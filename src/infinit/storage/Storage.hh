@@ -21,6 +21,8 @@ namespace infinit
       void
       set(Key k, elle::Buffer value,
           bool insert = true, bool update = false);
+      void
+      erase(Key k);
     protected:
       virtual
       elle::Buffer
@@ -28,6 +30,9 @@ namespace infinit
       virtual
       void
       _set(Key k, elle::Buffer value, bool insert, bool update) = 0;
+      virtual
+      void
+      _erase(Key k) = 0;
     };
   }
 }

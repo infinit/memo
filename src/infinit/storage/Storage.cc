@@ -25,5 +25,12 @@ namespace infinit
                        insert ? update ? "upsert" : "insert" : "update", key);
       return this->_set(key, std::move(value), insert, update);
     }
+
+    void
+    Storage::erase(Key key)
+    {
+      ELLE_TRACE_SCOPE("%s: erase %x", *this, key);
+      return this->_erase(key);
+    }
   }
 }

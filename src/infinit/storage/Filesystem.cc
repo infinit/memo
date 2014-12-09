@@ -56,6 +56,15 @@ namespace infinit
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
     }
 
+    void
+    Filesystem::_erase(Key key)
+    {
+      auto path = this->_path(key);
+      if (!exists(path))
+        throw MissingKey(key);
+      remove(path);
+    }
+
     boost::filesystem::path
     Filesystem::_path(Key const& key) const
     {

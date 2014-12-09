@@ -22,6 +22,9 @@ namespace infinit
       virtual
       void
       _set(Key k, elle::Buffer value, bool insert, bool update) override;
+      virtual
+      void
+      _erase(Key k);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
     private:
       boost::filesystem::path

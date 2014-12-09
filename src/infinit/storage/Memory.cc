@@ -45,5 +45,12 @@ namespace infinit
           search->second = std::move(value);
       }
     }
+
+    void
+    Memory::_erase(Key key)
+    {
+      if (this->_blocks.erase(key) == 0)
+        throw MissingKey(key);
+    }
   }
 }

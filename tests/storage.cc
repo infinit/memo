@@ -33,6 +33,9 @@ tests(infinit::storage::Storage& storage)
   BOOST_CHECK_THROW(storage.get(k2), infinit::storage::MissingKey);
   BOOST_CHECK_THROW(storage.set(k2, elle::Buffer(), false, true),
                     infinit::storage::MissingKey);
+  BOOST_CHECK_THROW(storage.erase(k2), infinit::storage::MissingKey);
+  storage.erase(k1);
+  BOOST_CHECK_THROW(storage.get(k1), infinit::storage::MissingKey);
 }
 
 static

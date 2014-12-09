@@ -18,6 +18,9 @@ namespace infinit
       virtual
       void
       _set(Key k, elle::Buffer value, bool insert, bool update) override;
+      virtual
+      void
+      _erase(Key k);
       typedef std::unordered_map<Key, elle::Buffer> Blocks;
       ELLE_ATTRIBUTE(Blocks, blocks);
     };
