@@ -30,6 +30,14 @@ def configure(
   ## Infinit library ##
   ## --------------- ##
 
+  cxx_config_infinit = drake.cxx.Config(cxx_config)
+  cxx_config_infinit += elle.boost.config_system(link = False)
+  cxx_config_infinit.library_add(
+    drake.copy(elle.boost.system_dynamic, 'lib', True))
+  cxx_config_infinit += elle.boost.config_filesystem(link = False)
+  cxx_config_infinit.library_add(
+    drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+
   infinit_sources = drake.nodes(
     'src/infinit/model/Address.cc',
     'src/infinit/model/Address.hh',
@@ -44,6 +52,8 @@ def configure(
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/storage/Collision.cc',
     'src/infinit/storage/Collision.hh',
+    'src/infinit/storage/Filesystem.cc',
+    'src/infinit/storage/Filesystem.hh',
     'src/infinit/storage/Key.hh',
     'src/infinit/storage/Memory.cc',
     'src/infinit/storage/Memory.hh',
@@ -57,7 +67,7 @@ def configure(
     'lib/infinit',
     infinit_sources + [elle_lib, cryptography_lib],
     cxx_toolkit,
-    cxx_config)
+    cxx_config_infinit)
   rule_build << infinit_lib
 
   ## ----- ##
@@ -71,6 +81,12 @@ def configure(
   cxx_config_tests += elle.boost.config_test(link = False)
   cxx_config_tests.library_add(
     drake.copy(elle.boost.test_dynamic, 'lib', True))
+  cxx_config_tests += elle.boost.config_system(link = False)
+  cxx_config_tests.library_add(
+    drake.copy(elle.boost.system_dynamic, 'lib', True))
+  cxx_config_tests += elle.boost.config_filesystem(link = False)
+  cxx_config_tests.library_add(
+    drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
 
   for test in ['faith', 'storage']:
     test = drake.cxx.Executable(

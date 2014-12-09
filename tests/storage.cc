@@ -1,15 +1,16 @@
+#include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/test.hh>
 
 #include <infinit/storage/Collision.hh>
+#include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/MissingKey.hh>
 #include <infinit/storage/Storage.hh>
 
 static
 void
-memory()
+tests(infinit::storage::Storage& storage)
 {
-  infinit::storage::Memory storage;
   infinit::storage::Key::Value v1 = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
@@ -34,8 +35,27 @@ memory()
                     infinit::storage::MissingKey);
 }
 
+static
+void
+memory()
+{
+  infinit::storage::Memory storage;
+  tests(storage);
+}
+
+
+static
+void
+filesystem()
+{
+  elle::filesystem::TemporaryDirectory d;
+  infinit::storage::Filesystem storage(d.path());
+  tests(storage);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
+  suite.add(BOOST_TEST_CASE(filesystem));
   suite.add(BOOST_TEST_CASE(memory));
 }
