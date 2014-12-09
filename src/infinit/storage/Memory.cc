@@ -5,7 +5,7 @@
 #include <infinit/storage/Collision.hh>
 #include <infinit/storage/MissingKey.hh>
 
-ELLE_LOG_COMPONENT("infinit.storage.Memory")
+ELLE_LOG_COMPONENT("infinit.storage.Memory");
 
 namespace infinit
 {
@@ -14,7 +14,6 @@ namespace infinit
     elle::Buffer
     Memory::_get(Key key) const
     {
-      ELLE_TRACE_SCOPE("%s: get %x", *this, key);
       auto it = this->_blocks.find(key);
       if (it == this->_blocks.end())
         throw MissingKey(key);
@@ -25,9 +24,6 @@ namespace infinit
     void
     Memory::_set(Key key, elle::Buffer value, bool insert, bool update)
     {
-      ELLE_ASSERT(insert || update);
-      ELLE_TRACE_SCOPE("%s: %s at %x", *this,
-                       insert ? update ? "upsert" : "insert" : "update", key);
       if (insert)
       {
         auto insertion =
