@@ -24,8 +24,12 @@ namespace infinit
         virtual
         void
         _store(blocks::Block& block) override;
+        virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address) const override;
+        virtual
+        void
+        _remove(Address address) override;
         ELLE_ATTRIBUTE_RX(storage::Storage&, storage);
       };
     }

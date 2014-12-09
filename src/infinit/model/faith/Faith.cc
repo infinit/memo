@@ -7,6 +7,7 @@
 #include <cryptography/hash.hh>
 
 #include <infinit/model/Address.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/Block.hh>
 #include <infinit/storage/MissingKey.hh>
 
@@ -59,6 +60,20 @@ namespace infinit
         catch (infinit::storage::MissingKey const&)
         {
           return nullptr;
+        }
+      }
+
+      void
+      Faith::_remove(Address address)
+      {
+        ELLE_TRACE_SCOPE("%s: remove block at %x", *this, address);
+        try
+        {
+          this->_storage.erase(address);
+        }
+        catch (infinit::storage::MissingKey const&)
+        {
+          throw MissingBlock(address);
         }
       }
     }

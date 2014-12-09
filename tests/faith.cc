@@ -40,6 +40,15 @@ faith()
     auto block3 = faith.make_block();
     BOOST_CHECK_THROW(faith.fetch(block3->address()),
                       infinit::model::MissingBlock);
+    BOOST_CHECK_THROW(faith.remove(block3->address()),
+                      infinit::model::MissingBlock);
+  }
+  ELLE_LOG("remove block")
+  {
+    faith.remove(block2->address());
+    BOOST_CHECK_THROW(faith.fetch(block2->address()),
+                      infinit::model::MissingBlock);
+    faith.fetch(block1->address());
   }
 }
 

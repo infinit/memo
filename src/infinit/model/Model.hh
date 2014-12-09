@@ -20,6 +20,8 @@ namespace infinit
       store(blocks::Block& block);
       std::unique_ptr<blocks::Block>
       fetch(Address address) const;
+      void
+      remove(Address address);
     protected:
       virtual
       std::unique_ptr<blocks::Block>
@@ -30,6 +32,9 @@ namespace infinit
       virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address) const = 0;
+      virtual
+      void
+      _remove(Address address) = 0;
     };
   }
 }

@@ -29,5 +29,11 @@ namespace infinit
       else
         throw MissingBlock(address);
     }
+
+    void
+    Model::remove(Address address)
+    {
+      this->_remove(address);
+    }
   }
 }
