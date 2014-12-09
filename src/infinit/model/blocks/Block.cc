@@ -1,0 +1,33 @@
+#include <infinit/model/blocks/Block.hh>
+
+namespace infinit
+{
+  namespace model
+  {
+    namespace blocks
+    {
+      Block::Block(Address address)
+        : _address(std::move(address))
+        , _data()
+      {}
+
+      Block::Block(Address address, elle::Buffer data)
+        : _address(std::move(address))
+        , _data(std::move(data))
+      {}
+
+      void
+      Block::print(std::ostream& output) const
+      {
+        elle::fprintf(output, "Block(%x, %x)",
+                      this->_address, this->_data);
+      }
+
+      bool
+      Block::operator ==(Block const& rhs) const
+      {
+        return rhs._address == this->_address && rhs._data == this->_data;
+      }
+    }
+  }
+}
