@@ -7,7 +7,7 @@ namespace infinit
   namespace model
   {
     MissingBlock::MissingBlock(Address address)
-      : Super(elle::sprintf("missing block: %s", address))
+      : Super(elle::sprintf("missing block: %x", address))
       , _address(address)
     {}
   }
