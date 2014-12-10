@@ -85,7 +85,7 @@ namespace infinit
     #define THROW_NOSYS { throw rfs::Error(ENOSYS, "Not implemented");}
     #define THROW_ISDIR { throw rfs::Error(EISDIR, "Is a directory");}
     #define THROW_NOTDIR { throw rfs::Error(ENOTDIR, "Is not a directory");}
-    
+
     class Node
     {
     protected:
@@ -107,7 +107,7 @@ namespace infinit
     {
     public:
       Unknown(Directory* parent, FileSystem& owner, std::string const& name);
-      void stat(struct stat*) override 
+      void stat(struct stat*) override
       {
         ELLE_DEBUG("Stat on unknown %s", _name);
         THROW_NOENT;
@@ -182,7 +182,7 @@ namespace infinit
       File& _owner;
       bool _dirty;
     };
-    
+
     class File: public rfs::Path, public Node
     {
     public:
@@ -210,7 +210,7 @@ namespace infinit
       friend class FileHandle;
       friend class Directory;
       /* Get address for given block index.
-       * @param create: if true, allow creation of a new block as needed   
+       * @param create: if true, allow creation of a new block as needed
        * @param change: will be filled by true if creation was/would have
        *                been required
       */
@@ -261,7 +261,7 @@ namespace infinit
       << stats.size << " bytes"
       << std::endl;
     }
-    
+
     std::unique_ptr<rfs::Path>
     FileSystem::path(std::string const& path)
     {
@@ -409,7 +409,7 @@ namespace infinit
       boost::filesystem::path current = full_path();
       std::string newname = where.filename().string();
       boost::filesystem::path newpath = where.parent_path();
-      
+
       if (&_parent == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
       Directory& dir = dynamic_cast<Directory&>(
@@ -498,11 +498,11 @@ namespace infinit
         }
       }
     }
-    
+
     void
     Node::stat(struct stat* st)
     {
-      
+
       memset(st, 0, sizeof(struct stat));
       if (_parent)
       {
@@ -630,7 +630,7 @@ namespace infinit
       }
       return Address(*(Address*)(_first_block->data().mutable_contents() + offset));
     }
-    
+
 
     void
     File::unlink()
@@ -951,4 +951,3 @@ namespace infinit
     }
   }
 }
-
