@@ -372,7 +372,7 @@ namespace infinit
         throw rfs::Error(EINVAL, "Cannot delete root node");
       _parent->_files.erase(_name);
       _parent->_changed();
-      //FREE _owner.block_store()->free(_block);
+      _owner.block_store()->remove(_block->address());
       _remove_from_cache();
     }
 
@@ -638,7 +638,7 @@ namespace infinit
       _parent->_files.erase(_name);
       _parent->_changed(true);
       if (!_multi())
-        ;// FREE_owner.block_store()->free(_first_block);
+        _owner.block_store()->remove(_first_block->address());
       else
       {
         Address::Value zero;
@@ -648,9 +648,9 @@ namespace infinit
         {
           if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
             continue; // unallocated block
-          ; // FREE_owner.block_store()->free(addr[i]);
+          _owner.block_store()->remove(addr[i]);
         }
-        ; // FREE_owner.block_store()->free(_first_block);
+        _owner.block_store()->remove(_first_block->address());
       }
       _remove_from_cache();
     }
@@ -710,7 +710,7 @@ namespace infinit
         {
            if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
             continue; // unallocated block
-          ; // FREE _owner.block_store()->free(addr[i]);
+          _owner.block_store()->remove(addr[i]);
           _blocks.erase(i);
         }
         _first_block->data().size((drop_from+1)*sizeof(Address));
@@ -735,7 +735,7 @@ namespace infinit
           data.address = addr[0];
           data.size = new_size;
           _parent->_changed();
-          ;// FREE _owner.block_store()->free(_first_block);
+          _owner.block_store()->remove(_first_block->address());
           auto it = _blocks.find(0);
           if (it != _blocks.end())
             _first_block = std::move(it->second);
