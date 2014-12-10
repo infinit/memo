@@ -28,7 +28,7 @@ namespace infinit
       if (!input.good())
         throw MissingKey(key);
       elle::Buffer res;
-      elle::IOStream output(new elle::OutputStreamBuffer(res));
+      elle::IOStream output(new elle::OutputStreamBuffer<elle::Buffer>(res));
       std::copy(std::istreambuf_iterator<char>(input),
                 std::istreambuf_iterator<char>(),
                 std::ostreambuf_iterator<char>(output));
