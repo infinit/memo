@@ -644,9 +644,10 @@ namespace infinit
     void
     File::unlink()
     {
+      bool multi = _multi();
       _parent->_files.erase(_name);
       _parent->_changed(true);
-      if (!_multi())
+      if (!multi)
         _owner.block_store()->remove(_first_block->address());
       else
       {
