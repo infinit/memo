@@ -4,6 +4,7 @@
 
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Memory.hh>
+#include <infinit/storage/Filesystem.hh>
 
 #include <infinit/model/faith/Faith.hh>
 
@@ -22,7 +23,8 @@ static void sig_int()
 
 static void main_scheduled(int argc, char** argv)
 {
-  storage = new infinit::storage::Memory();
+  //storage = new infinit::storage::Memory();
+  storage = new infinit::storage::Filesystem(argv[1]);
   auto model = elle::make_unique<infinit::model::faith::Faith>(*storage);
 
   std::string mountpoint(argv[2]);
