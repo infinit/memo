@@ -1,4 +1,5 @@
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/model/MissingBlock.hh>
 
 #include <elle/log.hh>
 #include <elle/serialization/Serializer.hh>
@@ -339,13 +340,22 @@ namespace infinit
       auto it = _files.find(name);
       if (it != _files.end())
       {
+        std::unique_ptr<Block> block;
+        try
+        {
+          block = _owner.block_store()->fetch(it->second.address);
+        }
+        catch (infinit::model::MissingBlock const& b)
+        {
+          throw rfs::Error(EIO, b.what());
+        }
         bool isdir = it->second.mode & DIRECTORY_MASK;
         if (isdir)
           return std::unique_ptr<rfs::Path>(new Directory(this, _owner, name,
-                               _owner.block_store()->fetch(it->second.address)));
+                                                          std::move(block)));
         else
           return std::unique_ptr<rfs::Path>(new File(this, _owner, name,
-                          _owner.block_store()->fetch(it->second.address)));
+                                                     std::move(block)));
       }
       else
         return std::unique_ptr<rfs::Path>(new Unknown(this, _owner, name));
