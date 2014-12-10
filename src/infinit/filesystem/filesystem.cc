@@ -534,8 +534,13 @@ namespace infinit
       std::unique_ptr<Block> b = _owner.block_store()->make_block();
       _owner.block_store()->store(*b);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
-      _parent->_files.insert(std::make_pair(_name, FileData{_name, 0, mode | DIRECTORY_MASK,
-                                        time(nullptr), time(nullptr), b->address(), FileStoreMode::direct}));
+      _parent->_files.insert(
+        std::make_pair(_name,
+                       FileData{_name, 0, mode | DIRECTORY_MASK,
+                                uint64_t(time(nullptr)),
+                                uint64_t(time(nullptr)),
+                                b->address(),
+                                FileStoreMode::direct}));
       _parent->_changed();
       _remove_from_cache();
     }
@@ -546,8 +551,12 @@ namespace infinit
       std::unique_ptr<Block> b = _owner.block_store()->make_block();
       _owner.block_store()->store(*b);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
-      _parent->_files.insert(std::make_pair(_name, FileData{_name, 0, mode & ~DIRECTORY_MASK,
-                                        time(nullptr), time(nullptr), b->address(), FileStoreMode::direct}));
+      _parent->_files.insert(
+        std::make_pair(_name, FileData{_name, 0, mode & ~DIRECTORY_MASK,
+                                       uint64_t(time(nullptr)),
+                                       uint64_t(time(nullptr)),
+                                       b->address(),
+                                       FileStoreMode::direct}));
       _parent->_changed(true);
       _remove_from_cache();
       File& f = dynamic_cast<File&>(_owner.fs()->path(full_path().string()));
@@ -832,7 +841,7 @@ namespace infinit
       int32_t block_size = _owner._block_size();
       if (offset >= total_size)
         return 0;
-      if (offset + size >= total_size)
+      if (signed(offset + size) >= total_size)
         size = total_size - offset;
       if (!_owner._multi())
       { // single block case
@@ -894,7 +903,7 @@ namespace infinit
     {
       _dirty = true;
       ELLE_DEBUG("write %s at %s on %s", size, offset, _owner._name);
-      int32_t block_size = _owner._block_size();
+      uint32_t block_size = _owner._block_size();
       if (!_owner._multi() && size + offset > block_size)
         _owner._switch_to_multi();
       if (!_owner._multi())
