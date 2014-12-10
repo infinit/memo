@@ -7,6 +7,7 @@
 # include <utility>
 
 # include <elle/attribute.hh>
+# include <elle/serialization/Serializer.hh>
 
 namespace infinit
 {
@@ -19,10 +20,13 @@ namespace infinit
     public:
       typedef uint8_t Value[32];
       Address(Value bytes);
+      Address(elle::serialization::SerializerIn& s);
       bool
       operator ==(Address const& rhs) const;
       bool
       operator <(Address const& rhs) const;
+      void
+      serialize(elle::serialization::Serializer& s);
       ELLE_ATTRIBUTE_R(Value, value);
       friend
       std::ostream&

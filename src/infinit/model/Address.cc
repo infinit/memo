@@ -30,6 +30,19 @@ namespace infinit
       out << elle::ConstWeakBuffer(k._value, sizeof(k._value));
       return out;
     }
+
+    Address::Address(elle::serialization::SerializerIn& s)
+      : _value()
+    {
+      this->serialize(s);
+    }
+
+    void
+    Address::serialize(elle::serialization::Serializer& s)
+    {
+      elle::WeakBuffer buf(this->_value, sizeof(Value));
+      s.serialize("id", buf);
+    }
   }
 }
 
