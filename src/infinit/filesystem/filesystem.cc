@@ -2,6 +2,8 @@
 #include <infinit/model/MissingBlock.hh>
 
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
+
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json/SerializerIn.hh>
 #include <elle/serialization/json/SerializerOut.hh>
@@ -199,7 +201,7 @@ namespace infinit
       void rename(boost::filesystem::path const& where) override;
       boost::filesystem::path readlink() override  THROW_NOENT;
       void symlink(boost::filesystem::path const& where) override THROW_EXIST;
-      void link(boost::filesystem::path const& where) override THROW_EXIST;
+      void link(boost::filesystem::path const& where) override;
       void chmod(mode_t mode) override THROW_NOSYS;
       void chown(int uid, int gid) override THROW_NOSYS;
       void statfs(struct statvfs *) override THROW_NOSYS;
@@ -210,6 +212,14 @@ namespace infinit
       static const unsigned long default_block_size = 1024 * 1024;
       friend class FileHandle;
       friend class Directory;
+      // A packed network-byte-ordered version of Header sits at the
+      // beginning of each file's first block in index mode.
+      struct Header
+      { // max size we can grow is sizeof(Address)
+        uint32_t block_size;
+        uint32_t links;
+        uint64_t total_size;
+      };
       /* Get address for given block index.
        * @param create: if true, allow creation of a new block as needed
        * @param change: will be filled by true if creation was/would have
@@ -217,9 +227,10 @@ namespace infinit
       */
       boost::optional<Address>
       _block_address(int index, bool create, bool* change = nullptr);
-      void _switch_to_multi();
+      void _switch_to_multi(bool alloc_first_block);
       void _changed();
-      long _block_size();
+      Header _header(); // Get header, must be in multi mode
+      void _header(Header const&);
       bool _multi(); // True if mode is index
       std::unordered_map<int, std::unique_ptr<Block>> _blocks;
       std::unique_ptr<Block> _first_block;
@@ -503,6 +514,8 @@ namespace infinit
         {
           cs.files++;
           cs.blocks += 1 + f->_blocks.size();
+          if (f->_first_block)
+            cs.size += f->_first_block->data().size();
           for (auto const& b: f->_blocks)
             cs.size += b.second->data().size();
         }
@@ -598,15 +611,31 @@ namespace infinit
       return _parent->_files.at(_name).store_mode == FileStoreMode::index;
     }
 
-    long
-    File::_block_size()
+    File::Header
+    File::_header()
     {
-      if (!_multi() || _first_block->data().size() < 4)
-        return default_block_size;
-      uint32_t nbs;
-      memcpy(&nbs, _first_block->data().mutable_contents(), 4);
-      nbs = ntohl(nbs);
-      return nbs;
+      Header res;
+      uint32_t v;
+      memcpy(&v, _first_block->data().mutable_contents(), 4);
+      res.block_size = ntohl(v);
+      memcpy(&v, _first_block->data().mutable_contents()+4, 4);
+      res.links = ntohl(v);
+      uint64_t v2;
+      memcpy(&v2, _first_block->data().mutable_contents()+8, 8);
+      res.total_size = ((uint64_t)ntohl(v2)<<32) + ntohl(v2 >> 32);
+      return res;
+      ELLE_DEBUG("Header: bs=%s links=%s size=%s", res.block_size, res.links, res.total_size);
+    }
+
+    void
+    File::_header(Header const& h)
+    {
+      uint32_t v = htonl(h.block_size);
+      memcpy(_first_block->data().mutable_contents(), &v, 4);
+      v = htonl(h.links);
+      memcpy(_first_block->data().mutable_contents()+4, &v, 4);
+      uint64_t v2 = (uint64_t)htonl(h.total_size)<<32 + htonl(h.total_size >> 32);
+      memcpy(_first_block->data().mutable_contents()+8, &v2, 8);
     }
 
     boost::optional<Address>
@@ -650,27 +679,86 @@ namespace infinit
       return Address(*(Address*)(_first_block->data().mutable_contents() + offset));
     }
 
+    void
+    File::link(boost::filesystem::path const& where)
+    {
+      std::string newname = where.filename().string();
+      boost::filesystem::path newpath = where.parent_path();
+      Directory& dir = dynamic_cast<Directory&>(
+        _owner.fs()->path(newpath.string()));
+      if (dir._files.find(newname) != dir._files.end())
+        throw rfs::Error(EEXIST, "target file exists");
+      // we need a place to store the link count
+      bool multi = _multi();
+      if (!multi)
+        _switch_to_multi(false);
+      Header header = _header();
+      header.links++;
+      _header(header);
+      dir._files.insert(std::make_pair(newname, _parent->_files.at(_name)));
+      dir._files.at(newname).name = newname;
+      dir._changed(true);
+      _owner.fs()->extract(where.string());
+      _owner.block_store()->store(*_first_block);
+      // also flush new data block
+      if (!multi)
+        _owner.block_store()->store(*_blocks.at(0));
+    }
 
     void
     File::unlink()
     {
+      static bool no_unlink = !elle::os::getenv("INHIBIT_UNLINK", "").empty();
+      if (no_unlink)
+      { // DEBUG: link the file in root directory
+        std::string n("__" + full_path().string());
+        for (int i=0; i<n.length(); ++i)
+          if (n[i] == '/')
+          n[i] = '_';
+        Directory* dir = _parent;
+        while (dir->_parent)
+          dir = dir->_parent;
+        auto& cur = _parent->_files.at(_name);
+        dir->_files.insert(std::make_pair(n, cur));
+        dir->_files.at(n).name = n;
+      }
+      // links and multi methods can't be called after deletion from parent
       bool multi = _multi();
+      int links = 1;
+      if (multi)
+        links = _header().links;
       _parent->_files.erase(_name);
       _parent->_changed(true);
       if (!multi)
-        _owner.block_store()->remove(_first_block->address());
+      {
+        if (!no_unlink)
+          _owner.block_store()->remove(_first_block->address());
+      }
       else
       {
-        Address::Value zero;
-        memset(&zero, 0, sizeof(Address::Value));
-        Address* addr = (Address*)(void*)_first_block->data().mutable_contents();
-        for (unsigned i=1; i*sizeof(Address) < _first_block->data().size(); ++i)
+        _first_block = _owner.block_store()->fetch(_first_block->address());
+        if (links > 1)
         {
-          if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
-            continue; // unallocated block
-          _owner.block_store()->remove(addr[i]);
+          ELLE_DEBUG("%s remaining links", links - 1);
+          Header header = _header();
+          header.links--;
+          _header(header);
+          _owner.block_store()->store(*_first_block);
         }
-        _owner.block_store()->remove(_first_block->address());
+        else
+        {
+          ELLE_DEBUG("No remaining links");
+          Address::Value zero;
+          memset(&zero, 0, sizeof(Address::Value));
+          Address* addr = (Address*)(void*)_first_block->data().mutable_contents();
+          for (unsigned i=1; i*sizeof(Address) < _first_block->data().size(); ++i)
+          {
+            if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
+              continue; // unallocated block
+            _owner.block_store()->remove(addr[i]);
+          }
+          _owner.block_store()->remove(_first_block->address());
+        }
       }
       _remove_from_cache();
     }
@@ -686,7 +774,18 @@ namespace infinit
     {
       ELLE_DEBUG("stat on file %s", _name);
       Node::stat(st);
-      st->st_size = _parent->_files.at(_name).size;
+      if (_multi())
+      {
+        _first_block = _owner.block_store()->fetch(_first_block->address());
+        Header header = _header();
+        st->st_size = header.total_size;
+        ELLE_DEBUG("stat on multi: %s", header.total_size);
+      }
+      else
+      {
+        st->st_size = _parent->_files.at(_name).size;
+        ELLE_DEBUG("stat on single: %s", st->st_size);
+      }
     }
 
     void
@@ -713,19 +812,21 @@ namespace infinit
     void
     File::truncate(off_t new_size)
     {
-      if (!_multi() && new_size > _block_size())
-        _switch_to_multi();
+      if (!_multi() && new_size > default_block_size)
+        _switch_to_multi(true);
       if (!_multi())
       {
         _first_block->data().size(new_size);
       }
       else
       { // FIXME: addr should be a Address::Value
+        Header header = _header();
+        uint32_t block_size = header.block_size;
         Address::Value zero;
         memset(&zero, 0, sizeof(Address::Value));
         Address* addr = (Address*)(void*)_first_block->data().mutable_contents();
         addr++; // skip header
-        off_t drop_from = new_size? (new_size-1) / _block_size() : 0;
+        off_t drop_from = new_size? (new_size-1) / block_size : 0;
         for (unsigned i=drop_from + 1; i*sizeof(Address) <= _first_block->data().size(); ++i)
         {
            if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
@@ -746,9 +847,11 @@ namespace infinit
             _blocks[drop_from] = _owner.block_store()->fetch(addr[drop_from]);
             bl = _blocks[drop_from].get();
           }
-          bl->data().size(new_size % _block_size());
+          bl->data().size(new_size % block_size);
         }
-        if (new_size <= _block_size())
+        header.total_size = new_size;
+        _header(header);
+        if (new_size <= block_size && header.links == 1)
         {
           auto& data = _parent->_files.at(_name);
           data.store_mode = FileStoreMode::direct;
@@ -786,7 +889,6 @@ namespace infinit
     void
     File::_changed()
     {
-      _owner.block_store()->store(*_first_block);
       auto& data = _parent->_files.at(_name);
       data.mtime = time(nullptr);
       if (!_multi())
@@ -795,34 +897,53 @@ namespace infinit
       {
         int64_t sz = 0;
         for (auto const& b: _blocks)
-        {
+        { // FIXME: per-block dirty state
+          ELLE_DEBUG("Storing data block %s :%x, size %s",
+            b.first, b.second->address(), b.second->data().size());
           sz += b.second->data().size();
           _owner.block_store()->store(*b.second);
         }
         data.size = sz;
+        Header header = _header();
+        header.total_size = sz;
+        _header(header);
       }
+      ELLE_DEBUG("Storing first block %x, size %s",
+                 _first_block->address(), _first_block->data().size());
+      _owner.block_store()->store(*_first_block);
       _parent->_changed(false);
     }
 
     void
-    File::_switch_to_multi()
+    File::_switch_to_multi(bool alloc_first_block)
     {
-      // current first_block becomes block[0], first_block becomes the index
+      // Switch without changing our address
       _parent->_files.at(_name).store_mode = FileStoreMode::index;
+      _parent->_changed();
+      std::unique_ptr<Block> new_block = _owner.block_store()->make_block();
+      new_block->data() = std::move(_first_block->data());
+      _blocks.insert(std::make_pair(0, std::move(new_block)));
+
+      /*
+      // current first_block becomes block[0], first_block becomes the index
       _blocks[0] = std::move(_first_block);
       _first_block = _owner.block_store()->make_block();
       _parent->_files.at(_name).address = _first_block->address();
+
       _parent->_changed();
+      */
       _first_block->data().size(sizeof(Address)* 2);
       // store block size in headers
-      uint32_t bs = default_block_size;
-      bs = htonl(bs);
-      memcpy(_first_block->data().mutable_contents(), &bs, 4);
+      Header h { default_block_size, 1, 0};
+      _header(h);
+
       memcpy(_first_block->data().mutable_contents() + sizeof(Address),
         _blocks.at(0)->address().value(), sizeof(Address::Value));
       // we know the operation that triggered us is going to expand data
       // beyond first block, so it is safe to resize here
-      _blocks.at(0)->data().size(default_block_size);
+      if (alloc_first_block)
+        _blocks.at(0)->data().size(default_block_size);
+      _changed();
     }
 
     FileHandle::FileHandle(File& owner)
@@ -831,6 +952,13 @@ namespace infinit
     {
       _owner._parent->_files.at(_owner._name).atime = time(nullptr);
       _owner._parent->_changed(false);
+      // FIXME: the only thing that can invalidate _owner is hard links
+      // keep tracks of open handle to know if we should refetch
+      // or a backend stat call?
+
+      int64_t sz = _owner._first_block->data().size();
+      _owner._first_block = _owner._owner.block_store()->fetch(
+        _owner._first_block->address());
     }
 
     FileHandle::~FileHandle()
@@ -841,24 +969,46 @@ namespace infinit
     void
     FileHandle::close()
     {
+      ELLE_DEBUG("Closing with dirty=%s", _dirty);
       if (_dirty)
         _owner._changed();
+      _dirty = false;
+      _owner._blocks.clear();
     }
 
     int
     FileHandle::read(elle::WeakBuffer buffer, size_t size, off_t offset)
     {
-      int64_t total_size = _owner._parent->_files.at(_owner._name).size;
-      int32_t block_size = _owner._block_size();
+      ELLE_ASSERT_EQ(buffer.size(), size);
+      int64_t total_size;
+      int32_t block_size;
+      if (_owner._multi())
+      {
+        File::Header h = _owner._header();
+        total_size = h.total_size;
+        block_size = h.block_size;
+      }
+      else
+      {
+        total_size = _owner._parent->_files.at(_owner._name).size;
+        block_size = _owner.default_block_size;
+      }
+
       if (offset >= total_size)
+      {
+        ELLE_DEBUG("read past end");
         return 0;
+      }
       if (signed(offset + size) >= total_size)
         size = total_size - offset;
       if (!_owner._multi())
       { // single block case
         auto& block = _owner._first_block;
-        ELLE_ASSERT(block->data().size() == total_size);
-        memcpy(buffer.mutable_contents(), &block->data()[offset], size);
+        ELLE_ASSERT_EQ(block->data().size(), total_size);
+        memcpy(buffer.mutable_contents(),
+               block->data().mutable_contents() + offset,
+               size);
+        ELLE_DEBUG("read %s bytes", size);
         return size;
       }
 
@@ -882,13 +1032,17 @@ namespace infinit
           if (change)
           { // block would have been allocated: sparse file?
             memset(buffer.mutable_contents(), 0, size);
+            ELLE_DEBUG("read %s 0-bytes", size);
             return size;
           }
           _owner._blocks.insert(std::make_pair(start_block, _owner._owner.block_store()->fetch(*addr)));
           block = _owner._blocks.find(start_block)->second.get();
         }
-        ELLE_ASSERT(block->data().size() >= block_offset + size);
+        ELLE_ASSERT_LTE(block_offset + size, block_size);
+        if (block->data().size() < block_offset + size)
+          size = block->data().size() - block_offset;
         memcpy(buffer.mutable_contents(), &block->data()[block_offset], size);
+        ELLE_DEBUG("read %s bytes", size);
         return size;
       }
       else
@@ -905,6 +1059,7 @@ namespace infinit
                  second_size, second_offset);
         if (r2 < 0)
           return r2;
+        ELLE_DEBUG("read %s+%s=%s bytes", r1, r2, r1+r2);
         return r1 + r2;
       }
     }
@@ -912,20 +1067,25 @@ namespace infinit
     int
     FileHandle::write(elle::WeakBuffer buffer, size_t size, off_t offset)
     {
+      ELLE_ASSERT_EQ(buffer.size(), size);
       _dirty = true;
       ELLE_DEBUG("write %s at %s on %s", size, offset, _owner._name);
-      uint32_t block_size = _owner._block_size();
-      if (!_owner._multi() && size + offset > block_size)
-        _owner._switch_to_multi();
+
+      if (!_owner._multi() && size + offset > _owner.default_block_size)
+        _owner._switch_to_multi(true);
+
       if (!_owner._multi())
       {
         auto& block = _owner._first_block;
         if (offset + size > block->data().size())
           block->data().size(offset + size);
-        memcpy(&block->data()[offset], buffer.mutable_contents(), size);
+        memcpy(block->data().mutable_contents() + offset, buffer.mutable_contents(), size);
+        // Update but do not commit yet, so that read on same fd do not fail.
+        _owner._parent->_files.at(_owner._name).size += size;
         return size;
       }
       // multi mode
+      uint64_t block_size = _owner._header().block_size;
       off_t end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
       int end_block = end ? (end - 1) / block_size : 0;
@@ -946,6 +1106,9 @@ namespace infinit
         if (block->data().size() < block_offset + size)
           block->data().size(block_offset + size);
         memcpy(&block->data()[block_offset], buffer.mutable_contents(), size);
+        File::Header h = _owner._header();
+        h.total_size += size;
+        _owner._header(h);
         return size;
       }
       // write across blocks
@@ -961,6 +1124,9 @@ namespace infinit
                     second_size, second_offset);
       if (r2 < 0)
         return r2;
+      File::Header h = _owner._header();
+      h.total_size += r1+r2;
+      _owner._header(h);
       return r1 + r2;
     }
 

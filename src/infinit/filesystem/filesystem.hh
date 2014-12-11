@@ -11,8 +11,7 @@ namespace infinit
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
     * File    : In direct mode, one block with all the data
-    *           In index mode, one block containing headers:
-    *            (size: sizeof(address): uint32_t block_size)
+    *           In index mode, one block containing headers
     *           and the list of addresses for the content.
     */
     class FileSystem: public reactor::filesystem::Operations
