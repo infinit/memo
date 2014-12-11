@@ -1,3 +1,5 @@
+#include <elle/os/environ.hh>
+
 #include <reactor/scheduler.hh>
 
 #include <infinit/filesystem/filesystem.hh>
@@ -23,8 +25,10 @@ static void sig_int()
 
 static void main_scheduled(int argc, char** argv)
 {
-  //storage = new infinit::storage::Memory();
-  storage = new infinit::storage::Filesystem(argv[1]);
+  if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
+    storage = new infinit::storage::Memory();
+  else
+    storage = new infinit::storage::Filesystem(argv[1]);
   auto model = elle::make_unique<infinit::model::faith::Faith>(*storage);
 
   std::string mountpoint(argv[2]);
