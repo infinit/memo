@@ -13,6 +13,7 @@
 #include <infinit/storage/Filesystem.hh>
 
 #include <infinit/model/faith/Faith.hh>
+#include <infinit/model/steg/Steg.hh>
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
@@ -41,12 +42,18 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
 
   reactor::Thread t(sched, "fs", [&] {
-    if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
-      storage = new infinit::storage::Memory();
-    else
-      storage = new infinit::storage::Filesystem(store);
-    auto model = elle::make_unique<infinit::model::faith::Faith>(*storage);
-
+      if (!elle::os::getenv("STEG", "").empty())
+      {
+        model = elle::make_unique<infinit::model::steg::Steg>(argv[1], "foo");
+      }
+      else
+      {
+        if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
+          storage = new infinit::storage::Memory();
+        else
+          storage = new infinit::storage::Filesystem(store);
+        model = elle::make_unique<infinit::model::faith::Faith>(*storage);
+      }
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "", std::move(model));
     ifs::FileSystem* ops_ptr = ops.get();

@@ -78,6 +78,8 @@ def configure(
     'src/infinit/storage/fwd.hh',
     'src/infinit/filesystem/filesystem.hh',
     'src/infinit/filesystem/filesystem.cc',
+    'src/infinit/model/steg/Steg.hh',
+    'src/infinit/model/steg/Steg.cc',
   )
   infinit_lib = drake.cxx.DynLib(
     'lib/infinit',
