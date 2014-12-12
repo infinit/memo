@@ -208,8 +208,11 @@ namespace infinit
       void utimens(const struct timespec tv[2]);
       void truncate(off_t new_size) override;
       std::unique_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
+      // check cache size, remove entries if needed
+      void check_cache();
     private:
       static const unsigned long default_block_size = 1024 * 1024;
+      static const unsigned long max_cache_size = 20; // in blocks
       friend class FileHandle;
       friend class Directory;
       // A packed network-byte-ordered version of Header sits at the
@@ -237,6 +240,7 @@ namespace infinit
       {
         std::unique_ptr<Block> block;
         bool dirty;
+        std::chrono::system_clock::time_point last_use;
       };
       std::unordered_map<int, CacheEntry> _blocks;
       std::unique_ptr<Block> _first_block;
@@ -975,6 +979,24 @@ namespace infinit
       _changed();
     }
 
+    void
+    File::check_cache()
+    {
+      typedef std::pair<const int, CacheEntry> Elem;
+      while (_blocks.size() > max_cache_size)
+      {
+        auto it = std::min_element(_blocks.begin(), _blocks.end(),
+          [](Elem const& a, Elem const& b) -> bool
+          {
+            return a.second.last_use < b.second.last_use;
+          });
+        ELLE_DEBUG("Removing block %s from cache", it->first);
+        if (it->second.dirty)
+          _owner.block_store()->store(*it->second.block);
+        _blocks.erase(it);
+      }
+    }
+
     FileHandle::FileHandle(File& owner)
     : _owner(owner)
     , _dirty(false)
@@ -1052,6 +1074,7 @@ namespace infinit
         if (it != _owner._blocks.end())
         {
           block = it->second.block.get();
+          it->second.last_use = std::chrono::system_clock::now();
         }
         else
         {
@@ -1063,9 +1086,11 @@ namespace infinit
             ELLE_DEBUG("read %s 0-bytes", size);
             return size;
           }
-          _owner._blocks.insert(std::make_pair(start_block,
+          auto inserted = _owner._blocks.insert(std::make_pair(start_block,
             File::CacheEntry{_owner._owner.block_store()->fetch(*addr), false}));
-          block = _owner._blocks.find(start_block)->second.block.get();
+          block = inserted.first->second.block.get();
+          inserted.first->second.last_use = std::chrono::system_clock::now();
+          _owner.check_cache();
         }
         ELLE_ASSERT_LTE(block_offset + size, block_size);
         if (block->data().size() < block_offset + size)
@@ -1125,6 +1150,7 @@ namespace infinit
         {
           block = it->second.block.get();
           it->second.dirty = true;
+          it->second.last_use = std::chrono::system_clock::now();
         }
         else
         {
@@ -1133,6 +1159,8 @@ namespace infinit
           auto it_insert = _owner._blocks.insert(std::make_pair(start_block,
             File::CacheEntry{_owner._owner.block_store()->fetch(*addr), true}));
           block = it_insert.first->second.block.get();
+          it_insert.first->second.last_use = std::chrono::system_clock::now();
+          _owner.check_cache();
         }
         off_t block_offset = offset % block_size;
         if (block->data().size() < block_offset + size)
