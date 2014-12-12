@@ -227,12 +227,18 @@ namespace infinit
       */
       boost::optional<Address>
       _block_address(int index, bool create, bool* change = nullptr);
+      // Switch from direct to indexed mode
       void _switch_to_multi(bool alloc_first_block);
       void _changed();
       Header _header(); // Get header, must be in multi mode
       void _header(Header const&);
       bool _multi(); // True if mode is index
-      std::unordered_map<int, std::unique_ptr<Block>> _blocks;
+      struct CacheEntry
+      {
+        std::unique_ptr<Block> block;
+        bool dirty;
+      };
+      std::unordered_map<int, CacheEntry> _blocks;
       std::unique_ptr<Block> _first_block;
     };
 
@@ -517,7 +523,7 @@ namespace infinit
           if (f->_first_block)
             cs.size += f->_first_block->data().size();
           for (auto const& b: f->_blocks)
-            cs.size += b.second->data().size();
+            cs.size += b.second.block->data().size();
         }
       }
     }
@@ -541,10 +547,12 @@ namespace infinit
         st->st_nlink = 1;
       }
       else
-      {
-        st->st_mode = DIRECTORY_MASK;
+      { // Root directory permissions
+        st->st_mode = DIRECTORY_MASK | 0777;
         st->st_size = 0;
       }
+      st->st_uid = ::getuid();
+      st->st_gid = ::getgid();
     }
 
     Unknown::Unknown(Directory* parent, FileSystem& owner, std::string const& name)
@@ -595,7 +603,7 @@ namespace infinit
     void
     Unknown::link(boost::filesystem::path const& where)
     {
-      throw rfs::Error(ENOSYS, "Not implemented");
+      throw rfs::Error(ENOENT, "link source does not exist");
     }
 
     File::File(Directory* parent, FileSystem& owner, std::string const& name,
@@ -712,7 +720,7 @@ namespace infinit
       _owner.block_store()->store(*_first_block);
       // also flush new data block
       if (!multi)
-        _owner.block_store()->store(*_blocks.at(0));
+        _owner.block_store()->store(*_blocks.at(0).block);
     }
 
     void
@@ -722,7 +730,7 @@ namespace infinit
       if (no_unlink)
       { // DEBUG: link the file in root directory
         std::string n("__" + full_path().string());
-        for (int i=0; i<n.length(); ++i)
+        for (unsigned int i=0; i<n.length(); ++i)
           if (n[i] == '/')
           n[i] = '_';
         Directory* dir = _parent;
@@ -822,7 +830,7 @@ namespace infinit
     void
     File::truncate(off_t new_size)
     {
-      if (!_multi() && new_size > default_block_size)
+      if (!_multi() && new_size > signed(default_block_size))
         _switch_to_multi(true);
       if (!_multi())
       {
@@ -835,27 +843,33 @@ namespace infinit
         Address::Value zero;
         memset(&zero, 0, sizeof(Address::Value));
         Address* addr = (Address*)(void*)_first_block->data().mutable_contents();
-        addr++; // skip header
-        off_t drop_from = new_size? (new_size-1) / block_size : 0;
-        for (unsigned i=drop_from + 1; i*sizeof(Address) <= _first_block->data().size(); ++i)
+        // last block id to keep, always keep block 0
+        int drop_from = new_size? (new_size-1) / block_size : 0;
+        // addr[0] is our headers
+        for (unsigned i=drop_from + 2; i*sizeof(Address) < _first_block->data().size(); ++i)
         {
            if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
             continue; // unallocated block
           _owner.block_store()->remove(addr[i]);
-          _blocks.erase(i);
+          _blocks.erase(i-1);
         }
-        _first_block->data().size((drop_from+1)*sizeof(Address));
+        _first_block->data().size((drop_from+2)*sizeof(Address));
         // last block surviving the cut might need resizing
-        if (!memcmp(addr[drop_from].value(), zero, sizeof(Address::Value)))
+        if (drop_from >=0 && !memcmp(addr[drop_from+1].value(), zero, sizeof(Address::Value)))
         {
           Block* bl;
           auto it = _blocks.find(drop_from);
           if (it != _blocks.end())
-            bl = it->second.get();
+          {
+            bl = it->second.block.get();
+            it->second.dirty = true;
+          }
           else
           {
-            _blocks[drop_from] = _owner.block_store()->fetch(addr[drop_from]);
-            bl = _blocks[drop_from].get();
+            _blocks[drop_from].block = _owner.block_store()->fetch(addr[drop_from+1]);
+            CacheEntry& ent = _blocks[drop_from];
+            bl = ent.block.get();
+            ent.dirty = true;
           }
           bl->data().size(new_size % block_size);
         }
@@ -865,15 +879,16 @@ namespace infinit
         {
           auto& data = _parent->_files.at(_name);
           data.store_mode = FileStoreMode::direct;
-          data.address = addr[0];
+          data.address = addr[1];
           data.size = new_size;
           _parent->_changed();
           _owner.block_store()->remove(_first_block->address());
           auto it = _blocks.find(0);
           if (it != _blocks.end())
-            _first_block = std::move(it->second);
+            _first_block = std::move(it->second.block);
           else
-             _first_block = _owner.block_store()->fetch(addr[0]);
+            _first_block = _owner.block_store()->fetch(addr[1]);
+          _first_block->data().size(new_size);
           _blocks.clear();
         }
       }
@@ -906,12 +921,16 @@ namespace infinit
       else
       {
         int64_t sz = 0;
-        for (auto const& b: _blocks)
-        { // FIXME: per-block dirty state
-          ELLE_DEBUG("Storing data block %s :%x, size %s",
-            b.first, b.second->address(), b.second->data().size());
-          sz += b.second->data().size();
-          _owner.block_store()->store(*b.second);
+        for (auto& b: _blocks)
+        { // FIXME: incremental size compute
+          ELLE_DEBUG("Checking data block %s :%x, size %s",
+            b.first, b.second.block->address(), b.second.block->data().size());
+          sz += b.second.block->data().size();
+          if (b.second.dirty)
+          {
+            b.second.dirty = false;
+            _owner.block_store()->store(*b.second.block);
+          }
         }
         data.size = sz;
         Header header = _header();
@@ -932,7 +951,7 @@ namespace infinit
       _parent->_changed();
       std::unique_ptr<Block> new_block = _owner.block_store()->make_block();
       new_block->data() = std::move(_first_block->data());
-      _blocks.insert(std::make_pair(0, std::move(new_block)));
+      _blocks.insert(std::make_pair(0, CacheEntry{std::move(new_block), true}));
 
       /*
       // current first_block becomes block[0], first_block becomes the index
@@ -948,11 +967,11 @@ namespace infinit
       _header(h);
 
       memcpy(_first_block->data().mutable_contents() + sizeof(Address),
-        _blocks.at(0)->address().value(), sizeof(Address::Value));
+        _blocks.at(0).block->address().value(), sizeof(Address::Value));
       // we know the operation that triggered us is going to expand data
       // beyond first block, so it is safe to resize here
       if (alloc_first_block)
-        _blocks.at(0)->data().size(default_block_size);
+        _blocks.at(0).block->data().size(default_block_size);
       _changed();
     }
 
@@ -966,7 +985,6 @@ namespace infinit
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
 
-      int64_t sz = _owner._first_block->data().size();
       _owner._first_block = _owner._owner.block_store()->fetch(
         _owner._first_block->address());
     }
@@ -1033,7 +1051,7 @@ namespace infinit
         Block* block = nullptr;
         if (it != _owner._blocks.end())
         {
-          block = it->second.get();
+          block = it->second.block.get();
         }
         else
         {
@@ -1045,8 +1063,9 @@ namespace infinit
             ELLE_DEBUG("read %s 0-bytes", size);
             return size;
           }
-          _owner._blocks.insert(std::make_pair(start_block, _owner._owner.block_store()->fetch(*addr)));
-          block = _owner._blocks.find(start_block)->second.get();
+          _owner._blocks.insert(std::make_pair(start_block,
+            File::CacheEntry{_owner._owner.block_store()->fetch(*addr), false}));
+          block = _owner._blocks.find(start_block)->second.block.get();
         }
         ELLE_ASSERT_LTE(block_offset + size, block_size);
         if (block->data().size() < block_offset + size)
@@ -1078,12 +1097,11 @@ namespace infinit
     FileHandle::write(elle::WeakBuffer buffer, size_t size, off_t offset)
     {
       ELLE_ASSERT_EQ(buffer.size(), size);
-      _dirty = true;
       ELLE_DEBUG("write %s at %s on %s", size, offset, _owner._name);
 
       if (!_owner._multi() && size + offset > _owner.default_block_size)
         _owner._switch_to_multi(true);
-
+      _dirty = true;
       if (!_owner._multi())
       {
         auto& block = _owner._first_block;
@@ -1104,13 +1122,17 @@ namespace infinit
         Block* block;
         auto const it = _owner._blocks.find(start_block);
         if (it != _owner._blocks.end())
-          block = it->second.get();
+        {
+          block = it->second.block.get();
+          it->second.dirty = true;
+        }
         else
         {
           bool change;
           boost::optional<Address> addr = _owner._block_address(start_block, true, &change);
-          _owner._blocks.insert(std::make_pair(start_block, _owner._owner.block_store()->fetch(*addr)));
-          block = _owner._blocks[start_block].get();
+          auto it_insert = _owner._blocks.insert(std::make_pair(start_block,
+            File::CacheEntry{_owner._owner.block_store()->fetch(*addr), true}));
+          block = it_insert.first->second.block.get();
         }
         off_t block_offset = offset % block_size;
         if (block->data().size() < block_offset + size)
@@ -1137,6 +1159,11 @@ namespace infinit
       File::Header h = _owner._header();
       h.total_size += r1+r2;
       _owner._header(h);
+      // Assuming linear writes, this is a good time to flush start block since
+      // it just got filled
+      File::CacheEntry& ent = _owner._blocks.at(start_block);
+      _owner._owner.block_store()->store(*ent.block);
+      ent.dirty = false;
       return r1 + r2;
     }
 
