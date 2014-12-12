@@ -667,7 +667,7 @@ namespace infinit
         *changeOrAbort = false;
       int offset = (index+1) * sizeof(Address);
       int sz = _first_block->data().size();
-      if (_first_block->data().size() < offset + sizeof(Address))
+      if (sz < offset + sizeof(Address))
       {
         if (!create)
         {
@@ -696,6 +696,7 @@ namespace infinit
                b->address().value(), sizeof(Address::Value));
         if (changeOrAbort)
           *changeOrAbort = true;
+        _owner.block_store()->store(*_first_block);
         return b->address();
       }
       return Address(*(Address*)(_first_block->data().mutable_contents() + offset));
@@ -841,8 +842,17 @@ namespace infinit
         _first_block->data().size(new_size);
       }
       else
-      { // FIXME: addr should be a Address::Value
+      {
         Header header = _header();
+        if (header.total_size <= new_size)
+        {
+          header.total_size = new_size;
+          _header(header);
+          _owner.block_store()->store(*_first_block);
+          return;
+        }
+        // FIXME: addr should be a Address::Value
+
         uint32_t block_size = header.block_size;
         Address::Value zero;
         memset(&zero, 0, sizeof(Address::Value));
@@ -1098,14 +1108,20 @@ namespace infinit
         if (block->data().size() < block_offset + size)
         { // sparse file, eof shrinkage of size was handled above
           long available = block->data().size() - block_offset;
+          if (available < 0)
+            available = 0;
           ELLE_DEBUG("no data for %s out of %s bytes", size - available, size);
-          memcpy(buffer.mutable_contents(),
-                 block->data().contents() + block_offset,
-                 available);
+          if (available)
+            memcpy(buffer.mutable_contents(),
+                   block->data().contents() + block_offset,
+                   available);
           memset(buffer.mutable_contents() + available, 0, size - available);
         }
-        memcpy(buffer.mutable_contents(), &block->data()[block_offset], size);
-        ELLE_DEBUG("read %s bytes", size);
+        else
+        {
+          memcpy(buffer.mutable_contents(), &block->data()[block_offset], size);
+          ELLE_DEBUG("read %s bytes", size);
+        }
         return size;
       }
       else
@@ -1174,6 +1190,7 @@ namespace infinit
             File::CacheEntry{_owner._owner.block_store()->fetch(*addr), true}));
           block = it_insert.first->second.block.get();
           it_insert.first->second.last_use = std::chrono::system_clock::now();
+          it_insert.first->second.dirty = true;
           _owner.check_cache();
         }
         off_t block_offset = offset % block_size;
