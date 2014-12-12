@@ -204,7 +204,7 @@ namespace infinit
       void link(boost::filesystem::path const& where) override;
       void chmod(mode_t mode) override THROW_NOSYS;
       void chown(int uid, int gid) override THROW_NOSYS;
-      void statfs(struct statvfs *) override THROW_NOSYS;
+      void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]);
       void truncate(off_t new_size) override;
       std::unique_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
@@ -605,6 +605,16 @@ namespace infinit
     {
     }
 
+    void
+    File::statfs(struct statvfs * st)
+    {
+      memset(st, 0, sizeof(struct statvfs));
+      st->f_bsize = 32768;
+      st->f_frsize = 32768;
+      st->f_blocks = 1000000;
+      st->f_bavail = 1000000;
+      st->f_fsid = 1;
+    }
     bool
     File::_multi()
     {
