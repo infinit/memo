@@ -924,22 +924,16 @@ namespace infinit
         data.size = _first_block->data().size();
       else
       {
-        int64_t sz = 0;
         for (auto& b: _blocks)
         { // FIXME: incremental size compute
           ELLE_DEBUG("Checking data block %s :%x, size %s",
             b.first, b.second.block->address(), b.second.block->data().size());
-          sz += b.second.block->data().size();
           if (b.second.dirty)
           {
             b.second.dirty = false;
             _owner.block_store()->store(*b.second.block);
           }
         }
-        data.size = sz;
-        Header header = _header();
-        header.total_size = sz;
-        _header(header);
       }
       ELLE_DEBUG("Storing first block %x, size %s",
                  _first_block->address(), _first_block->data().size());
@@ -953,6 +947,7 @@ namespace infinit
       // Switch without changing our address
       _parent->_files.at(_name).store_mode = FileStoreMode::index;
       _parent->_changed();
+      uint64_t current_size = _first_block->data().size();
       std::unique_ptr<Block> new_block = _owner.block_store()->make_block();
       new_block->data() = std::move(_first_block->data());
       _blocks.insert(std::make_pair(0, CacheEntry{std::move(new_block), true}));
@@ -967,7 +962,7 @@ namespace infinit
       */
       _first_block->data().size(sizeof(Address)* 2);
       // store block size in headers
-      Header h { default_block_size, 1, 0};
+      Header h { default_block_size, 1, current_size};
       _header(h);
 
       memcpy(_first_block->data().mutable_contents() + sizeof(Address),
@@ -975,7 +970,13 @@ namespace infinit
       // we know the operation that triggered us is going to expand data
       // beyond first block, so it is safe to resize here
       if (alloc_first_block)
-        _blocks.at(0).block->data().size(default_block_size);
+      {
+        auto& b = _blocks.at(0);
+        int64_t old_size = b.block->data().size();
+        b.block->data().size(default_block_size);
+        if (old_size != default_block_size)
+          memset(b.block->data().mutable_contents() + old_size, 0, default_block_size - old_size);
+      }
       _changed();
     }
 
@@ -1093,8 +1094,16 @@ namespace infinit
           _owner.check_cache();
         }
         ELLE_ASSERT_LTE(block_offset + size, block_size);
+
         if (block->data().size() < block_offset + size)
-          size = block->data().size() - block_offset;
+        { // sparse file, eof shrinkage of size was handled above
+          long available = block->data().size() - block_offset;
+          ELLE_DEBUG("no data for %s out of %s bytes", size - available, size);
+          memcpy(buffer.mutable_contents(),
+                 block->data().contents() + block_offset,
+                 available);
+          memset(buffer.mutable_contents() + available, 0, size - available);
+        }
         memcpy(buffer.mutable_contents(), &block->data()[block_offset], size);
         ELLE_DEBUG("read %s bytes", size);
         return size;
@@ -1131,7 +1140,12 @@ namespace infinit
       {
         auto& block = _owner._first_block;
         if (offset + size > block->data().size())
+        {
+          int64_t old_size = block->data().size();
           block->data().size(offset + size);
+          if (old_size < offset)
+            memset(block->data().mutable_contents() + old_size, 0, offset - old_size);
+        }
         memcpy(block->data().mutable_contents() + offset, buffer.mutable_contents(), size);
         // Update but do not commit yet, so that read on same fd do not fail.
         _owner._parent->_files.at(_owner._name).size += size;
@@ -1163,12 +1177,27 @@ namespace infinit
           _owner.check_cache();
         }
         off_t block_offset = offset % block_size;
+        bool growth = false;
         if (block->data().size() < block_offset + size)
+        {
+          growth = true;
+          int64_t old_size = block->data().size();
           block->data().size(block_offset + size);
+          if (old_size < block_offset)
+          { // fill with zeroes
+            memset(block->data().mutable_contents() + old_size, 0, block_offset - old_size);
+          }
+        }
         memcpy(&block->data()[block_offset], buffer.mutable_contents(), size);
-        File::Header h = _owner._header();
-        h.total_size += size;
-        _owner._header(h);
+        if (growth)
+        { // check if file size was increased
+          File::Header h = _owner._header();
+          if (h.total_size < offset + size)
+          {
+            h.total_size = offset + size;
+            _owner._header(h);
+          }
+        }
         return size;
       }
       // write across blocks
