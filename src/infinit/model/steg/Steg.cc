@@ -59,6 +59,15 @@ Steg::_pick() const
 std::unique_ptr<blocks::Block>
 Steg::_make_block() const
 {
+  if (!_root)
+  {
+    _root = _pick();
+    _root_data = elle::make_unique<blocks::Block>(*_root);
+    Address user_root = _pick();
+    _root_data->data().append(user_root.value(), sizeof(Address));
+    const_cast<Steg*>(this)->__store(*_root_data);
+    return elle::make_unique<blocks::Block>(*_root);
+  }
   Address address = _pick();
   auto res = elle::make_unique<blocks::Block>(address);
   return res;
@@ -66,6 +75,19 @@ Steg::_make_block() const
 
 void
 Steg::_store(blocks::Block& block)
+{
+  if (block.address() == *_root)
+  {
+    Address redirect(_root_data->data().contents());
+    blocks::Block b(redirect, elle::Buffer(block.data().contents(), block.data().size()));
+    __store(b);
+  }
+  else
+    __store(block);
+}
+
+void
+Steg::__store(blocks::Block& block)
 {
   if (block.data().size() == 0)
     return;
@@ -92,15 +114,43 @@ Steg::_store(blocks::Block& block)
   bfs::rename(tmpImage, it->second);
   ELLE_DEBUG("%s -> %s", tmpImage, it->second);
   ELLE_DEBUG("post: %s", bfs::file_size(it->second));
-  //bfs::remove(tmpData);
+  bfs::remove(tmpData);
 }
 
 std::unique_ptr<blocks::Block>
 Steg::_fetch(Address address) const
 {
+  if (!_root)
+  {
+    _root = address;
+    _root_data = __fetch(address);
+    Address redirect(_root_data->data().contents());
+    return __fetch(redirect);
+  }
+  if (_root == address)
+  {
+    Address redirect(_root_data->data().contents());
+    return __fetch(redirect);
+  }
+  return __fetch(address);
+}
+
+std::unique_ptr<blocks::Block>
+Steg::__fetch(Address address) const
+{
+
   auto it = _cache.find(address);
   if (it == _cache.end())
     throw MissingBlock(address);
+  {
+    auto itfree = std::find(_free_blocks.begin(), _free_blocks.end(), it->second);
+    // Check if we mistakenly believe the bloc is free
+    if (itfree != _free_blocks.end())
+    {
+      _free_blocks[itfree - _free_blocks.begin()] = _free_blocks[_free_blocks.size() - 1];
+      _free_blocks.pop_back();
+    }
+  }
   auto tmpData = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   //outguess -k secret -r out.jpg recover.txt
   std::vector<std::string> args = {
