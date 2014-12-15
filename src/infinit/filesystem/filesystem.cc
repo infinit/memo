@@ -11,6 +11,8 @@
 #include <reactor/filesystem.hh>
 #include <reactor/scheduler.hh>
 
+#include <cryptography/hash.hh>
+
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/Block.hh>
 
@@ -249,6 +251,11 @@ namespace infinit
 
     static Address to_address(std::string const& str)
     {
+      if (str.length() != 64)
+      {
+        auto hash = cryptography::hash::sha256(str);
+        return Address(hash.contents());
+      }
       Address::Value v;
       char c[3] = {0,0,0};
       if (str.length() != 64)
@@ -287,14 +294,19 @@ namespace infinit
     std::unique_ptr<rfs::Path>
     FileSystem::path(std::string const& path)
     {
+      // Called on / only
       std::unique_ptr<Block> block;
-      if (_root_address.empty())
+      try
       {
-        block = block_store()->make_block();
-        ELLE_LOG("New root address: %x", block->address());
-      }
-      else
         block = block_store()->fetch(to_address(_root_address));
+      }
+      catch(infinit::model::MissingBlock const& mb)
+      {}
+      if (!block)
+      {
+        ELLE_TRACE("root block not present, creating...");
+        block = elle::make_unique<Block>(to_address(_root_address));
+      }
       Directory* res = new Directory(nullptr, *this, "", std::move(block));
       res->_changed();
       return std::unique_ptr<rfs::Path>(res);

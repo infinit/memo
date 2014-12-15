@@ -22,7 +22,15 @@ namespace infinit
     elle::Buffer
     S3::_get(Key key) const
     {
-      return _storage->get_object(elle::sprintf("%x", key));
+      try
+      {
+        return _storage->get_object(elle::sprintf("%x", key));
+      }
+      catch(aws::AWSException const& e)
+      {
+        ELLE_TRACE("aws exception: %s", e);
+        throw MissingKey(key);
+      }
     }
     void
     S3::_set(Key key, elle::Buffer value, bool insert, bool update)
