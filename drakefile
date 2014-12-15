@@ -105,8 +105,6 @@ def configure(
       cxx_config_tests)
 
     rule_tests << test
-    if test_name == 'filesystem':
-      continue
     if valgrind_tests:
       runner = drake.valgrind.ValgrindRunner(
         exe = test, valgrind = valgrind)
@@ -115,7 +113,7 @@ def configure(
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 
-  for bin_name in ['s3fs']:
+  for bin_name in ['s3fs', 'filesystem']:
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name,
       [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib],
