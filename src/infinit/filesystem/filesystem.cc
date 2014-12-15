@@ -737,7 +737,10 @@ namespace infinit
       _owner.block_store()->store(*_first_block);
       // also flush new data block
       if (!multi)
+      {
         _owner.block_store()->store(*_blocks.at(0).block);
+        _blocks.clear();
+      }
     }
 
     void
@@ -814,11 +817,13 @@ namespace infinit
         _first_block = _owner.block_store()->fetch(_first_block->address());
         Header header = _header();
         st->st_size = header.total_size;
+        st->st_nlink = header.links;
         ELLE_DEBUG("stat on multi: %s", header.total_size);
       }
       else
       {
         st->st_size = _parent->_files.at(_name).size;
+        st->st_nlink = 1;
         ELLE_DEBUG("stat on single: %s", st->st_size);
       }
     }
@@ -952,6 +957,7 @@ namespace infinit
             b.first, b.second.block->address(), b.second.block->data().size());
           if (b.second.dirty)
           {
+            ELLE_DEBUG("Writing data block %s", b.first);
             b.second.dirty = false;
             _owner.block_store()->store(*b.second.block);
           }
@@ -1042,7 +1048,7 @@ namespace infinit
     void
     FileHandle::close()
     {
-      ELLE_DEBUG("Closing with dirty=%s", _dirty);
+      ELLE_DEBUG("Closing %s with dirty=%s", _owner._name, _dirty);
       if (_dirty)
         _owner._changed();
       _dirty = false;
@@ -1096,6 +1102,7 @@ namespace infinit
         Block* block = nullptr;
         if (it != _owner._blocks.end())
         {
+          ELLE_DEBUG("obtained block %s : %x from cache", start_block, it->second.block->address());
           block = it->second.block.get();
           it->second.last_use = std::chrono::system_clock::now();
         }
@@ -1113,6 +1120,7 @@ namespace infinit
             File::CacheEntry{_owner._owner.block_store()->fetch(*addr), false}));
           block = inserted.first->second.block.get();
           inserted.first->second.last_use = std::chrono::system_clock::now();
+          ELLE_DEBUG("fetched block %x of size %s", block->address(), block->data().size());
           _owner.check_cache();
         }
         ELLE_ASSERT_LTE(block_offset + size, block_size);
@@ -1212,6 +1220,7 @@ namespace infinit
           growth = true;
           int64_t old_size = block->data().size();
           block->data().size(block_offset + size);
+          ELLE_DEBUG("Growing block of %s", block_offset + size - old_size);
           if (old_size < block_offset)
           { // fill with zeroes
             memset(block->data().mutable_contents() + old_size, 0, block_offset - old_size);
