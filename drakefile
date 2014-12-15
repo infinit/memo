@@ -17,6 +17,8 @@ def configure(
                        cxx_config = cxx_config)
   elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
                         strip_prefix = True)
+  aws_lib = drake.copy(elle.aws.library, 'lib',
+                        strip_prefix = True)
   reactor_lib = drake.copy(elle.reactor.lib_dynamic, 'lib',
                         strip_prefix = True)
   cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
@@ -63,6 +65,8 @@ def configure(
     'src/infinit/storage/MissingKey.hh',
     'src/infinit/storage/Storage.cc',
     'src/infinit/storage/Storage.hh',
+    'src/infinit/storage/S3.cc',
+    'src/infinit/storage/S3.hh',
     'src/infinit/storage/fwd.hh',
     'src/infinit/filesystem/filesystem.hh',
     'src/infinit/filesystem/filesystem.cc',
@@ -80,6 +84,7 @@ def configure(
 
   rule_tests = drake.Rule('tests')
   rule_check = drake.Rule('check')
+  rule_bins  = drake.Rule('bin')
 
   cxx_config_tests = drake.cxx.Config(cxx_config)
   cxx_config_tests += elle.boost.config_test(link = False)
@@ -95,7 +100,7 @@ def configure(
   for test_name in ['faith', 'storage', 'filesystem']:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
-      [drake.node('tests/%s.cc' % test_name), infinit_lib, elle_lib, reactor_lib],
+      [drake.node('tests/%s.cc' % test_name), infinit_lib, elle_lib, aws_lib, reactor_lib],
       cxx_toolkit,
       cxx_config_tests)
 
@@ -109,3 +114,11 @@ def configure(
       runner = drake.Runner(exe = test)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
+
+  for bin_name in ['s3fs']:
+    bin = drake.cxx.Executable(
+      'bin/%s' % bin_name,
+      [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib],
+      cxx_toolkit,
+      cxx_config_tests)
+    rule_bins << bin

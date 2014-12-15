@@ -667,7 +667,7 @@ namespace infinit
         *changeOrAbort = false;
       int offset = (index+1) * sizeof(Address);
       int sz = _first_block->data().size();
-      if (sz < offset + sizeof(Address))
+      if (sz < offset + signed(sizeof(Address)))
       {
         if (!create)
         {
@@ -844,7 +844,7 @@ namespace infinit
       else
       {
         Header header = _header();
-        if (header.total_size <= new_size)
+        if (header.total_size <= unsigned(new_size))
         {
           header.total_size = new_size;
           _header(header);
