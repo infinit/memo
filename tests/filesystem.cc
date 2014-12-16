@@ -65,6 +65,12 @@ static std::string read(boost::filesystem::path const& where)
   return text;
 }
 
+static void write(boost::filesystem::path const& where, std::string const& what)
+{
+  boost::filesystem::ofstream ofs(where);
+  ofs << what;
+}
+
 void test_basic()
 {
   namespace bfs = boost::filesystem;
@@ -143,6 +149,82 @@ void test_basic()
   BOOST_CHECK_EQUAL(text, "TestcoinBcoinA");
   text = read(mount / "test2");
   BOOST_CHECK_EQUAL(text, "TestcoinBcoinA");
+  bfs::remove(mount / "test");
+  bfs::remove(mount / "test2");
+  //holes
+  int fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
+  if (fd < 0)
+    perror("open");
+  write(fd, "foo", 3);
+  lseek(fd, 10, SEEK_CUR);
+  write(fd, "foo", 3);
+  close(fd);
+  {
+    bfs::ifstream ifs(mount / "test");
+    char buffer[20];
+    ifs.read(buffer, 20);
+    BOOST_CHECK_EQUAL(ifs.gcount(), 16);
+    char expect[] = {'f','o','o',0,0,0,0,0,0,0,0,0,0,'f','o','o'};
+    BOOST_CHECK_EQUAL(std::string(buffer, buffer + 16), std::string(expect, expect + 16));
+  }
+  bfs::remove(mount / "test");
+  // use after unlink
+  fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
+  if (fd < 0)
+    perror("open");
+  write(fd, "foo", 3);
+  bfs::remove(mount / "test");
+  int res = write(fd, "foo", 3);
+  BOOST_CHECK_EQUAL(res, 3);
+  lseek(fd, 0, SEEK_SET);
+  char buf[7] = {0};
+  res = read(fd, buf, 6);
+  BOOST_CHECK_EQUAL(res, 6);
+  BOOST_CHECK_EQUAL(buf, "foofoo");
+  close(fd);
+  BOOST_CHECK_EQUAL(directory_count(mount), 0);
+
+  //rename
+  {
+    boost::filesystem::ofstream ofs(mount / "test");
+    ofs << "Test";
+  }
+  bfs::rename(mount / "test", mount / "test2");
+  BOOST_CHECK_EQUAL(read(mount / "test2"), "Test");
+  write(mount / "test3", "foo");
+  bfs::rename(mount / "test2", mount / "test3");
+  BOOST_CHECK_EQUAL(read(mount / "test3"), "Test");
+  BOOST_CHECK_EQUAL(directory_count(mount), 1);
+  bfs::create_directory(mount / "dir");
+  write(mount / "dir" / "foo", "bar");
+  bfs::rename(mount / "test3", mount / "dir", erc);
+  BOOST_CHECK_EQUAL(!!erc, true);
+  bfs::rename(mount / "dir", mount / "dir2");
+  bfs::remove(mount / "dir2", erc);
+  BOOST_CHECK_EQUAL(!!erc, true);
+  bfs::rename(mount / "dir2" / "foo", mount / "foo");
+  bfs::remove(mount / "dir2");
+  bfs::remove(mount / "foo");
+
+  // cross-block
+  fd = open((mount / "foo").string().c_str(), O_RDWR|O_CREAT, 0644);
+  BOOST_CHECK_GE(fd, 0);
+  lseek(fd, 1024*1024 - 10, SEEK_SET);
+  const char* data = "abcdefghijklmnopqrstuvwxyz";
+  res = write(fd, data, strlen(data));
+  BOOST_CHECK_EQUAL(res, strlen(data));
+  close(fd);
+  stat((mount / "foo").string().c_str(), &st);
+  BOOST_CHECK_EQUAL(st.st_size, 1024*1024 - 10 + 26);
+  char output[36];
+  fd = open((mount / "foo").string().c_str(), O_RDONLY);
+  BOOST_CHECK_GE(fd, 0);
+  lseek(fd, 1024*1024 - 15, SEEK_SET);
+  res = read(fd, output, 36);
+  BOOST_CHECK_EQUAL(31, res);
+  BOOST_CHECK_EQUAL(std::string(output, output+31),
+                    std::string(5, 0) + data);
+  close(fd);
 }
 
 

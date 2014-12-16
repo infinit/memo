@@ -1078,8 +1078,12 @@ namespace infinit
         ELLE_DEBUG("read past end");
         return 0;
       }
-      if (signed(offset + size) >= total_size)
+      if (signed(offset + size) > total_size)
+      {
+        ELLE_DEBUG("read past end, reducing size from %s to %s", size,
+                   total_size - offset);
         size = total_size - offset;
+      }
       if (!_owner._multi())
       { // single block case
         auto& block = _owner._first_block;
@@ -1130,7 +1134,8 @@ namespace infinit
           long available = block->data().size() - block_offset;
           if (available < 0)
             available = 0;
-          ELLE_DEBUG("no data for %s out of %s bytes", size - available, size);
+          ELLE_DEBUG("no data for %s out of %s bytes",
+                     size - available, size);
           if (available)
             memcpy(buffer.mutable_contents(),
                    block->data().contents() + block_offset,
@@ -1233,6 +1238,7 @@ namespace infinit
           if (h.total_size < offset + size)
           {
             h.total_size = offset + size;
+            ELLE_DEBUG("New file size: %s", h.total_size);
             _owner._header(h);
           }
         }
@@ -1251,9 +1257,6 @@ namespace infinit
                     second_size, second_offset);
       if (r2 < 0)
         return r2;
-      File::Header h = _owner._header();
-      h.total_size += r1+r2;
-      _owner._header(h);
       // Assuming linear writes, this is a good time to flush start block since
       // it just got filled
       File::CacheEntry& ent = _owner._blocks.at(start_block);
