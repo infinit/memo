@@ -2,6 +2,9 @@ import drake
 import drake.cxx
 import drake.valgrind
 
+with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
+  exec(f.read(), globals(), globals())
+
 def configure(
     cxx_toolkit = None,
     cxx_config = drake.cxx.Config(),
@@ -78,16 +81,25 @@ def configure(
     'src/infinit/storage/fwd.hh',
     'src/infinit/filesystem/filesystem.hh',
     'src/infinit/filesystem/filesystem.cc',
-    'src/infinit/model/steg/Steg.hh',
-    'src/infinit/model/steg/Steg.cc',
   )
+  outguess_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/outguess.a')
+  jpeg_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/jpeg-6b-steg/libjpeg.a')
+
+  outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
+  outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
+
   infinit_lib = drake.cxx.DynLib(
     'lib/infinit',
-    infinit_sources + [elle_lib, cryptography_lib],
+    infinit_sources + [elle_lib, cryptography_lib, aws_lib],
     cxx_toolkit,
     cxx_config_infinit)
   rule_build << infinit_lib
 
+
+  #GNUBuilder(cxx_toolkit,
+  #  configure = outguess_configure,
+  #  targets = [outguess_lib],
+  #  makefile = outguess_makefile)
   ## ----- ##
   ## Tests ##
   ## ----- ##
@@ -130,3 +142,13 @@ def configure(
       cxx_toolkit,
       cxx_config_tests)
     rule_bins << bin
+  steg = drake.cxx.Executable(
+    'bin/steg',
+    drake.nodes('src/infinit/model/steg/Steg.hh',
+    'src/infinit/model/steg/Steg.cc',
+    'bin/steg.cc'
+    ) + [outguess_lib, jpeg_lib, infinit_lib, elle_lib, reactor_lib, cryptography_lib],
+    cxx_toolkit,
+    cxx_config_tests
+    )
+  rule_bins << steg
