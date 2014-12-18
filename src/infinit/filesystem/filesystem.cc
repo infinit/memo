@@ -296,16 +296,25 @@ namespace infinit
     {
       // Called on / only
       std::unique_ptr<Block> block;
-      try
+      if (_root_address.length() == 0)
       {
-        block = block_store()->fetch(to_address(_root_address));
+        block = block_store()->make_block();
+        ELLE_LOG("root address: %x", block->address());
       }
-      catch(infinit::model::MissingBlock const& mb)
-      {}
-      if (!block)
+      else
       {
-        ELLE_TRACE("root block not present, creating...");
-        block = elle::make_unique<Block>(to_address(_root_address));
+        try
+        {
+          block = block_store()->fetch(to_address(_root_address));
+        }
+        catch(infinit::model::MissingBlock const& mb)
+        {}
+        if (!block)
+        {
+          ELLE_TRACE("root block not present, creating on %x...",
+            to_address(_root_address));
+          block = elle::make_unique<Block>(to_address(_root_address));
+        }
       }
       Directory* res = new Directory(nullptr, *this, "", std::move(block));
       res->_changed();
