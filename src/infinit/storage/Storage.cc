@@ -18,12 +18,12 @@ namespace infinit
     }
 
     void
-    Storage::set(Key key, elle::Buffer value, bool insert, bool update)
+    Storage::set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_ASSERT(insert || update);
       ELLE_TRACE_SCOPE("%s: %s at %x", *this,
                        insert ? update ? "upsert" : "insert" : "update", key);
-      return this->_set(key, std::move(value), insert, update);
+      return this->_set(key, value, insert, update);
     }
 
     void

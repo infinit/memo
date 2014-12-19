@@ -44,7 +44,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         auto& data = block.data();
         this->_storage.set(block.address(),
-                           elle::Buffer(data.contents(), data.size()),
+                           data,
                            true, true);
       }
 

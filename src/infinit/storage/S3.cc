@@ -33,7 +33,7 @@ namespace infinit
       }
     }
     void
-    S3::_set(Key key, elle::Buffer value, bool insert, bool update)
+    S3::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       _storage->put_object(value, elle::sprintf("%x", key));
     }

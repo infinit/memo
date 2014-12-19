@@ -22,7 +22,7 @@ namespace infinit
     }
 
     void
-    Memory::_set(Key key, elle::Buffer value, bool insert, bool update)
+    Memory::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       if (insert)
       {
@@ -30,7 +30,7 @@ namespace infinit
           this->_blocks.insert(std::make_pair(key, elle::Buffer()));
         if (!insertion.second && !update)
           throw Collision(key);
-        insertion.first->second = std::move(value);
+        insertion.first->second = elle::Buffer(value.contents(), value.size());
         if (insert && update && insertion.second)
           ELLE_DEBUG("%s: block inserted", *this);
         else if (insert && update && insertion.second)
@@ -42,7 +42,7 @@ namespace infinit
         if (search == this->_blocks.end())
           throw MissingKey(key);
         else
-          search->second = std::move(value);
+          search->second = elle::Buffer(value.contents(), value.size());
       }
     }
 

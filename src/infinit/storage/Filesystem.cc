@@ -36,7 +36,7 @@ namespace infinit
     }
 
     void
-    Filesystem::_set(Key key, elle::Buffer value, bool insert, bool update)
+    Filesystem::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       auto path = this->_path(key);
       bool exists = boost::filesystem::exists(path);

@@ -21,7 +21,7 @@ namespace infinit
       _get(Key k) const override;
       virtual
       void
-      _set(Key k, elle::Buffer value, bool insert, bool update) override;
+      _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
       void
       _erase(Key k);
