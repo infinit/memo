@@ -65,6 +65,8 @@ def configure(
     'src/infinit/storage/Mirror.hh',
     'src/infinit/storage/MissingKey.cc',
     'src/infinit/storage/MissingKey.hh',
+    'src/infinit/storage/sftp.cc',
+    'src/infinit/storage/sftp.hh',
     'src/infinit/storage/Storage.cc',
     'src/infinit/storage/Storage.hh',
     'src/infinit/storage/Strip.cc',
@@ -117,7 +119,7 @@ def configure(
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 
-  for bin_name in ['s3fs', 'filesystem']:
+  for bin_name in ['s3fs', 'filesystem', 'sshfs']:
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name,
       [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib],
