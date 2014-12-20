@@ -1,5 +1,5 @@
-#ifndef INFINIT_STORAGE_MIRROR_HH
-#define INFINIT_STORAGE_MIRROR_HH
+#ifndef INFINIT_STORAGE_SFTP_HH
+#define INFINIT_STORAGE_SFTP_HH
 
 #include <infinit/storage/Storage.hh>
 namespace infinit
