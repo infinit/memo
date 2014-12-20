@@ -56,6 +56,8 @@ def configure(
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/storage/Collision.cc',
     'src/infinit/storage/Collision.hh',
+    'src/infinit/storage/Crypt.cc',
+    'src/infinit/storage/Crypt.hh',
     'src/infinit/storage/Filesystem.cc',
     'src/infinit/storage/Filesystem.hh',
     'src/infinit/storage/Key.hh',
@@ -122,7 +124,7 @@ def configure(
   for bin_name in ['s3fs', 'filesystem', 'sshfs']:
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name,
-      [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib],
+      [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib, cryptography_lib],
       cxx_toolkit,
       cxx_config_tests)
     rule_bins << bin

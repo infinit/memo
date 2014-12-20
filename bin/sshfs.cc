@@ -1,5 +1,6 @@
 
 #include <infinit/storage/sftp.hh>
+#include <infinit/storage/Crypt.hh>
 #include <reactor/filesystem.hh>
 #include <reactor/thread.hh>
 #include <reactor/scheduler.hh>
@@ -18,14 +19,17 @@ static void sig_int()
 
 void main_scheduled(int argc, char** argv)
 {
-  if (argc != 5)
+  if (argc != 5 && argc != 6)
   {
-    std::cerr << "Usage: " << argv[0] <<" host host_path mount_point root" << std::endl;
+    std::cerr << "Usage: " << argv[0] <<" host host_path mount_point root [cryptkey]" << std::endl;
     exit(1);
   }
   
   infinit::storage::SFTP* sftp = new infinit::storage::SFTP(argv[1], argv[2]);
-  auto faith = elle::make_unique<infinit::model::faith::Faith>(*sftp);
+  infinit::storage::Storage* filter = nullptr;
+  if (argc > 5)
+    filter = new infinit::storage::Crypt(*sftp, argv[5], true);
+  auto faith = elle::make_unique<infinit::model::faith::Faith>(filter?*filter:*sftp);
   auto fsops = elle::make_unique<infinit::filesystem::FileSystem>(argv[4], std::move(faith));
   auto fsopsPtr = fsops.get();
   fs = new reactor::filesystem::FileSystem(std::move(fsops), true);
