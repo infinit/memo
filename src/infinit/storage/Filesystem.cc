@@ -5,6 +5,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 
+#include <elle/factory.hh>
 #include <elle/log.hh>
 
 #include <infinit/storage/Collision.hh>
@@ -70,5 +71,12 @@ namespace infinit
     {
       return this->root() / elle::sprintf("%x", key);
     }
+
+    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
+    {
+      return elle::make_unique<infinit::storage::Filesystem>(args[0]);
+    }
   }
 }
+
+FACTORY_REGISTER(infinit::storage::Storage, "filesystem", &infinit::storage::make);

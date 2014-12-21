@@ -1,6 +1,7 @@
 #include <infinit/storage/Storage.hh>
 
 #include <elle/log.hh>
+#include <elle/factory.hh>
 
 #include <infinit/storage/Key.hh>
 

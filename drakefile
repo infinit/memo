@@ -135,7 +135,7 @@ def configure(
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 
-  for bin_name in ['s3fs', 'filesystem', 'sshfs']:
+  for bin_name in ['s3fs', 'filesystem', 'sshfs', 'infinitfs']:
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name,
       [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib, cryptography_lib],

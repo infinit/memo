@@ -6,6 +6,7 @@
 #include <infinit/model/Address.hh>
 
 #include <elle/log.hh>
+#include <elle/factory.hh>
 
 enum PacketType {
   SSH_FXP_INIT          =      1 ,
@@ -55,6 +56,12 @@ enum PacketType {
 #define SSH_FX_OP_UNSUPPORTED                8
 
 ELLE_LOG_COMPONENT("infinit.fs.sftp");
+static std::unique_ptr<infinit::storage::Storage> make(std::vector<std::string> const& args)
+{
+  return elle::make_unique<infinit::storage::SFTP>(args[0], args[1]);
+}
+
+FACTORY_REGISTER(infinit::storage::Storage, "sftp", &make);
 namespace infinit
 {
   namespace storage

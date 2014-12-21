@@ -1,5 +1,6 @@
 #include <infinit/storage/Memory.hh>
 
+#include <elle/factory.hh>
 #include <elle/log.hh>
 
 #include <infinit/storage/Collision.hh>
@@ -52,5 +53,11 @@ namespace infinit
       if (this->_blocks.erase(key) == 0)
         throw MissingKey(key);
     }
+    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
+    {
+      return elle::make_unique<infinit::storage::Memory>();
+    }
   }
 }
+
+FACTORY_REGISTER(infinit::storage::Storage, "memory", &infinit::storage::make);

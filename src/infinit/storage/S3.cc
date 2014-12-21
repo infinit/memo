@@ -1,6 +1,11 @@
+#include <fstream>
+
 #include <infinit/storage/S3.hh>
 
+#include <elle/factory.hh>
 #include <elle/log.hh>
+#include <elle/serialization/json/SerializerIn.hh>
+#include <aws/S3.hh>
 
 
 #include <infinit/model/Address.hh>
@@ -42,5 +47,16 @@ namespace infinit
     {
       _storage->delete_object(elle::sprintf("%x", key));
     }
+    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
+    {
+      std::ifstream is(args[0]);
+      elle::serialization::json::SerializerIn input(is);
+      aws::Credentials creds(input);
+      creds.skew(boost::posix_time::time_duration());
+      auto s3 = elle::make_unique<aws::S3>(creds);
+      return elle::make_unique<infinit::storage::S3>(std::move(s3));
+    }
   }
 }
+
+FACTORY_REGISTER(infinit::storage::Storage, "s3", &infinit::storage::make);
