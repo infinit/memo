@@ -101,6 +101,7 @@ namespace infinit
       {}
       void rename(boost::filesystem::path const& where);
       void utimens(const struct timespec tv[2]);
+      void chmod(mode_t mode);
       void stat(struct stat* st);
       void _remove_from_cache();
       boost::filesystem::path full_path();
@@ -152,7 +153,7 @@ namespace infinit
       boost::filesystem::path readlink() override  THROW_ISDIR;
       void symlink(boost::filesystem::path const& where) override THROW_EXIST;
       void link(boost::filesystem::path const& where) override THROW_EXIST;
-      void chmod(mode_t mode) override THROW_NOSYS;
+      void chmod(mode_t mode) override;
       void chown(int uid, int gid) override THROW_NOSYS;
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]) override;
@@ -204,7 +205,7 @@ namespace infinit
       boost::filesystem::path readlink() override  THROW_NOENT;
       void symlink(boost::filesystem::path const& where) override THROW_EXIST;
       void link(boost::filesystem::path const& where) override;
-      void chmod(mode_t mode) override THROW_NOSYS;
+      void chmod(mode_t mode) override;
       void chown(int uid, int gid) override THROW_NOSYS;
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]);
@@ -554,6 +555,27 @@ namespace infinit
     }
 
     void
+    Directory::chmod(mode_t mode)
+    {
+      Node::chmod(mode);
+    }
+
+    void
+    File::chmod(mode_t mode)
+    {
+      Node::chmod(mode);
+    }
+
+    void
+    Node::chmod(mode_t mode)
+    {
+      if (!_parent)
+        return;
+      auto & f = _parent->_files.at(_name);
+      f.mode = (f.mode & ~07777) | (mode & 07777);
+      _parent->_changed();
+    }
+    void
     Node::stat(struct stat* st)
     {
 
@@ -852,6 +874,8 @@ namespace infinit
     void
     Node::utimens(const struct timespec tv[2])
     {
+      if (!_parent)
+        return;
       auto & f = _parent->_files.at(_name);
       f.atime = tv[0].tv_sec;
       f.mtime = tv[1].tv_sec;
