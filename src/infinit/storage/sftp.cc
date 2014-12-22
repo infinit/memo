@@ -295,26 +295,32 @@ namespace infinit
       ELLE_ASSERT_EQ(id, _req);
       elle::ConstWeakBuffer ch = p.readString();
       std::string handle = ch.string();
-      p.make(SSH_FXP_READ, ++_req, handle, 0, 0, 1000000000);
-      p.writeTo(_out);
-      p.readFrom(_in);
-      try
+      elle::Buffer res;
+      while (true)
       {
-        p.expectType(SSH_FXP_DATA); // id data
-      }
-      catch(PacketError const& e)
-      { // read on a 0-byte file causes an error
-        p.make(SSH_FXP_CLOSE, ++_req, handle);
+        p.make(SSH_FXP_READ, ++_req, handle, 0, res.size(), 1000000000);
         p.writeTo(_out);
         p.readFrom(_in);
-        if (e.erc() == SSH_FX_EOF)
-          return elle::Buffer(); // empty data, not an error
-        else
-          throw e;
+        try
+        {
+          p.expectType(SSH_FXP_DATA); // id data
+        }
+        catch(PacketError const& e)
+        { // read on a 0-byte file causes an error
+          p.make(SSH_FXP_CLOSE, ++_req, handle);
+          p.writeTo(_out);
+          p.readFrom(_in);
+          if (e.erc() == SSH_FX_EOF)
+            return res; // empty data, not an error
+          else
+            throw e;
+        }
+        p.readInt();
+        elle::ConstWeakBuffer buf = p.readString();
+        if (buf.size() == 0)
+          break;
+        res.append(buf.contents(), buf.size());
       }
-      p.readInt();
-      elle::ConstWeakBuffer buf = p.readString();
-      elle::Buffer res(buf.contents(), buf.size());
       // close
       ELLE_TRACE("Closing");
       p.make(SSH_FXP_CLOSE, ++_req, handle);
