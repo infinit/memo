@@ -40,6 +40,8 @@ namespace infinit
       std::string name;
       uint64_t size;
       uint32_t mode;
+      uint32_t uid;
+      uint32_t gid;
       uint64_t atime;
       uint64_t mtime;
       Address address;
@@ -75,6 +77,14 @@ namespace infinit
         int sm = (int)store_mode;
         s.serialize("store_mode", sm);
         store_mode = (FileStoreMode)sm;
+        try {
+          s.serialize("uid", uid);
+          s.serialize("gid", gid);
+        }
+        catch(elle::serialization::Error const& e)
+        {
+          ELLE_WARN("serialization error %s, assuming old format", e);
+        }
       }
     };
     struct CacheStats
@@ -102,6 +112,7 @@ namespace infinit
       void rename(boost::filesystem::path const& where);
       void utimens(const struct timespec tv[2]);
       void chmod(mode_t mode);
+      void chown(int uid, int gid);
       void stat(struct stat* st);
       void _remove_from_cache();
       boost::filesystem::path full_path();
@@ -154,7 +165,7 @@ namespace infinit
       void symlink(boost::filesystem::path const& where) override THROW_EXIST;
       void link(boost::filesystem::path const& where) override THROW_EXIST;
       void chmod(mode_t mode) override;
-      void chown(int uid, int gid) override THROW_NOSYS;
+      void chown(int uid, int gid) override;
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]) override;
       void truncate(off_t new_size) override THROW_ISDIR;
@@ -206,7 +217,7 @@ namespace infinit
       void symlink(boost::filesystem::path const& where) override THROW_EXIST;
       void link(boost::filesystem::path const& where) override;
       void chmod(mode_t mode) override;
-      void chown(int uid, int gid) override THROW_NOSYS;
+      void chown(int uid, int gid) override;
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]);
       void truncate(off_t new_size) override;
@@ -573,6 +584,27 @@ namespace infinit
         return;
       auto & f = _parent->_files.at(_name);
       f.mode = (f.mode & ~07777) | (mode & 07777);
+      _parent->_changed();
+    }
+
+    void
+    Directory::chown(int uid, int gid)
+    {
+      Node::chown(uid, gid);
+    }
+    void
+    File::chown(int uid, int gid)
+    {
+      Node::chown(uid, gid);
+    }
+    void
+    Node::chown(int uid, int gid)
+    {
+      if (!_parent)
+        return;
+      auto & f = _parent->_files.at(_name);
+      f.uid = uid;
+      f.gid = gid;
       _parent->_changed();
     }
     void
