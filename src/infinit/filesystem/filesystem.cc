@@ -1012,11 +1012,14 @@ namespace infinit
     {
       auto& data = _parent->_files.at(_name);
       data.mtime = time(nullptr);
+      _owner.block_store()->store(*_first_block);
       if (!_multi())
         data.size = _first_block->data().size();
       else
       {
-        for (auto& b: _blocks)
+        std::unordered_map<int, CacheEntry> blocks;
+        std::swap(blocks, _blocks);
+        for (auto& b: blocks)
         { // FIXME: incremental size compute
           ELLE_DEBUG("Checking data block %s :%x, size %s",
             b.first, b.second.block->address(), b.second.block->data().size());
@@ -1030,7 +1033,6 @@ namespace infinit
       }
       ELLE_DEBUG("Storing first block %x, size %s",
                  _first_block->address(), _first_block->data().size());
-      _owner.block_store()->store(*_first_block);
       _parent->_changed(false);
     }
 
@@ -1038,8 +1040,6 @@ namespace infinit
     File::_switch_to_multi(bool alloc_first_block)
     {
       // Switch without changing our address
-      _parent->_files.at(_name).store_mode = FileStoreMode::index;
-      _parent->_changed();
       uint64_t current_size = _first_block->data().size();
       std::unique_ptr<Block> new_block = _owner.block_store()->make_block();
       new_block->data() = std::move(_first_block->data());
@@ -1060,6 +1060,8 @@ namespace infinit
 
       memcpy(_first_block->data().mutable_contents() + sizeof(Address),
         _blocks.at(0).block->address().value(), sizeof(Address::Value));
+      _parent->_files.at(_name).store_mode = FileStoreMode::index;
+      _parent->_changed();
       // we know the operation that triggered us is going to expand data
       // beyond first block, so it is safe to resize here
       if (alloc_first_block)
