@@ -1,7 +1,11 @@
 #ifndef INFINIT_STORAGE_SFTP_HH
 #define INFINIT_STORAGE_SFTP_HH
 
+#include <boost/asio.hpp>
+
 #include <infinit/storage/Storage.hh>
+
+#include <reactor/semaphore.hh>
 namespace infinit
 {
   namespace storage
@@ -22,11 +26,13 @@ namespace infinit
       _erase(Key k) override;
     private:
       void _connect();
-      int _in;
-      int _out;
+      int _fin;
+      int _fout;
+      mutable boost::asio::posix::stream_descriptor _in, _out;
       std::string _server_address;
       std::string _path;
       int _child;
+      mutable reactor::Semaphore _sem;
       mutable int _req;
     };
   }

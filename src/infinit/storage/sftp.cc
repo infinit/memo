@@ -1,5 +1,12 @@
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/wait.h>
+
+#include <boost/asio.hpp>
+
+#include <reactor/scheduler.hh>
+#include <reactor/Barrier.hh>
+#include <reactor/lockable.hh>
 
 #include <infinit/storage/sftp.hh>
 #include <infinit/storage/MissingKey.hh>
@@ -105,8 +112,8 @@ namespace infinit
         _make(v...);
       }
 
-      void readFrom(int fd);
-      void writeTo(int fd);
+      void readFrom(boost::asio::posix::stream_descriptor& s);
+      void writeTo(boost::asio::posix::stream_descriptor& s);
 
       unsigned char readByte();
       int readInt();
@@ -145,49 +152,115 @@ namespace infinit
       sz = htonl(sz);
       *(int*)mutable_contents() = sz;
     }
-    void Packet::readFrom(int fd)
+    void Packet::readFrom(boost::asio::posix::stream_descriptor& s)
     {
+      ELLE_DEBUG("Reading one packet...");
       _pos = 0;
+      namespace asio = boost::asio;
       size(4);
-      int count = ::read(fd, contents(), 4);
-      ELLE_ASSERT(count == 4);
-      int len = readInt();
-      size(4 + len);
-      int pos = 0;
-      ELLE_DEBUG("Reading new packet payload, size %s", len);
-      while (pos < len)
+      reactor::Barrier b;
+      boost::system::error_code erc;
+      int len = 0;
+      auto cb2 = [&](boost::system::error_code e, size_t sz)
       {
-        int count = ::read(fd, contents() + 4 + pos, len - pos);
-        if (count < 0)
-          throw std::runtime_error("Error while reading");
-        if (count == 0 && pos < len)
-          throw std::runtime_error("Short read");
-        pos += count;
+        ELLE_DEBUG("got payload");
+        if (e)
+          ELLE_ERR("socket error: %s", e.message());
+        else if (sz != len)
+          ELLE_ERR("Unexpected read %s != %s", sz, len);
+        erc = e;
+        b.open();
+      };
+      s.non_blocking(false);
+      size_t sz = asio::read(s, asio::buffer(mutable_contents(), 4),
+        asio::transfer_exactly(4), erc);
+
+      if (!erc)
+        ELLE_ASSERT_EQ(sz, 4);
+      if (erc)
+        throw std::runtime_error(erc.message());
+      len = this->readInt();
+      ELLE_DEBUG("got header, reading %s", len);
+      this->size(4+len);
+      if (len < 1024)
+      {
+        sz = asio::read(s, asio::buffer(mutable_contents()+4, len),
+          asio::transfer_exactly(len), erc);
+        ELLE_DEBUG("got payload");
+        if (erc)
+          ELLE_ERR("socket error: %s", erc.message());
+        else if (sz != len)
+          ELLE_ERR("Unexpected read %s != %s", sz, len);
       }
+      else
+      {
+        s.non_blocking(true);
+        asio::async_read(s, asio::buffer(mutable_contents()+4, len),
+          asio::transfer_exactly(len), cb2);
+        b.wait();
+      }
+
+      /*
+      asio::async_read(s, asio::buffer(mutable_contents(), 4),
+        asio::transfer_exactly(4),
+        [&](boost::system::error_code e, size_t sz)
+          {
+            if (!e)
+              ELLE_ASSERT_EQ(sz, 4);
+            if (e)
+            {
+              erc = e;
+              b.open();
+              return;
+            }
+            len = this->readInt();
+            ELLE_DEBUG("got header, reading %s", len);
+            this->size(4+len);
+            asio::async_read(s, asio::buffer(mutable_contents()+4, len),
+              asio::transfer_exactly(len), cb2);
+          });*/
+
+      ELLE_DEBUG("Reading done");
+      if (erc)
+        throw std::runtime_error(erc.message());
     }
-    void Packet::writeTo(int fd)
+    void Packet::writeTo(boost::asio::posix::stream_descriptor& s)
     {
-      ELLE_DEBUG("Writing packet %x", *this);
-      unsigned int pos = 0;
-      while (pos < size())
+      ELLE_DEBUG("Writing packet %x ..., with payload %s", *this, _payload.size());
+      namespace asio = boost::asio;
+      std::vector<asio::const_buffer> v;
+      v.push_back(asio::const_buffer(contents(), size()));
+      if (_payload.size())
+        v.push_back(asio::const_buffer(_payload.contents(), _payload.size()));
+      boost::system::error_code erc;
+
+      bool mark = false;
+      if (_payload.size() < 1024)
       {
-        int count = ::write(fd, contents() + pos, size() - pos);
-        if (count < 0)
-          throw std::runtime_error(std::string("Error while writing ") + strerror(errno));
-        if (count == 0 && pos < size())
-          throw std::runtime_error("Short read");
-        pos += count;
+        int sz = asio::write(s, v, erc);
+        if (!erc)
+          ELLE_ASSERT_EQ(sz, size() + _payload.size());
       }
-      pos = 0;
-      while (pos < _payload.size())
+      else
       {
-        int count = ::write(fd, _payload.contents() + pos, _payload.size() - pos);
-        if (count < 0)
-          throw std::runtime_error(std::string("Error while writing ") + strerror(errno));
-        if (count == 0 && pos < _payload.size())
-          throw std::runtime_error("Short read");
-        pos += count;
+        reactor::Semaphore b;
+        asio::async_write(s, v, [&](boost::system::error_code e, size_t sz)
+          {
+            if (e)
+              ELLE_ERR("socket error: %s", e.message());
+            else if (sz != size() + _payload.size())
+              ELLE_ERR("Unexpected read %s != %s", sz, size() + _payload.size());
+            erc = e;
+            mark = true;
+            ELLE_DEBUG("write finished, opening...");
+            b.release();
+          });
+        b.wait();
+        ELLE_ASSERT(mark);
       }
+      ELLE_DEBUG("...write done");
+      if (erc)
+        throw std::runtime_error(erc.message());
     }
     unsigned char Packet::readByte()
     {
@@ -228,8 +301,12 @@ namespace infinit
     }
 
     SFTP::SFTP(std::string const& address, std::string const& path)
-      : _server_address(address)
+      : _in(reactor::scheduler().io_service())
+      , _out(reactor::scheduler().io_service())
+      ,_server_address(address)
       , _path(path)
+      , _sem(1)
+      , _req(1000)
     {
       _connect();
     }
@@ -253,8 +330,17 @@ namespace infinit
       else
       {
         _child = child;
-        _out = out[1];
-        _in = in[0];
+        _fout = out[1];
+        _fin = in[0];
+        _in.assign(_fin);
+        _in.non_blocking(true);
+        _out.assign(_fout);
+        _out.non_blocking(true);
+        new std::thread([child] {
+            int status;
+            ::waitpid(child, &status, 0);
+            ELLE_WARN("Ssh process terminated");
+        });
         Packet p;
         p.make(SSH_FXP_INIT, 3);
         ELLE_TRACE("Sending header: %x", p);
@@ -276,12 +362,17 @@ namespace infinit
     elle::Buffer
     SFTP::_get(Key k) const
     {
+      /*reactor::Lock lock(_sem);*/
       ELLE_TRACE("_get %x", k);
       std::string path = elle::sprintf("%s/%x", _path, k);
       Packet p;
-      p.make(SSH_FXP_OPEN, ++_req, path, SSH_FXF_READ, 0);
-      p.writeTo(_out);
-      p.readFrom(_in);
+      int req = ++_req;
+      p.make(SSH_FXP_OPEN, req, path, SSH_FXF_READ, 0);
+      {
+        reactor::Lock lock(_sem);
+        p.writeTo(_out);
+        p.readFrom(_in);
+      }
       ELLE_TRACE("got open answer: %x", p);
       try
       {
@@ -292,15 +383,19 @@ namespace infinit
         throw infinit::storage::MissingKey(k);
       }
       int id = p.readInt();
-      ELLE_ASSERT_EQ(id, _req);
+      ELLE_ASSERT_EQ(id, req);
       elle::ConstWeakBuffer ch = p.readString();
       std::string handle = ch.string();
       elle::Buffer res;
       while (true)
       {
-        p.make(SSH_FXP_READ, ++_req, handle, 0, res.size(), 1000000000);
-        p.writeTo(_out);
-        p.readFrom(_in);
+        int req = ++_req;
+        p.make(SSH_FXP_READ, req, handle, 0, res.size(), 1000000000);
+        {
+          reactor::Lock lock(_sem);
+          p.writeTo(_out);
+          p.readFrom(_in);
+        }
         try
         {
           p.expectType(SSH_FXP_DATA); // id data
@@ -308,14 +403,18 @@ namespace infinit
         catch(PacketError const& e)
         { // read on a 0-byte file causes an error
           p.make(SSH_FXP_CLOSE, ++_req, handle);
-          p.writeTo(_out);
-          p.readFrom(_in);
+          {
+            reactor::Lock lock(_sem);
+            p.writeTo(_out);
+            p.readFrom(_in);
+          }
           if (e.erc() == SSH_FX_EOF)
             return res; // empty data, not an error
           else
             throw e;
         }
-        p.readInt();
+        int id = p.readInt();
+        ELLE_ASSERT_EQ(id, req);
         elle::ConstWeakBuffer buf = p.readString();
         if (buf.size() == 0)
           break;
@@ -323,38 +422,59 @@ namespace infinit
       }
       // close
       ELLE_TRACE("Closing");
-      p.make(SSH_FXP_CLOSE, ++_req, handle);
-      p.writeTo(_out);
-      p.readFrom(_in);
+      req = ++_req;
+      p.make(SSH_FXP_CLOSE, req, handle);
+      {
+        reactor::Lock lock(_sem);
+        p.writeTo(_out);
+        p.readFrom(_in);
+        p.readByte();
+        int id = p.readInt();
+        ELLE_ASSERT_EQ(id, req);
+      }
       return res;
     }
     void
     SFTP::_erase(Key k)
     {
+      /*reactor::Lock lock(_sem);*/
       ELLE_TRACE("_erase %x", k);
       std::string path = elle::sprintf("%s/%x", _path, k);
       Packet p;
-      p.make(SSH_FXP_REMOVE, ++_req, path);
-      p.writeTo(_out);
-      p.readFrom(_in);
+      int req = ++_req;
+      p.make(SSH_FXP_REMOVE, req, path);
+      {
+        reactor::Lock lock(_sem);
+        p.writeTo(_out);
+        p.readFrom(_in);
+        p.readByte();
+        int id = p.readInt();
+        ELLE_ASSERT_EQ(id, req);
+      }
     }
     void
-    SFTP::_set(Key k, elle::Buffer const& value, bool insert, bool update)
+    SFTP::_set(Key k, elle::Buffer const& value_, bool insert, bool update)
     {
+      elle::Buffer value(value_.contents(), value_.size());
+      /*reactor::Lock lock(_sem);*/
       ELLE_TRACE("_set %x of size %s", k, value.size());
       std::string path = elle::sprintf("%s/%x", _path, k);
       Packet p;
-      p.make(SSH_FXP_OPEN,++_req, path,
+      int req = ++_req;
+      p.make(SSH_FXP_OPEN, req, path,
              SSH_FXF_WRITE | SSH_FXF_CREAT | SSH_FXF_TRUNC,
              0);
-      p.writeTo(_out);
-      p.readFrom(_in);
+      {
+        reactor::Lock lock(_sem);
+        p.writeTo(_out);
+        p.readFrom(_in);
+      }
       p.expectType(SSH_FXP_HANDLE);
       int id = p.readInt();
-      ELLE_ASSERT_EQ(id, _req);
+      ELLE_ASSERT_EQ(id, req);
       std::string handle = p.readString().string();
-      ELLE_TRACE("got handle %x (%s)", handle, handle);
-      static const int block_size = 32768;
+      ELLE_TRACE("got handle %x", handle);
+      static const int block_size = 16384;
       if (value.size())
       {
         // Sending too big values freeezes things up, probably because it
@@ -362,23 +482,28 @@ namespace infinit
         for(int o=0; o < 1 + (value.size()-1)/block_size; ++o)
         {
           ELLE_TRACE("write block %s", o);
-          p.make(SSH_FXP_WRITE, ++_req, handle, 0, o*block_size,
+          int req = ++_req;
+          p.make(SSH_FXP_WRITE, req, handle, 0, o*block_size,
             elle::ConstWeakBuffer(value.contents() + o*block_size,
               std::min(block_size, (int)value.size() - o*block_size)));
+          reactor::Lock lock(_sem);
           p.writeTo(_out);
           p.readFrom(_in);
+          p.readByte();
+          int id = p.readInt();
+          ELLE_ASSERT_EQ(id, req);
         }
       }
-      /*
-      p.make(SSH_FXP_WRITE, ++_req, handle, 0, 0, value);
-      p.writeTo(_out);
-      p.readFrom(_in);
-      */
       ELLE_TRACE("closing");
       //close
-      p.make(SSH_FXP_CLOSE, ++_req, handle);
+      req = ++_req;
+      p.make(SSH_FXP_CLOSE, req, handle);
+      reactor::Lock lock(_sem);
       p.writeTo(_out);
       p.readFrom(_in);
+      p.readByte();
+      id = p.readInt();
+      ELLE_ASSERT_EQ(id, req);
     }
   }
 }
