@@ -189,7 +189,7 @@ namespace infinit
     class FileHandle: public rfs::Handle
     {
     public:
-      FileHandle(File& owner);
+      FileHandle(File& owner, bool update_folder_mtime=false, bool no_prefetch = false);
       ~FileHandle();
       int read(elle::WeakBuffer buffer, size_t size, off_t offset) override;
       int write(elle::WeakBuffer buffer, size_t size, off_t offset) override;
@@ -204,7 +204,7 @@ namespace infinit
     {
     public:
       File(Directory* parent, FileSystem& owner, std::string const& name,
-                std::unique_ptr<Block> b);
+                std::unique_ptr<Block> b = std::unique_ptr<Block>());
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) THROW_NOTDIR;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;
@@ -229,6 +229,7 @@ namespace infinit
       static const unsigned long max_cache_size = 20; // in blocks
       friend class FileHandle;
       friend class Directory;
+      friend class Unknown;
       // A packed network-byte-ordered version of Header sits at the
       // beginning of each file's first block in index mode.
       struct Header
@@ -329,7 +330,6 @@ namespace infinit
         }
       }
       Directory* res = new Directory(nullptr, *this, "", std::move(block));
-      res->_changed();
       return std::unique_ptr<rfs::Path>(res);
     }
 
@@ -394,6 +394,9 @@ namespace infinit
       auto it = _files.find(name);
       if (it != _files.end())
       {
+        bool isDir = it->second.mode & DIRECTORY_MASK;
+        if (!isDir)
+          return std::unique_ptr<rfs::Path>(new File(this, _owner, name));
         std::unique_ptr<Block> block;
         try
         {
@@ -403,13 +406,8 @@ namespace infinit
         {
           throw rfs::Error(EIO, b.what());
         }
-        bool isdir = it->second.mode & DIRECTORY_MASK;
-        if (isdir)
-          return std::unique_ptr<rfs::Path>(new Directory(this, _owner, name,
-                                                          std::move(block)));
-        else
-          return std::unique_ptr<rfs::Path>(new File(this, _owner, name,
-                                                     std::move(block)));
+        return std::unique_ptr<rfs::Path>(new Directory(this, _owner, name,
+                                                        std::move(block)));
       }
       else
         return std::unique_ptr<rfs::Path>(new Unknown(this, _owner, name));
@@ -659,7 +657,7 @@ namespace infinit
     Unknown::create(int flags, mode_t mode)
     {
       std::unique_ptr<Block> b = _owner.block_store()->make_block();
-      _owner.block_store()->store(*b);
+      //_owner.block_store()->store(*b);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name, FileData{_name, 0, mode & ~DIRECTORY_MASK,
@@ -667,10 +665,11 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        b->address(),
                                        FileStoreMode::direct}));
-      _parent->_changed(true);
+      // FileHandle will do it _parent->_changed(true);
       _remove_from_cache();
       File& f = dynamic_cast<File&>(_owner.fs()->path(full_path().string()));
-      return std::unique_ptr<rfs::Handle>(new FileHandle(f));
+      f._first_block = std::move(b);
+      return std::unique_ptr<rfs::Handle>(new FileHandle(f, true, true));
     }
 
     void
@@ -871,7 +870,8 @@ namespace infinit
       Node::stat(st);
       if (_multi())
       {
-        _first_block = _owner.block_store()->fetch(_first_block->address());
+        _first_block = _owner.block_store()->fetch(
+          _parent->_files.at(_name).address);
         Header header = _header();
         st->st_size = header.total_size;
         st->st_nlink = header.links;
@@ -1087,18 +1087,18 @@ namespace infinit
       }
     }
 
-    FileHandle::FileHandle(File& owner)
+    FileHandle::FileHandle(File& owner, bool push_mtime, bool no_fetch)
     : _owner(owner)
     , _dirty(false)
     {
       _owner._parent->_files.at(_owner._name).atime = time(nullptr);
-      _owner._parent->_changed(false);
+      _owner._parent->_changed(push_mtime);
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
-
-      _owner._first_block = _owner._owner.block_store()->fetch(
-        _owner._first_block->address());
+      if (!no_fetch)
+        _owner._first_block = _owner._owner.block_store()->fetch(
+          _owner._first_block->address());
     }
 
     FileHandle::~FileHandle()
