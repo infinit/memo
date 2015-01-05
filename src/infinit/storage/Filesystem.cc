@@ -25,6 +25,7 @@ namespace infinit
     elle::Buffer
     Filesystem::_get(Key key) const
     {
+      ELLE_TRACE("get %x", key);
       boost::filesystem::ifstream input(this->_path(key));
       if (!input.good())
         throw MissingKey(key);
@@ -39,6 +40,7 @@ namespace infinit
     void
     Filesystem::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
+      ELLE_TRACE("set %x", key);
       auto path = this->_path(key);
       bool exists = boost::filesystem::exists(path);
       if (!exists && !insert)
@@ -60,6 +62,7 @@ namespace infinit
     void
     Filesystem::_erase(Key key)
     {
+      ELLE_TRACE("erase %x", key);
       auto path = this->_path(key);
       if (!exists(path))
         throw MissingKey(key);
