@@ -40,20 +40,13 @@ static int directory_count(boost::filesystem::path const& p)
 static void run_filesystem(std::string const& store, std::string const& mountpoint)
 {
   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
-
+  std::unique_ptr<infinit::model::Model> model;
   reactor::Thread t(sched, "fs", [&] {
-      if (!elle::os::getenv("STEG", "").empty())
-      {
-        model = elle::make_unique<infinit::model::steg::Steg>(argv[1], "foo");
-      }
-      else
-      {
-        if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
-          storage = new infinit::storage::Memory();
-        else
-          storage = new infinit::storage::Filesystem(store);
-        model = elle::make_unique<infinit::model::faith::Faith>(*storage);
-      }
+    if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
+      storage = new infinit::storage::Memory();
+    else
+      storage = new infinit::storage::Filesystem(store);
+    model = elle::make_unique<infinit::model::faith::Faith>(*storage);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "", std::move(model));
     ifs::FileSystem* ops_ptr = ops.get();
