@@ -798,12 +798,6 @@ namespace infinit
       dir._changed(true);
       _owner.fs()->extract(where.string());
       _owner.block_store()->store(*_first_block);
-      // also flush new data block
-      if (!multi)
-      {
-        _owner.block_store()->store(*_blocks.at(0).block);
-        _blocks.clear();
-      }
     }
 
     void
