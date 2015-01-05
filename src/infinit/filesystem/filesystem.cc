@@ -737,6 +737,7 @@ namespace infinit
     boost::optional<Address>
     File::_block_address(int index, bool create, bool* changeOrAbort)
     {
+      ELLE_ASSERT_GTE(index, 0);
       if (changeOrAbort)
         *changeOrAbort = false;
       int offset = (index+1) * sizeof(Address);
@@ -1162,7 +1163,7 @@ namespace infinit
       int end_block = end ? (end - 1) / block_size : 0;
       if (start_block == end_block)
       { // single block case
-        off_t block_offset = offset - start_block * block_size;
+        off_t block_offset = offset - (off_t)start_block * (off_t)block_size;
         auto const& it = _owner._blocks.find(start_block);
         Block* block = nullptr;
         if (it != _owner._blocks.end())
@@ -1215,7 +1216,9 @@ namespace infinit
         ELLE_ASSERT(start_block == end_block - 1);
         int64_t second_size = (offset + size) % block_size; // second block
         int64_t first_size = size - second_size;
-        int64_t second_offset = end_block * block_size;
+        int64_t second_offset = (int64_t)end_block * (int64_t)block_size;
+        ELLE_DEBUG("split %s %s into %s %s and %s %s",
+                   size, offset, first_size, offset, second_size, second_offset);
         int r1 = read(elle::WeakBuffer(buffer.mutable_contents(), first_size),
                       first_size, offset);
         if (r1 <= 0)
@@ -1309,7 +1312,7 @@ namespace infinit
       ELLE_ASSERT(start_block == end_block - 1);
       int64_t second_size = (offset + size) % block_size; // second block
       int64_t first_size = size - second_size;
-      int64_t second_offset = end_block * block_size;
+      int64_t second_offset = (int64_t)end_block * (int64_t)block_size;
       int r1 = write(elle::WeakBuffer(buffer.mutable_contents(), first_size),
                     first_size, offset);
       if (r1 <= 0)
