@@ -1099,7 +1099,7 @@ namespace infinit
       // or a backend stat call?
       if (!no_fetch)
         _owner._first_block = _owner._owner.block_store()->fetch(
-          _owner._first_block->address());
+          _owner._parent->_files.at(_owner._name).address);
     }
 
     FileHandle::~FileHandle()
@@ -1120,6 +1120,7 @@ namespace infinit
     int
     FileHandle::read(elle::WeakBuffer buffer, size_t size, off_t offset)
     {
+      ELLE_DEBUG("read %s at %s", size, offset);
       ELLE_ASSERT_EQ(buffer.size(), size);
       int64_t total_size;
       int32_t block_size;
@@ -1149,6 +1150,12 @@ namespace infinit
       if (!_owner._multi())
       { // single block case
         auto& block = _owner._first_block;
+        if (!block)
+        {
+          ELLE_DEBUG("read on uncached block, fetching");
+          _owner._first_block = _owner._owner.block_store()->fetch(
+            _owner._parent->_files.at(_owner._name).address);
+        }
         ELLE_ASSERT_EQ(block->data().size(), total_size);
         memcpy(buffer.mutable_contents(),
                block->data().mutable_contents() + offset,
