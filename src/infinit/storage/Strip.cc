@@ -41,12 +41,11 @@ namespace infinit
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
       std::vector<Storage*> backends;
-      for (int i=0; i<args.size(); i+=2)
+      for (unsigned int i = 0; i < args.size(); i += 2)
       {
         std::string name = args[i];
         std::vector<std::string> bargs;
         size_t space = args[i+1].find(" ");
-        size_t colon = args[i+1].find(":");
         const char* sep = (space == args[i+1].npos) ? ":" : " ";
         boost::algorithm::split(bargs, args[i+1], boost::algorithm::is_any_of(sep),
                                 boost::algorithm::token_compress_on);
