@@ -160,7 +160,7 @@ namespace infinit
       size(4);
       reactor::Barrier b;
       boost::system::error_code erc;
-      int len = 0;
+      size_t len = 0;
       auto cb2 = [&](boost::system::error_code e, size_t sz)
       {
         ELLE_DEBUG("got payload");
@@ -310,6 +310,15 @@ namespace infinit
     {
       _connect();
     }
+
+    void
+    pipe(int pipefd[2])
+    {
+      if (::pipe(pipefd))
+        throw elle::Error(elle::sprintf(
+                            "unable to create pipe: %s", strerror(errno)));
+    }
+
     void SFTP::_connect()
     {
       const char* args[5] = {"ssh", _server_address.c_str(), "-s", "sftp", 0};
@@ -479,13 +488,14 @@ namespace infinit
       {
         // Sending too big values freeezes things up, probably because it
         // fills the pipe with ssh
-        for(int o=0; o < 1 + (value.size()-1)/block_size; ++o)
+        for(int o = 0; o < 1 + int(value.size() - 1) / block_size; ++o)
         {
           ELLE_TRACE("write block %s", o);
           int req = ++_req;
           p.make(SSH_FXP_WRITE, req, handle, 0, o*block_size,
-            elle::ConstWeakBuffer(value.contents() + o*block_size,
-              std::min(block_size, (int)value.size() - o*block_size)));
+            elle::ConstWeakBuffer(
+              value.contents() + o*block_size,
+              std::min(block_size, int(value.size()) - o * block_size)));
           reactor::Lock lock(_sem);
           p.writeTo(_out);
           p.readFrom(_in);
