@@ -261,34 +261,35 @@ namespace infinit
       std::unique_ptr<Block> _first_block;
     };
 
-
-    static Address to_address(std::string const& str)
+    FileSystem::FileSystem(model::Address root,
+                           std::unique_ptr<infinit::model::Model> model)
+      : _root_address(root)
+      , _fs(nullptr)
+      , _block_store(std::move(model))
     {
-      if (str.length() != 64)
-      {
-        auto hash = cryptography::hash::sha256(str);
-        return Address(hash.contents());
-      }
-      Address::Value v;
-      char c[3] = {0,0,0};
-      if (str.length() != 64)
-        throw std::runtime_error("Invalid address size");
-      for (int i=0; i<32; ++i)
-      {
-        c[0] = str[i*2];
-        c[1] = str[i*2 + 1];
-        v[i] = strtol(c, nullptr, 16);
-      }
-      return Address(v);
+      reactor::scheduler().signal_handle
+        (SIGUSR1, [this] { this->print_cache_stats();});
     }
 
-    FileSystem::FileSystem(std::string root,
-                           std::unique_ptr<infinit::model::Model> block_store)
-    : _block_store(std::move(block_store))
-    , _root_address(root)
+    static
+    std::unique_ptr<Block>
+    _make_root_block(infinit::model::Model& model)
     {
-      reactor::scheduler().signal_handle(SIGUSR1, [this] { this->print_cache_stats();});
+      auto root = model.make_block();
+      model.store(*root);
+      return root;
     }
+
+    FileSystem::FileSystem(std::unique_ptr<infinit::model::Model> model)
+      : _root_address(_make_root_block(*model)->address())
+      , _fs(nullptr)
+      , _block_store(nullptr)
+    {
+      ELLE_ASSERT(model.get());
+      this->_block_store = std::move(model);
+      ELLE_LOG("create root block at address: %x", this->_root_address);
+    }
+
     void
     FileSystem::print_cache_stats()
     {
@@ -307,30 +308,17 @@ namespace infinit
     std::unique_ptr<rfs::Path>
     FileSystem::path(std::string const& path)
     {
-      // Called on / only
-      std::unique_ptr<Block> block;
-      if (_root_address.length() == 0)
-      {
-        block = block_store()->make_block();
-        ELLE_LOG("root address: %x", block->address());
-      }
-      else
-      {
-        try
-        {
-          block = block_store()->fetch(to_address(_root_address));
-        }
-        catch(infinit::model::MissingBlock const& mb)
-        {}
-        if (!block)
-        {
-          ELLE_TRACE("root block not present, creating on %x...",
-            to_address(_root_address));
-          block = elle::make_unique<Block>(to_address(_root_address));
-        }
-      }
-      Directory* res = new Directory(nullptr, *this, "", std::move(block));
-      return std::unique_ptr<rfs::Path>(res);
+      // In the infinit filesystem, we never query a path other than the
+      // root.
+      ELLE_ASSERT_EQ(path, "/");
+      return elle::make_unique<Directory>
+        (nullptr, *this, "", this->_root_block());
+    }
+
+    std::unique_ptr<Block>
+    FileSystem::_root_block()
+    {
+      return block_store()->fetch(_root_address);
     }
 
     static const int DIRECTORY_MASK = 0040000;

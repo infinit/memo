@@ -43,6 +43,22 @@ namespace infinit
       elle::WeakBuffer buf(this->_value, sizeof(Value));
       s.serialize("id", buf);
     }
+
+    Address
+    Address::from_string(std::string const& repr)
+    {
+      if (repr.length() != 64)
+        throw elle::Error(elle::sprintf("invalid address: %s", repr));
+      Value v;
+      char c[3] = {0, 0, 0};
+      for (int i = 0; i < 32; ++i)
+      {
+        c[0] = repr[i * 2];
+        c[1] = repr[i * 2 + 1];
+        v[i] = strtol(c, nullptr, 16);
+      }
+      return Address(v);
+    }
   }
 }
 

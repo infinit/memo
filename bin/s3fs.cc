@@ -34,7 +34,7 @@ void main_scheduled(int argc, char** argv)
   auto faith = elle::make_unique<infinit::model::faith::Faith>
     (elle::make_unique<infinit::storage::S3>(std::move(s3)));
   auto fsops = elle::make_unique<infinit::filesystem::FileSystem>
-    (argv[3], std::move(faith));
+    (infinit::model::Address::from_string(argv[3]), std::move(faith));
   auto fsopsPtr = fsops.get(); // FIXME: ffs
   fs = new reactor::filesystem::FileSystem(std::move(fsops), true);
   fsopsPtr->fs(fs); // FIXME: >.<

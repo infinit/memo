@@ -31,6 +31,9 @@ namespace infinit
       friend
       std::ostream&
       operator << (std::ostream& out, Address const& k);
+      static
+      Address
+      from_string(std::string const& repr);
     };
 
     std::ostream&

@@ -1,7 +1,8 @@
 #ifndef INFINIT_FILESYSTEM_FILESYSTEM_HH
 # define INFINIT_FILESYSTEM_FILESYSTEM_HH
-#include <reactor/filesystem.hh>
-#include <infinit/model/Model.hh>
+
+# include <reactor/filesystem.hh>
+# include <infinit/model/Model.hh>
 
 namespace infinit
 {
@@ -17,14 +18,19 @@ namespace infinit
     class FileSystem: public reactor::filesystem::Operations
     {
     public:
-      FileSystem(std::string root,
-                 std::unique_ptr<infinit::model::Model> block_store);
-      void print_cache_stats();
-      std::unique_ptr<reactor::filesystem::Path> path(std::string const& path) override;
+      FileSystem(std::unique_ptr<infinit::model::Model> model);
+      FileSystem(model::Address root,
+                 std::unique_ptr<infinit::model::Model> model);
+      void
+      print_cache_stats();
+      std::unique_ptr<reactor::filesystem::Path>
+      path(std::string const& path) override;
+
     private:
+      std::unique_ptr<model::blocks::Block> _root_block();
+      ELLE_ATTRIBUTE(model::Address, root_address);
       ELLE_ATTRIBUTE_RW(reactor::filesystem::FileSystem*, fs);
       ELLE_ATTRIBUTE_R(std::unique_ptr<infinit::model::Model>, block_store);
-      std::string _root_address;
     };
   }
 }
