@@ -19,7 +19,6 @@ namespace infinit
       ELLE_TRACE_SCOPE("Processing crypt backend %s '%s', pass %s", args[0], args[1], args[2]);
       std::vector<std::string> bargs;
       size_t space = args[1].find(" ");
-      size_t colon = args[1].find(":");
       const char* sep = (space == args[1].npos) ? ":" : " ";
       boost::algorithm::split(bargs, args[1], boost::algorithm::is_any_of(sep),
                               boost::algorithm::token_compress_on);

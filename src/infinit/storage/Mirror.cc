@@ -76,13 +76,12 @@ namespace infinit
       std::vector<Storage*> backends;
       bool balance_reads = args[0] == "true" || args[0] == "1" || args[0] =="yes";
       bool parallel = args[1] == "true" || args[1] == "1" || args[1] =="yes";
-      for (int i=2; i<args.size(); i+=2)
+      for (int i = 2; i < signed(args.size()); i += 2)
       {
         std::string name = args[i];
         std::vector<std::string> bargs;
         ELLE_TRACE_SCOPE("Processing mirror backend %s '%s'", name, args[i+1]);
         size_t space = args[i+1].find(" ");
-        size_t colon = args[i+1].find(":");
         const char* sep = (space == args[i+1].npos) ? ":" : " ";
         boost::algorithm::split(bargs, args[i+1], boost::algorithm::is_any_of(sep),
                                 boost::algorithm::token_compress_on);
