@@ -31,12 +31,13 @@ void main_scheduled(int argc, char** argv)
   aws::Credentials creds(input);
   creds.skew(boost::posix_time::time_duration());
   auto s3 = elle::make_unique<aws::S3>(creds);
-  infinit::storage::S3* s3store = new infinit::storage::S3(std::move(s3));
-  auto faith = elle::make_unique<infinit::model::faith::Faith>(*s3store);
-  auto fsops = elle::make_unique<infinit::filesystem::FileSystem>(argv[3], std::move(faith));
-  auto fsopsPtr = fsops.get();
+  auto faith = elle::make_unique<infinit::model::faith::Faith>
+    (elle::make_unique<infinit::storage::S3>(std::move(s3)));
+  auto fsops = elle::make_unique<infinit::filesystem::FileSystem>
+    (argv[3], std::move(faith));
+  auto fsopsPtr = fsops.get(); // FIXME: ffs
   fs = new reactor::filesystem::FileSystem(std::move(fsops), true);
-  fsopsPtr->fs(fs);
+  fsopsPtr->fs(fs); // FIXME: >.<
   fs->mount(argv[2], {});
 }
 

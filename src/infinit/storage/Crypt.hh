@@ -11,8 +11,10 @@ namespace infinit
     class Crypt: public Storage
     {
     public:
-      Crypt(Storage& backend, std::string const& password,
-            bool salt = true, // mix address and password to get a different key per block
+      Crypt(std::unique_ptr<Storage> backend,
+            std::string const& password,
+            // Mix address and password to get a different key per block.
+            bool salt = true,
             infinit::cryptography::cipher::Algorithm algorithm
               = infinit::cryptography::cipher::Algorithm::aes256
         );
@@ -27,7 +29,7 @@ namespace infinit
       void
       _erase(Key k) override;
     private:
-      Storage& _backend;
+      std::unique_ptr<Storage> _backend;
       std::string _password;
       bool _salt;
       infinit::cryptography::cipher::Algorithm _algorithm;

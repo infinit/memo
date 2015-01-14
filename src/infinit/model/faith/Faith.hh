@@ -16,7 +16,7 @@ namespace infinit
         : public Model
       {
       public:
-        Faith(storage::Storage& storage);
+        Faith(std::unique_ptr<storage::Storage> storage);
       protected:
         virtual
         std::unique_ptr<blocks::Block>
@@ -30,7 +30,7 @@ namespace infinit
         virtual
         void
         _remove(Address address) override;
-        ELLE_ATTRIBUTE_RX(storage::Storage&, storage);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
       };
     }
   }

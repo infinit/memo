@@ -19,8 +19,8 @@ namespace infinit
   {
     namespace faith
     {
-      Faith::Faith(storage::Storage& storage)
-        : _storage(storage)
+      Faith::Faith(std::unique_ptr<storage::Storage> storage)
+        : _storage(std::move(storage))
       {}
 
       std::unique_ptr<blocks::Block>
@@ -34,7 +34,7 @@ namespace infinit
           elle::ConstWeakBuffer(id.data, id.static_size()));
         ELLE_ASSERT_GTE(hash.size(), sizeof(Address::Value));
         Address address(hash.contents());
-        auto res = elle::make_unique<blocks::Block>(address);
+        auto res = std::unique_ptr<blocks::Block>(new blocks::Block(address));
         return res;
       }
 
@@ -43,9 +43,9 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         auto& data = block.data();
-        this->_storage.set(block.address(),
-                           data,
-                           true, true);
+        this->_storage->set(block.address(),
+                            data,
+                            true, true);
       }
 
       std::unique_ptr<blocks::Block>
@@ -54,8 +54,8 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: fetch block at %x", *this, address);
         try
         {
-          return elle::make_unique<blocks::Block>(address,
-                                                  this->_storage.get(address));
+          return std::unique_ptr<blocks::Block>
+            (new blocks::Block(address, this->_storage->get(address)));
         }
         catch (infinit::storage::MissingKey const&)
         {
@@ -69,7 +69,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: remove block at %x", *this, address);
         try
         {
-          this->_storage.erase(address);
+          this->_storage->erase(address);
         }
         catch (infinit::storage::MissingKey const&)
         {
