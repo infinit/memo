@@ -34,6 +34,10 @@ namespace infinit
       void
       _erase(Key k) = 0;
     };
+
+    std::unique_ptr<Storage>
+    instantiate(std::string const& name,
+                std::string const& args);
   }
 }
 

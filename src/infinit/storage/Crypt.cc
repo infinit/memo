@@ -4,8 +4,7 @@
 
 #include <elle/factory.hh>
 
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/split.hpp>
+
 ELLE_LOG_COMPONENT("infinit.fs.crypt");
 
 
@@ -18,15 +17,7 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     make(std::vector<std::string> const& args)
     {
-      ELLE_TRACE_SCOPE("Processing crypt backend %s '%s', pass %s",
-                       args[0], args[1], args[2]);
-      std::vector<std::string> bargs;
-      size_t space = args[1].find(" ");
-      const char* sep = (space == args[1].npos) ? ":" : " ";
-      boost::algorithm::split(bargs, args[1], boost::algorithm::is_any_of(sep),
-                              boost::algorithm::token_compress_on);
-      std::unique_ptr<Storage> backend =
-        elle::Factory<Storage>::instantiate(args[0], bargs);
+      std::unique_ptr<Storage> backend = instantiate(args[0], args[1]);
       std::string const& password = args[2];
       bool salt = true;
       if (args.size() > 3)

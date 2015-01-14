@@ -5,6 +5,9 @@
 
 #include <infinit/storage/Key.hh>
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
+
 ELLE_LOG_COMPONENT("infinit.storage.Storage");
 
 namespace infinit
@@ -32,6 +35,20 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: erase %x", *this, key);
       return this->_erase(key);
+    }
+
+    std::unique_ptr<Storage>
+    instantiate(std::string const& name,
+                std::string const& args)
+    {
+      ELLE_TRACE_SCOPE("Processing backend %s '%s'", args[0], args[1]);
+      std::vector<std::string> bargs;
+      size_t space = args.find(" ");
+      const char* sep = (space == args.npos) ? ":" : " ";
+      boost::algorithm::split(bargs, args, boost::algorithm::is_any_of(sep),
+                              boost::algorithm::token_compress_on);
+      std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
+      return std::move(backend);
     }
   }
 }
