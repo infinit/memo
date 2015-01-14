@@ -27,7 +27,8 @@ def configure(
   cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
                                 strip_prefix = True)
   cxx_toolkit = elle.cxx_toolkit
-  cxx_config = drake.cxx.Config(elle.config)
+  cxx_config = drake.cxx.Config(cxx_config)
+  cxx_config += elle.config
   cxx_config.add_local_include_path('src')
   cxx_config.warnings.parentheses = False
 
@@ -106,7 +107,6 @@ def configure(
 
   rule_tests = drake.Rule('tests')
   rule_check = drake.Rule('check')
-  rule_bins  = drake.Rule('bin')
 
   cxx_config_tests = drake.cxx.Config(cxx_config)
   cxx_config_tests += elle.boost.config_test(link = False)
@@ -135,13 +135,20 @@ def configure(
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 
-  for bin_name in ['s3fs', 'filesystem', 'sshfs', 'infinitfs']:
+  bin_cxx_config = drake.cxx.Config(cxx_config)
+  bin_cxx_config.library_add(
+      drake.copy(elle.boost.program_options_dynamic, 'lib', True))
+  bin_cxx_config.library_add(
+      drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+  bin_cxx_config.library_add(
+      drake.copy(elle.boost.system_dynamic, 'lib', True))
+  for bin_name in ['infinit', 's3fs', 'sshfs']:
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name,
       [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib, cryptography_lib],
       cxx_toolkit,
-      cxx_config_tests)
-    rule_bins << bin
+      bin_cxx_config)
+    rule_build << bin
   steg = drake.cxx.Executable(
     'bin/steg',
     drake.nodes('src/infinit/model/steg/Steg.hh',
@@ -151,4 +158,3 @@ def configure(
     cxx_toolkit,
     cxx_config_tests
     )
-  rule_bins << steg
