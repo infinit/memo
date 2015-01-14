@@ -234,6 +234,8 @@ namespace infinit
       // beginning of each file's first block in index mode.
       struct Header
       { // max size we can grow is sizeof(Address)
+        static const uint32_t current_version = 1;
+        uint32_t version;
         uint32_t block_size;
         uint32_t links;
         uint64_t total_size;
@@ -701,11 +703,13 @@ namespace infinit
       Header res;
       uint32_t v;
       memcpy(&v, _first_block->data().mutable_contents(), 4);
-      res.block_size = ntohl(v);
+      res.version = ntohl(v);
       memcpy(&v, _first_block->data().mutable_contents()+4, 4);
+      res.block_size = ntohl(v);
+      memcpy(&v, _first_block->data().mutable_contents()+8, 4);
       res.links = ntohl(v);
       uint64_t v2;
-      memcpy(&v2, _first_block->data().mutable_contents()+8, 8);
+      memcpy(&v2, _first_block->data().mutable_contents()+12, 8);
       res.total_size = ((uint64_t)ntohl(v2)<<32) + ntohl(v2 >> 32);
       return res;
       ELLE_DEBUG("Header: bs=%s links=%s size=%s", res.block_size, res.links, res.total_size);
@@ -714,12 +718,15 @@ namespace infinit
     void
     File::_header(Header const& h)
     {
-      uint32_t v = htonl(h.block_size);
+      uint32_t v;
+      v = htonl(h.current_version);
       memcpy(_first_block->data().mutable_contents(), &v, 4);
-      v = htonl(h.links);
+      v = htonl(h.block_size);
       memcpy(_first_block->data().mutable_contents()+4, &v, 4);
+      v = htonl(h.links);
+      memcpy(_first_block->data().mutable_contents()+8, &v, 4);
       uint64_t v2 = ((uint64_t)htonl(h.total_size)<<32) + htonl(h.total_size >> 32);
-      memcpy(_first_block->data().mutable_contents()+8, &v2, 8);
+      memcpy(_first_block->data().mutable_contents()+12, &v2, 8);
     }
 
     boost::optional<Address>
@@ -1038,7 +1045,7 @@ namespace infinit
       */
       _first_block->data().size(sizeof(Address)* 2);
       // store block size in headers
-      Header h { default_block_size, 1, current_size};
+      Header h { Header::current_version, default_block_size, 1, current_size};
       _header(h);
 
       memcpy(_first_block->data().mutable_contents() + sizeof(Address),
