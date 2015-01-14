@@ -337,7 +337,15 @@ namespace infinit
         ELLE_DEBUG("Deserializing directory");
         std::istream is(new elle::InputStreamBuffer<elle::Buffer>(_block->data()));
         elle::serialization::json::SerializerIn input(is);
-        input.serialize("content", _files);
+        try
+        {
+          input.serialize("content", _files);
+        }
+        catch(elle::serialization::Error const& e)
+        {
+          ELLE_WARN("Directory deserialization error: %s", e);
+          throw rfs::Error(EIO, e.what());
+        }
       }
       else
         _changed();
