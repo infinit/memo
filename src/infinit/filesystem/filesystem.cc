@@ -42,17 +42,19 @@ namespace infinit
       uint32_t mode;
       uint32_t uid;
       uint32_t gid;
-      uint64_t atime;
-      uint64_t mtime;
+      uint64_t atime; // access:  read,
+      uint64_t mtime; // content change  dir: create/delete file
+      uint64_t ctime; //attribute change+content change
       Address address;
       FileStoreMode store_mode;
       FileData(std::string name, uint64_t size, uint32_t mode, uint64_t atime,
-        uint64_t mtime, Address const& address, FileStoreMode store_mode)
+        uint64_t mtime, uint64_t ctime, Address const& address, FileStoreMode store_mode)
         : name(name)
         , size(size)
         , mode(mode)
         , atime(atime)
         , mtime(mtime)
+        , ctime(ctime)
         , address(address)
         , store_mode(store_mode)
       {
@@ -73,6 +75,7 @@ namespace infinit
         s.serialize("mode", mode);
         s.serialize("atime", atime);
         s.serialize("mtime", mtime);
+        s.serialize("ctime", ctime);
         s.serialize("address", address);
         int sm = (int)store_mode;
         s.serialize("store_mode", sm);
@@ -372,7 +375,9 @@ namespace infinit
       }
       if (set_mtime && _parent)
       {
-        _parent->_files.at(_name).mtime = time(nullptr);
+        FileData& f = _parent->_files.at(_name);
+        f.mtime = time(nullptr);
+        f.ctime = time(nullptr);
         _parent->_changed();
       }
       _push_changes();
@@ -580,6 +585,7 @@ namespace infinit
         return;
       auto & f = _parent->_files.at(_name);
       f.mode = (f.mode & ~07777) | (mode & 07777);
+      f.ctime = time(nullptr);
       _parent->_changed();
     }
 
@@ -601,6 +607,7 @@ namespace infinit
       auto & f = _parent->_files.at(_name);
       f.uid = uid;
       f.gid = gid;
+      f.ctime = time(nullptr);
       _parent->_changed();
     }
     void
@@ -616,7 +623,7 @@ namespace infinit
         st->st_size = fd.size;
         st->st_atime = fd.atime;
         st->st_mtime = fd.mtime;
-        st->st_ctime = fd.mtime;
+        st->st_ctime = fd.ctime;
         st->st_dev = 1;
         st->st_ino = (long)this;
         st->st_nlink = 1;
@@ -645,6 +652,7 @@ namespace infinit
                        FileData{_name, 0, mode | DIRECTORY_MASK,
                                 uint64_t(time(nullptr)),
                                 uint64_t(time(nullptr)),
+                                uint64_t(time(nullptr)),
                                 b->address(),
                                 FileStoreMode::direct}));
       _parent->_changed();
@@ -659,6 +667,7 @@ namespace infinit
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name, FileData{_name, 0, mode & ~DIRECTORY_MASK,
+                                       uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
                                        b->address(),
@@ -1014,6 +1023,7 @@ namespace infinit
     {
       auto& data = _parent->_files.at(_name);
       data.mtime = time(nullptr);
+      data.ctime = time(nullptr);
       _owner.block_store()->store(*_first_block);
       if (!_multi())
         data.size = _first_block->data().size();
