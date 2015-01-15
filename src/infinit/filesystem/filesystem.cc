@@ -189,7 +189,10 @@ namespace infinit
     class FileHandle: public rfs::Handle
     {
     public:
-      FileHandle(File& owner, bool update_folder_mtime=false, bool no_prefetch = false);
+      FileHandle(File& owner,
+                 bool update_folder_mtime=false,
+                 bool no_prefetch = false,
+                 bool mark_dirty = false);
       ~FileHandle();
       int read(elle::WeakBuffer buffer, size_t size, off_t offset) override;
       int write(elle::WeakBuffer buffer, size_t size, off_t offset) override;
@@ -655,7 +658,7 @@ namespace infinit
     Unknown::create(int flags, mode_t mode)
     {
       std::unique_ptr<Block> b = _owner.block_store()->make_block();
-      //_owner.block_store()->store(*b);
+      //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name, FileData{_name, 0, mode & ~DIRECTORY_MASK,
@@ -667,7 +670,9 @@ namespace infinit
       _remove_from_cache();
       File& f = dynamic_cast<File&>(_owner.fs()->path(full_path().string()));
       f._first_block = std::move(b);
-      return std::unique_ptr<rfs::Handle>(new FileHandle(f, true, true));
+      // Mark dirty since we did not push first_block
+      std::unique_ptr<rfs::Handle> h(new FileHandle(f, true, true, true));
+      return h;
     }
 
     void
@@ -1091,9 +1096,9 @@ namespace infinit
       }
     }
 
-    FileHandle::FileHandle(File& owner, bool push_mtime, bool no_fetch)
+    FileHandle::FileHandle(File& owner, bool push_mtime, bool no_fetch, bool dirty)
     : _owner(owner)
-    , _dirty(false)
+    , _dirty(dirty)
     {
       _owner._parent->_files.at(_owner._name).atime = time(nullptr);
       _owner._parent->_changed(push_mtime);

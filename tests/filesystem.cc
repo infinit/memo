@@ -226,6 +226,11 @@ void test_basic()
   BOOST_CHECK_EQUAL(std::string(output, output+31),
                     std::string(5, 0) + data);
   close(fd);
+
+  // link/unlink
+  fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
+  ::close(fd);
+  bfs::remove(mount / "u");
 }
 
 
