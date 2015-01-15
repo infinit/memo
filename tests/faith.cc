@@ -12,8 +12,9 @@ static
 void
 faith()
 {
-  infinit::storage::Memory storage;
-  infinit::model::faith::Faith faith(storage);
+  std::unique_ptr<infinit::storage::Storage> storage
+    = elle::make_unique<infinit::storage::Memory>();
+  infinit::model::faith::Faith faith(std::move(storage));
 
   auto block1 = faith.make_block();
   auto block2 = faith.make_block();

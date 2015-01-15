@@ -46,9 +46,10 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
       storage = new infinit::storage::Memory();
     else
       storage = new infinit::storage::Filesystem(store);
-    model = elle::make_unique<infinit::model::faith::Faith>(*storage);
+    model = elle::make_unique<infinit::model::faith::Faith>(
+      std::unique_ptr<infinit::storage::Storage>(storage));
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
-      "", std::move(model));
+      std::move(model));
     ifs::FileSystem* ops_ptr = ops.get();
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
     ops_ptr->fs(fs);
