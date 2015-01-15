@@ -14,6 +14,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/model/Model.hh>
+#include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
 
@@ -57,6 +58,35 @@ public:
 };
 static const elle::serialization::Hierarchy<StorageConfig>::
 Register<MemoryStorageConfig> _register_MemoryStorageConfig("memory");
+
+struct FilesystemStorageConfig:
+  public StorageConfig
+{
+public:
+  std::string path;
+
+  FilesystemStorageConfig(elle::serialization::SerializerIn& input)
+    : StorageConfig()
+  {
+    this->serialize(input);
+  }
+
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("path", this->path);
+  }
+
+  virtual
+  std::unique_ptr<infinit::storage::Storage>
+  make() const
+  {
+    return elle::make_unique<infinit::storage::Filesystem>(this->path);
+  }
+};
+static const elle::serialization::Hierarchy<StorageConfig>::
+Register<FilesystemStorageConfig>
+_register_FilesystemStorageConfig("filesystem");
 
 /*--------------------.
 | Model configuration |
