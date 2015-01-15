@@ -245,11 +245,10 @@ namespace infinit
       };
       /* Get address for given block index.
        * @param create: if true, allow creation of a new block as needed
-       * @param change: will be filled by true if creation was/would have
-       *                been required
+       *                else returns nullptr if creation was required
       */
-      boost::optional<Address>
-      _block_address(int index, bool create, bool* change = nullptr);
+      Block*
+      _block_at(int index, bool create);
       // Switch from direct to indexed mode
       void _switch_to_multi(bool alloc_first_block);
       void _changed();
@@ -740,21 +739,17 @@ namespace infinit
       memcpy(_first_block->data().mutable_contents()+12, &v2, 8);
     }
 
-    boost::optional<Address>
-    File::_block_address(int index, bool create, bool* changeOrAbort)
+    Block*
+    File::_block_at(int index, bool create)
     {
       ELLE_ASSERT_GTE(index, 0);
-      if (changeOrAbort)
-        *changeOrAbort = false;
       int offset = (index+1) * sizeof(Address);
       int sz = _first_block->data().size();
       if (sz < offset + signed(sizeof(Address)))
       {
         if (!create)
         {
-          if (changeOrAbort)
-            *changeOrAbort = true;
-          return boost::optional<Address>();
+          return nullptr;
         }
         _first_block->data().size(offset + sizeof(Address));
         memset(_first_block->data().mutable_contents() + sz, 0,
@@ -762,25 +757,31 @@ namespace infinit
       }
       char zeros[sizeof(Address)];
       memset(zeros, 0, sizeof(Address));
+      std::unique_ptr<Block> b;
       if (!memcmp(zeros, _first_block->data().mutable_contents() + offset,
                  sizeof(Address)))
       { // allocate
         if (!create)
         {
-          if (changeOrAbort)
-            *changeOrAbort = true;
-          return boost::optional<Address>();
+          return nullptr;
         }
-        std::unique_ptr<Block> b = _owner.block_store()->make_block();
-        _owner.block_store()->store(*b);
-        memcpy(_first_block->data().mutable_contents() + offset,
-               b->address().value(), sizeof(Address::Value));
-        if (changeOrAbort)
-          *changeOrAbort = true;
-        _owner.block_store()->store(*_first_block);
-        return b->address();
+        b = _owner.block_store()->make_block();
+        // _owner.block_store()->store(*b); // FIXME: but why?
       }
-      return Address(*(Address*)(_first_block->data().mutable_contents() + offset));
+      else
+      {
+         Address addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
+         b = _owner.block_store()->fetch(addr);
+      }
+      Block* b_addr = b.get();
+      memcpy(_first_block->data().mutable_contents() + offset,
+        b->address().value(), sizeof(Address::Value));
+      _owner.block_store()->store(*_first_block);
+      auto inserted = _blocks.insert(std::make_pair(index,
+        File::CacheEntry{std::move(b), false}));
+      inserted.first->second.last_use = std::chrono::system_clock::now();
+      inserted.first->second.dirty = true;
+      return b_addr;
     }
 
     void
@@ -1188,17 +1189,13 @@ namespace infinit
         else
         {
           bool change;
-          boost::optional<Address> addr = _owner._block_address(start_block, false, &change);
-          if (change)
+          block = _owner._block_at(start_block, false);
+          if (block == nullptr)
           { // block would have been allocated: sparse file?
             memset(buffer.mutable_contents(), 0, size);
             ELLE_DEBUG("read %s 0-bytes", size);
             return size;
           }
-          auto inserted = _owner._blocks.insert(std::make_pair(start_block,
-            File::CacheEntry{_owner._owner.block_store()->fetch(*addr), false}));
-          block = inserted.first->second.block.get();
-          inserted.first->second.last_use = std::chrono::system_clock::now();
           ELLE_DEBUG("fetched block %x of size %s", block->address(), block->data().size());
           _owner.check_cache();
         }
@@ -1286,13 +1283,8 @@ namespace infinit
         }
         else
         {
-          bool change;
-          boost::optional<Address> addr = _owner._block_address(start_block, true, &change);
-          auto it_insert = _owner._blocks.insert(std::make_pair(start_block,
-            File::CacheEntry{_owner._owner.block_store()->fetch(*addr), true}));
-          block = it_insert.first->second.block.get();
-          it_insert.first->second.last_use = std::chrono::system_clock::now();
-          it_insert.first->second.dirty = true;
+          block = _owner._block_at(start_block, true);
+          ELLE_ASSERT(block != nullptr);
           _owner.check_cache();
         }
         off_t block_offset = offset % block_size;
