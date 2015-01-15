@@ -50,9 +50,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
       std::unique_ptr<infinit::storage::Storage>(storage));
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       std::move(model));
-    ifs::FileSystem* ops_ptr = ops.get();
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
-    ops_ptr->fs(fs);
     fs->mount(mountpoint, {"", "-o", "big_writes"}); // {"", "-d" /*, "-o", "use_ino"*/});
   });
   sched.run();

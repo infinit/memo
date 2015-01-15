@@ -29,7 +29,6 @@ namespace infinit
     private:
       std::unique_ptr<model::blocks::Block> _root_block();
       ELLE_ATTRIBUTE(model::Address, root_address);
-      ELLE_ATTRIBUTE_RW(reactor::filesystem::FileSystem*, fs);
       ELLE_ATTRIBUTE_R(std::unique_ptr<infinit::model::Model>, block_store);
     };
   }

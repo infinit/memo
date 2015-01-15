@@ -235,9 +235,7 @@ main(int argc, char** argv)
               std::move(model));
         ELLE_TRACE("mount filesystem")
         {
-          auto& fixthisshit = *fs;
           reactor::filesystem::FileSystem filesystem(std::move(fs), true);
-          fixthisshit.fs(&filesystem); // FIXME: seriously, fix it.
           filesystem.mount(cfg.mountpoint, {});
           reactor::wait(filesystem);
         }

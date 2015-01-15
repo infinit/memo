@@ -269,7 +269,6 @@ namespace infinit
     FileSystem::FileSystem(model::Address root,
                            std::unique_ptr<infinit::model::Model> model)
       : _root_address(root)
-      , _fs(nullptr)
       , _block_store(std::move(model))
     {
       reactor::scheduler().signal_handle
@@ -287,7 +286,6 @@ namespace infinit
 
     FileSystem::FileSystem(std::unique_ptr<infinit::model::Model> model)
       : _root_address(_make_root_block(*model)->address())
-      , _fs(nullptr)
       , _block_store(nullptr)
     {
       ELLE_ASSERT(model.get());
@@ -298,7 +296,7 @@ namespace infinit
     void
     FileSystem::print_cache_stats()
     {
-      Directory& root = dynamic_cast<Directory&>(fs()->path("/"));
+      Directory& root = dynamic_cast<Directory&>(filesystem()->path("/"));
       CacheStats stats;
       memset(&stats, 0, sizeof(CacheStats));
       root.cache_stats(stats);
@@ -446,12 +444,12 @@ namespace infinit
       {
         std::string const& name = v.first;
         ELLE_DEBUG("Extracting %s", current / name);
-        auto p = _owner.fs()->extract((current / name).string());
+        auto p = _owner.filesystem()->extract((current / name).string());
         if (p)
         {
           auto ptr = p.get();
           ELLE_DEBUG("Inserting %s", where / name);
-          _owner.fs()->set((where/name).string(), std::move(p));
+          _owner.filesystem()->set((where/name).string(), std::move(p));
           if (v.second.mode & DIRECTORY_MASK)
           {
             dynamic_cast<Directory*>(ptr)->move_recurse(current / name, where / name);
@@ -476,12 +474,12 @@ namespace infinit
       if (&_parent == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
       Directory& dir = dynamic_cast<Directory&>(
-        _owner.fs()->path(newpath.string()));
+        _owner.filesystem()->path(newpath.string()));
 
       if (dir._files.find(newname) != dir._files.end())
       {
         // File and empty dir gets removed.
-        rfs::Path& target = _owner.fs()->path(where.string());
+        rfs::Path& target = _owner.filesystem()->path(where.string());
         struct stat st;
         target.stat(&st);
         if (st.st_mode & DIRECTORY_MASK)
@@ -510,16 +508,16 @@ namespace infinit
       _parent = &dir;
       // Move the node in cache
       ELLE_DEBUG("Extracting %s", current);
-      auto p = _owner.fs()->extract(current.string());
+      auto p = _owner.filesystem()->extract(current.string());
       // This might delete the dummy Unknown on destination which is fine
        ELLE_DEBUG("Setting %s", where);
-      _owner.fs()->set(where.string(),std::move(p));
+      _owner.filesystem()->set(where.string(),std::move(p));
     }
 
     void Node::_remove_from_cache()
     {
       ELLE_DEBUG("remove_from_cache: %s entering", _name);
-      std::unique_ptr<rfs::Path> self = _owner.fs()->extract(full_path().string());
+      std::unique_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path().string());
       rfs::Path* p = self.release();
       ELLE_DEBUG("remove_from_cache: %s released", _name);
       new reactor::Thread("delayed_cleanup", [p] { ELLE_DEBUG("async_clean"); delete p;}, true);
@@ -547,7 +545,7 @@ namespace infinit
       boost::filesystem::path current = full_path();
       for(auto const& f: _files)
       {
-        rfs::Path* p = _owner.fs()->get((current / f.second.name).string());
+        rfs::Path* p = _owner.filesystem()->get((current / f.second.name).string());
         if (!p)
           return;
         if (Directory* d = dynamic_cast<Directory*>(p))
@@ -668,7 +666,7 @@ namespace infinit
                                        FileStoreMode::direct}));
       // FileHandle will do it _parent->_changed(true);
       _remove_from_cache();
-      File& f = dynamic_cast<File&>(_owner.fs()->path(full_path().string()));
+      File& f = dynamic_cast<File&>(_owner.filesystem()->path(full_path().string()));
       f._first_block = std::move(b);
       // Mark dirty since we did not push first_block
       std::unique_ptr<rfs::Handle> h(new FileHandle(f, true, true, true));
@@ -791,7 +789,7 @@ namespace infinit
       std::string newname = where.filename().string();
       boost::filesystem::path newpath = where.parent_path();
       Directory& dir = dynamic_cast<Directory&>(
-        _owner.fs()->path(newpath.string()));
+        _owner.filesystem()->path(newpath.string()));
       if (dir._files.find(newname) != dir._files.end())
         throw rfs::Error(EEXIST, "target file exists");
       // we need a place to store the link count
@@ -804,7 +802,7 @@ namespace infinit
       dir._files.insert(std::make_pair(newname, _parent->_files.at(_name)));
       dir._files.at(newname).name = newname;
       dir._changed(true);
-      _owner.fs()->extract(where.string());
+      _owner.filesystem()->extract(where.string());
       _owner.block_store()->store(*_first_block);
     }
 
