@@ -237,6 +237,7 @@ main(int argc, char** argv)
         {
           reactor::filesystem::FileSystem filesystem(std::move(fs), true);
           filesystem.mount(cfg.mountpoint, {});
+          reactor::scheduler().signal_handle(SIGINT, [&] { filesystem.unmount();});
           reactor::wait(filesystem);
         }
       });
