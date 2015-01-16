@@ -23,7 +23,7 @@ namespace infinit
     S3::S3(std::unique_ptr<aws::S3> storage)
     : _storage(std::move(storage))
     {}
-    
+
     elle::Buffer
     S3::_get(Key key) const
     {
@@ -56,6 +56,41 @@ namespace infinit
       auto s3 = elle::make_unique<aws::S3>(creds);
       return elle::make_unique<infinit::storage::S3>(std::move(s3));
     }
+
+
+    struct S3StorageConfig:
+    public StorageConfig
+    {
+    public:
+      std::string configuration;
+      S3StorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("configuration", this->configuration);
+      }
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() const
+      {
+        std::ifstream is(configuration);
+        elle::serialization::json::SerializerIn input(is);
+        aws::Credentials creds(input);
+        creds.skew(boost::posix_time::time_duration());
+        auto s3 = elle::make_unique<aws::S3>(creds);
+        return elle::make_unique<infinit::storage::S3>(std::move(s3));
+      }
+    };
+
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<S3StorageConfig>
+    _register_S3StorageConfig("s3");
   }
 }
 

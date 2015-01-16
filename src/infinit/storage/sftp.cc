@@ -515,5 +515,35 @@ namespace infinit
       id = p.readInt();
       ELLE_ASSERT_EQ(id, req);
     }
+    struct SFTPStorageConfig:
+    public StorageConfig
+    {
+    public:
+      std::string host;
+      std::string path;
+      SFTPStorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("host", this->host);
+        s.serialize("path", this->path);
+      }
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() const
+      {
+        return elle::make_unique<infinit::storage::SFTP>(host, path);
+      }
+    };
+
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<SFTPStorageConfig>
+    _register_SFTPStorageConfig("sftp");
   }
 }

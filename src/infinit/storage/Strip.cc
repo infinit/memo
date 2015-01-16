@@ -10,8 +10,8 @@ namespace infinit
 {
   namespace storage
   {
-    Strip::Strip(std::vector<Storage*> backend)
-      : _backend(backend)
+    Strip::Strip(std::vector<std::unique_ptr<Storage>> backend)
+      : _backend(std::move(backend))
     {
     }
     elle::Buffer
@@ -40,7 +40,7 @@ namespace infinit
     }
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
-      std::vector<Storage*> backends;
+      std::vector<std::unique_ptr<Storage>> backends;
       for (unsigned int i = 0; i < args.size(); i += 2)
       {
         std::string name = args[i];
@@ -50,10 +50,58 @@ namespace infinit
         boost::algorithm::split(bargs, args[i+1], boost::algorithm::is_any_of(sep),
                                 boost::algorithm::token_compress_on);
         std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
-        backends.push_back(backend.release());
+        backends.push_back(std::move(backend));
       }
-      return elle::make_unique<Strip>(backends);
+      return elle::make_unique<Strip>(std::move(backends));
     }
+
+    class StorageConfigWrapper
+    {
+    public:
+      std::shared_ptr<StorageConfig> config;
+      StorageConfigWrapper() {}
+      StorageConfigWrapper(elle::serialization::SerializerIn& input)
+      {
+        serialize(input);
+      }
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("config", config);
+      }
+    };
+    struct StripStorageConfig:
+    public StorageConfig
+    {
+    public:
+      std::vector<StorageConfigWrapper> storage;
+      StripStorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("backend", this->storage);
+      }
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() const
+      {
+        std::vector<std::unique_ptr<infinit::storage::Storage>> s;
+        for(auto const& c: storage)
+          s.push_back(std::move(c.config->make()));
+        return elle::make_unique<infinit::storage::Strip>(
+          std::move(s));
+      }
+    };
+
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<StripStorageConfig>
+    _register_StripStorageConfig("strip");
   }
 }
 

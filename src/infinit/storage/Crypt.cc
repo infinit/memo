@@ -64,6 +64,40 @@ namespace infinit
     {
       this->_backend->erase(k);
     }
+
+    struct CryptStorageConfig:
+    public StorageConfig
+    {
+    public:
+      std::string password;
+      bool salt;
+      std::shared_ptr<StorageConfig> storage;
+      CryptStorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("password", this->password);
+        s.serialize("salt", this->salt);
+        s.serialize("backend", this->storage);
+      }
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() const
+      {
+        return elle::make_unique<infinit::storage::Crypt>(
+          std::move(storage->make()), password, salt);
+      }
+    };
+
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<CryptStorageConfig>
+    _register_CryptStorageConfig("crypt");
   }
 }
 

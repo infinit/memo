@@ -13,9 +13,9 @@ namespace infinit
     {
     public:
       Latency(std::unique_ptr<Storage> backend,
-        reactor::Duration latency_get,
-        reactor::Duration latency_set,
-        reactor::Duration latency_erase
+        reactor::DurationOpt latency_get,
+        reactor::DurationOpt latency_set,
+        reactor::DurationOpt latency_erase
         );
     protected:
       virtual
@@ -29,9 +29,9 @@ namespace infinit
       _erase(Key k) override;
     private:
       std::unique_ptr<Storage> _backend;
-      reactor::Duration _latency_get;
-      reactor::Duration _latency_set;
-      reactor::Duration _latency_erase;
+      reactor::DurationOpt _latency_get;
+      reactor::DurationOpt _latency_set;
+      reactor::DurationOpt _latency_erase;
     };
   }
 }

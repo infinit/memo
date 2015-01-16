@@ -12,9 +12,9 @@ namespace infinit
 {
   namespace storage
   {
-    Mirror::Mirror(std::vector<Storage*> backend, bool balance_reads, bool parallel)
+    Mirror::Mirror(std::vector<std::unique_ptr<Storage>> backend, bool balance_reads, bool parallel)
       : _balance_reads(balance_reads)
-      , _backend(backend)
+      , _backend(std::move(backend))
       , _read_counter(0)
       , _parallel(parallel)
     {
@@ -33,16 +33,17 @@ namespace infinit
       {
         elle::With<reactor::Scope>() << [&] (reactor::Scope& s)
         {
-          for (Storage* e: _backend)
+          for (auto& e: _backend)
           {
-            s.run_background("mirror set", [&,e] { e->set(k, value, insert, update);});
+            Storage* ptr = e.get();
+            s.run_background("mirror set", [&,ptr] { ptr->set(k, value, insert, update);});
           }
           s.wait();
         };
       }
       else
       {
-        for (Storage* e: _backend)
+        for (auto& e: _backend)
         {
           e->set(k, value, insert, update);
         }
@@ -55,16 +56,17 @@ namespace infinit
       {
         elle::With<reactor::Scope>() << [&] (reactor::Scope& s)
         {
-          for (Storage* e: _backend)
+          for (auto& e: _backend)
           {
-            s.run_background("mirror erase", [&,e] { e->erase(k);});
+            Storage* ptr = e.get();
+            s.run_background("mirror erase", [&,ptr] { ptr->erase(k);});
           }
           s.wait();
         };
       }
       else
       {
-        for (Storage* e: _backend)
+        for (auto& e: _backend)
         {
           e->erase(k);
         }
@@ -73,7 +75,7 @@ namespace infinit
 
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
-      std::vector<Storage*> backends;
+      std::vector<std::unique_ptr<Storage>> backends;
       bool balance_reads = args[0] == "true" || args[0] == "1" || args[0] =="yes";
       bool parallel = args[1] == "true" || args[1] == "1" || args[1] =="yes";
       for (int i = 2; i < signed(args.size()); i += 2)
@@ -86,10 +88,62 @@ namespace infinit
         boost::algorithm::split(bargs, args[i+1], boost::algorithm::is_any_of(sep),
                                 boost::algorithm::token_compress_on);
         std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
-        backends.push_back(backend.release());
+        backends.push_back(std::move(backend));
       }
-      return elle::make_unique<Mirror>(backends, balance_reads, parallel);
+      return elle::make_unique<Mirror>(std::move(backends), balance_reads, parallel);
     }
+
+    class StorageConfigWrapper
+    {
+    public:
+      std::shared_ptr<StorageConfig> config;
+      StorageConfigWrapper() {}
+      StorageConfigWrapper(elle::serialization::SerializerIn& input)
+      {
+        serialize(input);
+      }
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("config", config);
+      }
+    };
+    struct MirrorStorageConfig:
+    public StorageConfig
+    {
+    public:
+      bool parallel;
+      bool balance;
+      std::vector<StorageConfigWrapper> storage;
+      MirrorStorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("parallel", this->parallel);
+        s.serialize("balance", this->balance);
+        s.serialize("backend", this->storage);
+      }
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() const
+      {
+        std::vector<std::unique_ptr<infinit::storage::Storage>> s;
+        for(auto const& c: storage)
+          s.push_back(std::move(c.config->make()));
+        return elle::make_unique<infinit::storage::Mirror>(
+          std::move(s), balance, parallel);
+      }
+    };
+
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<MirrorStorageConfig>
+    _register_MirrorStorageConfig("mirror");
   }
 }
 

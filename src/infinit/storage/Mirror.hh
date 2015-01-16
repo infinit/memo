@@ -9,7 +9,7 @@ namespace infinit
     class Mirror: public Storage
     {
     public:
-      Mirror(std::vector<Storage*> backend, bool balance_reads,
+      Mirror(std::vector<std::unique_ptr<Storage>> backend, bool balance_reads,
              bool parallel = true);
     protected:
       virtual
@@ -22,7 +22,7 @@ namespace infinit
       void
       _erase(Key k) override;
       ELLE_ATTRIBUTE(bool, balance_reads);
-      ELLE_ATTRIBUTE(std::vector<Storage*>, backend);
+      ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
       ELLE_ATTRIBUTE(unsigned int, read_counter);
       ELLE_ATTRIBUTE(bool, parallel);
     };

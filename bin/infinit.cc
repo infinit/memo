@@ -14,6 +14,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/model/Model.hh>
+#include <infinit/storage/Async.hh>
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
@@ -24,16 +25,10 @@ ELLE_LOG_COMPONENT("infinit");
 | Storage configuration |
 `----------------------*/
 
-struct StorageConfig:
-  public elle::serialization::VirtuallySerializable
+namespace infinit
 {
-  static constexpr char const* virtually_serializable_key = "type";
-
-  virtual
-  std::unique_ptr<infinit::storage::Storage>
-  make() const = 0;
-};
-
+  namespace storage
+  {
 struct MemoryStorageConfig:
   public StorageConfig
 {
@@ -88,6 +83,10 @@ static const elle::serialization::Hierarchy<StorageConfig>::
 Register<FilesystemStorageConfig>
 _register_FilesystemStorageConfig("filesystem");
 
+  }
+}
+
+
 /*--------------------.
 | Model configuration |
 `--------------------*/
@@ -106,7 +105,7 @@ struct FaithModelConfig:
   public ModelConfig
 {
 public:
-  std::shared_ptr<StorageConfig> storage;
+  std::shared_ptr<infinit::storage::StorageConfig> storage;
 
   FaithModelConfig(elle::serialization::SerializerIn& input)
     : ModelConfig()

@@ -6,6 +6,7 @@
 
 # include <elle/Buffer.hh>
 # include <elle/attribute.hh>
+# include <elle/serialization/Serializer.hh>
 
 # include <infinit/storage/fwd.hh>
 
@@ -38,7 +39,16 @@ namespace infinit
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args);
+    struct StorageConfig:
+    public elle::serialization::VirtuallySerializable
+    {
+      static constexpr char const* virtually_serializable_key = "type";
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() const = 0;
+    };
   }
 }
+
 
 #endif

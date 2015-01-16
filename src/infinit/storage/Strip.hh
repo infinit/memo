@@ -12,7 +12,7 @@ namespace infinit
     class Strip: public Storage
     {
     public:
-      Strip(std::vector<Storage*> backend);
+      Strip(std::vector<std::unique_ptr<Storage>> backend);
     protected:
       virtual
       elle::Buffer
@@ -23,7 +23,7 @@ namespace infinit
       virtual
       void
       _erase(Key k) override;
-      ELLE_ATTRIBUTE(std::vector<Storage*>, backend);
+      ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
       int _disk_of(Key k) const ;
     };
   }

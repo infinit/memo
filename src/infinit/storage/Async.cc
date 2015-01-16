@@ -38,7 +38,7 @@ namespace infinit
         ELLE_DEBUG("satisfy get on %x from cache", k);
         return elle::Buffer(it->second.contents(), it->second.size());
       }
-      
+
       return _backend->get(k);
     }
     void
@@ -129,7 +129,44 @@ namespace infinit
         max_bytes = std::stol(args[3]);
       return elle::make_unique<Async>(std::move(backend), max_blocks, max_bytes);
     }
+
+    struct AsyncStorageConfig:
+    public StorageConfig
+    {
+    public:
+      int64_t max_blocks;
+      int64_t max_size;
+      std::shared_ptr<StorageConfig> storage;
+      AsyncStorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("max_blocks", this->max_blocks);
+        s.serialize("max_size", this->max_size);
+        s.serialize("backend", this->storage);
+      }
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() const
+      {
+        return elle::make_unique<infinit::storage::Async>(
+          std::move(storage->make()), max_blocks, max_size);
+      }
+    };
+
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<AsyncStorageConfig>
+    _register_AsyncStorageConfig("async");
+
+
   }
 }
 
 FACTORY_REGISTER(infinit::storage::Storage, "async", &infinit::storage::make);
+
