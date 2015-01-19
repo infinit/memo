@@ -9,10 +9,13 @@
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 
+#include <cryptography/KeyPair.hh>
+
 #include <reactor/scheduler.hh>
 
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/faith/Faith.hh>
+#include <infinit/model/paranoid/Paranoid.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/storage/Async.hh>
 #include <infinit/storage/Filesystem.hh>
@@ -97,14 +100,14 @@ struct ModelConfig:
 
   virtual
   std::unique_ptr<infinit::model::Model>
-  make() const = 0;
+  make() = 0;
 };
 
 struct FaithModelConfig:
   public ModelConfig
 {
 public:
-  std::shared_ptr<infinit::storage::StorageConfig> storage;
+  std::unique_ptr<infinit::storage::StorageConfig> storage;
 
   FaithModelConfig(elle::serialization::SerializerIn& input)
     : ModelConfig()
@@ -120,7 +123,7 @@ public:
 
   virtual
   std::unique_ptr<infinit::model::Model>
-  make() const
+  make()
   {
     return elle::make_unique<infinit::model::faith::Faith>
       (this->storage->make());
@@ -128,6 +131,49 @@ public:
 };
 static const elle::serialization::Hierarchy<ModelConfig>::
 Register<FaithModelConfig> _register_FaithModelConfig("faith");
+
+struct ParanoidModelConfig:
+  public ModelConfig
+{
+public:
+  // boost::optional does not support in-place construction, use a
+  // std::unique_ptr instead since KeyPair is not copiable.
+  std::unique_ptr<infinit::cryptography::KeyPair> keys;
+  std::unique_ptr<infinit::storage::StorageConfig> storage;
+
+  ParanoidModelConfig(elle::serialization::SerializerIn& input)
+    : ModelConfig()
+  {
+    this->serialize(input);
+  }
+
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("keys", this->keys);
+    s.serialize("storage", this->storage);
+  }
+
+  virtual
+  std::unique_ptr<infinit::model::Model>
+  make()
+  {
+    if (!this->keys)
+    {
+      this->keys.reset(
+        new infinit::cryptography::KeyPair(
+          infinit::cryptography::KeyPair::generate
+          (infinit::cryptography::Cryptosystem::rsa, 2048)));
+      elle::serialization::json::SerializerOut output(std::cout);
+      std::cout << "No key specified, generating fresh ones:" << std::endl;
+      this->keys->serialize(output);
+    }
+    return elle::make_unique<infinit::model::paranoid::Paranoid>
+      (std::move(*this->keys), this->storage->make());
+  }
+};
+static const elle::serialization::Hierarchy<ModelConfig>::
+Register<ParanoidModelConfig> _register_ParanoidModelConfig("paranoid");
 
 /*--------------.
 | Configuration |
