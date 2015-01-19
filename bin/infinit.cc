@@ -258,6 +258,8 @@ parse_options(int argc, char** argv, Config& cfg)
         elle::sprintf("error in configuration file %s: %s", config, e.what()));
     }
   }
+  else
+    throw elle::Error("missing mandatory 'config' option");
 }
 
 int
@@ -297,7 +299,7 @@ main(int argc, char** argv)
   }
   catch (std::exception const& e)
   {
-    elle::fprintf(std::cerr, "fatal error: %s\n", e.what());
+    elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
     return 1;
   }
 }
