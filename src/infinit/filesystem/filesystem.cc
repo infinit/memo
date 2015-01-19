@@ -713,6 +713,7 @@ namespace infinit
     bool
     File::_multi()
     {
+      ELLE_ASSERT(_parent);
       return _parent->_files.at(_name).store_mode == FileStoreMode::index;
     }
 
@@ -833,21 +834,21 @@ namespace infinit
         dir->_files.insert(std::make_pair(n, cur));
         dir->_files.at(n).name = n;
       }
-      // links and multi methods can't be called after deletion from parent
+      // multi method can't be called after deletion from parent
       bool multi = _multi();
-      int links = 1;
-      if (multi)
-        links = _header().links;
+      Address addr = _parent->_files.at(_name).address;
       _parent->_files.erase(_name);
       _parent->_changed(true);
       if (!multi)
       {
         if (!no_unlink)
-          _owner.block_store()->remove(_first_block->address());
+          _owner.block_store()->remove(addr);
       }
       else
       {
-        _first_block = _owner.block_store()->fetch(_first_block->address());
+        _first_block = _owner.block_store()->fetch(addr);
+
+        int links = _header().links;
         if (links > 1)
         {
           ELLE_DEBUG("%s remaining links", links - 1);
