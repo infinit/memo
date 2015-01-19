@@ -20,13 +20,10 @@ namespace infinit
     public:
       typedef uint8_t Value[32];
       Address(Value bytes);
-      Address(elle::serialization::SerializerIn& s);
       bool
       operator ==(Address const& rhs) const;
       bool
       operator <(Address const& rhs) const;
-      void
-      serialize(elle::serialization::Serializer& s);
       ELLE_ATTRIBUTE_R(Value, value);
       friend
       std::ostream&
@@ -37,6 +34,8 @@ namespace infinit
       static Address const null;
     private:
       Address();
+      friend
+      class elle::serialization::Serialize<infinit::model::Address>;
     };
 
     std::ostream&
@@ -52,6 +51,24 @@ namespace std
     size_t
     operator()(infinit::model::Address const& employee) const;
   };
+}
+
+namespace elle
+{
+  namespace serialization
+  {
+    template <>
+    struct Serialize<infinit::model::Address>
+    {
+      typedef elle::Buffer Type;
+      static
+      Type
+      convert(infinit::model::Address& address);
+      static
+      infinit::model::Address
+      convert(Type repr);
+    };
+  }
 }
 
 #endif

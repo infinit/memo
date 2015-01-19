@@ -31,19 +31,6 @@ namespace infinit
       return out;
     }
 
-    Address::Address(elle::serialization::SerializerIn& s)
-      : _value()
-    {
-      this->serialize(s);
-    }
-
-    void
-    Address::serialize(elle::serialization::Serializer& s)
-    {
-      elle::WeakBuffer buf(this->_value, sizeof(Value));
-      s.serialize_forward(buf);
-    }
-
     Address
     Address::from_string(std::string const& repr)
     {
@@ -91,5 +78,28 @@ namespace std
       hash_combine(result,
                    *reinterpret_cast<std::size_t const*>(address.value() + i));
     return result;
+  }
+}
+
+namespace elle
+{
+  namespace serialization
+  {
+    using infinit::model::Address;
+    Serialize<Address>::Type
+    Serialize<Address>::convert(Address& address)
+    {
+      return Type(address._value, sizeof(Address::Value));
+    }
+
+    Address
+    Serialize<Address>::convert(Type buffer)
+    {
+      if (buffer.size() != sizeof(Address::Value))
+        throw elle::Error(elle::sprintf("invalid address: %x", buffer));
+      Address::Value value;
+      memcpy(value, buffer.contents(), sizeof(value));
+      return Address(value);
+    }
   }
 }
