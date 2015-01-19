@@ -21,6 +21,7 @@
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
+#include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit");
 
@@ -214,8 +215,9 @@ parse_options(int argc, char** argv, Config& cfg)
   using namespace boost::program_options;
   options_description options("Options");
   options.add_options()
-    ("help,h", "display the help")
     ("config,c", value<std::string>(), "configuration file")
+    ("help,h", "display the help")
+    ("version,v", "display version")
     ;
   variables_map vm;
   try
@@ -233,6 +235,12 @@ parse_options(int argc, char** argv, Config& cfg)
     std::cout << std::endl;
     std::cout << options;
     std::cout << std::endl;
+    std::cout << "Infinit v" << INFINIT_VERSION << std::endl;
+    exit(0); // XXX: use Exit exception
+  }
+  if (vm.count("version"))
+  {
+    std::cout << INFINIT_VERSION << std::endl;
     exit(0); // XXX: use Exit exception
   }
   if (vm.count("config") != 0)

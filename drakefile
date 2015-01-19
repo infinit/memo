@@ -1,5 +1,6 @@
 import drake
 import drake.cxx
+import drake.git
 import drake.valgrind
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
@@ -46,7 +47,18 @@ def configure(
   cxx_config_infinit.library_add(
     drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
 
+  class CxxVersionGenerator(VersionGenerator):
+    def _variable(self, name, value):
+      try:
+        return '#define INFINIT_%s %s' % (name.upper(), int(value))
+      except:
+        return '#define INFINIT_%s "%s"' % (name.upper(), value)
+
+  CxxVersionGenerator(drake.node('src/infinit/version.hh'),
+                      drake.git.Git())
   infinit_sources = drake.nodes(
+    'src/infinit/filesystem/filesystem.cc',
+    'src/infinit/filesystem/filesystem.hh',
     'src/infinit/model/Address.cc',
     'src/infinit/model/Address.hh',
     'src/infinit/model/MissingBlock.cc',
@@ -77,17 +89,16 @@ def configure(
     'src/infinit/storage/Mirror.hh',
     'src/infinit/storage/MissingKey.cc',
     'src/infinit/storage/MissingKey.hh',
-    'src/infinit/storage/sftp.cc',
-    'src/infinit/storage/sftp.hh',
+    'src/infinit/storage/S3.cc',
+    'src/infinit/storage/S3.hh',
     'src/infinit/storage/Storage.cc',
     'src/infinit/storage/Storage.hh',
     'src/infinit/storage/Strip.cc',
     'src/infinit/storage/Strip.hh',
-    'src/infinit/storage/S3.cc',
-    'src/infinit/storage/S3.hh',
     'src/infinit/storage/fwd.hh',
-    'src/infinit/filesystem/filesystem.hh',
-    'src/infinit/filesystem/filesystem.cc',
+    'src/infinit/storage/sftp.cc',
+    'src/infinit/storage/sftp.hh',
+    'src/infinit/version.hh',
   )
   outguess_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/outguess.a')
   jpeg_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/jpeg-6b-steg/libjpeg.a')
