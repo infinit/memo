@@ -79,7 +79,8 @@ namespace infinit
           elle::serialization::json::SerializerOut serializer(output);
           crypted.serialize(serializer);
         }
-        this->_storage->set(block.address(), raw, true, true);
+        this->_storage->set(block.address(),
+                            this->_keys.K().encrypt(raw), true, true);
       }
 
       std::unique_ptr<blocks::Block>
@@ -89,7 +90,7 @@ namespace infinit
         elle::Buffer raw;
         try
         {
-          raw = this->_storage->get(address);
+          raw = this->_keys.k().decrypt(this->_storage->get(address));
         }
         catch (infinit::storage::MissingKey const&)
         {
