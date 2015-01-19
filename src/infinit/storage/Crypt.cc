@@ -88,7 +88,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::storage::Storage>
-      make() const
+      make() override
       {
         return elle::make_unique<infinit::storage::Crypt>(
           std::move(storage->make()), password, salt);

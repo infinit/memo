@@ -89,7 +89,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::storage::Storage>
-      make() const
+      make() override
       {
         std::vector<std::unique_ptr<infinit::storage::Storage>> s;
         for(auto const& c: storage)

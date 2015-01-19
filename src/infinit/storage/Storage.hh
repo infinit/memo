@@ -45,7 +45,7 @@ namespace infinit
       static constexpr char const* virtually_serializable_key = "type";
       virtual
       std::unique_ptr<infinit::storage::Storage>
-      make() const = 0;
+      make() = 0;
     };
   }
 }

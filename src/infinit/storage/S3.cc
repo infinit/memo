@@ -77,7 +77,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::storage::Storage>
-      make() const
+      make() override
       {
         std::ifstream is(configuration);
         elle::serialization::json::SerializerIn input(is);

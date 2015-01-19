@@ -153,7 +153,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::storage::Storage>
-      make() const
+      make() override
       {
         return elle::make_unique<infinit::storage::Async>(
           std::move(storage->make()), max_blocks, max_size);
@@ -169,4 +169,3 @@ namespace infinit
 }
 
 FACTORY_REGISTER(infinit::storage::Storage, "async", &infinit::storage::make);
-

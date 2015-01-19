@@ -108,7 +108,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::storage::Storage>
-      make() const
+      make() override
       {
         return elle::make_unique<infinit::storage::Latency>(
           std::move(storage->make()), latency_get , latency_set, latency_erase);
