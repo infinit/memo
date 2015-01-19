@@ -15,8 +15,12 @@
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/Block.hh>
+#include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs");
+
+static elle::Version const version
+  (INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
 
 namespace rfs = reactor::filesystem;
 
@@ -47,6 +51,7 @@ namespace infinit
       uint64_t ctime; //attribute change+content change
       Address address;
       FileStoreMode store_mode;
+
       FileData(std::string name, uint64_t size, uint32_t mode, uint64_t atime,
         uint64_t mtime, uint64_t ctime, Address const& address, FileStoreMode store_mode)
         : name(name)
@@ -57,17 +62,18 @@ namespace infinit
         , ctime(ctime)
         , address(address)
         , store_mode(store_mode)
-      {
-      }
+      {}
+
       FileData()
         : address(zeros)
-      {
-      }
+      {}
+
       FileData(elle::serialization::SerializerIn& s)
         : address(zeros)
       {
-        serialize(s);
+        s.serialize_forward(*this);
       }
+
       void serialize(elle::serialization::Serializer& s)
       {
         s.serialize("name", name);
@@ -173,8 +179,9 @@ namespace infinit
       void utimens(const struct timespec tv[2]) override;
       void truncate(off_t new_size) override THROW_ISDIR;
       std::unique_ptr<rfs::Path> child(std::string const& name) override;
-
       void cache_stats(CacheStats& append);
+      void serialize(elle::serialization::Serializer&);
+
     private:
       void move_recurse(boost::filesystem::path const& current,
                         boost::filesystem::path const& where);
@@ -328,6 +335,12 @@ namespace infinit
 
     static const int DIRECTORY_MASK = 0040000;
 
+    void
+    Directory::serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("content", this->_files);
+    }
+
     Directory::Directory(Directory* parent, FileSystem& owner,
                          std::string const& name,
                          std::unique_ptr<Block> b)
@@ -339,10 +352,10 @@ namespace infinit
       {
         ELLE_DEBUG("Deserializing directory");
         std::istream is(new elle::InputStreamBuffer<elle::Buffer>(_block->data()));
-        elle::serialization::json::SerializerIn input(is);
+        elle::serialization::json::SerializerIn input(is, version);
         try
         {
-          input.serialize("content", _files);
+          input.serialize_forward(*this);
         }
         catch(elle::serialization::Error const& e)
         {
@@ -370,8 +383,8 @@ namespace infinit
       {
         _block->data().reset();
         std::ostream os(new elle::OutputStreamBuffer<elle::Buffer>(_block->data()));
-        elle::serialization::json::SerializerOut output(os);
-        output.serialize("content", _files);
+        elle::serialization::json::SerializerOut output(os, version);
+        output.serialize_forward(*this);
       }
       if (set_mtime && _parent)
       {
