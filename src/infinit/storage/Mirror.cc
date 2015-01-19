@@ -93,28 +93,13 @@ namespace infinit
       return elle::make_unique<Mirror>(std::move(backends), balance_reads, parallel);
     }
 
-    class StorageConfigWrapper
-    {
-    public:
-      std::shared_ptr<StorageConfig> config;
-      StorageConfigWrapper() {}
-      StorageConfigWrapper(elle::serialization::SerializerIn& input)
-      {
-        serialize(input);
-      }
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        s.serialize("config", config);
-      }
-    };
     struct MirrorStorageConfig:
     public StorageConfig
     {
     public:
       bool parallel;
       bool balance;
-      std::vector<StorageConfigWrapper> storage;
+      std::vector<std::unique_ptr<StorageConfig>> storage;
       MirrorStorageConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
       {
@@ -135,7 +120,10 @@ namespace infinit
       {
         std::vector<std::unique_ptr<infinit::storage::Storage>> s;
         for(auto const& c: storage)
-          s.push_back(std::move(c.config->make()));
+        {
+          ELLE_ASSERT(!!c);
+          s.push_back(std::move(c->make()));
+        }
         return elle::make_unique<infinit::storage::Mirror>(
           std::move(s), balance, parallel);
       }

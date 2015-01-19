@@ -55,26 +55,12 @@ namespace infinit
       return elle::make_unique<Strip>(std::move(backends));
     }
 
-    class StorageConfigWrapper
-    {
-    public:
-      std::shared_ptr<StorageConfig> config;
-      StorageConfigWrapper() {}
-      StorageConfigWrapper(elle::serialization::SerializerIn& input)
-      {
-        serialize(input);
-      }
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        s.serialize("config", config);
-      }
-    };
+
     struct StripStorageConfig:
     public StorageConfig
     {
     public:
-      std::vector<StorageConfigWrapper> storage;
+      std::vector<std::unique_ptr<StorageConfig>> storage;
       StripStorageConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
       {
@@ -93,7 +79,7 @@ namespace infinit
       {
         std::vector<std::unique_ptr<infinit::storage::Storage>> s;
         for(auto const& c: storage)
-          s.push_back(std::move(c.config->make()));
+          s.push_back(std::move(c->make()));
         return elle::make_unique<infinit::storage::Strip>(
           std::move(s));
       }
