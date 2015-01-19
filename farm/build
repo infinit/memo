@@ -1,0 +1,8 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+
+os.chdir('%s' % os.environ['DIR_BUILD'])
+if subprocess.call(['python3', 'drake', '-j', os.environ['JOBS'], '//build']) != 0:
+  exit(1)
