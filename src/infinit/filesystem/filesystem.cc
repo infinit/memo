@@ -1129,8 +1129,20 @@ namespace infinit
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
       if (!no_fetch)
-        _owner._first_block = _owner._owner.block_store()->fetch(
-          _owner._parent->_files.at(_owner._name).address);
+      {
+        try
+        {
+          _owner._first_block = _owner._owner.block_store()->fetch(
+            _owner._parent->_files.at(_owner._name).address);
+        }
+        catch(infinit::model::MissingBlock const& err)
+        {
+          // This is not a mistake if file is already opened but data has not
+          // been pushed yet.
+          if (!_owner._first_block)
+            throw;
+        }
+      }
     }
 
     FileHandle::~FileHandle()

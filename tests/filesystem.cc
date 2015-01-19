@@ -229,6 +229,25 @@ void test_basic()
   fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
   ::close(fd);
   bfs::remove(mount / "u");
+
+  // multiple opens
+  {
+    boost::filesystem::ofstream ofs(mount / "test");
+    ofs << "Test";
+    boost::filesystem::ofstream ofs2(mount / "test");
+  }
+  BOOST_CHECK_EQUAL(read(mount / "test"), "Test");
+  bfs::remove(mount / "test");
+  {
+    boost::filesystem::ofstream ofs(mount / "test");
+    ofs << "Test";
+    {
+      boost::filesystem::ofstream ofs2(mount / "test");
+    }
+    ofs << "Test";
+  }
+  BOOST_CHECK_EQUAL(read(mount / "test"), "TestTest");
+  bfs::remove(mount / "test");
 }
 
 
