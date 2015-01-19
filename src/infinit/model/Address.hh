@@ -34,6 +34,9 @@ namespace infinit
       static
       Address
       from_string(std::string const& repr);
+      static Address const null;
+    private:
+      Address();
     };
 
     std::ostream&

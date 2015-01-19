@@ -41,7 +41,7 @@ namespace infinit
     Address::serialize(elle::serialization::Serializer& s)
     {
       elle::WeakBuffer buf(this->_value, sizeof(Value));
-      s.serialize("id", buf);
+      s.serialize_forward(buf);
     }
 
     Address
@@ -59,6 +59,14 @@ namespace infinit
       }
       return Address(v);
     }
+
+    Address::Address()
+      : _value()
+    {
+      memset(this->_value, 0, sizeof(Address::Value));
+    }
+
+    Address const Address::null;
   }
 }
 
