@@ -4,10 +4,6 @@
 
 #include <elle/factory.hh>
 
-
-ELLE_LOG_COMPONENT("infinit.fs.crypt");
-
-
 namespace infinit
 {
   namespace storage

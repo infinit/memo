@@ -1198,7 +1198,6 @@ namespace infinit
         }
         else
         {
-          bool change;
           block = _owner._block_at(start_block, false);
           if (block == nullptr)
           { // block would have been allocated: sparse file?
