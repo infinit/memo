@@ -16,6 +16,10 @@ def configure(
     valgrind_tests = False,
 ):
 
+  prefix = drake.Path(prefix)
+  if prefix.relative:
+    prefix = drake.path_build(prefix, absolute = True)
+
   elle = drake.include('elle',
                        cxx_toolkit = cxx_toolkit,
                        cxx_config = cxx_config)
@@ -175,3 +179,10 @@ def configure(
     cxx_toolkit,
     cxx_config_tests
     )
+
+  ## ------- ##
+  ## Install ##
+  ## ------- ##
+
+  drake.Rule('install') << drake.install(
+    drake.node('bin/infinit'), prefix)
