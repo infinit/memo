@@ -1298,7 +1298,9 @@ namespace infinit
         }
         memcpy(block->data().mutable_contents() + offset, buffer.mutable_contents(), size);
         // Update but do not commit yet, so that read on same fd do not fail.
-        _owner._parent->_files.at(_owner._name).size += size;
+        FileData& data = _owner._parent->_files.at(_owner._name);
+        if (data.size < offset + size)
+          data.size = offset + size;
         return size;
       }
       // multi mode
