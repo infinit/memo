@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+import sys
+import platform
+
+arch, osyst, comp = os.environ['BUILDFARM_NAME'].split('-')
+
+template = '''\
+#!/usr/bin/env python3
+
+import os
+import sys
+
+# Add drake in the Python path.
+sys.path.insert(0, os.path.realpath(%(dir_source)r '/elle/drake/src'))
+
+
+import drake
+import drake.cxx
+
+cfg = drake.cxx.Config()
+cfg.enable_debug_symbols()
+cfg.enable_optimization()
+
+with drake.Drake(%(dir_source)r) as d:
+  d.run(cxx_config = cfg)
+'''
+
+parameters = {}
+
+with open('%s/drake' % os.environ['DIR_BUILD'], 'w') as drake:
+  parameters['dir_source'] = os.path.abspath(os.environ['DIR_SOURCE'])
+  content = template % parameters
+  print(content, file = drake)
+  print(content)
