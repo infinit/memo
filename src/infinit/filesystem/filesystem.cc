@@ -36,7 +36,8 @@ namespace infinit
     enum class FileStoreMode
     {
       direct = 0, // address points to file data
-      index = 1   // address points to index of addresses
+      index = 1,   // address points to index of addresses
+      none = 2,    // no storage (symlink)
     };
     static Address::Value zeros = {0};
     struct FileData
@@ -51,6 +52,7 @@ namespace infinit
       uint64_t ctime; //attribute change+content change
       Address address;
       FileStoreMode store_mode;
+      boost::optional<std::string> symlink_target;
 
       FileData(std::string name, uint64_t size, uint32_t mode, uint64_t atime,
         uint64_t mtime, uint64_t ctime, Address const& address, FileStoreMode store_mode)
@@ -94,6 +96,7 @@ namespace infinit
         {
           ELLE_WARN("serialization error %s, assuming old format", e);
         }
+        s.serialize("symlink_target", symlink_target);
       }
     };
     struct CacheStats
@@ -157,6 +160,29 @@ namespace infinit
     private:
     };
 
+    class Symlink: public Node, public rfs::Path
+    {
+    public:
+      Symlink(Directory* parent, FileSystem& owner, std::string const& name);
+      void stat(struct stat*) override;
+      void list_directory(rfs::OnDirectoryEntry cb) THROW_NOTDIR;
+      std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_NOSYS;
+      std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override THROW_NOSYS;
+      void unlink() override;
+      void mkdir(mode_t mode) override THROW_EXIST;
+      void rmdir() override THROW_NOTDIR;
+      void rename(boost::filesystem::path const& where) override;
+      boost::filesystem::path readlink() override;
+      void symlink(boost::filesystem::path const& where) THROW_EXIST;
+      void link(boost::filesystem::path const& where) override; //copied symlink
+      void chmod(mode_t mode) override THROW_NOSYS; // target
+      void chown(int uid, int gid) override THROW_NOSYS; // target
+      void statfs(struct statvfs *) override THROW_NOSYS;
+      void utimens(const struct timespec tv[2]) THROW_NOSYS;
+      void truncate(off_t new_size) override THROW_NOSYS;
+      std::unique_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
+    };
+
     class Directory: public rfs::Path, public Node
     {
     public:
@@ -187,6 +213,7 @@ namespace infinit
                         boost::filesystem::path const& where);
       friend class Unknown;
       friend class File;
+      friend class Symlink;
       friend class Node;
       friend class FileHandle;
       void _changed(bool set_mtime = false);
@@ -334,6 +361,7 @@ namespace infinit
     }
 
     static const int DIRECTORY_MASK = 0040000;
+    static const int SYMLINK_MASK = 0120000;
 
     void
     Directory::serialize(elle::serialization::Serializer& s)
@@ -410,7 +438,11 @@ namespace infinit
       auto it = _files.find(name);
       if (it != _files.end())
       {
-        bool isDir = it->second.mode & DIRECTORY_MASK;
+        bool isDir = (it->second.mode & S_IFMT)  == DIRECTORY_MASK;
+        bool isSymlink = (it->second.mode & S_IFMT) == SYMLINK_MASK;
+        ELLE_DEBUG("isDir=%s, isSymlink=%s", isDir, isSymlink);
+        if (isSymlink)
+          return std::unique_ptr<rfs::Path>(new Symlink(this, _owner, name));
         if (!isDir)
           return std::unique_ptr<rfs::Path>(new File(this, _owner, name));
         std::unique_ptr<Block> block;
@@ -467,7 +499,7 @@ namespace infinit
           auto ptr = p.get();
           ELLE_DEBUG("Inserting %s", where / name);
           _owner.filesystem()->set((where/name).string(), std::move(p));
-          if (v.second.mode & DIRECTORY_MASK)
+          if ((v.second.mode & S_IFMT) ==  DIRECTORY_MASK)
           {
             dynamic_cast<Directory*>(ptr)->move_recurse(current / name, where / name);
           }
@@ -499,7 +531,7 @@ namespace infinit
         rfs::Path& target = _owner.filesystem()->path(where.string());
         struct stat st;
         target.stat(&st);
-        if (st.st_mode & DIRECTORY_MASK)
+        if ((st.st_mode & S_IFMT) == DIRECTORY_MASK)
         {
           try
           {
@@ -679,7 +711,7 @@ namespace infinit
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
-        std::make_pair(_name, FileData{_name, 0, mode & ~DIRECTORY_MASK,
+        std::make_pair(_name, FileData{_name, 0, mode,
                                        uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
@@ -697,13 +729,60 @@ namespace infinit
     void
     Unknown::symlink(boost::filesystem::path const& where)
     {
-      throw rfs::Error(ENOSYS, "Not implemented");
+      ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
+      Address::Value v {0};
+      auto it =_parent->_files.insert(
+        std::make_pair(_name, FileData{_name, 0, 0777 | SYMLINK_MASK,
+                                       uint64_t(time(nullptr)),
+                                       uint64_t(time(nullptr)),
+                                       uint64_t(time(nullptr)),
+                                       Address(v),
+                                       FileStoreMode::none}));
+      it.first->second.symlink_target = where.string();
+      _parent->_changed(true);
+      _remove_from_cache();
     }
 
     void
     Unknown::link(boost::filesystem::path const& where)
     {
       throw rfs::Error(ENOENT, "link source does not exist");
+    }
+
+    Symlink::Symlink(Directory* parent, FileSystem& owner, std::string const& name)
+    : Node(owner, parent, name)
+    {
+    }
+
+    void Symlink::stat(struct stat* s)
+    {
+      Node::stat(s);
+    }
+
+    void Symlink::unlink()
+    {
+      _parent->_files.erase(_name);
+      _parent->_changed(true);
+      _remove_from_cache();
+    }
+
+    void Symlink::rename(boost::filesystem::path const& where)
+    {
+      Node::rename(where);
+    }
+
+    boost::filesystem::path Symlink::readlink()
+    {
+      return *_parent->_files.at(_name).symlink_target;
+    }
+
+    void Symlink::link(boost::filesystem::path const& where)
+    {
+      rfs::Path& p = _owner.filesystem()->path(where.string());
+      Unknown* unk = dynamic_cast<Unknown*>(&p);
+      if (unk == nullptr)
+        THROW_EXIST;
+      unk->symlink(readlink());
     }
 
     File::File(Directory* parent, FileSystem& owner, std::string const& name,
