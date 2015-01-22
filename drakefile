@@ -76,6 +76,8 @@ def configure(
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
     'src/infinit/model/paranoid/Paranoid.hh',
+    'src/infinit/storage/Adb.cc',
+    'src/infinit/storage/Adb.hh',
     'src/infinit/storage/Async.cc',
     'src/infinit/storage/Async.hh',
     'src/infinit/storage/Collision.cc',
