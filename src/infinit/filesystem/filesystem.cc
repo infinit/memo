@@ -33,6 +33,7 @@ namespace infinit
 
     class Directory;
     class File;
+    typedef std::shared_ptr<Directory> DirectoryPtr;
     enum class FileStoreMode
     {
       direct = 0, // address points to file data
@@ -116,7 +117,7 @@ namespace infinit
     class Node
     {
     protected:
-      Node(FileSystem& owner, Directory* parent, std::string const& name)
+      Node(FileSystem& owner, std::shared_ptr<Directory> parent, std::string const& name)
       : _owner(owner)
       , _parent(parent)
       , _name(name)
@@ -129,13 +130,13 @@ namespace infinit
       void _remove_from_cache();
       boost::filesystem::path full_path();
       FileSystem& _owner;
-      Directory* _parent;
+      std::shared_ptr<Directory> _parent;
       std::string _name;
     };
     class Unknown: public Node, public rfs::Path
     {
     public:
-      Unknown(Directory* parent, FileSystem& owner, std::string const& name);
+      Unknown(DirectoryPtr parent, FileSystem& owner, std::string const& name);
       void stat(struct stat*) override
       {
         ELLE_DEBUG("Stat on unknown %s", _name);
@@ -156,14 +157,15 @@ namespace infinit
       void statfs(struct statvfs *) override THROW_NOENT;
       void utimens(const struct timespec tv[2]) override THROW_NOENT;
       void truncate(off_t new_size) override THROW_NOENT;
-      std::unique_ptr<Path> child(std::string const& name) override THROW_NOENT;
+      std::shared_ptr<Path> child(std::string const& name) override THROW_NOENT;
+      bool allow_cache() override { return false;}
     private:
     };
 
     class Symlink: public Node, public rfs::Path
     {
     public:
-      Symlink(Directory* parent, FileSystem& owner, std::string const& name);
+      Symlink(DirectoryPtr parent, FileSystem& owner, std::string const& name);
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) THROW_NOTDIR;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_NOSYS;
@@ -180,13 +182,14 @@ namespace infinit
       void statfs(struct statvfs *) override THROW_NOSYS;
       void utimens(const struct timespec tv[2]) THROW_NOSYS;
       void truncate(off_t new_size) override THROW_NOSYS;
-      std::unique_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
+      std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
+      bool allow_cache() override { return false;}
     };
 
     class Directory: public rfs::Path, public Node
     {
     public:
-      Directory(Directory* parent, FileSystem& owner, std::string const& name,
+      Directory(DirectoryPtr parent, FileSystem& owner, std::string const& name,
                 std::unique_ptr<Block> b);
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override;
@@ -204,11 +207,12 @@ namespace infinit
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]) override;
       void truncate(off_t new_size) override THROW_ISDIR;
-      std::unique_ptr<rfs::Path> child(std::string const& name) override;
+      std::shared_ptr<rfs::Path> child(std::string const& name) override;
       void cache_stats(CacheStats& append);
       void serialize(elle::serialization::Serializer&);
-
+      bool allow_cache() override { return true;}
     private:
+      void _fetch();
       void move_recurse(boost::filesystem::path const& current,
                         boost::filesystem::path const& where);
       friend class Unknown;
@@ -226,7 +230,7 @@ namespace infinit
     class FileHandle: public rfs::Handle
     {
     public:
-      FileHandle(File& owner,
+      FileHandle(std::shared_ptr<File> owner,
                  bool update_folder_mtime=false,
                  bool no_prefetch = false,
                  bool mark_dirty = false);
@@ -236,14 +240,14 @@ namespace infinit
       void ftruncate(off_t offset) override;
       void close() override;
     private:
-      File& _owner;
+      std::shared_ptr<File> _owner;
       bool _dirty;
     };
 
     class File: public rfs::Path, public Node
     {
     public:
-      File(Directory* parent, FileSystem& owner, std::string const& name,
+      File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
                 std::unique_ptr<Block> b = std::unique_ptr<Block>());
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) THROW_NOTDIR;
@@ -261,8 +265,9 @@ namespace infinit
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]);
       void truncate(off_t new_size) override;
-      std::unique_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
-      // check cache size, remove entries if needed
+      std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
+      bool allow_cache() override;
+      // check cached data size, remove entries if needed
       void check_cache();
     private:
       static const unsigned long default_block_size = 1024 * 1024;
@@ -300,17 +305,44 @@ namespace infinit
       };
       std::unordered_map<int, CacheEntry> _blocks;
       std::unique_ptr<Block> _first_block;
+      int _handle_count;
     };
 
     FileSystem::FileSystem(model::Address root,
                            std::unique_ptr<infinit::model::Model> model)
       : _root_address(root)
       , _block_store(std::move(model))
+      , _single_mount(false)
     {
       reactor::scheduler().signal_handle
         (SIGUSR1, [this] { this->print_cache_stats();});
     }
 
+    void FileSystem::unchecked_remove(model::Address address)
+    {
+      try
+      {
+        _block_store->remove(address);
+      }
+      catch (model::MissingBlock const& mb)
+      {
+        ELLE_WARN("Unexpected storage result: %s", mb);
+      }
+    }
+    std::unique_ptr<model::blocks::Block>
+    FileSystem::unchecked_fetch(model::Address address)
+    {
+      try
+      {
+        auto block = _block_store->fetch(address);
+        return std::move(block);
+      }
+      catch (model::MissingBlock const& mb)
+      {
+        ELLE_WARN("Unexpected storage result: %s", mb);
+      }
+      return {};
+    }
     static
     std::unique_ptr<Block>
     _make_root_block(infinit::model::Model& model)
@@ -323,6 +355,7 @@ namespace infinit
     FileSystem::FileSystem(std::unique_ptr<infinit::model::Model> model)
       : _root_address(_make_root_block(*model)->address())
       , _block_store(nullptr)
+      , _single_mount(false)
     {
       ELLE_ASSERT(model.get());
       this->_block_store = std::move(model);
@@ -332,10 +365,10 @@ namespace infinit
     void
     FileSystem::print_cache_stats()
     {
-      Directory& root = dynamic_cast<Directory&>(filesystem()->path("/"));
+      auto root = std::dynamic_pointer_cast<Directory>(filesystem()->path("/"));
       CacheStats stats;
       memset(&stats, 0, sizeof(CacheStats));
-      root.cache_stats(stats);
+      root->cache_stats(stats);
       std::cerr << "Statistics:\n"
       << stats.directories << " dirs\n"
       << stats.files << " files\n"
@@ -344,13 +377,13 @@ namespace infinit
       << std::endl;
     }
 
-    std::unique_ptr<rfs::Path>
+    std::shared_ptr<rfs::Path>
     FileSystem::path(std::string const& path)
     {
       // In the infinit filesystem, we never query a path other than the
       // root.
       ELLE_ASSERT_EQ(path, "/");
-      return elle::make_unique<Directory>
+      return std::make_shared<Directory>
         (nullptr, *this, "", this->_root_block());
     }
 
@@ -369,7 +402,7 @@ namespace infinit
       s.serialize("content", this->_files);
     }
 
-    Directory::Directory(Directory* parent, FileSystem& owner,
+    Directory::Directory(DirectoryPtr parent, FileSystem& owner,
                          std::string const& name,
                          std::unique_ptr<Block> b)
     : Node(owner, parent, name)
@@ -394,6 +427,25 @@ namespace infinit
       else
         _changed();
     }
+
+    void Directory::_fetch()
+    {
+      _block = std::move(_owner.block_store()->fetch(_block->address()));
+      _files.clear();
+      ELLE_DEBUG("Deserializing directory");
+      std::istream is(new elle::InputStreamBuffer<elle::Buffer>(_block->data()));
+      elle::serialization::json::SerializerIn input(is, version);
+      try
+      {
+        input.serialize_forward(*this);
+      }
+      catch(elle::serialization::Error const& e)
+      {
+        ELLE_WARN("Directory deserialization error: %s", e);
+        throw rfs::Error(EIO, e.what());
+      }
+    }
+
     void
     Directory::statfs(struct statvfs * st)
     {
@@ -431,20 +483,24 @@ namespace infinit
       _owner.block_store()->store(*_block);
       ELLE_DEBUG("pushChange ok");
     }
-    std::unique_ptr<rfs::Path>
+    std::shared_ptr<rfs::Path>
     Directory::child(std::string const& name)
     {
+      if (!_owner.single_mount())
+        _fetch();
       ELLE_DEBUG_SCOPE("Directory child: %s / %s", *this, name);
       auto it = _files.find(name);
+      auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
+      ELLE_DEBUG("Acquired self, file found = %s", it != _files.end());
       if (it != _files.end())
       {
         bool isDir = (it->second.mode & S_IFMT)  == DIRECTORY_MASK;
         bool isSymlink = (it->second.mode & S_IFMT) == SYMLINK_MASK;
         ELLE_DEBUG("isDir=%s, isSymlink=%s", isDir, isSymlink);
         if (isSymlink)
-          return std::unique_ptr<rfs::Path>(new Symlink(this, _owner, name));
+          return std::shared_ptr<rfs::Path>(new Symlink(self, _owner, name));
         if (!isDir)
-          return std::unique_ptr<rfs::Path>(new File(this, _owner, name));
+          return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
         std::unique_ptr<Block> block;
         try
         {
@@ -454,22 +510,27 @@ namespace infinit
         {
           throw rfs::Error(EIO, b.what());
         }
-        return std::unique_ptr<rfs::Path>(new Directory(this, _owner, name,
+        return std::shared_ptr<rfs::Path>(new Directory(self, _owner, name,
                                                         std::move(block)));
       }
       else
-        return std::unique_ptr<rfs::Path>(new Unknown(this, _owner, name));
+        return std::shared_ptr<rfs::Path>(new Unknown(self, _owner, name));
     }
 
     void
     Directory::list_directory(rfs::OnDirectoryEntry cb)
     {
+      if (!_owner.single_mount())
+        _fetch();
       ELLE_DEBUG("Directory list: %s", this);
       struct stat st;
       for (auto const& e: _files)
       {
         st.st_mode = e.second.mode;
         st.st_size = e.second.size;
+        st.st_atime = e.second.atime;
+        st.st_mtime = e.second.mtime;
+        st.st_ctime = e.second.ctime;
         cb(e.first, &st);
       }
     }
@@ -520,22 +581,22 @@ namespace infinit
       std::string newname = where.filename().string();
       boost::filesystem::path newpath = where.parent_path();
 
-      if (&_parent == nullptr)
+      if (!_parent)
         throw rfs::Error(EINVAL, "Cannot delete root node");
-      Directory& dir = dynamic_cast<Directory&>(
+      auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
 
-      if (dir._files.find(newname) != dir._files.end())
+      if (dir->_files.find(newname) != dir->_files.end())
       {
         // File and empty dir gets removed.
-        rfs::Path& target = _owner.filesystem()->path(where.string());
+        auto target = _owner.filesystem()->path(where.string());
         struct stat st;
-        target.stat(&st);
+        target->stat(&st);
         if ((st.st_mode & S_IFMT) == DIRECTORY_MASK)
         {
           try
           {
-            target.rmdir();
+            target->rmdir();
           }
           catch(rfs::Error const& e)
           {
@@ -543,7 +604,7 @@ namespace infinit
           }
         }
         else
-          target.unlink();
+          target->unlink();
         ELLE_DEBUG("removed move target %s", where);
       }
       auto data = _parent->_files.at(_name);
@@ -551,25 +612,28 @@ namespace infinit
       _parent->_changed();
 
       data.name = newname;
-      dir._files.insert(std::make_pair(newname, data));
-      dir._changed();
+      dir->_files.insert(std::make_pair(newname, data));
+      dir->_changed();
       _name = newname;
-      _parent = &dir;
+      _parent = dir;
       // Move the node in cache
       ELLE_DEBUG("Extracting %s", current);
       auto p = _owner.filesystem()->extract(current.string());
-      // This might delete the dummy Unknown on destination which is fine
-       ELLE_DEBUG("Setting %s", where);
-      _owner.filesystem()->set(where.string(),std::move(p));
+      if (p)
+      {
+        std::dynamic_pointer_cast<Node>(p)->_name = newname;
+        // This might delete the dummy Unknown on destination which is fine
+        ELLE_DEBUG("Setting %s", where);
+        _owner.filesystem()->set(where.string(), p);
+      }
     }
 
     void Node::_remove_from_cache()
     {
       ELLE_DEBUG("remove_from_cache: %s entering", _name);
-      std::unique_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path().string());
-      rfs::Path* p = self.release();
+      std::shared_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path().string());
       ELLE_DEBUG("remove_from_cache: %s released", _name);
-      new reactor::Thread("delayed_cleanup", [p] { ELLE_DEBUG("async_clean"); delete p;}, true);
+      new reactor::Thread("delayed_cleanup", [self] { ELLE_DEBUG("async_clean");}, true);
       ELLE_DEBUG("remove_from_cache: %s exiting with async cleaner", _name);
     }
 
@@ -594,12 +658,12 @@ namespace infinit
       boost::filesystem::path current = full_path();
       for(auto const& f: _files)
       {
-        rfs::Path* p = _owner.filesystem()->get((current / f.second.name).string());
+        auto p = _owner.filesystem()->get((current / f.second.name).string());
         if (!p)
           return;
-        if (Directory* d = dynamic_cast<Directory*>(p))
+        if (Directory* d = dynamic_cast<Directory*>(p.get()))
           d->cache_stats(cs);
-        else if (File* f = dynamic_cast<File*>(p))
+        else if (File* f = dynamic_cast<File*>(p.get()))
         {
           cs.files++;
           cs.blocks += 1 + f->_blocks.size();
@@ -668,7 +732,7 @@ namespace infinit
         st->st_size = fd.size;
         st->st_atime = fd.atime;
         st->st_mtime = fd.mtime;
-        st->st_ctime = fd.ctime;
+        st->st_ctime = fd.ctime;   
         st->st_dev = 1;
         st->st_ino = (long)this;
         st->st_nlink = 1;
@@ -682,7 +746,7 @@ namespace infinit
       st->st_gid = ::getgid();
     }
 
-    Unknown::Unknown(Directory* parent, FileSystem& owner, std::string const& name)
+    Unknown::Unknown(DirectoryPtr parent, FileSystem& owner, std::string const& name)
     : Node(owner, parent, name)
     {}
 
@@ -707,9 +771,18 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     Unknown::create(int flags, mode_t mode)
     {
+      if (!_owner.single_mount())
+        _parent->_fetch();
+      if (_parent->_files.find(_name) != _parent->_files.end())
+      {
+        ELLE_WARN("File %s exists where it should not", _name);
+        _remove_from_cache();
+        auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
+        return f->open(flags, mode);
+      }
       std::unique_ptr<Block> b = _owner.block_store()->make_block();
       //optimize: dont push block yet _owner.block_store()->store(*b);
-      ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
+      ELLE_DEBUG("Adding file to parent %x", _parent.get());
       _parent->_files.insert(
         std::make_pair(_name, FileData{_name, 0, mode,
                                        uint64_t(time(nullptr)),
@@ -717,11 +790,13 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        b->address(),
                                        FileStoreMode::direct}));
-      // FileHandle will do it _parent->_changed(true);
+      _parent->_changed(true);
       _remove_from_cache();
-      File& f = dynamic_cast<File&>(_owner.filesystem()->path(full_path().string()));
-      f._first_block = std::move(b);
+      auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
+      f->_first_block = std::move(b);
       // Mark dirty since we did not push first_block
+      ELLE_DEBUG("Forcing entry %s", f->full_path());
+      _owner.filesystem()->set(f->full_path().string(), f);
       std::unique_ptr<rfs::Handle> h(new FileHandle(f, true, true, true));
       return h;
     }
@@ -749,7 +824,7 @@ namespace infinit
       throw rfs::Error(ENOENT, "link source does not exist");
     }
 
-    Symlink::Symlink(Directory* parent, FileSystem& owner, std::string const& name)
+    Symlink::Symlink(DirectoryPtr parent, FileSystem& owner, std::string const& name)
     : Node(owner, parent, name)
     {
     }
@@ -778,18 +853,25 @@ namespace infinit
 
     void Symlink::link(boost::filesystem::path const& where)
     {
-      rfs::Path& p = _owner.filesystem()->path(where.string());
-      Unknown* unk = dynamic_cast<Unknown*>(&p);
+      auto p = _owner.filesystem()->path(where.string());
+      Unknown* unk = dynamic_cast<Unknown*>(p.get());
       if (unk == nullptr)
         THROW_EXIST;
       unk->symlink(readlink());
     }
 
-    File::File(Directory* parent, FileSystem& owner, std::string const& name,
+    File::File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
                std::unique_ptr<Block> block)
     : Node(owner, parent, name)
     , _first_block(std::move(block))
+    , _handle_count(0)
     {
+    }
+
+    bool
+    File::allow_cache()
+    {
+      return _owner.single_mount() ||  _handle_count > 0;
     }
 
     void
@@ -805,7 +887,9 @@ namespace infinit
     bool
     File::_multi()
     {
-      ELLE_ASSERT(_parent);
+      ELLE_DEBUG("Multi check %s", _name);
+      ELLE_ASSERT(!!_parent);
+      ELLE_ASSERT(_parent->_files.find(_name) != _parent->_files.end());
       return _parent->_files.at(_name).store_mode == FileStoreMode::index;
     }
 
@@ -891,9 +975,9 @@ namespace infinit
     {
       std::string newname = where.filename().string();
       boost::filesystem::path newpath = where.parent_path();
-      Directory& dir = dynamic_cast<Directory&>(
+      auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
-      if (dir._files.find(newname) != dir._files.end())
+      if (dir->_files.find(newname) != dir->_files.end())
         throw rfs::Error(EEXIST, "target file exists");
       // we need a place to store the link count
       bool multi = _multi();
@@ -902,9 +986,9 @@ namespace infinit
       Header header = _header();
       header.links++;
       _header(header);
-      dir._files.insert(std::make_pair(newname, _parent->_files.at(_name)));
-      dir._files.at(newname).name = newname;
-      dir._changed(true);
+      dir->_files.insert(std::make_pair(newname, _parent->_files.at(_name)));
+      dir->_files.at(newname).name = newname;
+      dir->_changed(true);
       _owner.filesystem()->extract(where.string());
       _owner.block_store()->store(*_first_block);
     }
@@ -919,7 +1003,7 @@ namespace infinit
         for (unsigned int i=0; i<n.length(); ++i)
           if (n[i] == '/')
           n[i] = '_';
-        Directory* dir = _parent;
+        DirectoryPtr dir = _parent;
         while (dir->_parent)
           dir = dir->_parent;
         auto& cur = _parent->_files.at(_name);
@@ -934,12 +1018,16 @@ namespace infinit
       if (!multi)
       {
         if (!no_unlink)
-          _owner.block_store()->remove(addr);
+          _owner.unchecked_remove(addr);
       }
       else
       {
-        _first_block = _owner.block_store()->fetch(addr);
-
+        _first_block = _owner.unchecked_fetch(addr);
+        if (!_first_block)
+        {
+          _remove_from_cache();
+          return;
+        }
         int links = _header().links;
         if (links > 1)
         {
@@ -1100,7 +1188,10 @@ namespace infinit
     {
       if (flags & O_TRUNC)
         truncate(0);
-      return std::unique_ptr<rfs::Handle>(new FileHandle(*this));
+      ELLE_DEBUG("Forcing entry %s", full_path());
+      _owner.filesystem()->set(full_path().string(), shared_from_this());
+      return std::unique_ptr<rfs::Handle>(new FileHandle(
+        std::dynamic_pointer_cast<File>(shared_from_this())));
     }
 
     std::unique_ptr<rfs::Handle>
@@ -1108,7 +1199,11 @@ namespace infinit
     {
       if (flags & O_TRUNC)
         truncate(0);
-      return std::unique_ptr<rfs::Handle>(new FileHandle(*this));
+      ELLE_DEBUG("Forcing entry %s", full_path());
+      if (!_owner.single_mount())
+        _owner.filesystem()->set(full_path().string(), shared_from_this());
+      return std::unique_ptr<rfs::Handle>(new FileHandle(
+        std::dynamic_pointer_cast<File>(shared_from_this())));
     }
 
     void
@@ -1145,6 +1240,9 @@ namespace infinit
     File::_switch_to_multi(bool alloc_first_block)
     {
       // Switch without changing our address
+      if (!_first_block)
+      _first_block = _owner.block_store()->fetch(
+          _parent->_files.at(_name).address);
       uint64_t current_size = _first_block->data().size();
       std::unique_ptr<Block> new_block = _owner.block_store()->make_block();
       new_block->data() = std::move(_first_block->data());
@@ -1198,12 +1296,13 @@ namespace infinit
       }
     }
 
-    FileHandle::FileHandle(File& owner, bool push_mtime, bool no_fetch, bool dirty)
+    FileHandle::FileHandle(std::shared_ptr<File> owner, bool push_mtime, bool no_fetch, bool dirty)
     : _owner(owner)
     , _dirty(dirty)
     {
-      _owner._parent->_files.at(_owner._name).atime = time(nullptr);
-      _owner._parent->_changed(push_mtime);
+      _owner->_handle_count++;
+      _owner->_parent->_files.at(_owner->_name).atime = time(nullptr);
+      _owner->_parent->_changed(push_mtime);
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
@@ -1211,14 +1310,14 @@ namespace infinit
       {
         try
         {
-          _owner._first_block = _owner._owner.block_store()->fetch(
-            _owner._parent->_files.at(_owner._name).address);
+          _owner->_first_block = _owner->_owner.block_store()->fetch(
+            _owner->_parent->_files.at(_owner->_name).address);
         }
         catch(infinit::model::MissingBlock const& err)
         {
           // This is not a mistake if file is already opened but data has not
           // been pushed yet.
-          if (!_owner._first_block)
+          if (!_owner->_first_block)
             throw;
         }
       }
@@ -1226,17 +1325,18 @@ namespace infinit
 
     FileHandle::~FileHandle()
     {
+      _owner->_handle_count--;
       close();
     }
 
     void
     FileHandle::close()
     {
-      ELLE_DEBUG("Closing %s with dirty=%s", _owner._name, _dirty);
+      ELLE_DEBUG("Closing %s with dirty=%s", _owner->_name, _dirty);
       if (_dirty)
-        _owner._changed();
+        _owner->_changed();
       _dirty = false;
-      _owner._blocks.clear();
+      _owner->_blocks.clear();
     }
 
     int
@@ -1246,16 +1346,16 @@ namespace infinit
       ELLE_ASSERT_EQ(buffer.size(), size);
       int64_t total_size;
       int32_t block_size;
-      if (_owner._multi())
+      if (_owner->_multi())
       {
-        File::Header h = _owner._header();
+        File::Header h = _owner->_header();
         total_size = h.total_size;
         block_size = h.block_size;
       }
       else
       {
-        total_size = _owner._parent->_files.at(_owner._name).size;
-        block_size = _owner.default_block_size;
+        total_size = _owner->_parent->_files.at(_owner->_name).size;
+        block_size = _owner->default_block_size;
       }
 
       if (offset >= total_size)
@@ -1269,14 +1369,14 @@ namespace infinit
                    total_size - offset);
         size = total_size - offset;
       }
-      if (!_owner._multi())
+      if (!_owner->_multi())
       { // single block case
-        auto& block = _owner._first_block;
+        auto& block = _owner->_first_block;
         if (!block)
         {
           ELLE_DEBUG("read on uncached block, fetching");
-          _owner._first_block = _owner._owner.block_store()->fetch(
-            _owner._parent->_files.at(_owner._name).address);
+          _owner->_first_block = _owner->_owner.block_store()->fetch(
+            _owner->_parent->_files.at(_owner->_name).address);
         }
         ELLE_ASSERT_EQ(block->data().size(), total_size);
         memcpy(buffer.mutable_contents(),
@@ -1293,9 +1393,9 @@ namespace infinit
       if (start_block == end_block)
       { // single block case
         off_t block_offset = offset - (off_t)start_block * (off_t)block_size;
-        auto const& it = _owner._blocks.find(start_block);
+        auto const& it = _owner->_blocks.find(start_block);
         Block* block = nullptr;
-        if (it != _owner._blocks.end())
+        if (it != _owner->_blocks.end())
         {
           ELLE_DEBUG("obtained block %s : %x from cache", start_block, it->second.block->address());
           block = it->second.block.get();
@@ -1303,7 +1403,7 @@ namespace infinit
         }
         else
         {
-          block = _owner._block_at(start_block, false);
+          block = _owner->_block_at(start_block, false);
           if (block == nullptr)
           { // block would have been allocated: sparse file?
             memset(buffer.mutable_contents(), 0, size);
@@ -1311,7 +1411,7 @@ namespace infinit
             return size;
           }
           ELLE_DEBUG("fetched block %x of size %s", block->address(), block->data().size());
-          _owner.check_cache();
+          _owner->check_cache();
         }
         ELLE_ASSERT_LTE(block_offset + size, block_size);
 
@@ -1360,14 +1460,14 @@ namespace infinit
     FileHandle::write(elle::WeakBuffer buffer, size_t size, off_t offset)
     {
       ELLE_ASSERT_EQ(buffer.size(), size);
-      ELLE_DEBUG("write %s at %s on %s", size, offset, _owner._name);
+      ELLE_DEBUG("write %s at %s on %s", size, offset, _owner->_name);
 
-      if (!_owner._multi() && size + offset > _owner.default_block_size)
-        _owner._switch_to_multi(true);
+      if (!_owner->_multi() && size + offset > _owner->default_block_size)
+        _owner->_switch_to_multi(true);
       _dirty = true;
-      if (!_owner._multi())
+      if (!_owner->_multi())
       {
-        auto& block = _owner._first_block;
+        auto& block = _owner->_first_block;
         if (offset + size > block->data().size())
         {
           int64_t old_size = block->data().size();
@@ -1377,21 +1477,21 @@ namespace infinit
         }
         memcpy(block->data().mutable_contents() + offset, buffer.mutable_contents(), size);
         // Update but do not commit yet, so that read on same fd do not fail.
-        FileData& data = _owner._parent->_files.at(_owner._name);
+        FileData& data = _owner->_parent->_files.at(_owner->_name);
         if (data.size < offset + size)
           data.size = offset + size;
         return size;
       }
       // multi mode
-      uint64_t block_size = _owner._header().block_size;
+      uint64_t block_size = _owner->_header().block_size;
       off_t end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
       int end_block = end ? (end - 1) / block_size : 0;
       if (start_block == end_block)
       {
         Block* block;
-        auto const it = _owner._blocks.find(start_block);
-        if (it != _owner._blocks.end())
+        auto const it = _owner->_blocks.find(start_block);
+        if (it != _owner->_blocks.end())
         {
           block = it->second.block.get();
           it->second.dirty = true;
@@ -1399,9 +1499,9 @@ namespace infinit
         }
         else
         {
-          block = _owner._block_at(start_block, true);
+          block = _owner->_block_at(start_block, true);
           ELLE_ASSERT(block != nullptr);
-          _owner.check_cache();
+          _owner->check_cache();
         }
         off_t block_offset = offset % block_size;
         bool growth = false;
@@ -1419,12 +1519,12 @@ namespace infinit
         memcpy(&block->data()[block_offset], buffer.mutable_contents(), size);
         if (growth)
         { // check if file size was increased
-          File::Header h = _owner._header();
+          File::Header h = _owner->_header();
           if (h.total_size < offset + size)
           {
             h.total_size = offset + size;
             ELLE_DEBUG("New file size: %s", h.total_size);
-            _owner._header(h);
+            _owner->_header(h);
           }
         }
         return size;
@@ -1444,8 +1544,8 @@ namespace infinit
         return r2;
       // Assuming linear writes, this is a good time to flush start block since
       // it just got filled
-      File::CacheEntry& ent = _owner._blocks.at(start_block);
-      _owner._owner.block_store()->store(*ent.block);
+      File::CacheEntry& ent = _owner->_blocks.at(start_block);
+      _owner->_owner.block_store()->store(*ent.block);
       ent.dirty = false;
       return r1 + r2;
     }
@@ -1453,7 +1553,7 @@ namespace infinit
     void
     FileHandle::ftruncate(off_t offset)
     {
-      return _owner.truncate(offset);
+      return _owner->truncate(offset);
     }
   }
 }

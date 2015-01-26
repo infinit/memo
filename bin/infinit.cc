@@ -186,6 +186,7 @@ public:
   std::string mountpoint;
   boost::optional<std::string> root_address;
   std::shared_ptr<ModelConfig> model;
+  boost::optional<bool> single_mount;
 
   Config()
     : mountpoint()
@@ -204,6 +205,7 @@ public:
     s.serialize("mountpoint", this->mountpoint);
     s.serialize("root_address", this->root_address);
     s.serialize("model", this->model);
+    s.serialize("single_mount", this->single_mount);
   }
 };
 
@@ -287,12 +289,16 @@ main(int argc, char** argv)
           else
             fs = elle::make_unique<infinit::filesystem::FileSystem>(
               std::move(model));
+        if (cfg.single_mount && *cfg.single_mount)
+          fs->single_mount(true);
         ELLE_TRACE("mount filesystem")
         {
           reactor::filesystem::FileSystem filesystem(std::move(fs), true);
           filesystem.mount(cfg.mountpoint, {});
           reactor::scheduler().signal_handle(SIGINT, [&] { filesystem.unmount();});
+          ELLE_TRACE("Waiting on filesystem");
           reactor::wait(filesystem);
+          ELLE_TRACE("Filesystem finished.");
         }
       });
     sched.run();

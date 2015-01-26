@@ -23,13 +23,16 @@ namespace infinit
                  std::unique_ptr<infinit::model::Model> model);
       void
       print_cache_stats();
-      std::unique_ptr<reactor::filesystem::Path>
+      std::shared_ptr<reactor::filesystem::Path>
       path(std::string const& path) override;
 
+      void unchecked_remove(model::Address address);
+      std::unique_ptr<model::blocks::Block> unchecked_fetch(model::Address address);
     private:
       std::unique_ptr<model::blocks::Block> _root_block();
       ELLE_ATTRIBUTE(model::Address, root_address);
       ELLE_ATTRIBUTE_R(std::unique_ptr<infinit::model::Model>, block_store);
+      ELLE_ATTRIBUTE_RW(bool, single_mount);
     };
   }
 }
