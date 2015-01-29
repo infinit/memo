@@ -184,7 +184,7 @@ struct Config
 {
 public:
   std::string mountpoint;
-  boost::optional<std::string> root_address;
+  boost::optional<elle::Buffer> root_address;
   std::shared_ptr<ModelConfig> model;
   boost::optional<bool> single_mount;
 
@@ -282,13 +282,21 @@ main(int argc, char** argv)
         ELLE_TRACE("initialize filesystem")
           if (cfg.root_address)
           {
-            fs = elle::make_unique<infinit::filesystem::FileSystem>(
-              infinit::model::Address::from_string(cfg.root_address.get()),
-              std::move(model));
+            using infinit::model::Address;
+            auto root = elle::serialization::Serialize<Address>::
+              convert(cfg.root_address.get());
+            fs = elle::make_unique<infinit::filesystem::FileSystem>
+              (root, std::move(model));
           }
           else
+          {
             fs = elle::make_unique<infinit::filesystem::FileSystem>(
               std::move(model));
+            std::cout << "No root block specified, generating fresh one:"
+                      << std::endl;
+            elle::serialization::json::SerializerOut output(std::cout);
+            output.serialize_forward(fs->root_address());
+          }
         if (cfg.single_mount && *cfg.single_mount)
           fs->single_mount(true);
         ELLE_TRACE("mount filesystem")

@@ -359,7 +359,7 @@ namespace infinit
     {
       ELLE_ASSERT(model.get());
       this->_block_store = std::move(model);
-      ELLE_LOG("create root block at address: %x", this->_root_address);
+      ELLE_TRACE("create root block at address: %x", this->_root_address);
     }
 
     void
@@ -732,7 +732,7 @@ namespace infinit
         st->st_size = fd.size;
         st->st_atime = fd.atime;
         st->st_mtime = fd.mtime;
-        st->st_ctime = fd.ctime;   
+        st->st_ctime = fd.ctime;
         st->st_dev = 1;
         st->st_ino = (long)this;
         st->st_nlink = 1;
