@@ -787,6 +787,7 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     Unknown::create(int flags, mode_t mode)
     {
+      ELLE_ASSERT_EQ((mode & S_IFMT), S_IFREG);
       if (!_owner.single_mount())
         _parent->_fetch();
       if (_parent->_files.find(_name) != _parent->_files.end())
@@ -808,7 +809,10 @@ namespace infinit
                                        FileStoreMode::direct}));
       _parent->_changed(true);
       _remove_from_cache();
-      auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
+      auto raw = _owner.filesystem()->path(full_path().string());
+      auto f = std::dynamic_pointer_cast<File>(raw);
+      if (!f)
+        ELLE_ERR("Expected valid pointer from %s, got nullptr", raw.get());
       f->_first_block = std::move(b);
       // Mark dirty since we did not push first_block
       ELLE_DEBUG("Forcing entry %s", f->full_path());
