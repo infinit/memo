@@ -431,7 +431,8 @@ namespace infinit
     void Directory::_fetch()
     {
       _block = std::move(_owner.block_store()->fetch(_block->address()));
-      _files.clear();
+      std::unordered_map<std::string, FileData> local;
+      std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
       std::istream is(new elle::InputStreamBuffer<elle::Buffer>(_block->data()));
       elle::serialization::json::SerializerIn input(is, version);
@@ -442,7 +443,22 @@ namespace infinit
       catch(elle::serialization::Error const& e)
       {
         ELLE_WARN("Directory deserialization error: %s", e);
+        std::swap(local, _files);
         throw rfs::Error(EIO, e.what());
+      }
+      // File writes update the file size in _files for reads to work,
+      // but they do not commit them to store (that would be far too expensive)
+      // So, keep local version of entries with bigger ctime than remote.
+      for (auto const& itl: local)
+      {
+        auto itr = _files.find(itl.first);
+        if (itr != _files.end()
+          && (itr->second.ctime < itl.second.ctime
+              || itr->second.mtime < itl.second.mtime))
+        {
+          ELLE_DEBUG("Using local data for %s", itl.first);
+          itr->second = itl.second;
+        }
       }
     }
 
@@ -1360,7 +1376,7 @@ namespace infinit
 
       if (offset >= total_size)
       {
-        ELLE_DEBUG("read past end");
+        ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
         return 0;
       }
       if (signed(offset + size) > total_size)
@@ -1479,7 +1495,11 @@ namespace infinit
         // Update but do not commit yet, so that read on same fd do not fail.
         FileData& data = _owner->_parent->_files.at(_owner->_name);
         if (data.size < offset + size)
+        {
           data.size = offset + size;
+          data.mtime = time(nullptr);
+          data.ctime = time(nullptr);
+        }
         return size;
       }
       // multi mode
