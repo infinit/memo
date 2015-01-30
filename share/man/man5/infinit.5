@@ -128,7 +128,7 @@ Store blocks in a directory on the local filesystem.
 .nf
 .RS
 {
-  "type": "memory",
+  "type": "filesystem",
   "path": "/where/to/store"
 }
 .RE
@@ -141,7 +141,7 @@ Store blocks in a directory a remote SSH \fBhost\fR.
 .nf
 .RS
 {
-  "type": "memory",
+  "type": "sftp",
   "host": "user@host.net",
   "path": "/where/to/store"
 }
