@@ -205,7 +205,7 @@ public:
     s.serialize("mountpoint", this->mountpoint);
     s.serialize("root_address", this->root_address);
     s.serialize("model", this->model);
-    s.serialize("single_mount", this->single_mount);
+    s.serialize("caching", this->single_mount);
   }
 };
 

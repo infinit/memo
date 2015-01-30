@@ -186,5 +186,10 @@ def configure(
   ## Install ##
   ## ------- ##
 
-  drake.Rule('install') << drake.install(
-    drake.node('bin/infinit'), prefix)
+  install = drake.Rule('install')
+  install << drake.install(drake.node('bin/infinit'), prefix)
+  man = drake.nodes(
+    'share/man/man1/infinit.1',
+    'share/man/man5/infinit.5',
+  )
+  install << drake.install(man, prefix)

@@ -1,0 +1,252 @@
+.TH INFINIT 5
+.SH NAME
+infinit \- filesystem specification
+
+.SH DESCRIPTION
+Configuration file define every aspect of filesystems: root address, storage and model backend, ...
+
+.SH SYNTAX
+The configuration files are written in JSON.
+The file must contain a single root dictionary defining options and their values.
+Values may be simple literals or nested dictionary for complex settings.
+
+.nf
+.RS
+{
+  "option1": value1,
+  "option2": value2,
+  "option3":
+  {
+    "option1": value3,
+    ...
+  }
+  ...
+}
+.RE
+.fi
+
+.SH OPTIONS
+The root dictionary defines the following options:
+
+.TP
+.BR mountpoint \fR
+Where to mount the filesystem.
+
+.TP
+.BR root_address \fR
+Optional address of the root block.
+If unspecified, a new root block will be created and
+.BR infinit (1)
+will output its address so it can be filled in in the configuration file for future mounts.
+Beware that it is crucial to fill-in this option or the next launch will recreate a new root and a second separate filesystem in the model.
+
+.TP
+.BR model \fR
+The backend model configuration.
+See the MODELS section.
+
+
+.TP
+.BR caching \fR
+Whether to aggressively cache all data locally.
+This is suitable only if no other mountpoint write to the filesystem or their modification might not be seen.
+
+.SH MODELS
+The model is the block layer of the infinit filesystem.
+It defines how and where data blocks must be stored.
+Its configuration is a dictionary containing a \fBtype\fR key defining the kind of model used and any additional model-specific option. Most models require a \fBstorage\fR key defining how to store blocks that the local machine is responsible for. See the STORAGES section.
+
+Available models:
+
+.TP
+.BR faith \fR
+The simplest model that store blocks verbatim locally.
+It provides no encryption or distribution, all blocks are stored in clear in the local \fBstorage\fR.
+The storage must be trusted since it holds clear data and \fBfaith\fR is vulnerable to malicious non-authentic data from the storage.
+No other options are needed or available.
+
+.nf
+.RS
+{
+  "type": "faith",
+  "storage":
+  {
+    ...
+  }
+}
+.RE
+.fi
+
+.TP
+.BR paranoid \fR
+A model providing strong encryption and autentication over the local storage.
+The storage need not be trusted since data is stored encrypted and authentified, preventing any data leak or malicious non-authentic data if the storage is compromised.
+An optional \fBkeys\fR option can be given with the asymmetric encryption key used for encryption.
+If unspecified,
+.BR infinit (1)
+will generate a pair of RSA keys and output them so they can be filled in the configuration file.
+Beware that it is crucial to fill-in the keys or subsequent launch will be unable to decrypt filesystem data.
+
+.nf
+.RS
+{
+  "type": "paranoid",
+  "keys": ...,
+  "storage":
+  {
+    ...
+  }
+}
+.RE
+.fi
+
+.SH STORAGES
+The storage defines how the local machine stores blocks it is responsible for.
+Although the blocks the machine is responsible for are described as "stored locally", the storage can save them to a distant server.
+It is the machine responsibility to save and retreive block when asked by the model, be it on local filesystems or over the network.
+
+Available storages:
+
+.TP
+.BR memory \fR
+The simplest storage that keep blocks in system memory.
+It uses no other ressource than RAM but as a consequence, of course, provides no persistence between runs.
+Suitable for one-shot mounts and testing.
+
+.nf
+.RS
+{
+  "type": "memory"
+}
+.RE
+.fi
+
+.TP
+.BR filesystem \fR
+Store blocks in a directory on the local filesystem.
+
+.nf
+.RS
+{
+  "type": "memory",
+  "path": "/where/to/store"
+}
+.RE
+.fi
+
+.TP
+.BR sftp \fR
+Store blocks in a directory a remote SSH \fBhost\fR.
+
+.nf
+.RS
+{
+  "type": "memory",
+  "host": "user@host.net",
+  "path": "/where/to/store"
+}
+.RE
+.fi
+
+.TP
+.BR async \fR
+Wrap a storage providing asynchronous writes.
+Store blocks in the given \fBstorage\fR making write operation asynchronously, buffering at most \fBmax_blocks\fR blocks for a maximum size of \fBmax_size\fR bytes.
+Useful if the underlying storage has latency to avoid blocking client applications writes.
+
+.nf
+.RS
+{
+  "type": "async",
+  "max_blocks": 1024,
+  "max_size": 1048576,
+  "backend": ...,
+}
+.RE
+.fi
+
+.SH EXAMPLES
+
+.TP
+\fBMemory\fR
+
+Store one-shot filesystem in memory.
+
+.nf
+.RS
+{
+  "mountpoint": ...,
+  "model":
+  {
+    "type": "faith",
+    "storage":
+    {
+      "type": "memory",
+    }
+  }
+}
+.RE
+.fi
+
+.TP
+\fBLocal trusted directory\fR
+
+Store filesystem in a local directory.
+Data will not be encrypted or authenticated, anyone tampering with the directory can access the clear data or insert malicious non-authentic data.
+
+.nf
+.RS
+{
+  "mountpoint": ...,
+  "root_address": ...,
+  "model":
+  {
+    "type": "faith",
+    "storage":
+    {
+      "type": "filesystem",
+      "path": "/var/.../storage",
+    }
+  }
+}
+.RE
+.fi
+
+.TP
+\fBRemote untrusted host\fR
+
+Store filesystem on an unstrusted remote SSH host.
+Since data is encrypted and authentified, even the root user of the remote host cannot access the data or tamper with it.
+She can still, of course, deny service by removing the files.
+The \fBsftp\fR storage is wrapped in an \fBasync\fR storage so write operation are not subject to network latency, greatly improving filesystem responsiveness.
+Caching is enabled to speed up successive reads, but prevents anyone else from writing to the storage concurrently.
+
+.nf
+.RS
+{
+  "mountpoint": ...,
+  "root_address": ...,
+  "caching": true,
+  "model":
+  {
+    "type": "paranoid",
+    "keys": ...,
+    "storage":
+    {
+      "type": "async",
+      "max_blocks": 1024,
+      "max_size": 1048576,
+      "backend":
+      {
+        "type": "sftp",
+        "host": "me@nsa.gov",
+        "path": "/var/.../storage",
+      }
+    }
+  }
+}
+.RE
+.fi
+
+.SH SEE ALSO
+.BR infinit (1)
