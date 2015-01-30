@@ -20,7 +20,12 @@ def configure(
   if prefix.relative:
     prefix = drake.path_build(prefix, absolute = True)
 
+  cxx_config = drake.cxx.Config(cxx_config)
+  if production_build:
+    cxx_config.enable_optimization()
+
   elle = drake.include('elle',
+                       production_build = production_build,
                        cxx_toolkit = cxx_toolkit,
                        cxx_config = cxx_config)
   elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
@@ -32,7 +37,6 @@ def configure(
   cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
                                 strip_prefix = True)
   cxx_toolkit = elle.cxx_toolkit
-  cxx_config = drake.cxx.Config(cxx_config)
   cxx_config += elle.config
   cxx_config.add_local_include_path('src')
   cxx_config.warnings.parentheses = False
