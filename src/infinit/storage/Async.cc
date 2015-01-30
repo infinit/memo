@@ -52,10 +52,23 @@ namespace infinit
     void
     Async::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
-      ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
       _wait();
-      _set_cache.push_back(Entry(k, elle::Buffer(value.contents(), value.size())));
-      _inc(value.size());
+      auto it = std::find_if(_set_cache.begin(), _set_cache.end(),
+                          [&](Entry const& e) { return e.first == k;});
+      if (it != _set_cache.end())
+      {
+        ELLE_DEBUG("updating set queue on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
+        _dec(it->second.size());
+        it->second.reset();
+        it->second.append(value.contents(), value.size());
+        _inc(value.size());
+      }
+      else
+      {
+        ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
+        _set_cache.push_back(Entry(k, elle::Buffer(value.contents(), value.size())));
+        _inc(value.size());
+      }
     }
 
     void
