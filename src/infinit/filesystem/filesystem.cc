@@ -270,8 +270,8 @@ namespace infinit
       // check cached data size, remove entries if needed
       void check_cache();
     private:
-      static const unsigned long default_block_size = 1024 * 1024;
-      static const unsigned long max_cache_size = 20; // in blocks
+      static const unsigned long default_block_size;
+      static const unsigned long max_cache_size; // in blocks
       friend class FileHandle;
       friend class Directory;
       friend class Unknown;
@@ -307,6 +307,9 @@ namespace infinit
       std::unique_ptr<Block> _first_block;
       int _handle_count;
     };
+
+    const unsigned long File::default_block_size = 1024 * 1024;
+    const unsigned long File::max_cache_size = 20; // in blocks
 
     FileSystem::FileSystem(model::Address root,
                            std::unique_ptr<infinit::model::Model> model)
