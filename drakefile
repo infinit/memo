@@ -40,6 +40,7 @@ def configure(
   cxx_config += elle.config
   cxx_config.add_local_include_path('src')
   cxx_config.warnings.parentheses = False
+  cxx_config.define('_FILE_OFFSET_BITS=64')
 
   rule_build = drake.Rule('build')
 
