@@ -36,6 +36,8 @@ def configure(
                         strip_prefix = True)
   cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
                                 strip_prefix = True)
+  protocol_lib = drake.copy(elle.protocol.lib_dynamic, 'lib',
+                            strip_prefix = True)
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
   cxx_config.add_local_include_path('src')
@@ -66,6 +68,8 @@ def configure(
   CxxVersionGenerator(drake.node('src/infinit/version.hh'),
                       drake.git.Git())
   infinit_sources = drake.nodes(
+    'src/infinit/RPC.hh',
+    'src/infinit/RPC.hxx',
     'src/infinit/filesystem/filesystem.cc',
     'src/infinit/filesystem/filesystem.hh',
     'src/infinit/model/Address.cc',
@@ -77,6 +81,14 @@ def configure(
     'src/infinit/model/blocks/Block.cc',
     'src/infinit/model/blocks/Block.hh',
     'src/infinit/model/blocks/fwd.hh',
+    'src/infinit/model/doughnut/Doughnut.cc',
+    'src/infinit/model/doughnut/Doughnut.hh',
+    'src/infinit/model/doughnut/Local.cc',
+    'src/infinit/model/doughnut/Local.hh',
+    'src/infinit/model/doughnut/Peer.cc',
+    'src/infinit/model/doughnut/Peer.hh',
+    'src/infinit/model/doughnut/Remote.cc',
+    'src/infinit/model/doughnut/Remote.hh',
     'src/infinit/model/faith/Faith.cc',
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
@@ -119,7 +131,10 @@ def configure(
 
   infinit_lib = drake.cxx.DynLib(
     'lib/infinit',
-    infinit_sources + [elle_lib, cryptography_lib, aws_lib],
+    infinit_sources + [elle_lib,
+                       cryptography_lib,
+                       aws_lib,
+                       protocol_lib],
     cxx_toolkit,
     cxx_config_infinit)
   rule_build << infinit_lib
@@ -147,7 +162,7 @@ def configure(
   cxx_config_tests.library_add(
     drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
 
-  for test_name in ['faith', 'storage', 'filesystem']:
+  for test_name in ['doughnut', 'faith', 'storage', 'filesystem']:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [drake.node('tests/%s.cc' % test_name), infinit_lib, elle_lib, aws_lib, reactor_lib],

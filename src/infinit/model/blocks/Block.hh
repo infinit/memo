@@ -12,16 +12,32 @@ namespace infinit
   {
     namespace blocks
     {
-      class Block:
-        public elle::Printable
+      class Block
+        : public elle::Printable
       {
+      /*-------------.
+      | Construction |
+      `-------------*/
+
       public:
         Block(Address address);
         Block(Address address, elle::Buffer data);
-        ELLE_ATTRIBUTE_R(const Address, address);
+        ELLE_ATTRIBUTE_R(Address, address);
         ELLE_ATTRIBUTE_RX(elle::Buffer, data);
         bool
         operator ==(Block const& rhs) const;
+
+      /*--------------.
+      | Serialization |
+      `--------------*/
+      public:
+        void
+        serialize(elle::serialization::Serializer& s);
+
+      /*----------.
+      | Printable |
+      `----------*/
+
       public:
         virtual
         void

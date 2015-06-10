@@ -176,7 +176,7 @@ namespace infinit
         asio::transfer_exactly(4), erc);
 
       if (!erc)
-        ELLE_ASSERT_EQ(sz, 4);
+        ELLE_ASSERT_EQ(sz, 4u);
       if (erc)
         throw std::runtime_error(erc.message());
       len = this->readInt();
@@ -237,7 +237,7 @@ namespace infinit
       bool mark = false;
       if (_payload.size() < 1024)
       {
-        int sz = asio::write(s, v, erc);
+        unsigned sz = asio::write(s, v, erc);
         if (!erc)
           ELLE_ASSERT_EQ(sz, size() + _payload.size());
       }

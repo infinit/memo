@@ -790,7 +790,7 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     Unknown::create(int flags, mode_t mode)
     {
-      ELLE_ASSERT_EQ((mode & S_IFMT), S_IFREG);
+      ELLE_ASSERT_EQ(signed(mode & S_IFMT), S_IFREG);
       if (!_owner.single_mount())
         _parent->_fetch();
       if (_parent->_files.find(_name) != _parent->_files.end())
@@ -1401,7 +1401,7 @@ namespace infinit
           _owner->_first_block = _owner->_owner.block_store()->fetch(
             _owner->_parent->_files.at(_owner->_name).address);
         }
-        ELLE_ASSERT_EQ(block->data().size(), total_size);
+        ELLE_ASSERT_EQ(signed(block->data().size()), total_size);
         memcpy(buffer.mutable_contents(),
                block->data().mutable_contents() + offset,
                size);
@@ -1436,7 +1436,7 @@ namespace infinit
           ELLE_DEBUG("fetched block %x of size %s", block->address(), block->data().size());
           _owner->check_cache();
         }
-        ELLE_ASSERT_LTE(block_offset + size, block_size);
+        ELLE_ASSERT_LTE(signed(block_offset + size), block_size);
 
         if (block->data().size() < block_offset + size)
         { // sparse file, eof shrinkage of size was handled above

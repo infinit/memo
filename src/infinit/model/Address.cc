@@ -1,11 +1,21 @@
 #include <infinit/model/Address.hh>
 
+#include <boost/uuid/random_generator.hpp>
+
 #include <elle/Buffer.hh>
+
+#include <cryptography/hash.hh>
 
 namespace infinit
 {
   namespace model
   {
+    Address::Address()
+      : _value()
+    {
+      memset(this->_value, 0, sizeof(Address::Value));
+    }
+
     Address::Address(Value value)
       : _value()
     {
@@ -47,10 +57,16 @@ namespace infinit
       return Address(v);
     }
 
-    Address::Address()
-      : _value()
+    Address
+    Address::random()
     {
-      memset(this->_value, 0, sizeof(Address::Value));
+      // Hash a UUID to get a random address.  Like using a deathstar to blow
+      // a mosquito and I like it.
+      auto id = boost::uuids::basic_random_generator<boost::mt19937>()();
+      auto hash = cryptography::hash::sha256(
+        elle::ConstWeakBuffer(id.data, id.static_size()));
+      ELLE_ASSERT_GTE(hash.size(), sizeof(Address::Value));
+      return Address(hash.contents());
     }
 
     Address const Address::null;

@@ -1,11 +1,7 @@
 #include <infinit/model/paranoid/Paranoid.hh>
 
-#include <boost/uuid/random_generator.hpp>
-
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
-
-#include <cryptography/hash.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -37,14 +33,7 @@ namespace infinit
       Paranoid::_make_block() const
       {
         ELLE_TRACE_SCOPE("%s: create block", *this);
-        // Hash a UUID to get a random address.  Like using a deathstar to blow
-        // a mosquito and I like it.
-        auto id = boost::uuids::basic_random_generator<boost::mt19937>()();
-        auto hash = cryptography::hash::sha256(
-          elle::ConstWeakBuffer(id.data, id.static_size()));
-        ELLE_ASSERT_GTE(hash.size(), sizeof(Address::Value));
-        Address address(hash.contents());
-        return std::unique_ptr<blocks::Block>(new blocks::Block(address));
+        return elle::make_unique<blocks::Block>(Address::random());
       }
 
       struct CryptedBlock

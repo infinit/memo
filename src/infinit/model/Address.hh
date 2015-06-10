@@ -19,6 +19,7 @@ namespace infinit
     {
     public:
       typedef uint8_t Value[32];
+      Address();
       Address(Value bytes);
       bool
       operator ==(Address const& rhs) const;
@@ -31,9 +32,11 @@ namespace infinit
       static
       Address
       from_string(std::string const& repr);
+      static
+      Address
+      random();
       static Address const null;
     private:
-      Address();
       friend
       class elle::serialization::Serialize<infinit::model::Address>;
     };
