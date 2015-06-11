@@ -21,6 +21,7 @@ namespace infinit
       typedef uint8_t Value[32];
       Address();
       Address(Value bytes);
+      Address(const elle::Buffer& buf);
       bool
       operator ==(Address const& rhs) const;
       bool

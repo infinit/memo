@@ -20,7 +20,7 @@ namespace infinit
   {
     namespace paranoid
     {
-      Paranoid::Paranoid(infinit::cryptography::KeyPair keys,
+      Paranoid::Paranoid(infinit::cryptography::rsa::KeyPair keys,
                          std::unique_ptr<storage::Storage> storage)
         : _keys(std::move(keys))
         , _storage(std::move(storage))
@@ -67,13 +67,12 @@ namespace infinit
         CryptedBlock crypted(block.address(), block.data());
         elle::Buffer raw;
         {
-          elle::IOStream output(
-            new elle::OutputStreamBuffer<elle::Buffer>(raw));
+          elle::IOStream output(raw.ostreambuf());
           elle::serialization::json::SerializerOut serializer(output, version);
           serializer.serialize_forward(crypted);
         }
         this->_storage->set(block.address(),
-                            this->_keys.K().encrypt(raw), true, true);
+                            this->_keys.K().encrypt(infinit::cryptography::Plain(raw)).buffer(), true, true);
       }
 
       std::unique_ptr<blocks::Block>
@@ -83,14 +82,14 @@ namespace infinit
         elle::Buffer raw;
         try
         {
-          raw = this->_keys.k().decrypt(this->_storage->get(address));
+          raw = std::move(this->_keys.k().decrypt(
+            infinit::cryptography::Code(this->_storage->get(address))).buffer());
         }
         catch (infinit::storage::MissingKey const&)
         {
           return nullptr;
         }
-        elle::IOStream input(
-          new elle::InputStreamBuffer<elle::Buffer>(raw));
+        elle::IOStream input(raw.istreambuf());
         elle::serialization::json::SerializerIn serializer(input, version);
         CryptedBlock crypted(serializer);
         if (crypted.address != address)

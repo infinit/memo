@@ -30,7 +30,7 @@ namespace infinit
       if (!input.good())
         throw MissingKey(key);
       elle::Buffer res;
-      elle::IOStream output(new elle::OutputStreamBuffer<elle::Buffer>(res));
+      elle::IOStream output(res.ostreambuf());
       std::copy(std::istreambuf_iterator<char>(input),
                 std::istreambuf_iterator<char>(),
                 std::ostreambuf_iterator<char>(output));
@@ -51,7 +51,7 @@ namespace infinit
       if (!output.good())
         throw elle::Error(
           elle::sprintf("unable to open for writing: %s", path));
-      elle::IOStream input(new elle::InputStreamBuffer<elle::Buffer>(value));
+      elle::IOStream input(value.istreambuf());
       std::copy(std::istreambuf_iterator<char>(input),
                 std::istreambuf_iterator<char>(),
                 std::ostreambuf_iterator<char>(output));

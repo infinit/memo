@@ -9,7 +9,7 @@
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 
-#include <cryptography/KeyPair.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
 #include <reactor/scheduler.hh>
 
@@ -139,7 +139,7 @@ struct ParanoidModelConfig:
 public:
   // boost::optional does not support in-place construction, use a
   // std::unique_ptr instead since KeyPair is not copiable.
-  std::unique_ptr<infinit::cryptography::KeyPair> keys;
+  std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
   std::unique_ptr<infinit::storage::StorageConfig> storage;
 
   ParanoidModelConfig(elle::serialization::SerializerIn& input)
@@ -162,9 +162,9 @@ public:
     if (!this->keys)
     {
       this->keys.reset(
-        new infinit::cryptography::KeyPair(
-          infinit::cryptography::KeyPair::generate
-          (infinit::cryptography::Cryptosystem::rsa, 2048)));
+        new infinit::cryptography::rsa::KeyPair(
+          infinit::cryptography::rsa::keypair::generate(
+          2048)));
       elle::serialization::json::SerializerOut output(std::cout);
       std::cout << "No key specified, generating fresh ones:" << std::endl;
       this->keys->serialize(output);

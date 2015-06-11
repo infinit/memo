@@ -415,7 +415,7 @@ namespace infinit
       if (!_block->data().empty())
       {
         ELLE_DEBUG("Deserializing directory");
-        std::istream is(new elle::InputStreamBuffer<elle::Buffer>(_block->data()));
+        elle::IOStream is(_block->data().istreambuf());
         elle::serialization::json::SerializerIn input(is, version);
         try
         {
@@ -437,7 +437,7 @@ namespace infinit
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
-      std::istream is(new elle::InputStreamBuffer<elle::Buffer>(_block->data()));
+      elle::IOStream is(_block->data().istreambuf());
       elle::serialization::json::SerializerIn input(is, version);
       try
       {
@@ -481,7 +481,7 @@ namespace infinit
       ELLE_DEBUG("Directory changed: %s with %s entries", this, _files.size());
       {
         _block->data().reset();
-        std::ostream os(new elle::OutputStreamBuffer<elle::Buffer>(_block->data()));
+        elle::IOStream os(_block->data().ostreambuf());
         elle::serialization::json::SerializerOut output(os, version);
         output.serialize_forward(*this);
       }
