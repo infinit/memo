@@ -14,6 +14,9 @@
 #include <reactor/scheduler.hh>
 
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/model/paranoid/Paranoid.hh>
 #include <infinit/model/Model.hh>
@@ -103,6 +106,79 @@ struct ModelConfig:
   std::unique_ptr<infinit::model::Model>
   make() = 0;
 };
+
+struct DoughnutNodeModelConfig:
+  public ModelConfig
+{
+public:
+  std::unique_ptr<infinit::storage::StorageConfig> storage;
+  int port;
+  DoughnutNodeModelConfig(elle::serialization::SerializerIn& input)
+    : ModelConfig()
+  {
+    this->serialize(input);
+  }
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("storage", this->storage);
+    s.serialize("port", this->port);
+  }
+  virtual
+  std::unique_ptr<infinit::model::Model>
+  make()
+  {
+    using namespace infinit::model::doughnut;
+    std::unique_ptr<infinit::storage::Storage> store = this->storage->make();
+    std::vector<std::unique_ptr<Peer>> peers;
+    peers.emplace_back(new Local(std::move(store), port));
+    return std::unique_ptr<infinit::model::Model>(
+      new Doughnut(std::move(peers)));
+  }
+};
+
+static const elle::serialization::Hierarchy<ModelConfig>::
+Register<DoughnutNodeModelConfig> _register_DoughnutNodeModelConfig("doughnut_node");
+
+
+struct DoughnutModelConfig:
+  public ModelConfig
+{
+public:
+  std::vector<std::string> nodes;
+
+  DoughnutModelConfig(elle::serialization::SerializerIn& input)
+    : ModelConfig()
+  {
+    this->serialize(input);
+  }
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("nodes", this->nodes);
+  }
+  virtual
+  std::unique_ptr<infinit::model::Model>
+  make()
+  {
+    namespace doughnut = infinit::model::doughnut;
+    std::vector<std::unique_ptr<doughnut::Peer>> peers;
+    for (auto const& hostport: nodes)
+    {
+      size_t p = hostport.find_first_of(':');
+      if (p == hostport.npos)
+        throw std::runtime_error("Failed to parse host:port " + hostport);
+      peers.emplace_back(new doughnut::Remote(hostport.substr(0, p),
+                                    std::stoi(hostport.substr(p+1))));
+    }
+    return std::unique_ptr<infinit::model::Model>(
+        new doughnut::Doughnut(std::move(peers)));
+  }
+};
+
+static const elle::serialization::Hierarchy<ModelConfig>::
+Register<DoughnutModelConfig> _register_DoughnutModelConfig("doughnut");
+
 
 struct FaithModelConfig:
   public ModelConfig
@@ -211,7 +287,7 @@ public:
 
 static
 void
-parse_options(int argc, char** argv, Config& cfg)
+parse_options(int argc, char** argv, Config& cfg, std::unique_ptr<ModelConfig>& model_config)
 {
   ELLE_TRACE_SCOPE("parse command line");
   using namespace boost::program_options;
@@ -220,6 +296,7 @@ parse_options(int argc, char** argv, Config& cfg)
     ("config,c", value<std::string>(), "configuration file")
     ("help,h", "display the help")
     ("version,v", "display version")
+    ("model,m", "Only load model, do not mount any filesystem")
     ;
   variables_map vm;
   try
@@ -251,10 +328,18 @@ parse_options(int argc, char** argv, Config& cfg)
     boost::filesystem::ifstream input_file(config);
     try
     {
-      elle::serialization::json::SerializerIn input(input_file);
-      cfg.serialize(input);
+      if (vm.count("model"))
+      {
+        elle::serialization::json::SerializerIn input(input_file);
+        input.serialize_forward(model_config);
+      }
+      else
+      {
+        elle::serialization::json::SerializerIn input(input_file);
+        cfg.serialize(input);
+      }
     }
-    catch (elle::serialization::Error const& e)
+    catch (elle ::serialization::Error const& e)
     {
       throw elle::Error(
         elle::sprintf("error in configuration file %s: %s", config, e.what()));
@@ -276,37 +361,46 @@ main(int argc, char** argv)
       [argc, argv]
       {
         Config cfg;
-        parse_options(argc, argv, cfg);
-        auto model = cfg.model->make();
-        std::unique_ptr<infinit::filesystem::FileSystem> fs;
-        ELLE_TRACE("initialize filesystem")
-          if (cfg.root_address)
-          {
-            using infinit::model::Address;
-            auto root = elle::serialization::Serialize<Address>::
-              convert(cfg.root_address.get());
-            fs = elle::make_unique<infinit::filesystem::FileSystem>
-              (root, std::move(model));
-          }
-          else
-          {
-            fs = elle::make_unique<infinit::filesystem::FileSystem>(
-              std::move(model));
-            std::cout << "No root block specified, generating fresh one:"
-                      << std::endl;
-            elle::serialization::json::SerializerOut output(std::cout);
-            output.serialize_forward(fs->root_address());
-          }
-        if (cfg.single_mount && *cfg.single_mount)
-          fs->single_mount(true);
-        ELLE_TRACE("mount filesystem")
+        std::unique_ptr<ModelConfig> model_cfg;
+        std::unique_ptr<infinit::model::Model> model;
+        parse_options(argc, argv, cfg, model_cfg);
+        if (model_cfg)
         {
-          reactor::filesystem::FileSystem filesystem(std::move(fs), true);
-          filesystem.mount(cfg.mountpoint, {});
-          reactor::scheduler().signal_handle(SIGINT, [&] { filesystem.unmount();});
-          ELLE_TRACE("Waiting on filesystem");
-          reactor::wait(filesystem);
-          ELLE_TRACE("Filesystem finished.");
+          model = model_cfg->make();
+        }
+        else
+        {
+          model = cfg.model->make();
+          std::unique_ptr<infinit::filesystem::FileSystem> fs;
+          ELLE_TRACE("initialize filesystem")
+            if (cfg.root_address)
+            {
+              using infinit::model::Address;
+              auto root = elle::serialization::Serialize<Address>::
+                convert(cfg.root_address.get());
+              fs = elle::make_unique<infinit::filesystem::FileSystem>
+                (root, std::move(model));
+            }
+            else
+            {
+              fs = elle::make_unique<infinit::filesystem::FileSystem>(
+                std::move(model));
+              std::cout << "No root block specified, generating fresh one:"
+                        << std::endl;
+              elle::serialization::json::SerializerOut output(std::cout);
+              output.serialize_forward(fs->root_address());
+            }
+          if (cfg.single_mount && *cfg.single_mount)
+            fs->single_mount(true);
+          ELLE_TRACE("mount filesystem")
+          {
+            reactor::filesystem::FileSystem filesystem(std::move(fs), true);
+            filesystem.mount(cfg.mountpoint, {});
+            reactor::scheduler().signal_handle(SIGINT, [&] { filesystem.unmount();});
+            ELLE_TRACE("Waiting on filesystem");
+            reactor::wait(filesystem);
+            ELLE_TRACE("Filesystem finished.");
+          }
         }
       });
     sched.run();
