@@ -19,12 +19,12 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Local::Local(std::unique_ptr<storage::Storage> storage)
+      Local::Local(std::unique_ptr<storage::Storage> storage, int port)
         : _storage(std::move(storage))
         , _server_thread(elle::sprintf("%s server", *this),
                          [this] { this->_serve(); })
       {
-        this->_server.listen();
+        this->_server.listen(port);
       }
 
       Local::~Local()

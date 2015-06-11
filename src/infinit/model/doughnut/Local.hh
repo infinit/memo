@@ -19,7 +19,7 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Local(std::unique_ptr<storage::Storage> storage);
+        Local(std::unique_ptr<storage::Storage> storage, int port = 0);
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
 
