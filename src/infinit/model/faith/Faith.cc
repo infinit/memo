@@ -4,7 +4,7 @@
 
 #include <elle/log.hh>
 
-#include <cryptography/hash.hh>
+#include <cryptography/oneway.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -30,10 +30,11 @@ namespace infinit
         // Hash a UUID to get a random address.  Like using a deathstar to blow
         // a mosquito and I like it.
         auto id = boost::uuids::basic_random_generator<boost::mt19937>()();
-        auto hash = cryptography::hash::sha256(
-          elle::ConstWeakBuffer(id.data, id.static_size()));
-        ELLE_ASSERT_GTE(hash.size(), sizeof(Address::Value));
-        Address address(hash.contents());
+        auto hash = cryptography::oneway::hash(
+          cryptography::Plain(elle::ConstWeakBuffer(id.data, id.static_size())),
+          cryptography::oneway::Algorithm::sha256);
+        ELLE_ASSERT_GTE(hash.buffer().size(), sizeof(Address::Value));
+        Address address(hash.buffer().contents());
         auto res = std::unique_ptr<blocks::Block>(new blocks::Block(address));
         return res;
       }

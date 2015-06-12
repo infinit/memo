@@ -42,8 +42,8 @@ namespace infinit
       elle::Buffer e = this->_backend->get(k);
       SecretKey enc(_algorithm,
         _salt ? _password + elle::sprintf("%x", k) : _password);
-      auto out = enc.decrypt<elle::Buffer>(infinit::cryptography::Output(e));
-      return std::move(out);
+      auto out = enc.decrypt(infinit::cryptography::Code(e));
+      return std::move(out.buffer());
     }
 
     void
@@ -51,7 +51,7 @@ namespace infinit
     {
       SecretKey enc(_algorithm,
         _salt ? _password + elle::sprintf("%x", k) : _password);
-      auto encrypted = enc.encrypt(value);
+      auto encrypted = enc.encrypt(cryptography::Plain(value));
       this->_backend->set(k, encrypted.buffer(), insert, update);
     }
 
