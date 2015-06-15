@@ -18,7 +18,6 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
-
       public:
         Block(Address address);
         Block(Address address, elle::Buffer data);
@@ -31,6 +30,7 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
+        Block(elle::serialization::Serializer& input);
         void
         serialize(elle::serialization::Serializer& s);
 

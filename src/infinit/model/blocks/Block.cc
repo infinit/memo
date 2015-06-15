@@ -30,6 +30,11 @@ namespace infinit
       | Serialization |
       `--------------*/
 
+      Block::Block(elle::serialization::Serializer& input)
+      {
+        this->serialize(input);
+      }
+
       void
       Block::serialize(elle::serialization::Serializer& s)
       {
