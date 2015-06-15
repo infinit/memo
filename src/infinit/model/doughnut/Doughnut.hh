@@ -5,6 +5,7 @@
 
 # include <infinit/model/Model.hh>
 # include <infinit/model/doughnut/Peer.hh>
+# include <infinit/overlay/Overlay.hh>
 
 namespace infinit
 {
@@ -16,7 +17,9 @@ namespace infinit
         : public Model
       {
       public:
-        Doughnut(std::vector<std::unique_ptr<Peer>> peers);
+        Doughnut(std::unique_ptr<overlay::Overlay> overlay);
+        ELLE_ATTRIBUTE(std::unique_ptr<overlay::Overlay>, overlay)
+
       protected:
         virtual
         std::unique_ptr<blocks::Block>
@@ -32,7 +35,7 @@ namespace infinit
         _remove(Address address) override;
         ELLE_ATTRIBUTE_R(std::vector<std::unique_ptr<Peer>>, peers);
       private:
-        Peer&
+        std::unique_ptr<Peer>
         _owner(Address const& address) const;
       };
     }

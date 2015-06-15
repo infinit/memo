@@ -21,6 +21,7 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
+        Remote(boost::asio::ip::tcp::endpoint endpoint);
         Remote(std::string const& host, int port);
         ELLE_ATTRIBUTE(reactor::network::TCPSocket, socket);
         ELLE_ATTRIBUTE(protocol::Serializer, serializer);

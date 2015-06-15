@@ -22,6 +22,12 @@ namespace infinit
         , _channels(this->_serializer)
       {}
 
+      Remote::Remote(boost::asio::ip::tcp::endpoint endpoint)
+        : _socket(std::move(endpoint))
+        , _serializer(this->_socket)
+        , _channels(this->_serializer)
+      {}
+
       /*-------.
       | Blocks |
       `-------*/
