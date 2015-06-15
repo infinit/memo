@@ -4,6 +4,8 @@
 # include <elle/serialization/json.hh>
 # include <elle/log.hh>
 
+# include <reactor/network/exception.hh>
+
 # include <protocol/ChanneledStream.hh>
 # include <protocol/Serializer.hh>
 
@@ -127,24 +129,29 @@ namespace infinit
     void
     serve(reactor::network::Socket& s)
     {
-      protocol::Serializer serializer(s);
-      protocol::ChanneledStream channels(serializer);
-      while (true)
+      try
       {
-        auto channel = channels.accept();
-        auto request = channel.read();
-        elle::serialization::json::SerializerIn input(request);
-        std::string name;
-        input.serialize("procedure", name);
-        auto it = this->_rpcs.find(name);
-        ELLE_ASSERT(it != this->_rpcs.end());
-        protocol::Packet response;
+        protocol::Serializer serializer(s);
+        protocol::ChanneledStream channels(serializer);
+        while (true)
         {
-          elle::serialization::json::SerializerOut output(response);
-          it->second->handle(input, output);
+          auto channel = channels.accept();
+          auto request = channel.read();
+          elle::serialization::json::SerializerIn input(request);
+          std::string name;
+          input.serialize("procedure", name);
+          auto it = this->_rpcs.find(name);
+          ELLE_ASSERT(it != this->_rpcs.end());
+          protocol::Packet response;
+          {
+            elle::serialization::json::SerializerOut output(response);
+            it->second->handle(input, output);
+          }
+          channel.write(response);
         }
-        channel.write(response);
       }
+      catch (reactor::network::ConnectionClosed const&)
+      {}
     }
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
