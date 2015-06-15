@@ -32,7 +32,7 @@ namespace infinit
       public:
         virtual
         void
-        store(blocks::Block& block) override;
+        store(blocks::Block const& block) override;
         virtual
         std::unique_ptr<blocks::Block>
         fetch(Address address) const override;

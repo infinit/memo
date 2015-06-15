@@ -27,20 +27,20 @@ namespace infinit
       `-------*/
 
       void
-      Remote::store(blocks::Block& block)
+      Remote::store(blocks::Block const& block)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        RPC<void (Address, elle::Buffer&)> store("store", this->_channels);
-        store(block.address(), block.data());
+        RPC<void (blocks::Block const&)> store("store", this->_channels);
+        store(block);
       }
 
       std::unique_ptr<blocks::Block>
       Remote::fetch(Address address) const
       {
         ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
-        RPC<elle::Buffer (Address)> fetch("fetch",
-                                          const_cast<Remote*>(this)->_channels);
-        return elle::make_unique<blocks::Block>(address, fetch(address));
+        RPC<std::unique_ptr<blocks::Block> (Address)> fetch(
+          "fetch", const_cast<Remote*>(this)->_channels);
+        return fetch(address);
       }
 
       void

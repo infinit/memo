@@ -25,7 +25,7 @@ namespace infinit
       public:
         virtual
         void
-        store(blocks::Block& block) = 0;
+        store(blocks::Block const& block) = 0;
         virtual
         std::unique_ptr<blocks::Block>
         fetch(Address address) const = 0;

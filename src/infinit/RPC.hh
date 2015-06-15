@@ -66,8 +66,7 @@ namespace infinit
       typedef
         typename std::remove_reference<typename Remaining::Head>::type
         Head;
-      Head arg;
-      input.serialize(elle::sprintf("arg%s", n), arg);
+      auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
       this->_handle<typename Remaining::Tail, Parsed..., Head&>(
         n + 1, input, output, parsed..., arg);
     }

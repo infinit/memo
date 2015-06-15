@@ -37,7 +37,7 @@ namespace infinit
       `-------*/
 
       void
-      Local::store(blocks::Block& block)
+      Local::store(blocks::Block const& block)
       {
         this->_storage->set(block.address(), block.data(), true, true);
       }
@@ -70,17 +70,16 @@ namespace infinit
       {
         RPCServer rpcs;
         rpcs.add("store",
-                std::function<void (Address address, elle::Buffer& data)>(
-                  [this] (Address address, elle::Buffer& data)
-                  {
-                    blocks::Block block(address, data);
-                    return this->store(block);
-                  }));
+                 std::function<void (blocks::Block const& data)>(
+                   [this] (blocks::Block const& block)
+                   {
+                     return this->store(block);
+                   }));
         rpcs.add("fetch",
-                std::function<elle::Buffer (Address address)>(
+                std::function<std::unique_ptr<blocks::Block> (Address address)>(
                   [this] (Address address)
                   {
-                    return this->fetch(address)->data();
+                    return this->fetch(address);
                   }));
         rpcs.add("remove",
                 std::function<void (Address address)>(
