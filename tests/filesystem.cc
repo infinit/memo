@@ -154,9 +154,9 @@ void test_basic()
   int fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
   if (fd < 0)
     perror("open");
-  write(fd, "foo", 3);
+  ELLE_ENFORCE_EQ(write(fd, "foo", 3), 3);
   lseek(fd, 10, SEEK_CUR);
-  write(fd, "foo", 3);
+  ELLE_ENFORCE_EQ(write(fd, "foo", 3), 3);
   close(fd);
   {
     bfs::ifstream ifs(mount / "test");
@@ -171,7 +171,7 @@ void test_basic()
   fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
   if (fd < 0)
     perror("open");
-  write(fd, "foo", 3);
+  ELLE_ENFORCE_EQ(write(fd, "foo", 3), 3);
   bfs::remove(mount / "test");
   int res = write(fd, "foo", 3);
   BOOST_CHECK_EQUAL(res, 3);
@@ -257,4 +257,3 @@ ELLE_TEST_SUITE()
   boost::unit_test::framework::master_test_suite().add(filesystem);
   filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
 }
-
