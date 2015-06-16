@@ -78,6 +78,7 @@ def configure(
     'src/infinit/model/MissingBlock.hh',
     'src/infinit/model/Model.cc',
     'src/infinit/model/Model.hh',
+    'src/infinit/model/Model.hxx',
     'src/infinit/model/blocks/Block.cc',
     'src/infinit/model/blocks/Block.hh',
     'src/infinit/model/blocks/fwd.hh',

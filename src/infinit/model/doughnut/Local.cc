@@ -6,6 +6,7 @@
 #include <reactor/Scope.hh>
 
 #include <infinit/RPC.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
 
@@ -45,7 +46,7 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Local::fetch(Address address) const
       {
-        return elle::make_unique<blocks::Block>
+        return Doughnut::_construct_block
           (address, this->_storage->get(address));
       }
 

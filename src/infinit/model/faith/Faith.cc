@@ -35,7 +35,7 @@ namespace infinit
           cryptography::oneway::Algorithm::sha256);
         ELLE_ASSERT_GTE(hash.buffer().size(), sizeof(Address::Value));
         Address address(hash.buffer().contents());
-        auto res = std::unique_ptr<blocks::Block>(new blocks::Block(address));
+        auto res = this->_construct_block(address);
         return res;
       }
 
@@ -55,8 +55,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: fetch block at %x", *this, address);
         try
         {
-          return std::unique_ptr<blocks::Block>
-            (new blocks::Block(address, this->_storage->get(address)));
+          return this->_construct_block(address, this->_storage->get(address));
         }
         catch (infinit::storage::MissingKey const&)
         {

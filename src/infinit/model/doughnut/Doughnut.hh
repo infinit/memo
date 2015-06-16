@@ -34,6 +34,8 @@ namespace infinit
         void
         _remove(Address address) override;
         ELLE_ATTRIBUTE_R(std::vector<std::unique_ptr<Peer>>, peers);
+        friend class Local;
+
       private:
         std::unique_ptr<Peer>
         _owner(Address const& address) const;

@@ -5,6 +5,7 @@
 # include <elle/Printable.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/fwd.hh>
 
 namespace infinit
 {
@@ -19,12 +20,14 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Block(Address address);
-        Block(Address address, elle::Buffer data);
         ELLE_ATTRIBUTE_R(Address, address);
         ELLE_ATTRIBUTE_RX(elle::Buffer, data);
         bool
         operator ==(Block const& rhs) const;
+      protected:
+        Block(Address address);
+        Block(Address address, elle::Buffer data);
+        friend class infinit::model::Model;
 
       /*--------------.
       | Serialization |

@@ -33,7 +33,7 @@ namespace infinit
       Paranoid::_make_block() const
       {
         ELLE_TRACE_SCOPE("%s: create block", *this);
-        return elle::make_unique<blocks::Block>(Address::random());
+        return this->_construct_block(Address::random());
       }
 
       struct CryptedBlock
@@ -97,8 +97,8 @@ namespace infinit
             elle::sprintf(
               "storage yielded a block with address %s at address %s",
               crypted.address, address));
-        return elle::make_unique<blocks::Block>(
-          crypted.address, std::move(crypted.content));
+        return this->_construct_block
+          (crypted.address, std::move(crypted.content));
       }
 
       void

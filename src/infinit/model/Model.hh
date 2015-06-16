@@ -23,6 +23,10 @@ namespace infinit
       void
       remove(Address address);
     protected:
+      template <typename ... Args>
+      static
+      std::unique_ptr<blocks::Block>
+      _construct_block(Args&& ... args);
       virtual
       std::unique_ptr<blocks::Block>
       _make_block() const = 0;
@@ -38,5 +42,7 @@ namespace infinit
     };
   }
 }
+
+# include <infinit/model/Model.hxx>
 
 #endif

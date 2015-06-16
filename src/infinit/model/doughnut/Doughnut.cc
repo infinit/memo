@@ -22,7 +22,7 @@ namespace infinit
       Doughnut::_make_block() const
       {
         ELLE_TRACE_SCOPE("%s: create block", *this);
-        return elle::make_unique<blocks::Block>(Address::random());
+        return this->_construct_block(Address::random());
       }
 
       void
