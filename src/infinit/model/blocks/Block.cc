@@ -20,6 +20,19 @@ namespace infinit
         , _data(std::move(data))
       {}
 
+      Block::~Block()
+      {}
+
+      /*--------.
+      | Content |
+      `--------*/
+
+      elle::Buffer const&
+      Block::data() const
+      {
+        return this->_data;
+      }
+
       bool
       Block::operator ==(Block const& rhs) const
       {

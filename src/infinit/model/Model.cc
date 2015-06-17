@@ -1,6 +1,6 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
-#include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 
 namespace infinit
 {
@@ -9,10 +9,11 @@ namespace infinit
     Model::Model()
     {}
 
-    std::unique_ptr<blocks::Block>
+    template <>
+    std::unique_ptr<blocks::MutableBlock>
     Model::make_block() const
     {
-      return this->_make_block();
+      return this->_make_mutable_block();
     }
 
     void

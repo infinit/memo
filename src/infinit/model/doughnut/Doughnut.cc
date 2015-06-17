@@ -3,6 +3,7 @@
 #include <elle/Error.hh>
 #include <elle/log.hh>
 
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/Remote.hh>
 
 
@@ -18,11 +19,11 @@ namespace infinit
         : _overlay(std::move(overlay))
       {}
 
-      std::unique_ptr<blocks::Block>
-      Doughnut::_make_block() const
+      std::unique_ptr<blocks::MutableBlock>
+      Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create block", *this);
-        return this->_construct_block(Address::random());
+        return this->_construct_block<blocks::MutableBlock>(Address::random());
       }
 
       void

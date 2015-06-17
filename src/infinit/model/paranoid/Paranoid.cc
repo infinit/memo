@@ -5,7 +5,7 @@
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
-#include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/storage/MissingKey.hh>
 #include <infinit/version.hh>
 
@@ -29,11 +29,11 @@ namespace infinit
       Paranoid::~Paranoid()
       {}
 
-      std::unique_ptr<blocks::Block>
-      Paranoid::_make_block() const
+      std::unique_ptr<blocks::MutableBlock>
+      Paranoid::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create block", *this);
-        return this->_construct_block(Address::random());
+        return this->_construct_block<blocks::MutableBlock>(Address::random());
       }
 
       struct CryptedBlock
@@ -97,7 +97,7 @@ namespace infinit
             elle::sprintf(
               "storage yielded a block with address %s at address %s",
               crypted.address, address));
-        return this->_construct_block
+        return this->_construct_block<blocks::MutableBlock>
           (crypted.address, std::move(crypted.content));
       }
 

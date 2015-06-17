@@ -8,6 +8,7 @@ namespace infinit
     namespace blocks
     {
       class Block;
+      class MutableBlock;
     }
   }
 }

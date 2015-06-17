@@ -19,15 +19,26 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
-      public:
-        ELLE_ATTRIBUTE_R(Address, address);
-        ELLE_ATTRIBUTE_RX(elle::Buffer, data);
-        bool
-        operator ==(Block const& rhs) const;
       protected:
         Block(Address address);
         Block(Address address, elle::Buffer data);
         friend class infinit::model::Model;
+      public:
+        virtual
+        ~Block();
+
+      /*--------.
+      | Content |
+      `--------*/
+      public:
+        bool
+        operator ==(Block const& rhs) const;
+        elle::Buffer const&
+        data() const;
+        ELLE_ATTRIBUTE_R(Address, address);
+
+      protected:
+        elle::Buffer _data;
 
       /*--------------.
       | Serialization |

@@ -8,7 +8,7 @@
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
-#include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.faith.Faith");
@@ -23,20 +23,11 @@ namespace infinit
         : _storage(std::move(storage))
       {}
 
-      std::unique_ptr<blocks::Block>
-      Faith::_make_block() const
+      std::unique_ptr<blocks::MutableBlock>
+      Faith::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create block", *this);
-        // Hash a UUID to get a random address.  Like using a deathstar to blow
-        // a mosquito and I like it.
-        auto id = boost::uuids::basic_random_generator<boost::mt19937>()();
-        auto hash = cryptography::oneway::hash(
-          cryptography::Plain(elle::ConstWeakBuffer(id.data, id.static_size())),
-          cryptography::oneway::Algorithm::sha256);
-        ELLE_ASSERT_GTE(hash.buffer().size(), sizeof(Address::Value));
-        Address address(hash.buffer().contents());
-        auto res = this->_construct_block(address);
-        return res;
+        return this->_construct_block<blocks::MutableBlock>(Address::random());
       }
 
       void
@@ -55,7 +46,8 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: fetch block at %x", *this, address);
         try
         {
-          return this->_construct_block(address, this->_storage->get(address));
+          return this->_construct_block<blocks::MutableBlock>
+            (address, this->_storage->get(address));
         }
         catch (infinit::storage::MissingKey const&)
         {

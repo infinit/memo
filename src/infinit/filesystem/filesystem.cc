@@ -1,6 +1,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/MissingBlock.hh>
 
+#include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 
@@ -14,7 +15,7 @@
 #include <cryptography/oneway.hh>
 
 #include <infinit/model/Address.hh>
-#include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs");
@@ -28,7 +29,7 @@ namespace infinit
 {
   namespace filesystem
   {
-    typedef infinit::model::blocks::Block Block;
+    typedef infinit::model::blocks::MutableBlock Block;
     typedef infinit::model::Address Address;
 
     class Directory;
@@ -321,7 +322,8 @@ namespace infinit
         (SIGUSR1, [this] { this->print_cache_stats();});
     }
 
-    void FileSystem::unchecked_remove(model::Address address)
+    void
+    FileSystem::unchecked_remove(model::Address address)
     {
       try
       {
@@ -332,13 +334,14 @@ namespace infinit
         ELLE_WARN("Unexpected storage result: %s", mb);
       }
     }
-    std::unique_ptr<model::blocks::Block>
+
+    std::unique_ptr<model::blocks::MutableBlock>
     FileSystem::unchecked_fetch(model::Address address)
     {
       try
       {
-        auto block = _block_store->fetch(address);
-        return std::move(block);
+        return elle::cast<model::blocks::MutableBlock>::runtime
+          (_block_store->fetch(address));
       }
       catch (model::MissingBlock const& mb)
       {
@@ -346,11 +349,12 @@ namespace infinit
       }
       return {};
     }
+
     static
-    std::unique_ptr<Block>
+    std::unique_ptr<model::blocks::MutableBlock>
     _make_root_block(infinit::model::Model& model)
     {
-      auto root = model.make_block();
+      auto root = model.make_block<model::blocks::MutableBlock>();
       model.store(*root);
       return root;
     }
@@ -393,7 +397,7 @@ namespace infinit
     std::unique_ptr<Block>
     FileSystem::_root_block()
     {
-      return block_store()->fetch(_root_address);
+      return elle::cast<Block>::runtime(block_store()->fetch(_root_address));
     }
 
     static const int DIRECTORY_MASK = 0040000;
@@ -433,7 +437,8 @@ namespace infinit
 
     void Directory::_fetch()
     {
-      _block = std::move(_owner.block_store()->fetch(_block->address()));
+      _block = elle::cast<Block>::runtime
+        (_owner.block_store()->fetch(_block->address()));
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
@@ -475,6 +480,7 @@ namespace infinit
       st->f_bavail = 1000000;
       st->f_fsid = 1;
     }
+
     void
     Directory::_changed(bool set_mtime)
     {
@@ -494,6 +500,7 @@ namespace infinit
       }
       _push_changes();
     }
+
     void
     Directory::_push_changes()
     {
@@ -502,6 +509,7 @@ namespace infinit
       _owner.block_store()->store(*_block);
       ELLE_DEBUG("pushChange ok");
     }
+
     std::shared_ptr<rfs::Path>
     Directory::child(std::string const& name)
     {
@@ -523,7 +531,8 @@ namespace infinit
         std::unique_ptr<Block> block;
         try
         {
-          block = _owner.block_store()->fetch(it->second.address);
+          block = elle::cast<Block>::runtime
+            (_owner.block_store()->fetch(it->second.address));
         }
         catch (infinit::model::MissingBlock const& b)
         {
@@ -554,7 +563,8 @@ namespace infinit
       }
     }
 
-    void Directory::rmdir()
+    void
+    Directory::rmdir()
     {
       if (!_files.empty())
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
@@ -566,8 +576,9 @@ namespace infinit
       _remove_from_cache();
     }
 
-    void Directory::move_recurse(boost::filesystem::path const& current,
-                                 boost::filesystem::path const& where)
+    void
+    Directory::move_recurse(boost::filesystem::path const& current,
+                            boost::filesystem::path const& where)
     {
       for (auto const& v: _files)
       {
@@ -586,7 +597,9 @@ namespace infinit
         }
       }
     }
-    void Directory::rename(boost::filesystem::path const& where)
+
+    void
+    Directory::rename(boost::filesystem::path const& where)
     {
       boost::filesystem::path current = full_path();
       Node::rename(where);
@@ -594,17 +607,16 @@ namespace infinit
       this->move_recurse(current, where);
     }
 
-    void Node::rename(boost::filesystem::path const& where)
+    void
+    Node::rename(boost::filesystem::path const& where)
     {
       boost::filesystem::path current = full_path();
       std::string newname = where.filename().string();
       boost::filesystem::path newpath = where.parent_path();
-
       if (!_parent)
         throw rfs::Error(EINVAL, "Cannot delete root node");
       auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
-
       if (dir->_files.find(newname) != dir->_files.end())
       {
         // File and empty dir gets removed.
@@ -629,7 +641,6 @@ namespace infinit
       auto data = _parent->_files.at(_name);
       _parent->_files.erase(_name);
       _parent->_changed();
-
       data.name = newname;
       dir->_files.insert(std::make_pair(newname, data));
       dir->_changed();
@@ -647,7 +658,8 @@ namespace infinit
       }
     }
 
-    void Node::_remove_from_cache()
+    void
+    Node::_remove_from_cache()
     {
       ELLE_DEBUG("remove_from_cache: %s entering", _name);
       std::shared_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path().string());
@@ -664,7 +676,8 @@ namespace infinit
       return _parent->full_path() / _name;
     }
 
-    void Directory::stat(struct stat* st)
+    void
+    Directory::stat(struct stat* st)
     {
       ELLE_DEBUG("stat on dir %s", _name);
       Node::stat(st);
@@ -722,11 +735,13 @@ namespace infinit
     {
       Node::chown(uid, gid);
     }
+
     void
     File::chown(int uid, int gid)
     {
       Node::chown(uid, gid);
     }
+
     void
     Node::chown(int uid, int gid)
     {
@@ -738,10 +753,10 @@ namespace infinit
       f.ctime = time(nullptr);
       _parent->_changed();
     }
+
     void
     Node::stat(struct stat* st)
     {
-
       memset(st, 0, sizeof(struct stat));
       if (_parent)
       {
@@ -766,13 +781,14 @@ namespace infinit
     }
 
     Unknown::Unknown(DirectoryPtr parent, FileSystem& owner, std::string const& name)
-    : Node(owner, parent, name)
+      : Node(owner, parent, name)
     {}
 
-    void Unknown::mkdir(mode_t mode)
+    void
+    Unknown::mkdir(mode_t mode)
     {
       ELLE_DEBUG("mkdir %s", _name);
-      std::unique_ptr<Block> b = _owner.block_store()->make_block();
+      auto b = _owner.block_store()->make_block<Block>();
       _owner.block_store()->store(*b);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
@@ -800,7 +816,7 @@ namespace infinit
         auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
         return f->open(flags, mode);
       }
-      std::unique_ptr<Block> b = _owner.block_store()->make_block();
+      auto b = _owner.block_store()->make_block<Block>();
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_DEBUG("Adding file to parent %x", _parent.get());
       _parent->_files.insert(
@@ -847,34 +863,40 @@ namespace infinit
       throw rfs::Error(ENOENT, "link source does not exist");
     }
 
-    Symlink::Symlink(DirectoryPtr parent, FileSystem& owner, std::string const& name)
-    : Node(owner, parent, name)
-    {
-    }
+    Symlink::Symlink(DirectoryPtr parent,
+                     FileSystem& owner,
+                     std::string const& name)
+      : Node(owner, parent, name)
+    {}
 
-    void Symlink::stat(struct stat* s)
+    void
+    Symlink::stat(struct stat* s)
     {
       Node::stat(s);
     }
 
-    void Symlink::unlink()
+    void
+    Symlink::unlink()
     {
       _parent->_files.erase(_name);
       _parent->_changed(true);
       _remove_from_cache();
     }
 
-    void Symlink::rename(boost::filesystem::path const& where)
+    void
+    Symlink::rename(boost::filesystem::path const& where)
     {
       Node::rename(where);
     }
 
-    boost::filesystem::path Symlink::readlink()
+    boost::filesystem::path
+    Symlink::readlink()
     {
       return *_parent->_files.at(_name).symlink_target;
     }
 
-    void Symlink::link(boost::filesystem::path const& where)
+    void
+    Symlink::link(boost::filesystem::path const& where)
     {
       auto p = _owner.filesystem()->path(where.string());
       Unknown* unk = dynamic_cast<Unknown*>(p.get());
@@ -888,8 +910,7 @@ namespace infinit
     : Node(owner, parent, name)
     , _first_block(std::move(block))
     , _handle_count(0)
-    {
-    }
+    {}
 
     bool
     File::allow_cache()
@@ -974,13 +995,13 @@ namespace infinit
         {
           return nullptr;
         }
-        b = _owner.block_store()->make_block();
+        b = _owner.block_store()->make_block<Block>();
         // _owner.block_store()->store(*b); // FIXME: but why?
       }
       else
       {
          Address addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
-         b = _owner.block_store()->fetch(addr);
+         b = elle::cast<Block>::runtime(_owner.block_store()->fetch(addr));
       }
       Block* b_addr = b.get();
       memcpy(_first_block->data().mutable_contents() + offset,
@@ -1091,8 +1112,8 @@ namespace infinit
       Node::stat(st);
       if (_multi())
       {
-        _first_block = _owner.block_store()->fetch(
-          _parent->_files.at(_name).address);
+        _first_block = elle::cast<Block>::runtime
+          (_owner.block_store()->fetch(_parent->_files.at(_name).address));
         Header header = _header();
         st->st_size = header.total_size;
         st->st_nlink = header.links;
@@ -1149,7 +1170,6 @@ namespace infinit
           return;
         }
         // FIXME: addr should be a Address::Value
-
         uint32_t block_size = header.block_size;
         Address::Value zero;
         memset(&zero, 0, sizeof(Address::Value));
@@ -1177,7 +1197,9 @@ namespace infinit
           }
           else
           {
-            _blocks[drop_from].block = _owner.block_store()->fetch(addr[drop_from+1]);
+            _blocks[drop_from].block =
+              elle::cast<Block>::runtime
+              (_owner.block_store()->fetch(addr[drop_from + 1]));
             CacheEntry& ent = _blocks[drop_from];
             bl = ent.block.get();
             ent.dirty = true;
@@ -1198,7 +1220,8 @@ namespace infinit
           if (it != _blocks.end())
             _first_block = std::move(it->second.block);
           else
-            _first_block = _owner.block_store()->fetch(addr[1]);
+            _first_block = elle::cast<Block>::runtime
+              (_owner.block_store()->fetch(addr[1]));
           _first_block->data().size(new_size);
           _blocks.clear();
         }
@@ -1264,26 +1287,23 @@ namespace infinit
     {
       // Switch without changing our address
       if (!_first_block)
-      _first_block = _owner.block_store()->fetch(
-          _parent->_files.at(_name).address);
+      _first_block = elle::cast<Block>::runtime
+        (_owner.block_store()->fetch(_parent->_files.at(_name).address));
       uint64_t current_size = _first_block->data().size();
-      std::unique_ptr<Block> new_block = _owner.block_store()->make_block();
+      auto new_block = _owner.block_store()->make_block<Block>();
       new_block->data() = std::move(_first_block->data());
       _blocks.insert(std::make_pair(0, CacheEntry{std::move(new_block), true}));
-
       /*
       // current first_block becomes block[0], first_block becomes the index
       _blocks[0] = std::move(_first_block);
-      _first_block = _owner.block_store()->make_block();
+      _first_block = _owner.block_store()->make_block<Block>();
       _parent->_files.at(_name).address = _first_block->address();
-
       _parent->_changed();
       */
       _first_block->data().size(sizeof(Address)* 2);
       // store block size in headers
       Header h { Header::current_version, default_block_size, 1, current_size};
       _header(h);
-
       memcpy(_first_block->data().mutable_contents() + sizeof(Address),
         _blocks.at(0).block->address().value(), sizeof(Address::Value));
       _parent->_files.at(_name).store_mode = FileStoreMode::index;
@@ -1319,9 +1339,12 @@ namespace infinit
       }
     }
 
-    FileHandle::FileHandle(std::shared_ptr<File> owner, bool push_mtime, bool no_fetch, bool dirty)
-    : _owner(owner)
-    , _dirty(dirty)
+    FileHandle::FileHandle(std::shared_ptr<File> owner,
+                           bool push_mtime,
+                           bool no_fetch,
+                           bool dirty)
+      : _owner(owner)
+      , _dirty(dirty)
     {
       _owner->_handle_count++;
       _owner->_parent->_files.at(_owner->_name).atime = time(nullptr);
@@ -1333,8 +1356,9 @@ namespace infinit
       {
         try
         {
-          _owner->_first_block = _owner->_owner.block_store()->fetch(
-            _owner->_parent->_files.at(_owner->_name).address);
+          auto address = _owner->_parent->_files.at(_owner->_name).address;
+          _owner->_first_block = elle::cast<Block>::runtime
+            (_owner->_owner.block_store()->fetch(address));
         }
         catch(infinit::model::MissingBlock const& err)
         {
@@ -1380,7 +1404,6 @@ namespace infinit
         total_size = _owner->_parent->_files.at(_owner->_name).size;
         block_size = _owner->default_block_size;
       }
-
       if (offset >= total_size)
       {
         ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
@@ -1398,8 +1421,9 @@ namespace infinit
         if (!block)
         {
           ELLE_DEBUG("read on uncached block, fetching");
-          _owner->_first_block = _owner->_owner.block_store()->fetch(
-            _owner->_parent->_files.at(_owner->_name).address);
+          auto address = _owner->_parent->_files.at(_owner->_name).address;
+          _owner->_first_block = elle::cast<Block>::runtime
+            (_owner->_owner.block_store()->fetch(address));
         }
         ELLE_ASSERT_EQ(signed(block->data().size()), total_size);
         memcpy(buffer.mutable_contents(),
@@ -1408,7 +1432,6 @@ namespace infinit
         ELLE_DEBUG("read %s bytes", size);
         return size;
       }
-
       // multi case
       off_t end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
@@ -1437,7 +1460,6 @@ namespace infinit
           _owner->check_cache();
         }
         ELLE_ASSERT_LTE(signed(block_offset + size), block_size);
-
         if (block->data().size() < block_offset + size)
         { // sparse file, eof shrinkage of size was handled above
           long available = block->data().size() - block_offset;
@@ -1484,7 +1506,6 @@ namespace infinit
     {
       ELLE_ASSERT_EQ(buffer.size(), size);
       ELLE_DEBUG("write %s at %s on %s", size, offset, _owner->_name);
-
       if (!_owner->_multi() && size + offset > _owner->default_block_size)
         _owner->_switch_to_multi(true);
       _dirty = true;

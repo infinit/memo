@@ -7,6 +7,7 @@
 
 #include <infinit/RPC.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
 
@@ -26,6 +27,7 @@ namespace infinit
                          [this] { this->_serve(); })
       {
         this->_server.listen(port);
+        ELLE_TRACE("%s: listen on port %s", *this, this->_server.port());
       }
 
       Local::~Local()
@@ -46,7 +48,7 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Local::fetch(Address address) const
       {
-        return Doughnut::_construct_block
+        return Doughnut::_construct_block<blocks::MutableBlock>
           (address, this->_storage->get(address));
       }
 

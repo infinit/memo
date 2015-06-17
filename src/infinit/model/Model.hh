@@ -14,7 +14,8 @@ namespace infinit
     {
     public:
       Model();
-      std::unique_ptr<blocks::Block>
+      template <typename Block>
+      std::unique_ptr<Block>
       make_block() const;
       void
       store(blocks::Block& block);
@@ -23,13 +24,13 @@ namespace infinit
       void
       remove(Address address);
     protected:
-      template <typename ... Args>
+      template <typename Block, typename ... Args>
       static
-      std::unique_ptr<blocks::Block>
+      std::unique_ptr<Block>
       _construct_block(Args&& ... args);
       virtual
-      std::unique_ptr<blocks::Block>
-      _make_block() const = 0;
+      std::unique_ptr<blocks::MutableBlock>
+      _make_mutable_block() const = 0;
       virtual
       void
       _store(blocks::Block& block) = 0;

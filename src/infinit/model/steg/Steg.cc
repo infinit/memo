@@ -28,7 +28,7 @@ namespace infinit
   {
     namespace steg
     {
-      
+
 namespace bfs = boost::filesystem;
 
 class InjectionFailure: public reactor::filesystem::Error
@@ -74,14 +74,14 @@ Steg::_pick() const
   auto hash = cryptography::hash::sha256(p.string());
   Address res = Address(hash.contents());
   _cache.insert(std::make_pair(res, p));
-  
+
   _used_blocks.push_back(res);
-  
+
   return res;
 }
 
-std::unique_ptr<blocks::Block>
-Steg::_make_block() const
+std::unique_ptr<blocks::MutableBlock>
+Steg::_make_mutable_block() const
 {
   if (!_root)
   {
@@ -203,4 +203,3 @@ Steg::_remove(Address address)
 }
 
 }}}
-

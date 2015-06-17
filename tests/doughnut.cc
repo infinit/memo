@@ -2,7 +2,7 @@
 #include <elle/test.hh>
 
 #include <infinit/model/MissingBlock.hh>
-#include <infinit/model/blocks/Block.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -22,7 +22,7 @@ ELLE_TEST_SCHEDULED(doughnut)
   members.push_back(local_b->server_endpoint());
   infinit::model::doughnut::Doughnut dht
     (elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
-  auto block = dht.make_block();
+  auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
   elle::Buffer data("\\_o<", 4);
   block->data() = elle::Buffer(data);
   ELLE_LOG("store block")

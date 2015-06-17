@@ -18,8 +18,8 @@ namespace infinit
         Steg(boost::filesystem::path const& storage, std::string const& pass);
       protected:
         virtual
-        std::unique_ptr<blocks::Block>
-        _make_block() const override;
+        std::unique_ptr<blocks::MutableBlock>
+        _make_mutable_block() const override;
         virtual
         void
         _store(blocks::Block& block) override;
