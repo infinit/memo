@@ -14,6 +14,9 @@
 #include <reactor/scheduler.hh>
 
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Stonehenge.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -93,6 +96,49 @@ namespace infinit
 }
 
 
+struct OverlayConfig:
+  public elle::serialization::VirtuallySerializable
+{
+  static constexpr char const* virtually_serializable_key = "type";
+
+  virtual
+  std::unique_ptr<infinit::overlay::Overlay>
+  make() = 0;
+};
+
+struct StonehengeOverlayConfig:
+  public OverlayConfig
+{
+  std::vector<std::string> nodes;
+  StonehengeOverlayConfig(elle::serialization::SerializerIn& input)
+    : OverlayConfig()
+  {
+    this->serialize(input);
+  }
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("nodes", this->nodes);
+  }
+  virtual
+  std::unique_ptr<infinit::overlay::Overlay>
+  make()
+  {
+    infinit::overlay::Overlay::Members members;
+    for (auto const& hostport: nodes)
+    {
+      size_t p = hostport.find_first_of(':');
+      if (p == hostport.npos)
+        throw std::runtime_error("Failed to parse host:port " + hostport);
+      members.emplace_back(boost::asio::ip::address::from_string(hostport.substr(0, p)),
+                           std::stoi(hostport.substr(p+1)));
+    }
+    return elle::make_unique<infinit::overlay::Stonehenge>(members);
+  }
+};
+static const elle::serialization::Hierarchy<OverlayConfig>::
+Register<StonehengeOverlayConfig> _registerStonehengeOverlayConfig("stonehenge");
+
 /*--------------------.
 | Model configuration |
 `--------------------*/
@@ -106,6 +152,32 @@ struct ModelConfig:
   std::unique_ptr<infinit::model::Model>
   make() = 0;
 };
+
+namespace infinit
+{
+  namespace model {
+class NodeModel: public infinit::model::Model
+{
+public:
+  NodeModel(std::unique_ptr<infinit::model::doughnut::Local> local)
+  : _local(std::move(local))
+  {}
+protected:
+  virtual
+  std::unique_ptr<blocks::MutableBlock>
+  _make_mutable_block() const {return {};};
+  virtual
+  void
+  _store(blocks::Block& block) {};
+  virtual
+  std::unique_ptr<blocks::Block>
+  _fetch(Address address) const { return {};}
+  virtual
+  void
+  _remove(Address address) {}
+  std::unique_ptr<doughnut::Local> _local;
+};
+}}
 
 struct DoughnutNodeModelConfig:
   public ModelConfig
@@ -130,10 +202,9 @@ public:
   {
     using namespace infinit::model::doughnut;
     std::unique_ptr<infinit::storage::Storage> store = this->storage->make();
-    std::vector<std::unique_ptr<Peer>> peers;
-    peers.emplace_back(new Local(std::move(store), port));
+    auto local = elle::make_unique<Local>(std::move(store), port);
     return std::unique_ptr<infinit::model::Model>(
-      new Doughnut(std::move(peers)));
+      new infinit::model::NodeModel(std::move(local)));
   }
 };
 
@@ -145,7 +216,7 @@ struct DoughnutModelConfig:
   public ModelConfig
 {
 public:
-  std::vector<std::string> nodes;
+  std::unique_ptr<OverlayConfig> overlay;
 
   DoughnutModelConfig(elle::serialization::SerializerIn& input)
     : ModelConfig()
@@ -155,24 +226,14 @@ public:
   void
   serialize(elle::serialization::Serializer& s)
   {
-    s.serialize("nodes", this->nodes);
+    s.serialize("overlay", this->overlay);
   }
   virtual
   std::unique_ptr<infinit::model::Model>
   make()
   {
-    namespace doughnut = infinit::model::doughnut;
-    std::vector<std::unique_ptr<doughnut::Peer>> peers;
-    for (auto const& hostport: nodes)
-    {
-      size_t p = hostport.find_first_of(':');
-      if (p == hostport.npos)
-        throw std::runtime_error("Failed to parse host:port " + hostport);
-      peers.emplace_back(new doughnut::Remote(hostport.substr(0, p),
-                                    std::stoi(hostport.substr(p+1))));
-    }
-    return std::unique_ptr<infinit::model::Model>(
-        new doughnut::Doughnut(std::move(peers)));
+    return elle::make_unique<infinit::model::doughnut::Doughnut>(
+      overlay->make());
   }
 };
 
