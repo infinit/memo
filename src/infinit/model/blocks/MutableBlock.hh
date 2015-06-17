@@ -27,6 +27,19 @@ namespace infinit
         MutableBlock(Address address, elle::Buffer data);
         friend class infinit::model::Model;
 
+      /*--------------.
+      | Serialization |
+      `--------------*/
+      public:
+        static constexpr char const* virtually_serializable_key = "type";
+        MutableBlock(elle::serialization::Serializer& input);
+        virtual
+        void
+        serialize(elle::serialization::Serializer& s) override;
+      private:
+        void
+        _serialize(elle::serialization::Serializer& s);
+
       /*--------.
       | Content |
       `--------*/

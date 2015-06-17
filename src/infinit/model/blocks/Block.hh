@@ -15,6 +15,7 @@ namespace infinit
     {
       class Block
         : public elle::Printable
+        , public elle::serialization::VirtuallySerializable
       {
       /*-------------.
       | Construction |
@@ -44,6 +45,7 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
+        static constexpr char const* virtually_serializable_key = "type";
         Block(elle::serialization::Serializer& input);
         void
         serialize(elle::serialization::Serializer& s);
