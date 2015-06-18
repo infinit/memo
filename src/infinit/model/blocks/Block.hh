@@ -41,6 +41,22 @@ namespace infinit
       protected:
         elle::Buffer _data;
 
+      /*-----------.
+      | Validation |
+      `-----------*/
+      public:
+        void
+        seal();
+        bool
+        validate() const;
+      protected:
+        virtual
+        void
+        _seal();
+        virtual
+        bool
+        _validate() const;
+
       /*--------------.
       | Serialization |
       `--------------*/

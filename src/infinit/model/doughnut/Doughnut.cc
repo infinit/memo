@@ -1,7 +1,9 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 
+#include <elle/Buffer.hh>
 #include <elle/Error.hh>
 #include <elle/log.hh>
+#include <elle/serialization/json.hh> // FIXME
 
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -85,12 +87,70 @@ namespace infinit
       public:
         OKB(cryptography::KeyPair const& keys)
           : OKBContent(keys)
-          , Super(
-              Address(
-                cryptography::oneway::hash
-                (this->key(), cryptography::oneway::Algorithm::sha256)
-                .buffer().contents()))
+          , Super(OKB::_hash_address(this->_key))
+          , _keys(keys)
         {}
+
+      // Validation
+      protected:
+        elle::Buffer
+        _sign() const
+        {
+          elle::Buffer res;
+          {
+            // FIXME: use binary to sign
+            elle::IOStream s(res.ostreambuf());
+            elle::serialization::json::SerializerOut output(s);
+            output.serialize("block_key", this->_key);
+            output.serialize("data", this->data());
+            output.serialize("version", this->_version);
+          }
+          return res;
+        }
+
+        virtual
+        void
+        _seal() override
+        {
+          ELLE_DEBUG_SCOPE("%s: seal", *this);
+          auto sign = this->_sign();
+          this->_signature = this->_keys.k().sign(cryptography::Plain(sign));
+        }
+
+        virtual
+        bool
+        _validate() const override
+        {
+          ELLE_DEBUG_SCOPE("%s: validate", *this);
+          auto expected_address = OKB::_hash_address(this->_key);
+          if (this->address() != expected_address)
+          {
+            ELLE_DUMP("%s: address %x invalid, expecting %x",
+                      *this, this->address(), expected_address);
+            return false;
+          }
+          ELLE_DUMP("%s: address is valid", *this);
+          if (!this->_key.verify(this->_owner.signature(), this->_owner.key()))
+            return false;
+          ELLE_DUMP("%s: owner key is valid", *this);
+          auto sign = this->_sign();
+          if (!this->_owner.key().verify(this->_signature,
+                                         cryptography::Plain(sign)))
+            return false;
+          ELLE_DUMP("%s: payload is valid", *this);
+          return true;
+        }
+
+      private:
+        static
+        Address
+        _hash_address(cryptography::PublicKey const& key)
+        {
+          auto hash = cryptography::oneway::hash
+            (key, cryptography::oneway::Algorithm::sha256);
+          return Address(hash.buffer().contents());
+        }
+        ELLE_ATTRIBUTE_R(cryptography::KeyPair, keys);
 
       // Serialization
       public:
@@ -113,6 +173,7 @@ namespace infinit
         void
         _serialize(elle::serialization::Serializer& input)
         {
+          input.serialize("key", this->_key);
           input.serialize("owner", this->_owner);
           input.serialize("version", this->_version);
           input.serialize("signature", this->_signature);

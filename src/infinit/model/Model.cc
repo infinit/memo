@@ -1,6 +1,10 @@
+#include <elle/log.hh>
+
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+
+ELLE_LOG_COMPONENT("infinit.model.Model");
 
 namespace infinit
 {
@@ -19,6 +23,7 @@ namespace infinit
     void
     Model::store(blocks::Block& block)
     {
+      block.seal();
       return this->_store(block);
     }
 
@@ -26,7 +31,14 @@ namespace infinit
     Model::fetch(Address address) const
     {
       if (auto res = this->_fetch(address))
+      {
+        if (!res->validate())
+        {
+          ELLE_WARN("%s: invalid block received for %s", *this, address);
+          throw elle::Error("invalid block");
+        }
         return res;
+      }
       else
         throw MissingBlock(address);
     }

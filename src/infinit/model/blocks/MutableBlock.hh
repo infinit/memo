@@ -44,6 +44,7 @@ namespace infinit
       | Content |
       `--------*/
       public:
+        using Super::data;
         elle::Buffer&
         data();
       };

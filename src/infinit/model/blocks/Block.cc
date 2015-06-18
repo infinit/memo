@@ -39,6 +39,32 @@ namespace infinit
         return rhs._address == this->_address && rhs._data == this->_data;
       }
 
+      /*-----------.
+      | Validation |
+      `-----------*/
+
+      void
+      Block::seal()
+      {
+        this->_seal();
+      }
+
+      void
+      Block::_seal()
+      {}
+
+      bool
+      Block::validate() const
+      {
+        return this->_validate();
+      }
+
+      bool
+      Block::_validate() const
+      {
+        return true;
+      }
+
       /*--------------.
       | Serialization |
       `--------------*/

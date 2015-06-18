@@ -42,6 +42,8 @@ namespace infinit
       void
       Local::store(blocks::Block const& block)
       {
+        if (!block.validate())
+          throw elle::Error("block validation failed");
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());
