@@ -59,7 +59,7 @@ namespace infinit
 
   private:
     template <typename Remaining, typename ... Parsed>
-    typename std::enable_if<!Remaining::empty, void>::type
+    typename std::enable_if<!Remaining::empty && !std::is_base_of<elle::serialization::VirtuallySerializable, typename std::remove_reference<typename Remaining::Head>::type>::value, void>::type
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -74,6 +74,24 @@ namespace infinit
       ELLE_DEBUG("%s: got argument: %s", *this, arg);
       this->_handle<typename Remaining::Tail, Parsed..., Head&>(
         n + 1, input, output, parsed..., arg);
+    }
+
+    template <typename Remaining, typename ... Parsed>
+    typename std::enable_if<!Remaining::empty && std::is_base_of<elle::serialization::VirtuallySerializable, typename std::remove_reference<typename Remaining::Head>::type>::value, void>::type
+    _handle(int n,
+            elle::serialization::SerializerIn& input,
+            elle::serialization::SerializerOut& output,
+            Parsed& ... parsed)
+    {
+      typedef
+        typename std::remove_const<typename std::remove_reference<typename Remaining::Head>::type>::type
+        Head;
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      ELLE_DEBUG("%s: get argument %s", *this, n);
+      auto arg = input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
+      ELLE_DEBUG("%s: got argument: %s", *this, *arg);
+      this->_handle<typename Remaining::Tail, Parsed..., Head&>(
+        n + 1, input, output, parsed..., *arg);
     }
 
     template <typename Remaining, typename ... Parsed>
