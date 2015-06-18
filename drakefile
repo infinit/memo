@@ -104,6 +104,8 @@ def configure(
     'src/infinit/overlay/Overlay.hh',
     'src/infinit/overlay/Stonehenge.cc',
     'src/infinit/overlay/Stonehenge.hh',
+    'src/infinit/overlay/kelips/Kelips.cc',
+    'src/infinit/overlay/kelips/Kelips.hh',
     'src/infinit/storage/Adb.cc',
     'src/infinit/storage/Adb.hh',
     'src/infinit/storage/Async.cc',

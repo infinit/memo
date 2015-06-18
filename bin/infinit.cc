@@ -16,6 +16,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/overlay/Overlay.hh>
 #include <infinit/overlay/Stonehenge.hh>
+#include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -105,6 +106,33 @@ struct OverlayConfig:
   std::unique_ptr<infinit::overlay::Overlay>
   make() = 0;
 };
+
+struct KelipsOverlayConfig:
+  public OverlayConfig
+{
+  KelipsOverlayConfig(elle::serialization::SerializerIn& input)
+    : OverlayConfig()
+  {
+    this->serialize(input);
+  }
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("storage", this->storage);
+    s.serialize("config", this->config);
+  }
+  std::unique_ptr<infinit::storage::StorageConfig> storage;
+  kelips::Configuration config;
+  virtual
+  std::unique_ptr<infinit::overlay::Overlay>
+  make()
+  {
+    std::unique_ptr<infinit::storage::Storage> s = storage->make();
+    return elle::make_unique<kelips::Node>(config, std::move(s));
+  }
+};
+static const elle::serialization::Hierarchy<OverlayConfig>::
+Register<KelipsOverlayConfig> _registerKelipsOverlayConfig("kelips");
 
 struct StonehengeOverlayConfig:
   public OverlayConfig
@@ -391,12 +419,12 @@ parse_options(int argc, char** argv, Config& cfg, std::unique_ptr<ModelConfig>& 
     {
       if (vm.count("model"))
       {
-        elle::serialization::json::SerializerIn input(input_file);
+        elle::serialization::json::SerializerIn input(input_file, false);
         input.serialize_forward(model_config);
       }
       else
       {
-        elle::serialization::json::SerializerIn input(input_file);
+        elle::serialization::json::SerializerIn input(input_file, false);
         cfg.serialize(input);
       }
     }
