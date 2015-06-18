@@ -3,6 +3,8 @@
 
 # include <memory>
 
+# include <cryptography/KeyPair.hh>
+
 # include <infinit/model/Model.hh>
 # include <infinit/model/doughnut/Peer.hh>
 # include <infinit/overlay/Overlay.hh>
@@ -16,9 +18,14 @@ namespace infinit
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
       {
+      /*-------------.
+      | Construction |
+      `-------------*/
       public:
-        Doughnut(std::unique_ptr<overlay::Overlay> overlay);
+        Doughnut(infinit::cryptography::KeyPair keys,
+                 std::unique_ptr<overlay::Overlay> overlay);
         ELLE_ATTRIBUTE(std::unique_ptr<overlay::Overlay>, overlay)
+        ELLE_ATTRIBUTE_R(infinit::cryptography::KeyPair, keys);
 
       protected:
         virtual

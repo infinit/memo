@@ -147,10 +147,6 @@ def configure(
   rule_build << infinit_lib
 
 
-  #GNUBuilder(cxx_toolkit,
-  #  configure = outguess_configure,
-  #  targets = [outguess_lib],
-  #  makefile = outguess_makefile)
   ## ----- ##
   ## Tests ##
   ## ----- ##
@@ -172,7 +168,8 @@ def configure(
   for test_name in ['doughnut', 'faith', 'storage', 'filesystem']:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
-      [drake.node('tests/%s.cc' % test_name), infinit_lib, elle_lib, aws_lib, reactor_lib],
+      [drake.node('tests/%s.cc' % test_name),
+       infinit_lib, cryptography_lib, elle_lib, aws_lib, reactor_lib],
       cxx_toolkit,
       cxx_config_tests)
 

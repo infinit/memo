@@ -26,7 +26,7 @@ namespace infinit
         friend class infinit::model::Model;
       public:
         virtual
-        ~Block();
+        ~Block() = 0;
 
       /*--------.
       | Content |

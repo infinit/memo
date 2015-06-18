@@ -42,14 +42,22 @@ namespace infinit
       void
       Local::store(blocks::Block const& block)
       {
-        this->_storage->set(block.address(), block.data(), true, true);
+        elle::Buffer data;
+        {
+          elle::IOStream s(data.ostreambuf());
+          elle::serialization::json::SerializerOut output(s);
+          output.serialize_forward(block);
+        }
+        this->_storage->set(block.address(), data, true, true);
       }
 
       std::unique_ptr<blocks::Block>
       Local::fetch(Address address) const
       {
-        return Doughnut::_construct_block<blocks::MutableBlock>
-          (address, this->_storage->get(address));
+        auto data = this->_storage->get(address);
+        elle::IOStream s(data.istreambuf());
+        elle::serialization::json::SerializerIn input(s);
+        return input.deserialize<std::unique_ptr<blocks::Block>>();
       }
 
       void

@@ -20,8 +20,10 @@ ELLE_TEST_SCHEDULED(doughnut)
   infinit::overlay::Stonehenge::Members members;
   members.push_back(local_a->server_endpoint());
   members.push_back(local_b->server_endpoint());
-  infinit::model::doughnut::Doughnut dht
-    (elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
+  infinit::model::doughnut::Doughnut dht(
+    infinit::cryptography::KeyPair::generate
+    (infinit::cryptography::Cryptosystem::rsa, 2048),
+    elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
   auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
   elle::Buffer data("\\_o<", 4);
   block->data() = elle::Buffer(data);
