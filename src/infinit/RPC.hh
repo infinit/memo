@@ -68,7 +68,10 @@ namespace infinit
       typedef
         typename std::remove_reference<typename Remaining::Head>::type
         Head;
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      ELLE_DEBUG("%s: get argument %s", *this, n);
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
+      ELLE_DEBUG("%s: got argument: %s", *this, arg);
       this->_handle<typename Remaining::Tail, Parsed..., Head&>(
         n + 1, input, output, parsed..., arg);
     }
@@ -82,13 +85,18 @@ namespace infinit
             elle::serialization::SerializerOut& output,
             Parsed& ... parsed)
     {
+      ELLE_LOG_COMPONENT("infinit.RPC");
       try
       {
+        ELLE_TRACE_SCOPE("%s: run", *this);
         this->_function(parsed...);
+        ELLE_TRACE("%s: success", *this);
         output.serialize("success", true);
       }
       catch (...)
       {
+        ELLE_TRACE("%s: exception escaped: %s",
+                   *this, elle::exception_string());
         output.serialize("success", false);
       }
     }
@@ -102,14 +110,19 @@ namespace infinit
             elle::serialization::SerializerOut& output,
             Parsed& ... parsed)
     {
+      ELLE_LOG_COMPONENT("infinit.RPC");
       try
       {
+        ELLE_TRACE_SCOPE("%s: run", *this);
         R res = this->_function(parsed...);
+        ELLE_TRACE("%s: success: %s", *this, res);
         output.serialize("success", true);
         output.serialize("value", res);
       }
       catch (...)
       {
+        ELLE_TRACE("%s: exception escaped: %s",
+                   *this, elle::exception_string());
         output.serialize("success", false);
       }
     }
@@ -142,10 +155,21 @@ namespace infinit
           input.serialize("procedure", name);
           auto it = this->_rpcs.find(name);
           ELLE_ASSERT(it != this->_rpcs.end());
+          ELLE_LOG_COMPONENT("infinit.RPC");
+          ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
           protocol::Packet response;
           {
             elle::serialization::json::SerializerOut output(response);
-            it->second->handle(input, output);
+            try
+            {
+              it->second->handle(input, output);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("%s: deserialization error: %s",
+                        *this, elle::exception_string());
+              throw;
+            }
           }
           channel.write(response);
         }
