@@ -112,6 +112,8 @@ namespace elle
     Address
     Serialize<Address>::convert(Type buffer)
     {
+      if (buffer.size() == 0)
+        return Address();
       if (buffer.size() != sizeof(Address::Value))
         throw elle::Error(elle::sprintf("invalid address: %x", buffer));
       Address::Value value;
