@@ -49,6 +49,8 @@ namespace infinit
         seal();
         bool
         validate() const;
+        bool
+        validate(Block const& previous) const;
       protected:
         virtual
         void
@@ -56,6 +58,9 @@ namespace infinit
         virtual
         bool
         _validate() const;
+        virtual
+        bool
+        _validate(Block const& previous) const;
 
       /*--------------.
       | Serialization |

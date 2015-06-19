@@ -119,6 +119,16 @@ namespace infinit
 
         virtual
         bool
+        _validate(blocks::Block const& previous) const override
+        {
+          if (!this->_validate())
+            return false;
+          auto previous_okb = dynamic_cast<OKB const*>(&previous);
+          return previous_okb && this->version() > previous_okb->version();
+        }
+
+        virtual
+        bool
         _validate() const override
         {
           ELLE_DEBUG_SCOPE("%s: validate", *this);

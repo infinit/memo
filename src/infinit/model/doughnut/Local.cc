@@ -6,6 +6,7 @@
 #include <reactor/Scope.hh>
 
 #include <infinit/RPC.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 
@@ -39,11 +40,32 @@ namespace infinit
       | Blocks |
       `-------*/
 
+      template <typename T, typename Serializer>
+      T
+      deserialize(elle::Buffer const& data)
+      {
+        elle::IOStream s(data.istreambuf());
+        typename Serializer::SerializerIn input(s);
+        return input.deserialize<T>();
+      }
+
       void
       Local::store(blocks::Block const& block)
       {
-        if (!block.validate())
-          throw elle::Error("block validation failed");
+        try
+        {
+          auto previous =
+            deserialize<std::unique_ptr<blocks::Block>,
+                        elle::serialization::Json>
+            (this->_storage->get(block.address()));
+          if (!block.validate(*previous))
+            throw elle::Error("block validation failed");
+        }
+        catch (MissingBlock const&)
+        {
+          if (!block.validate())
+            throw elle::Error("block validation failed");
+        }
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());

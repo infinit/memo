@@ -60,9 +60,21 @@ namespace infinit
       }
 
       bool
+      Block::validate(Block const& previous) const
+      {
+        return this->_validate(previous);
+      }
+
+      bool
       Block::_validate() const
       {
         return true;
+      }
+
+      bool
+      Block::_validate(Block const&) const
+      {
+        return this->_validate();
       }
 
       /*--------------.
