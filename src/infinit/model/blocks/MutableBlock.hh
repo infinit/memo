@@ -31,7 +31,6 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        static constexpr char const* virtually_serializable_key = "type";
         MutableBlock(elle::serialization::Serializer& input);
         virtual
         void

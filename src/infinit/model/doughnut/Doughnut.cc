@@ -5,6 +5,7 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh> // FIXME
 
+#include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/Remote.hh>
 
@@ -24,7 +25,7 @@ namespace infinit
         OKBContent(cryptography::KeyPair const& keys)
           : _key()
           , _owner(keys.K())
-          , _version(0)
+          , _version(-1)
           , _signature()
         {
           auto block_keys = cryptography::KeyPair::generate
@@ -113,6 +114,7 @@ namespace infinit
         _seal() override
         {
           ELLE_DEBUG_SCOPE("%s: seal", *this);
+          ++this->_version; // FIXME: idempotence in case the write fails ?
           auto sign = this->_sign();
           this->_signature = this->_keys.k().sign(cryptography::Plain(sign));
         }
@@ -190,7 +192,65 @@ namespace infinit
         }
       };
       static const elle::serialization::Hierarchy<blocks::Block>::
-      Register<OKB> _register_serialization("OKB");
+      Register<OKB> _register_okb_serialization("OKB");
+
+      class CHB
+        : public blocks::ImmutableBlock
+      {
+      // Types
+      public:
+        typedef CHB Self;
+        typedef blocks::ImmutableBlock Super;
+
+
+      // Construction
+      public:
+        CHB(elle::Buffer data)
+          : Super(CHB::_hash_address(data), data)
+        {}
+
+      // Validation
+      protected:
+        virtual
+        void
+        _seal() override
+        {}
+
+        virtual
+        bool
+        _validate() const override
+        {
+          ELLE_DEBUG_SCOPE("%s: validate", *this);
+          auto expected_address = CHB::_hash_address(this->data());
+          if (this->address() != expected_address)
+          {
+            ELLE_DUMP("%s: address %x invalid, expecting %x",
+                      *this, this->address(), expected_address);
+            return false;
+          }
+          return true;
+        }
+
+      // Serialization
+      public:
+        CHB(elle::serialization::Serializer& input)
+          : Super(input)
+        {}
+
+      // Details
+      private:
+        static
+        Address
+        _hash_address(elle::Buffer const& content)
+        {
+          auto hash = cryptography::oneway::hash
+            (cryptography::Plain(content),
+             cryptography::oneway::Algorithm::sha256);
+          return Address(hash.buffer().contents());
+        }
+      };
+      static const elle::serialization::Hierarchy<blocks::Block>::
+      Register<CHB> _register_chb_serialization("CHB");
 
       Doughnut::Doughnut(cryptography::KeyPair keys,
                          std::unique_ptr<overlay::Overlay> overlay)
@@ -201,8 +261,15 @@ namespace infinit
       std::unique_ptr<blocks::MutableBlock>
       Doughnut::_make_mutable_block() const
       {
-        ELLE_TRACE_SCOPE("%s: create block", *this);
+        ELLE_TRACE_SCOPE("%s: create OKB", *this);
         return elle::make_unique<OKB>(this->_keys);
+      }
+
+      std::unique_ptr<blocks::ImmutableBlock>
+      Doughnut::_make_immutable_block(elle::Buffer content) const
+      {
+        ELLE_TRACE_SCOPE("%s: create CHB", *this);
+        return elle::make_unique<CHB>(std::move(content));
       }
 
       void

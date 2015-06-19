@@ -6,9 +6,9 @@
 #include <reactor/Scope.hh>
 
 #include <infinit/RPC.hh>
-#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
 
@@ -52,6 +52,7 @@ namespace infinit
       void
       Local::store(blocks::Block const& block)
       {
+        ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         try
         {
           auto previous =
@@ -61,7 +62,7 @@ namespace infinit
           if (!block.validate(*previous))
             throw elle::Error("block validation failed");
         }
-        catch (MissingBlock const&)
+        catch (storage::MissingKey const&)
         {
           if (!block.validate())
             throw elle::Error("block validation failed");

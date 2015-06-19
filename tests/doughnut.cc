@@ -3,6 +3,7 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -24,15 +25,33 @@ ELLE_TEST_SCHEDULED(doughnut)
     infinit::cryptography::KeyPair::generate
     (infinit::cryptography::Cryptosystem::rsa, 2048),
     elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
-  auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
-  elle::Buffer data("\\_o<", 4);
-  block->data() = elle::Buffer(data);
-  ELLE_LOG("store block")
-    dht.store(*block);
-  ELLE_LOG("fetch block")
-    ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
-  ELLE_LOG("remove block")
-    dht.remove(block->address());
+  {
+    elle::Buffer data("\\_o<", 4);
+    auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(data);
+    ELLE_LOG("store block")
+      dht.store(*block);
+    ELLE_LOG("fetch block")
+      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
+    ELLE_LOG("remove block")
+      dht.remove(block->address());
+  }
+  {
+    auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
+    elle::Buffer data("\\_o<", 4);
+    block->data() = elle::Buffer(data);
+    ELLE_LOG("store block")
+      dht.store(*block);
+    elle::Buffer updated(">o_/", 4);
+    block->data() = elle::Buffer(updated);
+    ELLE_LOG("fetch block")
+      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
+    ELLE_LOG("store block")
+      dht.store(*block);
+    ELLE_LOG("fetch block")
+      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), updated);
+    ELLE_LOG("remove block")
+      dht.remove(block->address());
+  }
 }
 
 ELLE_TEST_SUITE()

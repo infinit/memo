@@ -16,7 +16,7 @@ namespace infinit
       Model();
       template <typename Block>
       std::unique_ptr<Block>
-      make_block() const;
+      make_block(elle::Buffer data = {}) const;
       void
       store(blocks::Block& block);
       std::unique_ptr<blocks::Block>
@@ -30,7 +30,10 @@ namespace infinit
       _construct_block(Args&& ... args);
       virtual
       std::unique_ptr<blocks::MutableBlock>
-      _make_mutable_block() const = 0;
+      _make_mutable_block() const;
+      virtual
+      std::unique_ptr<blocks::ImmutableBlock>
+      _make_immutable_block(elle::Buffer content) const;
       virtual
       void
       _store(blocks::Block& block) = 0;

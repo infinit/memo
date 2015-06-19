@@ -29,13 +29,6 @@ namespace infinit
       Paranoid::~Paranoid()
       {}
 
-      std::unique_ptr<blocks::MutableBlock>
-      Paranoid::_make_mutable_block() const
-      {
-        ELLE_TRACE_SCOPE("%s: create block", *this);
-        return this->_construct_block<blocks::MutableBlock>(Address::random());
-      }
-
       struct CryptedBlock
       {
         Address address;

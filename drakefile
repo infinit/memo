@@ -81,6 +81,8 @@ def configure(
     'src/infinit/model/Model.hxx',
     'src/infinit/model/blocks/Block.cc',
     'src/infinit/model/blocks/Block.hh',
+    'src/infinit/model/blocks/ImmutableBlock.cc',
+    'src/infinit/model/blocks/ImmutableBlock.hh',
     'src/infinit/model/blocks/MutableBlock.cc',
     'src/infinit/model/blocks/MutableBlock.hh',
     'src/infinit/model/blocks/fwd.hh',

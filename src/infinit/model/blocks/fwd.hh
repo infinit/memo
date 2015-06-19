@@ -9,6 +9,7 @@ namespace infinit
     {
       class Block;
       class MutableBlock;
+      class ImmutableBlock;
     }
   }
 }

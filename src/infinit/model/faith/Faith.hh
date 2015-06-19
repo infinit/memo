@@ -19,9 +19,6 @@ namespace infinit
         Faith(std::unique_ptr<storage::Storage> storage);
       protected:
         virtual
-        std::unique_ptr<blocks::MutableBlock>
-        _make_mutable_block() const override;
-        virtual
         void
         _store(blocks::Block& block) override;
         virtual

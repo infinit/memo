@@ -23,13 +23,6 @@ namespace infinit
         : _storage(std::move(storage))
       {}
 
-      std::unique_ptr<blocks::MutableBlock>
-      Faith::_make_mutable_block() const
-      {
-        ELLE_TRACE_SCOPE("%s: create block", *this);
-        return this->_construct_block<blocks::MutableBlock>(Address::random());
-      }
-
       void
       Faith::_store(blocks::Block& block)
       {

@@ -2,6 +2,7 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
+#include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.Model");
@@ -15,9 +16,33 @@ namespace infinit
 
     template <>
     std::unique_ptr<blocks::MutableBlock>
-    Model::make_block() const
+    Model::make_block(elle::Buffer data) const
     {
-      return this->_make_mutable_block();
+      auto res = this->_make_mutable_block();
+      res->data() = std::move(data);
+      return res;
+    }
+
+    std::unique_ptr<blocks::MutableBlock>
+    Model::_make_mutable_block() const
+    {
+      ELLE_TRACE_SCOPE("%s: create block", *this);
+      return this->_construct_block<blocks::MutableBlock>(Address::random());
+    }
+
+    template <>
+    std::unique_ptr<blocks::ImmutableBlock>
+    Model::make_block(elle::Buffer data) const
+    {
+      return this->_make_immutable_block(std::move(data));
+    }
+
+    std::unique_ptr<blocks::ImmutableBlock>
+    Model::_make_immutable_block(elle::Buffer data) const
+    {
+      ELLE_TRACE_SCOPE("%s: create block", *this);
+      return this->_construct_block<blocks::ImmutableBlock>(Address::random(),
+                                                            std::move(data));
     }
 
     void
