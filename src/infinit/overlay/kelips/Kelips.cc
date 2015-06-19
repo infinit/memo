@@ -160,8 +160,8 @@ namespace kelips
       }
       int request_id;
       Address origin; // node who created the request
-      Address resultAddress; // home node of the file
-      RpcEndpoint resultEndpoint; // endpoint of home node
+      Address resultAddress; // home node of the file or 0 for failure
+      RpcEndpoint resultEndpoint; // endpoint of home node, 0 port for failure
       Address fileAddress;
       int ttl;
     };
@@ -748,6 +748,11 @@ namespace kelips
         int group = random(_gen);
         if (group == g)
           group = _config.k-1;
+        if (_state.contacts[group].empty())
+        {
+          --i;
+          continue;
+        }
         std::uniform_int_distribution<> random2(0, _state.contacts[group].size()-1);
         int v = random2(_gen);
         auto it = _state.contacts[group].begin();
@@ -804,7 +809,19 @@ namespace kelips
     }
     // We don't have it, route the request,
     if (p->ttl == 0)
+    {
+      // FIXME not in initial protocol, but we cant distinguish get and put
+      packet::GetFileReply res;
+      res.resultEndpoint = RpcEndpoint();
+      res.sender = _self;
+      res.fileAddress = Address();
+      res.origin = p->originAddress;
+      res.request_id = p->request_id;
+      res.ttl = 1;
+      elle::Buffer buf = serialize(res);
+      send(buf, p->originEndpoint);
       return;
+    }
     p->ttl--;
     p->sender = _self;
     int count = _state.contacts[fg].size();
@@ -824,7 +841,8 @@ namespace kelips
       ELLE_TRACE("%s: Unknown request id %s", *this, p->request_id);
       return;
     }
-    ELLE_DEBUG("%s: unlocking waiter on response %s", *this, p->request_id);
+    ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
+               p->resultEndpoint);
     it->second->result = p->resultEndpoint;
     it->second->barrier.open();
     _pending_requests.erase(it);
@@ -898,6 +916,7 @@ namespace kelips
           for (int i=0; i < _config.query_retries; ++i)
           {
             auto r = std::make_shared<PendingRequest>();
+            r->barrier.close();
             int id = ++_next_id;
             _pending_requests[id] = r;
             p.request_id = id;
@@ -922,8 +941,16 @@ namespace kelips
             if (r->barrier.opened())
             {
               ELLE_DEBUG("%s: result for request %s: %s", *this, i, r->result);
-              res = r->result;
-              return;
+              if (r->result.port() != 0)
+              {
+                res = r->result;
+                return;
+              }
+              // else this is a failure, next attempt...
+            }
+            else
+            {
+              ELLE_DEBUG("%s: mrou closed barrier on attempt %s", *this, i);
             }
           }
       });
@@ -1131,6 +1158,18 @@ namespace kelips
     }
   }
 
+  std::unique_ptr<infinit::model::blocks::Block> Node::fetch(Address address) const
+  {
+    try
+    {
+      return Local::fetch(address);
+    }
+    catch(std::exception const& e)
+    {
+      ELLE_WARN("%s: Exception fetching %x: %s", *this, address, e.what());
+      throw;
+    }
+  }
   void Node::store(infinit::model::blocks::Block const& block)
   {
     Local::store(block);
@@ -1170,6 +1209,28 @@ namespace kelips
         return;
       ELLE_TRACE("%s: waiting for %s nodes, got %s", *this, count, sum);
       reactor::sleep(1_sec);
+    }
+  }
+
+  void Node::reload_state()
+  {
+    auto s = Local::storage().get();
+    auto fs = dynamic_cast<infinit::storage::Filesystem*>(s);
+    if (!fs)
+    {
+      ELLE_ERR("Unknown storage implementation, cannot restore state!");
+      return;
+    }
+    boost::filesystem::path root = fs->root();
+    auto it = boost::filesystem::directory_iterator(root);
+    for (;it !=  boost::filesystem::directory_iterator(); ++it)
+    {
+      std::string s = it->path().filename().string();
+      if (s.substr(0, 2) =! "0x" || s.length()!=66)
+        continue;
+      Address addr = Address::from_string(s.substr(2));
+      _state.files[addr] = File{addr, _self, now(), Time(), 0};
+      ELLE_DEBUG("%s: reloaded %s", *this, addr);
     }
   }
 
