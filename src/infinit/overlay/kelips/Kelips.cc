@@ -1,7 +1,9 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
+#include <infinit/storage/Filesystem.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
+#include <elle/format/base64.hh>
 #include <reactor/network/buffer.hh>
 #include <reactor/exception.hh>
 #include <reactor/scheduler.hh>
@@ -11,6 +13,7 @@
 
 #include <random>
 #include <algorithm>
+#include <boost/filesystem.hpp>
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
@@ -45,8 +48,9 @@ namespace elle
       typedef uint64_t Type;
       static uint64_t convert(kelips::Time& t)
       {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(
+        Type res = std::chrono::duration_cast<std::chrono::milliseconds>(
           t.time_since_epoch()).count();
+        return res;
       }
       static kelips::Time convert(uint64_t repr)
       {
@@ -55,8 +59,14 @@ namespace elle
     };
   }
 }
+
 namespace kelips
 {
+  static uint64_t serialize_time(const Time& t)
+  {
+    return elle::serialization::Serialize<Time>::convert(
+      const_cast<Time&>(t));
+  }
   namespace packet
   {
     #define REGISTER(classname, type) \
@@ -71,7 +81,7 @@ namespace kelips
       Address sender;
       static constexpr char const* virtually_serializable_key = "type";
     };
-    
+
     struct Ping: public Packet
     {
       Ping() {}
@@ -85,7 +95,7 @@ namespace kelips
       GossipEndpoint remote_endpoint;
     };
     REGISTER(Ping, "ping");
-    
+
     struct Pong: public Ping
     {
       using Ping::Ping;
@@ -289,6 +299,7 @@ namespace kelips
     _gossip.socket()->close();
     _gossip.bind(GossipEndpoint({}, _config.port));
     ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
+    reload_state();
     _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
       std::bind(&Node::gossipEmitter, this));
     _listener_thread = elle::make_unique<reactor::Thread>("listener",
@@ -313,7 +324,7 @@ namespace kelips
     ELLE_DUMP("%s: sending packet to %s\n%s", *this, e, b.string());
     _gossip.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
   }
- 
+
 
   void Node::gossipListener()
   {
@@ -327,55 +338,59 @@ namespace kelips
                                     source);
       buf.size(sz);
       ELLE_DUMP("%s: received data from %s:\n%s", *this, source, buf.string());
-      //deserialize
-      std::unique_ptr<packet::Packet> packet;
-      elle::IOStream stream(buf.istreambuf());
-      elle::serialization::json::SerializerIn input(stream);
-      try
-      {
-        input.serialize_forward(packet);
-      }
-      catch(elle::serialization::Error const& e)
-      {
-        ELLE_WARN("%s: Failed to deserialize packet: %s", *this, e);
-        continue;
-      }
-      packet->endpoint = source;
-      onContactSeen(packet->sender, source);
-      // TRAP: some packets inherit from each other, so most specific ones
-      // must be first
-      #define CASE(type) \
-        else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
- 
-      if (false) {}
-      CASE(Pong)
-      {
-        onPong(p);
-      }
-      CASE(Ping)
-      {
-        packet::Pong r;
-        r.sender = _self;
-        r.remote_endpoint = source;
-        elle::Buffer s = packet::serialize(r);
-        send(s, source);
-      }
-      CASE(Gossip)
-        onGossip(p);
-      CASE(BootstrapRequest)
-        onBootstrapRequest(p);
-      CASE(PutFileRequest)
-        onPutFileRequest(p);
-      CASE(PutFileReply)
-        onPutFileReply(p);
-      CASE(GetFileRequest)
-        onGetFileRequest(p);
-      CASE(GetFileReply)
-        onGetFileReply(p);
+      new reactor::Thread("process", [buf, source, this]
+        {
+        //deserialize
+        std::unique_ptr<packet::Packet> packet;
+        elle::IOStream stream(buf.istreambuf());
+        elle::serialization::json::SerializerIn input(stream);
+        try
+        {
+          input.serialize_forward(packet);
+        }
+        catch(elle::serialization::Error const& e)
+        {
+          ELLE_WARN("%s: Failed to deserialize packet: %s", *this, e);
+          return;
+        }
+        packet->endpoint = source;
+        onContactSeen(packet->sender, source);
 
-      else
-        ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
+        // TRAP: some packets inherit from each other, so most specific ones
+        // must be first
+        #define CASE(type) \
+          else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
+
+        if (false) {}
+        CASE(Pong)
+        {
+          onPong(p);
+        }
+        CASE(Ping)
+        {
+          packet::Pong r;
+          r.sender = _self;
+          r.remote_endpoint = source;
+          elle::Buffer s = packet::serialize(r);
+          send(s, source);
+        }
+        CASE(Gossip)
+          onGossip(p);
+        CASE(BootstrapRequest)
+          onBootstrapRequest(p);
+        CASE(PutFileRequest)
+          onPutFileRequest(p);
+        CASE(PutFileReply)
+          onPutFileReply(p);
+        CASE(GetFileRequest)
+          onGetFileRequest(p);
+        CASE(GetFileReply)
+          onGetFileReply(p);
+
+        else
+          ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
 #undef CASE
+        }, true);
     }
   }
 
@@ -403,7 +418,7 @@ namespace kelips
       fd.gossip_count++;
     }
   }
-  
+
   void Node::filterAndInsert(std::vector<Address> files, int target_count, int group,
                              std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& res)
   {
@@ -530,10 +545,18 @@ namespace kelips
     }
     return res;
   }
-  
+
   std::unordered_map<Address, std::pair<Time, Address>>
   Node::pickFiles()
   {
+    // update self file last seen, this will avoid us some ifs at other places
+    for (auto& f: _state.files)
+    {
+      if (f.second.home_node == _self)
+      {
+        f.second.last_seen = now();
+      }
+    }
     std::unordered_map<Address, std::pair<Time, Address>> res;
     unsigned int max_new = _config.gossip.files / 2;
     unsigned int max_old = _config.gossip.files / 2;
@@ -549,9 +572,6 @@ namespace kelips
     std::vector<Address> old_files;
     for (auto& f: _state.files)
     {
-      // update self file last seen, this will avoid us some ifs at other places
-      if (f.second.home_node == _self)
-        f.second.last_seen = now();
       if (f.second.home_node == _self
         && ((now() - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
         && res.find(f.first) == res.end()
@@ -572,6 +592,7 @@ namespace kelips
       }
       filterAndInsert(available, n, res);
     }
+    assert(res.size() == _config.gossip.files || res.size() == _state.files.size());
     return res;
   }
 
@@ -597,8 +618,16 @@ namespace kelips
       p.files = pickFiles();
       buf = serialize(p);
       targets = pickGroupTargets();
+      if (p.files.size() && targets.empty())
+        ELLE_WARN("%s: have files but no group member known", *this);
       for (auto const& e: targets)
+      {
+        if (!p.files.empty())
+          ELLE_TRACE("%s: info on %s files %s   %x %x", *this, p.files.size(),
+                   serialize_time(p.files.begin()->second.first),
+                   _self, p.files.begin()->second.second);
         send(buf, e);
+      }
     }
   }
 
@@ -674,6 +703,8 @@ namespace kelips
       }
       else if (c.second.first > it->second.last_seen)
       { // Also update endpoint in case it changed
+        if (it->second.endpoint != c.second.second)
+          ELLE_WARN("%s: Endpoint change %s %s", *this, it->second.endpoint, c.second.second);
         it->second.last_seen = c.second.first;
         it->second.endpoint = c.second.second;
       }
@@ -684,9 +715,17 @@ namespace kelips
       {
         auto it = _state.files.find(f.first);
         if (it == _state.files.end())
+        {
           _state.files[f.first] = File{f.first, f.second.second, f.second.first, Time(), 0};
+          ELLE_TRACE("%s: registering %x", *this, f.first);
+        }
         else
         {
+          ELLE_TRACE("%s: %s %s %s %x", *this,
+                   it->second.last_seen < f.second.first,
+                   serialize_time(it->second.last_seen),
+                   serialize_time(f.second.first),
+                   f.first);
           it->second.last_seen = std::max(it->second.last_seen, f.second.first);
         }
       }
@@ -769,6 +808,7 @@ namespace kelips
 
   void Node::onGetFileRequest(packet::GetFileRequest* p)
   {
+    ELLE_DEBUG("%s: getFileRequest %s/%x", *this, p->request_id, p->fileAddress);
     int fg = group_of(p->fileAddress);
     if (fg == _group)
     {
@@ -779,6 +819,7 @@ namespace kelips
         bool found = false;
         if (file_it->second.home_node == _self)
         {
+          ELLE_DEBUG("%s: found self", *this);
           endpoint_to_endpoint(_local_endpoint, endpoint);
           found = true;
         }
@@ -787,9 +828,12 @@ namespace kelips
           auto contact_it = _state.contacts[fg].find(file_it->second.home_node);
           if (contact_it != _state.contacts[fg].end())
           {
+            ELLE_DEBUG("%s: found other", *this);
             endpoint_to_endpoint(contact_it->second.endpoint, endpoint);
             found = true;
           }
+          else
+            ELLE_LOG("%s: have file but not node", *this);
         }
         if (found)
         {
@@ -801,12 +845,14 @@ namespace kelips
           endpoint_to_endpoint(endpoint, res.resultEndpoint);
           res.ttl = 1;
           elle::Buffer buf = serialize(res);
+          ELLE_DEBUG("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
           send(buf, p->originEndpoint);
           // FIXME: should we route the reply back the same path?
           return;
         }
       }
     }
+    ELLE_DEBUG("%s: route %s", *this, p->ttl);
     // We don't have it, route the request,
     if (p->ttl == 0)
     {
@@ -814,7 +860,7 @@ namespace kelips
       packet::GetFileReply res;
       res.resultEndpoint = RpcEndpoint();
       res.sender = _self;
-      res.fileAddress = Address();
+      res.fileAddress = p->fileAddress;
       res.origin = p->originAddress;
       res.request_id = p->request_id;
       res.ttl = 1;
@@ -825,6 +871,8 @@ namespace kelips
     p->ttl--;
     p->sender = _self;
     int count = _state.contacts[fg].size();
+    if (count == 0)
+      return;
     std::uniform_int_distribution<> random(0, count-1);
     int idx = random(_gen);
     auto it = _state.contacts[fg].begin();
@@ -835,6 +883,7 @@ namespace kelips
 
   void Node::onGetFileReply(packet::GetFileReply* p)
   {
+    ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->resultEndpoint);
     auto it = _pending_requests.find(p->request_id);
     if (it == _pending_requests.end())
     {
@@ -850,6 +899,7 @@ namespace kelips
 
   void Node::onPutFileRequest(packet::PutFileRequest* p)
   {
+    ELLE_LOG("%s: putFileRequest %s %x", *this, p->ttl, p->fileAddress);
     if (p->ttl > 0)
     { // Forward the packet to an other node
       int fg = group_of(p->fileAddress);
@@ -895,7 +945,7 @@ namespace kelips
     }
     catch (reactor::Timeout const& e)
     {
-      ELLE_TRACE("%s: get failed on %x, trying fetch", *this, file);
+      ELLE_LOG("%s: get failed on %x, trying put", *this, file);
       return lookup<packet::PutFileRequest>(file, timeout);
     }
   }
@@ -909,7 +959,7 @@ namespace kelips
     p.originAddress = _self;
     endpoint_to_endpoint(_local_endpoint, p.originEndpoint);
     p.fileAddress = file;
-    p.ttl = 3 * ceil(log(pow(_config.k, 2)));
+    p.ttl = _config.query_ttl; // 3 * ceil(log(pow(_config.k, 2)));
     elle::With<reactor::Scope>() << [&](reactor::Scope& s)
     {
       s.run_background("get address", [&] {
@@ -927,7 +977,7 @@ namespace kelips
               it = random_from(_state.contacts[_group], _gen);
             if (it == _state.contacts[_group].end())
               throw std::runtime_error("No contacts in self/target groups");
-            ELLE_DEBUG("%s: get request %s", *this, i);
+            ELLE_DEBUG("%s: get request %s(%s)", *this, i, id);
             send(buf, it->second.endpoint);
             try
             {
@@ -936,11 +986,11 @@ namespace kelips
             }
             catch (reactor::Timeout const& t)
             {
-              ELLE_TRACE("%s: Timeout on attempt %s", *this, i);
+              ELLE_LOG("%s: Timeout on attempt %s", *this, i);
             }
             if (r->barrier.opened())
             {
-              ELLE_DEBUG("%s: result for request %s: %s", *this, i, r->result);
+              ELLE_DEBUG("%s: result for request %s(%s): %s", *this, i, id, r->result);
               if (r->result.port() != 0)
               {
                 res = r->result;
@@ -959,7 +1009,7 @@ namespace kelips
     };
     if (res)
       return *res;
-    ELLE_WARN("%s: failed request", *this);
+    ELLE_WARN("%s: failed request for %x", *this, file);
     throw reactor::Timeout(timeout ?
       *timeout
       : boost::posix_time::milliseconds(_config.query_timeout_ms * _config.query_retries));
@@ -977,96 +1027,103 @@ namespace kelips
 
     We only consider nodes with an rtt value set
   */
-  std::vector<GossipEndpoint> Node::pickOutsideTargets()
+
+  static std::vector<Address> pick(std::map<Address, Duration> candidates, int count,
+    std::default_random_engine& gen)
   {
-    std::vector<GossipEndpoint> res;
-    while (res.size() < (unsigned)_config.gossip.other_target)
+    std::vector<Address> res;
+    if (count >= candidates.size())
     {
-      unsigned int count = 0;
-      double proba_sum = 0;
-      for (int i=0; i<_config.k; ++i)
+      for (auto const& e: candidates)
+        res.push_back(e.first);
+      return res;
+    }
+
+    typedef std::chrono::duration<int, std::ratio<1, 1000000>> US;
+    // get average latency, will be used for those with no rtt information
+    long total = 0;
+    int okcount = 0;
+    for (auto const& e: candidates)
+    {
+      if (e.second != Duration())
       {
-        if (i == _group)
-          continue;
-        for (auto const& c: _state.contacts[i])
-        {
-          if (c.second.rtt != Duration())
-          {
-            double v = c.second.rtt.count() / 1000.0;
-            proba_sum += 1.0 / pow(v, 2);
-            ++count;
-          }
-        }
+        total += std::chrono::duration_cast<US>(e.second).count();
+        okcount += 1;
       }
-      if (count <= res.size())
-        return res;
+    }
+    int avgLatency = okcount ? total / okcount : 1;
+    // apply to the map to avoid ifs belows
+    for (auto& e: candidates)
+      if (e.second == Duration())
+        e.second = std::chrono::microseconds(avgLatency);
+    // get total weight
+    double proba_sum = 0;
+    for (auto const& e: candidates)
+    {
+      double v = std::chrono::duration_cast<US>(e.second).count();
+      proba_sum += 1.0 / pow(v, 2);
+    }
+    // roll
+    while (res.size() < count)
+    {
       std::uniform_real_distribution<double> distribution(0.0, proba_sum);
-      double val = distribution(_gen);
-      proba_sum = 0.0;
-      for (int i=0; i<_config.k; ++i)
+      double target = distribution(gen);
+      double sum = 0;
+      auto it = candidates.begin();
+      while (it != candidates.end())
       {
-        if (i == _group)
-          continue;
-        for (auto const& c: _state.contacts[i])
-        {
-          if (c.second.rtt != Duration())
-          {
-            double v = c.second.rtt.count() / 1000.0;
-            proba_sum += 1.0 / pow(v, 2);
-            if (proba_sum > val)
-            {
-              if (std::find(res.begin(), res.end(), c.second.endpoint) == res.end())
-              {
-                res.push_back(c.second.endpoint);
-                break;
-              }
-            }
-          }
-        }
+        double v = std::chrono::duration_cast<US>(it->second).count();
+        sum += 1.0 / pow(v, 2);
+        if (sum >= target)
+          break;
       }
+      if (it == candidates.end())
+      {
+        ELLE_WARN("no target %s", proba_sum);
+        continue;
+      }
+      res.push_back(it->first);
+      double v = std::chrono::duration_cast<US>(it->second).count();
+      proba_sum -= 1.0 / pow(v, 2);
+      candidates.erase(it);
+    }
+    return res;
+  }
+
+    std::vector<GossipEndpoint> Node::pickOutsideTargets()
+  {
+    std::map<Address, int> group_of;
+    std::map<Address, Duration> candidates;
+    for (int i=0; i<_state.contacts.size(); ++i)
+    {
+      if (i == _group)
+        continue;
+      for (auto const& c: _state.contacts[i])
+      {
+        candidates[c.first] = c.second.rtt;
+        group_of[c.first] = i;
+      }
+    }
+    std::vector<Address> addresses = pick(candidates, _config.gossip.other_target, _gen);
+    std::vector<GossipEndpoint> res;
+    for (auto const& a: addresses)
+    {
+      int i = group_of.at(a);
+      res.push_back(_state.contacts[i].at(a).endpoint);
     }
     return res;
   }
 
   std::vector<GossipEndpoint> Node::pickGroupTargets()
   {
-    std::vector<GossipEndpoint> res;
-    while (res.size() < (unsigned)_config.gossip.group_target)
-    {
-      unsigned int count = 0;
-      double proba_sum = 0;
-      for (auto const& c: _state.contacts[_group])
-      {
-        if (c.second.rtt != Duration())
-        {
-          double v = c.second.rtt.count() / 1000.0;
-          proba_sum += 1.0 / pow(v, 2);
-          ++count;
-        }
-      }
-      if (count <= res.size())
-        return res;
-      std::uniform_real_distribution<double> distribution(0.0, proba_sum);
-      double val = distribution(_gen);
-      proba_sum = 0.0;
-      for (auto const& c: _state.contacts[_group])
-      {
-        if (c.second.rtt != Duration())
-        {
-          double v = c.second.rtt.count() / 1000.0;
-          proba_sum += 1.0 / pow(v, 2);
-          if (proba_sum > val)
-          {
-            if (std::find(res.begin(), res.end(), c.second.endpoint) == res.end())
-            {
-              res.push_back(c.second.endpoint);
-              break;
-            }
-          }
-        }
-      }
-    }
-    return res;
+    std::map<Address, Duration> candidates;
+    for (auto const& e: _state.contacts[_group])
+      candidates[e.first] = e.second.rtt;
+    std::vector<Address> r = pick(candidates, _config.gossip.group_target, _gen);
+    std::vector<GossipEndpoint> result;
+    for (auto const& a: r)
+      result.push_back(_state.contacts[_group].at(a).endpoint);
+    return result;
   }
 
   void Node::pinger()
@@ -1134,9 +1191,9 @@ namespace kelips
     auto t = now();
     while (it != _state.files.end())
     {
-      if (t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
+      if (!(it->second.home_node == _self) && t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
       {
-        ELLE_TRACE("%s: Erasing file %x", *this, it->first);
+        ELLE_LOG("%s: Erasing file %x", *this, it->first);
         it = _state.files.erase(it);
       }
       else
@@ -1149,7 +1206,7 @@ namespace kelips
       {
         if (t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
         {
-          ELLE_TRACE("%s: Erasing contact %x", *this, it->first);
+          ELLE_LOG("%s: Erasing contact %x", *this, it->first);
           it = contacts.erase(it);
         }
         else
@@ -1167,6 +1224,13 @@ namespace kelips
     catch(std::exception const& e)
     {
       ELLE_WARN("%s: Exception fetching %x: %s", *this, address, e.what());
+      ELLE_WARN("%s: is %x", *this, _self);
+      std::stringstream encoded;
+      {
+          elle::format::base64::Stream base64(encoded);
+          base64.write((const char*)_self.value(), sizeof(Address::Value));
+      }
+      ELLE_WARN("%s: %s", *this, encoded.str());
       throw;
     }
   }
@@ -1199,17 +1263,18 @@ namespace kelips
 
   void Node::wait(int count)
   {
-    ELLE_TRACE("%s: waiting for %s nodes", *this, count);
+    ELLE_LOG("%s: waiting for %s nodes", *this, count);
     while (true)
     {
       int sum = 0;
       for (auto const& contacts: _state.contacts)
         sum += contacts.size();
       if (sum >= count)
-        return;
-      ELLE_TRACE("%s: waiting for %s nodes, got %s", *this, count, sum);
+        break;
+      ELLE_LOG("%s: waiting for %s nodes, got %s", *this, count, sum);
       reactor::sleep(1_sec);
     }
+    reactor::sleep(10_sec);
   }
 
   void Node::reload_state()
@@ -1226,7 +1291,7 @@ namespace kelips
     for (;it !=  boost::filesystem::directory_iterator(); ++it)
     {
       std::string s = it->path().filename().string();
-      if (s.substr(0, 2) =! "0x" || s.length()!=66)
+      if (s.substr(0, 2) != "0x" || s.length()!=66)
         continue;
       Address addr = Address::from_string(s.substr(2));
       _state.files[addr] = File{addr, _self, now(), Time(), 0};
@@ -1242,6 +1307,7 @@ namespace kelips
     s.serialize("max_other_contacts", max_other_contacts);
     s.serialize("query_retries", query_retries);
     s.serialize("query_timeout_ms", query_timeout_ms);
+    s.serialize("query_ttl", query_ttl);
     s.serialize("contact_timeout_ms", contact_timeout_ms);
     s.serialize("file_timeout_ms", file_timeout_ms);
     s.serialize("ping_interval_ms", ping_interval_ms);
