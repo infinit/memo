@@ -843,7 +843,7 @@ namespace kelips
           res.origin = p->originAddress;
           res.request_id = p->request_id;
           endpoint_to_endpoint(endpoint, res.resultEndpoint);
-          res.ttl = 1;
+          res.ttl = p->ttl;
           elle::Buffer buf = serialize(res);
           ELLE_DEBUG("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
           send(buf, p->originEndpoint);
@@ -937,17 +937,25 @@ namespace kelips
     onGetFileReply(p);
   }
 
-  RpcEndpoint Node::address(Address file, reactor::DurationOpt timeout)
+  RpcEndpoint Node::address(Address file, reactor::DurationOpt timeout,
+    infinit::overlay::Operation op)
   {
-    try
-    {
-      return lookup<packet::GetFileRequest>(file, timeout);
-    }
-    catch (reactor::Timeout const& e)
-    {
-      ELLE_LOG("%s: get failed on %x, trying put", *this, file);
+    if (op == infinit::overlay::OP_INSERT)
       return lookup<packet::PutFileRequest>(file, timeout);
+    else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
+    {
+      try
+      {
+        return lookup<packet::GetFileRequest>(file, timeout);
+      }
+      catch (reactor::Timeout const& e)
+      {
+        ELLE_LOG("%s: get failed on %x, trying put", *this, file);
+        return lookup<packet::PutFileRequest>(file, timeout);
+      }
     }
+    else
+      return lookup<packet::GetFileRequest>(file, timeout);
   }
   template<typename T>
   RpcEndpoint Node::lookup(Address file, reactor::DurationOpt timeout)
@@ -1234,9 +1242,10 @@ namespace kelips
       throw;
     }
   }
-  void Node::store(infinit::model::blocks::Block const& block)
+  void Node::store(infinit::model::blocks::Block const& block,
+                   infinit::model::StoreMode mode)
   {
-    Local::store(block);
+    Local::store(block, mode);
     auto it = _state.files.find(block.address());
     if (it == _state.files.end())
       _state.files[block.address()] = File{block.address(), _self, now(), Time(), 0};
@@ -1249,10 +1258,10 @@ namespace kelips
       _state.files.erase(it);
   }
 
-  auto Node::_lookup(infinit::model::Address address, int n) const -> Members
+  auto Node::_lookup(infinit::model::Address address, int n, infinit::overlay::Operation op) const -> Members
   {
     Members res;
-    res.push_back(const_cast<Node*>(this)->address(address));
+    res.push_back(const_cast<Node*>(this)->address(address, reactor::DurationOpt(), op));
     return res;
   }
 

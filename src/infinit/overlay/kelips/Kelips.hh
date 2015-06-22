@@ -9,21 +9,6 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/storage/Storage.hh>
 
-namespace infinit
-{
-  namespace overlay
-  {
-    class Kelips
-      : public Overlay
-    {
-    protected:
-      virtual
-      Members
-      _lookup(model::Address address, int n) const override;
-    };
-  }
-}
-
 namespace kelips
 {
   typedef boost::asio::ip::tcp::endpoint RpcEndpoint;
@@ -128,15 +113,16 @@ namespace kelips
     Node(Configuration const& config,
          std::unique_ptr<infinit::storage::Storage> storage);
     void start();
-    RpcEndpoint address(Address file, reactor::DurationOpt timeout = {});
+    RpcEndpoint address(Address file, reactor::DurationOpt timeout,
+                        infinit::overlay::Operation op);
     void print(std::ostream& stream) const override;
     // local interface
-    void store(infinit::model::blocks::Block const& block) override;
+    void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode) override;
     void remove(Address address) override;
     std::unique_ptr<infinit::model::blocks::Block> fetch(Address address) const override;
     // overlay
   protected:
-    virtual Overlay::Members _lookup(infinit::model::Address address, int n) const override;
+    virtual Overlay::Members _lookup(infinit::model::Address address, int n, infinit::overlay::Operation op) const override;
   private:
     typedef infinit::model::doughnut::Local Local;
     typedef infinit::overlay::Overlay Overlay;
