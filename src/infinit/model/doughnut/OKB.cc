@@ -4,64 +4,45 @@ namespace infinit
   {
     namespace doughnut
     {
-      struct OKBContent
+      struct OKBHeader
       {
       // Construction
       public:
-        OKBContent(cryptography::KeyPair const& keys)
+        OKBHeader(cryptography::KeyPair const& keys)
           : _key()
-          , _owner(keys.K())
-          , _version(-1)
+          , _owner_key(keys.K())
           , _signature()
         {
           auto block_keys = cryptography::KeyPair::generate
             (cryptography::Cryptosystem::rsa, 2048);
-          this->_owner._signature = block_keys.k().sign(keys.K());
           this->_key.~PublicKey();
           new (&this->_key) cryptography::PublicKey(block_keys.K());
+          this->_signature = block_keys.k().sign(this->_owner_key);
         }
 
-        OKBContent()
+        OKBHeader()
           : _key()
-          , _owner()
-          , _version()
+          , _owner_key()
           , _signature()
         {}
 
-      // Content
+      // Serialization
       public:
-        struct Owner
+        void
+        serialize(elle::serialization::Serializer& input)
         {
-          Owner(cryptography::PublicKey key)
-            : _key(std::move(key))
-            , _signature()
-          {}
+          input.serialize("key", this->_owner_key);
+          input.serialize("signature", this->_signature);
+        }
 
-          Owner()
-            : _key()
-            , _signature()
-          {}
-
-          ELLE_ATTRIBUTE_R(cryptography::PublicKey, key);
-          ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
-          friend class OKBContent;
-
-          void
-          serialize(elle::serialization::Serializer& input)
-          {
-            input.serialize("key", this->_key);
-            input.serialize("signature", this->_signature);
-          }
-        };
         ELLE_ATTRIBUTE_R(cryptography::PublicKey, key);
-        ELLE_ATTRIBUTE_R(Owner, owner);
-        ELLE_ATTRIBUTE_R(int, version);
+        ELLE_ATTRIBUTE_R(cryptography::PublicKey, owner_key);
         ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
         friend class OKB;
       };
 
       class OKB
-        : public OKBContent
+        : public OKBHeader
         , public blocks::MutableBlock
       {
       // Types
@@ -73,10 +54,13 @@ namespace infinit
       // Construction
       public:
         OKB(cryptography::KeyPair const& keys)
-          : OKBContent(keys)
+          : OKBHeader(keys)
           , Super(OKB::_hash_address(this->_key))
+          , _version(-1)
           , _keys(keys)
         {}
+        ELLE_ATTRIBUTE_R(int, version);
+        ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
 
       // Validation
       protected:
@@ -87,7 +71,7 @@ namespace infinit
           {
             // FIXME: use binary to sign
             elle::IOStream s(res.ostreambuf());
-            elle::serialization::json::SerializerOut output(s);
+            elle::serialization::json::SerializerOut output(s, false);
             output.serialize("block_key", this->_key);
             output.serialize("data", this->data());
             output.serialize("version", this->_version);
@@ -103,6 +87,8 @@ namespace infinit
           ++this->_version; // FIXME: idempotence in case the write fails ?
           auto sign = this->_sign();
           this->_signature = this->_keys.k().sign(cryptography::Plain(sign));
+          ELLE_DUMP("%s: sign %s with %s: %f",
+                    *this, sign, this->_keys.k(), this->_signature);
         }
 
         virtual
@@ -127,15 +113,20 @@ namespace infinit
                       *this, this->address(), expected_address);
             return false;
           }
-          ELLE_DUMP("%s: address is valid", *this);
-          if (!this->_key.verify(this->_owner.signature(), this->_owner.key()))
+          else
+            ELLE_DUMP("%s: address is valid", *this);
+          if (!this->_key.verify(this->OKBHeader::_signature, this->_owner_key))
+          {
             return false;
-          ELLE_DUMP("%s: owner key is valid", *this);
+          }
+          else
+            ELLE_DUMP("%s: owner key is valid", *this);
           auto sign = this->_sign();
-          if (!this->_owner.key().verify(this->_signature,
-                                         cryptography::Plain(sign)))
+          if (!this->_owner_key.verify(this->_signature,
+                                       cryptography::Plain(sign)))
             return false;
-          ELLE_DUMP("%s: payload is valid", *this);
+          else
+            ELLE_DUMP("%s: payload is valid", *this);
           return true;
         }
 
@@ -153,7 +144,7 @@ namespace infinit
       // Serialization
       public:
         OKB(elle::serialization::Serializer& input)
-          : OKBContent()
+          : OKBHeader()
           , Super(input)
         {
           this->_serialize(input);
@@ -172,7 +163,7 @@ namespace infinit
         _serialize(elle::serialization::Serializer& input)
         {
           input.serialize("key", this->_key);
-          input.serialize("owner", this->_owner);
+          input.serialize("owner", static_cast<OKBHeader&>(*this));
           input.serialize("version", this->_version);
           input.serialize("signature", this->_signature);
         }
