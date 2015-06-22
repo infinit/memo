@@ -9,17 +9,17 @@ namespace infinit
     `-------*/
 
     Overlay::Members
-    Overlay::lookup(model::Address address, int n) const
+    Overlay::lookup(model::Address address, int n, Operation op) const
     {
-      auto res = this->_lookup(address, n);
+      auto res = this->_lookup(address, n, op);
       ELLE_ASSERT_EQ(signed(res.size()), n);
       return res;
     }
 
     Overlay::Member
-    Overlay::lookup(model::Address address) const
+    Overlay::lookup(model::Address address, Operation op) const
     {
-      return this->lookup(address, 1)[0];
+      return this->lookup(address, 1, op)[0];
     }
   }
 }

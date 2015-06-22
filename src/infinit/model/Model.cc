@@ -46,10 +46,10 @@ namespace infinit
     }
 
     void
-    Model::store(blocks::Block& block)
+    Model::store(blocks::Block& block, StoreMode mode)
     {
       block.seal();
-      return this->_store(block);
+      return this->_store(block, mode);
     }
 
     std::unique_ptr<blocks::Block>

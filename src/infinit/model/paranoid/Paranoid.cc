@@ -54,7 +54,7 @@ namespace infinit
       };
 
       void
-      Paranoid::_store(blocks::Block& block)
+      Paranoid::_store(blocks::Block& block, StoreMode mode)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         CryptedBlock crypted(block.address(), block.data());
@@ -65,7 +65,9 @@ namespace infinit
           serializer.serialize_forward(crypted);
         }
         this->_storage->set(block.address(),
-                            this->_keys.K().encrypt(cryptography::Plain(raw)).buffer(), true, true);
+                            this->_keys.K().encrypt(cryptography::Plain(raw)).buffer(),
+                            mode == STORE_ANY || mode == STORE_INSERT,
+                            mode == STORE_ANY || mode == STORE_UPDATE);
       }
 
       std::unique_ptr<blocks::Block>

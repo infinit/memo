@@ -33,11 +33,11 @@ namespace infinit
       `-------*/
 
       void
-      Remote::store(blocks::Block const& block)
+      Remote::store(blocks::Block const& block, StoreMode mode)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        RPC<void (blocks::Block const&)> store("store", this->_channels);
-        store(block);
+        RPC<void (blocks::Block const&, StoreMode)> store("store", this->_channels);
+        store(block, mode);
       }
 
       std::unique_ptr<blocks::Block>

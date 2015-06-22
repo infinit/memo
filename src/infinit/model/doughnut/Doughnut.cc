@@ -42,27 +42,40 @@ namespace infinit
       }
 
       void
-      Doughnut::_store(blocks::Block& block)
+      Doughnut::_store(blocks::Block& block, StoreMode mode)
       {
-        this->_owner(block.address())->store(block);
+        overlay::Operation op;
+        switch (mode)
+        {
+        case STORE_ANY:
+          op = overlay::OP_INSERT_OR_UPDATE;
+          break;
+        case STORE_INSERT:
+          op = overlay::OP_INSERT;
+          break;
+        case STORE_UPDATE:
+          op = overlay::OP_UPDATE;
+          break;
+        }
+        this->_owner(block.address(), op)->store(block, mode);
       }
 
       std::unique_ptr<blocks::Block>
       Doughnut::_fetch(Address address) const
       {
-        return this->_owner(address)->fetch(address);
+        return this->_owner(address, overlay::OP_FETCH)->fetch(address);
       }
 
       void
       Doughnut::_remove(Address address)
       {
-        this->_owner(address)->remove(address);
+        this->_owner(address, overlay::OP_REMOVE)->remove(address);
       }
 
       std::unique_ptr<Peer>
-      Doughnut::_owner(Address const& address) const
+      Doughnut::_owner(Address const& address, overlay::Operation op) const
       {
-        return elle::make_unique<Remote>(this->_overlay->lookup(address));
+        return elle::make_unique<Remote>(this->_overlay->lookup(address, op));
       }
     }
   }

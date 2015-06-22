@@ -24,13 +24,14 @@ namespace infinit
       {}
 
       void
-      Faith::_store(blocks::Block& block)
+      Faith::_store(blocks::Block& block, StoreMode mode)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         auto& data = block.data();
         this->_storage->set(block.address(),
                             data,
-                            true, true);
+                            mode == STORE_ANY || mode == STORE_INSERT,
+                            mode == STORE_ANY || mode == STORE_UPDATE);
       }
 
       std::unique_ptr<blocks::Block>

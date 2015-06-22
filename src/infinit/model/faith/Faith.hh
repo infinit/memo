@@ -20,7 +20,7 @@ namespace infinit
       protected:
         virtual
         void
-        _store(blocks::Block& block) override;
+        _store(blocks::Block& block, StoreMode mode) override;
         virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address) const override;

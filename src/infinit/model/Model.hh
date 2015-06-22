@@ -10,6 +10,12 @@ namespace infinit
 {
   namespace model
   {
+    enum StoreMode
+    {
+      STORE_ANY,
+      STORE_INSERT,
+      STORE_UPDATE
+    };
     class Model
     {
     public:
@@ -18,7 +24,7 @@ namespace infinit
       std::unique_ptr<Block>
       make_block(elle::Buffer data = {}) const;
       void
-      store(blocks::Block& block);
+      store(blocks::Block& block, StoreMode mode = STORE_ANY);
       std::unique_ptr<blocks::Block>
       fetch(Address address) const;
       void
@@ -36,7 +42,7 @@ namespace infinit
       _make_immutable_block(elle::Buffer content) const;
       virtual
       void
-      _store(blocks::Block& block) = 0;
+      _store(blocks::Block& block, StoreMode mode) = 0;
       virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address) const = 0;

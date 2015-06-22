@@ -23,7 +23,7 @@ namespace infinit
     protected:
       virtual
       Members
-      _lookup(model::Address address, int n) const override;
+      _lookup(model::Address address, int n, Operation op) const override;
     };
   }
 }

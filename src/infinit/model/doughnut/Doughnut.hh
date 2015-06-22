@@ -36,7 +36,7 @@ namespace infinit
         _make_immutable_block(elle::Buffer content) const override;
         virtual
         void
-        _store(blocks::Block& block) override;
+        _store(blocks::Block& block, StoreMode mode) override;
         virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address) const override;
@@ -48,7 +48,7 @@ namespace infinit
 
       private:
         std::unique_ptr<Peer>
-        _owner(Address const& address) const;
+        _owner(Address const& address, overlay::Operation op) const;
       };
     }
   }

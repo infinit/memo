@@ -50,7 +50,7 @@ namespace infinit
       }
 
       void
-      Local::store(blocks::Block const& block)
+      Local::store(blocks::Block const& block, StoreMode mode)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         try
@@ -73,7 +73,9 @@ namespace infinit
           elle::serialization::json::SerializerOut output(s);
           output.serialize_forward(block);
         }
-        this->_storage->set(block.address(), data, true, true);
+        this->_storage->set(block.address(), data,
+                            mode == STORE_ANY || mode == STORE_INSERT,
+                            mode == STORE_ANY || mode == STORE_UPDATE);
       }
 
       std::unique_ptr<blocks::Block>
@@ -88,6 +90,7 @@ namespace infinit
       void
       Local::remove(Address address)
       {
+        ELLE_DEBUG("remove %x", address);
         this->_storage->erase(address);
       }
 
@@ -106,10 +109,10 @@ namespace infinit
       {
         RPCServer rpcs;
         rpcs.add("store",
-                 std::function<void (blocks::Block const& data)>(
-                   [this] (blocks::Block const& block)
+                 std::function<void (blocks::Block const& data, StoreMode)>(
+                   [this] (blocks::Block const& block, StoreMode mode)
                    {
-                     return this->store(block);
+                     return this->store(block, mode);
                    }));
         rpcs.add("fetch",
                 std::function<std::unique_ptr<blocks::Block> (Address address)>(

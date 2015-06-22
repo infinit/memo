@@ -25,7 +25,7 @@ namespace infinit
     `-------*/
 
     Stonehenge::Members
-    Stonehenge::_lookup(model::Address address, int n) const
+    Stonehenge::_lookup(model::Address address, int n, Operation) const
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.

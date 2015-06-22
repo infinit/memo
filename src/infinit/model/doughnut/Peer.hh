@@ -2,6 +2,7 @@
 # define INFINIT_MODEL_DOUGHNUT_PEER_HH
 
 # include <infinit/model/blocks/Block.hh>
+# include <infinit/model/Model.hh>
 
 namespace infinit
 {
@@ -25,7 +26,7 @@ namespace infinit
       public:
         virtual
         void
-        store(blocks::Block const& block) = 0;
+        store(blocks::Block const& block, StoreMode mode) = 0;
         virtual
         std::unique_ptr<blocks::Block>
         fetch(Address address) const = 0;

@@ -303,9 +303,11 @@ namespace infinit
         std::unique_ptr<Block> block;
         bool dirty;
         std::chrono::system_clock::time_point last_use;
+        bool new_block;
       };
       std::unordered_map<int, CacheEntry> _blocks;
       std::unique_ptr<Block> _first_block;
+      bool _first_block_new;
       int _handle_count;
     };
 
@@ -789,7 +791,7 @@ namespace infinit
     {
       ELLE_DEBUG("mkdir %s", _name);
       auto b = _owner.block_store()->make_block<Block>();
-      _owner.block_store()->store(*b);
+      _owner.block_store()->store(*b, model::STORE_INSERT);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name,
@@ -833,6 +835,7 @@ namespace infinit
       if (!f)
         ELLE_ERR("Expected valid pointer from %s, got nullptr", raw.get());
       f->_first_block = std::move(b);
+      f->_first_block_new = true;
       // Mark dirty since we did not push first_block
       ELLE_DEBUG("Forcing entry %s", f->full_path());
       _owner.filesystem()->set(f->full_path().string(), f);
@@ -909,6 +912,7 @@ namespace infinit
                std::unique_ptr<Block> block)
     : Node(owner, parent, name)
     , _first_block(std::move(block))
+    , _first_block_new(false)
     , _handle_count(0)
     {}
 
@@ -988,6 +992,7 @@ namespace infinit
       char zeros[sizeof(Address)];
       memset(zeros, 0, sizeof(Address));
       std::unique_ptr<Block> b;
+      bool is_new = false;
       if (!memcmp(zeros, _first_block->data().mutable_contents() + offset,
                  sizeof(Address)))
       { // allocate
@@ -996,6 +1001,7 @@ namespace infinit
           return nullptr;
         }
         b = _owner.block_store()->make_block<Block>();
+        is_new = true;
         // _owner.block_store()->store(*b); // FIXME: but why?
       }
       else
@@ -1011,6 +1017,7 @@ namespace infinit
         File::CacheEntry{std::move(b), false}));
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = true;
+      inserted.first->second.new_block = is_new;
       return b_addr;
     }
 
@@ -1258,7 +1265,9 @@ namespace infinit
       auto& data = _parent->_files.at(_name);
       data.mtime = time(nullptr);
       data.ctime = time(nullptr);
-      _owner.block_store()->store(*_first_block);
+      _owner.block_store()->store(*_first_block,
+                                  _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+      _first_block_new = false;
       if (!_multi())
         data.size = _first_block->data().size();
       else
@@ -1273,7 +1282,8 @@ namespace infinit
           {
             ELLE_DEBUG("Writing data block %s", b.first);
             b.second.dirty = false;
-            _owner.block_store()->store(*b.second.block);
+            _owner.block_store()->store(*b.second.block, b.second.new_block? model::STORE_INSERT : model::STORE_ANY);
+            b.second.new_block = false;
           }
         }
       }
@@ -1334,7 +1344,10 @@ namespace infinit
           });
         ELLE_DEBUG("Removing block %s from cache", it->first);
         if (it->second.dirty)
-          _owner.block_store()->store(*it->second.block);
+        {
+          _owner.block_store()->store(*it->second.block, it->second.new_block? model::STORE_INSERT : model::STORE_ANY);
+          it->second.new_block = false;
+        }
         _blocks.erase(it);
       }
     }
@@ -1593,8 +1606,9 @@ namespace infinit
       // Assuming linear writes, this is a good time to flush start block since
       // it just got filled
       File::CacheEntry& ent = _owner->_blocks.at(start_block);
-      _owner->_owner.block_store()->store(*ent.block);
+      _owner->_owner.block_store()->store(*ent.block, ent.new_block? model::STORE_INSERT : model::STORE_ANY);
       ent.dirty = false;
+      ent.new_block = false;
       return r1 + r2;
     }
 

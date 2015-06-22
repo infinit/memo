@@ -196,7 +196,7 @@ protected:
   _make_mutable_block() const {return {};};
   virtual
   void
-  _store(blocks::Block& block) {};
+  _store(blocks::Block& block, StoreMode mode) {};
   virtual
   std::unique_ptr<blocks::Block>
   _fetch(Address address) const { return {};}

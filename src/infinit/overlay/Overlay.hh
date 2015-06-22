@@ -9,6 +9,14 @@ namespace infinit
 {
   namespace overlay
   {
+    enum Operation
+    {
+      OP_FETCH,
+      OP_INSERT,
+      OP_UPDATE,
+      OP_INSERT_OR_UPDATE, // for cases where we're not sure
+      OP_REMOVE
+    };
     class Overlay
     {
     /*------.
@@ -24,14 +32,14 @@ namespace infinit
     public:
       /// Lookup a list of nodes
       Members
-      lookup(model::Address address, int n) const;
+      lookup(model::Address address, int n, Operation op) const;
       /// Lookup a single node
       Member
-      lookup(model::Address address) const;
+      lookup(model::Address address, Operation op) const;
     protected:
       virtual
       Members
-      _lookup(model::Address address, int n) const = 0;
+      _lookup(model::Address address, int n, Operation op) const = 0;
     };
   }
 }
