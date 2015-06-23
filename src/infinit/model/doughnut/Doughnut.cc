@@ -24,7 +24,7 @@ namespace infinit
       Doughnut::Doughnut(cryptography::KeyPair keys,
                          std::unique_ptr<overlay::Overlay> overlay)
         : _overlay(std::move(overlay))
-        , _keys(keys)
+        , _keys(std::move(keys))
       {}
 
       std::unique_ptr<blocks::MutableBlock>
