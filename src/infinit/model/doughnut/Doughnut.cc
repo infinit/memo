@@ -2,6 +2,7 @@
 
 #include <elle/Buffer.hh>
 #include <elle/Error.hh>
+#include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/serialization/json.hh> // FIXME
 
@@ -12,7 +13,6 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
-#include <infinit/model/doughnut/ACB.cc>
 #include <infinit/model/doughnut/CHB.cc>
 
 namespace infinit
@@ -31,7 +31,9 @@ namespace infinit
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        return elle::make_unique<OKB>(this->_keys);
+        auto res = elle::make_unique<OKB>(this->_keys);
+        res->_doughnut = const_cast<Doughnut*>(this);
+        return std::move(res);
       }
 
       std::unique_ptr<blocks::ImmutableBlock>
@@ -63,7 +65,14 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Doughnut::_fetch(Address address) const
       {
-        return this->_owner(address, overlay::OP_FETCH)->fetch(address);
+        auto res = this->_owner(address, overlay::OP_FETCH)->fetch(address);
+        if (auto okb = elle::cast<OKB>::runtime(res))
+        {
+          okb->_doughnut = const_cast<Doughnut*>(this);
+          return std::move(okb);
+        }
+        else
+          return res;
       }
 
       void

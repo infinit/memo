@@ -1,9 +1,12 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_OKB_HH
 # define INFINIT_MODEL_DOUGHNUT_OKB_HH
 
+# include <elle/serialization/fwd.hh>
+
 # include <cryptography/KeyPair.hh>
 
 # include <infinit/model/blocks/MutableBlock.hh>
+# include <infinit/model/doughnut/fwd.hh>
 
 namespace infinit
 {
@@ -18,9 +21,19 @@ namespace infinit
       `-------------*/
       public:
         OKBHeader(cryptography::KeyPair const& keys);
+
+      /*---------.
+      | Contents |
+      `---------*/
+      public:
+        bool
+        validate(Address const& address) const;
         ELLE_ATTRIBUTE_R(cryptography::PublicKey, key);
         ELLE_ATTRIBUTE_R(cryptography::PublicKey, owner_key);
         ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
+      protected:
+        Address
+        _hash_address() const;
         friend class OKB;
 
       /*--------------.
@@ -53,6 +66,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(int, version);
         ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
         ELLE_ATTRIBUTE_R(cryptography::KeyPair, keys);
+        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
+        friend class Doughnut;
 
       /*-----------.
       | Validation |
@@ -67,13 +82,13 @@ namespace infinit
         virtual
         bool
         _validate() const override;
-
+      protected:
+        virtual
+        void
+        _sign(elle::serialization::SerializerOut& s) const;
       private:
         elle::Buffer
         _sign() const;
-        static
-        Address
-        _hash_address(cryptography::PublicKey const& key);
 
       /*--------------.
       | Serialization |

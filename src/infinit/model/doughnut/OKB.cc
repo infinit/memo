@@ -29,9 +29,32 @@ namespace infinit
         , _signature()
       {}
 
-      /*-------------.
-      | Construction |
-      `-------------*/
+      Address
+      OKBHeader::_hash_address() const
+      {
+        auto hash = cryptography::oneway::hash
+          (this->_key, cryptography::oneway::Algorithm::sha256);
+        return Address(hash.buffer().contents());
+      }
+
+      bool
+      OKBHeader::validate(Address const& address) const
+      {
+        auto expected_address = this->_hash_address();
+        if (address != expected_address)
+        {
+          ELLE_DUMP("%s: address %x invalid, expecting %x",
+                    *this, address, expected_address);
+          return false;
+        }
+        else
+          ELLE_DUMP("%s: address is valid", *this);
+        if (!this->_key.verify(this->OKBHeader::_signature, this->_owner_key))
+          return false;
+        else
+          ELLE_DUMP("%s: owner key is valid", *this);
+        return true;
+      }
 
       void
       OKBHeader::serialize(elle::serialization::Serializer& input)
@@ -40,11 +63,17 @@ namespace infinit
         input.serialize("signature", this->_signature);
       }
 
+      /*-------------.
+      | Construction |
+      `-------------*/
+
       OKB::OKB(cryptography::KeyPair const& keys)
         : OKBHeader(keys)
-        , Super(OKB::_hash_address(this->_key))
+        , Super(this->_hash_address())
         , _version(-1)
+        , _signature()
         , _keys(keys)
+        , _doughnut(nullptr)
       {}
 
       /*-----------.
@@ -59,17 +88,22 @@ namespace infinit
           // FIXME: use binary to sign
           elle::IOStream s(res.ostreambuf());
           elle::serialization::json::SerializerOut output(s, false);
-          output.serialize("block_key", this->_key);
-          output.serialize("data", this->data());
-          output.serialize("version", this->_version);
+          this->_sign(output);
         }
         return res;
       }
 
       void
+      OKB::_sign(elle::serialization::SerializerOut& s) const
+      {
+        s.serialize("block_key", this->_key);
+        s.serialize("data", this->data());
+        s.serialize("version", this->_version);
+      }
+
+      void
       OKB::_seal()
       {
-        ELLE_DEBUG_SCOPE("%s: seal", *this);
         ++this->_version; // FIXME: idempotence in case the write fails ?
         auto sign = this->_sign();
         this->_signature = this->_keys.k().sign(cryptography::Plain(sign));
@@ -89,37 +123,20 @@ namespace infinit
       bool
       OKB::_validate() const
       {
-        ELLE_DEBUG_SCOPE("%s: validate", *this);
-        auto expected_address = OKB::_hash_address(this->_key);
-        if (this->address() != expected_address)
-        {
-          ELLE_DUMP("%s: address %x invalid, expecting %x",
-                    *this, this->address(), expected_address);
+        if (!static_cast<OKBHeader const*>(this)->validate(this->address()))
           return false;
-        }
-        else
-          ELLE_DUMP("%s: address is valid", *this);
-        if (!this->_key.verify(this->OKBHeader::_signature, this->_owner_key))
-        {
-          return false;
-        }
-        else
-          ELLE_DUMP("%s: owner key is valid", *this);
         auto sign = this->_sign();
-        if (!this->_owner_key.verify(this->_signature,
-                                     cryptography::Plain(sign)))
-          return false;
-        else
-          ELLE_DUMP("%s: payload is valid", *this);
+        ELLE_DUMP("%s: check %f signs %s with %s",
+                  *this, this->_signature, sign, this->_owner_key)
+          if (!this->_owner_key.verify(this->_signature,
+                                       cryptography::Plain(sign)))
+          {
+            ELLE_TRACE("%s: data signature is invalid", *this);
+            return false;
+          }
+          else
+            ELLE_DUMP("%s: data signature is valid", *this);
         return true;
-      }
-
-      Address
-      OKB::_hash_address(cryptography::PublicKey const& key)
-      {
-        auto hash = cryptography::oneway::hash
-          (key, cryptography::oneway::Algorithm::sha256);
-        return Address(hash.buffer().contents());
       }
 
       /*--------------.
@@ -129,6 +146,10 @@ namespace infinit
       OKB::OKB(elle::serialization::Serializer& input)
         : OKBHeader()
         , Super(input)
+        , _version(-1)
+        , _signature()
+        , _keys()
+        , _doughnut(nullptr)
       {
         this->_serialize(input);
       }
@@ -141,13 +162,14 @@ namespace infinit
       }
 
       void
-      OKB::_serialize(elle::serialization::Serializer& input)
+      OKB::_serialize(elle::serialization::Serializer& s)
       {
-        input.serialize("key", this->_key);
-        input.serialize("owner", static_cast<OKBHeader&>(*this));
-        input.serialize("version", this->_version);
-        input.serialize("signature", this->_signature);
+        s.serialize("key", this->_key);
+        s.serialize("owner", static_cast<OKBHeader&>(*this));
+        s.serialize("version", this->_version);
+        s.serialize("signature", this->_signature);
       }
+
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<OKB> _register_okb_serialization("OKB");
     }

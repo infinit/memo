@@ -1,4 +1,8 @@
+#include <elle/log.hh>
+
 #include <infinit/model/blocks/Block.hh>
+
+ELLE_LOG_COMPONENT("infinit.model.blocks.Block");
 
 namespace infinit
 {
@@ -46,6 +50,7 @@ namespace infinit
       void
       Block::seal()
       {
+        ELLE_DEBUG_SCOPE("%s: seal", *this);
         this->_seal();
       }
 
@@ -56,12 +61,14 @@ namespace infinit
       bool
       Block::validate() const
       {
+        ELLE_DEBUG_SCOPE("%s: validate", *this);
         return this->_validate();
       }
 
       bool
       Block::validate(Block const& previous) const
       {
+        ELLE_DEBUG_SCOPE("%s: validate against %s", *this, previous);
         return this->_validate(previous);
       }
 
@@ -100,7 +107,7 @@ namespace infinit
       void
       Block::print(std::ostream& output) const
       {
-        elle::fprintf(output, "Block(%x, %x)",
+        elle::fprintf(output, "Block(%x, %f)",
                       this->_address, this->_data);
       }
     }
