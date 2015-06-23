@@ -195,7 +195,7 @@ def configure(
       drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
   bin_cxx_config.library_add(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
-  for bin_name in ['infinit', 's3fs', 'sshfs']:
+  for bin_name in ['infinit', 's3fs', 'sshfs', 'generatekeys']:
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name,
       [drake.node('bin/%s.cc' % bin_name), infinit_lib, elle_lib, aws_lib, reactor_lib, cryptography_lib],
