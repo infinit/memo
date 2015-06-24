@@ -62,10 +62,9 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        OKB(cryptography::KeyPair const& keys);
+        OKB(Doughnut* owner);
         ELLE_ATTRIBUTE_R(int, version);
         ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
-        ELLE_ATTRIBUTE_R(cryptography::KeyPair, keys);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
 

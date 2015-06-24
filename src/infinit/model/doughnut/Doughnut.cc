@@ -31,8 +31,7 @@ namespace infinit
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        auto res = elle::make_unique<OKB>(this->_keys);
-        res->_doughnut = const_cast<Doughnut*>(this);
+        auto res = elle::make_unique<OKB>(const_cast<Doughnut*>(this));
         return std::move(res);
       }
 

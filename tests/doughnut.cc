@@ -71,7 +71,7 @@ ELLE_TEST_SCHEDULED(ACB)
     (infinit::cryptography::Cryptosystem::rsa, 2048),
     elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
   {
-    auto block = elle::make_unique<infinit::model::doughnut::ACB>(dht.keys());
+    auto block = elle::make_unique<infinit::model::doughnut::ACB>(&dht);
     block->_doughnut = &dht;
     elle::Buffer data("\\_o<", 4);
     block->data() = elle::Buffer(data);

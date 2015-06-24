@@ -2,6 +2,7 @@
 #include <elle/serialization/json.hh>
 
 #include <infinit/model/doughnut/OKB.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
 
@@ -67,13 +68,12 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      OKB::OKB(cryptography::KeyPair const& keys)
-        : OKBHeader(keys)
+      OKB::OKB(Doughnut* owner)
+        : OKBHeader(owner->keys())
         , Super(this->_hash_address())
         , _version(-1)
         , _signature()
-        , _keys(keys)
-        , _doughnut(nullptr)
+        , _doughnut(owner)
       {}
 
       /*-----------.
@@ -106,9 +106,10 @@ namespace infinit
       {
         ++this->_version; // FIXME: idempotence in case the write fails ?
         auto sign = this->_sign();
-        this->_signature = this->_keys.k().sign(cryptography::Plain(sign));
+        this->_signature =
+          this->_doughnut->keys().k().sign(cryptography::Plain(sign));
         ELLE_DUMP("%s: sign %s with %s: %f",
-                  *this, sign, this->_keys.k(), this->_signature);
+                  *this, sign, this->_doughnut->keys().k(), this->_signature);
       }
 
       bool
@@ -148,7 +149,6 @@ namespace infinit
         , Super(input)
         , _version(-1)
         , _signature()
-        , _keys()
         , _doughnut(nullptr)
       {
         this->_serialize(input);

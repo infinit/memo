@@ -40,7 +40,7 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        ACB(cryptography::KeyPair const& keys);
+        ACB(Doughnut* owner);
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE_R(ACL, acl);

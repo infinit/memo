@@ -48,8 +48,8 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      ACB::ACB(cryptography::KeyPair const& keys)
-        : Super(keys)
+      ACB::ACB(Doughnut* owner)
+        : Super(owner)
         , _acl()
       {}
 
