@@ -72,7 +72,6 @@ ELLE_TEST_SCHEDULED(ACB)
     elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
   {
     auto block = elle::make_unique<infinit::model::doughnut::ACB>(&dht);
-    block->_doughnut = &dht;
     elle::Buffer data("\\_o<", 4);
     block->data() = elle::Buffer(data);
     ELLE_LOG("store block")
