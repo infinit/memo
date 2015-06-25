@@ -21,16 +21,43 @@ namespace infinit
   {
     namespace doughnut
     {
+      class PlainMutableBlock: public blocks::MutableBlock
+      {
+      public:
+        typedef blocks::MutableBlock Super;
+        PlainMutableBlock()
+        : Super(Address::random()) {}
+        PlainMutableBlock(elle::serialization::Serializer& input)
+        : Super(input) {}
+      };
+      static const elle::serialization::Hierarchy<blocks::Block>::
+      Register<PlainMutableBlock> _register_pmb_serialization("PMB");
+      class PlainImmutableBlock: public blocks::ImmutableBlock
+      {
+      public:
+        PlainImmutableBlock()
+        : Super(Address::random()) {}
+        PlainImmutableBlock(elle::serialization::Serializer& input)
+        : Super(input)
+        {}
+        typedef blocks::ImmutableBlock Super;
+      };
+      static const elle::serialization::Hierarchy<blocks::Block>::
+      Register<PlainImmutableBlock> _register_pib_serialization("PIB");
       Doughnut::Doughnut(cryptography::KeyPair keys,
-                         std::unique_ptr<overlay::Overlay> overlay)
+                         std::unique_ptr<overlay::Overlay> overlay,
+                         bool plain)
         : _overlay(std::move(overlay))
         , _keys(std::move(keys))
+        , _plain(plain)
       {}
 
       std::unique_ptr<blocks::MutableBlock>
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
+        if (_plain)
+           return elle::make_unique<PlainMutableBlock>();
         auto res = elle::make_unique<OKB>(const_cast<Doughnut*>(this));
         return std::move(res);
       }
@@ -39,7 +66,10 @@ namespace infinit
       Doughnut::_make_immutable_block(elle::Buffer content) const
       {
         ELLE_TRACE_SCOPE("%s: create CHB", *this);
-        return elle::make_unique<CHB>(std::move(content));
+        if (_plain)
+          return elle::make_unique<PlainImmutableBlock>();
+        else
+          return elle::make_unique<CHB>(std::move(content));
       }
 
       void

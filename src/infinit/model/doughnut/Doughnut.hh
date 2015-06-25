@@ -23,7 +23,8 @@ namespace infinit
       `-------------*/
       public:
         Doughnut(infinit::cryptography::KeyPair keys,
-                 std::unique_ptr<overlay::Overlay> overlay);
+                 std::unique_ptr<overlay::Overlay> overlay,
+                 bool plain = false);
         ELLE_ATTRIBUTE(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE_R(infinit::cryptography::KeyPair, keys);
 
@@ -49,6 +50,7 @@ namespace infinit
       private:
         std::unique_ptr<Peer>
         _owner(Address const& address, overlay::Operation op) const;
+        ELLE_ATTRIBUTE(bool, plain);
       };
     }
   }
