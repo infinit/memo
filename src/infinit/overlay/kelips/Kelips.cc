@@ -623,7 +623,7 @@ namespace kelips
       }
       filterAndInsert(available, n, res);
     }
-    assert(res.size() == _config.gossip.files || res.size() == _state.files.size());
+    assert(res.size() == unsigned(_config.gossip.files) || res.size() == _state.files.size());
     return res;
   }
 
@@ -1078,7 +1078,7 @@ namespace kelips
     std::default_random_engine& gen)
   {
     std::vector<Address> res;
-    if (count >= candidates.size())
+    if (unsigned(count) >= candidates.size())
     {
       for (auto const& e: candidates)
         res.push_back(e.first);
@@ -1110,7 +1110,7 @@ namespace kelips
       proba_sum += 1.0 / pow(v, 2);
     }
     // roll
-    while (res.size() < count)
+    while (res.size() < unsigned(count))
     {
       std::uniform_real_distribution<double> distribution(0.0, proba_sum);
       double target = distribution(gen);
@@ -1140,9 +1140,9 @@ namespace kelips
   {
     std::map<Address, int> group_of;
     std::map<Address, Duration> candidates;
-    for (int i=0; i<_state.contacts.size(); ++i)
+    for (unsigned int i=0; i<_state.contacts.size(); ++i)
     {
-      if (i == _group)
+      if (i == unsigned(_group))
         continue;
       for (auto const& c: _state.contacts[i])
       {
