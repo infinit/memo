@@ -21,7 +21,8 @@ struct ACLEntry
   bool write;
   elle::Buffer token;
 };
-DAS_MODEL(ACLEntry, (key, read, write, token));
+DAS_MODEL(ACLEntry, (key, read, write, token), DasACLEntry);
+DAS_MODEL_DEFAULT(ACLEntry, DasACLEntry);
 DAS_MODEL_SERIALIZE(ACLEntry);
 
 namespace infinit
