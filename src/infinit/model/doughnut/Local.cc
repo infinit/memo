@@ -86,7 +86,7 @@ namespace infinit
       {
         auto data = this->_storage->get(address);
         elle::IOStream s(data.istreambuf());
-        Serializer::SerializerIn input(s);
+        Serializer::SerializerIn input(s, false);
         return input.deserialize<std::unique_ptr<blocks::Block>>();
       }
 
