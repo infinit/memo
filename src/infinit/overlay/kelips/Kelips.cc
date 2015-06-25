@@ -999,6 +999,27 @@ namespace kelips
     int ttl, int retries)
   {
     int fg = group_of(file);
+    if (fg == _group)
+    {
+      auto it = _state.files.find(file);
+      if (it != _state.files.end())
+      {
+        Address owner = it->second.home_node;
+        if (owner == _self)
+        {
+          RpcEndpoint res;
+          endpoint_to_endpoint(_local_endpoint, res);
+          return res;
+        }
+        auto itcontact = _state.contacts[_group].find(owner);
+        if (itcontact != _state.contacts[_group].end())
+        {
+          RpcEndpoint res;
+          endpoint_to_endpoint(itcontact->second.endpoint, res);
+          return res;
+        }
+      }
+    }
     boost::optional<RpcEndpoint> res;
     T p;
     p.sender = _self;
