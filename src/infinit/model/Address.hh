@@ -38,7 +38,7 @@ namespace infinit
       static Address const null;
     private:
       friend
-      class elle::serialization::Serialize<infinit::model::Address>;
+      struct elle::serialization::Serialize<infinit::model::Address>;
     };
 
     std::ostream&
