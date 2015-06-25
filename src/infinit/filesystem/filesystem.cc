@@ -570,7 +570,7 @@ namespace infinit
     {
       if (!_files.empty())
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
-      if (&_parent == nullptr)
+      if (_parent.get() == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
       _parent->_files.erase(_name);
       _parent->_changed();
