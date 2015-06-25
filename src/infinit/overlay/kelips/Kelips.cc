@@ -266,6 +266,7 @@ namespace kelips
              std::unique_ptr<infinit::storage::Storage> storage)
   : Local(std::move(storage), config.port)
   , _config(config)
+  , _next_id(1)
   {
     start();
   }
@@ -368,6 +369,7 @@ namespace kelips
         }
         CASE(Ping)
         {
+          (void)p;
           packet::Pong r;
           r.sender = _self;
           r.remote_endpoint = source;
