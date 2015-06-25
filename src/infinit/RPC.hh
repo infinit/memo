@@ -2,6 +2,7 @@
 # define INFINIT_RPC_HH
 
 # include <elle/serialization/json.hh>
+# include <elle/serialization/binary.hh>
 # include <elle/log.hh>
 
 # include <reactor/network/exception.hh>
@@ -168,7 +169,7 @@ namespace infinit
         {
           auto channel = channels.accept();
           auto request = channel.read();
-          elle::serialization::json::SerializerIn input(request);
+          elle::serialization::binary::SerializerIn input(request, false);
           std::string name;
           input.serialize("procedure", name);
           auto it = this->_rpcs.find(name);
@@ -177,7 +178,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
           protocol::Packet response;
           {
-            elle::serialization::json::SerializerOut output(response);
+            elle::serialization::binary::SerializerOut output(response, false);
             try
             {
               it->second->handle(input, output);
@@ -300,7 +301,7 @@ namespace infinit
         protocol::Packet call;
         ELLE_DEBUG("%s: build request", self)
         {
-          elle::serialization::json::SerializerOut output(call);
+          elle::serialization::binary::SerializerOut output(call, false);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
         }
@@ -310,7 +311,7 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
-        elle::serialization::json::SerializerIn input(response);
+        elle::serialization::binary::SerializerIn input(response, false);
         bool success = false;
         input.serialize("success", success);
         ELLE_ASSERT(success);
