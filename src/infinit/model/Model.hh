@@ -22,7 +22,7 @@ namespace infinit
       Model();
       template <typename Block>
       std::unique_ptr<Block>
-      make_block(elle::Buffer data = {}) const;
+      make_block(elle::Buffer data = elle::Buffer()) const;
       void
       store(blocks::Block& block, StoreMode mode = STORE_ANY);
       std::unique_ptr<blocks::Block>
