@@ -13,6 +13,10 @@ namespace kelips
 {
   typedef boost::asio::ip::tcp::endpoint RpcEndpoint;
   typedef boost::asio::ip::udp::endpoint GossipEndpoint;
+  struct PrettyGossipEndpoint: public GossipEndpoint
+  {
+    using GossipEndpoint::GossipEndpoint;
+  };
   typedef infinit::model::Address Address;
   typedef std::chrono::time_point<std::chrono::steady_clock> Time;
   typedef Time::duration Duration;
@@ -91,7 +95,7 @@ namespace kelips
     int ping_interval_ms;
     int ping_timeout_ms;
     GossipConfiguration gossip;
-    std::vector<GossipEndpoint> bootstrap_nodes;
+    std::vector<PrettyGossipEndpoint> bootstrap_nodes;
     int wait; // wait for 'wait' nodes before starting
   };
   namespace packet

@@ -3,6 +3,9 @@
 #include <infinit/storage/Filesystem.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
+#include <elle/serialization/binary.hh>
+#include <elle/serialization/binary/SerializerIn.hh>
+#include <elle/serialization/binary/SerializerOut.hh>
 #include <elle/format/base64.hh>
 #include <reactor/network/buffer.hh>
 #include <reactor/exception.hh>
@@ -17,23 +20,49 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
+typedef elle::serialization::Binary Serializer;
+
 namespace elle
 {
   namespace serialization
   {
-    template<typename T>
-    struct SerializeEndpoint
+    template<>
+    struct Serialize<kelips::PrettyGossipEndpoint>
     {
       typedef std::string Type;
-      static std::string convert(T& ep)
+      static std::string convert(kelips::PrettyGossipEndpoint& ep)
       {
         return ep.address().to_string() + ":" + std::to_string(ep.port());
       }
-      static T convert(std::string& repr)
+      static kelips::PrettyGossipEndpoint convert(std::string& repr)
       {
         size_t sep = repr.find_first_of(':');
         auto addr = boost::asio::ip::address::from_string(repr.substr(0, sep));
         int port = std::stoi(repr.substr(sep + 1));
+        return kelips::PrettyGossipEndpoint(addr, port);
+      }
+    };
+
+    template<typename T>
+    struct SerializeEndpoint
+    {
+      typedef elle::Buffer Type;
+      static Type convert(T& ep)
+      {
+        Type res;
+        auto addr = ep.address().to_v4().to_bytes();
+        res.append(addr.data(), addr.size());
+        unsigned short port = ep.port();
+        res.append(&port, 2);
+        return res;
+      }
+      static T convert(elle::Buffer& repr)
+      {
+        ELLE_ASSERT(repr.size() == 6);
+        unsigned short port;
+        memcpy(&port, &repr[4], 2);
+        auto addr = boost::asio::ip::address_v4(
+          std::array<unsigned char, 4>{{repr[0], repr[1], repr[2], repr[3]}});
         return T(addr, port);
       }
     };
@@ -195,7 +224,7 @@ namespace kelips
     {
       elle::Buffer buf;
       elle::IOStream stream(buf.ostreambuf());
-      elle::serialization::json::SerializerOut output(stream, false);
+      Serializer::SerializerOut output(stream, false);
       output.serialize_forward((packet::Packet const&)packet);
       //const_cast<T&>(packet).serialize(output);
       return buf;
@@ -287,7 +316,7 @@ namespace kelips
     {
       _config.node_id = Address::random();
       std::cout << "Generating node_id:" << std::endl;
-      elle::serialization::json::SerializerOut output(std::cout);
+      elle::serialization::json::SerializerOut output(std::cout, false);
       output.serialize_forward(_config.node_id);
     }
     _self = _config.node_id;
@@ -344,7 +373,7 @@ namespace kelips
         //deserialize
         std::unique_ptr<packet::Packet> packet;
         elle::IOStream stream(buf.istreambuf());
-        elle::serialization::json::SerializerIn input(stream);
+        Serializer::SerializerIn input(stream, false);
         try
         {
           input.serialize_forward(packet);
