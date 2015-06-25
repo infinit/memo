@@ -8,9 +8,12 @@
 #include <infinit/RPC.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/Model.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
+
+typedef elle::serialization::Binary Serializer;
 
 namespace infinit
 {
@@ -45,8 +48,8 @@ namespace infinit
       deserialize(elle::Buffer const& data)
       {
         elle::IOStream s(data.istreambuf());
-        typename Serializer::SerializerIn input(s);
-        return input.deserialize<T>();
+        typename Serializer::SerializerIn input(s, false);
+        return input.template deserialize<T>();
       }
 
       void
@@ -57,7 +60,7 @@ namespace infinit
         {
           auto previous =
             deserialize<std::unique_ptr<blocks::Block>,
-                        elle::serialization::Json>
+                        elle::serialization::Binary>
             (this->_storage->get(block.address()));
           if (!block.validate(*previous))
             throw elle::Error("block validation failed");
@@ -70,7 +73,7 @@ namespace infinit
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());
-          elle::serialization::json::SerializerOut output(s);
+          Serializer::SerializerOut output(s, false);
           output.serialize_forward(block);
         }
         this->_storage->set(block.address(), data,
@@ -83,7 +86,7 @@ namespace infinit
       {
         auto data = this->_storage->get(address);
         elle::IOStream s(data.istreambuf());
-        elle::serialization::json::SerializerIn input(s);
+        Serializer::SerializerIn input(s);
         return input.deserialize<std::unique_ptr<blocks::Block>>();
       }
 
