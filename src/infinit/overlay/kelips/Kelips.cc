@@ -943,24 +943,31 @@ namespace kelips
     infinit::overlay::Operation op)
   {
     if (op == infinit::overlay::OP_INSERT)
-      return lookup<packet::PutFileRequest>(file, timeout);
+      return lookup<packet::PutFileRequest>(file, timeout,
+        _config.query_put_ttl, _config.query_put_retries);
     else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
     {
       try
       {
-        return lookup<packet::GetFileRequest>(file, timeout);
+        return lookup<packet::GetFileRequest>(file, timeout,
+          _config.query_get_ttl, _config.query_get_retries
+          );
       }
       catch (reactor::Timeout const& e)
       {
         ELLE_LOG("%s: get failed on %x, trying put", *this, file);
-        return lookup<packet::PutFileRequest>(file, timeout);
+        return lookup<packet::PutFileRequest>(file, timeout,
+          _config.query_put_ttl, _config.query_put_retries
+          );
       }
     }
     else
-      return lookup<packet::GetFileRequest>(file, timeout);
+      return lookup<packet::GetFileRequest>(file, timeout,
+        _config.query_get_ttl, _config.query_get_retries);
   }
   template<typename T>
-  RpcEndpoint Node::lookup(Address file, reactor::DurationOpt timeout)
+  RpcEndpoint Node::lookup(Address file, reactor::DurationOpt timeout,
+    int ttl, int retries)
   {
     int fg = group_of(file);
     boost::optional<RpcEndpoint> res;
@@ -969,11 +976,11 @@ namespace kelips
     p.originAddress = _self;
     endpoint_to_endpoint(_local_endpoint, p.originEndpoint);
     p.fileAddress = file;
-    p.ttl = _config.query_ttl; // 3 * ceil(log(pow(_config.k, 2)));
+    p.ttl = ttl; // 3 * ceil(log(pow(_config.k, 2)));
     elle::With<reactor::Scope>() << [&](reactor::Scope& s)
     {
       s.run_background("get address", [&] {
-          for (int i=0; i < _config.query_retries; ++i)
+          for (int i=0; i < retries; ++i)
           {
             auto r = std::make_shared<PendingRequest>();
             r->barrier.close();
@@ -1022,7 +1029,7 @@ namespace kelips
     ELLE_WARN("%s: failed request for %x", *this, file);
     throw reactor::Timeout(timeout ?
       *timeout
-      : boost::posix_time::milliseconds(_config.query_timeout_ms * _config.query_retries));
+      : boost::posix_time::milliseconds(_config.query_timeout_ms * retries));
   }
 
 
@@ -1316,9 +1323,11 @@ namespace kelips
     s.serialize("port", port);
     s.serialize("k", k);
     s.serialize("max_other_contacts", max_other_contacts);
-    s.serialize("query_retries", query_retries);
+    s.serialize("query_get_retries", query_get_retries);
+    s.serialize("query_put_retries", query_put_retries);
     s.serialize("query_timeout_ms", query_timeout_ms);
-    s.serialize("query_ttl", query_ttl);
+    s.serialize("query_get_ttl", query_get_ttl);
+    s.serialize("query_put_ttl", query_put_ttl);
     s.serialize("contact_timeout_ms", contact_timeout_ms);
     s.serialize("file_timeout_ms", file_timeout_ms);
     s.serialize("ping_interval_ms", ping_interval_ms);

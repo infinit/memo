@@ -81,9 +81,11 @@ namespace kelips
     int port;
     int k; // number of groups
     int max_other_contacts; // max number of contacts on each other group
-    int query_retries;    // query retry
+    int query_get_retries;    // query retry
+    int query_put_retries;    // query retry
     int query_timeout_ms; // query timeout
-    int query_ttl; // query initial ttl
+    int query_get_ttl; // query initial ttl
+    int query_put_ttl; // query initial ttl
     int contact_timeout_ms; // entry lifetime before supression
     int file_timeout_ms; // entry lifetime before supression
     int ping_interval_ms;
@@ -129,7 +131,8 @@ namespace kelips
     void reload_state();
     void wait(int contacts);
     template<typename T>
-    RpcEndpoint lookup(infinit::model::Address address, reactor::DurationOpt timeout);
+    RpcEndpoint lookup(infinit::model::Address address, reactor::DurationOpt timeout,
+                       int ttl, int retries);
     void send(elle::Buffer const& data, GossipEndpoint endpoint);
     int group_of(Address const& address); // consistent address -> group mapper
     void gossipListener();
