@@ -85,6 +85,17 @@ namespace infinit
         virtual
         void
         _sign(elle::serialization::SerializerOut& s) const;
+        bool
+        _check_signature(cryptography::PublicKey const& key,
+                         cryptography::Signature const& signature,
+                         elle::Buffer const& data,
+                         std::string const& name) const;
+
+        template <typename T>
+        bool
+        _validate_version(Block const& other_,
+                          int T::*member,
+                          int version) const;
       private:
         elle::Buffer
         _sign() const;
@@ -105,5 +116,6 @@ namespace infinit
   }
 }
 
+# include <infinit/model/doughnut/OKB.hxx>
 
 #endif

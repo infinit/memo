@@ -498,12 +498,13 @@ namespace infinit
     Directory::_changed(bool set_mtime)
     {
       ELLE_DEBUG("Directory changed: %s with %s entries", this, _files.size());
+      elle::Buffer data;
       {
-        _block->data().reset();
-        elle::IOStream os(_block->data().ostreambuf());
+        elle::IOStream os(data.ostreambuf());
         elle::serialization::json::SerializerOut output(os, version);
         output.serialize_forward(*this);
       }
+      _block->data(data);
       if (set_mtime && _parent)
       {
         FileData& f = _parent->_files.at(_name);
@@ -996,9 +997,13 @@ namespace infinit
         {
           return nullptr;
         }
-        _first_block->data().size(offset + sizeof(Address));
-        memset(_first_block->data().mutable_contents() + sz, 0,
-               offset + sizeof(Address) - sz);
+        this->_first_block->data(
+          [offset, sz] (elle::Buffer& data)
+          {
+            data.size(offset + sizeof(Address));
+            memset
+              (data.mutable_contents() + sz, 0, offset + sizeof(Address) - sz);
+          });
       }
       char zeros[sizeof(Address)];
       memset(zeros, 0, sizeof(Address));
@@ -1175,7 +1180,8 @@ namespace infinit
         _switch_to_multi(true);
       if (!_multi())
       {
-        _first_block->data().size(new_size);
+        _first_block->data
+          ([new_size] (elle::Buffer& data) { data.size(new_size); });
       }
       else
       {
@@ -1202,7 +1208,11 @@ namespace infinit
           _owner.block_store()->remove(addr[i]);
           _blocks.erase(i-1);
         }
-        _first_block->data().size((drop_from+2)*sizeof(Address));
+        _first_block->data(
+          [drop_from] (elle::Buffer& data)
+          {
+            data.size((drop_from + 2) * sizeof(Address));
+          });
         // last block surviving the cut might need resizing
         if (drop_from >=0 && !memcmp(addr[drop_from+1].value(), zero, sizeof(Address::Value)))
         {
@@ -1222,7 +1232,8 @@ namespace infinit
             bl = ent.block.get();
             ent.dirty = true;
           }
-          bl->data().size(new_size % block_size);
+          bl->data([new_size, block_size] (elle::Buffer& data)
+                   { data.size(new_size % block_size); });
         }
         header.total_size = new_size;
         _header(header);
@@ -1240,7 +1251,8 @@ namespace infinit
           else
             _first_block = elle::cast<Block>::runtime
               (_owner.block_store()->fetch(addr[1]));
-          _first_block->data().size(new_size);
+          _first_block->data
+            ([new_size] (elle::Buffer& data) { data.size(new_size); });
           _blocks.clear();
         }
       }
@@ -1312,7 +1324,7 @@ namespace infinit
         (_owner.block_store()->fetch(_parent->_files.at(_name).address));
       uint64_t current_size = _first_block->data().size();
       auto new_block = _owner.block_store()->make_block<Block>();
-      new_block->data() = std::move(_first_block->data());
+      new_block->data(elle::Buffer((_first_block->data())));
       _blocks.insert(std::make_pair(0, CacheEntry{std::move(new_block), true}));
       /*
       // current first_block becomes block[0], first_block becomes the index
@@ -1321,7 +1333,8 @@ namespace infinit
       _parent->_files.at(_name).address = _first_block->address();
       _parent->_changed();
       */
-      _first_block->data().size(sizeof(Address)* 2);
+      _first_block->data
+        ([] (elle::Buffer& data) { data.size(sizeof(Address)* 2); });
       // store block size in headers
       Header h { Header::current_version, default_block_size, 1, current_size};
       _header(h);
@@ -1335,7 +1348,7 @@ namespace infinit
       {
         auto& b = _blocks.at(0);
         int64_t old_size = b.block->data().size();
-        b.block->data().size(default_block_size);
+        b.block->data([] (elle::Buffer& data) {data.size(default_block_size);});
         if (old_size != default_block_size)
           memset(b.block->data().mutable_contents() + old_size, 0, default_block_size - old_size);
       }
@@ -1499,7 +1512,11 @@ namespace infinit
         }
         else
         {
-          memcpy(buffer.mutable_contents(), &block->data()[block_offset], size);
+          block->data(
+            [&buffer, block_offset, size] (elle::Buffer& data)
+            {
+              memcpy(buffer.mutable_contents(), &data[block_offset], size);
+            });
           ELLE_DEBUG("read %s bytes", size);
         }
         return size;
@@ -1539,7 +1556,8 @@ namespace infinit
         if (offset + size > block->data().size())
         {
           int64_t old_size = block->data().size();
-          block->data().size(offset + size);
+          block->data
+            ([offset, size] (elle::Buffer& data){ data.size(offset + size); });
           if (old_size < offset)
             memset(block->data().mutable_contents() + old_size, 0, offset - old_size);
         }
@@ -1581,14 +1599,18 @@ namespace infinit
         {
           growth = true;
           int64_t old_size = block->data().size();
-          block->data().size(block_offset + size);
+          block->data(
+            [block_offset, size] (elle::Buffer& data)
+            {
+              data.size(block_offset + size);
+            });
           ELLE_DEBUG("Growing block of %s", block_offset + size - old_size);
           if (old_size < block_offset)
           { // fill with zeroes
             memset(block->data().mutable_contents() + old_size, 0, block_offset - old_size);
           }
         }
-        memcpy(&block->data()[block_offset], buffer.mutable_contents(), size);
+        memcpy(block->data().contents() + block_offset, buffer.mutable_contents(), size);
         if (growth)
         { // check if file size was increased
           File::Header h = _owner->_header();

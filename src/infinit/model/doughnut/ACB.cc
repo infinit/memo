@@ -23,6 +23,7 @@ struct ACLEntry
 };
 DAS_MODEL(ACLEntry, (key, read, write, token), DasACLEntry);
 DAS_MODEL_DEFAULT(ACLEntry, DasACLEntry);
+DAS_MODEL_DEFINE(ACLEntry, (key, read, write), DasACLEntryPermissions);
 DAS_MODEL_SERIALIZE(ACLEntry);
 
 namespace infinit
@@ -31,27 +32,18 @@ namespace infinit
   {
     namespace doughnut
     {
-      ACL::ACL()
-        : _contents()
-        , _version(-1)
-        , _signature()
-      {}
-
-      void
-      ACL::serialize(elle::serialization::Serializer& s)
-      {
-        s.serialize("contents", this->_contents);
-        s.serialize("version", this->_version);
-        s.serialize("signature", this->_signature);
-      }
-
       /*-------------.
       | Construction |
       `-------------*/
 
       ACB::ACB(Doughnut* owner)
         : Super(owner)
+        , _editor(-1)
+        , _owner_token()
         , _acl()
+        , _acl_changed(true)
+        , _data_version(-1)
+        , _data_signature()
       {}
 
       /*-----------.
@@ -61,80 +53,142 @@ namespace infinit
       bool
       ACB::_validate(blocks::Block const& previous) const
       {
-        if (!this->_validate())
+        if (!Super::_validate(previous))
           return false;
-        auto previous_acb = dynamic_cast<ACB const*>(&previous);
-        return previous_acb && this->version() > previous_acb->version();
+        if (!this->_validate_version<ACB>
+            (previous, &ACB::_data_version, this->_data_version))
+          return false;
+        return true;
       }
 
       bool
       ACB::_validate() const
       {
-        if (!Super::_validate())
-          return false;
+        ELLE_DEBUG("%s: check owner signature", *this)
+          if (!Super::_validate())
+            return false;
+        ACLEntry* entry = nullptr;
+        if (this->_editor != -1)
+        {
+          ELLE_DEBUG_SCOPE("%s: check author has write permissions", *this);
+          if (this->_acl == Address::null || this->_editor < 0)
+            return false;
+          auto acl = this->doughnut()->fetch(this->_acl);
+          std::vector<ACLEntry> entries;
+          elle::IOStream input(acl->data().istreambuf());
+          elle::serialization::json::SerializerIn s(input);
+          s.serialize("entries", entries);
+          if (this->_editor >= signed(entries.size()))
+            return false;
+          entry = &entries[this->_editor];
+          if (!entry->write)
+            return false;
+        }
+        ELLE_DEBUG("%s: check author signature", *this)
+        {
+          auto sign = this->_data_sign();
+          auto& key = entry ? entry->key : this->owner_key();
+          if (!this->_check_signature(key, this->_data_signature, sign, "data"))
+            return false;
+        }
         return true;
       }
 
       void
       ACB::_seal()
       {
-        ELLE_TRACE_SCOPE("%s: update ACL", *this);
-        // auto mine = this->doughnut()->keys().K() == this->owner_key();
-        auto secret = cryptography::SecretKey::generate
-          (cryptography::cipher::Algorithm::aes256, 256);
-        ELLE_DUMP("%s: new block secret: %s", *this, secret);
-        this->_owner_token =
-          std::move(this->owner_key().encrypt(secret).buffer());
-        std::vector<ACLEntry> entries;
-        auto acl_address = this->_acl.contents();
-        if (acl_address != Address::null)
+        if (this->_acl_changed)
         {
-          auto acl = this->doughnut()->fetch(acl_address);
-          ELLE_DUMP("%s: previous ACL: %s", *this, *acl);
-          elle::IOStream input(acl->data().istreambuf());
-          elle::serialization::json::SerializerIn s(input);
-          s.serialize("entries", entries);
+          ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
+          Super::_seal();
+          this->_acl_changed = false;
         }
-        bool changed = false;
-        int idx = 0;
-        for (auto& e: entries)
+        if (this->_data_changed)
         {
-          if (e.write)
+          ++this->_data_version; // FIXME: idempotence in case the write fails ?
+          ELLE_TRACE_SCOPE("%s: data changed, seal", *this);
+          if (this->doughnut()->keys().K() == this->owner_key())
+            this->_editor = -1;
+          auto secret = cryptography::SecretKey::generate
+            (cryptography::cipher::Algorithm::aes256, 256);
+          ELLE_DUMP("%s: new block secret: %s", *this, secret);
+          this->_owner_token =
+            std::move(this->owner_key().encrypt(secret).buffer());
+          std::vector<ACLEntry> entries;
+          auto acl_address = this->_acl;
+          if (acl_address != Address::null)
           {
-            changed = true;
-            e.token = std::move(e.key.encrypt(secret).buffer());
-          }
-          if (e.key == this->doughnut()->keys().K())
-            this->_editor = idx;
-          ++idx;
-        }
-        if (changed)
-        {
-          ELLE_TRACE_SCOPE("%s: store new ACL", *this);
-          elle::Buffer new_acl;
-          {
-            elle::IOStream output(new_acl.ostreambuf());
-            elle::serialization::json::SerializerOut s(output);
+            auto acl = this->doughnut()->fetch(acl_address);
+            ELLE_DUMP("%s: previous ACL: %s", *this, *acl);
+            elle::IOStream input(acl->data().istreambuf());
+            elle::serialization::json::SerializerIn s(input);
             s.serialize("entries", entries);
           }
-          auto new_acl_block =
-            this->doughnut()->make_block<blocks::ImmutableBlock>(new_acl);
-          this->doughnut()->store(*new_acl_block);
-          this->_acl._contents = new_acl_block->address();
+          bool changed = false;
+          int idx = 0;
+          for (auto& e: entries)
+          {
+            if (e.write)
+            {
+              changed = true;
+              e.token = std::move(e.key.encrypt(secret).buffer());
+            }
+            if (e.key == this->doughnut()->keys().K())
+              this->_editor = idx;
+            ++idx;
+          }
+          if (changed)
+          {
+            ELLE_TRACE_SCOPE("%s: store new ACL", *this);
+            elle::Buffer new_acl;
+            {
+              elle::IOStream output(new_acl.ostreambuf());
+              elle::serialization::json::SerializerOut s(output);
+              s.serialize("entries", entries);
+            }
+            auto new_acl_block =
+              this->doughnut()->make_block<blocks::ImmutableBlock>(new_acl);
+            this->doughnut()->store(*new_acl_block);
+            this->_acl = new_acl_block->address();
+          }
+          auto sign = this->_data_sign();
+          auto const& key = this->doughnut()->keys().k();
+          this->_data_signature = key.sign(cryptography::Plain(sign));
+          ELLE_DUMP("%s: sign %s with %s: %f",
+                    *this, sign, key, this->_data_signature);
         }
-        Super::_seal();
-        if (changed)
+      }
+
+      elle::Buffer
+      ACB::_data_sign() const
+      {
+        elle::Buffer res;
         {
-          this->doughnut()->remove(acl_address);
+          elle::IOStream output(res.ostreambuf());
+          elle::serialization::json::SerializerOut s(output);
+          s.serialize("block_key", this->key());
+          s.serialize("version", this->_data_version);
+          s.serialize("data", this->data());
+          s.serialize("owner_token", this->_owner_token);
+          s.serialize("acl", this->_acl);
         }
+        return res;
       }
 
       void
       ACB::_sign(elle::serialization::SerializerOut& s) const
       {
-        Super::_sign(s);
-        s.serialize("owner_token", this->_owner_token);
-        s.serialize("acl_address", this->_acl._contents);
+        std::vector<ACLEntry> entries;
+        if (this->_acl != Address::null)
+        {
+          auto acl = this->doughnut()->fetch(this->_acl);
+          elle::IOStream input(acl->data().istreambuf());
+          elle::serialization::json::SerializerIn s(input);
+          s.serialize("entries", entries);
+        }
+        s.elle::serialization::Serializer::serialize(
+          "acls", entries,
+          elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
       }
 
       /*--------------.
@@ -143,6 +197,12 @@ namespace infinit
 
       ACB::ACB(elle::serialization::Serializer& input)
         : Super(input)
+        , _editor(-2)
+        , _owner_token()
+        , _acl()
+        , _acl_changed(false)
+        , _data_version(-1)
+        , _data_signature()
       {
         this->_serialize(input);
       }
@@ -160,6 +220,8 @@ namespace infinit
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl);
+        s.serialize("data_version", this->_data_version);
+        s.serialize("data_signature", this->_data_signature);
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

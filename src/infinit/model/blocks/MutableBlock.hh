@@ -26,6 +26,7 @@ namespace infinit
         MutableBlock(Address address);
         MutableBlock(Address address, elle::Buffer data);
         friend class infinit::model::Model;
+        bool _data_changed;
 
       /*--------------.
       | Serialization |
@@ -44,8 +45,10 @@ namespace infinit
       `--------*/
       public:
         using Super::data;
-        elle::Buffer&
-        data();
+        void
+        data(elle::Buffer data);
+        void
+        data(std::function<void (elle::Buffer&)> transformation);
       };
     }
   }

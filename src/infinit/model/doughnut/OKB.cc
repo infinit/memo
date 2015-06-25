@@ -86,9 +86,11 @@ namespace infinit
         elle::Buffer res;
         {
           // FIXME: use binary to sign
-          elle::IOStream s(res.ostreambuf());
-          elle::serialization::json::SerializerOut output(s, false);
-          this->_sign(output);
+          elle::IOStream output(res.ostreambuf());
+          elle::serialization::json::SerializerOut s(output, false);
+          s.serialize("block_key", this->_key);
+          s.serialize("version", this->_version);
+          this->_sign(s);
         }
         return res;
       }
@@ -96,9 +98,7 @@ namespace infinit
       void
       OKB::_sign(elle::serialization::SerializerOut& s) const
       {
-        s.serialize("block_key", this->_key);
         s.serialize("data", this->data());
-        s.serialize("version", this->_version);
       }
 
       void
@@ -117,8 +117,10 @@ namespace infinit
       {
         if (!this->_validate())
           return false;
-        auto previous_okb = dynamic_cast<OKB const*>(&previous);
-        return previous_okb && this->version() > previous_okb->version();
+        if (!this->_validate_version<OKB>
+            (previous, &OKB::_version, this->version()))
+          return false;
+        return true;
       }
 
       bool
@@ -127,17 +129,30 @@ namespace infinit
         if (!static_cast<OKBHeader const*>(this)->validate(this->address()))
           return false;
         auto sign = this->_sign();
-        ELLE_DUMP("%s: check %f signs %s with %s",
-                  *this, this->_signature, sign, this->_owner_key)
-          if (!this->_owner_key.verify(this->_signature,
-                                       cryptography::Plain(sign)))
-          {
-            ELLE_TRACE("%s: data signature is invalid", *this);
-            return false;
-          }
-          else
-            ELLE_DUMP("%s: data signature is valid", *this);
+        if (!this->_check_signature
+            (this->_owner_key, this->_signature, sign, "owner"))
+          return false;
         return true;
+      }
+
+      bool
+      OKB::_check_signature(cryptography::PublicKey const& key,
+                            cryptography::Signature const& signature,
+                            elle::Buffer const& data,
+                            std::string const& name) const
+      {
+        ELLE_DUMP("%s: check %f signs %s with %s",
+                  *this, signature, data, key);
+        if (!key.verify(signature, cryptography::Plain(data)))
+        {
+          ELLE_TRACE("%s: %s signature is invalid", *this, name);
+          return false;
+        }
+        else
+        {
+          ELLE_DUMP("%s: %s signature is valid", *this, name);
+          return true;
+        }
       }
 
       /*--------------.

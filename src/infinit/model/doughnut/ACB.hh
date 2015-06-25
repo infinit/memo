@@ -14,18 +14,6 @@ namespace infinit
   {
     namespace doughnut
     {
-      class ACL
-      {
-      public:
-        ACL();
-        ELLE_ATTRIBUTE_R(Address, contents);
-        ELLE_ATTRIBUTE_R(int, version);
-        ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
-        friend class ACB;
-        void
-        serialize(elle::serialization::Serializer& s);
-      };
-
       class ACB
         : public OKB
       {
@@ -43,15 +31,15 @@ namespace infinit
         ACB(Doughnut* owner);
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
-        ELLE_ATTRIBUTE_R(ACL, acl);
+        ELLE_ATTRIBUTE_R(Address, acl);
+        ELLE_ATTRIBUTE(bool, acl_changed);
+        ELLE_ATTRIBUTE(int, data_version);
+        ELLE_ATTRIBUTE(cryptography::Signature, data_signature);
 
       /*-----------.
       | Validation |
       `-----------*/
       protected:
-        // virtual
-        // void
-        // _seal() override;
         virtual
         bool
         _validate(blocks::Block const& previous) const override;
@@ -64,6 +52,9 @@ namespace infinit
         virtual
         void
         _sign(elle::serialization::SerializerOut& s) const override;
+      private:
+        elle::Buffer
+        _data_sign() const;
 
       /*--------------.
       | Serialization |

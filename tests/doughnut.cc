@@ -41,11 +41,11 @@ ELLE_TEST_SCHEDULED(doughnut)
   {
     auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
     elle::Buffer data("\\_o<", 4);
-    block->data() = elle::Buffer(data);
+    block->data(elle::Buffer(data));
     ELLE_LOG("store block")
       dht.store(*block);
     elle::Buffer updated(">o_/", 4);
-    block->data() = elle::Buffer(updated);
+    block->data(elle::Buffer(updated));
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
     ELLE_LOG("store block")
@@ -73,11 +73,11 @@ ELLE_TEST_SCHEDULED(ACB)
   {
     auto block = elle::make_unique<infinit::model::doughnut::ACB>(&dht);
     elle::Buffer data("\\_o<", 4);
-    block->data() = elle::Buffer(data);
+    block->data(elle::Buffer(data));
     ELLE_LOG("store block")
       dht.store(*block);
     elle::Buffer updated(">o_/", 4);
-    block->data() = elle::Buffer(updated);
+    block->data(elle::Buffer(updated));
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
     ELLE_LOG("store block")

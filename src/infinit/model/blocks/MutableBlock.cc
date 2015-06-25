@@ -8,16 +8,26 @@ namespace infinit
     {
       MutableBlock::MutableBlock(Address address)
         : Super(address)
+        , _data_changed(true)
       {}
 
       MutableBlock::MutableBlock(Address address, elle::Buffer data)
         : Super(address, data)
+        , _data_changed(true)
       {}
 
-      elle::Buffer&
-      MutableBlock::data()
+      void
+      MutableBlock::data(elle::Buffer data)
       {
-        return this->_data;
+        this->_data = std::move(data);
+        this->_data_changed = true;
+      }
+
+      void
+      MutableBlock::data(std::function<void (elle::Buffer&)> transformation)
+      {
+        transformation(this->_data);
+        this->_data_changed = true;
       }
 
       /*--------------.
@@ -26,6 +36,7 @@ namespace infinit
 
       MutableBlock::MutableBlock(elle::serialization::Serializer& input)
         : Super(input)
+        , _data_changed(false)
       {
         this->_serialize(input);
       }

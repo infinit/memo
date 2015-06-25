@@ -19,7 +19,7 @@ namespace infinit
     Model::make_block(elle::Buffer data) const
     {
       auto res = this->_make_mutable_block();
-      res->data() = std::move(data);
+      res->data(std::move(data));
       return res;
     }
 
