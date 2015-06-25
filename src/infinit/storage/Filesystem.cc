@@ -51,10 +51,7 @@ namespace infinit
       if (!output.good())
         throw elle::Error(
           elle::sprintf("unable to open for writing: %s", path));
-      elle::IOStream input(value.istreambuf());
-      std::copy(std::istreambuf_iterator<char>(input),
-                std::istreambuf_iterator<char>(),
-                std::ostreambuf_iterator<char>(output));
+      output.write(reinterpret_cast<const char*>(value.contents()), value.size());
       if (insert && update)
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
     }
