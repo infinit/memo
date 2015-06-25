@@ -225,8 +225,11 @@ namespace infinit
       void _push_changes();
       std::unique_ptr<Block> _block;
       std::unordered_map<std::string, FileData> _files;
+      boost::posix_time::ptime _last_fetch;
       friend class FileSystem;
     };
+    static const boost::posix_time::time_duration directory_cache_time
+      = boost::posix_time::seconds(2);
 
     class FileHandle: public rfs::Handle
     {
@@ -439,6 +442,14 @@ namespace infinit
 
     void Directory::_fetch()
     {
+      auto now = boost::posix_time::microsec_clock::universal_time();
+      if (_last_fetch != boost::posix_time::not_a_date_time
+        && now - _last_fetch < directory_cache_time)
+      {
+        ELLE_DEBUG("Using directory cache");
+        return;
+      }
+      _last_fetch = now;
       _block = elle::cast<Block>::runtime
         (_owner.block_store()->fetch(_block->address()));
       std::unordered_map<std::string, FileData> local;
