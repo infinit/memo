@@ -158,7 +158,7 @@ namespace kelips
     void addLocalResults(packet::GetFileRequest* p);
     std::vector<RpcEndpoint> kelipsGet(Address file, int n);
     std::vector<RpcEndpoint> kelipsPut(Address file, int n);
-    std::unordered_map<Address, std::pair<Time, Address>> pickFiles();
+    std::unordered_multimap<Address, std::pair<Time, Address>> pickFiles();
     std::unordered_map<Address, std::pair<Time, GossipEndpoint>> pickContacts();
     std::vector<GossipEndpoint> pickOutsideTargets();
     std::vector<GossipEndpoint> pickGroupTargets();
@@ -175,6 +175,7 @@ namespace kelips
     std::unique_ptr<reactor::Thread> _emitter_thread, _listener_thread, _pinger_thread;
     std::default_random_engine _gen;
     std::unordered_map<int, std::shared_ptr<PendingRequest>> _pending_requests;
+    std::vector<Address> _promised_files; // addresses for which we accepted a put
     int _next_id;
   };
 }

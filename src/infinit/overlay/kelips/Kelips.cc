@@ -157,7 +157,7 @@ namespace kelips
       }
       // address -> (last_seen, val)
       std::unordered_map<Address, std::pair<Time, GossipEndpoint>> contacts;
-      std::unordered_map<Address, std::pair<Time, Address>> files;
+      std::unordered_multimap<Address, std::pair<Time, Address>> files;
     };
     REGISTER(Gossip, "gossip");
 
@@ -606,7 +606,15 @@ namespace kelips
     return res;
   }
 
-  std::unordered_map<Address, std::pair<Time, Address>>
+  template<typename C, typename K, typename V>
+  bool has(C const& c, K const& k, V const& v)
+  {
+    auto its = c.equal_range(k);
+    return std::find_if(its.first, its.second,
+      [&](decltype(*its.first) e) { return e.second.second == v;}) != its.second;
+  }
+
+  std::unordered_multimap<Address, std::pair<Time, Address>>
   Node::pickFiles()
   {
     // update self file last seen, this will avoid us some ifs at other places
@@ -617,40 +625,71 @@ namespace kelips
         f.second.last_seen = now();
       }
     }
-    std::unordered_map<Address, std::pair<Time, Address>> res;
+    std::unordered_multimap<Address, std::pair<Time, Address>> res;
     unsigned int max_new = _config.gossip.files / 2;
     unsigned int max_old = _config.gossip.files / 2;
     // insert new files
-    std::vector<Address> new_files;
+    std::vector<std::pair<Address, std::pair<Time, Address>>> new_files;
     for (auto const& f: _state.files)
     {
       if (f.second.gossip_count < _config.gossip.new_threshold)
-        new_files.push_back(f.first);
+        new_files.push_back(std::make_pair(f.first,
+          std::make_pair(f.second.last_seen, f.second.home_node)));
     }
-    filterAndInsert(new_files, max_new, res);
+    if (new_files.size() > max_new)
+    {
+      if (max_new < new_files.size() - max_new)
+        new_files = pick_n(new_files, max_new, _gen);
+      else
+        new_files = remove_n(new_files, new_files.size() - max_new, _gen);
+    }
+    for (auto const& nf: new_files)
+    {
+      res.insert(nf);
+    }
     // insert old files, only our own for which we can update the last_seen value
-    std::vector<Address> old_files;
+    std::vector<std::pair<Address, std::pair<Time, Address>>> old_files;
     for (auto& f: _state.files)
     {
       if (f.second.home_node == _self
         && ((now() - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
-        && res.find(f.first) == res.end()
-        )
-        old_files.push_back(f.first);
+        && !has(res, f.first, f.second.home_node))
+          old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
     }
-    filterAndInsert(old_files, max_old, res);
+    if (old_files.size() > max_old)
+    {
+      if (max_old < old_files.size() - max_old)
+        old_files = pick_n(old_files, max_old, _gen);
+      else
+        old_files = remove_n(old_files, old_files.size() - max_old, _gen);
+    }
+    for (auto const& nf: old_files)
+    {
+      res.insert(nf);
+    }
+
     // Check if we have room for more files
     if (res.size() < (unsigned)_config.gossip.files)
     {
       int n = _config.gossip.files - res.size();
       // Pick at random
-      std::vector<Address> available;
+      std::vector<std::pair<Address, std::pair<Time, Address>>> available;
       for (auto const& f: _state.files)
       {
-        if (res.find(f.first) == res.end())
-          available.push_back(f.first);
+        if (!has(res, f.first, f.second.home_node))
+          available.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
       }
-      filterAndInsert(available, n, res);
+      if (available.size() > unsigned(n))
+      {
+        if (n < signed(available.size()) - n)
+          available = pick_n(available, n, _gen);
+        else
+          available = remove_n(available, available.size() - n, _gen);
+      }
+      for (auto const& nf: available)
+      {
+        res.insert(nf);
+      }
     }
     assert(res.size() == unsigned(_config.gossip.files) || res.size() == _state.files.size());
     return res;
@@ -914,7 +953,8 @@ namespace kelips
 
   void Node::onGetFileRequest(packet::GetFileRequest* p)
   {
-    ELLE_DEBUG("%s: getFileRequest %s/%x", *this, p->request_id, p->fileAddress);
+    ELLE_LOG("%s: getFileRequest %s/%x %s/%s", *this, p->request_id, p->fileAddress,
+             p->result.size(), p->count);
     int fg = group_of(p->fileAddress);
     if (fg == _group)
     {
@@ -930,12 +970,12 @@ namespace kelips
       res.result = p->result;
       res.ttl = p->ttl;
       elle::Buffer buf = serialize(res);
-      ELLE_DEBUG("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
+      ELLE_LOG("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
       send(buf, p->originEndpoint);
       // FIXME: should we route the reply back the same path?
       return;
     }
-    ELLE_DEBUG("%s: route %s", *this, p->ttl);
+    ELLE_LOG("%s: route %s", *this, p->ttl);
     // We don't have it, route the request,
     if (p->ttl == 0)
     {
@@ -984,27 +1024,33 @@ namespace kelips
     ELLE_LOG("%s: putFileRequest %s %s %x", *this, p->ttl, p->insert_ttl, p->fileAddress);
     if (p->insert_ttl == 0)
     {
-      // Check if we already have the block
-      auto its = _state.files.equal_range(p->fileAddress);
-      auto it = std::find_if(its.first, its.second,
-        [&](decltype(*its.first) i) ->bool {
-          return i.second.home_node == _self;
-        });
-      if (it == its.second)
-      { // Nope, insert here
-        // That makes us a home node for this address, but
-        // wait until we get the RPC to store anything
-        packet::PutFileReply res;
-        res.sender = _self;
-        res.request_id = p->request_id;
-        res.origin = p->originAddress;
-        endpoint_to_endpoint(_local_endpoint, res.resultEndpoint);
-        res.fileAddress = p->fileAddress;
-        res.resultAddress = _self;
-        res.ttl = 1;
-        elle::Buffer buf = serialize(res);
-        send(buf, p->originEndpoint);
-        return;
+      // check if we didn't already accept this file
+      if (std::find(_promised_files.begin(), _promised_files.end(), p->fileAddress)
+        == _promised_files.end())
+      {
+        // Check if we already have the block
+        auto its = _state.files.equal_range(p->fileAddress);
+        auto it = std::find_if(its.first, its.second,
+          [&](decltype(*its.first) i) ->bool {
+            return i.second.home_node == _self;
+          });
+        if (it == its.second)
+        { // Nope, insert here
+          // That makes us a home node for this address, but
+          // wait until we get the RPC to store anything
+          packet::PutFileReply res;
+          res.sender = _self;
+          res.request_id = p->request_id;
+          res.origin = p->originAddress;
+          endpoint_to_endpoint(_local_endpoint, res.resultEndpoint);
+          res.fileAddress = p->fileAddress;
+          res.resultAddress = _self;
+          res.ttl = 1;
+          elle::Buffer buf = serialize(res);
+          _promised_files.push_back(p->fileAddress);
+          send(buf, p->originEndpoint);
+          return;
+        }
       }
     }
     // Forward
@@ -1315,7 +1361,7 @@ namespace kelips
       ss << "f: " << _state.files.size() << "  c:";
       for(auto const& c: _state.contacts)
         ss << c.size() << ' ';
-      ELLE_LOG("%s: %s", *this, ss.str());
+      //ELLE_LOG("%s: %s", *this, ss.str());
       // pick a target
       GossipEndpoint endpoint;
       int group;
@@ -1415,6 +1461,12 @@ namespace kelips
     if (it == _state.files.end())
       _state.files.insert(std::make_pair(block.address(),
         File{block.address(), _self, now(), Time(), 0}));
+    auto itp = std::find(_promised_files.begin(), _promised_files.end(), block.address());
+    if (itp != _promised_files.end())
+    {
+      std::swap(*itp, _promised_files.back());
+      _promised_files.pop_back();
+    }
   }
   void Node::remove(Address address)
   {
