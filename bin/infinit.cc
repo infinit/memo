@@ -247,6 +247,8 @@ public:
   std::unique_ptr<OverlayConfig> overlay;
   std::unique_ptr<infinit::cryptography::KeyPair> key;
   boost::optional<bool> plain;;
+  boost::optional<int> read_n;
+  boost::optional<int> write_n;
 
   DoughnutModelConfig(elle::serialization::SerializerIn& input)
     : ModelConfig()
@@ -259,6 +261,8 @@ public:
     s.serialize("overlay", this->overlay);
     s.serialize("key", this->key);
     s.serialize("plain", this->plain);
+    s.serialize("read_n", this->read_n);
+    s.serialize("write_n", this->write_n);
   }
   virtual
   std::unique_ptr<infinit::model::Model>
@@ -269,12 +273,16 @@ public:
         infinit::cryptography::KeyPair::generate(
           infinit::cryptography::Cryptosystem::rsa, 2048),
         overlay->make(),
-        plain && *plain);
+        plain && *plain,
+        write_n ? *write_n : 1,
+        read_n ? *read_n : 1);
     else
       return elle::make_unique<infinit::model::doughnut::Doughnut>(
         std::move(*key),
         overlay->make(),
-        plain && *plain);
+        plain && *plain,
+        write_n ? *write_n : 1,
+        read_n ? *read_n : 1);
   }
 };
 

@@ -6,6 +6,8 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh> // FIXME
 
+#include <reactor/Scope.hh>
+
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/OKB.hh>
@@ -46,10 +48,12 @@ namespace infinit
       Register<PlainImmutableBlock> _register_pib_serialization("PIB");
       Doughnut::Doughnut(cryptography::KeyPair keys,
                          std::unique_ptr<overlay::Overlay> overlay,
-                         bool plain)
+                         bool plain, int write_n, int read_n)
         : _overlay(std::move(overlay))
         , _keys(std::move(keys))
         , _plain(plain)
+        , _write_n(write_n)
+        , _read_n(read_n)
       {}
 
       std::unique_ptr<blocks::MutableBlock>
@@ -88,13 +92,43 @@ namespace infinit
           op = overlay::OP_UPDATE;
           break;
         }
-        this->_owner(block.address(), op)->store(block, mode);
+        if (_write_n == 1)
+          this->_owner(block.address(), op)->store(block, mode);
+        else
+        {
+          auto endpoints = this->_overlay->lookup(block.address(), _write_n, op);
+          elle::With<reactor::Scope>() << [&](reactor::Scope& s)
+          {
+            for (auto & e: endpoints)
+              s.run_background("store", [e, &block, mode] {
+                  elle::make_unique<Remote>(e)->store(block, mode);
+              });
+            s.wait();
+          };
+        }
       }
 
       std::unique_ptr<blocks::Block>
       Doughnut::_fetch(Address address) const
       {
-        auto res = this->_owner(address, overlay::OP_FETCH)->fetch(address);
+        std::unique_ptr<blocks::Block> res;
+        if (_read_n == 1)
+        {
+          res = this->_owner(address, overlay::OP_FETCH)->fetch(address);
+        }
+        else
+        {
+          auto endpoints = this->_overlay->lookup(address, _write_n, overlay::OP_FETCH);
+          std::vector<std::unique_ptr<blocks::Block>> blocks;
+          elle::With<reactor::Scope>() << [&](reactor::Scope& s)
+          {
+            for (auto & e: endpoints)
+              s.run_background("fetch", [e,&blocks,address] {
+                  blocks.push_back(elle::make_unique<Remote>(e)->fetch(address));
+              });
+          };
+          res = std::move(blocks.front());
+        }
         if (auto okb = elle::cast<OKB>::runtime(res))
         {
           okb->_doughnut = const_cast<Doughnut*>(this);
@@ -107,7 +141,21 @@ namespace infinit
       void
       Doughnut::_remove(Address address)
       {
-        this->_owner(address, overlay::OP_REMOVE)->remove(address);
+        if (_write_n == 1)
+          this->_owner(address, overlay::OP_REMOVE)->remove(address);
+        else
+        {
+          auto endpoints = this->_overlay->lookup(address, _write_n,
+                                                  overlay::OP_REMOVE);
+          elle::With<reactor::Scope>() << [&](reactor::Scope& s)
+          {
+            for (auto & e: endpoints)
+              s.run_background("remove", [e, address] {
+                  elle::make_unique<Remote>(e)->remove(address);
+              });
+            s.wait();
+          };
+        }
       }
 
       std::unique_ptr<Peer>
