@@ -38,7 +38,7 @@ namespace kelips
     Time last_gossip;
     int gossip_count;
   };
-  typedef std::unordered_map<Address, File> Files;
+  typedef std::unordered_multimap<Address, File> Files;
   typedef std::unordered_map<Address, Contact> Contacts;
   struct State
   {
@@ -90,6 +90,7 @@ namespace kelips
     int query_timeout_ms; // query timeout
     int query_get_ttl; // query initial ttl
     int query_put_ttl; // query initial ttl
+    int query_put_insert_ttl; // query initial ttl
     int contact_timeout_ms; // entry lifetime before supression
     int file_timeout_ms; // entry lifetime before supression
     int ping_interval_ms;
@@ -119,8 +120,9 @@ namespace kelips
     Node(Configuration const& config,
          std::unique_ptr<infinit::storage::Storage> storage);
     void start();
-    RpcEndpoint address(Address file, reactor::DurationOpt timeout,
-                        infinit::overlay::Operation op);
+    std::vector<RpcEndpoint> address(Address file,
+                                     infinit::overlay::Operation op,
+                                     int n);
     void print(std::ostream& stream) const override;
     // local interface
     void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode) override;
@@ -134,9 +136,6 @@ namespace kelips
     typedef infinit::overlay::Overlay Overlay;
     void reload_state();
     void wait(int contacts);
-    template<typename T>
-    RpcEndpoint lookup(infinit::model::Address address, reactor::DurationOpt timeout,
-                       int ttl, int retries);
     void send(elle::Buffer const& data, GossipEndpoint endpoint);
     int group_of(Address const& address); // consistent address -> group mapper
     void gossipListener();
@@ -156,6 +155,9 @@ namespace kelips
     void filterAndInsert(std::vector<Address> files, int target_count, int group,
                         std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& p);
     void cleanup();
+    void addLocalResults(packet::GetFileRequest* p);
+    std::vector<RpcEndpoint> kelipsGet(Address file, int n);
+    std::vector<RpcEndpoint> kelipsPut(Address file, int n);
     std::unordered_map<Address, std::pair<Time, Address>> pickFiles();
     std::unordered_map<Address, std::pair<Time, GossipEndpoint>> pickContacts();
     std::vector<GossipEndpoint> pickOutsideTargets();

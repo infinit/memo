@@ -96,6 +96,7 @@ namespace kelips
     return elle::serialization::Serialize<Time>::convert(
       const_cast<Time&>(t));
   }
+  typedef std::pair<Address, RpcEndpoint> GetFileResult;
   namespace packet
   {
     #define REGISTER(classname, type) \
@@ -173,12 +174,16 @@ namespace kelips
         s.serialize("endpoint", originEndpoint);
         s.serialize("address", fileAddress);
         s.serialize("ttl", ttl);
+        s.serialize("count", count);
+        s.serialize("result", result);
       }
       int request_id;
       Address originAddress; //origin node
       GossipEndpoint originEndpoint;
       Address fileAddress; //file address requested
       int ttl;
+      int count; // number of results we want
+      std::vector<GetFileResult> result; // partial result
     };
     REGISTER(GetFileRequest, "get");
 
@@ -192,29 +197,53 @@ namespace kelips
         s.serialize("sender", sender);
         s.serialize("id", request_id);
         s.serialize("origin", origin);
-        s.serialize("endpoint", resultEndpoint);
         s.serialize("address", fileAddress);
-        s.serialize("result", resultAddress);
+        s.serialize("result", result);
         s.serialize("ttl", ttl);
       }
       int request_id;
       Address origin; // node who created the request
-      Address resultAddress; // home node of the file or 0 for failure
-      RpcEndpoint resultEndpoint; // endpoint of home node, 0 port for failure
       Address fileAddress;
       int ttl;
+      std::vector<GetFileResult> result;
     };
     REGISTER(GetFileReply, "getReply");
 
     struct PutFileRequest: public GetFileRequest
     {
-      using GetFileRequest::GetFileRequest;
+      int insert_ttl; // insert when this reaches 0
+      PutFileRequest() {}
+      PutFileRequest(elle::serialization::SerializerIn& input) {serialize(input);}
+      void
+      serialize(elle::serialization::Serializer& s) override
+      {
+        GetFileRequest::serialize(s);
+        s.serialize("insert_ttl", insert_ttl);
+      }
     };
     REGISTER(PutFileRequest, "put");
 
-    struct PutFileReply: public GetFileReply
+    struct PutFileReply: public Packet
     {
-      using GetFileReply::GetFileReply;
+      PutFileReply() {}
+      PutFileReply(elle::serialization::SerializerIn& input) {serialize(input);}
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("sender", sender);
+        s.serialize("id", request_id);
+        s.serialize("origin", origin);
+        s.serialize("address", fileAddress);
+        s.serialize("result", resultAddress);
+        s.serialize("resultEndpoint", resultEndpoint);
+        s.serialize("ttl", ttl);
+      }
+      int request_id;
+      Address origin; // node who created the request
+      Address fileAddress;
+      int ttl;
+      Address resultAddress;
+      RpcEndpoint resultEndpoint;
     };
     REGISTER(PutFileReply, "putReply");
 
@@ -233,7 +262,7 @@ namespace kelips
 
   struct PendingRequest
   {
-    RpcEndpoint result;
+    std::vector<GetFileResult> result;
     reactor::Barrier barrier;
   };
 
@@ -425,10 +454,10 @@ namespace kelips
     }
   }
 
-  template<typename T, typename U, typename G>
+  template<typename T, typename U, typename G, typename C>
   void filterAndInsert(std::vector<Address> files, int target_count,
                        std::unordered_map<Address, std::pair<Time, T>>& res,
-                       std::unordered_map<Address, U>& data,
+                       C& data,
                        T U::*access,
                        G& gen
                        )
@@ -442,7 +471,7 @@ namespace kelips
     }
     for (auto const& f: files)
     {
-      auto& fd = data.at(f);
+      auto& fd = data.find(f)->second;
       res.insert(std::make_pair(f,
         std::make_pair(fd.last_seen, fd.*access)));
       fd.last_gossip = now();
@@ -744,10 +773,14 @@ namespace kelips
     {
       for (auto const& f: p->files)
       {
-        auto it = _state.files.find(f.first);
-        if (it == _state.files.end())
+        auto its = _state.files.equal_range(f.first);
+        auto it = std::find_if(its.first, its.second,
+          [&](decltype(*its.first) i) -> bool {
+          return i.second.home_node == f.second.second;});
+        if (it == its.second)
         {
-          _state.files[f.first] = File{f.first, f.second.second, f.second.first, Time(), 0};
+          _state.files.insert(std::make_pair(f.first,
+            File{f.first, f.second.second, f.second.first, Time(), 0}));
           ELLE_TRACE("%s: registering %x", *this, f.first);
         }
         else
@@ -837,51 +870,70 @@ namespace kelips
     send(buf, p->endpoint);
   }
 
+  void Node::addLocalResults(packet::GetFileRequest* p)
+  {
+    int fg = group_of(p->fileAddress);
+    auto its = _state.files.equal_range(p->fileAddress);
+    for (auto it = its.first; it != its.second && p->result.size() < unsigned(p->count); ++it)
+    {
+      // Check if this one is already in results
+      if (std::find_if(p->result.begin(), p->result.end(),
+        [&](GetFileResult const& r) -> bool {
+          return r.first == it->second.home_node;
+        }) != p->result.end())
+      continue;
+      // find the corresponding endpoint
+      RpcEndpoint endpoint;
+      bool found = false;
+      if (it->second.home_node == _self)
+      {
+        ELLE_DEBUG("%s: found self", *this);
+        endpoint_to_endpoint(_local_endpoint, endpoint);
+        found = true;
+      }
+      else
+      {
+        auto contact_it = _state.contacts[fg].find(it->second.home_node);
+        if (contact_it != _state.contacts[fg].end())
+        {
+          ELLE_DEBUG("%s: found other", *this);
+          endpoint_to_endpoint(contact_it->second.endpoint, endpoint);
+          found = true;
+        }
+        else
+          ELLE_LOG("%s: have file but not node", *this);
+      }
+      if (!found)
+        continue;
+      GetFileResult res;
+      res.first = it->second.home_node;
+      endpoint_to_endpoint(endpoint, res.second);
+      p->result.push_back(res);
+    }
+  }
+
   void Node::onGetFileRequest(packet::GetFileRequest* p)
   {
     ELLE_DEBUG("%s: getFileRequest %s/%x", *this, p->request_id, p->fileAddress);
     int fg = group_of(p->fileAddress);
     if (fg == _group)
     {
-      auto file_it = _state.files.find(p->fileAddress);
-      if (file_it != _state.files.end())
-      {
-        RpcEndpoint endpoint;
-        bool found = false;
-        if (file_it->second.home_node == _self)
-        {
-          ELLE_DEBUG("%s: found self", *this);
-          endpoint_to_endpoint(_local_endpoint, endpoint);
-          found = true;
-        }
-        else
-        {
-          auto contact_it = _state.contacts[fg].find(file_it->second.home_node);
-          if (contact_it != _state.contacts[fg].end())
-          {
-            ELLE_DEBUG("%s: found other", *this);
-            endpoint_to_endpoint(contact_it->second.endpoint, endpoint);
-            found = true;
-          }
-          else
-            ELLE_LOG("%s: have file but not node", *this);
-        }
-        if (found)
-        {
-          packet::GetFileReply res;
-          res.sender = _self;
-          res.fileAddress = p->fileAddress;
-          res.origin = p->originAddress;
-          res.request_id = p->request_id;
-          endpoint_to_endpoint(endpoint, res.resultEndpoint);
-          res.ttl = p->ttl;
-          elle::Buffer buf = serialize(res);
-          ELLE_DEBUG("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
-          send(buf, p->originEndpoint);
-          // FIXME: should we route the reply back the same path?
-          return;
-        }
-      }
+      addLocalResults(p);
+    }
+    if (p->result.size() >= unsigned(p->count))
+    { // We got the full result, send reply
+      packet::GetFileReply res;
+      res.sender = _self;
+      res.fileAddress = p->fileAddress;
+      res.origin = p->originAddress;
+      res.request_id = p->request_id;
+      res.result = p->result;
+      res.ttl = p->ttl;
+      elle::Buffer buf = serialize(res);
+      ELLE_DEBUG("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
+      send(buf, p->originEndpoint);
+      // FIXME: should we route the reply back the same path?
+      return;
     }
     ELLE_DEBUG("%s: route %s", *this, p->ttl);
     // We don't have it, route the request,
@@ -889,7 +941,6 @@ namespace kelips
     {
       // FIXME not in initial protocol, but we cant distinguish get and put
       packet::GetFileReply res;
-      res.resultEndpoint = RpcEndpoint();
       res.sender = _self;
       res.fileAddress = p->fileAddress;
       res.origin = p->originAddress;
@@ -914,7 +965,7 @@ namespace kelips
 
   void Node::onGetFileReply(packet::GetFileReply* p)
   {
-    ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->resultEndpoint);
+    ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->result);
     auto it = _pending_requests.find(p->request_id);
     if (it == _pending_requests.end())
     {
@@ -922,164 +973,219 @@ namespace kelips
       return;
     }
     ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
-               p->resultEndpoint);
-    it->second->result = p->resultEndpoint;
+               p->result);
+    it->second->result = p->result;
     it->second->barrier.open();
     _pending_requests.erase(it);
   }
 
   void Node::onPutFileRequest(packet::PutFileRequest* p)
   {
-    ELLE_LOG("%s: putFileRequest %s %x", *this, p->ttl, p->fileAddress);
-    if (p->ttl > 0)
-    { // Forward the packet to an other node
-      int fg = group_of(p->fileAddress);
-      auto it = random_from(_state.contacts[fg], _gen);
-      if (it == _state.contacts[fg].end())
-        it = random_from(_state.contacts[_group], _gen);
-      if (it == _state.contacts[_group].end())
-      {
-        ELLE_ERR("%s: No contact founds", *this);
+    ELLE_LOG("%s: putFileRequest %s %s %x", *this, p->ttl, p->insert_ttl, p->fileAddress);
+    if (p->insert_ttl == 0)
+    {
+      // Check if we already have the block
+      auto its = _state.files.equal_range(p->fileAddress);
+      auto it = std::find_if(its.first, its.second,
+        [&](decltype(*its.first) i) ->bool {
+          return i.second.home_node == _self;
+        });
+      if (it == its.second)
+      { // Nope, insert here
+        // That makes us a home node for this address, but
+        // wait until we get the RPC to store anything
+        packet::PutFileReply res;
+        res.sender = _self;
+        res.request_id = p->request_id;
+        res.origin = p->originAddress;
+        endpoint_to_endpoint(_local_endpoint, res.resultEndpoint);
+        res.fileAddress = p->fileAddress;
+        res.resultAddress = _self;
+        res.ttl = 1;
+        elle::Buffer buf = serialize(res);
+        send(buf, p->originEndpoint);
         return;
       }
-      p->sender = _self;
-      p->ttl--;
-      elle::Buffer buf = serialize(*p);
-      send(buf, it->second.endpoint);
     }
-    else
-    { // That makes us the home node for this address, but
-      // wait until we get the RPC to store anything
-      packet::PutFileReply res;
-      res.sender = _self;
-      res.request_id = p->request_id;
-      res.origin = p->originAddress;
-      endpoint_to_endpoint(_local_endpoint, res.resultEndpoint);
-      res.fileAddress = p->fileAddress;
-      res.resultAddress = _self;
-      res.ttl = 1;
-      elle::Buffer buf = serialize(res);
-      send(buf, p->originEndpoint);
+    // Forward
+    if (p->insert_ttl > 0)
+      p->insert_ttl--;
+    if (p->ttl == 0)
+    {
+      ELLE_WARN("%s: dropping putfile request for %x", *this, p->fileAddress);
+      return;
     }
+
+    // Forward the packet to an other node
+    int fg = group_of(p->fileAddress);
+    auto it = random_from(_state.contacts[fg], _gen);
+    if (it == _state.contacts[fg].end())
+      it = random_from(_state.contacts[_group], _gen);
+    if (it == _state.contacts[_group].end())
+    {
+      ELLE_ERR("%s: No contact founds", *this);
+      return;
+    }
+    p->sender = _self;
+    p->ttl--;
+    elle::Buffer buf = serialize(*p);
+    send(buf, it->second.endpoint);
   }
 
   void Node::onPutFileReply(packet::PutFileReply* p)
   {
-    onGetFileReply(p);
+    ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->resultAddress);
+    auto it = _pending_requests.find(p->request_id);
+    if (it == _pending_requests.end())
+    {
+      ELLE_TRACE("%s: Unknown request id %s", *this, p->request_id);
+      return;
+    }
+    ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
+               p->resultAddress);
+    it->second->result.push_back(std::make_pair(p->resultAddress, p->resultEndpoint));
+    it->second->barrier.open();
+    _pending_requests.erase(it);
   }
 
-  RpcEndpoint Node::address(Address file, reactor::DurationOpt timeout,
-    infinit::overlay::Operation op)
+  std::vector<RpcEndpoint> Node::address(Address file,
+                            infinit::overlay::Operation op,
+                            int n)
   {
     if (op == infinit::overlay::OP_INSERT)
-      return lookup<packet::PutFileRequest>(file, timeout,
-        _config.query_put_ttl, _config.query_put_retries);
+      return kelipsPut(file, n);
     else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
     {
       try
       {
-        return lookup<packet::GetFileRequest>(file, timeout,
-          _config.query_get_ttl, _config.query_get_retries
-          );
+        return kelipsGet(file, n);
       }
       catch (reactor::Timeout const& e)
       {
         ELLE_LOG("%s: get failed on %x, trying put", *this, file);
-        return lookup<packet::PutFileRequest>(file, timeout,
-          _config.query_put_ttl, _config.query_put_retries
-          );
+        return kelipsPut(file, n);
       }
     }
     else
-      return lookup<packet::GetFileRequest>(file, timeout,
-        _config.query_get_ttl, _config.query_get_retries);
+      return kelipsGet(file, n);
   }
-  template<typename T>
-  RpcEndpoint Node::lookup(Address file, reactor::DurationOpt timeout,
-    int ttl, int retries)
+
+  std::vector<RpcEndpoint>
+  Node::kelipsGet(Address file, int n)
   {
+    packet::GetFileRequest r;
+    r.sender = _self;
+    r.request_id = ++ _next_id;
+    r.originAddress = _self;
+    r.originEndpoint = _local_endpoint;
+    r.fileAddress = file;
+    r.ttl = _config.query_get_ttl;
+    r.count = n;
     int fg = group_of(file);
     if (fg == _group)
     {
-      auto it = _state.files.find(file);
-      if (it != _state.files.end())
-      {
-        Address owner = it->second.home_node;
-        if (owner == _self)
-        {
-          RpcEndpoint res;
-          endpoint_to_endpoint(_local_endpoint, res);
-          return res;
-        }
-        auto itcontact = _state.contacts[_group].find(owner);
-        if (itcontact != _state.contacts[_group].end())
-        {
-          RpcEndpoint res;
-          endpoint_to_endpoint(itcontact->second.endpoint, res);
-          return res;
-        }
+      addLocalResults(&r);
+      if (r.result.size() >= unsigned(n))
+      { // Request completed locally
+        std::vector<RpcEndpoint> result;
+        for (auto const& i: r.result)
+          result.push_back(i.second);
+        return result;
       }
     }
-    boost::optional<RpcEndpoint> res;
-    T p;
+    for (int i=0; i < _config.query_get_retries; ++i)
+    {
+      packet::GetFileRequest req(r);
+      req.request_id = ++_next_id;
+      auto r = std::make_shared<PendingRequest>();
+      r->barrier.close();
+      _pending_requests[req.request_id] = r;
+      elle::Buffer buf = serialize(req);
+      // Select target node
+      auto it = random_from(_state.contacts[fg], _gen);
+      if (it == _state.contacts[fg].end())
+        it = random_from(_state.contacts[_group], _gen);
+      if (it == _state.contacts[_group].end())
+        throw std::runtime_error("No contacts in self/target groups");
+      ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
+      send(buf, it->second.endpoint);
+      try
+      {
+        reactor::wait(r->barrier,
+          boost::posix_time::milliseconds(_config.query_timeout_ms));
+      }
+      catch (reactor::Timeout const& t)
+      {
+        ELLE_LOG("%s: Timeout on attempt %s", *this, i);
+      }
+      ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
+                 r->result.size());
+      if (r->barrier.opened() && r->result.size() >= unsigned(n))
+      {
+        std::vector<RpcEndpoint> result;
+        for (auto const& i: r->result)
+          result.push_back(i.second);
+        return result;
+      }
+    }
+    throw reactor::Timeout(boost::posix_time::milliseconds(
+      _config.query_timeout_ms * _config.query_get_retries));
+  }
+
+  std::vector<RpcEndpoint>
+  Node::kelipsPut(Address file, int n)
+  {
+    int fg = group_of(file);
+    packet::PutFileRequest p;
     p.sender = _self;
     p.originAddress = _self;
-    endpoint_to_endpoint(_local_endpoint, p.originEndpoint);
+    p.originEndpoint = _local_endpoint;
     p.fileAddress = file;
-    p.ttl = ttl; // 3 * ceil(log(pow(_config.k, 2)));
+    p.ttl = _config.query_put_ttl;
+    p.count = 1;
+    p.insert_ttl = _config.query_put_insert_ttl;
+    std::vector<RpcEndpoint> results;
+    auto make_one = [&] {
+      for (int i=0; i< _config.query_put_retries; ++i)
+      {
+        packet::PutFileRequest req = p;
+        req.request_id = ++_next_id;
+        auto r = std::make_shared<PendingRequest>();
+        r->barrier.close();
+        _pending_requests[req.request_id] = r;
+        elle::Buffer buf = serialize(req);
+        // Select target node
+        auto it = random_from(_state.contacts[fg], _gen);
+        if (it == _state.contacts[fg].end())
+          it = random_from(_state.contacts[_group], _gen);
+        if (it == _state.contacts[_group].end())
+          throw std::runtime_error("No contacts in self/target groups");
+        ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
+        send(buf, it->second.endpoint);
+        try
+        {
+          reactor::wait(r->barrier,
+            boost::posix_time::milliseconds(_config.query_timeout_ms));
+        }
+        catch (reactor::Timeout const& t)
+        {
+          ELLE_LOG("%s: Timeout on attempt %s", *this, i);
+        }
+        if (r->barrier.opened())
+        {
+          ELLE_ASSERT(r->result.size());
+          results.push_back(r->result.front().second);
+          return;
+        }
+      }
+    };
     elle::With<reactor::Scope>() << [&](reactor::Scope& s)
     {
-      s.run_background("get address", [&] {
-          for (int i=0; i < retries; ++i)
-          {
-            auto r = std::make_shared<PendingRequest>();
-            r->barrier.close();
-            int id = ++_next_id;
-            _pending_requests[id] = r;
-            p.request_id = id;
-            elle::Buffer buf = serialize(p);
-            // Select target node
-            auto it = random_from(_state.contacts[fg], _gen);
-            if (it == _state.contacts[fg].end())
-              it = random_from(_state.contacts[_group], _gen);
-            if (it == _state.contacts[_group].end())
-              throw std::runtime_error("No contacts in self/target groups");
-            ELLE_DEBUG("%s: get request %s(%s)", *this, i, id);
-            send(buf, it->second.endpoint);
-            try
-            {
-              reactor::wait(r->barrier,
-                            boost::posix_time::milliseconds(_config.query_timeout_ms));
-            }
-            catch (reactor::Timeout const& t)
-            {
-              ELLE_LOG("%s: Timeout on attempt %s", *this, i);
-            }
-            if (r->barrier.opened())
-            {
-              ELLE_DEBUG("%s: result for request %s(%s): %s", *this, i, id, r->result);
-              if (r->result.port() != 0)
-              {
-                res = r->result;
-                return;
-              }
-              // else this is a failure, next attempt...
-            }
-            else
-            {
-              ELLE_DEBUG("%s: mrou closed barrier on attempt %s", *this, i);
-            }
-          }
-      });
-      s.wait(timeout);
-      s.terminate_now();
+      for (int i=0; i<n; ++i)
+        s.run_background("put", make_one);
+      s.wait();
     };
-    if (res)
-      return *res;
-    ELLE_WARN("%s: failed request for %x", *this, file);
-    throw reactor::Timeout(timeout ?
-      *timeout
-      : boost::posix_time::milliseconds(_config.query_timeout_ms * retries));
+    return results;
   }
 
 
@@ -1307,7 +1413,8 @@ namespace kelips
     Local::store(block, mode);
     auto it = _state.files.find(block.address());
     if (it == _state.files.end())
-      _state.files[block.address()] = File{block.address(), _self, now(), Time(), 0};
+      _state.files.insert(std::make_pair(block.address(),
+        File{block.address(), _self, now(), Time(), 0}));
   }
   void Node::remove(Address address)
   {
@@ -1320,7 +1427,7 @@ namespace kelips
   auto Node::_lookup(infinit::model::Address address, int n, infinit::overlay::Operation op) const -> Members
   {
     Members res;
-    res.push_back(const_cast<Node*>(this)->address(address, reactor::DurationOpt(), op));
+    res = const_cast<Node*>(this)->address(address, op, n);
     return res;
   }
 
@@ -1342,7 +1449,7 @@ namespace kelips
       ELLE_LOG("%s: waiting for %s nodes, got %s", *this, count, sum);
       reactor::sleep(1_sec);
     }
-    reactor::sleep(10_sec);
+    reactor::sleep(5_sec);
   }
 
   void Node::reload_state()
@@ -1362,7 +1469,8 @@ namespace kelips
       if (s.substr(0, 2) != "0x" || s.length()!=66)
         continue;
       Address addr = Address::from_string(s.substr(2));
-      _state.files[addr] = File{addr, _self, now(), Time(), 0};
+      _state.files.insert(std::make_pair(addr,
+                                         File{addr, _self, now(), Time(), 0}));
       ELLE_DEBUG("%s: reloaded %s", *this, addr);
     }
   }
@@ -1378,6 +1486,7 @@ namespace kelips
     s.serialize("query_timeout_ms", query_timeout_ms);
     s.serialize("query_get_ttl", query_get_ttl);
     s.serialize("query_put_ttl", query_put_ttl);
+    s.serialize("query_put_insert_ttl", query_put_insert_ttl);
     s.serialize("contact_timeout_ms", contact_timeout_ms);
     s.serialize("file_timeout_ms", file_timeout_ms);
     s.serialize("ping_interval_ms", ping_interval_ms);
