@@ -1053,7 +1053,7 @@ namespace kelips
           endpoint_to_endpoint(_local_endpoint, res.resultEndpoint);
           res.fileAddress = p->fileAddress;
           res.resultAddress = _self;
-          res.ttl = 1;
+          res.ttl = p->ttl;
           elle::Buffer buf = serialize(res);
           _promised_files.push_back(p->fileAddress);
           send(buf, p->originEndpoint);
