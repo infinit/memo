@@ -1506,24 +1506,12 @@ namespace kelips
 
   void Node::reload_state()
   {
-    auto s = Local::storage().get();
-    auto fs = dynamic_cast<infinit::storage::Filesystem*>(s);
-    if (!fs)
+    auto keys = Local::storage()->list();
+    for (auto const& k: keys)
     {
-      ELLE_ERR("Unknown storage implementation, cannot restore state!");
-      return;
-    }
-    boost::filesystem::path root = fs->root();
-    auto it = boost::filesystem::directory_iterator(root);
-    for (;it !=  boost::filesystem::directory_iterator(); ++it)
-    {
-      std::string s = it->path().filename().string();
-      if (s.substr(0, 2) != "0x" || s.length()!=66)
-        continue;
-      Address addr = Address::from_string(s.substr(2));
-      _state.files.insert(std::make_pair(addr,
-                                         File{addr, _self, now(), Time(), 0}));
-      ELLE_DEBUG("%s: reloaded %s", *this, addr);
+      _state.files.insert(std::make_pair(k,
+        File{k, _self, now(), Time(), 0}));
+      ELLE_DEBUG("%s: reloaded %x", *this, k);
     }
   }
 
