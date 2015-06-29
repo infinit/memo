@@ -62,6 +62,13 @@ enum PacketType {
 #define SSH_FX_CONNECTION_LOST               7
 #define SSH_FX_OP_UNSUPPORTED                8
 
+
+#define SSH_FILEXFER_ATTR_SIZE          0x00000001
+#define SSH_FILEXFER_ATTR_UIDGID        0x00000002
+#define SSH_FILEXFER_ATTR_PERMISSIONS   0x00000004
+#define SSH_FILEXFER_ATTR_ACMODTIME     0x00000008
+#define SSH_FILEXFER_ATTR_EXTENDED      0x80000000
+
 ELLE_LOG_COMPONENT("infinit.fs.sftp");
 static std::unique_ptr<infinit::storage::Storage> make(std::vector<std::string> const& args)
 {
@@ -121,6 +128,7 @@ namespace infinit
       void expectType(int t); // eats the type
 
       void resetRead();
+      void skipAttr();
     private:
       unsigned int _pos;
       elle::ConstWeakBuffer _payload;
@@ -297,6 +305,24 @@ namespace infinit
       {
         throw PacketError(0,
           elle::sprintf("Expected type HANDLE or STATUS, got %s", type));
+      }
+    }
+
+    void Packet::skipAttr()
+    {
+      int flags = readInt();
+      if (flags & SSH_FILEXFER_ATTR_SIZE) { readInt(); readInt(); }
+      if (flags & SSH_FILEXFER_ATTR_UIDGID) { readInt(); readInt(); }
+      if (flags & SSH_FILEXFER_ATTR_PERMISSIONS) { readInt();}
+      if (flags & SSH_FILEXFER_ATTR_ACMODTIME) {readInt(); readInt(); }
+      if (flags & SSH_FILEXFER_ATTR_EXTENDED)
+      {
+        int count = readInt();
+        for (int i=0; i<count; ++i)
+        {
+          readString();
+          readString();
+        }
       }
     }
 
@@ -515,6 +541,55 @@ namespace infinit
       id = p.readInt();
       ELLE_ASSERT_EQ(id, req);
     }
+    std::vector<Key>
+    SFTP::_list()
+    {
+      std::vector<Key> res;
+      Packet p;
+      int req = ++_req;
+      p.make(SSH_FXP_OPENDIR, req, _path);
+      {
+        reactor::Lock lock(_sem);
+        p.writeTo(_out);
+        p.readFrom(_in);
+      }
+      p.expectType(SSH_FXP_HANDLE);
+      int id = p.readInt();
+      ELLE_ASSERT_EQ(id, req);
+      std::string handle = p.readString().string();
+      ELLE_TRACE("got handle %x", handle);
+
+      while (true)
+      {
+        int req = ++_req;
+        p.make(SSH_FXP_READDIR, req, handle);
+        reactor::Lock lock(_sem);
+        p.writeTo(_out);
+        p.readFrom(_in);
+        int type = p.readByte();
+        if (type == SSH_FXP_STATUS)
+          break;
+        int id = p.readInt();
+        int count = p.readInt();
+        for (int i=0; i<count; ++i)
+        {
+          std::string s = p.readString().string();
+          p.skipAttr();
+          if (s.substr(0, 2) != "0x" || s.length()!=66)
+            continue;
+          Key k = Key::from_string(s.substr(2));
+          res.push_back(k);
+        }
+      }
+      p.make(SSH_FXP_CLOSE, ++_req, handle);
+      {
+        reactor::Lock lock(_sem);
+        p.writeTo(_out);
+        p.readFrom(_in);
+      }
+      return res;
+    }
+
     struct SFTPStorageConfig:
     public StorageConfig
     {

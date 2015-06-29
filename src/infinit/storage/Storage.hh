@@ -24,6 +24,8 @@ namespace infinit
           bool insert = true, bool update = false);
       void
       erase(Key k);
+      std::vector<Key>
+      list();
     protected:
       virtual
       elle::Buffer
@@ -34,6 +36,9 @@ namespace infinit
       virtual
       void
       _erase(Key k) = 0;
+      virtual
+      std::vector<Key>
+      _list() = 0;
     };
 
     std::unique_ptr<Storage>

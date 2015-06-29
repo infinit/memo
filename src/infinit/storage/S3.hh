@@ -23,6 +23,9 @@ namespace infinit
       virtual
       void
       _erase(Key k);
+      virtual
+      std::vector<Key>
+      _list() override;
       ELLE_ATTRIBUTE_RX(std::unique_ptr<aws::S3>, storage);
     };
   }

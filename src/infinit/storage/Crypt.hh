@@ -28,6 +28,9 @@ namespace infinit
       virtual
       void
       _erase(Key k) override;
+      virtual
+      std::vector<Key>
+      _list() override;
     private:
       std::unique_ptr<Storage> _backend;
       std::string _password;

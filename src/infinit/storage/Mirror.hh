@@ -21,6 +21,9 @@ namespace infinit
       virtual
       void
       _erase(Key k) override;
+      virtual
+      std::vector<Key>
+      _list() override;
       ELLE_ATTRIBUTE(bool, balance_reads);
       ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
       ELLE_ATTRIBUTE(unsigned int, read_counter);

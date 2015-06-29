@@ -24,6 +24,9 @@ namespace infinit
       virtual
       void
       _erase(Key k) override;
+      virtual
+      std::vector<Key>
+      _list() override;
     private:
       void _connect();
       int _fin;

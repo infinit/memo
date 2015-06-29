@@ -67,6 +67,31 @@ namespace infinit
       p.wait();
     }
 
+    std::vector<Key> Adb::_list()
+    {
+      std::vector<std::string> args = {
+        "sh",
+        "-c",
+        "adb shell ls " + _root + " > " + tmpOut
+      };
+      elle::system::Process p(args);
+      p.wait();
+      std::ifstream ifs(tmpOut);
+      std::vector<Key> res;
+      while (true)
+      {
+        std::string s;
+        std::getline(ifs, s);
+        if (s.empty())
+          break;
+        if (s.substr(0, 2) != "0x" || s.length()!=66)
+          continue;
+        Key k = Key::from_string(s.substr(2));
+        res.push_back(k);
+      }
+      return res;
+    }
+
     struct AdbStorageConfig:
     public StorageConfig
     {

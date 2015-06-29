@@ -61,6 +61,12 @@ namespace infinit
       this->_backend->erase(k);
     }
 
+    std::vector<Key>
+    Crypt::_list()
+    {
+      return this->_backend->list();
+    }
+
     struct CryptStorageConfig:
     public StorageConfig
     {

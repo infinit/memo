@@ -23,6 +23,9 @@ namespace infinit
       virtual
       void
       _erase(Key k) override;
+      virtual
+      std::vector<Key>
+      _list() override;
       ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
       int _disk_of(Key k) const ;
     };

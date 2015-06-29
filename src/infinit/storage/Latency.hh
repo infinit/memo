@@ -27,6 +27,9 @@ namespace infinit
       virtual
       void
       _erase(Key k) override;
+      virtual
+      std::vector<Key>
+      _list() override;
     private:
       std::unique_ptr<Storage> _backend;
       reactor::DurationOpt _latency_get;

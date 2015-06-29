@@ -25,6 +25,9 @@ namespace infinit
       virtual
       void
       _erase(Key k);
+      virtual
+      std::vector<Key>
+      _list();
       ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
     private:
       boost::filesystem::path

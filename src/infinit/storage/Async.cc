@@ -70,7 +70,11 @@ namespace infinit
         _inc(value.size());
       }
     }
-
+    std::vector<Key>
+    Async::_list()
+    {
+      return _backend->list();
+    }
     void
     Async::_worker()
     {

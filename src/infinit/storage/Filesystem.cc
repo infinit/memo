@@ -66,6 +66,24 @@ namespace infinit
       remove(path);
     }
 
+    std::vector<Key>
+    Filesystem::_list()
+    {
+      std::vector<Key> res;
+      boost::filesystem::directory_iterator it(this->root());
+      boost::filesystem::directory_iterator iend;
+      while (it != iend)
+      {
+        std::string s = it->path().filename().string();
+        if (s.substr(0, 2) != "0x" || s.length()!=66)
+          continue;
+        Key k = Key::from_string(s.substr(2));
+        res.push_back(k);
+        ++it;
+      }
+      return res;
+    }
+
     boost::filesystem::path
     Filesystem::_path(Key const& key) const
     {

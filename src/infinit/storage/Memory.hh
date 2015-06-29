@@ -21,6 +21,9 @@ namespace infinit
       virtual
       void
       _erase(Key k);
+      virtual
+      std::vector<Key>
+      _list() override;
       typedef std::unordered_map<Key, elle::Buffer> Blocks;
       ELLE_ATTRIBUTE(Blocks, blocks);
     };

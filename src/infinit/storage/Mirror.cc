@@ -72,6 +72,11 @@ namespace infinit
         }
       }
     }
+    std::vector<Key>
+    Mirror::_list()
+    {
+      return _backend.front()->list();
+    }
 
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {

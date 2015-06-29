@@ -53,6 +53,16 @@ namespace infinit
       if (this->_blocks.erase(key) == 0)
         throw MissingKey(key);
     }
+
+    std::vector<Key>
+    Memory::_list()
+    {
+      std::vector<Key> res;
+      for (auto const& b: this->_blocks)
+        res.push_back(b.first);
+      return res;
+    }
+
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
       return elle::make_unique<infinit::storage::Memory>();

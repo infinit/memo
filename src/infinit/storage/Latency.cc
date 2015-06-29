@@ -39,6 +39,11 @@ namespace infinit
         reactor::sleep(*_latency_erase);
       _backend->erase(k);
     }
+    std::vector<Key>
+    Latency::_list()
+    {
+      return _backend->list();
+    }
     static std::unique_ptr<infinit::storage::Storage>
     make(std::vector<std::string> const& args)
     {

@@ -38,6 +38,17 @@ namespace infinit
         res += value[i];
       return res % _backend.size();
     }
+    std::vector<Key>
+    Strip::_list()
+    {
+      std::vector<Key> res = _backend.front()->list();
+      for (unsigned i=1; i<_backend.size(); ++i)
+      {
+        auto keys = _backend[i]->list();
+        res.insert(res.end(), keys.begin(), keys.end());
+      }
+      return res;
+    }
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
       std::vector<std::unique_ptr<Storage>> backends;

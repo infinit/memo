@@ -47,6 +47,11 @@ namespace infinit
     {
       _storage->delete_object(elle::sprintf("%x", key));
     }
+    std::vector<Key>
+    S3::_list()
+    {
+      throw std::runtime_error("Not implemented");
+    }
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
       std::ifstream is(args[0]);

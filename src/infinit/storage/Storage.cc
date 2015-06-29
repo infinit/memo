@@ -37,6 +37,13 @@ namespace infinit
       return this->_erase(key);
     }
 
+    std::vector<Key>
+    Storage::list()
+    {
+      ELLE_TRACE_SCOPE("%s: list", *this);
+      return this->_list();
+    }
+
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args)
