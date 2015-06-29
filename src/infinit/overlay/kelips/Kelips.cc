@@ -1480,9 +1480,15 @@ namespace kelips
   void Node::remove(Address address)
   {
     Local::remove(address);
-    auto it = _state.files.find(address);
-    if (it != _state.files.end())
-      _state.files.erase(it);
+    auto its = _state.files.equal_range(address);
+    for (auto it = its.first; it != its.second; ++it)
+    {
+      if (it->second.home_node == _self)
+      {
+        _state.files.erase(it);
+        break;
+      }
+    }
   }
 
   auto Node::_lookup(infinit::model::Address address, int n, infinit::overlay::Operation op) const -> Members
