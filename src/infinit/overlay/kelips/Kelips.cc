@@ -913,8 +913,16 @@ namespace kelips
   {
     int fg = group_of(p->fileAddress);
     auto its = _state.files.equal_range(p->fileAddress);
-    for (auto it = its.first; it != its.second && p->result.size() < unsigned(p->count); ++it)
+    // Shuffle the match list
+    std::vector<decltype(its.first)> iterators;
+    for (auto it = its.first; it != its.second; ++it)
+      iterators.push_back(it);
+    std::shuffle(iterators.begin(), iterators.end(), _gen);
+
+    for (auto iti = iterators.begin(); iti != iterators.end()
+      && p->result.size() < unsigned(p->count); ++iti)
     {
+      auto it = *iti;
       // Check if this one is already in results
       if (std::find_if(p->result.begin(), p->result.end(),
         [&](GetFileResult const& r) -> bool {
