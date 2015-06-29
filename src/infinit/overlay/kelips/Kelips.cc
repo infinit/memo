@@ -1295,6 +1295,7 @@ namespace kelips
         sum += 1.0 / pow(v, 2);
         if (sum >= target)
           break;
+        ++it;
       }
       if (it == candidates.end())
       {
