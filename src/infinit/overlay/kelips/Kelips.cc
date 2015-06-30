@@ -7,6 +7,7 @@
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
 #include <elle/format/base64.hh>
+#include <elle/bench.hh>
 #include <reactor/network/buffer.hh>
 #include <reactor/exception.hh>
 #include <reactor/scheduler.hh>
@@ -264,6 +265,7 @@ namespace kelips
   {
     std::vector<GetFileResult> result;
     reactor::Barrier barrier;
+    Time startTime;
   };
 
   static inline Time now()
@@ -961,7 +963,7 @@ namespace kelips
 
   void Node::onGetFileRequest(packet::GetFileRequest* p)
   {
-    ELLE_LOG("%s: getFileRequest %s/%x %s/%s", *this, p->request_id, p->fileAddress,
+    ELLE_TRACE("%s: getFileRequest %s/%x %s/%s", *this, p->request_id, p->fileAddress,
              p->result.size(), p->count);
     int fg = group_of(p->fileAddress);
     if (fg == _group)
@@ -978,12 +980,12 @@ namespace kelips
       res.result = p->result;
       res.ttl = p->ttl;
       elle::Buffer buf = serialize(res);
-      ELLE_LOG("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
+      ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
       send(buf, p->originEndpoint);
       // FIXME: should we route the reply back the same path?
       return;
     }
-    ELLE_LOG("%s: route %s", *this, p->ttl);
+    ELLE_TRACE("%s: route %s", *this, p->ttl);
     // We don't have it, route the request,
     if (p->ttl == 0)
     {
@@ -1022,6 +1024,11 @@ namespace kelips
     }
     ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                p->result);
+    static elle::Bench stime = elle::Bench("GET RTT", boost::posix_time::seconds(5));
+    stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
+      (now() - it->second->startTime)).count());
+    static elle::Bench shops = elle::Bench("GET HOPS", boost::posix_time::seconds(5));
+    shops.add(p->ttl);
     it->second->result = p->result;
     it->second->barrier.open();
     _pending_requests.erase(it);
@@ -1029,7 +1036,7 @@ namespace kelips
 
   void Node::onPutFileRequest(packet::PutFileRequest* p)
   {
-    ELLE_LOG("%s: putFileRequest %s %s %x", *this, p->ttl, p->insert_ttl, p->fileAddress);
+    ELLE_TRACE("%s: putFileRequest %s %s %x", *this, p->ttl, p->insert_ttl, p->fileAddress);
     if (p->insert_ttl == 0)
     {
       // check if we didn't already accept this file
@@ -1095,6 +1102,11 @@ namespace kelips
       ELLE_TRACE("%s: Unknown request id %s", *this, p->request_id);
       return;
     }
+    static elle::Bench stime = elle::Bench("PUT RTT", boost::posix_time::seconds(5));
+    stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
+      (now() - it->second->startTime)).count());
+    static elle::Bench shops = elle::Bench("PUT HOPS", boost::posix_time::seconds(5));
+    shops.add(p->ttl);
     ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                p->resultAddress);
     it->second->result.push_back(std::make_pair(p->resultAddress, p->resultEndpoint));
@@ -1152,6 +1164,7 @@ namespace kelips
       packet::GetFileRequest req(r);
       req.request_id = ++_next_id;
       auto r = std::make_shared<PendingRequest>();
+      r->startTime = now();
       r->barrier.close();
       _pending_requests[req.request_id] = r;
       elle::Buffer buf = serialize(req);
@@ -1205,6 +1218,7 @@ namespace kelips
         packet::PutFileRequest req = p;
         req.request_id = ++_next_id;
         auto r = std::make_shared<PendingRequest>();
+        r->startTime = now();
         r->barrier.close();
         _pending_requests[req.request_id] = r;
         elle::Buffer buf = serialize(req);
@@ -1318,7 +1332,7 @@ namespace kelips
     return res;
   }
 
-    std::vector<GossipEndpoint> Node::pickOutsideTargets()
+  std::vector<GossipEndpoint> Node::pickOutsideTargets()
   {
     std::map<Address, int> group_of;
     std::map<Address, Duration> candidates;
@@ -1367,10 +1381,10 @@ namespace kelips
 
       // some stats
       std::stringstream ss;
-      ss << "f: " << _state.files.size() << "  c:";
+      ss << "g: " << _group << "  f: " << _state.files.size() << "  c:";
       for(auto const& c: _state.contacts)
         ss << c.size() << ' ';
-      //ELLE_LOG("%s: %s", *this, ss.str());
+      ELLE_LOG("%s: %s", *this, ss.str());
       // pick a target
       GossipEndpoint endpoint;
       int group;
@@ -1421,7 +1435,7 @@ namespace kelips
     {
       if (!(it->second.home_node == _self) && t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
       {
-        ELLE_LOG("%s: Erasing file %x", *this, it->first);
+        ELLE_TRACE("%s: Erasing file %x", *this, it->first);
         it = _state.files.erase(it);
       }
       else
@@ -1434,7 +1448,7 @@ namespace kelips
       {
         if (t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
         {
-          ELLE_LOG("%s: Erasing contact %x", *this, it->first);
+          ELLE_TRACE("%s: Erasing contact %x", *this, it->first);
           it = contacts.erase(it);
         }
         else
