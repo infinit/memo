@@ -359,7 +359,7 @@ is_martian(const struct sockaddr *sa)
         const unsigned char *address = (const unsigned char*)&sin->sin_addr;
         return sin->sin_port == 0 ||
             (address[0] == 0) ||
-            (address[0] == 127) ||
+            /*(address[0] == 127) ||*/
             ((address[0] & 0xE0) == 0xE0);
     }
     case AF_INET6: {
@@ -1135,7 +1135,7 @@ search_step(struct search *sr, dht_callback *callback, void *closure)
         (*callback)(closure,
                     sr->af == AF_INET ?
                     DHT_EVENT_SEARCH_DONE : DHT_EVENT_SEARCH_DONE6,
-                    sr->id, NULL, 0);
+                    sr->id, sr->nodes, sr->numnodes);
     sr->step_time = now.tv_sec;
 }
 
@@ -1882,7 +1882,7 @@ dht_periodic(const void *buf, size_t buflen,
         int values_len = 2048, values6_len = 2048;
         int want;
         unsigned short ttid;
-
+        debugf("Handling packet\n");
         if(is_martian(from))
             goto dontread;
 
