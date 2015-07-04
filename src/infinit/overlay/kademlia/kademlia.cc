@@ -56,7 +56,7 @@ namespace kademlia
   {
     dht_debug = fdopen(2, "w");
     _socket.socket()->close();
-    _socket.bind(Endpoint({}, config.port));
+    _socket.bind(Endpoint({}, server_endpoint().port()));
     dht_init(_socket.socket()->native_handle(), -1, config.node_id.value(), 0);
     for (auto const& e: _config.bootstrap_nodes)
     {
@@ -71,7 +71,7 @@ namespace kademlia
         int g,d,c,i;
         dht_nodes(AF_INET, &g, &d, &c, &i);
         ELLE_TRACE("Waiting for %s nodes, got %s", config.wait, g+d);
-        if (g+d > config.wait)
+        if (g+d >= config.wait)
           break;
         reactor::sleep(1_sec);
       }
@@ -87,12 +87,13 @@ namespace kademlia
       try
       {
         Endpoint ep;
-        ELLE_DEBUG("recvfrom delay %s", sleepTime);
+        ELLE_DUMP("recvfrom delay %s", sleepTime);
         size_t sz = _socket.receive_from(
-          reactor::network::Buffer(buffer, 4096),
+          reactor::network::Buffer(buffer, 4095),
           ep,
           boost::posix_time::seconds(sleepTime));
         ELLE_DEBUG("recvfrom got %s bytes from %s", sz, ep);
+        buffer[sz] = 0;
         dht_periodic(buffer, sz, ep.data(), ep.size(), &sleepTime, ::on_event, this);
       }
       catch (reactor::network::TimeOut const& to)
@@ -119,9 +120,15 @@ namespace kademlia
   void Kademlia::on_event(int event, unsigned char *info_hash,
                           void *data, size_t data_len)
   {
-    ELLE_TRACE("on event %s", event);
     std::string key((char*)info_hash, 20);
-    auto req = _requests.at(key);
+    ELLE_TRACE("on event %s for %x", event, elle::Buffer(key.data(), key.size()));
+    auto reqit = _requests.find(key);
+    if (reqit == _requests.end())
+    {
+      ELLE_TRACE("Key not found");
+      return;
+    }
+    auto req = reqit->second;
     if (event == DHT_EVENT_VALUES)
     {
       unsigned char* cdata = (unsigned char*)data;
@@ -130,18 +137,26 @@ namespace kademlia
       {
         if (req->result.size() >= unsigned(req->n))
           break;
-        sockaddr_in sin;
-        memset(&sin, 0, sizeof(sin));
-        memcpy(&sin.sin_addr, cdata + i*6, 4);
-        memcpy(&sin.sin_port, cdata + i*6 + 2, 2);
+        sockaddr addr;
+        addr.sa_family = AF_INET;
+        sockaddr_in* sin = (sockaddr_in*)&addr;
+        memcpy(&sin->sin_addr, cdata + i*6, 4);
+        memcpy(&sin->sin_port, cdata + i*6 + 4, 2);
         boost::asio::ip::tcp::endpoint e;
-        memcpy(e.data(), &sin, e.size());
+        *e.data() = addr;
+        //memcpy(e.data(), &sin, e.size());
         ELLE_TRACE("Adding to result: %s", e);
         req->result.push_back(e);
+      }
+      if (req->result.size() >= unsigned(req->n))
+      { // No need to wait for finish event
+        req->barrier.open();
+        _requests.erase(key);
       }
     }
     else if (event == DHT_EVENT_SEARCH_DONE)
     {
+      ELLE_TRACE("search done, %s results, %s extras", req->result.size(), data_len);
       if ( (req->op == infinit::overlay::OP_INSERT_OR_UPDATE && req->result.empty())
         || req->op == infinit::overlay::OP_INSERT)
       { // No result of course, but we hacked in dht to give us
@@ -154,18 +169,28 @@ namespace kademlia
             break;
           boost::asio::ip::tcp::endpoint e;
           memcpy(e.data(), &n[i].ss, e.size());
+          req->result.push_back(e);
           ELLE_TRACE("Adding close node to result: %s", e);
         }
       }
       req->barrier.open();
+      _requests.erase(key);
     }
   }
 
   infinit::overlay::Overlay::Members Kademlia::_lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op) const
   {
-    ELLE_TRACE("lookup %x", address);
     std::string key((const char*)address.value(), 20);
+    ELLE_TRACE("lookup %x", elle::Buffer(key.data(), key.size()));
+    auto reqit = _requests.find(key);
+    if (reqit != _requests.end())
+    {
+      auto req = reqit->second;
+      req->barrier.wait();
+      ELLE_TRACE("lookup %x finished with %s", address, req->result.size());
+      return req->result;
+    }
     auto req = std::make_shared<PendingRequest>();
     req->op = op;
     req->n = n;
@@ -190,6 +215,7 @@ namespace kademlia
   {
     Local::store(block, mode);
     // advertise it
+    ELLE_TRACE("Advertizing %x", block.address());
     dht_search(block.address().value(), server_endpoint().port(), AF_INET, 0, 0);
   }
   void Kademlia::remove(Address address)
