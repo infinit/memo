@@ -150,8 +150,9 @@ namespace kademlia
       }
       if (req->result.size() >= unsigned(req->n))
       { // No need to wait for finish event
+        // But dont remove req from our list, since dht
+        // will merge multiple requests for same id into one
         req->barrier.open();
-        _requests.erase(key);
       }
     }
     else if (event == DHT_EVENT_SEARCH_DONE)
@@ -181,6 +182,29 @@ namespace kademlia
   infinit::overlay::Overlay::Members Kademlia::_lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op) const
   {
+    if (op == infinit::overlay::OP_INSERT)
+    { // FIXME: this is bad
+      // pick a node at random from our routing table
+      sockaddr_in nodes[100];
+      int count = 100;
+      int zero = 0;
+      dht_get_nodes(nodes, &count, 0, &zero);
+      ELLE_TRACE("Got %s dht nodes", count);
+      if (count < n)
+        return {};
+      infinit::overlay::Overlay::Members result;
+      std::uniform_int_distribution<> dist(0, count-1);
+      while (result.size() < unsigned(n))
+      {
+        int res = dist(gen);
+        boost::asio::ip::tcp::endpoint ep;
+        *ep.data() = (sockaddr&)nodes[res];
+        if (std::find(result.begin(), result.end(), ep) != result.end())
+          continue;
+        result.push_back(ep);
+      }
+      return result;
+    }
     std::string key((const char*)address.value(), 20);
     ELLE_TRACE("lookup %x", elle::Buffer(key.data(), key.size()));
     auto reqit = _requests.find(key);

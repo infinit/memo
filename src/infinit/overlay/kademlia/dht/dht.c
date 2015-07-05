@@ -1882,7 +1882,7 @@ dht_periodic(const void *buf, size_t buflen,
         int values_len = 2048, values6_len = 2048;
         int want;
         unsigned short ttid;
-        debugf("Handling packet\n");
+
         if(is_martian(from))
             goto dontread;
 
