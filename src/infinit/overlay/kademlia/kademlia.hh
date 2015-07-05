@@ -30,6 +30,7 @@ namespace kademlia
   class Kademlia
     : public infinit::overlay::Overlay
     , public infinit::model::doughnut::Local
+    , public elle::Printable
   {
   public:
     Kademlia(Configuration const& config,
@@ -37,6 +38,7 @@ namespace kademlia
     void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode) override;
     void remove(Address address) override;
     std::unique_ptr<infinit::model::blocks::Block> fetch(Address address) const override;
+    void print(std::ostream& stream) const override;
   protected:
     virtual Overlay::Members _lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op)
