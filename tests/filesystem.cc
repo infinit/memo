@@ -13,7 +13,6 @@
 #include <infinit/storage/Filesystem.hh>
 
 #include <infinit/model/faith/Faith.hh>
-#include <infinit/model/steg/Steg.hh>
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
