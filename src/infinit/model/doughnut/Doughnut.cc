@@ -126,6 +126,7 @@ namespace infinit
               s.run_background("fetch", [e,&blocks,address] {
                   blocks.push_back(elle::make_unique<Remote>(e)->fetch(address));
               });
+            s.wait();
           };
           res = std::move(blocks.front());
         }
