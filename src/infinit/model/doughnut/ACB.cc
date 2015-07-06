@@ -46,6 +46,65 @@ namespace infinit
         , _data_signature()
       {}
 
+      /*------------.
+      | Permissions |
+      `------------*/
+
+      void
+      ACB::set_permissions(cryptography::PublicKey const& key,
+                           bool read,
+                           bool write)
+      {
+        std::vector<ACLEntry> entries;
+        if (this->_acl != Address::null)
+        {
+          auto acl = this->doughnut()->fetch(this->_acl);
+          entries =
+            elle::serialization::deserialize
+            <std::vector<ACLEntry>, elle::serialization::Json>
+            (acl->data(), "entries");
+        }
+        auto it = std::find_if
+          (entries.begin(), entries.end(),
+           [&] (ACLEntry const& e) { return e.key == key; });
+        bool acl_changed = false;
+        if (it == entries.end())
+        {
+          auto secret = this->doughnut()->keys().k().decrypt
+            (cryptography::Code(this->_owner_token));
+          auto token = key.encrypt(secret);
+          entries.emplace_back
+            (ACLEntry{key, read, write, std::move(token.buffer())});
+          acl_changed = true;
+        }
+        else
+        {
+          if (it->read != read)
+          {
+            it->read = read;
+            acl_changed = true;
+          }
+          if (it->write != write)
+          {
+            it->write = write;
+            acl_changed = true;
+          }
+        }
+        if (acl_changed)
+        {
+          // FIXME: squash multiple ACL changes
+          auto new_acl = this->doughnut()->make_block<blocks::ImmutableBlock>(
+            elle::serialization::serialize
+            <std::vector<ACLEntry>, elle::serialization::Json>
+            (entries, "entries"));
+          this->doughnut()->store(*new_acl);
+          this->_acl = new_acl->address();
+          this->_acl_changed = true;
+          // The ACL address is part of the data.
+          this->_data_changed = true;
+        }
+      }
+
       /*-----------.
       | Validation |
       `-----------*/
@@ -68,13 +127,13 @@ namespace infinit
           if (!Super::_validate())
             return false;
         ACLEntry* entry = nullptr;
+        std::vector<ACLEntry> entries;
         if (this->_editor != -1)
         {
           ELLE_DEBUG_SCOPE("%s: check author has write permissions", *this);
           if (this->_acl == Address::null || this->_editor < 0)
             return false;
           auto acl = this->doughnut()->fetch(this->_acl);
-          std::vector<ACLEntry> entries;
           elle::IOStream input(acl->data().istreambuf());
           elle::serialization::json::SerializerIn s(input);
           s.serialize("entries", entries);
@@ -107,7 +166,8 @@ namespace infinit
         {
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
           ELLE_TRACE_SCOPE("%s: data changed, seal", *this);
-          if (this->doughnut()->keys().K() == this->owner_key())
+          bool owner = this->doughnut()->keys().K() == this->owner_key();
+          if (owner)
             this->_editor = -1;
           auto secret = cryptography::SecretKey::generate
             (cryptography::cipher::Algorithm::aes256, 256);
@@ -125,18 +185,24 @@ namespace infinit
             s.serialize("entries", entries);
           }
           bool changed = false;
+          bool found = false;
           int idx = 0;
           for (auto& e: entries)
           {
-            if (e.write)
+            if (e.read)
             {
               changed = true;
               e.token = std::move(e.key.encrypt(secret).buffer());
             }
             if (e.key == this->doughnut()->keys().K())
+            {
+              found = true;
               this->_editor = idx;
+            }
             ++idx;
           }
+          if (!owner && !found)
+            throw elle::Error("not owner and no write permissions");
           if (changed)
           {
             ELLE_TRACE_SCOPE("%s: store new ACL", *this);
@@ -156,6 +222,7 @@ namespace infinit
           this->_data_signature = key.sign(cryptography::Plain(sign));
           ELLE_DUMP("%s: sign %s with %s: %f",
                     *this, sign, key, this->_data_signature);
+          this->_data_changed = false;
         }
       }
 
@@ -182,9 +249,9 @@ namespace infinit
         if (this->_acl != Address::null)
         {
           auto acl = this->doughnut()->fetch(this->_acl);
-          elle::IOStream input(acl->data().istreambuf());
-          elle::serialization::json::SerializerIn s(input);
-          s.serialize("entries", entries);
+          entries = elle::serialization::deserialize
+            <std::vector<ACLEntry>, elle::serialization::Json>
+            (acl->data(), "entries");
         }
         s.elle::serialization::Serializer::serialize(
           "acls", entries,

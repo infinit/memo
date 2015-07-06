@@ -1,3 +1,5 @@
+#define private public
+
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
@@ -7,6 +9,8 @@
 
 #include <infinit/RPC.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/OKB.hh>
+#include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/Model.hh>
 #include <infinit/storage/MissingKey.hh>
@@ -55,6 +59,9 @@ namespace infinit
       void
       Local::store(blocks::Block const& block, StoreMode mode)
       {
+        // FIXME: contextual serialization
+        if (auto okb = dynamic_cast<OKB const*>(&block))
+          const_cast<OKB*>(okb)->_doughnut = this->_doughnut.get();
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         try
         {
@@ -63,12 +70,12 @@ namespace infinit
                         elle::serialization::Binary>
             (this->_storage->get(block.address()));
           if (!block.validate(*previous))
-            throw elle::Error("block validation failed");
+            throw ValidationFailed("FIXME");
         }
         catch (storage::MissingKey const&)
         {
           if (!block.validate())
-            throw elle::Error("block validation failed");
+            throw ValidationFailed("FIXME");
         }
         elle::Buffer data;
         {

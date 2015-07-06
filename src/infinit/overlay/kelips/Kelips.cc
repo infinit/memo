@@ -464,9 +464,9 @@ namespace kelips
                        G& gen
                        )
   {
-    if (files.size() > target_count)
+    if (signed(files.size()) > target_count)
     {
-      if (target_count < files.size() - target_count)
+      if (target_count < signed(files.size()) - target_count)
         files = pick_n(files, target_count, gen);
       else
         files = remove_n(files, files.size() - target_count, gen);

@@ -99,6 +99,8 @@ def configure(
     'src/infinit/model/doughnut/Peer.hh',
     'src/infinit/model/doughnut/Remote.cc',
     'src/infinit/model/doughnut/Remote.hh',
+    'src/infinit/model/doughnut/ValidationFailed.cc',
+    'src/infinit/model/doughnut/ValidationFailed.hh',
     'src/infinit/model/faith/Faith.cc',
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',

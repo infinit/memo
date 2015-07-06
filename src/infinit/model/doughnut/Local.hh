@@ -4,6 +4,7 @@
 # include <reactor/network/tcp-server.hh>
 
 # include <infinit/model/doughnut/Peer.hh>
+# include <infinit/model/doughnut/fwd.hh>
 # include <infinit/storage/Storage.hh>
 
 namespace infinit
@@ -22,6 +23,7 @@ namespace infinit
         Local(std::unique_ptr<storage::Storage> storage, int port = 0);
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
+        ELLE_ATTRIBUTE_RX(std::unique_ptr<Doughnut>, doughnut);
 
       /*-------.
       | Blocks |

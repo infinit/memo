@@ -36,6 +36,15 @@ namespace infinit
         ELLE_ATTRIBUTE(int, data_version);
         ELLE_ATTRIBUTE(cryptography::Signature, data_signature);
 
+      /*------------.
+      | Permissions |
+      `------------*/
+      public:
+        void
+        set_permissions(cryptography::PublicKey const& key,
+                        bool read,
+                        bool write);
+
       /*-----------.
       | Validation |
       `-----------*/

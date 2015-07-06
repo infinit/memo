@@ -570,6 +570,7 @@ namespace infinit
         if (type == SSH_FXP_STATUS)
           break;
         int id = p.readInt();
+        (void)id;
         int count = p.readInt();
         for (int i=0; i<count; ++i)
         {

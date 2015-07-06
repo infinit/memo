@@ -29,7 +29,7 @@ faith()
   ELLE_LOG("update block")
   {
     std::string update("twerk is the new twist");
-    block2->data() = elle::Buffer(update.c_str(), update.length());
+    block2->data(elle::Buffer(update.c_str(), update.length()));
     BOOST_CHECK_NE(*faith.fetch(block2->address()), *block2);
     std::cerr << "STORE " << block2->data() << std::endl;
     faith.store(*block2);

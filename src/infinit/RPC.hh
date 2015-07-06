@@ -112,6 +112,15 @@ namespace infinit
         ELLE_TRACE("%s: success", *this);
         output.serialize("success", true);
       }
+      catch (elle::Error& e)
+      {
+        ELLE_TRACE("%s: exception escaped: %s",
+                   *this, elle::exception_string());
+        output.serialize("success", false);
+        std::unique_ptr<elle::Exception> p(&e);
+        output.serialize("exception", p);
+        p.release();
+      }
       catch (...)
       {
         ELLE_TRACE("%s: exception escaped: %s",
@@ -137,6 +146,15 @@ namespace infinit
         ELLE_TRACE("%s: success: %s", *this, res);
         output.serialize("success", true);
         output.serialize("value", res);
+      }
+      catch (elle::Error& e)
+      {
+        ELLE_TRACE("%s: exception escaped: %s",
+                   *this, elle::exception_string());
+        output.serialize("success", false);
+        std::unique_ptr<elle::Exception> p(&e);
+        output.serialize("exception", p);
+        p.release();
       }
       catch (...)
       {
@@ -169,7 +187,7 @@ namespace infinit
         {
           auto channel = channels.accept();
           auto request = channel.read();
-          elle::serialization::binary::SerializerIn input(request, false);
+          elle::serialization::json::SerializerIn input(request, false);
           std::string name;
           input.serialize("procedure", name);
           auto it = this->_rpcs.find(name);
@@ -178,7 +196,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
           protocol::Packet response;
           {
-            elle::serialization::binary::SerializerOut output(response, false);
+            elle::serialization::json::SerializerOut output(response, false);
             try
             {
               it->second->handle(input, output);
@@ -301,7 +319,7 @@ namespace infinit
         protocol::Packet call;
         ELLE_DEBUG("%s: build request", self)
         {
-          elle::serialization::binary::SerializerOut output(call, false);
+          elle::serialization::json::SerializerOut output(call, false);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
         }
@@ -311,11 +329,26 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
-        elle::serialization::binary::SerializerIn input(response, false);
+        elle::serialization::json::SerializerIn input(response, false);
         bool success = false;
         input.serialize("success", success);
-        ELLE_ASSERT(success);
-        return get_result<R>(input);
+        if (success)
+        {
+          ELLE_TRACE_SCOPE("%s: get result", self);
+          auto res = get_result<R>(input);
+          ELLE_DUMP("%s: result: %s", self, res);
+          return std::move(res);
+        }
+        else
+        {
+          ELLE_TRACE_SCOPE("%s: call failed, get exception", self);
+          auto e =
+            input.deserialize<std::unique_ptr<elle::Exception>>("exception");
+          ELLE_DUMP("%s: exception: %s (%s)",
+                    self, e->what(), elle::demangle(typeid(*e).name()));
+          // FIXME: slice
+          throw *e;
+        }
       }
     }
   };
