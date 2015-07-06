@@ -24,6 +24,8 @@ namespace infinit
       bool
       operator ==(Address const& rhs) const;
       bool
+      operator !=(Address const& rhs) const;
+      bool
       operator <(Address const& rhs) const;
       ELLE_ATTRIBUTE_R(Value, value);
       friend

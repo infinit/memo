@@ -29,6 +29,12 @@ namespace infinit
     }
 
     bool
+    Address::operator !=(Address const& rhs) const
+    {
+      return memcmp(this->_value, rhs._value, sizeof(Value)) != 0;
+    }
+
+    bool
     Address::operator <(Address const& rhs) const
     {
       return memcmp(this->_value, rhs._value, sizeof(Value)) < 0;
