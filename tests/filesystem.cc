@@ -247,6 +247,30 @@ void test_basic()
   }
   BOOST_CHECK_EQUAL(read(mount / "test"), "TestTest");
   bfs::remove(mount / "test");
+
+  // randomized manyops
+  std::default_random_engine gen;
+  std::uniform_int_distribution<>dist(0, 255);
+  {
+    boost::filesystem::ofstream ofs(mount / "tbig");
+    for (int i=0; i<10000000; ++i)
+      ofs.put(dist(gen));
+  }
+  BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
+  std::uniform_int_distribution<>dist2(0, 9999999);
+  for (int i=0; i < 200; ++i)
+  {
+    int fd = open((mount / "foo").string().c_str(), O_RDWR);
+    for (int i=0; i < 5; ++i)
+    {
+      lseek(fd, dist2(gen), SEEK_SET);
+      unsigned char c = dist(gen);
+      write(fd, &c, 1);
+    }
+    close(fd);
+  }
+  BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
+  bfs::remove(mount / "tbig");
 }
 
 
