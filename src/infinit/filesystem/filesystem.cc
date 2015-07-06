@@ -16,6 +16,7 @@
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs");
@@ -29,7 +30,9 @@ namespace infinit
 {
   namespace filesystem
   {
-    typedef infinit::model::blocks::MutableBlock Block;
+    typedef infinit::model::blocks::Block Block;
+    typedef infinit::model::blocks::MutableBlock MutableBlock;
+    typedef infinit::model::blocks::ImmutableBlock ImmutableBlock;
     typedef infinit::model::Address Address;
 
     class Directory;
@@ -191,7 +194,7 @@ namespace infinit
     {
     public:
       Directory(DirectoryPtr parent, FileSystem& owner, std::string const& name,
-                std::unique_ptr<Block> b);
+                std::unique_ptr<MutableBlock> b);
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_ISDIR;
@@ -223,7 +226,7 @@ namespace infinit
       friend class FileHandle;
       void _changed(bool set_mtime = false);
       void _push_changes();
-      std::unique_ptr<Block> _block;
+      std::unique_ptr<MutableBlock> _block;
       std::unordered_map<std::string, FileData> _files;
       boost::posix_time::ptime _last_fetch;
       friend class FileSystem;
@@ -252,7 +255,7 @@ namespace infinit
     {
     public:
       File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
-                std::unique_ptr<Block> b = std::unique_ptr<Block>());
+                std::unique_ptr<MutableBlock> b = std::unique_ptr<MutableBlock>());
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) THROW_NOTDIR;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;
@@ -293,7 +296,7 @@ namespace infinit
        * @param create: if true, allow creation of a new block as needed
        *                else returns nullptr if creation was required
       */
-      Block*
+      MutableBlock*
       _block_at(int index, bool create);
       // Switch from direct to indexed mode
       void _switch_to_multi(bool alloc_first_block);
@@ -303,13 +306,13 @@ namespace infinit
       bool _multi(); // True if mode is index
       struct CacheEntry
       {
-        std::unique_ptr<Block> block;
+        std::unique_ptr<MutableBlock> block;
         bool dirty;
         std::chrono::system_clock::time_point last_use;
         bool new_block;
       };
       std::unordered_map<int, CacheEntry> _blocks;
-      std::unique_ptr<Block> _first_block;
+      std::unique_ptr<MutableBlock> _first_block;
       bool _first_block_new;
       int _handle_count;
     };
@@ -359,7 +362,7 @@ namespace infinit
     std::unique_ptr<model::blocks::MutableBlock>
     _make_root_block(infinit::model::Model& model)
     {
-      auto root = model.make_block<model::blocks::MutableBlock>();
+      auto root = model.make_block<MutableBlock>();
       model.store(*root);
       return root;
     }
@@ -399,10 +402,10 @@ namespace infinit
         (nullptr, *this, "", this->_root_block());
     }
 
-    std::unique_ptr<Block>
+    std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
-      return elle::cast<Block>::runtime(block_store()->fetch(_root_address));
+      return elle::cast<MutableBlock>::runtime(block_store()->fetch(_root_address));
     }
 
     static const int DIRECTORY_MASK = 0040000;
@@ -416,7 +419,7 @@ namespace infinit
 
     Directory::Directory(DirectoryPtr parent, FileSystem& owner,
                          std::string const& name,
-                         std::unique_ptr<Block> b)
+                         std::unique_ptr<MutableBlock> b)
     : Node(owner, parent, name)
     , _block(std::move(b))
     {
@@ -450,7 +453,7 @@ namespace infinit
         return;
       }
       _last_fetch = now;
-      _block = elle::cast<Block>::runtime
+      _block = elle::cast<MutableBlock>::runtime
         (_owner.block_store()->fetch(_block->address()));
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
@@ -542,10 +545,10 @@ namespace infinit
           return std::shared_ptr<rfs::Path>(new Symlink(self, _owner, name));
         if (!isDir)
           return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
-        std::unique_ptr<Block> block;
+        std::unique_ptr<MutableBlock> block;
         try
         {
-          block = elle::cast<Block>::runtime
+          block = elle::cast<MutableBlock>::runtime
             (_owner.block_store()->fetch(it->second.address));
         }
         catch (infinit::model::MissingBlock const& b)
@@ -802,7 +805,7 @@ namespace infinit
     Unknown::mkdir(mode_t mode)
     {
       ELLE_DEBUG("mkdir %s", _name);
-      auto b = _owner.block_store()->make_block<Block>();
+      auto b = _owner.block_store()->make_block<MutableBlock>();
       _owner.block_store()->store(*b, model::STORE_INSERT);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
@@ -830,7 +833,7 @@ namespace infinit
         auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
         return f->open(flags, mode);
       }
-      auto b = _owner.block_store()->make_block<Block>();
+      auto b = _owner.block_store()->make_block<MutableBlock>();
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_DEBUG("Adding file to parent %x", _parent.get());
       _parent->_files.insert(
@@ -921,7 +924,7 @@ namespace infinit
     }
 
     File::File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
-               std::unique_ptr<Block> block)
+               std::unique_ptr<MutableBlock> block)
     : Node(owner, parent, name)
     , _first_block(std::move(block))
     , _first_block_new(false)
@@ -985,7 +988,7 @@ namespace infinit
       memcpy(_first_block->data().mutable_contents()+12, &v2, 8);
     }
 
-    Block*
+    MutableBlock*
     File::_block_at(int index, bool create)
     {
       ELLE_ASSERT_GTE(index, 0);
@@ -1007,7 +1010,7 @@ namespace infinit
       }
       char zeros[sizeof(Address)];
       memset(zeros, 0, sizeof(Address));
-      std::unique_ptr<Block> b;
+      std::unique_ptr<MutableBlock> b;
       bool is_new = false;
       if (!memcmp(zeros, _first_block->data().mutable_contents() + offset,
                  sizeof(Address)))
@@ -1016,16 +1019,16 @@ namespace infinit
         {
           return nullptr;
         }
-        b = _owner.block_store()->make_block<Block>();
+        b = _owner.block_store()->make_block<MutableBlock>();
         is_new = true;
         // _owner.block_store()->store(*b); // FIXME: but why?
       }
       else
       {
          Address addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
-         b = elle::cast<Block>::runtime(_owner.block_store()->fetch(addr));
+         b = elle::cast<MutableBlock>::runtime(_owner.block_store()->fetch(addr));
       }
-      Block* b_addr = b.get();
+      MutableBlock* b_addr = b.get();
       memcpy(_first_block->data().mutable_contents() + offset,
         b->address().value(), sizeof(Address::Value));
       _owner.block_store()->store(*_first_block);
@@ -1135,7 +1138,7 @@ namespace infinit
       Node::stat(st);
       if (_multi())
       {
-        _first_block = elle::cast<Block>::runtime
+        _first_block = elle::cast<MutableBlock>::runtime
           (_owner.block_store()->fetch(_parent->_files.at(_name).address));
         Header header = _header();
         st->st_size = header.total_size;
@@ -1216,7 +1219,7 @@ namespace infinit
         // last block surviving the cut might need resizing
         if (drop_from >=0 && !memcmp(addr[drop_from+1].value(), zero, sizeof(Address::Value)))
         {
-          Block* bl;
+          MutableBlock* bl;
           auto it = _blocks.find(drop_from);
           if (it != _blocks.end())
           {
@@ -1226,7 +1229,7 @@ namespace infinit
           else
           {
             _blocks[drop_from].block =
-              elle::cast<Block>::runtime
+              elle::cast<MutableBlock>::runtime
               (_owner.block_store()->fetch(addr[drop_from + 1]));
             CacheEntry& ent = _blocks[drop_from];
             bl = ent.block.get();
@@ -1249,7 +1252,7 @@ namespace infinit
           if (it != _blocks.end())
             _first_block = std::move(it->second.block);
           else
-            _first_block = elle::cast<Block>::runtime
+            _first_block = elle::cast<MutableBlock>::runtime
               (_owner.block_store()->fetch(addr[1]));
           _first_block->data
             ([new_size] (elle::Buffer& data) { data.size(new_size); });
@@ -1288,9 +1291,6 @@ namespace infinit
       auto& data = _parent->_files.at(_name);
       data.mtime = time(nullptr);
       data.ctime = time(nullptr);
-      _owner.block_store()->store(*_first_block,
-                                  _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
-      _first_block_new = false;
       if (!_multi())
         data.size = _first_block->data().size();
       else
@@ -1305,13 +1305,40 @@ namespace infinit
           {
             ELLE_DEBUG("Writing data block %s", b.first);
             b.second.dirty = false;
-            _owner.block_store()->store(*b.second.block, b.second.new_block? model::STORE_INSERT : model::STORE_ANY);
+            // FIXME: Find a way to move the data
+            auto imb = _owner.block_store()->make_block<ImmutableBlock>(b.second.block->data());
+            if (imb->address() != b.second.block->address())
+            {
+              ELLE_DEBUG("Changing address of block %s: %s -> %s", b.first,
+                b.second.block->address(), imb->address());
+              int offset = (b.first+1) * sizeof(Address);
+              memcpy(_first_block->data().mutable_contents() + offset,
+                imb->address().value(), sizeof(Address::Value));
+              if (!b.second.new_block)
+              {
+                try
+                {
+                  _owner.block_store()->remove(b.second.block->address());
+                }
+                catch (infinit::model::MissingBlock const& mb)
+                {
+                  ELLE_WARN("Block was supposed to exist: %s",
+                            b.second.block->address());
+                }
+              }
+              b.second.new_block = true;
+            }
+            _owner.block_store()->store(*imb, b.second.new_block? model::STORE_INSERT : model::STORE_ANY);
             b.second.new_block = false;
+            b.second.dirty = false;
           }
         }
       }
       ELLE_DEBUG("Storing first block %x, size %s",
                  _first_block->address(), _first_block->data().size());
+      _owner.block_store()->store(*_first_block,
+                                  _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+      _first_block_new = false;
       _parent->_changed(false);
     }
 
@@ -1320,10 +1347,10 @@ namespace infinit
     {
       // Switch without changing our address
       if (!_first_block)
-      _first_block = elle::cast<Block>::runtime
+      _first_block = elle::cast<MutableBlock>::runtime
         (_owner.block_store()->fetch(_parent->_files.at(_name).address));
       uint64_t current_size = _first_block->data().size();
-      auto new_block = _owner.block_store()->make_block<Block>();
+      auto new_block = _owner.block_store()->make_block<MutableBlock>();
       new_block->data(elle::Buffer((_first_block->data())));
       _blocks.insert(std::make_pair(0, CacheEntry{std::move(new_block), true}));
       /*
@@ -1394,7 +1421,7 @@ namespace infinit
         try
         {
           auto address = _owner->_parent->_files.at(_owner->_name).address;
-          _owner->_first_block = elle::cast<Block>::runtime
+          _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.block_store()->fetch(address));
         }
         catch(infinit::model::MissingBlock const& err)
@@ -1459,7 +1486,7 @@ namespace infinit
         {
           ELLE_DEBUG("read on uncached block, fetching");
           auto address = _owner->_parent->_files.at(_owner->_name).address;
-          _owner->_first_block = elle::cast<Block>::runtime
+          _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.block_store()->fetch(address));
         }
         ELLE_ASSERT_EQ(signed(block->data().size()), total_size);
@@ -1477,7 +1504,7 @@ namespace infinit
       { // single block case
         off_t block_offset = offset - (off_t)start_block * (off_t)block_size;
         auto const& it = _owner->_blocks.find(start_block);
-        Block* block = nullptr;
+        MutableBlock* block = nullptr;
         if (it != _owner->_blocks.end())
         {
           ELLE_DEBUG("obtained block %s : %x from cache", start_block, it->second.block->address());
@@ -1579,7 +1606,7 @@ namespace infinit
       int end_block = end ? (end - 1) / block_size : 0;
       if (start_block == end_block)
       {
-        Block* block;
+        MutableBlock* block;
         auto const it = _owner->_blocks.find(start_block);
         if (it != _owner->_blocks.end())
         {
@@ -1604,7 +1631,8 @@ namespace infinit
             {
               data.size(block_offset + size);
             });
-          ELLE_DEBUG("Growing block of %s", block_offset + size - old_size);
+          ELLE_DEBUG("Growing block of %s to %s", block_offset + size - old_size,
+            block_offset + size);
           if (old_size < block_offset)
           { // fill with zeroes
             memset(block->data().mutable_contents() + old_size, 0, block_offset - old_size);
@@ -1639,9 +1667,23 @@ namespace infinit
       // Assuming linear writes, this is a good time to flush start block since
       // it just got filled
       File::CacheEntry& ent = _owner->_blocks.at(start_block);
-      _owner->_owner.block_store()->store(*ent.block, ent.new_block? model::STORE_INSERT : model::STORE_ANY);
+      auto imb = _owner->_owner.block_store()->make_block<ImmutableBlock>(ent.block->data());
+      if (imb->address() != ent.block->address())
+      {
+        ELLE_DEBUG("Changing address of block %s: %s -> %s", start_block,
+                   ent.block->address(), imb->address());
+        int offset = (start_block+1) * sizeof(Address);
+        memcpy(_owner->_first_block->data().mutable_contents() + offset,
+          imb->address().value(), sizeof(Address::Value));
+        if (!ent.new_block)
+          _owner->_owner.block_store()->remove(ent.block->address());
+      }
+      _owner->_owner.block_store()->store(*imb, ent.new_block? model::STORE_INSERT : model::STORE_ANY);
       ent.dirty = false;
       ent.new_block = false;
+      _owner->_owner.block_store()->store(*_owner->_first_block,
+                                  _owner->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+      _owner->_first_block_new = false;
       return r1 + r2;
     }
 
