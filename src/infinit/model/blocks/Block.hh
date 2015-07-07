@@ -37,6 +37,8 @@ namespace infinit
         elle::Buffer const&
         data() const;
         ELLE_ATTRIBUTE_R(Address, address);
+        elle::Buffer
+        take_data();
 
       protected:
         elle::Buffer _data;

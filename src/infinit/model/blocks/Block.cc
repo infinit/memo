@@ -37,6 +37,12 @@ namespace infinit
         return this->_data;
       }
 
+      elle::Buffer
+      Block::take_data()
+      {
+        return std::move(this->_data);
+      }
+
       bool
       Block::operator ==(Block const& rhs) const
       {
