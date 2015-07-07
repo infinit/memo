@@ -63,6 +63,18 @@ static std::string read(boost::filesystem::path const& where)
   return text;
 }
 
+static void read_all(boost::filesystem::path const& where)
+{
+  boost::filesystem::ifstream ifs(where);
+  char buffer[1024];
+  while (true)
+  {
+    ifs.read(buffer, 1024);
+    if (!ifs.gcount())
+      return;
+  }
+}
+
 static void write(boost::filesystem::path const& where, std::string const& what)
 {
   boost::filesystem::ofstream ofs(where);
@@ -270,6 +282,17 @@ void test_basic()
     close(fd);
   }
   BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
+  // truncate
+  boost::filesystem::resize_file(mount / "tbig", 9000000);
+  read_all(mount / "tbig");
+  boost::filesystem::resize_file(mount / "tbig", 8000000);
+  read_all(mount / "tbig");
+  boost::filesystem::resize_file(mount / "tbig", 5000000);
+  read_all(mount / "tbig");
+  boost::filesystem::resize_file(mount / "tbig", 2000000);
+  read_all(mount / "tbig");
+  boost::filesystem::resize_file(mount / "tbig", 900000);
+  read_all(mount / "tbig");
   bfs::remove(mount / "tbig");
 }
 
