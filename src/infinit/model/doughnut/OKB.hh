@@ -14,6 +14,9 @@ namespace infinit
   {
     namespace doughnut
     {
+      template <typename Block>
+      class BaseOKB;
+
       struct OKBHeader
       {
       /*-------------.
@@ -34,7 +37,8 @@ namespace infinit
       protected:
         Address
         _hash_address() const;
-        friend class OKB;
+        template <typename Block>
+        friend class BaseOKB;
 
       /*--------------.
       | Serialization |
@@ -46,23 +50,23 @@ namespace infinit
         OKBHeader();
       };
 
-      class OKB
+      template <typename Block>
+      class BaseOKB
         : public OKBHeader
-        , public blocks::MutableBlock
+        , public Block
       {
       /*------.
       | Types |
       `------*/
       public:
-        typedef OKB Self;
-        typedef blocks::MutableBlock Super;
-
+        typedef BaseOKB<Block> Self;
+        typedef Block Super;
 
       /*-------------.
       | Construction |
       `-------------*/
       public:
-        OKB(Doughnut* owner);
+        BaseOKB(Doughnut* owner);
         ELLE_ATTRIBUTE_R(int, version);
         ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
@@ -93,7 +97,7 @@ namespace infinit
 
         template <typename T>
         bool
-        _validate_version(Block const& other_,
+        _validate_version(blocks::Block const& other_,
                           int T::*member,
                           int version) const;
       private:
@@ -104,7 +108,7 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        OKB(elle::serialization::Serializer& input);
+        BaseOKB(elle::serialization::Serializer& input);
         virtual
         void
         serialize(elle::serialization::Serializer& s) override;
@@ -112,6 +116,8 @@ namespace infinit
         void
         _serialize(elle::serialization::Serializer& input);
       };
+
+      typedef BaseOKB<blocks::MutableBlock> OKB;
     }
   }
 }

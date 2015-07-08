@@ -1,6 +1,8 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
+#include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 
@@ -68,7 +70,8 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      OKB::OKB(Doughnut* owner)
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(Doughnut* owner)
         : OKBHeader(owner->keys())
         , Super(this->_hash_address())
         , _version(-1)
@@ -80,8 +83,9 @@ namespace infinit
       | Validation |
       `-----------*/
 
+      template <typename Block>
       elle::Buffer
-      OKB::_sign() const
+      BaseOKB<Block>::_sign() const
       {
         elle::Buffer res;
         {
@@ -95,14 +99,16 @@ namespace infinit
         return res;
       }
 
+      template <typename Block>
       void
-      OKB::_sign(elle::serialization::SerializerOut& s) const
+      BaseOKB<Block>::_sign(elle::serialization::SerializerOut& s) const
       {
         s.serialize("data", this->data());
       }
 
+      template <typename Block>
       void
-      OKB::_seal()
+      BaseOKB<Block>::_seal()
       {
         ++this->_version; // FIXME: idempotence in case the write fails ?
         auto sign = this->_sign();
@@ -112,8 +118,9 @@ namespace infinit
                   *this, sign, this->_doughnut->keys().k(), this->_signature);
       }
 
+      template <typename Block>
       bool
-      OKB::_validate(blocks::Block const& previous) const
+      BaseOKB<Block>::_validate(blocks::Block const& previous) const
       {
         if (!this->_validate())
           return false;
@@ -123,8 +130,9 @@ namespace infinit
         return true;
       }
 
+      template <typename Block>
       bool
-      OKB::_validate() const
+      BaseOKB<Block>::_validate() const
       {
         if (!static_cast<OKBHeader const*>(this)->validate(this->address()))
           return false;
@@ -135,8 +143,9 @@ namespace infinit
         return true;
       }
 
+      template <typename Block>
       bool
-      OKB::_check_signature(cryptography::PublicKey const& key,
+      BaseOKB<Block>::_check_signature(cryptography::PublicKey const& key,
                             cryptography::Signature const& signature,
                             elle::Buffer const& data,
                             std::string const& name) const
@@ -159,7 +168,8 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      OKB::OKB(elle::serialization::Serializer& input)
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(elle::serialization::Serializer& input)
         : OKBHeader()
         , Super(input)
         , _version(-1)
@@ -169,21 +179,28 @@ namespace infinit
         this->_serialize(input);
       }
 
+      template <typename Block>
       void
-      OKB::serialize(elle::serialization::Serializer& s)
+      BaseOKB<Block>::serialize(elle::serialization::Serializer& s)
       {
         this->Super::serialize(s);
         this->_serialize(s);
       }
 
+      template <typename Block>
       void
-      OKB::_serialize(elle::serialization::Serializer& s)
+      BaseOKB<Block>::_serialize(elle::serialization::Serializer& s)
       {
         s.serialize("key", this->_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
         s.serialize("signature", this->_signature);
       }
+
+      template
+      class BaseOKB<blocks::MutableBlock>;
+      template
+      class BaseOKB<blocks::ACLBlock>;
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<OKB> _register_okb_serialization("OKB");

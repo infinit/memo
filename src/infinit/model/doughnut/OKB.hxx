@@ -7,11 +7,12 @@ namespace infinit
   {
     namespace doughnut
     {
+      template <typename Block>
       template <typename T>
       bool
-      OKB::_validate_version(Block const& other_,
-                             int T::*member,
-                             int version) const
+      BaseOKB<Block>::_validate_version(blocks::Block const& other_,
+                                        int T::*member,
+                                        int version) const
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
         auto other = dynamic_cast<T const*>(&other_);
