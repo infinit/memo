@@ -39,6 +39,9 @@ namespace infinit
       public:
         PlainImmutableBlock()
         : Super(Address::random()) {}
+        PlainImmutableBlock(elle::Buffer b)
+        : Super(Address::random(), b)
+        {}
         PlainImmutableBlock(elle::serialization::Serializer& input)
         : Super(input)
         {}
@@ -71,7 +74,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: create CHB", *this);
         if (_plain)
-          return elle::make_unique<PlainImmutableBlock>();
+          return elle::make_unique<PlainImmutableBlock>(std::move(content));
         else
           return elle::make_unique<CHB>(std::move(content));
       }
