@@ -13,6 +13,12 @@
 #include <infinit/storage/Filesystem.hh>
 
 #include <infinit/model/faith/Faith.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Local.hh>
+
+#include <infinit/overlay/Stonehenge.hh>
+
+ELLE_LOG_COMPONENT("test");
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
@@ -34,6 +40,51 @@ static int directory_count(boost::filesystem::path const& p)
     ++s; ++d;
   }
   return s;
+}
+
+static void run_filesystem_dht(std::string const& store,
+                               std::string const& mountpoint,
+                               int node_count,
+                               bool plain,
+                               int nread = 1,
+                               int nwrite = 1)
+{
+  std::vector<std::unique_ptr<infinit::model::doughnut::Local>> nodes;
+  std::vector<boost::asio::ip::tcp::endpoint> endpoints;
+  reactor::Thread t(sched, "fs", [&] {
+    for (int i=0; i<node_count; ++i)
+    {
+      auto tmp = store / boost::filesystem::unique_path();
+      std::cerr << i << " : " << tmp << std::endl;
+      boost::filesystem::create_directories(tmp);
+      infinit::storage::Storage* s;
+      if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
+        s = new infinit::storage::Memory();
+      else
+        s = new infinit::storage::Filesystem(tmp);
+      infinit::model::doughnut::Local* l = new infinit::model::doughnut::Local(
+        std::unique_ptr<infinit::storage::Storage>(s));
+      auto ep = l->server_endpoint();
+      endpoints.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
+                             ep.port());
+      nodes.emplace_back(l);
+    }
+    std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
+    std::unique_ptr<infinit::model::Model> model =
+      elle::make_unique<infinit::model::doughnut::Doughnut>(
+        infinit::cryptography::KeyPair::generate(
+              infinit::cryptography::Cryptosystem::rsa, 2048),
+              std::move(ov),
+              plain, nread, nwrite);
+    std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
+      std::move(model));
+    fs = new reactor::filesystem::FileSystem(std::move(ops), true);
+    ELLE_LOG("mounting on %s", mountpoint);
+    fs->mount(mountpoint, {"", "-o", "big_writes"}); // {"", "-d" /*, "-o", "use_ino"*/});
+    ELLE_LOG("filesystem unmounted");
+    nodes.clear();
+  });
+  sched.run();
 }
 
 static void run_filesystem(std::string const& store, std::string const& mountpoint)
@@ -81,21 +132,32 @@ static void write(boost::filesystem::path const& where, std::string const& what)
   ofs << what;
 }
 
-void test_basic()
+void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int nwrite=1)
 {
   namespace bfs = boost::filesystem;
   auto store = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   auto mount = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   boost::filesystem::create_directories(mount);
   boost::filesystem::create_directories(store);
-  std::thread t([&] {run_filesystem(store.string(), mount.string());});
-  usleep(500000);
+  std::thread t([&] {
+      if (dht)
+        run_filesystem_dht(store.string(), mount.string(), nnodes, plain,
+                           nread, nwrite);
+      else
+        run_filesystem(store.string(), mount.string());
+  });
+
+  usleep(900000);
+
   elle::SafeFinally remover([&] {
+      ELLE_TRACE("unmounting");
       reactor::Thread th(sched, "unmount", [&] { fs->unmount();});
       t.join();
+      ELLE_TRACE("cleaning up");
       boost::filesystem::remove_all(store);
       boost::filesystem::remove_all(mount);
   });
+
   {
     boost::filesystem::ofstream ofs(mount / "test");
     ofs << "Test";
@@ -241,6 +303,13 @@ void test_basic()
   ::close(fd);
   bfs::remove(mount / "u");
 
+  // multiple open, but with only one open
+  {
+    boost::filesystem::ofstream ofs(mount / "test");
+    ofs << "Test";
+  }
+  BOOST_CHECK_EQUAL(read(mount / "test"), "Test");
+  bfs::remove(mount / "test");
   // multiple opens
   {
     boost::filesystem::ofstream ofs(mount / "test");
@@ -260,6 +329,7 @@ void test_basic()
   BOOST_CHECK_EQUAL(read(mount / "test"), "TestTest");
   bfs::remove(mount / "test");
 
+  ELLE_TRACE("Randomizing a file");
   // randomized manyops
   std::default_random_engine gen;
   std::uniform_int_distribution<>dist(0, 255);
@@ -268,10 +338,13 @@ void test_basic()
     for (int i=0; i<10000000; ++i)
       ofs.put(dist(gen));
   }
+  ELLE_TRACE("random writes");
   BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
   std::uniform_int_distribution<>dist2(0, 9999999);
-  for (int i=0; i < 200; ++i)
+  for (int i=0; i < (dht?1:100); ++i)
   {
+    if (! (i%10))
+      ELLE_TRACE("Run %s", i);
     int fd = open((mount / "foo").string().c_str(), O_RDWR);
     for (int i=0; i < 5; ++i)
     {
@@ -296,10 +369,24 @@ void test_basic()
   bfs::remove(mount / "tbig");
 }
 
+void test_basic()
+{
+  test_filesystem(false);
+}
+void test_dht_plain()
+{
+  test_filesystem(true, 5, true, 1, 1);
+}
+void test_dht_crypto()
+{
+  test_filesystem(true, 5, false, 1, 1);
+}
 
 ELLE_TEST_SUITE()
 {
   boost::unit_test::test_suite* filesystem = BOOST_TEST_SUITE("filesystem");
   boost::unit_test::framework::master_test_suite().add(filesystem);
   filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
+  filesystem->add(BOOST_TEST_CASE(test_dht_plain), 0, 50);
+  filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 50);
 }
