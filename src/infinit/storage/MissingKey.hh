@@ -15,6 +15,9 @@ namespace infinit
     public:
       typedef elle::Error Super;
       MissingKey(Key key);
+      MissingKey(elle::serialization::SerializerIn& input);
+      void
+      serialize(elle::serialization::Serializer& s) override;
       ELLE_ATTRIBUTE_R(Key, key);
     };
   }
