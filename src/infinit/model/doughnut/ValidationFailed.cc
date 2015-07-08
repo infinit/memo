@@ -9,7 +9,7 @@ namespace infinit
     namespace doughnut
     {
       ValidationFailed::ValidationFailed(std::string const& reason)
-        : Super(reason)
+        : Super(elle::sprintf("block validation failed: %s", reason))
       {}
 
       ValidationFailed::ValidationFailed(
