@@ -352,8 +352,12 @@ namespace infinit
     : _backend(std::move(block))
     , _is_mutable(dynamic_cast<MutableBlock*>(_backend.get()))
     {
+      ELLE_DEBUG("Anyblock mutable=%s", _is_mutable);
       if (!_is_mutable)
+      {
         _buf = _backend->take_data();
+        ELLE_DEBUG("Nonmutable, stole %s bytes", _buf.size());
+      }
     }
 
     AnyBlock::AnyBlock(AnyBlock && b)
@@ -1466,6 +1470,7 @@ namespace infinit
       uint64_t current_size = _first_block->data().size();
       auto new_block = _owner.block_store()->make_block<ImmutableBlock>(
         _first_block->data());
+      ELLE_ASSERT_EQ(current_size, new_block->data().size());
       _blocks.insert(std::make_pair(0, CacheEntry{
         AnyBlock(std::move(new_block)), true, {}, true}));
       ELLE_ASSERT_EQ(current_size, _blocks.at(0).block.data().size());
@@ -1554,6 +1559,7 @@ namespace infinit
       : _owner(owner)
       , _dirty(dirty)
     {
+      ELLE_TRACE("FileHandle creation, hc=%s", _owner->_handle_count);
       _owner->_handle_count++;
       _owner->_parent->_files.at(_owner->_name).atime = time(nullptr);
       _owner->_parent->_changed(push_mtime);
@@ -1573,7 +1579,15 @@ namespace infinit
           // This is not a mistake if file is already opened but data has not
           // been pushed yet.
           if (!_owner->_first_block)
+          {
+            ELLE_ERR("Block missing in storage and not in cache.");
             throw;
+          }
+        }
+        catch(std::exception const& e)
+        {
+          ELLE_WARN("Unexpected exception while fetching: %s", e.what());
+          throw;
         }
       }
     }
