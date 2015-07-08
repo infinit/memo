@@ -7,6 +7,9 @@
 #include <elle/serialization/json.hh> // FIXME
 
 #include <reactor/Scope.hh>
+#include <reactor/exception.hh>
+
+#include <infinit/storage/MissingKey.hh>
 
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -117,7 +120,25 @@ namespace infinit
         std::unique_ptr<blocks::Block> res;
         if (_read_n == 1)
         {
-          res = this->_owner(address, overlay::OP_FETCH)->fetch(address);
+          try
+          {
+            res = this->_owner(address, overlay::OP_FETCH)->fetch(address);
+          }
+          catch (infinit::storage::MissingKey const&)
+          {
+            return nullptr;
+          }
+          catch (reactor::Terminate const&)
+          {
+            throw;
+          }
+          catch (std::exception const& e)
+          {
+            ELLE_WARN("Doughnut: unexpected exception while fetching %x: %s (%s)",
+                      address, e.what(), typeid(e).name());
+            ELLE_WARN("Workaround exception slicing bug: assuming MissingKey");
+            return nullptr;
+          }
         }
         else
         {
