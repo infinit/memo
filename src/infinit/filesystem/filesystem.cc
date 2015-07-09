@@ -143,6 +143,7 @@ namespace infinit
     #define THROW_NOSYS { throw rfs::Error(ENOSYS, "Not implemented");}
     #define THROW_ISDIR { throw rfs::Error(EISDIR, "Is a directory");}
     #define THROW_NOTDIR { throw rfs::Error(ENOTDIR, "Is not a directory");}
+    #define THROW_NODATA { throw rfs::Error(ENODATA, "No data");}
 
     class Node
     {
@@ -189,6 +190,7 @@ namespace infinit
       void truncate(off_t new_size) override THROW_NOENT;
       std::shared_ptr<Path> child(std::string const& name) override THROW_NOENT;
       bool allow_cache() override { return false;}
+      std::string getxattr(std::string const& k) override {THROW_NODATA;}
     private:
     };
 
@@ -238,6 +240,8 @@ namespace infinit
       void utimens(const struct timespec tv[2]) override;
       void truncate(off_t new_size) override THROW_ISDIR;
       std::shared_ptr<rfs::Path> child(std::string const& name) override;
+      std::string getxattr(std::string const& key) override;
+      std::vector<std::string> listxattr() override;
       void cache_stats(CacheStats& append);
       void serialize(elle::serialization::Serializer&);
       bool allow_cache() override { return true;}
@@ -298,6 +302,8 @@ namespace infinit
       void statfs(struct statvfs *) override;
       void utimens(const struct timespec tv[2]);
       void truncate(off_t new_size) override;
+      std::string getxattr(std::string const& name) override;
+      std::vector<std::string> listxattr() override;
       std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
       bool allow_cache() override;
       // check cached data size, remove entries if needed
@@ -1552,6 +1558,54 @@ namespace infinit
       }
     }
 
+    std::vector<std::string> File::listxattr()
+    {
+      ELLE_TRACE("listxattr");
+      std::vector<std::string> res;
+      res.push_back("user.infinit.block");
+      return res;
+    }
+    std::vector<std::string> Directory::listxattr()
+    {
+      ELLE_TRACE("listxattr");
+      std::vector<std::string> res;
+      res.push_back("user.infinit.block");
+      return res;
+    }
+    std::string File::getxattr(std::string const& key)
+    {
+      ELLE_TRACE("getxattr %s", key);
+      if (key == "user.infinit.block")
+      {
+        if (_first_block)
+          return elle::sprintf("%x", _first_block->address());
+        else
+        {
+          auto const& elem = _parent->_files.at(_name);
+          return elle::sprintf("%x", elem.address);
+        }
+      }
+      else
+        THROW_NODATA;
+    }
+    std::string Directory::getxattr(std::string const& key)
+    {
+      ELLE_TRACE("getxattr %s", key);
+      if (key == "user.infinit.block")
+      {
+        if (_block)
+          return elle::sprintf("%x", _block->address());
+        else if (_parent)
+        {
+          auto const& elem = _parent->_files.at(_name);
+          return elle::sprintf("%x", elem.address);
+        }
+        else
+          return "<ROOT>";
+      }
+      else
+        THROW_NODATA;
+    }
     FileHandle::FileHandle(std::shared_ptr<File> owner,
                            bool push_mtime,
                            bool no_fetch,
