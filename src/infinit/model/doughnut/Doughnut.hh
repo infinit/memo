@@ -6,7 +6,7 @@
 # include <cryptography/KeyPair.hh>
 
 # include <infinit/model/Model.hh>
-# include <infinit/model/doughnut/Peer.hh>
+# include <infinit/model/doughnut/Consensus.hh>
 # include <infinit/overlay/Overlay.hh>
 
 namespace infinit
@@ -24,8 +24,10 @@ namespace infinit
       public:
         Doughnut(infinit::cryptography::KeyPair keys,
                  std::unique_ptr<overlay::Overlay> overlay,
-                 bool plain = false, int write_n = 1, int read_n = 1);
+                 std::unique_ptr<Consensus> consensus = nullptr,
+                 bool plain = false);
         ELLE_ATTRIBUTE(std::unique_ptr<overlay::Overlay>, overlay)
+        ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
         ELLE_ATTRIBUTE_R(infinit::cryptography::KeyPair, keys);
 
       protected:
@@ -50,15 +52,10 @@ namespace infinit
         virtual
         void
         _remove(Address address) override;
-        ELLE_ATTRIBUTE_R(std::vector<std::unique_ptr<Peer>>, peers);
         friend class Local;
 
       private:
-        std::unique_ptr<Peer>
-        _owner(Address const& address, overlay::Operation op) const;
         ELLE_ATTRIBUTE(bool, plain);
-        ELLE_ATTRIBUTE(int, write_n);
-        ELLE_ATTRIBUTE(int, read_n);
       };
     }
   }
