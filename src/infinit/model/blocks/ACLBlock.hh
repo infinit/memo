@@ -1,6 +1,7 @@
 #ifndef INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 # define INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 
+# include <infinit/model/User.hh>
 # include <infinit/model/blocks/MutableBlock.hh>
 
 namespace infinit
@@ -25,6 +26,21 @@ namespace infinit
       protected:
         ACLBlock(Address address);
         ACLBlock(Address address, elle::Buffer data);
+
+      /*------------.
+      | Permissions |
+      `------------*/
+      public:
+        void
+        set_permissions(User const& user,
+                        bool read,
+                        bool write);
+      protected:
+        virtual
+        void
+        _set_permissions(User const& user,
+                         bool read,
+                         bool write) = 0;
 
       /*--------------.
       | Serialization |

@@ -11,6 +11,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/User.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
 
@@ -102,6 +103,20 @@ namespace infinit
           this->_acl_changed = true;
           // The ACL address is part of the data.
           this->_data_changed = true;
+        }
+      }
+
+      void
+      ACB::_set_permissions(model::User const& user_, bool read, bool write)
+      {
+        try
+        {
+          auto& user = dynamic_cast<User const&>(user_);
+          this->set_permissions(user.key(), read, write);
+        }
+        catch (std::bad_cast const&)
+        {
+          ELLE_ABORT("doughnut was passed a non-doughnut user.");
         }
       }
 

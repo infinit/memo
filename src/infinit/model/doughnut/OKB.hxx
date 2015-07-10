@@ -18,7 +18,8 @@ namespace infinit
         auto other = dynamic_cast<T const*>(&other_);
         if (!other)
         {
-          ELLE_TRACE("%s: writing over a different block type", *this);
+          ELLE_TRACE("%s: writing over a different block type (%s)",
+                     *this, elle::demangle(typeid(other_).name()));
           return false;
         }
         auto other_version = other->*member;

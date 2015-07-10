@@ -8,6 +8,7 @@
 #include <reactor/Scope.hh>
 
 #include <infinit/RPC.hh>
+#include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
@@ -62,6 +63,8 @@ namespace infinit
         // FIXME: contextual serialization
         if (auto okb = dynamic_cast<OKB const*>(&block))
           const_cast<OKB*>(okb)->_doughnut = this->_doughnut.get();
+        else if (auto acb = dynamic_cast<ACB const*>(&block))
+          const_cast<ACB*>(acb)->_doughnut = this->_doughnut.get();
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         try
         {

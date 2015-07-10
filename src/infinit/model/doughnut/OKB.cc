@@ -124,8 +124,8 @@ namespace infinit
       {
         if (!this->_validate())
           return false;
-        if (!this->_validate_version<OKB>
-            (previous, &OKB::_version, this->version()))
+        if (!this->_validate_version<BaseOKB<Block>>
+            (previous, &BaseOKB<Block>::_version, this->version()))
           return false;
         return true;
       }

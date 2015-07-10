@@ -13,6 +13,7 @@
 
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 
@@ -158,6 +159,11 @@ namespace infinit
         {
           okb->_doughnut = const_cast<Doughnut*>(this);
           return std::move(okb);
+        }
+        else if (auto acb = elle::cast<ACB>::runtime(res))
+        {
+          acb->_doughnut = const_cast<Doughnut*>(this);
+          return std::move(acb);
         }
         else
           return res;

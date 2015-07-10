@@ -5,7 +5,8 @@
 
 # include <cryptography/KeyPair.hh>
 
-# include <infinit/model/blocks/MutableBlock.hh>
+# include <infinit/model/User.hh>
+# include <infinit/model/blocks/ACLBlock.hh>
 # include <infinit/model/doughnut/OKB.hh>
 
 namespace infinit
@@ -15,14 +16,14 @@ namespace infinit
     namespace doughnut
     {
       class ACB
-        : public OKB
+        : public BaseOKB<blocks::ACLBlock>
       {
       /*------.
       | Types |
       `------*/
       public:
         typedef ACB Self;
-        typedef OKB Super;
+        typedef BaseOKB<blocks::ACLBlock> Super;
 
       /*-------------.
       | Construction |
@@ -40,10 +41,17 @@ namespace infinit
       | Permissions |
       `------------*/
       public:
+        virtual
         void
         set_permissions(cryptography::PublicKey const& key,
                         bool read,
                         bool write);
+      protected:
+        virtual
+        void
+        _set_permissions(model::User const& key,
+                         bool read,
+                         bool write) override;
 
       /*-----------.
       | Validation |
