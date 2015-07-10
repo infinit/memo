@@ -83,6 +83,14 @@ namespace infinit
           return elle::make_unique<CHB>(std::move(content));
       }
 
+      std::unique_ptr<blocks::ACLBlock>
+      Doughnut::_make_acl_block() const
+      {
+        ELLE_TRACE_SCOPE("%s: create ACB", *this);
+        ELLE_ASSERT(!this->_plain); // LALALALA
+        return elle::make_unique<ACB>(const_cast<Doughnut*>(this));
+      }
+
       void
       Doughnut::_store(blocks::Block& block, StoreMode mode)
       {

@@ -5,13 +5,14 @@
 #include <elle/test.hh>
 
 #include <infinit/model/MissingBlock.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
-#include <infinit/model/doughnut/ACB.hh> // FIXME
 #include <infinit/overlay/Stonehenge.hh>
 #include <infinit/storage/Memory.hh>
 
@@ -95,7 +96,7 @@ ELLE_TEST_SCHEDULED(ACB)
     std::move(other_keys),
     elle::make_unique<infinit::overlay::Stonehenge>(members));
   {
-    auto block = elle::make_unique<infinit::model::doughnut::ACB>(&dht);
+    auto block = dht.make_block<infinit::model::blocks::ACLBlock>();
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
     ELLE_LOG("owner: store ACB")
@@ -103,7 +104,7 @@ ELLE_TEST_SCHEDULED(ACB)
     {
       ELLE_LOG("other: fetch ACB");
       auto fetched = other_dht.fetch(block->address());
-      auto acb = elle::cast<infinit::model::doughnut::ACB>::runtime(fetched);
+      auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
       acb->data(elle::Buffer(":-(", 3));
       ELLE_LOG("other: stored edited ACB")
         // FIXME: slice
@@ -112,13 +113,13 @@ ELLE_TEST_SCHEDULED(ACB)
         //                   infinit::model::doughnut::ValidationFailed);
     }
     ELLE_LOG("owner: add ACB permissions")
-      block->set_permissions(other_key, true, true);
+      block->set_permissions(infinit::model::doughnut::User(other_key), true, true);
     ELLE_LOG("owner: store ACB")
       dht.store(*block);
     {
       ELLE_LOG("other: fetch ACB");
       auto fetched = other_dht.fetch(block->address());
-      auto acb = elle::cast<infinit::model::doughnut::ACB>::runtime(fetched);
+      auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
       acb->data(elle::Buffer(":-(", 3));
       ELLE_LOG("other: stored edited ACB")
         other_dht.store(*acb);

@@ -36,6 +36,12 @@ namespace infinit
         this->_set_permissions(user, read, write);
       }
 
+      void
+      ACLBlock::_set_permissions(User const&, bool, bool)
+      {
+        // FIXME: what do ?
+      }
+
       /*--------------.
       | Serialization |
       `--------------*/

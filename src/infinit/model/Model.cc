@@ -2,6 +2,7 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/Model.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 
@@ -43,6 +44,22 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: create block", *this);
       return this->_construct_block<blocks::ImmutableBlock>(Address::random(),
                                                             std::move(data));
+    }
+
+    template <>
+    std::unique_ptr<blocks::ACLBlock>
+    Model::make_block(elle::Buffer data) const
+    {
+      auto res = this->_make_acl_block();
+      res->data(std::move(data));
+      return res;
+    }
+
+    std::unique_ptr<blocks::ACLBlock>
+    Model::_make_acl_block() const
+    {
+      ELLE_TRACE_SCOPE("%s: create ACL block", *this);
+      return this->_construct_block<blocks::ACLBlock>(Address::random());
     }
 
     void

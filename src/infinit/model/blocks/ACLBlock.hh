@@ -26,6 +26,7 @@ namespace infinit
       protected:
         ACLBlock(Address address);
         ACLBlock(Address address, elle::Buffer data);
+        friend class infinit::model::Model;
 
       /*------------.
       | Permissions |
@@ -40,7 +41,7 @@ namespace infinit
         void
         _set_permissions(User const& user,
                          bool read,
-                         bool write) = 0;
+                         bool write);
 
       /*--------------.
       | Serialization |

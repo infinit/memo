@@ -7,6 +7,7 @@ namespace infinit
   {
     namespace blocks
     {
+      class ACLBlock;
       class Block;
       class MutableBlock;
       class ImmutableBlock;

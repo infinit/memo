@@ -36,6 +36,9 @@ namespace infinit
         std::unique_ptr<blocks::ImmutableBlock>
         _make_immutable_block(elle::Buffer content) const override;
         virtual
+        std::unique_ptr<blocks::ACLBlock>
+        _make_acl_block() const override;
+        virtual
         void
         _store(blocks::Block& block, StoreMode mode) override;
         virtual
