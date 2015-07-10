@@ -62,6 +62,19 @@ namespace infinit
       return this->_construct_block<blocks::ACLBlock>(Address::random());
     }
 
+    std::unique_ptr<User>
+    Model::make_user(elle::Buffer const& data) const
+    {
+      ELLE_TRACE_SCOPE("%s: load user from %f", *this, data);
+      return this->_make_user(data);
+    }
+
+    std::unique_ptr<User>
+    Model::_make_user(elle::Buffer const&) const
+    {
+      return elle::make_unique<User>(); // FIXME
+    }
+
     void
     Model::store(blocks::Block& block, StoreMode mode)
     {

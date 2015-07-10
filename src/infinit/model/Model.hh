@@ -4,6 +4,7 @@
 # include <memory>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/User.hh>
 # include <infinit/model/blocks/fwd.hh>
 
 namespace infinit
@@ -23,6 +24,8 @@ namespace infinit
       template <typename Block>
       std::unique_ptr<Block>
       make_block(elle::Buffer data = elle::Buffer()) const;
+      std::unique_ptr<User>
+      make_user(elle::Buffer const& data) const;
       void
       store(blocks::Block& block, StoreMode mode = STORE_ANY);
       std::unique_ptr<blocks::Block>
@@ -43,6 +46,9 @@ namespace infinit
       virtual
       std::unique_ptr<blocks::ACLBlock>
       _make_acl_block() const;
+      virtual
+      std::unique_ptr<User>
+      _make_user(elle::Buffer const& data) const;
       virtual
       void
       _store(blocks::Block& block, StoreMode mode) = 0;

@@ -2,6 +2,7 @@
 
 #include <elle/Buffer.hh>
 #include <elle/Error.hh>
+#include <elle/IOStream.hh>
 #include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/serialization/json.hh> // FIXME
@@ -16,6 +17,7 @@
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/User.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
@@ -89,6 +91,14 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: create ACB", *this);
         ELLE_ASSERT(!this->_plain); // LALALALA
         return elle::make_unique<ACB>(const_cast<Doughnut*>(this));
+      }
+
+      std::unique_ptr<model::User>
+      Doughnut::_make_user(elle::Buffer const& data) const
+      {
+        elle::IOStream input(data.istreambuf());
+        elle::serialization::json::SerializerIn s(input);
+        return elle::make_unique<doughnut::User>(cryptography::PublicKey(s));
       }
 
       void

@@ -39,6 +39,9 @@ namespace infinit
         std::unique_ptr<blocks::ACLBlock>
         _make_acl_block() const override;
         virtual
+        std::unique_ptr<model::User>
+        _make_user(elle::Buffer const& data) const;
+        virtual
         void
         _store(blocks::Block& block, StoreMode mode) override;
         virtual
