@@ -12,6 +12,8 @@ namespace kademlia
 {
   typedef boost::asio::ip::udp::endpoint Endpoint;
   typedef infinit::model::Address Address;
+  typedef std::chrono::time_point<std::chrono::steady_clock> Time;
+  typedef Time::duration Duration;
   struct PrettyEndpoint: public Endpoint
   {
     using Endpoint::Endpoint;
@@ -26,7 +28,20 @@ namespace kademlia
     int port;
     std::vector<PrettyEndpoint> bootstrap_nodes;
     int wait;
+    int address_size; // in bits
+    int k; // number of entries to keep/bucket, and response size
+    int alpha; // number of concurrent requests to send
   };
+  namespace packet
+  {
+    struct Ping;
+    struct Pong;
+    struct FindNode;
+    struct FindNodeReply;
+    struct FindValue;
+    struct FindValueReply;
+    struct Store;
+  }
   class Kademlia
     : public infinit::overlay::Overlay
     , public infinit::model::doughnut::Local
@@ -44,21 +59,69 @@ namespace kademlia
                                      int n, infinit::overlay::Operation op)
                                   const override;
   public:
-    void on_event(int event, unsigned char *info_hash, void *data, size_t data_len);
+
   private:
     void _loop();
+    void _ping();
+    void _refresh();
+    void send(elle::Buffer const& data, Endpoint endpoint);
+    std::unordered_map<Address, Endpoint> closest(Address addr);
+
+    void onPong(packet::Pong*);
+    void onFindValue(packet::FindValue*);
+    void onFindValueReply(packet::FindValueReply*);
+    void onFindNode(packet::FindNode*);
+    void onFindNodeReply(packet::FindNodeReply*);
+    void onStore(packet::Store*);
+    void onContactSeen(Address sender, Endpoint ep);
+    Address dist(Address const& a, Address const& b);
+    bool less(Address const& a, Address const& b);
+    bool more(Address const& a, Address const& b);
+    int bucket_of(Address const&);
     typedef infinit::model::doughnut::Local Local;
     typedef infinit::overlay::Overlay Overlay;
     std::unique_ptr<reactor::Thread> _looper;
+    std::unique_ptr<reactor::Thread> _pinger;
+    std::unique_ptr<reactor::Thread> _refresher;
     reactor::network::UDPSocket _socket;
+    reactor::Mutex _udp_send_mutex;
     Configuration _config;
-    struct PendingRequest {
-      reactor::Barrier barrier;
-      infinit::overlay::Operation op;
-      int n;
-      Overlay::Members result;
+    Address _mask;
+    Address _self;
+
+    struct Node
+    {
+      Address address;
+      Endpoint endpoint;
+      Time last_seen;
+      int unack_ping;
     };
-    mutable std::map<std::string, std::shared_ptr<PendingRequest>> _requests;
+    struct Store
+    {
+      Endpoint endpoint;
+      Time last_seen;
+    };
+    struct Query
+    {
+      Address target;
+      std::vector<Address> res;
+      std::vector<Address> candidates;
+      std::unordered_map<Address, Endpoint> endpoints;
+      int pending; // number of requests in flight
+      std::vector<Address> queried;
+      reactor::Barrier barrier;
+      std::vector<Endpoint> storeResult;
+      int n; // number ofr results requested
+      int steps; // number of replies we got
+    };
+    std::shared_ptr<Query> startQuery(Address const& a, bool storage);
+    boost::optional<Address> recurseRequest(
+      Query& q,
+      std::unordered_map<Address, Endpoint> const& nodes);
+    void finish(int rid, Query&q);
+    std::vector<std::vector<Node>> _routes;
+    std::unordered_map<Address, std::vector<Store>> _storage;
+    std::unordered_map<int, std::shared_ptr<Query>> _queries;
   };
 }
 

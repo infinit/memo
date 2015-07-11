@@ -143,7 +143,6 @@ def configure(
     'src/infinit/overlay/kelips/Kelips.hh',
     'src/infinit/overlay/kademlia/kademlia.cc',
     'src/infinit/overlay/kademlia/kademlia.hh',
-    'src/infinit/overlay/kademlia/dht/dht.c',
     'src/infinit/storage/Adb.cc',
     'src/infinit/storage/Adb.hh',
     'src/infinit/storage/Async.cc',
