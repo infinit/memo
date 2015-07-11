@@ -584,7 +584,9 @@ namespace kademlia
   void Kademlia::finish(int rid, Query& q)
   {
     std::sort(q.res.begin(), q.res.end(),
-      std::bind(&Kademlia::less, this, std::placeholders::_1, std::placeholders::_2));
+      [&](Address const& a, Address const& b) -> bool {
+        return less(dist(a, q.target), dist(b, q.target));
+      });
     q.barrier.open();
     _queries.erase(rid);
   }
@@ -618,7 +620,9 @@ namespace kademlia
     Address addr = *addrIt;
     // stop query if we already queried the k closest nodes we know about
     std::sort(q.res.begin(), q.res.end(),
-      std::bind(&Kademlia::less, this, std::placeholders::_1, std::placeholders::_2));
+      [&](Address const& a, Address const& b) -> bool {
+        return less(dist(a, q.target), dist(b, q.target));
+      });
     if (q.steps >= 3 && q.res.size() >= unsigned(_config.k)
       && less(dist(q.res[_config.k-1], q.target),
               dist(addr, q.target)))
