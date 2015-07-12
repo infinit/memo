@@ -28,9 +28,13 @@ namespace kademlia
     int port;
     std::vector<PrettyEndpoint> bootstrap_nodes;
     int wait;
+    int wait_ms;
     int address_size; // in bits
     int k; // number of entries to keep/bucket, and response size
     int alpha; // number of concurrent requests to send
+    int ping_interval_ms;
+    int refresh_interval_ms;
+    int storage_lifetime_ms;
   };
   namespace packet
   {
@@ -64,6 +68,9 @@ namespace kademlia
     void _loop();
     void _ping();
     void _refresh();
+    void _reload();
+    void _cleanup();
+    void _republish();
     void send(elle::Buffer const& data, Endpoint endpoint);
     std::unordered_map<Address, Endpoint> closest(Address addr);
 
@@ -83,6 +90,8 @@ namespace kademlia
     std::unique_ptr<reactor::Thread> _looper;
     std::unique_ptr<reactor::Thread> _pinger;
     std::unique_ptr<reactor::Thread> _refresher;
+    std::unique_ptr<reactor::Thread> _cleaner;
+    std::unique_ptr<reactor::Thread> _republisher;
     reactor::network::UDPSocket _socket;
     reactor::Mutex _udp_send_mutex;
     Configuration _config;
@@ -119,6 +128,7 @@ namespace kademlia
       Query& q,
       std::unordered_map<Address, Endpoint> const& nodes);
     void finish(int rid, Query&q);
+    Endpoint _local_endpoint;
     std::vector<std::vector<Node>> _routes;
     std::unordered_map<Address, std::vector<Store>> _storage;
     std::unordered_map<int, std::shared_ptr<Query>> _queries;

@@ -176,7 +176,7 @@ namespace kademlia
   : Local(std::move(storage), config.port)
   , _config(config)
   {
-
+    srand(time(nullptr) + getpid());
     _self = _config.node_id;
     Address::Value v;
     _routes.resize(_config.address_size);
@@ -203,6 +203,10 @@ namespace kademlia
       [this] { this->_ping();});
     _refresher = elle::make_unique<reactor::Thread>("refresher",
       [this] { this->_refresh();});
+    _cleaner = elle::make_unique<reactor::Thread>("cleaner",
+      [this] { this->_cleanup();});
+    _republisher = elle::make_unique<reactor::Thread>("republisher",
+      [this] { this->_republish();});
     for (auto const& ep: _config.bootstrap_nodes)
     {
       packet::Ping p;
@@ -224,6 +228,8 @@ namespace kademlia
         reactor::sleep(1_sec);
       }
     }
+    reactor::sleep(boost::posix_time::milliseconds(_config.wait_ms));
+    _reload();
     ELLE_LOG("%s: exiting ctor", *this);
   }
 
@@ -343,6 +349,34 @@ namespace kademlia
   }
 
 
+  void Kademlia::_reload()
+  {
+    while (_local_endpoint == Endpoint())
+    {
+      ELLE_TRACE("%s: Waiting for endpoint (ping)", *this);
+      reactor::sleep(500_ms);
+    }
+    auto keys = Local::storage()->list();
+    for (auto const& k: keys)
+    {
+      _storage[k].push_back(Store{_local_endpoint, now()});
+      std::shared_ptr<Query> q = startQuery(k, false);
+      ELLE_TRACE("%s: waiting for reload query", *this);
+      q->barrier.wait();
+      ELLE_TRACE("%s: reload query finished", *this);
+      packet::Store s;
+      s.sender = _self;
+      s.key = k;
+      s.value = {_local_endpoint};
+      elle::Buffer buf = serialize(s);
+      // store the mapping in the k closest nodes
+      for (unsigned int i=0; i<q->res.size() && i<unsigned(_config.k); ++i)
+      {
+        send(buf, q->endpoints.at(q->res[i]));
+      }
+    }
+  }
+
   infinit::overlay::Overlay::Members Kademlia::_lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op) const
   {
@@ -446,6 +480,10 @@ namespace kademlia
     s.serialize("address_size", address_size);
     s.serialize("k", k);
     s.serialize("alpha", alpha);
+    s.serialize("ping_interval_ms", ping_interval_ms);
+    s.serialize("refresh_interval_ms", refresh_interval_ms);
+    s.serialize("storage_lifetime_ms", storage_lifetime_ms);
+    s.serialize("wait_ms", wait_ms);
   }
 
   void Kademlia::store(infinit::model::blocks::Block const& block,
@@ -496,6 +534,7 @@ namespace kademlia
 
   void Kademlia::onPong(packet::Pong* p)
   {
+    _local_endpoint = p->remote_endpoint;
     Address addr = p->sender;
     int b = bucket_of(addr);
     auto& bucket = _routes[b];
@@ -505,7 +544,7 @@ namespace kademlia
       return;
     it->last_seen = now();
     it->endpoint = p->endpoint;
-    it->unack_ping--;
+    it->unack_ping = 0;
   }
 
   std::unordered_map<Address, Endpoint> Kademlia::closest(Address addr)
@@ -697,11 +736,80 @@ namespace kademlia
     send(buf, q.endpoints.at(*addr));
   }
 
-  void Kademlia::_ping()
+  void Kademlia::_republish()
+  {
+    reactor::sleep(boost::posix_time::seconds(rand() % 10));
+    while (true)
+    {
+      // count how many keys we have
+      int count = 0;
+      for (auto & sv: _storage)
+        for (auto& s: sv.second)
+          if (s.endpoint == _local_endpoint)
+            ++count;
+      if (!count)
+      {
+        reactor::sleep(10_sec);
+        continue;
+      }
+      int interval = _config.storage_lifetime_ms / count;
+      ELLE_DEBUG("%s: set refresh interval to %s", *this, interval);
+      reactor::sleep(boost::posix_time::milliseconds(interval/3));
+      Address oldest;
+      Time t = now();
+      Store* match = nullptr;
+      for (auto & sv: _storage)
+        for (auto& s: sv.second)
+          if (s.endpoint == _local_endpoint && s.last_seen < t)
+          {
+            match = &s;
+            t = s.last_seen;
+            oldest = sv.first;
+          }
+      match->last_seen = now();
+      std::shared_ptr<Query> q = startQuery(oldest, false);
+      ELLE_TRACE("%s: waiting for republish query", *this);
+      q->barrier.wait();
+      ELLE_TRACE("%s: republish query finished", *this);
+      packet::Store s;
+      s.sender = _self;
+      s.key = oldest;
+      s.value = {_local_endpoint};
+      elle::Buffer buf = serialize(s);
+      for (unsigned int i=0; i<q->res.size() && i<unsigned(_config.k); ++i)
+      {
+        send(buf, q->endpoints.at(q->res[i]));
+      }
+    }
+  }
+
+  void Kademlia::_cleanup()
   {
     while (true)
     {
-      reactor::sleep(1_sec);
+      reactor::sleep(10_sec);
+      for (auto& s: _storage)
+      {
+        for (unsigned int i=0; i < s.second.size(); ++i)
+        {
+          if (now() - s.second[i].last_seen > std::chrono::milliseconds(_config.storage_lifetime_ms))
+          {
+            ELLE_DEBUG("%s: cleanup %x -> %s", *this, s.first, s.second[i].endpoint);
+            std::swap(s.second[i], s.second[s.second.size()-1]);
+            s.second.pop_back();
+            --i;
+          }
+        }
+      }
+    }
+  }
+
+  void Kademlia::_ping()
+  {
+    reactor::sleep(boost::posix_time::milliseconds(rand() % _config.ping_interval_ms));
+    while (true)
+    {
+      reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
       int ncount = 0;
       for (auto const& b: _routes)
         ncount += b.size();
@@ -729,6 +837,7 @@ namespace kademlia
   }
   void Kademlia::_refresh()
   {
+    reactor::sleep(boost::posix_time::milliseconds(rand() % _config.refresh_interval_ms));
     while (true)
     {
       ELLE_DEBUG("%s: refresh query", *this);
@@ -738,7 +847,7 @@ namespace kademlia
         sq->barrier.wait();
         ELLE_DEBUG("%s: refresh query finished", *this);
       }
-      reactor::sleep(10_sec);
+      reactor::sleep(boost::posix_time::milliseconds(_config.refresh_interval_ms));
     }
   }
 }
