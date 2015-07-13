@@ -371,6 +371,8 @@ public:
   boost::optional<elle::Buffer> root_address;
   std::shared_ptr<ModelConfig> model;
   boost::optional<bool> single_mount;
+  boost::optional<int> local_port;
+  std::unique_ptr<infinit::storage::StorageConfig> local_storage;
 
   Config()
     : mountpoint()
@@ -390,6 +392,8 @@ public:
     s.serialize("root_address", this->root_address);
     s.serialize("model", this->model);
     s.serialize("caching", this->single_mount);
+    s.serialize("local_port", this->local_port);
+    s.serialize("local_storage", this->local_storage);
   }
 };
 
@@ -471,6 +475,7 @@ main(int argc, char** argv)
         Config cfg;
         std::unique_ptr<ModelConfig> model_cfg;
         std::unique_ptr<infinit::model::Model> model;
+        std::unique_ptr<infinit::model::Model> model2;
         parse_options(argc, argv, cfg, model_cfg);
         if (model_cfg)
         {
@@ -500,6 +505,19 @@ main(int argc, char** argv)
             }
           if (cfg.single_mount && *cfg.single_mount)
             fs->single_mount(true);
+
+          std::unique_ptr<infinit::model::doughnut::Local> local;
+          if (cfg.local_storage)
+          {
+            model2 = cfg.model->make();
+            std::unique_ptr<infinit::storage::Storage> store
+              = cfg.local_storage->make();
+            local.reset(new infinit::model::doughnut::Local(std::move(store),
+              cfg.local_port? *cfg.local_port : 0));
+            local->doughnut().reset(
+              dynamic_cast<infinit::model::doughnut::Doughnut*>(model2.release()));
+            ELLE_LOG("got doughnut %s", local->doughnut().get());
+          }
           ELLE_TRACE("mount filesystem")
           {
             reactor::filesystem::FileSystem filesystem(std::move(fs), true);
