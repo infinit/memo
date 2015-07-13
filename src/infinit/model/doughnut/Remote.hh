@@ -6,6 +6,7 @@
 # include <protocol/Serializer.hh>
 # include <protocol/ChanneledStream.hh>
 
+# include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Peer.hh>
 
 namespace infinit
@@ -21,8 +22,9 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Remote(boost::asio::ip::tcp::endpoint endpoint);
-        Remote(std::string const& host, int port);
+        Remote(Doughnut& doughnut, boost::asio::ip::tcp::endpoint endpoint);
+        Remote(Doughnut& doughnut, std::string const& host, int port);
+        ELLE_ATTRIBUTE(Doughnut&, doughnut);
         ELLE_ATTRIBUTE(reactor::network::TCPSocket, socket);
         ELLE_ATTRIBUTE(protocol::Serializer, serializer);
         ELLE_ATTRIBUTE(protocol::ChanneledStream, channels);

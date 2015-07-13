@@ -16,14 +16,17 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Remote::Remote(std::string const& host, int port)
-        : _socket(host, port)
+      Remote::Remote(Doughnut& doughnut, std::string const& host, int port)
+        : _doughnut(doughnut)
+        , _socket(host, port)
         , _serializer(this->_socket)
         , _channels(this->_serializer)
       {}
 
-      Remote::Remote(boost::asio::ip::tcp::endpoint endpoint)
-        : _socket(std::move(endpoint))
+      Remote::Remote(Doughnut& doughnut,
+                     boost::asio::ip::tcp::endpoint endpoint)
+        : _doughnut(doughnut)
+        , _socket(std::move(endpoint))
         , _serializer(this->_socket)
         , _channels(this->_serializer)
       {}
@@ -46,6 +49,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
         RPC<std::unique_ptr<blocks::Block> (Address)> fetch(
           "fetch", const_cast<Remote*>(this)->_channels);
+        fetch.set_context<Doughnut*>(&this->_doughnut);
         return fetch(address);
       }
 

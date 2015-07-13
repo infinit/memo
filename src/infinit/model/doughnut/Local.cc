@@ -1,5 +1,3 @@
-#define private public
-
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
@@ -48,30 +46,17 @@ namespace infinit
       | Blocks |
       `-------*/
 
-      template <typename T, typename Serializer>
-      T
-      deserialize(elle::Buffer const& data)
-      {
-        elle::IOStream s(data.istreambuf());
-        typename Serializer::SerializerIn input(s, false);
-        return input.template deserialize<T>();
-      }
-
       void
       Local::store(blocks::Block const& block, StoreMode mode)
       {
-        // FIXME: contextual serialization
-        if (auto okb = dynamic_cast<OKB const*>(&block))
-          const_cast<OKB*>(okb)->_doughnut = this->_doughnut.get();
-        else if (auto acb = dynamic_cast<ACB const*>(&block))
-          const_cast<ACB*>(acb)->_doughnut = this->_doughnut.get();
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         try
         {
-          auto previous =
-            deserialize<std::unique_ptr<blocks::Block>,
-                        elle::serialization::Binary>
-            (this->_storage->get(block.address()));
+          auto previous_buffer = this->_storage->get(block.address());
+          elle::IOStream s(previous_buffer.istreambuf());
+          typename elle::serialization::binary::SerializerIn input(s, false);
+          input.set_context<Doughnut*>(this->_doughnut.get());
+          auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
           if (!block.validate(*previous))
             throw ValidationFailed("FIXME");
         }
@@ -97,6 +82,7 @@ namespace infinit
         auto data = this->_storage->get(address);
         elle::IOStream s(data.istreambuf());
         Serializer::SerializerIn input(s, false);
+        input.set_context<Doughnut*>(this->_doughnut.get());
         return input.deserialize<std::unique_ptr<blocks::Block>>();
       }
 
@@ -139,6 +125,7 @@ namespace infinit
                   {
                     this->remove(address);
                   }));
+        rpcs.set_context<Doughnut*>(this->_doughnut.get());
         elle::With<reactor::Scope>() << [this, &rpcs] (reactor::Scope& scope)
         {
           while (true)

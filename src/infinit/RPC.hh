@@ -188,6 +188,7 @@ namespace infinit
           auto channel = channels.accept();
           auto request = channel.read();
           elle::serialization::json::SerializerIn input(request, false);
+          input.set_context(this->_context);
           std::string name;
           input.serialize("procedure", name);
           auto it = this->_rpcs.find(name);
@@ -215,7 +216,15 @@ namespace infinit
       {}
     }
 
+    template <typename T>
+    void
+    set_context(T value)
+    {
+      this->_context.set<T>(value);
+    }
+
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
+    elle::serialization::Context _context;
   };
 
   /*-------.
@@ -230,6 +239,17 @@ namespace infinit
       , _channels(channels)
     {}
 
+    template <typename T>
+    void
+    set_context(T value)
+    {
+      ELLE_LOG_COMPONENT("infinit.RPC");
+      ELLE_DUMP("%s: set context for %s: %s",
+                *this, elle::demangle(typeid(T).name()), value);
+      this->_context.template set<T>(value);
+    }
+
+    elle::serialization::Context _context;
     ELLE_ATTRIBUTE_R(std::string, name);
     ELLE_ATTRIBUTE_R(protocol::ChanneledStream&, channels);
   };
@@ -330,6 +350,7 @@ namespace infinit
         ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
         elle::serialization::json::SerializerIn input(response, false);
+        input.set_context(self._context);
         bool success = false;
         input.serialize("success", success);
         if (success)

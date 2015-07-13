@@ -1,6 +1,7 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_CONSENSUS_HH
 # define INFINIT_MODEL_DOUGHNUT_CONSENSUS_HH
 
+# include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Peer.hh>
 # include <infinit/overlay/Overlay.hh>
 
@@ -12,6 +13,10 @@ namespace infinit
     {
       class Consensus
       {
+      public:
+        Consensus(Doughnut& doughnut);
+        ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
+
       public:
         void
         store(overlay::Overlay& overlay, blocks::Block& block, StoreMode mode);

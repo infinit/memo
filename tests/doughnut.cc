@@ -1,5 +1,3 @@
-#define private public
-
 #include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/test.hh>

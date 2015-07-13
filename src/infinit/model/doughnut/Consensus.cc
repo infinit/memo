@@ -7,6 +7,10 @@ namespace infinit
   {
     namespace doughnut
     {
+      Consensus::Consensus(Doughnut& doughnut)
+        : _doughnut(doughnut)
+      {}
+
       void
       Consensus::store(overlay::Overlay& overlay,
                        blocks::Block& block,
@@ -68,7 +72,8 @@ namespace infinit
                         Address const& address,
                         overlay::Operation op) const
       {
-        return elle::make_unique<Remote>(overlay.lookup(address, op));
+        return elle::make_unique<Remote>
+          (this->_doughnut, overlay.lookup(address, op));
       }
     }
   }

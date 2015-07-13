@@ -191,6 +191,7 @@ namespace infinit
       void
       BaseOKB<Block>::_serialize(elle::serialization::Serializer& s)
       {
+        s.serialize_context<Doughnut*>(this->_doughnut);
         s.serialize("key", this->_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);

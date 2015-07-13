@@ -66,7 +66,7 @@ namespace infinit
         , _plain(plain)
       {
         if (!this->_consensus)
-          this->_consensus = elle::make_unique<Consensus>();
+          this->_consensus = elle::make_unique<Consensus>(*this);
       }
 
       std::unique_ptr<blocks::MutableBlock>
@@ -117,7 +117,7 @@ namespace infinit
         std::unique_ptr<blocks::Block> res;
         try
         {
-          res = this->_consensus->fetch(*this->_overlay, address);
+          return this->_consensus->fetch(*this->_overlay, address);
         }
         catch (infinit::storage::MissingKey const&)
         {
@@ -134,18 +134,6 @@ namespace infinit
           ELLE_WARN("Workaround exception slicing bug: assuming MissingKey");
           return nullptr;
         }
-        if (auto okb = elle::cast<OKB>::runtime(res))
-        {
-          okb->_doughnut = const_cast<Doughnut*>(this);
-          return std::move(okb);
-        }
-        else if (auto acb = elle::cast<ACB>::runtime(res))
-        {
-          acb->_doughnut = const_cast<Doughnut*>(this);
-          return std::move(acb);
-        }
-        else
-          return res;
       }
 
       void
