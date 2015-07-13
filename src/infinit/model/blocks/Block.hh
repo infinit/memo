@@ -34,6 +34,7 @@ namespace infinit
       public:
         bool
         operator ==(Block const& rhs) const;
+        virtual
         elle::Buffer const&
         data() const;
         ELLE_ATTRIBUTE_R(Address, address);

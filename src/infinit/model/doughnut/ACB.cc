@@ -45,7 +45,69 @@ namespace infinit
         , _acl_changed(true)
         , _data_version(-1)
         , _data_signature()
+        , _data_plain()
+        , _data_decrypted(true)
       {}
+
+      /*--------.
+      | Content |
+      `--------*/
+
+      elle::Buffer const&
+      ACB::data() const
+      {
+        if (!this->_data_decrypted)
+        {
+          ELLE_TRACE_SCOPE("%s: decrypt data", *this);
+          auto& mine = this->doughnut()->keys().K();
+          elle::Buffer const* encrypted_secret = nullptr;
+          std::vector<ACLEntry> entries;
+          if (mine == this->owner_key())
+          {
+            ELLE_DEBUG("%s: we are owner", *this);
+            encrypted_secret = &this->_owner_token;
+          }
+          else if (this->_acl != Address::null)
+          {
+            // FIXME: factor searching the token
+            auto acl = this->doughnut()->fetch(this->_acl);
+            entries =
+              elle::serialization::deserialize
+              <std::vector<ACLEntry>, elle::serialization::Json>
+              (acl->data(), "entries");
+            auto it = std::find_if
+              (entries.begin(), entries.end(),
+               [&] (ACLEntry const& e) { return e.key == mine; });
+            if (it != entries.end() && it->read)
+            {
+              ELLE_DEBUG("%s: we are an editor", *this);
+              encrypted_secret = &it->token;
+            }
+          }
+          if (!encrypted_secret)
+          {
+            ELLE_ABORT("no read permissions");
+            // FIXME: better exceptions
+            throw elle::Error("no read permissions");
+          }
+          auto secret =
+            this->doughnut()->keys().k().decrypt<cryptography::SecretKey>
+            (cryptography::Code(*encrypted_secret));
+          ELLE_DUMP("%s: secret: %s", *this, secret);
+          const_cast<ACB*>(this)->_data_plain =
+            std::move(secret.decrypt(cryptography::Code(this->_data)).buffer());
+          ELLE_DUMP("%s: decrypted data: %s", *this, this->_data_plain);
+          const_cast<ACB*>(this)->_data_decrypted = true;
+        }
+        return this->_data_plain;
+      }
+
+      void
+      ACB::data(std::function<void (elle::Buffer&)> transformation)
+      {
+        transformation(this->_data_plain);
+        this->_data_changed = true;
+      }
 
       /*------------.
       | Permissions |
@@ -71,8 +133,10 @@ namespace infinit
         bool acl_changed = false;
         if (it == entries.end())
         {
+          // FIXME: shitty crypto interface prevent me from just reencrypting
+          // the buffer without deserializing the private key
           auto secret = this->doughnut()->keys().k().decrypt
-            (cryptography::Code(this->_owner_token));
+            <cryptography::SecretKey>(cryptography::Code(this->_owner_token));
           auto token = key.encrypt(secret);
           entries.emplace_back
             (ACLEntry{key, read, write, std::move(token.buffer())});
@@ -232,6 +296,10 @@ namespace infinit
             this->doughnut()->store(*new_acl_block);
             this->_acl = new_acl_block->address();
           }
+          auto encrypted =
+            secret.encrypt(cryptography::Plain(this->_data_plain));
+          this->MutableBlock::data(
+            [&] (elle::Buffer& data) { data = std::move(encrypted.buffer()); });
           this->_data_changed = false;
         }
         // Even if only the ACL was changed, we need to re-sign because the ACL
@@ -255,7 +323,7 @@ namespace infinit
           elle::serialization::json::SerializerOut s(output);
           s.serialize("block_key", this->key());
           s.serialize("version", this->_data_version);
-          s.serialize("data", this->data());
+          s.serialize("data", this->Block::data());
           s.serialize("owner_token", this->_owner_token);
           s.serialize("acl", this->_acl);
         }
@@ -290,6 +358,8 @@ namespace infinit
         , _acl_changed(false)
         , _data_version(-1)
         , _data_signature()
+        , _data_plain()
+        , _data_decrypted(false)
       {
         this->_serialize(input);
       }

@@ -19,8 +19,9 @@ namespace infinit
       void
       MutableBlock::data(elle::Buffer data)
       {
-        this->_data = std::move(data);
-        this->_data_changed = true;
+        // FIXME: Don't change this, subclasses override the other data
+        // setter version.
+        this->data([&] (elle::Buffer& _data) { _data = std::move(data); });
       }
 
       void

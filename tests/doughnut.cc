@@ -102,6 +102,8 @@ ELLE_TEST_SCHEDULED(ACB)
     {
       ELLE_LOG("other: fetch ACB");
       auto fetched = other_dht.fetch(block->address());
+      // No read permissions.
+      // BOOST_CHECK_THROW(fetched->data(), elle::Error);
       auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
       acb->data(elle::Buffer(":-(", 3));
       ELLE_LOG("other: stored edited ACB")
@@ -117,10 +119,16 @@ ELLE_TEST_SCHEDULED(ACB)
     {
       ELLE_LOG("other: fetch ACB");
       auto fetched = other_dht.fetch(block->address());
+      BOOST_CHECK_EQUAL(fetched->data(), "\\_o<");
       auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
-      acb->data(elle::Buffer(":-(", 3));
+      acb->data(elle::Buffer(":-)", 3));
       ELLE_LOG("other: stored edited ACB")
         other_dht.store(*acb);
+    }
+    ELLE_LOG("owner: fetch ACB")
+    {
+      auto fetched = dht.fetch(block->address());
+      BOOST_CHECK_EQUAL(fetched->data(), ":-)");
     }
   }
 }

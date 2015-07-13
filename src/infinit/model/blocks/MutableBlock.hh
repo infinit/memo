@@ -47,6 +47,7 @@ namespace infinit
         using Super::data;
         void
         data(elle::Buffer data);
+        virtual
         void
         data(std::function<void (elle::Buffer&)> transformation);
       };

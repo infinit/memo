@@ -37,6 +37,19 @@ namespace infinit
         ELLE_ATTRIBUTE(int, data_version);
         ELLE_ATTRIBUTE(cryptography::Signature, data_signature);
 
+      /*--------.
+      | Content |
+      `--------*/
+      public:
+        virtual
+        elle::Buffer const&
+        data() const;
+        virtual
+        void
+        data(std::function<void (elle::Buffer&)> transformation);
+        ELLE_ATTRIBUTE(elle::Buffer, data_plain);
+        ELLE_ATTRIBUTE(bool, data_decrypted);
+
       /*------------.
       | Permissions |
       `------------*/
