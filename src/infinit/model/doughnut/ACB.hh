@@ -46,9 +46,15 @@ namespace infinit
         data() const;
         virtual
         void
+        data(elle::Buffer data);
+        virtual
+        void
         data(std::function<void (elle::Buffer&)> transformation);
         ELLE_ATTRIBUTE(elle::Buffer, data_plain);
         ELLE_ATTRIBUTE(bool, data_decrypted);
+      private:
+        void
+        _decrypt_data() const;
 
       /*------------.
       | Permissions |

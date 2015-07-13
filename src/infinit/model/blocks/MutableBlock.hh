@@ -45,6 +45,7 @@ namespace infinit
       `--------*/
       public:
         using Super::data;
+        virtual
         void
         data(elle::Buffer data);
         virtual

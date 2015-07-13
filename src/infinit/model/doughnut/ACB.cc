@@ -56,6 +56,29 @@ namespace infinit
       elle::Buffer const&
       ACB::data() const
       {
+        this->_decrypt_data();
+        return this->_data_plain;
+      }
+
+      void
+      ACB::data(elle::Buffer data)
+      {
+        this->_data_plain = std::move(data);
+        this->_data_changed = true;
+        this->_data_decrypted = true;
+      }
+
+      void
+      ACB::data(std::function<void (elle::Buffer&)> transformation)
+      {
+        this->_decrypt_data();
+        transformation(this->_data_plain);
+        this->_data_changed = true;
+      }
+
+      void
+      ACB::_decrypt_data() const
+      {
         if (!this->_data_decrypted)
         {
           ELLE_TRACE_SCOPE("%s: decrypt data", *this);
@@ -99,14 +122,6 @@ namespace infinit
           ELLE_DUMP("%s: decrypted data: %s", *this, this->_data_plain);
           const_cast<ACB*>(this)->_data_decrypted = true;
         }
-        return this->_data_plain;
-      }
-
-      void
-      ACB::data(std::function<void (elle::Buffer&)> transformation)
-      {
-        transformation(this->_data_plain);
-        this->_data_changed = true;
       }
 
       /*------------.
@@ -243,6 +258,7 @@ namespace infinit
         }
         if (this->_data_changed)
         {
+          ELLE_ASSERT(this->_data_decrypted);
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
           ELLE_TRACE_SCOPE("%s: data changed, seal", *this);
           bool owner = this->doughnut()->keys().K() == this->owner_key();
