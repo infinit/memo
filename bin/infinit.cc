@@ -273,16 +273,14 @@ public:
         infinit::cryptography::KeyPair::generate(
           infinit::cryptography::Cryptosystem::rsa, 2048),
         overlay->make(),
-        plain && *plain,
-        write_n ? *write_n : 1,
-        read_n ? *read_n : 1);
+        nullptr,
+        plain && *plain);
     else
       return elle::make_unique<infinit::model::doughnut::Doughnut>(
         std::move(*key),
         overlay->make(),
-        plain && *plain,
-        write_n ? *write_n : 1,
-        read_n ? *read_n : 1);
+        nullptr,
+        plain && *plain);
   }
 };
 

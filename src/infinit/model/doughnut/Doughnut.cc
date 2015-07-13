@@ -40,6 +40,17 @@ namespace infinit
       };
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<PlainMutableBlock> _register_pmb_serialization("PMB");
+      class PlainACLBlock: public blocks::ACLBlock
+      {
+      public:
+        typedef blocks::ACLBlock Super;
+        PlainACLBlock()
+        : Super(Address::random()) {}
+        PlainACLBlock(elle::serialization::Serializer& input)
+        : Super(input) {}
+      };
+      static const elle::serialization::Hierarchy<blocks::Block>::
+      Register<PlainACLBlock> _register_paclb_serialization("PACLB");
       class PlainImmutableBlock: public blocks::ImmutableBlock
       {
       public:
@@ -93,8 +104,10 @@ namespace infinit
       Doughnut::_make_acl_block() const
       {
         ELLE_TRACE_SCOPE("%s: create ACB", *this);
-        ELLE_ASSERT(!this->_plain); // LALALALA
-        return elle::make_unique<ACB>(const_cast<Doughnut*>(this));
+        if (_plain)
+          return elle::make_unique<PlainACLBlock>();
+        else
+          return elle::make_unique<ACB>(const_cast<Doughnut*>(this));
       }
 
       std::unique_ptr<model::User>

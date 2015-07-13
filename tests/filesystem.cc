@@ -75,7 +75,8 @@ static void run_filesystem_dht(std::string const& store,
         infinit::cryptography::KeyPair::generate(
               infinit::cryptography::Cryptosystem::rsa, 2048),
               std::move(ov),
-              plain, nread, nwrite);
+              nullptr,
+              plain);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       std::move(model));
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
