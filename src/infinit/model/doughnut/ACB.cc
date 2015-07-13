@@ -101,8 +101,6 @@ namespace infinit
           this->doughnut()->store(*new_acl);
           this->_acl = new_acl->address();
           this->_acl_changed = true;
-          // The ACL address is part of the data.
-          this->_data_changed = true;
         }
       }
 
@@ -171,6 +169,8 @@ namespace infinit
       void
       ACB::_seal()
       {
+        bool acl_changed = this->_acl_changed;
+        bool data_changed = this->_data_changed;
         if (this->_acl_changed)
         {
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
@@ -232,12 +232,17 @@ namespace infinit
             this->doughnut()->store(*new_acl_block);
             this->_acl = new_acl_block->address();
           }
+          this->_data_changed = false;
+        }
+        // Even if only the ACL was changed, we need to re-sign because the ACL
+        // address is part of the signature.
+        if (acl_changed || data_changed)
+        {
           auto sign = this->_data_sign();
           auto const& key = this->doughnut()->keys().k();
           this->_data_signature = key.sign(cryptography::Plain(sign));
           ELLE_DUMP("%s: sign %s with %s: %f",
                     *this, sign, key, this->_data_signature);
-          this->_data_changed = false;
         }
       }
 
