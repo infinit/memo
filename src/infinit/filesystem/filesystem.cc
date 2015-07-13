@@ -17,6 +17,7 @@
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs");
@@ -144,6 +145,8 @@ namespace infinit
     #define THROW_ISDIR { throw rfs::Error(EISDIR, "Is a directory");}
     #define THROW_NOTDIR { throw rfs::Error(ENOTDIR, "Is not a directory");}
     #define THROW_NODATA { throw rfs::Error(ENODATA, "No data");}
+    #define THROW_INVAL { throw rfs::Error(EINVAL, "Invalid argument");}
+    #define THROW_ACCES { throw rfs::Error(EACCES, "Access denied");}
 
     class Node
     {
@@ -242,6 +245,7 @@ namespace infinit
       std::shared_ptr<rfs::Path> child(std::string const& name) override;
       std::string getxattr(std::string const& key) override;
       std::vector<std::string> listxattr() override;
+      void setxattr(std::string const& name, std::string const& value, int flags) override;
       void cache_stats(CacheStats& append);
       void serialize(elle::serialization::Serializer&);
       bool allow_cache() override { return true;}
@@ -304,6 +308,7 @@ namespace infinit
       void truncate(off_t new_size) override;
       std::string getxattr(std::string const& name) override;
       std::vector<std::string> listxattr() override;
+      void setxattr(std::string const& name, std::string const& value, int flags) override;
       std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
       bool allow_cache() override;
       // check cached data size, remove entries if needed
@@ -483,7 +488,8 @@ namespace infinit
     std::unique_ptr<model::blocks::MutableBlock>
     _make_root_block(infinit::model::Model& model)
     {
-      auto root = model.make_block<MutableBlock>();
+      std::unique_ptr<model::blocks::MutableBlock> root
+        = model.make_block<model::blocks::ACLBlock>();
       model.store(*root);
       return root;
     }
@@ -634,6 +640,7 @@ namespace infinit
         FileData& f = _parent->_files.at(_name);
         f.mtime = time(nullptr);
         f.ctime = time(nullptr);
+        f.address = _block->address();
         _parent->_changed();
       }
       _push_changes();
@@ -964,7 +971,15 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        b->address(),
                                        FileStoreMode::direct}));
-      _parent->_changed(true);
+      try
+      {
+        _parent->_changed(true);
+      }
+      catch(elle::Error const& e)
+      {
+        ELLE_WARN("Error updating directory at %s: %s", full_path(), e.what());
+        THROW_ACCES;
+      }
       _remove_from_cache();
       auto raw = _owner.filesystem()->path(full_path().string());
       auto f = std::dynamic_pointer_cast<File>(raw);
@@ -1400,8 +1415,15 @@ namespace infinit
         truncate(0);
       ELLE_DEBUG("Forcing entry %s", full_path());
       _owner.filesystem()->set(full_path().string(), shared_from_this());
-      return std::unique_ptr<rfs::Handle>(new FileHandle(
-        std::dynamic_pointer_cast<File>(shared_from_this())));
+      try {
+        return std::unique_ptr<rfs::Handle>(new FileHandle(
+          std::dynamic_pointer_cast<File>(shared_from_this())));
+      }
+      catch(elle::Error const& e)
+      {
+        ELLE_WARN("Error opening file %s: %s", full_path(), e.what());
+        THROW_ACCES;
+      }
     }
 
     std::unique_ptr<rfs::Handle>
@@ -1563,6 +1585,10 @@ namespace infinit
       ELLE_TRACE("listxattr");
       std::vector<std::string> res;
       res.push_back("user.infinit.block");
+      res.push_back("user.infinit.auth.setr");
+      res.push_back("user.infinit.auth.setrw");
+      res.push_back("user.infinit.auth.setw");
+      res.push_back("user.infinit.auth.clear");
       return res;
     }
     std::vector<std::string> Directory::listxattr()
@@ -1588,6 +1614,76 @@ namespace infinit
       else
         THROW_NODATA;
     }
+    void File::setxattr(std::string const& name, std::string const& value, int flags)
+    {
+      THROW_INVAL;
+    }
+    void Directory::setxattr(std::string const& name, std::string const& value, int flags)
+    {
+      ELLE_TRACE("setxattr %s", name);
+      if (name.find("user.infinit.auth.") == 0)
+      {
+        std::string flags = name.substr(strlen("user.infinit.auth."));
+        bool r = false;
+        bool w = false;
+        if (flags == "clear")
+          ;
+        else if (flags == "setr")
+          r = true;
+        else if (flags == "setw")
+          w = true;
+        else if (flags == "setrw")
+        {
+          r = true; w = true;
+        }
+        else
+          THROW_NODATA;
+        if (value.empty())
+          THROW_INVAL;
+        if (value.find_first_of("/\\. ") != value.npos)
+          THROW_INVAL;
+        elle::Buffer userkey;
+        if (value[0] == '$')
+        { // user name, fetch the key
+          std::shared_ptr<Path> p = _owner.path("/");
+          auto users = dynamic_cast<Directory*>(p.get())->child("$users");
+          auto user = dynamic_cast<Directory*>(users.get())->child(value.substr(1));
+          File* f = dynamic_cast<File*>(user.get());
+          ELLE_TRACE("user by name failed: %s %s", user.get(), f);
+          if (!f)
+            THROW_INVAL;
+          std::unique_ptr<rfs::Handle> h = f->open(0, O_RDONLY);
+          userkey.size(16384);
+          int len = h->read(userkey, 16384, 0);
+          userkey.size(len);
+          h->close();
+        }
+        else
+        { // user key
+          ELLE_TRACE("setxattr raw key");
+          userkey = elle::Buffer(value.data(), value.size());
+        }
+        auto user = _owner.block_store()->make_user(userkey);
+        model::blocks::ACLBlock* acl
+          = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
+        if (acl == 0)
+        { // Damm
+          ELLE_TRACE("Not an acl block, updating");
+          std::unique_ptr<model::blocks::ACLBlock> nacl
+            = _owner.block_store()->make_block<model::blocks::ACLBlock>();
+          _owner.block_store()->remove(_block->address());
+          _block = std::move(nacl);
+          _changed(true);
+          acl = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
+        }
+        ELLE_TRACE("Setting permission at %s", acl->address());
+        acl->set_permissions(*user, r, w);
+        _owner.block_store()->store(*acl); // FIXME STORE MODE
+      }
+      else
+        THROW_NODATA;
+    }
+
     std::string Directory::getxattr(std::string const& key)
     {
       ELLE_TRACE("getxattr %s", key);
@@ -1615,8 +1711,19 @@ namespace infinit
     {
       ELLE_TRACE("FileHandle creation, hc=%s", _owner->_handle_count);
       _owner->_handle_count++;
+      _owner->_parent->_fetch();
       _owner->_parent->_files.at(_owner->_name).atime = time(nullptr);
-      _owner->_parent->_changed(push_mtime);
+      try
+      {
+        _owner->_parent->_changed(push_mtime);
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_WARN("Error accessing %s: %s", _owner->full_path(), e.what());
+        _owner->_handle_count--;
+        close();
+        THROW_ACCES;
+      }
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
