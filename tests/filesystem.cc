@@ -1,8 +1,16 @@
+
 #include <boost/filesystem/fstream.hpp>
 
 #include <elle/os/environ.hh>
 
 #include <elle/test.hh>
+
+#include <elle/format/base64.hh>
+
+#include <elle/serialization/Serializer.hh>
+#include <elle/serialization/json.hh>
+
+#include <elle/system/Process.hh>
 
 #include <reactor/scheduler.hh>
 
@@ -18,11 +26,15 @@
 
 #include <infinit/overlay/Stonehenge.hh>
 
+#include <sys/types.h>
+#include <attr/xattr.h>
+
 ELLE_LOG_COMPONENT("test");
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
 
+bool mounted = false;
 infinit::storage::Storage* storage;
 reactor::filesystem::FileSystem* fs;
 reactor::Scheduler sched;
@@ -41,17 +53,32 @@ static int directory_count(boost::filesystem::path const& p)
   }
   return s;
 }
-
-static void run_filesystem_dht(std::string const& store,
-                               std::string const& mountpoint,
-                               int node_count,
-                               bool plain,
-                               int nread = 1,
-                               int nwrite = 1)
+template<typename T> std::string serialize(T & t)
 {
-  std::vector<std::unique_ptr<infinit::model::doughnut::Local>> nodes;
-  std::vector<boost::asio::ip::tcp::endpoint> endpoints;
-  reactor::Thread t(sched, "fs", [&] {
+  elle::Buffer buf;
+  {
+    elle::IOStream ios(buf.ostreambuf());
+    elle::serialization::json::SerializerOut so(ios, false);
+    so.serialize_forward(t);
+  }
+  return buf.string();
+}
+
+
+
+std::vector<std::string> mount_points;
+std::vector<infinit::cryptography::PublicKey> keys;
+std::vector<std::unique_ptr<infinit::model::doughnut::Local>> nodes;
+std::vector<boost::asio::ip::tcp::endpoint> endpoints;
+std::vector<std::unique_ptr<elle::system::Process>> processes;
+
+// Run nodes in a separate scheduler to avoid reentrency issues
+reactor::Scheduler* nodes_sched;
+static void make_nodes(std::string store, int node_count, bool plain)
+{
+  reactor::Scheduler s;
+  nodes_sched = &s;
+  reactor::Thread t(s, "nodes", [&] {
     for (int i=0; i<node_count; ++i)
     {
       auto tmp = store / boost::filesystem::unique_path();
@@ -69,23 +96,144 @@ static void run_filesystem_dht(std::string const& store,
                              ep.port());
       nodes.emplace_back(l);
     }
-    std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
-    std::unique_ptr<infinit::model::Model> model =
-      elle::make_unique<infinit::model::doughnut::Doughnut>(
-        infinit::cryptography::KeyPair::generate(
-              infinit::cryptography::Cryptosystem::rsa, 2048),
-              std::move(ov),
-              nullptr,
-              plain);
-    std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
-      std::move(model));
-    fs = new reactor::filesystem::FileSystem(std::move(ops), true);
-    ELLE_LOG("mounting on %s", mountpoint);
-    fs->mount(mountpoint, {"", "-o", "big_writes"}); // {"", "-d" /*, "-o", "use_ino"*/});
-    ELLE_LOG("filesystem unmounted");
-    nodes.clear();
+    // now give each a model
+    for (int i=0; i<node_count; ++i)
+    {
+      auto kp = infinit::cryptography::KeyPair::generate(
+        infinit::cryptography::Cryptosystem::rsa, 2048);
+      std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
+      std::unique_ptr<infinit::model::doughnut::Doughnut> model =
+        elle::make_unique<infinit::model::doughnut::Doughnut>(
+          std::move(kp),
+          std::move(ov),
+          nullptr,
+          plain);
+      nodes[i]->doughnut() = std::move(model);
+    }
+  });
+  ELLE_LOG("Running node scheduler");
+  s.run();
+  ELLE_LOG("Exiting node scheduler");
+}
+
+static void run_filesystem_dht(std::string const& store,
+                               std::string const& mountpoint,
+                               int node_count,
+                               bool plain,
+                               int nread = 1,
+                               int nwrite = 1,
+                               int nmount = 1)
+{
+
+  new std::thread([&] { make_nodes(store, node_count, plain);});
+  while (nodes.size() != unsigned(node_count))
+    usleep(100000);
+  std::vector<reactor::Thread*> threads;
+  reactor::Thread t(sched, "fs", [&] {
+    std::string root;
+    mount_points.reserve(nmount);
+    for (int i=0; i< nmount; ++i)
+    {
+      std::string mp = mountpoint;
+      if (nmount != 1)
+      {
+        mp = (mp / boost::filesystem::unique_path()).string();
+      }
+      mount_points.push_back(mp);
+      boost::filesystem::create_directories(mp);
+
+      if (nmount == 1)
+      {
+        std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
+        auto kp = infinit::cryptography::KeyPair::generate(
+          infinit::cryptography::Cryptosystem::rsa, 2048);
+        keys.push_back(kp.K());
+        std::unique_ptr<infinit::model::Model> model =
+        elle::make_unique<infinit::model::doughnut::Doughnut>(
+          std::move(kp),
+          std::move(ov),
+          nullptr,
+          plain);
+        std::unique_ptr<ifs::FileSystem> ops;
+        ops = elle::make_unique<ifs::FileSystem>(std::move(model));
+        fs = new reactor::filesystem::FileSystem(std::move(ops), true);
+        new reactor::Thread("mounter", [mp] {
+            ELLE_LOG("mounting on %s", mp);
+            mounted = true;
+            fs->mount(mp, {"", "-o", "big_writes"}); // {"", "-d" /*, "-o", "use_ino"*/});
+            ELLE_LOG("filesystem unmounted");
+            nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
+            processes.clear();
+            reactor::scheduler().terminate();
+        });
+      }
+      else
+      {
+        // Having more than one mount in the same process is failing
+        // Make a config file.
+        elle::json::Object r;
+        if( i > 0)
+        {
+          r["root_address"] = root;
+        }
+        r["single_mount"] = false;
+        r["mountpoint"] = mp;
+        elle::json::Object model;
+        model["type"] = "doughnut";
+        model["plain"] = false;
+        auto kp = infinit::cryptography::KeyPair::generate(
+          infinit::cryptography::Cryptosystem::rsa, 2048);
+        keys.push_back(kp.K());
+        model["key"] = "!!!"; // placeholder, lolilol
+        elle::json::Object overlay;
+        overlay["type"] = "stonehenge";
+        elle::json::Array v;
+        for(auto const& ep: endpoints)
+          v.push_back("127.0.0.1:" + std::to_string(ep.port()));
+        overlay["nodes"] = v;
+        model["overlay"] = overlay;
+        r["model"] = model;
+        std::string kps = serialize(kp);
+        std::stringstream ss;
+        elle::json::write(ss, r, true);
+        std::string ser = ss.str();
+        // Now replace placeholder with key
+        size_t pos = ser.find("\"!!!\"");
+        ser = ser.substr(0, pos) + kps + ser.substr(pos + 5);
+        std::ofstream ofs(mountpoint + "/" + std::to_string(i));
+        ofs.write(ser.data(), ser.size());
+        std::vector<std::string> args {
+          "bin/infinit",
+          "-c",
+          (mountpoint + "/" + std::to_string(i))
+        };
+        if (i == 0)
+        {
+          args.push_back("--rootfile");
+          args.push_back(mountpoint + "/" +"root");
+        }
+        processes.emplace_back(new elle::system::Process(args));
+        if (i == 0)
+        {
+          ELLE_TRACE("Waiting for root address");
+          while (true)
+          {
+            usleep(100000);
+            std::ifstream ifs(mountpoint + "/" +"root");
+            if (ifs.good())
+            {
+              ifs >> root;
+              if (!root.empty())
+                break;
+            }
+          }
+          ELLE_TRACE("Got root: %s", root);
+        }
+      }
+    }
   });
   sched.run();
+  ELLE_TRACE("sched exiting");
 }
 
 static void run_filesystem(std::string const& store, std::string const& mountpoint)
@@ -148,13 +296,22 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
         run_filesystem(store.string(), mount.string());
   });
 
-  usleep(900000);
+  while (mount_points.size() != 1 || !mounted)
+    usleep(100000);
+  usleep(500000);
+  ELLE_LOG("starting test");
 
   elle::SafeFinally remover([&] {
       ELLE_TRACE("unmounting");
       reactor::Thread th(sched, "unmount", [&] { fs->unmount();});
       t.join();
       ELLE_TRACE("cleaning up");
+      for (auto const& mp: mount_points)
+      {
+        std::vector<std::string> args{"fusermount", "-u", mp};
+        elle::system::Process p(args);
+      }
+      usleep(200000);
       boost::filesystem::remove_all(store);
       boost::filesystem::remove_all(mount);
   });
@@ -383,11 +540,86 @@ void test_dht_crypto()
   test_filesystem(true, 5, false, 1, 1);
 }
 
+void test_acl()
+{
+  namespace bfs = boost::filesystem;
+  auto store = bfs::temp_directory_path() / bfs::unique_path();
+  auto mount = bfs::temp_directory_path() / bfs::unique_path();
+  bfs::create_directories(mount);
+  bfs::create_directories(store);
+  std::thread t([&] {
+      run_filesystem_dht(store.string(), mount.string(), 5, false, 1, 1, 2);
+  });
+  while (mount_points.size() != 2)
+    usleep(100000);
+  ELLE_LOG("Test start");
+  elle::SafeFinally remover([&] {
+      ELLE_LOG("unmounting");
+      nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
+      ELLE_LOG("cleaning up: TERM %s", processes.size());
+      for (auto const& p: processes)
+        kill(p->pid(), SIGTERM);
+      usleep(200000);
+      ELLE_LOG("cleaning up: KILL");
+      for (auto const& p: processes)
+        kill(p->pid(), SIGKILL);
+      usleep(200000);
+      // unmount all
+      for (auto const& mp: mount_points)
+      {
+        std::vector<std::string> args{"fusermount", "-u", mp};
+        elle::system::Process p(args);
+      }
+      usleep(200000);
+      boost::filesystem::remove_all(mount);
+      boost::filesystem::remove_all(store);
+      t.join();
+      ELLE_LOG("teardown complete");
+  });
+  // Mounts/keys are in mount_points and keys
+  // First entry got the root!
+  BOOST_CHECK_EQUAL(mount_points.size(), 2);
+  bfs::path m0 = mount_points[0];
+  bfs::path m1 = mount_points[1];
+  //bfs::path m2 = mount_points[2];
+  {
+    boost::filesystem::ofstream ofs(m0 / "test");
+    ofs << "Test";
+  }
+  BOOST_CHECK_EQUAL(directory_count(m0), 1);
+  BOOST_CHECK_EQUAL(directory_count(m1), 1);
+  {
+     boost::filesystem::ifstream ifs(m1 / "test");
+     BOOST_CHECK_EQUAL(ifs.good(), false);
+  }
+  BOOST_CHECK_EQUAL(keys.size(), 2);
+  std::string k1 = serialize(keys[1]);
+  ELLE_LOG("setxattr");
+  setxattr(m0.c_str(), "user.infinit.auth.setrw",
+    k1.c_str(), k1.length(), 0);
+  ELLE_LOG("setxattr done");
+  // expire directory cache
+  usleep(2100000);
+  {
+     boost::filesystem::ifstream ifs(m1 / "test");
+     BOOST_CHECK_EQUAL(ifs.good(), true);
+     std::string v;
+     ifs >> v;
+     BOOST_CHECK_EQUAL(v, "Test");
+  }
+  ELLE_LOG("test end");
+}
+
 ELLE_TEST_SUITE()
 {
+  // This is needed to ignore child process exiting with nonzero
+  // There is unfortunately no more specific way.
+  setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no", 1);
+  signal(SIGCHLD, SIG_IGN);
   boost::unit_test::test_suite* filesystem = BOOST_TEST_SUITE("filesystem");
   boost::unit_test::framework::master_test_suite().add(filesystem);
   filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
   filesystem->add(BOOST_TEST_CASE(test_dht_plain), 0, 50);
   filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 50);
+  filesystem->add(BOOST_TEST_CASE(test_acl), 0, 50);
 }
