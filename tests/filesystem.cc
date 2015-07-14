@@ -569,8 +569,9 @@ void test_acl()
   std::thread t([&] {
       run_filesystem_dht(store.string(), mount.string(), 5, false, 1, 1, 2);
   });
-  while (mount_points.size() != 2)
+  while (mount_points.size() != 2 && keys.size() != 2)
     usleep(100000);
+  usleep(200000);
   ELLE_LOG("Test start");
   elle::SafeFinally remover([&] {
       ELLE_LOG("unmounting");
