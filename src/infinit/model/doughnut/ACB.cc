@@ -81,7 +81,6 @@ namespace infinit
         }
         if (!encrypted_secret)
         {
-          ELLE_ABORT("no read permissions");
           // FIXME: better exceptions
           throw elle::Error("no read permissions");
         }
