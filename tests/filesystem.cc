@@ -37,7 +37,7 @@ namespace rfs = reactor::filesystem;
 bool mounted = false;
 infinit::storage::Storage* storage;
 reactor::filesystem::FileSystem* fs;
-reactor::Scheduler sched;
+reactor::Scheduler* sched;
 static void sig_int()
 {
   fs->unmount();
@@ -124,12 +124,19 @@ static void run_filesystem_dht(std::string const& store,
                                int nwrite = 1,
                                int nmount = 1)
 {
-
+  sched = new reactor::Scheduler();
+  fs = nullptr;
+  mount_points.clear();
+  keys.clear();
+  nodes.clear();
+  endpoints.clear();
+  processes.clear();
+  mounted = false;
   new std::thread([&] { make_nodes(store, node_count, plain);});
   while (nodes.size() != unsigned(node_count))
     usleep(100000);
   std::vector<reactor::Thread*> threads;
-  reactor::Thread t(sched, "fs", [&] {
+  reactor::Thread t(*sched, "fs", [&] {
     std::string root;
     mount_points.reserve(nmount);
     for (int i=0; i< nmount; ++i)
@@ -232,15 +239,23 @@ static void run_filesystem_dht(std::string const& store,
       }
     }
   });
-  sched.run();
+  sched->run();
   ELLE_TRACE("sched exiting");
 }
 
 static void run_filesystem(std::string const& store, std::string const& mountpoint)
 {
+  sched = new reactor::Scheduler();
+  fs = nullptr;
+  mount_points.clear();
+  keys.clear();
+  nodes.clear();
+  endpoints.clear();
+  processes.clear();
+  mounted = false;
   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   std::unique_ptr<infinit::model::Model> model;
-  reactor::Thread t(sched, "fs", [&] {
+  reactor::Thread t(*sched, "fs", [&] {
     if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
       storage = new infinit::storage::Memory();
     else
@@ -250,9 +265,11 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       std::move(model));
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
+    mount_points.push_back(mountpoint);
+    mounted = true;
     fs->mount(mountpoint, {"", "-o", "big_writes"}); // {"", "-d" /*, "-o", "use_ino"*/});
   });
-  sched.run();
+  sched->run();
 }
 
 static std::string read(boost::filesystem::path const& where)
@@ -288,6 +305,7 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   auto mount = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   boost::filesystem::create_directories(mount);
   boost::filesystem::create_directories(store);
+  mount_points.clear();
   std::thread t([&] {
       if (dht)
         run_filesystem_dht(store.string(), mount.string(), nnodes, plain,
@@ -303,7 +321,7 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
 
   elle::SafeFinally remover([&] {
       ELLE_TRACE("unmounting");
-      reactor::Thread th(sched, "unmount", [&] { fs->unmount();});
+      reactor::Thread th(*sched, "unmount", [&] { fs->unmount();});
       t.join();
       ELLE_TRACE("cleaning up");
       for (auto const& mp: mount_points)
@@ -497,9 +515,10 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
       ofs.put(dist(gen));
   }
   ELLE_TRACE("random writes");
+
   BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
   std::uniform_int_distribution<>dist2(0, 9999999);
-  for (int i=0; i < (dht?1:100); ++i)
+  for (int i=0; i < (dht?1:10); ++i)
   {
     if (! (i%10))
       ELLE_TRACE("Run %s", i);
