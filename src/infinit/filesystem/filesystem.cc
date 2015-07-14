@@ -551,6 +551,14 @@ namespace infinit
     , _block(std::move(b))
     {
       ELLE_DEBUG("Directory::Directory %s, parent %s", this, parent);
+      try
+      {
+        _block->data();
+      }
+      catch (elle::Error const& e)
+      {
+        THROW_ACCES;
+      }
       if (!_block->data().empty())
       {
         ELLE_DEBUG("Deserializing directory");
@@ -933,7 +941,7 @@ namespace infinit
     Unknown::mkdir(mode_t mode)
     {
       ELLE_DEBUG("mkdir %s", _name);
-      auto b = _owner.block_store()->make_block<MutableBlock>();
+      auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
       _owner.block_store()->store(*b, model::STORE_INSERT);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
@@ -1719,10 +1727,7 @@ namespace infinit
       }
       catch (std::exception const& e)
       {
-        ELLE_WARN("Error accessing %s: %s", _owner->full_path(), e.what());
-        _owner->_handle_count--;
-        close();
-        THROW_ACCES;
+        ELLE_TRACE("Error writing atime %s: %s", _owner->full_path(), e.what());
       }
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
