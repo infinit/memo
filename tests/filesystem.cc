@@ -45,14 +45,40 @@ static void sig_int()
 
 static int directory_count(boost::filesystem::path const& p)
 {
-  boost::filesystem::directory_iterator d(p);
-  int s=0;
-  while (d!= boost::filesystem::directory_iterator())
+  try
   {
-    ++s; ++d;
+    boost::filesystem::directory_iterator d(p);
+    int s=0;
+    while (d!= boost::filesystem::directory_iterator())
+    {
+      ++s; ++d;
+    }
+    return s;
   }
-  return s;
+  catch(std::exception const& e)
+  {
+    return -1;
+  }
 }
+
+static bool can_access(boost::filesystem::path const& p)
+{
+  int fd = open(p.string().c_str(), O_RDONLY);
+  bool res = (fd >= 0);
+  if (res)
+    close(fd);
+  return res;
+}
+
+static bool touch(boost::filesystem::path const& p)
+{
+  boost::filesystem::ofstream ofs(p);
+  if (!ofs.good())
+    return false;
+  ofs << "test";
+  return true;
+}
+
 template<typename T> std::string serialize(T & t)
 {
   elle::Buffer buf;
@@ -607,19 +633,19 @@ void test_acl()
     ofs << "Test";
   }
   BOOST_CHECK_EQUAL(directory_count(m0), 1);
-  BOOST_CHECK_EQUAL(directory_count(m1), 1);
+  BOOST_CHECK_EQUAL(directory_count(m1), -1);
+  BOOST_CHECK(!can_access(m1/"test"));
   {
      boost::filesystem::ifstream ifs(m1 / "test");
      BOOST_CHECK_EQUAL(ifs.good(), false);
   }
   BOOST_CHECK_EQUAL(keys.size(), 2);
   std::string k1 = serialize(keys[1]);
-  ELLE_LOG("setxattr");
   setxattr(m0.c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0);
-  ELLE_LOG("setxattr done");
   // expire directory cache
   usleep(2100000);
+  BOOST_CHECK(can_access(m1/"test"));
   {
      boost::filesystem::ifstream ifs(m1 / "test");
      BOOST_CHECK_EQUAL(ifs.good(), true);
@@ -627,6 +653,18 @@ void test_acl()
      ifs >> v;
      BOOST_CHECK_EQUAL(v, "Test");
   }
+
+  bfs::create_directory(m0 / "dir1");
+  BOOST_CHECK(touch(m0 / "dir1" / "pan"));
+  BOOST_CHECK(!can_access(m1 / "dir1"));
+  BOOST_CHECK(!can_access(m1 / "dir1" / "pan"));
+  BOOST_CHECK(!touch(m1 / "dir1" / "coin"));
+  setxattr((m0 / "dir1").c_str(), "user.infinit.auth.setrw",
+    k1.c_str(), k1.length(), 0);
+  usleep(2100000);
+  BOOST_CHECK(can_access(m1 / "dir1"));
+  BOOST_CHECK(can_access(m1 / "dir1" / "pan"));
+  BOOST_CHECK(touch(m1 / "dir1" / "coin"));
   ELLE_LOG("test end");
 }
 
