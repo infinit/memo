@@ -32,6 +32,7 @@
 
 ELLE_LOG_COMPONENT("infinit");
 
+boost::optional<std::string> root_address_file;
 /*----------------------.
 | Storage configuration |
 `----------------------*/
@@ -409,6 +410,7 @@ parse_options(int argc, char** argv, Config& cfg, std::unique_ptr<ModelConfig>& 
     ("help,h", "display the help")
     ("version,v", "display version")
     ("model,m", "Only load model, do not mount any filesystem")
+    ("rootfile,f", value<std::string>(), "File to store root address into")
     ;
   variables_map vm;
   try
@@ -459,6 +461,10 @@ parse_options(int argc, char** argv, Config& cfg, std::unique_ptr<ModelConfig>& 
   }
   else
     throw elle::Error("missing mandatory 'config' option");
+  if (vm.count("rootfile") != 0)
+  {
+    root_address_file = vm["rootfile"].as<std::string>();
+  }
 }
 
 int
@@ -500,8 +506,17 @@ main(int argc, char** argv)
                 std::move(model));
               std::cout << "No root block specified, generating fresh one:"
                         << std::endl;
-              elle::serialization::json::SerializerOut output(std::cout);
-              output.serialize_forward(fs->root_address());
+              std::stringstream ss;
+              {
+                elle::serialization::json::SerializerOut output(ss);
+                output.serialize_forward(fs->root_address());
+              }
+              std::cout << ss.str();
+              if (root_address_file)
+              {
+                std::ofstream ofs(*root_address_file);
+                ofs << ss.str().substr(1, ss.str().size()-3);
+              }
             }
           if (cfg.single_mount && *cfg.single_mount)
             fs->single_mount(true);
@@ -516,7 +531,6 @@ main(int argc, char** argv)
               cfg.local_port? *cfg.local_port : 0));
             local->doughnut().reset(
               dynamic_cast<infinit::model::doughnut::Doughnut*>(model2.release()));
-            ELLE_LOG("got doughnut %s", local->doughnut().get());
           }
           ELLE_TRACE("mount filesystem")
           {
