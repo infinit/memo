@@ -332,6 +332,7 @@ namespace infinit
         std::vector<ACLEntry> entries;
         if (this->_acl != Address::null)
         {
+          ELLE_ASSERT(this->doughnut());
           auto acl = this->doughnut()->fetch(this->_acl);
           entries = elle::serialization::deserialize
             <std::vector<ACLEntry>, elle::serialization::Json>
