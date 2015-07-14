@@ -491,6 +491,18 @@ main(int argc, char** argv)
         {
           model = cfg.model->make();
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
+          std::unique_ptr<infinit::model::doughnut::Local> local;
+          if (cfg.local_storage)
+          {
+            ELLE_TRACE("Initialize local node");
+            model2 = cfg.model->make();
+            std::unique_ptr<infinit::storage::Storage> store
+              = cfg.local_storage->make();
+            local.reset(new infinit::model::doughnut::Local(std::move(store),
+              cfg.local_port? *cfg.local_port : 0));
+            local->doughnut().reset(
+              dynamic_cast<infinit::model::doughnut::Doughnut*>(model2.release()));
+          }
           ELLE_TRACE("initialize filesystem")
             if (cfg.root_address)
             {
@@ -520,18 +532,6 @@ main(int argc, char** argv)
             }
           if (cfg.single_mount && *cfg.single_mount)
             fs->single_mount(true);
-
-          std::unique_ptr<infinit::model::doughnut::Local> local;
-          if (cfg.local_storage)
-          {
-            model2 = cfg.model->make();
-            std::unique_ptr<infinit::storage::Storage> store
-              = cfg.local_storage->make();
-            local.reset(new infinit::model::doughnut::Local(std::move(store),
-              cfg.local_port? *cfg.local_port : 0));
-            local->doughnut().reset(
-              dynamic_cast<infinit::model::doughnut::Doughnut*>(model2.release()));
-          }
           ELLE_TRACE("mount filesystem")
           {
             reactor::filesystem::FileSystem filesystem(std::move(fs), true);
