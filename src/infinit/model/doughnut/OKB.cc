@@ -157,7 +157,7 @@ namespace infinit
       void
       BaseOKB<Block>::_sign(elle::serialization::SerializerOut& s) const
       {
-        s.serialize("data", this->data());
+        s.serialize("data", this->_data);
       }
 
       template <typename Block>
