@@ -983,7 +983,7 @@ namespace infinit
       {
         _parent->_changed(true);
       }
-      catch(elle::Error const& e)
+      catch(elle::Exception const& e)
       {
         ELLE_WARN("Error updating directory at %s: %s", full_path(), e.what());
         THROW_ACCES;
