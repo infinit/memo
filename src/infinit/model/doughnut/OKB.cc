@@ -117,7 +117,7 @@ namespace infinit
       {
         if (!this->_data_decrypted)
         {
-          ELLE_TRACE_SCOPE("%s: decrypted data", *this);
+          ELLE_TRACE_SCOPE("%s: decrypt data", *this);
           const_cast<BaseOKB<Block>*>(this)->_data_plain =
             this->_decrypt_data(this->_data);
           ELLE_DUMP("%s: decrypted data: %s", *this, this->_data_plain);
@@ -164,12 +164,20 @@ namespace infinit
       void
       BaseOKB<Block>::_seal()
       {
-        auto encrypted =
-          this->doughnut()->keys().K().encrypt
-          (cryptography::Plain(this->_data_plain));
-        this->Block::data(std::move(encrypted.buffer()));
-        this->_data_changed = false;
-        this->_seal_okb();
+        if (this->_data_changed)
+        {
+          ELLE_DEBUG_SCOPE("%s: data changed, seal", *this);
+          ELLE_DUMP("%s: data: %s", *this, this->_data_plain);
+          auto encrypted =
+            this->doughnut()->keys().K().encrypt
+            (cryptography::Plain(this->_data_plain));
+          ELLE_DUMP("%s: encrypted data: %s", *this, encrypted.buffer());
+          this->Block::data(std::move(encrypted.buffer()));
+          this->_seal_okb();
+          this->_data_changed = false;
+        }
+        else
+          ELLE_DEBUG("%s: data didn't change", *this);
       }
 
       template <typename Block>
