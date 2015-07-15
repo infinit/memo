@@ -72,6 +72,28 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
 
+      /*--------.
+      | Content |
+      `--------*/
+      public:
+        virtual
+        elle::Buffer const&
+        data() const;
+        virtual
+        void
+        data(elle::Buffer data) override;
+        virtual
+        void
+        data(std::function<void (elle::Buffer&)> transformation) override;
+        ELLE_ATTRIBUTE_R(elle::Buffer, data_plain);
+        ELLE_ATTRIBUTE(bool, data_decrypted);
+      protected:
+        void
+        _decrypt_data() const;
+        virtual
+        elle::Buffer
+        _decrypt_data(elle::Buffer const&) const;
+
       /*-----------.
       | Validation |
       `-----------*/
@@ -79,6 +101,8 @@ namespace infinit
         virtual
         void
         _seal() override;
+        void
+        _seal_okb();
         virtual
         bool
         _validate(blocks::Block const& previous) const override;

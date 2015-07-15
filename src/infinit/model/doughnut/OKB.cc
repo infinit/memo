@@ -77,7 +77,61 @@ namespace infinit
         , _version(-1)
         , _signature()
         , _doughnut(owner)
+        , _data_plain()
+        , _data_decrypted(true)
       {}
+
+      /*--------.
+      | Content |
+      `--------*/
+
+      template <typename Block>
+      elle::Buffer const&
+      BaseOKB<Block>::data() const
+      {
+        this->_decrypt_data();
+        return this->_data_plain;
+      }
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::data(elle::Buffer data)
+      {
+        this->_data_plain = std::move(data);
+        this->_data_changed = true;
+        this->_data_decrypted = true;
+      }
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::data(std::function<void (elle::Buffer&)> transformation)
+      {
+        this->_decrypt_data();
+        transformation(this->_data_plain);
+        this->_data_changed = true;
+      }
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::_decrypt_data() const
+      {
+        if (!this->_data_decrypted)
+        {
+          ELLE_TRACE_SCOPE("%s: decrypted data", *this);
+          const_cast<BaseOKB<Block>*>(this)->_data_plain =
+            this->_decrypt_data(this->_data);
+          ELLE_DUMP("%s: decrypted data: %s", *this, this->_data_plain);
+          const_cast<BaseOKB<Block>*>(this)->_data_decrypted = true;
+        }
+      }
+
+      template <typename Block>
+      elle::Buffer
+      BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
+      {
+        cryptography::Code input(data);
+        return std::move(this->doughnut()->keys().k().decrypt(input).buffer());
+      }
 
       /*-----------.
       | Validation |
@@ -109,6 +163,18 @@ namespace infinit
       template <typename Block>
       void
       BaseOKB<Block>::_seal()
+      {
+        auto encrypted =
+          this->doughnut()->keys().K().encrypt
+          (cryptography::Plain(this->_data_plain));
+        this->Block::data(std::move(encrypted.buffer()));
+        this->_data_changed = false;
+        this->_seal_okb();
+      }
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::_seal_okb()
       {
         ++this->_version; // FIXME: idempotence in case the write fails ?
         auto sign = this->_sign();
@@ -175,6 +241,8 @@ namespace infinit
         , _version(-1)
         , _signature()
         , _doughnut(nullptr)
+        , _data_plain()
+        , _data_decrypted(false)
       {
         this->_serialize(input);
       }

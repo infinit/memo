@@ -45,83 +45,52 @@ namespace infinit
         , _acl_changed(true)
         , _data_version(-1)
         , _data_signature()
-        , _data_plain()
-        , _data_decrypted(true)
       {}
 
       /*--------.
       | Content |
       `--------*/
 
-      elle::Buffer const&
-      ACB::data() const
+      elle::Buffer
+      ACB::_decrypt_data(elle::Buffer const& data) const
       {
-        this->_decrypt_data();
-        return this->_data_plain;
-      }
-
-      void
-      ACB::data(elle::Buffer data)
-      {
-        this->_data_plain = std::move(data);
-        this->_data_changed = true;
-        this->_data_decrypted = true;
-      }
-
-      void
-      ACB::data(std::function<void (elle::Buffer&)> transformation)
-      {
-        this->_decrypt_data();
-        transformation(this->_data_plain);
-        this->_data_changed = true;
-      }
-
-      void
-      ACB::_decrypt_data() const
-      {
-        if (!this->_data_decrypted)
+        auto& mine = this->doughnut()->keys().K();
+        elle::Buffer const* encrypted_secret = nullptr;
+        std::vector<ACLEntry> entries;
+        if (mine == this->owner_key())
         {
-          ELLE_TRACE_SCOPE("%s: decrypt data", *this);
-          auto& mine = this->doughnut()->keys().K();
-          elle::Buffer const* encrypted_secret = nullptr;
-          std::vector<ACLEntry> entries;
-          if (mine == this->owner_key())
-          {
-            ELLE_DEBUG("%s: we are owner", *this);
-            encrypted_secret = &this->_owner_token;
-          }
-          else if (this->_acl != Address::null)
-          {
-            // FIXME: factor searching the token
-            auto acl = this->doughnut()->fetch(this->_acl);
-            entries =
-              elle::serialization::deserialize
-              <std::vector<ACLEntry>, elle::serialization::Json>
-              (acl->data(), "entries");
-            auto it = std::find_if
-              (entries.begin(), entries.end(),
-               [&] (ACLEntry const& e) { return e.key == mine; });
-            if (it != entries.end() && it->read)
-            {
-              ELLE_DEBUG("%s: we are an editor", *this);
-              encrypted_secret = &it->token;
-            }
-          }
-          if (!encrypted_secret)
-          {
-            ELLE_ABORT("no read permissions");
-            // FIXME: better exceptions
-            throw elle::Error("no read permissions");
-          }
-          auto secret =
-            this->doughnut()->keys().k().decrypt<cryptography::SecretKey>
-            (cryptography::Code(*encrypted_secret));
-          ELLE_DUMP("%s: secret: %s", *this, secret);
-          const_cast<ACB*>(this)->_data_plain =
-            std::move(secret.decrypt(cryptography::Code(this->_data)).buffer());
-          ELLE_DUMP("%s: decrypted data: %s", *this, this->_data_plain);
-          const_cast<ACB*>(this)->_data_decrypted = true;
+          ELLE_DEBUG("%s: we are owner", *this);
+          encrypted_secret = &this->_owner_token;
         }
+        else if (this->_acl != Address::null)
+        {
+          // FIXME: factor searching the token
+          auto acl = this->doughnut()->fetch(this->_acl);
+          entries =
+            elle::serialization::deserialize
+              <std::vector<ACLEntry>, elle::serialization::Json>
+            (acl->data(), "entries");
+          auto it = std::find_if
+            (entries.begin(), entries.end(),
+             [&] (ACLEntry const& e) { return e.key == mine; });
+          if (it != entries.end() && it->read)
+          {
+            ELLE_DEBUG("%s: we are an editor", *this);
+            encrypted_secret = &it->token;
+          }
+        }
+        if (!encrypted_secret)
+        {
+          ELLE_ABORT("no read permissions");
+          // FIXME: better exceptions
+          throw elle::Error("no read permissions");
+        }
+        auto secret =
+          this->doughnut()->keys().k().decrypt<cryptography::SecretKey>
+          (cryptography::Code(*encrypted_secret));
+        ELLE_DUMP("%s: secret: %s", *this, secret);
+        return
+          std::move(secret.decrypt(cryptography::Code(this->_data)).buffer());
       }
 
       /*------------.
@@ -133,21 +102,27 @@ namespace infinit
                            bool read,
                            bool write)
       {
+        ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
+                   *this, key, read, write);
         std::vector<ACLEntry> entries;
         if (this->_acl != Address::null)
         {
+          ELLE_DEBUG_SCOPE("%s: fetch old ACL at %s", *this, this->_acl);
           auto acl = this->doughnut()->fetch(this->_acl);
+          ELLE_DUMP("%s: ACL content: %s", acl->data());
           entries =
             elle::serialization::deserialize
             <std::vector<ACLEntry>, elle::serialization::Json>
             (acl->data(), "entries");
         }
+        ELLE_DUMP("%s: ACL entries: %s", *this, entries);
         auto it = std::find_if
           (entries.begin(), entries.end(),
            [&] (ACLEntry const& e) { return e.key == key; });
         bool acl_changed = false;
         if (it == entries.end())
         {
+          ELLE_DEBUG_SCOPE("%s: new user, insert ACL entry", *this);
           // FIXME: shitty crypto interface prevent me from just reencrypting
           // the buffer without deserializing the private key
           auto secret = this->doughnut()->keys().k().decrypt
@@ -159,6 +134,7 @@ namespace infinit
         }
         else
         {
+          ELLE_DEBUG_SCOPE("%s: edit ACL entry", *this);
           if (it->read != read)
           {
             it->read = read;
@@ -172,6 +148,7 @@ namespace infinit
         }
         if (acl_changed)
         {
+          ELLE_DEBUG_SCOPE("%s: push new ACL block", *this);
           // FIXME: squash multiple ACL changes
           auto new_acl = this->doughnut()->make_block<blocks::ImmutableBlock>(
             elle::serialization::serialize
@@ -179,6 +156,7 @@ namespace infinit
             (entries, "entries"));
           this->doughnut()->store(*new_acl);
           this->_acl = new_acl->address();
+          ELLE_DUMP("%s: new ACL address: %s", *this, this->_acl);
           this->_acl_changed = true;
         }
       }
@@ -250,15 +228,16 @@ namespace infinit
       {
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
-        if (this->_acl_changed)
+        if (acl_changed)
         {
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
-          Super::_seal();
+          Super::_seal_okb();
           this->_acl_changed = false;
         }
-        if (this->_data_changed)
+        else
+          ELLE_DEBUG("%s: ACL didn't change", *this);
+        if (data_changed)
         {
-          ELLE_ASSERT(this->_data_decrypted);
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
           ELLE_TRACE_SCOPE("%s: data changed, seal", *this);
           bool owner = this->doughnut()->keys().K() == this->owner_key();
@@ -313,11 +292,12 @@ namespace infinit
             this->_acl = new_acl_block->address();
           }
           auto encrypted =
-            secret.encrypt(cryptography::Plain(this->_data_plain));
-          this->MutableBlock::data(
-            [&] (elle::Buffer& data) { data = std::move(encrypted.buffer()); });
+            secret.encrypt(cryptography::Plain(this->data_plain()));
+          this->MutableBlock::data(std::move(encrypted.buffer()));
           this->_data_changed = false;
         }
+        else
+          ELLE_DEBUG("%s: data didn't change", *this);
         // Even if only the ACL was changed, we need to re-sign because the ACL
         // address is part of the signature.
         if (acl_changed || data_changed)
@@ -374,8 +354,6 @@ namespace infinit
         , _acl_changed(false)
         , _data_version(-1)
         , _data_signature()
-        , _data_plain()
-        , _data_decrypted(false)
       {
         this->_serialize(input);
       }
