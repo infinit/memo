@@ -25,6 +25,19 @@ ELLE_TEST_SCHEDULED(doughnut)
   infinit::overlay::Stonehenge::Members members;
   members.push_back(local_a->server_endpoint());
   members.push_back(local_b->server_endpoint());
+  local_a->doughnut().reset(
+    new infinit::model::doughnut::Doughnut(
+      infinit::cryptography::KeyPair::generate
+      (infinit::cryptography::Cryptosystem::rsa, 2048),
+      elle::make_unique<infinit::overlay::Stonehenge>(members)
+      ));
+  local_b->doughnut().reset(
+    new infinit::model::doughnut::Doughnut(
+      infinit::cryptography::KeyPair::generate
+      (infinit::cryptography::Cryptosystem::rsa, 2048),
+      elle::make_unique<infinit::overlay::Stonehenge>(members)
+      ));
+
   infinit::model::doughnut::Doughnut dht(
     infinit::cryptography::KeyPair::generate
     (infinit::cryptography::Cryptosystem::rsa, 2048),

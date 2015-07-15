@@ -55,6 +55,7 @@ namespace infinit
           auto previous_buffer = this->_storage->get(block.address());
           elle::IOStream s(previous_buffer.istreambuf());
           typename elle::serialization::binary::SerializerIn input(s, false);
+          ELLE_ASSERT(this->_doughnut.get());
           input.set_context<Doughnut*>(this->_doughnut.get());
           auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
           if (!block.validate(*previous))
@@ -82,6 +83,7 @@ namespace infinit
         auto data = this->_storage->get(address);
         elle::IOStream s(data.istreambuf());
         Serializer::SerializerIn input(s, false);
+        ELLE_ASSERT(this->_doughnut.get());
         input.set_context<Doughnut*>(this->_doughnut.get());
         return input.deserialize<std::unique_ptr<blocks::Block>>();
       }
@@ -125,6 +127,7 @@ namespace infinit
                   {
                     this->remove(address);
                   }));
+        ELLE_ASSERT(this->_doughnut.get());
         rpcs.set_context<Doughnut*>(this->_doughnut.get());
         elle::With<reactor::Scope>() << [this, &rpcs] (reactor::Scope& scope)
         {
