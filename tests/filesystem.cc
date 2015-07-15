@@ -666,6 +666,16 @@ void test_acl()
   BOOST_CHECK(can_access(m1 / "dir1" / "pan"));
   BOOST_CHECK(touch(m1 / "dir1" / "coin"));
   ELLE_LOG("test end");
+
+  // readonly
+  bfs::create_directory(m0 / "dir2");
+  setxattr((m0 / "dir2").c_str(), "user.infinit.auth.setr",
+    k1.c_str(), k1.length(), 0);
+  usleep(500000);
+  BOOST_CHECK(touch(m0 / "dir2" / "coin"));
+  BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
+  BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
+  BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
 }
 
 ELLE_TEST_SUITE()
