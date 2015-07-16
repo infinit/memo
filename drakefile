@@ -31,7 +31,8 @@ def configure(
                        cxx_toolkit = cxx_toolkit,
                        cxx_config = cxx_config,
                        python3 = python3,
-                       fuse = fuse)
+                       fuse = fuse,
+                       valgrind = valgrind)
   elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
                         strip_prefix = True)
   aws_lib = drake.copy(elle.aws.library, 'lib',

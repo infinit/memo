@@ -20,18 +20,42 @@ sys.path.insert(0, os.path.realpath(%(dir_source)r '/elle/drake/src'))
 import drake
 import drake.cxx
 
+os.environ.update(%(environ)r)
+
+cxx_toolkit = drake.cxx.GccToolkit(compiler = %(compiler)r)
+
 cfg = drake.cxx.Config()
 cfg.enable_debug_symbols()
 cfg.enable_optimization()
 
+for f in %(flags)r:
+  cfg.flag(f)
+
 with drake.Drake(%(dir_source)r) as d:
-  d.run(cxx_config = cfg)
+  d.run(cxx_toolkit = cxx_toolkit,
+        cxx_config = cfg,
+        python3 = False,
+        fuse = %(fuse)r,
+        valgrind = %(valgrind)r)
 '''
 
-parameters = {}
+parameters = {
+  'compiler': None,
+  'environ': {},
+  'flags': (),
+  'fuse': None,
+  'valgrind': None,
+}
 
 with open('%s/drake' % os.environ['DIR_BUILD'], 'w') as drake:
   parameters['dir_source'] = os.path.abspath(os.environ['DIR_SOURCE'])
+  if osyst == 'osx':
+    parameters['compiler'] = 'clang++'
+    parameters['environ'] = {'MACOSX_DEPLOYMENT_TARGET': '10.7'}
+    parameters['flags'] = ('-ftemplate-depth=512', '-stdlib=libc++')
+    parameters['fuse'] = '/usr/local'
+    parameters['valgrind'] = False
+
   content = template % parameters
   print(content, file = drake)
   print(content)
