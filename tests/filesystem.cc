@@ -26,8 +26,20 @@
 
 #include <infinit/overlay/Stonehenge.hh>
 
+#include <random>
+
 #include <sys/types.h>
+#ifdef INFINIT_LINUX
 #include <attr/xattr.h>
+#else
+#include <sys/xattr.h>
+#endif
+
+#ifdef INFINIT_MACOSX
+  #define SXA_EXTRA ,0
+#else
+  #define SXA_EXTRA
+#endif
 
 ELLE_LOG_COMPONENT("test");
 
@@ -230,8 +242,10 @@ static void run_filesystem_dht(std::string const& store,
         // Now replace placeholder with key
         size_t pos = ser.find("\"!!!\"");
         ser = ser.substr(0, pos) + kps + ser.substr(pos + 5);
-        std::ofstream ofs(mountpoint + "/" + std::to_string(i));
-        ofs.write(ser.data(), ser.size());
+        {
+          std::ofstream ofs(mountpoint + "/" + std::to_string(i));
+          ofs.write(ser.data(), ser.size());
+        }
         std::vector<std::string> args {
           "bin/infinit",
           "-c",
@@ -290,7 +304,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
     mount_points.push_back(mountpoint);
     mounted = true;
-    fs->mount(mountpoint, {"", "-o", "big_writes"}); // {"", "-d" /*, "-o", "use_ino"*/});
+    fs->mount(mountpoint, {""}); // {"", "-d" /*, "-o", "use_ino"*/});
   });
   sched->run();
 }
@@ -349,7 +363,12 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
       ELLE_TRACE("cleaning up");
       for (auto const& mp: mount_points)
       {
-        std::vector<std::string> args{"fusermount", "-u", mp};
+        std::vector<std::string> args
+#ifdef INFINIT_MACOSX
+          {"umount", mp};
+#else
+          {"fusermount", "-u", mp};
+#endif
         elle::system::Process p(args);
       }
       usleep(200000);
@@ -610,7 +629,12 @@ void test_acl()
       // unmount all
       for (auto const& mp: mount_points)
       {
-        std::vector<std::string> args{"fusermount", "-u", mp};
+        std::vector<std::string> args
+#ifdef INFINIT_MACOSX
+          {"umount", mp};
+#else
+          {"fusermount", "-u", mp};
+#endif
         elle::system::Process p(args);
       }
       usleep(200000);
@@ -639,7 +663,7 @@ void test_acl()
   BOOST_CHECK_EQUAL(keys.size(), 2);
   std::string k1 = serialize(keys[1]);
   setxattr(m0.c_str(), "user.infinit.auth.setrw",
-    k1.c_str(), k1.length(), 0);
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
   // expire directory cache
   usleep(2100000);
   BOOST_CHECK(can_access(m1/"test"));
@@ -657,7 +681,7 @@ void test_acl()
   BOOST_CHECK(!can_access(m1 / "dir1" / "pan"));
   BOOST_CHECK(!touch(m1 / "dir1" / "coin"));
   setxattr((m0 / "dir1").c_str(), "user.infinit.auth.setrw",
-    k1.c_str(), k1.length(), 0);
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
   usleep(2100000);
   BOOST_CHECK(can_access(m1 / "dir1"));
   BOOST_CHECK(can_access(m1 / "dir1" / "pan"));
@@ -667,7 +691,7 @@ void test_acl()
   // readonly
   bfs::create_directory(m0 / "dir2");
   setxattr((m0 / "dir2").c_str(), "user.infinit.auth.setr",
-    k1.c_str(), k1.length(), 0);
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
   usleep(500000);
   BOOST_CHECK(touch(m0 / "dir2" / "coin"));
   BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
