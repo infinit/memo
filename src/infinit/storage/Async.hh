@@ -5,6 +5,7 @@
 #include <reactor/scheduler.hh>
 #include <reactor/Barrier.hh>
 #include <infinit/storage/Storage.hh>
+#include <infinit/model/Address.hh>
 
 namespace infinit
 {
