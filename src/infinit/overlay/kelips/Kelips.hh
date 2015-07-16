@@ -9,6 +9,8 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/storage/Storage.hh>
 
+#include <random>
+
 namespace kelips
 {
   typedef boost::asio::ip::tcp::endpoint RpcEndpoint;

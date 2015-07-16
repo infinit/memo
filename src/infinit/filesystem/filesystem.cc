@@ -946,7 +946,7 @@ namespace infinit
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name,
-                       FileData{_name, 0, mode | DIRECTORY_MASK,
+                       FileData{_name, 0, static_cast<uint32_t>(mode | DIRECTORY_MASK),
                                 uint64_t(time(nullptr)),
                                 uint64_t(time(nullptr)),
                                 uint64_t(time(nullptr)),
