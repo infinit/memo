@@ -130,7 +130,7 @@ namespace infinit
         {
           ELLE_DEBUG_SCOPE("%s: fetch old ACL at %s", *this, this->_acl);
           auto acl = this->doughnut()->fetch(this->_acl);
-          ELLE_DUMP("%s: ACL content: %s", acl->data());
+          ELLE_DUMP("%s: ACL content: %s", *this, acl->data());
           entries =
             elle::serialization::deserialize
             <std::vector<ACLEntry>, elle::serialization::Json>
