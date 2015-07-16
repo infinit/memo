@@ -25,6 +25,34 @@ namespace infinit
            elle::serialization::SerializerOut& output) = 0;
   };
 
+#ifdef __clang__
+  // Clang fails on the other simpler list implementation by
+  // matching List<Foo> to the default impl on some conditions.
+  template<int I, typename ... Args> struct ListImpl {};
+
+  template<typename ... Args>
+  struct List
+   : public ListImpl<sizeof...(Args), Args...>
+  {
+  };
+
+  template <typename ... Args>
+  struct ListImpl<0, Args...>
+  {
+    static constexpr bool empty = true;
+    static constexpr int nargs = sizeof...(Args);
+  };
+
+  template <int I, typename Head_, typename ... Tail_>
+  struct ListImpl<I, Head_, Tail_ ...>
+  {
+    typedef Head_ Head;
+    typedef List<Tail_...> Tail;
+    static constexpr bool empty = false;
+  };
+
+#else
+
   template <typename ... Args>
   struct List
   {
@@ -38,6 +66,8 @@ namespace infinit
     typedef List<Tail_...> Tail;
     static constexpr bool empty = false;
   };
+
+#endif
 
   template <typename R, typename ... Args>
   class
@@ -94,7 +124,6 @@ namespace infinit
       this->_handle<typename Remaining::Tail, Parsed..., Head&>(
         n + 1, input, output, parsed..., *arg);
     }
-
     template <typename Remaining, typename ... Parsed>
     typename std::enable_if<
       Remaining::empty && std::is_same<R, void>::value,
