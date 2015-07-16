@@ -228,7 +228,7 @@ public:
   serialize(elle::serialization::Serializer& s)
   {
     s.serialize("overlay", this->overlay);
-    s.serialize("key", this->key);
+    s.serialize("keys", this->key);
     s.serialize("plain", this->plain);
   }
 
