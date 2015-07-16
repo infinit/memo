@@ -1648,11 +1648,11 @@ namespace infinit
           THROW_NODATA;
         if (value.empty())
           THROW_INVAL;
-        if (value.find_first_of("/\\. ") != value.npos)
-          THROW_INVAL;
         elle::Buffer userkey;
         if (value[0] == '$')
         { // user name, fetch the key
+          if (value.find_first_of("/\\. ") != value.npos)
+            THROW_INVAL;
           std::shared_ptr<Path> p = _owner.path("/");
           auto users = dynamic_cast<Directory*>(p.get())->child("$users");
           auto user = dynamic_cast<Directory*>(users.get())->child(value.substr(1));
