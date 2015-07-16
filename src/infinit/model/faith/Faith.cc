@@ -4,7 +4,7 @@
 
 #include <elle/log.hh>
 
-#include <cryptography/oneway.hh>
+#include <cryptography/hash.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>

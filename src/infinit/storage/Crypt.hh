@@ -1,8 +1,9 @@
 #ifndef INFINIT_STORAGE_CRYPT_HH
 #define INFINIT_STORAGE_CRYPT_HH
 
+#include <cryptography/Cipher.hh>
+
 #include <infinit/storage/Storage.hh>
-#include <cryptography/cipher.hh>
 
 namespace infinit
 {
@@ -15,8 +16,8 @@ namespace infinit
             std::string const& password,
             // Mix address and password to get a different key per block.
             bool salt = true,
-            infinit::cryptography::cipher::Algorithm algorithm
-              = infinit::cryptography::cipher::Algorithm::aes256
+            infinit::cryptography::Cipher algorithm =
+            cryptography::Cipher::aes256
         );
     protected:
       virtual
@@ -35,7 +36,7 @@ namespace infinit
       std::unique_ptr<Storage> _backend;
       std::string _password;
       bool _salt;
-      infinit::cryptography::cipher::Algorithm _algorithm;
+      infinit::cryptography::Cipher _algorithm;
     };
   }
 }

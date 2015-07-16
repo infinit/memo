@@ -67,7 +67,7 @@ namespace infinit
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<PlainImmutableBlock> _register_pib_serialization("PIB");
 
-      Doughnut::Doughnut(cryptography::KeyPair keys,
+      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
                          std::unique_ptr<overlay::Overlay> overlay,
                          std::unique_ptr<Consensus> consensus,
                          bool plain)
@@ -115,7 +115,7 @@ namespace infinit
       {
         elle::IOStream input(data.istreambuf());
         elle::serialization::json::SerializerIn s(input);
-        return elle::make_unique<doughnut::User>(cryptography::PublicKey(s));
+        return elle::make_unique<doughnut::User>(cryptography::rsa::PublicKey(s));
       }
 
       void
@@ -134,17 +134,6 @@ namespace infinit
         }
         catch (infinit::storage::MissingKey const&)
         {
-          return nullptr;
-        }
-        catch (reactor::Terminate const&)
-        {
-          throw;
-        }
-        catch (std::exception const& e)
-        {
-          ELLE_WARN("Doughnut: unexpected exception while fetching %x: %s (%s)",
-                    address, e.what(), typeid(e).name());
-          ELLE_WARN("Workaround exception slicing bug: assuming MissingKey");
           return nullptr;
         }
       }

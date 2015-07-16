@@ -9,7 +9,7 @@
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 
-#include <cryptography/KeyPair.hh>
+#include <cryptography/rsa/KeyPair.hh>
 
 #include <reactor/scheduler.hh>
 
@@ -144,11 +144,13 @@ struct StonehengeOverlayConfig:
   {
     this->serialize(input);
   }
+
   void
   serialize(elle::serialization::Serializer& s)
   {
     s.serialize("nodes", this->nodes);
   }
+
   virtual
   std::unique_ptr<infinit::overlay::Overlay>
   make()
@@ -208,70 +210,35 @@ protected:
 };
 }}
 
-struct DoughnutNodeModelConfig:
-  public ModelConfig
-{
-public:
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-  int port;
-  DoughnutNodeModelConfig(elle::serialization::SerializerIn& input)
-    : ModelConfig()
-  {
-    this->serialize(input);
-  }
-  void
-  serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("storage", this->storage);
-    s.serialize("port", this->port);
-  }
-  virtual
-  std::unique_ptr<infinit::model::Model>
-  make()
-  {
-    using namespace infinit::model::doughnut;
-    std::unique_ptr<infinit::storage::Storage> store = this->storage->make();
-    auto local = elle::make_unique<Local>(std::move(store), port);
-    return std::unique_ptr<infinit::model::Model>(
-      new infinit::model::NodeModel(std::move(local)));
-  }
-};
-
-static const elle::serialization::Hierarchy<ModelConfig>::
-Register<DoughnutNodeModelConfig> _register_DoughnutNodeModelConfig("doughnut_node");
-
-
 struct DoughnutModelConfig:
   public ModelConfig
 {
 public:
   std::unique_ptr<OverlayConfig> overlay;
-  std::unique_ptr<infinit::cryptography::KeyPair> key;
+  std::unique_ptr<infinit::cryptography::rsa::KeyPair> key;
   boost::optional<bool> plain;;
-  boost::optional<int> read_n;
-  boost::optional<int> write_n;
 
   DoughnutModelConfig(elle::serialization::SerializerIn& input)
     : ModelConfig()
   {
     this->serialize(input);
   }
+
   void
   serialize(elle::serialization::Serializer& s)
   {
     s.serialize("overlay", this->overlay);
     s.serialize("key", this->key);
     s.serialize("plain", this->plain);
-    s.serialize("read_n", this->read_n);
-    s.serialize("write_n", this->write_n);
   }
+
   virtual
   std::unique_ptr<infinit::model::Model>
   make()
   {
     if (!key)
       return elle::make_unique<infinit::model::doughnut::Doughnut>(
-        infinit::cryptography::KeyPair::generate(
+        infinit::cryptography::rsa::KeyPair::generate(
           infinit::cryptography::Cryptosystem::rsa, 2048),
         overlay->make(),
         nullptr,
@@ -324,7 +291,7 @@ struct ParanoidModelConfig:
 public:
   // boost::optional does not support in-place construction, use a
   // std::unique_ptr instead since KeyPair is not copiable.
-  std::unique_ptr<infinit::cryptography::KeyPair> keys;
+  std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
   std::unique_ptr<infinit::storage::StorageConfig> storage;
 
   ParanoidModelConfig(elle::serialization::SerializerIn& input)
@@ -347,8 +314,8 @@ public:
     if (!this->keys)
     {
       this->keys.reset(
-        new infinit::cryptography::KeyPair(
-          infinit::cryptography::KeyPair::generate
+        new infinit::cryptography::rsa::KeyPair(
+          infinit::cryptography::rsa::KeyPair::generate
           (infinit::cryptography::Cryptosystem::rsa, 2048)));
       elle::serialization::json::SerializerOut output(std::cout);
       std::cout << "No key specified, generating fresh ones:" << std::endl;
@@ -489,6 +456,8 @@ main(int argc, char** argv)
         }
         else
         {
+          if (!cfg.model)
+            throw elle::Error("missing mandatory \"model\" configuration key");
           model = cfg.model->make();
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
           std::unique_ptr<infinit::model::doughnut::Local> local;

@@ -3,7 +3,7 @@
 
 # include <elle/serialization/fwd.hh>
 
-# include <cryptography/KeyPair.hh>
+# include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/ACLBlock.hh>
@@ -35,7 +35,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Address, acl);
         ELLE_ATTRIBUTE(bool, acl_changed);
         ELLE_ATTRIBUTE(int, data_version);
-        ELLE_ATTRIBUTE(cryptography::Signature, data_signature);
+        ELLE_ATTRIBUTE(elle::Buffer, data_signature);
 
       /*--------.
       | Content |
@@ -51,7 +51,7 @@ namespace infinit
       public:
         virtual
         void
-        set_permissions(cryptography::PublicKey const& key,
+        set_permissions(cryptography::rsa::PublicKey const& key,
                         bool read,
                         bool write);
       protected:

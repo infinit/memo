@@ -4,8 +4,8 @@
 #include <das/model.hh>
 #include <das/serializer.hh>
 
-#include <cryptography/KeyPair.hh>
-#include <cryptography/PublicKey.hh>
+#include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/PublicKey.hh>
 #include <cryptography/SecretKey.hh>
 
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -15,13 +15,33 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
 
+// FIXME
+static auto dummy_keys = infinit::cryptography::rsa::keypair::generate(2048);
+
 struct ACLEntry
 {
-  infinit::cryptography::PublicKey key;
+  infinit::cryptography::rsa::PublicKey key;
   bool read;
   bool write;
   elle::Buffer token;
+
+  ACLEntry(infinit::cryptography::rsa::PublicKey key_,
+           bool read_,
+           bool write_,
+           elle::Buffer token_)
+    : key(std::move(key_))
+    , read(read_)
+    , write(write_)
+    , token(std::move(token_))
+  {}
+
+  ACLEntry(elle::serialization::Serializer& s)
+    : key(dummy_keys.K()) // FIXME
+  {
+    s.serialize_forward(*this);
+  }
 };
+
 DAS_MODEL(ACLEntry, (key, read, write, token), DasACLEntry);
 DAS_MODEL_DEFAULT(ACLEntry, DasACLEntry);
 DAS_MODEL_DEFINE(ACLEntry, (key, read, write), DasACLEntryPermissions);
@@ -84,12 +104,14 @@ namespace infinit
           // FIXME: better exceptions
           throw elle::Error("no read permissions");
         }
+        auto secret_buffer =
+          this->doughnut()->keys().k().open(*encrypted_secret);
         auto secret =
-          this->doughnut()->keys().k().decrypt<cryptography::SecretKey>
-          (cryptography::Code(*encrypted_secret));
+          elle::serialization::deserialize
+          <cryptography::SecretKey, elle::serialization::Json>
+          (secret_buffer);
         ELLE_DUMP("%s: secret: %s", *this, secret);
-        return
-          std::move(secret.decrypt(cryptography::Code(this->_data)).buffer());
+        return secret.decipher(this->_data);
       }
 
       /*------------.
@@ -97,7 +119,7 @@ namespace infinit
       `------------*/
 
       void
-      ACB::set_permissions(cryptography::PublicKey const& key,
+      ACB::set_permissions(cryptography::rsa::PublicKey const& key,
                            bool read,
                            bool write)
       {
@@ -122,13 +144,9 @@ namespace infinit
         if (it == entries.end())
         {
           ELLE_DEBUG_SCOPE("%s: new user, insert ACL entry", *this);
-          // FIXME: shitty crypto interface prevent me from just reencrypting
-          // the buffer without deserializing the private key
-          auto secret = this->doughnut()->keys().k().decrypt
-            <cryptography::SecretKey>(cryptography::Code(this->_owner_token));
-          auto token = key.encrypt(secret);
+          auto secret = this->doughnut()->keys().k().open(this->_owner_token);
           entries.emplace_back
-            (ACLEntry{key, read, write, std::move(token.buffer())});
+            (ACLEntry(key, read, write, key.seal(secret)));
           acl_changed = true;
         }
         else
@@ -242,11 +260,13 @@ namespace infinit
           bool owner = this->doughnut()->keys().K() == this->owner_key();
           if (owner)
             this->_editor = -1;
-          auto secret = cryptography::SecretKey::generate
-            (cryptography::cipher::Algorithm::aes256, 256);
+          auto secret = cryptography::secretkey::generate
+            (256, cryptography::Cipher::aes256, cryptography::Mode::cbc);
           ELLE_DUMP("%s: new block secret: %s", *this, secret);
-          this->_owner_token =
-            std::move(this->owner_key().encrypt(secret).buffer());
+          auto secret_buffer =
+            elle::serialization::serialize
+            <cryptography::SecretKey, elle::serialization::Json>(secret);
+          this->_owner_token = this->owner_key().seal(secret_buffer);
           std::vector<ACLEntry> entries;
           auto acl_address = this->_acl;
           if (acl_address != Address::null)
@@ -265,7 +285,7 @@ namespace infinit
             if (e.read)
             {
               changed = true;
-              e.token = std::move(e.key.encrypt(secret).buffer());
+              e.token = e.key.encrypt(secret_buffer);
             }
             if (e.key == this->doughnut()->keys().K())
             {
@@ -290,9 +310,7 @@ namespace infinit
             this->doughnut()->store(*new_acl_block);
             this->_acl = new_acl_block->address();
           }
-          auto encrypted =
-            secret.encrypt(cryptography::Plain(this->data_plain()));
-          this->MutableBlock::data(std::move(encrypted.buffer()));
+          this->MutableBlock::data(secret.encipher(this->data_plain()));
           this->_data_changed = false;
         }
         else
@@ -303,7 +321,7 @@ namespace infinit
         {
           auto sign = this->_data_sign();
           auto const& key = this->doughnut()->keys().k();
-          this->_data_signature = key.sign(cryptography::Plain(sign));
+          this->_data_signature = key.sign(sign);
           ELLE_DUMP("%s: sign %s with %s: %f",
                     *this, sign, key, this->_data_signature);
         }
@@ -337,7 +355,7 @@ namespace infinit
             <std::vector<ACLEntry>, elle::serialization::Json>
             (acl->data(), "entries");
         }
-        s.elle::serialization::Serializer::serialize(
+        s.serialize(
           "acls", entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
       }

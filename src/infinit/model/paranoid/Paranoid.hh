@@ -3,7 +3,7 @@
 
 # include <memory>
 
-# include <cryptography/KeyPair.hh>
+# include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/Model.hh>
 # include <infinit/storage/Storage.hh>
@@ -18,7 +18,7 @@ namespace infinit
         : public Model
       {
       public:
-        Paranoid(infinit::cryptography::KeyPair keys,
+        Paranoid(infinit::cryptography::rsa::KeyPair keys,
                  std::unique_ptr<storage::Storage> storage);
         virtual
         ~Paranoid();
@@ -33,7 +33,7 @@ namespace infinit
         virtual
         void
         _remove(Address address) override;
-        ELLE_ATTRIBUTE_R(infinit::cryptography::KeyPair, keys);
+        ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
       };
     }

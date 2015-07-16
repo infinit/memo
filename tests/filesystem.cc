@@ -125,7 +125,7 @@ static void make_nodes(std::string store, int node_count, bool plain)
     // now give each a model
     for (int i=0; i<node_count; ++i)
     {
-      auto kp = infinit::cryptography::KeyPair::generate(
+      auto kp = infinit::cryptography::rsa::KeyPair::generate(
         infinit::cryptography::Cryptosystem::rsa, 2048);
       std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
       std::unique_ptr<infinit::model::doughnut::Doughnut> model =
@@ -178,7 +178,7 @@ static void run_filesystem_dht(std::string const& store,
       if (nmount == 1)
       {
         std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
-        auto kp = infinit::cryptography::KeyPair::generate(
+        auto kp = infinit::cryptography::rsa::KeyPair::generate(
           infinit::cryptography::Cryptosystem::rsa, 2048);
         keys.push_back(kp.K());
         std::unique_ptr<infinit::model::Model> model =
@@ -214,7 +214,7 @@ static void run_filesystem_dht(std::string const& store,
         elle::json::Object model;
         model["type"] = "doughnut";
         model["plain"] = false;
-        auto kp = infinit::cryptography::KeyPair::generate(
+        auto kp = infinit::cryptography::rsa::KeyPair::generate(
           infinit::cryptography::Cryptosystem::rsa, 2048);
         keys.push_back(kp.K());
         model["key"] = "!!!"; // placeholder, lolilol

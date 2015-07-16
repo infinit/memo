@@ -19,7 +19,7 @@ namespace infinit
       if (args.size() > 3)
       {
         std::string const& v = args[3];
-        salt = (v=="1" || v == "yes" || v == "true");
+        salt = (v == "1" || v == "yes" || v == "true");
       }
       return elle::make_unique<Crypt>(std::move(backend), password, salt);
     }
@@ -29,7 +29,7 @@ namespace infinit
     Crypt::Crypt(std::unique_ptr<Storage> backend,
                  std::string const& password,
                  bool salt,
-                 infinit::cryptography::cipher::Algorithm algorithm)
+                 infinit::cryptography::Cipher algorithm)
       : _backend(std::move(backend))
       , _password(password)
       , _salt(salt)
@@ -40,19 +40,18 @@ namespace infinit
     Crypt::_get(Key k) const
     {
       elle::Buffer e = this->_backend->get(k);
-      SecretKey enc(_algorithm,
-        _salt ? _password + elle::sprintf("%x", k) : _password);
-      auto out = enc.decrypt(infinit::cryptography::Code(e));
-      return std::move(out.buffer());
+      SecretKey enc(_salt ? _password + elle::sprintf("%x", k) : _password,
+                    this->_algorithm, cryptography::Mode::cbc);
+      return enc.decipher(e);
     }
 
     void
     Crypt::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
-      SecretKey enc(_algorithm,
-        _salt ? _password + elle::sprintf("%x", k) : _password);
-      auto encrypted = enc.encrypt(cryptography::Plain(value));
-      this->_backend->set(k, encrypted.buffer(), insert, update);
+      SecretKey enc(
+        _salt ? _password + elle::sprintf("%x", k) : this->_password,
+        this->_algorithm, cryptography::Mode::cbc);
+      this->_backend->set(k, enc.encipher(value), insert, update);
     }
 
     void

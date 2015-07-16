@@ -1,3 +1,5 @@
+#include <cryptography/hash.hh>
+
 namespace infinit
 {
   namespace model
@@ -53,10 +55,9 @@ namespace infinit
         Address
         _hash_address(elle::Buffer const& content)
         {
-          auto hash = cryptography::oneway::hash
-            (cryptography::Plain(content),
-             cryptography::oneway::Algorithm::sha256);
-          return Address(hash.buffer().contents());
+          auto hash = cryptography::hash
+            (content, cryptography::Oneway::sha256);
+          return Address(hash.contents());
         }
       };
       static const elle::serialization::Hierarchy<blocks::Block>::

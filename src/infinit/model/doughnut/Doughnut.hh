@@ -3,7 +3,7 @@
 
 # include <memory>
 
-# include <cryptography/KeyPair.hh>
+# include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/Model.hh>
 # include <infinit/model/doughnut/Consensus.hh>
@@ -22,13 +22,13 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Doughnut(infinit::cryptography::KeyPair keys,
+        Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  std::unique_ptr<overlay::Overlay> overlay,
                  std::unique_ptr<Consensus> consensus = nullptr,
                  bool plain = false);
         ELLE_ATTRIBUTE(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
-        ELLE_ATTRIBUTE_R(infinit::cryptography::KeyPair, keys);
+        ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::KeyPair, keys);
 
       protected:
         virtual

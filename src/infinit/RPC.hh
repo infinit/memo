@@ -117,9 +117,7 @@ namespace infinit
         ELLE_TRACE("%s: exception escaped: %s",
                    *this, elle::exception_string());
         output.serialize("success", false);
-        std::unique_ptr<elle::Exception> p(&e);
-        output.serialize("exception", p);
-        p.release();
+        output.serialize("exception", std::current_exception());
       }
       catch (...)
       {
@@ -152,9 +150,7 @@ namespace infinit
         ELLE_TRACE("%s: exception escaped: %s",
                    *this, elle::exception_string());
         output.serialize("success", false);
-        std::unique_ptr<elle::Exception> p(&e);
-        output.serialize("exception", p);
-        p.release();
+        output.serialize("exception", std::current_exception());
       }
       catch (...)
       {
@@ -364,11 +360,8 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: call failed, get exception", self);
           auto e =
-            input.deserialize<std::unique_ptr<elle::Exception>>("exception");
-          ELLE_DUMP("%s: exception: %s (%s)",
-                    self, e->what(), elle::demangle(typeid(*e).name()));
-          // FIXME: slice
-          throw *e;
+            input.deserialize<std::exception_ptr>("exception");
+          std::rethrow_exception(e);
         }
       }
     }

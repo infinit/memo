@@ -27,20 +27,17 @@ ELLE_TEST_SCHEDULED(doughnut)
   members.push_back(local_b->server_endpoint());
   local_a->doughnut().reset(
     new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::KeyPair::generate
-      (infinit::cryptography::Cryptosystem::rsa, 2048),
+      infinit::cryptography::rsa::keypair::generate(2048),
       elle::make_unique<infinit::overlay::Stonehenge>(members)
       ));
   local_b->doughnut().reset(
     new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::KeyPair::generate
-      (infinit::cryptography::Cryptosystem::rsa, 2048),
+      infinit::cryptography::rsa::keypair::generate(2048),
       elle::make_unique<infinit::overlay::Stonehenge>(members)
       ));
 
   infinit::model::doughnut::Doughnut dht(
-    infinit::cryptography::KeyPair::generate
-    (infinit::cryptography::Cryptosystem::rsa, 2048),
+    infinit::cryptography::rsa::keypair::generate(2048),
     elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
   {
     elle::Buffer data("\\_o<", 4);
@@ -85,23 +82,19 @@ ELLE_TEST_SCHEDULED(ACB)
   }
   local_a->doughnut().reset(
     new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::KeyPair::generate
-      (infinit::cryptography::Cryptosystem::rsa, 2048),
+      infinit::cryptography::rsa::keypair::generate(2048),
       elle::make_unique<infinit::overlay::Stonehenge>(members)
       ));
   local_b->doughnut().reset(
     new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::KeyPair::generate
-      (infinit::cryptography::Cryptosystem::rsa, 2048),
+      infinit::cryptography::rsa::keypair::generate(2048),
       elle::make_unique<infinit::overlay::Stonehenge>(members)
       ));
   // Clients
   infinit::model::doughnut::Doughnut dht(
-    infinit::cryptography::KeyPair::generate
-    (infinit::cryptography::Cryptosystem::rsa, 2048),
+    infinit::cryptography::rsa::keypair::generate(2048),
     elle::make_unique<infinit::overlay::Stonehenge>(members));
-  auto other_keys = infinit::cryptography::KeyPair::generate
-    (infinit::cryptography::Cryptosystem::rsa, 2048);
+  auto other_keys = infinit::cryptography::rsa::keypair::generate(2048);
   auto other_key = other_keys.K();
   infinit::model::doughnut::Doughnut other_dht(
     std::move(other_keys),

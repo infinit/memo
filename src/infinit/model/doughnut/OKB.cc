@@ -1,9 +1,12 @@
+#include <infinit/model/doughnut/OKB.hh>
+
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
+#include <cryptography/hash.hh>
+
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
@@ -14,30 +17,35 @@ namespace infinit
   {
     namespace doughnut
     {
-      OKBHeader::OKBHeader(cryptography::KeyPair const& keys)
-        : _key()
+      OKBHeader::OKBHeader(cryptography::rsa::KeyPair const& keys,
+                           cryptography::rsa::KeyPair const& block_keys)
+        : _key(block_keys.K())
         , _owner_key(keys.K())
         , _signature()
       {
-        auto block_keys = cryptography::KeyPair::generate
-          (cryptography::Cryptosystem::rsa, 2048);
-        this->_key.~PublicKey();
-        new (&this->_key) cryptography::PublicKey(block_keys.K());
-        this->_signature = block_keys.k().sign(this->_owner_key);
+        auto owner_key_buffer = elle::serialization::serialize
+          <cryptography::rsa::PublicKey, elle::serialization::Json>
+          (this->_owner_key);
+        this->_signature = block_keys.k().sign(owner_key_buffer);
       }
 
+      // FIXME
+      static auto dummy_keys = cryptography::rsa::keypair::generate(2048);
+
       OKBHeader::OKBHeader()
-        : _key()
-        , _owner_key()
+        : _key(dummy_keys.K()) // FIXME
+        , _owner_key(dummy_keys.K()) // FIXME
         , _signature()
       {}
 
       Address
       OKBHeader::_hash_address() const
       {
-        auto hash = cryptography::oneway::hash
-          (this->_key, cryptography::oneway::Algorithm::sha256);
-        return Address(hash.buffer().contents());
+        auto key_buffer = elle::serialization::serialize
+          <cryptography::rsa::PublicKey, elle::serialization::Json>(this->_key);
+        auto hash =
+          cryptography::hash(key_buffer, cryptography::Oneway::sha256);
+        return Address(hash.contents());
       }
 
       bool
@@ -52,7 +60,10 @@ namespace infinit
         }
         else
           ELLE_DUMP("%s: address is valid", *this);
-        if (!this->_key.verify(this->OKBHeader::_signature, this->_owner_key))
+        auto owner_key_buffer = elle::serialization::serialize
+          <cryptography::rsa::PublicKey, elle::serialization::Json>
+          (this->_owner_key);
+        if (!this->_key.verify(this->OKBHeader::_signature, owner_key_buffer))
           return false;
         else
           ELLE_DUMP("%s: owner key is valid", *this);
@@ -72,7 +83,7 @@ namespace infinit
 
       template <typename Block>
       BaseOKB<Block>::BaseOKB(Doughnut* owner)
-        : OKBHeader(owner->keys())
+        : OKBHeader(owner->keys(), cryptography::rsa::keypair::generate(2048))
         , Super(this->_hash_address())
         , _version(-1)
         , _signature()
@@ -129,8 +140,7 @@ namespace infinit
       elle::Buffer
       BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
-        cryptography::Code input(data);
-        return std::move(this->doughnut()->keys().k().decrypt(input).buffer());
+        return this->doughnut()->keys().k().open(data);
       }
 
       /*-----------.
@@ -169,10 +179,9 @@ namespace infinit
           ELLE_DEBUG_SCOPE("%s: data changed, seal", *this);
           ELLE_DUMP("%s: data: %s", *this, this->_data_plain);
           auto encrypted =
-            this->doughnut()->keys().K().encrypt
-            (cryptography::Plain(this->_data_plain));
-          ELLE_DUMP("%s: encrypted data: %s", *this, encrypted.buffer());
-          this->Block::data(std::move(encrypted.buffer()));
+            this->doughnut()->keys().K().seal(this->_data_plain);
+          ELLE_DUMP("%s: encrypted data: %s", *this, encrypted);
+          this->Block::data(std::move(encrypted));
           this->_seal_okb();
           this->_data_changed = false;
         }
@@ -186,8 +195,7 @@ namespace infinit
       {
         ++this->_version; // FIXME: idempotence in case the write fails ?
         auto sign = this->_sign();
-        this->_signature =
-          this->_doughnut->keys().k().sign(cryptography::Plain(sign));
+        this->_signature = this->_doughnut->keys().k().sign(sign);
         ELLE_DUMP("%s: sign %s with %s: %f",
                   *this, sign, this->_doughnut->keys().k(), this->_signature);
       }
@@ -219,14 +227,14 @@ namespace infinit
 
       template <typename Block>
       bool
-      BaseOKB<Block>::_check_signature(cryptography::PublicKey const& key,
-                            cryptography::Signature const& signature,
+      BaseOKB<Block>::_check_signature(cryptography::rsa::PublicKey const& key,
+                            elle::Buffer const& signature,
                             elle::Buffer const& data,
                             std::string const& name) const
       {
         ELLE_DUMP("%s: check %f signs %s with %s",
                   *this, signature, data, key);
-        if (!key.verify(signature, cryptography::Plain(data)))
+        if (!key.verify(signature, data))
         {
           ELLE_TRACE("%s: %s signature is invalid", *this, name);
           return false;

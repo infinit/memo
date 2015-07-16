@@ -3,7 +3,7 @@
 
 # include <elle/serialization/fwd.hh>
 
-# include <cryptography/KeyPair.hh>
+# include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/blocks/MutableBlock.hh>
 # include <infinit/model/doughnut/fwd.hh>
@@ -23,7 +23,8 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        OKBHeader(cryptography::KeyPair const& keys);
+        OKBHeader(cryptography::rsa::KeyPair const& keys,
+                  cryptography::rsa::KeyPair const& block_keys);
 
       /*---------.
       | Contents |
@@ -31,9 +32,9 @@ namespace infinit
       public:
         bool
         validate(Address const& address) const;
-        ELLE_ATTRIBUTE_R(cryptography::PublicKey, key);
-        ELLE_ATTRIBUTE_R(cryptography::PublicKey, owner_key);
-        ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
+        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
+        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner_key);
+        ELLE_ATTRIBUTE_R(elle::Buffer, signature);
       protected:
         Address
         _hash_address() const;
@@ -68,7 +69,7 @@ namespace infinit
       public:
         BaseOKB(Doughnut* owner);
         ELLE_ATTRIBUTE_R(int, version);
-        ELLE_ATTRIBUTE_R(cryptography::Signature, signature);
+        ELLE_ATTRIBUTE_R(elle::Buffer, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
 
@@ -114,8 +115,8 @@ namespace infinit
         void
         _sign(elle::serialization::SerializerOut& s) const;
         bool
-        _check_signature(cryptography::PublicKey const& key,
-                         cryptography::Signature const& signature,
+        _check_signature(cryptography::rsa::PublicKey const& key,
+                         elle::Buffer const& signature,
                          elle::Buffer const& data,
                          std::string const& name) const;
 

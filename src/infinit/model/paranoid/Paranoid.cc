@@ -20,7 +20,7 @@ namespace infinit
   {
     namespace paranoid
     {
-      Paranoid::Paranoid(infinit::cryptography::KeyPair keys,
+      Paranoid::Paranoid(infinit::cryptography::rsa::KeyPair keys,
                          std::unique_ptr<storage::Storage> storage)
         : _keys(std::move(keys))
         , _storage(std::move(storage))
@@ -64,10 +64,11 @@ namespace infinit
           elle::serialization::json::SerializerOut serializer(output, version);
           serializer.serialize_forward(crypted);
         }
-        this->_storage->set(block.address(),
-                            this->_keys.K().encrypt(cryptography::Plain(raw)).buffer(),
-                            mode == STORE_ANY || mode == STORE_INSERT,
-                            mode == STORE_ANY || mode == STORE_UPDATE);
+        this->_storage->set(
+          block.address(),
+          this->_keys.K().seal(raw),
+          mode == STORE_ANY || mode == STORE_INSERT,
+          mode == STORE_ANY || mode == STORE_UPDATE);
       }
 
       std::unique_ptr<blocks::Block>
@@ -77,8 +78,8 @@ namespace infinit
         elle::Buffer raw;
         try
         {
-          raw = std::move(this->_keys.k().decrypt(
-            cryptography::Code(this->_storage->get(address))).buffer());
+          auto stored = this->_storage->get(address);
+          raw = std::move(this->_keys.k().open(stored));
         }
         catch (infinit::storage::MissingKey const&)
         {

@@ -12,7 +12,7 @@
 #include <reactor/filesystem.hh>
 #include <reactor/scheduler.hh>
 
-#include <cryptography/oneway.hh>
+#include <cryptography/hash.hh>
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
