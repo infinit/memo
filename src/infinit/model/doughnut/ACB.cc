@@ -285,7 +285,7 @@ namespace infinit
             if (e.read)
             {
               changed = true;
-              e.token = e.key.encrypt(secret_buffer);
+              e.token = e.key.seal(secret_buffer);
             }
             if (e.key == this->doughnut()->keys().K())
             {
