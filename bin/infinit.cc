@@ -238,8 +238,7 @@ public:
   {
     if (!key)
       return elle::make_unique<infinit::model::doughnut::Doughnut>(
-        infinit::cryptography::rsa::KeyPair::generate(
-          infinit::cryptography::Cryptosystem::rsa, 2048),
+        infinit::cryptography::rsa::keypair::generate(2048),
         overlay->make(),
         nullptr,
         plain && *plain);
@@ -315,8 +314,7 @@ public:
     {
       this->keys.reset(
         new infinit::cryptography::rsa::KeyPair(
-          infinit::cryptography::rsa::KeyPair::generate
-          (infinit::cryptography::Cryptosystem::rsa, 2048)));
+          infinit::cryptography::rsa::keypair::generate(2048)));
       elle::serialization::json::SerializerOut output(std::cout);
       std::cout << "No key specified, generating fresh ones:" << std::endl;
       this->keys->serialize(output);
