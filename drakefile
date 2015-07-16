@@ -14,6 +14,8 @@ def configure(
     prefix = '/usr',
     valgrind = None,
     valgrind_tests = False,
+    python3 = None,
+    fuse = None,
 ):
 
   prefix = drake.Path(prefix)
@@ -27,7 +29,9 @@ def configure(
   elle = drake.include('elle',
                        production_build = production_build,
                        cxx_toolkit = cxx_toolkit,
-                       cxx_config = cxx_config)
+                       cxx_config = cxx_config,
+                       python3 = python3,
+                       fuse = fuse)
   elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
                         strip_prefix = True)
   aws_lib = drake.copy(elle.aws.library, 'lib',
