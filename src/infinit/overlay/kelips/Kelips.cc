@@ -1564,4 +1564,33 @@ namespace kelips
     s.serialize("bootstrap_nodes", bootstrap_nodes);
     s.serialize("wait", wait);
   }
+
+
+  struct KelipsOverlayConfig
+    : public infinit::overlay::OverlayConfig
+  {
+    KelipsOverlayConfig(elle::serialization::SerializerIn& input)
+      : OverlayConfig()
+    {
+      this->serialize(input);
+    }
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("storage", this->storage);
+      s.serialize("config", this->config);
+    }
+    std::unique_ptr<infinit::storage::StorageConfig> storage;
+    kelips::Configuration config;
+    virtual
+    std::unique_ptr<infinit::overlay::Overlay>
+    make()
+    {
+      std::unique_ptr<infinit::storage::Storage> s = storage->make();
+      return elle::make_unique<kelips::Node>(config, std::move(s));
+    }
+  };
+  static const elle::serialization::Hierarchy<infinit::overlay::OverlayConfig>::
+  Register<KelipsOverlayConfig> _registerKelipsOverlayConfig("kelips");
+
 }

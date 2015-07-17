@@ -17,6 +17,7 @@ namespace infinit
       OP_INSERT_OR_UPDATE, // for cases where we're not sure
       OP_REMOVE
     };
+
     class Overlay
     {
     /*------.
@@ -40,6 +41,16 @@ namespace infinit
       virtual
       Members
       _lookup(model::Address address, int n, Operation op) const = 0;
+    };
+
+    struct OverlayConfig:
+      public elle::serialization::VirtuallySerializable
+    {
+      static constexpr char const* virtually_serializable_key = "type";
+
+      virtual
+      std::unique_ptr<infinit::overlay::Overlay>
+      make() = 0;
     };
   }
 }

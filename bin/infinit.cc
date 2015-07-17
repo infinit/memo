@@ -34,78 +34,6 @@ ELLE_LOG_COMPONENT("infinit");
 
 boost::optional<std::string> root_address_file;
 
-struct OverlayConfig:
-  public elle::serialization::VirtuallySerializable
-{
-  static constexpr char const* virtually_serializable_key = "type";
-
-  virtual
-  std::unique_ptr<infinit::overlay::Overlay>
-  make() = 0;
-};
-
-struct KelipsOverlayConfig:
-  public OverlayConfig
-{
-  KelipsOverlayConfig(elle::serialization::SerializerIn& input)
-    : OverlayConfig()
-  {
-    this->serialize(input);
-  }
-  void
-  serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("storage", this->storage);
-    s.serialize("config", this->config);
-  }
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-  kelips::Configuration config;
-  virtual
-  std::unique_ptr<infinit::overlay::Overlay>
-  make()
-  {
-    std::unique_ptr<infinit::storage::Storage> s = storage->make();
-    return elle::make_unique<kelips::Node>(config, std::move(s));
-  }
-};
-static const elle::serialization::Hierarchy<OverlayConfig>::
-Register<KelipsOverlayConfig> _registerKelipsOverlayConfig("kelips");
-
-struct StonehengeOverlayConfig:
-  public OverlayConfig
-{
-  std::vector<std::string> nodes;
-  StonehengeOverlayConfig(elle::serialization::SerializerIn& input)
-    : OverlayConfig()
-  {
-    this->serialize(input);
-  }
-
-  void
-  serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("nodes", this->nodes);
-  }
-
-  virtual
-  std::unique_ptr<infinit::overlay::Overlay>
-  make()
-  {
-    infinit::overlay::Overlay::Members members;
-    for (auto const& hostport: nodes)
-    {
-      size_t p = hostport.find_first_of(':');
-      if (p == hostport.npos)
-        throw std::runtime_error("Failed to parse host:port " + hostport);
-      members.emplace_back(boost::asio::ip::address::from_string(hostport.substr(0, p)),
-                           std::stoi(hostport.substr(p+1)));
-    }
-    return elle::make_unique<infinit::overlay::Stonehenge>(members);
-  }
-};
-static const elle::serialization::Hierarchy<OverlayConfig>::
-Register<StonehengeOverlayConfig> _registerStonehengeOverlayConfig("stonehenge");
-
 /*--------------------.
 | Model configuration |
 `--------------------*/
@@ -150,7 +78,7 @@ struct DoughnutModelConfig:
   public ModelConfig
 {
 public:
-  std::unique_ptr<OverlayConfig> overlay;
+  std::unique_ptr<infinit::overlay::OverlayConfig> overlay;
   std::unique_ptr<infinit::cryptography::rsa::KeyPair> key;
   boost::optional<bool> plain;;
 
