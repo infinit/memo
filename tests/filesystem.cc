@@ -267,6 +267,7 @@ static void run_filesystem_dht(std::string const& store,
         elle::json::Object model;
         model["type"] = "doughnut";
         model["plain"] = false;
+        model["name"] = "user" + std::to_string(i);
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         keys.push_back(kp.K());
         model["keys"] = "!!!"; // placeholder, lolilol
@@ -747,6 +748,15 @@ void test_acl()
   BOOST_CHECK(!can_access(m1 / "dir1" / "pan"));
   BOOST_CHECK(touch(m1 / "dir1" / "coin"));
 
+
+  // test by user name
+  touch(m0 / "byuser");
+  BOOST_CHECK(!can_access(m1 / "byuser"));
+  setxattr((m0 / "byuser").c_str(), "user.infinit.auth.setrw",
+    "user1", strlen("user1"), 0 SXA_EXTRA);
+  usleep(2100000);
+  BOOST_CHECK(can_access(m1/"test"));
+  BOOST_CHECK(can_access(m1 / "byuser"));
 
   // readonly
   bfs::create_directory(m0 / "dir2");

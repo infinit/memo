@@ -1633,29 +1633,8 @@ namespace infinit
     {
       if (value.empty())
         THROW_INVAL;
-      elle::Buffer userkey;
-      if (value[0] == '$')
-      { // user name, fetch the key
-        if (value.find_first_of("/\\. ") != value.npos)
-          THROW_INVAL;
-        std::shared_ptr<reactor::filesystem::Path> p = _owner.path("/");
-        auto users = dynamic_cast<Directory*>(p.get())->child("$users");
-        auto user = dynamic_cast<Directory*>(users.get())->child(value.substr(1));
-        File* f = dynamic_cast<File*>(user.get());
-        ELLE_TRACE("user by name failed: %s %s", user.get(), f);
-        if (!f)
-          THROW_INVAL;
-        std::unique_ptr<rfs::Handle> h = f->open(0, O_RDONLY);
-        userkey.size(16384);
-        int len = h->read(userkey, 16384, 0);
-        userkey.size(len);
-        h->close();
-      }
-      else
-      { // user key
-        ELLE_TRACE("setxattr raw key");
-        userkey = elle::Buffer(value.data(), value.size());
-      }
+      ELLE_TRACE("setxattr raw key");
+      elle::Buffer userkey = elle::Buffer(value.data(), value.size());
       auto user = _owner.block_store()->make_user(userkey);
       return std::move(user);
     }
