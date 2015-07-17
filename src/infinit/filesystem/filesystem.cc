@@ -141,7 +141,6 @@ namespace infinit
     #define THROW_NOENT { throw rfs::Error(ENOENT, "No such file or directory");}
     #define THROW_NOSYS { throw rfs::Error(ENOSYS, "Not implemented");}
     #define THROW_EXIST { throw rfs::Error(EEXIST, "File exists");}
-    #define THROW_NOSYS { throw rfs::Error(ENOSYS, "Not implemented");}
     #define THROW_ISDIR { throw rfs::Error(EISDIR, "Is a directory");}
     #define THROW_NOTDIR { throw rfs::Error(ENOTDIR, "Is not a directory");}
     #define THROW_NODATA { throw rfs::Error(ENODATA, "No data");}
@@ -162,6 +161,7 @@ namespace infinit
       void chown(int uid, int gid);
       void stat(struct stat* st);
       void _remove_from_cache();
+      std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       boost::filesystem::path full_path();
       FileSystem& _owner;
       std::shared_ptr<Directory> _parent;
@@ -550,13 +550,14 @@ namespace infinit
     : Node(owner, parent, name)
     , _block(std::move(b))
     {
-      ELLE_DEBUG("Directory::Directory %s, parent %s", this, parent);
+      ELLE_DEBUG("Directory::Directory %s, parent %s address %s", this, parent, _block->address());
       try
       {
         _block->data();
       }
       catch (elle::Error const& e)
       {
+        ELLE_DEBUG("Directory data access failure: %s", e.what());
         THROW_ACCES;
       }
       if (!_block->data().empty())
@@ -969,7 +970,7 @@ namespace infinit
         auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
         return f->open(flags, mode);
       }
-      auto b = _owner.block_store()->make_block<MutableBlock>();
+      auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_DEBUG("Adding file to parent %x", _parent.get());
       _parent->_files.insert(
@@ -1622,56 +1623,84 @@ namespace infinit
       else
         THROW_NODATA;
     }
+
+    std::unique_ptr<infinit::model::User>
+    Node::_get_user(std::string const& value)
+    {
+      if (value.empty())
+        THROW_INVAL;
+      elle::Buffer userkey;
+      if (value[0] == '$')
+      { // user name, fetch the key
+        if (value.find_first_of("/\\. ") != value.npos)
+          THROW_INVAL;
+        std::shared_ptr<reactor::filesystem::Path> p = _owner.path("/");
+        auto users = dynamic_cast<Directory*>(p.get())->child("$users");
+        auto user = dynamic_cast<Directory*>(users.get())->child(value.substr(1));
+        File* f = dynamic_cast<File*>(user.get());
+        ELLE_TRACE("user by name failed: %s %s", user.get(), f);
+        if (!f)
+          THROW_INVAL;
+        std::unique_ptr<rfs::Handle> h = f->open(0, O_RDONLY);
+        userkey.size(16384);
+        int len = h->read(userkey, 16384, 0);
+        userkey.size(len);
+        h->close();
+      }
+      else
+      { // user key
+        ELLE_TRACE("setxattr raw key");
+        userkey = elle::Buffer(value.data(), value.size());
+      }
+      auto user = _owner.block_store()->make_user(userkey);
+      return std::move(user);
+    }
+    static std::pair<bool, bool> parse_flags(std::string const& flags)
+    {
+      bool r = false;
+      bool w = false;
+      if (flags == "clear")
+        ;
+      else if (flags == "setr")
+        r = true;
+      else if (flags == "setw")
+        w = true;
+      else if (flags == "setrw")
+      {
+        r = true; w = true;
+      }
+      else
+        THROW_NODATA;
+      return std::make_pair(r, w);
+    }
     void File::setxattr(std::string const& name, std::string const& value, int flags)
     {
-      THROW_INVAL;
-    }
-    void Directory::setxattr(std::string const& name, std::string const& value, int flags)
-    {
-      ELLE_TRACE("setxattr %s", name);
+      ELLE_TRACE("file setxattr %s", name);
       if (name.find("user.infinit.auth.") == 0)
       {
         std::string flags = name.substr(strlen("user.infinit.auth."));
-        bool r = false;
-        bool w = false;
-        if (flags == "clear")
-          ;
-        else if (flags == "setr")
-          r = true;
-        else if (flags == "setw")
-          w = true;
-        else if (flags == "setrw")
-        {
-          r = true; w = true;
-        }
-        else
-          THROW_NODATA;
-        if (value.empty())
-          THROW_INVAL;
-        elle::Buffer userkey;
-        if (value[0] == '$')
-        { // user name, fetch the key
-          if (value.find_first_of("/\\. ") != value.npos)
-            THROW_INVAL;
-          std::shared_ptr<Path> p = _owner.path("/");
-          auto users = dynamic_cast<Directory*>(p.get())->child("$users");
-          auto user = dynamic_cast<Directory*>(users.get())->child(value.substr(1));
-          File* f = dynamic_cast<File*>(user.get());
-          ELLE_TRACE("user by name failed: %s %s", user.get(), f);
-          if (!f)
-            THROW_INVAL;
-          std::unique_ptr<rfs::Handle> h = f->open(0, O_RDONLY);
-          userkey.size(16384);
-          int len = h->read(userkey, 16384, 0);
-          userkey.size(len);
-          h->close();
-        }
-        else
-        { // user key
-          ELLE_TRACE("setxattr raw key");
-          userkey = elle::Buffer(value.data(), value.size());
-        }
-        auto user = _owner.block_store()->make_user(userkey);
+        std::pair<bool, bool> perms = parse_flags(flags);
+        std::unique_ptr<infinit::model::User> user = _get_user(value);
+        Address addr = _parent->_files.at(_name).address;
+        auto block = _owner.block_store()->fetch(addr);
+        auto acl = dynamic_cast<model::blocks::ACLBlock*>(block.get());
+        ELLE_ASSERT(acl);
+        ELLE_TRACE("Setting permission at %s", acl->address());
+        acl->set_permissions(*user, perms.first, perms.second);
+        _owner.block_store()->store(*acl); // FIXME STORE MODE
+      }
+      else
+        THROW_NODATA;
+    }
+    void Directory::setxattr(std::string const& name, std::string const& value, int flags)
+    {
+      ELLE_TRACE("directory setxattr %s", name);
+      _fetch();
+      if (name.find("user.infinit.auth.") == 0)
+      {
+        std::string flags = name.substr(strlen("user.infinit.auth."));
+        std::pair<bool, bool> perms = parse_flags(flags);
+        std::unique_ptr<infinit::model::User> user = _get_user(value);
         model::blocks::ACLBlock* acl
           = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
         if (acl == 0)
@@ -1685,7 +1714,7 @@ namespace infinit
           acl = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
         }
         ELLE_TRACE("Setting permission at %s", acl->address());
-        acl->set_permissions(*user, r, w);
+        acl->set_permissions(*user, perms.first, perms.second);
         _owner.block_store()->store(*acl); // FIXME STORE MODE
       }
       else
@@ -1739,6 +1768,7 @@ namespace infinit
           auto address = _owner->_parent->_files.at(_owner->_name).address;
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.block_store()->fetch(address));
+          _owner->_first_block->data();
         }
         catch(infinit::model::MissingBlock const& err)
         {
@@ -1746,12 +1776,21 @@ namespace infinit
           // been pushed yet.
           if (!_owner->_first_block)
           {
+            _owner->_handle_count--;
             ELLE_ERR("Block missing in storage and not in cache.");
             throw;
           }
         }
+        catch(elle::Error const& e)
+        {
+          _owner->_handle_count--;
+          ELLE_TRACE("assuming permissiond denied for error %s", e.what());
+          _owner->_first_block.reset();
+          THROW_ACCES;
+        }
         catch(std::exception const& e)
         {
+          _owner->_handle_count--;
           ELLE_WARN("Unexpected exception while fetching: %s", e.what());
           throw;
         }
