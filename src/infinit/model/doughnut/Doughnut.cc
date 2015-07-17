@@ -143,6 +143,50 @@ namespace infinit
       {
         this->_consensus->remove(*this->_overlay, address);
       }
+
+      struct DoughnutModelConfig:
+        public ModelConfig
+      {
+      public:
+        std::unique_ptr<infinit::overlay::OverlayConfig> overlay;
+        std::unique_ptr<infinit::cryptography::rsa::KeyPair> key;
+        boost::optional<bool> plain;;
+
+        DoughnutModelConfig(elle::serialization::SerializerIn& input)
+          : ModelConfig()
+        {
+          this->serialize(input);
+        }
+
+        void
+        serialize(elle::serialization::Serializer& s)
+        {
+          s.serialize("overlay", this->overlay);
+          s.serialize("keys", this->key);
+          s.serialize("plain", this->plain);
+        }
+
+        virtual
+        std::unique_ptr<infinit::model::Model>
+        make()
+        {
+          if (!key)
+            return elle::make_unique<infinit::model::doughnut::Doughnut>(
+              infinit::cryptography::rsa::keypair::generate(2048),
+              overlay->make(),
+              nullptr,
+              plain && *plain);
+          else
+            return elle::make_unique<infinit::model::doughnut::Doughnut>(
+              std::move(*key),
+              overlay->make(),
+              nullptr,
+              plain && *plain);
+        }
+      };
+
+      static const elle::serialization::Hierarchy<ModelConfig>::
+      Register<DoughnutModelConfig> _register_DoughnutModelConfig("doughnut");
     }
   }
 }

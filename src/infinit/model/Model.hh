@@ -17,6 +17,7 @@ namespace infinit
       STORE_INSERT,
       STORE_UPDATE
     };
+
     class Model
     {
     public:
@@ -58,6 +59,16 @@ namespace infinit
       virtual
       void
       _remove(Address address) = 0;
+    };
+
+    struct ModelConfig:
+      public elle::serialization::VirtuallySerializable
+    {
+      static constexpr char const* virtually_serializable_key = "type";
+
+      virtual
+      std::unique_ptr<infinit::model::Model>
+      make() = 0;
     };
   }
 }

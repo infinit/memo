@@ -44,6 +44,7 @@ namespace infinit
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args);
+
     struct StorageConfig:
     public elle::serialization::VirtuallySerializable
     {

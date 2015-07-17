@@ -110,6 +110,49 @@ namespace infinit
           throw MissingBlock(address);
         }
       }
+
+      struct ParanoidModelConfig:
+        public ModelConfig
+      {
+      public:
+        // boost::optional does not support in-place construction, use a
+        // std::unique_ptr instead since KeyPair is not copiable.
+        std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
+        std::unique_ptr<infinit::storage::StorageConfig> storage;
+
+        ParanoidModelConfig(elle::serialization::SerializerIn& input)
+          : ModelConfig()
+        {
+          this->serialize(input);
+        }
+
+        void
+        serialize(elle::serialization::Serializer& s)
+        {
+          s.serialize("keys", this->keys);
+          s.serialize("storage", this->storage);
+        }
+
+        virtual
+        std::unique_ptr<infinit::model::Model>
+        make()
+        {
+          if (!this->keys)
+          {
+            this->keys.reset(
+              new infinit::cryptography::rsa::KeyPair(
+                infinit::cryptography::rsa::keypair::generate(2048)));
+            elle::serialization::json::SerializerOut output(std::cout);
+            std::cout << "No key specified, generating fresh ones:" << std::endl;
+            this->keys->serialize(output);
+          }
+          return elle::make_unique<infinit::model::paranoid::Paranoid>
+            (std::move(*this->keys), this->storage->make());
+        }
+      };
+
+      static const elle::serialization::Hierarchy<ModelConfig>::
+      Register<ParanoidModelConfig> _register_ParanoidModelConfig("paranoid");
     }
   }
 }

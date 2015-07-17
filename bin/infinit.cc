@@ -34,162 +34,6 @@ ELLE_LOG_COMPONENT("infinit");
 
 boost::optional<std::string> root_address_file;
 
-/*--------------------.
-| Model configuration |
-`--------------------*/
-
-struct ModelConfig:
-  public elle::serialization::VirtuallySerializable
-{
-  static constexpr char const* virtually_serializable_key = "type";
-
-  virtual
-  std::unique_ptr<infinit::model::Model>
-  make() = 0;
-};
-
-namespace infinit
-{
-  namespace model {
-class NodeModel: public infinit::model::Model
-{
-public:
-  NodeModel(std::unique_ptr<infinit::model::doughnut::Local> local)
-  : _local(std::move(local))
-  {}
-protected:
-  virtual
-  std::unique_ptr<blocks::MutableBlock>
-  _make_mutable_block() const {return {};};
-  virtual
-  void
-  _store(blocks::Block& block, StoreMode mode) {};
-  virtual
-  std::unique_ptr<blocks::Block>
-  _fetch(Address address) const { return {};}
-  virtual
-  void
-  _remove(Address address) {}
-  std::unique_ptr<doughnut::Local> _local;
-};
-}}
-
-struct DoughnutModelConfig:
-  public ModelConfig
-{
-public:
-  std::unique_ptr<infinit::overlay::OverlayConfig> overlay;
-  std::unique_ptr<infinit::cryptography::rsa::KeyPair> key;
-  boost::optional<bool> plain;;
-
-  DoughnutModelConfig(elle::serialization::SerializerIn& input)
-    : ModelConfig()
-  {
-    this->serialize(input);
-  }
-
-  void
-  serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("overlay", this->overlay);
-    s.serialize("keys", this->key);
-    s.serialize("plain", this->plain);
-  }
-
-  virtual
-  std::unique_ptr<infinit::model::Model>
-  make()
-  {
-    if (!key)
-      return elle::make_unique<infinit::model::doughnut::Doughnut>(
-        infinit::cryptography::rsa::keypair::generate(2048),
-        overlay->make(),
-        nullptr,
-        plain && *plain);
-    else
-      return elle::make_unique<infinit::model::doughnut::Doughnut>(
-        std::move(*key),
-        overlay->make(),
-        nullptr,
-        plain && *plain);
-  }
-};
-
-static const elle::serialization::Hierarchy<ModelConfig>::
-Register<DoughnutModelConfig> _register_DoughnutModelConfig("doughnut");
-
-
-struct FaithModelConfig:
-  public ModelConfig
-{
-public:
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-
-  FaithModelConfig(elle::serialization::SerializerIn& input)
-    : ModelConfig()
-  {
-    this->serialize(input);
-  }
-
-  void
-  serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("storage", this->storage);
-  }
-
-  virtual
-  std::unique_ptr<infinit::model::Model>
-  make()
-  {
-    return elle::make_unique<infinit::model::faith::Faith>
-      (this->storage->make());
-  }
-};
-static const elle::serialization::Hierarchy<ModelConfig>::
-Register<FaithModelConfig> _register_FaithModelConfig("faith");
-
-struct ParanoidModelConfig:
-  public ModelConfig
-{
-public:
-  // boost::optional does not support in-place construction, use a
-  // std::unique_ptr instead since KeyPair is not copiable.
-  std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-
-  ParanoidModelConfig(elle::serialization::SerializerIn& input)
-    : ModelConfig()
-  {
-    this->serialize(input);
-  }
-
-  void
-  serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("keys", this->keys);
-    s.serialize("storage", this->storage);
-  }
-
-  virtual
-  std::unique_ptr<infinit::model::Model>
-  make()
-  {
-    if (!this->keys)
-    {
-      this->keys.reset(
-        new infinit::cryptography::rsa::KeyPair(
-          infinit::cryptography::rsa::keypair::generate(2048)));
-      elle::serialization::json::SerializerOut output(std::cout);
-      std::cout << "No key specified, generating fresh ones:" << std::endl;
-      this->keys->serialize(output);
-    }
-    return elle::make_unique<infinit::model::paranoid::Paranoid>
-      (std::move(*this->keys), this->storage->make());
-  }
-};
-static const elle::serialization::Hierarchy<ModelConfig>::
-Register<ParanoidModelConfig> _register_ParanoidModelConfig("paranoid");
-
 /*--------------.
 | Configuration |
 `--------------*/
@@ -199,7 +43,7 @@ struct Config
 public:
   std::string mountpoint;
   boost::optional<elle::Buffer> root_address;
-  std::shared_ptr<ModelConfig> model;
+  std::shared_ptr<infinit::model::ModelConfig> model;
   boost::optional<bool> single_mount;
   boost::optional<int> local_port;
   std::unique_ptr<infinit::storage::StorageConfig> local_storage;
@@ -229,7 +73,8 @@ public:
 
 static
 void
-parse_options(int argc, char** argv, Config& cfg, std::unique_ptr<ModelConfig>& model_config)
+parse_options(int argc, char** argv, Config& cfg,
+              std::unique_ptr<infinit::model::ModelConfig>& model_config)
 {
   ELLE_TRACE_SCOPE("parse command line");
   using namespace boost::program_options;
@@ -308,7 +153,7 @@ main(int argc, char** argv)
       [argc, argv]
       {
         Config cfg;
-        std::unique_ptr<ModelConfig> model_cfg;
+        std::unique_ptr<infinit::model::ModelConfig> model_cfg;
         std::unique_ptr<infinit::model::Model> model;
         std::unique_ptr<infinit::model::Model> model2;
         parse_options(argc, argv, cfg, model_cfg);

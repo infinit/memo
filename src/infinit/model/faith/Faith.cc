@@ -62,6 +62,36 @@ namespace infinit
           throw MissingBlock(address);
         }
       }
+
+      struct FaithModelConfig:
+        public ModelConfig
+      {
+      public:
+        std::unique_ptr<infinit::storage::StorageConfig> storage;
+
+        FaithModelConfig(elle::serialization::SerializerIn& input)
+          : ModelConfig()
+        {
+          this->serialize(input);
+        }
+
+        void
+        serialize(elle::serialization::Serializer& s)
+        {
+          s.serialize("storage", this->storage);
+        }
+
+        virtual
+        std::unique_ptr<infinit::model::Model>
+        make()
+        {
+          return elle::make_unique<infinit::model::faith::Faith>
+            (this->storage->make());
+        }
+      };
+
+      static const elle::serialization::Hierarchy<ModelConfig>::
+      Register<FaithModelConfig> _register_FaithModelConfig("faith");
     }
   }
 }
