@@ -467,6 +467,10 @@ namespace infinit
       {
         ELLE_WARN("Unexpected storage result: %s", mb);
       }
+      catch (elle::Exception const& e)
+      {
+        ELLE_WARN("Unexpected unexpected exception: %s", e.what());
+      }
     }
 
     std::unique_ptr<model::blocks::MutableBlock>
