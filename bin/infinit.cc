@@ -14,16 +14,15 @@
 #include <reactor/scheduler.hh>
 
 #include <infinit/filesystem/filesystem.hh>
-#include <infinit/overlay/Overlay.hh>
-#include <infinit/overlay/Stonehenge.hh>
-#include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/model/Model.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/model/paranoid/Paranoid.hh>
-#include <infinit/model/Model.hh>
+#include <infinit/overlay/Overlay.hh>
+#include <infinit/overlay/Stonehenge.hh>
+#include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Async.hh>
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
@@ -45,8 +44,6 @@ public:
   boost::optional<elle::Buffer> root_address;
   std::shared_ptr<infinit::model::ModelConfig> model;
   boost::optional<bool> single_mount;
-  boost::optional<int> local_port;
-  std::unique_ptr<infinit::storage::StorageConfig> local_storage;
 
   Config()
     : mountpoint()
@@ -66,8 +63,6 @@ public:
     s.serialize("root_address", this->root_address);
     s.serialize("model", this->model);
     s.serialize("caching", this->single_mount);
-    s.serialize("local_port", this->local_port);
-    s.serialize("local_storage", this->local_storage);
   }
 };
 
@@ -167,18 +162,6 @@ main(int argc, char** argv)
             throw elle::Error("missing mandatory \"model\" configuration key");
           model = cfg.model->make();
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
-          std::unique_ptr<infinit::model::doughnut::Local> local;
-          if (cfg.local_storage)
-          {
-            ELLE_TRACE("Initialize local node");
-            model2 = cfg.model->make();
-            std::unique_ptr<infinit::storage::Storage> store
-              = cfg.local_storage->make();
-            local.reset(new infinit::model::doughnut::Local(std::move(store),
-              cfg.local_port? *cfg.local_port : 0));
-            local->doughnut().reset(
-              dynamic_cast<infinit::model::doughnut::Doughnut*>(model2.release()));
-          }
           ELLE_TRACE("initialize filesystem")
             if (cfg.root_address)
             {
