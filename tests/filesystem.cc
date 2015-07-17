@@ -29,6 +29,8 @@
 #include <random>
 
 #include <sys/types.h>
+#include <sys/statvfs.h>
+
 #ifdef INFINIT_LINUX
 #include <attr/xattr.h>
 #else
@@ -50,9 +52,41 @@ bool mounted = false;
 infinit::storage::Storage* storage;
 reactor::filesystem::FileSystem* fs;
 reactor::Scheduler* sched;
+
+std::vector<std::string> mount_points;
+std::vector<infinit::cryptography::rsa::PublicKey> keys;
+std::vector<std::unique_ptr<infinit::model::doughnut::Local>> nodes;
+std::vector<boost::asio::ip::tcp::endpoint> endpoints;
+std::vector<std::unique_ptr<elle::system::Process>> processes;
+
 static void sig_int()
 {
   fs->unmount();
+}
+
+static void wait_for_mounts(boost::filesystem::path root, int count)
+{
+  struct statvfs stparent;
+  statvfs(root.string().c_str(), &stparent);
+  while (mount_points.size() < unsigned(count))
+    usleep(20000);
+  struct statvfs st;
+  for (int i=0; i<count; ++i)
+  {
+    while (true)
+    {
+      int res = statvfs(mount_points[i].c_str(), &st);
+      ELLE_TRACE("%s fsid: %s %s", i, st.f_fsid, stparent.f_fsid);
+      // statvfs failure with EPERM means its mounted
+      if (res < 0
+        || st.f_fsid != stparent.f_fsid
+        || st.f_blocks != stparent.f_blocks
+        || st.f_bsize != stparent.f_bsize
+        || st.f_flag != stparent.f_flag)
+        break;
+      usleep(20000);
+    }
+  }
 }
 
 static int directory_count(boost::filesystem::path const& p)
@@ -102,13 +136,6 @@ template<typename T> std::string serialize(T & t)
   return buf.string();
 }
 
-
-
-std::vector<std::string> mount_points;
-std::vector<infinit::cryptography::rsa::PublicKey> keys;
-std::vector<std::unique_ptr<infinit::model::doughnut::Local>> nodes;
-std::vector<boost::asio::ip::tcp::endpoint> endpoints;
-std::vector<std::unique_ptr<elle::system::Process>> processes;
 
 // Run nodes in a separate scheduler to avoid reentrency issues
 reactor::Scheduler* nodes_sched;
@@ -262,7 +289,7 @@ static void run_filesystem_dht(std::string const& store,
           ELLE_TRACE("Waiting for root address");
           while (true)
           {
-            usleep(100000);
+            usleep(10000);
             std::ifstream ifs(mountpoint + "/" +"root");
             if (ifs.good())
             {
@@ -350,10 +377,7 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
       else
         run_filesystem(store.string(), mount.string());
   });
-
-  while (mount_points.size() != 1 || !mounted)
-    usleep(100000);
-  usleep(500000);
+  wait_for_mounts(mount, 1);
   ELLE_LOG("starting test");
 
   elle::SafeFinally remover([&] {
@@ -611,9 +635,7 @@ void test_acl()
   std::thread t([&] {
       run_filesystem_dht(store.string(), mount.string(), 5, false, 1, 1, 2);
   });
-  while (mount_points.size() != 2 && keys.size() != 2)
-    usleep(100000);
-  usleep(200000);
+  wait_for_mounts(mount, 2);
   ELLE_LOG("Test start");
   elle::SafeFinally remover([&] {
       ELLE_LOG("unmounting");
