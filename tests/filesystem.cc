@@ -64,19 +64,30 @@ static void sig_int()
   fs->unmount();
 }
 
-static void wait_for_mounts(boost::filesystem::path root, int count)
+static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
 {
   struct statvfs stparent;
-  statvfs(root.string().c_str(), &stparent);
+  if (start)
+  {
+    stparent = *start;
+    ELLE_LOG("initializing with %s %s", stparent.f_fsid, stparent.f_blocks);
+  }
+  else
+    statvfs(root.string().c_str(), &stparent);
   while (mount_points.size() < unsigned(count))
     usleep(20000);
+#ifdef INFINIT_MACOSX
+  // stat change monitoring does not work for unknown reasons
+  usleep(2000000);
+  return;
+#endif
   struct statvfs st;
   for (int i=0; i<count; ++i)
   {
     while (true)
     {
       int res = statvfs(mount_points[i].c_str(), &st);
-      ELLE_TRACE("%s fsid: %s %s", i, st.f_fsid, stparent.f_fsid);
+      ELLE_TRACE("%s fsid: %s %s  blk %s %s", i, st.f_fsid, stparent.f_fsid, st.f_blocks, stparent.f_blocks);
       // statvfs failure with EPERM means its mounted
       if (res < 0
         || st.f_fsid != stparent.f_fsid
@@ -232,12 +243,15 @@ static void run_filesystem_dht(std::string const& store,
         new reactor::Thread("mounter", [mp] {
             ELLE_LOG("mounting on %s", mp);
             mounted = true;
-            fs->mount(mp, {"", "-o", "big_writes"}); // {"", "-d" /*, "-o", "use_ino"*/});
+            fs->mount(mp, {""}); // {"", "-d" /*, "-o", "use_ino"*/});
+#ifndef INFINIT_MACOSX
             ELLE_LOG("filesystem unmounted");
             nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
             processes.clear();
             reactor::scheduler().terminate();
-        });
+#endif
+
+            });
       }
       else
       {
@@ -307,6 +321,15 @@ static void run_filesystem_dht(std::string const& store,
   });
   sched->run();
   ELLE_TRACE("sched exiting");
+#ifdef INFINIT_MACOSX
+  if (nmount == 1)
+  {
+    ELLE_LOG("filesystem unmounted");
+    nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
+    processes.clear();
+  }
+#endif
+
 }
 
 static void run_filesystem(std::string const& store, std::string const& mountpoint)
@@ -372,6 +395,8 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   boost::filesystem::create_directories(mount);
   boost::filesystem::create_directories(store);
   mount_points.clear();
+  struct statvfs statstart;
+  statvfs(mount.string().c_str(), &statstart);
   std::thread t([&] {
       if (dht)
         run_filesystem_dht(store.string(), mount.string(), nnodes, plain,
@@ -379,12 +404,14 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
       else
         run_filesystem(store.string(), mount.string());
   });
-  wait_for_mounts(mount, 1);
+  wait_for_mounts(mount, 1, &statstart);
   ELLE_LOG("starting test");
 
   elle::SafeFinally remover([&] {
       ELLE_TRACE("unmounting");
-      reactor::Thread th(*sched, "unmount", [&] { fs->unmount();});
+      //fs->unmount();
+      sched->mt_run<void>("unmounter", [&] { fs->unmount();});
+      //reactor::Thread th(*sched, "unmount", [&] { fs->unmount();});
       t.join();
       ELLE_TRACE("cleaning up");
       for (auto const& mp: mount_points)
@@ -634,10 +661,12 @@ void test_acl()
   auto mount = bfs::temp_directory_path() / bfs::unique_path();
   bfs::create_directories(mount);
   bfs::create_directories(store);
+  struct statvfs statstart;
+  statvfs(mount.string().c_str(), &statstart);
   std::thread t([&] {
       run_filesystem_dht(store.string(), mount.string(), 5, false, 1, 1, 2);
   });
-  wait_for_mounts(mount, 2);
+  wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
   elle::SafeFinally remover([&] {
       ELLE_LOG("unmounting");
