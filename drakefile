@@ -178,6 +178,7 @@ def configure(
   rule_check = drake.Rule('check')
 
   cxx_config_tests = drake.cxx.Config(cxx_config)
+  cxx_config_tests.lib_path_runtime('../lib')
   cxx_config_tests += elle.boost.config_test(link = False)
   cxx_config_tests.library_add(
     drake.copy(elle.boost.test_dynamic, 'lib', True))
@@ -206,6 +207,7 @@ def configure(
     rule_check << runner.status
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
+  bin_cxx_config.lib_path_runtime('../lib')
   bin_cxx_config.library_add(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
   bin_cxx_config.library_add(
