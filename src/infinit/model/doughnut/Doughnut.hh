@@ -26,9 +26,16 @@ namespace infinit
                  std::unique_ptr<overlay::Overlay> overlay,
                  std::unique_ptr<Consensus> consensus = nullptr,
                  bool plain = false);
+        Doughnut(std::unique_ptr<overlay::Overlay> overlay,
+                 std::unique_ptr<Consensus> consensus = nullptr,
+                 bool plain = false);
+        infinit::cryptography::rsa::KeyPair&
+        keys();
         ELLE_ATTRIBUTE(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
-        ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::KeyPair, keys);
+        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>,
+                       keys);
+
 
       protected:
         virtual

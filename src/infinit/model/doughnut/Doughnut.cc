@@ -71,13 +71,29 @@ namespace infinit
                          std::unique_ptr<overlay::Overlay> overlay,
                          std::unique_ptr<Consensus> consensus,
                          bool plain)
+        : Doughnut(std::move(overlay), std::move(consensus), plain)
+      {
+        this->_keys.emplace(std::move(keys));
+      }
+
+      Doughnut::Doughnut(std::unique_ptr<overlay::Overlay> overlay,
+                         std::unique_ptr<Consensus> consensus,
+                         bool plain)
         : _overlay(std::move(overlay))
         , _consensus(std::move(consensus))
-        , _keys(std::move(keys))
+        , _keys()
         , _plain(plain)
       {
         if (!this->_consensus)
           this->_consensus = elle::make_unique<Consensus>(*this);
+      }
+
+      infinit::cryptography::rsa::KeyPair&
+      Doughnut::keys()
+      {
+        if (!this->_keys)
+          throw elle::Error(elle::sprintf("%s is key-less", *this));
+        return this->_keys.get();
       }
 
       std::unique_ptr<blocks::MutableBlock>
@@ -172,7 +188,6 @@ namespace infinit
         {
           if (!key)
             return elle::make_unique<infinit::model::doughnut::Doughnut>(
-              infinit::cryptography::rsa::keypair::generate(2048),
               overlay->make(),
               nullptr,
               plain && *plain);
