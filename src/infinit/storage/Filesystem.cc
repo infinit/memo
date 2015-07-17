@@ -94,6 +94,35 @@ namespace infinit
     {
       return elle::make_unique<infinit::storage::Filesystem>(args[0]);
     }
+
+    struct FilesystemStorageConfig
+      : public StorageConfig
+    {
+    public:
+      std::string path;
+
+      FilesystemStorageConfig(elle::serialization::SerializerIn& input)
+        : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("path", this->path);
+      }
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override
+      {
+        return elle::make_unique<infinit::storage::Filesystem>(this->path);
+      }
+    };
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<FilesystemStorageConfig>
+    _register_FilesystemStorageConfig("filesystem");
   }
 }
 

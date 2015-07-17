@@ -67,6 +67,30 @@ namespace infinit
     {
       return elle::make_unique<infinit::storage::Memory>();
     }
+
+    struct MemoryStorageConfig
+      : public StorageConfig
+    {
+    public:
+      MemoryStorageConfig(elle::serialization::SerializerIn& input)
+        : StorageConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {}
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override
+      {
+        return elle::make_unique<infinit::storage::Memory>();
+      }
+    };
+    static const elle::serialization::Hierarchy<StorageConfig>::
+    Register<MemoryStorageConfig> _register_MemoryStorageConfig("memory");
   }
 }
 
