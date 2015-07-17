@@ -103,6 +103,7 @@ static int directory_count(boost::filesystem::path const& p)
   }
   catch(std::exception const& e)
   {
+    ELLE_LOG("directory_count failed with %s", e.what());
     return -1;
   }
 }
@@ -113,6 +114,7 @@ static bool can_access(boost::filesystem::path const& p)
   bool res = (fd >= 0);
   if (res)
     close(fd);
+  ELLE_DEBUG("can_access %s: %s", p, res);
   return res;
 }
 
@@ -253,7 +255,7 @@ static void run_filesystem_dht(std::string const& store,
         model["plain"] = false;
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         keys.push_back(kp.K());
-        model["key"] = "!!!"; // placeholder, lolilol
+        model["keys"] = "!!!"; // placeholder, lolilol
         elle::json::Object overlay;
         overlay["type"] = "stonehenge";
         elle::json::Array v;
@@ -688,6 +690,13 @@ void test_acl()
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   // expire directory cache
   usleep(2100000);
+  // k1 can now list directory
+  BOOST_CHECK_EQUAL(directory_count(m1), 1);
+  // but the file is still not readable
+  //BOOST_CHECK(!can_access(m1/"test"));
+  setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  usleep(2100000);
   BOOST_CHECK(can_access(m1/"test"));
   {
      boost::filesystem::ifstream ifs(m1 / "test");
@@ -706,19 +715,23 @@ void test_acl()
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   usleep(2100000);
   BOOST_CHECK(can_access(m1 / "dir1"));
-  BOOST_CHECK(can_access(m1 / "dir1" / "pan"));
+  BOOST_CHECK(!can_access(m1 / "dir1" / "pan"));
   BOOST_CHECK(touch(m1 / "dir1" / "coin"));
-  ELLE_LOG("test end");
+
 
   // readonly
   bfs::create_directory(m0 / "dir2");
   setxattr((m0 / "dir2").c_str(), "user.infinit.auth.setr",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(500000);
   BOOST_CHECK(touch(m0 / "dir2" / "coin"));
+  setxattr((m0 / "dir2"/ "coin").c_str(), "user.infinit.auth.setr",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  usleep(2100000);
   BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
+
+  ELLE_LOG("test end");
 }
 
 ELLE_TEST_SUITE()
