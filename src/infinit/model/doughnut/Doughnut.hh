@@ -22,6 +22,11 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
+        Doughnut(std::string name,
+                 infinit::cryptography::rsa::KeyPair keys,
+                 std::unique_ptr<overlay::Overlay> overlay,
+                 std::unique_ptr<Consensus> consensus = nullptr,
+                 bool plain = false);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  std::unique_ptr<overlay::Overlay> overlay,
                  std::unique_ptr<Consensus> consensus = nullptr,

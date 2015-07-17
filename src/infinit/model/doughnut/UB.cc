@@ -18,10 +18,18 @@ namespace infinit
       `-------------*/
 
       UB::UB(std::string name, cryptography::rsa::PublicKey key)
-        : Super(UB::_hash_address(name))
+        : Super(UB::hash_address(name))
         , _name(std::move(name))
         , _key(std::move(key))
       {}
+
+      Address
+      UB::hash_address(std::string const& name)
+      {
+        auto hash = cryptography::hash (elle::sprintf("UB/%s", name),
+                                        cryptography::Oneway::sha256);
+        return Address(hash.contents());
+      }
 
       /*-----------.
       | Validation |
@@ -36,7 +44,7 @@ namespace infinit
       UB::_validate() const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
-        auto expected_address = UB::_hash_address(this->name());
+        auto expected_address = UB::hash_address(this->name());
         if (this->address() != expected_address)
         {
           ELLE_DUMP("%s: address %x invalid, expecting %x",
@@ -62,6 +70,7 @@ namespace infinit
       void
       UB::serialize(elle::serialization::Serializer& s)
       {
+        Super::serialize(s);
         this->_serialize(s);
       }
 
@@ -70,18 +79,6 @@ namespace infinit
       {
         s.serialize("name", this->_name);
         s.serialize("key", this->_key);
-      }
-
-      /*--------.
-      | Details |
-      `--------*/
-
-      Address
-      UB::_hash_address(std::string const& name)
-      {
-        auto hash = cryptography::hash (elle::sprintf("UB/%s", name),
-                                        cryptography::Oneway::sha256);
-        return Address(hash.contents());
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

@@ -12,11 +12,13 @@
 
 #include <infinit/storage/MissingKey.hh>
 
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -67,15 +69,6 @@ namespace infinit
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<PlainImmutableBlock> _register_pib_serialization("PIB");
 
-      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
-                         std::unique_ptr<overlay::Overlay> overlay,
-                         std::unique_ptr<Consensus> consensus,
-                         bool plain)
-        : Doughnut(std::move(overlay), std::move(consensus), plain)
-      {
-        this->_keys.emplace(std::move(keys));
-      }
-
       Doughnut::Doughnut(std::unique_ptr<overlay::Overlay> overlay,
                          std::unique_ptr<Consensus> consensus,
                          bool plain)
@@ -86,6 +79,42 @@ namespace infinit
       {
         if (!this->_consensus)
           this->_consensus = elle::make_unique<Consensus>(*this);
+      }
+
+      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
+                         std::unique_ptr<overlay::Overlay> overlay,
+                         std::unique_ptr<Consensus> consensus,
+                         bool plain)
+        : Doughnut(std::move(overlay), std::move(consensus), plain)
+      {
+        this->_keys.emplace(std::move(keys));
+      }
+
+      Doughnut::Doughnut(std::string name,
+                         cryptography::rsa::KeyPair keys,
+                         std::unique_ptr<overlay::Overlay> overlay,
+                         std::unique_ptr<Consensus> consensus,
+                         bool plain)
+        : Doughnut(std::move(keys),
+                   std::move(overlay),
+                   std::move(consensus),
+                   plain)
+      {
+        try
+        {
+          auto block = this->fetch(UB::hash_address(name));
+          ELLE_DEBUG("%s: user block already present", *this);
+          auto ub = elle::cast<UB>::runtime(block);
+          if (ub->key() != this->keys().K())
+            throw elle::Error(
+              elle::sprintf("user block exists with different key"));
+        }
+        catch (MissingBlock const&)
+        {
+          ELLE_TRACE_SCOPE("%s: store user block", *this);
+          UB user(std::move(name), this->keys().K());
+          this->store(user);
+        }
       }
 
       infinit::cryptography::rsa::KeyPair&
@@ -129,9 +158,24 @@ namespace infinit
       std::unique_ptr<model::User>
       Doughnut::_make_user(elle::Buffer const& data) const
       {
-        elle::IOStream input(data.istreambuf());
-        elle::serialization::json::SerializerIn s(input);
-        return elle::make_unique<doughnut::User>(cryptography::rsa::PublicKey(s));
+        if (data.size() == 0)
+          throw elle::Error("invalid empty user");
+        if (data[0] == '{')
+        {
+          ELLE_TRACE_SCOPE("%s: create user from public key", *this);
+          elle::IOStream input(data.istreambuf());
+          elle::serialization::json::SerializerIn s(input);
+          return elle::make_unique<doughnut::User>
+            (cryptography::rsa::PublicKey(s));
+        }
+        else
+        {
+          ELLE_TRACE_SCOPE("%s: fetch user from name", *this);
+          auto block = this->fetch(UB::hash_address(data.string()));
+          auto ub = elle::cast<UB>::runtime(block);
+          return elle::make_unique<doughnut::User>
+            (ub->key());
+        }
       }
 
       void
@@ -166,7 +210,8 @@ namespace infinit
       public:
         std::unique_ptr<infinit::overlay::OverlayConfig> overlay;
         std::unique_ptr<infinit::cryptography::rsa::KeyPair> key;
-        boost::optional<bool> plain;;
+        boost::optional<bool> plain;
+        boost::optional<std::string> name;
 
         DoughnutModelConfig(elle::serialization::SerializerIn& input)
           : ModelConfig()
@@ -180,6 +225,7 @@ namespace infinit
           s.serialize("overlay", this->overlay);
           s.serialize("keys", this->key);
           s.serialize("plain", this->plain);
+          s.serialize("name", this->name);
         }
 
         virtual
@@ -191,8 +237,15 @@ namespace infinit
               overlay->make(),
               nullptr,
               plain && *plain);
+          else if (!name)
+            return elle::make_unique<infinit::model::doughnut::Doughnut>(
+              std::move(*key),
+              overlay->make(),
+              nullptr,
+              plain && *plain);
           else
             return elle::make_unique<infinit::model::doughnut::Doughnut>(
+              std::move(this->name.get()),
               std::move(*key),
               overlay->make(),
               nullptr,
