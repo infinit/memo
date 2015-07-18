@@ -60,6 +60,9 @@ namespace infinit
         _set_permissions(model::User const& key,
                          bool read,
                          bool write) override;
+        virtual
+        void
+        _copy_permissions(ACLBlock& to) override;
 
       /*-----------.
       | Validation |

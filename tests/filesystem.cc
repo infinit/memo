@@ -770,6 +770,21 @@ void test_acl()
   BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
 
+  // inheritance
+  bfs::create_directory(m0 / "dirs");
+  ELLE_LOG("setattrs");
+  setxattr((m0 / "dirs").c_str(), "user.infinit.auth.setrw",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  ELLE_LOG("setinherit");
+  setxattr((m0 / "dirs").c_str(), "user.infinit.auth.inherit",
+    "true", strlen("true"), 0 SXA_EXTRA);
+  ELLE_LOG("create childs");
+  touch(m0 / "dirs" / "coin");
+  bfs::create_directory(m0 / "dirs" / "dir");
+  touch(m0 / "dirs" / "dir" / "coin");
+  BOOST_CHECK(can_access(m1 / "dirs" / "coin"));
+  BOOST_CHECK(can_access(m1 / "dirs" / "dir" / "coin"));
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 2);
   ELLE_LOG("test end");
 }
 

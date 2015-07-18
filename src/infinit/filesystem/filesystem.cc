@@ -34,6 +34,7 @@ namespace infinit
     typedef infinit::model::blocks::Block Block;
     typedef infinit::model::blocks::MutableBlock MutableBlock;
     typedef infinit::model::blocks::ImmutableBlock ImmutableBlock;
+    typedef infinit::model::blocks::ACLBlock ACLBlock;
     typedef infinit::model::Address Address;
 
     class AnyBlock
@@ -225,7 +226,7 @@ namespace infinit
     {
     public:
       Directory(DirectoryPtr parent, FileSystem& owner, std::string const& name,
-                std::unique_ptr<MutableBlock> b);
+                std::unique_ptr<ACLBlock> b);
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_ISDIR;
@@ -259,9 +260,10 @@ namespace infinit
       friend class Node;
       friend class FileHandle;
       void _changed(bool set_mtime = false);
-      void _push_changes();
-      std::unique_ptr<MutableBlock> _block;
+      void _push_changes(bool first_write = false);
+      std::unique_ptr<ACLBlock> _block;
       std::unordered_map<std::string, FileData> _files;
+      bool _inherit_auth; //child nodes inherit this dir's permissions
       boost::posix_time::ptime _last_fetch;
       friend class FileSystem;
     };
@@ -530,7 +532,9 @@ namespace infinit
       // root.
       ELLE_ASSERT_EQ(path, "/");
       return std::make_shared<Directory>
-        (nullptr, *this, "", this->_root_block());
+        (nullptr, *this, "",
+          elle::cast<ACLBlock>::runtime(
+            this->_root_block()));
     }
 
     std::unique_ptr<MutableBlock>
@@ -546,13 +550,15 @@ namespace infinit
     Directory::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("content", this->_files);
+      s.serialize("inherti_auth", this->_inherit_auth);
     }
 
     Directory::Directory(DirectoryPtr parent, FileSystem& owner,
                          std::string const& name,
-                         std::unique_ptr<MutableBlock> b)
+                         std::unique_ptr<ACLBlock> b)
     : Node(owner, parent, name)
     , _block(std::move(b))
+    , _inherit_auth(_parent?_parent->_inherit_auth : false)
     {
       ELLE_DEBUG("Directory::Directory %s, parent %s address %s", this, parent, _block->address());
       try
@@ -593,7 +599,7 @@ namespace infinit
         return;
       }
       _last_fetch = now;
-      _block = elle::cast<MutableBlock>::runtime
+      _block = elle::cast<ACLBlock>::runtime
         (_owner.block_store()->fetch(_block->address()));
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
@@ -660,11 +666,11 @@ namespace infinit
     }
 
     void
-    Directory::_push_changes()
+    Directory::_push_changes(bool first_write)
     {
       ELLE_DEBUG("Directory pushChanges: %s on %x size %s",
                  this, _block->address(), _block->data().size());
-      _owner.block_store()->store(*_block);
+      _owner.block_store()->store(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
       ELLE_DEBUG("pushChange ok");
     }
 
@@ -686,10 +692,10 @@ namespace infinit
           return std::shared_ptr<rfs::Path>(new Symlink(self, _owner, name));
         if (!isDir)
           return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
-        std::unique_ptr<MutableBlock> block;
+        std::unique_ptr<ACLBlock> block;
         try
         {
-          block = elle::cast<MutableBlock>::runtime
+          block = elle::cast<ACLBlock>::runtime
             (_owner.block_store()->fetch(it->second.address));
         }
         catch (infinit::model::MissingBlock const& b)
@@ -947,7 +953,19 @@ namespace infinit
     {
       ELLE_DEBUG("mkdir %s", _name);
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
-      _owner.block_store()->store(*b, model::STORE_INSERT);
+      auto address = b->address();
+      if (_parent->_inherit_auth)
+      {
+        ELLE_ASSERT(!!_parent->_block);
+        // We must store first to ready ACL layer
+        _owner.block_store()->store(*b, model::STORE_INSERT);
+        _parent->_block->copy_permissions(*b);
+        Directory d(_parent, _owner, _name, std::move(b));
+        d._inherit_auth = true;
+        d._push_changes();
+      }
+      else
+        _owner.block_store()->store(*b, model::STORE_INSERT);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name,
@@ -955,7 +973,7 @@ namespace infinit
                                 uint64_t(time(nullptr)),
                                 uint64_t(time(nullptr)),
                                 uint64_t(time(nullptr)),
-                                b->address(),
+                                address,
                                 FileStoreMode::direct}));
       _parent->_changed();
       _remove_from_cache();
@@ -999,7 +1017,17 @@ namespace infinit
       if (!f)
         ELLE_ERR("Expected valid pointer from %s, got nullptr", raw.get());
       f->_first_block = std::move(b);
-      f->_first_block_new = true;
+      if (_parent->_inherit_auth)
+      {
+        // ACLblock is not ready yet, we cant use permissions
+        _owner.block_store()->store(*f->_first_block, model::STORE_INSERT);
+        // now it is :)
+        f->_first_block_new = false;
+        _parent->_block->copy_permissions(
+          dynamic_cast<ACLBlock&>(*f->_first_block));
+      }
+      else
+        f->_first_block_new = true;
       // Mark dirty since we did not push first_block
       ELLE_DEBUG("Forcing entry %s", f->full_path());
       _owner.filesystem()->set(f->full_path().string(), f);
@@ -1679,7 +1707,13 @@ namespace infinit
     {
       ELLE_TRACE("directory setxattr %s", name);
       _fetch();
-      if (name.find("user.infinit.auth.") == 0)
+      if (name == "user.infinit.auth.inherit")
+      {
+        bool on = !(value == "0" || value == "false" || value=="");
+        _inherit_auth = on;
+        _changed();
+      }
+      else if (name.find("user.infinit.auth.") == 0)
       {
         std::string flags = name.substr(strlen("user.infinit.auth."));
         std::pair<bool, bool> perms = parse_flags(flags);

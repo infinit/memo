@@ -37,9 +37,21 @@ namespace infinit
       }
 
       void
+      ACLBlock::copy_permissions(ACLBlock& to)
+      {
+        ELLE_TRACE_SCOPE("%s: copy permissions to %s", *this, to);
+        this->_copy_permissions(to);
+      }
+
+      void
       ACLBlock::_set_permissions(User const&, bool, bool)
       {
         // FIXME: what do ?
+      }
+
+      void
+      ACLBlock::_copy_permissions(ACLBlock& to)
+      {
       }
 
       /*--------------.

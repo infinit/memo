@@ -36,13 +36,17 @@ namespace infinit
         set_permissions(User const& user,
                         bool read,
                         bool write);
+        void
+        copy_permissions(ACLBlock& to);
       protected:
         virtual
         void
         _set_permissions(User const& user,
                          bool read,
                          bool write);
-
+        virtual
+        void
+        _copy_permissions(ACLBlock& to);
       /*--------------.
       | Serialization |
       `--------------*/

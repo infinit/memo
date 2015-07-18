@@ -167,6 +167,7 @@ namespace infinit
         {
           ELLE_DEBUG_SCOPE("%s: push new ACL block", *this);
           // FIXME: squash multiple ACL changes
+          // FIXME: old acl block leaked (but maybe it was shared!)
           auto new_acl = this->doughnut()->make_block<blocks::ImmutableBlock>(
             elle::serialization::serialize
             <std::vector<ACLEntry>, elle::serialization::Json>
@@ -189,6 +190,29 @@ namespace infinit
         catch (std::bad_cast const&)
         {
           ELLE_ABORT("doughnut was passed a non-doughnut user.");
+        }
+      }
+
+      void
+      ACB::_copy_permissions(ACLBlock& to)
+      {
+        ACB* other = dynamic_cast<ACB*>(&to);
+        if (!other)
+          throw elle::Error("Other block is not an ACB");
+        // also add owner in case it's not the same
+        other->set_permissions(this->owner_key(), true, true);
+        if (this->_acl == Address::null)
+          return; // nothing to do
+        auto acl = this->doughnut()->fetch(this->_acl);
+        std::vector<ACLEntry> entries;
+        entries =
+          elle::serialization::deserialize
+          <std::vector<ACLEntry>, elle::serialization::Json>
+          (acl->data(), "entries");
+        // FIXME: better implementation
+        for (auto const& e: entries)
+        {
+          other->set_permissions(e.key, e.read, e.write);
         }
       }
 
