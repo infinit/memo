@@ -10,6 +10,7 @@ namespace infinit
     public:
       virtual ~User()
       {}
+      virtual std::string name() {return "";};
     };
   }
 }

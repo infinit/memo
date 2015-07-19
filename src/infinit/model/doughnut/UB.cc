@@ -5,6 +5,8 @@
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
 
+#include <elle/serialization/json.hh>
+
 ELLE_LOG_COMPONENT("infinit.model.doughnut.UB");
 
 namespace infinit
@@ -17,10 +19,11 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      UB::UB(std::string name, cryptography::rsa::PublicKey key)
-        : Super(UB::hash_address(name))
+      UB::UB(std::string name, cryptography::rsa::PublicKey key, bool reverse)
+        : Super(reverse ? UB::hash_address(key) : UB::hash_address(name))
         , _name(std::move(name))
         , _key(std::move(key))
+        , _reverse(reverse)
       {}
 
       Address
@@ -31,6 +34,16 @@ namespace infinit
         return Address(hash.contents());
       }
 
+      Address
+      UB::hash_address(cryptography::rsa::PublicKey const& key)
+      {
+        elle::Buffer buf = elle::serialization::serialize
+          <cryptography::rsa::PublicKey, elle::serialization::Json>
+          (key);
+        auto hash = cryptography::hash (elle::sprintf("RUB/%s", buf),
+                                        cryptography::Oneway::sha256);
+        return Address(hash.contents());
+      }
       /*-----------.
       | Validation |
       `-----------*/
@@ -44,7 +57,10 @@ namespace infinit
       UB::_validate() const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
-        auto expected_address = UB::hash_address(this->name());
+        auto expected_address = this->reverse() ?
+          UB::hash_address(this->key())
+          : UB::hash_address(this->name());
+
         if (this->address() != expected_address)
         {
           ELLE_DUMP("%s: address %x invalid, expecting %x",
@@ -79,6 +95,7 @@ namespace infinit
       {
         s.serialize("name", this->_name);
         s.serialize("key", this->_key);
+        s.serialize("rev", this->_reverse);
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

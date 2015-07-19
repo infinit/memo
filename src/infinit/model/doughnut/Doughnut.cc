@@ -102,12 +102,29 @@ namespace infinit
       {
         try
         {
+          auto block = this->fetch(UB::hash_address(this->keys().K()));
+          ELLE_DEBUG("%s: user reverse block already present", *this);
+          auto ub = elle::cast<UB>::runtime(block);
+          if (ub->name() != name)
+            throw elle::Error(
+              elle::sprintf("This key is already associated with name %s",
+                            ub->name()));
+        }
+        catch(MissingBlock const&)
+        {
+          ELLE_TRACE_SCOPE("%s: store reverse user block", *this);
+          UB user(std::move(name), this->keys().K(), true);
+          this->store(user);
+        }
+        try
+        {
           auto block = this->fetch(UB::hash_address(name));
           ELLE_DEBUG("%s: user block already present", *this);
           auto ub = elle::cast<UB>::runtime(block);
           if (ub->key() != this->keys().K())
             throw elle::Error(
-              elle::sprintf("user block exists with different key"));
+              elle::sprintf("user block exists at %s(%x) with different key",
+                            name, UB::hash_address(name)));
         }
         catch (MissingBlock const&)
         {
@@ -162,11 +179,22 @@ namespace infinit
           throw elle::Error("invalid empty user");
         if (data[0] == '{')
         {
-          ELLE_TRACE_SCOPE("%s: create user from public key", *this);
+          ELLE_TRACE_SCOPE("%s: fetch user from public key", *this);
           elle::IOStream input(data.istreambuf());
           elle::serialization::json::SerializerIn s(input);
-          return elle::make_unique<doughnut::User>
-            (cryptography::rsa::PublicKey(s));
+          cryptography::rsa::PublicKey pub(s);
+          try
+          {
+            auto block = this->fetch(UB::hash_address(pub));
+            auto ub = elle::cast<UB>::runtime(block);
+            return elle::make_unique<doughnut::User>
+              (ub->key(), ub->name());
+          }
+          catch (MissingBlock const&)
+          {
+            ELLE_TRACE("Reverse UB not found, returning no name");
+            return elle::make_unique<doughnut::User>(pub, "");
+          }
         }
         else
         {
@@ -174,7 +202,7 @@ namespace infinit
           auto block = this->fetch(UB::hash_address(data.string()));
           auto ub = elle::cast<UB>::runtime(block);
           return elle::make_unique<doughnut::User>
-            (ub->key());
+            (ub->key(), data.string());
         }
       }
 

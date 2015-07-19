@@ -27,13 +27,17 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        UB(std::string name, cryptography::rsa::PublicKey key);
+        UB(std::string name, cryptography::rsa::PublicKey key,
+           bool reverse = false);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
+        ELLE_ATTRIBUTE_R(bool, reverse);
         static
         Address
         hash_address(std::string const& name);
-
+        static
+        Address
+        hash_address(cryptography::rsa::PublicKey const& key);
       /*-----------.
       | Validation |
       `-----------*/

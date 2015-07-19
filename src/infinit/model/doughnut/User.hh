@@ -15,8 +15,10 @@ namespace infinit
         : public model::User
       {
       public:
-        User(cryptography::rsa::PublicKey key);
+        User(cryptography::rsa::PublicKey key, std::string const& name);
+        std::string name() override;
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
+        ELLE_ATTRIBUTE_R(std::string, name);
       };
     }
   }
