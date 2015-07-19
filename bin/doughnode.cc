@@ -18,7 +18,7 @@ ELLE_LOG_COMPONENT("doughnode");
 struct Config
 {
 public:
-  int port;
+  boost::optional<int> port;
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   std::shared_ptr<infinit::model::ModelConfig> model;
 
@@ -113,11 +113,16 @@ main(int argc, char** argv)
         parse_options(argc, argv, cfg);
         ELLE_ASSERT(cfg.model.get());
         auto model = cfg.model->make();
-        auto storage = cfg.storage->make();
-        infinit::model::doughnut::Local local(std::move(storage), cfg.port);
-        local.doughnut() =
-          elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
+        if (cfg.storage)
+        {
+          auto storage = cfg.storage->make();
+          infinit::model::doughnut::Local local(std::move(storage),
+                                                cfg.port ? *cfg.port : 0);
+          local.doughnut() =
+            elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
+        }
         reactor::sleep();
+
       });
     sched.run();
   }
