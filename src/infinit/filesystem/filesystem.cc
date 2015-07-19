@@ -1630,6 +1630,7 @@ namespace infinit
       res.push_back("user.infinit.auth.setrw");
       res.push_back("user.infinit.auth.setw");
       res.push_back("user.infinit.auth.clear");
+      res.push_back("user.infinit.auth");
       return res;
     }
     std::vector<std::string> Directory::listxattr()
@@ -1637,8 +1638,32 @@ namespace infinit
       ELLE_TRACE("listxattr");
       std::vector<std::string> res;
       res.push_back("user.infinit.block");
+      res.push_back("user.infinit.auth.setr");
+      res.push_back("user.infinit.auth.setrw");
+      res.push_back("user.infinit.auth.setw");
+      res.push_back("user.infinit.auth.clear");
+      res.push_back("user.infinit.auth.inherit");
+      res.push_back("user.infinit.auth");
       return res;
     }
+
+    static std::string perms_to_json(ACLBlock& block)
+    {
+      auto perms = block.list_permissions();
+      elle::json::Array v;
+      for (auto const& perm: perms)
+      {
+        elle::json::Object o;
+        o["name"] = perm.user->name();
+        o["read"] = perm.read;
+        o["write"] = perm.write;
+        v.push_back(o);
+      }
+      std::stringstream ss;
+      elle::json::write(ss, v, true);
+      return ss.str();
+    }
+
     std::string File::getxattr(std::string const& key)
     {
       ELLE_TRACE("getxattr %s", key);
@@ -1651,6 +1676,10 @@ namespace infinit
           auto const& elem = _parent->_files.at(_name);
           return elle::sprintf("%x", elem.address);
         }
+      }
+      else if (key == "user.infinit.auth")
+      {
+        return perms_to_json(dynamic_cast<ACLBlock&>(*_first_block));
       }
       else
         THROW_NODATA;
@@ -1752,6 +1781,11 @@ namespace infinit
         }
         else
           return "<ROOT>";
+      }
+      else if (key == "user.infinit.auth")
+      {
+        _fetch();
+        return perms_to_json(*_block);
       }
       else
         THROW_NODATA;

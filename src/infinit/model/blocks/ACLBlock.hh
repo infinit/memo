@@ -38,6 +38,22 @@ namespace infinit
                         bool write);
         void
         copy_permissions(ACLBlock& to);
+
+        struct Entry
+        {
+          Entry() {}
+          Entry(std::unique_ptr<User> u, bool r, bool w)
+          : user(std::move(u)), read(r), write(w) {}
+          Entry(Entry&& b) = default;
+
+          std::unique_ptr<User> user;
+          bool read;
+          bool write;
+        };
+
+        std::vector<Entry>
+        list_permissions();
+
       protected:
         virtual
         void
@@ -47,6 +63,11 @@ namespace infinit
         virtual
         void
         _copy_permissions(ACLBlock& to);
+
+        virtual
+        std::vector<Entry>
+        _list_permissions();
+
       /*--------------.
       | Serialization |
       `--------------*/

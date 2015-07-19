@@ -43,6 +43,13 @@ namespace infinit
         this->_copy_permissions(to);
       }
 
+      std::vector<ACLBlock::Entry>
+      ACLBlock::list_permissions()
+      {
+        ELLE_TRACE_SCOPE("%s: list permissions");
+        return this->_list_permissions();
+      }
+
       void
       ACLBlock::_set_permissions(User const&, bool, bool)
       {
@@ -52,6 +59,12 @@ namespace infinit
       void
       ACLBlock::_copy_permissions(ACLBlock& to)
       {
+      }
+
+      std::vector<ACLBlock::Entry>
+      ACLBlock::_list_permissions()
+      {
+        return {};
       }
 
       /*--------------.

@@ -216,6 +216,36 @@ namespace infinit
         }
       }
 
+
+
+      std::vector<ACB::Entry>
+      ACB::_list_permissions()
+      {
+        std::vector<ACB::Entry> res;
+        auto user = this->doughnut()->make_user(
+          elle::serialization::serialize
+            <cryptography::rsa::PublicKey, elle::serialization::Json>(
+              this->owner_key()));
+        res.emplace_back(std::move(user), true, true);
+        if (this->_acl == Address::null)
+          return std::move(res);
+        auto acl = this->doughnut()->fetch(this->_acl);
+        std::vector<ACLEntry> entries;
+        entries =
+          elle::serialization::deserialize
+          <std::vector<ACLEntry>, elle::serialization::Json>
+          (acl->data(), "entries");
+        for (auto const& ent: entries)
+        {
+          auto user = this->doughnut()->make_user(
+          elle::serialization::serialize
+            <cryptography::rsa::PublicKey, elle::serialization::Json>(
+              ent.key));
+          res.emplace_back(std::move(user), ent.read, ent.write);
+        }
+        return res;
+      }
+
       /*-----------.
       | Validation |
       `-----------*/

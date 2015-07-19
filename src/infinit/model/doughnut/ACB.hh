@@ -64,6 +64,10 @@ namespace infinit
         void
         _copy_permissions(ACLBlock& to) override;
 
+        virtual
+        std::vector<Entry>
+        _list_permissions() override;
+
       /*-----------.
       | Validation |
       `-----------*/
