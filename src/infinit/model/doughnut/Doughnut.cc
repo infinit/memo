@@ -112,14 +112,16 @@ namespace infinit
         }
         catch(MissingBlock const&)
         {
-          ELLE_TRACE_SCOPE("%s: store reverse user block", *this);
-          UB user(std::move(name), this->keys().K(), true);
+          UB user(name, this->keys().K(), true);
+          ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
+            user.address());
           this->store(user);
         }
         try
         {
           auto block = this->fetch(UB::hash_address(name));
-          ELLE_DEBUG("%s: user block already present", *this);
+          ELLE_DEBUG("%s: user block for %s already present at %x", *this,
+            name, block->address());
           auto ub = elle::cast<UB>::runtime(block);
           if (ub->key() != this->keys().K())
             throw elle::Error(
@@ -128,8 +130,9 @@ namespace infinit
         }
         catch (MissingBlock const&)
         {
-          ELLE_TRACE_SCOPE("%s: store user block", *this);
-          UB user(std::move(name), this->keys().K());
+          UB user(name, this->keys().K());
+          ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
+                           *this, user.address(), name);
           this->store(user);
         }
       }
