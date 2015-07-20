@@ -758,18 +758,6 @@ void test_acl()
   BOOST_CHECK(can_access(m1/"test"));
   BOOST_CHECK(can_access(m1 / "byuser"));
 
-  // readonly
-  bfs::create_directory(m0 / "dir2");
-  setxattr((m0 / "dir2").c_str(), "user.infinit.auth.setr",
-    k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  BOOST_CHECK(touch(m0 / "dir2" / "coin"));
-  setxattr((m0 / "dir2"/ "coin").c_str(), "user.infinit.auth.setr",
-    k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
-  BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
-  BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
-  BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
-
   // inheritance
   bfs::create_directory(m0 / "dirs");
   ELLE_LOG("setattrs");
@@ -785,6 +773,19 @@ void test_acl()
   BOOST_CHECK(can_access(m1 / "dirs" / "coin"));
   BOOST_CHECK(can_access(m1 / "dirs" / "dir" / "coin"));
   BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 2);
+
+    // readonly
+  bfs::create_directory(m0 / "dir2");
+  setxattr((m0 / "dir2").c_str(), "user.infinit.auth.setr",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  BOOST_CHECK(touch(m0 / "dir2" / "coin"));
+  setxattr((m0 / "dir2"/ "coin").c_str(), "user.infinit.auth.setr",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  usleep(2100000);
+  BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
+  BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
+  BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
+
   ELLE_LOG("test end");
 }
 
