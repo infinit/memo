@@ -120,8 +120,10 @@ main(int argc, char** argv)
                                                 cfg.port ? *cfg.port : 0);
           local.doughnut() =
             elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
+          reactor::sleep();
         }
-        reactor::sleep();
+        else
+          reactor::sleep();
 
       });
     sched.run();
