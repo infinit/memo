@@ -491,12 +491,13 @@ namespace infinit
     }
 
     static
-    std::unique_ptr<model::blocks::MutableBlock>
+    std::unique_ptr<model::blocks::ACLBlock>
     _make_root_block(infinit::model::Model& model)
     {
-      std::unique_ptr<model::blocks::MutableBlock> root
+      std::unique_ptr<model::blocks::ACLBlock> root
         = model.make_block<model::blocks::ACLBlock>();
-      model.store(*root);
+      ELLE_DEBUG("Creating and storing root block at %x", root->address());
+      model.store(*root, model::STORE_INSERT);
       return root;
     }
 
@@ -531,10 +532,12 @@ namespace infinit
       // In the infinit filesystem, we never query a path other than the
       // root.
       ELLE_ASSERT_EQ(path, "/");
-      return std::make_shared<Directory>
-        (nullptr, *this, "",
-          elle::cast<ACLBlock>::runtime(
-            this->_root_block()));
+      ELLE_DEBUG("Processing request for root path");
+      auto root = this->_root_block();
+      ELLE_ASSERT(!!root);
+      auto acl_root =  elle::cast<ACLBlock>::runtime(std::move(root));
+      ELLE_ASSERT(!!acl_root);
+      return std::make_shared<Directory>(nullptr, *this, "", std::move(acl_root));
     }
 
     std::unique_ptr<MutableBlock>
@@ -560,6 +563,7 @@ namespace infinit
     , _block(std::move(b))
     , _inherit_auth(_parent?_parent->_inherit_auth : false)
     {
+      ELLE_ASSERT(!!_block);
       ELLE_DEBUG("Directory::Directory %s, parent %s address %s", this, parent, _block->address());
       try
       {
