@@ -44,7 +44,6 @@ public:
   boost::optional<elle::Buffer> root_address;
   std::shared_ptr<infinit::model::ModelConfig> model;
   boost::optional<bool> single_mount;
-  std::string name;
 
   Config()
     : mountpoint()
