@@ -553,7 +553,7 @@ namespace infinit
     Directory::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("content", this->_files);
-      s.serialize("inherti_auth", this->_inherit_auth);
+      s.serialize("inherit_auth", this->_inherit_auth);
     }
 
     Directory::Directory(DirectoryPtr parent, FileSystem& owner,
