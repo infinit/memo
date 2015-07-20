@@ -119,7 +119,7 @@ ELLE_TEST_SCHEDULED(ACB)
         //                   infinit::model::doughnut::ValidationFailed);
     }
     ELLE_LOG("owner: add ACB permissions")
-      block->set_permissions(infinit::model::doughnut::User(other_key), true, true);
+      block->set_permissions(infinit::model::doughnut::User(other_key, ""), true, true);
     ELLE_LOG("owner: store ACB")
       dht.store(*block);
     {
