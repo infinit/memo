@@ -235,54 +235,47 @@ namespace infinit
         this->_consensus->remove(*this->_overlay, address);
       }
 
-      struct DoughnutModelConfig:
-        public ModelConfig
+      DoughnutModelConfig::DoughnutModelConfig()
+        : ModelConfig()
+      {}
+
+      DoughnutModelConfig::DoughnutModelConfig(elle::serialization::SerializerIn& input)
+        : ModelConfig()
       {
-      public:
-        std::unique_ptr<infinit::overlay::OverlayConfig> overlay;
-        std::unique_ptr<infinit::cryptography::rsa::KeyPair> key;
-        boost::optional<bool> plain;
-        boost::optional<std::string> name;
+        this->serialize(input);
+      }
 
-        DoughnutModelConfig(elle::serialization::SerializerIn& input)
-          : ModelConfig()
-        {
-          this->serialize(input);
-        }
+      void
+      DoughnutModelConfig::serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("overlay", this->overlay);
+        s.serialize("keys", this->keys);
+        s.serialize("plain", this->plain);
+        s.serialize("name", this->name);
+      }
 
-        void
-        serialize(elle::serialization::Serializer& s)
-        {
-          s.serialize("overlay", this->overlay);
-          s.serialize("keys", this->key);
-          s.serialize("plain", this->plain);
-          s.serialize("name", this->name);
-        }
-
-        virtual
-        std::unique_ptr<infinit::model::Model>
-        make()
-        {
-          if (!key)
-            return elle::make_unique<infinit::model::doughnut::Doughnut>(
-              overlay->make(),
-              nullptr,
-              plain && *plain);
-          else if (!name)
-            return elle::make_unique<infinit::model::doughnut::Doughnut>(
-              std::move(*key),
-              overlay->make(),
-              nullptr,
-              plain && *plain);
-          else
-            return elle::make_unique<infinit::model::doughnut::Doughnut>(
-              std::move(this->name.get()),
-              std::move(*key),
-              overlay->make(),
-              nullptr,
-              plain && *plain);
-        }
-      };
+      std::unique_ptr<infinit::model::Model>
+      DoughnutModelConfig::make()
+      {
+        if (!keys)
+          return elle::make_unique<infinit::model::doughnut::Doughnut>(
+            overlay->make(),
+            nullptr,
+            plain && *plain);
+        else if (!name)
+          return elle::make_unique<infinit::model::doughnut::Doughnut>(
+            *keys,
+            overlay->make(),
+            nullptr,
+            plain && *plain);
+        else
+          return elle::make_unique<infinit::model::doughnut::Doughnut>(
+            std::move(this->name.get()),
+            *keys,
+            overlay->make(),
+            nullptr,
+            plain && *plain);
+      }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
       Register<DoughnutModelConfig> _register_DoughnutModelConfig("doughnut");

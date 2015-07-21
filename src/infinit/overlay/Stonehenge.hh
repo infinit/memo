@@ -25,6 +25,19 @@ namespace infinit
       Members
       _lookup(model::Address address, int n, Operation op) const override;
     };
+
+    struct StonehengeOverlayConfig
+      : public OverlayConfig
+    {
+      std::vector<std::string> nodes;
+      StonehengeOverlayConfig();
+      StonehengeOverlayConfig(elle::serialization::SerializerIn& input);
+      void
+      serialize(elle::serialization::Serializer& s);
+      virtual
+      std::unique_ptr<infinit::overlay::Overlay>
+      make();
+    };
   }
 }
 

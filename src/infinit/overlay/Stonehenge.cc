@@ -46,39 +46,38 @@ namespace infinit
       return res;
     }
 
+    StonehengeOverlayConfig::StonehengeOverlayConfig()
+      : OverlayConfig()
+    {}
 
-    struct StonehengeOverlayConfig:
-      public OverlayConfig
+    StonehengeOverlayConfig::StonehengeOverlayConfig
+      (elle::serialization::SerializerIn& input)
+      : OverlayConfig()
     {
-      std::vector<std::string> nodes;
-      StonehengeOverlayConfig(elle::serialization::SerializerIn& input)
-        : OverlayConfig()
-      {
-        this->serialize(input);
-      }
+      this->serialize(input);
+    }
 
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        s.serialize("nodes", this->nodes);
-      }
+    void
+    StonehengeOverlayConfig::serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("nodes", this->nodes);
+    }
 
-      virtual
-      std::unique_ptr<infinit::overlay::Overlay>
-      make()
+    std::unique_ptr<infinit::overlay::Overlay>
+    StonehengeOverlayConfig::make()
+    {
+      infinit::overlay::Overlay::Members members;
+      for (auto const& hostport: nodes)
       {
-        infinit::overlay::Overlay::Members members;
-        for (auto const& hostport: nodes)
-        {
-          size_t p = hostport.find_first_of(':');
-          if (p == hostport.npos)
-            throw std::runtime_error("Failed to parse host:port " + hostport);
-          members.emplace_back(boost::asio::ip::address::from_string(hostport.substr(0, p)),
-                               std::stoi(hostport.substr(p+1)));
-        }
-        return elle::make_unique<infinit::overlay::Stonehenge>(members);
+        size_t p = hostport.find_first_of(':');
+        if (p == hostport.npos)
+          throw std::runtime_error("Failed to parse host:port " + hostport);
+        members.emplace_back(boost::asio::ip::address::from_string(hostport.substr(0, p)),
+                             std::stoi(hostport.substr(p+1)));
       }
-    };
+      return elle::make_unique<infinit::overlay::Stonehenge>(members);
+    }
+
     static const elle::serialization::Hierarchy<OverlayConfig>::
     Register<StonehengeOverlayConfig> _registerStonehengeOverlayConfig("stonehenge");
   }

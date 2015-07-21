@@ -69,6 +69,24 @@ namespace infinit
       private:
         ELLE_ATTRIBUTE(bool, plain);
       };
+
+      struct DoughnutModelConfig:
+        public ModelConfig
+      {
+      public:
+        std::unique_ptr<overlay::OverlayConfig> overlay;
+        std::unique_ptr<cryptography::rsa::KeyPair> keys;
+        boost::optional<bool> plain;
+        boost::optional<std::string> name;
+
+        DoughnutModelConfig();
+        DoughnutModelConfig(elle::serialization::SerializerIn& input);
+        void
+        serialize(elle::serialization::Serializer& s);
+        virtual
+        std::unique_ptr<infinit::model::Model>
+        make();
+      };
     }
   }
 }
