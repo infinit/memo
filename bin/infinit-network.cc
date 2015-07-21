@@ -52,18 +52,8 @@ network(boost::program_options::variables_map vm)
     };
   if (vm.count("create"))
   {
-    if (!vm.count("name"))
-    {
-      create_help(std::cerr);
-      throw elle::Error("network name unspecified");
-    }
-    std::string name = vm["name"].as<std::string>();
-    if (!vm.count("storage"))
-    {
-      create_help(std::cerr);
-      throw elle::Error("storage unspecified");
-    }
-    std::string storage_name = vm["storage"].as<std::string>();
+    auto name = mandatory(vm, "name", "network name", create_help);
+    auto storage_name = mandatory(vm, "storage", create_help);
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     {
       boost::filesystem::ifstream f(ifnt.root_dir() / "storage" / storage_name);
@@ -100,12 +90,7 @@ network(boost::program_options::variables_map vm)
   }
   else if (vm.count("run"))
   {
-    if (!vm.count("name"))
-    {
-      run_help(std::cerr);
-      throw elle::Error("network name unspecified");
-    }
-    std::string name = vm["name"].as<std::string>();
+    auto name = mandatory(vm, "name", "network name", run_help);
     auto network = ifnt.network_get(name);
     auto local = network.run();
     reactor::sleep();

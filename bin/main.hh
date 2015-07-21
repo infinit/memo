@@ -292,3 +292,25 @@ private:
     return this->_variables[name];
   }
 };
+
+std::string
+mandatory(boost::program_options::variables_map const& vm,
+          std::string const& name,
+          std::string const& desc,
+          std::function<void(std::ostream&)> const& help)
+{
+  if (!vm.count(name))
+  {
+    help(std::cerr);
+    throw elle::Error(elle::sprintf("%s unspecified", desc));
+  }
+  return vm[name].as<std::string>();
+}
+
+std::string
+mandatory(boost::program_options::variables_map const& vm,
+          std::string const& name,
+          std::function<void(std::ostream&)> const& help)
+{
+  return mandatory(vm, name, name, help);
+}
