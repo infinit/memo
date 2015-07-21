@@ -6,6 +6,7 @@
 #include <elle/system/home_directory.hh>
 
 #include <reactor/scheduler.hh>
+#include <reactor/thread.hh>
 
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -56,7 +57,6 @@ namespace infinit
               throw elle::Exit(0);
             }
             main(std::move(vm));
-            return 0;
           }
         });
       sched.run();
