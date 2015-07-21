@@ -15,9 +15,6 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
 
-// FIXME
-static auto dummy_keys = infinit::cryptography::rsa::keypair::generate(2048);
-
 struct ACLEntry
 {
   infinit::cryptography::rsa::PublicKey key;
@@ -35,17 +32,27 @@ struct ACLEntry
     , token(std::move(token_))
   {}
 
-  ACLEntry(elle::serialization::Serializer& s)
-    : key(dummy_keys.K()) // FIXME
-  {
-    s.serialize_forward(*this);
-  }
+  ACLEntry(elle::serialization::SerializerIn& s)
+    : ACLEntry(deserialize(s))
+  {}
+
+  static ACLEntry deserialize(elle::serialization::SerializerIn& s);
 };
 
 DAS_MODEL(ACLEntry, (key, read, write, token), DasACLEntry);
 DAS_MODEL_DEFAULT(ACLEntry, DasACLEntry);
 DAS_MODEL_DEFINE(ACLEntry, (key, read, write), DasACLEntryPermissions);
 DAS_MODEL_SERIALIZE(ACLEntry);
+
+ACLEntry
+ACLEntry::deserialize(elle::serialization::SerializerIn& s)
+{
+  DasACLEntry::Update content(s);
+  return ACLEntry(std::move(content.key.get()),
+                  content.read.get(),
+                  content.write.get(),
+                  std::move(content.token.get()));
+}
 
 namespace infinit
 {
