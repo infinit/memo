@@ -134,7 +134,7 @@ namespace infinit
         {
           UB user(name, this->keys().K(), true);
           ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
-            user.address());
+                           user.address());
           this->store(user);
         }
       }
@@ -277,6 +277,15 @@ namespace infinit
             overlay->make(),
             nullptr,
             plain && *plain);
+      }
+
+      std::unique_ptr<Doughnut>
+      DoughnutModelConfig::make_read_only()
+      {
+        return elle::make_unique<infinit::model::doughnut::Doughnut>(
+          overlay->make(),
+          nullptr,
+          plain && *plain);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

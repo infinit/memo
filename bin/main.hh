@@ -96,11 +96,7 @@ namespace infinit
         (this->storage->make(), this->port);
       auto dht = elle::cast<infinit::model::doughnut::DoughnutModelConfig>
         ::compiletime(this->model);
-      dht->keys.reset();
-      dht->name.reset();
-      local->doughnut() =
-        elle::cast<infinit::model::doughnut::Doughnut>::compiletime
-        (dht->make());
+      local->doughnut() = dht->make_read_only();
       return local;
     }
 

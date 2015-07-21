@@ -86,6 +86,8 @@ namespace infinit
         virtual
         std::unique_ptr<infinit::model::Model>
         make();
+        std::unique_ptr<Doughnut>
+        make_read_only();
       };
     }
   }
