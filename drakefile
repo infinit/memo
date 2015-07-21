@@ -218,10 +218,13 @@ def configure(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
   for bin_name in [
       'doughnode',
+      'generatekeys',
       'infinit',
+      'infinit-network',
+      'infinit-storage',
+      'infinit-volume',
       's3fs',
       'sshfs',
-      'generatekeys',
   ]:
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name,
