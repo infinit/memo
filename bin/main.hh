@@ -7,6 +7,8 @@
 
 #include <reactor/scheduler.hh>
 
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/version.hh>
 
 namespace infinit
@@ -70,14 +72,78 @@ namespace infinit
     }
     return 0;
   }
-}
 
+  struct Network
+  {
+    Network(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
 
-static
-boost::filesystem::path
-infinit_dir()
-{
-  return elle::system::home_directory() / ".infinit";
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("storage", this->storage);
+      s.serialize("model", this->model);
+      s.serialize("port", this->port);
+    }
+
+    std::unique_ptr<infinit::model::doughnut::Local>
+    run()
+    {
+      auto local =
+        elle::make_unique<infinit::model::doughnut::Local>
+        (this->storage->make(), this->port);
+      auto dht = elle::cast<infinit::model::doughnut::DoughnutModelConfig>
+        ::compiletime(this->model);
+      dht->keys.reset();
+      dht->name.reset();
+      local->doughnut() =
+        elle::cast<infinit::model::doughnut::Doughnut>::compiletime
+        (dht->make());
+      return local;
+    }
+
+    std::unique_ptr<infinit::storage::StorageConfig> storage;
+    std::unique_ptr<infinit::model::ModelConfig> model;
+    int port;
+  };
+
+  class Infinit
+  {
+  public:
+    Network
+    network(std::string const& name)
+    {
+      boost::filesystem::ifstream f;
+      this->_open(f, this->_network_path(name), "network");
+      elle::serialization::json::SerializerIn s(f, false);
+      return s.deserialize<Network>();
+    }
+
+    boost::filesystem::path
+    root_dir()
+    {
+      return elle::system::home_directory() / ".infinit";
+    }
+
+  private:
+    boost::filesystem::path
+    _network_path(std::string const& name)
+    {
+      return this->root_dir() / "networks" / name;
+    }
+
+    void
+    _open(boost::filesystem::ifstream& f,
+          boost::filesystem::path const& path,
+          std::string const& name)
+    {
+      f.open(path);
+      if (!f.good())
+        throw elle::Error(elle::sprintf("network '%s' does not exist", name));
+    }
+  };
 }
 
 class CommandLineSerializer

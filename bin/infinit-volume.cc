@@ -26,6 +26,8 @@ options_description modes("Modes");
 options_description creation("Creation options");
 options_description run("Run options");
 
+infinit::Infinit ifnt;
+
 void
 network(boost::program_options::variables_map vm)
 {
@@ -74,7 +76,7 @@ network(boost::program_options::variables_map vm)
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     int port;
     {
-      boost::filesystem::ifstream f(infinit_dir() / "networks" / network_name);
+      boost::filesystem::ifstream f(ifnt.root_dir() / "networks" / network_name);
       if (!f.good())
         throw elle::Error
           (elle::sprintf("network '%s' does not exist", network_name));
@@ -103,7 +105,7 @@ network(boost::program_options::variables_map vm)
       std::unique_ptr<boost::filesystem::ofstream> output;
       if (!vm.count("stdout"))
       {
-        auto dir = infinit_dir() / "volumes";
+        auto dir = ifnt.root_dir() / "volumes";
         create_directories(dir);
         auto path = dir / name;
         if (exists(path))
@@ -137,7 +139,7 @@ network(boost::program_options::variables_map vm)
     infinit::model::Address root_address;
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     {
-      boost::filesystem::ifstream f(infinit_dir() / "volumes" / name);
+      boost::filesystem::ifstream f(ifnt.root_dir() / "volumes" / name);
       if (!f.good())
         throw elle::Error
           (elle::sprintf("volume '%s' does not exist", name));

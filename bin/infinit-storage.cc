@@ -24,6 +24,8 @@ options_description storage_filesystem_opt("Filesystem storage options");
 using infinit::storage::StorageConfig;
 typedef elle::serialization::Hierarchy<StorageConfig> Hierarchy;
 
+infinit::Infinit ifnt;
+
 void
 storage(boost::program_options::variables_map vm)
 {
@@ -90,7 +92,7 @@ storage(boost::program_options::variables_map vm)
       std::unique_ptr<boost::filesystem::ofstream> output;
       if (!vm.count("stdout"))
       {
-        auto dir = infinit_dir() / "storage";
+        auto dir = ifnt.root_dir() / "storage";
         create_directories(dir);
         auto path = dir / name;
         if (exists(path))
@@ -115,7 +117,7 @@ storage(boost::program_options::variables_map vm)
     }
     std::string name = vm["name"].as<std::string>();
     {
-      auto dir = infinit_dir() / "storage";
+      auto dir = ifnt.root_dir() / "storage";
       create_directories(dir);
       auto path = dir / name;
       if (!remove(path))

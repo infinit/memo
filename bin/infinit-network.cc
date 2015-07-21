@@ -10,7 +10,6 @@
 #include <cryptography/rsa/KeyPair.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Local.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/overlay/Stonehenge.hh>
 
@@ -24,6 +23,8 @@ options_description options("Options");
 options_description modes("Modes");
 options_description creation("Creation options");
 options_description run("Run options");
+
+infinit::Infinit ifnt;
 
 void
 network(boost::program_options::variables_map vm)
@@ -65,7 +66,7 @@ network(boost::program_options::variables_map vm)
     std::string storage_name = vm["storage"].as<std::string>();
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     {
-      boost::filesystem::ifstream f(infinit_dir() / "storage" / storage_name);
+      boost::filesystem::ifstream f(ifnt.root_dir() / "storage" / storage_name);
       if (!f.good())
         throw elle::Error
           (elle::sprintf("storage '%s' does not exist", storage));
@@ -87,7 +88,7 @@ network(boost::program_options::variables_map vm)
       std::unique_ptr<boost::filesystem::ofstream> output;
       if (!vm.count("stdout"))
       {
-        auto dir = infinit_dir() / "networks";
+        auto dir = ifnt.root_dir() / "networks";
         create_directories(dir);
         auto path = dir / name;
         if (exists(path))
@@ -114,24 +115,8 @@ network(boost::program_options::variables_map vm)
       throw elle::Error("network name unspecified");
     }
     std::string name = vm["name"].as<std::string>();
-    boost::filesystem::ifstream f(infinit_dir() / "networks" / name);
-    if (!f.good())
-      throw elle::Error(elle::sprintf("network '%s' does not exist", name));
-    elle::serialization::json::SerializerIn input(f, false);
-    std::unique_ptr<infinit::storage::StorageConfig> storage;
-    input.serialize("storage", storage);
-    std::unique_ptr<infinit::model::ModelConfig> model;
-    input.serialize("model", model);
-    auto dht = elle::cast<infinit::model::doughnut::DoughnutModelConfig>
-      ::compiletime(model);
-    dht->keys.reset();
-    dht->name.reset();
-    int port;
-    input.serialize("port", port);
-    infinit::model::doughnut::Local local(storage->make(), port);
-    local.doughnut() =
-      elle::cast<infinit::model::doughnut::Doughnut>::compiletime(dht->make());
-    ELLE_ASSERT(local.doughnut().get());
+    auto network = ifnt.network(name);
+    auto local = network.run();
     reactor::sleep();
   }
   else
