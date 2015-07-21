@@ -45,10 +45,11 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
+        OKBHeader(cryptography::rsa::PublicKey keys,
+                  cryptography::rsa::PublicKey block_keys,
+                  elle::Buffer signature);
         void
-        serialize(elle::serialization::Serializer& input);
-      protected:
-        OKBHeader();
+        serialize(elle::serialization::Serializer& s);
       };
 
       template <typename Block>
@@ -133,11 +134,13 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        BaseOKB(elle::serialization::Serializer& input);
+        BaseOKB(elle::serialization::SerializerIn& input);
         virtual
         void
         serialize(elle::serialization::Serializer& s) override;
       private:
+        class SerializationContent;
+        BaseOKB(SerializationContent input);
         void
         _serialize(elle::serialization::Serializer& input);
       };

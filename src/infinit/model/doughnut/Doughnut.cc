@@ -102,26 +102,9 @@ namespace infinit
       {
         try
         {
-          auto block = this->fetch(UB::hash_address(this->keys().K()));
-          ELLE_DEBUG("%s: user reverse block already present", *this);
-          auto ub = elle::cast<UB>::runtime(block);
-          if (ub->name() != name)
-            throw elle::Error(
-              elle::sprintf("This key is already associated with name %s",
-                            ub->name()));
-        }
-        catch(MissingBlock const&)
-        {
-          UB user(name, this->keys().K(), true);
-          ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
-            user.address());
-          this->store(user);
-        }
-        try
-        {
           auto block = this->fetch(UB::hash_address(name));
-          ELLE_DEBUG("%s: user block for %s already present at %x", *this,
-            name, block->address());
+          ELLE_DEBUG("%s: user block for %s already present at %x",
+                     *this, name, block->address());
           auto ub = elle::cast<UB>::runtime(block);
           if (ub->key() != this->keys().K())
             throw elle::Error(
@@ -133,6 +116,25 @@ namespace infinit
           UB user(name, this->keys().K());
           ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
                            *this, user.address(), name);
+          this->store(user);
+        }
+        try
+        {
+          auto block = this->fetch(UB::hash_address(this->keys().K()));
+          ELLE_DEBUG("%s: user reverse block for %s already present at %x",
+                     *this, name, block->address());
+          auto ub = elle::cast<UB>::runtime(block);
+          if (ub->name() != name)
+            throw elle::Error(
+              elle::sprintf(
+                "user reverse block exists at %s(%x) with different name: %s",
+                name, UB::hash_address(this->keys().K()), ub->name()));
+        }
+        catch(MissingBlock const&)
+        {
+          UB user(name, this->keys().K(), true);
+          ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
+            user.address());
           this->store(user);
         }
       }
@@ -257,12 +259,12 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       DoughnutModelConfig::make()
       {
-        if (!keys)
+        if (!this->keys)
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
             overlay->make(),
             nullptr,
             plain && *plain);
-        else if (!name)
+        else if (!this->name)
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
             *keys,
             overlay->make(),
@@ -270,7 +272,7 @@ namespace infinit
             plain && *plain);
         else
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
-            std::move(this->name.get()),
+            this->name.get(),
             *keys,
             overlay->make(),
             nullptr,

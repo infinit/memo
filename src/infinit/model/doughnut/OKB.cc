@@ -29,15 +29,6 @@ namespace infinit
         this->_signature = block_keys.k().sign(owner_key_buffer);
       }
 
-      // FIXME
-      static auto dummy_keys = cryptography::rsa::keypair::generate(2048);
-
-      OKBHeader::OKBHeader()
-        : _key(dummy_keys.K()) // FIXME
-        , _owner_key(dummy_keys.K()) // FIXME
-        , _signature()
-      {}
-
       Address
       OKBHeader::_hash_address() const
       {
@@ -69,6 +60,14 @@ namespace infinit
           ELLE_DUMP("%s: owner key is valid", *this);
         return true;
       }
+
+      OKBHeader::OKBHeader(cryptography::rsa::PublicKey key,
+                           cryptography::rsa::PublicKey block_key,
+                           elle::Buffer signature)
+        : _key(std::move(block_key))
+        , _owner_key(std::move(key))
+        , _signature(std::move(signature))
+      {}
 
       void
       OKBHeader::serialize(elle::serialization::Serializer& input)
@@ -251,17 +250,53 @@ namespace infinit
       `--------------*/
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(elle::serialization::Serializer& input)
-        : OKBHeader()
-        , Super(input)
-        , _version(-1)
-        , _signature()
+      struct BaseOKB<Block>::SerializationContent
+      {
+        struct Header
+        {
+          Header(elle::serialization::SerializerIn& s)
+            : key(s.template deserialize<cryptography::rsa::PublicKey>("key"))
+            , signature(s.template deserialize<elle::Buffer>("signature"))
+          {}
+
+          cryptography::rsa::PublicKey key;
+          elle::Buffer signature;
+        };
+
+        SerializationContent(elle::serialization::SerializerIn& s)
+          : block(s)
+          , key(s.template deserialize<cryptography::rsa::PublicKey>("key"))
+          , header(s.template deserialize<Header>("owner"))
+          , version(s.template deserialize<int>("version"))
+          , signature(s.template deserialize<elle::Buffer>("signature"))
+        {}
+
+        Block block;
+        cryptography::rsa::PublicKey key;
+        Header header;
+        int version;
+        elle::Buffer signature;
+      };
+
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(elle::serialization::SerializerIn& input)
+        : BaseOKB(SerializationContent(input))
+      {
+        input.serialize_context<Doughnut*>(this->_doughnut);
+      }
+
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(SerializationContent content)
+        : OKBHeader(std::move(content.header.key),
+                    std::move(content.key),
+                    std::move(content.header.signature))
+        , Super(std::move(content.block))
+        , _version(std::move(content.version))
+        , _signature(std::move(content.signature))
         , _doughnut(nullptr)
         , _data_plain()
         , _data_decrypted(false)
-      {
-        this->_serialize(input);
-      }
+      {}
 
       template <typename Block>
       void

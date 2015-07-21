@@ -425,7 +425,7 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      ACB::ACB(elle::serialization::Serializer& input)
+      ACB::ACB(elle::serialization::SerializerIn& input)
         : Super(input)
         , _editor(-2)
         , _owner_token()

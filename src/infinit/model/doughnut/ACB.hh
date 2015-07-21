@@ -92,7 +92,7 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        ACB(elle::serialization::Serializer& input);
+        ACB(elle::serialization::SerializerIn& input);
         virtual
         void
         serialize(elle::serialization::Serializer& s) override;
