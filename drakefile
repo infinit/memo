@@ -25,6 +25,8 @@ def configure(
   cxx_config = drake.cxx.Config(cxx_config)
   if production_build:
     cxx_config.enable_optimization()
+  if cxx_toolkit.os in [drake.os.macos]:
+    cxx_config.use_local_libcxx = True
 
   elle = drake.include('elle',
                        production_build = production_build,
