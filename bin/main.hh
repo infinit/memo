@@ -75,6 +75,9 @@ namespace infinit
 
   struct Network
   {
+    Network()
+    {}
+
     Network(elle::serialization::SerializerIn& s)
     {
       this->serialize(s);
@@ -109,12 +112,21 @@ namespace infinit
   {
   public:
     Network
-    network(std::string const& name)
+    network_get(std::string const& name)
     {
       boost::filesystem::ifstream f;
-      this->_open(f, this->_network_path(name), "network");
+      this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerIn s(f, false);
       return s.deserialize<Network>();
+    }
+
+    void
+    network_save(std::string const& name, Network const& network)
+    {
+      boost::filesystem::ofstream f;
+      this->_open(f, this->_network_path(name), name, "network");
+      elle::serialization::json::SerializerOut s(f, false);
+      s.serialize_forward(network);
     }
 
     boost::filesystem::path
@@ -127,17 +139,35 @@ namespace infinit
     boost::filesystem::path
     _network_path(std::string const& name)
     {
-      return this->root_dir() / "networks" / name;
+      auto root = this->root_dir() / "networks";
+      create_directories(root);
+      return root / name;
     }
 
     void
     _open(boost::filesystem::ifstream& f,
           boost::filesystem::path const& path,
-          std::string const& name)
+          std::string const& name,
+          std::string const& type)
     {
       f.open(path);
       if (!f.good())
-        throw elle::Error(elle::sprintf("network '%s' does not exist", name));
+        throw elle::Error(elle::sprintf("%s '%s' does not exist", type, name));
+    }
+
+    void
+    _open(boost::filesystem::ofstream& f,
+          boost::filesystem::path const& path,
+          std::string const& name,
+          std::string const& type)
+    {
+      if (exists(path))
+        throw elle::Error(
+          elle::sprintf("%s '%s' already exists", type, name));
+      f.open(path);
+      if (!f.good())
+        throw elle::Error(
+          elle::sprintf("unable to open '%s' for writing", path));
     }
   };
 }

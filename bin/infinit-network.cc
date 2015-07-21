@@ -85,26 +85,17 @@ network(boost::program_options::variables_map vm)
       (infinit::cryptography::rsa::keypair::generate(2048));
     dht->name = elle::system::username();
     {
-      std::unique_ptr<boost::filesystem::ofstream> output;
+      infinit::Network network;
+      network.storage = std::move(storage);
+      network.port = 4242;
+      network.model = std::move(dht);
       if (!vm.count("stdout"))
+        ifnt.network_save(name, network);
+      else
       {
-        auto dir = ifnt.root_dir() / "networks";
-        create_directories(dir);
-        auto path = dir / name;
-        if (exists(path))
-          throw elle::Error(
-            elle::sprintf("network '%s' already exists", name));
-        output = elle::make_unique<boost::filesystem::ofstream>(path);
-        if (!output->good())
-          throw elle::Error(
-            elle::sprintf("unable to open '%s' for writing", path));
+        elle::serialization::json::SerializerOut s(std::cout, false);
+        s.serialize_forward(network);
       }
-      elle::serialization::json::SerializerOut s
-        (output ? *output : std::cout, false);
-      std::unique_ptr<infinit::model::ModelConfig> model(std::move(dht));
-      s.serialize("model", model);
-      s.serialize("port", 4242);
-      s.serialize("storage", storage);
     }
   }
   else if (vm.count("run"))
@@ -115,7 +106,7 @@ network(boost::program_options::variables_map vm)
       throw elle::Error("network name unspecified");
     }
     std::string name = vm["name"].as<std::string>();
-    auto network = ifnt.network(name);
+    auto network = ifnt.network_get(name);
     auto local = network.run();
     reactor::sleep();
   }
