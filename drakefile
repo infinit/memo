@@ -25,8 +25,6 @@ def configure(
   cxx_config = drake.cxx.Config(cxx_config)
   if production_build:
     cxx_config.enable_optimization()
-  if cxx_toolkit.os in [drake.os.macos]:
-    cxx_config.use_local_libcxx = True
 
   elle = drake.include('elle',
                        production_build = production_build,
@@ -50,6 +48,9 @@ def configure(
   cxx_config.add_local_include_path('src')
   cxx_config.warnings.parentheses = False
   cxx_config.define('_FILE_OFFSET_BITS=64')
+
+  if cxx_toolkit.os in [drake.os.macos]:
+    cxx_config.use_local_libcxx = True
 
   rule_build = drake.Rule('build')
 
