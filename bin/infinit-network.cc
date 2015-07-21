@@ -69,7 +69,7 @@ network(boost::program_options::variables_map vm)
       boost::filesystem::ifstream f(ifnt.root_dir() / "storage" / storage_name);
       if (!f.good())
         throw elle::Error
-          (elle::sprintf("storage '%s' does not exist", storage));
+          (elle::sprintf("storage '%s' does not exist", storage_name));
       elle::serialization::json::SerializerIn input(f, false);
       storage =
         input.deserialize<std::unique_ptr<infinit::storage::StorageConfig>>();
