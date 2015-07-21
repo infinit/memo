@@ -38,14 +38,16 @@ network(boost::program_options::variables_map vm)
     };
   auto create_help = [&] (std::ostream& output)
     {
-      std::cout << "Usage: " << program << " --create --name [name] [options]" << std::endl;
+      std::cout << "Usage: " << program
+                << " --create --name [name] [options]" << std::endl;
       std::cout << std::endl;
       std::cout << creation;
       std::cout << std::endl;
     };
   auto run_help = [&] (std::ostream& output)
     {
-      std::cout << "Usage: " << program << " --run --name [name] [options]" << std::endl;
+      std::cout << "Usage: " << program
+                << " --run --name [name] [options]" << std::endl;
       std::cout << std::endl;
       std::cout << run;
       std::cout << std::endl;
@@ -54,12 +56,14 @@ network(boost::program_options::variables_map vm)
   {
     auto name = mandatory(vm, "name", "network name", create_help);
     auto storage = ifnt.storage_get(mandatory(vm, "storage", create_help));
-    auto overlay =
-      elle::make_unique<infinit::overlay::StonehengeOverlayConfig>();
-    overlay->nodes.push_back("127.0.0.1:4242");
     auto dht =
       elle::make_unique<infinit::model::doughnut::DoughnutModelConfig>();
-    dht->overlay = std::move(overlay);
+    {
+      auto overlay =
+        elle::make_unique<infinit::overlay::StonehengeOverlayConfig>();
+      overlay->nodes.push_back("127.0.0.1:4242");
+      dht->overlay = std::move(overlay);
+    }
     dht->keys =
       elle::make_unique<infinit::cryptography::rsa::KeyPair>
       (infinit::cryptography::rsa::keypair::generate(2048));
