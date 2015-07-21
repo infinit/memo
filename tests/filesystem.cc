@@ -419,7 +419,7 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
       {
         std::vector<std::string> args
 #ifdef INFINIT_MACOSX
-          {"umount", mp};
+          {"umount", "-f", mp};
 #else
           {"fusermount", "-u", mp};
 #endif
@@ -427,7 +427,9 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
       }
       usleep(200000);
       boost::filesystem::remove_all(store);
+      ELLE_TRACE("remove mount");
       boost::filesystem::remove_all(mount);
+      ELLE_TRACE("Cleaning done");
   });
 
   {
@@ -458,7 +460,9 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   bfs::file_size(mount / "foo", erc);
   BOOST_CHECK_EQUAL(true, !!erc);
 
+  struct stat st;
   // hardlink
+#ifndef INFINIT_MACOSX
   {
     bfs::ofstream ofs(mount / "test");
     ofs << "Test";
@@ -470,7 +474,6 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
     ofs.close();
   }
   usleep(500000);
-  struct stat st;
   stat((mount / "test").string().c_str(), &st);
   BOOST_CHECK_EQUAL(st.st_size, 9);
   stat((mount / "test2").string().c_str(), &st);
@@ -495,6 +498,9 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   BOOST_CHECK_EQUAL(text, "TestcoinBcoinA");
   bfs::remove(mount / "test");
   bfs::remove(mount / "test2");
+
+#endif
+
   //holes
   int fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
   if (fd < 0)
@@ -610,6 +616,7 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
     for (int i=0; i<10000000; ++i)
       ofs.put(dist(gen));
   }
+  usleep(1000000);
   ELLE_TRACE("random writes");
 
   BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
@@ -618,25 +625,34 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   {
     if (! (i%10))
       ELLE_TRACE("Run %s", i);
-    int fd = open((mount / "foo").string().c_str(), O_RDWR);
+    ELLE_TRACE("opening");
+    int fd = open((mount / "tbig").string().c_str(), O_RDWR);
     for (int i=0; i < 5; ++i)
     {
-      lseek(fd, dist2(gen), SEEK_SET);
+      int sv = dist2(gen);
+      lseek(fd, sv, SEEK_SET);
       unsigned char c = dist(gen);
+      ELLE_TRACE("Write 1 at %s", sv);
       write(fd, &c, 1);
     }
+    ELLE_TRACE("Closing");
     close(fd);
   }
   BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
   // truncate
+  ELLE_TRACE("truncate 9");
   boost::filesystem::resize_file(mount / "tbig", 9000000);
   read_all(mount / "tbig");
+  ELLE_TRACE("truncate 8");
   boost::filesystem::resize_file(mount / "tbig", 8000000);
   read_all(mount / "tbig");
+  ELLE_TRACE("truncate 5");
   boost::filesystem::resize_file(mount / "tbig", 5000000);
   read_all(mount / "tbig");
+  ELLE_TRACE("truncate 2");
   boost::filesystem::resize_file(mount / "tbig", 2000000);
   read_all(mount / "tbig");
+  ELLE_TRACE("truncate .9");
   boost::filesystem::resize_file(mount / "tbig", 900000);
   read_all(mount / "tbig");
   bfs::remove(mount / "tbig");
