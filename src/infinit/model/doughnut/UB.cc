@@ -74,14 +74,12 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      static auto dummy_keys = cryptography::rsa::keypair::generate(2048);
-      UB::UB(elle::serialization::Serializer& input)
+      UB::UB(elle::serialization::SerializerIn& input)
         : Super(input)
-        , _name()
-        , _key(dummy_keys.K())
-      {
-        this->_serialize(input);
-      }
+        , _name(input.deserialize<std::string>("name"))
+        , _key(input.deserialize<cryptography::rsa::PublicKey>("key"))
+        , _reverse(input.deserialize<bool>("reverse"))
+      {}
 
       void
       UB::serialize(elle::serialization::Serializer& s)
@@ -95,7 +93,7 @@ namespace infinit
       {
         s.serialize("name", this->_name);
         s.serialize("key", this->_key);
-        s.serialize("rev", this->_reverse);
+        s.serialize("reverse", this->_reverse);
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

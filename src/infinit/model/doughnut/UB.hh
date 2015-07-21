@@ -53,7 +53,7 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        UB(elle::serialization::Serializer& input);
+        UB(elle::serialization::SerializerIn& input);
         virtual
         void
         serialize(elle::serialization::Serializer& s) override;
