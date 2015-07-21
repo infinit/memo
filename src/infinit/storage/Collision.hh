@@ -15,6 +15,8 @@ namespace infinit
     public:
       typedef elle::Error Super;
       Collision(Key key);
+      Collision(elle::serialization::SerializerIn& s);
+      void serialize(elle::serialization::Serializer& s);
       ELLE_ATTRIBUTE_R(Key, key);
     };
   }
