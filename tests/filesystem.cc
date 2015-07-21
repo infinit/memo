@@ -411,7 +411,14 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   elle::SafeFinally remover([&] {
       ELLE_TRACE("unmounting");
       //fs->unmount();
-      sched->mt_run<void>("unmounter", [&] { fs->unmount();});
+      try
+      {
+        sched->mt_run<void>("unmounter", [&] { fs->unmount();});
+      }
+      catch(std::exception const& e)
+      {
+        ELLE_TRACE("unmounter threw %s", e.what());
+      }
       //reactor::Thread th(*sched, "unmount", [&] { fs->unmount();});
       t.join();
       ELLE_TRACE("cleaning up");
@@ -638,6 +645,7 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
     ELLE_TRACE("Closing");
     close(fd);
   }
+  ELLE_TRACE("truncates");
   BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
   // truncate
   ELLE_TRACE("truncate 9");
@@ -751,6 +759,14 @@ void test_acl()
      ifs >> v;
      BOOST_CHECK_EQUAL(v, "Test");
   }
+  setxattr((m0/"test").c_str(), "user.infinit.auth.clear",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  usleep(2100000);
+  BOOST_CHECK(!can_access(m1/"test"));
+  setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  usleep(2100000);
+  BOOST_CHECK(can_access(m1/"test"));
 
   bfs::create_directory(m0 / "dir1");
   BOOST_CHECK(touch(m0 / "dir1" / "pan"));
