@@ -53,17 +53,7 @@ network(boost::program_options::variables_map vm)
   if (vm.count("create"))
   {
     auto name = mandatory(vm, "name", "network name", create_help);
-    auto storage_name = mandatory(vm, "storage", create_help);
-    std::unique_ptr<infinit::storage::StorageConfig> storage;
-    {
-      boost::filesystem::ifstream f(ifnt.root_dir() / "storage" / storage_name);
-      if (!f.good())
-        throw elle::Error
-          (elle::sprintf("storage '%s' does not exist", storage_name));
-      elle::serialization::json::SerializerIn input(f, false);
-      storage =
-        input.deserialize<std::unique_ptr<infinit::storage::StorageConfig>>();
-    }
+    auto storage = ifnt.storage_get(mandatory(vm, "storage", create_help));
     auto overlay =
       elle::make_unique<infinit::overlay::StonehengeOverlayConfig>();
     overlay->nodes.push_back("127.0.0.1:4242");

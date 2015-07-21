@@ -135,11 +135,28 @@ namespace infinit
       return elle::system::home_directory() / ".infinit";
     }
 
+    std::unique_ptr<infinit::storage::StorageConfig>
+    storage_get(std::string const& name)
+    {
+      boost::filesystem::ifstream f;
+      this->_open(f, this->_storage_path(name), name, "storage");
+      elle::serialization::json::SerializerIn s(f, false);
+      return s.deserialize<std::unique_ptr<infinit::storage::StorageConfig>>();
+    }
+
   private:
     boost::filesystem::path
     _network_path(std::string const& name)
     {
       auto root = this->root_dir() / "networks";
+      create_directories(root);
+      return root / name;
+    }
+
+    boost::filesystem::path
+    _storage_path(std::string const& name)
+    {
+      auto root = this->root_dir() / "storage";
       create_directories(root);
       return root / name;
     }
