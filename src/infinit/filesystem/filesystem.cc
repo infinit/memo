@@ -20,6 +20,10 @@
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/version.hh>
 
+#ifdef INFINIT_LINUX
+  #include <attr/xattr.h>
+#endif
+
 ELLE_LOG_COMPONENT("infinit.fs");
 
 static elle::Version const version
@@ -86,9 +90,12 @@ namespace infinit
       Address address;
       FileStoreMode store_mode;
       boost::optional<std::string> symlink_target;
+      std::unordered_map<std::string, std::string> xattrs;
+
 
       FileData(std::string name, uint64_t size, uint32_t mode, uint64_t atime,
-        uint64_t mtime, uint64_t ctime, Address const& address, FileStoreMode store_mode)
+        uint64_t mtime, uint64_t ctime, Address const& address, FileStoreMode store_mode,
+        std::unordered_map<std::string, std::string> xattrs)
         : name(name)
         , size(size)
         , mode(mode)
@@ -97,6 +104,7 @@ namespace infinit
         , ctime(ctime)
         , address(address)
         , store_mode(store_mode)
+        , xattrs(std::move(xattrs))
       {}
 
       FileData()
@@ -130,6 +138,7 @@ namespace infinit
           ELLE_WARN("serialization error %s, assuming old format", e);
         }
         s.serialize("symlink_target", symlink_target);
+        s.serialize("xattrs", xattrs);
       }
     };
     struct CacheStats
@@ -145,6 +154,7 @@ namespace infinit
     #define THROW_ISDIR { throw rfs::Error(EISDIR, "Is a directory");}
     #define THROW_NOTDIR { throw rfs::Error(ENOTDIR, "Is not a directory");}
     #define THROW_NODATA { throw rfs::Error(ENODATA, "No data");}
+    #define THROW_NOATTR { throw rfs::Error(ENOATTR, "No attribute");}
     #define THROW_INVAL { throw rfs::Error(EINVAL, "Invalid argument");}
     #define THROW_ACCES { throw rfs::Error(EACCES, "Access denied");}
 
@@ -161,6 +171,9 @@ namespace infinit
       void chmod(mode_t mode);
       void chown(int uid, int gid);
       void stat(struct stat* st);
+      std::string getxattr(std::string const& key);
+      void setxattr(std::string const& k, std::string const& v, int flags);
+      void removexattr(std::string const& k);
       void _remove_from_cache();
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       boost::filesystem::path full_path();
@@ -247,6 +260,7 @@ namespace infinit
       std::string getxattr(std::string const& key) override;
       std::vector<std::string> listxattr() override;
       void setxattr(std::string const& name, std::string const& value, int flags) override;
+      void removexattr(std::string const& name) override;
       void cache_stats(CacheStats& append);
       void serialize(elle::serialization::Serializer&);
       bool allow_cache() override { return true;}
@@ -311,6 +325,7 @@ namespace infinit
       std::string getxattr(std::string const& name) override;
       std::vector<std::string> listxattr() override;
       void setxattr(std::string const& name, std::string const& value, int flags) override;
+      void removexattr(std::string const& name) override;
       std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
       bool allow_cache() override;
       // check cached data size, remove entries if needed
@@ -722,6 +737,8 @@ namespace infinit
       struct stat st;
       for (auto const& e: _files)
       {
+        if (e.first.empty())
+          continue;
         st.st_mode = e.second.mode;
         st.st_size = e.second.size;
         st.st_atime = e.second.atime;
@@ -922,6 +939,56 @@ namespace infinit
       _parent->_changed();
     }
 
+    void File::removexattr(std::string const& k)
+    {
+      Node::removexattr(k);
+    }
+
+    void Directory::removexattr(std::string const& k)
+    {
+      Node::removexattr(k);
+    }
+
+    void
+    Node::removexattr(std::string const& k)
+    {
+      auto& xattrs = _parent ?
+         _parent->_files.at(_name).xattrs
+         : static_cast<Directory*>(this)->_files[""].xattrs;
+      ELLE_DEBUG("got xattrs with %s entries", xattrs.size());
+      xattrs.erase(k);
+      if (_parent)
+        _parent->_changed(false);
+      else
+        static_cast<Directory*>(this)->_changed(false);
+    }
+
+    void
+    Node::setxattr(std::string const& k, std::string const& v, int flags)
+    {
+      auto& xattrs = _parent ?
+         _parent->_files.at(_name).xattrs
+         : static_cast<Directory*>(this)->_files[""].xattrs;
+      ELLE_DEBUG("got xattrs with %s entries", xattrs.size());
+      xattrs[k] = v;
+      if (_parent)
+        _parent->_changed(false);
+      else
+        static_cast<Directory*>(this)->_changed(false);
+    }
+
+    std::string
+    Node::getxattr(std::string const& k)
+    {
+      auto& xattrs = _parent ?
+         _parent->_files.at(_name).xattrs
+         : static_cast<Directory*>(this)->_files[""].xattrs;
+      auto it = xattrs.find(k);
+      if (it == xattrs.end())
+        THROW_NOATTR;
+      return it->second;
+    }
+
     void
     Node::stat(struct stat* st)
     {
@@ -978,7 +1045,8 @@ namespace infinit
                                 uint64_t(time(nullptr)),
                                 uint64_t(time(nullptr)),
                                 address,
-                                FileStoreMode::direct}));
+                                FileStoreMode::direct,
+                                {}}));
       _parent->_changed();
       _remove_from_cache();
     }
@@ -1005,7 +1073,8 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
                                        b->address(),
-                                       FileStoreMode::direct}));
+                                       FileStoreMode::direct,
+                                       {}}));
       try
       {
         _parent->_changed(true);
@@ -1050,7 +1119,8 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
                                        Address(v),
-                                       FileStoreMode::none}));
+                                       FileStoreMode::none,
+                                       {}}));
       it.first->second.symlink_target = where.string();
       _parent->_changed(true);
       _remove_from_cache();
@@ -1635,6 +1705,8 @@ namespace infinit
       res.push_back("user.infinit.auth.setw");
       res.push_back("user.infinit.auth.clear");
       res.push_back("user.infinit.auth");
+      for (auto const& a: _parent->_files.at(_name).xattrs)
+        res.push_back(a.first);
       return res;
     }
     std::vector<std::string> Directory::listxattr()
@@ -1648,6 +1720,8 @@ namespace infinit
       res.push_back("user.infinit.auth.clear");
       res.push_back("user.infinit.auth.inherit");
       res.push_back("user.infinit.auth");
+      for (auto const& a: _parent->_files.at(_name).xattrs)
+        res.push_back(a.first);
       return res;
     }
 
@@ -1686,7 +1760,7 @@ namespace infinit
         return perms_to_json(dynamic_cast<ACLBlock&>(*_first_block));
       }
       else
-        THROW_NODATA;
+        return Node::getxattr(key);
     }
 
     std::unique_ptr<infinit::model::User>
@@ -1734,7 +1808,7 @@ namespace infinit
         _owner.block_store()->store(*acl); // FIXME STORE MODE
       }
       else
-        THROW_NODATA;
+        Node::setxattr(name, value, flags);
     }
     void Directory::setxattr(std::string const& name, std::string const& value, int flags)
     {
@@ -1768,7 +1842,7 @@ namespace infinit
         _owner.block_store()->store(*acl); // FIXME STORE MODE
       }
       else
-        THROW_NODATA;
+        Node::setxattr(name, value, flags);
     }
 
     std::string Directory::getxattr(std::string const& key)
@@ -1792,7 +1866,7 @@ namespace infinit
         return perms_to_json(*_block);
       }
       else
-        THROW_NODATA;
+        return Node::getxattr(key);
     }
     FileHandle::FileHandle(std::shared_ptr<File> owner,
                            bool push_mtime,
