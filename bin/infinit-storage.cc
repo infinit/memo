@@ -11,15 +11,8 @@ ELLE_LOG_COMPONENT("8storage");
 
 #include "main.hh"
 
-std::string program;
-using boost::program_options::options_description;
-options_description options("Options");
-options_description modes("Modes");
-options_description creation("Creation options");
-options_description destruction("Destruction options");
-options_description types("Storage types");
-
-options_description storage_filesystem_opt("Filesystem storage options");
+using namespace boost::program_options;
+options_description mode_options("Modes");
 
 using infinit::storage::StorageConfig;
 typedef elle::serialization::Hierarchy<StorageConfig> Hierarchy;
@@ -27,54 +20,55 @@ typedef elle::serialization::Hierarchy<StorageConfig> Hierarchy;
 infinit::Infinit ifnt;
 
 void
-storage(boost::program_options::variables_map vm)
+storage(boost::program_options::variables_map mode,
+        std::vector<std::string> args)
 {
-  auto mode_help = [&] (std::ostream& output)
-    {
-      output << "Usage: " << program << " [mode] [mode-options]" << std::endl;
-      output << std::endl;
-      output << modes;
-      output << std::endl;
-    };
-  auto create_help = [&] (std::ostream& output)
-    {
-      std::cout << "Usage: " << program << " --create --name [name] [type] [options]" << std::endl;
-      std::cout << std::endl;
-      std::cout << creation;
-      std::cout << std::endl;
-      std::cout << types;
-      std::cout << std::endl;
-    };
-  auto destroy_help = [&] (std::ostream& output)
-    {
-      std::cout << "Usage: " << program << " --destroy --name [name]" << std::endl;
-      std::cout << std::endl;
-      std::cout << destruction;
-      std::cout << std::endl;
-    };
-  if (vm.count("help"))
+  if (mode.count("create"))
   {
-    if (vm.count("create"))
-      create_help(std::cout);
-    else
-      mode_help(std::cout);
-    std::cout << "Infinit v" << INFINIT_VERSION << std::endl;
-    throw elle::Exit(0);
-  }
-  if (vm.count("create"))
-  {
-    if (!vm.count("name"))
+    options_description creation_options("Creation options");
+    creation_options.add_options()
+      ("name", value<std::string>(), "storage name")
+      ("stdout", "output configuration to stdout")
+      ;
+    options_description types("Storage types");
+    for (auto const& t: Hierarchy::_map())
     {
-      create_help(std::cerr);
-      throw elle::Error("storage name unspecified");
+      auto name = elle::sprintf("--%s", t.first);
+      auto desc = elle::sprintf("select a storage of type %s", t.first);
+      types.add_options()(t.first.c_str(), desc.c_str());
     }
-    std::string name = vm["name"].as<std::string>();
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --create [options] [storage-type] [storage-options]"
+             << std::endl;
+      output << std::endl;
+      output << creation_options;
+      output << std::endl;
+      output << types;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    options_description merge;
+    merge.add(creation_options);
+    merge.add(types);
+    options_description fs_storage_options("Filesystem storage options");
+    fs_storage_options.add_options()
+      ("path", value<std::string>(), "where to store blocks")
+      ;
+    merge.add(fs_storage_options);
+    variables_map creation = parse_args(merge, args);
+    auto name = optional(creation, "name");
     std::function<
       std::unique_ptr<StorageConfig>(elle::serialization::SerializerIn&)> const*
       factory = nullptr;
     for (auto const& t: Hierarchy::_map())
     {
-      if (vm.count(t.first))
+      if (creation.count(t.first))
       {
         if (factory)
           throw elle::Error("multiple storage type specified");
@@ -83,88 +77,71 @@ storage(boost::program_options::variables_map vm)
     }
     if (!factory)
     {
-      create_help(std::cerr);
+      help(std::cerr);
       throw elle::Error("storage type unspecified");
     }
+    std::unique_ptr<infinit::storage::StorageConfig> config;
     {
-      CommandLineSerializer input(vm);
-      auto config = (*factory)(input);
-      std::unique_ptr<boost::filesystem::ofstream> output;
-      if (!vm.count("stdout"))
-      {
-        auto dir = ifnt.root_dir() / "storage";
-        create_directories(dir);
-        auto path = dir / name;
-        if (exists(path))
-          throw elle::Error(
-            elle::sprintf("storage '%s' already exists", name));
-        output = elle::make_unique<boost::filesystem::ofstream>(path);
-        if (!output->good())
-          throw elle::Error(
-            elle::sprintf("unable to open '%s' for writing", path));
-      }
-      elle::serialization::json::SerializerOut s
-        (output ? *output : std::cout, false);
+      CommandLineSerializer input(creation);
+      config = (*factory)(input);
+    }
+    if (!creation.count("stdout"))
+    {
+      if (!name)
+        throw elle::Error("storage name unspecified (use --name)");
+        ifnt.storage_save(*name, *config);
+    }
+    else
+    {
+      elle::serialization::json::SerializerOut s(std::cout, false);
       s.serialize_forward(config);
     }
   }
-  else if (vm.count("destroy"))
+  else if (mode.count("destroy"))
   {
-    if (!vm.count("name"))
+    options_description destruction_options("Destruction options");
+    destruction_options.add_options()
+      ("name", value<std::string>(), "storage name")
+      ("wipe", value<std::string>(), "wipe storage content (default)")
+      ("no-wipe", value<std::string>(), "do not wipe storage content")
+      ;
+    auto help = [&] (std::ostream& output)
     {
-      destroy_help(std::cerr);
-      throw elle::Error("storage name unspecified");
-    }
-    std::string name = vm["name"].as<std::string>();
+      std::cout << "Usage: " << program
+                << " --destroy --name [name] [options]" << std::endl;
+      std::cout << std::endl;
+      std::cout << destruction_options;
+      std::cout << std::endl;
+    };
+    if (mode.count("help"))
     {
-      auto dir = ifnt.root_dir() / "storage";
-      create_directories(dir);
-      auto path = dir / name;
-      if (!remove(path))
-        throw elle::Error(
-          elle::sprintf("storage '%s' does not exist", name));
+      help(std::cout);
+      throw elle::Exit(0);
     }
+    variables_map destruction = parse_args(destruction_options, args);
+    auto name = mandatory(destruction, "name", "storage name", help);
+    ifnt.storage_remove(name);
   }
   else
   {
-    mode_help(std::cerr);
+    std::cerr << "Usage: " << program << " [mode] [mode-options]" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << mode_options;
+    std::cerr << std::endl;
     throw elle::Error("mode unspecified");
   }
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
   program = argv[0];
-
-  using boost::program_options::value;
-  modes.add_options()
+  mode_options.add_options()
     ("create", "create a new storage")
     ("destroy", "destroy a storage")
     ("list", "list existing storages or storage content")
     ;
-  creation.add_options()
-    ("name", value<std::string>(), "storage name")
-    ("stdout", "output configuration to stdout")
-    ;
-  destruction.add_options()
-    ("name", value<std::string>(), "storage name")
-    ("wipe", value<std::string>(), "wipe storage content (default)")
-    ("no-wipe", value<std::string>(), "do not wipe storage content")
-    ;
-
-  for (auto const& t: Hierarchy::_map())
-  {
-    auto name = elle::sprintf("--%s", t.first);
-    auto desc = elle::sprintf("select a storage of type %s", t.first);
-    types.add_options()(t.first.c_str(), desc.c_str());
-  }
-
-  storage_filesystem_opt.add_options()
-    ("path", value<std::string>(), "where to store block files");
-
-  options.add(modes);
-  options.add(creation);
-  options.add(types);
-  options.add(storage_filesystem_opt);
-  return infinit::main(std::move(options), &storage, argc, argv);
+  options_description options("Infinit storage utility");
+  options.add(mode_options);
+  return infinit::main(options, &storage, argc, argv);
 }

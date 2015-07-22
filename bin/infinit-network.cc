@@ -17,45 +17,39 @@ ELLE_LOG_COMPONENT("8network");
 
 #include "main.hh"
 
-std::string program;
-using boost::program_options::options_description;
-options_description options("Options");
-options_description modes("Modes");
-options_description creation("Creation options");
-options_description run("Run options");
+using namespace boost::program_options;
+options_description mode_options("Modes");
 
 infinit::Infinit ifnt;
 
 void
-network(boost::program_options::variables_map vm)
+network(boost::program_options::variables_map mode,
+        std::vector<std::string> args)
 {
-  auto mode_help = [&] (std::ostream& output)
-    {
-      output << "Usage: " << program << " [mode] [mode-options]" << std::endl;
-      output << std::endl;
-      output << modes;
-      output << std::endl;
-    };
-  auto create_help = [&] (std::ostream& output)
-    {
-      std::cout << "Usage: " << program
-                << " --create --name [name] [options]" << std::endl;
-      std::cout << std::endl;
-      std::cout << creation;
-      std::cout << std::endl;
-    };
-  auto run_help = [&] (std::ostream& output)
-    {
-      std::cout << "Usage: " << program
-                << " --run --name [name] [options]" << std::endl;
-      std::cout << std::endl;
-      std::cout << run;
-      std::cout << std::endl;
-    };
-  if (vm.count("create"))
+  if (mode.count("create"))
   {
-    auto name = mandatory(vm, "name", "network name", create_help);
-    auto storage = ifnt.storage_get(mandatory(vm, "storage", create_help));
+    options_description creation_options("Creation options");
+    creation_options.add_options()
+      ("name", value<std::string>(), "created network name")
+      ("storage", value<std::string>(), "underlying storage to use")
+      ("stdout", "output configuration to stdout")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --create [options]" << std::endl;
+      output << std::endl;
+      output << creation_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    variables_map creation = parse_args(creation_options, args);
+    auto name = optional(creation, "name");
+    auto storage = ifnt.storage_get(mandatory(creation, "storage", help));
     auto dht =
       elle::make_unique<infinit::model::doughnut::DoughnutModelConfig>();
     {
@@ -73,8 +67,12 @@ network(boost::program_options::variables_map vm)
       network.storage = std::move(storage);
       network.port = 4242;
       network.model = std::move(dht);
-      if (!vm.count("stdout"))
-        ifnt.network_save(name, network);
+      if (!creation.count("stdout"))
+      {
+        if (!name)
+          throw elle::Error("network name unspecified (use --name)");
+        ifnt.network_save(*name, network);
+      }
       else
       {
         elle::serialization::json::SerializerOut s(std::cout, false);
@@ -82,16 +80,37 @@ network(boost::program_options::variables_map vm)
       }
     }
   }
-  else if (vm.count("run"))
+  else if (mode.count("run"))
   {
-    auto name = mandatory(vm, "name", "network name", run_help);
+    options_description run_options("Run options");
+    run_options.add_options()
+      ("name", value<std::string>(), "created network name")
+      ;
+    auto help = [&] (std::ostream& output)
+      {
+        output << "Usage: " << program
+        << " --run --name [name] [options]" << std::endl;
+        output << std::endl;
+        output << run_options;
+        output << std::endl;
+      };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    variables_map run = parse_args(run_options, args);
+    auto name = mandatory(run, "name", "network name", help);
     auto network = ifnt.network_get(name);
     auto local = network.run();
     reactor::sleep();
   }
   else
   {
-    mode_help(std::cerr);
+    std::cerr << "Usage: " << program << " [mode] [mode-options]" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << mode_options;
+    std::cerr << std::endl;
     throw elle::Error("mode unspecified");
   }
 }
@@ -99,25 +118,13 @@ network(boost::program_options::variables_map vm)
 int main(int argc, char** argv)
 {
   program = argv[0];
-
-  using boost::program_options::value;
-  modes.add_options()
+  mode_options.add_options()
     ("create", "create a new network")
     ("destroy", "destroy a network")
     ("list", "list existing networks")
     ("run", "run network")
     ;
-  creation.add_options()
-    ("name", value<std::string>(), "created network name")
-    ("storage", value<std::string>(), "underlying storage to use")
-    ("stdout", "output configuration to stdout")
-    ;
-  run.add_options()
-    ("name", value<std::string>(), "created network name")
-    ;
-
-  options.add(modes);
-  options.add(creation);
-  // options.add(run);
-  return infinit::main(std::move(options), &network, argc, argv);
+  options_description options("Infinit network utility");
+  options.add(mode_options);
+  return infinit::main(options, &network, argc, argv);
 }

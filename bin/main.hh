@@ -5,18 +5,23 @@
 #include <elle/cast.hh>
 #include <elle/system/home_directory.hh>
 
+#include <reactor/filesystem.hh>
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
+#include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/version.hh>
+
+std::string program;
 
 namespace infinit
 {
   int
   main(boost::program_options::options_description options,
-       std::function<void (boost::program_options::variables_map)> main,
+       std::function<void (boost::program_options::variables_map,
+                           std::vector<std::string>)> main,
        int argc,
        char** argv)
   {
@@ -32,7 +37,7 @@ namespace infinit
           ELLE_TRACE("parse command line")
           {
             using namespace boost::program_options;
-            boost::program_options::options_description misc("Miscellaneous");
+            options_description misc("Miscellaneous");
             misc.add_options()
               ("help,h", "display the help")
               ("version,v", "display version")
@@ -43,20 +48,22 @@ namespace infinit
             {
               auto parser = command_line_parser(argc, argv);
               parser.options(options);
-              // parser.allow_unregistered();
-              store(parser.run(), vm);
+              parser.allow_unregistered();
+              auto parsed = parser.run();
+              store(parsed, vm);
               notify(vm);
+              if (vm.count("version"))
+              {
+                std::cout << INFINIT_VERSION << std::endl;
+                throw elle::Exit(0);
+              }
+              main(std::move(vm),
+                   collect_unrecognized(parsed.options, include_positional));
             }
             catch (invalid_command_line_syntax const& e)
             {
               throw elle::Error(elle::sprintf("command line error: %s", e.what()));
             }
-            if (vm.count("version"))
-            {
-              std::cout << INFINIT_VERSION << std::endl;
-              throw elle::Exit(0);
-            }
-            main(std::move(vm));
           }
         });
       sched.run();
@@ -97,15 +104,53 @@ namespace infinit
       auto local =
         elle::make_unique<infinit::model::doughnut::Local>
         (this->storage->make(), this->port);
-      auto dht = elle::cast<infinit::model::doughnut::DoughnutModelConfig>
-        ::compiletime(this->model);
-      local->doughnut() = dht->make_read_only();
+      auto& dht = static_cast<infinit::model::doughnut::DoughnutModelConfig&>
+        (*this->model);
+      local->doughnut() = dht.make_read_only();
       return local;
     }
 
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     std::unique_ptr<infinit::model::ModelConfig> model;
     int port;
+  };
+
+  struct Volume
+  {
+    Volume()
+    {}
+
+    Volume(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("mountpoint", this->mountpoint);
+      s.serialize("root_address", this->root_address);
+      s.serialize("network", this->network);
+    }
+
+    std::pair<
+      std::unique_ptr<infinit::model::doughnut::Local>,
+      std::unique_ptr<reactor::filesystem::FileSystem>>
+    run()
+    {
+      auto local = this->network.run();
+      auto fs = elle::make_unique<infinit::filesystem::FileSystem>
+        (this->root_address, this->network.model->make());
+      auto driver =
+        elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
+      create_directories(boost::filesystem::path(mountpoint));
+      driver->mount(mountpoint, {});
+      return std::make_pair(std::move(local), std::move(driver));
+    }
+
+    std::string mountpoint;
+    infinit::model::Address root_address;
+    Network network;
   };
 
   class Infinit
@@ -144,6 +189,43 @@ namespace infinit
       return s.deserialize<std::unique_ptr<infinit::storage::StorageConfig>>();
     }
 
+    void
+    storage_save(std::string const& name,
+                 infinit::storage::StorageConfig const& storage)
+    {
+      boost::filesystem::ofstream f;
+      this->_open(f, this->_storage_path(name), name, "storage");
+      elle::serialization::json::SerializerOut s(f, false);
+      s.serialize_forward(storage);
+    }
+
+    void
+    storage_remove(std::string const& name)
+    {
+      auto path = this->_storage_path(name);
+      if (!remove(path))
+        throw elle::Error(
+          elle::sprintf("storage '%s' does not exist", name));
+    }
+
+    Volume
+    volume_get(std::string const& name)
+    {
+      boost::filesystem::ifstream f;
+      this->_open(f, this->_volume_path(name), name, "volume");
+      elle::serialization::json::SerializerIn s(f, false);
+      return s.deserialize<Volume>();
+    }
+
+    void
+    volume_save(std::string const& name, Volume const& volume)
+    {
+      boost::filesystem::ofstream f;
+      this->_open(f, this->_volume_path(name), name, "volume");
+      elle::serialization::json::SerializerOut s(f, false);
+      s.serialize_forward(volume);
+    }
+
   private:
     boost::filesystem::path
     _network_path(std::string const& name)
@@ -157,6 +239,14 @@ namespace infinit
     _storage_path(std::string const& name)
     {
       auto root = this->root_dir() / "storage";
+      create_directories(root);
+      return root / name;
+    }
+
+    boost::filesystem::path
+    _volume_path(std::string const& name)
+    {
+      auto root = this->root_dir() / "volumes";
       create_directories(root);
       return root / name;
     }
@@ -319,9 +409,19 @@ mandatory(boost::program_options::variables_map const& vm,
   if (!vm.count(name))
   {
     help(std::cerr);
-    throw elle::Error(elle::sprintf("%s unspecified", desc));
+    throw elle::Error(elle::sprintf("%s unspecified (use --%s)", desc, name));
   }
   return vm[name].as<std::string>();
+}
+
+boost::optional<std::string>
+optional(boost::program_options::variables_map const& vm,
+         std::string const& name)
+{
+  if (vm.count(name))
+    return vm[name].as<std::string>();
+  else
+    return {};
 }
 
 std::string
@@ -330,4 +430,17 @@ mandatory(boost::program_options::variables_map const& vm,
           std::function<void(std::ostream&)> const& help)
 {
   return mandatory(vm, name, name, help);
+}
+
+boost::program_options::variables_map
+parse_args(boost::program_options::options_description const& options,
+           std::vector<std::string> const& args)
+{
+  auto parser = boost::program_options::command_line_parser(args);
+  parser.options(options);
+  boost::program_options::variables_map res;
+  auto parsed = parser.run();
+  boost::program_options::store(parsed, res);
+  boost::program_options::notify(res);
+  return res;
 }
