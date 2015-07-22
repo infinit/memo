@@ -1816,7 +1816,7 @@ namespace infinit
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
-      if (!no_fetch)
+      if (!no_fetch && !_owner->_first_block)
       {
         try
         {
