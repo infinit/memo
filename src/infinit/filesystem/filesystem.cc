@@ -90,12 +90,12 @@ namespace infinit
       Address address;
       FileStoreMode store_mode;
       boost::optional<std::string> symlink_target;
-      std::unordered_map<std::string, std::string> xattrs;
+      std::unordered_map<std::string, elle::Buffer> xattrs;
 
 
       FileData(std::string name, uint64_t size, uint32_t mode, uint64_t atime,
         uint64_t mtime, uint64_t ctime, Address const& address, FileStoreMode store_mode,
-        std::unordered_map<std::string, std::string> xattrs)
+        std::unordered_map<std::string, elle::Buffer> xattrs)
         : name(name)
         , size(size)
         , mode(mode)
@@ -970,7 +970,7 @@ namespace infinit
          _parent->_files.at(_name).xattrs
          : static_cast<Directory*>(this)->_files[""].xattrs;
       ELLE_DEBUG("got xattrs with %s entries", xattrs.size());
-      xattrs[k] = v;
+      xattrs[k] = elle::Buffer(v.data(), v.size());
       if (_parent)
         _parent->_changed(false);
       else
@@ -986,7 +986,7 @@ namespace infinit
       auto it = xattrs.find(k);
       if (it == xattrs.end())
         THROW_NOATTR;
-      return it->second;
+      return it->second.string();
     }
 
     void
