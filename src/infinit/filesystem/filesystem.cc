@@ -1707,12 +1707,14 @@ namespace infinit
     {
       ELLE_TRACE("listxattr");
       std::vector<std::string> res;
+      /*
       res.push_back("user.infinit.block");
       res.push_back("user.infinit.auth.setr");
       res.push_back("user.infinit.auth.setrw");
       res.push_back("user.infinit.auth.setw");
       res.push_back("user.infinit.auth.clear");
       res.push_back("user.infinit.auth");
+      */
       for (auto const& a: _parent->_files.at(_name).xattrs)
         res.push_back(a.first);
       return res;
@@ -1721,6 +1723,7 @@ namespace infinit
     {
       ELLE_TRACE("listxattr");
       std::vector<std::string> res;
+      /*
       res.push_back("user.infinit.block");
       res.push_back("user.infinit.auth.setr");
       res.push_back("user.infinit.auth.setrw");
@@ -1728,6 +1731,7 @@ namespace infinit
       res.push_back("user.infinit.auth.clear");
       res.push_back("user.infinit.auth.inherit");
       res.push_back("user.infinit.auth");
+      */
       for (auto const& a: _parent->_files.at(_name).xattrs)
         res.push_back(a.first);
       return res;
