@@ -108,7 +108,15 @@ namespace infinit
       {}
 
       FileData()
-        : address(zeros)
+        : size(0)
+        , mode(0)
+        , uid(0)
+        , gid(0)
+        , atime(0)
+        , mtime(0)
+        , ctime(0)
+        , address(zeros)
+        , store_mode(FileStoreMode::direct)
       {}
 
       FileData(elle::serialization::SerializerIn& s)
