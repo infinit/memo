@@ -1059,7 +1059,7 @@ namespace infinit
                                 uint64_t(time(nullptr)),
                                 address,
                                 FileStoreMode::direct,
-                                {}}));
+                                std::unordered_map<std::string, elle::Buffer>{}}));
       _parent->_changed();
       _remove_from_cache();
     }
@@ -1087,7 +1087,7 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        b->address(),
                                        FileStoreMode::direct,
-                                       {}}));
+                                       std::unordered_map<std::string, elle::Buffer>{}}));
       try
       {
         _parent->_changed(true);
@@ -1133,7 +1133,7 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        Address(v),
                                        FileStoreMode::none,
-                                       {}}));
+                                       std::unordered_map<std::string, elle::Buffer>{}}));
       it.first->second.symlink_target = where.string();
       _parent->_changed(true);
       _remove_from_cache();
