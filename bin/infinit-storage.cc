@@ -6,6 +6,7 @@
 #include <elle/serialization/json.hh>
 
 #include <infinit/storage/Storage.hh>
+#include <infinit/storage/Collision.hh>
 
 ELLE_LOG_COMPONENT("8storage");
 
@@ -19,10 +20,20 @@ typedef elle::serialization::Hierarchy<StorageConfig> Hierarchy;
 
 infinit::Infinit ifnt;
 
+// force inclusion of infinit SO.
+static void force_include()
+{
+  auto c = infinit::storage::Collision(infinit::storage::Key::null); // force inclusion of infinit so.
+}
+
+bool call_force_include = false;
+
 void
 storage(boost::program_options::variables_map mode,
         std::vector<std::string> args)
 {
+  if (call_force_include)
+    force_include();
   if (mode.count("create"))
   {
     options_description creation_options("Creation options");
