@@ -974,6 +974,11 @@ namespace infinit
     void
     Node::setxattr(std::string const& k, std::string const& v, int flags)
     {
+      /* Drop quarantine flags, preventing the files from being opened.
+      * https://github.com/osxfuse/osxfuse/issues/162
+      */
+      if (k == "com.apple.quarantine")
+        return;
       auto& xattrs = _parent ?
          _parent->_files.at(_name).xattrs
          : static_cast<Directory*>(this)->_files[""].xattrs;
