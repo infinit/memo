@@ -8,6 +8,7 @@ namespace infinit
     namespace doughnut
     {
       class Doughnut;
+      class Local;
     }
   }
 }

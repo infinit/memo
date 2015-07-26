@@ -4,6 +4,7 @@
 # include <reactor/network/tcp-socket.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/doughnut/fwd.hh>
 
 namespace infinit
 {
@@ -37,6 +38,11 @@ namespace infinit
       /// Lookup a single node
       Member
       lookup(model::Address address, Operation op) const;
+
+      virtual
+      void
+      register_local(infinit::model::doughnut::Local& local) {}
+
     protected:
       virtual
       Members

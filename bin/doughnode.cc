@@ -118,8 +118,9 @@ main(int argc, char** argv)
           auto storage = cfg.storage->make();
           infinit::model::doughnut::Local local(std::move(storage),
                                                 cfg.port ? *cfg.port : 0);
-          local.doughnut() =
-            elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
+          auto doughnut = elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
+          doughnut->overlay()->register_local(local);
+          local.doughnut() = std::move(doughnut);
           reactor::sleep();
         }
         else
