@@ -72,6 +72,7 @@ namespace infinit
           Serializer::SerializerOut output(s, false);
           output.serialize_forward(block);
         }
+        on_store(block, mode);
         this->_storage->set(block.address(), data,
                             mode == STORE_ANY || mode == STORE_INSERT,
                             mode == STORE_ANY || mode == STORE_UPDATE);
@@ -85,7 +86,9 @@ namespace infinit
         Serializer::SerializerIn input(s, false);
         ELLE_ASSERT(this->_doughnut.get());
         input.set_context<Doughnut*>(this->_doughnut.get());
-        return input.deserialize<std::unique_ptr<blocks::Block>>();
+        auto res = input.deserialize<std::unique_ptr<blocks::Block>>();
+        on_fetch(address, res);
+        return std::move(res);
       }
 
       void
@@ -93,6 +96,7 @@ namespace infinit
       {
         ELLE_DEBUG("remove %x", address);
         this->_storage->erase(address);
+        on_remove(address);
       }
 
       /*-------.

@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_LOCAL_HH
 # define INFINIT_MODEL_DOUGHNUT_LOCAL_HH
 
+# include <boost/signals2.hpp>
+
 # include <reactor/network/tcp-server.hh>
 
 # include <infinit/model/doughnut/Peer.hh>
@@ -38,6 +40,10 @@ namespace infinit
         virtual
         void
         remove(Address address) override;
+
+        boost::signals2::signal<void (blocks::Block const& block, StoreMode mode)> on_store;
+        boost::signals2::signal<void (Address, std::unique_ptr<blocks::Block>&)> on_fetch;
+        boost::signals2::signal<void (Address)> on_remove;
 
       /*-------.
       | Server |
