@@ -36,7 +36,7 @@ namespace infinit
                  bool plain = false);
         infinit::cryptography::rsa::KeyPair&
         keys();
-        ELLE_ATTRIBUTE(std::unique_ptr<overlay::Overlay>, overlay)
+        ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
         ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>,
                        keys);
