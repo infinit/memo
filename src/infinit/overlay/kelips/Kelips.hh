@@ -84,7 +84,7 @@ namespace kelips
     void
     serialize(elle::serialization::Serializer& s);
     Address node_id;
-    int port;
+    bool observer;
     int k; // number of groups
     int max_other_contacts; // max number of contacts on each other group
     int query_get_retries;    // query retry
@@ -115,28 +115,28 @@ namespace kelips
   struct PendingRequest;
   class Node
     : public infinit::overlay::Overlay
-    , public infinit::model::doughnut::Local
     , public elle::Printable
   {
   public:
-    Node(Configuration const& config,
-         std::unique_ptr<infinit::storage::Storage> storage);
+    Node(Configuration const& config);
     void start();
+    void engage();
+    void register_local(infinit::model::doughnut::Local& local) override;
     std::vector<RpcEndpoint> address(Address file,
                                      infinit::overlay::Operation op,
                                      int n);
     void print(std::ostream& stream) const override;
-    // local interface
-    void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode) override;
-    void remove(Address address) override;
-    std::unique_ptr<infinit::model::blocks::Block> fetch(Address address) const override;
+    // local hooks interface
+    void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);
+    void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block>& res);
+    void remove(Address address);
     // overlay
   protected:
     virtual Overlay::Members _lookup(infinit::model::Address address, int n, infinit::overlay::Operation op) const override;
   private:
     typedef infinit::model::doughnut::Local Local;
     typedef infinit::overlay::Overlay Overlay;
-    void reload_state();
+    void reload_state(Local& l);
     void wait(int contacts);
     void send(elle::Buffer const& data, GossipEndpoint endpoint);
     int group_of(Address const& address); // consistent address -> group mapper
@@ -179,6 +179,7 @@ namespace kelips
     std::unordered_map<int, std::shared_ptr<PendingRequest>> _pending_requests;
     std::vector<Address> _promised_files; // addresses for which we accepted a put
     int _next_id;
+    int _port;
   };
 }
 /* TODO:

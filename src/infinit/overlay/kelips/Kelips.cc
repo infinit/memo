@@ -322,12 +322,12 @@ namespace kelips
     dst = E2(src.address(), src.port());
   }
 
-  Node::Node(Configuration const& config,
-             std::unique_ptr<infinit::storage::Storage> storage)
-  : Local(std::move(storage), config.port)
-  , _config(config)
+  Node::Node(Configuration const& config)
+  : _config(config)
   , _next_id(1)
   {
+    if (_config.node_id == Address::null)
+      ELLE_LOG("Running in observer mode");
     start();
   }
 
@@ -341,26 +341,11 @@ namespace kelips
     return addr4 % _config.k;
   }
 
-  void Node::start()
+  void Node::engage()
   {
-    if (_config.node_id == Address())
-    {
-      _config.node_id = Address::random();
-      std::cout << "Generating node_id:" << std::endl;
-      elle::serialization::json::SerializerOut output(std::cout, false);
-      output.serialize_forward(_config.node_id);
-    }
-    _self = _config.node_id;
-    _group = group_of(_config.node_id);
-    _state.contacts.resize(_config.k);
-    if (!_config.port)
-    { // Use same port as local
-      _config.port = Local::server_endpoint().port();
-    }
     _gossip.socket()->close();
-    _gossip.bind(GossipEndpoint({}, _config.port));
+    _gossip.bind(GossipEndpoint({}, _port));
     ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
-    reload_state();
     _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
       std::bind(&Node::gossipEmitter, this));
     _listener_thread = elle::make_unique<reactor::Thread>("listener",
@@ -377,6 +362,23 @@ namespace kelips
     }
     if (_config.wait)
       wait(_config.wait);
+  }
+
+  void Node::start()
+  {
+    if (_config.node_id == Address::null && !_config.observer)
+    {
+      _config.node_id = Address::random();
+      std::cout << "Generating node_id:" << std::endl;
+      elle::serialization::json::SerializerOut output(std::cout, false);
+      output.serialize_forward(_config.node_id);
+    }
+    _self = _config.node_id;
+    _group = group_of(_config.node_id);
+    _state.contacts.resize(_config.k);
+    // If we are not an observer, we must wait for Local port information
+    if (_config.observer)
+      engage();
   }
 
   void Node::send(elle::Buffer const& b, GossipEndpoint e)
@@ -415,7 +417,8 @@ namespace kelips
           return;
         }
         packet->endpoint = source;
-        onContactSeen(packet->sender, source);
+        if (packet->sender != Address::null)
+          onContactSeen(packet->sender, source);
 
         // TRAP: some packets inherit from each other, so most specific ones
         // must be first
@@ -1457,29 +1460,26 @@ namespace kelips
     }
   }
 
-  std::unique_ptr<infinit::model::blocks::Block> Node::fetch(Address address) const
+  void
+  Node::register_local(infinit::model::doughnut::Local& local)
   {
-    try
-    {
-      return Local::fetch(address);
-    }
-    catch(std::exception const& e)
-    {
-      ELLE_WARN("%s: Exception fetching %x: %s", *this, address, e.what());
-      ELLE_WARN("%s: is %x", *this, _self);
-      std::stringstream encoded;
-      {
-          elle::format::base64::Stream base64(encoded);
-          base64.write((const char*)_self.value(), sizeof(Address::Value));
-      }
-      ELLE_WARN("%s: %s", *this, encoded.str());
-      throw;
-    }
+    local.on_fetch.connect(std::bind(&Node::fetch, this, std::placeholders::_1,
+                                     std::placeholders::_2));
+    local.on_store.connect(std::bind(&Node::store, this, std::placeholders::_1,
+                                     std::placeholders::_2));
+    local.on_remove.connect(std::bind(&Node::remove, this, std::placeholders::_1));
+    _port = local.server_endpoint().port();
+    reload_state(local);
+    engage();
   }
+
+  void Node::fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b)
+  {
+  }
+
   void Node::store(infinit::model::blocks::Block const& block,
                    infinit::model::StoreMode mode)
   {
-    Local::store(block, mode);
     auto it = _state.files.find(block.address());
     if (it == _state.files.end())
       _state.files.insert(std::make_pair(block.address(),
@@ -1493,7 +1493,6 @@ namespace kelips
   }
   void Node::remove(Address address)
   {
-    Local::remove(address);
     auto its = _state.files.equal_range(address);
     for (auto it = its.first; it != its.second; ++it)
     {
@@ -1533,9 +1532,9 @@ namespace kelips
     reactor::sleep(5_sec);
   }
 
-  void Node::reload_state()
+  void Node::reload_state(Local& l)
   {
-    auto keys = Local::storage()->list();
+    auto keys = l.storage()->list();
     for (auto const& k: keys)
     {
       _state.files.insert(std::make_pair(k,
@@ -1547,7 +1546,7 @@ namespace kelips
   void Configuration::serialize(elle::serialization::Serializer& s)
   {
     s.serialize("node_id", node_id);
-    s.serialize("port", port);
+    s.serialize("observer", observer);
     s.serialize("k", k);
     s.serialize("max_other_contacts", max_other_contacts);
     s.serialize("query_get_retries", query_get_retries);
@@ -1577,7 +1576,6 @@ namespace kelips
     void
     serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("storage", this->storage);
       s.serialize("config", this->config);
     }
     std::unique_ptr<infinit::storage::StorageConfig> storage;
@@ -1586,8 +1584,7 @@ namespace kelips
     std::unique_ptr<infinit::overlay::Overlay>
     make()
     {
-      std::unique_ptr<infinit::storage::Storage> s = storage->make();
-      return elle::make_unique<kelips::Node>(config, std::move(s));
+      return elle::make_unique<kelips::Node>(config);
     }
   };
   static const elle::serialization::Hierarchy<infinit::overlay::OverlayConfig>::

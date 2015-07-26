@@ -18,6 +18,6 @@ for f in sys.argv[1:]:
   print(encoded)
   with open(f, "r") as fj:
     content = json.load(fj)
-  content['overlay']['config']['node_id'] = encoded.decode('utf-8')
+  content['model']['overlay']['config']['node_id'] = encoded.decode('utf-8')
   with open(f, "w") as fj:
     json.dump(content, fj, indent=2)
