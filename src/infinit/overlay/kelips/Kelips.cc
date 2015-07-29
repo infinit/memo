@@ -1564,30 +1564,71 @@ namespace kelips
     s.serialize("wait", wait);
   }
 
+  Configuration::Configuration()
+    : node_id()
+    , observer(true)
+    , k(6)
+    , max_other_contacts(6)
+    , query_get_retries(30)
+    , query_put_retries(12)
+    , query_timeout_ms(1000)
+    , query_get_ttl(10)
+    , query_put_ttl(10)
+    , query_put_insert_ttl(3)
+    , contact_timeout_ms(120000)
+    , file_timeout_ms(120000)
+    , ping_interval_ms(1000)
+    , ping_timeout_ms(1000)
+    , bootstrap_nodes()
+    , wait(6)
+    , gossip()
+  {}
 
-  struct KelipsOverlayConfig
-    : public infinit::overlay::OverlayConfig
+  GossipConfiguration::GossipConfiguration()
+    : interval_ms(2000)
+    , new_threshold(5)
+    , old_threshold_ms(40000)
+    , files(6)
+    , contacts_group(6)
+    , contacts_other(6)
+    , group_target(3)
+    , other_target(3)
+    , bootstrap_group_target(12)
+    , bootstrap_other_target(12)
+  {}
+}
+
+namespace infinit
+{
+  namespace overlay
   {
-    KelipsOverlayConfig(elle::serialization::SerializerIn& input)
-      : OverlayConfig()
+    namespace kelips
     {
-      this->serialize(input);
-    }
-    void
-    serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("config", this->config);
-    }
-    std::unique_ptr<infinit::storage::StorageConfig> storage;
-    kelips::Configuration config;
-    virtual
-    std::unique_ptr<infinit::overlay::Overlay>
-    make()
-    {
-      return elle::make_unique<kelips::Node>(config);
-    }
-  };
-  static const elle::serialization::Hierarchy<infinit::overlay::OverlayConfig>::
-  Register<KelipsOverlayConfig> _registerKelipsOverlayConfig("kelips");
+      Configuration::Configuration()
+        : OverlayConfig()
+      {}
 
+      Configuration::Configuration(elle::serialization::SerializerIn& input)
+        : OverlayConfig()
+      {
+        this->serialize(input);
+      }
+
+      void
+      Configuration::serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("config", this->config);
+      }
+
+      std::unique_ptr<infinit::overlay::Overlay>
+      Configuration::make()
+      {
+        return elle::make_unique<::kelips::Node>(config);
+      }
+
+      static const
+      elle::serialization::Hierarchy<infinit::overlay::OverlayConfig>::
+      Register<Configuration> _registerKelipsOverlayConfig("kelips");
+    }
+  }
 }

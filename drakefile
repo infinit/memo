@@ -108,6 +108,8 @@ def configure(
     'src/infinit/model/doughnut/Local.hh',
     'src/infinit/model/doughnut/OKB.cc',
     'src/infinit/model/doughnut/OKB.hh',
+    'src/infinit/model/doughnut/Passport.cc',
+    'src/infinit/model/doughnut/Passport.hh',
     'src/infinit/model/doughnut/Peer.cc',
     'src/infinit/model/doughnut/Peer.hh',
     'src/infinit/model/doughnut/Remote.cc',
@@ -212,6 +214,7 @@ def configure(
     rule_check << runner.status
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
+  bin_cxx_config += elle.das.config
   bin_cxx_config.lib_path_runtime('../lib')
   bin_cxx_config.library_add(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
@@ -220,14 +223,15 @@ def configure(
   bin_cxx_config.library_add(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
   binaries = [
-      'doughnode',
-      'generatekeys',
-      'infinit',
-      'infinit-network',
-      'infinit-storage',
-      'infinit-volume',
-      's3fs',
-      'sshfs',
+    'doughnode',
+    'generatekeys',
+    'infinit',
+    'infinit-network',
+    'infinit-storage',
+    'infinit-user',
+    'infinit-volume',
+    's3fs',
+    'sshfs',
   ]
   for bin_name in binaries:
     bin = drake.cxx.Executable(

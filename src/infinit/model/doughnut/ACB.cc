@@ -1,3 +1,5 @@
+#include <infinit/model/doughnut/ACB.hh>
+
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
@@ -9,7 +11,6 @@
 #include <cryptography/SecretKey.hh>
 
 #include <infinit/model/blocks/ImmutableBlock.hh>
-#include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
 

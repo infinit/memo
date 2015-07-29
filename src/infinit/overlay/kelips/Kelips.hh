@@ -48,9 +48,10 @@ namespace kelips
      //contacts from all groups. We will allow contacts[_group] to grow more
     std::vector<Contacts> contacts; //contacts from other groups
   };
+
   struct GossipConfiguration
   {
-    GossipConfiguration() {}
+    GossipConfiguration();
     GossipConfiguration(elle::serialization::SerializerIn& input) {serialize(input);}
     void
     serialize(elle::serialization::Serializer& s)
@@ -77,9 +78,10 @@ namespace kelips
     int bootstrap_group_target;
     int bootstrap_other_target;
   };
+
   struct Configuration
   {
-    Configuration() {}
+    Configuration();
     Configuration(elle::serialization::SerializerIn& input) {serialize(input);}
     void
     serialize(elle::serialization::Serializer& s);
@@ -97,10 +99,11 @@ namespace kelips
     int file_timeout_ms; // entry lifetime before supression
     int ping_interval_ms;
     int ping_timeout_ms;
-    GossipConfiguration gossip;
     std::vector<PrettyGossipEndpoint> bootstrap_nodes;
     int wait; // wait for 'wait' nodes before starting
+    GossipConfiguration gossip;
   };
+
   namespace packet
   {
     struct Packet;
@@ -182,7 +185,35 @@ namespace kelips
     int _port;
   };
 }
+
+
+namespace infinit
+{
+  namespace overlay
+  {
+    namespace kelips
+    {
+      struct Configuration
+        : public OverlayConfig
+      {
+        Configuration();
+        Configuration(elle::serialization::SerializerIn& input);
+
+        void
+        serialize(elle::serialization::Serializer& s);
+
+        virtual
+        std::unique_ptr<infinit::overlay::Overlay>
+        make() override;
+
+        ::kelips::Configuration config;
+      };
+    }
+  }
+}
+
 /* TODO:
 - overlay integration
 */
+
 #endif

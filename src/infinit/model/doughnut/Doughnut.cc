@@ -1,5 +1,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 
+#include <boost/optional.hpp>
+
 #include <elle/Buffer.hh>
 #include <elle/Error.hh>
 #include <elle/IOStream.hh>
@@ -69,33 +71,33 @@ namespace infinit
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<PlainImmutableBlock> _register_pib_serialization("PIB");
 
-      Doughnut::Doughnut(std::unique_ptr<overlay::Overlay> overlay,
+      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
+                         cryptography::rsa::PublicKey owner,
+                         Passport passport,
+                         std::unique_ptr<overlay::Overlay> overlay,
                          std::unique_ptr<Consensus> consensus,
                          bool plain)
         : _overlay(std::move(overlay))
         , _consensus(std::move(consensus))
-        , _keys()
+        , _keys(std::move(keys))
+        , _owner(std::move(owner))
+        , _passport(std::move(passport))
         , _plain(plain)
       {
         if (!this->_consensus)
           this->_consensus = elle::make_unique<Consensus>(*this);
       }
 
-      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
-                         std::unique_ptr<overlay::Overlay> overlay,
-                         std::unique_ptr<Consensus> consensus,
-                         bool plain)
-        : Doughnut(std::move(overlay), std::move(consensus), plain)
-      {
-        this->_keys.emplace(std::move(keys));
-      }
-
       Doughnut::Doughnut(std::string name,
                          cryptography::rsa::KeyPair keys,
+                         cryptography::rsa::PublicKey owner,
+                         Passport passport,
                          std::unique_ptr<overlay::Overlay> overlay,
                          std::unique_ptr<Consensus> consensus,
                          bool plain)
         : Doughnut(std::move(keys),
+                   std::move(owner),
+                   std::move(passport),
                    std::move(overlay),
                    std::move(consensus),
                    plain)
@@ -137,14 +139,6 @@ namespace infinit
                            user.address());
           this->store(user);
         }
-      }
-
-      infinit::cryptography::rsa::KeyPair&
-      Doughnut::keys()
-      {
-        if (!this->_keys)
-          throw elle::Error(elle::sprintf("%s is key-less", *this));
-        return this->_keys.get();
       }
 
       std::unique_ptr<blocks::MutableBlock>
@@ -236,22 +230,37 @@ namespace infinit
       {
         this->_consensus->remove(*this->_overlay, address);
       }
-
-      DoughnutModelConfig::DoughnutModelConfig()
-        : ModelConfig()
+      DoughnutModelConfig::DoughnutModelConfig(
+        std::unique_ptr<overlay::OverlayConfig> overlay_,
+        cryptography::rsa::KeyPair keys_,
+        cryptography::rsa::PublicKey owner_,
+        Passport passport_,
+        boost::optional<std::string> name_)
+        : overlay(std::move(overlay_))
+        , keys(std::move(keys_))
+        , owner(std::move(owner_))
+        , passport(std::move(passport_))
+        , name(std::move(name_))
       {}
 
-      DoughnutModelConfig::DoughnutModelConfig(elle::serialization::SerializerIn& input)
-        : ModelConfig()
-      {
-        this->serialize(input);
-      }
+      DoughnutModelConfig::DoughnutModelConfig
+        (elle::serialization::SerializerIn& s)
+        : overlay(s.deserialize<std::unique_ptr<overlay::OverlayConfig>>
+                  ("overlay"))
+        , keys(s.deserialize<cryptography::rsa::KeyPair>("keys"))
+        , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
+        , passport(s.deserialize<Passport>("passport"))
+        , plain(s.deserialize<boost::optional<bool>>("plain"))
+        , name(s.deserialize<boost::optional<std::string>>("name"))
+      {}
 
       void
       DoughnutModelConfig::serialize(elle::serialization::Serializer& s)
       {
         s.serialize("overlay", this->overlay);
         s.serialize("keys", this->keys);
+        s.serialize("owner", this->owner);
+        s.serialize("passport", this->passport);
         s.serialize("plain", this->plain);
         s.serialize("name", this->name);
       }
@@ -259,30 +268,25 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       DoughnutModelConfig::make()
       {
-        if (!this->keys)
+        if (!this->name)
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
-            overlay->make(),
-            nullptr,
-            plain && *plain);
-        else if (!this->name)
-          return elle::make_unique<infinit::model::doughnut::Doughnut>(
-            *keys,
+            keys,
+            owner,
+            passport,
             overlay->make(),
             nullptr,
             plain && *plain);
         else
-          return elle::make_unique<infinit::model::doughnut::Doughnut>(
-            this->name.get(),
-            *keys,
-            overlay->make(),
-            nullptr,
-            plain && *plain);
+          return this->make_read_only();
       }
 
       std::unique_ptr<Doughnut>
       DoughnutModelConfig::make_read_only()
       {
         return elle::make_unique<infinit::model::doughnut::Doughnut>(
+          keys,
+          owner,
+          passport,
           overlay->make(),
           nullptr,
           plain && *plain);

@@ -7,6 +7,7 @@
 
 # include <infinit/model/Model.hh>
 # include <infinit/model/doughnut/Consensus.hh>
+# include <infinit/model/doughnut/Passport.hh>
 # include <infinit/overlay/Overlay.hh>
 
 namespace infinit
@@ -24,22 +25,22 @@ namespace infinit
       public:
         Doughnut(std::string name,
                  infinit::cryptography::rsa::KeyPair keys,
+                 infinit::cryptography::rsa::PublicKey owner,
+                 Passport passport,
                  std::unique_ptr<overlay::Overlay> overlay,
                  std::unique_ptr<Consensus> consensus = nullptr,
                  bool plain = false);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
+                 infinit::cryptography::rsa::PublicKey owner,
+                 Passport passport,
                  std::unique_ptr<overlay::Overlay> overlay,
                  std::unique_ptr<Consensus> consensus = nullptr,
                  bool plain = false);
-        Doughnut(std::unique_ptr<overlay::Overlay> overlay,
-                 std::unique_ptr<Consensus> consensus = nullptr,
-                 bool plain = false);
-        infinit::cryptography::rsa::KeyPair&
-        keys();
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
-        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>,
-                       keys);
+        ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
+        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
+        ELLE_ATTRIBUTE_R(Passport, passport);
 
 
       protected:
@@ -75,11 +76,18 @@ namespace infinit
       {
       public:
         std::unique_ptr<overlay::OverlayConfig> overlay;
-        std::unique_ptr<cryptography::rsa::KeyPair> keys;
+        cryptography::rsa::KeyPair keys;
+        cryptography::rsa::PublicKey owner;
+        Passport passport;
         boost::optional<bool> plain;
         boost::optional<std::string> name;
 
-        DoughnutModelConfig();
+        DoughnutModelConfig(
+          std::unique_ptr<overlay::OverlayConfig> overlay,
+          cryptography::rsa::KeyPair keys,
+          cryptography::rsa::PublicKey owner,
+          Passport passport,
+          boost::optional<std::string> name);
         DoughnutModelConfig(elle::serialization::SerializerIn& input);
         void
         serialize(elle::serialization::Serializer& s);
@@ -92,5 +100,8 @@ namespace infinit
     }
   }
 }
+
+DAS_MODEL_FIELDS(infinit::model::doughnut::DoughnutModelConfig,
+                 (overlay, keys, owner, passport, name));
 
 #endif
