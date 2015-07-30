@@ -3,6 +3,7 @@
 #include <boost/uuid/random_generator.hpp>
 
 #include <elle/log.hh>
+#include <elle/serialization/binary.hh>
 
 #include <cryptography/hash.hh>
 
@@ -12,6 +13,8 @@
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.faith.Faith");
+
+typedef elle::serialization::Binary Serializer;
 
 namespace infinit
 {
@@ -27,7 +30,12 @@ namespace infinit
       Faith::_store(blocks::Block& block, StoreMode mode)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        auto& data = block.data();
+        elle::Buffer data;
+        {
+          elle::IOStream s(data.ostreambuf());
+          Serializer::SerializerOut output(s, false);
+          output.serialize_forward(block);
+        }
         this->_storage->set(block.address(),
                             data,
                             mode == STORE_ANY || mode == STORE_INSERT,
@@ -40,8 +48,11 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: fetch block at %x", *this, address);
         try
         {
-          return this->_construct_block<blocks::MutableBlock>
-            (address, this->_storage->get(address));
+          auto data = this->_storage->get(address);
+          elle::IOStream s(data.istreambuf());
+          Serializer::SerializerIn input(s, false);
+          auto res = input.deserialize<std::unique_ptr<blocks::Block>>();
+          return std::move(res);
         }
         catch (infinit::storage::MissingKey const&)
         {
