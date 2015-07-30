@@ -52,14 +52,13 @@ network(boost::program_options::variables_map mode,
     auto creation = parse_args(creation_options, args);
     auto name = optional(creation, "name");
     auto network_name = mandatory(creation, "network", help);
-    infinit::Volume volume;
-    volume.mountpoint = mandatory(creation, "mountpoint", help);
-    volume.network = ifnt.network_get(network_name);
+    auto mountpoint = mandatory(creation, "mountpoint", help);
+    auto network = ifnt.network_get(network_name);
     ELLE_TRACE("start network");
-    auto local = volume.network.run();
+    auto local = network.run();
     ELLE_TRACE("create volume");
-    infinit::filesystem::FileSystem fs(volume.network.model->make());
-    volume.root_address = fs.root_address();
+    infinit::filesystem::FileSystem fs(network.model->make());
+    infinit::Volume volume(mountpoint, fs.root_address(), network.name);
     {
       if (!creation.count("stdout"))
       {
@@ -96,8 +95,10 @@ network(boost::program_options::variables_map mode,
     auto run = parse_args(run_options, args);
     auto name = mandatory(run, "name", "volume name", help);
     auto volume = ifnt.volume_get(name);
-    auto running = volume.run();
-    reactor::wait(*running.second);
+    auto network = ifnt.network_get(volume.network);
+    auto local = network.run();
+    auto fs = volume.run(network);
+    reactor::wait(*fs);
   }
   else
   {

@@ -196,44 +196,45 @@ namespace infinit
     std::unique_ptr<infinit::model::ModelConfig> model;
   };
 
-  // struct Volume
-  // {
-  //   Volume(Network network_)
-  //     : network(std::move(network_))
-  //   {}
+  struct Volume
+  {
+    Volume(std::string mountpoint_,
+           infinit::model::Address root_,
+           std::string network_)
+      : mountpoint(std::move(mountpoint_))
+      , root_address(std::move(root_))
+      , network(std::move(network_))
+    {}
 
-  //   Volume(elle::serialization::SerializerIn& s)
-  //   {
-  //     this->serialize(s);
-  //   }
+    Volume(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
 
-  //   void
-  //   serialize(elle::serialization::Serializer& s)
-  //   {
-  //     s.serialize("mountpoint", this->mountpoint);
-  //     s.serialize("root_address", this->root_address);
-  //     s.serialize("network", this->network);
-  //   }
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("mountpoint", this->mountpoint);
+      s.serialize("root_address", this->root_address);
+      s.serialize("network", this->network);
+    }
 
-  //   std::pair<
-  //     std::unique_ptr<infinit::model::doughnut::Local>,
-  //     std::unique_ptr<reactor::filesystem::FileSystem>>
-  //   run()
-  //   {
-  //     auto local = this->network.run();
-  //     auto fs = elle::make_unique<infinit::filesystem::FileSystem>
-  //       (this->root_address, this->network.model->make());
-  //     auto driver =
-  //       elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
-  //     create_directories(boost::filesystem::path(mountpoint));
-  //     driver->mount(mountpoint, {});
-  //     return std::make_pair(std::move(local), std::move(driver));
-  //   }
+    std::unique_ptr<reactor::filesystem::FileSystem>
+    run(Network& network)
+    {
+      auto fs = elle::make_unique<infinit::filesystem::FileSystem>
+        (this->root_address, network.model->make());
+      auto driver =
+        elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
+      create_directories(boost::filesystem::path(mountpoint));
+      driver->mount(mountpoint, {});
+      return std::move(driver);
+    }
 
-  //   std::string mountpoint;
-  //   infinit::model::Address root_address;
-  //   Network network;
-  // };
+    std::string mountpoint;
+    infinit::model::Address root_address;
+    std::string network;
+  };
 
   class Infinit
   {
@@ -328,23 +329,23 @@ namespace infinit
           elle::sprintf("storage '%s' does not exist", name));
     }
 
-    // Volume
-    // volume_get(std::string const& name)
-    // {
-    //   boost::filesystem::ifstream f;
-    //   this->_open(f, this->_volume_path(name), name, "volume");
-    //   elle::serialization::json::SerializerIn s(f, false);
-    //   return s.deserialize<Volume>();
-    // }
+    Volume
+    volume_get(std::string const& name)
+    {
+      boost::filesystem::ifstream f;
+      this->_open(f, this->_volume_path(name), name, "volume");
+      elle::serialization::json::SerializerIn s(f, false);
+      return s.deserialize<Volume>();
+    }
 
-    // void
-    // volume_save(std::string const& name, Volume const& volume)
-    // {
-    //   boost::filesystem::ofstream f;
-    //   this->_open(f, this->_volume_path(name), name, "volume");
-    //   elle::serialization::json::SerializerOut s(f, false);
-    //   s.serialize_forward(volume);
-    // }
+    void
+    volume_save(std::string const& name, Volume const& volume)
+    {
+      boost::filesystem::ofstream f;
+      this->_open(f, this->_volume_path(name), name, "volume");
+      elle::serialization::json::SerializerOut s(f, false);
+      s.serialize_forward(volume);
+    }
 
     boost::filesystem::path
     _network_path(std::string const& name)
