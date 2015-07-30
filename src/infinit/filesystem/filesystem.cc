@@ -362,6 +362,7 @@ namespace infinit
       _block_at(int index, bool create);
       // Switch from direct to indexed mode
       void _switch_to_multi(bool alloc_first_block);
+      void _ensure_first_block();
       void _changed();
       Header _header(); // Get header, must be in multi mode
       void _header(Header const&);
@@ -1220,9 +1221,20 @@ namespace infinit
       return _parent->_files.at(_name).store_mode == FileStoreMode::index;
     }
 
+    void
+    File::_ensure_first_block()
+    {
+      if (_first_block)
+        return;
+      Address addr = _parent->_files.at(_name).address;
+      _first_block = elle::cast<MutableBlock>::runtime(
+        _owner.block_store()->fetch(addr));
+    }
+
     File::Header
     File::_header()
     {
+      _ensure_first_block();
       Header res;
       uint32_t v;
       memcpy(&v, _first_block->data().mutable_contents(), 4);
@@ -1774,7 +1786,9 @@ namespace infinit
       }
       else if (key == "user.infinit.auth")
       {
-        return perms_to_json(dynamic_cast<ACLBlock&>(*_first_block));
+        Address addr = _parent->_files.at(_name).address;
+        auto block = _owner.block_store()->fetch(addr);
+        return perms_to_json(dynamic_cast<ACLBlock&>(*block));
       }
       else
         return Node::getxattr(key);
@@ -1957,6 +1971,8 @@ namespace infinit
         _owner->_changed();
       _dirty = false;
       _owner->_blocks.clear();
+      if (_owner->_handle_count == 0)
+        _owner->_first_block.reset();
     }
 
     int
