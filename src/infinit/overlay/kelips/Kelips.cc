@@ -27,23 +27,6 @@ namespace elle
 {
   namespace serialization
   {
-    template<>
-    struct Serialize<kelips::PrettyGossipEndpoint>
-    {
-      typedef std::string Type;
-      static std::string convert(kelips::PrettyGossipEndpoint& ep)
-      {
-        return ep.address().to_string() + ":" + std::to_string(ep.port());
-      }
-      static kelips::PrettyGossipEndpoint convert(std::string& repr)
-      {
-        size_t sep = repr.find_first_of(':');
-        auto addr = boost::asio::ip::address::from_string(repr.substr(0, sep));
-        int port = std::stoi(repr.substr(sep + 1));
-        return kelips::PrettyGossipEndpoint(addr, port);
-      }
-    };
-
     template<typename T>
     struct SerializeEndpoint
     {

@@ -199,6 +199,8 @@ network(boost::program_options::variables_map mode,
     options_description run_options("Run options");
     run_options.add_options()
       ("name", value<std::string>(), "created network name")
+      ("host", value<std::vector<std::string>>()->multitoken(),
+       "hosts to connect to")
       ;
     auto help = [&] (std::ostream& output)
       {
@@ -216,6 +218,14 @@ network(boost::program_options::variables_map mode,
     variables_map run = parse_args(run_options, args);
     auto name = mandatory(run, "name", "network name", help);
     auto network = ifnt.network_get(name);
+    auto& dht = static_cast<infinit::model::doughnut::DoughnutModelConfig&>
+      (*network.model);
+    auto& overlay = static_cast<infinit::overlay::kelips::Configuration&>
+      (*dht.overlay);
+    for (auto& host: run["host"].as<std::vector<std::string>>())
+      overlay.config.bootstrap_nodes.push_back(
+        elle::serialization::Serialize<kelips::PrettyGossipEndpoint>
+        ::convert(host));
     auto local = network.run();
     if (!local)
       throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
@@ -275,12 +285,12 @@ int main(int argc, char** argv)
   program = argv[0];
   mode_options.add_options()
     ("create", "create a new network")
-    ("destroy", "destroy a network")
+    // ("destroy", "destroy a network")
     ("export", "export a network for someone else to import")
     ("import", "import a network")
     ("invite", "create a passport to a network for a user")
     ("join", "join a network with a passport")
-    ("list", "list existing networks")
+    // ("list", "list existing networks")
     ("run", "run network")
     ;
   options_description options("Infinit network utility");
