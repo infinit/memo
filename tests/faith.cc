@@ -31,9 +31,9 @@ faith()
     std::string update("twerk is the new twist");
     block2->data(elle::Buffer(update.c_str(), update.length()));
     BOOST_CHECK_NE(*faith.fetch(block2->address()), *block2);
-    std::cerr << "STORE " << block2->data() << std::endl;
+    ELLE_LOG("STORE %x", block2->data());
     faith.store(*block2);
-    std::cerr << "STORED " << block2->data() << std::endl;
+    ELLE_LOG("STORED %x", block2->data());
     BOOST_CHECK_EQUAL(*faith.fetch(block2->address()), *block2);
   }
   ELLE_LOG("fetch non-existent block")
