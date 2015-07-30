@@ -87,6 +87,9 @@ namespace infinit
       void
       ACLBlock::_serialize(elle::serialization::Serializer&)
       {}
+
+      static const elle::serialization::Hierarchy<Block>::
+      Register<ACLBlock> _register_serialization("acl");
     }
   }
 }
