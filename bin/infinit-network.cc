@@ -35,6 +35,7 @@ network(boost::program_options::variables_map mode,
       ("name", value<std::string>(), "created network name")
       ("user", value<std::string>(), "user to create the network as")
       ("storage", value<std::string>(), "optional storage to contribute")
+      ("nodes", value<std::string>(), "Estimate of the total number of nodes")
       ("stdout", "output configuration to stdout")
       ;
     auto help = [&] (std::ostream& output)
@@ -54,6 +55,10 @@ network(boost::program_options::variables_map mode,
     auto name = mandatory(creation, "name", "network name", help);
     auto owner = ifnt.user_get(optional(creation, "user"));
     auto storage_name = optional(creation, "storage");
+    auto nodes = optional(creation, "nodes");
+    int k = 1;
+    if (nodes)
+      k = sqrt(std::stoi(*nodes));
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     if (storage_name)
       storage = ifnt.storage_get(*storage_name);
@@ -65,6 +70,9 @@ network(boost::program_options::variables_map mode,
         infinit::model::doughnut::Passport
           (owner.public_key, name, owner.private_key.get()),
         owner.name);
+    auto& kelips_cfg = static_cast<infinit::overlay::kelips::Configuration&>(*dht->overlay);
+    kelips_cfg.config.k = k;
+    kelips_cfg.config.node_id = infinit::model::Address::random();
     {
       infinit::Network network;
       network.storage = std::move(storage);
