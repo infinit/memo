@@ -57,7 +57,7 @@ network(boost::program_options::variables_map mode,
     ELLE_TRACE("start network");
     auto local = network.run();
     ELLE_TRACE("create volume");
-    infinit::filesystem::FileSystem fs(network.model->make());
+    infinit::filesystem::FileSystem fs(network.model->make(true));
     infinit::Volume volume(mountpoint, fs.root_address(), network.name);
     {
       if (!creation.count("stdout"))
