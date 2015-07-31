@@ -22,6 +22,9 @@ namespace infinit
         void
         serialize(elle::serialization::Serializer& s);
 
+        bool
+        verify(cryptography::rsa::PublicKey const& owner);
+
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, user);
         ELLE_ATTRIBUTE_R(std::string, network);
         ELLE_ATTRIBUTE(elle::Buffer, signature);

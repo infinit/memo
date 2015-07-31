@@ -38,6 +38,19 @@ namespace infinit
         s.serialize("network", this->_network);
         s.serialize("signature", this->_signature);
       }
+
+      bool
+      Passport::verify(cryptography::rsa::PublicKey const& owner)
+      {
+        elle::Buffer fingerprint;
+        {
+          elle::IOStream output(fingerprint.ostreambuf());
+          elle::serialization::json::SerializerOut s(output, false);
+          s.serialize("user", this->_user);
+          s.serialize("network", this->_network);
+        }
+        return owner.verify(this->_signature, fingerprint);
+      }
     }
   }
 }

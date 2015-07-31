@@ -179,6 +179,9 @@ network(boost::program_options::variables_map mode,
       auto input = get_input(join);
       elle::serialization::json::SerializerIn passport_s(*input, false);
       infinit::model::doughnut::Passport passport(passport_s);
+      bool ok = passport.verify(desc.owner);
+      if (!ok)
+        throw std::runtime_error("Failed to verify passport signature.");
       auto user = ifnt.user_get(username);
       infinit::Network network;
       network.model =
