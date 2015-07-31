@@ -832,5 +832,9 @@ ELLE_TEST_SUITE()
   filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
   filesystem->add(BOOST_TEST_CASE(test_dht_plain), 0, 50);
   filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 50);
+#ifndef INFINIT_MACOSX
+  // osxfuse fails to handle two mounts at the same time, the second fails
+  // with a mysterious 'permission denied'
   filesystem->add(BOOST_TEST_CASE(test_acl), 0, 50);
+#endif
 }
