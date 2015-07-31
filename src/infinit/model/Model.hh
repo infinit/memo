@@ -68,7 +68,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::model::Model>
-      make() = 0;
+      make(bool observer) = 0;
     };
   }
 }

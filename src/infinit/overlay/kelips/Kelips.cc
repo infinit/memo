@@ -305,9 +305,10 @@ namespace kelips
     dst = E2(src.address(), src.port());
   }
 
-  Node::Node(Configuration const& config)
+  Node::Node(Configuration const& config, bool observer)
   : _config(config)
   , _next_id(1)
+  , _observer(observer)
   {
     if (_config.node_id == Address::null)
       ELLE_LOG("Running in observer mode");
@@ -349,18 +350,20 @@ namespace kelips
 
   void Node::start()
   {
-    if (_config.node_id == Address::null && !_config.observer)
+    if (_config.node_id == Address::null && !_observer)
     {
       _config.node_id = Address::random();
       std::cout << "Generating node_id:" << std::endl;
       elle::serialization::json::SerializerOut output(std::cout, false);
       output.serialize_forward(_config.node_id);
     }
+    if (_observer)
+      _config.node_id = Address::null;
     _self = _config.node_id;
     _group = group_of(_config.node_id);
     _state.contacts.resize(_config.k);
     // If we are not an observer, we must wait for Local port information
-    if (_config.observer)
+    if (_observer)
       engage();
   }
 
@@ -1446,6 +1449,7 @@ namespace kelips
   void
   Node::register_local(infinit::model::doughnut::Local& local)
   {
+    ELLE_ASSERT(!_observer);
     local.on_fetch.connect(std::bind(&Node::fetch, this, std::placeholders::_1,
                                      std::placeholders::_2));
     local.on_store.connect(std::bind(&Node::store, this, std::placeholders::_1,
@@ -1529,7 +1533,6 @@ namespace kelips
   void Configuration::serialize(elle::serialization::Serializer& s)
   {
     s.serialize("node_id", node_id);
-    s.serialize("observer", observer);
     s.serialize("k", k);
     s.serialize("max_other_contacts", max_other_contacts);
     s.serialize("query_get_retries", query_get_retries);
@@ -1549,7 +1552,6 @@ namespace kelips
 
   Configuration::Configuration()
     : node_id()
-    , observer(true)
     , k(6)
     , max_other_contacts(6)
     , query_get_retries(30)
@@ -1604,9 +1606,9 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make()
+      Configuration::make(bool observer)
       {
-        return elle::make_unique<::kelips::Node>(config);
+        return elle::make_unique<::kelips::Node>(config, observer);
       }
 
       static const

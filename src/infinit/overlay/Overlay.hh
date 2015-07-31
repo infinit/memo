@@ -56,7 +56,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make() = 0;
+      make(bool observer) = 0;
     };
   }
 }

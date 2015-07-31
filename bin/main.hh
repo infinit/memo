@@ -183,7 +183,7 @@ namespace infinit
         return nullptr;
       auto& dht_cfg =
         static_cast<model::doughnut::DoughnutModelConfig&>(*this->model);
-      auto dht = dht_cfg.make_read_only();
+      auto dht = dht_cfg.make_read_only(false);
       auto local =
         elle::make_unique<infinit::model::doughnut::Local>
         (this->storage->make());
@@ -223,7 +223,7 @@ namespace infinit
     run(Network& network)
     {
       auto fs = elle::make_unique<infinit::filesystem::FileSystem>
-        (this->root_address, network.model->make());
+        (this->root_address, network.model->make(true));
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       create_directories(boost::filesystem::path(mountpoint));

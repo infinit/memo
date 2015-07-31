@@ -64,7 +64,7 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeOverlayConfig::make()
+    StonehengeOverlayConfig::make(bool observer)
     {
       infinit::overlay::Overlay::Members members;
       for (auto const& hostport: nodes)

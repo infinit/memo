@@ -36,7 +36,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s);
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make();
+      make(bool observer) override;
     };
   }
 }

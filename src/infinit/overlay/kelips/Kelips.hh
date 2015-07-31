@@ -86,7 +86,6 @@ namespace kelips
     void
     serialize(elle::serialization::Serializer& s);
     Address node_id;
-    bool observer;
     int k; // number of groups
     int max_other_contacts; // max number of contacts on each other group
     int query_get_retries;    // query retry
@@ -121,7 +120,7 @@ namespace kelips
     , public elle::Printable
   {
   public:
-    Node(Configuration const& config);
+    Node(Configuration const& config, bool observer);
     void start();
     void engage();
     void register_local(infinit::model::doughnut::Local& local) override;
@@ -183,6 +182,7 @@ namespace kelips
     std::vector<Address> _promised_files; // addresses for which we accepted a put
     int _next_id;
     int _port;
+    bool _observer;
   };
 }
 
@@ -204,7 +204,7 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make() override;
+        make(bool observer) override;
 
         ::kelips::Configuration config;
       };

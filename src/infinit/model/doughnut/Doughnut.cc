@@ -266,28 +266,28 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      DoughnutModelConfig::make()
+      DoughnutModelConfig::make(bool observer)
       {
         if (!this->name)
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
             keys,
             owner,
             passport,
-            overlay->make(),
+            overlay->make(observer),
             nullptr,
             plain && *plain);
         else
-          return this->make_read_only();
+          return this->make_read_only(observer);
       }
 
       std::unique_ptr<Doughnut>
-      DoughnutModelConfig::make_read_only()
+      DoughnutModelConfig::make_read_only(bool observer)
       {
         return elle::make_unique<infinit::model::doughnut::Doughnut>(
           keys,
           owner,
           passport,
-          overlay->make(),
+          overlay->make(observer),
           nullptr,
           plain && *plain);
       }
