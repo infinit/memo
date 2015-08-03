@@ -3,6 +3,7 @@
 
 # include <boost/signals2.hpp>
 
+# include <reactor/Barrier.hh>
 # include <reactor/network/tcp-server.hh>
 
 # include <infinit/model/doughnut/Peer.hh>
@@ -25,7 +26,7 @@ namespace infinit
         Local(std::unique_ptr<storage::Storage> storage, int port = 0);
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
-        ELLE_ATTRIBUTE_RX(std::unique_ptr<Doughnut>, doughnut);
+        ELLE_ATTRIBUTE_RX(std::shared_ptr<Doughnut>, doughnut);
 
       /*-------.
       | Blocks |
@@ -49,10 +50,13 @@ namespace infinit
       | Server |
       `-------*/
       public:
+        void
+        serve();
         reactor::network::TCPServer::EndPoint
         server_endpoint();
         ELLE_ATTRIBUTE(reactor::network::TCPServer, server);
         ELLE_ATTRIBUTE(reactor::Thread, server_thread);
+        ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
         void
         _serve();
       };

@@ -93,9 +93,7 @@ namespace infinit
         serialize(elle::serialization::Serializer& s);
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(bool observer);
-        std::unique_ptr<Doughnut>
-        make_read_only(bool observer);
+        make(std::vector<std::string> const& hosts, bool client, bool server);
       };
     }
   }

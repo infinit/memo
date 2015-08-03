@@ -18,9 +18,9 @@ namespace infinit
     class FileSystem: public reactor::filesystem::Operations
     {
     public:
-      FileSystem(std::unique_ptr<infinit::model::Model> model);
+      FileSystem(std::shared_ptr<infinit::model::Model> model);
       FileSystem(model::Address root,
-                 std::unique_ptr<infinit::model::Model> model);
+                 std::shared_ptr<infinit::model::Model> model);
       void
       print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
@@ -32,7 +32,7 @@ namespace infinit
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(model::Address, root_address);
-      ELLE_ATTRIBUTE_R(std::unique_ptr<infinit::model::Model>, block_store);
+      ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
       ELLE_ATTRIBUTE_RW(bool, single_mount);
     };
   }

@@ -1606,9 +1606,13 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(bool observer)
+      Configuration::make(std::vector<std::string> const& hosts, bool server)
       {
-        return elle::make_unique<::kelips::Node>(config, observer);
+        for (auto const& host: hosts)
+          config.bootstrap_nodes.push_back(
+            elle::serialization::Serialize<::kelips::PrettyGossipEndpoint>
+            ::convert(host));
+        return elle::make_unique<::kelips::Node>(config, !server);
       }
 
       static const

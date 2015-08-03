@@ -473,7 +473,7 @@ namespace infinit
     }
 
     FileSystem::FileSystem(model::Address root,
-                           std::unique_ptr<infinit::model::Model> model)
+                           std::shared_ptr<model::Model> model)
       : _root_address(root)
       , _block_store(std::move(model))
       , _single_mount(false)
@@ -525,7 +525,7 @@ namespace infinit
       return root;
     }
 
-    FileSystem::FileSystem(std::unique_ptr<infinit::model::Model> model)
+    FileSystem::FileSystem(std::shared_ptr<model::Model> model)
       : _root_address(_make_root_block(*model)->address())
       , _block_store(nullptr)
       , _single_mount(false)

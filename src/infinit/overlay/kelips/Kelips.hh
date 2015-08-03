@@ -204,7 +204,7 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(bool observer) override;
+        make(std::vector<std::string> const& hosts, bool server) override;
 
         ::kelips::Configuration config;
       };

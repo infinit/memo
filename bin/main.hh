@@ -3,6 +3,7 @@
 #include <elle/Error.hh>
 #include <elle/Exit.hh>
 #include <elle/cast.hh>
+#include <elle/os/environ.hh>
 #include <elle/system/home_directory.hh>
 #include <elle/system/username.hh>
 
@@ -17,6 +18,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/version.hh>
 
 std::string program;
@@ -176,19 +178,24 @@ namespace infinit
       s.serialize("model", this->model);
     }
 
-    std::unique_ptr<infinit::model::doughnut::Local>
-    run()
+    std::pair<std::unique_ptr<infinit::model::doughnut::Local>,
+              std::shared_ptr<infinit::model::doughnut::Doughnut>>
+    run(std::vector<std::string> const& hosts = {})
     {
-      if (!this->storage)
-        return nullptr;
-      auto& dht_cfg =
-        static_cast<model::doughnut::DoughnutModelConfig&>(*this->model);
-      auto dht = dht_cfg.make_read_only(false);
-      auto local =
-        elle::make_unique<infinit::model::doughnut::Local>
-        (this->storage->make());
-      local->doughnut() = std::move(dht);
-      return local;
+      auto model = this->model->make(hosts, false, !!storage);
+      std::shared_ptr<model::doughnut::Doughnut> dht(
+        static_cast<model::doughnut::Doughnut*>(model.release()));
+      if (this->storage)
+      {
+        auto local = elle::make_unique<infinit::model::doughnut::Local>
+          (this->storage->make());
+        dht->overlay()->register_local(*local);
+        local->doughnut() = dht;
+        local->serve();
+        return std::make_pair(std::move(local), dht);
+      }
+      return std::make_pair(std::unique_ptr<infinit::model::doughnut::Local>(),
+                            dht);
     }
 
     std::string name;
@@ -220,15 +227,15 @@ namespace infinit
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
-    run(Network& network)
+    run(std::shared_ptr<infinit::model::doughnut::Doughnut> dht)
     {
-      auto fs = elle::make_unique<infinit::filesystem::FileSystem>
-        (this->root_address, network.model->make(true));
+      auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
+          this->root_address, dht);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       create_directories(boost::filesystem::path(mountpoint));
       driver->mount(mountpoint, {});
-      return std::move(driver);
+      return driver;
     }
 
     std::string mountpoint;
@@ -298,7 +305,12 @@ namespace infinit
     boost::filesystem::path
     root_dir()
     {
-      return elle::system::home_directory() / ".infinit";
+      static auto const env  = elle::os::getenv("INFINIT_HOME", "");
+      static auto const res =
+        env.empty() ?
+        elle::system::home_directory() / ".infinit" :
+        boost::filesystem::path(env);
+      return res;
     }
 
     std::unique_ptr<infinit::storage::StorageConfig>

@@ -104,6 +104,7 @@ namespace infinit
       {
         try
         {
+          ELLE_TRACE_SCOPE("%s: check user block", *this);
           auto block = this->fetch(UB::hash_address(name));
           ELLE_DEBUG("%s: user block for %s already present at %x",
                      *this, name, block->address());
@@ -122,6 +123,7 @@ namespace infinit
         }
         try
         {
+          ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
           auto block = this->fetch(UB::hash_address(this->keys().K()));
           ELLE_DEBUG("%s: user reverse block for %s already present at %x",
                      *this, name, block->address());
@@ -266,30 +268,26 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      DoughnutModelConfig::make(bool observer)
+      DoughnutModelConfig::make(std::vector<std::string> const& hosts,
+                                bool client,
+                                bool server)
       {
         if (!this->name)
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
             keys,
             owner,
             passport,
-            overlay->make(observer),
+            overlay->make(hosts, server),
             nullptr,
             plain && *plain);
         else
-          return this->make_read_only(observer);
-      }
-
-      std::unique_ptr<Doughnut>
-      DoughnutModelConfig::make_read_only(bool observer)
-      {
-        return elle::make_unique<infinit::model::doughnut::Doughnut>(
-          keys,
-          owner,
-          passport,
-          overlay->make(observer),
-          nullptr,
-          plain && *plain);
+          return elle::make_unique<infinit::model::doughnut::Doughnut>(
+            keys,
+            owner,
+            passport,
+            overlay->make(hosts, server),
+            nullptr,
+            plain && *plain);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

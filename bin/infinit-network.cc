@@ -15,7 +15,7 @@
 #include <infinit/storage/Storage.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 
-ELLE_LOG_COMPONENT("8network");
+ELLE_LOG_COMPONENT("infinit-network");
 
 #include "main.hh"
 
@@ -229,16 +229,11 @@ network(boost::program_options::variables_map mode,
     variables_map run = parse_args(run_options, args);
     auto name = mandatory(run, "name", "network name", help);
     auto network = ifnt.network_get(name);
-    auto& dht = static_cast<infinit::model::doughnut::DoughnutModelConfig&>
-      (*network.model);
-    auto& overlay = static_cast<infinit::overlay::kelips::Configuration&>
-      (*dht.overlay);
-    for (auto& host: run["host"].as<std::vector<std::string>>())
-      overlay.config.bootstrap_nodes.push_back(
-        elle::serialization::Serialize<kelips::PrettyGossipEndpoint>
-        ::convert(host));
-    auto local = network.run();
-    if (!local)
+    std::vector<std::string> hosts;
+    if (run.count("host"))
+      hosts = run["host"].as<std::vector<std::string>>();
+    auto local = network.run(hosts);
+    if (!local.first)
       throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
     reactor::sleep();
   }

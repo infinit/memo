@@ -68,7 +68,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(bool observer) = 0;
+      make(std::vector<std::string> const& hosts, bool client, bool server) = 0;
     };
   }
 }

@@ -135,7 +135,7 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(bool observer)
+        make(std::vector<std::string> const&, bool, bool)
         {
           if (!this->keys)
           {

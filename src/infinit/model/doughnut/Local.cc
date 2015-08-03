@@ -103,6 +103,12 @@ namespace infinit
       | Server |
       `-------*/
 
+      void
+      Local::serve()
+      {
+        this->_server_barrier.open();
+      }
+
       reactor::network::TCPServer::EndPoint
       Local::server_endpoint()
       {
@@ -131,6 +137,7 @@ namespace infinit
                   {
                     this->remove(address);
                   }));
+        reactor::wait(this->_server_barrier);
         ELLE_ASSERT(this->_doughnut.get());
         rpcs.set_context<Doughnut*>(this->_doughnut.get());
         elle::With<reactor::Scope>() << [this, &rpcs] (reactor::Scope& scope)

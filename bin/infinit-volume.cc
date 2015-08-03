@@ -11,8 +11,8 @@
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Storage.hh>
-#include <infinit/overlay/Stonehenge.hh>
 
 ELLE_LOG_COMPONENT("8network");
 
@@ -55,10 +55,10 @@ network(boost::program_options::variables_map mode,
     auto mountpoint = mandatory(creation, "mountpoint", help);
     auto network = ifnt.network_get(network_name);
     ELLE_TRACE("start network");
-    auto local = network.run();
+    auto model = network.run();
     ELLE_TRACE("create volume");
-    infinit::filesystem::FileSystem fs(network.model->make(true));
-    infinit::Volume volume(mountpoint, fs.root_address(), network.name);
+    auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
+    infinit::Volume volume(mountpoint, fs->root_address(), network.name);
     {
       if (!creation.count("stdout"))
       {
@@ -78,6 +78,8 @@ network(boost::program_options::variables_map mode,
     options_description run_options("Run options");
     run_options.add_options()
       ("name", value<std::string>(), "volume name")
+      ("host", value<std::vector<std::string>>()->multitoken(),
+       "hosts to connect to")
       ;
     auto help = [&] (std::ostream& output)
       {
@@ -94,10 +96,13 @@ network(boost::program_options::variables_map mode,
     }
     auto run = parse_args(run_options, args);
     auto name = mandatory(run, "name", "volume name", help);
+    std::vector<std::string> hosts;
+    if (run.count("host"))
+      hosts = run["host"].as<std::vector<std::string>>();
     auto volume = ifnt.volume_get(name);
     auto network = ifnt.network_get(volume.network);
-    auto local = network.run();
-    auto fs = volume.run(network);
+    auto model = network.run(hosts);
+    auto fs = volume.run(model.second);
     reactor::wait(*fs);
   }
   else
