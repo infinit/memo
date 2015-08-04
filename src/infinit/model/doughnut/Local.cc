@@ -138,8 +138,6 @@ namespace infinit
                     this->remove(address);
                   }));
         reactor::wait(this->_server_barrier);
-        ELLE_ASSERT(this->_doughnut.get());
-        rpcs.set_context<Doughnut*>(this->_doughnut.get());
         elle::With<reactor::Scope>() << [this, &rpcs] (reactor::Scope& scope)
         {
           while (true)
@@ -150,6 +148,7 @@ namespace infinit
               name,
               [this, socket, &rpcs]
               {
+                rpcs.set_context<Doughnut*>(this->_doughnut.get());
                 rpcs.serve(**socket);
               });
           }
