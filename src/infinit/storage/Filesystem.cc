@@ -20,7 +20,9 @@ namespace infinit
     Filesystem::Filesystem(boost::filesystem::path root)
       : Storage()
       , _root(std::move(root))
-    {}
+    {
+      create_directories(this->_root);
+    }
 
     elle::Buffer
     Filesystem::_get(Key key) const
