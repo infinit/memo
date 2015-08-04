@@ -34,10 +34,10 @@ network(boost::program_options::variables_map mode,
   {
     options_description creation_options("Creation options");
     creation_options.add_options()
-      ("name", value<std::string>(), "created network name")
-      ("user", value<std::string>(), "user to create the network as")
-      ("storage", value<std::string>(), "optional storage to contribute")
-      ("port", value<int>(), "port to listen on (random by default)")
+      ("name,n", value<std::string>(), "created network name")
+      ("user,u", value<std::string>(), "user to create the network as")
+      ("storage,s", value<std::string>(), "optional storage to contribute")
+      ("port,p", value<int>(), "port to listen on (random by default)")
       ("stdout", "output configuration to stdout")
       ;
     options_description types("Overlay types");
@@ -222,9 +222,10 @@ network(boost::program_options::variables_map mode,
   {
     options_description join_options("Join options");
     join_options.add_options()
-      ("name,n", value<std::string>(), "network to join")
       ("input,i", value<std::string>(),
        "file to read passport from (defaults to stdin)")
+      ("name,n", value<std::string>(), "network to join")
+      ("port", value<int>(), "port to listen on (random by default)")
       ("storage", value<std::string>(), "optional storage to contribute")
       ("user,u", value<std::string>(),
        "user to join the network as (defaults to system user)")
@@ -269,6 +270,8 @@ network(boost::program_options::variables_map mode,
           user.name);
       network.storage = std::move(storage);
       network.name = name;
+      if (join.count("port"))
+        network.port = join["port"].as<int>();
       remove(ifnt._network_path(name));
       ifnt.network_save(name, network);
     }
