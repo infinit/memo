@@ -37,11 +37,11 @@ network(boost::program_options::variables_map mode,
       ("name", value<std::string>(), "created network name")
       ("user", value<std::string>(), "user to create the network as")
       ("storage", value<std::string>(), "optional storage to contribute")
-      ("nodes", value<std::string>(), "Estimate of the total number of nodes")
       ("stdout", "output configuration to stdout")
       ;
     options_description types("Overlay types");
     types.add_options()
+      ("kelips", "use a Kelips overlay network")
       ("stonehenge", "use a stonehenge overlay network")
       ;
     options_description stonehenge_options("Stonehenge options");
@@ -49,10 +49,15 @@ network(boost::program_options::variables_map mode,
       ("host", value<std::vector<std::string>>()->multitoken(),
        "hosts to connect to")
       ;
+    options_description kelips_options("Kelips options");
+    kelips_options.add_options()
+      ("nodes", value<std::string>(), "estimate of the total number of nodes")
+      ;
     options_description merge;
     merge.add(creation_options);
     merge.add(types);
     merge.add(stonehenge_options);
+    merge.add(kelips_options);
     variables_map creation = parse_args(merge, args);
     auto help = [&] (std::ostream& output)
     {
@@ -65,6 +70,17 @@ network(boost::program_options::variables_map mode,
         output << creation_options;
         output << std::endl;
         output << stonehenge_options;
+        output << std::endl;
+      }
+      else if (creation.count("kelips"))
+      {
+        output << "Usage: " << program
+               << " --create [options] --kelips [stonehenge-options]"
+               << std::endl;
+        output << std::endl;
+        output << creation_options;
+        output << std::endl;
+        output << kelips_options;
         output << std::endl;
       }
       else
@@ -105,7 +121,7 @@ network(boost::program_options::variables_map mode,
       auto kelips =
         elle::make_unique<infinit::overlay::kelips::Configuration>();
       if (creation.count("nodes"))
-        kelips->config.k = sqrt(std::stoi(creation["nodes"].as<int>()));
+        kelips->config.k = sqrt(creation["nodes"].as<int>());
       kelips->config.node_id = infinit::model::Address::random();
       overlay_config = std::move(kelips);
     }
