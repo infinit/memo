@@ -158,8 +158,7 @@ network(boost::program_options::variables_map mode,
       hosts = run["host"].as<std::vector<std::string>>();
     auto volume = ifnt.volume_get(name);
     auto network = ifnt.network_get(volume.network);
-    auto model = network.run(hosts);
-
+    auto model = network.run(hosts, true);
     auto fs = volume.run(model.second, optional(run, "mountpoint"));
     reactor::wait(*fs);
   }

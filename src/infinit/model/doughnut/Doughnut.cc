@@ -200,10 +200,17 @@ namespace infinit
         else
         {
           ELLE_TRACE_SCOPE("%s: fetch user from name", *this);
-          auto block = this->fetch(UB::hash_address(data.string()));
-          auto ub = elle::cast<UB>::runtime(block);
-          return elle::make_unique<doughnut::User>
-            (ub->key(), data.string());
+          try
+          {
+            auto block = this->fetch(UB::hash_address(data.string()));
+            auto ub = elle::cast<UB>::runtime(block);
+            return elle::make_unique<doughnut::User>
+              (ub->key(), data.string());
+          }
+          catch (infinit::model::MissingBlock const&)
+          {
+            return nullptr;
+          }
         }
       }
 
@@ -272,7 +279,7 @@ namespace infinit
                                 bool client,
                                 bool server)
       {
-        if (!this->name)
+        if (!client || !this->name)
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
             keys,
             owner,
@@ -282,6 +289,7 @@ namespace infinit
             plain && *plain);
         else
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
+            this->name.get(),
             keys,
             owner,
             passport,

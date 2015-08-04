@@ -182,9 +182,10 @@ namespace infinit
 
     std::pair<std::unique_ptr<infinit::model::doughnut::Local>,
               std::shared_ptr<infinit::model::doughnut::Doughnut>>
-    run(std::vector<std::string> const& hosts = {})
+    run(std::vector<std::string> const& hosts = {},
+        bool client = false)
     {
-      auto model = this->model->make(hosts, false, !!storage);
+      auto model = this->model->make(hosts, client, !!storage);
       std::shared_ptr<model::doughnut::Doughnut> dht(
         static_cast<model::doughnut::Doughnut*>(model.release()));
       if (this->storage)
@@ -234,7 +235,7 @@ namespace infinit
 
     std::unique_ptr<reactor::filesystem::FileSystem>
     run(std::shared_ptr<infinit::model::doughnut::Doughnut> dht,
-        boost::optional<boost::filesystem::path> mountpoint_ = {})
+        boost::optional<std::string> mountpoint_ = {})
     {
       auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
           this->root_address, dht);
