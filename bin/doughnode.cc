@@ -112,7 +112,7 @@ main(int argc, char** argv)
         Config cfg;
         parse_options(argc, argv, cfg);
         ELLE_ASSERT(cfg.model.get());
-        auto model = cfg.model->make(false);
+        auto model = cfg.model->make({}, false, true);
         if (cfg.storage)
         {
           auto storage = cfg.storage->make();

@@ -154,13 +154,13 @@ main(int argc, char** argv)
         parse_options(argc, argv, cfg, model_cfg);
         if (model_cfg)
         {
-          model = model_cfg->make(false);
+          model = model_cfg->make({}, true, true);
         }
         else
         {
           if (!cfg.model)
             throw elle::Error("missing mandatory \"model\" configuration key");
-          model = cfg.model->make(true);
+          model = cfg.model->make({}, true, true);
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
           ELLE_TRACE("initialize filesystem")
             if (cfg.root_address)
