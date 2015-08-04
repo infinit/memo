@@ -37,6 +37,7 @@ network(boost::program_options::variables_map mode,
       ("name", value<std::string>(), "created network name")
       ("user", value<std::string>(), "user to create the network as")
       ("storage", value<std::string>(), "optional storage to contribute")
+      ("port", value<int>(), "port to listen on (random by default)")
       ("stdout", "output configuration to stdout")
       ;
     options_description types("Overlay types");
@@ -143,6 +144,8 @@ network(boost::program_options::variables_map mode,
       network.storage = std::move(storage);
       network.model = std::move(dht);
       network.name = name;
+      if (creation.count("port"))
+        network.port = creation["port"].as<int>();
       if (!creation.count("stdout"))
       {
         ifnt.network_save(name, network);

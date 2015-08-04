@@ -163,6 +163,7 @@ namespace infinit
       : name()
       , storage()
       , model()
+      , port()
     {}
 
     Network(elle::serialization::SerializerIn& s)
@@ -176,6 +177,7 @@ namespace infinit
       s.serialize("name", this->name);
       s.serialize("storage", this->storage);
       s.serialize("model", this->model);
+      s.serialize("port", this->port);
     }
 
     std::pair<std::unique_ptr<infinit::model::doughnut::Local>,
@@ -188,7 +190,7 @@ namespace infinit
       if (this->storage)
       {
         auto local = elle::make_unique<infinit::model::doughnut::Local>
-          (this->storage->make());
+          (this->storage->make(), this->port ? this->port.get() : 0);
         dht->overlay()->register_local(*local);
         local->doughnut() = dht;
         local->serve();
@@ -201,6 +203,7 @@ namespace infinit
     std::string name;
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     std::unique_ptr<infinit::model::ModelConfig> model;
+    boost::optional<int> port;
   };
 
   struct Volume
