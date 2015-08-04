@@ -208,10 +208,12 @@ namespace infinit
 
   struct Volume
   {
-    Volume(std::string mountpoint_,
+    Volume(std::string name,
+           std::string mountpoint_,
            infinit::model::Address root_,
            std::string network_)
-      : mountpoint(std::move(mountpoint_))
+      : name(name)
+      , mountpoint(std::move(mountpoint_))
       , root_address(std::move(root_))
       , network(std::move(network_))
     {}
@@ -224,24 +226,34 @@ namespace infinit
     void
     serialize(elle::serialization::Serializer& s)
     {
+      s.serialize("name", this->name);
       s.serialize("mountpoint", this->mountpoint);
       s.serialize("root_address", this->root_address);
       s.serialize("network", this->network);
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
-    run(std::shared_ptr<infinit::model::doughnut::Doughnut> dht)
+    run(std::shared_ptr<infinit::model::doughnut::Doughnut> dht,
+        boost::optional<boost::filesystem::path> mountpoint_ = {})
     {
       auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
           this->root_address, dht);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
-      create_directories(boost::filesystem::path(mountpoint));
-      driver->mount(mountpoint, {});
+      boost::filesystem::path mountpoint;
+      if (mountpoint_)
+        mountpoint = mountpoint_.get();
+      else if (this->mountpoint)
+        mountpoint = this->mountpoint.get();
+      else
+        throw elle::Error("mountpoint unspecified");
+      create_directories(mountpoint);
+      driver->mount(mountpoint.string(), {});
       return driver;
     }
 
-    std::string mountpoint;
+    std::string name;
+    boost::optional<std::string> mountpoint;
     infinit::model::Address root_address;
     std::string network;
   };
@@ -354,10 +366,10 @@ namespace infinit
     }
 
     void
-    volume_save(std::string const& name, Volume const& volume)
+    volume_save(Volume const& volume)
     {
       boost::filesystem::ofstream f;
-      this->_open(f, this->_volume_path(name), name, "volume");
+      this->_open(f, this->_volume_path(volume.name), volume.name, "volume");
       elle::serialization::json::SerializerOut s(f, false);
       s.serialize_forward(volume);
     }

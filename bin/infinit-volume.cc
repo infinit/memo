@@ -50,7 +50,7 @@ network(boost::program_options::variables_map mode,
       throw elle::Exit(0);
     }
     auto creation = parse_args(creation_options, args);
-    auto name = optional(creation, "name");
+    auto name = mandatory(creation, "name", help);
     auto network_name = mandatory(creation, "network", help);
     auto mountpoint = mandatory(creation, "mountpoint", help);
     auto network = ifnt.network_get(network_name);
@@ -58,14 +58,10 @@ network(boost::program_options::variables_map mode,
     auto model = network.run();
     ELLE_TRACE("create volume");
     auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
-    infinit::Volume volume(mountpoint, fs->root_address(), network.name);
+    infinit::Volume volume(name, mountpoint, fs->root_address(), network.name);
     {
       if (!creation.count("stdout"))
-      {
-        if (!name)
-          throw elle::Error("volume name unspecified (use --name)");
-        ifnt.volume_save(*name, volume);
-      }
+        ifnt.volume_save(volume);
       else
       {
         elle::serialization::json::SerializerOut s(std::cout, false);
@@ -73,11 +69,72 @@ network(boost::program_options::variables_map mode,
       }
     }
   }
+  else if (mode.count("export"))
+  {
+    options_description export_options("Export options");
+    export_options.add_options()
+      ("name,n", value<std::string>(), "network to export")
+      ("output,o", value<std::string>(), "file to write user to "
+                                        "(stdout by default)")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --export [options]" << std::endl;
+      output << std::endl;
+      output << export_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    auto exportation = parse_args(export_options, args);
+    auto volume_name = mandatory(exportation, "name", "volume name", help);
+    auto output = get_output(exportation);
+    auto volume = ifnt.volume_get(volume_name);
+    volume.mountpoint.reset();
+    {
+      elle::serialization::json::SerializerOut s(*output, false);
+      s.serialize_forward(volume);
+    }
+  }
+  else if (mode.count("import"))
+  {
+    options_description import_options("Import options");
+    import_options.add_options()
+      ("input,i", value<std::string>(), "file to read volume from")
+      ("mountpoint,m", value<std::string>(), "where to mount the filesystem")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --import [options]" << std::endl;
+      output << std::endl;
+      output << import_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    auto importation = parse_args(import_options, args);
+    auto input = get_input(importation);
+    {
+      elle::serialization::json::SerializerIn s(*input, false);
+      infinit::Volume volume(s);
+      volume.mountpoint = optional(importation, "mountpoint");
+      ifnt.volume_save(volume);
+    }
+  }
   else if (mode.count("run"))
   {
     options_description run_options("Run options");
     run_options.add_options()
       ("name", value<std::string>(), "volume name")
+      ("mountpoint,m", value<std::string>(), "where to mount the filesystem")
       ("host", value<std::vector<std::string>>()->multitoken(),
        "hosts to connect to")
       ;
@@ -102,7 +159,8 @@ network(boost::program_options::variables_map mode,
     auto volume = ifnt.volume_get(name);
     auto network = ifnt.network_get(volume.network);
     auto model = network.run(hosts);
-    auto fs = volume.run(model.second);
+
+    auto fs = volume.run(model.second, optional(run, "mountpoint"));
     reactor::wait(*fs);
   }
   else
@@ -121,6 +179,8 @@ int main(int argc, char** argv)
   mode_options.add_options()
     ("create", "create a new volume")
     ("destroy", "destroy a volume")
+    ("export", "export a network for someone else to import")
+    ("import", "import a network")
     ("list", "list existing volumes")
     ("run", "run volume")
     ;
