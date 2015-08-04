@@ -194,7 +194,7 @@ namespace infinit
     namespace kelips
     {
       struct Configuration
-        : public OverlayConfig
+        : public overlay::Configuration
       {
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);

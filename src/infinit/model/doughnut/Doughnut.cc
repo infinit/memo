@@ -233,7 +233,7 @@ namespace infinit
         this->_consensus->remove(*this->_overlay, address);
       }
       DoughnutModelConfig::DoughnutModelConfig(
-        std::unique_ptr<overlay::OverlayConfig> overlay_,
+        std::unique_ptr<overlay::Configuration> overlay_,
         cryptography::rsa::KeyPair keys_,
         cryptography::rsa::PublicKey owner_,
         Passport passport_,
@@ -247,7 +247,7 @@ namespace infinit
 
       DoughnutModelConfig::DoughnutModelConfig
         (elle::serialization::SerializerIn& s)
-        : overlay(s.deserialize<std::unique_ptr<overlay::OverlayConfig>>
+        : overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                   ("overlay"))
         , keys(s.deserialize<cryptography::rsa::KeyPair>("keys"))
         , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))

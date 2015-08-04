@@ -26,12 +26,12 @@ namespace infinit
       _lookup(model::Address address, int n, Operation op) const override;
     };
 
-    struct StonehengeOverlayConfig
-      : public OverlayConfig
+    struct StonehengeConfiguration
+      : public Configuration
     {
       std::vector<std::string> nodes;
-      StonehengeOverlayConfig();
-      StonehengeOverlayConfig(elle::serialization::SerializerIn& input);
+      StonehengeConfiguration();
+      StonehengeConfiguration(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s);
       virtual

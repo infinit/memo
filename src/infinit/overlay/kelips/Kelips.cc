@@ -1590,11 +1590,11 @@ namespace infinit
     namespace kelips
     {
       Configuration::Configuration()
-        : OverlayConfig()
+        : overlay::Configuration()
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& input)
-        : OverlayConfig()
+        : overlay::Configuration()
       {
         this->serialize(input);
       }
@@ -1616,7 +1616,7 @@ namespace infinit
       }
 
       static const
-      elle::serialization::Hierarchy<infinit::overlay::OverlayConfig>::
+      elle::serialization::Hierarchy<infinit::overlay::Configuration>::
       Register<Configuration> _registerKelipsOverlayConfig("kelips");
     }
   }

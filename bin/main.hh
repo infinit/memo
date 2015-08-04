@@ -128,7 +128,7 @@ namespace infinit
   struct NetworkDescriptor
   {
     NetworkDescriptor(std::string name_,
-                      std::unique_ptr<infinit::overlay::OverlayConfig> overlay_,
+                      std::unique_ptr<infinit::overlay::Configuration> overlay_,
                       infinit::cryptography::rsa::PublicKey owner_)
       : name(std::move(name_))
       , overlay(std::move(overlay_))
@@ -137,7 +137,7 @@ namespace infinit
 
     NetworkDescriptor(elle::serialization::SerializerIn& s)
       : name(s.deserialize<std::string>("name"))
-      , overlay(s.deserialize<std::unique_ptr<overlay::OverlayConfig>>
+      , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
     {
@@ -153,7 +153,7 @@ namespace infinit
     }
 
     std::string name;
-    std::unique_ptr<infinit::overlay::OverlayConfig> overlay;
+    std::unique_ptr<infinit::overlay::Configuration> overlay;
     infinit::cryptography::rsa::PublicKey owner;
   };
 

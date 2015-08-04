@@ -46,25 +46,25 @@ namespace infinit
       return res;
     }
 
-    StonehengeOverlayConfig::StonehengeOverlayConfig()
-      : OverlayConfig()
+    StonehengeConfiguration::StonehengeConfiguration()
+      : overlay::Configuration()
     {}
 
-    StonehengeOverlayConfig::StonehengeOverlayConfig
+    StonehengeConfiguration::StonehengeConfiguration
       (elle::serialization::SerializerIn& input)
-      : OverlayConfig()
+      : Configuration()
     {
       this->serialize(input);
     }
 
     void
-    StonehengeOverlayConfig::serialize(elle::serialization::Serializer& s)
+    StonehengeConfiguration::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("nodes", this->nodes);
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeOverlayConfig::make(std::vector<std::string> const&, bool)
+    StonehengeConfiguration::make(std::vector<std::string> const&, bool)
     {
       infinit::overlay::Overlay::Members members;
       for (auto const& hostport: nodes)
@@ -78,7 +78,7 @@ namespace infinit
       return elle::make_unique<infinit::overlay::Stonehenge>(members);
     }
 
-    static const elle::serialization::Hierarchy<OverlayConfig>::
-    Register<StonehengeOverlayConfig> _registerStonehengeOverlayConfig("stonehenge");
+    static const elle::serialization::Hierarchy<Configuration>::
+    Register<StonehengeConfiguration> _registerStonehengeConfiguration("stonehenge");
   }
 }

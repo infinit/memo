@@ -75,7 +75,7 @@ namespace infinit
         public ModelConfig
       {
       public:
-        std::unique_ptr<overlay::OverlayConfig> overlay;
+        std::unique_ptr<overlay::Configuration> overlay;
         cryptography::rsa::KeyPair keys;
         cryptography::rsa::PublicKey owner;
         Passport passport;
@@ -83,7 +83,7 @@ namespace infinit
         boost::optional<std::string> name;
 
         DoughnutModelConfig(
-          std::unique_ptr<overlay::OverlayConfig> overlay,
+          std::unique_ptr<overlay::Configuration> overlay,
           cryptography::rsa::KeyPair keys,
           cryptography::rsa::PublicKey owner,
           Passport passport,
