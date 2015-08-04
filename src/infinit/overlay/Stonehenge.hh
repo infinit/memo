@@ -29,7 +29,7 @@ namespace infinit
     struct StonehengeConfiguration
       : public Configuration
     {
-      std::vector<std::string> nodes;
+      std::vector<std::string> hosts;
       StonehengeConfiguration();
       StonehengeConfiguration(elle::serialization::SerializerIn& input);
       void

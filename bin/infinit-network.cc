@@ -14,6 +14,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/overlay/Stonehenge.hh>
 
 ELLE_LOG_COMPONENT("infinit-network");
 
@@ -23,6 +24,7 @@ using namespace boost::program_options;
 options_description mode_options("Modes");
 
 infinit::Infinit ifnt;
+
 
 void
 network(boost::program_options::variables_map mode,
@@ -38,41 +40,88 @@ network(boost::program_options::variables_map mode,
       ("nodes", value<std::string>(), "Estimate of the total number of nodes")
       ("stdout", "output configuration to stdout")
       ;
+    options_description types("Overlay types");
+    types.add_options()
+      ("stonehenge", "use a stonehenge overlay network")
+      ;
+    options_description stonehenge_options("Stonehenge options");
+    stonehenge_options.add_options()
+      ("host", value<std::vector<std::string>>()->multitoken(),
+       "hosts to connect to")
+      ;
+    options_description merge;
+    merge.add(creation_options);
+    merge.add(types);
+    merge.add(stonehenge_options);
+    variables_map creation = parse_args(merge, args);
     auto help = [&] (std::ostream& output)
     {
-      output << "Usage: " << program
-             << " --create [options]" << std::endl;
-      output << std::endl;
-      output << creation_options;
-      output << std::endl;
+      if (creation.count("stonehenge"))
+      {
+        output << "Usage: " << program
+               << " --create [options] --stonehenge [stonehenge-options]"
+               << std::endl;
+        output << std::endl;
+        output << creation_options;
+        output << std::endl;
+        output << stonehenge_options;
+        output << std::endl;
+      }
+      else
+      {
+        output << "Usage: " << program
+               << " --create [options] overlay-type [overlay-options]"
+               << std::endl;
+        output << std::endl;
+        output << creation_options;
+        output << std::endl;
+        output << types;
+        output << std::endl;
+      }
     };
     if (mode.count("help"))
     {
       help(std::cout);
       throw elle::Exit(0);
     }
-    variables_map creation = parse_args(creation_options, args);
     auto name = mandatory(creation, "name", "network name", help);
     auto owner = ifnt.user_get(optional(creation, "user"));
     auto storage_name = optional(creation, "storage");
-    auto nodes = optional(creation, "nodes");
-    int k = 1;
-    if (nodes)
-      k = sqrt(std::stoi(*nodes));
+    std::unique_ptr<infinit::overlay::Configuration> overlay_config;
+    if (creation.count("stonehenge"))
+    {
+      auto stonehenge =
+        elle::make_unique<infinit::overlay::StonehengeConfiguration>();
+      if (!creation.count("host"))
+      {
+        help(std::cerr);
+        throw elle::Error("stonehenge hosts not specified");
+      }
+      stonehenge->hosts = creation["host"].as<std::vector<std::string>>();
+      overlay_config = std::move(stonehenge);
+    }
+    if (creation.count("kelips"))
+    {
+      auto kelips =
+        elle::make_unique<infinit::overlay::kelips::Configuration>();
+      if (creation.count("nodes"))
+        kelips->config.k = sqrt(std::stoi(creation["nodes"].as<int>()));
+      kelips->config.node_id = infinit::model::Address::random();
+      overlay_config = std::move(kelips);
+    }
+    if (!overlay_config)
+      throw elle::Error("overlay type unspecified");
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     if (storage_name)
       storage = ifnt.storage_get(*storage_name);
     auto dht =
       elle::make_unique<infinit::model::doughnut::DoughnutModelConfig>(
-        elle::make_unique<infinit::overlay::kelips::Configuration>(),
+        std::move(overlay_config),
         owner.keypair(),
         owner.public_key,
         infinit::model::doughnut::Passport
           (owner.public_key, name, owner.private_key.get()),
         owner.name);
-    auto& kelips_cfg = static_cast<infinit::overlay::kelips::Configuration&>(*dht->overlay);
-    kelips_cfg.config.k = k;
-    kelips_cfg.config.node_id = infinit::model::Address::random();
     {
       infinit::Network network;
       network.storage = std::move(storage);

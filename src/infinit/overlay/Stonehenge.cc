@@ -60,14 +60,14 @@ namespace infinit
     void
     StonehengeConfiguration::serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("nodes", this->nodes);
+      s.serialize("hosts", this->hosts);
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
     StonehengeConfiguration::make(std::vector<std::string> const&, bool)
     {
       infinit::overlay::Overlay::Members members;
-      for (auto const& hostport: nodes)
+      for (auto const& hostport: this->hosts)
       {
         size_t p = hostport.find_first_of(':');
         if (p == hostport.npos)
