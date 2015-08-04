@@ -16,29 +16,41 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
 
+namespace dht = infinit::model::doughnut;
+namespace storage = infinit::storage;
+
 ELLE_TEST_SCHEDULED(doughnut)
 {
-  auto local_a = elle::make_unique<infinit::model::doughnut::Local>(
-    elle::make_unique<infinit::storage::Memory>());
-  auto local_b = elle::make_unique<infinit::model::doughnut::Local>(
-    elle::make_unique<infinit::storage::Memory>());
+  auto local_a = elle::make_unique<dht::Local>(
+    elle::make_unique<storage::Memory>());
+  auto local_b = elle::make_unique<dht::Local>(
+    elle::make_unique<storage::Memory>());
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
+  dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
+  dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
   infinit::overlay::Stonehenge::Members members;
   members.push_back(local_a->server_endpoint());
   members.push_back(local_b->server_endpoint());
-  local_a->doughnut().reset(
-    new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::rsa::keypair::generate(2048),
-      elle::make_unique<infinit::overlay::Stonehenge>(members)
-      ));
-  local_b->doughnut().reset(
-    new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::rsa::keypair::generate(2048),
-      elle::make_unique<infinit::overlay::Stonehenge>(members)
-      ));
-
-  infinit::model::doughnut::Doughnut dht(
-    infinit::cryptography::rsa::keypair::generate(2048),
-    elle::make_unique<infinit::overlay::Stonehenge>(std::move(members)));
+  auto dht_a = std::make_shared<dht::Doughnut>(
+    keys_a,
+    keys_a.K(),
+    passport_a,
+    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    );
+  local_a->doughnut() = dht_a;
+  dht_a->overlay()->register_local(*local_a);
+  local_a->serve();
+  auto dht_b = std::make_shared<dht::Doughnut>(
+    keys_b,
+    keys_a.K(),
+    passport_b,
+    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    );
+  local_b->doughnut() = dht_b;
+  local_b->serve();
+  dht_b->overlay()->register_local(*local_b);
+  auto& dht = *dht_a;
   {
     elle::Buffer data("\\_o<", 4);
     auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(data);
@@ -70,35 +82,37 @@ ELLE_TEST_SCHEDULED(doughnut)
 
 ELLE_TEST_SCHEDULED(ACB)
 {
-  // Servers
-  auto local_a = elle::make_unique<infinit::model::doughnut::Local>(
-    elle::make_unique<infinit::storage::Memory>());
-  auto local_b = elle::make_unique<infinit::model::doughnut::Local>(
-    elle::make_unique<infinit::storage::Memory>());
+    auto local_a = elle::make_unique<dht::Local>(
+    elle::make_unique<storage::Memory>());
+  auto local_b = elle::make_unique<dht::Local>(
+    elle::make_unique<storage::Memory>());
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
+  dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
+  dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
   infinit::overlay::Stonehenge::Members members;
-  {
-    members.push_back(local_a->server_endpoint());
-    members.push_back(local_b->server_endpoint());
-  }
-  local_a->doughnut().reset(
-    new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::rsa::keypair::generate(2048),
-      elle::make_unique<infinit::overlay::Stonehenge>(members)
-      ));
-  local_b->doughnut().reset(
-    new infinit::model::doughnut::Doughnut(
-      infinit::cryptography::rsa::keypair::generate(2048),
-      elle::make_unique<infinit::overlay::Stonehenge>(members)
-      ));
-  // Clients
-  infinit::model::doughnut::Doughnut dht(
-    infinit::cryptography::rsa::keypair::generate(2048),
-    elle::make_unique<infinit::overlay::Stonehenge>(members));
-  auto other_keys = infinit::cryptography::rsa::keypair::generate(2048);
-  auto other_key = other_keys.K();
-  infinit::model::doughnut::Doughnut other_dht(
-    std::move(other_keys),
-    elle::make_unique<infinit::overlay::Stonehenge>(members));
+  members.push_back(local_a->server_endpoint());
+  members.push_back(local_b->server_endpoint());
+  auto dht_a = std::make_shared<dht::Doughnut>(
+    keys_a,
+    keys_a.K(),
+    passport_a,
+    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    );
+  local_a->doughnut() = dht_a;
+  dht_a->overlay()->register_local(*local_a);
+  local_a->serve();
+  auto dht_b = std::make_shared<dht::Doughnut>(
+    keys_b,
+    keys_a.K(),
+    passport_b,
+    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    );
+  local_b->doughnut() = dht_b;
+  dht_b->overlay()->register_local(*local_b);
+  local_b->serve();
+  auto& dht = *dht_a;
+  auto& other_dht = *dht_b;
   {
     auto block = dht.make_block<infinit::model::blocks::ACLBlock>();
     elle::Buffer data("\\_o<", 4);
@@ -116,10 +130,10 @@ ELLE_TEST_SCHEDULED(ACB)
         // FIXME: slice
         BOOST_CHECK_THROW(other_dht.store(*acb), elle::Exception);
         // BOOST_CHECK_THROW(other_dht.store(*acb),
-        //                   infinit::model::doughnut::ValidationFailed);
+        //                   dht::ValidationFailed);
     }
     ELLE_LOG("owner: add ACB permissions")
-      block->set_permissions(infinit::model::doughnut::User(other_key, ""), true, true);
+      block->set_permissions(dht::User(keys_b.K(), ""), true, true);
     ELLE_LOG("owner: store ACB")
       dht.store(*block);
     {

@@ -151,41 +151,43 @@ template<typename T> std::string serialize(T & t)
 
 
 // Run nodes in a separate scheduler to avoid reentrency issues
+// ndmefyl: WHAT THE FUCK is that supposed to imply O.o
 reactor::Scheduler* nodes_sched;
 static void make_nodes(std::string store, int node_count, bool plain)
 {
   reactor::Scheduler s;
   nodes_sched = &s;
   reactor::Thread t(s, "nodes", [&] {
-    for (int i=0; i<node_count; ++i)
+    for (int i = 0; i < node_count; ++i)
     {
-      auto tmp = store / boost::filesystem::unique_path();
-      std::cerr << i << " : " << tmp << std::endl;
-      boost::filesystem::create_directories(tmp);
-      infinit::storage::Storage* s;
+      std::unique_ptr<infinit::storage::Storage> s;
       if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
-        s = new infinit::storage::Memory();
+        s.reset(new infinit::storage::Memory());
       else
-        s = new infinit::storage::Filesystem(tmp);
-      infinit::model::doughnut::Local* l = new infinit::model::doughnut::Local(
-        std::unique_ptr<infinit::storage::Storage>(s));
+      {
+        auto tmp = store / boost::filesystem::unique_path();
+        std::cerr << i << " : " << tmp << std::endl;
+        boost::filesystem::create_directories(tmp);
+        s.reset(new infinit::storage::Filesystem(tmp));
+      }
+      auto l = new infinit::model::doughnut::Local(std::move(s));
       auto ep = l->server_endpoint();
       endpoints.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
                              ep.port());
       nodes.emplace_back(l);
     }
     // now give each a model
-    for (int i=0; i<node_count; ++i)
+    for (int i = 0; i < node_count; ++i)
     {
       auto kp = infinit::cryptography::rsa::keypair::generate(2048);
       std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
-      std::unique_ptr<infinit::model::doughnut::Doughnut> model =
-        elle::make_unique<infinit::model::doughnut::Doughnut>(
+      auto model =
+        std::make_shared<infinit::model::doughnut::Doughnut>(
           std::move(kp),
           std::move(ov),
           nullptr,
           plain);
-      nodes[i]->doughnut() = std::move(model);
+      nodes[i]->doughnut() = model;
     }
   });
   ELLE_LOG("Running node scheduler");
