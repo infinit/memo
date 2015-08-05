@@ -52,7 +52,7 @@ network(boost::program_options::variables_map mode,
     auto creation = parse_args(creation_options, args);
     auto name = mandatory(creation, "name", help);
     auto network_name = mandatory(creation, "network", help);
-    auto mountpoint = mandatory(creation, "mountpoint", help);
+    auto mountpoint = optional(creation, "mountpoint");
     auto network = ifnt.network_get(network_name);
     ELLE_TRACE("start network");
     auto model = network.run();

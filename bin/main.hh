@@ -215,7 +215,7 @@ namespace infinit
   struct Volume
   {
     Volume(std::string name,
-           std::string mountpoint_,
+           boost::optional<std::string> mountpoint_,
            infinit::model::Address root_,
            std::string network_)
       : name(name)
