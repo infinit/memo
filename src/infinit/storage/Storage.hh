@@ -17,6 +17,8 @@ namespace infinit
     class Storage
     {
     public:
+      virtual
+      ~Storage();
       elle::Buffer
       get(Key k) const;
       void

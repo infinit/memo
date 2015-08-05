@@ -14,6 +14,9 @@ namespace infinit
 {
   namespace storage
   {
+    Storage::~Storage()
+    {}
+
     elle::Buffer
     Storage::get(Key key) const
     {

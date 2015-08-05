@@ -15,6 +15,8 @@ namespace infinit
     {
     public:
       Dropbox(std::string token);
+      ~Dropbox();
+
     protected:
       virtual
       elle::Buffer

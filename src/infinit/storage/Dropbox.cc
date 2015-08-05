@@ -14,6 +14,10 @@ namespace infinit
     Dropbox::Dropbox(std::string token)
       : _dropbox(std::move(token))
     {}
+
+    Dropbox::~Dropbox()
+    {}
+
     static
     boost::filesystem::path
     path()
