@@ -67,34 +67,34 @@ namespace infinit
     }
 
 
-    struct StripStorageConfig:
-    public StorageConfig
-    {
-    public:
-      std::vector<std::unique_ptr<StorageConfig>> storage;
-      StripStorageConfig(elle::serialization::SerializerIn& input)
+    StripStorageConfig::StripStorageConfig(Storages storages_)
       : StorageConfig()
-      {
-        this->serialize(input);
-      }
+      , storage(std::move(storages_))
+    {}
 
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        s.serialize("backend", this->storage);
-      }
+    StripStorageConfig::StripStorageConfig(
+      elle::serialization::SerializerIn& input)
+      : StorageConfig()
+      , storage()
+    {
+      this->serialize(input);
+    }
 
-      virtual
-      std::unique_ptr<infinit::storage::Storage>
-      make() override
-      {
-        std::vector<std::unique_ptr<infinit::storage::Storage>> s;
-        for(auto const& c: storage)
-          s.push_back(std::move(c->make()));
-        return elle::make_unique<infinit::storage::Strip>(
-          std::move(s));
-      }
-    };
+    void
+    StripStorageConfig::serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("backend", this->storage);
+    }
+
+    std::unique_ptr<infinit::storage::Storage>
+    StripStorageConfig::StripStorageConfig::make()
+    {
+      std::vector<std::unique_ptr<infinit::storage::Storage>> s;
+      for(auto const& c: storage)
+        s.push_back(std::move(c->make()));
+      return elle::make_unique<infinit::storage::Strip>(
+        std::move(s));
+    }
 
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<StripStorageConfig>

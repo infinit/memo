@@ -29,6 +29,21 @@ namespace infinit
       ELLE_ATTRIBUTE(std::vector<std::unique_ptr<Storage>>, backend);
       int _disk_of(Key k) const ;
     };
+
+    struct StripStorageConfig
+      : public StorageConfig
+    {
+    public:
+      typedef std::vector<std::unique_ptr<StorageConfig>> Storages;
+      StripStorageConfig(Storages storages_);
+      StripStorageConfig(elle::serialization::SerializerIn& input);
+      void
+      serialize(elle::serialization::Serializer& s);
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override;
+      Storages storage;
+    };
   }
 }
 

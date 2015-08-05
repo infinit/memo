@@ -11,6 +11,7 @@
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/storage/Storage.hh>
+#include <infinit/storage/Strip.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/overlay/Stonehenge.hh>
 
@@ -34,7 +35,8 @@ network(boost::program_options::variables_map mode,
     creation_options.add_options()
       ("name,n", value<std::string>(), "created network name")
       ("user,u", value<std::string>(), "user to create the network as")
-      ("storage,s", value<std::string>(), "optional storage to contribute")
+      ("storage,s", value<std::vector<std::string>>()->multitoken(),
+       "optional storage to contribute")
       ("port,p", value<int>(), "port to listen on (random by default)")
       ("stdout", "output configuration to stdout")
       ;
@@ -101,7 +103,6 @@ network(boost::program_options::variables_map mode,
     }
     auto name = mandatory(creation, "name", "network name", help);
     auto owner = ifnt.user_get(optional(creation, "user"));
-    auto storage_name = optional(creation, "storage");
     std::unique_ptr<infinit::overlay::Configuration> overlay_config;
     if (creation.count("stonehenge"))
     {
@@ -127,8 +128,19 @@ network(boost::program_options::variables_map mode,
     if (!overlay_config)
       throw elle::Error("overlay type unspecified");
     std::unique_ptr<infinit::storage::StorageConfig> storage;
-    if (storage_name)
-      storage = ifnt.storage_get(*storage_name);
+    auto storage_count = creation.count("storage");
+    if (storage_count > 0)
+    {
+      auto storages = creation["storage"].as<std::vector<std::string>>();
+      std::vector<std::unique_ptr<infinit::storage::StorageConfig>> backends;
+      for (auto const& storage: storages)
+        backends.emplace_back(ifnt.storage_get(storage));
+      if (backends.size() == 1)
+        storage = std::move(backends[0]);
+      else
+        storage.reset(
+          new infinit::storage::StripStorageConfig(std::move(backends)));
+    }
     auto dht =
       elle::make_unique<infinit::model::doughnut::DoughnutModelConfig>(
         std::move(overlay_config),
