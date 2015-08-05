@@ -15,6 +15,8 @@ namespace infinit
     {
     public:
       Dropbox(std::string token);
+      Dropbox(std::string token,
+              boost::filesystem::path root);
       ~Dropbox();
 
     protected:
@@ -31,6 +33,11 @@ namespace infinit
       std::vector<Key>
       _list() override;
       ELLE_ATTRIBUTE(dropbox::Dropbox, dropbox);
+      ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
+
+    private:
+      boost::filesystem::path
+      _path(Key key) const;
     };
   }
 }

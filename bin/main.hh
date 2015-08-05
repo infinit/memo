@@ -550,7 +550,8 @@ protected:
                     bool present,
                     std::function<void ()> const& f)
   {
-    ELLE_ABORT("not handled");
+    if (this->_variables.count(name))
+      f();
   }
 
 private:

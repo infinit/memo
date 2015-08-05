@@ -74,6 +74,8 @@ storage(boost::program_options::variables_map mode,
     merge.add(fs_storage_options);
     options_description dropbox_storage_options("Dropbox storage options");
     dropbox_storage_options.add_options()
+      ("root", value<std::string>(),
+       "where to store blocks in dropbox (defaults to .infinit)")
       ("token", value<std::string>(), "authentication token")
       ;
     merge.add(dropbox_storage_options);
