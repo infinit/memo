@@ -72,6 +72,11 @@ storage(boost::program_options::variables_map mode,
       ("path", value<std::string>(), "where to store blocks")
       ;
     merge.add(fs_storage_options);
+    options_description dropbox_storage_options("Dropbox storage options");
+    dropbox_storage_options.add_options()
+      ("token", value<std::string>(), "authentication token")
+      ;
+    merge.add(dropbox_storage_options);
     variables_map creation = parse_args(merge, args);
     auto name = optional(creation, "name");
     std::function<
