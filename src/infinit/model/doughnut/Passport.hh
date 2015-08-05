@@ -19,6 +19,7 @@ namespace infinit
                  std::string network,
                  cryptography::rsa::PrivateKey const& owner);
         Passport(elle::serialization::SerializerIn& s);
+        ~Passport();
         void
         serialize(elle::serialization::Serializer& s);
 

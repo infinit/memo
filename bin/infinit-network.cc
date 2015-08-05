@@ -9,8 +9,6 @@
 
 #include <das/serializer.hh>
 
-#include <cryptography/rsa/KeyPair.hh>
-
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/overlay/kelips/Kelips.hh>

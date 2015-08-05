@@ -31,6 +31,9 @@ namespace infinit
         , _signature(s.deserialize<elle::Buffer>("signature"))
       {}
 
+      Passport::~Passport()
+      {}
+
       void
       Passport::serialize(elle::serialization::Serializer& s)
       {

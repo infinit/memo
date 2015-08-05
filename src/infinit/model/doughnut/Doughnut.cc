@@ -143,6 +143,9 @@ namespace infinit
         }
       }
 
+      Doughnut::~Doughnut()
+      {}
+
       std::unique_ptr<blocks::MutableBlock>
       Doughnut::_make_mutable_block() const
       {
@@ -239,6 +242,10 @@ namespace infinit
       {
         this->_consensus->remove(*this->_overlay, address);
       }
+
+      DoughnutModelConfig::~DoughnutModelConfig()
+      {}
+
       DoughnutModelConfig::DoughnutModelConfig(
         std::unique_ptr<overlay::Configuration> overlay_,
         cryptography::rsa::KeyPair keys_,

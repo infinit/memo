@@ -36,6 +36,7 @@ namespace infinit
                  std::unique_ptr<overlay::Overlay> overlay,
                  std::unique_ptr<Consensus> consensus = nullptr,
                  bool plain = false);
+        ~Doughnut();
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
@@ -89,6 +90,7 @@ namespace infinit
           Passport passport,
           boost::optional<std::string> name);
         DoughnutModelConfig(elle::serialization::SerializerIn& input);
+        ~DoughnutModelConfig();
         void
         serialize(elle::serialization::Serializer& s);
         virtual
