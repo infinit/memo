@@ -253,7 +253,12 @@ namespace infinit
         mountpoint = this->mountpoint.get();
       else
         throw elle::Error("mountpoint unspecified");
-      create_directories(mountpoint);
+      try
+      {
+        create_directories(mountpoint);
+      }
+      catch (boost::filesystem::filesystem_error const&)
+      {}
       driver->mount(mountpoint.string(), {});
       return driver;
     }
