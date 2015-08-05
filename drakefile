@@ -39,12 +39,15 @@ def configure(
                         strip_prefix = True)
   reactor_lib = drake.copy(elle.reactor.lib_dynamic, 'lib',
                         strip_prefix = True)
+  dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, 'lib',
+                           strip_prefix = True)
   cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
                                 strip_prefix = True)
   protocol_lib = drake.copy(elle.protocol.lib_dynamic, 'lib',
                             strip_prefix = True)
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
+  cxx_config += elle.dropbox.config
   cxx_config.add_local_include_path('src')
   cxx_config.warnings.parentheses = False
   cxx_config.define('_FILE_OFFSET_BITS=64')
@@ -138,6 +141,8 @@ def configure(
     'src/infinit/storage/Collision.hh',
     'src/infinit/storage/Crypt.cc',
     'src/infinit/storage/Crypt.hh',
+    'src/infinit/storage/Dropbox.cc',
+    'src/infinit/storage/Dropbox.hh',
     'src/infinit/storage/Filesystem.cc',
     'src/infinit/storage/Filesystem.hh',
     'src/infinit/storage/Key.hh',
@@ -171,11 +176,11 @@ def configure(
     infinit_sources + [elle_lib,
                        cryptography_lib,
                        aws_lib,
-                       protocol_lib],
+                       protocol_lib,
+                       dropbox_lib],
     cxx_toolkit,
     cxx_config_infinit)
   rule_build << infinit_lib
-
 
   ## ----- ##
   ## Tests ##
