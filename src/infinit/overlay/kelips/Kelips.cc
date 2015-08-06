@@ -1451,22 +1451,25 @@ namespace kelips
   }
 
   void
-  Node::register_local(infinit::model::doughnut::Local& local)
+  Node::register_local(std::shared_ptr<infinit::model::doughnut::Local> local)
   {
-    ELLE_ASSERT(!_observer);
-    local.on_fetch.connect(std::bind(&Node::fetch, this, std::placeholders::_1,
-                                     std::placeholders::_2));
-    local.on_store.connect(std::bind(&Node::store, this, std::placeholders::_1,
-                                     std::placeholders::_2));
-    local.on_remove.connect(std::bind(&Node::remove, this, std::placeholders::_1));
-    _port = local.server_endpoint().port();
-    reload_state(local);
-    engage();
+    ELLE_ASSERT(!this->_observer);
+    local->on_fetch.connect(std::bind(&Node::fetch, this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2));
+    local->on_store.connect(std::bind(&Node::store, this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2));
+    local->on_remove.connect(std::bind(&Node::remove, this,
+                                       std::placeholders::_1));
+    this->_port = local->server_endpoint().port();
+    reload_state(*local);
+    this->engage();
   }
 
-  void Node::fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b)
-  {
-  }
+  void Node::fetch(Address address,
+                   std::unique_ptr<infinit::model::blocks::Block> & b)
+  {}
 
   void Node::store(infinit::model::blocks::Block const& block,
                    infinit::model::StoreMode mode)

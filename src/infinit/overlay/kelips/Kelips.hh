@@ -123,7 +123,9 @@ namespace kelips
     Node(Configuration const& config, bool observer);
     void start();
     void engage();
-    void register_local(infinit::model::doughnut::Local& local) override;
+    void
+    register_local(
+      std::shared_ptr<infinit::model::doughnut::Local> local) override;
     std::vector<RpcEndpoint> address(Address file,
                                      infinit::overlay::Operation op,
                                      int n);

@@ -47,7 +47,7 @@ namespace infinit
 
       virtual
       void
-      register_local(model::doughnut::Local& local) {}
+      register_local(std::shared_ptr<model::doughnut::Local> local);
 
       ELLE_ATTRIBUTE_RWX(model::doughnut::Doughnut*, doughnut);
 

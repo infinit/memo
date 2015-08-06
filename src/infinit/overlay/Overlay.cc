@@ -16,6 +16,10 @@ namespace infinit
     | Lookup |
     `-------*/
 
+    void
+    Overlay::register_local(std::shared_ptr<model::doughnut::Local> local)
+    {}
+
     Overlay::Members
     Overlay::lookup(model::Address address, int n, Operation op) const
     {
