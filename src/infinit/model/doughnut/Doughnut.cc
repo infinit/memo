@@ -33,56 +33,16 @@ namespace infinit
   {
     namespace doughnut
     {
-      class PlainMutableBlock: public blocks::MutableBlock
-      {
-      public:
-        typedef blocks::MutableBlock Super;
-        PlainMutableBlock()
-        : Super(Address::random()) {}
-        PlainMutableBlock(elle::serialization::Serializer& input)
-        : Super(input) {}
-      };
-      static const elle::serialization::Hierarchy<blocks::Block>::
-      Register<PlainMutableBlock> _register_pmb_serialization("PMB");
-      class PlainACLBlock: public blocks::ACLBlock
-      {
-      public:
-        typedef blocks::ACLBlock Super;
-        PlainACLBlock()
-        : Super(Address::random()) {}
-        PlainACLBlock(elle::serialization::Serializer& input)
-        : Super(input) {}
-      };
-      static const elle::serialization::Hierarchy<blocks::Block>::
-      Register<PlainACLBlock> _register_paclb_serialization("PACLB");
-      class PlainImmutableBlock: public blocks::ImmutableBlock
-      {
-      public:
-        PlainImmutableBlock()
-        : Super(Address::random()) {}
-        PlainImmutableBlock(elle::Buffer b)
-        : Super(Address::random(), b)
-        {}
-        PlainImmutableBlock(elle::serialization::Serializer& input)
-        : Super(input)
-        {}
-        typedef blocks::ImmutableBlock Super;
-      };
-      static const elle::serialization::Hierarchy<blocks::Block>::
-      Register<PlainImmutableBlock> _register_pib_serialization("PIB");
-
       Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          std::unique_ptr<overlay::Overlay> overlay,
-                         std::unique_ptr<Consensus> consensus,
-                         bool plain)
+                         std::unique_ptr<Consensus> consensus)
         : _overlay(std::move(overlay))
         , _consensus(std::move(consensus))
         , _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
-        , _plain(plain)
       {
         if (!this->_consensus)
           this->_consensus = elle::make_unique<Consensus>(*this);
@@ -94,14 +54,12 @@ namespace infinit
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          std::unique_ptr<overlay::Overlay> overlay,
-                         std::unique_ptr<Consensus> consensus,
-                         bool plain)
+                         std::unique_ptr<Consensus> consensus)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(overlay),
-                   std::move(consensus),
-                   plain)
+                   std::move(consensus))
       {
         try
         {
@@ -151,30 +109,21 @@ namespace infinit
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        if (_plain)
-           return elle::make_unique<PlainMutableBlock>();
-        auto res = elle::make_unique<OKB>(const_cast<Doughnut*>(this));
-        return std::move(res);
+        return elle::make_unique<OKB>(const_cast<Doughnut*>(this));
       }
 
       std::unique_ptr<blocks::ImmutableBlock>
       Doughnut::_make_immutable_block(elle::Buffer content) const
       {
         ELLE_TRACE_SCOPE("%s: create CHB", *this);
-        if (_plain)
-          return elle::make_unique<PlainImmutableBlock>(std::move(content));
-        else
-          return elle::make_unique<CHB>(std::move(content));
+        return elle::make_unique<CHB>(std::move(content));
       }
 
       std::unique_ptr<blocks::ACLBlock>
       Doughnut::_make_acl_block() const
       {
         ELLE_TRACE_SCOPE("%s: create ACB", *this);
-        if (_plain)
-          return elle::make_unique<PlainACLBlock>();
-        else
-          return elle::make_unique<ACB>(const_cast<Doughnut*>(this));
+        return elle::make_unique<ACB>(const_cast<Doughnut*>(this));
       }
 
       std::unique_ptr<model::User>
@@ -267,7 +216,6 @@ namespace infinit
         , keys(s.deserialize<cryptography::rsa::KeyPair>("keys"))
         , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
         , passport(s.deserialize<Passport>("passport"))
-        , plain(s.deserialize<boost::optional<bool>>("plain"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
       {}
 
@@ -278,7 +226,6 @@ namespace infinit
         s.serialize("keys", this->keys);
         s.serialize("owner", this->owner);
         s.serialize("passport", this->passport);
-        s.serialize("plain", this->plain);
         s.serialize("name", this->name);
       }
 
@@ -293,8 +240,7 @@ namespace infinit
             owner,
             passport,
             overlay->make(hosts, server),
-            nullptr,
-            plain && *plain);
+            nullptr);
         else
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -302,8 +248,7 @@ namespace infinit
             owner,
             passport,
             overlay->make(hosts, server),
-            nullptr,
-            plain && *plain);
+            nullptr);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

@@ -28,14 +28,12 @@ namespace infinit
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  std::unique_ptr<overlay::Overlay> overlay,
-                 std::unique_ptr<Consensus> consensus = nullptr,
-                 bool plain = false);
+                 std::unique_ptr<Consensus> consensus = nullptr);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  std::unique_ptr<overlay::Overlay> overlay,
-                 std::unique_ptr<Consensus> consensus = nullptr,
-                 bool plain = false);
+                 std::unique_ptr<Consensus> consensus = nullptr);
         ~Doughnut();
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
@@ -67,9 +65,6 @@ namespace infinit
         void
         _remove(Address address) override;
         friend class Local;
-
-      private:
-        ELLE_ATTRIBUTE(bool, plain);
       };
 
       struct DoughnutModelConfig:
@@ -80,7 +75,6 @@ namespace infinit
         cryptography::rsa::KeyPair keys;
         cryptography::rsa::PublicKey owner;
         Passport passport;
-        boost::optional<bool> plain;
         boost::optional<std::string> name;
 
         DoughnutModelConfig(
