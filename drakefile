@@ -127,6 +127,8 @@ def configure(
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
     'src/infinit/model/paranoid/Paranoid.hh',
+    'src/infinit/overlay/Kalimero.cc',
+    'src/infinit/overlay/Kalimero.hh',
     'src/infinit/overlay/Overlay.cc',
     'src/infinit/overlay/Overlay.hh',
     'src/infinit/overlay/Stonehenge.cc',

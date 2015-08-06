@@ -18,6 +18,7 @@ namespace infinit
     {
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
+        , public std::enable_shared_from_this<Doughnut>
       {
       /*-------------.
       | Construction |
@@ -28,11 +29,13 @@ namespace infinit
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  std::unique_ptr<overlay::Overlay> overlay,
+                 std::shared_ptr<Local> local = nullptr,
                  std::unique_ptr<Consensus> consensus = nullptr);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  std::unique_ptr<overlay::Overlay> overlay,
+                 std::shared_ptr<Local> local = nullptr,
                  std::unique_ptr<Consensus> consensus = nullptr);
         ~Doughnut();
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
@@ -90,6 +93,10 @@ namespace infinit
         virtual
         std::unique_ptr<infinit::model::Model>
         make(std::vector<std::string> const& hosts, bool client, bool server);
+        std::shared_ptr<Doughnut>
+        make(std::vector<std::string> const& hosts,
+             bool client,
+             std::shared_ptr<Local> local);
       };
     }
   }

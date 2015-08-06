@@ -185,25 +185,23 @@ namespace infinit
     run(std::vector<std::string> const& hosts = {},
         bool client = false)
     {
-      std::shared_ptr<model::doughnut::Doughnut> dht;
+      auto dht_config =
+        static_cast<model::doughnut::DoughnutModelConfig*>(this->model.get());
       if (this->storage)
       {
         auto local = std::make_shared<infinit::model::doughnut::Local>
           (this->storage->make(), this->port ? this->port.get() : 0);
         local->serve();
-        auto model = this->model->make(hosts, client, !!storage);
-        dht.reset(static_cast<model::doughnut::Doughnut*>(model.release()));
-        local->doughnut() = dht;
-        dht->overlay()->register_local(local);
-        return std::make_pair(std::move(local), dht);
+        return std::make_pair(std::move(local),
+                              dht_config->make(hosts, client, local));
       }
       else
       {
-        auto model = this->model->make(hosts, client, !!storage);
-        dht.reset(static_cast<model::doughnut::Doughnut*>(model.release()));
+        std::shared_ptr<infinit::model::doughnut::Local> local;
+        return
+          std::make_pair(local,
+                         dht_config->make(hosts, client, local));
       }
-      return std::make_pair(std::unique_ptr<infinit::model::doughnut::Local>(),
-                            dht);
     }
 
     std::string name;

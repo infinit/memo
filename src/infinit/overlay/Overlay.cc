@@ -1,5 +1,9 @@
 #include <infinit/overlay/Overlay.hh>
 
+#include <elle/log.hh>
+
+ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
+
 namespace infinit
 {
   namespace overlay
@@ -23,6 +27,7 @@ namespace infinit
     Overlay::Members
     Overlay::lookup(model::Address address, int n, Operation op) const
     {
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, address);
       auto res = this->_lookup(address, n, op);
       ELLE_ASSERT_EQ(signed(res.size()), n);
       return res;

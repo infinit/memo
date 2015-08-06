@@ -10,10 +10,11 @@
 #include <das/serializer.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/overlay/Kalimero.hh>
+#include <infinit/overlay/Stonehenge.hh>
+#include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
-#include <infinit/overlay/kelips/Kelips.hh>
-#include <infinit/overlay/Stonehenge.hh>
 
 ELLE_LOG_COMPONENT("infinit-network");
 
@@ -23,7 +24,6 @@ using namespace boost::program_options;
 options_description mode_options("Modes");
 
 infinit::Infinit ifnt;
-
 
 void
 network(boost::program_options::variables_map mode,
@@ -42,7 +42,8 @@ network(boost::program_options::variables_map mode,
       ;
     options_description types("Overlay types");
     types.add_options()
-      ("kelips", "use a Kelips overlay network")
+      ("kalimero", "use a kalimero overlay network")
+      ("kelips", "use a kelips overlay network")
       ("stonehenge", "use a stonehenge overlay network")
       ;
     options_description stonehenge_options("Stonehenge options");
@@ -126,7 +127,9 @@ network(boost::program_options::variables_map mode,
       overlay_config = std::move(kelips);
     }
     if (!overlay_config)
-      throw elle::Error("overlay type unspecified");
+    {
+      overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
+    }
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     auto storage_count = creation.count("storage");
     if (storage_count > 0)

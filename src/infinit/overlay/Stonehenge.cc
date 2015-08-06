@@ -34,7 +34,6 @@ namespace infinit
                         int n,
                         Operation) const
     {
-      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, address);
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
       int size = this->_hosts.size();

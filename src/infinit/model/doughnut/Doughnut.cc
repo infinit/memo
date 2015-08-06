@@ -12,16 +12,16 @@
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
 
-#include <infinit/storage/MissingKey.hh>
-
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
@@ -37,6 +37,7 @@ namespace infinit
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          std::unique_ptr<overlay::Overlay> overlay,
+                         std::shared_ptr<Local> local,
                          std::unique_ptr<Consensus> consensus)
         : _overlay(std::move(overlay))
         , _consensus(std::move(consensus))
@@ -47,6 +48,11 @@ namespace infinit
         if (!this->_consensus)
           this->_consensus = elle::make_unique<Consensus>(*this);
         this->overlay()->doughnut(this);
+        if (local)
+        {
+          local->doughnut().reset(this);
+          this->overlay()->register_local(local);
+        }
       }
 
       Doughnut::Doughnut(std::string name,
@@ -54,11 +60,13 @@ namespace infinit
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          std::unique_ptr<overlay::Overlay> overlay,
+                         std::shared_ptr<Local> local,
                          std::unique_ptr<Consensus> consensus)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(overlay),
+                   std::move(local),
                    std::move(consensus))
       {
         try
@@ -249,6 +257,37 @@ namespace infinit
             passport,
             overlay->make(hosts, server),
             nullptr);
+      }
+
+      std::shared_ptr<Doughnut>
+      DoughnutModelConfig::make(std::vector<std::string> const& hosts,
+                                bool client,
+                                std::shared_ptr<Local> local)
+      {
+        // Doughnut creates a shared pointer to himself in his ctor if passed a
+        // Local.
+        infinit::model::doughnut::Doughnut* dht = nullptr;
+        if (!client || !this->name)
+          dht = new infinit::model::doughnut::Doughnut(
+            keys,
+            owner,
+            passport,
+            overlay->make(hosts, bool(local)),
+            local,
+            nullptr);
+        else
+          dht = new infinit::model::doughnut::Doughnut(
+            this->name.get(),
+            keys,
+            owner,
+            passport,
+            overlay->make(hosts, bool(local)),
+            local,
+            nullptr);
+        if (local)
+          return local->doughnut();
+        else
+          return std::shared_ptr<Doughnut>(dht);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
