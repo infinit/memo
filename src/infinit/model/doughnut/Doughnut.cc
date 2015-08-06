@@ -86,6 +86,7 @@ namespace infinit
       {
         if (!this->_consensus)
           this->_consensus = elle::make_unique<Consensus>(*this);
+        this->overlay()->doughnut(this);
       }
 
       Doughnut::Doughnut(std::string name,

@@ -4,6 +4,11 @@
 
 #include <elle/Error.hh>
 #include <elle/assert.hh>
+#include <elle/log.hh>
+
+#include <infinit/model/doughnut/Remote.hh>
+
+ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
 
 namespace infinit
 {
@@ -13,10 +18,10 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Stonehenge::Stonehenge(Members members)
-      : _members(std::move(members))
+    Stonehenge::Stonehenge(Hosts hosts)
+      : _hosts(std::move(hosts))
     {
-      if (this->_members.empty())
+      if (this->_hosts.empty())
         throw elle::Error("empty peer list");
     }
 
@@ -25,24 +30,29 @@ namespace infinit
     `-------*/
 
     Stonehenge::Members
-    Stonehenge::_lookup(model::Address address, int n, Operation) const
+    Stonehenge::_lookup(model::Address address,
+                        int n,
+                        Operation) const
     {
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, address);
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
-      int size = this->_members.size();
+      int size = this->_hosts.size();
       ELLE_ASSERT_LTE(n, size);
       auto owner = address.value()[0] % size;
       Stonehenge::Members res;
-      auto write = std::back_inserter(res);
-      auto start = this->_members.begin() + owner;
-      auto end = std::min(start + n, this->_members.end());
-      std::copy(start, end, write);
-      if (owner + n > size)
+      ELLE_ASSERT(this->doughnut());
+      int i = owner;
+      do
       {
-        auto start = this->_members.begin();
-        auto end = start + n - (size - owner);
-        std::copy(start, end, write);
+        ELLE_DEBUG("%s: yield %s", *this, this->_hosts[i]);
+        res.emplace_back(
+          new model::doughnut::Remote(
+            const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
+            this->_hosts[i]));
+        i = (i + 1) % size;
       }
+      while (i != (owner + n) % size);
       return res;
     }
 
@@ -66,16 +76,18 @@ namespace infinit
     std::unique_ptr<infinit::overlay::Overlay>
     StonehengeConfiguration::make(std::vector<std::string> const&, bool)
     {
-      infinit::overlay::Overlay::Members members;
-      for (auto const& hostport: this->hosts)
+      Stonehenge::Hosts hosts;
+      for (auto const& host: this->hosts)
       {
-        size_t p = hostport.find_first_of(':');
-        if (p == hostport.npos)
-          throw std::runtime_error("Failed to parse host:port " + hostport);
-        members.emplace_back(boost::asio::ip::address::from_string(hostport.substr(0, p)),
-                             std::stoi(hostport.substr(p+1)));
+        size_t p = host.find_first_of(':');
+        if (p == host.npos)
+          throw elle::Error(
+            elle::sprintf("failed to parse host:port: %s", host));
+        hosts.emplace_back(
+          boost::asio::ip::address::from_string(host.substr(0, p)),
+          std::stoi(host.substr(p + 1)));
       }
-      return elle::make_unique<infinit::overlay::Stonehenge>(members);
+      return elle::make_unique<infinit::overlay::Stonehenge>(hosts);
     }
 
     static const elle::serialization::Hierarchy<Configuration>::

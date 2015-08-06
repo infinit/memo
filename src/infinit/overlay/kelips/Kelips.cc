@@ -1,23 +1,27 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
-#include <infinit/storage/Filesystem.hh>
+#include <algorithm>
+#include <random>
+
+#include <boost/filesystem.hpp>
+
+#include <elle/bench.hh>
+#include <elle/format/base64.hh>
 #include <elle/serialization/Serializer.hh>
-#include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
-#include <elle/format/base64.hh>
-#include <elle/bench.hh>
-#include <reactor/network/buffer.hh>
-#include <reactor/exception.hh>
-#include <reactor/scheduler.hh>
-#include <reactor/thread.hh>
+#include <elle/serialization/json.hh>
+
 #include <reactor/Barrier.hh>
 #include <reactor/Scope.hh>
+#include <reactor/exception.hh>
+#include <reactor/network/buffer.hh>
+#include <reactor/scheduler.hh>
+#include <reactor/thread.hh>
 
-#include <random>
-#include <algorithm>
-#include <boost/filesystem.hpp>
+#include <infinit/storage/Filesystem.hh>
+#include <infinit/model/doughnut/Remote.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
@@ -1478,6 +1482,7 @@ namespace kelips
       _promised_files.pop_back();
     }
   }
+
   void Node::remove(Address address)
   {
     auto its = _state.files.equal_range(address);
@@ -1491,10 +1496,18 @@ namespace kelips
     }
   }
 
-  auto Node::_lookup(infinit::model::Address address, int n, infinit::overlay::Operation op) const -> Members
+  Node::Members
+  Node::_lookup(infinit::model::Address address,
+                int n,
+                infinit::overlay::Operation op) const
   {
     Members res;
-    res = const_cast<Node*>(this)->address(address, op, n);
+    for (auto const& host: const_cast<Node*>(this)->address(address, op, n))
+      res.emplace_back(
+        new infinit::model::doughnut::Remote(
+          const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+          host));
+
     return res;
   }
 

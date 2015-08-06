@@ -37,7 +37,7 @@ namespace infinit
         _remove(overlay::Overlay& overlay, Address address);
 
       private:
-        std::unique_ptr<Peer>
+        std::shared_ptr<Peer>
         _owner(overlay::Overlay& overlay,
                Address const& address,
                overlay::Operation op) const;

@@ -4,6 +4,14 @@ namespace infinit
 {
   namespace overlay
   {
+    /*-------------.
+    | Construction |
+    `-------------*/
+
+    Overlay::Overlay()
+      : _doughnut(nullptr)
+    {}
+
     /*-------.
     | Lookup |
     `-------*/

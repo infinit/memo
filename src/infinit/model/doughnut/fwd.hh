@@ -11,6 +11,8 @@ namespace infinit
     {
       class Doughnut;
       class Local;
+      class Peer;
+      class Remote;
       using das::operator <<;
     }
   }

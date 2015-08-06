@@ -25,8 +25,14 @@ namespace infinit
     | Types |
     `------*/
     public:
-      typedef boost::asio::ip::tcp::endpoint Member;
+      typedef std::shared_ptr<model::doughnut::Peer> Member;
       typedef std::vector<Member> Members;
+
+    /*-------------.
+    | Construction |
+    `-------------*/
+    public:
+      Overlay();
 
     /*-------.
     | Lookup |
@@ -41,7 +47,9 @@ namespace infinit
 
       virtual
       void
-      register_local(infinit::model::doughnut::Local& local) {}
+      register_local(model::doughnut::Local& local) {}
+
+      ELLE_ATTRIBUTE_RWX(model::doughnut::Doughnut*, doughnut);
 
     protected:
       virtual

@@ -14,8 +14,10 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      Stonehenge(Members members);
-      ELLE_ATTRIBUTE_R(Members, members);
+      typedef boost::asio::ip::tcp::endpoint Host;
+      typedef std::vector<Host> Hosts;
+      Stonehenge(Hosts hosts);
+      ELLE_ATTRIBUTE_R(Hosts, hosts);
 
     /*-------.
     | Lookup |
@@ -23,7 +25,9 @@ namespace infinit
     protected:
       virtual
       Members
-      _lookup(model::Address address, int n, Operation op) const override;
+      _lookup(model::Address address,
+              int n,
+              Operation op) const override;
     };
 
     struct StonehengeConfiguration

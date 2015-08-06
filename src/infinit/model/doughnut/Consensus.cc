@@ -67,13 +67,12 @@ namespace infinit
         this->_owner(overlay, address, overlay::OP_REMOVE)->remove(address);
       }
 
-      std::unique_ptr<Peer>
+      std::shared_ptr<Peer>
       Consensus::_owner(overlay::Overlay& overlay,
                         Address const& address,
                         overlay::Operation op) const
       {
-        return elle::make_unique<Remote>
-          (this->_doughnut, overlay.lookup(address, op));
+        return overlay.lookup(address, op);
       }
     }
   }
