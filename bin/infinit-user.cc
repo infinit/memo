@@ -11,6 +11,8 @@
 
 #include <cryptography/rsa/KeyPair.hh>
 
+#include <reactor/http/Request.hh>
+
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/overlay/Stonehenge.hh>
@@ -129,6 +131,42 @@ network(boost::program_options::variables_map mode,
       elle::printf("Imported user %s.\n", user.name);
     }
   }
+  else if (mode.count("publish"))
+  {
+    options_description publish_options("Publish options");
+    publish_options.add_options()
+      ("name,n", value<std::string>(),
+       "user to publish (defaults to system user)")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --publish --name USER [options]" << std::endl;
+      output << std::endl;
+      output << publish_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    auto publication = parse_args(publish_options, args);
+    auto name = get_name(publication);
+    auto user = ifnt.user_get(name);
+    reactor::http::Request::Configuration c;
+    c.header_add("Content-Type", "application/json");
+    reactor::http::Request r(elle::sprintf("%s/users/%s", beyond, user.uid()),
+                             reactor::http::Method::PUT,
+                             std::move(c));
+
+    {
+      das::Serializer<infinit::DasPublicUser> view(user);
+      elle::serialization::json::serialize(view, r, false);
+    }
+    r.finalize();
+    reactor::wait(r);
+  }
   else
   {
     std::cerr << "Usage: " << program << " [mode] [mode-options]" << std::endl;
@@ -143,9 +181,10 @@ int main(int argc, char** argv)
 {
   program = argv[0];
   mode_options.add_options()
+    ("export",   "export a user for someone else to import")
     ("generate", "create local user with a generated pair of keys")
-    ("export", "export a user for someone else to import")
-    ("import", "import a user")
+    ("import",   "import a user")
+    ("publish",  elle::sprintf("publish user to %s", beyond).c_str())
     ;
   options_description options("Infinit user utility");
   options.add(mode_options);

@@ -3,12 +3,14 @@
 #include <elle/Error.hh>
 #include <elle/Exit.hh>
 #include <elle/cast.hh>
+#include <elle/format/base64url.hh>
 #include <elle/os/environ.hh>
 #include <elle/system/home_directory.hh>
 #include <elle/system/username.hh>
 
 #include <das/model.hh>
 
+#include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
 
 #include <reactor/filesystem.hh>
@@ -118,6 +120,14 @@ namespace infinit
       s.serialize("name", this->name);
       s.serialize("public_key", this->public_key);
       s.serialize("private_key", this->private_key);
+    }
+
+    std::string
+    uid()
+    {
+      auto serial = elle::serialization::binary::serialize(this->public_key);
+      auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
+      return elle::format::base64url::encode(hash).string().substr(0, 8);
     }
 
     std::string name;
@@ -673,3 +683,5 @@ namespace infinit
   DAS_MODEL_DEFINE(User, (name, public_key, private_key), DasUser);
   DAS_MODEL_DEFINE(User, (name, public_key), DasPublicUser);
 }
+
+static auto const beyond = "127.0.0.1:8080";

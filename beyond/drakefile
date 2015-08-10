@@ -1,0 +1,42 @@
+import drake
+
+build = None
+check = None
+install = None
+tests = None
+
+def configure(python = None):
+
+  global build, check, install, tests
+
+  sources = drake.nodes(
+    'src/__init__.py',
+    'src/couchdb.py',
+  )
+  build = drake.Rule('build')
+  python_prefix = drake.Path('lib/python%s' % python.version)
+  built = drake.copy(sources,
+                     python_prefix / 'infinit/beyond',
+                     strip_prefix = 'src')
+  build << built
+  build << drake.copy(drake.node('bottle/bottle.py'),
+                      python_prefix, strip_prefix = True)
+  build << drake.copy(
+    drake.nodes(
+      'couchdb-python/couchdb/view.py',
+      'couchdb-python/couchdb/mapping.py',
+      'couchdb-python/couchdb/__init__.py',
+      'couchdb-python/couchdb/util.py',
+      'couchdb-python/couchdb/util2.py',
+      'couchdb-python/couchdb/util3.py',
+      'couchdb-python/couchdb/client.py',
+      'couchdb-python/couchdb/json.py',
+      'couchdb-python/couchdb/__main__.py',
+      'couchdb-python/couchdb/http.py',
+      'couchdb-python/couchdb/multipart.py',
+      'couchdb-python/couchdb/design.py',
+    ),
+    python_prefix,
+    strip_prefix = 'couchdb-python')
+  build << drake.copy(drake.node('beyond'),
+                      'bin', strip_prefix = True)

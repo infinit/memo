@@ -276,3 +276,9 @@ def configure(
     'share/man/man5/infinit.5',
   )
   install << drake.install(man, prefix)
+
+  ## ------ ##
+  ## Beyond ##
+  ## ------ ##
+
+  drake.include('beyond', python = elle.python3)

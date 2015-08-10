@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import os
+import os.path
+import sys
+
+from itertools import chain
+
+ROOT = os.path.dirname(os.path.realpath(__file__))
+PYTHONPATH = ROOT + '/../lib/python%s.%s' % sys.version_info[0:2]
+sys.path.insert(0, PYTHONPATH)
+os.environ['PYTHONPATH'] = '%s:%s' % (PYTHONPATH, os.environ.get('PYTHONPATH', ''))
+
+import infinit.beyond
+import infinit.beyond.couchdb
+
+def parse_options():
+  import argparse
+  # Parse options
+  parser = argparse.ArgumentParser(description = 'to infinity !')
+  parser.add_argument('--host',
+                      metavar = 'HOST',
+                      type = str,
+                      help = 'interface to listen on')
+  parser.add_argument('--port',
+                      metavar = 'PORT',
+                      type = int,
+                      help = 'port to listen on')
+  return parser.parse_args()
+
+try:
+  args = parse_options()
+  with infinit.beyond.couchdb.CouchDB() as couchdb:
+    datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
+    beyond = infinit.beyond.Beyond(datastore = datastore)
+    app = infinit.beyond.Bottle(beyond)
+    import bottle
+    kwargs = {}
+    if args.host is not None:
+      kwargs['host'] = args.host
+    if args.port is not None:
+      kwargs['port'] = args.port
+    bottle.run(app = app, **kwargs)
+except Exception as e:
+  print('%s: fatal error: %s' % (sys.argv[0], e))
+  raise
+  # exit(1)

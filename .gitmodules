@@ -1,3 +1,9 @@
 [submodule "elle"]
 	path = elle
 	url = git@git.infinit.io:elle
+[submodule "beyond/bottle"]
+	path = beyond/bottle
+	url = https://github.com/mefyl/bottle.git
+[submodule "beyond/couchdb-python"]
+	path = beyond/couchdb-python
+	url = https://github.com/infinitdotio/couchdb-python.git
