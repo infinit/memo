@@ -5,8 +5,12 @@
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 
-#include <infinit/storage/Storage.hh>
+#include <reactor/http/Request.hh>
+
 #include <infinit/storage/Collision.hh>
+#include <infinit/storage/Dropbox.hh>
+#include <infinit/storage/Filesystem.hh>
+#include <infinit/storage/Storage.hh>
 
 ELLE_LOG_COMPONENT("8storage");
 
@@ -15,25 +19,12 @@ ELLE_LOG_COMPONENT("8storage");
 using namespace boost::program_options;
 options_description mode_options("Modes");
 
-using infinit::storage::StorageConfig;
-typedef elle::serialization::Hierarchy<StorageConfig> Hierarchy;
-
 infinit::Infinit ifnt;
-
-// force inclusion of infinit SO.
-static void force_include()
-{
-  auto c = infinit::storage::Collision(infinit::storage::Key::null); // force inclusion of infinit so.
-}
-
-bool call_force_include = false;
 
 void
 storage(boost::program_options::variables_map mode,
         std::vector<std::string> args)
 {
-  if (call_force_include)
-    force_include();
   if (mode.count("create"))
   {
     options_description creation_options("Creation options");
@@ -42,28 +33,10 @@ storage(boost::program_options::variables_map mode,
       ("stdout", "output configuration to stdout")
       ;
     options_description types("Storage types");
-    for (auto const& t: Hierarchy::_map())
-    {
-      auto name = elle::sprintf("--%s", t.first);
-      auto desc = elle::sprintf("select a storage of type %s", t.first);
-      types.add_options()(t.first.c_str(), desc.c_str());
-    }
-    auto help = [&] (std::ostream& output)
-    {
-      output << "Usage: " << program
-             << " --create [options] [storage-type] [storage-options]"
-             << std::endl;
-      output << std::endl;
-      output << creation_options;
-      output << std::endl;
-      output << types;
-      output << std::endl;
-    };
-    if (mode.count("help"))
-    {
-      help(std::cout);
-      throw elle::Exit(0);
-    }
+    types.add_options()
+      ("dropbox", "store data in a Dropbox account")
+      ("filesystem", "store files on a local disk")
+      ;
     options_description merge;
     merge.add(creation_options);
     merge.add(types);
@@ -74,34 +47,54 @@ storage(boost::program_options::variables_map mode,
     merge.add(fs_storage_options);
     options_description dropbox_storage_options("Dropbox storage options");
     dropbox_storage_options.add_options()
+      ("account", value<std::string>(), "dropbox account to use")
       ("root", value<std::string>(),
        "where to store blocks in dropbox (defaults to .infinit)")
       ("token", value<std::string>(), "authentication token")
       ;
     merge.add(dropbox_storage_options);
     variables_map creation = parse_args(merge, args);
-    auto name = optional(creation, "name");
-    std::function<
-      std::unique_ptr<StorageConfig>(elle::serialization::SerializerIn&)> const*
-      factory = nullptr;
-    for (auto const& t: Hierarchy::_map())
+    auto help = [&] (std::ostream& output)
     {
-      if (creation.count(t.first))
+      output << "Usage: " << program
+             << " --create [options] [storage-type] [storage-options]"
+             << std::endl;
+      output << std::endl;
+      output << creation_options;
+      output << std::endl;
+      if (creation.count("filesystem"))
+        output << fs_storage_options;
+      else if (creation.count("dropbox"))
       {
-        if (factory)
-          throw elle::Error("multiple storage type specified");
-        factory = &t.second;
+        output << dropbox_storage_options;
+        output << std::endl;
       }
-    }
-    if (!factory)
+      else
+        output << types;
+      output << std::endl;
+    };
+    if (mode.count("help"))
     {
-      help(std::cerr);
-      throw elle::Error("storage type unspecified");
+      help(std::cout);
+      throw elle::Exit(0);
     }
+    auto name = optional(creation, "name");
     std::unique_ptr<infinit::storage::StorageConfig> config;
+    if (creation.count("dropbox"))
     {
-      CommandLineSerializer input(creation);
-      config = (*factory)(input);
+      auto root = optional(creation, "root");
+      auto account_name = mandatory(creation, "account", "account", help);
+      auto account = ifnt.credentials_dropbox(account_name);
+      config =
+        elle::make_unique<infinit::storage::DropboxStorageConfig>
+        (account.token, std::move(root));
+    }
+    if (creation.count("filesystem"))
+    {
+      auto path = mandatory(creation, "path", "path", help);
+      config =
+        elle::make_unique<infinit::storage::FilesystemStorageConfig>
+        (std::move(path));
     }
     if (!creation.count("stdout"))
     {

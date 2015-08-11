@@ -18,32 +18,42 @@ class User:
   class NotFound(Exception):
     pass
 
-  def __init__(self, beyond, id, name = None, public_key = None):
+  def __init__(self,
+               beyond,
+               id,
+               name = None,
+               public_key = None,
+               dropbox_accounts = None):
     self.__beyond = beyond
     self.__id = id
     self.__name = name
     self.__public_key = public_key
-    self.__dropbox_accounts = {}
-    self.__dropbox_accounts_original = {}
+    self.__dropbox_accounts = dropbox_accounts or {}
+    self.__dropbox_accounts_original = dict(self.dropbox_accounts)
 
   @classmethod
   def from_json(self, beyond, json):
     return User(beyond,
                 id = json['id'],
                 name = json['name'],
-                public_key = json['public_key'])
+                public_key = json['public_key'],
+                dropbox_accounts = json.get('dropbox_accounts'))
 
-  def to_json(self):
-    return {
+  def to_json(self, private = False):
+    res = {
       'id': self.id,
       'name': self.name,
       'public_key': self.public_key,
     }
+    if private and self.dropbox_accounts is not None:
+      res['dropbox_accounts'] = self.dropbox_accounts
+    return res
 
   def create(self):
     assert all(m is not None
                for m in [self.id, self.name, self.public_key])
-    self.__beyond._Beyond__datastore.user_insert(self.to_json())
+    self.__beyond._Beyond__datastore.user_insert(
+      self.to_json(private = True))
 
   def save(self):
     diff = {}
@@ -77,10 +87,14 @@ class Bottle(bottle.Bottle):
     self.__beyond = beyond
     self.route('/')(self.root)
     self.route('/users/<id>', method = 'GET')(self.user_get)
+    self.route('/users/<id>/dropbox-accounts', method = 'GET')(self.user_dropbox_accounts_get)
     self.route('/users/<id>', method = 'PUT')(self.user_put)
     self.route('/users/<id>/dropbox-oauth')(self.oauth_dropbox_get)
     self.route('/oauth/dropbox')(self.oauth_dropbox)
     self.route('/debug', method = 'GET')(self.debug)
+
+  def authenticate(self, user):
+    pass
 
   def root(self):
     return {
@@ -104,6 +118,21 @@ class Bottle(bottle.Bottle):
   def user_get(self, id):
     return self.__beyond.user_get(id = id).to_json()
 
+  def user_dropbox_accounts_get(self, id):
+    try:
+      user = self.__beyond.user_get(id = id)
+      self.authenticate(user)
+      return {
+        'dropbox_accounts': list(user.dropbox_accounts.values()),
+      }
+    except User.NotFound:
+      bottle.response.status = 404
+      return {
+        'error': 'user/not_found',
+        'reason': 'user %r does not exist' % id,
+        'id': id,
+      }
+
   def oauth_dropbox_get(self, id):
     params = {
       'client_id': 'jjkwyejhkyutaz2',
@@ -121,7 +150,7 @@ class Bottle(bottle.Bottle):
 
   def oauth_dropbox(self):
     code = bottle.request.query['code']
-    state = bottle.request.query['state']
+    uid = bottle.request.query['state']
     query = {
       'code': code,
       'grant_type': 'authorization_code',
@@ -137,24 +166,24 @@ class Bottle(bottle.Bottle):
     r = requests.get('https://api.dropbox.com/1/account/info',
                      params = {'access_token': access_token})
     account_info = r.json()
-    user = User(self.__beyond, id = '7vle_3Cn')
+    user = User(self.__beyond, id = uid)
     user.dropbox_accounts[account_info['uid']] = {
       'uid': account_info['uid'],
-      'name': account_info['display_name'],
+      'display_name': account_info['display_name'],
       'token': access_token,
     }
     try:
       user.save()
       return {
         'uid': account_info['uid'],
-        'name': account_info['display_name'],
+        'display_name': account_info['display_name'],
       }
     except User.NotFound:
       bottle.response.status = 404
       return {
         'error': 'user/not_found',
-        'reason': 'user %r does not exist' % state,
-        'id': state,
+        'reason': 'user %r does not exist' % uid,
+        'id': uid,
       }
 
   def debug(self):

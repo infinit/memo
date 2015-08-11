@@ -39,6 +39,23 @@ namespace infinit
       boost::filesystem::path
       _path(Key key) const;
     };
+
+    struct DropboxStorageConfig
+      : public StorageConfig
+    {
+      DropboxStorageConfig(std::string token,
+                           boost::optional<std::string> root);
+      DropboxStorageConfig(elle::serialization::SerializerIn& input);
+      void
+      serialize(elle::serialization::Serializer& s);
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override;
+
+      std::string token;
+      boost::optional<std::string> root;
+    };
+
   }
 }
 

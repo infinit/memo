@@ -14,7 +14,7 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Storage.hh>
 
-ELLE_LOG_COMPONENT("8network");
+ELLE_LOG_COMPONENT("infinit-volume");
 
 #include "main.hh"
 
@@ -158,8 +158,11 @@ network(boost::program_options::variables_map mode,
       hosts = run["host"].as<std::vector<std::string>>();
     auto volume = ifnt.volume_get(name);
     auto network = ifnt.network_get(volume.network);
+    ELLE_TRACE("run network");
     auto model = network.run(hosts, true);
+    ELLE_TRACE("run volume");
     auto fs = volume.run(model.second, optional(run, "mountpoint"));
+    ELLE_TRACE("wait");
     reactor::wait(*fs);
   }
   else

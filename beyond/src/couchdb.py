@@ -96,20 +96,28 @@ class CouchDBDatastore:
 
   def user_fetch(self, id = None, name = None):
     assert any(a is not None for a in [id, name])
-    if id is not None:
-      json = self.__couchdb['users'][id]
-      if name is not None and json['name'] != name:
-        return None
-    elif name is not None:
-      view = self.__couchdb['users'].view('beyond/per_name')[name]
-      json = next(iter(view)).value # Really ?
-    json['id'] = json['_id']
-    return json
+    try:
+      if id is not None:
+        json = self.__couchdb['users'][id]
+        if name is not None and json['name'] != name:
+          return None
+      elif name is not None:
+        view = self.__couchdb['users'].view('beyond/per_name')[name]
+        json = next(iter(view)).value # Really ?
+      json = dict(json)
+      json['id'] = json['_id']
+      del json['_id']
+      return json
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.User.NotFound()
 
-  def user_update(self, id, dropbox_accounts = None):
-    args = {}
-    if dropbox_accounts is not None:
-      args['dropbox_accounts'] = json.dumps(dropbox_accounts)
+
+  def user_update(self, id, diff = None):
+    args = {
+      name: json.dumps(value)
+      for name, value in diff.items()
+      if value is not None
+    }
     try:
       self.__couchdb['users'].update_doc(
         'beyond/update',

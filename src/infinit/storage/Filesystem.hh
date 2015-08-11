@@ -33,6 +33,19 @@ namespace infinit
       boost::filesystem::path
       _path(Key const& key) const;
     };
+
+    struct FilesystemStorageConfig
+      : public StorageConfig
+    {
+      FilesystemStorageConfig(std::string path);
+      FilesystemStorageConfig(elle::serialization::SerializerIn& input);
+      void
+      serialize(elle::serialization::Serializer& s);
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override;
+      std::string path;
+    };
   }
 }
 

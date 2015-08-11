@@ -86,37 +86,38 @@ namespace infinit
       return res;
     }
 
-    struct DropboxStorageConfig
-      : public StorageConfig
+    DropboxStorageConfig::DropboxStorageConfig(
+      std::string token_,
+      boost::optional<std::string> root_)
+      : StorageConfig()
+      , token(std::move(token_))
+      , root(std::move(root_))
+    {}
+
+    DropboxStorageConfig::DropboxStorageConfig(
+      elle::serialization::SerializerIn& input)
+      : StorageConfig()
     {
-    public:
-      DropboxStorageConfig(elle::serialization::SerializerIn& input)
-        : StorageConfig()
-      {
-        this->serialize(input);
-      }
+      this->serialize(input);
+    }
 
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        s.serialize("token", this->token);
-        s.serialize("root", this->root);
-      }
+    void
+    DropboxStorageConfig::serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("token", this->token);
+      s.serialize("root", this->root);
+    }
 
-      virtual
-      std::unique_ptr<infinit::storage::Storage>
-      make() override
-      {
-        if (this->root)
-          return elle::make_unique<infinit::storage::Dropbox>(
-            this->token, this->root.get());
-        else
-          return elle::make_unique<infinit::storage::Dropbox>(this->token);
-      }
+    std::unique_ptr<infinit::storage::Storage>
+    DropboxStorageConfig::make()
+    {
+      if (this->root)
+        return elle::make_unique<infinit::storage::Dropbox>(
+          this->token, this->root.get());
+      else
+        return elle::make_unique<infinit::storage::Dropbox>(this->token);
+    }
 
-      std::string token;
-      boost::optional<std::string> root;
-    };
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<DropboxStorageConfig> _register_DropboxStorageConfig("dropbox");
   }

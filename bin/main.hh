@@ -9,6 +9,7 @@
 #include <elle/system/username.hh>
 
 #include <das/model.hh>
+#include <das/serializer.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
@@ -24,6 +25,25 @@
 #include <infinit/version.hh>
 
 std::string program;
+
+struct DropboxAccount
+{
+  int uid;
+  std::string display_name;
+  std::string token;
+};
+
+struct DropboxAccounts
+{
+  std::vector<DropboxAccount> dropbox_accounts;
+};
+
+DAS_MODEL(DropboxAccount, (uid, display_name, token), DasDropboxAccount);
+DAS_MODEL_DEFAULT(DropboxAccount, DasDropboxAccount);
+DAS_MODEL_SERIALIZE(DropboxAccount);
+DAS_MODEL(DropboxAccounts, (dropbox_accounts), DasDropboxAccounts);
+DAS_MODEL_DEFAULT(DropboxAccounts, DasDropboxAccounts);
+DAS_MODEL_SERIALIZE(DropboxAccounts);
 
 namespace infinit
 {
@@ -393,6 +413,65 @@ namespace infinit
       s.serialize_forward(volume);
     }
 
+    void
+    credentials_dropbox_add(DropboxAccount const& a)
+    {
+      auto path = this->_credentials_path(
+        "dropbox", elle::sprintf("%s", a.uid));
+      boost::filesystem::ofstream f(path);
+      if (!f.good())
+        throw elle::Error(
+          elle::sprintf("unable to open %s for writing", path));
+      elle::serialization::json::serialize(a, f, false);
+    }
+
+    std::vector<DropboxAccount>
+    credentials_dropbox()
+    {
+      std::vector<DropboxAccount> res;
+      auto const path = this->_credentials_path("dropbox");
+      boost::filesystem::directory_iterator const end;
+      for (boost::filesystem::directory_iterator it(path);
+           it != end;
+           ++it)
+      {
+        if (is_regular_file(it->status()))
+        {
+          boost::filesystem::ifstream f(it->path());
+          if (!f.good())
+            throw elle::Error(
+              elle::sprintf("unable to open %s for reading", path));
+          res.push_back(
+            elle::serialization::json::deserialize<DropboxAccount>(f, false));
+        }
+      }
+      return res;
+    }
+
+    DropboxAccount
+    credentials_dropbox(std::string const& name)
+    {
+      for (auto const& account: this->credentials_dropbox())
+        if (account.display_name == name
+            || elle::sprintf("%s", account.uid) == name)
+          return account;
+      throw elle::Error(elle::sprintf("no such Dropbox account: %s", name));
+    }
+
+    boost::filesystem::path
+    _credentials_path(std::string const& service)
+    {
+      auto root = this->root_dir() / "credentials" / service;
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _credentials_path(std::string const& service, std::string const& name)
+    {
+      return this->_credentials_path(service) / name;
+    }
+
     boost::filesystem::path
     _network_path(std::string const& name)
     {
@@ -684,4 +763,4 @@ namespace infinit
   DAS_MODEL_DEFINE(User, (name, public_key), DasPublicUser);
 }
 
-static auto const beyond = "127.0.0.1:8080";
+static auto const beyond = "http://127.0.0.1:8080";

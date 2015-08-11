@@ -26,7 +26,7 @@ namespace infinit
         Local(std::unique_ptr<storage::Storage> storage, int port = 0);
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
-        ELLE_ATTRIBUTE_RX(std::shared_ptr<Doughnut>, doughnut);
+        ELLE_ATTRIBUTE_RX(Doughnut*, doughnut);
 
       /*-------.
       | Blocks |

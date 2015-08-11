@@ -50,7 +50,7 @@ namespace infinit
         this->overlay()->doughnut(this);
         if (local)
         {
-          local->doughnut().reset(this);
+          local->doughnut() = this;
           this->overlay()->register_local(local);
         }
       }
@@ -264,11 +264,8 @@ namespace infinit
                                 bool client,
                                 std::shared_ptr<Local> local)
       {
-        // Doughnut creates a shared pointer to himself in his ctor if passed a
-        // Local.
-        infinit::model::doughnut::Doughnut* dht = nullptr;
         if (!client || !this->name)
-          dht = new infinit::model::doughnut::Doughnut(
+          return std::make_shared<infinit::model::doughnut::Doughnut>(
             keys,
             owner,
             passport,
@@ -276,7 +273,7 @@ namespace infinit
             local,
             nullptr);
         else
-          dht = new infinit::model::doughnut::Doughnut(
+          return std::make_shared<infinit::model::doughnut::Doughnut>(
             this->name.get(),
             keys,
             owner,
@@ -284,10 +281,6 @@ namespace infinit
             overlay->make(hosts, bool(local)),
             local,
             nullptr);
-        if (local)
-          return local->doughnut();
-        else
-          return std::shared_ptr<Doughnut>(dht);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
