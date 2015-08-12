@@ -34,7 +34,6 @@ for f in %(flags)r:
 with drake.Drake(%(dir_source)r) as d:
   d.run(cxx_toolkit = cxx_toolkit,
         cxx_config = cfg,
-        python3 = False,
         fuse = %(fuse)r,
         valgrind = %(valgrind)r)
 '''
