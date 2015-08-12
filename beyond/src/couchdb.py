@@ -72,9 +72,7 @@ class CouchDBDatastore:
         '_id': '_design/beyond',
         'language': 'python',
         'updates': {
-          name: {
-            'map': getsource(update),
-          }
+          name: getsource(update)
           for name, update in [('update', self.__user_update)]
         },
         'views': {
