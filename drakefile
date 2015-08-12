@@ -139,6 +139,8 @@ def configure(
     'src/infinit/storage/Adb.hh',
     'src/infinit/storage/Async.cc',
     'src/infinit/storage/Async.hh',
+    'src/infinit/storage/Cache.cc',
+    'src/infinit/storage/Cache.hh',
     'src/infinit/storage/Collision.cc',
     'src/infinit/storage/Collision.hh',
     'src/infinit/storage/Crypt.cc',

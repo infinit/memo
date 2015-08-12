@@ -8,6 +8,7 @@
 # include <elle/attribute.hh>
 # include <elle/serialization/Serializer.hh>
 
+# include <infinit/model/Address.hh>
 # include <infinit/storage/fwd.hh>
 
 namespace infinit
