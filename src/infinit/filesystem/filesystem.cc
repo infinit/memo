@@ -1446,6 +1446,7 @@ namespace infinit
     void
     Node::utimens(const struct timespec tv[2])
     {
+      ELLE_TRACE_SCOPE("%s: utimens: %s", *this, tv);
       if (!_parent)
         return;
       auto & f = _parent->_files.at(_name);
@@ -1551,6 +1552,7 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     File::open(int flags, mode_t mode)
     {
+      ELLE_TRACE_SCOPE("%s: open", *this);
       if (flags & O_TRUNC)
         truncate(0);
       ELLE_DEBUG("Forcing entry %s", full_path());
@@ -1899,6 +1901,7 @@ namespace infinit
       else
         return Node::getxattr(key);
     }
+
     FileHandle::FileHandle(std::shared_ptr<File> owner,
                            bool push_mtime,
                            bool no_fetch,
@@ -1906,10 +1909,13 @@ namespace infinit
       : _owner(owner)
       , _dirty(dirty)
     {
-      ELLE_TRACE("FileHandle creation, hc=%s", _owner->_handle_count);
+      ELLE_TRACE_SCOPE("%s: create (handle count = %s)",
+                       *this, _owner->_handle_count);
       _owner->_handle_count++;
       _owner->_parent->_fetch();
       _owner->_parent->_files.at(_owner->_name).atime = time(nullptr);
+      // This atime implementation does not honor noatime option
+#if false
       try
       {
         _owner->_parent->_changed(push_mtime);
@@ -1918,6 +1924,7 @@ namespace infinit
       {
         ELLE_TRACE("Error writing atime %s: %s", _owner->full_path(), e.what());
       }
+#endif
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
