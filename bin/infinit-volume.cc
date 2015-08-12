@@ -137,6 +137,9 @@ network(boost::program_options::variables_map mode,
       ("mountpoint,m", value<std::string>(), "where to mount the filesystem")
       ("host", value<std::vector<std::string>>()->multitoken(),
        "hosts to connect to")
+      ("cache,c", "enable storage caching")
+      ("cache-size,s", value<int>(),
+       "maximum storage cache in bytes (implies --cache)")
       ;
     auto help = [&] (std::ostream& output)
       {
@@ -159,7 +162,14 @@ network(boost::program_options::variables_map mode,
     auto volume = ifnt.volume_get(name);
     auto network = ifnt.network_get(volume.network);
     ELLE_TRACE("run network");
-    auto model = network.run(hosts, true);
+    bool cache = run.count("cache");
+    boost::optional<int> cache_size;
+    if (run.count("cache-size"))
+    {
+      cache = true;
+      cache_size = run["cache-size"].as<int>();
+    }
+    auto model = network.run(hosts, true, cache, cache_size);
     ELLE_TRACE("run volume");
     auto fs = volume.run(model.second, optional(run, "mountpoint"));
     ELLE_TRACE("wait");

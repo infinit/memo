@@ -22,6 +22,7 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/storage/Cache.hh>
 #include <infinit/version.hh>
 
 std::string program;
@@ -213,14 +214,19 @@ namespace infinit
     std::pair<std::shared_ptr<infinit::model::doughnut::Local>,
               std::shared_ptr<infinit::model::doughnut::Doughnut>>
     run(std::vector<std::string> const& hosts = {},
-        bool client = false)
+        bool client = false,
+        bool cache = false,
+        boost::optional<int> cache_size = {})
     {
       auto dht_config =
         static_cast<model::doughnut::DoughnutModelConfig*>(this->model.get());
       if (this->storage)
       {
+        auto storage = this->storage->make();
+        if (cache)
+          storage.reset(new storage::Cache(std::move(storage), cache_size));
         auto local = std::make_shared<infinit::model::doughnut::Local>
-          (this->storage->make(), this->port ? this->port.get() : 0);
+          (std::move(storage), this->port ? this->port.get() : 0);
         local->serve();
         return std::make_pair(std::move(local),
                               dht_config->make(hosts, client, local));
@@ -287,7 +293,7 @@ namespace infinit
       }
       catch (boost::filesystem::filesystem_error const&)
       {}
-      driver->mount(mountpoint.string(), {});
+      driver->mount(mountpoint.string(), {"infinit-volume", "-o", "noatime"});
       return driver;
     }
 
