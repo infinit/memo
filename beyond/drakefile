@@ -34,12 +34,14 @@ def configure(python = None, prefix = drake.Path('/usr')):
   python_prefix = drake.Path('lib/python%s' % python.version)
   def install_nodes(where, how):
     where = drake.Path(where)
-    yield from how(sources,
-                   where / python_prefix / 'infinit/beyond',
-                   strip_prefix = 'src')
-    yield from how(couchdb_sources,
-                   where / python_prefix,
-                   strip_prefix = 'couchdb-python')
+    for node in how(sources,
+                    where / python_prefix / 'infinit/beyond',
+                    strip_prefix = 'src'):
+      yield node
+    for node in  how(couchdb_sources,
+                     where / python_prefix,
+                     strip_prefix = 'couchdb-python'):
+      yield node
     yield how(drake.node('bottle/bottle.py'),
               where / python_prefix, strip_prefix = True)
     yield how(drake.node('beyond'),
