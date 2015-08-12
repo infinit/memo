@@ -267,6 +267,14 @@ def configure(
     cxx_config_tests
     )
 
+  ## ------ ##
+  ## Beyond ##
+  ## ------ ##
+
+  beyond = drake.include('beyond',
+                         python = elle.python3,
+                         prefix = prefix)
+
   ## ------- ##
   ## Install ##
   ## ------- ##
@@ -274,14 +282,9 @@ def configure(
   install = drake.Rule('install')
   for bin_name, libs in binaries:
     install << drake.install(drake.node('bin/%s' % bin_name), prefix)
+  install << beyond.install
   man = drake.nodes(
     'share/man/man1/infinit.1',
     'share/man/man5/infinit.5',
   )
   install << drake.install(man, prefix)
-
-  ## ------ ##
-  ## Beyond ##
-  ## ------ ##
-
-  drake.include('beyond', python = elle.python3)

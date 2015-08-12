@@ -1,11 +1,14 @@
 import drake
+import drake.debian
+
+from itertools import chain
 
 build = None
 check = None
 install = None
 tests = None
 
-def configure(python = None):
+def configure(python = None, prefix = drake.Path('/usr')):
 
   global build, check, install, tests
 
@@ -13,30 +16,59 @@ def configure(python = None):
     'src/__init__.py',
     'src/couchdb.py',
   )
-  build = drake.Rule('build')
+  couchdb_sources = drake.nodes(
+    'couchdb-python/couchdb/view.py',
+    'couchdb-python/couchdb/mapping.py',
+    'couchdb-python/couchdb/__init__.py',
+    'couchdb-python/couchdb/util.py',
+    'couchdb-python/couchdb/util2.py',
+    'couchdb-python/couchdb/util3.py',
+    'couchdb-python/couchdb/client.py',
+    'couchdb-python/couchdb/json.py',
+    'couchdb-python/couchdb/__main__.py',
+    'couchdb-python/couchdb/http.py',
+    'couchdb-python/couchdb/multipart.py',
+    'couchdb-python/couchdb/design.py',
+  )
+
   python_prefix = drake.Path('lib/python%s' % python.version)
-  built = drake.copy(sources,
-                     python_prefix / 'infinit/beyond',
-                     strip_prefix = 'src')
-  build << built
-  build << drake.copy(drake.node('bottle/bottle.py'),
-                      python_prefix, strip_prefix = True)
-  build << drake.copy(
-    drake.nodes(
-      'couchdb-python/couchdb/view.py',
-      'couchdb-python/couchdb/mapping.py',
-      'couchdb-python/couchdb/__init__.py',
-      'couchdb-python/couchdb/util.py',
-      'couchdb-python/couchdb/util2.py',
-      'couchdb-python/couchdb/util3.py',
-      'couchdb-python/couchdb/client.py',
-      'couchdb-python/couchdb/json.py',
-      'couchdb-python/couchdb/__main__.py',
-      'couchdb-python/couchdb/http.py',
-      'couchdb-python/couchdb/multipart.py',
-      'couchdb-python/couchdb/design.py',
-    ),
-    python_prefix,
-    strip_prefix = 'couchdb-python')
-  build << drake.copy(drake.node('beyond'),
-                      'bin', strip_prefix = True)
+  def install_nodes(where, how):
+    where = drake.Path(where)
+    yield from how(sources,
+                   where / python_prefix / 'infinit/beyond',
+                   strip_prefix = 'src')
+    yield from how(couchdb_sources,
+                   where / python_prefix,
+                   strip_prefix = 'couchdb-python')
+    yield how(drake.node('bottle/bottle.py'),
+              where / python_prefix, strip_prefix = True)
+    yield how(drake.node('beyond'),
+              where / 'bin', strip_prefix = True)
+
+  build = drake.Rule('build')
+  build << install_nodes(where = '.', how = drake.copy)
+
+  install = drake.Rule('install')
+  install << install_nodes(where = prefix, how = drake.install)
+
+  ## ------ ##
+  ## Debian ##
+  ## ------ ##
+
+  package = install_nodes('debian/opt/infinit/beyond',
+                          how = drake.copy)
+  git = drake.git.Git()
+  with drake.templating.Context(content = {
+      'version': git.description(),
+      'version_major': git.version().split('.')[0],
+      'version_minor': git.version().split('.')[1],
+      'python_version_major': python.version.major,
+      'python_version_minor': python.version.minor,
+  }):
+    drake.node('control.tmpl')
+  package = chain(package,
+                  drake.copy(drake.nodes('control'), 'debian/DEBIAN'))
+  debian = drake.Rule('debian')
+  debian << drake.debian.Packager(
+    'infinit-beyond_%s_amd64.deb' % git.description(),
+    package, 'debian').package
