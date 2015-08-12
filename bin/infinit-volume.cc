@@ -140,6 +140,7 @@ network(boost::program_options::variables_map mode,
       ("cache,c", "enable storage caching")
       ("cache-size,s", value<int>(),
        "maximum storage cache in bytes (implies --cache)")
+      ("async-writes,a", "do not wait for writes on the backend")
       ;
     auto help = [&] (std::ostream& output)
       {
@@ -163,13 +164,14 @@ network(boost::program_options::variables_map mode,
     auto network = ifnt.network_get(volume.network);
     ELLE_TRACE("run network");
     bool cache = run.count("cache");
+    bool async_writes = run.count("async-writes");
     boost::optional<int> cache_size;
     if (run.count("cache-size"))
     {
       cache = true;
       cache_size = run["cache-size"].as<int>();
     }
-    auto model = network.run(hosts, true, cache, cache_size);
+    auto model = network.run(hosts, true, cache, cache_size, async_writes);
     ELLE_TRACE("run volume");
     auto fs = volume.run(model.second, optional(run, "mountpoint"));
     ELLE_TRACE("wait");

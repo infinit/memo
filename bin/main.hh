@@ -22,6 +22,7 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/storage/Async.hh>
 #include <infinit/storage/Cache.hh>
 #include <infinit/version.hh>
 
@@ -216,13 +217,16 @@ namespace infinit
     run(std::vector<std::string> const& hosts = {},
         bool client = false,
         bool cache = false,
-        boost::optional<int> cache_size = {})
+        boost::optional<int> cache_size = {},
+        bool async_writes = false)
     {
       auto dht_config =
         static_cast<model::doughnut::DoughnutModelConfig*>(this->model.get());
       if (this->storage)
       {
         auto storage = this->storage->make();
+        if (async_writes)
+          storage.reset(new storage::Async(std::move(storage), 10000));
         if (cache)
           storage.reset(new storage::Cache(std::move(storage), cache_size));
         auto local = std::make_shared<infinit::model::doughnut::Local>
