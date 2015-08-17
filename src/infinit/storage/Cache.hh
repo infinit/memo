@@ -1,6 +1,7 @@
 #ifndef INFINIT_STORAGE_CACHE_HH
 # define INFINIT_STORAGE_CACHE_HH
 
+# include <set>
 # include <infinit/storage/Storage.hh>
 
 namespace infinit
@@ -25,12 +26,14 @@ namespace infinit
       virtual
       std::vector<Key>
       _list() override;
+      void
+      _init() const;
 
       ELLE_ATTRIBUTE_R(std::unique_ptr<Storage>, storage);
       ELLE_ATTRIBUTE_R(boost::optional<int>, size);
       typedef std::unordered_map<Key, elle::Buffer> Blocks;
       ELLE_ATTRIBUTE_P(Blocks, blocks, mutable);
-      typedef std::vector<Key> Keys;
+      typedef std::set<Key> Keys;
       ELLE_ATTRIBUTE_P(boost::optional<Keys>, keys, mutable);
     };
   }
