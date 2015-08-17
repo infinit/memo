@@ -21,15 +21,15 @@ namespace storage = infinit::storage;
 
 ELLE_TEST_SCHEDULED(doughnut)
 {
-  auto local_a = elle::make_unique<dht::Local>(
+  auto local_a = std::make_shared<dht::Local>(
     elle::make_unique<storage::Memory>());
-  auto local_b = elle::make_unique<dht::Local>(
+  auto local_b = std::make_shared<dht::Local>(
     elle::make_unique<storage::Memory>());
   auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
   dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
   auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
   dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
-  infinit::overlay::Stonehenge::Members members;
+  infinit::overlay::Stonehenge::Hosts members;
   members.push_back(local_a->server_endpoint());
   members.push_back(local_b->server_endpoint());
   auto dht_a = std::make_shared<dht::Doughnut>(
@@ -38,8 +38,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     passport_a,
     elle::make_unique<infinit::overlay::Stonehenge>(members)
     );
-  local_a->doughnut() = dht_a;
-  dht_a->overlay()->register_local(*local_a);
+  local_a->doughnut() = dht_a.get();
+  dht_a->overlay()->register_local(local_a);
   local_a->serve();
   auto dht_b = std::make_shared<dht::Doughnut>(
     keys_b,
@@ -47,9 +47,9 @@ ELLE_TEST_SCHEDULED(doughnut)
     passport_b,
     elle::make_unique<infinit::overlay::Stonehenge>(members)
     );
-  local_b->doughnut() = dht_b;
+  local_b->doughnut() = dht_b.get();
   local_b->serve();
-  dht_b->overlay()->register_local(*local_b);
+  dht_b->overlay()->register_local(local_b);
   auto& dht = *dht_a;
   {
     elle::Buffer data("\\_o<", 4);
@@ -82,15 +82,15 @@ ELLE_TEST_SCHEDULED(doughnut)
 
 ELLE_TEST_SCHEDULED(ACB)
 {
-    auto local_a = elle::make_unique<dht::Local>(
+  auto local_a = std::make_shared<dht::Local>(
     elle::make_unique<storage::Memory>());
-  auto local_b = elle::make_unique<dht::Local>(
+  auto local_b = std::make_shared<dht::Local>(
     elle::make_unique<storage::Memory>());
   auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
   dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
   auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
   dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
-  infinit::overlay::Stonehenge::Members members;
+  infinit::overlay::Stonehenge::Hosts members;
   members.push_back(local_a->server_endpoint());
   members.push_back(local_b->server_endpoint());
   auto dht_a = std::make_shared<dht::Doughnut>(
@@ -99,8 +99,8 @@ ELLE_TEST_SCHEDULED(ACB)
     passport_a,
     elle::make_unique<infinit::overlay::Stonehenge>(members)
     );
-  local_a->doughnut() = dht_a;
-  dht_a->overlay()->register_local(*local_a);
+  local_a->doughnut() = dht_a.get();
+  dht_a->overlay()->register_local(local_a);
   local_a->serve();
   auto dht_b = std::make_shared<dht::Doughnut>(
     keys_b,
@@ -108,8 +108,8 @@ ELLE_TEST_SCHEDULED(ACB)
     passport_b,
     elle::make_unique<infinit::overlay::Stonehenge>(members)
     );
-  local_b->doughnut() = dht_b;
-  dht_b->overlay()->register_local(*local_b);
+  local_b->doughnut() = dht_b.get();
+  dht_b->overlay()->register_local(local_b);
   local_b->serve();
   auto& dht = *dht_a;
   auto& other_dht = *dht_b;
