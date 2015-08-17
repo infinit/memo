@@ -77,12 +77,16 @@ namespace infinit
     std::vector<Key>
     Dropbox::_list()
     {
-      auto metadata = this->_dropbox.metadata(this->_root);
+      auto metadata = this->_dropbox.metadata("/" + this->_root.string());
       std::vector<Key> res;
       if (!metadata.is_dir || !metadata.contents)
         throw elle::Error(".infinit is not a directory");
       for (auto const& entry: metadata.contents.get())
-        res.push_back(model::Address::from_string(entry.path));
+      {
+        // /.infinit/0xFOO -> FOO
+        std::string address = entry.path.substr(entry.path.find_last_of('/')+3);
+        res.push_back(model::Address::from_string(address));
+      }
       return res;
     }
 
