@@ -154,8 +154,8 @@ class Bottle(bottle.Bottle):
     query = {
       'code': code,
       'grant_type': 'authorization_code',
-      'client_id': 'jjkwyejhkyutaz2',
-      'client_secret': 'alli1e5hqq9fdbf',
+      'client_id': 'ldsi5nojwpfqcqg',
+      'client_secret': 'gwca0vz648u0y6r',
       'redirect_uri': 'http://localhost:8080/oauth/dropbox',
     }
     response = requests.post('https://api.dropbox.com/1/oauth2/token',
