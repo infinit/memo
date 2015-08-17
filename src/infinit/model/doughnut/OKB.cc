@@ -4,6 +4,7 @@
 #include <elle/serialization/json.hh>
 
 #include <cryptography/hash.hh>
+#include <cryptography/rsa/KeyPool.hh>
 
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -80,9 +81,15 @@ namespace infinit
       | Construction |
       `-------------*/
 
+      static cryptography::rsa::KeyPool& pool_get()
+      {
+        static cryptography::rsa::KeyPool pool(2048, 10);
+        return pool;
+      }
+
       template <typename Block>
       BaseOKB<Block>::BaseOKB(Doughnut* owner)
-        : OKBHeader(owner->keys(), cryptography::rsa::keypair::generate(2048))
+        : OKBHeader(owner->keys(), pool_get().get())
         , Super(this->_hash_address())
         , _version(-1)
         , _signature()
