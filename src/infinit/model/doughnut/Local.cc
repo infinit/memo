@@ -51,20 +51,28 @@ namespace infinit
       Local::store(blocks::Block const& block, StoreMode mode)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        try
-        {
-          auto previous_buffer = this->_storage->get(block.address());
-          elle::IOStream s(previous_buffer.istreambuf());
-          typename elle::serialization::binary::SerializerIn input(s, false);
-          input.set_context<Doughnut*>(this->_doughnut);
-          auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
-          if (!block.validate(*previous))
-            throw ValidationFailed("FIXME");
-        }
-        catch (storage::MissingKey const&)
-        {
+        if (mode == STORE_INSERT)
+        { // There is no previous version of the block
           if (!block.validate())
             throw ValidationFailed("FIXME");
+        }
+        else
+        {
+          try
+          {
+            auto previous_buffer = this->_storage->get(block.address());
+            elle::IOStream s(previous_buffer.istreambuf());
+            typename elle::serialization::binary::SerializerIn input(s, false);
+            input.set_context<Doughnut*>(this->_doughnut);
+            auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+            if (!block.validate(*previous))
+              throw ValidationFailed("FIXME");
+          }
+          catch (storage::MissingKey const&)
+          {
+            if (!block.validate())
+              throw ValidationFailed("FIXME");
+          }
         }
         elle::Buffer data;
         {
