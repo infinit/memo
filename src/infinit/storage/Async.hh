@@ -40,9 +40,13 @@ namespace infinit
       reactor::Barrier _dequeueing;
       reactor::Barrier _queueing;
       reactor::Thread _thread;
-      typedef std::pair<Key, elle::Buffer> Entry;
-      std::deque<Entry> _set_cache;
-      std::deque<Key> _erase_cache;
+      enum class Operation
+      {
+        erase,
+        set
+      };
+      typedef std::tuple<Key, elle::Buffer, Operation> Entry;
+      std::deque<Entry> _op_cache;
       int _blocks;
       int _bytes;
     };

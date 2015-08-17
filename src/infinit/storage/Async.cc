@@ -1,6 +1,7 @@
 #include "infinit/storage/Async.hh"
 
 #include <infinit/model/Address.hh>
+#include <infinit/storage/MissingKey.hh>
 
 #include <elle/factory.hh>
 
@@ -28,48 +29,39 @@ namespace infinit
     elle::Buffer
     Async::_get(Key k) const
     {
-      auto it = std::find_if(_set_cache.begin(), _set_cache.end(),
+      auto it = std::find_if(_op_cache.rbegin(), _op_cache.rend(),
         [&](Entry const& a)
         {
-          return a.first == k;
+          return std::get<0>(a) == k;
         });
-      if (it != _set_cache.end())
+      if (it != _op_cache.rend())
       {
-        ELLE_DEBUG("satisfy get on %x from cache", k);
-        return elle::Buffer(it->second.contents(), it->second.size());
+        if (std::get<2>(*it) == Operation::erase)
+          throw MissingKey(k);
+        elle::Buffer const& buf = std::get<1>(*it);
+        return elle::Buffer(buf.contents(), buf.size());
       }
-
       return _backend->get(k);
     }
+
     void
     Async::_erase(Key k)
     {
       ELLE_DEBUG("queueing erase on %x", k);
       _wait();
-      _erase_cache.push_back(k);
+      _op_cache.emplace_back(k, elle::Buffer(), Operation::erase);
       _inc(0);
     }
+
     void
     Async::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       _wait();
-      auto it = std::find_if(_set_cache.begin(), _set_cache.end(),
-                          [&](Entry const& e) { return e.first == k;});
-      if (it != _set_cache.end())
-      {
-        ELLE_DEBUG("updating set queue on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
-        _dec(it->second.size());
-        it->second.reset();
-        it->second.append(value.contents(), value.size());
-        _inc(value.size());
-      }
-      else
-      {
-        ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
-        _set_cache.push_back(Entry(k, elle::Buffer(value.contents(), value.size())));
-        _inc(value.size());
-      }
+      ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
+      _op_cache.emplace_back(k, elle::Buffer(value), Operation::set);
+      _inc(value.size());
     }
+
     std::vector<Key>
     Async::_list()
     {
@@ -81,22 +73,21 @@ namespace infinit
       while (true)
       {
         reactor::wait(_dequeueing);
-        while (!_erase_cache.empty())
+        while (!_op_cache.empty())
         {
-          Key k = _erase_cache.front();
-          _erase_cache.pop_front();
-          ELLE_DEBUG("dequeueing erase on %x", k);
-          _backend->erase(k);
-          _dec(0);
-        }
-        while (!_set_cache.empty())
-        {
-          Entry e(std::move(_set_cache.front()));
-          _set_cache.pop_front();
-          ELLE_DEBUG("dequeueing write on %x. Cache blocks=%s bytes=%s",
-                     e.first, _blocks, _bytes);
-          _backend->set(e.first, e.second, true, true);
-          _dec(e.second.size());
+          auto& e = _op_cache.front();
+          elle::Buffer buf = std::move(std::get<1>(e));
+          Key k = std::get<0>(e);
+          Operation op = std::get<2>(e);
+          ELLE_DEBUG("dequeueing %s on %x. Cache blocks=%s bytes=%s",
+                     (op == Operation::erase) ? "erase" : "set",
+                     k, _blocks, _bytes);
+          _op_cache.pop_front();
+          _dec(buf.size());
+          if (op == Operation::erase)
+            _backend->erase(k);
+          else
+            _backend->set(k, buf, true, true);
         }
       }
     }
