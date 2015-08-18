@@ -3,8 +3,15 @@ import requests
 
 class Beyond(bottle.Bottle):
 
-  def __init__(self, datastore):
+  def __init__(
+      self,
+      datastore,
+      dropbox_app_key,
+      dropbox_app_secret,
+  ):
     self.__datastore = datastore
+    self.__dropbox_app_key    = dropbox_app_key
+    self.__dropbox_app_secret = dropbox_app_secret
 
   def user_get(self, id = None, name = None):
     json = self.__datastore.user_fetch(name = name, id = id)
@@ -135,7 +142,7 @@ class Bottle(bottle.Bottle):
 
   def oauth_dropbox_get(self, id):
     params = {
-      'client_id': 'jjkwyejhkyutaz2',
+      'client_id': self.__dropbox_app_key,
       'response_type': 'code',
       'redirect_uri': 'http://localhost:8080/oauth/dropbox',
       'state': id,
@@ -154,8 +161,8 @@ class Bottle(bottle.Bottle):
     query = {
       'code': code,
       'grant_type': 'authorization_code',
-      'client_id': 'ldsi5nojwpfqcqg',
-      'client_secret': 'gwca0vz648u0y6r',
+      'client_id': self.__dropbox_app_key,
+      'client_secret': self.__dropbox_app_secret,
       'redirect_uri': 'http://localhost:8080/oauth/dropbox',
     }
     response = requests.post('https://api.dropbox.com/1/oauth2/token',

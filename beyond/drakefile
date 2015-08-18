@@ -1,5 +1,6 @@
 import drake
 import drake.debian
+import drake.templating
 
 from itertools import chain
 
@@ -8,7 +9,10 @@ check = None
 install = None
 tests = None
 
-def configure(python = None, prefix = drake.Path('/usr')):
+def configure(python = None,
+              prefix = drake.Path('/usr'),
+              dropbox_app_key = 'ldsi5nojwpfqcqg',
+              dropbox_app_secret = 'gwca0vz648u0y6r'):
 
   global build, check, install, tests
 
@@ -32,6 +36,11 @@ def configure(python = None, prefix = drake.Path('/usr')):
   )
 
   python_prefix = drake.Path('lib/python%s' % python.version)
+  with drake.templating.Context(content = {
+      'dropbox_app_key': dropbox_app_key,
+      'dropbox_app_secret': dropbox_app_secret,
+  }):
+    drake.node('beyond.tmpl')
   def install_nodes(where, how):
     where = drake.Path(where)
     for node in how(sources,

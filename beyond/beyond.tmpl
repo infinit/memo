@@ -26,13 +26,27 @@ def parse_options():
                       metavar = 'PORT',
                       type = int,
                       help = 'port to listen on')
+  parser.add_argument('--dropbox-app-key',
+                      metavar = 'KEY',
+                      type = str,
+                      help = 'Dropbox app key',
+                      default = ${repr(dropbox_app_key)})
+  parser.add_argument('--dropbox-app-secret',
+                      metavar = 'SECRET',
+                      type = str,
+                      help = 'Dropbox app secret',
+                      default = ${repr(dropbox_app_secret)})
   return parser.parse_args()
 
 try:
   args = parse_options()
   with infinit.beyond.couchdb.CouchDB() as couchdb:
     datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
-    beyond = infinit.beyond.Beyond(datastore = datastore)
+    beyond = infinit.beyond.Beyond(
+      datastore = datastore,
+      dropbox_app_key = args.dropbox_app_key,
+      dropbox_app_secret = args.dropbox_app_secret,
+    )
     app = infinit.beyond.Bottle(beyond)
     import bottle
     kwargs = {}
