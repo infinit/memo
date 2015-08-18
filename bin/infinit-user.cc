@@ -156,7 +156,7 @@ network(boost::program_options::variables_map mode,
     auto user = ifnt.user_get(name);
     reactor::http::Request::Configuration c;
     c.header_add("Content-Type", "application/json");
-    reactor::http::Request r(elle::sprintf("%s/users/%s", beyond, user.uid()),
+    reactor::http::Request r(elle::sprintf("%s/users/%s", beyond(), user.uid()),
                              reactor::http::Method::PUT,
                              std::move(c));
 
@@ -184,7 +184,7 @@ int main(int argc, char** argv)
     ("export",   "export a user for someone else to import")
     ("generate", "create local user with a generated pair of keys")
     ("import",   "import a user")
-    ("publish",  elle::sprintf("publish user to %s", beyond).c_str())
+    ("publish",  elle::sprintf("publish user to %s", beyond()).c_str())
     ;
   options_description options("Infinit user utility");
   options.add(mode_options);

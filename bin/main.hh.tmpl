@@ -773,4 +773,12 @@ namespace infinit
   DAS_MODEL_DEFINE(User, (name, public_key), DasPublicUser);
 }
 
-static auto const beyond = "${beyond_host}";
+std::string
+beyond();
+
+std::string
+beyond()
+{
+  auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
+  return res;
+}

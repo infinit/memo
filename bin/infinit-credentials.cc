@@ -66,7 +66,7 @@ credentials(boost::program_options::variables_map mode,
     {
       auto user = ifnt.user_get(get_username(mode, "user"));
       std::cout << "Register your dropbox account with infinit by visiting "
-                << beyond << "/users/" << user.uid()
+                << beyond() << "/users/" << user.uid()
                 << "/dropbox-oauth" << std::endl;
     }
     else
@@ -81,7 +81,7 @@ credentials(boost::program_options::variables_map mode,
     {
       auto user = ifnt.user_get(get_username(mode, "user"));
       reactor::http::Request r(
-        elle::sprintf("%s/users/%s/dropbox-accounts", beyond, user.uid()),
+        elle::sprintf("%s/users/%s/dropbox-accounts", beyond(), user.uid()),
         reactor::http::Method::GET);
       if (r.status() == reactor::http::StatusCode::Not_Found)
       {
