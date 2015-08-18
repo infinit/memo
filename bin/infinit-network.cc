@@ -18,7 +18,7 @@
 
 ELLE_LOG_COMPONENT("infinit-network");
 
-#include "main.hh"
+#include <main.hh>
 
 using namespace boost::program_options;
 options_description mode_options("Modes");

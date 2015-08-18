@@ -12,9 +12,13 @@ tests = None
 def configure(python = None,
               prefix = drake.Path('/usr'),
               dropbox_app_key = 'ldsi5nojwpfqcqg',
-              dropbox_app_secret = 'gwca0vz648u0y6r'):
+              dropbox_app_secret = 'gwca0vz648u0y6r',
+              git = None):
 
   global build, check, install, tests
+
+  if git is None:
+    git = drake.git.Git()
 
   sources = drake.nodes(
     'src/__init__.py',

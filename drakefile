@@ -10,6 +10,7 @@ def configure(
     cxx_toolkit = None,
     cxx_config = drake.cxx.Config(),
     production_build = False,
+    beyond_host = 'https://beyond.infinit.io',
     boost = None,
     prefix = '/usr',
     valgrind = None,
@@ -25,6 +26,8 @@ def configure(
   cxx_config = drake.cxx.Config(cxx_config)
   if production_build:
     cxx_config.enable_optimization()
+
+  git = drake.git.Git()
 
   elle = drake.include('elle',
                        production_build = production_build,
@@ -77,8 +80,8 @@ def configure(
       except:
         return '#define INFINIT_%s "%s"' % (name.upper(), value)
 
-  CxxVersionGenerator(drake.node('src/infinit/version.hh'),
-                      drake.git.Git())
+  CxxVersionGenerator(drake.node('src/infinit/version.hh'), git)
+
   infinit_sources = drake.nodes(
     'src/infinit/RPC.hh',
     'src/infinit/RPC.hxx',
@@ -234,8 +237,14 @@ def configure(
   ## Binaries ##
   ## -------- ##
 
+  with drake.templating.Context(content = {
+      'beyond_host': beyond_host,
+  }):
+    drake.node('bin/main.hh.tmpl')
+
   bin_cxx_config = drake.cxx.Config(cxx_config)
   bin_cxx_config += elle.das.config
+  bin_cxx_config.add_local_include_path('bin')
   bin_cxx_config.lib_path_runtime('../lib')
   bin_cxx_config.library_add(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
@@ -279,7 +288,8 @@ def configure(
 
   beyond = drake.include('beyond',
                          python = elle.python3,
-                         prefix = prefix)
+                         prefix = prefix,
+                         git = git)
 
   ## ------- ##
   ## Install ##
