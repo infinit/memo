@@ -166,6 +166,14 @@ network(boost::program_options::variables_map mode,
     }
     r.finalize();
     reactor::wait(r);
+    if (r.status() == reactor::http::StatusCode::OK)
+      elle::printf("user \"%s\" published\n", name);
+    else if (r.status() == reactor::http::StatusCode::Conflict)
+      throw elle::Error(
+        elle::sprintf("user \"%s\" is already published", name));
+    else
+      throw elle::Error(
+        elle::sprintf("unexpected error %s publishing user", r.status()));
   }
   else
   {
