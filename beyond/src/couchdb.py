@@ -28,6 +28,9 @@ database_dir = %(root)s/db-data
 view_index_dir = %(root)s/db-data
 uri_file = %(root)s/couchdb.uri
 
+[httpd]
+port = 0
+
 [log]
 file = %(root)s/db.log
 
