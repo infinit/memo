@@ -18,7 +18,8 @@ namespace infinit
       // Construction
       public:
         CHB(elle::Buffer data)
-          : Super(CHB::_hash_address(data), data)
+          : Super(CHB::_hash_address(data, _make_salt()), data)
+          , _salt(_last_salt())
         {}
 
       // Validation
@@ -33,7 +34,7 @@ namespace infinit
         _validate() const override
         {
           ELLE_DEBUG_SCOPE("%s: validate", *this);
-          auto expected_address = CHB::_hash_address(this->data());
+          auto expected_address = CHB::_hash_address(this->data(), this->_salt);
           if (this->address() != expected_address)
           {
             ELLE_DUMP("%s: address %x invalid, expecting %x",
@@ -47,21 +48,48 @@ namespace infinit
       public:
         CHB(elle::serialization::Serializer& input)
           : Super(input)
-        {}
-
+        {
+          input.serialize("salt", _salt);
+        }
+        void serialize(elle::serialization::Serializer& s)
+        {
+          Super::serialize(s);
+          s.serialize("salt", _salt);
+        }
       // Details
       private:
+        static elle::Buffer _last_salt_value;
+        static
+        elle::Buffer
+        _make_salt()
+        {
+          _last_salt_value = elle::Buffer(Address::random().value(),
+                                          sizeof(Address::Value));
+          return _last_salt_value;
+        }
+
+        static
+        elle::Buffer
+        _last_salt()
+        {
+          return _last_salt_value;
+        }
+
         static
         Address
-        _hash_address(elle::Buffer const& content)
+        _hash_address(elle::Buffer const& content, elle::Buffer const& salt)
         {
+          elle::IOStream stream(salt.istreambuf_combine(content));
           auto hash = cryptography::hash
-            (content, cryptography::Oneway::sha256);
+            (stream, cryptography::Oneway::sha256);
           return Address(hash.contents());
         }
+        elle::Buffer _salt;
       };
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<CHB> _register_chb_serialization("CHB");
+
+      elle::Buffer CHB::_last_salt_value;
     }
   }
 }
