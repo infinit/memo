@@ -3,7 +3,7 @@ import infinit.beyond
 import infinit.beyond.couchdb
 
 datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb.Server())
-beyond = infinit.beyond.beyond(
+beyond = infinit.beyond.Beyond(
   datastore = datastore,
   dropbox_app_key = ${repr(dropbox_app_key)},
   dropbox_app_secret = ${repr(dropbox_app_secret)},

@@ -1,4 +1,5 @@
 import couchdb
+import couchdb.client
 import json
 import os.path
 import shutil
@@ -66,11 +67,21 @@ def getsource(f):
 
 class CouchDBDatastore:
 
-  def __init__(self, couchdb):
-    self.__couchdb = couchdb
-    self.__couchdb.create('users')
+  def __init__(self, db):
+    self.__couchdb = db
+    try:
+      self.__couchdb.create('users')
+    except couchdb.http.PreconditionFailed as e:
+      if e.args[0][0] == 'file_exists':
+        pass
+      else:
+        raise
     import inspect
-    self.__couchdb['users'].save(
+    try:
+      design = self.__couchdb['users']['_design/beyond']
+    except couchdb.http.ResourceNotFound:
+      design = couchdb.client.Document()
+    design.update(
       {
         '_id': '_design/beyond',
         'language': 'python',
@@ -85,6 +96,7 @@ class CouchDBDatastore:
           for name, view in [('per_name', self.__user_per_name)]
         }
       })
+    self.__couchdb['users'].save(design)
 
   def user_insert(self, user):
     json = dict(user)
