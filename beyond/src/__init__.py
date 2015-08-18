@@ -1,5 +1,6 @@
 import bottle
 import requests
+import infinit.beyond.version
 
 class Beyond(bottle.Bottle):
 
@@ -105,7 +106,7 @@ class Bottle(bottle.Bottle):
 
   def root(self):
     return {
-      'version': None,
+      'version': infinit.beyond.version.version,
     }
 
   def user_put(self, id):

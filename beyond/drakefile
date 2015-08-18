@@ -9,6 +9,9 @@ check = None
 install = None
 tests = None
 
+with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
+  exec(f.read(), globals(), globals())
+
 def configure(python = None,
               prefix = drake.Path('/usr'),
               dropbox_app_key = 'ldsi5nojwpfqcqg',
@@ -20,10 +23,16 @@ def configure(python = None,
   if git is None:
     git = drake.git.Git()
 
+  version = drake.node('src/version.py')
+  class PythonVersionGenerator(VersionGenerator):
+    def _variable(self, name, value):
+      return '%s = %r' % (name, value)
+  PythonVersionGenerator(version, git)
+
   sources = drake.nodes(
     'src/__init__.py',
     'src/couchdb.py',
-  )
+  ) + [version]
   couchdb_sources = drake.nodes(
     'couchdb-python/couchdb/view.py',
     'couchdb-python/couchdb/mapping.py',
