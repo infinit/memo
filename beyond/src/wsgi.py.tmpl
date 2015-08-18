@@ -1,0 +1,11 @@
+import couchdb
+import infinit.beyond
+import infinit.beyond.couchdb
+
+datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb.Server())
+beyond = infinit.beyond.beyond(
+  datastore = datastore,
+  dropbox_app_key = ${repr(dropbox_app_key)},
+  dropbox_app_secret = ${repr(dropbox_app_secret)},
+)
+application = infinit.beyond.Bottle(beyond)

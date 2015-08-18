@@ -2,7 +2,7 @@ import bottle
 import requests
 import infinit.beyond.version
 
-class Beyond(bottle.Bottle):
+class Beyond:
 
   def __init__(
       self,

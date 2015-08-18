@@ -29,9 +29,17 @@ def configure(python = None,
       return '%s = %r' % (name, value)
   PythonVersionGenerator(version, git)
 
+  with drake.templating.Context(content = {
+      'dropbox_app_key': dropbox_app_key,
+    'dropbox_app_secret': dropbox_app_secret,
+  }):
+    drake.node('beyond.tmpl')
+    drake.node('src/wsgi.py.tmpl')
+
   sources = drake.nodes(
     'src/__init__.py',
     'src/couchdb.py',
+    'src/wsgi.py',
   ) + [version]
   couchdb_sources = drake.nodes(
     'couchdb-python/couchdb/view.py',
@@ -49,11 +57,6 @@ def configure(python = None,
   )
 
   python_prefix = drake.Path('lib/python%s' % python.version)
-  with drake.templating.Context(content = {
-      'dropbox_app_key': dropbox_app_key,
-      'dropbox_app_secret': dropbox_app_secret,
-  }):
-    drake.node('beyond.tmpl')
   def install_nodes(where, how):
     where = drake.Path(where)
     for node in how(sources,
