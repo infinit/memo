@@ -1253,15 +1253,18 @@ namespace infinit
     void
     File::_header(Header const& h)
     {
-      uint32_t v;
-      v = htonl(h.current_version);
-      memcpy(_first_block->data().mutable_contents(), &v, 4);
-      v = htonl(h.block_size);
-      memcpy(_first_block->data().mutable_contents()+4, &v, 4);
-      v = htonl(h.links);
-      memcpy(_first_block->data().mutable_contents()+8, &v, 4);
-      uint64_t v2 = ((uint64_t)htonl(h.total_size)<<32) + htonl(h.total_size >> 32);
-      memcpy(_first_block->data().mutable_contents()+12, &v2, 8);
+      _first_block->data([&](elle::Buffer& data) {
+          uint32_t v;
+          v = htonl(h.current_version);
+          memcpy(data.mutable_contents(), &v, 4);
+          v = htonl(h.block_size);
+          memcpy(data.mutable_contents()+4, &v, 4);
+          v = htonl(h.links);
+          memcpy(data.mutable_contents()+8, &v, 4);
+          uint64_t v2 = ((uint64_t)htonl(h.total_size)<<32) + htonl(h.total_size >> 32);
+          memcpy(data.mutable_contents()+12, &v2, 8);
+      });
+
     }
 
     AnyBlock*
