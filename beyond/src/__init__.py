@@ -147,7 +147,7 @@ class Bottle(bottle.Bottle):
 
   def oauth_dropbox_get(self, id):
     params = {
-      'client_id': self.beyond._Beyond__dropbox_app_key,
+      'client_id': self.__beyond._Beyond__dropbox_app_key,
       'response_type': 'code',
       'redirect_uri': '%s/oauth/dropbox' % self.host(),
       'state': id,
@@ -166,8 +166,8 @@ class Bottle(bottle.Bottle):
     query = {
       'code': code,
       'grant_type': 'authorization_code',
-      'client_id': self.beyond._Beyond__dropbox_app_key,
-      'client_secret': self.beyond._Beyond__dropbox_app_secret,
+      'client_id': self.__beyond._Beyond__dropbox_app_key,
+      'client_secret': self.__beyond._Beyond__dropbox_app_secret,
       'redirect_uri': '%s/oauth/dropbox' % self.host(),
     }
     response = requests.post('https://api.dropbox.com/1/oauth2/token',
