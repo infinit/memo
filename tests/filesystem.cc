@@ -124,7 +124,9 @@ static bool can_access(boost::filesystem::path const& p)
   int fd = open(p.string().c_str(), O_RDONLY);
   bool res = (fd >= 0);
   if (res)
+  {
     close(fd);
+  }
   ELLE_DEBUG("can_access %s: %s", p, res);
   return res;
 }
@@ -153,7 +155,9 @@ template<typename T> std::string serialize(T & t)
 // Run nodes in a separate scheduler to avoid reentrency issues
 // ndmefyl: WHAT THE FUCK is that supposed to imply O.o
 reactor::Scheduler* nodes_sched;
-static void make_nodes(std::string store, int node_count, bool plain)
+static void make_nodes(std::string store, int node_count,
+  infinit::cryptography::rsa::KeyPair const& owner
+  )
 {
   reactor::Scheduler s;
   nodes_sched = &s;
@@ -175,18 +179,21 @@ static void make_nodes(std::string store, int node_count, bool plain)
       endpoints.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
                              ep.port());
       nodes.emplace_back(l);
+      l->serve();
     }
     // now give each a model
     for (int i = 0; i < node_count; ++i)
     {
       auto kp = infinit::cryptography::rsa::keypair::generate(2048);
       std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
+      infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner.k());
       auto model =
-        std::make_shared<infinit::model::doughnut::Doughnut>(
+        new infinit::model::doughnut::Doughnut(
           std::move(kp),
-          std::move(ov),
-          nullptr,
-          plain);
+          owner.K(),
+          passport,
+          std::move(ov)
+          );
       nodes[i]->doughnut() = model;
     }
   });
@@ -198,7 +205,6 @@ static void make_nodes(std::string store, int node_count, bool plain)
 static void run_filesystem_dht(std::string const& store,
                                std::string const& mountpoint,
                                int node_count,
-                               bool plain,
                                int nread = 1,
                                int nwrite = 1,
                                int nmount = 1)
@@ -211,9 +217,11 @@ static void run_filesystem_dht(std::string const& store,
   endpoints.clear();
   processes.clear();
   mounted = false;
-  new std::thread([&] { make_nodes(store, node_count, plain);});
+  auto owner_keys = infinit::cryptography::rsa::keypair::generate(2048);
+  new std::thread([&] { make_nodes(store, node_count, owner_keys);});
   while (nodes.size() != unsigned(node_count))
     usleep(100000);
+  ELLE_TRACE("got %s nodes, preparing %s mounts", nodes.size(), nmount);
   std::vector<reactor::Thread*> threads;
   reactor::Thread t(*sched, "fs", [&] {
     std::string root;
@@ -230,18 +238,26 @@ static void run_filesystem_dht(std::string const& store,
 
       if (nmount == 1)
       {
+        ELLE_TRACE("configuring mounter...");
         std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         keys.push_back(kp.K());
+        infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner_keys.k());
+        ELLE_TRACE("instantiating dougnut...");
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
+          "testnet",
           std::move(kp),
-          std::move(ov),
-          nullptr,
-          plain);
+          owner_keys.K(),
+          passport,
+          std::move(ov)
+          );
+        ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
         ops = elle::make_unique<ifs::FileSystem>(std::move(model));
+        ELLE_TRACE("instantiating fs...");
         fs = new reactor::filesystem::FileSystem(std::move(ops), true);
+        ELLE_TRACE("running mounter...");
         new reactor::Thread("mounter", [mp] {
             ELLE_LOG("mounting on %s", mp);
             mounted = true;
@@ -268,26 +284,34 @@ static void run_filesystem_dht(std::string const& store,
         r["mountpoint"] = mp;
         elle::json::Object model;
         model["type"] = "doughnut";
-        model["plain"] = false;
         model["name"] = "user" + std::to_string(i);
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         keys.push_back(kp.K());
-        model["keys"] = "!!!"; // placeholder, lolilol
+        model["keys"] = "@KEYS@"; // placeholder, lolilol
+        model["passport"] = "@PASSPORT@"; // placeholder, lolilol
+        model["owner"] = "@OWNER@"; // placeholder, lolilol
         elle::json::Object overlay;
         overlay["type"] = "stonehenge";
         elle::json::Array v;
         for(auto const& ep: endpoints)
           v.push_back("127.0.0.1:" + std::to_string(ep.port()));
-        overlay["nodes"] = v;
+        overlay["hosts"] = v;
         model["overlay"] = overlay;
         r["model"] = model;
         std::string kps = serialize(kp);
+        std::string owner_ser = serialize(owner_keys.K());
+        infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner_keys.k());
+        std::string passport_ser = serialize(passport);
         std::stringstream ss;
         elle::json::write(ss, r, true);
         std::string ser = ss.str();
         // Now replace placeholder with key
-        size_t pos = ser.find("\"!!!\"");
-        ser = ser.substr(0, pos) + kps + ser.substr(pos + 5);
+        size_t pos = ser.find("\"@KEYS@\"");
+        ser = ser.substr(0, pos) + kps + ser.substr(pos + 8);
+        pos = ser.find("\"@PASSPORT@\"");
+        ser = ser.substr(0, pos) + passport_ser + ser.substr(pos + 12);
+        pos = ser.find("\"@OWNER@\"");
+        ser = ser.substr(0, pos) + owner_ser + ser.substr(pos + 9);
         {
           std::ofstream ofs(mountpoint + "/" + std::to_string(i));
           ofs.write(ser.data(), ser.size());
@@ -322,6 +346,7 @@ static void run_filesystem_dht(std::string const& store,
       }
     }
   });
+  ELLE_TRACE("sched running");
   sched->run();
   ELLE_TRACE("sched exiting");
 #ifdef INFINIT_MACOSX
@@ -390,7 +415,7 @@ static void write(boost::filesystem::path const& where, std::string const& what)
   ofs << what;
 }
 
-void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int nwrite=1)
+void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
 {
   namespace bfs = boost::filesystem;
   auto store = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
@@ -402,13 +427,13 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   statvfs(mount.string().c_str(), &statstart);
   std::thread t([&] {
       if (dht)
-        run_filesystem_dht(store.string(), mount.string(), nnodes, plain,
+        run_filesystem_dht(store.string(), mount.string(), 5,
                            nread, nwrite);
       else
         run_filesystem(store.string(), mount.string());
   });
   wait_for_mounts(mount, 1, &statstart);
-  ELLE_LOG("starting test");
+  ELLE_LOG("starting test, mnt=%s, store=%s", mount, store);
 
   elle::SafeFinally remover([&] {
       ELLE_TRACE("unmounting");
@@ -440,12 +465,12 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
       boost::filesystem::remove_all(mount);
       ELLE_TRACE("Cleaning done");
   });
+  std::string text;
 
   {
     boost::filesystem::ofstream ofs(mount / "test");
     ofs << "Test";
   }
-  std::string text;
   BOOST_CHECK_EQUAL(directory_count(mount), 1);
   {
     bfs::ifstream ifs(mount / "test");
@@ -506,6 +531,8 @@ void test_filesystem(bool dht, int nnodes=5, bool plain=true, int nread=1, int n
   text = read(mount / "test2");
   BOOST_CHECK_EQUAL(text, "TestcoinBcoinA");
   bfs::remove(mount / "test");
+  text = read(mount / "test2");
+  BOOST_CHECK_EQUAL(text, "TestcoinBcoinA");
   bfs::remove(mount / "test2");
 
 #endif
@@ -672,13 +699,10 @@ void test_basic()
 {
   test_filesystem(false);
 }
-void test_dht_plain()
-{
-  test_filesystem(true, 5, true, 1, 1);
-}
+
 void test_dht_crypto()
 {
-  test_filesystem(true, 5, false, 1, 1);
+  test_filesystem(true, 5, 1, 1);
 }
 
 void test_acl()
@@ -691,7 +715,7 @@ void test_acl()
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
   std::thread t([&] {
-      run_filesystem_dht(store.string(), mount.string(), 5, false, 1, 1, 2);
+      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2);
   });
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
@@ -749,7 +773,7 @@ void test_acl()
   // k1 can now list directory
   BOOST_CHECK_EQUAL(directory_count(m1), 1);
   // but the file is still not readable
-  //BOOST_CHECK(!can_access(m1/"test"));
+  BOOST_CHECK(!can_access(m1/"test"));
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   usleep(2100000);
@@ -763,7 +787,7 @@ void test_acl()
   }
   setxattr((m0/"test").c_str(), "user.infinit.auth.clear",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(3100000);
   BOOST_CHECK(!can_access(m1/"test"));
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
@@ -832,7 +856,6 @@ ELLE_TEST_SUITE()
   boost::unit_test::test_suite* filesystem = BOOST_TEST_SUITE("filesystem");
   boost::unit_test::framework::master_test_suite().add(filesystem);
   filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
-  filesystem->add(BOOST_TEST_CASE(test_dht_plain), 0, 50);
   filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 50);
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails
