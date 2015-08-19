@@ -116,7 +116,9 @@ namespace kelips
 
     struct Pong: public Ping
     {
-      using Ping::Ping;
+      Pong() {}
+      Pong(elle::serialization::SerializerIn& input)
+      : Ping(input) {}
     };
     REGISTER(Pong, "pong");
 
@@ -1626,9 +1628,9 @@ namespace infinit
       {
         for (auto const& host: hosts)
           config.bootstrap_nodes.push_back(
-            elle::serialization::Serialize<::kelips::PrettyGossipEndpoint>
+            elle::serialization::Serialize< ::kelips::PrettyGossipEndpoint>
             ::convert(host));
-        return elle::make_unique<::kelips::Node>(config, !server);
+        return elle::make_unique< ::kelips::Node>(config, !server);
       }
 
       static const

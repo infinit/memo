@@ -17,7 +17,12 @@ namespace kelips
   typedef boost::asio::ip::udp::endpoint GossipEndpoint;
   struct PrettyGossipEndpoint: public GossipEndpoint
   {
-    using GossipEndpoint::GossipEndpoint;
+    PrettyGossipEndpoint() {}
+    PrettyGossipEndpoint(const PrettyGossipEndpoint& b)
+    : GossipEndpoint(b)
+    {}
+    PrettyGossipEndpoint(boost::asio::ip::address const& addr, int port)
+    : GossipEndpoint(addr, port) {}
   };
   typedef infinit::model::Address Address;
   typedef std::chrono::time_point<std::chrono::steady_clock> Time;
