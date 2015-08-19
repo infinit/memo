@@ -6,6 +6,11 @@ import sys
 
 arch, osyst, compiler = os.environ['BUILDFARM_NAME'].split('-')
 os.chdir(os.environ['DIR_BUILD'])
-subprocess.check_call(['python3', 'drake',
-                       '//install', '//beyond/debian',
-                       '--prefix=../%s' % os.environ['DIR_INSTALL']])
+targets = ['//install']
+
+if osyst.startswith('linux_ubuntu'):
+  targets.append('//beyond/debian')
+
+subprocess.check_call(
+  ['python3', 'drake', '--prefix=../%s' % os.environ['DIR_INSTALL']]
+  + targets)
