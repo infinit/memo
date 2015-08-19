@@ -79,8 +79,10 @@ namespace infinit
     {
       auto metadata = this->_dropbox.metadata("/" + this->_root.string());
       std::vector<Key> res;
-      if (!metadata.is_dir || !metadata.contents)
+      if (!metadata.is_dir)
         throw elle::Error(".infinit is not a directory");
+      if  (!metadata.contents)
+        return res;
       for (auto const& entry: metadata.contents.get())
       {
         // /.infinit/0xFOO -> FOO
