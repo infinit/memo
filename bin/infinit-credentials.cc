@@ -92,7 +92,8 @@ credentials(boost::program_options::variables_map mode,
         elle::serialization::json::deserialize<DropboxAccounts>(r, false);
       for (auto const& a: accounts.dropbox_accounts)
       {
-        elle::printf("Fetched Dropbox account %s (%s)", a.uid, a.display_name);
+        elle::printf("Fetched Dropbox account %s (%s)\n",
+                     a.uid, a.display_name);
         ifnt.credentials_dropbox_add(a);
       }
       // FIXME: remove deleted ones
