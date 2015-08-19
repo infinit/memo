@@ -93,6 +93,7 @@ class Bottle(bottle.Bottle):
   def __init__(self, beyond):
     super().__init__()
     self.__beyond = beyond
+    self.install(bottle.CertificationPlugin())
     self.route('/')(self.root)
     self.route('/users/<id>', method = 'GET')(self.user_get)
     self.route('/users/<id>/dropbox-accounts', method = 'GET')(self.user_dropbox_accounts_get)
@@ -198,4 +199,17 @@ class Bottle(bottle.Bottle):
       }
 
   def debug(self):
-    pass
+    if hasattr(bottle.request, 'certificate') and \
+       bottle.request.certificate in [
+         'antony.mechin@infinit.io',
+         'baptiste.fradin@infinit.io',
+         'christopher.crone@infinit.io',
+         'gaetan.rochel@infinit.io',
+         'julien.quintard@infinit.io',
+         'matthieu.nottale@infinit.io',
+         'patrick.perlmutter@infinit.io',
+         'quentin.hocquet@infinit.io',
+       ]:
+      return True
+    else:
+      return super().debug()
