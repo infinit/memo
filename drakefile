@@ -15,7 +15,7 @@ def configure(
     prefix = '/usr',
     valgrind = None,
     valgrind_tests = False,
-    python3 = None,
+    python = None,
     fuse = None,
 ):
 
@@ -33,7 +33,7 @@ def configure(
                        production_build = production_build,
                        cxx_toolkit = cxx_toolkit,
                        cxx_config = cxx_config,
-                       python3 = python3,
+                       python3 = python,
                        fuse = fuse,
                        valgrind = valgrind)
   elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
