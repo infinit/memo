@@ -35,6 +35,7 @@ with drake.Drake(%(dir_source)r) as d:
   d.run(cxx_toolkit = cxx_toolkit,
         cxx_config = cfg,
         fuse = %(fuse)r,
+        python = %(python)r,
         valgrind = %(valgrind)r)
 '''
 
@@ -43,6 +44,7 @@ parameters = {
   'environ': {},
   'flags': (),
   'fuse': None,
+  'python': None,
   'valgrind': None,
 }
 
