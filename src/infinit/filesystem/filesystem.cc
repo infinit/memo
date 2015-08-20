@@ -1439,6 +1439,7 @@ namespace infinit
         Header header = _header();
         st->st_size = header.total_size;
         st->st_nlink = header.links;
+        st->st_blocks = st->st_size / 512;
         ELLE_DEBUG("stat on multi: %s", header.total_size);
       }
       else
