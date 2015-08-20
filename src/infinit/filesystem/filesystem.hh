@@ -29,6 +29,9 @@ namespace infinit
       void unchecked_remove(model::Address address);
       std::unique_ptr<model::blocks::MutableBlock>
       unchecked_fetch(model::Address address);
+
+      std::unique_ptr<model::blocks::Block>
+      fetch_or_die(model::Address address);
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(model::Address, root_address);

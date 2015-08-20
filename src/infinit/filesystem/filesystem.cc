@@ -499,6 +499,21 @@ namespace infinit
       }
     }
 
+    std::unique_ptr<model::blocks::Block>
+    FileSystem::fetch_or_die(model::Address address)
+    {
+      try
+      {
+        return elle::cast<model::blocks::MutableBlock>::runtime
+          (_block_store->fetch(address));
+      }
+      catch (model::MissingBlock const& mb)
+      {
+        ELLE_WARN("Unexpected storage result: %s", mb);
+        throw rfs::Error(EIO, "i/o error");
+      }
+    }
+
     std::unique_ptr<model::blocks::MutableBlock>
     FileSystem::unchecked_fetch(model::Address address)
     {
@@ -1420,7 +1435,7 @@ namespace infinit
       if (_multi())
       {
         _first_block = elle::cast<MutableBlock>::runtime
-          (_owner.block_store()->fetch(_parent->_files.at(_name).address));
+          (_owner.fetch_or_die(_parent->_files.at(_name).address));
         Header header = _header();
         st->st_size = header.total_size;
         st->st_nlink = header.links;
