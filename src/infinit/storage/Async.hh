@@ -16,6 +16,8 @@ namespace infinit
     public:
       Async(std::unique_ptr<Storage> backend, int max_blocks = 100, int64_t max_size = -1, bool merge = true);
       ~Async();
+      void
+      flush();
     protected:
       virtual
       elle::Buffer
@@ -55,6 +57,7 @@ namespace infinit
       int _blocks;
       int _bytes;
       bool _merge; // merge ops to have at most one per key in cache
+      bool _terminate;
       std::unordered_map<Key, unsigned long> _op_index;
     };
   }

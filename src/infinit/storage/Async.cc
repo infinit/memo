@@ -23,17 +23,32 @@ namespace infinit
       , _blocks(0)
       , _bytes(0)
       , _merge(merge)
+      , _terminate(false)
     {
       _queueing.open();
     }
     Async::~Async()
     {
+      ELLE_TRACE("~Async...");
+      _terminate = true;
       if (!_op_cache.empty())
-        ELLE_ERR("ASync filter deleted with %s operations still in cache!",
-                 _op_cache.size());
-      ELLE_TRACE("~Async");
-      _thread.terminate_now();
+      {
+        ELLE_WARN("ASync flushing %s operations still in cache!"
+                 " blocks: %s, size: %s",
+                 _op_cache.size(), _blocks, _bytes);
+      }
+      else
+        _dequeueing.open();
+      reactor::wait(_thread);
+      ELLE_TRACE("...~Async");
     }
+
+    void
+    Async::flush()
+    {
+      reactor::wait(!_dequeueing);
+    }
+
     elle::Buffer
     Async::_get(Key k) const
     {
@@ -105,7 +120,9 @@ namespace infinit
     {
       while (true)
       {
+        ELLE_DEBUG("worker waiting...");
         reactor::wait(_dequeueing);
+        ELLE_DEBUG("worker woken up");
         while (!_op_cache.empty())
         {
           auto& e = _op_cache.front();
@@ -135,6 +152,8 @@ namespace infinit
           else if (op == Operation::set)
             _backend->set(k, buf, true, true);
         }
+        if (_terminate)
+          break;
       }
     }
     void
@@ -155,7 +174,9 @@ namespace infinit
       ELLE_ASSERT_GTE(_blocks, 0);
       ELLE_ASSERT_GTE(_bytes, 0);
       if (!_blocks)
+      {
         _dequeueing.close();
+      }
       if ( (_max_size == -1 || _max_size >= _bytes)
         && (_max_blocks == -1 || _max_blocks >= _blocks))
         _queueing.open();
