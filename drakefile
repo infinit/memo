@@ -209,7 +209,7 @@ def configure(
   cxx_config_tests.library_add(
     drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
 
-  for test_name in ['doughnut', 'faith', 'storage']:
+  for test_name in ['doughnut', 'faith', 'storage', 'filesystem']:
     # Forgive me bearclaw
     # 'filesystem'
     test = drake.cxx.Executable(
