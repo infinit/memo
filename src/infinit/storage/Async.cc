@@ -33,6 +33,7 @@ namespace infinit
           catch(std::exception const& e)
           {
             ELLE_TRACE("Worker thread threw %s", e.what());
+            throw;
           }
         })
       , _op_offset(0)
