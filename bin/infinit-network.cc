@@ -164,10 +164,7 @@ network(boost::program_options::variables_map mode,
         ifnt.network_save(name, network);
       }
       else
-      {
-        elle::serialization::json::SerializerOut s(std::cout, false);
-        s.serialize_forward(network);
-      }
+        elle::serialization::json::serialize(network, std::cout, false);
     }
   }
   else if (mode.count("export"))
@@ -200,8 +197,7 @@ network(boost::program_options::variables_map mode,
         (*network.model);
       infinit::NetworkDescriptor desc(
         network.name, std::move(dht.overlay), std::move(dht.owner));
-      elle::serialization::json::SerializerOut s(*output, false);
-      s.serialize_forward(desc);
+      elle::serialization::json::serialize(desc, *output, false);
     }
   }
   else if (mode.count("import"))
@@ -226,8 +222,9 @@ network(boost::program_options::variables_map mode,
     auto importation = parse_args(import_options, args);
     auto input = get_input(importation);
     {
-      elle::serialization::json::SerializerIn s(*input, false);
-      infinit::NetworkDescriptor desc(s);
+      auto desc =
+        elle::serialization::json::deserialize<infinit::NetworkDescriptor>
+        (*input, false);
       ifnt.network_save(desc.name, desc);
     }
   }
@@ -267,8 +264,9 @@ network(boost::program_options::variables_map mode,
     {
       auto desc = ifnt.network_descriptor_get(name);
       auto input = get_input(join);
-      elle::serialization::json::SerializerIn passport_s(*input, false);
-      infinit::model::doughnut::Passport passport(passport_s);
+      auto passport =
+        elle::serialization::json::deserialize
+        <infinit::model::doughnut::Passport>(*input, false);
       bool ok = passport.verify(desc.owner);
       if (!ok)
         throw elle::Error("passport signature is invalid");
@@ -357,8 +355,7 @@ network(boost::program_options::variables_map mode,
       network_name,
       self.private_key.get());
     auto output = get_output(invitation);
-    elle::serialization::json::SerializerOut s(*output, false);
-    s.serialize_forward(passport);
+    elle::serialization::json::serialize(passport, *output, false);
   }
   else
   {
