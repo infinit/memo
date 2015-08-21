@@ -237,7 +237,10 @@ namespace infinit
       {
         auto storage = this->storage->make();
         if (async_writes)
-          storage.reset(new storage::Async(std::move(storage), 10000));
+        {
+          boost::filesystem::path journal = root_dir() / "cache" / name / "async";
+          storage.reset(new storage::Async(std::move(storage), 10000, 0, true, journal.string()));
+        }
         if (cache)
           storage.reset(new storage::Cache(std::move(storage), cache_size));
         auto local = std::make_shared<infinit::model::doughnut::Local>
