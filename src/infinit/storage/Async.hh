@@ -14,7 +14,9 @@ namespace infinit
     class Async: public Storage
     {
     public:
-      Async(std::unique_ptr<Storage> backend, int max_blocks = 100, int64_t max_size = -1, bool merge = true);
+      Async(std::unique_ptr<Storage> backend, int max_blocks = 100,
+            int64_t max_size = -1, bool merge = true,
+            std::string const& journal_dir="");
       ~Async();
       void
       flush();
@@ -44,6 +46,7 @@ namespace infinit
       void _dec(int64_t size);
       void _wait(); /// Wait for cache to go bellow limit
       void _push_op(Key k, elle::Buffer const& buf, Operation op);
+      void _restore_journal();
       std::unique_ptr<Storage> _backend;
       int _max_blocks;
       int64_t _max_size;
@@ -58,6 +61,7 @@ namespace infinit
       int _bytes;
       bool _merge; // merge ops to have at most one per key in cache
       bool _terminate;
+      std::string _journal_dir;
       std::unordered_map<Key, unsigned long> _op_index;
     };
   }

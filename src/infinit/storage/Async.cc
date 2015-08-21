@@ -1,11 +1,16 @@
 #include "infinit/storage/Async.hh"
 
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+
 #include <infinit/model/Address.hh>
 #include <infinit/storage/MissingKey.hh>
 
 #include <elle/factory.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs.async");
+
+namespace bfs = boost::filesystem;
 
 namespace infinit
 {
@@ -14,17 +19,34 @@ namespace infinit
     Async::Async(std::unique_ptr<Storage> backend,
                  int max_blocks,
                  int64_t max_size,
-                 bool merge)
+                 bool merge,
+                 std::string const& journal_dir)
       : _backend(std::move(backend))
       , _max_blocks(max_blocks)
       , _max_size(max_size)
-      , _thread("async deque", [&]{this->_worker();})
+      , _thread("async deque", [&]
+        {
+          try {
+            this->_worker();
+            ELLE_TRACE("Worker thread normal exit");
+          }
+          catch(std::exception const& e)
+          {
+            ELLE_TRACE("Worker thread threw %s", e.what());
+          }
+        })
       , _op_offset(0)
       , _blocks(0)
       , _bytes(0)
       , _merge(merge)
       , _terminate(false)
+      , _journal_dir(journal_dir)
     {
+      if (!_journal_dir.empty())
+      {
+        bfs::create_directories(_journal_dir);
+        _restore_journal();
+      }
       _queueing.open();
     }
     Async::~Async()
@@ -41,6 +63,45 @@ namespace infinit
         _dequeueing.open();
       reactor::wait(_thread);
       ELLE_TRACE("...~Async");
+    }
+
+    void
+    Async::_restore_journal()
+    {
+      ELLE_TRACE("Restoring journal from %s", _journal_dir);
+      bfs::path p(_journal_dir);
+      bfs::directory_iterator it(p);
+      unsigned int min_id = -1;
+      while (it != bfs::directory_iterator())
+      {
+        min_id = std::min(min_id, (unsigned int)std::stoi(it->path().filename().string()));
+        ++it;
+      }
+      _op_offset = min_id == -1? 0 : min_id;
+      it = bfs::directory_iterator(p);
+      while (it != bfs::directory_iterator())
+      {
+        int id = std::stoi(it->path().filename().string());
+        bfs::ifstream is(*it);
+        char c;
+        is.read(&c, 1);
+        Key::Value v;
+        is.read((char*)v, sizeof(Key::Value));
+        Key k(v);
+        elle::Buffer buf;
+        elle::IOStream output(buf.ostreambuf());
+        std::copy(std::istreambuf_iterator<char>(is),
+          std::istreambuf_iterator<char>(),
+          std::ostreambuf_iterator<char>(output));
+        Operation op = (Operation)c;
+        while (_op_cache.size() + _op_offset <= id)
+          _op_cache.emplace_back(Key(), elle::Buffer(), Operation::none);
+        _inc(buf.size());
+        _op_cache[id - _op_offset] = std::make_tuple(k, std::move(buf), op);
+        if (_merge)
+          _op_index[k] = _op_offset;
+        ++it;
+      }
     }
 
     void
@@ -70,29 +131,38 @@ namespace infinit
     void
     Async::_push_op(Key k, elle::Buffer const& buf, Operation op)
     {
+      int insert_index = -1;
+      _op_cache.emplace_back(k, elle::Buffer(buf), op);
+      insert_index = _op_cache.size() + _op_offset - 1;
+      _inc(buf.size());
+
       if (_merge)
       {
         auto it = _op_index.find(k);
         if (it != _op_index.end())
         {
           auto index = it->second;
-          ELLE_ASSERT(index >= _op_offset);
-          ELLE_ASSERT(index < _op_offset + _op_cache.size());
           auto& prev = _op_cache[index - _op_offset];
-          ELLE_ASSERT_EQ(std::get<0>(prev), k);
           _dec(std::get<1>(prev).size());
+          std::get<2>(prev) = Operation::none;
           std::get<1>(prev).reset();
-          std::get<1>(prev).append(buf.contents(), buf.size());
-          std::get<2>(prev) = op;
-          _inc(buf.size());
-          return;
+          auto path = bfs::path(_journal_dir) / std::to_string(index);
+          ELLE_DEBUG("deleting %s", path);
+          bfs::remove(path);
         }
+        _op_index[k] = insert_index;
       }
-      _op_cache.emplace_back(k, elle::Buffer(buf), op);
-      _inc(buf.size());
-      if (_merge)
-        _op_index.insert(std::make_pair(k, _op_offset + _op_cache.size()-1));
-    }
+      if (!_journal_dir.empty())
+      {
+        bfs::path path = bfs::path(_journal_dir) / std::to_string(insert_index);
+        ELLE_DEBUG("creating %s", path);
+        bfs::ofstream os(path);
+        char cop = (char)op;
+        os.write(&cop, 1);
+        os.write((const char*)k.value(), sizeof(Key::Value));
+        os.write((const char*)buf.contents(), buf.size());
+      }
+   }
 
     void
     Async::_erase(Key k)
@@ -134,9 +204,10 @@ namespace infinit
                      k, _blocks, _bytes);
           _op_cache.pop_front();
           ++_op_offset;
+          if (op == Operation::none)
+            continue;
           if (_merge)
             _op_index.erase(k);
-          _dec(buf.size());
           if (op == Operation::erase)
           { // if we merged a set and an erase and the set was a 'create',
             // erase might legitimaly fail
@@ -151,9 +222,19 @@ namespace infinit
           }
           else if (op == Operation::set)
             _backend->set(k, buf, true, true);
+          _dec(buf.size());
+          if (!_journal_dir.empty())
+          {
+            auto path = bfs::path(_journal_dir) / std::to_string(_op_offset-1);
+            ELLE_DEBUG("deleting %s", path);
+            bfs::remove(path);
+          }
         }
         if (_terminate)
+        {
+          ELLE_DEBUG("Terminating.");
           break;
+        }
       }
     }
     void
@@ -215,6 +296,7 @@ namespace infinit
       int64_t max_blocks;
       int64_t max_size;
       boost::optional<bool> merge;
+      boost::optional<std::string> journal_dir;
       std::shared_ptr<StorageConfig> storage;
       AsyncStorageConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
@@ -229,6 +311,7 @@ namespace infinit
         s.serialize("max_size", this->max_size);
         s.serialize("merge", this->merge);
         s.serialize("backend", this->storage);
+        s.serialize("journal_dir", this->journal_dir);
       }
 
       virtual
@@ -237,7 +320,7 @@ namespace infinit
       {
         return elle::make_unique<infinit::storage::Async>(
           std::move(storage->make()), max_blocks, max_size,
-          merge ? *merge : true);
+          merge ? *merge : true, journal_dir? *journal_dir: "");
       }
     };
 
