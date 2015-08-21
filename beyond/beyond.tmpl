@@ -12,6 +12,7 @@ sys.path.insert(0, PYTHONPATH)
 os.environ['PYTHONPATH'] = '%s:%s' % (PYTHONPATH, os.environ.get('PYTHONPATH', ''))
 
 import infinit.beyond
+import infinit.beyond.bottle
 import infinit.beyond.couchdb
 
 def parse_options():
@@ -47,7 +48,7 @@ try:
       dropbox_app_key = args.dropbox_app_key,
       dropbox_app_secret = args.dropbox_app_secret,
     )
-    app = infinit.beyond.Bottle(beyond)
+    app = infinit.beyond.bottle.Bottle(beyond)
     import bottle
     kwargs = {}
     if args.host is not None:
