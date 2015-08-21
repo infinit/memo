@@ -145,7 +145,7 @@ network(boost::program_options::variables_map mode,
           new infinit::storage::StripStorageConfig(std::move(backends)));
     }
     auto dht =
-      elle::make_unique<infinit::model::doughnut::DoughnutModelConfig>(
+      elle::make_unique<infinit::model::doughnut::Configuration>(
         std::move(overlay_config),
         owner.keypair(),
         owner.public_key,
@@ -196,7 +196,7 @@ network(boost::program_options::variables_map mode,
     auto output = get_output(exportation);
     auto network = ifnt.network_get(network_name);
     {
-      auto& dht = static_cast<infinit::model::doughnut::DoughnutModelConfig&>
+      auto& dht = static_cast<infinit::model::doughnut::Configuration&>
         (*network.model);
       infinit::NetworkDescriptor desc(
         network.name, std::move(dht.overlay), std::move(dht.owner));
@@ -275,7 +275,7 @@ network(boost::program_options::variables_map mode,
       auto user = ifnt.user_get(username);
       infinit::Network network;
       network.model =
-        elle::make_unique<infinit::model::doughnut::DoughnutModelConfig>(
+        elle::make_unique<infinit::model::doughnut::Configuration>(
           std::move(desc.overlay),
           user.keypair(),
           std::move(desc.owner),
@@ -348,7 +348,7 @@ network(boost::program_options::variables_map mode,
     auto user = ifnt.user_get(user_name);
     auto self = ifnt.user_get();
     if (self.public_key !=
-        static_cast<infinit::model::doughnut::DoughnutModelConfig&>
+        static_cast<infinit::model::doughnut::Configuration&>
         (*network.model).owner)
       throw elle::Error(
         elle::sprintf("not owner of network \"%s\"", network_name));

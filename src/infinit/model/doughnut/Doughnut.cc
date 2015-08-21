@@ -201,10 +201,10 @@ namespace infinit
         this->_consensus->remove(*this->_overlay, address);
       }
 
-      DoughnutModelConfig::~DoughnutModelConfig()
+      Configuration::~Configuration()
       {}
 
-      DoughnutModelConfig::DoughnutModelConfig(
+      Configuration::Configuration(
         std::unique_ptr<overlay::Configuration> overlay_,
         cryptography::rsa::KeyPair keys_,
         cryptography::rsa::PublicKey owner_,
@@ -217,7 +217,7 @@ namespace infinit
         , name(std::move(name_))
       {}
 
-      DoughnutModelConfig::DoughnutModelConfig
+      Configuration::Configuration
         (elle::serialization::SerializerIn& s)
         : overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                   ("overlay"))
@@ -228,7 +228,7 @@ namespace infinit
       {}
 
       void
-      DoughnutModelConfig::serialize(elle::serialization::Serializer& s)
+      Configuration::serialize(elle::serialization::Serializer& s)
       {
         s.serialize("overlay", this->overlay);
         s.serialize("keys", this->keys);
@@ -238,7 +238,7 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      DoughnutModelConfig::make(std::vector<std::string> const& hosts,
+      Configuration::make(std::vector<std::string> const& hosts,
                                 bool client,
                                 bool server)
       {
@@ -260,7 +260,7 @@ namespace infinit
       }
 
       std::shared_ptr<Doughnut>
-      DoughnutModelConfig::make(std::vector<std::string> const& hosts,
+      Configuration::make(std::vector<std::string> const& hosts,
                                 bool client,
                                 std::shared_ptr<Local> local)
       {
@@ -284,7 +284,7 @@ namespace infinit
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
-      Register<DoughnutModelConfig> _register_DoughnutModelConfig("doughnut");
+      Register<Configuration> _register_Configuration("doughnut");
     }
   }
 }

@@ -70,7 +70,7 @@ namespace infinit
         friend class Local;
       };
 
-      struct DoughnutModelConfig:
+      struct Configuration:
         public ModelConfig
       {
       public:
@@ -80,14 +80,14 @@ namespace infinit
         Passport passport;
         boost::optional<std::string> name;
 
-        DoughnutModelConfig(
+        Configuration(
           std::unique_ptr<overlay::Configuration> overlay,
           cryptography::rsa::KeyPair keys,
           cryptography::rsa::PublicKey owner,
           Passport passport,
           boost::optional<std::string> name);
-        DoughnutModelConfig(elle::serialization::SerializerIn& input);
-        ~DoughnutModelConfig();
+        Configuration(elle::serialization::SerializerIn& input);
+        ~Configuration();
         void
         serialize(elle::serialization::Serializer& s);
         virtual
@@ -102,7 +102,7 @@ namespace infinit
   }
 }
 
-DAS_MODEL_FIELDS(infinit::model::doughnut::DoughnutModelConfig,
+DAS_MODEL_FIELDS(infinit::model::doughnut::Configuration,
                  (overlay, keys, owner, passport, name));
 
 #endif
