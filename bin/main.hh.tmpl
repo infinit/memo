@@ -232,7 +232,7 @@ namespace infinit
         bool async_writes = false)
     {
       auto dht_config =
-        static_cast<model::doughnut::DoughnutModelConfig*>(this->model.get());
+        static_cast<model::doughnut::Configuration*>(this->model.get());
       if (this->storage)
       {
         auto storage = this->storage->make();
