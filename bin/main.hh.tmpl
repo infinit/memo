@@ -111,6 +111,18 @@ namespace infinit
     return 0;
   }
 
+  inline
+  boost::filesystem::path
+  root_dir()
+  {
+    static auto const env  = elle::os::getenv("INFINIT_HOME", "");
+    static auto const res =
+    env.empty() ?
+    elle::system::home_directory() / ".infinit" :
+    boost::filesystem::path(env);
+    return res;
+  }
+
   struct User
   {
     User(std::string name_, cryptography::rsa::KeyPair keys_)
@@ -366,17 +378,6 @@ namespace infinit
       return s.deserialize<User>();
     }
 
-    boost::filesystem::path
-    root_dir()
-    {
-      static auto const env  = elle::os::getenv("INFINIT_HOME", "");
-      static auto const res =
-        env.empty() ?
-        elle::system::home_directory() / ".infinit" :
-        boost::filesystem::path(env);
-      return res;
-    }
-
     std::unique_ptr<infinit::storage::StorageConfig>
     storage_get(std::string const& name)
     {
@@ -471,7 +472,7 @@ namespace infinit
     boost::filesystem::path
     _credentials_path(std::string const& service)
     {
-      auto root = this->root_dir() / "credentials" / service;
+      auto root = root_dir() / "credentials" / service;
       create_directories(root);
       return root;
     }
@@ -485,7 +486,7 @@ namespace infinit
     boost::filesystem::path
     _network_path(std::string const& name)
     {
-      auto root = this->root_dir() / "networks";
+      auto root = root_dir() / "networks";
       create_directories(root);
       return root / name;
     }
@@ -493,7 +494,7 @@ namespace infinit
     boost::filesystem::path
     _storage_path(std::string const& name)
     {
-      auto root = this->root_dir() / "storage";
+      auto root = root_dir() / "storage";
       create_directories(root);
       return root / name;
     }
@@ -501,7 +502,7 @@ namespace infinit
     boost::filesystem::path
     _user_path(std::string const& name)
     {
-      auto root = this->root_dir() / "users";
+      auto root = root_dir() / "users";
       create_directories(root);
       return root / name;
     }
@@ -509,7 +510,7 @@ namespace infinit
     boost::filesystem::path
     _volume_path(std::string const& name)
     {
-      auto root = this->root_dir() / "volumes";
+      auto root = root_dir() / "volumes";
       create_directories(root);
       return root / name;
     }
