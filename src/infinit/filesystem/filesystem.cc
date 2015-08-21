@@ -504,12 +504,16 @@ namespace infinit
     {
       try
       {
-        return elle::cast<model::blocks::MutableBlock>::runtime
-          (_block_store->fetch(address));
+        return _block_store->fetch(address);
       }
       catch (model::MissingBlock const& mb)
       {
         ELLE_WARN("Unexpected storage result: %s", mb);
+        throw rfs::Error(EIO, "i/o error");
+      }
+      catch (elle::serialization::Error const& se)
+      {
+        ELLE_WARN("serialization error on %x: %s", address, se);
         throw rfs::Error(EIO, "i/o error");
       }
     }
@@ -736,15 +740,10 @@ namespace infinit
         if (!isDir)
           return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
         std::unique_ptr<ACLBlock> block;
-        try
-        {
-          block = elle::cast<ACLBlock>::runtime
-            (_owner.block_store()->fetch(it->second.address));
-        }
-        catch (infinit::model::MissingBlock const& b)
-        {
-          throw rfs::Error(EIO, b.what());
-        }
+
+        block = elle::cast<ACLBlock>::runtime
+          (_owner.fetch_or_die(it->second.address));
+
         return std::shared_ptr<rfs::Path>(new Directory(self, _owner, name,
                                                         std::move(block)));
       }
@@ -1305,6 +1304,7 @@ namespace infinit
       char zeros[sizeof(Address)];
       memset(zeros, 0, sizeof(Address));
       AnyBlock b;
+      Address addr;
       bool is_new = false;
       if (!memcmp(zeros, _first_block->data().mutable_contents() + offset,
                  sizeof(Address)))
@@ -1314,18 +1314,20 @@ namespace infinit
           return nullptr;
         }
         b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>());
-        is_new = true;
-        // _owner.block_store()->store(*b); // FIXME: but why?
+        is_new = false; // since we store it just below
+        // Store it, since our FAT will reference it
+        ELLE_DEBUG("Storing newly created block for %s as %x", index, b.address());
+        addr = b.store(*_owner.block_store(), model::STORE_INSERT);
       }
       else
       {
-         Address addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
-         b = AnyBlock(_owner.block_store()->fetch(addr));
+        addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
+         b = AnyBlock(_owner.fetch_or_die(addr));
       }
       _first_block->data([&](elle::Buffer& data)
         {
           memcpy(data.mutable_contents() + offset,
-            b.address().value(), sizeof(Address::Value));
+            addr.value(), sizeof(Address::Value));
         });
       _owner.block_store()->store(*_first_block);
       auto inserted = _blocks.insert(std::make_pair(index,
