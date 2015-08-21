@@ -8,6 +8,7 @@
 
 #include <elle/factory.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
+#include <elle/serialization/binary/SerializerOut.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs.async");
 
