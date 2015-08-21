@@ -239,7 +239,7 @@ namespace infinit
         if (async_writes)
         {
           boost::filesystem::path journal = root_dir() / "cache" / name / "async";
-          storage.reset(new storage::Async(std::move(storage), 10000, 0, true, journal.string()));
+          storage.reset(new storage::Async(std::move(storage), 10000, -1, true, journal.string()));
         }
         if (cache)
           storage.reset(new storage::Cache(std::move(storage), cache_size));
