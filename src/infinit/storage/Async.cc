@@ -7,6 +7,7 @@
 #include <infinit/storage/MissingKey.hh>
 
 #include <elle/factory.hh>
+#include <elle/serialization/binary/SerializerIn.hh>
 
 ELLE_LOG_COMPONENT("infinit.fs.async");
 
@@ -84,16 +85,13 @@ namespace infinit
       {
         int id = std::stoi(it->path().filename().string());
         bfs::ifstream is(*it);
-        char c;
-        is.read(&c, 1);
-        Key::Value v;
-        is.read((char*)v, sizeof(Key::Value));
-        Key k(v);
+        elle::serialization::binary::SerializerIn sin(is);
+        int c;
+        Key k;
         elle::Buffer buf;
-        elle::IOStream output(buf.ostreambuf());
-        std::copy(std::istreambuf_iterator<char>(is),
-          std::istreambuf_iterator<char>(),
-          std::ostreambuf_iterator<char>(output));
+        sin.serialize("operation", c);
+        sin.serialize("key", k);
+        sin.serialize("data", buf);
         Operation op = (Operation)c;
         while (_op_cache.size() + _op_offset <= id)
           _op_cache.emplace_back(Key(), elle::Buffer(), Operation::none);
@@ -158,10 +156,11 @@ namespace infinit
         bfs::path path = bfs::path(_journal_dir) / std::to_string(insert_index);
         ELLE_DEBUG("creating %s", path);
         bfs::ofstream os(path);
-        char cop = (char)op;
-        os.write(&cop, 1);
-        os.write((const char*)k.value(), sizeof(Key::Value));
-        os.write((const char*)buf.contents(), buf.size());
+        int cop = (char)op;
+        elle::serialization::binary::SerializerOut sout(os);
+        sout.serialize("operation", cop);
+        sout.serialize("key", k);
+        sout.serialize("data", buf);
       }
    }
 
@@ -246,7 +245,11 @@ namespace infinit
       _dequeueing.open();
       if ( (_max_size != -1 && _max_size < _bytes)
         || _max_blocks != -1 && _max_blocks < _blocks)
+      {
+        ELLE_DEBUG("async limit reached: %s/%s > %s/%s, closing queue.",
+          _blocks, _bytes, _max_blocks, _max_size);
         _queueing.close();
+      }
     }
     void
     Async::_dec(int64_t size)
