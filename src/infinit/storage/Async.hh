@@ -56,8 +56,14 @@ namespace infinit
       reactor::Barrier _dequeueing;
       reactor::Barrier _queueing;
       reactor::Thread _thread;
+      struct Entry
+      {
+        Key key;
+        Operation operation;
+        elle::Buffer data;
+        unsigned int hop; // number of times entry was invalidated and pushed back
+      };
 
-      typedef std::tuple<Key, elle::Buffer, Operation> Entry;
       std::deque<Entry> _op_cache;
       unsigned long _op_offset; // number of popped elements
       int _blocks;

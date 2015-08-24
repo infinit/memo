@@ -6,6 +6,7 @@
 #include <infinit/model/Address.hh>
 #include <infinit/storage/MissingKey.hh>
 
+#include <elle/os/environ.hh>
 #include <elle/factory.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
@@ -18,6 +19,13 @@ namespace infinit
 {
   namespace storage
   {
+    static int _max_entry_hop()
+    {
+      return std::stoi(elle::os::getenv("INFINIT_ASYNC_MAX_ENTRY_HOPS", "4"));
+    }
+
+    static int max_entry_hop = _max_entry_hop();
+
     Async::Async(std::unique_ptr<Storage> backend,
                  int max_blocks,
                  int64_t max_size,
@@ -95,9 +103,9 @@ namespace infinit
         sin.serialize("data", buf);
         Operation op = (Operation)c;
         while (_op_cache.size() + _op_offset <= id)
-          _op_cache.emplace_back(Key(), elle::Buffer(), Operation::none);
+          _op_cache.push_back(Entry{Key(), Operation::none, elle::Buffer(), 0});
         _inc(buf.size());
-        _op_cache[id - _op_offset] = std::make_tuple(k, std::move(buf), op);
+        _op_cache[id - _op_offset] = Entry{k, op, std::move(buf), 0};
         if (_merge)
           _op_index[k] = _op_offset;
         ++it;
@@ -116,13 +124,13 @@ namespace infinit
       auto it = std::find_if(_op_cache.rbegin(), _op_cache.rend(),
         [&](Entry const& a)
         {
-          return std::get<0>(a) == k;
+          return a.key == k;
         });
       if (it != _op_cache.rend())
       {
-        if (std::get<2>(*it) == Operation::erase)
+        if (it->operation == Operation::erase)
           throw MissingKey(k);
-        elle::Buffer const& buf = std::get<1>(*it);
+        elle::Buffer const& buf = it->data;
         return elle::Buffer(buf.contents(), buf.size());
       }
       return _backend->get(k);
@@ -132,23 +140,39 @@ namespace infinit
     Async::_push_op(Key k, elle::Buffer const& buf, Operation op)
     {
       int insert_index = -1;
-      _op_cache.emplace_back(k, elle::Buffer(buf), op);
+      _op_cache.push_back(Entry{k, op, elle::Buffer(buf), 0});
       insert_index = _op_cache.size() + _op_offset - 1;
       _inc(buf.size());
-
+      ELLE_DEBUG("inserting %s: %s(%s) at %x",
+                 insert_index,
+                 op == Operation::set ? "set" : "erase",
+                 buf.size(),
+                 k);
       if (_merge)
       {
         auto it = _op_index.find(k);
         if (it != _op_index.end())
         {
-          auto index = it->second;
-          auto& prev = _op_cache[index - _op_offset];
-          _dec(std::get<1>(prev).size());
-          std::get<2>(prev) = Operation::none;
-          std::get<1>(prev).reset();
-          auto path = bfs::path(_journal_dir) / std::to_string(index);
-          ELLE_DEBUG("deleting %s", path);
-          bfs::remove(path);
+          if (max_entry_hop >= 0 && _op_cache[it->second - _op_offset].hop >= max_entry_hop)
+          {
+            ELLE_DEBUG("not moving %s, max hop reached", it->second);
+          }
+          else
+          {
+            auto index = it->second;
+            auto& prev = _op_cache[index - _op_offset];
+            _dec(prev.data.size());
+            ELLE_DEBUG("deleting %s: %s(%s) at %x",
+                       index,
+                       prev.operation == Operation::set ? "set" : "erase",
+                       prev.data.size(),
+                       k);
+            prev.operation = Operation::none;
+            prev.data.reset();
+            _op_cache[insert_index - _op_offset].hop = prev.hop + 1;
+            auto path = bfs::path(_journal_dir) / std::to_string(index);
+            bfs::remove(path);
+          }
         }
         _op_index[k] = insert_index;
       }
@@ -216,9 +240,9 @@ namespace infinit
         while (!_op_cache.empty())
         {
           auto& e = _op_cache.front();
-          elle::Buffer buf = std::move(std::get<1>(e));
-          Key k = std::get<0>(e);
-          Operation op = std::get<2>(e);
+          elle::Buffer buf = std::move(e.data);
+          Key k = e.key;
+          Operation op = e.operation;
           ELLE_DEBUG("dequeueing %s on %x. Cache blocks=%s bytes=%s",
                      (op == Operation::erase) ? "erase" : "set",
                      k, _blocks, _bytes);
