@@ -190,6 +190,18 @@ namespace infinit
     BlockStatus
     Async::_status(Key k)
     {
+      auto it = std::find_if(_op_cache.rbegin(), _op_cache.rend(),
+        [&](Entry const& a)
+        {
+          return a.key == k;
+        });
+      if (it != _op_cache.rend())
+      {
+        if (it->operation == Operation::erase)
+          return BlockStatus::missing;
+        else
+          return BlockStatus::exists;
+      }
       return _backend->status(k);
     }
 
