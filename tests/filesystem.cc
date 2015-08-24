@@ -860,10 +860,10 @@ ELLE_TEST_SUITE()
   boost::unit_test::test_suite* filesystem = BOOST_TEST_SUITE("filesystem");
   boost::unit_test::framework::master_test_suite().add(filesystem);
   filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
-  filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 50);
+  filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 120);
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails
   // with a mysterious 'permission denied'
-  filesystem->add(BOOST_TEST_CASE(test_acl), 0, 50);
+  filesystem->add(BOOST_TEST_CASE(test_acl), 0, 120);
 #endif
 }
