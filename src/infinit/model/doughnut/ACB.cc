@@ -322,8 +322,7 @@ namespace infinit
           bool owner = this->doughnut()->keys().K() == this->owner_key();
           if (owner)
             this->_editor = -1;
-          auto secret = cryptography::secretkey::generate
-            (256, cryptography::Cipher::aes256, cryptography::Mode::cbc);
+          auto secret = cryptography::secretkey::generate(256);
           ELLE_DUMP("%s: new block secret: %s", *this, secret);
           auto secret_buffer =
             elle::serialization::serialize

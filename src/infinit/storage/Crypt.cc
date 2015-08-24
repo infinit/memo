@@ -40,18 +40,18 @@ namespace infinit
     Crypt::_get(Key k) const
     {
       elle::Buffer e = this->_backend->get(k);
-      SecretKey enc(_salt ? _password + elle::sprintf("%x", k) : _password,
-                    this->_algorithm, cryptography::Mode::cbc);
-      return enc.decipher(e);
+      SecretKey enc(_salt ? _password + elle::sprintf("%x", k) : _password);
+      return enc.decipher(e, this->_algorithm, cryptography::Mode::cbc);
     }
 
     void
     Crypt::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
-      SecretKey enc(
-        _salt ? _password + elle::sprintf("%x", k) : this->_password,
-        this->_algorithm, cryptography::Mode::cbc);
-      this->_backend->set(k, enc.encipher(value), insert, update);
+      SecretKey enc(_salt ? _password + elle::sprintf("%x", k) : this->_password);
+      this->_backend->set(
+        k,
+        enc.encipher(value, this->_algorithm, cryptography::Mode::cbc),
+        insert, update);
     }
 
     void
