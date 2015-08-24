@@ -37,11 +37,16 @@ def parse_options():
                       type = str,
                       help = 'Dropbox app secret',
                       default = ${repr(dropbox_app_secret)})
+  parser.add_argument('--couchdb-port',
+                      metavar = 'PORT',
+                      type = int,
+                      help = 'CouchDB port',
+                      default = 0)
   return parser.parse_args()
 
 try:
   args = parse_options()
-  with infinit.beyond.couchdb.CouchDB() as couchdb:
+  with infinit.beyond.couchdb.CouchDB(port = args.couchdb_port) as couchdb:
     datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
     beyond = infinit.beyond.Beyond(
       datastore = datastore,
