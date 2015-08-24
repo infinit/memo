@@ -11,11 +11,16 @@ namespace infinit
   namespace storage
   {
     Cache::Cache(std::unique_ptr<Storage> backend,
-                 boost::optional<int> size)
+                 boost::optional<int> size,
+                 bool use_list,
+                 bool use_status)
       : _storage(std::move(backend))
       , _size(std::move(size))
+      , _use_list(use_list)
+      , _use_status(use_status)
       , _keys()
     {
+      ELLE_TRACE("Cache start, list=%s, status=%s", _use_list, _use_status);
     }
 
     elle::Buffer
@@ -31,7 +36,9 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: cache miss on %s", *this, k);
         _init();
-        if (this->_keys->find(k) == this->_keys->end())
+        if (_use_list && this->_keys->find(k) == this->_keys->end())
+          throw MissingKey(k);
+        if (_use_status && this->_storage->status(k) == BlockStatus::missing)
           throw MissingKey(k);
         auto data =  this->_storage->get(k);
         this->_blocks.emplace(k, data);
@@ -57,7 +64,8 @@ namespace infinit
         ELLE_TRACE("%s: cache %s", *this, k);
         _init();
         this->_blocks.emplace(k, value);
-        this->_keys->insert(k);
+        if (_use_list)
+          this->_keys->insert(k);
       }
       ELLE_TRACE("%s _set done %s", *this, k);
     }
@@ -69,24 +77,31 @@ namespace infinit
       ELLE_TRACE("%s: drop %s", *this, k);
       this->_blocks.erase(k);
       this->_storage->erase(k);
-      this->_keys->erase(k);
+      if (_use_list)
+        this->_keys->erase(k);
     }
 
     void
     Cache::_init() const
     {
-      if (this->_keys)
+      if (!_use_list || this->_keys)
         return;
       ELLE_TRACE("%s: sync keys", *this);
       auto keys = this->_storage->list();
       this->_keys = Keys();
       this->_keys->insert(keys.begin(), keys.end());
     }
+
     std::vector<Key>
     Cache::_list()
     {
-      _init();
-      return std::vector<Key>(this->_keys->begin(), this->_keys->end());
+      if (_use_list)
+      {
+        _init();
+        return std::vector<Key>(this->_keys->begin(), this->_keys->end());
+      }
+      else
+        return _storage->list();
     }
   }
 }

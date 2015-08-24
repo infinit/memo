@@ -15,6 +15,12 @@ namespace infinit
 {
   namespace storage
   {
+    enum class BlockStatus
+    {
+      exists,
+      missing,
+      unknown
+    };
     class Storage
     {
     public:
@@ -29,6 +35,8 @@ namespace infinit
       erase(Key k);
       std::vector<Key>
       list();
+      BlockStatus
+      status(Key k);
     protected:
       virtual
       elle::Buffer
@@ -42,6 +50,12 @@ namespace infinit
       virtual
       std::vector<Key>
       _list() = 0;
+      /// Return the status of a given key.
+      /// Implementations should check localy only if the information is
+      /// available, or return BlockStatus::unknown.
+      virtual
+      BlockStatus
+      _status(Key k);
     };
 
     std::unique_ptr<Storage>

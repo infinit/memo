@@ -186,6 +186,13 @@ namespace infinit
     {
       return _backend->list();
     }
+
+    BlockStatus
+    Async::_status(Key k)
+    {
+      return _backend->status(k);
+    }
+
     void
     Async::_worker()
     {

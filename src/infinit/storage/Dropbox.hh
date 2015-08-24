@@ -28,10 +28,13 @@ namespace infinit
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
       void
-      _erase(Key k);
+      _erase(Key k) override;
       virtual
       std::vector<Key>
       _list() override;
+      virtual
+      BlockStatus
+      _status(Key k) override;
       ELLE_ATTRIBUTE(dropbox::Dropbox, dropbox);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
 

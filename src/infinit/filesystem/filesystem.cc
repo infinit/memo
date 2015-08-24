@@ -389,7 +389,7 @@ namespace infinit
     : _backend(std::move(block))
     , _is_mutable(dynamic_cast<MutableBlock*>(_backend.get()))
     {
-      ELLE_DEBUG("Anyblock mutable=%s", _is_mutable);
+      ELLE_DEBUG("Anyblock mutable=%s, addr = %x", _is_mutable, _backend->address());
       if (!_is_mutable)
       {
         _buf = _backend->take_data();
@@ -462,6 +462,7 @@ namespace infinit
     Address AnyBlock::store(infinit::model::Model& model,
                             infinit::model::StoreMode mode)
     {
+      ELLE_DEBUG("Anyblock store: %x", _backend->address());
       if (_is_mutable)
       {
         model.store(*_backend, mode);

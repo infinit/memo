@@ -47,6 +47,19 @@ namespace infinit
       return this->_list();
     }
 
+    BlockStatus
+    Storage::status(Key k)
+    {
+      ELLE_TRACE_SCOPE("%s: status %x", *this, k);
+      return this->_status(k);
+    }
+
+    BlockStatus
+    Storage::_status(Key k)
+    {
+      return BlockStatus::unknown;
+    }
+
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args)

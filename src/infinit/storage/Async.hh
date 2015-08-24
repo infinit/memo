@@ -33,6 +33,9 @@ namespace infinit
       virtual
       std::vector<Key>
       _list() override;
+      virtual
+      BlockStatus
+      _status(Key k) override;
     private:
       enum class Operation
       {

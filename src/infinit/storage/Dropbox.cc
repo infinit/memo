@@ -33,6 +33,7 @@ namespace infinit
     elle::Buffer
     Dropbox::_get(Key key) const
     {
+      ELLE_DEBUG("get %x", key);
       try
       {
         return this->_dropbox.get(this->_path(key));
@@ -46,6 +47,7 @@ namespace infinit
     void
     Dropbox::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
+      ELLE_DEBUG("set %x", key);
       if (insert)
       {
         auto insertion =
@@ -64,6 +66,7 @@ namespace infinit
     void
     Dropbox::_erase(Key key)
     {
+      ELLE_DEBUG("erase %x", key);
       try
       {
         return this->_dropbox.delete_(this->_path(key));
@@ -90,6 +93,24 @@ namespace infinit
         res.push_back(model::Address::from_string(address));
       }
       return res;
+    }
+
+    BlockStatus
+    Dropbox::_status(Key k)
+    {
+      boost::filesystem::path p("/" + this->_root.string());
+      p = p / elle::sprintf("%x", k);
+      try
+      {
+        auto metadata = this->_dropbox.local_metadata(p);
+        ELLE_DEBUG("status check on %x: %s", p, metadata? "exists" : "unknown");
+        return metadata? BlockStatus::exists : BlockStatus::unknown;
+      }
+      catch (dropbox::NoSuchFile const &)
+      {
+        ELLE_DEBUG("status check on %x: %s", p, "missing");
+        return BlockStatus::missing;
+      }
     }
 
     DropboxStorageConfig::DropboxStorageConfig(

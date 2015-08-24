@@ -13,7 +13,10 @@ namespace infinit
     {
     public:
       Cache(std::unique_ptr<Storage> backend,
-            boost::optional<int> size = {});
+            boost::optional<int> size = {},
+            bool use_list = false, // optimize trusting keys from backend._list()
+            bool use_status = true // optimize using backend._status()
+            );
       virtual
       elle::Buffer
       _get(Key k) const override;
@@ -31,6 +34,8 @@ namespace infinit
 
       ELLE_ATTRIBUTE_R(std::unique_ptr<Storage>, storage);
       ELLE_ATTRIBUTE_R(boost::optional<int>, size);
+      ELLE_ATTRIBUTE_R(bool, use_list);
+      ELLE_ATTRIBUTE_R(bool, use_status);
       typedef std::unordered_map<Key, elle::Buffer> Blocks;
       ELLE_ATTRIBUTE_P(Blocks, blocks, mutable);
       typedef std::set<Key> Keys;
