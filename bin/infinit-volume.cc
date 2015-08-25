@@ -23,8 +23,16 @@ options_description mode_options("Modes");
 
 infinit::Infinit ifnt;
 
+static
+std::string
+volume_name(boost::program_options::variables_map args,
+            std::function<void (std::ostream&)> help)
+{
+  return ifnt.qualified_name(mandatory(args, "name", "volume name", help));
+}
+
 void
-network(boost::program_options::variables_map mode,
+volume(boost::program_options::variables_map mode,
         std::vector<std::string> args)
 {
   if (mode.count("create"))
@@ -50,7 +58,7 @@ network(boost::program_options::variables_map mode,
       throw elle::Exit(0);
     }
     auto creation = parse_args(creation_options, args);
-    auto name = mandatory(creation, "name", help);
+    auto name = volume_name(creation, help);
     auto network_name = mandatory(creation, "network", help);
     auto mountpoint = optional(creation, "mountpoint");
     auto network = ifnt.network_get(network_name);
@@ -91,9 +99,9 @@ network(boost::program_options::variables_map mode,
       throw elle::Exit(0);
     }
     auto exportation = parse_args(export_options, args);
-    auto volume_name = mandatory(exportation, "name", "volume name", help);
+    auto name = volume_name(exportation, help);
     auto output = get_output(exportation);
-    auto volume = ifnt.volume_get(volume_name);
+    auto volume = ifnt.volume_get(name);
     volume.mountpoint.reset();
     {
       elle::serialization::json::SerializerOut s(*output, false);
@@ -129,6 +137,57 @@ network(boost::program_options::variables_map mode,
       ifnt.volume_save(volume);
     }
   }
+  else if (mode.count("publish"))
+  {
+    options_description publish_options("Publish options");
+    publish_options.add_options()
+      ("name,n", value<std::string>(), "volume to publish")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --publish --name VOLUME [options]" << std::endl;
+      output << std::endl;
+      output << publish_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    auto publication = parse_args(publish_options, args);
+    auto name = volume_name(publication, help);
+    auto volume = ifnt.volume_get(name);
+    auto network = ifnt.network_get(volume.network);
+    auto owner_uid = infinit::User::uid(network.dht()->owner);
+    beyond_publish("volume", name, volume);
+  }
+  else if (mode.count("fetch"))
+  {
+    options_description publish_options("Fetch options");
+    publish_options.add_options()
+      ("name,n", value<std::string>(), "volume to fetch")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --fetch --name VOLUME [options]" << std::endl;
+      output << std::endl;
+      output << publish_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    auto fetch = parse_args(publish_options, args);
+    auto name = volume_name(fetch, help);
+    auto desc =
+      beyond_fetch<infinit::Volume>("volume", name);
+    ifnt.volume_save(std::move(desc));
+  }
   else if (mode.count("run"))
   {
     options_description run_options("Run options");
@@ -156,7 +215,7 @@ network(boost::program_options::variables_map mode,
       throw elle::Exit(0);
     }
     auto run = parse_args(run_options, args);
-    auto name = mandatory(run, "name", "volume name", help);
+    auto name = volume_name(run, help);
     std::vector<std::string> hosts;
     if (run.count("host"))
       hosts = run["host"].as<std::vector<std::string>>();
@@ -194,11 +253,13 @@ int main(int argc, char** argv)
     ("create", "create a new volume")
     ("destroy", "destroy a volume")
     ("export", "export a network for someone else to import")
+    ("fetch", elle::sprintf("fetch network from %s", beyond()).c_str())
     ("import", "import a network")
     ("list", "list existing volumes")
+    ("publish", elle::sprintf("publish volume to %s", beyond()).c_str())
     ("run", "run volume")
     ;
   options_description options("Infinit volume utility");
   options.add(mode_options);
-  return infinit::main(options, &network, argc, argv);
+  return infinit::main(options, &volume, argc, argv);
 }

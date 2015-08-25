@@ -341,7 +341,7 @@ network(boost::program_options::variables_map mode,
     }
     auto fetch = parse_args(publish_options, args);
     auto network_name = mandatory(fetch, "name", "network name", help);
-    network_name = ifnt.qualified_network_name(network_name);
+    network_name = ifnt.qualified_name(network_name);
     auto desc =
       beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
     ifnt.network_save(std::move(desc));

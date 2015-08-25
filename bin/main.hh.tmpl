@@ -339,7 +339,7 @@ namespace infinit
   {
   public:
     std::string
-    qualified_network_name(std::string const& network_name)
+    qualified_name(std::string const& network_name)
     {
       if (network_name.find("/") == std::string::npos)
       {
@@ -353,7 +353,7 @@ namespace infinit
     Network
     network_get(std::string const& name_)
     {
-      auto name = qualified_network_name(name_);
+      auto name = qualified_name(name_);
       boost::filesystem::ifstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerIn s(f, false);
@@ -363,7 +363,7 @@ namespace infinit
     NetworkDescriptor
     network_descriptor_get(std::string const& name_)
     {
-      auto name = qualified_network_name(name_);
+      auto name = qualified_name(name_);
       boost::filesystem::ifstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerIn s(f, false);
@@ -373,7 +373,7 @@ namespace infinit
     void
     network_save(Network const& network)
     {
-      auto name = qualified_network_name(network.name);
+      auto name = qualified_name(network.name);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerOut s(f, false);
@@ -383,7 +383,7 @@ namespace infinit
     void
     network_save(NetworkDescriptor const& network)
     {
-      auto name = qualified_network_name(network.name);
+      auto name = qualified_name(network.name);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerOut s(f, false);

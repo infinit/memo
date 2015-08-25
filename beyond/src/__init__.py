@@ -191,6 +191,6 @@ class Network(metaclass = Entity,
 
 class Volume(metaclass = Entity,
               insert = 'volume_insert',
-              fields = ['name', 'network', 'root']):
+              fields = ['name', 'network', 'root_address']):
 
   pass

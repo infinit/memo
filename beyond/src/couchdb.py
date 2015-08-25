@@ -195,7 +195,7 @@ class CouchDBDatastore:
 
   def volume_insert(self, volume):
     json = volume.json()
-    json['_id'] = volume.id
+    json['_id'] = volume.name
     try:
       self.__couchdb['volumes'].save(json)
     except couchdb.ResourceConflict:
