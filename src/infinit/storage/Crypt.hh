@@ -15,9 +15,7 @@ namespace infinit
       Crypt(std::unique_ptr<Storage> backend,
             std::string const& password,
             // Mix address and password to get a different key per block.
-            bool salt = true,
-            infinit::cryptography::Cipher algorithm =
-            cryptography::Cipher::aes256
+            bool salt = true
         );
     protected:
       virtual
@@ -36,7 +34,6 @@ namespace infinit
       std::unique_ptr<Storage> _backend;
       std::string _password;
       bool _salt;
-      infinit::cryptography::Cipher _algorithm;
     };
   }
 }

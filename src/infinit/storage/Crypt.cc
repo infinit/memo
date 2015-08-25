@@ -28,12 +28,10 @@ namespace infinit
 
     Crypt::Crypt(std::unique_ptr<Storage> backend,
                  std::string const& password,
-                 bool salt,
-                 infinit::cryptography::Cipher algorithm)
+                 bool salt)
       : _backend(std::move(backend))
       , _password(password)
       , _salt(salt)
-      , _algorithm(algorithm)
     {}
 
     elle::Buffer
@@ -41,17 +39,15 @@ namespace infinit
     {
       elle::Buffer e = this->_backend->get(k);
       SecretKey enc(_salt ? _password + elle::sprintf("%x", k) : _password);
-      return enc.decipher(e, this->_algorithm, cryptography::Mode::cbc);
+      return enc.decipher(e);
     }
 
     void
     Crypt::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
-      SecretKey enc(_salt ? _password + elle::sprintf("%x", k) : this->_password);
-      this->_backend->set(
-        k,
-        enc.encipher(value, this->_algorithm, cryptography::Mode::cbc),
-        insert, update);
+      SecretKey enc(
+        _salt ? _password + elle::sprintf("%x", k) : this->_password);
+      this->_backend->set(k, enc.encipher(value), insert, update);
     }
 
     void
