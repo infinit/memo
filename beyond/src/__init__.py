@@ -13,8 +13,21 @@ class Beyond:
       dropbox_app_secret,
   ):
     self.__datastore = datastore
+    self.__datastore.beyond = self
     self.__dropbox_app_key    = dropbox_app_key
     self.__dropbox_app_secret = dropbox_app_secret
+
+  ## ------- ##
+  ## Network ##
+  ## ------- ##
+
+  def network_get(self, owner_id, name):
+    return self.__datastore.network_fetch(
+      owner_id = owner_id, name = name)
+
+  ## ---- ##
+  ## User ##
+  ## ---- ##
 
   def user_get(self, id = None, name = None):
     json = self.__datastore.user_fetch(name = name, id = id)
@@ -94,6 +107,7 @@ class Entity(type):
 
   def __new__(self, name, superclasses, content,
               insert = None, fields = []):
+    content['fields'] = fields
     # Init
     def __init__(self, beyond, **kwargs):
       self.__beyond = beyond

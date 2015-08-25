@@ -254,12 +254,12 @@ def configure(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
   binaries = [
     ('doughnode', []),
-    ('generatekeys', [cryptography_lib]),
+    ('generatekeys', []),
     ('infinit', []),
-    ('infinit-credentials', [cryptography_lib]),
-    ('infinit-network', [cryptography_lib]),
-    ('infinit-storage', [cryptography_lib]),
-    ('infinit-user', [cryptography_lib]),
+    ('infinit-credentials', []),
+    ('infinit-network', []),
+    ('infinit-storage', []),
+    ('infinit-user', []),
     ('infinit-volume', []),
     ('s3fs', [aws_lib]),
     ('sshfs', []),
@@ -267,8 +267,13 @@ def configure(
   for bin_name, libs in binaries:
     source = drake.node('bin/%s.cc' % bin_name)
     bin = drake.cxx.Executable(
-      'bin/%s' % bin_name,
-      [source, infinit_lib, elle_lib, reactor_lib] + libs,
+      'bin/%s' % bin_name, [
+        source,
+        infinit_lib,
+        elle_lib,
+        reactor_lib,
+        cryptography_lib
+      ] + libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin

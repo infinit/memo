@@ -60,6 +60,7 @@ try:
       kwargs['host'] = args.host
     if args.port is not None:
       kwargs['port'] = args.port
+    bottle.DEBUG = True
     bottle.run(app = app, **kwargs)
 except Exception as e:
   print('%s: fatal error: %s' % (sys.argv[0], e))

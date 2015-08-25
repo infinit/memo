@@ -17,7 +17,8 @@ class Bottle(bottle.Bottle):
     self.route('/users/<id>', method = 'PUT')(self.user_put)
     self.route('/users/<id>/dropbox-oauth')(self.oauth_dropbox_get)
     # Network
-    self.route('/networks/<owner_id>/<id>', method = 'PUT')(self.network_put)
+    self.route('/networks/<owner_id>/<name>', method = 'GET')(self.network_get)
+    self.route('/networks/<owner_id>/<name>', method = 'PUT')(self.network_put)
 
   def authenticate(self, user):
     pass
@@ -86,7 +87,11 @@ class Bottle(bottle.Bottle):
   ## Network ##
   ## ------- ##
 
-  def network_put(self, owner_id, id):
+  def network_get(self, owner_id, name):
+    return self.__beyond.network_get(
+      owner_id = owner_id, name = name).json()
+
+  def network_put(self, owner_id, name):
     try:
       json = bottle.request.json
       network = Network(self.__beyond, **json)
@@ -95,7 +100,7 @@ class Bottle(bottle.Bottle):
       bottle.response.status = 409
       return {
         'error': 'network/conflict',
-        'reason': 'network %r already exists' % id,
+        'reason': 'network %r already exists' % name,
       }
 
   ## ------- ##

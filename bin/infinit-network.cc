@@ -161,7 +161,7 @@ network(boost::program_options::variables_map mode,
         network.port = creation["port"].as<int>();
       if (!creation.count("stdout"))
       {
-        ifnt.network_save(name, network);
+        ifnt.network_save(network);
       }
       else
         elle::serialization::json::serialize(network, std::cout, false);
@@ -225,7 +225,7 @@ network(boost::program_options::variables_map mode,
       auto desc =
         elle::serialization::json::deserialize<infinit::NetworkDescriptor>
         (*input, false);
-      ifnt.network_save(desc.name, desc);
+      ifnt.network_save(desc);
     }
   }
   else if (mode.count("join"))
@@ -284,7 +284,7 @@ network(boost::program_options::variables_map mode,
       if (join.count("port"))
         network.port = join["port"].as<int>();
       remove(ifnt._network_path(name));
-      ifnt.network_save(name, network);
+      ifnt.network_save(network);
     }
   }
   else if (mode.count("publish"))
@@ -319,6 +319,32 @@ network(boost::program_options::variables_map mode,
         elle::sprintf("%s/%s", owner_uid, network_name),
         desc);
     }
+  }
+  else if (mode.count("fetch"))
+  {
+    options_description publish_options("Fetch options");
+    publish_options.add_options()
+      ("name,n", value<std::string>(), "network to fetch")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --fetch --name NETWORK [options]" << std::endl;
+      output << std::endl;
+      output << publish_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    auto fetch = parse_args(publish_options, args);
+    auto network_name = mandatory(fetch, "name", "network name", help);
+    network_name = ifnt.qualified_network_name(network_name);
+    auto desc =
+      beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
+    ifnt.network_save(std::move(desc));
   }
   else if (mode.count("run"))
   {
@@ -407,6 +433,7 @@ int main(int argc, char** argv)
     ("create", "create a new network")
     // ("destroy", "destroy a network")
     ("export", "export a network for someone else to import")
+    ("fetch", elle::sprintf("fetch network from %s", beyond()).c_str())
     ("import", "import a network")
     ("invite", "create a passport to a network for a user")
     ("join", "join a network with a passport")

@@ -338,9 +338,22 @@ namespace infinit
   class Infinit
   {
   public:
-    Network
-    network_get(std::string const& name)
+    std::string
+    qualified_network_name(std::string const& network_name)
     {
+      if (network_name.find("/") == std::string::npos)
+      {
+        auto user = this->user_get(elle::system::username());
+        return elle::sprintf("%s/%s", user.uid(), network_name);
+      }
+      else
+        return network_name;
+    }
+
+    Network
+    network_get(std::string const& name_)
+    {
+      auto name = qualified_network_name(name_);
       boost::filesystem::ifstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerIn s(f, false);
@@ -348,8 +361,9 @@ namespace infinit
     }
 
     NetworkDescriptor
-    network_descriptor_get(std::string const& name)
+    network_descriptor_get(std::string const& name_)
     {
+      auto name = qualified_network_name(name_);
       boost::filesystem::ifstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerIn s(f, false);
@@ -357,8 +371,9 @@ namespace infinit
     }
 
     void
-    network_save(std::string const& name, Network const& network)
+    network_save(Network const& network)
     {
+      auto name = qualified_network_name(network.name);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerOut s(f, false);
@@ -366,8 +381,9 @@ namespace infinit
     }
 
     void
-    network_save(std::string const& name, NetworkDescriptor const& network)
+    network_save(NetworkDescriptor const& network)
     {
+      auto name = qualified_network_name(network.name);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerOut s(f, false);
@@ -548,6 +564,7 @@ namespace infinit
           std::string const& name,
           std::string const& type)
     {
+      create_directories(path.parent_path());
       if (exists(path))
         throw elle::Error(
           elle::sprintf("%s '%s' already exists", type, name));
@@ -820,4 +837,22 @@ beyond_publish(std::string const& type, std::string const& name, T const& o)
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s publishing %s",
                     r.status(), type));
+}
+
+template <typename T>
+T
+beyond_fetch(std::string const& type, std::string const& name)
+{
+  reactor::http::Request r(elle::sprintf("%s/%ss/%s", beyond(), type, name));
+  reactor::wait(r);
+  if (r.status() == reactor::http::StatusCode::OK)
+    elle::printf("Fetched %s \"%s\".\n", type, name);
+  else if (r.status() == reactor::http::StatusCode::Conflict)
+    throw elle::Error(
+      elle::sprintf("%s \"%s\" is already published", type, name));
+  else
+    throw elle::Error(
+      elle::sprintf("unexpected HTTP error %s fetching %s",
+                    r.status(), type));
+  return elle::serialization::json::deserialize<T>(r, false);
 }
