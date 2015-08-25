@@ -81,6 +81,7 @@ class CouchDBDatastore:
           raise
     create('networks')
     create('users')
+    create('volumes')
     import inspect
     try:
       design = self.__couchdb['users']['_design/beyond']
@@ -187,3 +188,22 @@ class CouchDBDatastore:
       return infinit.beyond.Network.from_json(self.beyond, json)
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
+
+  ## ------ ##
+  ## Volume ##
+  ## ------ ##
+
+  def volume_insert(self, volume):
+    json = volume.json()
+    json['_id'] = volume.id
+    try:
+      self.__couchdb['volumes'].save(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.Volume.Duplicate()
+
+  def volume_fetch(self, owner_id, name):
+    try:
+      json = self.__couchdb['volumes']['%s/%s' % (owner_id, name)]
+      return infinit.beyond.Volume.from_json(self.beyond, json)
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.Volume.NotFound()

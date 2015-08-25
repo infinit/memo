@@ -33,6 +33,15 @@ class Beyond:
     json = self.__datastore.user_fetch(name = name, id = id)
     return User.from_json(self, json)
 
+  ## ------ ##
+  ## Volume ##
+  ## ------ ##
+
+  def volume_get(self, owner_id, name):
+    return self.__datastore.volume_fetch(
+      owner_id = owner_id, name = name)
+
+
 class User:
 
   class Duplicate(Exception):
@@ -168,6 +177,7 @@ class Entity(type):
       content[f] = property(lambda self: getattr(self, '_%s__%s' % (name, f)))
     type.__init__(self, name, superclasses, content)
 
+
 class Network(metaclass = Entity,
               insert = 'network_insert',
               fields = ['name', 'owner', 'overlay']):
@@ -177,3 +187,10 @@ class Network(metaclass = Entity,
     der = base64.b64decode(self.owner['rsa'])
     owner_id = base64.b64encode(cryptography.hash(der))[0:8]
     return '%s/%s' % (owner_id.decode('latin-1'), self.name)
+
+
+class Volume(metaclass = Entity,
+              insert = 'volume_insert',
+              fields = ['name', 'network', 'root']):
+
+  pass

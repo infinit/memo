@@ -19,6 +19,9 @@ class Bottle(bottle.Bottle):
     # Network
     self.route('/networks/<owner_id>/<name>', method = 'GET')(self.network_get)
     self.route('/networks/<owner_id>/<name>', method = 'PUT')(self.network_put)
+    # Volume
+    self.route('/volumes/<owner_id>/<name>', method = 'GET')(self.volume_get)
+    self.route('/volumes/<owner_id>/<name>', method = 'PUT')(self.volume_put)
 
   def authenticate(self, user):
     pass
@@ -101,6 +104,26 @@ class Bottle(bottle.Bottle):
       return {
         'error': 'network/conflict',
         'reason': 'network %r already exists' % name,
+      }
+
+  ## ------- ##
+  ## Volume ##
+  ## ------- ##
+
+  def volume_get(self, owner_id, name):
+    return self.__beyond.volume_get(
+      owner_id = owner_id, name = name).json()
+
+  def volume_put(self, owner_id, name):
+    try:
+      json = bottle.request.json
+      volume = Volume(self.__beyond, **json)
+      volume.create()
+    except Volume.Duplicate:
+      bottle.response.status = 409
+      return {
+        'error': 'volume/conflict',
+        'reason': 'volume %r already exists' % name,
       }
 
   ## ------- ##
