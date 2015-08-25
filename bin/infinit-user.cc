@@ -154,26 +154,8 @@ network(boost::program_options::variables_map mode,
     auto publication = parse_args(publish_options, args);
     auto name = get_name(publication);
     auto user = ifnt.user_get(name);
-    reactor::http::Request::Configuration c;
-    c.header_add("Content-Type", "application/json");
-    reactor::http::Request r(elle::sprintf("%s/users/%s", beyond(), user.uid()),
-                             reactor::http::Method::PUT,
-                             std::move(c));
-
-    {
-      das::Serializer<infinit::DasPublicUser> view(user);
-      elle::serialization::json::serialize(view, r, false);
-    }
-    r.finalize();
-    reactor::wait(r);
-    if (r.status() == reactor::http::StatusCode::OK)
-      elle::printf("user \"%s\" published\n", name);
-    else if (r.status() == reactor::http::StatusCode::Conflict)
-      throw elle::Error(
-        elle::sprintf("user \"%s\" is already published", name));
-    else
-      throw elle::Error(
-        elle::sprintf("unexpected error %s publishing user", r.status()));
+    das::Serializer<infinit::DasPublicUser> view(user);
+    beyond_publish("user", user.uid(), view);
   }
   else
   {
