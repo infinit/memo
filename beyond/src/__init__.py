@@ -107,6 +107,7 @@ class Entity(type):
 
   def __new__(self, name, superclasses, content,
               insert = None, fields = []):
+    self_type = None
     content['fields'] = fields
     # Init
     def __init__(self, beyond, **kwargs):
@@ -114,7 +115,7 @@ class Entity(type):
       for f in fields:
         setattr(self, '_%s__%s' % (name, f), kwargs.pop(f, None))
       if kwargs:
-        raise TypeError('__init__() got an unexpected keyword argument \'%s\'' % next(iter(kwargs)))
+        raise TypeError('__init__() got an unexpected keyword argument %r' % next(iter(kwargs)))
     content['__init__'] = __init__
     # JSON
     def json(self):
@@ -123,6 +124,18 @@ class Entity(type):
         m: getattr(self, m) for m in fields
       }
     content['json'] = json
+    def from_json(beyond, json):
+      missing = next((m for m in fields if m not in json), None)
+      if missing is not None:
+        raise Exception(
+          'missing mandatory JSON key for '
+          '%s: %s' % (self.__name__, missing))
+      json = {
+        k: v
+        for k, v in json.items() if k in fields
+      }
+      return self_type(beyond, **json)
+    content['from_json'] = from_json
     # Create
     if insert:
       def create(self):
@@ -145,7 +158,8 @@ class Entity(type):
       (Exception,),
       {'__qualname__': '%s.NotFound' % name},
     )
-    return type.__new__(self, name, superclasses, content)
+    self_type = type.__new__(self, name, superclasses, content)
+    return self_type
 
   def __init__(self, name, superclasses, content,
                insert = None,
