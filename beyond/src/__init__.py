@@ -1,4 +1,7 @@
+import base64
+import cryptography
 import requests
+
 import infinit.beyond.version
 
 class Beyond:
@@ -85,3 +88,64 @@ class User:
   @property
   def dropbox_accounts(self):
     return self.__dropbox_accounts
+
+
+class Entity(type):
+
+  def __new__(self, name, superclasses, content,
+              insert = None, fields = []):
+    # Init
+    def __init__(self, beyond, **kwargs):
+      self.__beyond = beyond
+      for f in fields:
+        setattr(self, '_%s__%s' % (name, f), kwargs.pop(f, None))
+      if kwargs:
+        raise TypeError('__init__() got an unexpected keyword argument \'%s\'' % next(iter(kwargs)))
+    content['__init__'] = __init__
+    # JSON
+    def json(self):
+      assert all(getattr(self, m) is not None for m in fields)
+      return {
+        m: getattr(self, m) for m in fields
+      }
+    content['json'] = json
+    # Create
+    if insert:
+      def create(self):
+        assert all(getattr(self, m) is not None for m in fields)
+        getattr(self.__beyond._Beyond__datastore, insert)(self)
+      content['create'] = create
+    # Properties
+    def make_getter(f):
+      return lambda self: getattr(self, '_%s__%s' % (name, f))
+    for f in fields:
+      content[f] = property(make_getter(f))
+    # Exceptions
+    content['Duplicate'] = type(
+      'Duplicate',
+      (Exception,),
+      {'__qualname__': '%s.Duplicate' % name},
+    )
+    content['NotFound'] = type(
+      'NotFound',
+      (Exception,),
+      {'__qualname__': '%s.NotFound' % name},
+    )
+    return type.__new__(self, name, superclasses, content)
+
+  def __init__(self, name, superclasses, content,
+               insert = None,
+               fields = []):
+    for f in fields:
+      content[f] = property(lambda self: getattr(self, '_%s__%s' % (name, f)))
+    type.__init__(self, name, superclasses, content)
+
+class Network(metaclass = Entity,
+              insert = 'network_insert',
+              fields = ['name', 'owner', 'overlay']):
+
+  @property
+  def id(self):
+    der = base64.b64decode(self.owner['rsa'])
+    owner_id = base64.b64encode(cryptography.hash(der))[0:8]
+    return '%s/%s' % (owner_id.decode('latin-1'), self.name)

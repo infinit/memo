@@ -1,4 +1,7 @@
 import bottle
+import cryptography
+
+from infinit.beyond import *
 
 class Bottle(bottle.Bottle):
 
@@ -7,12 +10,14 @@ class Bottle(bottle.Bottle):
     self.__beyond = beyond
     self.install(bottle.CertificationPlugin())
     self.route('/')(self.root)
+    self.route('/oauth/dropbox')(self.oauth_dropbox)
+    # User
     self.route('/users/<id>', method = 'GET')(self.user_get)
     self.route('/users/<id>/dropbox-accounts', method = 'GET')(self.user_dropbox_accounts_get)
     self.route('/users/<id>', method = 'PUT')(self.user_put)
     self.route('/users/<id>/dropbox-oauth')(self.oauth_dropbox_get)
-    self.route('/oauth/dropbox')(self.oauth_dropbox)
-    self.route('/debug', method = 'GET')(self.debug)
+    # Network
+    self.route('/networks/<owner_id>/<id>', method = 'PUT')(self.network_put)
 
   def authenticate(self, user):
     pass
@@ -21,6 +26,29 @@ class Bottle(bottle.Bottle):
     return {
       'version': infinit.beyond.version.version,
     }
+
+  def host(self):
+    return '%s://%s' % bottle.request.urlparts[0:2]
+
+  def debug(self):
+    if hasattr(bottle.request, 'certificate') and \
+       bottle.request.certificate in [
+         'antony.mechin@infinit.io',
+         'baptiste.fradin@infinit.io',
+         'christopher.crone@infinit.io',
+         'gaetan.rochel@infinit.io',
+         'julien.quintard@infinit.io',
+         'matthieu.nottale@infinit.io',
+         'patrick.perlmutter@infinit.io',
+         'quentin.hocquet@infinit.io',
+       ]:
+      return True
+    else:
+      return super().debug()
+
+  ## ---- ##
+  ## User ##
+  ## ---- ##
 
   def user_put(self, id):
     try:
@@ -54,8 +82,25 @@ class Bottle(bottle.Bottle):
         'id': id,
       }
 
-  def host(self):
-    return '%s://%s' % bottle.request.urlparts[0:2]
+  ## ------- ##
+  ## Network ##
+  ## ------- ##
+
+  def network_put(self, owner_id, id):
+    try:
+      json = bottle.request.json
+      network = Network(self.__beyond, **json)
+      network.create()
+    except Network.Duplicate:
+      bottle.response.status = 409
+      return {
+        'error': 'network/conflict',
+        'reason': 'network %r already exists' % id,
+      }
+
+  ## ------- ##
+  ## Dropbox ##
+  ## ------- ##
 
   def oauth_dropbox_get(self, id):
     params = {
@@ -109,19 +154,3 @@ class Bottle(bottle.Bottle):
         'reason': 'user %r does not exist' % uid,
         'id': uid,
       }
-
-  def debug(self):
-    if hasattr(bottle.request, 'certificate') and \
-       bottle.request.certificate in [
-         'antony.mechin@infinit.io',
-         'baptiste.fradin@infinit.io',
-         'christopher.crone@infinit.io',
-         'gaetan.rochel@infinit.io',
-         'julien.quintard@infinit.io',
-         'matthieu.nottale@infinit.io',
-         'patrick.perlmutter@infinit.io',
-         'quentin.hocquet@infinit.io',
-       ]:
-      return True
-    else:
-      return super().debug()

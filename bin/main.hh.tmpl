@@ -11,6 +11,8 @@
 #include <das/model.hh>
 #include <das/serializer.hh>
 
+#include <reactor/http/Request.hh>
+
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
 
@@ -155,12 +157,19 @@ namespace infinit
       s.serialize("private_key", this->private_key);
     }
 
+    static
+    std::string
+    uid(cryptography::rsa::PublicKey const& key)
+    {
+      auto serial = cryptography::rsa::publickey::der::encode(key);
+      auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
+      return elle::format::base64url::encode(hash).string().substr(0, 8);
+    }
+
     std::string
     uid()
     {
-      auto serial = elle::serialization::binary::serialize(this->public_key);
-      auto hash = cryptography::hash(serial, cryptography::Oneway::sha256);
-      return elle::format::base64url::encode(hash).string().substr(0, 8);
+      return uid(this->public_key);
     }
 
     std::string name;
@@ -223,6 +232,12 @@ namespace infinit
       s.serialize("port", this->port);
     }
 
+    model::doughnut::Configuration*
+    dht() const
+    {
+      return static_cast<model::doughnut::Configuration*>(this->model.get());
+    }
+
     std::pair<std::shared_ptr<infinit::model::doughnut::Local>,
               std::shared_ptr<infinit::model::doughnut::Doughnut>>
     run(std::vector<std::string> const& hosts = {},
@@ -231,8 +246,6 @@ namespace infinit
         boost::optional<int> cache_size = {},
         bool async_writes = false)
     {
-      auto dht_config =
-        static_cast<model::doughnut::Configuration*>(this->model.get());
       if (this->storage)
       {
         auto storage = this->storage->make();
@@ -247,14 +260,14 @@ namespace infinit
           (std::move(storage), this->port ? this->port.get() : 0);
         local->serve();
         return std::make_pair(std::move(local),
-                              dht_config->make(hosts, client, local));
+                              this->dht()->make(hosts, client, local));
       }
       else
       {
         std::shared_ptr<infinit::model::doughnut::Local> local;
         return
           std::make_pair(local,
-                         dht_config->make(hosts, client, local));
+                         this->dht()->make(hosts, client, local));
       }
     }
 
@@ -785,4 +798,26 @@ beyond()
 {
   auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
   return res;
+}
+
+template <typename T>
+void
+beyond_publish(std::string const& type, std::string const& name, T const& o)
+{
+  reactor::http::Request::Configuration c;
+  c.header_add("Content-Type", "application/json");
+  reactor::http::Request r(elle::sprintf("%s/%ss/%s", beyond(), type, name),
+                           reactor::http::Method::PUT, std::move(c));
+  elle::serialization::json::serialize(o, r, false);
+  r.finalize();
+  reactor::wait(r);
+  if (r.status() == reactor::http::StatusCode::OK)
+    elle::printf("Published %s \"%s\".\n", type, name);
+  else if (r.status() == reactor::http::StatusCode::Conflict)
+    throw elle::Error(
+      elle::sprintf("%s \"%s\" is already published", type, name));
+  else
+    throw elle::Error(
+      elle::sprintf("unexpected HTTP error %s publishing %s",
+                    r.status(), type));
 }

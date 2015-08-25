@@ -10,8 +10,9 @@ import infinit.beyond
 
 class CouchDB:
 
-  def __init__(self):
+  def __init__(self, port = 0):
     self.__uri = None
+    self.__port = port
 
   def __path(self, p):
     return '%s/couchdb.%s' % (self.__dir, p)
@@ -30,14 +31,14 @@ view_index_dir = %(root)s/db-data
 uri_file = %(root)s/couchdb.uri
 
 [httpd]
-port = 0
+port = %(port)s
 
 [log]
 file = %(root)s/db.log
 
 [query_servers]
 python=python -m couchdb
-''' % {'root': self.__dir},
+''' % {'root': self.__dir, 'port': self.__port},
             file = f)
     subprocess.check_call(
       ['couchdb', '-a', config,
@@ -69,13 +70,16 @@ class CouchDBDatastore:
 
   def __init__(self, db):
     self.__couchdb = db
-    try:
-      self.__couchdb.create('users')
-    except couchdb.http.PreconditionFailed as e:
-      if e.args[0][0] == 'file_exists':
-        pass
-      else:
-        raise
+    def create(name):
+      try:
+        self.__couchdb.create(name)
+      except couchdb.http.PreconditionFailed as e:
+        if e.args[0][0] == 'file_exists':
+          pass
+        else:
+          raise
+    create('networks')
+    create('users')
     import inspect
     try:
       design = self.__couchdb['users']['_design/beyond']
@@ -97,6 +101,10 @@ class CouchDBDatastore:
         }
       })
     self.__couchdb['users'].save(design)
+
+  ## ---- ##
+  ## User ##
+  ## ---- ##
 
   def user_insert(self, user):
     json = dict(user)
@@ -159,3 +167,15 @@ class CouchDBDatastore:
     for id, account in update.get('dropbox_accounts', {}).items():
       user.setdefault('dropbox_accounts', {})[id] = account
     return [user, {'json': json.dumps(user)}]
+
+  ## ------- ##
+  ## Network ##
+  ## ------- ##
+
+  def network_insert(self, network):
+    json = network.json()
+    json['_id'] = network.id
+    try:
+      self.__couchdb['networks'].save(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.Network.Duplicate()

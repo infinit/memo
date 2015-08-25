@@ -286,10 +286,12 @@ def configure(
   ## Beyond ##
   ## ------ ##
 
-  beyond = drake.include('beyond',
-                         python = elle.python3,
-                         prefix = prefix,
-                         git = git)
+  beyond = drake.include(
+    'beyond',
+    python = elle.python3,
+    cryptography_python_module = elle.cryptography.python_module,
+    prefix = prefix,
+    git = git)
 
   ## ------- ##
   ## Install ##

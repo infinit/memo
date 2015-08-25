@@ -287,6 +287,39 @@ network(boost::program_options::variables_map mode,
       ifnt.network_save(name, network);
     }
   }
+  else if (mode.count("publish"))
+  {
+    options_description publish_options("Publish options");
+    publish_options.add_options()
+      ("name,n", value<std::string>(), "network to publish")
+      ;
+    auto help = [&] (std::ostream& output)
+    {
+      output << "Usage: " << program
+             << " --publish --name NETWORK [options]" << std::endl;
+      output << std::endl;
+      output << publish_options;
+      output << std::endl;
+    };
+    if (mode.count("help"))
+    {
+      help(std::cout);
+      throw elle::Exit(0);
+    }
+    auto publication = parse_args(publish_options, args);
+    auto network_name = mandatory(publication, "name", "network name", help);
+    auto network = ifnt.network_get(network_name);
+    {
+      auto& dht = *network.dht();
+      auto owner_uid = infinit::User::uid(dht.owner);
+      infinit::NetworkDescriptor desc(
+        network.name, std::move(dht.overlay), std::move(dht.owner));
+      beyond_publish(
+        "network",
+        elle::sprintf("%s/%s", owner_uid, network_name),
+        desc);
+    }
+  }
   else if (mode.count("run"))
   {
     options_description run_options("Run options");
@@ -378,6 +411,7 @@ int main(int argc, char** argv)
     ("invite", "create a passport to a network for a user")
     ("join", "join a network with a passport")
     // ("list", "list existing networks")
+    ("publish", elle::sprintf("publish network to %s", beyond()).c_str())
     ("run", "run network")
     ;
   options_description options("Infinit network utility");
