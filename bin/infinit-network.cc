@@ -263,10 +263,23 @@ network(boost::program_options::variables_map mode,
       storage = ifnt.storage_get(*storage_name);
     {
       auto desc = ifnt.network_descriptor_get(name);
-      auto input = get_input(join);
-      auto passport =
-        elle::serialization::json::deserialize
-        <infinit::model::doughnut::Passport>(*input, false);
+      auto self = ifnt.user_get();
+      auto passport = [&] () -> infinit::model::doughnut::Passport
+      {
+        if (!join.count("input") && self.public_key == desc.owner)
+        {
+          return infinit::model::doughnut::Passport(
+            self.public_key,
+            desc.name,
+            self.private_key.get());
+        }
+        else
+        {
+          auto input = get_input(join);
+          return elle::serialization::json::deserialize
+            <infinit::model::doughnut::Passport>(*input, false);
+        }
+      }();
       bool ok = passport.verify(desc.owner);
       if (!ok)
         throw elle::Error("passport signature is invalid");
