@@ -364,10 +364,28 @@ namespace infinit
     network_descriptor_get(std::string const& name_)
     {
       auto name = qualified_name(name_);
-      boost::filesystem::ifstream f;
-      this->_open(f, this->_network_path(name), name, "network");
-      elle::serialization::json::SerializerIn s(f, false);
-      return s.deserialize<NetworkDescriptor>();
+      try
+      {
+        boost::filesystem::ifstream f;
+        this->_open(f, this->_network_path(name), name, "network");
+        elle::serialization::json::SerializerIn s(f, false);
+        return s.deserialize<NetworkDescriptor>();
+      }
+      catch (elle::serialization::Error const&)
+      {
+        try
+        {
+          auto network = this->network_get(name_);
+          return NetworkDescriptor{
+            network.name,
+            std::move(network.dht()->overlay),
+            std::move(network.dht()->owner),
+          };
+        }
+        catch (elle::Error const&)
+        {}
+        throw;
+      }
     }
 
     void

@@ -400,12 +400,10 @@ network(boost::program_options::variables_map mode,
     auto invitation = parse_args(invite_options, args);
     auto network_name = mandatory(invitation, "name", "network name", help);
     auto user_name = mandatory(invitation, "user", "user name", help);
-    auto network = ifnt.network_get(network_name);
+    auto network = ifnt.network_descriptor_get(network_name);
     auto user = ifnt.user_get(user_name);
     auto self = ifnt.user_get();
-    if (self.public_key !=
-        static_cast<infinit::model::doughnut::Configuration&>
-        (*network.model).owner)
+    if (self.public_key != network.owner)
       throw elle::Error(
         elle::sprintf("not owner of network \"%s\"", network_name));
     infinit::model::doughnut::Passport passport(
