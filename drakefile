@@ -303,7 +303,13 @@ def configure(
   ## ------- ##
 
   install = drake.Rule('install')
-  for bin_name, libs in binaries:
+  for bin_name in [
+      'infinit-credentials',
+      'infinit-network',
+      'infinit-storage',
+      'infinit-user',
+      'infinit-volume',
+  ]:
     install << drake.install(drake.node('bin/%s' % bin_name), prefix)
   install << beyond.install
   man = drake.nodes(

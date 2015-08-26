@@ -1,3 +1,5 @@
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
 
 #include <elle/Error.hh>
@@ -42,6 +44,16 @@ struct DropboxAccounts
   std::vector<DropboxAccount> dropbox_accounts;
 };
 
+class CommandLineError
+  : public elle::Error
+{
+public:
+  template <typename ... Args>
+  CommandLineError(Args&& ... args)
+    : elle::Error(std::forward<Args>(args)...)
+  {}
+};
+
 DAS_MODEL(DropboxAccount, (uid, display_name, token), DasDropboxAccount);
 DAS_MODEL_DEFAULT(DropboxAccount, DasDropboxAccount);
 DAS_MODEL_SERIALIZE(DropboxAccount);
@@ -49,12 +61,78 @@ DAS_MODEL(DropboxAccounts, (dropbox_accounts), DasDropboxAccounts);
 DAS_MODEL_DEFAULT(DropboxAccounts, DasDropboxAccounts);
 DAS_MODEL_SERIALIZE(DropboxAccounts);
 
+
+struct Mode
+{
+  typedef
+    std::function<void (boost::program_options::variables_map const&)> Action;
+
+  Mode(
+    std::string name_,
+    std::string description_,
+    Action action_,
+    std::string help = {},
+    std::vector<boost::program_options::option_description> options = {},
+    std::vector<boost::program_options::options_description> extra_options = {}
+    )
+    : name(std::move(name_))
+    , description(std::move(description_))
+    , action(std::move(action_))
+    , help_complement(std::move(help))
+    , options(this->description)
+  {
+    boost::program_options::options_description mode_options(
+      elle::sprintf("%s%s options",
+                    (char)toupper(this->name[0]),
+                    this->name.substr(1)));
+    for (auto const& option: options)
+      mode_options.add(
+        boost::shared_ptr<boost::program_options::option_description>
+        (new boost::program_options::option_description(std::move(option))));
+    this->options.add(mode_options);
+    for (auto const& extra: extra_options)
+      this->options.add(extra);
+  }
+
+  void
+  help(std::ostream& output) const
+  {
+    output << "Usage: " << program
+           << " --" << this->name;
+    if (!this->help_complement.empty())
+      output << " " << this->help_complement;
+    output << " [OPTIONS...]" << std::endl;
+    output << std::endl;
+    output << this->options;
+    output << std::endl;
+  }
+
+  std::string name;
+  std::string description;
+  Action action;
+  std::string help_complement;
+  boost::program_options::options_description options;
+};
+typedef std::vector<Mode> Modes;
+
+boost::program_options::variables_map
+parse_args(boost::program_options::options_description const& options,
+           std::vector<std::string> const& args)
+{
+  auto parser = boost::program_options::command_line_parser(args);
+  parser.options(options);
+  boost::program_options::variables_map res;
+  auto parsed = parser.run();
+  boost::program_options::store(parsed, res);
+  boost::program_options::notify(res);
+  return res;
+}
+
 namespace infinit
 {
   int
-  main(boost::program_options::options_description options,
-       std::function<void (boost::program_options::variables_map,
-                           std::vector<std::string>)> main,
+  main(std::string desc,
+       Modes const& modes,
        int argc,
        char** argv)
   {
@@ -64,11 +142,17 @@ namespace infinit
       reactor::Thread main_thread(
         sched,
         "main",
-        [&options, &main, &sched, argc, argv]
+        [&sched, &modes, &desc, argc, argv]
         {
           ELLE_TRACE("parse command line")
           {
             using namespace boost::program_options;
+            options_description mode_options("Modes");
+            for (auto const& mode: modes)
+              mode_options.add_options()(mode.name.c_str(),
+                                         mode.description.c_str());
+            options_description options(desc);
+            options.add(mode_options);
             options_description misc("Miscellaneous");
             misc.add_options()
               ("help,h", "display the help")
@@ -89,8 +173,39 @@ namespace infinit
                 std::cout << INFINIT_VERSION << std::endl;
                 throw elle::Exit(0);
               }
-              main(std::move(vm),
-                   collect_unrecognized(parsed.options, include_positional));
+              bool help = vm.count("help");
+              for (auto const& mode: modes)
+              {
+                if (vm.count(mode.name))
+                {
+                  if (help)
+                  {
+                    mode.help(std::cout);
+                    return;
+                  }
+                  auto args =
+                    collect_unrecognized(parsed.options, include_positional);
+                  try
+                  {
+                    mode.action(parse_args(mode.options, args));
+                  }
+                  catch (CommandLineError const&)
+                  {
+                    mode.help(std::cerr);
+                    throw;
+                  }
+                  return;
+                }
+              }
+              std::ostream& output = help ? std::cout : std::cerr;
+              {
+                output << "Usage: " << program << " MODE [OPTIONS...]" << std::endl;
+                output << std::endl;
+                output << options;
+                output << std::endl;
+              }
+              if (!help)
+                throw elle::Error("mode unspecified");
             }
             catch (invalid_command_line_syntax const& e)
             {
@@ -737,20 +852,6 @@ private:
   }
 };
 
-std::string
-mandatory(boost::program_options::variables_map const& vm,
-          std::string const& name,
-          std::string const& desc,
-          std::function<void(std::ostream&)> const& help)
-{
-  if (!vm.count(name))
-  {
-    help(std::cerr);
-    throw elle::Error(elle::sprintf("%s unspecified (use --%s)", desc, name));
-  }
-  return vm[name].as<std::string>();
-}
-
 boost::optional<std::string>
 optional(boost::program_options::variables_map const& vm,
          std::string const& name)
@@ -761,25 +862,24 @@ optional(boost::program_options::variables_map const& vm,
     return {};
 }
 
-std::string
+template <typename T = std::string>
+T
 mandatory(boost::program_options::variables_map const& vm,
           std::string const& name,
-          std::function<void(std::ostream&)> const& help)
+          std::string const& desc)
 {
-  return mandatory(vm, name, name, help);
+  if (!vm.count(name))
+    throw CommandLineError(
+      elle::sprintf("%s unspecified (use --%s)", desc, name));
+  return vm[name].as<T>();
 }
 
-boost::program_options::variables_map
-parse_args(boost::program_options::options_description const& options,
-           std::vector<std::string> const& args)
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          std::string const& name)
 {
-  auto parser = boost::program_options::command_line_parser(args);
-  parser.options(options);
-  boost::program_options::variables_map res;
-  auto parsed = parser.run();
-  boost::program_options::store(parsed, res);
-  boost::program_options::notify(res);
-  return res;
+  return mandatory<T>(vm, name, name);
 }
 
 std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
