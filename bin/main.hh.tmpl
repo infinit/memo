@@ -371,11 +371,11 @@ namespace infinit
     }
 
     void
-    network_save(Network const& network)
+    network_save(Network const& network, bool overwrite = false)
     {
       auto name = qualified_name(network.name);
       boost::filesystem::ofstream f;
-      this->_open(f, this->_network_path(name), name, "network");
+      this->_open(f, this->_network_path(name), name, "network", overwrite);
       elle::serialization::json::SerializerOut s(f, false);
       s.serialize_forward(network);
     }
@@ -562,10 +562,11 @@ namespace infinit
     _open(boost::filesystem::ofstream& f,
           boost::filesystem::path const& path,
           std::string const& name,
-          std::string const& type)
+          std::string const& type,
+          bool overwrite = false)
     {
       create_directories(path.parent_path());
-      if (exists(path))
+      if (!overwrite && exists(path))
         throw elle::Error(
           elle::sprintf("%s '%s' already exists", type, name));
       f.open(path);

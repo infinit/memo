@@ -283,8 +283,7 @@ network(boost::program_options::variables_map mode,
       network.name = name;
       if (join.count("port"))
         network.port = join["port"].as<int>();
-      remove(ifnt._network_path(name));
-      ifnt.network_save(network);
+      ifnt.network_save(network, true);
     }
   }
   else if (mode.count("publish"))
