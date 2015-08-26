@@ -204,6 +204,9 @@ namespace infinit
       s.serialize("owner", this->owner);
     }
 
+    std::string
+    qualified_name() const;
+
     std::string name;
     std::unique_ptr<infinit::overlay::Configuration> overlay;
     infinit::cryptography::rsa::PublicKey owner;
@@ -341,13 +344,24 @@ namespace infinit
     std::string
     qualified_name(std::string const& network_name)
     {
-      if (network_name.find("/") == std::string::npos)
+      if (network_name.find("/") != std::string::npos)
+        return network_name;
+      else
       {
         auto user = this->user_get(elle::system::username());
-        return elle::sprintf("%s/%s", user.uid(), network_name);
+        return qualified_name(network_name, user.public_key);
       }
-      else
+    }
+
+    static
+    std::string
+    qualified_name(std::string const& network_name,
+                   cryptography::rsa::PublicKey const& key)
+    {
+      if (network_name.find("/") != std::string::npos)
         return network_name;
+      else
+        return elle::sprintf("%s/%s", User::uid(key), network_name);
     }
 
     Network
@@ -593,6 +607,12 @@ namespace infinit
           elle::sprintf("unable to open '%s' for writing", path));
     }
   };
+
+  std::string
+  NetworkDescriptor::qualified_name() const
+  {
+    return Infinit::qualified_name(this->name, this->owner);
+  }
 }
 
 class CommandLineSerializer

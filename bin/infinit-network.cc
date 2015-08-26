@@ -149,8 +149,10 @@ network(boost::program_options::variables_map mode,
         std::move(overlay_config),
         owner.keypair(),
         owner.public_key,
-        infinit::model::doughnut::Passport
-          (owner.public_key, name, owner.private_key.get()),
+        infinit::model::doughnut::Passport(
+          owner.public_key,
+          ifnt.qualified_name(name, owner.public_key),
+          owner.private_key.get()),
         owner.name);
     {
       infinit::Network network;
@@ -270,7 +272,7 @@ network(boost::program_options::variables_map mode,
         {
           return infinit::model::doughnut::Passport(
             self.public_key,
-            desc.name,
+            desc.qualified_name(),
             self.private_key.get());
         }
         else
@@ -421,7 +423,7 @@ network(boost::program_options::variables_map mode,
         elle::sprintf("not owner of network \"%s\"", network_name));
     infinit::model::doughnut::Passport passport(
       user.public_key,
-      network_name,
+      network.qualified_name(),
       self.private_key.get());
     auto output = get_output(invitation);
     elle::serialization::json::serialize(passport, *output, false);
