@@ -344,6 +344,7 @@ namespace infinit
       friend class FileHandle;
       friend class Directory;
       friend class Unknown;
+      friend class Node;
       // A packed network-byte-ordered version of Header sits at the
       // beginning of each file's first block in index mode.
       struct Header
@@ -1437,8 +1438,9 @@ namespace infinit
       Node::stat(st);
       if (_multi())
       {
-        _first_block = elle::cast<MutableBlock>::runtime
-          (_owner.fetch_or_die(_parent->_files.at(_name).address));
+        if (!_first_block || !_handle_count)
+          _first_block = elle::cast<MutableBlock>::runtime
+            (_owner.fetch_or_die(_parent->_files.at(_name).address));
         Header header = _header();
         st->st_size = header.total_size;
         st->st_nlink = header.links;
@@ -1631,6 +1633,7 @@ namespace infinit
               int offset = (b.first+1) * sizeof(Address);
               _first_block->data([&] (elle::Buffer& data)
                 {
+                  ELLE_ASSERT_GTE(data.size() , offset + sizeof(Address::Value));
                   memcpy(data.contents() + offset, addr.value(), sizeof(Address::Value));
                 });
               if (!b.second.new_block)
@@ -1644,8 +1647,13 @@ namespace infinit
           }
         }
       }
-      ELLE_DEBUG("Storing first block %x, size %s",
-                 _first_block->address(), _first_block->data().size());
+      ELLE_DEBUG("Storing first block %x, size %s (datablocks: %s)",
+                 _first_block->address(), _first_block->data().size(),
+                 _first_block->data().size() / sizeof(Address::Value) - 1
+                 );
+      Header h = _header();
+      ELLE_DEBUG("First block: v:%s bs:%s l:%s ts:%s", h.version, h.block_size,
+                 h.links, h.total_size);
       _owner.block_store()->store(*_first_block,
                                   _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
       _first_block_new = false;
@@ -1999,9 +2007,11 @@ namespace infinit
       if (_dirty)
         _owner->_changed();
       _dirty = false;
-      _owner->_blocks.clear();
       if (_owner->_handle_count == 0)
+      {
+        _owner->_blocks.clear();
         _owner->_first_block.reset();
+      }
     }
 
     int
