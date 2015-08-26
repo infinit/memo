@@ -51,7 +51,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s _set %s", *this, k);
       auto it = this->_blocks.find(k);
-      if (it != this->_blocks.end() && !insert)
+      if (it != this->_blocks.end() && !update)
         throw Collision(k);
       this->_storage->set(k, value, insert, update);
       if (it != this->_blocks.end())
