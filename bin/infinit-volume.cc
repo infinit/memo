@@ -149,7 +149,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to export" },
         { "output,o", value<std::string>(),
-          "file to write user to  (stdout by default)"}
+          "file to write volume to  (stdout by default)"}
       },
     },
     {
