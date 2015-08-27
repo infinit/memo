@@ -262,6 +262,9 @@ static void run_filesystem_dht(std::string const& store,
             ELLE_LOG("mounting on %s", mp);
             mounted = true;
             fs->mount(mp, {""}); // {"", "-d" /*, "-o", "use_ino"*/});
+            ELLE_TRACE("waiting...");
+            reactor::wait(*fs);
+            ELLE_TRACE("...done");
 #ifndef INFINIT_MACOSX
             ELLE_LOG("filesystem unmounted");
             nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
@@ -385,6 +388,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     mount_points.push_back(mountpoint);
     mounted = true;
     fs->mount(mountpoint, {""}); // {"", "-d" /*, "-o", "use_ino"*/});
+    reactor::wait(*fs);
   });
   sched->run();
 }
