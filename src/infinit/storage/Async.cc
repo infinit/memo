@@ -101,7 +101,7 @@ namespace infinit
         min_id = std::min(min_id, (unsigned int)std::stoi(it->path().filename().string()));
         ++it;
       }
-      _op_offset = min_id == -1? 0 : min_id;
+      _op_offset = signed(min_id) == -1 ? 0 : min_id;
       it = bfs::directory_iterator(p);
       while (it != bfs::directory_iterator())
       {
@@ -115,7 +115,7 @@ namespace infinit
         sin.serialize("key", k);
         sin.serialize("data", buf);
         Operation op = (Operation)c;
-        while (_op_cache.size() + _op_offset <= id)
+        while (signed(_op_cache.size() + _op_offset) <= id)
           _op_cache.push_back(Entry{Key(), Operation::none, elle::Buffer(), 0});
         _inc(buf.size());
         _op_cache[id - _op_offset] = Entry{k, op, std::move(buf), 0};
@@ -166,7 +166,8 @@ namespace infinit
         auto it = _op_index.find(k);
         if (it != _op_index.end())
         {
-          if (max_entry_hop >= 0 && _op_cache[it->second - _op_offset].hop >= max_entry_hop)
+          if (max_entry_hop >= 0 &&
+              signed(_op_cache[it->second - _op_offset].hop) >= max_entry_hop)
           {
             ELLE_DEBUG("not moving %s, max hop reached", it->second);
           }
