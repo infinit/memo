@@ -26,6 +26,13 @@ namespace infinit
 
     static int max_entry_hop = _max_entry_hop();
 
+    static int _n_threads()
+    {
+      return std::stoi(elle::os::getenv("INFINIT_ASYNC_THREADS", "4"));
+    }
+
+    static int n_threads = _n_threads();
+
     Async::Async(std::unique_ptr<Storage> backend,
                  int max_blocks,
                  int64_t max_size,
@@ -34,18 +41,6 @@ namespace infinit
       : _backend(std::move(backend))
       , _max_blocks(max_blocks)
       , _max_size(max_size)
-      , _thread("async deque", [&]
-        {
-          try {
-            this->_worker();
-            ELLE_TRACE("Worker thread normal exit");
-          }
-          catch(std::exception const& e)
-          {
-            ELLE_TRACE("Worker thread threw %s", e.what());
-            throw;
-          }
-        })
       , _op_offset(0)
       , _blocks(0)
       , _bytes(0)
@@ -59,6 +54,23 @@ namespace infinit
         _restore_journal();
       }
       _queueing.open();
+      for (int i=0; i< n_threads; ++i)
+      {
+        auto t = elle::make_unique<reactor::Thread>("async deque " + std::to_string(i),
+          [&]
+          {
+            try {
+              this->_worker();
+              ELLE_TRACE("Worker thread normal exit");
+            }
+            catch(std::exception const& e)
+            {
+              ELLE_TRACE("Worker thread threw %s", e.what());
+              throw;
+            }
+          });
+        _threads.push_back(std::move(t));
+      }
     }
     Async::~Async()
     {
@@ -72,7 +84,8 @@ namespace infinit
       }
       else
         _dequeueing.open();
-      reactor::wait(_thread);
+      for (auto & t: _threads)
+        reactor::wait(*t);
       ELLE_TRACE("...~Async");
     }
 
@@ -239,17 +252,22 @@ namespace infinit
         ELLE_DEBUG("worker woken up");
         while (!_op_cache.empty())
         {
+          // begin atomic block
           auto& e = _op_cache.front();
           elle::Buffer buf = std::move(e.data);
           Key k = e.key;
           Operation op = e.operation;
-          ELLE_DEBUG("dequeueing %s on %x. Cache blocks=%s bytes=%s",
-                     (op == Operation::erase) ? "erase" : "set",
-                     k, _blocks, _bytes);
           _op_cache.pop_front();
           ++_op_offset;
+          unsigned int index = _op_offset - 1;
           if (op == Operation::none)
             continue;
+          _dec(buf.size());
+          //end atomic block
+          ELLE_DEBUG("dequeueing %s on %x. Cache blocks=%s bytes=%s oc=%s",
+            (op == Operation::erase) ? "erase" : "set",
+            k, _blocks, _bytes, _op_cache.size());
+
           if (_merge)
             _op_index.erase(k);
           if (op == Operation::erase)
@@ -266,10 +284,9 @@ namespace infinit
           }
           else if (op == Operation::set)
             _backend->set(k, buf, true, true);
-          _dec(buf.size());
           if (!_journal_dir.empty())
           {
-            auto path = bfs::path(_journal_dir) / std::to_string(_op_offset-1);
+            auto path = bfs::path(_journal_dir) / std::to_string(index);
             ELLE_DEBUG("deleting %s", path);
             bfs::remove(path);
           }

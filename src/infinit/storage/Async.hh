@@ -55,7 +55,7 @@ namespace infinit
       int64_t _max_size;
       reactor::Barrier _dequeueing;
       reactor::Barrier _queueing;
-      reactor::Thread _thread;
+      std::vector<std::unique_ptr<reactor::Thread>> _threads;
       struct Entry
       {
         Key key;
