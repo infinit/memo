@@ -734,8 +734,8 @@ namespace infinit
       ELLE_DEBUG("Acquired self, file found = %s", it != _files.end());
       if (it != _files.end())
       {
-        bool isDir = (it->second.mode & S_IFMT)  == DIRECTORY_MASK;
-        bool isSymlink = (it->second.mode & S_IFMT) == SYMLINK_MASK;
+        bool isDir = signed(it->second.mode & S_IFMT)  == DIRECTORY_MASK;
+        bool isSymlink = signed(it->second.mode & S_IFMT) == SYMLINK_MASK;
         ELLE_DEBUG("isDir=%s, isSymlink=%s", isDir, isSymlink);
         if (isSymlink)
           return std::shared_ptr<rfs::Path>(new Symlink(self, _owner, name));
@@ -800,7 +800,7 @@ namespace infinit
           auto ptr = p.get();
           ELLE_DEBUG("Inserting %s", where / name);
           _owner.filesystem()->set((where/name).string(), std::move(p));
-          if ((v.second.mode & S_IFMT) ==  DIRECTORY_MASK)
+          if (signed(v.second.mode & S_IFMT) ==  DIRECTORY_MASK)
           {
             dynamic_cast<Directory*>(ptr)->move_recurse(current / name, where / name);
           }
@@ -833,7 +833,7 @@ namespace infinit
         auto target = _owner.filesystem()->path(where.string());
         struct stat st;
         target->stat(&st);
-        if ((st.st_mode & S_IFMT) == DIRECTORY_MASK)
+        if (signed(st.st_mode & S_IFMT) == DIRECTORY_MASK)
         {
           try
           {
@@ -1699,7 +1699,7 @@ namespace infinit
         auto& b = _blocks.at(0);
         int64_t old_size = b.block.data().size();
         b.block.data([] (elle::Buffer& data) {data.size(default_block_size);});
-        if (old_size != default_block_size)
+        if (old_size != signed(default_block_size))
           b.block.zero(old_size, default_block_size - old_size);
       }
       _changed();
