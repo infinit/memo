@@ -23,12 +23,15 @@ export_(variables_map const& args)
   auto output = get_output(args);
   if (args.count("full") && args["full"].as<bool>())
   {
-    elle::fprintf(std::cerr, "WARNING: you are exporting the user \"%s\" "
-                  "including the private key\n", name);
-    elle::fprintf(std::cerr, "WARNING: anyone in possession of this "
-                  "information can impersonate that user\n");
-    elle::fprintf(std::cerr, "WARNING: if you mean to export your user for "
-                  "someone else, remove the --full flag\n");
+    if (!script_mode)
+    {
+      elle::fprintf(std::cerr, "WARNING: you are exporting the user \"%s\" "
+                    "including the private key\n", name);
+      elle::fprintf(std::cerr, "WARNING: anyone in possession of this "
+                    "information can impersonate that user\n");
+      elle::fprintf(std::cerr, "WARNING: if you mean to export your user for "
+                    "someone else, remove the --full flag\n");
+    }
     das::Serializer<infinit::DasUser> view(user);
     elle::serialization::json::serialize(view, *output, false);
   }
