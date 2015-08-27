@@ -1307,7 +1307,6 @@ namespace infinit
       memset(zeros, 0, sizeof(Address));
       AnyBlock b;
       Address addr;
-      bool is_new = false;
       if (!memcmp(zeros, _first_block->data().mutable_contents() + offset,
                  sizeof(Address)))
       { // allocate
@@ -1316,27 +1315,27 @@ namespace infinit
           return nullptr;
         }
         b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>());
-        is_new = false; // since we store it just below
         // Store it, since our FAT will reference it
         ELLE_DEBUG("Storing newly created block for %s as %x", index, b.address());
         addr = b.store(*_owner.block_store(), model::STORE_INSERT);
-      }
-      else
-      {
-        addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
-         b = AnyBlock(_owner.fetch_or_die(addr));
-      }
-      _first_block->data([&](elle::Buffer& data)
+        _first_block->data([&](elle::Buffer& data)
         {
           memcpy(data.mutable_contents() + offset,
             addr.value(), sizeof(Address::Value));
         });
-      _owner.block_store()->store(*_first_block);
+        _owner.block_store()->store(*_first_block);
+      }
+      else
+      {
+        addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
+        b = AnyBlock(_owner.fetch_or_die(addr));
+      }
+
       auto inserted = _blocks.insert(std::make_pair(index,
         File::CacheEntry{AnyBlock(std::move(b)), false}));
       inserted.first->second.last_use = std::chrono::system_clock::now();
-      inserted.first->second.dirty = true;
-      inserted.first->second.new_block = is_new;
+      inserted.first->second.dirty = false; // we just fetched or inserted it
+      inserted.first->second.new_block = false;
       return &inserted.first->second.block;
     }
 
@@ -2186,6 +2185,10 @@ namespace infinit
           block = _owner->_block_at(start_block, true);
           ELLE_ASSERT(block != nullptr);
           _owner->check_cache();
+          auto const it = _owner->_blocks.find(start_block);
+          ELLE_ASSERT(it != _owner->_blocks.end());
+          it->second.dirty = true;
+          it->second.last_use = std::chrono::system_clock::now();
         }
         off_t block_offset = offset % block_size;
         bool growth = false;
