@@ -2157,7 +2157,7 @@ namespace infinit
         });
         // Update but do not commit yet, so that read on same fd do not fail.
         FileData& data = _owner->_parent->_files.at(_owner->_name);
-        if (data.size < offset + size)
+        if (unsigned(data.size) < offset + size)
         {
           data.size = offset + size;
           data.mtime = time(nullptr);
@@ -2212,7 +2212,7 @@ namespace infinit
         if (growth)
         { // check if file size was increased
           File::Header h = _owner->_header();
-          if (h.total_size < offset + size)
+          if (unsigned(h.total_size) < offset + size)
           {
             h.total_size = offset + size;
             ELLE_DEBUG("New file size: %s", h.total_size);
