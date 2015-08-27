@@ -121,9 +121,9 @@ run(variables_map const& args)
     args.count("async-writes") && args["async-writes"].as<bool>();
   auto model = network.run(hosts, true, cache, cache_size, async_writes);
   ELLE_TRACE("run volume");
+  report_action("running", "volume", volume.name);
   auto fs = volume.run(model.second, optional(args, "mountpoint"));
   ELLE_TRACE("wait");
-  report_action("running", "volume", volume.name);
   reactor::wait(*fs);
 }
 

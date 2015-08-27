@@ -963,7 +963,10 @@ void
 report(std::string const& msg)
 {
   if (!script_mode)
-    elle::printf("%s%s.\n", (char)toupper(msg[0]), msg.substr(1));
+  {
+    elle::printf("%s%s.", (char)toupper(msg[0]), msg.substr(1));
+    std::cout << std::endl;
+  }
 }
 
 void
