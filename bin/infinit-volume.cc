@@ -110,15 +110,15 @@ run(variables_map const& args)
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network);
   ELLE_TRACE("run network");
-  bool cache = args.count("cache") && args["cache"].as<bool>();
+  bool cache = args.count("cache");
+  boost::optional<int> cache_size;
+  if (args.count("cache") && args["cache"].as<int>() != 0)
+  {
+    std::cerr << "SET CACHE TO " << args["cache"].as<int>() << std::endl;
+    cache_size = args["cache"].as<int>();
+  }
   bool async_writes =
     args.count("async-writes") && args["async-writes"].as<bool>();
-  boost::optional<int> cache_size;
-  if (args.count("cache-size"))
-  {
-    cache = true;
-    cache_size = args["cache-size"].as<int>();
-  }
   auto model = network.run(hosts, true, cache, cache_size, async_writes);
   ELLE_TRACE("run volume");
   auto fs = volume.run(model.second, optional(args, "mountpoint"));
@@ -195,9 +195,9 @@ main(int argc, char** argv)
           "where to mount the filesystem" },
         { "host", value<std::vector<std::string>>()->multitoken(),
           "hosts to connect to" },
-        { "cache,c", bool_switch(), "enable storage caching" },
-        { "cache-size,s", value<int>(),
-          "maximum storage cache in bytes (implies --cache)" },
+        { "cache,c", value<int>()->implicit_value(0),
+          "enable storage caching, "
+          "optional arguments specifies maximum size in bytes" },
         { "async-writes,a", bool_switch(),
           "do not wait for writes on the backend" },
       },
