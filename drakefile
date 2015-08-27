@@ -311,9 +311,8 @@ def configure(
       'infinit-volume',
   ]:
     install << drake.install(drake.node('bin/%s' % bin_name), prefix)
-  install << beyond.install
-  man = drake.nodes(
-    'share/man/man1/infinit.1',
-    'share/man/man5/infinit.5',
-  )
-  install << drake.install(man, prefix)
+  # man = drake.nodes(
+  #   'share/man/man1/infinit.1',
+  #   'share/man/man5/infinit.5',
+  # )
+  # install << drake.install(man, prefix)
