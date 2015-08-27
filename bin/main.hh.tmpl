@@ -527,7 +527,7 @@ namespace infinit
     void
     network_save(Network const& network, bool overwrite = false)
     {
-      auto name = qualified_name(network.name);
+      auto name = qualified_name(network.name, network.dht()->owner);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network", overwrite);
       elle::serialization::json::SerializerOut s(f, false);

@@ -19,7 +19,9 @@ static
 std::string
 volume_name(boost::program_options::variables_map args)
 {
-  return ifnt.qualified_name(mandatory(args, "name", "volume name"));
+  auto owner = ifnt.user_get(optional(args, "owner"));
+  return ifnt.qualified_name(mandatory(args, "name", "volume name"),
+                             owner.public_key);
 }
 
 static
@@ -128,6 +130,8 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
+  option_description owner("owner,w", value<std::string>(),
+                           "user owning the volume (defaults to system user)");
   Modes modes {
     {
       "create",
@@ -138,6 +142,7 @@ main(int argc, char** argv)
         { "name", value<std::string>(), "created volume name" },
         { "network", value<std::string>(), "underlying network to use" },
         { "mountpoint", value<std::string>(), "where to mount the filesystem" },
+        owner,
         { "stdout", bool_switch(), "output configuration to stdout" },
       },
     },
@@ -149,7 +154,8 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to export" },
         { "output,o", value<std::string>(),
-          "file to write volume to  (stdout by default)"}
+          "file to write volume to  (stdout by default)"},
+        owner,
       },
     },
     {
@@ -159,6 +165,7 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "volume to fetch" },
+        owner,
       },
     },
     {
@@ -179,6 +186,7 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to publish" },
+        owner,
       },
     },
     {

@@ -21,7 +21,7 @@ void
 create(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
-  auto owner = ifnt.user_get(optional(args, "user"));
+  auto owner = ifnt.user_get(optional(args, "owner"));
   std::unique_ptr<infinit::overlay::Configuration> overlay_config;
   if (args.count("stonehenge"))
   {
@@ -89,9 +89,11 @@ static
 void
 export_(variables_map const& args)
 {
-  auto network_name = mandatory(args, "name", "network name");
+  auto owner = ifnt.user_get(optional(args, "owner"));
   auto output = get_output(args);
-  auto network = ifnt.network_get(network_name);
+  auto network_name = mandatory(args, "name", "network name");
+  auto network = ifnt.network_get(
+    ifnt.qualified_name(network_name, owner.public_key));
   {
     auto& dht = static_cast<infinit::model::doughnut::Configuration&>
       (*network.model);
@@ -106,8 +108,9 @@ static
 void
 fetch(variables_map const& args)
 {
+  auto owner = ifnt.user_get(optional(args, "owner"));
   auto network_name = mandatory(args, "name", "network name");
-  network_name = ifnt.qualified_name(network_name);
+  network_name = ifnt.qualified_name(network_name, owner.public_key);
   auto desc =
     beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
   ifnt.network_save(std::move(desc));
@@ -129,9 +132,11 @@ static
 void
 invite(variables_map const& args)
 {
+  auto owner = ifnt.user_get(optional(args, "owner"));
   auto network_name = mandatory(args, "name", "network name");
   auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_descriptor_get(network_name);
+  auto network = ifnt.network_descriptor_get(
+    ifnt.qualified_name(network_name, owner.public_key));
   auto user = ifnt.user_get(user_name);
   auto self = ifnt.user_get();
   if (self.public_key != network.owner)
@@ -235,6 +240,9 @@ run(variables_map const& args)
 int main(int argc, char** argv)
 {
   program = argv[0];
+  option_description owner("owner,w", value<std::string>(),
+                           "user owning the network (defaults to system user)");
+
   options_description overlay_types_options("Overlay types");
   overlay_types_options.add_options()
     ("kalimero", "use a kalimero overlay network")
@@ -261,8 +269,7 @@ int main(int argc, char** argv)
         { "name,n", value<std::string>(), "created network name" },
         { "storage,s", value<std::vector<std::string>>()->multitoken(),
             "optional storage to contribute" },
-        { "user,u", value<std::string>(),
-            "user to create the network as (defaults to system user)" },
+        owner,
         { "port,p", value<int>(), "port to listen on (random by default)" },
         { "stdout", bool_switch(), "output configuration to stdout" },
       },
@@ -279,6 +286,7 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to export" },
+        owner,
         { "output,o", value<std::string>(),
             "file to write exported network to (defaults to stdout)" },
       },
@@ -289,7 +297,8 @@ int main(int argc, char** argv)
       &fetch,
       "--name NETWORK",
       {
-        { "name,n", value<std::string>(), "network to fetch" }
+        { "name,n", value<std::string>(), "network to fetch" },
+        owner,
       },
     },
     {
@@ -312,6 +321,7 @@ int main(int argc, char** argv)
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "output,o", value<std::string>(),
             "file to write the passport to (defaults to stdout)" },
+        owner,
       },
     },
     {
