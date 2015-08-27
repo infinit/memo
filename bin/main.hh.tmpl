@@ -1046,7 +1046,7 @@ beyond_fetch(std::string const& type, std::string const& name)
   reactor::http::Request r(elle::sprintf("%s/%ss/%s", beyond(), type, name));
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    elle::printf("fetched", type, name);
+    report_action("fetched", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
     throw elle::Error(
       elle::sprintf("%s \"%s\" is already published", type, name));
