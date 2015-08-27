@@ -31,17 +31,22 @@ create(variables_map const& args)
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(network_name);
   ELLE_TRACE("start network");
+  report_action("starting", "network", network.qualified_name());
   auto model = network.run();
   ELLE_TRACE("create volume");
+  report("creating volume root blocks");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
   infinit::Volume volume(name, mountpoint, fs->root_address(), network.name);
   {
     if (args.count("stdout") && args["stdout"].as<bool>())
-      ifnt.volume_save(volume);
-    else
     {
       elle::serialization::json::SerializerOut s(std::cout, false);
       s.serialize_forward(volume);
+    }
+    else
+    {
+      report_created("volume", name);
+      ifnt.volume_save(volume);
     }
   }
 }
@@ -58,6 +63,7 @@ export_(variables_map const& args)
     elle::serialization::json::SerializerOut s(*output, false);
     s.serialize_forward(volume);
   }
+  report_exported(*output, "volume", volume.name);
 }
 
 static
@@ -65,12 +71,11 @@ void
 import(variables_map const& args)
 {
   auto input = get_input(args);
-  {
-    elle::serialization::json::SerializerIn s(*input, false);
-    infinit::Volume volume(s);
-    volume.mountpoint = optional(args, "mountpoint");
-    ifnt.volume_save(volume);
-  }
+  elle::serialization::json::SerializerIn s(*input, false);
+  infinit::Volume volume(s);
+  volume.mountpoint = optional(args, "mountpoint");
+  ifnt.volume_save(volume);
+  report_imported("volume", volume.name);
 }
 
 static
@@ -118,10 +123,12 @@ run(variables_map const& args)
   ELLE_TRACE("run volume");
   auto fs = volume.run(model.second, optional(args, "mountpoint"));
   ELLE_TRACE("wait");
+  report_action("running", "volume", volume.name);
   reactor::wait(*fs);
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
   program = argv[0];
   Modes modes {

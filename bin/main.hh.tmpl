@@ -389,6 +389,9 @@ namespace infinit
       }
     }
 
+    std::string
+    qualified_name() const;
+
     std::string name;
     std::unique_ptr<infinit::storage::StorageConfig> storage;
     std::unique_ptr<infinit::model::ModelConfig> model;
@@ -728,6 +731,12 @@ namespace infinit
   {
     return Infinit::qualified_name(this->name, this->owner);
   }
+
+  std::string
+  Network::qualified_name() const
+  {
+    return Infinit::qualified_name(this->name, this->dht()->owner);
+  }
 }
 
 class CommandLineSerializer
@@ -946,6 +955,50 @@ namespace infinit
   DAS_MODEL_DEFINE(User, (name, public_key), DasPublicUser);
 }
 
+void
+report(std::string const& msg)
+{
+  elle::printf("%s%s.\n", (char)toupper(msg[0]), msg.substr(1));
+}
+
+void
+report_action(std::string const& action,
+              std::string const& type,
+              std::string const& name)
+{
+  report(elle::sprintf("%s %s \"\%s\"", action, type, name));
+}
+
+void
+report_created(std::string const& type, std::string const& name)
+{
+  report_action("created", type, name);
+}
+
+void
+report_imported(std::string const& type, std::string const& name)
+{
+  report_action("imported", type, name);
+}
+
+void
+report_action_output(std::ostream& output,
+                     std::string const& action,
+                     std::string const& type,
+                     std::string const& name)
+{
+  if (&output != &std::cout)
+    report_action(action, type, name);
+}
+
+void
+report_exported(std::ostream& output,
+                std::string const& type,
+                std::string const& name)
+{
+  report_action_output(output, "exported", type, name);
+}
+
 std::string
 beyond();
 
@@ -968,7 +1021,7 @@ beyond_publish(std::string const& type, std::string const& name, T const& o)
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    elle::printf("Published %s \"%s\".\n", type, name);
+    report_action("published", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
     throw elle::Error(
       elle::sprintf("%s \"%s\" is already published", type, name));
@@ -985,7 +1038,7 @@ beyond_fetch(std::string const& type, std::string const& name)
   reactor::http::Request r(elle::sprintf("%s/%ss/%s", beyond(), type, name));
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    elle::printf("Fetched %s \"%s\".\n", type, name);
+    elle::printf("fetched", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
     throw elle::Error(
       elle::sprintf("%s \"%s\" is already published", type, name));

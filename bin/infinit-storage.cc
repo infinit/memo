@@ -21,25 +21,6 @@ static
 void
 create(variables_map const& args)
 {
-  // auto help = [&] (std::ostream& output)
-  //   {
-  //     output << "Usage: " << program
-  //     << " --create [options] [storage-type] [storage-options]"
-  //     << std::endl;
-  //     output << std::endl;
-  //     output << creation_options;
-  //     output << std::endl;
-  //     if (creation.count("filesystem"))
-  //       output << fs_storage_options;
-  //     else if (creation.count("dropbox"))
-  //     {
-  //       output << dropbox_storage_options;
-  //       output << std::endl;
-  //     }
-  //     else
-  //       output << types;
-  //     output << std::endl;
-  //   };
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("dropbox"))
   {
@@ -63,6 +44,7 @@ create(variables_map const& args)
   {
     auto name = mandatory(args, "name", "storage name");
     ifnt.storage_save(name, *config);
+    report_created("storage", name);
   }
   else
   {

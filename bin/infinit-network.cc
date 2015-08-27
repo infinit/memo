@@ -78,7 +78,10 @@ create(variables_map const& args)
     if (args.count("stdout") && args["stdout"].as<bool>())
       elle::serialization::json::serialize(network, std::cout, false);
     else
+    {
       ifnt.network_save(network);
+      report_created("network", name);
+    }
   }
 }
 
@@ -96,6 +99,7 @@ export_(variables_map const& args)
       network.name, std::move(dht.overlay), std::move(dht.owner));
     elle::serialization::json::serialize(desc, *output, false);
   }
+  report_exported(*output, "network", network.name);
 }
 
 static
@@ -114,12 +118,11 @@ void
 import(variables_map const& args)
 {
   auto input = get_input(args);
-  {
-    auto desc =
-      elle::serialization::json::deserialize<infinit::NetworkDescriptor>
-      (*input, false);
-    ifnt.network_save(desc);
-  }
+  auto desc =
+    elle::serialization::json::deserialize<infinit::NetworkDescriptor>
+    (*input, false);
+  ifnt.network_save(desc);
+  report_imported("network", desc.name);
 }
 
 static
@@ -140,6 +143,8 @@ invite(variables_map const& args)
     self.private_key.get());
   auto output = get_output(args);
   elle::serialization::json::serialize(passport, *output, false);
+  report_action_output(
+    *output, "wrote", "passport for", network.qualified_name());
 }
 
 static
@@ -189,6 +194,7 @@ join(variables_map const& args)
     if (args.count("port"))
       network.port = args["port"].as<int>();
     ifnt.network_save(network, true);
+    report_action("joined", "network", network.name);
   }
 }
 
@@ -222,6 +228,7 @@ run(variables_map const& args)
   auto local = network.run(hosts);
   if (!local.first)
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
+  report_action("running", "network", network.name);
   reactor::sleep();
 }
 
@@ -273,7 +280,7 @@ int main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to export" },
         { "output,o", value<std::string>(),
-            "file to write user to (stdout by default)" },
+            "file to write exported network to (defaults to stdout)" },
       },
     },
     {
@@ -303,6 +310,8 @@ int main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to create the passport to" },
         { "user,u", value<std::string>(), "user to create the passport for" },
+        { "output,o", value<std::string>(),
+            "file to write the passport to (defaults to stdout)" },
       },
     },
     {

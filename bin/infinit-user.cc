@@ -44,10 +44,11 @@ void
 generate(variables_map const& args)
 {
   auto name = get_name(args);
+  report("generating RSA keypair");
   infinit::User user(name,
                      infinit::cryptography::rsa::keypair::generate(2048));
   ifnt.user_save(user);
-  elle::printf("Generated user %s.\n", name);
+  report_action("generated", "user", name);
 }
 
 static
@@ -59,7 +60,7 @@ import(variables_map const& args)
     auto user =
       elle::serialization::json::deserialize<infinit::User>(*input, false);
     ifnt.user_save(user);
-    elle::printf("Imported user %s.\n", user.name);
+    report_imported("user", user.name);
   }
 }
 
