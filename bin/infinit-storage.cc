@@ -21,10 +21,13 @@ static
 void
 create(variables_map const& args)
 {
+  auto name = mandatory(args, "name", "storage name");
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("dropbox"))
   {
     auto root = optional(args, "root");
+    if (!root)
+      root = name;
     auto account_name = mandatory(args, "account");
     auto account = ifnt.credentials_dropbox(account_name);
     config =
@@ -42,7 +45,6 @@ create(variables_map const& args)
       throw CommandLineError("storage type unspecified");
   if (!args.count("stdout") || !args["stdout"].as<bool>())
   {
-    auto name = mandatory(args, "name", "storage name");
     ifnt.storage_save(name, *config);
     report_created("storage", name);
   }
