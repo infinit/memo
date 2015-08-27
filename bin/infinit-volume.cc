@@ -36,7 +36,7 @@ create(variables_map const& args)
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
   infinit::Volume volume(name, mountpoint, fs->root_address(), network.name);
   {
-    if (!args.count("stdout"))
+    if (args.count("stdout") && args["stdout"].as<bool>())
       ifnt.volume_save(volume);
     else
     {
