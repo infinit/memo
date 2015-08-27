@@ -113,10 +113,7 @@ run(variables_map const& args)
   bool cache = args.count("cache");
   boost::optional<int> cache_size;
   if (args.count("cache") && args["cache"].as<int>() != 0)
-  {
-    std::cerr << "SET CACHE TO " << args["cache"].as<int>() << std::endl;
     cache_size = args["cache"].as<int>();
-  }
   bool async_writes =
     args.count("async-writes") && args["async-writes"].as<bool>();
   auto model = network.run(hosts, true, cache, cache_size, async_writes);
