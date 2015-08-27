@@ -24,6 +24,8 @@ def configure(
     prefix = drake.path_build(prefix, absolute = True)
 
   cxx_config = drake.cxx.Config(cxx_config)
+  cxx_config.warnings.parentheses = False
+  cxx_config.warnings.sign_compare = drake.cxx.Config.Warnings.Error;
   if production_build:
     cxx_config.enable_optimization()
 
@@ -52,7 +54,6 @@ def configure(
   cxx_config += elle.config
   cxx_config += elle.dropbox.config
   cxx_config.add_local_include_path('src')
-  cxx_config.warnings.parentheses = False
   cxx_config.define('_FILE_OFFSET_BITS=64')
 
   if cxx_toolkit.os in [drake.os.macos]:
