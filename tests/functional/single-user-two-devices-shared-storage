@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import pipes
 import tempfile
+import time
 
 
 class TemporaryDirectory:
@@ -45,6 +46,10 @@ class Infinit(TemporaryDirectory):
       stdout =  subprocess.PIPE,
       stderr =  subprocess.PIPE,
     )
+    if input is not None:
+      # FIXME: On OSX, if you spam stdin before the FDStream takes it
+      # over, you get a broken pipe.
+      time.sleep(0.5)
     out, err = process.communicate(input)
     if process.returncode != 0:
       raise Exception('command failed with code %s: %s' % \
