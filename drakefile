@@ -190,50 +190,6 @@ def configure(
     cxx_config_infinit)
   rule_build << infinit_lib
 
-  ## ----- ##
-  ## Tests ##
-  ## ----- ##
-
-  rule_tests = drake.Rule('tests')
-  rule_check = drake.Rule('check')
-
-  cxx_config_tests = drake.cxx.Config(cxx_config)
-  cxx_config_tests += elle.das.config
-  cxx_config_tests.lib_path_runtime('../lib')
-  cxx_config_tests += elle.boost.config_test(link = False)
-  cxx_config_tests.library_add(
-    drake.copy(elle.boost.test_dynamic, 'lib', True))
-  cxx_config_tests += elle.boost.config_system(link = False)
-  cxx_config_tests.library_add(
-    drake.copy(elle.boost.system_dynamic, 'lib', True))
-  cxx_config_tests += elle.boost.config_filesystem(link = False)
-  cxx_config_tests.library_add(
-    drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
-
-  for test_name in ['doughnut', 'faith', 'storage', 'filesystem']:
-    # Forgive me bearclaw
-    # 'filesystem'
-    test = drake.cxx.Executable(
-      'tests/%s' % test_name,
-      [
-        drake.node('tests/%s.cc' % test_name),
-        infinit_lib,
-        elle_lib,
-        cryptography_lib,
-        reactor_lib,
-      ],
-      cxx_toolkit,
-      cxx_config_tests)
-
-    rule_tests << test
-    if valgrind_tests:
-      runner = drake.valgrind.ValgrindRunner(
-        exe = test, valgrind = valgrind)
-    else:
-      runner = drake.Runner(exe = test)
-    runner.reporting = drake.Runner.Reporting.on_failure
-    rule_check << runner.status
-
   ## -------- ##
   ## Binaries ##
   ## -------- ##
@@ -285,8 +241,79 @@ def configure(
     'bin/steg.cc'
     ) + [outguess_lib, jpeg_lib, infinit_lib],
     cxx_toolkit,
-    cxx_config_tests
-    )
+    bin_cxx_config,
+  )
+
+  ## ------- ##
+  ## Install ##
+  ## ------- ##
+
+  install = drake.Rule('install')
+  installed_binaries = [
+    drake.node('bin/%s' % bin_name)
+    for bin_name in [
+        'infinit-credentials',
+        'infinit-network',
+        'infinit-storage',
+        'infinit-user',
+        'infinit-volume',
+    ]
+  ]
+  install << drake.install(installed_binaries, prefix)
+  # man = drake.nodes(
+  #   'share/man/man1/infinit.1',
+  #   'share/man/man5/infinit.5',
+  # )
+  # install << drake.install(man, prefix)
+
+  ## ----- ##
+  ## Tests ##
+  ## ----- ##
+
+  rule_tests = drake.Rule('tests')
+  rule_check = drake.Rule('check')
+
+  cxx_config_tests = drake.cxx.Config(cxx_config)
+  cxx_config_tests += elle.das.config
+  cxx_config_tests.lib_path_runtime('../lib')
+  cxx_config_tests += elle.boost.config_test(link = False)
+  cxx_config_tests.library_add(
+    drake.copy(elle.boost.test_dynamic, 'lib', True))
+  cxx_config_tests += elle.boost.config_system(link = False)
+  cxx_config_tests.library_add(
+    drake.copy(elle.boost.system_dynamic, 'lib', True))
+  cxx_config_tests += elle.boost.config_filesystem(link = False)
+  cxx_config_tests.library_add(
+    drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+
+  for test_name in ['doughnut', 'faith', 'storage', 'filesystem']:
+    test = drake.cxx.Executable(
+      'tests/%s' % test_name,
+      [
+        drake.node('tests/%s.cc' % test_name),
+        infinit_lib,
+        elle_lib,
+        cryptography_lib,
+        reactor_lib,
+      ],
+      cxx_toolkit,
+      cxx_config_tests)
+
+    rule_tests << test
+    if valgrind_tests:
+      runner = drake.valgrind.ValgrindRunner(
+        exe = test, valgrind = valgrind)
+    else:
+      runner = drake.Runner(exe = test)
+    runner.reporting = drake.Runner.Reporting.on_failure
+    rule_check << runner.status
+  for test_name in [
+      'single-user-two-devices-shared-storage'
+  ]:
+    test = drake.node('tests/functional/%s' % test_name)
+    test.dependencies_add(installed_binaries)
+    runner = drake.Runner(exe = test)
+    rule_check << runner.status
 
   ## ------ ##
   ## Beyond ##
@@ -298,22 +325,3 @@ def configure(
     cryptography_python_module = elle.cryptography.python_module,
     prefix = prefix,
     git = git)
-
-  ## ------- ##
-  ## Install ##
-  ## ------- ##
-
-  install = drake.Rule('install')
-  for bin_name in [
-      'infinit-credentials',
-      'infinit-network',
-      'infinit-storage',
-      'infinit-user',
-      'infinit-volume',
-  ]:
-    install << drake.install(drake.node('bin/%s' % bin_name), prefix)
-  # man = drake.nodes(
-  #   'share/man/man1/infinit.1',
-  #   'share/man/man5/infinit.5',
-  # )
-  # install << drake.install(man, prefix)

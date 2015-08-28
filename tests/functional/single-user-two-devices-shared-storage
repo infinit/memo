@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+
+import json
+import shutil
+import subprocess
+import pipes
+import tempfile
+
+
+class TemporaryDirectory:
+
+  def __init__(self):
+    self.__dir = None
+
+  def __enter__(self):
+    self.__dir = tempfile.mkdtemp()
+    return self
+
+  def __exit__(self, *args, **kwargs):
+    shutil.rmtree(self.__dir)
+
+  @property
+  def dir(self):
+    return self.__dir
+
+
+class Infinit(TemporaryDirectory):
+
+  def run(self, args, input = None):
+    env = {
+      'PATH': 'bin',
+      'INFINIT_HOME': self.dir,
+    }
+    print(' '.join('%s=%s' % (k, v) for k, v in env.items()),
+          ' '.join(pipes.quote(arg) for arg in args))
+    if input is not None:
+      input = (json.dumps(input) + '\n').encode('utf-8')
+    output = subprocess.check_output(
+      args + ['-s'],
+      env = env,
+      input =  input,
+    )
+    try:
+      return json.loads(output.decode('utf-8'))
+    except:
+      return None
+
+with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
+  # Device 1
+  infinit_1.run(['infinit-user', '--generate', '--name', 'user'])
+  user = infinit_1.run([
+    'infinit-user', '--export', '--full', '--name', 'user'
+  ])
+  infinit_1.run([
+    'infinit-storage', '--create',
+    '--name', 'storage',
+    '--filesystem', '--path', tmp.dir,
+  ])
+  network_name = infinit_1.run([
+    'infinit-network', '--create',
+    '--name', 'network', '--storage', 'storage',
+    '--owner', 'user',
+  ])
+  network = infinit_1.run([
+    'infinit-network', '--export',
+    '--name', 'network',
+    '--owner', 'user',
+  ])
+  infinit_1.run([
+    'infinit-volume', '--create',
+    '--name', 'volume', '--network', 'network',
+    '--owner', 'user',
+  ])
+  volume = infinit_1.run([
+    'infinit-volume', '--export',
+    '--name', 'volume',
+    '--owner', 'user',
+  ])
+  response = infinit_1.run([
+    'infinit-volume', '--run',
+    '--name', 'volume',
+    '--owner', 'user',
+  ],
+  input = {'operation': 'mkdir', 'path': '/beacon'})
+  # Device 2
+  infinit_2.run(['infinit-user', '--import'], input = user)
+  infinit_2.run([
+    'infinit-storage', '--create',
+    '--name', 'storage',
+    '--filesystem', '--path', tmp.dir,
+  ])
+  infinit_2.run(['infinit-network', '--import'], input = network)
+  infinit_2.run([
+    'infinit-network', '--join',
+    '--name', 'network',
+    '--storage', 'storage',
+    '--owner', 'user',
+  ])
+  infinit_2.run(['infinit-volume', '--import'], input = volume)
+  response = infinit_2.run([
+    'infinit-volume', '--run',
+    '--name', 'volume',
+    '--owner', 'user',
+  ],
+  input = {'operation': 'list_directory', 'path': '/'})
+  assert response['entries'] == ['beacon']
