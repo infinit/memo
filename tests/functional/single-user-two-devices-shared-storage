@@ -47,7 +47,8 @@ class Infinit(TemporaryDirectory):
     )
     out, err = process.communicate(input)
     if process.returncode != 0:
-      raise Exception('command failed: %s' % pretty)
+      raise Exception('command failed with code %s: %s' % \
+                      (process.returncode, pretty))
     try:
       return json.loads(out.decode('utf-8'))
     except:
