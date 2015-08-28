@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import io
 import json
 import shutil
 import subprocess
@@ -31,17 +32,24 @@ class Infinit(TemporaryDirectory):
       'PATH': 'bin',
       'INFINIT_HOME': self.dir,
     }
-    print(' '.join('%s=%s' % (k, v) for k, v in env.items()),
-          ' '.join(pipes.quote(arg) for arg in args))
+    pretty = '%s %s' % (
+      ' '.join('%s=%s' % (k, v) for k, v in env.items()),
+      ' '.join(pipes.quote(arg) for arg in args))
+    print(pretty)
     if input is not None:
       input = (json.dumps(input) + '\n').encode('utf-8')
-    output = subprocess.check_output(
+    process = subprocess.Popen(
       args + ['-s'],
       env = env,
-      input =  input,
+      stdin =  subprocess.PIPE,
+      stdout =  subprocess.PIPE,
+      stderr =  subprocess.PIPE,
     )
+    out, err = process.communicate(input)
+    if process.returncode != 0:
+      raise Exception('command failed: %s' % pretty)
     try:
-      return json.loads(output.decode('utf-8'))
+      return json.loads(out.decode('utf-8'))
     except:
       return None
 
