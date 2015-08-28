@@ -14,6 +14,25 @@ using namespace boost::program_options;
 
 infinit::Infinit ifnt;
 
+template <typename Super>
+struct UserView
+  : Super
+{
+  template <typename ... Args>
+  UserView(Args&& ... args)
+    : Super(std::forward<Args>(args)...)
+  {}
+
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    Super::serialize(s);
+    std::string id(infinit::User::uid(this->object().public_key));
+    s.serialize("id", id);
+  }
+};
+
+
 static
 void
 export_(variables_map const& args)
@@ -32,12 +51,12 @@ export_(variables_map const& args)
       elle::fprintf(std::cerr, "WARNING: if you mean to export your user for "
                     "someone else, remove the --full flag\n");
     }
-    das::Serializer<infinit::DasUser> view(user);
+    UserView<das::Serializer<infinit::DasUser>> view(user);
     elle::serialization::json::serialize(view, *output, false);
   }
   else
   {
-    das::Serializer<infinit::DasPublicUser> view(user);
+    UserView<das::Serializer<infinit::DasPublicUser>> view(user);
     elle::serialization::json::serialize(view, *output, false);
   }
 }

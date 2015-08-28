@@ -436,21 +436,21 @@ namespace infinit
           this->root_address, dht);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
-      boost::filesystem::path mountpoint;
+      boost::optional<boost::filesystem::path> mountpoint;
       if (mountpoint_)
         mountpoint = mountpoint_.get();
       else if (this->mountpoint)
         mountpoint = this->mountpoint.get();
-      else
-        throw elle::Error("mountpoint unspecified");
-      try
+      if (mountpoint)
       {
-        create_directories(mountpoint);
+        try
+        {
+          create_directories(mountpoint.get());
+        }
+        catch (boost::filesystem::filesystem_error const&)
+        {}
+        driver->mount(mountpoint.get(), {"infinit-volume", "-o", "noatime"});
       }
-      catch (boost::filesystem::filesystem_error const&)
-      {}
-      reactor::scheduler().signal_handle(SIGINT, [&] { driver->unmount();});
-      driver->mount(mountpoint.string(), {"infinit-volume", "-o", "noatime"});
       return driver;
     }
 
@@ -537,7 +537,7 @@ namespace infinit
     void
     network_save(NetworkDescriptor const& network)
     {
-      auto name = qualified_name(network.name);
+      auto name = qualified_name(network.name, network.owner);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network");
       elle::serialization::json::SerializerOut s(f, false);

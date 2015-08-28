@@ -75,13 +75,14 @@ create(variables_map const& args)
     network.name = name;
     if (args.count("port"))
       network.port = args["port"].as<int>();
-    if (args.count("stdout") && args["stdout"].as<bool>())
-      elle::serialization::json::serialize(network, std::cout, false);
-    else
+    bool stdout = args.count("stdout") && args["stdout"].as<bool>();
+    if (!stdout)
     {
       ifnt.network_save(network);
       report_created("network", name);
     }
+    if (stdout || script_mode)
+      elle::serialization::json::serialize(network, std::cout, false);
   }
 }
 
@@ -156,24 +157,24 @@ static
 void
 join(variables_map const& args)
 {
+  auto owner = ifnt.user_get(optional(args, "owner"));
   auto input = get_input(args);
-  auto name = mandatory(args, "name", "network name");
-  auto username = get_username(args, "user");
+  auto name = ifnt.qualified_name(mandatory(args, "name", "network name"),
+                                  owner.public_key);
   auto storage_name = optional(args, "storage");
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   if (storage_name)
     storage = ifnt.storage_get(*storage_name);
   {
     auto desc = ifnt.network_descriptor_get(name);
-    auto self = ifnt.user_get();
     auto passport = [&] () -> infinit::model::doughnut::Passport
     {
-      if (!args.count("input") && self.public_key == desc.owner)
+      if (!args.count("input") && owner.public_key == desc.owner)
       {
         return infinit::model::doughnut::Passport(
-          self.public_key,
+          owner.public_key,
           desc.qualified_name(),
-          self.private_key.get());
+          owner.private_key.get());
       }
       else
       {
@@ -185,15 +186,14 @@ join(variables_map const& args)
     bool ok = passport.verify(desc.owner);
     if (!ok)
       throw elle::Error("passport signature is invalid");
-    auto user = ifnt.user_get(username);
     infinit::Network network;
     network.model =
       elle::make_unique<infinit::model::doughnut::Configuration>(
         std::move(desc.overlay),
-        user.keypair(),
+        owner.keypair(),
         std::move(desc.owner),
         std::move(passport),
-        user.name);
+        owner.name);
     network.storage = std::move(storage);
     network.name = name;
     if (args.count("port"))
@@ -333,6 +333,7 @@ int main(int argc, char** argv)
         { "input,i", value<std::string>(),
             "file to read passport from (defaults to stdin)" },
         { "name,n", value<std::string>(), "network to join" },
+        owner,
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
         { "user,u", value<std::string>(),

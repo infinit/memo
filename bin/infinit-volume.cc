@@ -1,6 +1,8 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
+#include <reactor/FDStream.hh>
+
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
@@ -17,9 +19,8 @@ infinit::Infinit ifnt;
 
 static
 std::string
-volume_name(boost::program_options::variables_map args)
+volume_name(variables_map const& args, infinit::User const& owner)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
   return ifnt.qualified_name(mandatory(args, "name", "volume name"),
                              owner.public_key);
 }
@@ -28,8 +29,10 @@ static
 void
 create(variables_map const& args)
 {
-  auto name = volume_name(args);
-  auto network_name = mandatory(args, "network");
+  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto name = volume_name(args, owner);
+  auto network_name = ifnt.qualified_name(mandatory(args, "network"),
+                                          owner.public_key);
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(network_name);
   ELLE_TRACE("start network");
@@ -38,18 +41,17 @@ create(variables_map const& args)
   ELLE_TRACE("create volume");
   report("creating volume root blocks");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
-  infinit::Volume volume(name, mountpoint, fs->root_address(), network.name);
+  infinit::Volume volume(
+    name, mountpoint, fs->root_address(), network.qualified_name());
+  if (args.count("stdout") && args["stdout"].as<bool>())
   {
-    if (args.count("stdout") && args["stdout"].as<bool>())
-    {
-      elle::serialization::json::SerializerOut s(std::cout, false);
-      s.serialize_forward(volume);
-    }
-    else
-    {
-      report_created("volume", name);
-      ifnt.volume_save(volume);
-    }
+    elle::serialization::json::SerializerOut s(std::cout, false);
+    s.serialize_forward(volume);
+  }
+  else
+  {
+    report_created("volume", name);
+    ifnt.volume_save(volume);
   }
 }
 
@@ -57,7 +59,8 @@ static
 void
 export_(variables_map const& args)
 {
-  auto name = volume_name(args);
+  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto name = volume_name(args, owner);
   auto output = get_output(args);
   auto volume = ifnt.volume_get(name);
   volume.mountpoint.reset();
@@ -84,7 +87,8 @@ static
 void
 publish(variables_map const& args)
 {
-  auto name = volume_name(args);
+  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network);
   auto owner_uid = infinit::User::uid(network.dht()->owner);
@@ -95,7 +99,8 @@ static
 void
 fetch(variables_map const& args)
 {
-  auto name = volume_name(args);
+  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto name = volume_name(args, owner);
   auto desc =
     beyond_fetch<infinit::Volume>("volume", name);
   ifnt.volume_save(std::move(desc));
@@ -105,7 +110,8 @@ static
 void
 run(variables_map const& args)
 {
-  auto name = volume_name(args);
+  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto name = volume_name(args, owner);
   std::vector<std::string> hosts;
   if (args.count("host"))
     hosts = args["host"].as<std::vector<std::string>>();
@@ -118,12 +124,77 @@ run(variables_map const& args)
     cache_size = args["cache"].as<int>();
   bool async_writes =
     args.count("async-writes") && args["async-writes"].as<bool>();
+  report_action("running", "network", volume.name);
   auto model = network.run(hosts, true, cache, cache_size, async_writes);
   ELLE_TRACE("run volume");
   report_action("running", "volume", volume.name);
   auto fs = volume.run(model.second, optional(args, "mountpoint"));
-  ELLE_TRACE("wait");
-  reactor::wait(*fs);
+  reactor::scheduler().signal_handle(
+    SIGINT,
+    [&]
+    {
+      ELLE_TRACE("terminating");
+      reactor::scheduler().terminate();
+    });
+  elle::SafeFinally unmount(
+    [&]
+    {
+      ELLE_TRACE("unmounting")
+        fs->unmount();
+    });
+  if (script_mode)
+  {
+    reactor::FDStream stdin(0);
+    while (true)
+    {
+      try
+      {
+        auto json =
+          boost::any_cast<elle::json::Object>(elle::json::read(stdin));
+        ELLE_TRACE("got command: %s", json);
+        elle::serialization::json::SerializerIn command(json, false);
+        auto op = command.deserialize<std::string>("operation");
+        auto path =
+          fs->path(command.deserialize<std::string>("path"));
+        if (op == "list_directory")
+        {
+          std::vector<std::string> entries;
+          path->list_directory(
+            [&] (std::string const& path, struct stat*)
+            {
+              entries.push_back(path);
+            });
+          elle::serialization::json::SerializerOut response(std::cout);
+          response.serialize("entries", entries);
+          response.serialize("success", true);
+          continue;
+        }
+        else if (op == "mkdir")
+        {
+          path->mkdir(0777);
+        }
+        else
+          throw elle::Error(elle::sprintf("operation %s does not exist", op));
+        elle::serialization::json::SerializerOut response(std::cout);
+        response.serialize("success", true);
+      }
+      catch (reactor::FDStream::EOF const&)
+      {
+        return;
+      }
+      catch (elle::Error const& e)
+      {
+        elle::serialization::json::SerializerOut response(std::cout);
+        response.serialize("success", false);
+        response.serialize("message", e.what());
+      }
+    }
+  }
+  else
+  {
+    ELLE_TRACE("wait filesystem");
+    reactor::wait(*fs);
+  }
 }
 
 int
@@ -195,16 +266,17 @@ main(int argc, char** argv)
       &run,
       "--name VOLUME [--mountpoint PATH]",
       {
-        { "name", value<std::string>(), "volume name" },
-        { "mountpoint,m", value<std::string>(),
-          "where to mount the filesystem" },
-        { "host", value<std::vector<std::string>>()->multitoken(),
-          "hosts to connect to" },
+        { "async-writes,a", bool_switch(),
+          "do not wait for writes on the backend" },
         { "cache,c", value<int>()->implicit_value(0),
           "enable storage caching, "
           "optional arguments specifies maximum size in bytes" },
-        { "async-writes,a", bool_switch(),
-          "do not wait for writes on the backend" },
+        { "mountpoint,m", value<std::string>(),
+          "where to mount the filesystem" },
+        { "name", value<std::string>(), "volume name" },
+        { "host", value<std::vector<std::string>>()->multitoken(),
+          "hosts to connect to" },
+        owner,
       },
     },
   };
