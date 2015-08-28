@@ -61,7 +61,7 @@ class Infinit(TemporaryDirectory):
 
 with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
   # Device 1
-  infinit_1.run(['infinit-user', '--generate', '--name', 'user'])
+  infinit_1.run(['infinit-user', '--create', '--name', 'user'])
   user = infinit_1.run([
     'infinit-user', '--export', '--full', '--name', 'user'
   ])

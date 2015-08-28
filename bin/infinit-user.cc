@@ -5,6 +5,7 @@
 #include <das/serializer.hh>
 
 #include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/pem.hh>
 
 ELLE_LOG_COMPONENT("infinit-user");
 
@@ -61,14 +62,62 @@ export_(variables_map const& args)
   }
 }
 
+void
+echo_mode(bool enable)
+{
+#if defined(INFINIT_WINDOWS)
+  HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+  DWORD mode;
+  GetConsoleMode(hStdin, &mode);
+  if (!enable)
+    mode &= ~ENABLE_ECHO_INPUT;
+  else
+    mode |= ENABLE_ECHO_INPUT;
+  SetConsoleMode(hStdin, mode );
+#else
+  struct termios tty;
+  tcgetattr(STDIN_FILENO, &tty);
+  if(!enable)
+    tty.c_lflag &= ~ECHO;
+  else
+    tty.c_lflag |= ECHO;
+  (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+#endif
+}
+
+std::string
+read_passphrase()
+{
+  elle::SafeFinally restore_echo([] { echo_mode(true); });
+  echo_mode(false);
+  std::cout << "Passphrase: ";
+  std::cout.flush();
+  std::string res;
+  std::getline(std::cin, res);
+  return res;
+}
+
 static
 void
-generate(variables_map const& args)
+create(variables_map const& args)
 {
   auto name = get_name(args);
-  report("generating RSA keypair");
-  infinit::User user(name,
-                     infinit::cryptography::rsa::keypair::generate(2048));
+  auto keys_file = optional(args, "keys");
+  auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
+    {
+      if (keys_file)
+      {
+        auto passphrase = read_passphrase();
+        return infinit::cryptography::rsa::pem::import_keypair(
+          keys_file.get(), passphrase);
+      }
+      else
+      {
+        report("generating RSA keypair");
+        return infinit::cryptography::rsa::keypair::generate(2048);
+      }
+    }();
+  infinit::User user(name, keys);
   ifnt.user_save(user);
   report_action("generated", "user", name);
 }
@@ -117,13 +166,15 @@ main(int argc, char** argv)
       },
     },
     {
-      "generate",
-      "Create user with a generated pair of keys",
-      &generate,
+      "create",
+      "Create a user",
+      &create,
       {},
       {
         { "name,n", value<std::string>(),
           "user name (defaults to system username)" },
+        { "keys,k", value<std::string>(),
+          "key in PEM format (new keys are generated if unspecified)" },
       },
     },
     {
