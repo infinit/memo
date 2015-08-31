@@ -173,8 +173,9 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user name (defaults to system username)" },
-        { "keys,k", value<std::string>(),
-          "key in PEM format (new keys are generated if unspecified)" },
+        { "key,k", value<std::string>(),
+          "RSA key pair in PEM format - e.g. your SSH key"
+            " (generated if unspecified)" },
       },
     },
     {
