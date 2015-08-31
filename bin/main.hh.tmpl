@@ -1058,5 +1058,5 @@ beyond_fetch(std::string const& type, std::string const& name)
 }
 
 boost::program_options::option_description option_owner(
-  "owner,w", boost::program_options::value<std::string>(),
-  "user owning the network (defaults to system user)");
+  "as,a", boost::program_options::value<std::string>(),
+  "user to run commands as (defaults to system user)");
