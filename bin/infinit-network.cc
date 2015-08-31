@@ -336,8 +336,6 @@ int main(int argc, char** argv)
         owner,
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
-        { "user,u", value<std::string>(),
-          "user to join the network as (defaults to system user)" },
       },
     },
     {
