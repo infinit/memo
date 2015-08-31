@@ -21,6 +21,7 @@
 #include <reactor/thread.hh>
 
 #include <infinit/storage/Filesystem.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Remote.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
