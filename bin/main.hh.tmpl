@@ -530,7 +530,7 @@ namespace infinit
       auto name = qualified_name(network.name, network.dht()->owner);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network", overwrite);
-      elle::serialization::json::SerializerOut s(f, false);
+      elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
     }
 
@@ -540,7 +540,7 @@ namespace infinit
       auto name = qualified_name(network.name, network.owner);
       boost::filesystem::ofstream f;
       this->_open(f, this->_network_path(name), name, "network");
-      elle::serialization::json::SerializerOut s(f, false);
+      elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
     }
 
@@ -549,7 +549,7 @@ namespace infinit
     {
       boost::filesystem::ofstream f;
       this->_open(f, this->_user_path(user.name), user.name, "user");
-      elle::serialization::json::SerializerOut s(f, false);
+      elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(user);
     }
 
@@ -579,7 +579,7 @@ namespace infinit
     {
       boost::filesystem::ofstream f;
       this->_open(f, this->_storage_path(name), name, "storage");
-      elle::serialization::json::SerializerOut s(f, false);
+      elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(storage);
     }
 
@@ -606,7 +606,7 @@ namespace infinit
     {
       boost::filesystem::ofstream f;
       this->_open(f, this->_volume_path(volume.name), volume.name, "volume");
-      elle::serialization::json::SerializerOut s(f, false);
+      elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(volume);
     }
 
