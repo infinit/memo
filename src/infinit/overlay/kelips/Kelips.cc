@@ -1633,6 +1633,12 @@ namespace infinit
         return elle::make_unique< ::kelips::Node>(config, !server);
       }
 
+      void
+      Configuration::join()
+      {
+        this->config.node_id = infinit::model::Address::random();
+      }
+
       static const
       elle::serialization::Hierarchy<infinit::overlay::Configuration>::
       Register<Configuration> _registerKelipsOverlayConfig("kelips");

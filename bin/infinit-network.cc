@@ -187,6 +187,7 @@ join(variables_map const& args)
     if (!ok)
       throw elle::Error("passport signature is invalid");
     infinit::Network network;
+    desc.overlay->join();
     network.model =
       elle::make_unique<infinit::model::doughnut::Configuration>(
         std::move(desc.overlay),

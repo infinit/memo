@@ -62,6 +62,11 @@ namespace infinit
     {
       static constexpr char const* virtually_serializable_key = "type";
 
+      /// Perform any initialization required at join time.
+      virtual
+      void
+      join() {}
+
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(std::vector<std::string> const& hosts, bool server) = 0;
