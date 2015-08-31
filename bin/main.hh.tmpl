@@ -1056,3 +1056,7 @@ beyond_fetch(std::string const& type, std::string const& name)
                     r.status(), type));
   return elle::serialization::json::deserialize<T>(r, false);
 }
+
+boost::program_options::option_description option_owner(
+  "owner,w", boost::program_options::value<std::string>(),
+  "user owning the network (defaults to system user)");

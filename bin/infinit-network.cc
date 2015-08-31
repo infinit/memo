@@ -21,7 +21,7 @@ void
 create(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   std::unique_ptr<infinit::overlay::Configuration> overlay_config;
   if (args.count("stonehenge"))
   {
@@ -90,7 +90,7 @@ static
 void
 export_(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(
@@ -109,7 +109,7 @@ static
 void
 fetch(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto network_name = mandatory(args, "name", "network name");
   network_name = ifnt.qualified_name(network_name, owner.public_key);
   auto desc =
@@ -133,7 +133,7 @@ static
 void
 invite(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto network_name = mandatory(args, "name", "network name");
   auto user_name = mandatory(args, "user", "user name");
   auto network = ifnt.network_descriptor_get(
@@ -157,7 +157,7 @@ static
 void
 join(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto input = get_input(args);
   auto name = ifnt.qualified_name(mandatory(args, "name", "network name"),
                                   owner.public_key);
@@ -240,8 +240,6 @@ run(variables_map const& args)
 int main(int argc, char** argv)
 {
   program = argv[0];
-  option_description owner("owner,w", value<std::string>(),
-                           "user owning the network (defaults to system user)");
 
   options_description overlay_types_options("Overlay types");
   overlay_types_options.add_options()
@@ -269,7 +267,7 @@ int main(int argc, char** argv)
         { "name,n", value<std::string>(), "created network name" },
         { "storage,s", value<std::vector<std::string>>()->multitoken(),
             "optional storage to contribute" },
-        owner,
+        option_owner,
         { "port,p", value<int>(), "port to listen on (random by default)" },
         { "stdout", bool_switch(), "output configuration to stdout" },
       },
@@ -286,7 +284,7 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to export" },
-        owner,
+        option_owner,
         { "output,o", value<std::string>(),
             "file to write exported network to (defaults to stdout)" },
       },
@@ -298,7 +296,7 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to fetch" },
-        owner,
+        option_owner,
       },
     },
     {
@@ -321,7 +319,7 @@ int main(int argc, char** argv)
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "output,o", value<std::string>(),
             "file to write the passport to (defaults to stdout)" },
-        owner,
+        option_owner,
       },
     },
     {
@@ -333,7 +331,7 @@ int main(int argc, char** argv)
         { "input,i", value<std::string>(),
             "file to read passport from (defaults to stdin)" },
         { "name,n", value<std::string>(), "network to join" },
-        owner,
+        option_owner,
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
       },

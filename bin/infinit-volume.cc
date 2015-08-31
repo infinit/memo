@@ -29,7 +29,7 @@ static
 void
 create(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto name = volume_name(args, owner);
   auto network_name = ifnt.qualified_name(mandatory(args, "network"),
                                           owner.public_key);
@@ -59,7 +59,7 @@ static
 void
 export_(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto name = volume_name(args, owner);
   auto output = get_output(args);
   auto volume = ifnt.volume_get(name);
@@ -87,7 +87,7 @@ static
 void
 publish(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network);
@@ -99,7 +99,7 @@ static
 void
 fetch(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto name = volume_name(args, owner);
   auto desc =
     beyond_fetch<infinit::Volume>("volume", name);
@@ -110,7 +110,7 @@ static
 void
 run(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, "owner"));
+  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
   auto name = volume_name(args, owner);
   std::vector<std::string> hosts;
   if (args.count("host"))
@@ -201,8 +201,6 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  option_description owner("owner,w", value<std::string>(),
-                           "user owning the volume (defaults to system user)");
   Modes modes {
     {
       "create",
@@ -213,7 +211,7 @@ main(int argc, char** argv)
         { "name", value<std::string>(), "created volume name" },
         { "network", value<std::string>(), "underlying network to use" },
         { "mountpoint", value<std::string>(), "where to mount the filesystem" },
-        owner,
+        option_owner,
         { "stdout", bool_switch(), "output configuration to stdout" },
       },
     },
@@ -226,7 +224,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network to export" },
         { "output,o", value<std::string>(),
           "file to write volume to  (stdout by default)"},
-        owner,
+        option_owner,
       },
     },
     {
@@ -236,7 +234,7 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "volume to fetch" },
-        owner,
+        option_owner,
       },
     },
     {
@@ -257,7 +255,7 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to publish" },
-        owner,
+        option_owner,
       },
     },
     {
@@ -276,7 +274,7 @@ main(int argc, char** argv)
         { "name", value<std::string>(), "volume name" },
         { "host", value<std::vector<std::string>>()->multitoken(),
           "hosts to connect to" },
-        owner,
+        option_owner,
       },
     },
   };
