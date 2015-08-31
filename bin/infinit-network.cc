@@ -37,6 +37,8 @@ create(variables_map const& args)
       elle::make_unique<infinit::overlay::kelips::Configuration>();
     if (args.count("nodes"))
       kelips->config.k = sqrt(args["nodes"].as<int>());
+    if (args.count("k"))
+      kelips->config.k = args["k"].as<int>();
     kelips->config.node_id = infinit::model::Address::random();
     overlay_config = std::move(kelips);
   }
@@ -256,6 +258,7 @@ int main(int argc, char** argv)
   options_description kelips_options("Kelips options");
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
+    ("k", value<int>(), "number of groups")
     ;
   options_description options("Infinit network utility");
   Modes modes {
