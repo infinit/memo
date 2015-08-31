@@ -37,7 +37,10 @@ create(variables_map const& args)
   auto network = ifnt.network_get(network_name);
   ELLE_TRACE("start network");
   report_action("starting", "network", network.qualified_name());
-  auto model = network.run();
+  std::vector<std::string> hosts;
+  if (args.count("host"))
+    hosts = args["host"].as<std::vector<std::string>>();
+  auto model = network.run(hosts);
   ELLE_TRACE("create volume");
   report("creating volume root blocks");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
@@ -213,6 +216,8 @@ main(int argc, char** argv)
         { "mountpoint", value<std::string>(), "where to mount the filesystem" },
         option_owner,
         { "stdout", bool_switch(), "output configuration to stdout" },
+        { "host", value<std::vector<std::string>>()->multitoken(),
+          "hosts to connect to" },
       },
     },
     {
