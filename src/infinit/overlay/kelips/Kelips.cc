@@ -1128,7 +1128,16 @@ namespace kelips
       }
     }
     else
-      return kelipsGet(file, n);
+    {
+      try
+      {
+        return kelipsGet(file, n);
+      }
+      catch (reactor::Timeout const& e)
+      {
+        throw infinit::model::MissingBlock(file);
+      }
+    }
   }
 
   std::vector<RpcEndpoint>
