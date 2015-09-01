@@ -36,7 +36,10 @@ ELLE_TEST_SCHEDULED(doughnut)
     keys_a,
     keys_a.K(),
     passport_a,
-    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+      [=](infinit::model::doughnut::Doughnut*d) {
+        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+      })
     );
   local_a->doughnut() = dht_a.get();
   dht_a->overlay()->register_local(local_a);
@@ -45,7 +48,10 @@ ELLE_TEST_SCHEDULED(doughnut)
     keys_b,
     keys_a.K(),
     passport_b,
-    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+      [=](infinit::model::doughnut::Doughnut*d) {
+        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+      })
     );
   local_b->doughnut() = dht_b.get();
   local_b->serve();
@@ -97,7 +103,10 @@ ELLE_TEST_SCHEDULED(ACB)
     keys_a,
     keys_a.K(),
     passport_a,
-    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+      [=](infinit::model::doughnut::Doughnut*d) {
+        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+      })
     );
   local_a->doughnut() = dht_a.get();
   dht_a->overlay()->register_local(local_a);
@@ -106,7 +115,10 @@ ELLE_TEST_SCHEDULED(ACB)
     keys_b,
     keys_a.K(),
     passport_b,
-    elle::make_unique<infinit::overlay::Stonehenge>(members)
+    static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+      [=](infinit::model::doughnut::Doughnut*d) {
+        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+      })
     );
   local_b->doughnut() = dht_b.get();
   dht_b->overlay()->register_local(local_b);

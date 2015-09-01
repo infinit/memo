@@ -125,7 +125,8 @@ namespace kelips
     , public elle::Printable
   {
   public:
-    Node(Configuration const& config, bool observer);
+    Node(Configuration const& config, bool observer,
+         infinit::model::doughnut::Doughnut* doughnut);
     virtual ~Node();
     void start();
     void engage();
@@ -216,7 +217,8 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(std::vector<std::string> const& hosts, bool server) override;
+        make(std::vector<std::string> const& hosts, bool server,
+             model::doughnut::Doughnut* doughnut) override;
 
         ::kelips::Configuration config;
       };

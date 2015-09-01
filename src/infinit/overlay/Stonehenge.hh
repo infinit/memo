@@ -16,7 +16,7 @@ namespace infinit
     public:
       typedef boost::asio::ip::tcp::endpoint Host;
       typedef std::vector<Host> Hosts;
-      Stonehenge(Hosts hosts);
+      Stonehenge(Hosts hosts, model::doughnut::Doughnut* doughnut);
       ELLE_ATTRIBUTE_R(Hosts, hosts);
 
     /*-------.
@@ -40,7 +40,8 @@ namespace infinit
       serialize(elle::serialization::Serializer& s);
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(std::vector<std::string> const& hosts, bool server) override;
+      make(std::vector<std::string> const& hosts, bool server,
+        model::doughnut::Doughnut* doughnut) override;
     };
   }
 }

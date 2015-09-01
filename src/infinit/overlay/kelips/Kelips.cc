@@ -312,14 +312,17 @@ namespace kelips
     dst = E2(src.address(), src.port());
   }
 
-  Node::Node(Configuration const& config, bool observer)
+  Node::Node(Configuration const& config, bool observer,
+    infinit::model::doughnut::Doughnut* doughnut)
   : _config(config)
   , _next_id(1)
   , _observer(observer)
   {
     if (_config.node_id == Address::null)
       ELLE_LOG("Running in observer mode");
+    this->doughnut(doughnut);
     start();
+
   }
 
   int Node::group_of(Address const& a)
@@ -1648,13 +1651,14 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(std::vector<std::string> const& hosts, bool server)
+      Configuration::make(std::vector<std::string> const& hosts, bool server,
+                          infinit::model::doughnut::Doughnut* doughnut)
       {
         for (auto const& host: hosts)
           config.bootstrap_nodes.push_back(
             elle::serialization::Serialize< ::kelips::PrettyGossipEndpoint>
             ::convert(host));
-        return elle::make_unique< ::kelips::Node>(config, !server);
+        return elle::make_unique< ::kelips::Node>(config, !server, doughnut);
       }
 
       void

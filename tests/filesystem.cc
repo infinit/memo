@@ -185,14 +185,16 @@ static void make_nodes(std::string store, int node_count,
     for (int i = 0; i < node_count; ++i)
     {
       auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-      std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
       infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner.k());
       auto model =
         new infinit::model::doughnut::Doughnut(
           std::move(kp),
           owner.K(),
           passport,
-          std::move(ov)
+          static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
+            })
           );
       nodes[i]->doughnut() = model;
     }
@@ -239,7 +241,6 @@ static void run_filesystem_dht(std::string const& store,
       if (nmount == 1)
       {
         ELLE_TRACE("configuring mounter...");
-        std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         keys.push_back(kp.K());
         infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner_keys.k());
@@ -250,7 +251,10 @@ static void run_filesystem_dht(std::string const& store,
           std::move(kp),
           owner_keys.K(),
           passport,
-          std::move(ov)
+          static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
+            })
           );
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
