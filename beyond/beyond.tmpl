@@ -47,6 +47,11 @@ def parse_options():
                       type = str,
                       help = 'Google app secret',
                       default = ${repr(google_app_secret)})
+  parser.add_argument(
+    '--couchdb-directory',
+    metavar = 'PATH',
+    type = str,
+    help = 'CouchDB persisent directory (temporary if unspecified)')
   parser.add_argument('--couchdb-port',
                       metavar = 'PORT',
                       type = int,
@@ -56,7 +61,10 @@ def parse_options():
 
 try:
   args = parse_options()
-  with infinit.beyond.couchdb.CouchDB(port = args.couchdb_port) as couchdb:
+  with infinit.beyond.couchdb.CouchDB(
+      port = args.couchdb_port,
+      directory = args.couchdb_directory,
+  ) as couchdb:
     datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
     beyond = infinit.beyond.Beyond(
       datastore = datastore,

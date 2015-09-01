@@ -1,17 +1,22 @@
 import couchdb
 import couchdb.client
 import json
+import os
 import os.path
+import requests
 import shutil
 import subprocess
 import tempfile
+import time
 
 import infinit.beyond
 
 class CouchDB:
 
-  def __init__(self, port = 0):
+  def __init__(self, port = 0, directory = None):
     self.beyond = None
+    self.__delete = False
+    self.__dir = directory
     self.__uri = None
     self.__port = port
 
@@ -19,7 +24,14 @@ class CouchDB:
     return '%s/couchdb.%s' % (self.__dir, p)
 
   def __enter__(self):
-    self.__dir = tempfile.mkdtemp()
+    if self.__dir is None:
+      self.__dir = tempfile.mkdtemp()
+      self.__delete = True
+    else:
+      try:
+        os.makedirs(self.__dir)
+      except FileExistsError:
+        pass
     config = self.__path('ini')
     pid = self.__path('pid')
     stdout = self.__path('stdout')
@@ -44,16 +56,25 @@ python=python -m couchdb
     subprocess.check_call(
       ['couchdb', '-a', config,
        '-b', '-p', pid, '-o', stdout, '-e', stderr])
-    while not (os.path.exists(self.__path('uri'))):
-      import time
+    status_cmd = ['couchdb', '-a', config, '-p', pid, '-s']
+    while subprocess.call(status_cmd, stderr = subprocess.PIPE) != 0:
+      time.sleep(0.1)
+    while not os.path.exists(self.__path('uri')):
       time.sleep(0.1)
     with open(self.__path('uri'), 'r') as f:
       self.__uri = f.read().strip()
+    while True:
+      try:
+        if requests.get(self.__uri).json()['couchdb'] == 'Welcome':
+          break
+      except requests.exceptions.ConnectionError:
+        time.sleep(0.1)
     return couchdb.Server(self.__uri)
 
   def __exit__(self, *args, **kwargs):
     subprocess.check_call(['couchdb', '-d', '-p', self.__path('pid')])
-    shutil.rmtree(self.__dir)
+    if self.__delete:
+      shutil.rmtree(self.__dir)
 
   @property
   def uri(self):
