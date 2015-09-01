@@ -971,6 +971,8 @@ namespace kelips
   {
     ELLE_TRACE("%s: getFileRequest %s/%x %s/%s", *this, p->request_id, p->fileAddress,
              p->result.size(), p->count);
+    if (p->originEndpoint.port() == 0)
+      p->originEndpoint = p->endpoint;
     int fg = group_of(p->fileAddress);
     if (fg == _group)
     {
@@ -1043,6 +1045,8 @@ namespace kelips
   void Node::onPutFileRequest(packet::PutFileRequest* p)
   {
     ELLE_TRACE("%s: putFileRequest %s %s %x", *this, p->ttl, p->insert_ttl, p->fileAddress);
+    if (p->originEndpoint.port() == 0)
+      p->originEndpoint = p->endpoint;
     if (p->insert_ttl == 0)
     {
       // check if we didn't already accept this file
