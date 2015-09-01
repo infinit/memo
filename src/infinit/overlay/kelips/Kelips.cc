@@ -332,6 +332,16 @@ namespace kelips
     return addr4 % _config.k;
   }
 
+  Node::~Node()
+  {
+    if (_emitter_thread)
+      _emitter_thread->terminate_now();
+    if (_listener_thread)
+      _listener_thread->terminate_now();
+    if (_pinger_thread)
+      _pinger_thread->terminate_now();
+  }
+
   void Node::engage()
   {
     _gossip.socket()->close();

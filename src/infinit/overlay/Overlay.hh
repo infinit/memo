@@ -33,6 +33,7 @@ namespace infinit
     `-------------*/
     public:
       Overlay();
+      virtual ~Overlay() {}
 
     /*-------.
     | Lookup |

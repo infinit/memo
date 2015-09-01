@@ -126,6 +126,7 @@ namespace kelips
   {
   public:
     Node(Configuration const& config, bool observer);
+    virtual ~Node();
     void start();
     void engage();
     void
