@@ -135,13 +135,12 @@ static
 void
 invite(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto self = ifnt.user_get(optional(args, option_owner.long_name()));
   auto network_name = mandatory(args, "name", "network name");
   auto user_name = mandatory(args, "user", "user name");
   auto network = ifnt.network_descriptor_get(
-    ifnt.qualified_name(network_name, owner.public_key));
+    ifnt.qualified_name(network_name, self.public_key));
   auto user = ifnt.user_get(user_name);
-  auto self = ifnt.user_get();
   if (self.public_key != network.owner)
     throw elle::Error(
       elle::sprintf("not owner of network \"%s\"", network_name));
