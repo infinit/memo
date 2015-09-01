@@ -168,6 +168,8 @@ class CouchDBDatastore:
     }
     for id, account in update.get('dropbox_accounts', {}).items():
       user.setdefault('dropbox_accounts', {})[id] = account
+    for id, account in update.get('google_accounts', {}).items():
+      user.setdefault('google_accounts', {})[id] = account
     return [user, {'json': json.dumps(user)}]
 
   ## ------- ##
