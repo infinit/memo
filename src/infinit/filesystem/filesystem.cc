@@ -35,6 +35,24 @@ namespace infinit
 {
   namespace filesystem
   {
+
+    template<typename F> auto umbrella(F f) -> decltype(f())
+    {
+      try {
+        return f();
+      }
+      catch(elle::Exception const& e)
+      {
+        ELLE_WARN("unexpected exception %s", e);
+        throw rfs::Error(EIO, elle::sprintf("%s", e));
+      }
+      catch(std::exception const& e)
+      {
+        ELLE_WARN("unexpected exception %s", e);
+        throw rfs::Error(EIO, e.what());
+      }
+    }
+
     typedef infinit::model::blocks::Block Block;
     typedef infinit::model::blocks::MutableBlock MutableBlock;
     typedef infinit::model::blocks::ImmutableBlock ImmutableBlock;
@@ -466,11 +484,11 @@ namespace infinit
       ELLE_DEBUG("Anyblock store: %x", _backend->address());
       if (_is_mutable)
       {
-        model.store(*_backend, mode);
+        umbrella([&] {model.store(*_backend, mode);});
         return _backend->address();
       }
       auto block = model.make_block<ImmutableBlock>(_buf);
-      model.store(*block, mode);
+      umbrella([&] { model.store(*block, mode);});
       return block->address();
     }
 
@@ -497,7 +515,36 @@ namespace infinit
       }
       catch (elle::Exception const& e)
       {
-        ELLE_WARN("Unexpected unexpected exception: %s", e.what());
+        ELLE_WARN("Unexpected exception: %s", e.what());
+      }
+    }
+
+    void
+    FileSystem::store_or_die(model::blocks::Block& block, model::StoreMode mode)
+    {
+      try
+      {
+        _block_store->store(block, mode);
+      }
+      catch (model::MissingBlock const& mb)
+      {
+        ELLE_WARN("Unexpected storage result on store: %s", mb);
+        throw rfs::Error(EIO, elle::sprintf("%s", mb));
+      }
+      catch (elle::serialization::Error const& se)
+      {
+        ELLE_WARN("serialization error on store %x: %s", block.address(), se);
+        throw rfs::Error(EIO, elle::sprintf("%s", se));
+      }
+      catch(elle::Exception const& e)
+      {
+        ELLE_WARN("unexpected exception on store %x: %s", block.address(), e);
+        throw rfs::Error(EIO, elle::sprintf("%s", e));
+      }
+      catch(std::exception const& e)
+      {
+        ELLE_WARN("unexpected exception on store %x: %s", block.address(), e);
+        throw rfs::Error(EIO, e.what());
       }
     }
 
@@ -510,13 +557,23 @@ namespace infinit
       }
       catch (model::MissingBlock const& mb)
       {
-        ELLE_WARN("Unexpected storage result: %s", mb);
-        throw rfs::Error(EIO, "i/o error");
+        ELLE_WARN("Unexpected storage result on fetch: %s", mb);
+        throw rfs::Error(EIO, elle::sprintf("%s", mb));
       }
       catch (elle::serialization::Error const& se)
       {
-        ELLE_WARN("serialization error on %x: %s", address, se);
-        throw rfs::Error(EIO, "i/o error");
+        ELLE_WARN("serialization error on fetch %x: %s", address, se);
+        throw rfs::Error(EIO, elle::sprintf("%s", se));
+      }
+      catch(elle::Exception const& e)
+      {
+        ELLE_WARN("unexpected exception on fetch %x: %s", address, e);
+        throw rfs::Error(EIO, elle::sprintf("%s", e));
+      }
+      catch(std::exception const& e)
+      {
+        ELLE_WARN("unexpected exception on fetch %x: %s", address, e);
+        throw rfs::Error(EIO, e.what());
       }
     }
 
@@ -649,7 +706,7 @@ namespace infinit
       }
       _last_fetch = now;
       _block = elle::cast<ACLBlock>::runtime
-        (_owner.block_store()->fetch(_block->address()));
+        (_owner.fetch_or_die(_block->address()));
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
@@ -719,7 +776,7 @@ namespace infinit
     {
       ELLE_DEBUG("Directory pushChanges: %s on %x size %s",
                  this, _block->address(), _block->data().size());
-      _owner.block_store()->store(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
+      _owner.store_or_die(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
       ELLE_DEBUG("pushChange ok");
     }
 
@@ -1059,14 +1116,14 @@ namespace infinit
       {
         ELLE_ASSERT(!!_parent->_block);
         // We must store first to ready ACL layer
-        _owner.block_store()->store(*b, model::STORE_INSERT);
+        _owner.store_or_die(*b, model::STORE_INSERT);
         _parent->_block->copy_permissions(*b);
         Directory d(_parent, _owner, _name, std::move(b));
         d._inherit_auth = true;
         d._push_changes();
       }
       else
-        _owner.block_store()->store(*b, model::STORE_INSERT);
+        _owner.store_or_die(*b, model::STORE_INSERT);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name,
@@ -1123,7 +1180,7 @@ namespace infinit
       if (_parent->_inherit_auth)
       {
         // ACLblock is not ready yet, we cant use permissions
-        _owner.block_store()->store(*f->_first_block, model::STORE_INSERT);
+        _owner.store_or_die(*f->_first_block, model::STORE_INSERT);
         // now it is :)
         f->_first_block_new = false;
         _parent->_block->copy_permissions(
@@ -1244,7 +1301,7 @@ namespace infinit
         return;
       Address addr = _parent->_files.at(_name).address;
       _first_block = elle::cast<MutableBlock>::runtime(
-        _owner.block_store()->fetch(addr));
+        _owner.fetch_or_die(addr));
     }
 
     File::Header
@@ -1323,7 +1380,7 @@ namespace infinit
           memcpy(data.mutable_contents() + offset,
             addr.value(), sizeof(Address::Value));
         });
-        _owner.block_store()->store(*_first_block);
+        _owner.store_or_die(*_first_block);
       }
       else
       {
@@ -1359,7 +1416,7 @@ namespace infinit
       dir->_files.at(newname).name = newname;
       dir->_changed(true);
       _owner.filesystem()->extract(where.string());
-      _owner.block_store()->store(*_first_block);
+      _owner.store_or_die(*_first_block);
     }
 
     void
@@ -1404,7 +1461,7 @@ namespace infinit
           Header header = _header();
           header.links--;
           _header(header);
-          _owner.block_store()->store(*_first_block);
+          _owner.store_or_die(*_first_block);
         }
         else
         {
@@ -1495,7 +1552,7 @@ namespace infinit
         {
           header.total_size = new_size;
           _header(header);
-          _owner.block_store()->store(*_first_block);
+          _owner.store_or_die(*_first_block);
           return;
         }
         // FIXME: addr should be a Address::Value
@@ -1531,7 +1588,7 @@ namespace infinit
           else
           {
             _blocks[drop_from].block =
-              AnyBlock(_owner.block_store()->fetch(addr[drop_from + 1]));
+              AnyBlock(_owner.fetch_or_die(addr[drop_from + 1]));
             CacheEntry& ent = _blocks[drop_from];
             bl = &ent.block;
             ent.dirty = true;
@@ -1555,7 +1612,7 @@ namespace infinit
             data_block = & it->second.block;
           else
           {
-            std::unique_ptr<Block> bl = _owner.block_store()->fetch(addr[1]);
+            std::unique_ptr<Block> bl = _owner.fetch_or_die(addr[1]);
             _blocks[0] = {AnyBlock(std::move(bl)), false, {}, false};
             data_block = &_blocks[0].block;
           }
@@ -1566,7 +1623,7 @@ namespace infinit
               data.append(data_block->data().contents(), new_size);
             });
           _blocks.clear();
-          _owner.block_store()->store(*_first_block, infinit::model::STORE_UPDATE);
+          _owner.store_or_die(*_first_block, infinit::model::STORE_UPDATE);
         }
       }
       _changed();
@@ -1653,8 +1710,8 @@ namespace infinit
       Header h = _header();
       ELLE_DEBUG("First block: v:%s bs:%s l:%s ts:%s", h.version, h.block_size,
                  h.links, h.total_size);
-      _owner.block_store()->store(*_first_block,
-                                  _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+      _owner.store_or_die(*_first_block,
+                          _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
       _first_block_new = false;
       _parent->_changed(false);
     }
@@ -1665,7 +1722,7 @@ namespace infinit
       // Switch without changing our address
       if (!_first_block)
       _first_block = elle::cast<MutableBlock>::runtime
-        (_owner.block_store()->fetch(_parent->_files.at(_name).address));
+        (_owner.fetch_or_die(_parent->_files.at(_name).address));
       uint64_t current_size = _first_block->data().size();
       auto new_block = _owner.block_store()->make_block<ImmutableBlock>(
         _first_block->data());
@@ -1745,8 +1802,8 @@ namespace infinit
       }
       if (fat_change)
       {
-        _owner.block_store()->store(*_first_block,
-                                  _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+        _owner.store_or_die(*_first_block,
+                            _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
         _first_block_new = false;
       }
     }
@@ -1818,7 +1875,7 @@ namespace infinit
       else if (key == "user.infinit.auth")
       {
         Address addr = _parent->_files.at(_name).address;
-        auto block = _owner.block_store()->fetch(addr);
+        auto block = _owner.fetch_or_die(addr);
         return perms_to_json(dynamic_cast<ACLBlock&>(*block));
       }
       else
@@ -1862,12 +1919,12 @@ namespace infinit
         std::pair<bool, bool> perms = parse_flags(flags);
         std::unique_ptr<infinit::model::User> user = _get_user(value);
         Address addr = _parent->_files.at(_name).address;
-        auto block = _owner.block_store()->fetch(addr);
+        auto block = _owner.fetch_or_die(addr);
         auto acl = dynamic_cast<model::blocks::ACLBlock*>(block.get());
         ELLE_ASSERT(acl);
         ELLE_TRACE("Setting permission at %s", acl->address());
         acl->set_permissions(*user, perms.first, perms.second);
-        _owner.block_store()->store(*acl); // FIXME STORE MODE
+        _owner.store_or_die(*acl); // FIXME STORE MODE
       }
       else
         Node::setxattr(name, value, flags);
@@ -1901,7 +1958,7 @@ namespace infinit
         }
         ELLE_TRACE("Setting permission at %s", acl->address());
         acl->set_permissions(*user, perms.first, perms.second);
-        _owner.block_store()->store(*acl); // FIXME STORE MODE
+        _owner.store_or_die(*acl); // FIXME STORE MODE
       }
       else
         Node::setxattr(name, value, flags);
@@ -1980,7 +2037,7 @@ namespace infinit
         catch(elle::Error const& e)
         {
           _owner->_handle_count--;
-          ELLE_TRACE("assuming permissiond denied for error %s", e.what());
+          ELLE_WARN("assuming permissiond denied for error %s", e.what());
           _owner->_first_block.reset();
           THROW_ACCES;
         }
@@ -1988,7 +2045,7 @@ namespace infinit
         {
           _owner->_handle_count--;
           ELLE_WARN("Unexpected exception while fetching: %s", e.what());
-          throw;
+          throw rfs::Error(EIO, e.what());
         }
       }
     }
@@ -2050,7 +2107,7 @@ namespace infinit
           ELLE_DEBUG("read on uncached block, fetching");
           auto address = _owner->_parent->_files.at(_owner->_name).address;
           _owner->_first_block = elle::cast<MutableBlock>::runtime
-            (_owner->_owner.block_store()->fetch(address));
+            (_owner->_owner.fetch_or_die(address));
         }
         ELLE_ASSERT_EQ(signed(block->data().size()), total_size);
         memcpy(buffer.mutable_contents(),
@@ -2255,7 +2312,7 @@ namespace infinit
 
       ent.dirty = false;
       ent.new_block = false;
-      _owner->_owner.block_store()->store(*_owner->_first_block,
+      _owner->_owner.store_or_die(*_owner->_first_block,
                                   _owner->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
       _owner->_first_block_new = false;
       return r1 + r2;

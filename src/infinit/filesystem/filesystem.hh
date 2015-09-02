@@ -32,6 +32,10 @@ namespace infinit
 
       std::unique_ptr<model::blocks::Block>
       fetch_or_die(model::Address address);
+
+      void
+      store_or_die(model::blocks::Block& block,
+                   model::StoreMode mode = model::STORE_ANY);
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(model::Address, root_address);
