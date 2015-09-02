@@ -32,16 +32,11 @@
 
 std::string program;
 
-struct DropboxAccount
+struct Credentials
 {
-  int uid;
+  std::string uid;
   std::string display_name;
   std::string token;
-};
-
-struct DropboxAccounts
-{
-  std::vector<DropboxAccount> dropbox_accounts;
 };
 
 class CommandLineError
@@ -54,13 +49,9 @@ public:
   {}
 };
 
-DAS_MODEL(DropboxAccount, (uid, display_name, token), DasDropboxAccount);
-DAS_MODEL_DEFAULT(DropboxAccount, DasDropboxAccount);
-DAS_MODEL_SERIALIZE(DropboxAccount);
-DAS_MODEL(DropboxAccounts, (dropbox_accounts), DasDropboxAccounts);
-DAS_MODEL_DEFAULT(DropboxAccounts, DasDropboxAccounts);
-DAS_MODEL_SERIALIZE(DropboxAccounts);
-
+DAS_MODEL(Credentials, (uid, display_name, token), DasCredentials);
+DAS_MODEL_DEFAULT(Credentials, DasCredentials);
+DAS_MODEL_SERIALIZE(Credentials);
 
 struct Mode
 {
@@ -286,7 +277,7 @@ namespace infinit
     }
 
     std::string
-    uid()
+    uid() const
     {
       return uid(this->public_key);
     }
@@ -611,10 +602,9 @@ namespace infinit
     }
 
     void
-    credentials_dropbox_add(DropboxAccount const& a)
+    credentials_add(std::string const& name, Credentials const& a)
     {
-      auto path = this->_credentials_path(
-        "dropbox", elle::sprintf("%s", a.uid));
+      auto path = this->_credentials_path(name, elle::sprintf("%s", a.uid));
       boost::filesystem::ofstream f(path);
       if (!f.good())
         throw elle::Error(
@@ -622,11 +612,11 @@ namespace infinit
       elle::serialization::json::serialize(a, f, false);
     }
 
-    std::vector<DropboxAccount>
-    credentials_dropbox()
+    std::vector<Credentials>
+    credentials(std::string const& name) const
     {
-      std::vector<DropboxAccount> res;
-      auto const path = this->_credentials_path("dropbox");
+      std::vector<Credentials> res;
+      auto const path = this->_credentials_path(name);
       boost::filesystem::directory_iterator const end;
       for (boost::filesystem::directory_iterator it(path);
            it != end;
@@ -639,24 +629,60 @@ namespace infinit
             throw elle::Error(
               elle::sprintf("unable to open %s for reading", path));
           res.push_back(
-            elle::serialization::json::deserialize<DropboxAccount>(f, false));
+            elle::serialization::json::deserialize<Credentials>(f, false));
         }
       }
       return res;
     }
 
-    DropboxAccount
-    credentials_dropbox(std::string const& name)
+    Credentials
+    credentials(std::string const& name, std::string const& uid) const
     {
-      for (auto const& account: this->credentials_dropbox())
+      for (auto const& account: this->credentials(name))
         if (account.display_name == name
             || elle::sprintf("%s", account.uid) == name)
           return account;
-      throw elle::Error(elle::sprintf("no such Dropbox account: %s", name));
+      throw elle::Error(elle::sprintf("no such %s account: %s", name, uid));
+    }
+
+    void
+    credentials_dropbox_add(Credentials const& a)
+    {
+      this->credentials_add("dropbox", a);
+    }
+
+    std::vector<Credentials>
+    credentials_dropbox() const
+    {
+      return this->credentials("dropbox");
+    }
+
+    Credentials
+    credentials_dropbox(std::string const& uid) const
+    {
+      return credentials("dropbox", uid);
+    }
+
+    void
+    credentials_google_add(Credentials const& a)
+    {
+      this->credentials_add("google", a);
+    }
+
+    std::vector<Credentials>
+    credentials_google() const
+    {
+      return this->credentials("google");
+    }
+
+    Credentials
+    credentials_google(std::string const& uid) const
+    {
+      return credentials("google", uid);
     }
 
     boost::filesystem::path
-    _credentials_path(std::string const& service)
+    _credentials_path(std::string const& service) const
     {
       auto root = root_dir() / "credentials" / service;
       create_directories(root);
@@ -664,7 +690,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _credentials_path(std::string const& service, std::string const& name)
+    _credentials_path(std::string const& service, std::string const& name) const
     {
       return this->_credentials_path(service) / name;
     }

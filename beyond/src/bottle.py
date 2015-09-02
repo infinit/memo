@@ -11,7 +11,7 @@ class Bottle(bottle.Bottle):
       'exchange_url': 'https://api.dropbox.com/1/oauth2/token',
       'info_url': 'https://api.dropbox.com/1/account/info',
       'info': lambda info: {
-        'uid': info['uid'],
+        'uid': str(info['uid']),
         'display_name': info['display_name'],
       },
     },
@@ -40,8 +40,8 @@ class Bottle(bottle.Bottle):
       self.route('/oauth/%s' % s)(getattr(self, 'oauth_%s' % s))
       self.route('/users/<id>/%s-oauth' % s)(
         getattr(self, 'oauth_%s_get' % s))
-      self.route('/users/<id>/%s-accounts' %s, method = 'GET')(
-        getattr(self, 'user_%s_accounts_get' % s))
+      self.route('/users/<id>/credentials/%s' %s, method = 'GET')(
+        getattr(self, 'user_%s_credentials_get' % s))
     # User
     self.route('/users/<id>', method = 'GET')(self.user_get)
     self.route('/users/<id>', method = 'PUT')(self.user_put)
@@ -196,13 +196,13 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       }
   oauth.__name__ = 'oauth_%s' % name
   setattr(Bottle, oauth.__name__, oauth)
-  def user_accounts_get(self, id, name = name):
+  def user_credentials_get(self, id, name = name):
     beyond = self._Bottle__beyond
     try:
       user = beyond.user_get(id = id)
       self.authenticate(user)
       return {
-        'accounts':
+        'credentials':
           list(getattr(user, '%s_accounts' % name).values()),
       }
     except User.NotFound:
@@ -212,5 +212,5 @@ for name, conf in Bottle._Bottle__oauth_services.items():
         'reason': 'user %r does not exist' % id,
         'id': id,
       }
-  user_accounts_get.__name__ = 'user_%s_accounts_get' % name
-  setattr(Bottle, user_accounts_get.__name__, user_accounts_get)
+  user_credentials_get.__name__ = 'user_%s_credentials_get' % name
+  setattr(Bottle, user_credentials_get.__name__, user_credentials_get)
