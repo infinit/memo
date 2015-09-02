@@ -51,6 +51,10 @@ def configure(
     'templates/parts/footer.html',
   )
 
+  resources = drake.nodes(
+    'resources/images/logo.png',
+  )
+
   if python is not None:
     python_version = python.version
   else:
@@ -65,6 +69,8 @@ def configure(
   def copy_templates(where, how):
     where = drake.Path(where)
     for node in how(templates, where / 'share/infinit/website'):
+      yield node
+    for node in how(resources, where / 'share/infinit/website'):
       yield node
 
   build = drake.Rule('build')

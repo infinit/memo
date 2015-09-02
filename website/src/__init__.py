@@ -1,6 +1,6 @@
 import bottle
 
-from infinit.website.utils import route, view
+from infinit.website.utils import route, static_file, view
 
 class Website(bottle.Bottle):
 
@@ -12,3 +12,7 @@ class Website(bottle.Bottle):
   @view('pages/root')
   def root():
     return {}
+
+  @route('/images/<path:path>')
+  def images(path):
+    return static_file('images/%s' % path)

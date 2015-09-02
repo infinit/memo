@@ -17,6 +17,10 @@ def view(name):
     return bottle.mako_view(name, template_lookup = [lookup])(f)
   return res
 
+def static_file(path):
+  return bottle.static_file(
+    path, root = '%s/share/infinit/website/resources' % PREFIX)
+
 class Routes:
 
   def __init__(self):
