@@ -13,6 +13,9 @@
 #include <elle/serialization/binary/SerializerOut.hh>
 #include <elle/serialization/json.hh>
 
+#include <cryptography/SecretKey.hh>
+#include <cryptography/Error.hh>
+
 #include <reactor/Barrier.hh>
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
@@ -22,7 +25,9 @@
 
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/model/MissingBlock.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/Passport.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
@@ -88,7 +93,17 @@ namespace kelips
   typedef std::pair<Address, RpcEndpoint> GetFileResult;
   namespace packet
   {
-    #define REGISTER(classname, type) \
+    template<typename T> elle::Buffer serialize(T const& packet)
+    {
+      elle::Buffer buf;
+      elle::IOStream stream(buf.ostreambuf());
+      Serializer::SerializerOut output(stream, false);
+      output.serialize_forward((packet::Packet const&)packet);
+      //const_cast<T&>(packet).serialize(output);
+      return buf;
+    }
+
+#define REGISTER(classname, type) \
     static const elle::serialization::Hierarchy<Packet>:: \
     Register<classname>   \
     _registerPacket##classname(type)
@@ -100,6 +115,78 @@ namespace kelips
       Address sender;
       static constexpr char const* virtually_serializable_key = "type";
     };
+
+    struct EncryptedPayload: public Packet
+    {
+      EncryptedPayload() {}
+      EncryptedPayload(elle::serialization::SerializerIn& input) {serialize(input);}
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("sender", sender);
+        s.serialize("payload", payload);
+      }
+      std::unique_ptr<Packet> decrypt(infinit::cryptography::SecretKey const& k)
+      {
+        elle::Buffer plain = k.decipher(payload,
+                                        infinit::cryptography::Cipher::aes256,
+                                        infinit::cryptography::Mode::cbc,
+                                        infinit::cryptography::Oneway::sha256);
+        elle::IOStream stream(plain.istreambuf());
+        Serializer::SerializerIn input(stream, false);
+        std::unique_ptr<packet::Packet> packet;
+        input.serialize_forward(packet);
+        return std::move(packet);
+      }
+      void encrypt(infinit::cryptography::SecretKey const& k,
+                   Packet const& p)
+      {
+        elle::Buffer plain = packet::serialize(p);
+        payload = k.encipher(plain,
+                             infinit::cryptography::Cipher::aes256,
+                             infinit::cryptography::Mode::cbc,
+                             infinit::cryptography::Oneway::sha256);
+      }
+      elle::Buffer payload;
+    };
+    REGISTER(EncryptedPayload, "crypt");
+
+    struct RequestKey: public Packet
+    {
+      RequestKey(infinit::model::doughnut::Passport p) : passport(p) {}
+      RequestKey(elle::serialization::SerializerIn& input)
+      : passport(input) {
+        input.serialize("sender", sender);
+      }
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        passport.serialize(s);
+        s.serialize("sender", sender);
+      }
+      infinit::model::doughnut::Passport passport;
+    };
+    REGISTER(RequestKey, "reqk");
+
+    struct KeyReply: public Packet
+    {
+      KeyReply(infinit::model::doughnut::Passport p) : passport(p) {}
+      KeyReply(elle::serialization::SerializerIn& input)
+       : passport(input) {
+         input.serialize("sender", sender);
+         input.serialize("encrypted_key", encrypted_key);
+       }
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        passport.serialize(s);
+        s.serialize("sender", sender);
+        s.serialize("encrypted_key", encrypted_key);
+      }
+      elle::Buffer encrypted_key;
+      infinit::model::doughnut::Passport passport;
+    };
+    REGISTER(KeyReply, "repk");
 
     struct Ping: public Packet
     {
@@ -240,15 +327,6 @@ namespace kelips
 
 #undef REGISTER
 
-    template<typename T> elle::Buffer serialize(T const& packet)
-    {
-      elle::Buffer buf;
-      elle::IOStream stream(buf.ostreambuf());
-      Serializer::SerializerOut output(stream, false);
-      output.serialize_forward((packet::Packet const&)packet);
-      //const_cast<T&>(packet).serialize(output);
-      return buf;
-    }
   }
 
   struct PendingRequest
@@ -359,10 +437,17 @@ namespace kelips
     // Send a bootstrap request to bootstrap nodes
     packet::BootstrapRequest req;
     req.sender = _config.node_id;
-    elle::Buffer buf = packet::serialize(req);
     for (auto const& e: _config.bootstrap_nodes)
     {
-      send(buf, e);
+      if (!_config.encrypt || _config.accept_plain)
+        send(req, e, Address::null);
+      else
+      {
+        packet::RequestKey req(doughnut()->passport());
+        req.sender = _self;
+        send(req, e, Address::null);
+        _pending_bootstrap.push_back(e);
+      }
     }
     if (_config.wait)
       wait(_config.wait);
@@ -387,10 +472,51 @@ namespace kelips
       engage();
   }
 
-  void Node::send(elle::Buffer const& b, GossipEndpoint e)
+  void Node::send(packet::Packet const& p, GossipEndpoint e, Address a)
   {
+    ELLE_ASSERT(e.port() != 0);
+    bool is_crypto = dynamic_cast<const packet::EncryptedPayload*>(&p)
+    || dynamic_cast<const packet::RequestKey*>(&p)
+    || dynamic_cast<const packet::KeyReply*>(&p);
+    elle::Buffer b;
+    bool send_key_request = false;
+    auto it = _keys.find(a);
+    if (is_crypto
+      || !_config.encrypt
+      || (it == _keys.end() && _config.accept_plain)
+      )
+    {
+      b = packet::serialize(p);
+      send_key_request = _config.encrypt && !is_crypto;
+    }
+    else
+    {
+      if (it == _keys.end())
+      { // FIXME queue packet
+        ELLE_WARN("%s: dropping packet to %s : %s, no key available",
+                  *this, e, a);
+        send_key_request = true;
+      }
+      else
+      {
+        packet::EncryptedPayload ep;
+        ep.sender = p.sender;
+        ep.encrypt(it->second, p);
+        b = packet::serialize(ep);
+      }
+    }
+    if (send_key_request)
+    {
+      packet::RequestKey req(doughnut()->passport());
+      req.sender = _self;
+      send(req, e, Address::null);
+    }
+    if (b.size() == 0)
+      return;
+    static elle::Bench bencher("packet size", 5_sec);
+    bencher.add(b.size());
     reactor::Lock l(_udp_send_mutex);
-    ELLE_DUMP("%s: sending packet to %s\n%s", *this, e, b.string());
+    ELLE_DUMP("%s: sending %s bytes packet to %s\n%s", *this, b.size(), e, b.string());
     _gossip.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
   }
 
@@ -406,7 +532,7 @@ namespace kelips
       int sz = _gossip.receive_from(reactor::network::Buffer(buf.mutable_contents(), buf.size()),
                                     source);
       buf.size(sz);
-      ELLE_DUMP("%s: received data from %s:\n%s", *this, source, buf.string());
+      ELLE_DUMP("%s: received %s bytes from %s:\n%s", *this, sz, source, buf.string());
       new reactor::Thread("process", [buf, source, this]
         {
         //deserialize
@@ -420,9 +546,121 @@ namespace kelips
         catch(elle::serialization::Error const& e)
         {
           ELLE_WARN("%s: Failed to deserialize packet: %s", *this, e);
+          ELLE_TRACE("%x", buf);
           return;
         }
         packet->endpoint = source;
+        bool was_crypted = false;
+
+        // First handle crypto related packets
+        if (auto p = dynamic_cast<packet::EncryptedPayload*>(packet.get()))
+        {
+          auto key = _keys.find(packet->sender);
+          bool failure = true;
+          if (key == _keys.end())
+          {
+            ELLE_WARN("%s: key unknown for %s : %s",
+                      *this, source, packet->sender);
+          }
+          else
+          {
+            try
+            {
+              std::unique_ptr<packet::Packet> plain = p->decrypt(key->second);
+              if (plain->sender != p->sender)
+              {
+                ELLE_WARN("%s: sender inconsistency in encrypted packet: %s != %s",
+                          *this, p->sender, plain->sender);
+                return;
+              }
+              packet = std::move(plain);
+              packet->endpoint = source;
+              failure = false;
+              was_crypted = true;
+            }
+            catch (infinit::cryptography::Error const& e)
+            {
+              ELLE_WARN("%s: decryption from %s : %s failed: %s",
+                        *this, source, packet->sender, e.what());
+            }
+          }
+          if (failure)
+          { // send a key request
+            ELLE_DEBUG("%s: sending key request to %s", *this, source);
+            packet::RequestKey rk(doughnut()->passport());
+            rk.sender = _self;
+            elle::Buffer s = packet::serialize(rk);
+            send(rk, source, p->sender);
+            return;
+          }
+        } // EncryptedPayload
+        if (auto p = dynamic_cast<packet::RequestKey*>(packet.get()))
+        {
+          ELLE_DEBUG("%s: processing key request from %s", *this, source);
+          // validate passport
+          bool ok = p->passport.verify(doughnut()->owner());
+          if (!ok)
+          {
+            ELLE_WARN("%s: failed to validate passport from %s : %s",
+                      *this, source, p->sender);
+            return;
+          }
+          auto it = _keys.find(p->sender);
+          if (it != _keys.end())
+            ELLE_WARN("%s: overriding key for %s : %s",
+                      *this, source, p->sender);
+          auto sk = infinit::cryptography::secretkey::generate(256);
+          elle::Buffer password = sk.password();
+          _keys.insert(std::make_pair(p->sender, std::move(sk)));
+          packet::KeyReply kr(doughnut()->passport());
+          kr.sender = _self;
+          kr.encrypted_key = p->passport.user().seal(
+            password,
+            infinit::cryptography::Cipher::aes256,
+            infinit::cryptography::Mode::cbc);
+          send(kr, source, p->sender);
+          return;
+        } // requestkey
+        if (auto p = dynamic_cast<packet::KeyReply*>(packet.get()))
+        {
+          ELLE_DEBUG("%s: processing key reply from %s", *this, source);
+          // validate passport
+          bool ok = p->passport.verify(doughnut()->owner());
+          if (!ok)
+          {
+            ELLE_WARN("%s: failed to validate passport from %s : %s",
+                      *this, source, p->sender);
+            return;
+          }
+          elle::Buffer password = doughnut()->keys().k().open(
+            p->encrypted_key,
+            infinit::cryptography::Cipher::aes256,
+            infinit::cryptography::Mode::cbc);
+          infinit::cryptography::SecretKey sk(std::move(password));
+          _keys.insert(std::make_pair(p->sender, std::move(sk)));
+          // Flush operations waiting on crypto ready
+          auto it = std::find(_pending_bootstrap.begin(),
+                              _pending_bootstrap.end(),
+                              source);
+          if (it != _pending_bootstrap.end())
+          {
+            ELLE_DEBUG("%s: processing queued operation to %s", *this, source);
+            *it = _pending_bootstrap[_pending_bootstrap.size() - 1];
+            _pending_bootstrap.pop_back();
+            packet::BootstrapRequest req;
+            req.sender = _self;
+            send(req, source, p->sender);
+          }
+          return;
+        } // keyreply
+
+        if (!was_crypted && !_config.accept_plain)
+        {
+          ELLE_WARN("%s: rejecting plain packet from %s : %s",
+                    *this, source, packet->sender);
+          return;
+        }
+
         if (packet->sender != Address::null)
           onContactSeen(packet->sender, source);
 
@@ -438,12 +676,10 @@ namespace kelips
         }
         CASE(Ping)
         {
-          (void)p;
           packet::Pong r;
           r.sender = _self;
           r.remote_endpoint = source;
-          elle::Buffer s = packet::serialize(r);
-          send(s, source);
+          send(r, source, p->sender);
         }
         CASE(Gossip)
           onGossip(p);
@@ -721,9 +957,9 @@ namespace kelips
 
       p.contacts = pickContacts();
       elle::Buffer buf = serialize(p);
-      std::vector<GossipEndpoint> targets = pickOutsideTargets();
+      auto targets = pickOutsideTargets();
       for (auto const& e: targets)
-        send(buf, e);
+        send(p, e.first, e.second);
       // Add some files, just for group targets
       p.files = pickFiles();
       buf = serialize(p);
@@ -736,7 +972,7 @@ namespace kelips
           ELLE_TRACE("%s: info on %s files %s   %x %x", *this, p.files.size(),
                    serialize_time(p.files.begin()->second.first),
                    _self, p.files.begin()->second.second);
-        send(buf, e);
+        send(p, e.first, e.second);
       }
     }
   }
@@ -811,7 +1047,7 @@ namespace kelips
         if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
           target[c.first] = Contact{c.second.second, c.first, Duration(), c.second.first, Time(), 0};
       }
-      else if (c.second.first > it->second.last_seen)
+      else if (it->second.last_seen < c.second.first)
       { // Also update endpoint in case it changed
         if (it->second.endpoint != c.second.second)
           ELLE_WARN("%s: Endpoint change %s %s", *this, it->second.endpoint, c.second.second);
@@ -916,8 +1152,7 @@ namespace kelips
           res.contacts[it->first] = std::make_pair(it->second.last_seen, it->second.endpoint);
       }
     }
-    elle::Buffer buf = serialize(res);
-    send(buf, p->endpoint);
+    send(res, p->endpoint, p->sender);
   }
 
   void Node::addLocalResults(packet::GetFileRequest* p)
@@ -990,9 +1225,8 @@ namespace kelips
       res.request_id = p->request_id;
       res.result = p->result;
       res.ttl = p->ttl;
-      elle::Buffer buf = serialize(res);
       ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
-      send(buf, p->originEndpoint);
+      send(res, p->originEndpoint, p->originAddress);
       // FIXME: should we route the reply back the same path?
       return;
     }
@@ -1007,8 +1241,7 @@ namespace kelips
       res.origin = p->originAddress;
       res.request_id = p->request_id;
       res.ttl = 1;
-      elle::Buffer buf = serialize(res);
-      send(buf, p->originEndpoint);
+      send(res, p->originEndpoint, p->originAddress);
       return;
     }
     p->ttl--;
@@ -1020,8 +1253,7 @@ namespace kelips
     int idx = random(_gen);
     auto it = _state.contacts[fg].begin();
     while (idx--) ++it;
-    elle::Buffer buf = serialize(*p);
-    send(buf, it->second.endpoint);
+    send(*p, it->second.endpoint, it->second.address);
   }
 
   void Node::onGetFileReply(packet::GetFileReply* p)
@@ -1074,9 +1306,8 @@ namespace kelips
           res.fileAddress = p->fileAddress;
           res.resultAddress = _self;
           res.ttl = p->ttl;
-          elle::Buffer buf = serialize(res);
           _promised_files.push_back(p->fileAddress);
-          send(buf, p->originEndpoint);
+          send(res, p->originEndpoint, p->originAddress);
           return;
         }
       }
@@ -1102,8 +1333,7 @@ namespace kelips
     }
     p->sender = _self;
     p->ttl--;
-    elle::Buffer buf = serialize(*p);
-    send(buf, it->second.endpoint);
+    send(*p, it->second.endpoint, it->second.address);
   }
 
   void Node::onPutFileReply(packet::PutFileReply* p)
@@ -1189,7 +1419,6 @@ namespace kelips
       r->startTime = now();
       r->barrier.close();
       _pending_requests[req.request_id] = r;
-      elle::Buffer buf = serialize(req);
       // Select target node
       auto it = random_from(_state.contacts[fg], _gen);
       if (it == _state.contacts[fg].end())
@@ -1197,7 +1426,7 @@ namespace kelips
       if (it == _state.contacts[_group].end())
         throw std::runtime_error("No contacts in self/target groups");
       ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
-      send(buf, it->second.endpoint);
+      send(req, it->second.endpoint, it->second.address);
       try
       {
         reactor::wait(r->barrier,
@@ -1251,7 +1480,7 @@ namespace kelips
         if (it == _state.contacts[_group].end())
           throw std::runtime_error("No contacts in self/target groups");
         ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
-        send(buf, it->second.endpoint);
+        send(req, it->second.endpoint, it->second.address);
         try
         {
           reactor::wait(r->barrier,
@@ -1308,7 +1537,7 @@ namespace kelips
     int okcount = 0;
     for (auto const& e: candidates)
     {
-      if (e.second != Duration())
+      if (!(e.second == Duration())) //compiler glitch on != : ambiguous overload
       {
         total += std::chrono::duration_cast<US>(e.second).count();
         okcount += 1;
@@ -1354,7 +1583,7 @@ namespace kelips
     return res;
   }
 
-  std::vector<GossipEndpoint> Node::pickOutsideTargets()
+  std::vector<std::pair<GossipEndpoint, Address>> Node::pickOutsideTargets()
   {
     std::map<Address, int> group_of;
     std::map<Address, Duration> candidates;
@@ -1369,24 +1598,24 @@ namespace kelips
       }
     }
     std::vector<Address> addresses = pick(candidates, _config.gossip.other_target, _gen);
-    std::vector<GossipEndpoint> res;
+    std::vector<std::pair<GossipEndpoint, Address>> res;
     for (auto const& a: addresses)
     {
       int i = group_of.at(a);
-      res.push_back(_state.contacts[i].at(a).endpoint);
+      res.push_back(std::make_pair(_state.contacts[i].at(a).endpoint, a));
     }
     return res;
   }
 
-  std::vector<GossipEndpoint> Node::pickGroupTargets()
+  std::vector<std::pair<GossipEndpoint, Address>> Node::pickGroupTargets()
   {
     std::map<Address, Duration> candidates;
     for (auto const& e: _state.contacts[_group])
       candidates[e.first] = e.second.rtt;
     std::vector<Address> r = pick(candidates, _config.gossip.group_target, _gen);
-    std::vector<GossipEndpoint> result;
+    std::vector<std::pair<GossipEndpoint, Address>> result;
     for (auto const& a: r)
-      result.push_back(_state.contacts[_group].at(a).endpoint);
+      result.push_back(std::make_pair(_state.contacts[_group].at(a).endpoint, a));
     return result;
   }
 
@@ -1409,6 +1638,7 @@ namespace kelips
       ELLE_LOG("%s: %s", *this, ss.str());
       // pick a target
       GossipEndpoint endpoint;
+      Address address;
       int group;
       while (true)
       {
@@ -1424,16 +1654,16 @@ namespace kelips
         auto it = _state.contacts[group].begin();
         while(v--) ++it;
         endpoint = it->second.endpoint;
+        address = it->second.address;
         _ping_target = it->first;
         break;
       }
       packet::Ping p;
       p.sender = _self;
       p.remote_endpoint = endpoint;
-      elle::Buffer buf = serialize(p);
       _ping_time = now();
       ELLE_DEBUG("%s: pinging %x at %s", *this, _ping_target, endpoint);
-      send(buf, endpoint);
+      send(p, endpoint, address);
       try
       {
         reactor::wait(_ping_barrier,
@@ -1561,7 +1791,7 @@ namespace kelips
       ELLE_LOG("%s: waiting for %s nodes, got %s", *this, count, sum);
       reactor::sleep(1_sec);
     }
-    reactor::sleep(5_sec);
+    reactor::sleep(1_sec);
   }
 
   void Node::reload_state(Local& l)
@@ -1593,6 +1823,8 @@ namespace kelips
     s.serialize("gossip", gossip);
     s.serialize("bootstrap_nodes", bootstrap_nodes);
     s.serialize("wait", wait);
+    s.serialize("encrypt", encrypt);
+    s.serialize("accept_plain", accept_plain);
   }
 
   Configuration::Configuration()
@@ -1610,7 +1842,9 @@ namespace kelips
     , ping_interval_ms(1000)
     , ping_timeout_ms(1000)
     , bootstrap_nodes()
-    , wait(6)
+    , wait(1)
+    , encrypt(false)
+    , accept_plain(true)
     , gossip()
   {}
 

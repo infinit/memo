@@ -9,7 +9,9 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/storage/Storage.hh>
 
+#include <cryptography/SecretKey.hh>
 #include <random>
+#include <chrono>
 
 namespace kelips
 {
@@ -105,6 +107,8 @@ namespace kelips
     int ping_timeout_ms;
     std::vector<PrettyGossipEndpoint> bootstrap_nodes;
     int wait; // wait for 'wait' nodes before starting
+    bool encrypt;
+    bool accept_plain;
     GossipConfiguration gossip;
   };
 
@@ -149,7 +153,7 @@ namespace kelips
     typedef infinit::overlay::Overlay Overlay;
     void reload_state(Local& l);
     void wait(int contacts);
-    void send(elle::Buffer const& data, GossipEndpoint endpoint);
+    void send(packet::Packet const& p, GossipEndpoint e, Address a);
     int group_of(Address const& address); // consistent address -> group mapper
     void gossipListener();
     void gossipEmitter();
@@ -173,8 +177,8 @@ namespace kelips
     std::vector<RpcEndpoint> kelipsPut(Address file, int n);
     std::unordered_multimap<Address, std::pair<Time, Address>> pickFiles();
     std::unordered_map<Address, std::pair<Time, GossipEndpoint>> pickContacts();
-    std::vector<GossipEndpoint> pickOutsideTargets();
-    std::vector<GossipEndpoint> pickGroupTargets();
+    std::vector<std::pair<GossipEndpoint, Address>> pickOutsideTargets();
+    std::vector<std::pair<GossipEndpoint, Address>> pickGroupTargets();
     Address _ping_target;
     Time _ping_time;
     reactor::Barrier _ping_barrier;
@@ -189,6 +193,8 @@ namespace kelips
     std::default_random_engine _gen;
     std::unordered_map<int, std::shared_ptr<PendingRequest>> _pending_requests;
     std::vector<Address> _promised_files; // addresses for which we accepted a put
+    std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
+    std::vector<GossipEndpoint> _pending_bootstrap; // bootstrap pending auth
     int _next_id;
     int _port;
     bool _observer;

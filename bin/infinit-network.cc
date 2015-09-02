@@ -39,6 +39,32 @@ create(variables_map const& args)
       kelips->config.k = sqrt(args["nodes"].as<int>());
     if (args.count("k"))
       kelips->config.k = args["k"].as<int>();
+    if (args.count("encrypt"))
+    {
+      std::string enc = args["encrypt"].as<std::string>();
+      if (enc == "no")
+      {
+        kelips->config.encrypt = false;
+        kelips->config.accept_plain = true;
+      }
+      else if (enc == "lazy")
+      {
+        kelips->config.encrypt = true;
+        kelips->config.accept_plain = true;
+      }
+      else if (enc == "yes")
+      {
+        kelips->config.encrypt = true;
+        kelips->config.accept_plain = false;
+      }
+      else
+        throw elle::Error("'encrypt' must be 'no', 'lazy' or 'yes'");
+    }
+    else
+    {
+      kelips->config.encrypt = false;
+      kelips->config.accept_plain = true;
+    }
     kelips->config.node_id = infinit::model::Address::random();
     overlay_config = std::move(kelips);
   }
@@ -258,6 +284,7 @@ int main(int argc, char** argv)
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups")
+    ("encrypt", value<std::string>(), "no, lazy or yes")
     ;
   options_description options("Infinit network utility");
   Modes modes {
