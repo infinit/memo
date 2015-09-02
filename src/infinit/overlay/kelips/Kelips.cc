@@ -15,6 +15,7 @@
 
 #include <cryptography/SecretKey.hh>
 #include <cryptography/Error.hh>
+#include <cryptography/hash.hh>
 
 #include <reactor/Barrier.hh>
 #include <reactor/Scope.hh>
@@ -90,6 +91,15 @@ namespace kelips
     return elle::serialization::Serialize<Time>::convert(
       const_cast<Time&>(t));
   }
+
+  static std::string key_hash(infinit::cryptography::SecretKey const& k)
+  {
+    auto hk = infinit::cryptography::hash(k.password(),
+                                           infinit::cryptography::Oneway::sha256);
+    std::string hkhex = elle::sprintf("%x", hk);
+    return hkhex.substr(0,3) + hkhex.substr(hkhex.length()-3);
+  }
+
   typedef std::pair<Address, RpcEndpoint> GetFileResult;
   namespace packet
   {
@@ -533,7 +543,8 @@ namespace kelips
                                     source);
       buf.size(sz);
       ELLE_DUMP("%s: received %s bytes from %s:\n%s", *this, sz, source, buf.string());
-      new reactor::Thread("process", [buf, source, this]
+      static int counter = 1;
+      new reactor::Thread(elle::sprintf("process %s", counter++), [buf, source, this]
         {
         //deserialize
         std::unique_ptr<packet::Packet> packet;
@@ -580,8 +591,8 @@ namespace kelips
             }
             catch (infinit::cryptography::Error const& e)
             {
-              ELLE_WARN("%s: decryption from %s : %s failed: %s",
-                        *this, source, packet->sender, e.what());
+              ELLE_WARN("%s: decryption with %s from %s : %s failed: %s",
+                        *this, key_hash(key->second), source, packet->sender, e.what());
             }
           }
           if (failure)
@@ -606,12 +617,17 @@ namespace kelips
             return;
           }
           auto it = _keys.find(p->sender);
-          if (it != _keys.end())
-            ELLE_WARN("%s: overriding key for %s : %s",
-                      *this, source, p->sender);
+
           auto sk = infinit::cryptography::secretkey::generate(256);
           elle::Buffer password = sk.password();
-          _keys.insert(std::make_pair(p->sender, std::move(sk)));
+          if (it != _keys.end())
+          {
+            ELLE_WARN("%s: overriding key %s -> %s  for %s : %s",
+                      *this, key_hash(it->second), key_hash(sk), source, p->sender);
+            it->second = std::move(sk);
+          }
+          else
+            _keys.insert(std::make_pair(p->sender, std::move(sk)));
           packet::KeyReply kr(doughnut()->passport());
           kr.sender = _self;
           kr.encrypted_key = p->passport.user().seal(
@@ -637,7 +653,11 @@ namespace kelips
             infinit::cryptography::Cipher::aes256,
             infinit::cryptography::Mode::cbc);
           infinit::cryptography::SecretKey sk(std::move(password));
-          _keys.insert(std::make_pair(p->sender, std::move(sk)));
+          auto itk = _keys.find(p->sender);
+          if (itk == _keys.end())
+            _keys.insert(std::make_pair(p->sender, std::move(sk)));
+          else
+            itk->second = std::move(sk);
           // Flush operations waiting on crypto ready
           auto it = std::find(_pending_bootstrap.begin(),
                               _pending_bootstrap.end(),
