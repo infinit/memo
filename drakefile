@@ -315,13 +315,25 @@ def configure(
     runner = drake.Runner(exe = test)
     rule_check << runner.status
 
-  ## ------ ##
-  ## Beyond ##
-  ## ------ ##
+  ## --- ##
+  ## Web ##
+  ## --- ##
+
+  bottle = drake.node('bottle/bottle.py')
 
   beyond = drake.include(
     'beyond',
     python = elle.python3,
     cryptography_python_module = elle.cryptography.python_module,
     prefix = prefix,
-    git = git)
+    git = git,
+    bottle = bottle,
+  )
+
+  website = drake.include(
+    'website',
+    python = elle.python3,
+    prefix = prefix,
+    git = git,
+    bottle = bottle,
+  )
