@@ -1,0 +1,70 @@
+import drake
+
+build = None
+check = None
+install = None
+tests = None
+
+def configure(
+    python,
+    git,
+    bottle,
+    prefix = drake.Path('/usr'),
+):
+
+  global build, check, install, tests
+
+  class PythonCopy(drake.Copy):
+
+    def execute(self):
+      if not super().execute():
+        return False
+      script = ';'.join([
+        'import py_compile',
+        'res = py_compile.compile(file = %r, dfile = %r)',
+        'exit(1 if res is None else 0)',
+      ]) % (str(self.target().path()), str(self.source.path()))
+      self.cmd(
+        'Check syntax of %s' % self.target(),
+        ['%s/bin/python%s' % (python.prefix, python.version),
+         '-c', script],
+        throw = True)
+      return True
+
+  def copy_python(*args, **kwargs):
+    return drake.copy(builder = PythonCopy, *args, **kwargs)
+
+  ## ----- ##
+  ## Build ##
+  ## ----- ##
+
+  sources = drake.nodes(
+    'src/__init__.py',
+    'src/__main__.py',
+    'src/utils.py',
+  )
+
+  templates = drake.nodes(
+    'templates/base.html',
+    'templates/pages/root.html',
+    'templates/parts/footer.html',
+  )
+
+  python_prefix = drake.Path('lib/python%s' % python.version)
+  def copy_sources(where, how):
+    where = drake.Path(where) / python_prefix
+    for node in how(sources,
+                    where / 'infinit/website', strip_prefix = 'src'):
+      yield node
+    yield how([bottle], where, strip_prefix = True)
+  def copy_templates(where, how):
+    where = drake.Path(where)
+    for node in how(templates, where / 'share/infinit/website'):
+      yield node
+
+  build = drake.Rule('build')
+  build << copy_sources(where = '.', how = copy_python)
+  build << copy_templates(where = '.', how = drake.copy)
+  install = drake.Rule('install')
+  install << copy_sources(where = prefix, how = drake.install)
+  install << copy_templates(where = prefix, how = drake.install)
