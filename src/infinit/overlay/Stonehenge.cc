@@ -18,11 +18,12 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Stonehenge::Stonehenge(Hosts hosts)
+    Stonehenge::Stonehenge(Hosts hosts, model::doughnut::Doughnut* doughnut)
       : _hosts(std::move(hosts))
     {
       if (this->_hosts.empty())
         throw elle::Error("empty peer list");
+      this->doughnut(doughnut);
     }
 
     /*-------.
@@ -73,7 +74,8 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeConfiguration::make(std::vector<std::string> const&, bool)
+    StonehengeConfiguration::make(std::vector<std::string> const&, bool,
+     model::doughnut::Doughnut* doughnut)
     {
       Stonehenge::Hosts hosts;
       for (auto const& host: this->hosts)
@@ -86,7 +88,7 @@ namespace infinit
           boost::asio::ip::address::from_string(host.substr(0, p)),
           std::stoi(host.substr(p + 1)));
       }
-      return elle::make_unique<infinit::overlay::Stonehenge>(hosts);
+      return elle::make_unique<infinit::overlay::Stonehenge>(hosts, doughnut);
     }
 
     static const elle::serialization::Hierarchy<Configuration>::

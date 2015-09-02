@@ -185,14 +185,16 @@ static void make_nodes(std::string store, int node_count,
     for (int i = 0; i < node_count; ++i)
     {
       auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-      std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
       infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner.k());
       auto model =
         new infinit::model::doughnut::Doughnut(
           std::move(kp),
           owner.K(),
           passport,
-          std::move(ov)
+          static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
+            })
           );
       nodes[i]->doughnut() = model;
     }
@@ -239,7 +241,6 @@ static void run_filesystem_dht(std::string const& store,
       if (nmount == 1)
       {
         ELLE_TRACE("configuring mounter...");
-        std::unique_ptr<infinit::overlay::Overlay> ov(new infinit::overlay::Stonehenge(endpoints));
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         keys.push_back(kp.K());
         infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner_keys.k());
@@ -250,7 +251,10 @@ static void run_filesystem_dht(std::string const& store,
           std::move(kp),
           owner_keys.K(),
           passport,
-          std::move(ov)
+          static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
+            })
           );
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
@@ -697,6 +701,33 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
   boost::filesystem::resize_file(mount / "tbig", 900000);
   read_all(mount / "tbig");
   bfs::remove(mount / "tbig");
+
+  // extended attributes
+  setxattr(mount.c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
+  touch(mount / "file");
+  setxattr((mount / "file").c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
+  char attrlist[1024];
+  ssize_t sz = listxattr(mount.c_str(), attrlist, 1024 SXA_EXTRA);
+  BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
+  BOOST_CHECK_EQUAL(attrlist, "testattr");
+  sz = listxattr( (mount / "file").c_str(), attrlist, 1024 SXA_EXTRA);
+  BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
+  BOOST_CHECK_EQUAL(attrlist, "testattr");
+  sz = getxattr(mount.c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+  BOOST_CHECK_EQUAL(sz, strlen("foo"));
+  attrlist[sz] = 0;
+  BOOST_CHECK_EQUAL(attrlist, "foo");
+  sz = getxattr( (mount / "file").c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+  BOOST_CHECK_EQUAL(sz, strlen("foo"));
+  attrlist[sz] = 0;
+  BOOST_CHECK_EQUAL(attrlist, "foo");
+  sz = getxattr( (mount / "file").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+  BOOST_CHECK_EQUAL(sz, -1);
+  sz = getxattr( (mount / "nope").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+  BOOST_CHECK_EQUAL(sz, -1);
+  sz = getxattr( mount.c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+  BOOST_CHECK_EQUAL(sz, -1);
+  bfs::remove(mount / "file");
 }
 
 void test_basic()

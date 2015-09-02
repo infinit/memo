@@ -33,6 +33,7 @@ namespace infinit
     `-------------*/
     public:
       Overlay();
+      virtual ~Overlay() {}
 
     /*-------.
     | Lookup |
@@ -69,7 +70,8 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(std::vector<std::string> const& hosts, bool server) = 0;
+      make(std::vector<std::string> const& hosts, bool server,
+        model::doughnut::Doughnut* doughnut) = 0;
     };
   }
 }

@@ -36,14 +36,14 @@ namespace infinit
       Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
-                         std::unique_ptr<overlay::Overlay> overlay,
+                         OverlayBuilder overlay_builder,
                          std::shared_ptr<Local> local,
                          std::unique_ptr<Consensus> consensus)
-        : _overlay(std::move(overlay))
-        , _consensus(std::move(consensus))
+        : _consensus(std::move(consensus))
         , _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
+        , _overlay(overlay_builder(this))
       {
         if (!this->_consensus)
           this->_consensus = elle::make_unique<Consensus>(*this);
@@ -59,13 +59,13 @@ namespace infinit
                          cryptography::rsa::KeyPair keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
-                         std::unique_ptr<overlay::Overlay> overlay,
+                         OverlayBuilder overlay_builder,
                          std::shared_ptr<Local> local,
                          std::unique_ptr<Consensus> consensus)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
-                   std::move(overlay),
+                   std::move(overlay_builder),
                    std::move(local),
                    std::move(consensus))
       {
@@ -247,7 +247,10 @@ namespace infinit
             keys,
             owner,
             passport,
-            overlay->make(hosts, server),
+            static_cast<Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return overlay->make(hosts, server, doughnut);
+            }),
             nullptr);
         else
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -255,7 +258,10 @@ namespace infinit
             keys,
             owner,
             passport,
-            overlay->make(hosts, server),
+            static_cast<Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return overlay->make(hosts, server, doughnut);
+            }),
             nullptr);
       }
 
@@ -269,7 +275,10 @@ namespace infinit
             keys,
             owner,
             passport,
-            overlay->make(hosts, bool(local)),
+            static_cast<Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return overlay->make(hosts, bool(local), doughnut);
+            }),
             local,
             nullptr);
         else
@@ -278,7 +287,10 @@ namespace infinit
             keys,
             owner,
             passport,
-            overlay->make(hosts, bool(local)),
+            static_cast<Doughnut::OverlayBuilder>(
+            [=](infinit::model::doughnut::Doughnut* doughnut) {
+              return overlay->make(hosts, bool(local), doughnut);
+            }),
             local,
             nullptr);
       }

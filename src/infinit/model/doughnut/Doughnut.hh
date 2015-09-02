@@ -24,26 +24,28 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
+        typedef std::function<
+           std::unique_ptr<infinit::overlay::Overlay>
+           (Doughnut*)> OverlayBuilder;
         Doughnut(std::string name,
                  infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
-                 std::unique_ptr<overlay::Overlay> overlay,
+                 OverlayBuilder overlay_builder,
                  std::shared_ptr<Local> local = nullptr,
                  std::unique_ptr<Consensus> consensus = nullptr);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
-                 std::unique_ptr<overlay::Overlay> overlay,
+                 OverlayBuilder overlay_builder,
                  std::shared_ptr<Local> local = nullptr,
                  std::unique_ptr<Consensus> consensus = nullptr);
         ~Doughnut();
-        ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
-
+        ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
 
       protected:
         virtual

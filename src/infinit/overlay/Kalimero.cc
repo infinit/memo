@@ -47,7 +47,8 @@ namespace infinit
     {}
 
     std::unique_ptr<infinit::overlay::Overlay>
-    KalimeroConfiguration::make(std::vector<std::string> const& hosts, bool)
+    KalimeroConfiguration::make(std::vector<std::string> const& hosts, bool,
+      model::doughnut::Doughnut*)
     {
       if (!hosts.empty())
         throw elle::Error(

@@ -13,6 +13,10 @@ try:
   val = int(val)
 except:
   pass
+if val == "true":
+  val = True
+if val == "false":
+  val = False
 key = key.split('.')
 for f in sys.argv[3:]:
   with open(f, "r") as fj:
