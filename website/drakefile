@@ -1,4 +1,5 @@
 import drake
+import sys
 
 build = None
 check = None
@@ -50,7 +51,11 @@ def configure(
     'templates/parts/footer.html',
   )
 
-  python_prefix = drake.Path('lib/python%s' % python.version)
+  if python is not None:
+    python_version = python.version
+  else:
+    python_version = '%s.%s' % sys.version_info[:2]
+  python_prefix = drake.Path('lib/python%s' % python_version)
   def copy_sources(where, how):
     where = drake.Path(where) / python_prefix
     for node in how(sources,

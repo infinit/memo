@@ -321,14 +321,15 @@ def configure(
 
   bottle = drake.node('bottle/bottle.py')
 
-  beyond = drake.include(
-    'beyond',
-    python = elle.python3,
-    cryptography_python_module = elle.cryptography.python_module,
-    prefix = prefix,
-    git = git,
-    bottle = bottle,
-  )
+  if elle.python3 is not None:
+    beyond = drake.include(
+      'beyond',
+      python = elle.python3,
+      cryptography_python_module = elle.cryptography.python_module,
+      prefix = prefix,
+      git = git,
+      bottle = bottle,
+    )
 
   website = drake.include(
     'website',
