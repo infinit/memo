@@ -701,6 +701,33 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
   boost::filesystem::resize_file(mount / "tbig", 900000);
   read_all(mount / "tbig");
   bfs::remove(mount / "tbig");
+
+  // extended attributes
+  setxattr(mount.c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
+  touch(mount / "file");
+  setxattr((mount / "file").c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
+  char attrlist[1024];
+  ssize_t sz = listxattr(mount.c_str(), attrlist, 1024);
+  BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
+  BOOST_CHECK_EQUAL(attrlist, "testattr");
+  sz = listxattr( (mount / "file").c_str(), attrlist, 1024);
+  BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
+  BOOST_CHECK_EQUAL(attrlist, "testattr");
+  sz = getxattr(mount.c_str(), "testattr", attrlist, 1024);
+  BOOST_CHECK_EQUAL(sz, strlen("foo"));
+  attrlist[sz] = 0;
+  BOOST_CHECK_EQUAL(attrlist, "foo");
+  sz = getxattr( (mount / "file").c_str(), "testattr", attrlist, 1024);
+  BOOST_CHECK_EQUAL(sz, strlen("foo"));
+  attrlist[sz] = 0;
+  BOOST_CHECK_EQUAL(attrlist, "foo");
+  sz = getxattr( (mount / "file").c_str(), "nope", attrlist, 1024);
+  BOOST_CHECK_EQUAL(sz, -1);
+  sz = getxattr( (mount / "nope").c_str(), "nope", attrlist, 1024);
+  BOOST_CHECK_EQUAL(sz, -1);
+  sz = getxattr( mount.c_str(), "nope", attrlist, 1024);
+  BOOST_CHECK_EQUAL(sz, -1);
+  bfs::remove(mount / "file");
 }
 
 void test_basic()

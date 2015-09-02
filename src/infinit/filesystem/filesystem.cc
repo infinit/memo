@@ -1810,7 +1810,7 @@ namespace infinit
 
     std::vector<std::string> File::listxattr()
     {
-      ELLE_TRACE("listxattr");
+      ELLE_TRACE("file listxattr");
       std::vector<std::string> res;
       /*
       res.push_back("user.infinit.block");
@@ -1826,17 +1826,17 @@ namespace infinit
     }
     std::vector<std::string> Directory::listxattr()
     {
-      ELLE_TRACE("listxattr");
+      ELLE_TRACE("directory listxattr");
       std::vector<std::string> res;
-      /*
-      res.push_back("user.infinit.block");
-      res.push_back("user.infinit.auth.setr");
-      res.push_back("user.infinit.auth.setrw");
-      res.push_back("user.infinit.auth.setw");
-      res.push_back("user.infinit.auth.clear");
-      res.push_back("user.infinit.auth.inherit");
-      res.push_back("user.infinit.auth");
-      */
+      if (!_parent)
+      {
+        auto it = _files.find("");
+        if (it == _files.end())
+          return res;
+        for (auto const& a: it->second.xattrs)
+          res.push_back(a.first);
+        return res;
+      }
       for (auto const& a: _parent->_files.at(_name).xattrs)
         res.push_back(a.first);
       return res;
