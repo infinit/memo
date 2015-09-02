@@ -6,4 +6,4 @@
 	url = https://github.com/infinitdotio/couchdb-python.git
 [submodule "bottle"]
 	path = bottle
-	url = git@github.com:mefyl/bottle.git
+	url = https://github.com/mefyl/bottle.git
