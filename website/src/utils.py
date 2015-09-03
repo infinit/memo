@@ -23,6 +23,7 @@ def view(name):
       name,
       template_lookup = [lookup],
       url = url,
+      request = bottle.request,
     )(f)
   return res
 
