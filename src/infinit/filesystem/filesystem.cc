@@ -37,7 +37,7 @@ namespace infinit
   namespace filesystem
   {
 
-    template<typename F> auto umbrella(F f) -> decltype(f())
+    template<typename F> auto umbrella(F f, int err = EIO) -> decltype(f())
     {
       try {
         return f();
@@ -49,12 +49,12 @@ namespace infinit
       catch(elle::Exception const& e)
       {
         ELLE_WARN("unexpected exception %s", e);
-        throw rfs::Error(EIO, elle::sprintf("%s", e));
+        throw rfs::Error(err, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
       {
         ELLE_WARN("unexpected exception %s", e);
-        throw rfs::Error(EIO, e.what());
+        throw rfs::Error(err, e.what());
       }
     }
 
@@ -723,7 +723,7 @@ namespace infinit
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
-      elle::IOStream is(_block->data().istreambuf());
+      elle::IOStream is(umbrella([&] { return _block->data().istreambuf();}, EPERM));
       elle::serialization::json::SerializerIn input(is, version);
       try
       {
