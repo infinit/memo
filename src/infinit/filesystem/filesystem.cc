@@ -11,6 +11,7 @@
 
 #include <reactor/filesystem.hh>
 #include <reactor/scheduler.hh>
+#include <reactor/exception.hh>
 
 #include <cryptography/hash.hh>
 
@@ -40,6 +41,10 @@ namespace infinit
     {
       try {
         return f();
+      }
+      catch(reactor::Terminate const& e)
+      {
+        throw;
       }
       catch(elle::Exception const& e)
       {
@@ -526,6 +531,10 @@ namespace infinit
       {
         _block_store->store(block, mode);
       }
+      catch(reactor::Terminate const& e)
+      {
+        throw;
+      }
       catch (model::MissingBlock const& mb)
       {
         ELLE_WARN("Unexpected storage result on store: %s", mb);
@@ -554,6 +563,10 @@ namespace infinit
       try
       {
         return _block_store->fetch(address);
+      }
+      catch(reactor::Terminate const& e)
+      {
+        throw;
       }
       catch (model::MissingBlock const& mb)
       {
