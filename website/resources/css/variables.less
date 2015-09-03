@@ -2,7 +2,7 @@
 @infinitred: #F25E5A;
 @infinitblue: #2BBEBD;
 
-@black: #1C1C1C;
+@black: #353535;
 @blue: #459CCB;
 
 @infinitlblue: #2BBEBD;
@@ -22,6 +22,12 @@
   :-moz-placeholder { color: @color;}
   ::-moz-placeholder { color: @color;}
   :-ms-input-placeholder { color: @color;}
+}
+
+.transition() {
+  -webkit-transition: all 0.2s;
+  -moz-transition: all 0.2s;
+  transition: all 0.2s;
 }
 
 @highdpi: ~"(-webkit-min-device-pixel-ratio: 1.5), (min--moz-device-pixel-ratio: 1.5), (-o-min-device-pixel-ratio: 3/2), (min-resolution: 1.5dppx)";
