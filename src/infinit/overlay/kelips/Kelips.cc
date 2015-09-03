@@ -1661,7 +1661,7 @@ namespace kelips
       ss << "g: " << _group << "  f: " << _state.files.size() << "  c:";
       for(auto const& c: _state.contacts)
         ss << c.size() << ' ';
-      ELLE_LOG("%s: %s", *this, ss.str());
+      ELLE_TRACE("%s: %s", *this, ss.str());
       // pick a target
       GossipEndpoint endpoint;
       Address address;
@@ -1731,6 +1731,35 @@ namespace kelips
         }
         else
           ++it;
+      }
+    }
+    int my_files = 0;
+    for (auto const& f: _state.files)
+    {
+      if (f.second.home_node == _self)
+        ++my_files;
+    }
+    int time_send_all = my_files / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
+    ELLE_DEBUG("time_send_all is %s", time_send_all);
+    if (time_send_all >= _config.file_timeout_ms / 2)
+    {
+      ELLE_LOG("too many files for configuration: files=%s, per packet=%s, interval=%s, timeout=%s",
+                my_files, _config.gossip.files, _config.gossip.interval_ms, _config.file_timeout_ms);
+      if (_config.gossip.files < 20)
+      { // keep it so it fits in 'standard' MTU of +/- 1k
+        _config.gossip.files = std::min(20, _config.gossip.files * 3 / 2);
+        ELLE_LOG("Increasing files/packet to %s", _config.gossip.files);
+      }
+      else if (_config.gossip.interval_ms > 400)
+      {
+        _config.gossip.interval_ms = std::max(400, _config.gossip.interval_ms * 2 / 3);
+        ELLE_LOG("Decreasing interval to %s", _config.gossip.interval_ms);
+      }
+      else
+      { // We're assuming each node has roughly the same number of files,
+        // so others will increase their timeout as we do
+        _config.file_timeout_ms =  _config.file_timeout_ms * 3 / 2;
+        ELLE_LOG("Increasing timeout to %s", _config.file_timeout_ms);
       }
     }
   }
@@ -1892,8 +1921,8 @@ namespace kelips
     , new_threshold(5)
     , old_threshold_ms(40000)
     , files(6)
-    , contacts_group(6)
-    , contacts_other(6)
+    , contacts_group(3)
+    , contacts_other(3)
     , group_target(3)
     , other_target(3)
     , bootstrap_group_target(12)
