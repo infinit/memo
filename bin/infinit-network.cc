@@ -21,7 +21,7 @@ void
 create(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   std::unique_ptr<infinit::overlay::Configuration> overlay_config;
   if (args.count("stonehenge"))
   {
@@ -122,7 +122,7 @@ static
 void
 export_(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(
@@ -141,7 +141,7 @@ static
 void
 fetch(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   network_name = ifnt.qualified_name(network_name, owner.public_key);
   auto desc =
@@ -188,7 +188,7 @@ static
 void
 join(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto input = get_input(args);
   auto name = ifnt.qualified_name(mandatory(args, "name", "network name"),
                                   owner.public_key);

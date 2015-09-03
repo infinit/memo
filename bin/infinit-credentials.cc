@@ -15,7 +15,7 @@ add(variables_map const& args)
 {
   if (args.count("dropbox"))
   {
-    auto user = ifnt.user_get(get_username(args, "user"));
+    auto user = self_user(ifnt, args);
     std::cout << "Register your dropbox account with infinit by visiting "
               << beyond() << "/users/" << user.uid()
               << "/dropbox-oauth" << std::endl;
@@ -28,8 +28,7 @@ static
 void
 fetch(variables_map const& args)
 {
-  // if (args.count("dropbox"))
-  auto user = ifnt.user_get(get_username(args, "user"));
+  auto user = self_user(ifnt, args);
   reactor::http::Request r(
     elle::sprintf("%s/users/%s/dropbox-accounts", beyond(), user.uid()),
     reactor::http::Method::GET);
@@ -62,10 +61,6 @@ list(variables_map const& args)
 int
 main(int argc, char** argv)
 {
-  option_description user(
-    "user",
-    value<std::string>(),
-    "user to manage credentials with (defaults to system user)");
   options_description services_options("Services");
   services_options.add_options()
     ("dropbox", "Dropbox account credentials")
@@ -78,7 +73,7 @@ main(int argc, char** argv)
       &add,
       "SERVICE",
       {
-        user,
+        option_owner,
       },
       {services_options},
     },
@@ -88,7 +83,7 @@ main(int argc, char** argv)
       &fetch,
       "[SERVICE]",
       {
-        user,
+        option_owner,
       },
       {services_options},
     },

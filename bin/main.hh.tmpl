@@ -1073,5 +1073,9 @@ infinit::User
 self_user(infinit::Infinit const& ifnt,
           boost::program_options::variables_map const& args)
 {
-  return ifnt.user_get(optional(args, option_owner.long_name()));
+  static auto const env  = elle::os::getenv("INFINIT_USER", "");
+  auto as = optional(args, option_owner.long_name());
+  if (!as && !env.empty())
+    as = env;
+  return ifnt.user_get(as);
 }

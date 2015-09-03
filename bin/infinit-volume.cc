@@ -29,7 +29,7 @@ static
 void
 create(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto network_name = ifnt.qualified_name(mandatory(args, "network"),
                                           owner.public_key);
@@ -62,7 +62,7 @@ static
 void
 export_(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto output = get_output(args);
   auto volume = ifnt.volume_get(name);
@@ -90,7 +90,7 @@ static
 void
 publish(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network);
@@ -102,7 +102,7 @@ static
 void
 fetch(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto desc =
     beyond_fetch<infinit::Volume>("volume", name);
@@ -113,7 +113,7 @@ static
 void
 run(variables_map const& args)
 {
-  auto owner = ifnt.user_get(optional(args, option_owner.long_name()));
+  auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   std::vector<std::string> hosts;
   if (args.count("host"))
