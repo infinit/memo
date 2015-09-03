@@ -47,12 +47,16 @@ def configure(
 
   templates = drake.nodes(
     'templates/base.html',
-    'templates/pages/root.html',
-    'templates/parts/footer.html',
+    'templates/pages/home.html',
   )
 
   resources = drake.nodes(
+    'resources/images/favicon@2x.png',
     'resources/images/logo.png',
+    'resources/images/logo@2x.png',
+
+    'resources/css/normalize.css',
+    'resources/css/main.min.css',
   )
 
   if python is not None:

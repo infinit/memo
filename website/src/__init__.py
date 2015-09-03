@@ -11,7 +11,10 @@ class Website(bottle.Bottle):
   @route('/')
   @view('pages/home')
   def root():
-    return {}
+    return {
+      'description': 'Infinit Filesystem',
+      'page': 'home',
+    }
 
   @route('/css/<path:path>')
   @route('/images/<path:path>')

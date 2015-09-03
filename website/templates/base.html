@@ -1,15 +1,50 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Infinit</title>
+    <meta charset="utf-8" />
+
+    <%
+    title = context.get('title', 'Infinit')
+    %>
+    <title>${title}</title>
+    <meta name="description" content="${description}" />
+
+    <meta property="og:description" content="${description}" />
+    <meta property="og:image" content="{{ URL::asset('/images/fb-cover@2x.jpg') }}" />
+    <meta property="og:title" content="${title}" />
+    <meta property="fb:page_id" content="infinitdotio" />
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@infinit">
+    <meta name="twitter:title" content="${title}">
+    <meta name="twitter:description" content="${description}">
+    <meta name="twitter:creator" content="@infinit">
+    <meta name="twitter:image:src" content="">
+    <meta name="twitter:domain" content="infinit.io">
+
+    <meta name="author" content="Infinit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <link rel="icon" type="image/png" href="${url('images/favicon@2x.png')}" />
+    <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
   </head>
-  <body>
+
+  <body class="${page}">
+
+    <header>
+      <img src="${url('images/logo.png')}" alt="Infinit">
+
+      <ul>
+        <li><a href="#">Documentation</a></li>
+        <li><a href="#">Download</a></li>
+      </ul>
+    </header>
+
     <div class="content">
       <%block name="content">
       default
       </%block>
     </div>
 
-    <%include file="parts/footer.html"/>
   </body>
 </html>
