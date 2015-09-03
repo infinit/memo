@@ -13,14 +13,9 @@ class Website(bottle.Bottle):
   def root():
     return {}
 
-  @route('/images/<path:path>')
-  def images(path):
-    return static_file('images/%s' % path)
-
   @route('/css/<path:path>')
-  def images(path):
-    return static_file('css/%s' % path)
-
+  @route('/images/<path:path>')
   @route('/js/<path:path>')
   def images(path):
-    return static_file('js/%s' % path)
+    d = bottle.request.urlparts.path.split('/')[1]
+    return static_file('%s/%s' % (d,  path))
