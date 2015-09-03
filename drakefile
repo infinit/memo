@@ -215,6 +215,7 @@ def configure(
     ('doughnode', []),
     ('generatekeys', []),
     ('infinit', []),
+    ('infinit-acl', []),
     ('infinit-credentials', []),
     ('infinit-network', []),
     ('infinit-storage', []),
