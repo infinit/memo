@@ -242,6 +242,8 @@ void
 publish(variables_map const& args)
 {
   auto network_name = mandatory(args, "name", "network name");
+  auto self = self_user(ifnt, args);
+  network_name = ifnt.qualified_name(network_name, self.public_key);
   auto network = ifnt.network_get(network_name);
   {
     auto& dht = *network.dht();
@@ -260,6 +262,8 @@ void
 run(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
+  auto self = self_user(ifnt, args);
+  ifnt.qualified_name(name, self.public_key);
   auto network = ifnt.network_get(name);
   std::vector<std::string> hosts;
   if (args.count("host"))
@@ -352,11 +356,11 @@ int main(int argc, char** argv)
       &invite,
       "--name NETWORK --user USER",
       {
+        option_owner,
         { "name,n", value<std::string>(), "network to create the passport to" },
-        { "user,u", value<std::string>(), "user to create the passport for" },
         { "output,o", value<std::string>(),
             "file to write the passport to (defaults to stdout)" },
-        option_owner,
+        { "user,u", value<std::string>(), "user to create the passport for" },
       },
     },
     {
@@ -365,10 +369,10 @@ int main(int argc, char** argv)
       &join,
       "--name NETWORK",
       {
+        option_owner,
         { "input,i", value<std::string>(),
             "file to read passport from (defaults to stdin)" },
         { "name,n", value<std::string>(), "network to join" },
-        option_owner,
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
       },
@@ -379,6 +383,7 @@ int main(int argc, char** argv)
       &publish,
       "--name NETWORK",
       {
+        option_owner,
         { "name,n", value<std::string>(), "network to publish" }
       },
     },
@@ -388,6 +393,7 @@ int main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
+        option_owner,
         { "name", value<std::string>(), "created network name" },
         { "host", value<std::vector<std::string>>()->multitoken(),
           "hosts to connect to" },

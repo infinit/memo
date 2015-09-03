@@ -560,7 +560,7 @@ namespace infinit
     }
 
     User
-    user_get(boost::optional<std::string> user = {})
+    user_get(boost::optional<std::string> user = {}) const
     {
       if (!user)
         user = elle::system::username();
@@ -676,7 +676,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path(std::string const& name)
+    _network_path(std::string const& name) const
     {
       auto root = root_dir() / "networks";
       create_directories(root);
@@ -684,7 +684,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _storage_path(std::string const& name)
+    _storage_path(std::string const& name) const
     {
       auto root = root_dir() / "storage";
       create_directories(root);
@@ -692,7 +692,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _user_path(std::string const& name)
+    _user_path(std::string const& name) const
     {
       auto root = root_dir() / "users";
       create_directories(root);
@@ -700,7 +700,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _volume_path(std::string const& name)
+    _volume_path(std::string const& name) const
     {
       auto root = root_dir() / "volumes";
       create_directories(root);
@@ -711,7 +711,7 @@ namespace infinit
     _open(boost::filesystem::ifstream& f,
           boost::filesystem::path const& path,
           std::string const& name,
-          std::string const& type)
+          std::string const& type) const
     {
       f.open(path);
       if (!f.good())
@@ -1066,3 +1066,12 @@ beyond_fetch(std::string const& type, std::string const& name)
 boost::program_options::option_description option_owner(
   "as,a", boost::program_options::value<std::string>(),
   "user to run commands as (defaults to system user)");
+
+inline
+static
+infinit::User
+self_user(infinit::Infinit const& ifnt,
+          boost::program_options::variables_map const& args)
+{
+  return ifnt.user_get(optional(args, option_owner.long_name()));
+}
