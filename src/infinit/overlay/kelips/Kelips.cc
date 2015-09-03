@@ -1260,6 +1260,7 @@ namespace kelips
       res.fileAddress = p->fileAddress;
       res.origin = p->originAddress;
       res.request_id = p->request_id;
+      res.result = p->result;
       res.ttl = 1;
       send(res, p->originEndpoint, p->originAddress);
       return;
@@ -1411,6 +1412,7 @@ namespace kelips
   std::vector<RpcEndpoint>
   Node::kelipsGet(Address file, int n)
   {
+    std::set<RpcEndpoint> result_set;
     packet::GetFileRequest r;
     r.sender = _self;
     r.request_id = ++ _next_id;
@@ -1423,11 +1425,12 @@ namespace kelips
     if (fg == _group)
     {
       addLocalResults(&r);
-      if (r.result.size() >= unsigned(n))
+      for (auto const& e: r.result)
+        result_set.insert(e.second);
+      if (result_set.size() >= unsigned(n))
       { // Request completed locally
-        std::vector<RpcEndpoint> result;
-        for (auto const& i: r.result)
-          result.push_back(i.second);
+        std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
+        result.resize(n);
         return result;
       }
     }
@@ -1458,16 +1461,19 @@ namespace kelips
       }
       ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
                  r->result.size());
-      if (r->barrier.opened() && r->result.size() >= unsigned(n))
-      {
-        std::vector<RpcEndpoint> result;
-        for (auto const& i: r->result)
-          result.push_back(i.second);
-        return result;
-      }
+
+      for (auto const& e: r->result)
+        result_set.insert(e.second);
+      if (signed(result_set.size()) >= n)
+        break;
     }
-    throw reactor::Timeout(boost::posix_time::milliseconds(
-      _config.query_timeout_ms * _config.query_get_retries));
+    if (result_set.empty())
+      throw reactor::Timeout(boost::posix_time::milliseconds(
+        _config.query_timeout_ms * _config.query_get_retries));
+    std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
+    if (signed(result.size()) > n)
+      result.resize(n);
+    return result;
   }
 
   std::vector<RpcEndpoint>
@@ -1785,10 +1791,23 @@ namespace kelips
   {
     Members res;
     for (auto const& host: const_cast<Node*>(this)->address(address, op, n))
-      res.emplace_back(
-        new infinit::model::doughnut::Remote(
-          const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-          host));
+    {
+      try
+      {
+        res.emplace_back(
+          new infinit::model::doughnut::Remote(
+            const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+            host));
+      }
+      catch (reactor::Terminate const& e)
+      {
+        throw;
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_WARN("Failed to connect to node %s", host);
+      }
+    }
 
     return res;
   }
