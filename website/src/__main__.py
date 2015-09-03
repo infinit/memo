@@ -2,4 +2,4 @@ import bottle
 import infinit.website
 
 bottle.DEBUG = True
-bottle.run(app = infinit.website.Website(), autoreload = True)
+bottle.run(app = infinit.website.Website(), reloader = True)
