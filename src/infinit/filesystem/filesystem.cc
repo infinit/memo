@@ -717,9 +717,9 @@ namespace infinit
         ELLE_DEBUG("Using directory cache");
         return;
       }
-      _last_fetch = now;
       _block = elle::cast<ACLBlock>::runtime
         (_owner.fetch_or_die(_block->address()));
+      _last_fetch = now;
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
