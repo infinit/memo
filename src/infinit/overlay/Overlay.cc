@@ -25,11 +25,13 @@ namespace infinit
     {}
 
     Overlay::Members
-    Overlay::lookup(model::Address address, int n, Operation op) const
+    Overlay::lookup(model::Address address, int n, Operation op, bool strict) const
     {
       ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, address);
       auto res = this->_lookup(address, n, op);
-      ELLE_ASSERT_EQ(signed(res.size()), n);
+      if (strict && signed(res.size()) != n)
+        throw elle::Error(elle::sprintf("%s: got only %s of the %s requested nodes",
+                                        *this, res.size(), n));
       return res;
     }
 

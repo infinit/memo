@@ -41,7 +41,7 @@ namespace infinit
     public:
       /// Lookup a list of nodes
       Members
-      lookup(model::Address address, int n, Operation op) const;
+      lookup(model::Address address, int n, Operation op, bool strict=true) const;
       /// Lookup a single node
       Member
       lookup(model::Address address, Operation op) const;
