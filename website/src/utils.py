@@ -38,6 +38,7 @@ class Routes:
   def __call__(self, *args, **kwargs):
     def res(f):
       self.__routes.append((f, args, kwargs))
+      return f
     return res
 
   def apply(self, bottle):
