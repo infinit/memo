@@ -10,11 +10,20 @@ for i in range(4):
 
 from bottle import mako_view as view, mako_template as template
 
+def url(url):
+  host = '://'.join(bottle.request.urlparts[:2])
+  if url and url[0] != '/':
+    host += '/'
+  return host + url
+
 def view(name):
   def res(f):
     lookup = '%s/share/infinit/website/templates' % PREFIX
-    print(lookup)
-    return bottle.mako_view(name, template_lookup = [lookup])(f)
+    return bottle.mako_view(
+      name,
+      template_lookup = [lookup],
+      url = url,
+    )(f)
   return res
 
 def static_file(path):
