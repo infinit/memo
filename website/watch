@@ -1,0 +1,6 @@
+#!/bin/sh
+
+fswatch website | while read event
+  do
+   (cd _build && ./drake //website/build)
+  done
