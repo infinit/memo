@@ -21,6 +21,8 @@
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/doughnut/Replicator.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -38,15 +40,16 @@ namespace infinit
                          Passport passport,
                          OverlayBuilder overlay_builder,
                          std::shared_ptr<Local> local,
-                         std::unique_ptr<Consensus> consensus)
-        : _consensus(std::move(consensus))
-        , _keys(std::move(keys))
+                         int replicas)
+        : _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _overlay(overlay_builder(this))
       {
-        if (!this->_consensus)
+        if (replicas == 1)
           this->_consensus = elle::make_unique<Consensus>(*this);
+        else
+          this->_consensus = elle::make_unique<Replicator>(*this, replicas);
         this->overlay()->doughnut(this);
         if (local)
         {
@@ -61,13 +64,13 @@ namespace infinit
                          Passport passport,
                          OverlayBuilder overlay_builder,
                          std::shared_ptr<Local> local,
-                         std::unique_ptr<Consensus> consensus)
+                         int replicas)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(overlay_builder),
                    std::move(local),
-                   std::move(consensus))
+                   std::move(replicas))
       {
         try
         {
@@ -209,12 +212,14 @@ namespace infinit
         cryptography::rsa::KeyPair keys_,
         cryptography::rsa::PublicKey owner_,
         Passport passport_,
-        boost::optional<std::string> name_)
+        boost::optional<std::string> name_,
+        boost::optional<int> replicas_)
         : overlay(std::move(overlay_))
         , keys(std::move(keys_))
         , owner(std::move(owner_))
         , passport(std::move(passport_))
         , name(std::move(name_))
+        , replicas(std::move(replicas_))
       {}
 
       Configuration::Configuration
@@ -225,6 +230,7 @@ namespace infinit
         , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
+        , replicas(s.deserialize<boost::optional<int>>("replicas"))
       {}
 
       void
@@ -235,6 +241,7 @@ namespace infinit
         s.serialize("owner", this->owner);
         s.serialize("passport", this->passport);
         s.serialize("name", this->name);
+        s.serialize("replicas", this->replicas);
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -280,7 +287,7 @@ namespace infinit
               return overlay->make(hosts, bool(local), doughnut);
             }),
             local,
-            nullptr);
+            replicas? *replicas : 1);
         else
           return std::make_shared<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -292,7 +299,7 @@ namespace infinit
               return overlay->make(hosts, bool(local), doughnut);
             }),
             local,
-            nullptr);
+            replicas? *replicas : 1);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

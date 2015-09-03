@@ -33,13 +33,13 @@ namespace infinit
                  Passport passport,
                  OverlayBuilder overlay_builder,
                  std::shared_ptr<Local> local = nullptr,
-                 std::unique_ptr<Consensus> consensus = nullptr);
+                 int replicas = 1);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  OverlayBuilder overlay_builder,
                  std::shared_ptr<Local> local = nullptr,
-                 std::unique_ptr<Consensus> consensus = nullptr);
+                 int replicas = 1);
         ~Doughnut();
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
@@ -81,13 +81,15 @@ namespace infinit
         cryptography::rsa::PublicKey owner;
         Passport passport;
         boost::optional<std::string> name;
+        boost::optional<int> replicas;
 
         Configuration(
           std::unique_ptr<overlay::Configuration> overlay,
           cryptography::rsa::KeyPair keys,
           cryptography::rsa::PublicKey owner,
           Passport passport,
-          boost::optional<std::string> name);
+          boost::optional<std::string> name,
+          boost::optional<int> replicas);
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void

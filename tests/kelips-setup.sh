@@ -5,6 +5,7 @@ set -e
 rootdir=$1
 nodes=$2
 k=$3
+replicas=1
 observers=2
 user=test
 port_base=5050
@@ -37,7 +38,7 @@ for i in $(seq 0 $nodes); do
 done
 
 # Generate overlay network and export structure
-INFINIT_HOME=$rootdir/conf0 infinit-network --create --storage storage --name kelips --port $port_base --kelips --as $user --k $k
+INFINIT_HOME=$rootdir/conf0 infinit-network --create --storage storage --name kelips --port $port_base --kelips --as $user --k $k --replicas $replicas
 exported_network=$(INFINIT_HOME=$rootdir/conf0 infinit-network --export --as $user --name kelips)
 
 # get hashed user name for $user

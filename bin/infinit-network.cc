@@ -86,6 +86,9 @@ create(variables_map const& args)
       storage.reset(
         new infinit::storage::StripStorageConfig(std::move(backends)));
   }
+  boost::optional<int> replicas;
+  if (args.count("replicas"))
+    replicas = args["replicas"].as<int>();
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       std::move(overlay_config),
@@ -95,7 +98,8 @@ create(variables_map const& args)
         owner.public_key,
         ifnt.qualified_name(name, owner.public_key),
         owner.private_key.get()),
-      owner.name);
+      owner.name,
+      replicas);
   {
     infinit::Network network;
     network.storage = std::move(storage);
@@ -127,7 +131,7 @@ export_(variables_map const& args)
     auto& dht = static_cast<infinit::model::doughnut::Configuration&>
       (*network.model);
     infinit::NetworkDescriptor desc(
-      network.name, std::move(dht.overlay), std::move(dht.owner));
+      network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network.name);
@@ -215,13 +219,15 @@ join(variables_map const& args)
       throw elle::Error("passport signature is invalid");
     infinit::Network network;
     desc.overlay->join();
+
     network.model =
       elle::make_unique<infinit::model::doughnut::Configuration>(
         std::move(desc.overlay),
         owner.keypair(),
         std::move(desc.owner),
         std::move(passport),
-        owner.name);
+        owner.name,
+        desc.replicas);
     network.storage = std::move(storage);
     network.name = name;
     if (args.count("port"))
@@ -241,7 +247,7 @@ publish(variables_map const& args)
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(dht.owner);
     infinit::NetworkDescriptor desc(
-      network.name, std::move(dht.overlay), std::move(dht.owner));
+      network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
     beyond_publish(
       "network",
       elle::sprintf("%s/%s", owner_uid, network_name),
@@ -299,6 +305,7 @@ int main(int argc, char** argv)
             "optional storage to contribute" },
         option_owner,
         { "port,p", value<int>(), "port to listen on (random by default)" },
+        { "replicas,r", value<int>(), "data replication factor" },
         { "stdout", bool_switch(), "output configuration to stdout" },
       },
       {
