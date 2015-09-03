@@ -145,6 +145,14 @@ publish(variables_map const& args)
   beyond_publish("user", user.uid(), view);
 }
 
+static
+void
+register_(variables_map const& args)
+{
+  create(args);
+  publish(args);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -186,6 +194,19 @@ main(int argc, char** argv)
       {
         { "input,i", value<std::string>(),
           "file to read user from (defaults to stdin)" },
+      },
+    },
+    {
+      "register",
+      "Create and register a user",
+      &register_,
+      {},
+      {
+        { "name,n", value<std::string>(),
+          "user name (defaults to system username)" },
+        { "key,k", value<std::string>(),
+          "RSA key pair in PEM format - e.g. your SSH key"
+            " (generated if unspecified)" },
       },
     },
     {
