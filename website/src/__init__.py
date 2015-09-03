@@ -9,10 +9,18 @@ class Website(bottle.Bottle):
     route.apply(self)
 
   @route('/')
-  @view('pages/root')
+  @view('pages/home')
   def root():
     return {}
 
   @route('/images/<path:path>')
   def images(path):
     return static_file('images/%s' % path)
+
+  @route('/css/<path:path>')
+  def images(path):
+    return static_file('css/%s' % path)
+
+  @route('/js/<path:path>')
+  def images(path):
+    return static_file('js/%s' % path)
