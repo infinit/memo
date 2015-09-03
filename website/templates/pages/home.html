@@ -1,5 +1,80 @@
 <%inherit file="/base.html"/>
 
 <%block name="content">
-Infinit c'est cool tout ca.
+
+  <section class="presentation">
+    <h1>Powerful storage platform for developers and sysadmins</h1>
+    <h2>#peer­to­peer #encrypted #redundancy #access­control #filesystem</h2>
+  </section>
+
+  <section class="cta">
+    <p>­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­Create your distributed file storage infrastructure in 55 seconds</p>
+    <a class="button" href="#">Try it!</a>
+    <a class="button border black" href="#what-is-infinit">What is Infinit?</a>
+  </section>
+
+  <section class="features">
+    <div class="network">
+      <img src="${url('images/icons/network.png')}">
+      <h3>Network</h3>
+      <p>Create a storage network composed of several machines, clients and/or servers.</p>
+    </div>
+
+    <div class="storage">
+      <img src="${url('images/icons/storage.png')}">
+      <h3>Storage</h3>
+      <p>Attach one or more storages to a machine, being a local disk, a remote storage resource i.e cloud</p>
+    </div>
+
+    <div class="volume">
+      <img src="${url('images/icons/folder.png')}">
+      <h3>Volume</h3>
+      <p>Create a volume and access files through a UNIX­ like file system interface.­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­</p>
+    </div>
+  </section>
+
+  <section class="description" id="what-is-infinit">
+    <h4 class="title">What is Infinit?</h4>
+    <p class="subtitle">A platform for creating flexible and controlled storage infrastructures</p>
+
+    <img src="${url('images/schema-global.png')}" alt="Schema of Infinit">
+  </section>
+
+  <section class="usecases">
+    <h4 class="title">How is it used?</h4>
+    <p class="subtitle">Infinit can be configured and deployed in numerous ways</p>
+
+    <a class="usecase" href="#">
+      <img src="${url('images/home-personal-cloud.png')}" alt="Unlimited Dropbox ­like Personal Cloud">
+      <h2>Unlimited Dropbox ­like Personal Cloud</h2>
+      <p>Create a virtual drive with the storage capacity equals to the sum of the cloud
+providers you connect: Dropbox, Flickr, Google Drive, Amazon S3 and more.</p>
+    </a>
+
+    <a class="usecase" href="#">
+      <img src="${url('images/home-storage-infrastructure.png')}" alt="Storage Infrastructure on Commodity Hardware">
+      <h2>Storage Infrastructure on Commodity Hardware</h2>
+      <p>Connect computers together to create a controlled peer ­to ­peer storage
+infrastructure (public, private or hybrid cloud) that is secure, scalable and
+flexible yet controlled.</p>
+    </a>
+
+    <a class="usecase" href="#">
+      <img src="${url('images/home-filesystem-api.png')}" alt="Filesystem on top of an API">
+      <h2>Filesystem on top of an API</h2>
+      <p>Render any file­ meaningful API (Flickr, Youtube etc.) accessible through a
+native file system interface.</p>
+    </a>
+  </section>
+
+  <section class="commercial">
+    <h4 class="title">Commercial</h4>
+    <strong>Infinit brings a cutting ­edge technology for both object­ and file­based scalable storage infrastructures to businesses across the world.</strong>
+
+    <p>Being to create a white­labelled drive on top of your file­based storage API, to set up a complicated geographically distributed multi­domain storage infrastructure or subscribe to a enterprise license, we are here for you.</p>
+
+    <a class="button" href="#">Contact Us</a>
+  </section>
+
+
 </%block>

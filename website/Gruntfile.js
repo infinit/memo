@@ -8,7 +8,7 @@ module.exports = function(grunt) {
       },
       all: [
         'Gruntfile.js',
-        'resources/js/page.*.js'
+        'resources/js/pages/*.js'
       ]
     },
     less: {
@@ -33,7 +33,6 @@ module.exports = function(grunt) {
       dist: {
         files: {
           'resources/js/scripts.min.js': [
-            'resources/js/plugins/jquery.ui.widget.js',
             'resources/js/plugins/*.js',
             'resources/js/pages/*.js',
           ]

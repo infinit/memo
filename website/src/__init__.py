@@ -8,12 +8,11 @@ class Website(bottle.Bottle):
     super().__init__()
     route.apply(self)
 
-  @route('/')
+  @route('/', name = 'home')
   @view('pages/home')
   def root():
     return {
       'description': 'Infinit Filesystem',
-      'page': 'home',
     }
 
   @route('/css/<path:path>')

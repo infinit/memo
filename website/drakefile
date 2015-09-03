@@ -54,9 +54,28 @@ def configure(
     'resources/images/favicon@2x.png',
     'resources/images/logo.png',
     'resources/images/logo@2x.png',
+    'resources/images/bg-header-home.png',
+    'resources/images/bg-header-home@2x.png',
+    'resources/images/home-filesystem-api.png',
+    'resources/images/home-filesystem-api@2x.png',
+    'resources/images/home-personal-cloud.png',
+    'resources/images/home-personal-cloud@2x.png',
+    'resources/images/home-storage-infrastructure.png',
+    'resources/images/home-storage-infrastructure@2x.png',
+    'resources/images/schema-global.png',
+    'resources/images/schema-global@2x.png',
+
+    'resources/images/icons/storage.png',
+    'resources/images/icons/storage@2x.png',
+    'resources/images/icons/folder.png',
+    'resources/images/icons/folder@2x.png',
+    'resources/images/icons/network.png',
+    'resources/images/icons/network@2x.png',
 
     'resources/css/normalize.css',
     'resources/css/main.min.css',
+
+    'resources/js/scripts.min.js',
   )
 
   if python is not None:

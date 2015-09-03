@@ -29,7 +29,7 @@
     <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
   </head>
 
-  <body class="${page}">
+  <body class="${request.route.name}">
 
     <header>
       <img src="${url('images/logo.png')}" alt="Infinit">
@@ -46,5 +46,6 @@
       </%block>
     </div>
 
+    <script type="text/javascript" src="${url('js/scripts.min.js')}"></script>
   </body>
 </html>
