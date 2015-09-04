@@ -260,6 +260,7 @@ def configure(
         'infinit-storage',
         'infinit-user',
         'infinit-volume',
+        'infinit-acl',
     ]
   ]
   install << drake.install(installed_binaries, prefix)
