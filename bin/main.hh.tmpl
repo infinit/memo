@@ -645,8 +645,7 @@ namespace infinit
     credentials(std::string const& name, std::string const& uid) const
     {
       for (auto const& account: this->credentials(name))
-        if (account.display_name == name
-            || elle::sprintf("%s", account.uid) == name)
+        if (account.display_name == uid || account.uid == uid)
           return account;
       throw elle::Error(elle::sprintf("no such %s account: %s", name, uid));
     }
