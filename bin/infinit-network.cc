@@ -250,10 +250,7 @@ publish(variables_map const& args)
     auto owner_uid = infinit::User::uid(dht.owner);
     infinit::NetworkDescriptor desc(
       network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
-    beyond_publish(
-      "network",
-      elle::sprintf("%s/%s", owner_uid, network_name),
-      desc);
+    beyond_publish("network", network_name, desc);
   }
 }
 
