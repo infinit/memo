@@ -221,7 +221,7 @@ class Network(metaclass = Entity,
   @property
   def id(self):
     der = base64.b64decode(self.owner['rsa'])
-    owner_id = base64.b64encode(cryptography.hash(der))[0:8]
+    owner_id = base64.urlsafe_b64encode(cryptography.hash(der))[0:8]
     return '%s/%s' % (owner_id.decode('latin-1'), self.name)
 
 
