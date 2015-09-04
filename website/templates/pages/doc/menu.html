@@ -1,0 +1,61 @@
+
+  <ul class="menu">
+    <li
+    % if request.route.name == 'overview':
+      class="active"
+    % endif
+    >
+      <a href="#">Overview</a>
+    </li>
+
+    <li
+    % if request.route.name == 'get_started':
+      class="active"
+    % endif
+    >
+      <a href="#">Get Started</a>
+    </li>
+
+    <li
+    % if request.route.name == 'technology':
+      class="active"
+    % endif
+    >
+      <a href="#">Technology</a>
+    </li>
+
+    <li
+    % if request.route.name == 'comparisons':
+      class="active"
+    % endif
+    >
+      <a href="#">Comparisons</a>
+    </li>
+
+    <li
+    % if request.route.name == 'deployments':
+      class="active"
+    % endif
+    >
+      <a href="#">Deployments</a>
+    </li>
+
+    <li
+    % if request.route.name == 'Reference':
+      class="active"
+    % endif
+    >
+      <a href="#">Reference</a>
+
+      <ul>
+        <li><a href="#">infinit-user</a></li>
+        <li><a href="#">infinit-credentials</a></li>
+        <li><a href="#">infinit-storage</a></li>
+        <li><a href="#">infinit-network</a></li>
+        <li><a href="#">infinit-volume</a></li>
+        <li><a href="#">infinit-hub</a></li>
+      </ul>
+    </li>
+
+  </ul>
+

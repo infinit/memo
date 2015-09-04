@@ -15,6 +15,14 @@ class Website(bottle.Bottle):
       'description': 'Infinit Filesystem',
     }
 
+  @route('/get-started', name = 'get_started')
+  @view('pages/doc/get_started.html')
+  def root():
+    return {
+      'title': 'Get Started',
+      'description': 'Infinit Filesystem',
+    }
+
   @route('/css/<path:path>')
   @route('/images/<path:path>')
   @route('/js/<path:path>')
