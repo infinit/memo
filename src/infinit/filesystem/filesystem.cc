@@ -1997,6 +1997,11 @@ namespace infinit
         _fetch();
         return perms_to_json(*_block);
       }
+      else if (key == "user.infinit.auth.inherit")
+      {
+        _fetch();
+        return _inherit_auth ? "true" : "false";
+      }
       else
         return Node::getxattr(key);
     }

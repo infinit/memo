@@ -11,6 +11,7 @@
 #include <boost/filesystem.hpp>
 
 #include <elle/log.hh>
+#include <elle/json/json.hh>
 
 #ifdef INFINIT_MACOSX
   #define SXA_EXTRA ,0
@@ -21,7 +22,7 @@
 
 bool recursive = false;
 bool inherit = false;
-bool dishinerit = false;
+bool disinherit = false;
 bool list = false;
 bool verbose = false;
 std::vector<std::string> path;
@@ -40,6 +41,8 @@ void apply(std::string const& file, bool from_rec)
 {
   if (verbose)
     std::cout << "processing " << file << std::endl;
+  using namespace boost::filesystem;
+  bool dir = is_directory(file);
   if (list)
   {
     char buf[4096];
@@ -49,12 +52,49 @@ void apply(std::string const& file, bool from_rec)
     else
     {
       buf[sz] = 0;
-      std::cout << file << " : " << buf << std::endl;
+      std::stringstream ss;
+      ss.str(buf);
+      boost::optional<bool> dir_inherit;
+      if (dir)
+      {
+        int sz = getxattr(file.c_str(), "user.infinit.auth.inherit", buf, 4095 SXA_EXTRA SXA_EXTRA);
+        if (sz < 0)
+          perror(file.c_str());
+        else
+        {
+          buf[sz] = 0;
+          dir_inherit = (buf == std::string("true"));
+        }
+      }
+      try
+      {
+        // [{name: s, read: bool, write: bool}]
+        using namespace elle::json;
+        std::stringstream output;
+        output << file << ":" << std::endl;
+        if (dir_inherit)
+          output << "  inherit: " << (dir_inherit.get() ? "yes" : "no") << std::endl;
+        Json j = elle::json::read(ss);
+        auto a = boost::any_cast<Array>(j);
+        for (auto& li: a)
+        {
+          auto d = boost::any_cast<Object>(li);
+          auto n = boost::any_cast<std::string>(d.at("name"));
+          auto r = boost::any_cast<bool>(d.at("read"));
+          auto w = boost::any_cast<bool>(d.at("write"));
+          const char* mode = w ? (r? "rw" : "w") : (r? "r" : "none");
+          output << "\t" << n << ": " << mode << std::endl;
+        }
+        std::cout << output.str() << std::endl;
+      }
+      catch (std::exception const& e)
+      {
+        std::cout << file << " : " << buf << std::endl;
+      }
     }
   }
-  using namespace boost::filesystem;
-  bool dir = is_directory(file);
-  if (inherit || dishinerit)
+
+  if (inherit || disinherit)
   {
     if (!dir)
     {
@@ -96,10 +136,10 @@ int main(int argc, char** argv)
   options_description options("options");
   options.add_options()
    ("help,h", "display the help")
-   ("recursive,R", bool_switch(&recursive), "apply operatior recursively")
+   ("recursive,R", bool_switch(&recursive), "apply operation recursively")
    ("list,l", bool_switch(&list), "list current ACL")
    ("inherit,i", bool_switch(&inherit), "if set, new files/folder will inherit ACLs frome their parent directory")
-   ("disinherit,d", bool_switch(&dishinerit), "Disable inheritance flag")
+   ("disinherit,d", bool_switch(&disinherit), "Disable inheritance flag")
    ("verbose,v", bool_switch(&verbose), "verbose output")
    ("path,p", value<std::vector<std::string> >(&path), "path")
    ("mode,m", value<std::string>(&mode), "mode {r, w, rw, none}")
@@ -125,9 +165,19 @@ int main(int argc, char** argv)
       std::cout << "missing argument " << (mode.empty() ? "mode": "user") << std::endl;
       show_help = true;
     }
+    if (path.empty())
+    {
+      std::cout << "Missing path argument" << std::endl;
+      show_help = true;
+    }
+    if (mode.empty() && !inherit && !disinherit && !list)
+    {
+      std::cout << "No operation specified, set one of -i, -d, -m, -l" << std::endl;
+      show_help = true;
+    }
     if (vm.count("help") || show_help)
     {
-      std::cout << "Usage: " << argv[0] << " [options] mode user path..." << std::endl;
+      std::cout << "Usage: " << argv[0] << " [options] path..." << std::endl;
       std::cout << options << std::endl;
       exit(0);
     }
