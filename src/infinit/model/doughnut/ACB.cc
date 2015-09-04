@@ -180,7 +180,7 @@ namespace infinit
             elle::serialization::serialize
             <std::vector<ACLEntry>, elle::serialization::Json>
             (entries, "entries"));
-          this->doughnut()->store(*new_acl);
+          this->doughnut()->store(*new_acl, STORE_INSERT);
           this->_acl = new_acl->address();
           ELLE_DUMP("%s: new ACL address: %s", *this, this->_acl);
           this->_acl_changed = true;
@@ -368,7 +368,7 @@ namespace infinit
             }
             auto new_acl_block =
               this->doughnut()->make_block<blocks::ImmutableBlock>(new_acl);
-            this->doughnut()->store(*new_acl_block);
+            this->doughnut()->store(*new_acl_block, STORE_INSERT);
             this->_acl = new_acl_block->address();
           }
           this->MutableBlock::data(secret.encipher(this->data_plain()));
