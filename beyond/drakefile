@@ -67,6 +67,7 @@ def configure(
 
   sources = drake.nodes(
     'src/__init__.py',
+    'src/bottle.py',
     'src/couchdb.py',
     'src/wsgi.py',
   ) + [bottle, version]
