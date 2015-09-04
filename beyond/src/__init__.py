@@ -11,11 +11,31 @@ class Beyond:
       datastore,
       dropbox_app_key,
       dropbox_app_secret,
+      google_app_key,
+      google_app_secret,
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
     self.__dropbox_app_key    = dropbox_app_key
     self.__dropbox_app_secret = dropbox_app_secret
+    self.__google_app_key    = google_app_key
+    self.__google_app_secret = google_app_secret
+
+  @property
+  def dropbox_app_key(self):
+    return self.__dropbox_app_key
+
+  @property
+  def dropbox_app_secret(self):
+    return self.__dropbox_app_secret
+
+  @property
+  def google_app_key(self):
+    return self.__google_app_key
+
+  @property
+  def google_app_secret(self):
+    return self.__google_app_secret
 
   ## ------- ##
   ## Network ##
@@ -55,13 +75,17 @@ class User:
                id,
                name = None,
                public_key = None,
-               dropbox_accounts = None):
+               dropbox_accounts = None,
+               google_accounts = None,
+  ):
     self.__beyond = beyond
     self.__id = id
     self.__name = name
     self.__public_key = public_key
     self.__dropbox_accounts = dropbox_accounts or {}
     self.__dropbox_accounts_original = dict(self.dropbox_accounts)
+    self.__google_accounts = google_accounts or {}
+    self.__google_accounts_original = dict(self.google_accounts)
 
   @classmethod
   def from_json(self, beyond, json):
@@ -69,7 +93,9 @@ class User:
                 id = json['id'],
                 name = json['name'],
                 public_key = json['public_key'],
-                dropbox_accounts = json.get('dropbox_accounts'))
+                dropbox_accounts = json.get('dropbox_accounts'),
+                google_accounts = json.get('google_accounts'),
+    )
 
   def to_json(self, private = False):
     res = {
@@ -79,6 +105,8 @@ class User:
     }
     if private and self.dropbox_accounts is not None:
       res['dropbox_accounts'] = self.dropbox_accounts
+    if private and self.google_accounts is not None:
+      res['google_accounts'] = self.google_accounts
     return res
 
   def create(self):
@@ -92,8 +120,12 @@ class User:
     for id, account in self.dropbox_accounts.items():
       if self.__dropbox_accounts_original.get(id) != account:
         diff.setdefault('dropbox_accounts', {})[id] = account
+    for id, account in self.google_accounts.items():
+      if self.__google_accounts_original.get(id) != account:
+        diff.setdefault('google_accounts', {})[id] = account
     self.__beyond._Beyond__datastore.user_update(self.id, diff)
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
+    self.__google_accounts_original = dict(self.__google_accounts)
 
   @property
   def id(self):
@@ -110,6 +142,10 @@ class User:
   @property
   def dropbox_accounts(self):
     return self.__dropbox_accounts
+
+  @property
+  def google_accounts(self):
+    return self.__google_accounts
 
 
 class Entity(type):

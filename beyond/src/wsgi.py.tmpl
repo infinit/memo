@@ -8,5 +8,7 @@ beyond = infinit.beyond.Beyond(
   datastore = datastore,
   dropbox_app_key = ${repr(dropbox_app_key)},
   dropbox_app_secret = ${repr(dropbox_app_secret)},
+  google_app_key = ${repr(google_app_key)},
+  google_app_secret = ${repr(google_app_secret)},
 )
 application = infinit.beyond.bottle.Bottle(beyond)

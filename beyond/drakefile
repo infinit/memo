@@ -23,7 +23,28 @@ def configure(
     google_app_key = '798530033299-jiqlihdquc70r08ucthm3o1omp594ihm',
     google_app_secret = 'ufwn6w0hAT2MDuwOzfWxh4Sx',
 ):
+
   global build, check, install, tests
+
+  class PythonCopy(drake.Copy):
+
+    def execute(self):
+      if not super().execute():
+        return False
+      script = ';'.join([
+        'import py_compile',
+        'res = py_compile.compile(file = %r, dfile = %r)',
+        'exit(1 if res is None else 0)',
+      ]) % (str(self.target().path()), str(self.source.path()))
+      self.cmd(
+        'Check syntax of %s' % self.target(),
+        ['%s/bin/python%s' % (python.prefix, python.version),
+         '-c', script],
+        throw = True)
+      return True
+
+  def copy_python(*args, **kwargs):
+    return drake.copy(builder = PythonCopy, *args, **kwargs)
 
   if git is None:
     git = drake.git.Git()
@@ -36,7 +57,10 @@ def configure(
 
   with drake.templating.Context(content = {
       'dropbox_app_key': dropbox_app_key,
-    'dropbox_app_secret': dropbox_app_secret,
+      'dropbox_app_secret': dropbox_app_secret,
+      'google_app_key':
+        '%s.apps.googleusercontent.com' % google_app_key,
+      'google_app_secret': google_app_secret,
   }):
     drake.node('beyond.tmpl')
     drake.node('src/wsgi.py.tmpl')
@@ -80,7 +104,7 @@ def configure(
               where / python_prefix, strip_prefix = True)
 
   build = drake.Rule('build')
-  build << install_nodes(where = '.', how = drake.copy)
+  build << install_nodes(where = '.', how = copy_python)
 
   install = drake.Rule('install')
   install << install_nodes(where = prefix, how = drake.install)
