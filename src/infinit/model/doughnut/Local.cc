@@ -44,6 +44,7 @@ namespace infinit
       Local::~Local()
       {
         this->_server_thread.terminate_now();
+        this->_utp_server_thread.terminate_now();
       }
 
       /*-------.
