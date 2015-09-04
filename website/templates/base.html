@@ -5,6 +5,7 @@
 
     <%
     title = context.get('title', 'Infinit')
+    title = context.get('description', 'Powerful storage platform for developers and sysadmins')
     %>
     <title>${title}</title>
     <meta name="description" content="${description}" />
@@ -29,7 +30,7 @@
     <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
   </head>
 
-  <body class="${request.route.name}">
+  <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''}">
 
     <header>
       <a href="#"><img src="${url('images/logo.png')}" alt="Infinit"></a>

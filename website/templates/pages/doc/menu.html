@@ -1,50 +1,26 @@
 
   <ul class="menu">
-    <li
-    % if request.route.name == 'overview':
-      class="active"
-    % endif
-    >
+    <li ${'class="active"' if request.route.name == 'doc_overview' else ''}>
       <a href="#">Overview</a>
     </li>
 
-    <li
-    % if request.route.name == 'get_started':
-      class="active"
-    % endif
-    >
+    <li ${'class="active"' if request.route.name == 'doc_get_started' else ''}>
       <a href="#">Get Started</a>
     </li>
 
-    <li
-    % if request.route.name == 'technology':
-      class="active"
-    % endif
-    >
+    <li ${'class="active"' if request.route.name == 'doc_technology' else ''}>
       <a href="#">Technology</a>
     </li>
 
-    <li
-    % if request.route.name == 'comparisons':
-      class="active"
-    % endif
-    >
+    <li ${'class="active"' if request.route.name == 'doc_comparisons' else ''}>
       <a href="#">Comparisons</a>
     </li>
 
-    <li
-    % if request.route.name == 'deployments':
-      class="active"
-    % endif
-    >
+    <li ${'class="active"' if request.route.name == 'doc_deployments' else ''}>
       <a href="#">Deployments</a>
     </li>
 
-    <li
-    % if request.route.name == 'Reference':
-      class="active"
-    % endif
-    >
+    <li ${'class="active"' if request.route.name == 'doc_reference' else ''}>
       <a href="#">Reference</a>
 
       <ul>
@@ -55,6 +31,10 @@
         <li><a href="#">infinit-volume</a></li>
         <li><a href="#">infinit-hub</a></li>
       </ul>
+    </li>
+
+    <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
+      <a href="#">Roadmap</a>
     </li>
 
   </ul>

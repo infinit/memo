@@ -15,12 +15,20 @@ class Website(bottle.Bottle):
       'description': 'Infinit Filesystem',
     }
 
-  @route('/get-started', name = 'get_started')
+  @route('/overview', name = 'doc_overview')
+  @view('pages/doc/overview.html')
+  def root():
+    return {
+      'title': 'Overview',
+      'description': 'Infinit',
+    }
+
+  @route('/get-started', name = 'doc_get_started')
   @view('pages/doc/get_started.html')
   def root():
     return {
       'title': 'Get Started',
-      'description': 'Infinit Filesystem',
+      'description': 'Infinit',
     }
 
   @route('/css/<path:path>')

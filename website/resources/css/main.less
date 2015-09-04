@@ -32,6 +32,8 @@ a.button, button.button, input.button {
   &.border.black:hover { background: @black; color: white;}
 }
 
+.spacer { clear: both; }
+
 header {
   padding: 10px 8% 5px 8%;
 
@@ -150,7 +152,7 @@ body.home {
 }
 
 
-body.get_started {
+body.documentation {
   header { background: #F9F9F9; border-bottom: 2px solid #F3F3F3; }
 
   ul.menu {
@@ -172,7 +174,7 @@ body.get_started {
   ul.menu ul li a { font-size: 13px; }
 
 
-  section.documentation {
+  section.doc {
     float: left; width: 50%; padding: 20px 15% 100px 30%;
 
     h1 {
@@ -182,6 +184,12 @@ body.get_started {
 
     p { line-height: 20px; }
     p.note { font-style: italic; color: #8C8C8C; }
+    p a { color: @infinitblue; .transition() }
+
+    p a:hover {
+      color: darken(@infinitblue, 10%);
+      border-bottom: 2px solid darken(@infinitblue, 10%);
+    }
 
     h2 { margin-top: 50px;}
     .button { font-size: 14px; padding: 6px 11px;}
@@ -199,6 +207,44 @@ body.get_started {
     }
   }
 }
+
+
+body.doc_overview {
+
+  section.doc {
+
+    .features {
+
+      div {
+        float: left; width: 25%; padding: 0 2%; background: darken(white, 2%);
+        border-radius: 3px; margin: 2%;
+
+        h2 { font-size: 15px; text-transform: uppercase; margin: 15px 0 5px 0;}
+        p { font-size: 13px; color: #959595; line-height: 19px; margin-top: 0;}
+      }
+
+      div:nth-child(3n+1) {
+        clear: both;
+      }
+    }
+
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
