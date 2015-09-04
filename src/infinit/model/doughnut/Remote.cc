@@ -18,19 +18,30 @@ namespace infinit
 
       Remote::Remote(Doughnut& doughnut, std::string const& host, int port)
         : _doughnut(doughnut)
-        , _socket(host, port)
-        , _serializer(this->_socket)
+        , _socket(elle::make_unique<reactor::network::TCPSocket>(host, port))
+        , _serializer(*this->_socket)
         , _channels(this->_serializer)
       {}
 
       Remote::Remote(Doughnut& doughnut,
                      boost::asio::ip::tcp::endpoint endpoint)
         : _doughnut(doughnut)
-        , _socket(std::move(endpoint))
-        , _serializer(this->_socket)
+        , _socket(elle::make_unique<reactor::network::TCPSocket>(
+            std::move(endpoint)))
+        , _serializer(*this->_socket)
         , _channels(this->_serializer)
       {}
 
+      Remote::Remote(Doughnut& doughnut,
+                     boost::asio::ip::udp::endpoint endpoint)
+        : _doughnut(doughnut)
+        , _utp_socket(elle::make_unique<reactor::network::UTPSocket>(
+            _utp_server(), endpoint.address().to_string(), endpoint.port()))
+        , _serializer(*this->_utp_socket)
+        , _channels(this->_serializer)
+      {
+
+      }
       /*-------.
       | Blocks |
       `-------*/
@@ -59,6 +70,18 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
         RPC<void (Address)> remove("remove", this->_channels);
         remove(address);
+      }
+
+      reactor::network::UTPServer&
+      Remote::_utp_server()
+      {
+        static std::unique_ptr<reactor::network::UTPServer> us;
+        if (!us)
+        {
+          us.reset(new reactor::network::UTPServer());
+          us->listen(0);
+        }
+        return *us;
       }
     }
   }

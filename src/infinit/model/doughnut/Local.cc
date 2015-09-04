@@ -33,8 +33,11 @@ namespace infinit
         , _doughnut(nullptr)
         , _server_thread(elle::sprintf("%s server", *this),
                          [this] { this->_serve(); })
+        , _utp_server_thread(elle::sprintf("%s utp server", *this),
+                         [this] { this->_serve_utp(); })
       {
         this->_server.listen(port);
+        this->_utp_server.listen(this->_server.port() + 100);
         ELLE_TRACE("%s: listen on port %s", *this, this->_server.port());
       }
 
@@ -153,6 +156,50 @@ namespace infinit
           }
         };
       }
+
+
+
+      void
+      Local::_serve_utp()
+      {
+        RPCServer rpcs;
+        rpcs.add("store",
+                 std::function<void (blocks::Block const& data, StoreMode)>(
+                   [this] (blocks::Block const& block, StoreMode mode)
+                   {
+                     return this->store(block, mode);
+                   }));
+        rpcs.add("fetch",
+                std::function<std::unique_ptr<blocks::Block> (Address address)>(
+                  [this] (Address address)
+                  {
+                    return this->fetch(address);
+                  }));
+        rpcs.add("remove",
+                std::function<void (Address address)>(
+                  [this] (Address address)
+                  {
+                    this->remove(address);
+                  }));
+        reactor::wait(this->_server_barrier);
+        elle::With<reactor::Scope>() << [this, &rpcs] (reactor::Scope& scope)
+        {
+          while (true)
+          {
+            auto socket = elle::utility::move_on_copy(this->_utp_server.accept());
+            auto name = elle::sprintf("%s: %s server", *this, **socket);
+            scope.run_background(
+              name,
+              [this, socket, &rpcs]
+              {
+                rpcs.set_context<Doughnut*>(this->_doughnut);
+                protocol::Serializer serializer(**socket);
+                rpcs.serve(serializer);
+              });
+          }
+        };
+      }
+
     }
   }
 }

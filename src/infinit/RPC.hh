@@ -201,12 +201,19 @@ namespace infinit
         elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
     }
 
+
     void
     serve(reactor::network::Socket& s)
     {
+      protocol::Serializer serializer(s);
+      serve(serializer);
+    }
+
+    void
+    serve(protocol::Serializer& serializer)
+    {
       try
       {
-        protocol::Serializer serializer(s);
         protocol::ChanneledStream channels(serializer);
         while (true)
         {
@@ -238,6 +245,8 @@ namespace infinit
         }
       }
       catch (reactor::network::ConnectionClosed const&)
+      {}
+      catch (reactor::network::SocketClosed const&)
       {}
     }
 

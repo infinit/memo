@@ -5,6 +5,7 @@
 
 # include <reactor/Barrier.hh>
 # include <reactor/network/tcp-server.hh>
+# include <reactor/network/utp-socket.hh>
 
 # include <infinit/model/doughnut/Peer.hh>
 # include <infinit/model/doughnut/fwd.hh>
@@ -57,8 +58,12 @@ namespace infinit
         ELLE_ATTRIBUTE(reactor::network::TCPServer, server);
         ELLE_ATTRIBUTE(reactor::Thread, server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
+        ELLE_ATTRIBUTE(reactor::network::UTPServer, utp_server);
+        ELLE_ATTRIBUTE(reactor::Thread, utp_server_thread);
         void
         _serve();
+        void
+        _serve_utp();
       };
     }
   }
