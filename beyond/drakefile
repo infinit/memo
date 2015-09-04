@@ -36,11 +36,13 @@ def configure(
         'res = py_compile.compile(file = %r, dfile = %r)',
         'exit(1 if res is None else 0)',
       ]) % (str(self.target().path()), str(self.source.path()))
-      self.cmd(
-        'Check syntax of %s' % self.target(),
-        ['%s/bin/python%s' % (python.prefix, python.version),
-         '-c', script],
-        throw = True)
+      if not isinstance(self.target(),
+                        (drake.cxx.Module, drake.cxx.DynLib)):
+        self.cmd(
+          'Check syntax of %s' % self.target(),
+          ['%s/bin/python%s' % (python.prefix, python.version),
+           '-c', script],
+          throw = True)
       return True
 
   def copy_python(*args, **kwargs):
