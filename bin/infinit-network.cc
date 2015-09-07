@@ -35,10 +35,18 @@ create(variables_map const& args)
   {
     auto kelips =
       elle::make_unique<infinit::overlay::kelips::Configuration>();
-    if (args.count("nodes"))
-      kelips->config.k = sqrt(args["nodes"].as<int>());
     if (args.count("k"))
       kelips->config.k = args["k"].as<int>();
+    else if (args.count("nodes"))
+    {
+      int nodes = args["nodes"].as<int>();
+      if (nodes < 10)
+        kelips->config.k = 1;
+      else if (sqrt(nodes) < 5)
+        kelips->config.k = nodes / 5;
+      else
+        kelips->config.k = sqrt(nodes);
+    }
     if (args.count("encrypt"))
     {
       std::string enc = args["encrypt"].as<std::string>();
