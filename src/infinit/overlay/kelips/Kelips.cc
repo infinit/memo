@@ -1393,6 +1393,7 @@ namespace kelips
       catch (reactor::Timeout const& e)
       {
         ELLE_LOG("%s: get failed on %x, trying put", *this, file);
+        ELLE_LOG("%s", e.backtrace());
         return kelipsPut(file, n);
       }
     }
@@ -1821,20 +1822,44 @@ namespace kelips
     Members res;
     for (auto const& host: const_cast<Node*>(this)->address(address, op, n))
     {
-      try
+      using Protocol = infinit::model::doughnut::Local::Protocol;
+      if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
       {
-        res.emplace_back(
-          new infinit::model::doughnut::Remote(
-            const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-            host));
+        try
+        {
+          res.emplace_back(
+            new infinit::model::doughnut::Remote(
+              const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+              boost::asio::ip::udp::endpoint(host.address(), host.port()+100)));
+          continue;
+        }
+        catch (reactor::Terminate const& e)
+        {
+          throw;
+        }
+        catch (std::exception const& e)
+        {
+          ELLE_WARN("Failed to connect with utp to node %s", host);
+        }
       }
-      catch (reactor::Terminate const& e)
+      if (_config.rpc_protocol == Protocol::tcp || _config.rpc_protocol == Protocol::all)
       {
-        throw;
-      }
-      catch (std::exception const& e)
-      {
-        ELLE_WARN("Failed to connect to node %s", host);
+        try
+        {
+          res.emplace_back(
+            new infinit::model::doughnut::Remote(
+              const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+              host));
+          continue;
+        }
+        catch (reactor::Terminate const& e)
+        {
+          throw;
+        }
+        catch (std::exception const& e)
+        {
+          ELLE_WARN("Failed to connect with tcp to node %s", host);
+        }
       }
     }
 
@@ -1893,6 +1918,7 @@ namespace kelips
     s.serialize("wait", wait);
     s.serialize("encrypt", encrypt);
     s.serialize("accept_plain", accept_plain);
+    s.serialize("rpc_protocol", rpc_protocol);
   }
 
   Configuration::Configuration()
@@ -1913,6 +1939,7 @@ namespace kelips
     , wait(1)
     , encrypt(false)
     , accept_plain(true)
+    , rpc_protocol(infinit::model::doughnut::Local::Protocol::all)
     , gossip()
   {}
 

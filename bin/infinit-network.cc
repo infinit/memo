@@ -65,6 +65,19 @@ create(variables_map const& args)
       kelips->config.encrypt = false;
       kelips->config.accept_plain = true;
     }
+    if (args.count("protocol"))
+    {
+      std::string proto = args["protocol"].as<std::string>();
+      try
+      {
+        kelips->config.rpc_protocol =
+          elle::serialization::Serialize<infinit::model::doughnut::Local::Protocol>::convert(proto);
+      }
+      catch (elle::serialization::Error const& e)
+      {
+        throw elle::Error("protocol must be one of: utp, tcp, all");
+      }
+    }
     kelips->config.node_id = infinit::model::Address::random();
     overlay_config = std::move(kelips);
   }
@@ -292,6 +305,7 @@ int main(int argc, char** argv)
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups")
     ("encrypt", value<std::string>(), "no, lazy or yes")
+    ("protocol", value<std::string>(), "RPC protocol to use: tcp,utp,all")
     ;
   options_description options("Infinit network utility");
   Modes modes {

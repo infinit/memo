@@ -109,6 +109,7 @@ namespace kelips
     int wait; // wait for 'wait' nodes before starting
     bool encrypt;
     bool accept_plain;
+    infinit::model::doughnut::Local::Protocol rpc_protocol;
     GossipConfiguration gossip;
   };
 
