@@ -105,8 +105,18 @@ class Bottle(bottle.Bottle):
   ## ------- ##
 
   def network_get(self, owner_id, name):
-    return self.__beyond.network_get(
-      owner_id = owner_id, name = name).json()
+    try:
+      return self.__beyond.network_get(
+        owner_id = owner_id, name = name).json()
+    except Network.NotFound:
+      id = '%s/%s' % (owner_id, name)
+      bottle.response.status = 404
+      return {
+        'error': 'network/not_found',
+        'reason': 'network %r does not exist' % id,
+        'id': id,
+      }
+
 
   def network_put(self, owner_id, name):
     try:
