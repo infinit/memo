@@ -1505,7 +1505,16 @@ namespace kelips
         if (it == _state.contacts[fg].end())
           it = random_from(_state.contacts[_group], _gen);
         if (it == _state.contacts[_group].end())
-          throw std::runtime_error("No contacts in self/target groups");
+        {
+          if (fg != _group)
+            throw std::runtime_error("No contacts in self/target groups");
+          // Store locally
+          _promised_files.push_back(p.fileAddress);
+          results.push_back(RpcEndpoint(
+            boost::asio::ip::address::from_string("127.0.0.1"),
+            this->_port));
+          return;
+        }
         ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
         send(req, it->second.endpoint, it->second.address);
         try
