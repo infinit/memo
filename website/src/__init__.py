@@ -31,6 +31,22 @@ class Website(bottle.Bottle):
       'description': 'Infinit',
     }
 
+  @route('/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
+  @view('pages/doc/deployments/personal_cloud.html')
+  def root():
+    return {
+      'title': 'Roadmap',
+      'description': 'Infinit',
+    }
+
+  @route('/roadmap', name = 'doc_roadmap')
+  @view('pages/doc/roadmap.html')
+  def root():
+    return {
+      'title': 'Roadmap',
+      'description': 'Infinit',
+    }
+
   @route('/css/<path:path>')
   @route('/images/<path:path>')
   @route('/js/<path:path>')

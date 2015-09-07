@@ -1,11 +1,11 @@
 
   <ul class="menu">
     <li ${'class="active"' if request.route.name == 'doc_overview' else ''}>
-      <a href="#">Overview</a>
+      <a href="/overview">Overview</a>
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_get_started' else ''}>
-      <a href="#">Get Started</a>
+      <a href="/get-started">Get Started</a>
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_technology' else ''}>
@@ -18,6 +18,12 @@
 
     <li ${'class="active"' if request.route.name == 'doc_deployments' else ''}>
       <a href="#">Deployments</a>
+
+      <ul>
+        <li ${'class="active"' if request.route.name == 'doc_deployment_personal_cloud' else ''}><a href="/deployments/unlimited-personal-drive">Personal Cloud</a></li>
+        <li><a href="#">Storage Infrastructure</a></li>
+        <li><a href="#">API-based Filesystem</a></li>
+      </ul>
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_reference' else ''}>
@@ -34,7 +40,7 @@
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
-      <a href="#">Roadmap</a>
+      <a href="/roadmap">Roadmap</a>
     </li>
 
   </ul>
