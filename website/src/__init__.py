@@ -31,6 +31,14 @@ class Website(bottle.Bottle):
       'description': 'Infinit',
     }
 
+  @route('/documentation/technology', name = 'doc_technology')
+  @view('pages/doc/technology.html')
+  def root():
+    return {
+      'title': 'Technology',
+      'description': 'Infinit',
+    }
+
   @route('/documentation/comparisons', name = 'doc_comparisons')
   @view('pages/doc/comparisons.html')
   def root():

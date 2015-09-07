@@ -16,6 +16,7 @@ module.exports = function(grunt) {
         files: {
           'resources/css/main.min.css': [
             'resources/css/normalize.css',
+            'resources/css/snippets.css',
             'resources/css/main.less'
           ]
         },
@@ -47,7 +48,8 @@ module.exports = function(grunt) {
     watch: {
       less: {
         files: [
-          'resources/css/*.less'
+          'resources/css/*.less',
+          'resources/css/plugins/*.css'
         ],
         tasks: ['less']
       },

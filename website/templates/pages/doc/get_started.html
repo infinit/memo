@@ -26,8 +26,7 @@
 
     <p>Next, open your terminal and extract the Infinit tarball:</p>
 
-<pre>
-$> tar xjvf infinit­0.2.0.tbz
+<pre><code>$> tar xjvf infinit­0.2.0.tbz
 infinit­0.2.0/
 infinit­0.2.0/bin/
 infinit­0.2.0/lib
@@ -35,7 +34,7 @@ infinit­0.2.0/lib
 infinit­0.2.0/bin/infinit­storage
 infinit­0.2.0/bin/infinit­user
 infinit­0.2.0/bin/infinit­volume
-$></pre>
+$></code></pre>
 
     <p>All the configuration files the Infinit command­line tools create and use are located in the <span class="code">$INFINIT_HOME</span> directory which, by default, is set to <span class="code">$HOME/.infinit/</span>. You can change edit your shell configuration to set <span class="code">INFINIT_HOME</span> to another location if you want.</p>
 
@@ -45,12 +44,11 @@ $></pre>
     <p>Now that you’ve extracted the tarball, take a look. The extract directory contains subdirectories. <span class="code">bin/</span> contains the actual Infinit binaries such as infinit-user, infinit-network and more. The <span class="code">lib/</span> subdirectory contains all the libraries those binaries require to operate. Finally, the <span class="code">test/</span> subdirectory is provided for you to quickly test those command-line tools, see below.</p>
 
 
-<pre>
-$> cd infinit-0.2.0/
+<pre><code>$> cd infinit-0.2.0/
 $> ls
 bin/  lib/  test/
 $>
-</pre>
+</code></pre>
 
     <h2>Test by mounting an existing volume</h2>
 
@@ -58,32 +56,29 @@ $>
 
     <p>Add the <span class="code">bin/</span> to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
 
-<pre>
-$> export PATH=$PWD/bin/:$PATH
+<pre><code>$> export PATH=$PWD/bin/:$PATH
 $>
-</pre>
+</code></pre>
 
     <p>Now run the infinit-volume command by prefixing it with the environment variable <span class="code">INFINIT_HOME=$PWD/../test/home</span> to tell the command where to look for the configuration files required for this test.</p>
 
-<pre>
-$> INFINIT_HOME=$PWD/test/home/ infinit-volume --mount --name test --mountpoint $PWD/test/mountpoint/ -as alice
+<pre><code>$> INFINIT_HOME=$PWD/test/home/ infinit-volume --mount --name test --mountpoint $PWD/test/mountpoint/ -as alice
 … XXX ...
 $>
-</pre>
+</code></pre>
 
     <p>This command mounts the volume named <span class="code">test</span> on behalf of the user ‘alice’ and makes it accessible from the mount point <span class="code">test/mountpoint/</span>.</p>
 
     <p>At this point, you can access the files in the <span class="code">test</span> volume by browsing the <span class="code">test/mountpoint/</span> directory.</p>
 
-<pre>
-$> cd ../test/
+<pre><code>$> cd ../test/
 $> ls
 home/ mountpoint/
 $> cd mountpoint/
 $> ls
 … XXX …
 $>
-</pre>
+</code></pre>
 
     <p>Noteworthy is that test <span class="code">test</span> volume contains 2GB of data. However, unlike cloud storage services like Dropbox, you were able to access its content without having to wait hours for all the files to be downloaded locally.</p>
 

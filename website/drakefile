@@ -51,6 +51,7 @@ def configure(
     'templates/pages/doc/menu.html',
     'templates/pages/doc/get_started.html',
     'templates/pages/doc/overview.html',
+    'templates/pages/doc/technology.html',
     'templates/pages/doc/comparisons.html',
     'templates/pages/doc/deployments/personal_cloud.html',
     'templates/pages/doc/roadmap.html',

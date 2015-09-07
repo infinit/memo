@@ -194,16 +194,15 @@ body.documentation {
     h2 { margin-top: 50px;}
     .button { font-size: 14px; padding: 6px 11px;}
 
-    pre {
-      display: block; color: white;
-      background: #323232; font-size: 13px;
+    pre code {
+      display: block;
       padding: 15px 20px; border-radius: 5px;
       margin-left: 0;
     }
 
-    span.code {
+    span.code, .tags span {
       background: #E9F2F5; border-radius: 3px; padding: 3px;
-      color: #5A6878; font-family: monospace; font-size: 13px;
+      color: #5A6878; font-family: @monospace; font-size: 13px;
     }
 
     img { max-width: 100%; }
@@ -223,6 +222,9 @@ body.documentation {
       padding: 10px 5px;
       border-right: 3px solid #E6E6E6;
     }
+
+    .tags { margin-top: -10px; margin-bottom: 25px; }
+    .tags span { font-family: @sourcesans; }
   }
 }
 

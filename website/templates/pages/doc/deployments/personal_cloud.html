@@ -19,12 +19,11 @@
 
     <h2>Create a user</h2>
 
-<pre>
-$[device A]> infinit-user --create --name jacquo
+<pre><code>$[device A]> infinit-user --create --name jacquo
 Generating RSA keypair.
 Generated user "jacquo".
 $[device A]>
-</pre>
+</code></pre>
 
     <p>By simply passing the --create option, Infinit takes care of generating a RSA key pair and creating a user whose name is based on your UNIX username. Please refer to the infinit-user manual or reference page for more options such as using your existing SSH RSA key.</p>
 
@@ -34,17 +33,16 @@ $[device A]>
 
     <p>To register an account based on your freshly created user, simply use the --register option. Note that you will need to choose a unique handle just as it is the case on Twitter, Github and many other services.</p>
 
-<pre>
-$[device A]> infinit-user --register --name jacquo --handle jrc --email jacques@chirac.fr
+<pre><code>$[device A]> infinit-user --register --name jacquo --handle jrc --email jacques@chirac.fr
 … XXX ...
-$[device A]> </pre>
+$[device A]>
+</code></pre>
 
     <p>To simplify all the hub-related commands, you can set the INFINIT_HUB_HANDLE environment variable to your handle:</p>
 
-<pre>
-$[device A]> export INFINIT_HUB_HANDLE=”jrc”
+<pre><code>$[device A]> export INFINIT_HUB_HANDLE=”jrc”
 $[device A]>
-</pre>
+</code></pre>
 
 
     <h2>Plug your cloud services</h2>
@@ -53,12 +51,10 @@ $[device A]>
 
     <p>The infinit-credentials binary will be used for that purpose. The <span class="code">--add</span> option can be used to list all the cloud services that are supported at the moment.</p>
 
-<pre>
-$[device A]> infinit-credentials --add
-</pre>
+<pre><code>$[device A]> infinit-credentials --add
+</code></pre>
 
-<pre>
-Add credentials for a third-party service:
+<pre><code>Add credentials for a third-party service:
 
 Add options:
   --user arg             user to manage credentials with (defaults to system
@@ -66,16 +62,16 @@ Add options:
 
 Services:
   --dropbox              Dropbox account credentials
-</pre>
+</code></pre>
 
     <p>At the moment, we only support a handful of cloud services but adding more is quite a simple process. If you feel like contributing, please do not hesitate to <a href="#">get in touch</a>.</p>
 
     <p>Let’s start by plugging your Dropbox account. Even though Dropbox already provides a file storage service, Infinit is going to use Dropbox’s storage capacity to store blocks of encrypted data.</p>
 
-<pre>
-$[device A]> infinit-credentials --handle jrc --add --dropbox
+<pre><code>$[device A]> infinit-credentials --handle jrc --add --dropbox
 Register your dropbox account with infinit by visiting https://...
-$[device A]></pre>
+$[device A]>
+</code></pre>
 
     <p>At this point you need to visit the URL displayed in your terminal. This will bring you to the Dropbox’s authentication page. Log in and authorize the Infinit application to add your Dropbox to the list of cloud storage resources that you will be able to plug to your Infinit file systems.</p>
 
@@ -85,8 +81,7 @@ $[device A]></pre>
 
     <p class="note">Note that the cloud services have been added to your hub account. You need to fetch them locally to be able to plug them to your file systems.</p>
 
-<pre>
-$[device A]> infinit-credentials --list
+<pre><code>$[device A]> infinit-credentials --list
 Dropbox:
 $[device A]> infinit-credentials --handle jrc --fetch
 Fetched Dropbox account 455444556 (Jacques Chirac)
@@ -94,7 +89,7 @@ $[device A]> infinit-credentials --list
 Dropbox:
   455444556: Jacques Chirac
 $[device A]>
-</pre>
+</code></pre>
 
     <p>That’s it, you have added your cloud services and they are ready to be used to store data.</p>
 
@@ -105,10 +100,10 @@ $[device A]>
 
     <p>Let’s create a storage on the Dropbox account we’ve just added by specifying the account number listed through <span class="code">infinit-credentials --list</span>. Note that you also need to name this storage to manipulate it in the future e.g ‘dropbox’.</p>
 
-<pre>
-$[device A]> infinit-storage --create --dropbox --account 455444556 --name dropbox
+<pre><code>$[device A]> infinit-storage --create --dropbox --account 455444556 --name dropbox
 Created storage "dropbox".
-$[device A]> </pre>
+$[device A]>
+</code></pre>
 
     <p><strong>Important note:</strong> Infinit will store files in a subdirectory of your Dropbox. By default this subdirectory is <span class="code">.infinit/</span> but can be specified through the --root option. Never will Infinit erase or alter files already stored in your Dropbox.</p>
 
@@ -121,11 +116,10 @@ $[device A]> </pre>
 
     <p>The <span class="code">infinit-network</span> command is used to create the network, specifying a name for the network and the list of storages to plug. In the example below, only the storage ‘dropbox’ is used but you can obviously plug as many storages as you want, no matter their nature.</p>
 
-<pre>
-$[device A]> infinit-network --create --as jacquo --name clouds --storage dropbox
+<pre><code>$[device A]> infinit-network --create --as jacquo --name clouds --storage dropbox
 Created network "clouds".
 $[device A]>
-</pre>
+</code></pre>
 
     <p>You’ve just created your first network that for now consists of only one computer and two storages:</p>
 
@@ -137,13 +131,12 @@ $[device A]>
 
     <p>Volumes can be manipulated through the infinit-volume binary as shown next:</p>
 
-<pre>
-$[device A]> infinit-volume --create ---as jacquo --network clouds --name personal
+<pre><code>$[device A]> infinit-volume --create ---as jacquo --network clouds --name personal
 Starting network ".../clouds".
 Creating volume root blocks.
 Created volume ".../personal".
 $[device A]>
-</pre>
+</code></pre>
 
     <p>That’s it, you’ve created a ‘personal’ volume i.e a file system whose blocks will be stored in the ‘clouds’ network which relies on the ‘dropbox’ and ‘google drive’ storages.</p>
 
@@ -153,13 +146,12 @@ $[device A]>
 
     <p>From this point, you can mount the volume as a regular partition to store and access files from anywhere.</p>
 
-<pre>
-$[device A]> mkdir mnt/
+<pre><code>$[device A]> mkdir mnt/
 $[device A]> infinit-volume --mount --as jacquo --name personal --async-writes --cache --mountpoint mnt/
 Running network ".../clouds".
 Running volume ".../personal".
 […]
-</pre>
+</code></pre>
 
     <p>Note that this command does not return. You can make it run in the background if you prefer. To stop it, just hit <span class="code">CTRL^C</span>.</p>
 
@@ -170,12 +162,11 @@ Running volume ".../personal".
 
     <p>Before moving on to the other devices, we need to make the resources we’ve created retrievable. The following commands publish the network and volume resources on the hub:</p>
 
-<pre>
-$[device A]> infinit-network --publish --name clouds --as jacquo
+<pre><code>$[device A]> infinit-network --publish --name clouds --as jacquo
 … XXX …
 $[device A]> infinit-volume --publish --name personal --as jacquo
 ... XXX ...
-</pre>
+</code></pre>
 
     <p>By doing this, you will be able to fetch the network and volume configurations on another of your devices.</p>
 
@@ -183,13 +174,12 @@ $[device A]> infinit-volume --publish --name personal --as jacquo
 
     <p>Let’s first export the user into a file. Note the <span class="code">--full</span> option that means that both the public and private parts of the user’s RSA key must be exported.</p>
 
-<pre>
-$[device A]> infinit-user --export --full --name jacquo > jacquo.user
+<pre><code>$[device A]> infinit-user --export --full --name jacquo > jacquo.user
 WARNING: you are exporting the user "jacquo" including the private key
 WARNING: anyone in possession of this information can impersonate that user
 WARNING: if you mean to export your user for someone else, remove the --full flag
 $[device A]>
-</pre>
+</code></pre>
 
     <p>From that point, you are free to move the file <span class="code">jacquo.user</span> through the method of your choice such as SCP.</p>
 
@@ -197,20 +187,19 @@ $[device A]>
 
     <p>Once installed, let us import the <span class="code">jacquo.user</span> file to re-create the user on this device.</p>
 
-<pre>
-$[device B]> infinit-user --import --input jacquo.user
+<pre><code>$[device B]> infinit-user --import --input jacquo.user
 Imported user “jacquo”.
 $[device B]>
-</pre>
+</code></pre>
 
     <p>The next steps consist in fetching the resources that you previously published on the hub: networks and volumes.</p>
 
-<pre>
-$[device B]> infinit-network --fetch --name clouds --user jacquo
+<pre><code>$[device B]> infinit-network --fetch --name clouds --user jacquo
 Fetched network ".../clouds".
 $[device B]> infinit-volume --fetch --name personal --as jacquo
 Fetched volume ".../personal".
-$[device B]> </pre>
+$[device B]>
+</code></pre>
 
   <p>At this point, you could already mount the volume to access your files. In this configuration however, the storages (Dropbox and Google Drive) are only plugged to <span class="code">device A</span>, meaning that in order to retrieve blocks from those storages, <span class="code">device A</span> would need to be available at any time.</p>
 
@@ -218,33 +207,30 @@ $[device B]> </pre>
 
   <p>First, let’s fetch the credentials to the cloud services from the hub and then re-create the associated storages:</p>
 
-<pre>
-$[device B]> infinit-credentials --fetch --as jacquo
+<pre><code>$[device B]> infinit-credentials --fetch --as jacquo
 Fetched Dropbox credentials 455444556 (Jacques Chirac)
 $[device B]> infinit-storage --create --dropbox --account 455444556 --name dropbox
 Created storage "dropbox".
 $[device B]>
-</pre>
+</code></pre>
 
     <p>Finally, you need to connect this device to the network you created on the first device, contributing storage resources to the whole. Note that in this case, due to the optimization above, the storages are shared rather than contributed.</p>
 
-<pre>
-$[device B]> infinit-network --join --name clouds --storage dropbox --as jacquo
+<pre><code>$[device B]> infinit-network --join --name clouds --storage dropbox --as jacquo
 Joined network ".../clouds".
 $[device B]>
-</pre>
+</code></pre>
 
     <p>The command above joins the current device to the network ‘clouds’ contributing the storages specified.</p>
 
     <p>Finally, the volume can be mounted on this device as show below:</p>
 
-<pre>
-$[device B]> mkdir mnt/
+<pre><code>$[device B]> mkdir mnt/
 $[device B]> infinit-volume --mount --name personal --mountpoint mnt/ --as jacquo --async-writes
 Running network ".../clouds".
 Running volume ".../personal".
 […]
-</pre>
+</code></pre>
 
     <p>That’s it, you’ve created a drive of virtually unlimited capacity by relying on cloud storage capacities to create your personal and secure drive.</p>
 
