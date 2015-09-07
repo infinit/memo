@@ -28,23 +28,44 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Local::Local(std::unique_ptr<storage::Storage> storage, int port)
+      Local::Local(std::unique_ptr<storage::Storage> storage,
+                   int port,
+                   Protocol p)
         : _storage(std::move(storage))
         , _doughnut(nullptr)
-        , _server_thread(elle::sprintf("%s server", *this),
-                         [this] { this->_serve(); })
-        , _utp_server_thread(elle::sprintf("%s utp server", *this),
-                         [this] { this->_serve_utp(); })
       {
-        this->_server.listen(port);
-        this->_utp_server.listen(this->_server.port() + 100);
-        ELLE_TRACE("%s: listen on port %s", *this, this->_server.port());
+        if (p == Protocol::tcp || p == Protocol::all)
+        {
+          this->_server_thread = elle::make_unique<reactor::Thread>(
+            elle::sprintf("%s server", *this),
+            [this] { this->_serve(); });
+          this->_server = elle::make_unique<reactor::network::TCPServer>();
+          this->_server->listen(port);
+        }
+        if (p == Protocol::utp || p == Protocol::all)
+        {
+          this->_utp_server_thread = elle::make_unique<reactor::Thread>(
+            elle::sprintf("%s utp server", *this),
+            [this] { this->_serve_utp(); });
+          this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
+          // FIXME: kelips already use the Local's port on udp for its
+          // gossip protocol, so use a fixed delta until we advertise
+          // tcp and utp endpoints separately
+          if (this->_server)
+            port = this->_server->port() + 100;
+          else if (port)
+            port += 100;
+          this->_utp_server->listen(port);
+        }
+        ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
       }
 
       Local::~Local()
       {
-        this->_server_thread.terminate_now();
-        this->_utp_server_thread.terminate_now();
+        if (this->_server_thread)
+          this->_server_thread->terminate_now();
+        if (this->_utp_server_thread)
+          this->_utp_server_thread->terminate_now();
       }
 
       /*-------.
@@ -115,7 +136,14 @@ namespace infinit
       reactor::network::TCPServer::EndPoint
       Local::server_endpoint()
       {
-        return this->_server.local_endpoint();
+        if (this->_server)
+          return this->_server->local_endpoint();
+        else if (this->_utp_server)
+        {
+          auto ep = this->_utp_server->local_endpoint();
+          return reactor::network::TCPServer::EndPoint(ep.address(), ep.port()-100);
+        }
+        else throw elle::Error("Local not listening on any endpoint");
       }
 
       void
@@ -145,7 +173,7 @@ namespace infinit
         {
           while (true)
           {
-            auto socket = elle::utility::move_on_copy(this->_server.accept());
+            auto socket = elle::utility::move_on_copy(this->_server->accept());
             auto name = elle::sprintf("%s: %s server", *this, **socket);
             scope.run_background(
               name,
@@ -187,7 +215,7 @@ namespace infinit
         {
           while (true)
           {
-            auto socket = elle::utility::move_on_copy(this->_utp_server.accept());
+            auto socket = elle::utility::move_on_copy(this->_utp_server->accept());
             auto name = elle::sprintf("%s: %s server", *this, **socket);
             scope.run_background(
               name,
@@ -201,6 +229,40 @@ namespace infinit
         };
       }
 
+    }
+  }
+}
+
+namespace elle
+{
+  namespace serialization
+  {
+    using namespace infinit::model::doughnut;
+    std::string
+    Serialize<Local::Protocol>::convert(
+      Local::Protocol p)
+    {
+      switch (p)
+      {
+      case Local::Protocol::tcp:
+        return "tcp";
+      case Local::Protocol::utp:
+        return "utp";
+      case Local::Protocol::all:
+        return "all";
+      }
+    }
+    Local::Protocol
+    Serialize<Local::Protocol>::convert(std::string const& repr)
+    {
+      if (repr == "tcp")
+        return Local::Protocol::tcp;
+      else if (repr == "utp")
+        return Local::Protocol::utp;
+      else if (repr == "all")
+        return Local::Protocol::all;
+      else
+        throw Error("Expected one of tcp, utp, all,  got '" + repr + "'");
     }
   }
 }

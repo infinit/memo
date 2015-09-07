@@ -20,11 +20,19 @@ namespace infinit
       class Local
         : public Peer
       {
+      public:
+        enum class Protocol
+        {
+          tcp = 1,
+          utp = 2,
+          all = 3
+        };
       /*-------------.
       | Construction |
       `-------------*/
       public:
-        Local(std::unique_ptr<storage::Storage> storage, int port = 0);
+        Local(std::unique_ptr<storage::Storage> storage, int port = 0,
+              Protocol p = Protocol::all);
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
         ELLE_ATTRIBUTE_RX(Doughnut*, doughnut);
@@ -55,11 +63,11 @@ namespace infinit
         serve();
         reactor::network::TCPServer::EndPoint
         server_endpoint();
-        ELLE_ATTRIBUTE(reactor::network::TCPServer, server);
-        ELLE_ATTRIBUTE(reactor::Thread, server_thread);
+        ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);
+        ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, server_thread);
+        ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPServer>, utp_server);
+        ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
-        ELLE_ATTRIBUTE(reactor::network::UTPServer, utp_server);
-        ELLE_ATTRIBUTE(reactor::Thread, utp_server_thread);
         void
         _serve();
         void
@@ -69,4 +77,20 @@ namespace infinit
   }
 }
 
+namespace elle
+{
+  namespace serialization
+  {
+    template<> struct Serialize<infinit::model::doughnut::Local::Protocol>
+    {
+      typedef std::string Type;
+      static
+      std::string
+      convert(infinit::model::doughnut::Local::Protocol p);
+      static
+      infinit::model::doughnut::Local::Protocol
+      convert(std::string const& repr);
+    };
+  }
+}
 #endif
