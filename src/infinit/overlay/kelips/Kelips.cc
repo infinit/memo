@@ -1958,7 +1958,7 @@ namespace kelips
     , ping_interval_ms(1000)
     , ping_timeout_ms(1000)
     , bootstrap_nodes()
-    , wait(1)
+    , wait(0)
     , encrypt(false)
     , accept_plain(true)
     , rpc_protocol(infinit::model::doughnut::Local::Protocol::all)
