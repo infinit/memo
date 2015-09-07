@@ -36,10 +36,12 @@ create(variables_map const& args)
   }
   if (args.count("filesystem"))
   {
-    auto path = mandatory(args, "path");
+    auto path = optional(args, "path");
+    if (!path)
+      path = (infinit::root_dir() / "storage" / (name + ".data")).string();
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
-      (std::move(path));
+      (std::move(*path));
   }
   if (!config)
       throw CommandLineError("storage type unspecified");
