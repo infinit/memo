@@ -1201,7 +1201,15 @@ namespace kelips
       if (it->second.home_node == _self)
       {
         ELLE_DEBUG("%s: found self", *this);
-        endpoint_to_endpoint(_local_endpoint, endpoint);
+        if (_local_endpoint.address().to_string() == "0.0.0.0")
+        {
+          ELLE_WARN("Endpoint yet unknown, assuming localhost");
+          endpoint = RpcEndpoint(
+            boost::asio::ip::address::from_string("127.0.0.1"),
+            this->_port);
+        }
+        else
+          endpoint_to_endpoint(_local_endpoint, endpoint);
         found = true;
       }
       else
@@ -1448,7 +1456,11 @@ namespace kelips
       if (it == _state.contacts[fg].end())
         it = random_from(_state.contacts[_group], _gen);
       if (it == _state.contacts[_group].end())
-        throw std::runtime_error("No contacts in self/target groups");
+      {
+        ELLE_WARN("No contact to forward GET to");
+        throw reactor::Timeout(boost::posix_time::milliseconds(
+          _config.query_timeout_ms * _config.query_get_retries));
+      }
       ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
       send(req, it->second.endpoint, it->second.address);
       try
