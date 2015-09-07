@@ -24,7 +24,7 @@ class TemporaryDirectory:
 
 class Infinit(TemporaryDirectory):
 
-  def run(self, args, input = None):
+  def run(self, args, input = None, return_code = 0):
     env = {
       'PATH': 'bin',
       'INFINIT_HOME': self.dir,
@@ -47,7 +47,7 @@ class Infinit(TemporaryDirectory):
       # over, you get a broken pipe.
       time.sleep(0.5)
     out, err = process.communicate(input)
-    if process.returncode != 0:
+    if process.returncode != return_code:
       raise Exception('command failed with code %s: %s' % \
                       (process.returncode, pretty))
     try:

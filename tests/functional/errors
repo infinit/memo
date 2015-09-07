@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+with Infinit() as infinit:
+  descriptor = {
+    'name' : 'clouds',
+    'overlay' : {
+      'type' : 'kalimero'
+    },
+    'owner' : {
+      'rsa' : 'MIIBCgKCAQEAp0uoRP+SKv6ryQo8TLapW8SFVZfmc0clf2HxBSx+uKAvGASbW2/pGJsE7m7R2aiHlCUkvW19TbNtkRoZ8IlnOu1E52wJEDiZvEjUYm+3T6Re8eyFj2ZakCGjOzQWP7G8DGdVBHdKdtcljvmXaWUbJDDI5MMzk9v+C3q2NmQiRfRD/V0T3hRgCejN7fbYJ3cgySRxIEhaUr0SqHGJioD8jiRoYXLJ9w4xsSLkofFltmkbaqynimzvQ6rKnz4lKx2wl8X59YUDXT7UWb6yIPBMMhOnDxdOgojgQxbbkzp6ilGh+wS14KR6sp948jURYD7qDtdiluI78mlajzhEADuyTQIDAQAB'
+    }
+  }
+  infinit.run(['infinit-user', '--create', '--name', 'user'])
+  infinit.run(['infinit-network', '--import'], input = descriptor)
+  infinit.run(['infinit-network',
+               '--run', '--name', 'clouds', '--as', 'user'],
+              return_code = 1)

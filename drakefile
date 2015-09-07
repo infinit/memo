@@ -312,7 +312,8 @@ def configure(
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
   for test_name in [
-      'single-user-two-devices-shared-storage'
+      'errors',
+      'single-user-two-devices-shared-storage',
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
