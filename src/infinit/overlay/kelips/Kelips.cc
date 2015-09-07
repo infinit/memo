@@ -437,6 +437,7 @@ namespace kelips
   {
     _gossip.socket()->close();
     _gossip.bind(GossipEndpoint({}, _port));
+    ELLE_LOG("kelips listening on port %s", _gossip.local_endpoint().port());
     ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
     _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
       std::bind(&Node::gossipEmitter, this));
