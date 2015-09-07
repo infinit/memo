@@ -1957,6 +1957,11 @@ namespace infinit
         std::string flags = name.substr(strlen("user.infinit.auth."));
         std::pair<bool, bool> perms = parse_flags(flags);
         std::unique_ptr<infinit::model::User> user = _get_user(value);
+        if (!user)
+        {
+          ELLE_WARN("user %s does not exist", value);
+          THROW_INVAL;
+        }
         model::blocks::ACLBlock* acl
           = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
         if (acl == 0)
