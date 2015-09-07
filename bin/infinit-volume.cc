@@ -127,7 +127,7 @@ run(variables_map const& args)
     cache_size = args["cache"].as<int>();
   bool async_writes =
     args.count("async-writes") && args["async-writes"].as<bool>();
-  report_action("running", "network", volume.name);
+  report_action("running", "network", network.name);
   auto model = network.run(hosts, true, cache, cache_size, async_writes);
   ELLE_TRACE("run volume");
   report_action("running", "volume", volume.name);
