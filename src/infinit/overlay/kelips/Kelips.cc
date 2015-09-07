@@ -985,7 +985,7 @@ namespace kelips
       buf = serialize(p);
       targets = pickGroupTargets();
       if (p.files.size() && targets.empty())
-        ELLE_WARN("%s: have files but no group member known", *this);
+        ELLE_TRACE("%s: have files but no group member known", *this);
       for (auto const& e: targets)
       {
         if (!p.files.empty())
@@ -1203,7 +1203,7 @@ namespace kelips
         ELLE_DEBUG("%s: found self", *this);
         if (_local_endpoint.address().to_string() == "0.0.0.0")
         {
-          ELLE_WARN("Endpoint yet unknown, assuming localhost");
+          ELLE_TRACE("Endpoint yet unknown, assuming localhost");
           endpoint = RpcEndpoint(
             boost::asio::ip::address::from_string("127.0.0.1"),
             this->_port);
@@ -1400,8 +1400,8 @@ namespace kelips
       }
       catch (reactor::Timeout const& e)
       {
-        ELLE_LOG("%s: get failed on %x, trying put", *this, file);
-        ELLE_LOG("%s", e.backtrace());
+        ELLE_TRACE("%s: get failed on %x, trying put", *this, file);
+        ELLE_TRACE("%s", e.backtrace());
         return kelipsPut(file, n);
       }
     }
@@ -1457,7 +1457,7 @@ namespace kelips
         it = random_from(_state.contacts[_group], _gen);
       if (it == _state.contacts[_group].end())
       {
-        ELLE_WARN("No contact to forward GET to");
+        ELLE_TRACE("No contact to forward GET to");
         throw reactor::Timeout(boost::posix_time::milliseconds(
           _config.query_timeout_ms * _config.query_get_retries));
       }
