@@ -98,7 +98,15 @@ class Bottle(bottle.Bottle):
       }
 
   def user_get(self, id):
-    return self.__beyond.user_get(id = id).to_json()
+    try:
+      return self.__beyond.user_get(id = id).to_json()
+    except User.NotFound:
+      bottle.response.status = 404
+      return {
+        'error': 'user/not_found',
+        'reason': 'user %r does not exist' % id,
+        'id': id,
+      }
 
   ## ------- ##
   ## Network ##
