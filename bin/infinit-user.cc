@@ -102,7 +102,7 @@ void
 create(variables_map const& args)
 {
   auto name = get_name(args);
-  auto keys_file = optional(args, "keys");
+  auto keys_file = optional(args, "key");
   auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
     {
       if (keys_file)
