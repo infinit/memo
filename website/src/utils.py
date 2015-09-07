@@ -16,14 +16,20 @@ def url(url):
     host += '/'
   return host + url
 
+def find_route(name, **params):
+  for route in bottle.request.app.routes:
+    if route.name == name:
+      return route.rule
+
 def view(name):
   def res(f):
     lookup = '%s/share/infinit/website/templates' % PREFIX
     return bottle.mako_view(
       name,
       template_lookup = [lookup],
-      url = url,
       request = bottle.request,
+      route = find_route,
+      url = url,
     )(f)
   return res
 
