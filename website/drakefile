@@ -51,6 +51,7 @@ def configure(
     'templates/pages/doc/menu.html',
     'templates/pages/doc/get_started.html',
     'templates/pages/doc/overview.html',
+    'templates/pages/doc/comparisons.html',
     'templates/pages/doc/deployments/personal_cloud.html',
     'templates/pages/doc/roadmap.html',
   )
@@ -69,6 +70,12 @@ def configure(
     'resources/images/home-storage-infrastructure@2x.png',
     'resources/images/schema-global.png',
     'resources/images/schema-global@2x.png',
+    'resources/images/schema-centralized.png',
+    'resources/images/schema-centralized@2x.png',
+    'resources/images/schema-distributed.png',
+    'resources/images/schema-distributed@2x.png',
+    'resources/images/schema-decentralized.png',
+    'resources/images/schema-decentralized@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',

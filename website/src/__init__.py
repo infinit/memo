@@ -31,11 +31,19 @@ class Website(bottle.Bottle):
       'description': 'Infinit',
     }
 
+  @route('/documentation/comparisons', name = 'doc_comparisons')
+  @view('pages/doc/comparisons.html')
+  def root():
+    return {
+      'title': 'Comparisons',
+      'description': 'Infinit',
+    }
+
   @route('/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
   @view('pages/doc/deployments/personal_cloud.html')
   def root():
     return {
-      'title': 'Roadmap',
+      'title': 'Personal Cloud',
       'description': 'Infinit',
     }
 
