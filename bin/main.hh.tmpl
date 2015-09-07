@@ -488,8 +488,12 @@ namespace infinit
       auto name = qualified_name(name_);
       boost::filesystem::ifstream f;
       this->_open(f, this->_network_path(name), name, "network");
-      elle::serialization::json::SerializerIn s(f, false);
-      return s.deserialize<Network>();
+      auto res = elle::serialization::json::deserialize<Network>(f, false);
+      if (!res.model)
+        throw elle::Error(
+          elle::sprintf("you are not part of network %s, join it first",
+                        name_));
+      return res;
     }
 
     NetworkDescriptor
