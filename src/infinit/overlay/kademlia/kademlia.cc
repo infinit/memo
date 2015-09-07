@@ -8,14 +8,19 @@
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
 
-#include <cryptography/oneway.hh>
+#include <elle/json/exceptions.hh>
+
+#include <cryptography/hash.hh>
 #include <reactor/network/buffer.hh>
 #include <reactor/network/exception.hh>
 
+#include <infinit/model/MissingBlock.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.kademlia");
 
-typedef elle::serialization::Binary Serializer;
+typedef elle::serialization::Json Serializer;
 
 static inline kademlia::Time now()
 {
@@ -34,7 +39,7 @@ namespace elle
       {
         return ep.address().to_string() + ":" + std::to_string(ep.port());
       }
-      static kademlia::PrettyEndpoint convert(std::string& repr)
+      static kademlia::PrettyEndpoint convert(std::string const& repr)
       {
         size_t sep = repr.find_first_of(':');
         auto addr = boost::asio::ip::address::from_string(repr.substr(0, sep));
@@ -79,6 +84,22 @@ static std::default_random_engine gen;
 
 namespace kademlia
 {
+  Configuration::Configuration()
+  : node_id(Address::random())
+  , port(0)
+  , wait(1)
+  , wait_ms(500)
+  , address_size(40)
+  , k(8)
+  , alpha(3)
+  , ping_interval_ms(1000)
+  , refresh_interval_ms(10000)
+  , storage_lifetime_ms(120000)
+  {
+    
+  }
+  
+  
   namespace packet
   {
     #define REGISTER(classname, type) \
@@ -92,7 +113,7 @@ namespace kademlia
       Endpoint endpoint; // remote endpoint, filled by recvfrom
       Address sender;
     };
-    #define SER(a, b, e) s.serialize(#e, e);
+    #define SER(a, b, e) s.serialize(BOOST_PP_STRINGIZE(e), e);
 #define PACKET(name, ...)                                             \
       name() {}                                                           \
       name(elle::serialization::SerializerIn& input) {serialize(input);}  \
@@ -171,15 +192,15 @@ namespace kademlia
   {
     dst = E2(src.address(), src.port());
   }
-  Kademlia::Kademlia(Configuration const& config,
-                     std::unique_ptr<infinit::storage::Storage> storage)
-  : Local(std::move(storage), config.port)
-  , _config(config)
+  Kademlia::Kademlia(Configuration const& config, bool server,
+    infinit::model::doughnut::Doughnut* doughnut)
+  : _config(config)
   {
+    this->doughnut(doughnut);
     srand(time(nullptr) + getpid());
     _self = _config.node_id;
-    Address::Value v;
     _routes.resize(_config.address_size);
+    Address::Value v;
     memset(v, 0xFF, sizeof(Address::Value));
     for (int i = sizeof(v)-1; i>=0; --i)
     {
@@ -193,9 +214,29 @@ namespace kademlia
     }
   done:
     _mask = Address(v);
-    ELLE_TRACE("Using address mask %x", _mask);
+    if (!server)
+      _bootstrap();
+  }
+
+  Kademlia::~Kademlia()
+  {
+    if (_looper)
+      _looper->terminate_now();
+    if (_pinger)
+      _pinger->terminate_now();
+    if (_refresher)
+      _refresher->terminate_now();
+    if (_cleaner)
+      _cleaner->terminate_now();
+    if (_republisher)
+      _republisher->terminate_now();
+  }
+
+  void Kademlia::_bootstrap()
+  {
+    ELLE_TRACE("Using address mask %x, port %s", _mask, _config.port);
     _socket.socket()->close();
-    _socket.bind(Endpoint({}, server_endpoint().port()));
+    _socket.bind(Endpoint({}, _config.port));
 
     _looper = elle::make_unique<reactor::Thread>("looper",
       [this] { this->_loop();});
@@ -215,24 +256,41 @@ namespace kademlia
       elle::Buffer buf = serialize(p);
       send(buf, ep);
     }
-    if (config.wait)
+    if (_config.wait)
     {
       while (true)
       {
         int n = 0;
         for(auto const& e: _routes)
           n += e.size();
-        ELLE_TRACE("%s: Waiting for %s nodes, got %s", *this, config.wait, n);
-        if (n >= config.wait)
+        ELLE_TRACE("%s: Waiting for %s nodes, got %s", *this, _config.wait, n);
+        if (n >= _config.wait)
           break;
         reactor::sleep(1_sec);
       }
     }
     reactor::sleep(boost::posix_time::milliseconds(_config.wait_ms));
-    _reload();
     ELLE_LOG("%s: exiting ctor", *this);
   }
 
+  void
+  Kademlia::register_local(std::shared_ptr<infinit::model::doughnut::Local> local)
+  {
+    ELLE_DEBUG("Registering local");
+    local->on_fetch.connect(std::bind(&Kademlia::fetch, this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2));
+    local->on_store.connect(std::bind(&Kademlia::store, this,
+                                      std::placeholders::_1,
+                                      std::placeholders::_2));
+    local->on_remove.connect(std::bind(&Kademlia::remove, this,
+                                       std::placeholders::_1));
+    this->_port = local->server_endpoint().port();
+    this->_config.port = this->_port;
+    _bootstrap();
+    _reload(*local);
+  }
+  
   void Kademlia::_loop()
   {
     elle::Buffer buf;
@@ -247,18 +305,31 @@ namespace kademlia
       size_t sz = _socket.receive_from(
           reactor::network::Buffer(buf.mutable_contents(), buf.size()),
           ep);
+      if (sz == 0)
+      {
+        ELLE_WARN("%s: empty packet received", *this);
+        continue;
+      }
       buf.size(sz);
       std::unique_ptr<packet::Packet> packet;
       elle::IOStream stream(buf.istreambuf());
-      Serializer::SerializerIn input(stream, false);
       try
       {
+        Serializer::SerializerIn input(stream, false);
         input.serialize_forward(packet);
       }
       catch(elle::serialization::Error const& e)
       {
-        ELLE_WARN("%s: Failed to deserialize packet: %s", *this, e);
-        return;
+        ELLE_WARN("%s: Failed to deserialize packet from %s: %s",
+                  *this, ep, e);
+        ELLE_WARN("%s", buf.string());
+        continue;
+      }
+      catch(elle::json::ParseError const& e)
+      {
+        ELLE_WARN("%s: json parse error from %s: %s", *this, ep, e);
+        ELLE_WARN("%s", buf.string());
+        continue;
       }
       packet->endpoint = ep;
       onContactSeen(packet->sender, ep);
@@ -349,14 +420,14 @@ namespace kademlia
   }
 
 
-  void Kademlia::_reload()
+  void Kademlia::_reload(Local& l)
   {
     while (_local_endpoint == Endpoint())
     {
       ELLE_TRACE("%s: Waiting for endpoint (ping)", *this);
       reactor::sleep(500_ms);
     }
-    auto keys = Local::storage()->list();
+    auto keys = l.storage()->list();
     for (auto const& k: keys)
     {
       _storage[k].push_back(Store{_local_endpoint, now()});
@@ -380,7 +451,7 @@ namespace kademlia
   infinit::overlay::Overlay::Members Kademlia::_lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op) const
   {
-    ELLE_LOG("%s: lookup %s", *this, address);
+    ELLE_TRACE("%s: lookup %s with mode %s", *this, address, op);
     auto self = const_cast<Kademlia*>(this);
     if (op == infinit::overlay::OP_INSERT)
     { // Lets try an insert policy of 'closest nodes'
@@ -401,8 +472,14 @@ namespace kademlia
         self->send(buf, q->endpoints.at(q->res[i]));
       }
       infinit::overlay::Overlay::Members res;
-      res.push_back({});
-      endpoint_to_endpoint(s.value[0], res.back());
+      ELLE_TRACE("%s: Connecting remote %s", *this, s.value[0]);
+      boost::asio::ip::tcp::endpoint ep;
+      endpoint_to_endpoint(s.value[0], ep);
+      res.emplace_back(
+        new infinit::model::doughnut::Remote(
+          const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+          ep));
+      ELLE_TRACE("%s: returning", *this);
       return res;
     }
 
@@ -417,9 +494,15 @@ namespace kademlia
     infinit::overlay::Overlay::Members res;
     if (!q->storeResult.empty())
     {
-      res.push_back({});
-      endpoint_to_endpoint(q->storeResult[0], res.back());
+      boost::asio::ip::tcp::endpoint ep;
+      endpoint_to_endpoint(q->storeResult[0], ep);
+      res.emplace_back(
+        new infinit::model::doughnut::Remote(
+          const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+          ep));
     }
+    else
+      throw infinit::model::MissingBlock(address);
     return res;
   }
 
@@ -489,18 +572,15 @@ namespace kademlia
   void Kademlia::store(infinit::model::blocks::Block const& block,
                        infinit::model::StoreMode mode)
   {
-    Local::store(block, mode);
     // advertise it
     ELLE_TRACE("%s: Advertizing %x", *this, block.address());
   }
   void Kademlia::remove(Address address)
   {
-    Local::remove(address);
   }
-  std::unique_ptr<infinit::model::blocks::Block>
-  Kademlia::fetch(Address address) const
+  
+  void Kademlia::fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b)
   {
-    return Local::fetch(address);
   }
 
   void Kademlia::print(std::ostream& o) const
@@ -848,6 +928,46 @@ namespace kademlia
         ELLE_DEBUG("%s: refresh query finished", *this);
       }
       reactor::sleep(boost::posix_time::milliseconds(_config.refresh_interval_ms));
+    }
+  }
+}
+
+namespace infinit
+{
+  namespace overlay
+  {
+    namespace kademlia
+    {
+      Configuration::Configuration()
+      {}
+
+      Configuration::Configuration(elle::serialization::SerializerIn& input)
+      {
+        this->serialize(input);
+      }
+      void
+      Configuration::join()
+      {
+        this->config.node_id = infinit::model::Address::random();
+      }
+      void
+      Configuration::serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("config", this->config);
+      }
+
+      std::unique_ptr<infinit::overlay::Overlay>
+      Configuration::make(std::vector<std::string> const& hosts, bool server,
+        model::doughnut::Doughnut* doughnut)
+      {
+        for (auto const& host: hosts)
+        config.bootstrap_nodes.push_back(
+          elle::serialization::Serialize< ::kademlia::PrettyEndpoint>
+          ::convert(host));
+        return elle::make_unique< ::kademlia::Kademlia>(config, server, doughnut);
+      }
+      static const elle::serialization::Hierarchy<overlay::Configuration>::
+      Register<Configuration> _registerKademliaOverlayConfig("kademlia");
     }
   }
 }

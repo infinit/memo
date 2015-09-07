@@ -11,6 +11,9 @@ user=test
 port_base=5050
 nports=5 # allocate fixed port port_base+i to the first nports nodes
 
+#network_args="--kelips  --k $k --replicas $replicas"
+network_args="--kademlia"
+
 # port(id, port_base, nports
 function port {
   if test $1 -le $3; then echo "--port " $(($2 + $1)); fi
@@ -38,7 +41,7 @@ for i in $(seq 0 $nodes); do
 done
 
 # Generate overlay network and export structure
-INFINIT_HOME=$rootdir/conf0 infinit-network --create --storage storage --name kelips --port $port_base --kelips --as $user --k $k --replicas $replicas
+INFINIT_HOME=$rootdir/conf0 infinit-network --create --storage storage --name kelips --port $port_base --as $user $network_args
 exported_network=$(INFINIT_HOME=$rootdir/conf0 infinit-network --export --as $user --name kelips)
 
 # get hashed user name for $user
@@ -63,12 +66,12 @@ for i in $(seq 0 $observers); do
 done
 
 # create volume, requires running nodes
-INFINIT_HOME=$rootdir/conf0 infinit-network --run --name $user_hash/kelips &
+INFINIT_HOME=$rootdir/conf0 infinit-network --run --as $user --name $user_hash/kelips &
 pid1=$!
-sleep 2
-INFINIT_HOME=$rootdir/conf1 infinit-network --run --name $user_hash/kelips --host 127.0.0.1:$port_base &
+sleep 3
+INFINIT_HOME=$rootdir/conf1 infinit-network --run --as ${user}1 --name $user_hash/kelips --host 127.0.0.1:$port_base &
 pid2=$!
-
+sleep 3
 INFINIT_HOME=$rootdir/observer_conf_0 infinit-volume --create \
   --mountpoint observer_mount_0 \
   --as obs0 --network $user_hash/kelips \

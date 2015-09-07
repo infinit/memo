@@ -5,6 +5,7 @@
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/overlay/Stonehenge.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
+#include <infinit/overlay/kademlia/kademlia.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/storage/Strip.hh>
 
@@ -30,6 +31,11 @@ create(variables_map const& args)
     stonehenge->hosts =
       mandatory<std::vector<std::string>>(args, "host", "stonehenge hosts");
     overlay_config = std::move(stonehenge);
+  }
+  if (args.count("kademlia"))
+  {
+    auto kad = elle::make_unique<infinit::overlay::kademlia::Configuration>();
+    overlay_config = std::move(kad);
   }
   if (args.count("kelips"))
   {
@@ -297,6 +303,7 @@ int main(int argc, char** argv)
     ("kalimero", "use a kalimero overlay network")
     ("kelips", "use a kelips overlay network")
     ("stonehenge", "use a stonehenge overlay network")
+    ("kademlia", "Use a Kademlia overlay network")
     ;
   options_description stonehenge_options("Stonehenge options");
   stonehenge_options.add_options()

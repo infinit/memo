@@ -20,7 +20,7 @@ namespace kademlia
   };
   struct Configuration
   {
-    Configuration() {}
+    Configuration();
     Configuration(elle::serialization::SerializerIn& input) {serialize(input);}
     void
     serialize(elle::serialization::Serializer& s);
@@ -48,16 +48,19 @@ namespace kademlia
   }
   class Kademlia
     : public infinit::overlay::Overlay
-    , public infinit::model::doughnut::Local
     , public elle::Printable
   {
   public:
-    Kademlia(Configuration const& config,
-             std::unique_ptr<infinit::storage::Storage> storage);
-    void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode) override;
-    void remove(Address address) override;
-    std::unique_ptr<infinit::model::blocks::Block> fetch(Address address) const override;
+    Kademlia(Configuration const& config, bool server,
+      infinit::model::doughnut::Doughnut* doughnut);
+    ~Kademlia();
+    void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);
+    void remove(Address address);
+    void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;
+    void
+    register_local(
+      std::shared_ptr<infinit::model::doughnut::Local> local) override;
   protected:
     virtual Overlay::Members _lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op)
@@ -68,7 +71,8 @@ namespace kademlia
     void _loop();
     void _ping();
     void _refresh();
-    void _reload();
+    void _reload(infinit::model::doughnut::Local& l);
+    void _bootstrap();
     void _cleanup();
     void _republish();
     void send(elle::Buffer const& data, Endpoint endpoint);
@@ -132,8 +136,38 @@ namespace kademlia
     std::vector<std::vector<Node>> _routes;
     std::unordered_map<Address, std::vector<Store>> _storage;
     std::unordered_map<int, std::shared_ptr<Query>> _queries;
+    int _port;
   };
 }
 
+namespace infinit
+{
+  namespace overlay
+  {
+    namespace kademlia
+    {
+      struct Configuration
+        : public overlay::Configuration
+      {
+        Configuration();
+        Configuration(elle::serialization::SerializerIn& input);
+
+        void
+        serialize(elle::serialization::Serializer& s);
+
+        virtual
+        void
+        join() override;
+
+        virtual
+        std::unique_ptr<infinit::overlay::Overlay>
+        make(std::vector<std::string> const& hosts, bool server,
+             model::doughnut::Doughnut* doughnut) override;
+
+        ::kademlia::Configuration config;
+      };
+    }
+  }
+}
 
 #endif
