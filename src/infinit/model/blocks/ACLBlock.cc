@@ -46,7 +46,7 @@ namespace infinit
       std::vector<ACLBlock::Entry>
       ACLBlock::list_permissions()
       {
-        ELLE_TRACE_SCOPE("%s: list permissions");
+        ELLE_TRACE_SCOPE("%s: list permissions", *this);
         return this->_list_permissions();
       }
 
