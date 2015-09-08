@@ -103,8 +103,8 @@ class Bottle(bottle.Bottle):
       bottle.response.status = 404
       return {
         'error': 'user/not_found',
-        'reason': 'user %r does not exist' % id,
-        'id': id,
+        'reason': 'user %r does not exist' % name,
+        'id': name,
       }
 
   ## ------- ##
