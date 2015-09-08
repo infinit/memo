@@ -158,7 +158,7 @@ publish(variables_map const& args)
 
 static
 void
-register_(variables_map const& args)
+signup_(variables_map const& args)
 {
   create(args);
   publish(args);
@@ -218,19 +218,6 @@ main(int argc, char** argv)
       },
     },
     {
-      "register",
-      "Create and register a user",
-      &register_,
-      {},
-      {
-        { "name,n", value<std::string>(),
-          "user name (defaults to system username)" },
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key"
-            " (generated if unspecified)" },
-      },
-    },
-    {
       "publish",
       elle::sprintf("Publish user to %s", beyond()).c_str(),
       &publish,
@@ -238,6 +225,29 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to publish (defaults to system user)" },
+      },
+    },
+    {
+      "register",
+      elle::sprintf("Publish user to %s (alias for --publish)", beyond()).c_str(),
+      &publish,
+      {},
+      {
+        { "name,n", value<std::string>(),
+          "user to register (defaults to system user)" },
+      },
+    },
+    {
+      "signup",
+      "Create and register a user",
+      &signup_,
+      {},
+      {
+        { "name,n", value<std::string>(),
+          "user name (defaults to system username)" },
+        { "key,k", value<std::string>(),
+          "RSA key pair in PEM format - e.g. your SSH key"
+            " (generated if unspecified)" },
       },
     },
   };
