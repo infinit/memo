@@ -1496,7 +1496,7 @@ namespace infinit
         if (!_first_block || !_handle_count)
           _first_block = elle::cast<MutableBlock>::runtime
             (_owner.fetch_or_die(_parent->_files.at(_name).address));
-        Header header = _header();
+        Header header = umbrella([&] {return _header();}, EPERM);
         st->st_size = header.total_size;
         st->st_nlink = header.links;
         st->st_blocks = st->st_size / 512;
