@@ -137,16 +137,9 @@ class CouchDBDatastore:
     except couchdb.ResourceConflict:
       raise infinit.beyond.User.Duplicate()
 
-  def user_fetch(self, id = None, name = None):
-    assert any(a is not None for a in [id, name])
+  def user_fetch(self, name):
     try:
-      if id is not None:
-        json = self.__couchdb['users'][id]
-        if name is not None and json['name'] != name:
-          return None
-      elif name is not None:
-        view = self.__couchdb['users'].view('beyond/per_name')[name]
-        json = next(iter(view)).value # Really ?
+      json = self.__couchdb['users'][name]
       json = dict(json)
       json['id'] = json['_id']
       del json['_id']
