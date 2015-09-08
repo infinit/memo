@@ -99,12 +99,15 @@ echo_mode(bool enable)
 std::string
 read_passphrase()
 {
-  elle::SafeFinally restore_echo([] { echo_mode(true); });
-  echo_mode(false);
-  std::cout << "Passphrase: ";
-  std::cout.flush();
   std::string res;
-  std::getline(std::cin, res);
+  {
+    elle::SafeFinally restore_echo([] { echo_mode(true); });
+    echo_mode(false);
+    std::cout << "Passphrase: ";
+    std::cout.flush();
+    std::getline(std::cin, res);
+  }
+  std::cout << std::endl;
   return res;
 }
 
