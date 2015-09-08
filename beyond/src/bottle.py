@@ -98,7 +98,7 @@ class Bottle(bottle.Bottle):
 
   def user_get(self, name):
     try:
-      return self.__beyond.user_get(name = name).to_json()
+      return self.__beyond.user_get(name = name).json()
     except User.NotFound:
       bottle.response.status = 404
       return {
