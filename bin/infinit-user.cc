@@ -62,6 +62,17 @@ export_(variables_map const& args)
   }
 }
 
+static
+void
+fetch(variables_map const& args)
+{
+  auto owner = self_user(ifnt, args);
+  auto user_name = mandatory(args, "name", "user name");
+  auto user =
+    beyond_fetch<infinit::User>("user", user_name);
+  ifnt.user_save(std::move(user));
+}
+
 void
 echo_mode(bool enable)
 {
@@ -142,7 +153,7 @@ publish(variables_map const& args)
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   das::Serializer<infinit::DasPublicUser> view(user);
-  beyond_publish("user", user.uid(), view);
+  beyond_publish("user", user.name, view);
 }
 
 static
@@ -184,6 +195,16 @@ main(int argc, char** argv)
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key"
             " (generated if unspecified)" },
+      },
+    },
+    {
+      "fetch",
+      "Fetch a user",
+      &fetch,
+      "--name USER",
+      {
+        { "name,n", value<std::string>(), "user to fetch" },
+        option_owner,
       },
     },
     {

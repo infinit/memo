@@ -21,8 +21,7 @@ static
 std::string
 volume_name(variables_map const& args, infinit::User const& owner)
 {
-  return ifnt.qualified_name(mandatory(args, "name", "volume name"),
-                             owner.public_key);
+  return ifnt.qualified_name(mandatory(args, "name", "volume name"), owner);
 }
 
 static
@@ -31,12 +30,10 @@ create(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
-  auto network_name = ifnt.qualified_name(mandatory(args, "network"),
-                                          owner.public_key);
   auto mountpoint = optional(args, "mountpoint");
-  auto network = ifnt.network_get(network_name);
+  auto network = ifnt.network_get(mandatory(args, "network"), owner);
   ELLE_TRACE("start network");
-  report_action("starting", "network", network.qualified_name());
+  report_action("starting", "network", network.name);
   std::vector<std::string> hosts;
   if (args.count("host"))
     hosts = args["host"].as<std::vector<std::string>>();
@@ -45,7 +42,7 @@ create(variables_map const& args)
   report("creating volume root blocks");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
   infinit::Volume volume(
-    name, mountpoint, fs->root_address(), network.qualified_name());
+    name, mountpoint, fs->root_address(), network.name);
   if (args.count("stdout") && args["stdout"].as<bool>())
   {
     elle::serialization::json::SerializerOut s(std::cout, false);
@@ -93,7 +90,7 @@ publish(variables_map const& args)
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
-  auto network = ifnt.network_get(volume.network);
+  auto network = ifnt.network_get(volume.network, owner);
   auto owner_uid = infinit::User::uid(network.dht()->owner);
   beyond_publish("volume", name, volume);
 }
@@ -119,7 +116,7 @@ run(variables_map const& args)
   if (args.count("host"))
     hosts = args["host"].as<std::vector<std::string>>();
   auto volume = ifnt.volume_get(name);
-  auto network = ifnt.network_get(volume.network);
+  auto network = ifnt.network_get(volume.network, owner);
   ELLE_TRACE("run network");
   bool cache = args.count("cache");
   boost::optional<int> cache_size;

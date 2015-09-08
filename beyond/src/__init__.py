@@ -41,9 +41,9 @@ class Beyond:
   ## Network ##
   ## ------- ##
 
-  def network_get(self, owner_id, name):
+  def network_get(self, owner, name):
     return self.__datastore.network_fetch(
-      owner_id = owner_id, name = name)
+      owner = owner, name = name)
 
   ## ---- ##
   ## User ##
@@ -57,9 +57,9 @@ class Beyond:
   ## Volume ##
   ## ------ ##
 
-  def volume_get(self, owner_id, name):
+  def volume_get(self, owner, name):
     return self.__datastore.volume_fetch(
-      owner_id = owner_id, name = name)
+      owner = owner, name = name)
 
 
 class User:
@@ -72,7 +72,6 @@ class User:
 
   def __init__(self,
                beyond,
-               id,
                name = None,
                public_key = None,
                dropbox_accounts = None,
@@ -90,14 +89,13 @@ class User:
   @classmethod
   def from_json(self, beyond, json):
     return User(beyond,
-                id = json['id'],
                 name = json['name'],
                 public_key = json['public_key'],
                 dropbox_accounts = json.get('dropbox_accounts'),
                 google_accounts = json.get('google_accounts'),
     )
 
-  def to_json(self, private = False):
+  def json(self, private = False):
     res = {
       'id': self.id,
       'name': self.name,
@@ -110,10 +108,7 @@ class User:
     return res
 
   def create(self):
-    assert all(m is not None
-               for m in [self.id, self.name, self.public_key])
-    self.__beyond._Beyond__datastore.user_insert(
-      self.to_json(private = True))
+    self.__beyond._Beyond__datastore.user_insert(self)
 
   def save(self):
     diff = {}
@@ -129,7 +124,9 @@ class User:
 
   @property
   def id(self):
-    return self.__id
+    der = base64.b64decode(self.public_key['rsa'])
+    id = base64.urlsafe_b64encode(cryptography.hash(der))[0:8]
+    return id.decode('latin-1')
 
   @property
   def name(self):
@@ -218,11 +215,7 @@ class Network(metaclass = Entity,
               insert = 'network_insert',
               fields = ['name', 'owner', 'overlay']):
 
-  @property
-  def id(self):
-    der = base64.b64decode(self.owner['rsa'])
-    owner_id = base64.urlsafe_b64encode(cryptography.hash(der))[0:8]
-    return '%s/%s' % (owner_id.decode('latin-1'), self.name)
+  pass
 
 
 class Volume(metaclass = Entity,

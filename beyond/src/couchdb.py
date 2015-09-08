@@ -130,9 +130,8 @@ class CouchDBDatastore:
   ## ---- ##
 
   def user_insert(self, user):
-    json = dict(user)
-    json['_id'] = json['id']
-    del json['id']
+    json = user.json(private = True)
+    json['_id'] = json['name']
     try:
       self.__couchdb['users'].save(json)
     except couchdb.ResourceConflict:
@@ -199,15 +198,15 @@ class CouchDBDatastore:
 
   def network_insert(self, network):
     json = network.json()
-    json['_id'] = network.id
+    json['_id'] = network.name
     try:
       self.__couchdb['networks'].save(json)
     except couchdb.ResourceConflict:
       raise infinit.beyond.Network.Duplicate()
 
-  def network_fetch(self, owner_id, name):
+  def network_fetch(self, owner, name):
     try:
-      json = self.__couchdb['networks']['%s/%s' % (owner_id, name)]
+      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
       return infinit.beyond.Network.from_json(self.beyond, json)
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
@@ -224,9 +223,9 @@ class CouchDBDatastore:
     except couchdb.ResourceConflict:
       raise infinit.beyond.Volume.Duplicate()
 
-  def volume_fetch(self, owner_id, name):
+  def volume_fetch(self, owner, name):
     try:
-      json = self.__couchdb['volumes']['%s/%s' % (owner_id, name)]
+      json = self.__couchdb['volumes']['%s/%s' % (owner, name)]
       return infinit.beyond.Volume.from_json(self.beyond, json)
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Volume.NotFound()

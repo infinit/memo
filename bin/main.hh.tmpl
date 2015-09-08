@@ -318,9 +318,6 @@ namespace infinit
       s.serialize("replicas", this->replicas);
     }
 
-    std::string
-    qualified_name() const;
-
     std::string name;
     std::unique_ptr<infinit::overlay::Configuration> overlay;
     infinit::cryptography::rsa::PublicKey owner;
@@ -388,9 +385,6 @@ namespace infinit
                          this->dht()->make(hosts, client, local));
       }
     }
-
-    std::string
-    qualified_name() const;
 
     std::string name;
     std::unique_ptr<infinit::storage::StorageConfig> storage;
@@ -460,32 +454,20 @@ namespace infinit
   {
   public:
     std::string
-    qualified_name(std::string const& network_name)
+    qualified_name(std::string const& network_name, User const& owner)
     {
       if (network_name.find("/") != std::string::npos)
         return network_name;
       else
       {
-        auto user = this->user_get(elle::system::username());
-        return qualified_name(network_name, user.public_key);
+        return elle::sprintf("%s/%s", owner.name, network_name);
       }
     }
 
-    static
-    std::string
-    qualified_name(std::string const& network_name,
-                   cryptography::rsa::PublicKey const& key)
-    {
-      if (network_name.find("/") != std::string::npos)
-        return network_name;
-      else
-        return elle::sprintf("%s/%s", User::uid(key), network_name);
-    }
-
     Network
-    network_get(std::string const& name_)
+    network_get(std::string const& name_, User const& owner)
     {
-      auto name = qualified_name(name_);
+      auto name = qualified_name(name_, owner);
       boost::filesystem::ifstream f;
       this->_open(f, this->_network_path(name), name, "network");
       auto res = elle::serialization::json::deserialize<Network>(f, false);
@@ -497,9 +479,9 @@ namespace infinit
     }
 
     NetworkDescriptor
-    network_descriptor_get(std::string const& name_)
+    network_descriptor_get(std::string const& name_, User const& owner)
     {
-      auto name = qualified_name(name_);
+      auto name = qualified_name(name_, owner);
       try
       {
         boost::filesystem::ifstream f;
@@ -511,7 +493,7 @@ namespace infinit
       {
         try
         {
-          auto network = this->network_get(name_);
+          auto network = this->network_get(name_, owner);
           return NetworkDescriptor{
             network.name,
             std::move(network.dht()->overlay),
@@ -528,9 +510,9 @@ namespace infinit
     void
     network_save(Network const& network, bool overwrite = false)
     {
-      auto name = qualified_name(network.name, network.dht()->owner);
       boost::filesystem::ofstream f;
-      this->_open(f, this->_network_path(name), name, "network", overwrite);
+      this->_open(f, this->_network_path(network.name),
+                  network.name, "network", overwrite);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
     }
@@ -538,9 +520,9 @@ namespace infinit
     void
     network_save(NetworkDescriptor const& network)
     {
-      auto name = qualified_name(network.name, network.owner);
       boost::filesystem::ofstream f;
-      this->_open(f, this->_network_path(name), name, "network");
+      this->_open(f, this->_network_path(network.name),
+                  network.name, "network");
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
     }
@@ -764,18 +746,6 @@ namespace infinit
           elle::sprintf("unable to open '%s' for writing", path));
     }
   };
-
-  std::string
-  NetworkDescriptor::qualified_name() const
-  {
-    return Infinit::qualified_name(this->name, this->owner);
-  }
-
-  std::string
-  Network::qualified_name() const
-  {
-    return Infinit::qualified_name(this->name, this->dht()->owner);
-  }
 }
 
 class CommandLineSerializer

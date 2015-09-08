@@ -117,7 +117,7 @@ create(variables_map const& args)
       owner.public_key,
       infinit::model::doughnut::Passport(
         owner.public_key,
-        ifnt.qualified_name(name, owner.public_key),
+        ifnt.qualified_name(name, owner),
         owner.private_key.get()),
       owner.name,
       replicas);
@@ -125,7 +125,7 @@ create(variables_map const& args)
     infinit::Network network;
     network.storage = std::move(storage);
     network.model = std::move(dht);
-    network.name = name;
+    network.name = ifnt.qualified_name(name, owner);
     if (args.count("port"))
       network.port = args["port"].as<int>();
     bool stdout = args.count("stdout") && args["stdout"].as<bool>();
@@ -146,8 +146,7 @@ export_(variables_map const& args)
   auto owner = self_user(ifnt, args);
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
-  auto network = ifnt.network_get(
-    ifnt.qualified_name(network_name, owner.public_key));
+  auto network = ifnt.network_get(network_name, owner);
   {
     auto& dht = static_cast<infinit::model::doughnut::Configuration&>
       (*network.model);
@@ -164,7 +163,7 @@ fetch(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
-  network_name = ifnt.qualified_name(network_name, owner.public_key);
+  network_name = ifnt.qualified_name(network_name, owner);
   auto desc =
     beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
   ifnt.network_save(std::move(desc));
@@ -189,20 +188,19 @@ invite(variables_map const& args)
   auto self = ifnt.user_get(optional(args, option_owner.long_name()));
   auto network_name = mandatory(args, "name", "network name");
   auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_descriptor_get(
-    ifnt.qualified_name(network_name, self.public_key));
+  auto network = ifnt.network_descriptor_get(network_name, self);
   auto user = ifnt.user_get(user_name);
   if (self.public_key != network.owner)
     throw elle::Error(
       elle::sprintf("not owner of network \"%s\"", network_name));
   infinit::model::doughnut::Passport passport(
     user.public_key,
-    network.qualified_name(),
+    network.name,
     self.private_key.get());
   auto output = get_output(args);
   elle::serialization::json::serialize(passport, *output, false);
   report_action_output(
-    *output, "wrote", "passport for", network.qualified_name());
+    *output, "wrote", "passport for", network.name);
 }
 
 static
@@ -211,21 +209,20 @@ join(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
   auto input = get_input(args);
-  auto name = ifnt.qualified_name(mandatory(args, "name", "network name"),
-                                  owner.public_key);
+  auto network_name = mandatory(args, "name", "network name");
   auto storage_name = optional(args, "storage");
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   if (storage_name)
     storage = ifnt.storage_get(*storage_name);
   {
-    auto desc = ifnt.network_descriptor_get(name);
+    auto desc = ifnt.network_descriptor_get(network_name, owner);
     auto passport = [&] () -> infinit::model::doughnut::Passport
     {
       if (!args.count("input") && owner.public_key == desc.owner)
       {
         return infinit::model::doughnut::Passport(
           owner.public_key,
-          desc.qualified_name(),
+          desc.name,
           owner.private_key.get());
       }
       else
@@ -250,7 +247,7 @@ join(variables_map const& args)
         owner.name,
         desc.replicas);
     network.storage = std::move(storage);
-    network.name = name;
+    network.name = desc.name;
     if (args.count("port"))
       network.port = args["port"].as<int>();
     ifnt.network_save(network, true);
@@ -264,14 +261,13 @@ publish(variables_map const& args)
 {
   auto network_name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
-  network_name = ifnt.qualified_name(network_name, self.public_key);
-  auto network = ifnt.network_get(network_name);
+  auto network = ifnt.network_get(network_name, self);
   {
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(dht.owner);
     infinit::NetworkDescriptor desc(
       network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
-    beyond_publish("network", network_name, desc);
+    beyond_publish("network", desc.name, desc);
   }
 }
 
@@ -281,8 +277,7 @@ run(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
-  ifnt.qualified_name(name, self.public_key);
-  auto network = ifnt.network_get(name);
+  auto network = ifnt.network_get(name, self);
   std::vector<std::string> hosts;
   if (args.count("host"))
     hosts = args["host"].as<std::vector<std::string>>();

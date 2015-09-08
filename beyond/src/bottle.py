@@ -43,14 +43,14 @@ class Bottle(bottle.Bottle):
       self.route('/users/<id>/credentials/%s' %s, method = 'GET')(
         getattr(self, 'user_%s_credentials_get' % s))
     # User
-    self.route('/users/<id>', method = 'GET')(self.user_get)
-    self.route('/users/<id>', method = 'PUT')(self.user_put)
+    self.route('/users/<name>', method = 'GET')(self.user_get)
+    self.route('/users/<name>', method = 'PUT')(self.user_put)
     # Network
-    self.route('/networks/<owner_id>/<name>', method = 'GET')(self.network_get)
-    self.route('/networks/<owner_id>/<name>', method = 'PUT')(self.network_put)
+    self.route('/networks/<owner>/<name>', method = 'GET')(self.network_get)
+    self.route('/networks/<owner>/<name>', method = 'PUT')(self.network_put)
     # Volume
-    self.route('/volumes/<owner_id>/<name>', method = 'GET')(self.volume_get)
-    self.route('/volumes/<owner_id>/<name>', method = 'PUT')(self.volume_put)
+    self.route('/volumes/<owner>/<name>', method = 'GET')(self.volume_get)
+    self.route('/volumes/<owner>/<name>', method = 'PUT')(self.volume_put)
 
   def authenticate(self, user):
     pass
@@ -83,23 +83,22 @@ class Bottle(bottle.Bottle):
   ## User ##
   ## ---- ##
 
-  def user_put(self, id):
+  def user_put(self, name):
     try:
       json = bottle.request.json
-      json['id'] = id
       user = User.from_json(self.__beyond, json)
       user.create()
     except User.Duplicate:
       bottle.response.status = 409
       return {
         'error': 'user/conflict',
-        'reason': 'user %r already exists' % id,
-        'id': id,
+        'reason': 'user %r already exists' % name,
+        'id': name,
       }
 
-  def user_get(self, id):
+  def user_get(self, name):
     try:
-      return self.__beyond.user_get(id = id).to_json()
+      return self.__beyond.user_get(name = name).to_json()
     except User.NotFound:
       bottle.response.status = 404
       return {
@@ -112,12 +111,12 @@ class Bottle(bottle.Bottle):
   ## Network ##
   ## ------- ##
 
-  def network_get(self, owner_id, name):
+  def network_get(self, owner, name):
     try:
       return self.__beyond.network_get(
-        owner_id = owner_id, name = name).json()
+        owner = owner, name = name).json()
     except Network.NotFound:
-      id = '%s/%s' % (owner_id, name)
+      id = '%s/%s' % (owner, name)
       bottle.response.status = 404
       return {
         'error': 'network/not_found',
@@ -125,8 +124,7 @@ class Bottle(bottle.Bottle):
         'id': id,
       }
 
-
-  def network_put(self, owner_id, name):
+  def network_put(self, owner, name):
     try:
       json = bottle.request.json
       network = Network(self.__beyond, **json)
@@ -142,11 +140,11 @@ class Bottle(bottle.Bottle):
   ## Volume ##
   ## ------- ##
 
-  def volume_get(self, owner_id, name):
+  def volume_get(self, owner, name):
     return self.__beyond.volume_get(
-      owner_id = owner_id, name = name).json()
+      owner = owner, name = name).json()
 
-  def volume_put(self, owner_id, name):
+  def volume_put(self, owner, name):
     try:
       json = bottle.request.json
       volume = Volume(self.__beyond, **json)
