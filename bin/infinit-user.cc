@@ -148,12 +148,12 @@ import(variables_map const& args)
 
 static
 void
-publish(variables_map const& args)
+push(variables_map const& args)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   das::Serializer<infinit::DasPublicUser> view(user);
-  beyond_publish("user", user.name, view);
+  beyond_push("user", user.name, view);
 }
 
 static
@@ -161,7 +161,7 @@ void
 signup_(variables_map const& args)
 {
   create(args);
-  publish(args);
+  push(args);
 }
 
 int
@@ -218,19 +218,19 @@ main(int argc, char** argv)
       },
     },
     {
-      "publish",
-      elle::sprintf("Publish user to %s", beyond()).c_str(),
-      &publish,
+      "push",
+      elle::sprintf("Push a user to %s", beyond()).c_str(),
+      &push,
       {},
       {
         { "name,n", value<std::string>(),
-          "user to publish (defaults to system user)" },
+          "user to push (defaults to system user)" },
       },
     },
     {
       "register",
-      elle::sprintf("Publish user to %s (alias for --publish)", beyond()).c_str(),
-      &publish,
+      elle::sprintf("Push user to %s (alias for --push)", beyond()).c_str(),
+      &push,
       {},
       {
         { "name,n", value<std::string>(),

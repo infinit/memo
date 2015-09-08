@@ -1024,7 +1024,7 @@ beyond()
 
 template <typename T>
 void
-beyond_publish(std::string const& type, std::string const& name, T const& o)
+beyond_push(std::string const& type, std::string const& name, T const& o)
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", "application/json");
@@ -1034,13 +1034,13 @@ beyond_publish(std::string const& type, std::string const& name, T const& o)
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    report_action("published", type, name);
+    report_action("pushed", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
     throw elle::Error(
-      elle::sprintf("%s \"%s\" is already published", type, name));
+      elle::sprintf("%s \"%s\" is already pushed", type, name));
   else
     throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s publishing %s",
+      elle::sprintf("unexpected HTTP error %s pushing %s",
                     r.status(), type));
 }
 

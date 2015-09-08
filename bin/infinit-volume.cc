@@ -85,14 +85,14 @@ import(variables_map const& args)
 
 static
 void
-publish(variables_map const& args)
+push(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, owner);
   auto owner_uid = infinit::User::uid(network.dht()->owner);
-  beyond_publish("volume", name, volume);
+  beyond_push("volume", name, volume);
 }
 
 static
@@ -251,12 +251,12 @@ main(int argc, char** argv)
       },
     },
     {
-      "publish",
-      elle::sprintf("publish volume to %s", beyond()).c_str(),
-      &publish,
+      "push",
+      elle::sprintf("Push a volume to %s", beyond()).c_str(),
+      &push,
       "--name VOLUME",
       {
-        { "name,n", value<std::string>(), "volume to publish" },
+        { "name,n", value<std::string>(), "volume to push" },
         option_owner,
       },
     },

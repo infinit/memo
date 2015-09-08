@@ -257,7 +257,7 @@ join(variables_map const& args)
 
 static
 void
-publish(variables_map const& args)
+push(variables_map const& args)
 {
   auto network_name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
@@ -267,7 +267,7 @@ publish(variables_map const& args)
     auto owner_uid = infinit::User::uid(dht.owner);
     infinit::NetworkDescriptor desc(
       network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
-    beyond_publish("network", desc.name, desc);
+    beyond_push("network", desc.name, desc);
   }
 }
 
@@ -392,13 +392,13 @@ int main(int argc, char** argv)
       },
     },
     {
-      "publish",
-      "Publish a network",
-      &publish,
+      "push",
+      elle::sprintf("Push a network to %s", beyond()).c_str(),
+      &push,
       "--name NETWORK",
       {
         option_owner,
-        { "name,n", value<std::string>(), "network to publish" }
+        { "name,n", value<std::string>(), "network to push" }
       },
     },
     {
