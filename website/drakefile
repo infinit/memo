@@ -55,6 +55,7 @@ def configure(
     'templates/pages/doc/comparisons.html',
     'templates/pages/doc/deployments/personal_cloud.html',
     'templates/pages/doc/roadmap.html',
+    'templates/pages/legal.html',
   )
 
   resources = drake.nodes(
@@ -63,6 +64,8 @@ def configure(
     'resources/images/logo@2x.png',
     'resources/images/bg-header-home.png',
     'resources/images/bg-header-home@2x.png',
+    'resources/images/bg-terminal.png',
+    'resources/images/bg-terminal@2x.png',
     'resources/images/home-filesystem-api.png',
     'resources/images/home-filesystem-api@2x.png',
     'resources/images/home-personal-cloud.png',

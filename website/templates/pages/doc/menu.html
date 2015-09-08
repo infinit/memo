@@ -1,26 +1,26 @@
 
   <ul class="menu">
     <li ${'class="active"' if request.route.name == 'doc_overview' else ''}>
-      <a href="/overview">Overview</a>
+      <a href="${route('doc_overview')}">Overview</a>
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_get_started' else ''}>
-      <a href="/get-started">Get Started</a>
+      <a href="${route('doc_get_started')}">Get Started</a>
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_technology' else ''}>
-      <a href="/documentation/technology">Technology</a>
+      <a href="${route('doc_technology')}">Technology</a>
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_comparisons' else ''}>
-      <a href="/documentation/comparisons">Comparisons</a>
+      <a href="${route('doc_comparisons')}">Comparisons</a>
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_deployments' else ''}>
       <a href="#">Deployments</a>
 
       <ul>
-        <li ${'class="active"' if request.route.name == 'doc_deployment_personal_cloud' else ''}><a href="/deployments/unlimited-personal-drive">Personal Cloud</a></li>
+        <li ${'class="active"' if request.route.name == 'doc_deployment_personal_cloud' else ''}><a href="${route('doc_deployment_personal_cloud')}">Personal Cloud</a></li>
         <li><a href="#">Storage Infrastructure</a></li>
         <li><a href="#">API-based Filesystem</a></li>
       </ul>
@@ -40,7 +40,7 @@
     </li>
 
     <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
-      <a href="/roadmap">Roadmap</a>
+      <a href="${route('doc_roadmap')}">Roadmap</a>
     </li>
 
   </ul>

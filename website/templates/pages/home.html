@@ -5,6 +5,26 @@
   <section class="presentation">
     <h1>Powerful storage platform for developers and sysadmins</h1>
     <h2>#peer­to­peer #encrypted #redundancy #access­control #filesystem</h2>
+
+    <div class="terminal">
+<pre><code id="commands">
+$> infinit-storage --create —dropbox —account 455444556 —name dropbox
+Created storage “dropbox".
+
+$> infinit-network —create —storage dropbox —storage flickr —name clouds
+Created network "clouds".
+
+$> infinit-volume —create —network clouds —name personal-drive
+Starting network "clouds".
+Creating volume root blocks.
+Created volume “personal-drive".
+
+$> infinit-volume —mount —name personal-drive —mountpoint /mnt/personal-drive/
+Mounting volume “personal-drive".
+
+$> ​▎
+</code></pre>
+    </div>
   </section>
 
   <section class="cta">
@@ -44,7 +64,7 @@
     <h4 class="title">How is it used?</h4>
     <p class="subtitle">Infinit can be configured and deployed in numerous ways</p>
 
-    <a class="usecase" href="#">
+    <a class="usecase" href="${route('doc_deployment_personal_cloud')}">
       <img src="${url('images/home-personal-cloud.png')}" alt="Unlimited Dropbox ­like Personal Cloud">
       <h2>Unlimited Dropbox ­like Personal Cloud</h2>
       <p>Create a virtual drive with the storage capacity equals to the sum of the cloud

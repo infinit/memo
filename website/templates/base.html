@@ -5,7 +5,7 @@
 
     <%
     title = context.get('title', 'Infinit')
-    title = context.get('description', 'Powerful storage platform for developers and sysadmins')
+    description = context.get('description', 'Powerful storage platform for developers and sysadmins')
     %>
     <title>${title}</title>
     <meta name="description" content="${description}" />
@@ -33,11 +33,11 @@
   <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''}">
 
     <header>
-      <a href="/"><img src="${url('images/logo.png')}" alt="Infinit"></a>
+      <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"></a>
 
       <ul>
-        <li><a href="/overview">Documentation</a></li>
-        <li><a href="/get-started">Download</a></li>
+        <li><a href="${route('doc_overview')}">Documentation</a></li>
+        <li><a href="${route('doc_get_started')}">Download</a></li>
       </ul>
     </header>
 
@@ -48,5 +48,6 @@
     </div>
 
     <script type="text/javascript" src="${url('js/scripts.min.js')}"></script>
+    <link href='https://fonts.googleapis.com/css?family=Ubuntu+Mono' rel='stylesheet' type='text/css'>
   </body>
 </html>

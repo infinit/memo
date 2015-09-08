@@ -47,7 +47,7 @@ class Website(bottle.Bottle):
       'description': 'Infinit',
     }
 
-  @route('/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
+  @route('/documentation/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
   @view('pages/doc/deployments/personal_cloud.html')
   def root():
     return {
@@ -60,6 +60,14 @@ class Website(bottle.Bottle):
   def root():
     return {
       'title': 'Roadmap',
+      'description': 'Infinit',
+    }
+
+  @route('/legal', name = 'legal')
+  @view('pages/legal.html')
+  def root():
+    return {
+      'title': 'Legal',
       'description': 'Infinit',
     }
 
