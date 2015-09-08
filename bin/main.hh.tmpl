@@ -1052,9 +1052,9 @@ beyond_fetch(std::string const& type, std::string const& name)
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
     report_action("fetched", type, name);
-  else if (r.status() == reactor::http::StatusCode::Conflict)
+  else if (r.status() == reactor::http::StatusCode::Not_Found)
     throw elle::Error(
-      elle::sprintf("%s \"%s\" is already published", type, name));
+      elle::sprintf("%s \"%s\" not found", type, name));
   else
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s fetching %s",
