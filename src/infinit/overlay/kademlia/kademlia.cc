@@ -152,9 +152,11 @@ namespace kademlia
       std::unordered_map<Address, Endpoint> nodes;
     };
     REGISTER(FindNodeReply, "foundN");
-    struct FindValue: public FindNode
+    struct FindValue: public Packet
     {
-      using FindNode::FindNode;
+      PACKET(FindValue, sender, target, requestId);
+      int requestId;
+      Address target;
     };
     REGISTER(FindValue, "findV");
     struct FindValueReply: public Packet
@@ -537,15 +539,24 @@ namespace kademlia
           id, storage);
         continue;
       }
-      packet::FindValue fv;
-      fv.sender = _self;
-      fv.requestId = id;
-      fv.target = target;
+
       elle::Buffer buf;
       if (storage)
+      {
+        packet::FindValue fv;
+        fv.sender = _self;
+        fv.requestId = id;
+        fv.target = target;
         buf = serialize(fv);
+      }
       else
-        buf = serialize(packet::FindNode(fv));
+      {
+        packet::FindNode fn;
+        fn.sender = _self;
+        fn.requestId = id;
+        fn.target = target;
+        buf = serialize(fn);
+      }
       ELLE_TRACE("%s: startquery %s(%s) send to %s",
         *this, id, storage, *a);
       send(buf, sq->endpoints.at(*a));

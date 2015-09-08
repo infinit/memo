@@ -16,7 +16,9 @@ namespace kademlia
   typedef Time::duration Duration;
   struct PrettyEndpoint: public Endpoint
   {
-    using Endpoint::Endpoint;
+    PrettyEndpoint() {}
+    PrettyEndpoint(boost::asio::ip::address h, int p)
+    : Endpoint(h, p) {}
   };
   struct Configuration
   {
