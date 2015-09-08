@@ -18,6 +18,8 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
 
+#include <random>
+
 ELLE_LOG_COMPONENT("infinit.overlay.kademlia");
 
 typedef elle::serialization::Json Serializer;
