@@ -270,7 +270,7 @@ namespace infinit
     {
     public:
       Directory(DirectoryPtr parent, FileSystem& owner, std::string const& name,
-                std::unique_ptr<ACLBlock> b);
+                Address address);
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_ISDIR;
@@ -306,6 +306,7 @@ namespace infinit
       friend class FileHandle;
       void _changed(bool set_mtime = false);
       void _push_changes(bool first_write = false);
+      Address _address;
       std::unique_ptr<ACLBlock> _block;
       std::unordered_map<std::string, FileData> _files;
       bool _inherit_auth; //child nodes inherit this dir's permissions
@@ -652,7 +653,9 @@ namespace infinit
       ELLE_ASSERT(!!root);
       auto acl_root =  elle::cast<ACLBlock>::runtime(std::move(root));
       ELLE_ASSERT(!!acl_root);
-      return std::make_shared<Directory>(nullptr, *this, "", std::move(acl_root));
+      auto res =  std::make_shared<Directory>(nullptr, *this, "", acl_root->address());
+      res->_block = std::move(acl_root);
+      return res;
     }
 
     std::unique_ptr<MutableBlock>
@@ -673,39 +676,13 @@ namespace infinit
 
     Directory::Directory(DirectoryPtr parent, FileSystem& owner,
                          std::string const& name,
-                         std::unique_ptr<ACLBlock> b)
+                         Address address)
     : Node(owner, parent, name)
-    , _block(std::move(b))
+    , _address(address)
     , _inherit_auth(_parent?_parent->_inherit_auth : false)
+    , _last_fetch(boost::posix_time::not_a_date_time)
     {
-      ELLE_ASSERT(!!_block);
-      ELLE_DEBUG("Directory::Directory %s, parent %s address %s", this, parent, _block->address());
-      try
-      {
-        _block->data();
-      }
-      catch (elle::Error const& e)
-      {
-        ELLE_DEBUG("Directory data access failure: %s", e.what());
-        THROW_ACCES;
-      }
-      if (!_block->data().empty())
-      {
-        ELLE_DEBUG("Deserializing directory");
-        elle::IOStream is((_block->data().istreambuf()));
-        elle::serialization::json::SerializerIn input(is, version);
-        try
-        {
-          input.serialize_forward(*this);
-        }
-        catch(elle::serialization::Error const& e)
-        {
-          ELLE_WARN("Directory deserialization error: %s", e);
-          throw rfs::Error(EIO, e.what());
-        }
-      }
-      else
-        _changed();
+      ELLE_DEBUG("Directory::Directory %s, parent %s address %s", this, parent, address);
     }
 
     void Directory::_fetch()
@@ -718,12 +695,20 @@ namespace infinit
         return;
       }
       _block = elle::cast<ACLBlock>::runtime
-        (_owner.fetch_or_die(_block->address()));
+        (_owner.fetch_or_die(_address));
       _last_fetch = now;
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
-      elle::IOStream is(umbrella([&] { return _block->data().istreambuf();}, EPERM));
+      bool empty = false;
+      elle::IOStream is(umbrella([&] {
+          auto& d = _block->data();
+          empty = d.empty();
+          return d.istreambuf();
+        }
+        , EPERM));
+      if (empty)
+        return;
       elle::serialization::json::SerializerIn input(is, version);
       try
       {
@@ -772,6 +757,10 @@ namespace infinit
         elle::serialization::json::SerializerOut output(os, version);
         output.serialize_forward(*this);
       }
+      if (!_block)
+      {
+        _block = elle::cast<ACLBlock>::runtime(_owner.fetch_or_die(_address));
+      }
       _block->data(data);
       if (set_mtime && _parent)
       {
@@ -796,7 +785,7 @@ namespace infinit
     std::shared_ptr<rfs::Path>
     Directory::child(std::string const& name)
     {
-      if (!_owner.single_mount())
+      if (!_owner.single_mount() || !_block)
         _fetch();
       ELLE_DEBUG_SCOPE("Directory child: %s / %s", *this, name);
       auto it = _files.find(name);
@@ -811,13 +800,9 @@ namespace infinit
           return std::shared_ptr<rfs::Path>(new Symlink(self, _owner, name));
         if (!isDir)
           return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
-        std::unique_ptr<ACLBlock> block;
-
-        block = elle::cast<ACLBlock>::runtime
-          (_owner.fetch_or_die(it->second.address));
 
         return std::shared_ptr<rfs::Path>(new Directory(self, _owner, name,
-                                                        std::move(block)));
+                                                        it->second.address));
       }
       else
         return std::shared_ptr<rfs::Path>(new Unknown(self, _owner, name));
@@ -826,7 +811,7 @@ namespace infinit
     void
     Directory::list_directory(rfs::OnDirectoryEntry cb)
     {
-      if (!_owner.single_mount())
+      if (!_owner.single_mount() || ! _block)
         _fetch();
       ELLE_DEBUG("Directory list: %s", this);
       struct stat st;
@@ -1131,7 +1116,8 @@ namespace infinit
         // We must store first to ready ACL layer
         _owner.store_or_die(*b, model::STORE_INSERT);
         _parent->_block->copy_permissions(*b);
-        Directory d(_parent, _owner, _name, std::move(b));
+        Directory d(_parent, _owner, _name, address);
+        d._block = std::move(b);
         d._inherit_auth = true;
         d._push_changes();
       }
@@ -1976,6 +1962,7 @@ namespace infinit
         }
         ELLE_TRACE("Setting permission at %s", acl->address());
         acl->set_permissions(*user, perms.first, perms.second);
+        ELLE_TRACE("Storing acl block at %s", acl->address());
         _owner.store_or_die(*acl); // FIXME STORE MODE
       }
       else
