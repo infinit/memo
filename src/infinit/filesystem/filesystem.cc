@@ -1922,7 +1922,8 @@ namespace infinit
         auto acl = dynamic_cast<model::blocks::ACLBlock*>(block.get());
         ELLE_ASSERT(acl);
         ELLE_TRACE("Setting permission at %s", acl->address());
-        acl->set_permissions(*user, perms.first, perms.second);
+        umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
+          EPERM);
         _owner.store_or_die(*acl); // FIXME STORE MODE
       }
       else
@@ -1961,7 +1962,8 @@ namespace infinit
           acl = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
         }
         ELLE_TRACE("Setting permission at %s", acl->address());
-        acl->set_permissions(*user, perms.first, perms.second);
+        umbrella([&] { acl->set_permissions(*user, perms.first, perms.second);},
+          EPERM);
         ELLE_TRACE("Storing acl block at %s", acl->address());
         _owner.store_or_die(*acl); // FIXME STORE MODE
       }
