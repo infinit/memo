@@ -38,7 +38,7 @@ create(variables_map const& args)
   {
     auto path = optional(args, "path");
     if (!path)
-      path = (infinit::root_dir() / "storage" / (name + ".data")).string();
+      path = (infinit::root_dir() / "blocks" / name).string();
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
       (std::move(*path));
