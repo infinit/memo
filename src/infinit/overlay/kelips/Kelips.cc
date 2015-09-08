@@ -348,7 +348,7 @@ namespace kelips
 
   static inline Time now()
   {
-    return std::chrono::steady_clock::now();
+    return std::chrono::system_clock::now();
   }
 
   template<typename C>
@@ -1013,7 +1013,7 @@ namespace kelips
     }
     else
     {
-      it->second.last_seen = std::chrono::steady_clock::now();
+      it->second.last_seen = now();
       it->second.endpoint = endpoint;
     }
   }
@@ -1053,6 +1053,7 @@ namespace kelips
 
   void Node::onGossip(packet::Gossip* p)
   {
+    ELLE_TRACE("%s: rocessing gossip from %s", *this, p->endpoint);
     int g = group_of(p->sender);
     if (g != _group && !p->files.empty())
       ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
@@ -1088,7 +1089,10 @@ namespace kelips
         {
           _state.files.insert(std::make_pair(f.first,
             File{f.first, f.second.second, f.second.first, Time(), 0}));
-          ELLE_TRACE("%s: registering %x", *this, f.first);
+          ELLE_TRACE("%s: registering %x live since %s (%s)", *this,
+                     f.first,
+                     std::chrono::duration_cast<std::chrono::seconds>(now() - f.second.first).count(),
+                     (now() - f.second.first).count());
         }
         else
         {

@@ -27,7 +27,7 @@ namespace kelips
     : GossipEndpoint(addr, port) {}
   };
   typedef infinit::model::Address Address;
-  typedef std::chrono::time_point<std::chrono::steady_clock> Time;
+  typedef std::chrono::time_point<std::chrono::system_clock> Time;
   typedef Time::duration Duration;
   //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
   struct Contact
