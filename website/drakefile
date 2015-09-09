@@ -1,6 +1,8 @@
 import drake
 import sys
 
+from itertools import chain
+
 build = None
 check = None
 install = None
@@ -97,15 +99,15 @@ def configure(
   if python is not None:
     python_version = python.version
   else:
-    python_version = '%s.%s' % sys.version_info[:2]
+    python_version = '%s.%s' % sys.version_ivnfo[:2]
   python_prefix = drake.Path('lib/python%s' % python_version)
-  def copy_sources(where, how):
+  def copy_sources(where, how = drake.copy):
     where = drake.Path(where) / python_prefix
     for node in how(sources,
                     where / 'infinit/website', strip_prefix = 'src'):
       yield node
-    yield how([bottle], where, strip_prefix = True)
-  def copy_templates(where, how):
+    yield how([bottle], where, strip_prefix = True)[0]
+  def copy_templates(where, how = drake.copy):
     where = drake.Path(where)
     for node in how(templates, where / 'share/infinit/website'):
       yield node
@@ -118,3 +120,24 @@ def configure(
   install = drake.Rule('install')
   install << copy_sources(where = prefix, how = drake.install)
   install << copy_templates(where = prefix, how = drake.install)
+
+  ## ------ ##
+  ## Debian ##
+  ## ------ ##
+
+  git = drake.git.Git()
+  with drake.templating.Context(content = {
+      'version': git.description(),
+      'version_major': git.version().split('.')[0],
+      'version_minor': git.version().split('.')[1],
+      'python_version_major': python.version.major,
+      'python_version_minor': python.version.minor,
+  }):
+    drake.node('control.tmpl')
+  package = chain(copy_sources('debian/opt/infinit/sh'),
+                  copy_templates('debian/opt/infinit/sh'),
+                  drake.copy(drake.nodes('control'), 'debian/DEBIAN'))
+  debian = drake.Rule('debian')
+  debian << drake.debian.Packager(
+    'infinit-sh_%s_amd64.deb' % git.description(),
+    package, 'debian').package

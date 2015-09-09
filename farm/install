@@ -10,6 +10,7 @@ targets = ['//install']
 
 if osyst.startswith('linux_ubuntu'):
   targets.append('//beyond/debian')
+  targets.append('//website/debian')
 
 subprocess.check_call(
   ['python3', 'drake', '--prefix=../%s' % os.environ['DIR_INSTALL']]
