@@ -88,6 +88,7 @@ class Bottle(bottle.Bottle):
       json = bottle.request.json
       user = User.from_json(self.__beyond, json)
       user.create()
+      bottle.response.status = 201
     except User.Duplicate:
       bottle.response.status = 409
       return {
