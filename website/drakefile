@@ -65,6 +65,7 @@ def configure(
     'resources/images/favicon@2x.png',
     'resources/images/logo.png',
     'resources/images/logo@2x.png',
+    'resources/images/bg-header-home.gif',
     'resources/images/bg-header-home.png',
     'resources/images/bg-header-home@2x.png',
     'resources/images/bg-terminal.png',
