@@ -17,14 +17,14 @@ add(variables_map const& args)
   {
     auto user = self_user(ifnt, args);
     std::cout << "Register your Dropbox account with infinit by visiting "
-              << beyond() << "/users/" << user.uid()
+              << beyond() << "/users/" << user.name
               << "/dropbox-oauth" << std::endl;
   }
   else if (args.count("google"))
   {
     auto user = ifnt.user_get(get_username(args, "user"));
     std::cout << "Register your Google account with infinit by visiting "
-              << beyond() << "/users/" << user.uid()
+              << beyond() << "/users/" << user.name
               << "/google-oauth" << std::endl;
   }
   else
@@ -55,7 +55,7 @@ fetch_credentials(infinit::User const& user,
                   std::function<void (Credentials)> add)
 {
   reactor::http::Request r(
-    elle::sprintf("%s/users/%s/credentials/%s", beyond(), user.uid(), name),
+    elle::sprintf("%s/users/%s/credentials/%s", beyond(), user.name, name),
     reactor::http::Method::GET);
   if (r.status() == reactor::http::StatusCode::Not_Found)
   {
