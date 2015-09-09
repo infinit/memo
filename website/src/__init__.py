@@ -6,7 +6,24 @@ class Website(bottle.Bottle):
 
   def __init__(self):
     super().__init__()
+    self.install(bottle.CertificationPlugin())
     route.apply(self)
+
+  def debug(self):
+    if hasattr(bottle.request, 'certificate') and \
+       bottle.request.certificate in [
+         'antony.mechin@infinit.io',
+         'baptiste.fradin@infinit.io',
+         'christopher.crone@infinit.io',
+         'gaetan.rochel@infinit.io',
+         'julien.quintard@infinit.io',
+         'matthieu.nottale@infinit.io',
+         'patrick.perlmutter@infinit.io',
+         'quentin.hocquet@infinit.io',
+       ]:
+      return True
+    else:
+      return super().debug()
 
   @route('/', name = 'home')
   @view('pages/home')
