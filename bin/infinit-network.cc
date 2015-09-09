@@ -243,7 +243,6 @@ join(variables_map const& args)
       throw elle::Error("passport signature is invalid");
     infinit::Network network;
     desc.overlay->join();
-
     network.model =
       elle::make_unique<infinit::model::doughnut::Configuration>(
         std::move(desc.overlay),
@@ -259,6 +258,14 @@ join(variables_map const& args)
     ifnt.network_save(network, true);
     report_action("joined", "network", network.name);
   }
+}
+
+static
+void
+list(variables_map const& args)
+{
+  for (auto const& network: ifnt.networks_get())
+    std::cout << network.name << std::endl;
 }
 
 static
@@ -397,6 +404,12 @@ int main(int argc, char** argv)
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
       },
+    },
+    {
+      "list",
+      "List networks",
+      &list,
+      {},
     },
     {
       "push",

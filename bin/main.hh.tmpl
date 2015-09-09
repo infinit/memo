@@ -478,6 +478,25 @@ namespace infinit
       return res;
     }
 
+    std::vector<Network>
+    networks_get() const
+    {
+      std::vector<Network> res;
+      for (boost::filesystem::recursive_directory_iterator it(this->_network_path());
+           it != boost::filesystem::recursive_directory_iterator();
+           ++it)
+      {
+        if (is_regular_file(it->status()))
+        {
+          boost::filesystem::ifstream f;
+          this->_open(f, it->path(), "network", it->path().filename().string());
+          res.push_back(
+            elle::serialization::json::deserialize<Network>(f, false));
+        }
+      }
+      return res;
+    }
+
     NetworkDescriptor
     network_descriptor_get(std::string const& name_, User const& owner)
     {
@@ -687,11 +706,17 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path(std::string const& name) const
+    _network_path() const
     {
       auto root = root_dir() / "networks";
       create_directories(root);
-      return root / name;
+      return root;
+    }
+
+    boost::filesystem::path
+    _network_path(std::string const& name) const
+    {
+      return this->_network_path() / name;
     }
 
     boost::filesystem::path
