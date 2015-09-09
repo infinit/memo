@@ -4,8 +4,8 @@
     <meta charset="utf-8" />
 
     <%
-    title = context.get('title', 'Infinit')
-    description = context.get('description', 'Powerful storage platform for developers and sysadmins')
+    title = context.get('title', 'Infinit File System')
+    description = context.get('description', 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.')
     %>
     <title>${title}</title>
     <meta name="description" content="${description}" />
@@ -77,7 +77,7 @@
                 <li><a href="${route('about')}">About</a></li>
                 <li><a href="#">Blog</a></li>
                 <li><a href="${route('legal')}">Legal</a></li>
-                <li><a href="#">Contact</a></li>
+                <li><a href="${route('contact')}">Contact</a></li>
               </ul>
             </li>
             <li class="list-product">

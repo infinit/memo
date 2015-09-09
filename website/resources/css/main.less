@@ -52,7 +52,7 @@ a.button, button.button, input.button {
   margin: 20px auto; display: none;
 }
 
-input[type="email"], input[type="text"], input[type="password"] {
+input[type="email"], input[type="text"], input[type="password"], textarea {
   padding: 8px 22px; outline: none;
   border: 2px solid darken(white, 20%); border-radius: 30px;
   font-family: @sourcesans;
@@ -181,7 +181,7 @@ footer nav > ul > li {
 
   input[type="email"] {
     min-width: 200px; height: 30px; margin-top: 20px;
-    text-align: center;
+    text-align: center; font-size: 16px;
   }
   .button {  margin-top: 15px;}
 }
@@ -313,7 +313,7 @@ body.home {
 }
 
 
-body.documentation, body.legal {
+body.documentation, body.legal, body.contact {
   header { background: #F9F9F9; border-bottom: 2px solid #F3F3F3; }
 
   #sidebar {
@@ -661,7 +661,16 @@ body.about {
 
 
 
+body.contact {
+  section.doc { margin-top: 30px; padding: 0 15% 100px 25%;}
+  form { margin-top: 40px; }
 
+  input[type="text"], input[type="email"] { height: 25px; width: 40%;}
+  input[type="text"] { width: 40%; margin-bottom: 10px; }
+
+  textarea { width: 100%; min-height: 200px; border-radius: 5px; padding: 17px;}
+  section.doc .button { padding: 10px 25px; margin-top: 15px;}
+}
 
 
 
