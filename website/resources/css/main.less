@@ -2,6 +2,18 @@
 
 @import url('//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700');
 
+@font-face {
+  font-family: 'icons';
+  src:url('../fonts/icons.eot');
+  src:url('../fonts/icons.eot?#iefix') format('embedded-opentype'),
+      url('../fonts/icons.ttf') format('truetype'),
+      url('../fonts/icons.woff') format('woff'),
+      url('../fonts/icons.svg#icons') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+
 body {
   font-family: @sourcesans;
   font-size: 14px;
@@ -38,14 +50,19 @@ header {
   padding: 10px 8% 5px 8%;
 
   ul {
-    float: right;
+    float: right; margin-top: 18px;
 
     li {
       float: left; margin-left: 50px;
       a {
-        display: block;
+        display: block; font-size: 13px;
         text-transform: uppercase;
         font-weight: 600;
+        .transition();
+      }
+
+      a:hover, a.active {
+        color: lighten(@black, 50%);
       }
     }
   }
@@ -57,8 +74,89 @@ pre code {
   margin-left: 0; line-height: 17px;
 }
 
-section {
+section.blue {
+  background: #EBF0F3;
+}
 
+
+footer {
+   background: darken(@infinitblack, 7%); clear: both;
+   padding: 80px 0; min-height: 155px;
+   font-size: 13px;
+
+  .wrapper { max-width: 100%; }
+
+  ul {
+    list-style-type: none; margin:0; padding: 0; margin: auto; clear: both;
+  }
+}
+
+footer nav > ul > li {
+  float: left;  margin-right: 8px; color: white; font-family: @sourcesans;
+  width: 14%; padding-left: 2%; padding-right: 2%;
+
+  &.made {
+    margin-right:0; width: 20%; padding-left: 8%;
+
+    p { margin: 0; padding: 0; margin-bottom: 7px; font-weight: 300; }
+
+    .icon-infinit {
+      color: @infinitgrey; font-size: 2.4em; display: block; margin-bottom: 10px;
+      transition: color 0.3s; outline: none; display: inline-block;
+      -webkit-transition: color 0.3s;
+      -moz-transition: color 0.3s;
+      &:hover { color: white; }
+    }
+    .paris {
+      font-family: @sourcesans; margin-top: 30px; font-weight: 600;
+      font-size: 1.2em; text-transform: uppercase;
+      span { color: @infinitred; }
+    }
+    .nyc { font-weight: 300; padding: 0px 0 10px 0;display: block; }
+  }
+
+  ul > li {
+    float: none;
+
+    &.category {
+      font-family: @sourcesans; text-transform: uppercase;
+      margin-bottom: 20px; font-weight: 600;
+    }
+    a {
+      color: @infinitgrey; margin-top: 8px;
+      display: block; outline: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      &:hover { color: white; outline: none;}
+    }
+  }
+
+  &.connect {
+    width: 25%;
+
+    form input[type="submit"] { display: none; }
+    form input[type="email"] {
+      background: #45453A; border: 2px solid #696961;
+      height: 30px; min-width: 200px; border-radius: 3px;
+      padding: 3px 7px; font-family: @sourcesans;
+      color: @infinitgrey; outline: none;
+      .placeholder(lighten(@infinitgrey, 10%));
+
+      &:focus { border: 2px solid lighten(#696961, 10%); }
+    }
+
+    ul.social { margin-top: 13px; }
+    ul.social li { float: left; margin-right: 15px; margin-bottom: 5px;}
+
+    a {
+      color: @infinitgrey;
+      transition: color 0.3s; outline: none;
+      -webkit-transition: color 0.3s;
+      -moz-transition: color 0.3s;
+      &:hover { color: white; }
+      &:before { padding-right: 2px; margin-left: 0;}
+    }
+  }
 }
 
 
@@ -175,10 +273,12 @@ body.home {
 body.documentation, body.legal {
   header { background: #F9F9F9; border-bottom: 2px solid #F3F3F3; }
 
-  ul.menu {
-    padding-left: 8%; padding-top: 30px; float: left;
-    position: fixed; width: 10%;
+  #sidebar {
+    padding-left: 8%; width: 10%; float: left; margin-top: 20px;
+    margin-bottom: 30px;
   }
+
+  ul.menu { position: absolute; padding-top: 20px; }
 
   ul.menu li a { font-family: @helvetica; font-weight: 300; }
 
@@ -195,11 +295,11 @@ body.documentation, body.legal {
 
 
   section.doc {
-    float: left; width: 50%; padding: 20px 15% 100px 30%;
+    float: left; width: 50%; padding: 0 15% 100px 30%;
 
     h1 {
       font-size: 33px; line-height: 41px; padding-bottom: 15px;
-      border-bottom: 1px solid #DFDFDF; display: block;
+      border-bottom: 1px solid #DFDFDF; display: block; margin-top: 0;
     }
 
     p { line-height: 20px; }
@@ -343,7 +443,178 @@ body.legal {
 
 
 
+body.about {
+  .wrapper { width: 90%; margin: auto;}
 
+  section { padding: 80px 0; clear: both; }
+
+  h2 { font-family: @helvetica; font-size: 22px; font-weight: 300; text-align: center;}
+
+  .heading {
+    background: url('../images/bg-about.jpg') no-repeat; width: 100%; height: 248px;
+    -webkit-background-size: cover; -moz-background-size: cover; -o-background-size: cover; background-size: cover;
+    text-align: center; color: white; padding-top: 125px;
+
+    h1 {
+      text-shadow: 0px 1px 1px rgba(0,0,0,0.3); font-size: 1.8em; margin: 0 20px;
+      font-weight: 600; font-family: @sourcesans;
+      background: rgba(0, 0, 0, 0.1); padding: 5px 0; display: inline-block;
+    }
+
+    .contact {
+      font-weight: 200; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-size: 1.5em;
+      background: rgba(0, 0, 0, 0.1); width: 90%; display: inline; margin: 0 20px;
+      a { text-decoration: underline; color: white;
+        &:hover { color:@infinitgrey; }
+      }
+    }
+  }
+
+  .title {
+    text-transform: uppercase; color: white; background: @infinitred;
+    padding: 10px 30px; font-weight: 600;
+    text-align: center; width: 100px; margin: auto; margin-top: -20px; margin-bottom: 60px;
+  }
+
+  .team {
+    .description {
+      padding: 0 23% 80px 23%; text-align: center;
+
+      strong {
+        font-family: @helvetica; font-weight: 300; font-size: 22px;
+        line-height: 31px;
+      }
+
+      a { color: @infinitblue;}
+    }
+
+    .swagger:nth-child(odd) { clear: both;}
+
+    .swagger { width: 50%; float: left; margin-bottom: 70px; min-height: 135px;
+      .networks {
+        float: left; margin: 0 10px 0 30px; width: 100px;  text-align: center;
+        .avatar {
+          width: 100px; height: 100px; display: block; margin-bottom: 7px;
+
+          &.antony {
+            .at2x('../images/team/antony.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.baptiste {
+            .at2x('../images/team/baptiste.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.chris {
+            .at2x('../images/team/chris.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.gaetan {
+            .at2x('../images/team/gaetan.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.julien {
+            .at2x('../images/team/julien.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.matthieu {
+            .at2x('../images/team/matthieu.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.patrick {
+            .at2x('../images/team/patrick.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.quentin {
+            .at2x('../images/team/quentin.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &.you {
+            .at2x('../images/team/you.png', 100px, 200px);
+            background-position: top center;
+            background-repeat: no-repeat;
+          }
+          &:hover { background-position: bottom center;
+          }
+        }
+
+        .icons {
+          color: white; font-size: 1.3em; color: lighten(gray, 30%);
+          -webkit-transition: all 0.3s;
+          -moz-transition: all 0.3s;
+          transition: all 0.3s;
+
+          &:before { margin-right: 0; margin-left: 0;}
+
+          &.icon-twitter:hover { color: #6BD4E3; }
+          &.icon-dribbble:hover { color: #FF509C; }
+          &.icon-soundcloud:hover { color: #FFA050; }
+          &.icon-linkedin:hover { color: #2287C1; }
+          &.icon-facebook:hover { color: #415EA0}
+        }
+      }
+      .infos { float: left; width: 65%;
+        h3 {
+          font-family: @sourcesans; text-transform: uppercase;
+          word-spacing: 1px; font-size: 1.1em; font-weight: 600;
+          margin: 0; padding: 0; float: left; margin-right: 10px;
+        }
+        strong {
+          padding-top: 7px; padding-bottom: 3px; font-size: 0.9em;
+          display: block; font-weight: 400; clear: both;
+          a { color: @infinitblue; }
+          a:hover { color: darken(@infinitblue, 10%); }
+        }
+        p { text-align: justify; font-size: 0.9em; color: @gray; margin: 0; font-family: @sourcesans;
+          a { color: @infinitblue; font-family: @sourcesans;
+            &:hover { color: darken(@infinitblue, 10%); }
+          }
+        }
+      }
+    }
+  }
+
+  section.map {
+    text-align: center;
+    a { color: @infinitblue;}
+    img { width: 100%; max-width: 800px; height: auto; margin: auto; margin-top: 20px;}
+  }
+
+  section.philosophy, section.investors {
+    ul.values {
+      li { float: left; width: 16%; margin-bottom: 90px; text-align: center;}
+      li p { font-family: @sourcesans; font-weight: bold; text-transform: uppercase;}
+      span { font-size: 5em;}
+      span.icon-ethics { margin-left: -20px; display: block;}
+      p { margin-top: 10px;}
+    }
+
+    p.p1 {
+      clear: both; text-align: center;
+    }
+  }
+
+  section.investors {
+    ul.investors {
+      padding-bottom: 130px;
+
+      li {
+        float: left; width: 25%; text-align: center; margin-bottom: 130px;
+        margin-top: 10px;
+        a { color: @infinitblue; display: block; margin-bottom: 10px;}
+      }
+
+      li.alvencapital a { margin-top: 15px;}
+    }
+  }
+}
 
 
 

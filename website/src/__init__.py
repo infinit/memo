@@ -63,6 +63,14 @@ class Website(bottle.Bottle):
       'description': 'Infinit',
     }
 
+  @route('/about', name = 'about')
+  @view('pages/about.html')
+  def root():
+    return {
+      'title': 'About',
+      'description': 'Infinit',
+    }
+
   @route('/legal', name = 'legal')
   @view('pages/legal.html')
   def root():
@@ -72,6 +80,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/css/<path:path>')
+  @route('/fonts/<path:path>')
   @route('/images/<path:path>')
   @route('/js/<path:path>')
   def images(path):

@@ -4,32 +4,37 @@ $(document).ready(function() {
     hljs.highlightBlock(block);
   });
 
-    $('body.home #commands').t(
-      '<ins>1 </ins><mark>$></mark> infinit-storage --create —dropbox —account 455444556 —name dropbox' +
-      '<ins>0.5</ins><ins>\nCreated storage “dropbox". \n\n</ins>' +
-      '<mark>$></mark> <ins>2</ins>'+
+  var a = function () {
+    var height = $(window).scrollTop();
+    var menu_anchor = $("#menu-anchor").offset().top;
+    var footer = $("footer").offset().top;
+    var menu = $("ul.menu");
+    var menu_height = $("ul.menu").height() + 20; // margin
 
-      'infinit-network —create —storage dropbox —storage flickr —name clouds' +
-      '<ins>0.5</ins><ins>\nCreated network "clouds". \n\n</ins>' +
-      '<mark>$></mark> <ins>2</ins>'+
+    if (height > menu_anchor) {
+      var myTop = $(window).scrollTop();
 
-      'infinit-volume —create —network clouds —name personal-drive' +
-      '<ins>0.5</ins><ins>\nStarting network "clouds".'+
-      '\nCreating volume root blocks.'+
-      '\nCreated volume “personal-drive". \n\n</ins>' +
-      '<mark>$></mark> <ins>2</ins>'+
-
-      'infinit-volume —mount —name personal-drive —mountpoint /mnt/personal-drive/' +
-      '<ins>0.5</ins><ins>\nMounting volume “personal-drive". \n\n</ins>' +
-      '<mark>$></mark> ',
-      {
-        speed: 20,
-        speed_vary: true,
-        fin: function(elem) {
-        }
+      if (myTop > footer - menu_height) {
+        myTop = footer - menu_height;
       }
-    );
 
-  $('body.home #commands').t('infinit-storage --create —dropbox —account 455444556 —name dropbox');
+      menu.css({
+        position: "absolute",
+        top: myTop,
+        bottom: ""
+      });
+
+    } else {
+      if (height <= menu_anchor) {
+        menu.css({
+          position: "absolute",
+          top: "",
+          bottom: ""
+        });
+      }
+    }
+  };
+
+  $(window).scroll(a);
 
 });
