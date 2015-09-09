@@ -107,7 +107,8 @@ def configure(
               where / python_prefix, strip_prefix = True)
 
   build = drake.Rule('build')
-  build << install_nodes(where = '.', how = copy_python)
+  built = list(install_nodes(where = '.', how = copy_python))
+  build << built
 
   install = drake.Rule('install')
   install << install_nodes(where = prefix, how = drake.install)
@@ -133,3 +134,20 @@ def configure(
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),
     package, 'debian').package
+
+  ## ----- ##
+  ## Check ##
+  ## ----- ##
+
+  rule_check = drake.Rule('check')
+  for test_name in [
+      'oauth-dropbox',
+  ]:
+    test = drake.node('tests/%s' % test_name)
+    test.dependencies_add(built)
+    runner = drake.Runner(
+      exe = test,
+      env = {
+        'PYTHONPATH': drake.path_build(python_prefix),
+      })
+    rule_check << runner.status

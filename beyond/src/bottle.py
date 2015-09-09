@@ -38,9 +38,10 @@ class Bottle(bottle.Bottle):
     # OAuth
     for s in Bottle.__oauth_services:
       self.route('/oauth/%s' % s)(getattr(self, 'oauth_%s' % s))
-      self.route('/users/<id>/%s-oauth' % s)(
+      self.route('/users/<username>/%s-oauth' % s)(
         getattr(self, 'oauth_%s_get' % s))
-      self.route('/users/<id>/credentials/%s' %s, method = 'GET')(
+      self.route('/users/<username>/credentials/%s' %s,
+                 method = 'GET')(
         getattr(self, 'user_%s_credentials_get' % s))
     # User
     self.route('/users/<name>', method = 'GET')(self.user_get)
@@ -101,12 +102,15 @@ class Bottle(bottle.Bottle):
     try:
       return self.__beyond.user_get(name = name).json()
     except User.NotFound:
-      bottle.response.status = 404
-      return {
-        'error': 'user/not_found',
-        'reason': 'user %r does not exist' % name,
-        'id': name,
-      }
+      return self.__user_not_found(name)
+
+  def __user_not_found(self, name):
+    bottle.response.status = 404
+    return {
+      'error': 'user/not_found',
+      'reason': 'user %r does not exist' % name,
+      'name': name,
+    }
 
   ## ------- ##
   ## Network ##
@@ -158,13 +162,13 @@ class Bottle(bottle.Bottle):
       }
 
 for name, conf in Bottle._Bottle__oauth_services.items():
-  def oauth_get(self, id, name = name, conf = conf):
+  def oauth_get(self, username, name = name, conf = conf):
     beyond = self._Bottle__beyond
     params = {
       'client_id': getattr(beyond, '%s_app_key' % name),
       'response_type': 'code',
       'redirect_uri': '%s/oauth/%s' % (self.host(), name),
-      'state': id,
+      'state': username,
     }
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)
@@ -175,7 +179,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
   def oauth(self, name = name, conf = conf):
     beyond = self._Bottle__beyond
     code = bottle.request.query['code']
-    uid = bottle.request.query['state']
+    username = bottle.request.query['state']
     query = {
       'code': code,
       'grant_type': 'authorization_code',
@@ -191,11 +195,10 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       return response.text
     contents = response.json()
     access_token = contents['access_token']
-    user = User(beyond, id = uid)
+    user = User(beyond, name = username)
     response = requests.get(
       conf['info_url'], params = {'access_token': access_token})
     if response.status_code // 100 != 2:
-      print('HOP %s' % response.status_code)
       bottle.response.status = response.status_code
       return response.text
     info = conf['info'](response.json())
@@ -205,29 +208,19 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       user.save()
       return info
     except User.NotFound:
-      bottle.response.status = 404
-      return {
-        'error': 'user/not_found',
-        'reason': 'user %r does not exist' % uid,
-        'id': uid,
-      }
+      return self._Bottle__user_not_found(username)
   oauth.__name__ = 'oauth_%s' % name
   setattr(Bottle, oauth.__name__, oauth)
-  def user_credentials_get(self, id, name = name):
+  def user_credentials_get(self, username, name = name):
     beyond = self._Bottle__beyond
     try:
-      user = beyond.user_get(id = id)
+      user = beyond.user_get(name = username)
       self.authenticate(user)
       return {
         'credentials':
           list(getattr(user, '%s_accounts' % name).values()),
       }
     except User.NotFound:
-      bottle.response.status = 404
-      return {
-        'error': 'user/not_found',
-        'reason': 'user %r does not exist' % id,
-        'id': id,
-      }
+      return self._Bottle__user_not_found(username)
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
   setattr(Bottle, user_credentials_get.__name__, user_credentials_get)

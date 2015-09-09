@@ -91,8 +91,8 @@ class User:
     return User(beyond,
                 name = json['name'],
                 public_key = json['public_key'],
-                dropbox_accounts = json.get('dropbox_accounts'),
-                google_accounts = json.get('google_accounts'),
+                dropbox_accounts = json.get('dropbox_accounts', []),
+                google_accounts = json.get('google_accounts', []),
     )
 
   def json(self, private = False):
@@ -118,7 +118,7 @@ class User:
     for id, account in self.google_accounts.items():
       if self.__google_accounts_original.get(id) != account:
         diff.setdefault('google_accounts', {})[id] = account
-    self.__beyond._Beyond__datastore.user_update(self.id, diff)
+    self.__beyond._Beyond__datastore.user_update(self.name, diff)
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
     self.__google_accounts_original = dict(self.__google_accounts)
 
