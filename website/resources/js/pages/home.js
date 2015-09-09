@@ -17,7 +17,7 @@ $(document).ready(function() {
 
     'infinit-volume —mount —name personal-drive —mountpoint /mnt/personal-drive/' +
     '<ins>0.5</ins><ins>\nMounting volume “personal-drive". \n\n</ins>' +
-    '<mark>$></mark> ',
+    '<mark><a href="' + $('.button.try').attr('href') +'">Get started now!</a></mark> ',
     {
       speed: 20,
       speed_vary: true,
@@ -25,5 +25,15 @@ $(document).ready(function() {
       }
     }
   );
+
+  $('.icon-slack').magnificPopup({
+    type:'inline',
+    midClick: true,
+    mainClass: 'mfp-fade'
+  });
+
+  $('.icon-slack').click(function() {
+    $('#slack').show();
+  });
 
 });

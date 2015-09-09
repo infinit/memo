@@ -17,6 +17,7 @@ module.exports = function(grunt) {
           'resources/css/main.min.css': [
             'resources/css/normalize.css',
             'resources/css/snippets.css',
+            'resources/css/magnific-popup.css',
             'resources/css/main.less'
           ]
         },

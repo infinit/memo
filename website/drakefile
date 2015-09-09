@@ -122,6 +122,8 @@ def configure(
     'resources/images/logos/aliveideas@2x.png',
     'resources/images/logos/techstars.png',
     'resources/images/logos/techstars@2x.png',
+    'resources/images/logos/slack.png',
+    'resources/images/logos/slack@2x.png',
 
     'resources/fonts/icons.eot',
     'resources/fonts/icons.svg',
