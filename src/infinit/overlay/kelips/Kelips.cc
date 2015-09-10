@@ -146,7 +146,7 @@ namespace kelips
         Serializer::SerializerIn input(stream, false);
         std::unique_ptr<packet::Packet> packet;
         input.serialize_forward(packet);
-        return std::move(packet);
+        return packet;
       }
       void encrypt(infinit::cryptography::SecretKey const& k,
                    Packet const& p)
@@ -1523,7 +1523,7 @@ namespace kelips
           it = random_from(_state.contacts[_group], _gen);
         if (it == _state.contacts[_group].end())
         {
-          if (fg != _group)
+          if (fg != _group || _observer)
             throw std::runtime_error("No contacts in self/target groups");
           // Store locally
           _promised_files.push_back(p.fileAddress);
