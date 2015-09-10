@@ -51,9 +51,12 @@ parameters = {
 with open('%s/drake' % os.environ['DIR_BUILD'], 'w') as drake:
   parameters['dir_source'] = os.path.abspath(os.environ['DIR_SOURCE'])
   if osyst == 'osx':
-    parameters['compiler'] = 'clang++'
-    parameters['environ'] = {'MACOSX_DEPLOYMENT_TARGET': '10.7'}
-    parameters['flags'] = ('-ftemplate-depth=512', '-stdlib=libc++')
+    parameters['compiler'] = 'g++-4.9'
+    parameters['environ'] = {
+      'MACOSX_DEPLOYMENT_TARGET': '10.7',
+      'PATH': os.environ['PATH'] + ':/usr/local/Cellar/gcc49/4.9.3/bin/'
+      }
+    parameters['flags'] = ('-ftemplate-depth=512')
     parameters['fuse'] = '/usr/local'
     parameters['python'] = \
       '/usr/local/Frameworks/Python.framework/Versions/3.4'
