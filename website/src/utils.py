@@ -1,4 +1,5 @@
 import bottle
+import functools
 import os
 import os.path
 import sys
@@ -50,5 +51,5 @@ class Routes:
 
   def apply(self, bottle):
     for f, args, kwargs in self.__routes:
-      bottle.route(*args, **kwargs)(f)
+      bottle.route(*args, **kwargs)(functools.partial(f, self = bottle))
 route = Routes()

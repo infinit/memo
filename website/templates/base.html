@@ -32,6 +32,8 @@
 
   <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''}">
 
+    <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
+
     <header>
       <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"></a>
 
@@ -52,9 +54,9 @@
       <strong>Join our Slack community!</strong>
       <p>Ask questions to our team or our contributors, get involved in the project...</p>
 
-      <form action="" type="POST">
-        <input type="email" name="email" placeholder="you@domain.com"><br>
-        <input type="submit" value="Get an invitation" class="button">
+      <form action="${route('slack')}" type="POST">
+        <input type="email" name="email" placeholder="you@domain.com" required><br>
+        <button type="submit" class="button">Get an invitation</button>
       </form>
 
       <br><br>

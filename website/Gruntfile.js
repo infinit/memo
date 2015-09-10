@@ -36,6 +36,7 @@ module.exports = function(grunt) {
         files: {
           'resources/js/scripts.min.js': [
             'resources/js/plugins/*.js',
+            'resources/js/pages/base.js',
             'resources/js/pages/*.js',
           ]
         },

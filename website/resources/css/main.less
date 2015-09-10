@@ -27,17 +27,16 @@ a.button, button.button, input.button {
   display: inline-block; overflow: hidden;
   background: #F25E5A; border-radius: 40px;
   padding: 10px 25px;
-  -webkit-transition: all 0.2s;
-  -moz-transition: all 0.2s;
-  transition: all 0.2s;
   position: relative;
   font-family: @sourcesans; color: white; text-transform: uppercase; font-size:16px;
   font-weight: 600; border: none;
-
+  outline: none; .transition();
 
   &:hover, &:active {
     background: darken(@infinitred, 10%);
   }
+
+  &:focus { outline: none; }
 
   &.border { background: none; }
   &.border.black { border: 1px solid @black; color: @black;}
@@ -50,6 +49,14 @@ a.button, button.button, input.button {
   position: relative; background: #FFF; border-radius: 5px;
   padding: 20px; width: auto; max-width: 500px;
   margin: 20px auto; display: none;
+}
+
+#popup_notice {
+  text-align: center; padding: 12px 12px; font-size: 1em;
+  background: #1FC3BF; color: white; position: fixed; z-index: 999;
+  width: 100%; display: none;
+
+  span { padding-right: 7px; }
 }
 
 input[type="email"], input[type="text"], input[type="password"], textarea {
