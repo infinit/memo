@@ -661,7 +661,7 @@ namespace infinit
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
-      return elle::cast<MutableBlock>::runtime(block_store()->fetch(_root_address));
+      return elle::cast<MutableBlock>::runtime(fetch_or_die(_root_address));
     }
 
     static const int DIRECTORY_MASK = 0040000;
