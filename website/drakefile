@@ -12,6 +12,7 @@ def configure(
     python,
     git,
     bottle,
+    sendwithus,
     prefix = drake.Path('/usr'),
 ):
 
@@ -148,6 +149,9 @@ def configure(
                     where / 'infinit/website', strip_prefix = 'src'):
       yield node
     yield how([bottle], where, strip_prefix = True)[0]
+    for n in how(sendwithus.nodes,
+                 where, strip_prefix = '../%s' % sendwithus.root):
+      yield n
   def copy_templates(where, how = drake.copy):
     where = drake.Path(where)
     for node in how(templates, where / 'share/infinit/website'):

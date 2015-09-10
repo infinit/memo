@@ -1,6 +1,7 @@
 import drake
 import drake.cxx
 import drake.git
+import drake.python
 import drake.valgrind
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
@@ -327,6 +328,15 @@ def configure(
   ## --- ##
 
   bottle = drake.node('bottle/bottle.py')
+  sendwithus = drake.python.Package(
+    'sendwithus',
+    'sendwithus_python',
+    drake.nodes(
+      'sendwithus_python/sendwithus/__init__.py',
+      'sendwithus_python/sendwithus/encoder.py',
+      'sendwithus_python/sendwithus/version.py',
+    ),
+  )
 
   if elle.python3 is not None:
     beyond = drake.include(
@@ -344,4 +354,5 @@ def configure(
     prefix = prefix,
     git = git,
     bottle = bottle,
+    sendwithus = sendwithus,
   )
