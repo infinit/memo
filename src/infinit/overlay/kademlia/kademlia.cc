@@ -534,7 +534,7 @@ namespace kademlia
     sq->res = sq->candidates;
     for (int i=0; i<_config.alpha; ++i)
     {
-      boost::optional<Address> a = recurseRequest(*sq, {});
+      boost::optional<Address> a = recurseRequest(*sq, {{}});
       if (!a)
       {
         ELLE_TRACE("%s: startQuery %s(%s): no target", *this,
