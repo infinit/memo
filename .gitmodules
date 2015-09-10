@@ -7,3 +7,6 @@
 [submodule "bottle"]
 	path = bottle
 	url = https://github.com/mefyl/bottle.git
+[submodule "sendwithus_python"]
+	path = sendwithus_python
+	url = https://github.com/mefyl/sendwithus_python.git
