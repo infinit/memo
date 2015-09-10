@@ -20,6 +20,26 @@ def configure(
     fuse = None,
 ):
 
+  class PatchAndInstall(drake.Install):
+    def execute(self):
+      if not super().execute():
+        return False
+      if cxx_toolkit.os == drake.os.macos:
+        output = subprocess.check_output(
+          ['otool', '-L', str(self.target().path())])
+        lines = output.decode('utf-8').strip().split('\n')
+        lines = [
+          x.split(' ')[0]
+          for x in lines if 'libstdc++' in x or 'libgcc_s' in x
+        ]
+        for l in lines:
+          self.cmd(
+            'Localize libstdc++ of %s' % self.target,
+            ['install_name_tool', '-change',
+             l, '@rpath/%s' % (os.path.filename(l))],
+            throw = True)
+      return True
+
   prefix = drake.Path(prefix)
   if prefix.relative:
     prefix = drake.path_build(prefix, absolute = True)
@@ -266,7 +286,9 @@ def configure(
         'infinit-acl',
     ]
   ]
-  install << drake.install(installed_binaries, prefix)
+
+
+  install << drake.copy(installed_binaries, prefix, None, builder = PatchAndInstall)
   # man = drake.nodes(
   #   'share/man/man1/infinit.1',
   #   'share/man/man5/infinit.5',
@@ -346,6 +368,7 @@ def configure(
       prefix = prefix,
       git = git,
       bottle = bottle,
+      PatchAndInstall = PatchAndInstall,
     )
 
   website = drake.include(
@@ -355,4 +378,5 @@ def configure(
     git = git,
     bottle = bottle,
     sendwithus = sendwithus,
+    PatchAndInstall = PatchAndInstall,
   )

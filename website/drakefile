@@ -1,7 +1,9 @@
 import drake
+import drake.cxx
 import sys
 
 from itertools import chain
+import functools
 
 build = None
 check = None
@@ -13,6 +15,7 @@ def configure(
     git,
     bottle,
     sendwithus,
+    PatchAndInstall,
     prefix = drake.Path('/usr'),
 ):
 
@@ -163,7 +166,9 @@ def configure(
   build << copy_sources(where = '.', how = copy_python)
   build << copy_templates(where = '.', how = drake.copy)
   install = drake.Rule('install')
-  install << copy_sources(where = prefix, how = drake.install)
+  install << copy_sources(
+    where = prefix,
+    how = functools.partial(drake.copy, builder = PatchAndInstall))
   install << copy_templates(where = prefix, how = drake.install)
 
   ## ------ ##

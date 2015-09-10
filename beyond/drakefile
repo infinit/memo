@@ -3,6 +3,7 @@ import drake.debian
 import drake.templating
 
 from itertools import chain
+import functools
 
 build = None
 check = None
@@ -17,6 +18,7 @@ def configure(
     cryptography_python_module,
     git,
     bottle,
+    PatchAndInstall,
     prefix = drake.Path('/usr'),
     dropbox_app_key = 'ldsi5nojwpfqcqg',
     dropbox_app_secret = 'gwca0vz648u0y6r',
@@ -111,7 +113,9 @@ def configure(
   build << built
 
   install = drake.Rule('install')
-  install << install_nodes(where = prefix, how = drake.install)
+  install << install_nodes(
+    where = prefix,
+    how = functools.partial(drake.copy, builder = PatchAndInstall))
 
   ## ------ ##
   ## Debian ##
