@@ -1,69 +1,12 @@
 #!/usr/bin/env python3
 
-import infinit.beyond
 import infinit.beyond.bottle
-import infinit.beyond.couchdb
 
 import bottle
-import os
-import requests
-import threading
 import unittest
 import urllib.parse
 
-from functools import partial
-from itertools import chain
-
-
-class Beyond:
-
-  def __init__(self):
-    self.__couchdb = infinit.beyond.couchdb.CouchDB()
-    self.__datastore = None
-    self.__beyond = None
-    self.__app = None
-
-  def __enter__(self):
-    couchdb = self.__couchdb.__enter__()
-    self.__datastore = \
-      infinit.beyond.couchdb.CouchDBDatastore(couchdb)
-    self.__beyond = infinit.beyond.Beyond(
-      datastore = self.__datastore,
-      dropbox_app_key = 'db_key',
-      dropbox_app_secret = 'db_secret',
-      google_app_key = 'google_key',
-      google_app_secret = 'google_secret',
-    )
-    self.__app = infinit.beyond.bottle.Bottle(self.__beyond)
-    thread = threading.Thread(
-      target = partial(bottle.run, app = self.__app, port = 0))
-    thread.daemon = True
-    thread.start()
-    while not hasattr(self.__app, 'port'):
-      import time
-      time.sleep(.1)
-    return self
-
-  @property
-  def host(self):
-    return '%s:%s' % (self.__app.host(), self.__app.port)
-
-  def request(self, url, **kwargs):
-    return requests.request(url = '%s/%s' % (self.host, url),
-                            allow_redirects = False,
-                            **kwargs)
-
-  def get(self, url, **kwargs):
-    return self.request(url = url, method = 'GET', **kwargs)
-
-  def put(self, url, **kwargs):
-    return self.request(url = url, method = 'PUT', **kwargs)
-
-  def __exit__(self, *args):
-    self.__app = None
-    self.__beyond = None
-    self.__datastore = None
-    self.__couchdb.__exit__(*args)
+from utils import *
 
 class DummyDropbox(bottle.Bottle):
 
@@ -90,20 +33,6 @@ class DummyDropbox(bottle.Bottle):
       'display_name': 'user_display-name',
     }
 
-  def __enter__(self):
-    thread = threading.Thread(
-      target = partial(bottle.run, app = self, port = 0))
-    thread.daemon = True
-    thread.start()
-    while not hasattr(self, 'port'):
-      import time
-      time.sleep(.1)
-    return self
-
-  @property
-  def host(self):
-    return 'http://localhost:%s' % self.port
-
 with Beyond() as beyond, DummyDropbox(beyond.host) as db:
   conf = infinit.beyond.bottle.Bottle._Bottle__oauth_services
   form_url = '%s/dropbox-oauth-form' % db.host
@@ -120,8 +49,7 @@ with Beyond() as beyond, DummyDropbox(beyond.host) as db:
       self.assertEqual(r.status_code, 303)
       url = urllib.parse.urlparse(r.headers['Location'])
       print(url)
-      self.assertEqual(url.scheme, 'http')
-      self.assertEqual(url.netloc, 'localhost:%s' % db.port)
+      self.assertEqual('%s://%s' % (url.scheme, url.netloc), db.host)
       self.assertEqual(url.path, '/dropbox-oauth-form')
       self.assertEqual(url.params, '')
       query = urllib.parse.parse_qs(url.query)
