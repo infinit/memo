@@ -203,10 +203,20 @@ invite(variables_map const& args)
     user.public_key,
     network.name,
     self.private_key.get());
-  auto output = get_output(args);
-  elle::serialization::json::serialize(passport, *output, false);
-  report_action_output(
-    *output, "wrote", "passport for", network.name);
+  bool push = args.count("push") && args["push"].as<bool>();
+  if (push)
+    beyond_push(
+      elle::sprintf("networks/%s/passports/%s", network.name, user_name),
+      "passport for",
+      user_name,
+      passport);
+  if (!push || args.count("output"))
+  {
+    auto output = get_output(args);
+    elle::serialization::json::serialize(passport, *output, false);
+    report_action_output(
+      *output, "wrote", "passport for", network.name);
+  }
 }
 
 static
@@ -388,6 +398,8 @@ int main(int argc, char** argv)
         { "name,n", value<std::string>(), "network to create the passport to" },
         { "output,o", value<std::string>(),
             "file to write the passport to (defaults to stdout)" },
+        { "push,p", bool_switch(),
+            elle::sprintf("push the passport to %s", beyond()).c_str() },
         { "user,u", value<std::string>(), "user to create the passport for" },
       },
     },

@@ -169,38 +169,42 @@ namespace infinit
               }
               script_mode = vm.count("script");
               bool help = vm.count("help");
-              for (auto const& mode: modes)
+              Mode const* mode = nullptr;
+              std::vector<std::string> args;
+              for (auto const& m: modes)
+                if (vm.count(m.name))
+                  if (!mode)
+                    mode = &m;
+                  else
+                    args.push_back("--" + m.name);
+              if (!mode)
               {
-                if (vm.count(mode.name))
-                {
-                  if (help)
-                  {
-                    mode.help(std::cout);
-                    return;
-                  }
-                  auto args =
-                    collect_unrecognized(parsed.options, include_positional);
-                  try
-                  {
-                    mode.action(parse_args(mode.options, args));
-                  }
-                  catch (CommandLineError const&)
-                  {
-                    mode.help(std::cerr);
-                    throw;
-                  }
-                  return;
-                }
-              }
-              std::ostream& output = help ? std::cout : std::cerr;
-              {
-                output << "Usage: " << program << " MODE [OPTIONS...]" << std::endl;
+                std::ostream& output = help ? std::cout : std::cerr;
+                output << "Usage: " << program
+                       << " MODE [OPTIONS...]" << std::endl;
                 output << std::endl;
                 output << options;
                 output << std::endl;
+                if (!help)
+                  throw elle::Error("mode unspecified");
               }
-              if (!help)
-                throw elle::Error("mode unspecified");
+              if (help)
+              {
+                mode->help(std::cout);
+                return;
+              }
+              for (auto const& unrecognized:
+                     collect_unrecognized(parsed.options, include_positional))
+                args.push_back(unrecognized);
+              try
+              {
+                mode->action(parse_args(mode->options, args));
+              }
+              catch (CommandLineError const&)
+              {
+                mode->help(std::cerr);
+                throw;
+              }
             }
             catch (invalid_command_line_syntax const& e)
             {
@@ -1049,11 +1053,12 @@ beyond()
 
 template <typename T>
 void
-beyond_push(std::string const& type, std::string const& name, T const& o)
+beyond_push(std::string const& where,
+            std::string const& type, std::string const& name, T const& o)
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", "application/json");
-  reactor::http::Request r(elle::sprintf("%s/%ss/%s", beyond(), type, name),
+  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::PUT, std::move(c));
   elle::serialization::json::serialize(o, r, false);
   r.finalize();
@@ -1067,6 +1072,13 @@ beyond_push(std::string const& type, std::string const& name, T const& o)
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s pushing %s",
                     r.status(), type));
+}
+
+template <typename T>
+void
+beyond_push(std::string const& type, std::string const& name, T const& o)
+{
+  beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o);
 }
 
 template <typename T>
