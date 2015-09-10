@@ -56,7 +56,7 @@ with open('%s/drake' % os.environ['DIR_BUILD'], 'w') as drake:
       'MACOSX_DEPLOYMENT_TARGET': '10.7',
       'PATH': os.environ['PATH'] + ':/usr/local/Cellar/gcc49/4.9.3/bin/'
       }
-    parameters['flags'] = ('-ftemplate-depth=512')
+    parameters['flags'] = ('-ftemplate-depth=512',)
     parameters['fuse'] = '/usr/local'
     parameters['python'] = \
       '/usr/local/Frameworks/Python.framework/Versions/3.4'
