@@ -1063,11 +1063,13 @@ beyond_push(std::string const& where,
   elle::serialization::json::serialize(o, r, false);
   r.finalize();
   reactor::wait(r);
-  if (r.status() == reactor::http::StatusCode::OK)
+  if (r.status() == reactor::http::StatusCode::Created)
     report_action("pushed", type, name);
+  else if (r.status() == reactor::http::StatusCode::OK)
+    report_action("Already pushed", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
     throw elle::Error(
-      elle::sprintf("%s \"%s\" is already pushed", type, name));
+      elle::sprintf("%s \"%s\" already exists with a different key", type, name));
   else
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s pushing %s",

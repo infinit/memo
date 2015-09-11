@@ -82,6 +82,12 @@ mefyl = {
   'public_key': {'rsa': 'MIIBCAKCAQEAq1pXuFI8l8MopHufZ4S3fe+WoR5wgeaPtZhw9IFuHZ+3F7V7fCzy76gKp5EPz5sk2Dowd90d+TuEUjUUkI0fRLJipRPjo2reFsuOAZ244ee/NLtG601vQUS/sV8ow2QZEAoNAiNZQGr4jEqvmjIB+rwOmx9eUgs887KjUYlX+wH5984EAr/qd62VddYXga8o4T2QX4GlYik/s/yKm0dlCQgZXQPYM5Wogv6KluGdLFKBaNc2HYkGEArZE51sATRcDOSQcycg2sGuwfL/LfClsCkx2LSYjJh9qkiBNUsAg+LeRt/9Hv3S32tcMszCph3nSX5u+1yz8VURHjVGh9ptAwIBIw=='},
 }
 
+mefyl2 = {
+  'name': 'mefyl',
+  'public_key':
+  {'rsa': 'MIIBCgKCAQEA7nhbx8j2hGaMjSrFGCToNcduUX1uHwB8GbmhjkMhspq57YTJ5Krx3N21BAbZnUpSjR/t36YtsvUgPSRGMmKl8W0YouKe18z2ihmO502zzOqloazZeVcOxrF5jRx2mCk+3DszDGUJgOETyY/5lJnb/ToNCvyKEF5epW0suyw4tFZoGI5unBXN7V90dPq+h7zli7XQ23JAExXFLzOzdiCD6DVWoYN13sROg2SUqMTtyFN8047A7rR/J87Son0x5f/cIIIS4imQVE0PLFaQOpB45RxE9yI3rHy+8MDlWyTG74BUFpxOVLM2FjLvGhIg/mv0TM9awrmyY+YPgGbRDmm/BQIDAQAB'},
+}
+
 network = {
   'overlay': {
     'type': 'kelips',

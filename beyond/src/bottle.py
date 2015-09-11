@@ -100,12 +100,15 @@ class Bottle(bottle.Bottle):
       bottle.response.status = 201
       return {}
     except User.Duplicate:
-      bottle.response.status = 409
-      return {
-        'error': 'user/conflict',
-        'reason': 'user %r already exists' % name,
-        'id': name,
-      }
+      if user.public_key == self.__beyond.user_get(user.name).public_key:
+          bottle.response.status = 200
+      else:
+        bottle.response.status = 409
+        return {
+          'error': 'user/conflict',
+          'reason': 'user %r already exists' % name,
+          'id': name,
+        }
 
   def user_get(self, name):
     try:
