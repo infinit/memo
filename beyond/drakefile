@@ -6,7 +6,7 @@ from itertools import chain
 import functools
 
 build = None
-check = None
+rule_check = None
 install = None
 tests = None
 
@@ -26,7 +26,7 @@ def configure(
     google_app_secret = 'ufwn6w0hAT2MDuwOzfWxh4Sx',
 ):
 
-  global build, check, install, tests
+  global build, rule_check, install, tests
 
   class PythonCopy(drake.Copy):
 

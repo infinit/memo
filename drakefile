@@ -383,6 +383,7 @@ def configure(
       bottle = bottle,
       PatchAndInstall = PatchAndInstall,
     )
+    rule_check << beyond.rule_check
 
   website = drake.include(
     'website',
