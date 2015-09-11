@@ -46,6 +46,8 @@ def configure(
           os.chmod(target_path, 0o555)
           tgtdir = os.path.join(os.path.dirname(target_path), '..', 'lib')
           tgtfile = os.path.join(tgtdir, os.path.basename(l))
+          if not os.path.exists(tgtdir):
+            os.makedirs(tgtdir)
           if not os.path.exists(tgtfile):
             shutil.copy(l, tgtdir)
       return True
