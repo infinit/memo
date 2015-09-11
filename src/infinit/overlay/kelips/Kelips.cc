@@ -1815,8 +1815,10 @@ namespace kelips
   void Node::store(infinit::model::blocks::Block const& block,
                    infinit::model::StoreMode mode)
   {
-    auto it = _state.files.find(block.address());
-    if (it == _state.files.end())
+    auto its = _state.files.equal_range(block.address());
+    if (std::find_if(its.first, its.second, [&](Files::value_type const& f) {
+        return f.second.home_node == _self;
+    }) == its.second)
       _state.files.insert(std::make_pair(block.address(),
         File{block.address(), _self, now(), Time(), 0}));
     auto itp = std::find(_promised_files.begin(), _promised_files.end(), block.address());
