@@ -33,10 +33,11 @@ namespace infinit
       {}
 
       Remote::Remote(Doughnut& doughnut,
-                     boost::asio::ip::udp::endpoint endpoint)
+                     boost::asio::ip::udp::endpoint endpoint,
+                     reactor::network::UTPServer& server)
         : _doughnut(doughnut)
         , _utp_socket(elle::make_unique<reactor::network::UTPSocket>(
-            _utp_server(), endpoint.address().to_string(), endpoint.port()))
+            server, endpoint.address().to_string(), endpoint.port()))
         , _serializer(*this->_utp_socket)
         , _channels(this->_serializer)
       {
@@ -72,17 +73,6 @@ namespace infinit
         remove(address);
       }
 
-      reactor::network::UTPServer&
-      Remote::_utp_server()
-      {
-        static std::unique_ptr<reactor::network::UTPServer> us;
-        if (!us)
-        {
-          us.reset(new reactor::network::UTPServer());
-          us->listen(0);
-        }
-        return *us;
-      }
     }
   }
 }

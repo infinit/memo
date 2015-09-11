@@ -25,7 +25,8 @@ namespace infinit
       public:
         Remote(Doughnut& doughnut, boost::asio::ip::tcp::endpoint endpoint);
         Remote(Doughnut& doughnut, std::string const& host, int port);
-        Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint);
+        Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
+               reactor::network::UTPServer& server);
         ELLE_ATTRIBUTE(Doughnut&, doughnut);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
@@ -46,9 +47,6 @@ namespace infinit
         void
         remove(Address address) override;
       private:
-        static
-        reactor::network::UTPServer&
-        _utp_server();
       };
     }
   }

@@ -196,6 +196,7 @@ namespace kelips
     std::vector<Address> _promised_files; // addresses for which we accepted a put
     std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
     std::vector<GossipEndpoint> _pending_bootstrap; // bootstrap pending auth
+    reactor::network::UTPServer _remotes_server;
     int _next_id;
     int _port;
     bool _observer;

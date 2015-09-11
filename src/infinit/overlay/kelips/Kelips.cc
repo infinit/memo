@@ -409,6 +409,7 @@ namespace kelips
     if (_config.node_id == Address::null)
       ELLE_LOG("Running in observer mode");
     this->doughnut(doughnut);
+    _remotes_server.listen(0);
     start();
 
   }
@@ -425,6 +426,7 @@ namespace kelips
 
   Node::~Node()
   {
+    ELLE_TRACE("~Kelips");
     if (_emitter_thread)
       _emitter_thread->terminate_now();
     if (_listener_thread)
@@ -1858,7 +1860,8 @@ namespace kelips
           res.emplace_back(
             new infinit::model::doughnut::Remote(
               const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-              boost::asio::ip::udp::endpoint(host.address(), host.port()+100)));
+              boost::asio::ip::udp::endpoint(host.address(), host.port()+100),
+              const_cast<Node*>(this)->_remotes_server));
           continue;
         }
         catch (reactor::Terminate const& e)
