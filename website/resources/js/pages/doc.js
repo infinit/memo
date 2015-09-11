@@ -9,7 +9,7 @@ $(document).ready(function() {
     var menu_anchor = $("#menu-anchor").offset().top;
     var footer = $("footer").offset().top;
     var menu = $("ul.menu");
-    var menu_height = $("ul.menu").height() + 20; // margin
+    var menu_height = $("ul.menu").height() + 60; // margin
 
     if (height > menu_anchor) {
       var myTop = $(window).scrollTop();

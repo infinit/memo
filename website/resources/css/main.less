@@ -333,7 +333,7 @@ body.documentation, body.legal, body.contact {
   ul.menu li a { font-family: @helvetica; font-weight: 300; }
 
   ul.menu li a:hover,
-  ul.menu li.active a {
+  ul.menu li.active > a {
     color: @infinitred;
   }
 
@@ -390,7 +390,6 @@ body.documentation, body.legal, body.contact {
     }
 
     .tags { margin-top: -10px; margin-bottom: 25px; }
-    .tags span { font-family: @sourcesans; }
   }
 }
 
@@ -402,16 +401,14 @@ body.doc_overview {
     .features {
 
       div {
-        float: left; width: 25%; padding: 0 2%; background: darken(white, 2%);
-        border-radius: 3px; margin: 2%;
+        float: left; width: 31%; margin-right: 3%;
 
-        h2 { font-size: 15px; text-transform: uppercase; margin: 15px 0 5px 0;}
+        h2 { font-size: 15px; text-transform: uppercase; margin: 25px 0 5px 0;}
         p { font-size: 13px; color: #959595; line-height: 19px; margin-top: 0;}
       }
 
-      div:nth-child(3n+1) {
-        clear: both;
-      }
+      div:nth-child(3n) { margin-right: 0; }
+      div:nth-child(3n+1) { clear: both; }
     }
 
   }

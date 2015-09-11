@@ -60,6 +60,8 @@ def configure(
     'templates/pages/doc/technology.html',
     'templates/pages/doc/comparisons.html',
     'templates/pages/doc/deployments/personal_cloud.html',
+    'templates/pages/doc/deployments/decentralized_fs.html',
+    'templates/pages/doc/reference.html',
     'templates/pages/doc/roadmap.html',
     'templates/pages/about.html',
     'templates/pages/contact.html',
@@ -92,6 +94,8 @@ def configure(
     'resources/images/schema-distributed@2x.png',
     'resources/images/schema-decentralized.png',
     'resources/images/schema-decentralized@2x.png',
+    'resources/images/schema-technology.png',
+    'resources/images/schema-technology@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
