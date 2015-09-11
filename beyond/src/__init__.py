@@ -127,7 +127,7 @@ class User:
 
   @property
   def id(self):
-    der = base64.b64decode(self.public_key['rsa'])
+    der = base64.b64decode(self.public_key['rsa'].encode('latin-1'))
     id = base64.urlsafe_b64encode(cryptography.hash(der))[0:8]
     return id.decode('latin-1')
 
