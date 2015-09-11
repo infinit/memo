@@ -24,7 +24,7 @@ with Beyond() as beyond:
       self.assertEqual(
         beyond.put('users/mefyl', json = mefyl).status_code, 200)
       self.assertEqual(
-        beyond.put('users/mefyl', json = mefyl_regen).status_code, 409)
+        beyond.put('users/mefyl', json = mefyl2).status_code, 409)
       r = beyond.put('users/mefyl', json = mefyl)
       self.assertEqual(beyond.get('users/none').status_code, 404)
       # Network
