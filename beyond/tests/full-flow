@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import bottle
+import unittest
+import urllib.parse
+
+from utils import *
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_flow(self):
+      # User
+      r = beyond.put('users/mefyl', json = mefyl)
+      self.assertEqual(r.status_code, 201)
+      r = beyond.get('users/mefyl')
+      self.assertEqual(r.status_code, 200)
+      json = r.json()
+      for k, v in mefyl.items():
+        self.assertEqual(json[k], v)
+      self.assertEqual(
+        beyond.put('users/mefyl', json = mefyl).status_code, 409)
+      self.assertEqual(beyond.get('users/none').status_code, 404)
+      # Network
+      r = beyond.put('networks/mefyl/infinit', json = network)
+      self.assertEqual(r.status_code, 201)
+      r = beyond.get('networks/mefyl/infinit')
+      self.assertEqual(r.status_code, 200)
+      json = r.json()
+      for k, v in network.items():
+        self.assertEqual(json[k], v)
+      r = beyond.get('networks/none/infinit')
+      self.assertEqual(r.status_code, 404)
+
+  if __name__ == '__main__':
+    unittest.main()

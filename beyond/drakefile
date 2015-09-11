@@ -145,6 +145,7 @@ def configure(
 
   rule_check = drake.Rule('check')
   for test_name in [
+      'full-flow',
       'oauth-dropbox',
   ]:
     test = drake.node('tests/%s' % test_name)

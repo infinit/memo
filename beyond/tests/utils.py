@@ -76,3 +76,50 @@ class Beyond:
   @property
   def host(self):
     return 'http://127.0.0.1:%s' % self.__app.port
+
+mefyl = {
+  'name': 'mefyl',
+  'public_key': {'rsa': 'MIIBCAKCAQEAq1pXuFI8l8MopHufZ4S3fe+WoR5wgeaPtZhw9IFuHZ+3F7V7fCzy76gKp5EPz5sk2Dowd90d+TuEUjUUkI0fRLJipRPjo2reFsuOAZ244ee/NLtG601vQUS/sV8ow2QZEAoNAiNZQGr4jEqvmjIB+rwOmx9eUgs887KjUYlX+wH5984EAr/qd62VddYXga8o4T2QX4GlYik/s/yKm0dlCQgZXQPYM5Wogv6KluGdLFKBaNc2HYkGEArZE51sATRcDOSQcycg2sGuwfL/LfClsCkx2LSYjJh9qkiBNUsAg+LeRt/9Hv3S32tcMszCph3nSX5u+1yz8VURHjVGh9ptAwIBIw=='},
+}
+
+network = {
+  'overlay': {
+    'type': 'kelips',
+    'config': {
+      'query_get_retries': 30,
+      'file_timeout_ms': 120000,
+      'k': 1,
+      'ping_interval_ms': 1000,
+      'query_put_insert_ttl': 3,
+      'query_get_ttl': 10,
+      'gossip': {
+        'other_target': 3,
+        'interval_ms': 2000,
+        'group_target': 3,
+        'bootstrap_group_target': 12,
+        'old_threshold_ms': 40000,
+        'contacts_other': 3,
+        'files': 6,
+        'bootstrap_other_target': 12,
+        'new_threshold': 5,
+        'contacts_group': 3
+      },
+      'ping_timeout_ms': 1000,
+      'node_id': 'SVyRYERs4s675ceW/Jt/hlBSfvWrjwZwwp+lhXJVq7Y=',
+      'encrypt': True,
+      'wait': 0,
+      'max_other_contacts': 6,
+      'query_put_retries': 12,
+      'accept_plain': False,
+      'bootstrap_nodes': [ ],
+      'rpc_protocol': 'all',
+      'query_put_ttl': 10,
+      'query_timeout_ms': 1000,
+      'contact_timeout_ms': 120000
+    }
+  },
+  'owner': {
+    'rsa': 'MIIBCAKCAQEAq1pXuFI8l8MopHufZ4S3fe+WoR5wgeaPtZhw9IFuHZ+3F7V7fCzy76gKp5EPz5sk2Dowd90d+TuEUjUUkI0fRLJipRPjo2reFsuOAZ244ee/NLtG601vQUS/sV8ow2QZEAoNAiNZQGr4jEqvmjIB+rwOmx9eUgs887KjUYlX+wH5984EAr/qd62VddYXga8o4T2QX4GlYik/s/yKm0dlCQgZXQPYM5Wogv6KluGdLFKBaNc2HYkGEArZE51sATRcDOSQcycg2sGuwfL/LfClsCkx2LSYjJh9qkiBNUsAg+LeRt/9Hv3S32tcMszCph3nSX5u+1yz8VURHjVGh9ptAwIBIw=='
+  },
+  'name': 'mefyl/infinit'
+}
