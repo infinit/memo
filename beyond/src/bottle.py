@@ -51,6 +51,10 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.network_get)
     self.route('/networks/<owner>/<name>',
                method = 'PUT')(self.network_put)
+    self.route('/networks/<owner>/<name>/passports/<invitee>',
+               method = 'GET')(self.network_passport_get)
+    self.route('/networks/<owner>/<name>/passports/<invitee>',
+               method = 'PUT')(self.network_passport_put)
     # Volume
     self.route('/volumes/<owner>/<name>',
                method = 'GET')(self.volume_get)
@@ -151,9 +155,33 @@ class Bottle(bottle.Bottle):
         'reason': 'network %r already exists' % name,
       }
 
-  ## ------- ##
+  def network_passport_get(self, owner, name, invitee):
+    user = self.__beyond.user_get(name = owner)
+    self.authenticate(user)
+    network = self.__beyond.network_get(
+      owner = owner, name = name)
+    passport = network.passports.get(invitee)
+    if passport is None:
+      return self.__not_found(
+        'passport', '%s/%s/%s' % (owner, name, invitee))
+    else:
+      return passport
+
+  def network_passport_put(self, owner, name, invitee):
+    try:
+      user = self.__beyond.user_get(name = owner)
+      self.authenticate(user)
+      network = Network(self.__beyond, owner = owner, name = name)
+      network.passports[invitee] = bottle.request.json
+      network.save()
+      bottle.response.status = 201
+      return {}
+    except Network.NotFound:
+      return self.__not_found('network', '%s/%s' % (owner, name))
+
+  ## ------ ##
   ## Volume ##
-  ## ------- ##
+  ## ------ ##
 
   def volume_get(self, owner, name):
     return self.__beyond.volume_get(

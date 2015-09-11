@@ -4,6 +4,9 @@ import requests
 
 import infinit.beyond.version
 
+from copy import deepcopy
+from itertools import chain
+
 class Beyond:
 
   def __init__(
@@ -148,16 +151,25 @@ class User:
 class Entity(type):
 
   def __new__(self, name, superclasses, content,
-              insert = None, fields = []):
+              insert = None,
+              update = None,
+              fields = {}):
     self_type = None
     content['fields'] = fields
     # Init
     def __init__(self, beyond, **kwargs):
       self.__beyond = beyond
-      for f in fields:
-        setattr(self, '_%s__%s' % (name, f), kwargs.pop(f, None))
+      for f, default in fields.items():
+        v = kwargs.pop(f, None)
+        if v is None:
+          v = default
+        setattr(self, '_%s__%s' % (name, f), v)
+        if isinstance(v, dict):
+          setattr(self, '_%s__%s_original' % (name, f), deepcopy(v))
       if kwargs:
-        raise TypeError('__init__() got an unexpected keyword argument %r' % next(iter(kwargs)))
+        raise TypeError(
+          '__init__() got an unexpected keyword argument %r' %
+          next(iter(kwargs)))
     content['__init__'] = __init__
     # JSON
     def json(self):
@@ -184,6 +196,26 @@ class Entity(type):
         assert all(getattr(self, m) is not None for m in fields)
         getattr(self.__beyond._Beyond__datastore, insert)(self)
       content['create'] = create
+    # Save
+    if update:
+      def save(self):
+        diff = {}
+        for field in fields:
+          import sys
+          v = getattr(self, field)
+          if isinstance(v, dict):
+            original_field = \
+              '_%s__%s_original' % (self.__class__.__name__, field)
+            original = getattr(self, original_field)
+            for k, v in v.items():
+              if original.get(k) != v:
+                diff.setdefault(field, {})[k] = v
+            setattr(self, original_field, deepcopy(v))
+        updater = getattr(self.__beyond._Beyond__datastore, update)
+        import sys
+        sys.stdout = sys.stderr
+        updater(self.id, diff)
+      content['save'] = save
     # Properties
     def make_getter(f):
       return lambda self: getattr(self, '_%s__%s' % (name, f))
@@ -205,21 +237,32 @@ class Entity(type):
 
   def __init__(self, name, superclasses, content,
                insert = None,
+               update = None,
                fields = []):
     for f in fields:
       content[f] = property(lambda self: getattr(self, '_%s__%s' % (name, f)))
     type.__init__(self, name, superclasses, content)
 
 
+def fields(*args, **kwargs):
+  return dict(chain(((k, None) for k in args), kwargs.items()))
+
+
 class Network(metaclass = Entity,
               insert = 'network_insert',
-              fields = ['name', 'owner', 'overlay']):
+              update = 'network_update',
+              fields = fields('name', 'owner', 'overlay',
+                              passports = {})):
 
-  pass
+  @property
+  def id(self):
+    return '%s/%s' % (self.owner, self.name)
 
 
 class Volume(metaclass = Entity,
               insert = 'volume_insert',
-              fields = ['name', 'network', 'root_address']):
+              fields = fields('name', 'network', 'root_address')):
 
-  pass
+  @property
+  def id(self):
+    return '%s/%s' % (self.network, self.name)

@@ -114,7 +114,9 @@ class CouchDBDatastore:
         'language': 'python',
         'updates': {
           name: getsource(update)
-          for name, update in [('update', self.__user_update)]
+          for name, update in [
+              ('update', self.__user_update),
+          ]
         },
         'views': {
           name: {
@@ -124,6 +126,22 @@ class CouchDBDatastore:
         }
       })
     self.__couchdb['users'].save(design)
+    try:
+      design = self.__couchdb['networks']['_design/beyond']
+    except couchdb.http.ResourceNotFound:
+      design = couchdb.client.Document()
+    design.update(
+      {
+        '_id': '_design/beyond',
+        'language': 'python',
+        'updates': {
+          name: getsource(update)
+          for name, update in [
+              ('update', self.__network_update),
+          ]
+        },
+      })
+    self.__couchdb['networks'].save(design)
 
   ## ---- ##
   ## User ##
@@ -184,6 +202,38 @@ class CouchDBDatastore:
     for id, account in update.get('google_accounts', {}).items():
       user.setdefault('google_accounts', {})[id] = account
     return [user, {'json': json.dumps(user)}]
+
+  def __network_update(network, req):
+    if network is None:
+      return [
+        None,
+        {
+          'code': 404,
+        }
+      ]
+    import json
+    update = {
+      name: json.loads(value)
+      for name, value in req['query'].items()
+    }
+    for user, passport in update.get('passports', {}).items():
+      network.setdefault('passports', {})[user] = passport
+    return [network, {'json': json.dumps(update)}]
+
+  def network_update(self, id, diff):
+    args = {
+      name: json.dumps(value)
+      for name, value in diff.items()
+      if value is not None
+    }
+    try:
+      self.__couchdb['networks'].update_doc(
+        'beyond/update',
+        id,
+        **args
+      )
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.Network.NotFound()
 
   ## ------- ##
   ## Network ##
