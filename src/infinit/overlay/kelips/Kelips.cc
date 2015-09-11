@@ -1494,8 +1494,13 @@ namespace kelips
       if (it == _state.contacts[_group].end())
       {
         ELLE_TRACE("No contact to forward GET to");
-        throw reactor::Timeout(boost::posix_time::milliseconds(
-          _config.query_timeout_ms * _config.query_get_retries));
+        if (result_set.empty())
+          throw reactor::Timeout(boost::posix_time::milliseconds(
+            _config.query_timeout_ms * _config.query_get_retries));
+        std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
+        if (result.size() > unsigned(n))
+          result.resize(n);
+        return result;
       }
       ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
       send(req, it->second.endpoint, it->second.address);
