@@ -175,6 +175,11 @@ namespace infinit
                 if (vm.count(m.name))
                   if (!mode)
                     mode = &m;
+                  else if (mode->name == "fetch" || mode->name == "push")
+                  {
+                    args.push_back("--" + m.name);
+                    mode = &m;
+                  }
                   else
                     args.push_back("--" + m.name);
               if (!mode)
