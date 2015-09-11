@@ -5,6 +5,7 @@ import drake.python
 import drake.valgrind
 
 import os
+import shutil
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -27,21 +28,26 @@ def configure(
       if not super().execute():
         return False
       if cxx_toolkit.os == drake.os.macos and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.gcc:
+        target_path =  str(self.target().path())
         output = subprocess.check_output(
-          ['otool', '-L', str(self.target().path())])
+          ['otool', '-L',  target_path])
         lines = output.decode('utf-8').strip().split('\n')
         lines = [
           x.replace('\t', '').split(' ')[0]
           for x in lines if 'libstdc++' in x or 'libgcc_s' in x
         ]
         for l in lines:
-          os.chmod(str(self.target().path()), 0o755)
+          os.chmod(target_path, 0o755)
           self.cmd(
             'Localize libstdc++ of %s' % self.target(),
             ['install_name_tool', '-change',
-             l, '@rpath/%s' % (os.path.basename(l)), self.target().path()],
+             l, '@rpath/%s' % (os.path.basename(l)), target_path],
             throw = True)
-          os.chmod(str(self.target().path()), 0o555)
+          os.chmod(target_path, 0o555)
+          tgtdir = os.path.join(os.path.dirname(target_path), '..', 'lib')
+          tgtfile = os.path.join(tgtdir, os.path.basename(l))
+          if not os.path.exists(tgtfile):
+            shutil.copy(l, tgtdir)
       return True
 
   prefix = drake.Path(prefix)
