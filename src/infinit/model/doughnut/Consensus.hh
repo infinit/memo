@@ -15,6 +15,7 @@ namespace infinit
       {
       public:
         Consensus(Doughnut& doughnut);
+        virtual ~Consensus() {}
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 
       public:
