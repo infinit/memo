@@ -13,6 +13,21 @@
 #include <random>
 #include <chrono>
 
+namespace std
+{
+  template<>
+  struct hash<boost::asio::ip::udp::endpoint>
+  {
+    size_t
+    operator ()(boost::asio::ip::udp::endpoint const& e) const
+    {
+      return std::hash<std::string>()(e.address().to_string()
+        + ":" + std::to_string(e.port()));
+    }
+  };
+}
+
+
 namespace kelips
 {
   typedef boost::asio::ip::tcp::endpoint RpcEndpoint;
@@ -180,6 +195,10 @@ namespace kelips
     std::unordered_map<Address, std::pair<Time, GossipEndpoint>> pickContacts();
     std::vector<std::pair<GossipEndpoint, Address>> pickOutsideTargets();
     std::vector<std::pair<GossipEndpoint, Address>> pickGroupTargets();
+    infinit::cryptography::SecretKey* getKey(Address const& a,
+      GossipEndpoint const& e);
+    void setKey(Address const& a, GossipEndpoint const& e,
+      infinit::cryptography::SecretKey sk);
     Address _ping_target;
     Time _ping_time;
     reactor::Barrier _ping_barrier;
@@ -195,6 +214,7 @@ namespace kelips
     std::unordered_map<int, std::shared_ptr<PendingRequest>> _pending_requests;
     std::vector<Address> _promised_files; // addresses for which we accepted a put
     std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
+    std::unordered_map<GossipEndpoint, infinit::cryptography::SecretKey> _observer_keys;
     std::vector<GossipEndpoint> _pending_bootstrap; // bootstrap pending auth
     reactor::network::UTPServer _remotes_server;
     int _next_id;

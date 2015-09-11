@@ -485,6 +485,46 @@ namespace kelips
       engage();
   }
 
+  void
+  Node::setKey(Address const& a, GossipEndpoint const& e,
+    infinit::cryptography::SecretKey sk)
+  {
+    auto oldkey = getKey(a, e);
+    if (oldkey)
+    {
+      ELLE_WARN("%s: overriding key %s -> %s  for %s : %s",
+        *this, key_hash(*oldkey), key_hash(sk), e, a);
+      if (a != Address())
+        _keys.find(a)->second = std::move(sk);
+      else
+        _observer_keys.find(e)->second = std::move(sk);
+    }
+    else
+    {
+      if (a != Address())
+        _keys.insert(std::make_pair(a, std::move(sk)));
+      else
+        _observer_keys.insert(std::make_pair(e, std::move(sk)));
+    }
+  }
+
+  infinit::cryptography::SecretKey*
+  Node::getKey(Address const& a, GossipEndpoint const& e)
+  {
+    if (a == Address())
+    {
+      auto it = _observer_keys.find(e);
+      if (it != _observer_keys.end())
+        return &it->second;
+    }
+    else
+    {
+      auto it = _keys.find(a);
+      if (it != _keys.end())
+        return &it->second;
+    }
+    return nullptr;
+  }
   void Node::send(packet::Packet const& p, GossipEndpoint e, Address a)
   {
     ELLE_ASSERT(e.port() != 0);
@@ -493,10 +533,10 @@ namespace kelips
     || dynamic_cast<const packet::KeyReply*>(&p);
     elle::Buffer b;
     bool send_key_request = false;
-    auto it = _keys.find(a);
+    auto key = getKey(a, e);
     if (is_crypto
       || !_config.encrypt
-      || (it == _keys.end() && _config.accept_plain)
+      || (!key && _config.accept_plain)
       )
     {
       b = packet::serialize(p);
@@ -504,7 +544,7 @@ namespace kelips
     }
     else
     {
-      if (it == _keys.end())
+      if (!key)
       { // FIXME queue packet
         ELLE_WARN("%s: dropping packet to %s : %s, no key available",
                   *this, e, a);
@@ -514,7 +554,7 @@ namespace kelips
       {
         packet::EncryptedPayload ep;
         ep.sender = p.sender;
-        ep.encrypt(it->second, p);
+        ep.encrypt(*key, p);
         b = packet::serialize(ep);
       }
     }
@@ -569,9 +609,9 @@ namespace kelips
         // First handle crypto related packets
         if (auto p = dynamic_cast<packet::EncryptedPayload*>(packet.get()))
         {
-          auto key = _keys.find(packet->sender);
+          auto key = getKey(packet->sender, packet->endpoint);
           bool failure = true;
-          if (key == _keys.end())
+          if (!key)
           {
             ELLE_WARN("%s: key unknown for %s : %s",
                       *this, source, packet->sender);
@@ -580,7 +620,7 @@ namespace kelips
           {
             try
             {
-              std::unique_ptr<packet::Packet> plain = p->decrypt(key->second);
+              std::unique_ptr<packet::Packet> plain = p->decrypt(*key);
               if (plain->sender != p->sender)
               {
                 ELLE_WARN("%s: sender inconsistency in encrypted packet: %s != %s",
@@ -595,7 +635,7 @@ namespace kelips
             catch (infinit::cryptography::Error const& e)
             {
               ELLE_WARN("%s: decryption with %s from %s : %s failed: %s",
-                        *this, key_hash(key->second), source, packet->sender, e.what());
+                        *this, key_hash(*key), source, packet->sender, e.what());
             }
           }
           if (failure)
@@ -619,18 +659,10 @@ namespace kelips
                       *this, source, p->sender);
             return;
           }
-          auto it = _keys.find(p->sender);
 
           auto sk = infinit::cryptography::secretkey::generate(256);
           elle::Buffer password = sk.password();
-          if (it != _keys.end())
-          {
-            ELLE_WARN("%s: overriding key %s -> %s  for %s : %s",
-                      *this, key_hash(it->second), key_hash(sk), source, p->sender);
-            it->second = std::move(sk);
-          }
-          else
-            _keys.insert(std::make_pair(p->sender, std::move(sk)));
+          setKey(p->sender, p->endpoint, std::move(sk));
           packet::KeyReply kr(doughnut()->passport());
           kr.sender = _self;
           kr.encrypted_key = p->passport.user().seal(
@@ -656,11 +688,8 @@ namespace kelips
             infinit::cryptography::Cipher::aes256,
             infinit::cryptography::Mode::cbc);
           infinit::cryptography::SecretKey sk(std::move(password));
-          auto itk = _keys.find(p->sender);
-          if (itk == _keys.end())
-            _keys.insert(std::make_pair(p->sender, std::move(sk)));
-          else
-            itk->second = std::move(sk);
+          setKey(p->sender, p->endpoint, std::move(sk));
+
           // Flush operations waiting on crypto ready
           auto it = std::find(_pending_bootstrap.begin(),
                               _pending_bootstrap.end(),
