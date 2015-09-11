@@ -4,6 +4,8 @@ import drake.git
 import drake.python
 import drake.valgrind
 
+import os
+
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
@@ -24,20 +26,22 @@ def configure(
     def execute(self):
       if not super().execute():
         return False
-      if cxx_toolkit.os == drake.os.macos:
+      if cxx_toolkit.os == drake.os.macos and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.gcc:
         output = subprocess.check_output(
           ['otool', '-L', str(self.target().path())])
         lines = output.decode('utf-8').strip().split('\n')
         lines = [
-          x.split(' ')[0]
+          x.replace('\t', '').split(' ')[0]
           for x in lines if 'libstdc++' in x or 'libgcc_s' in x
         ]
         for l in lines:
+          os.chmod(str(self.target().path()), 0o755)
           self.cmd(
-            'Localize libstdc++ of %s' % self.target,
+            'Localize libstdc++ of %s' % self.target(),
             ['install_name_tool', '-change',
-             l, '@rpath/%s' % (os.path.filename(l))],
+             l, '@rpath/%s' % (os.path.basename(l)), self.target().path()],
             throw = True)
+          os.chmod(str(self.target().path()), 0o555)
       return True
 
   prefix = drake.Path(prefix)
