@@ -1557,11 +1557,17 @@ namespace kelips
           if (fg != _group || _observer)
             throw std::runtime_error("No contacts in self/target groups");
           // Store locally
-          _promised_files.push_back(p.fileAddress);
-          results.push_back(RpcEndpoint(
-            boost::asio::ip::address::from_string("127.0.0.1"),
-            this->_port));
-          return;
+          if (std::find(_promised_files.begin(), _promised_files.end(), p.fileAddress)
+            == _promised_files.end())
+          {
+            _promised_files.push_back(p.fileAddress);
+            results.push_back(RpcEndpoint(
+              boost::asio::ip::address::from_string("127.0.0.1"),
+              this->_port));
+            return;
+          }
+          else
+            return;
         }
         ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
         send(req, it->second.endpoint, it->second.address);
@@ -1879,8 +1885,11 @@ namespace kelips
                 infinit::overlay::Operation op) const
   {
     Members res;
-    for (auto const& host: const_cast<Node*>(this)->address(address, op, n))
+    auto hosts = const_cast<Node*>(this)->address(address, op, n);
+    ELLE_TRACE("address produced %s hosts:", hosts.size());
+    for (auto const& host: hosts)
     {
+      ELLE_TRACE("connecting to %s", host);
       using Protocol = infinit::model::doughnut::Local::Protocol;
       if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
       {
