@@ -234,12 +234,18 @@ join(variables_map const& args)
     auto desc = ifnt.network_descriptor_get(network_name, owner);
     auto passport = [&] () -> infinit::model::doughnut::Passport
     {
+      bool fetch = args.count("fetch") && args["fetch"].as<bool>();
+      if (fetch)
+        return beyond_fetch<infinit::model::doughnut::Passport>(
+            elle::sprintf("networks/%s/passports/%s", network_name, owner.name),
+            network_name,
+            owner.name);
       if (!args.count("input") && owner.public_key == desc.owner)
       {
         return infinit::model::doughnut::Passport(
-          owner.public_key,
-          desc.name,
-          owner.private_key.get());
+            owner.public_key,
+            desc.name,
+            owner.private_key.get());
       }
       else
       {
@@ -248,6 +254,7 @@ join(variables_map const& args)
           <infinit::model::doughnut::Passport>(*input, false);
       }
     }();
+
     bool ok = passport.verify(desc.owner);
     if (!ok)
       throw elle::Error("passport signature is invalid");
@@ -413,6 +420,8 @@ int main(int argc, char** argv)
         { "input,i", value<std::string>(),
             "file to read passport from (defaults to stdin)" },
         { "name,n", value<std::string>(), "network to join" },
+        { "fetch,f", bool_switch(),
+            elle::sprintf("fetch the passport from %s", beyond()).c_str() },
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
       },

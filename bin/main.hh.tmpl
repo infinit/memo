@@ -1091,9 +1091,10 @@ beyond_push(std::string const& type, std::string const& name, T const& o)
 
 template <typename T>
 T
-beyond_fetch(std::string const& type, std::string const& name)
+beyond_fetch(std::string const& where,
+             std::string const& type, std::string const& name)
 {
-  reactor::http::Request r(elle::sprintf("%s/%ss/%s", beyond(), type, name));
+  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where));
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
     report_action("fetched", type, name);
@@ -1105,6 +1106,14 @@ beyond_fetch(std::string const& type, std::string const& name)
       elle::sprintf("unexpected HTTP error %s fetching %s",
                     r.status(), type));
   return elle::serialization::json::deserialize<T>(r, false);
+}
+
+template <typename T>
+T
+beyond_fetch(std::string const& type,
+             std::string const& name)
+{
+  return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
 }
 
 boost::program_options::option_description option_owner(
