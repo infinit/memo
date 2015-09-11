@@ -55,7 +55,13 @@ class Beyond:
     self.__app.__enter__()
     return self
 
-  def request(self, url, **kwargs):
+  def request(self, url, json = None,**kwargs):
+    # Older requests don't have json parameter
+    if json is not None:
+      j = json
+      import json
+      kwargs['data'] = json.dumps(j)
+      kwargs['headers'] = {'Content-Type': 'application/json'}
     return requests.request(url = '%s/%s' % (self.host, url),
                             allow_redirects = False,
                             **kwargs)
