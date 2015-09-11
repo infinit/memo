@@ -50,7 +50,8 @@ namespace infinit
         if (replicas == 1)
           this->_consensus = elle::make_unique<Consensus>(*this);
         else
-          this->_consensus = elle::make_unique<Replicator>(*this, replicas);
+          this->_consensus = elle::make_unique<Replicator>(*this, replicas,
+            dir / "replicator");
         this->overlay()->doughnut(this);
         if (local)
         {

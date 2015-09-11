@@ -1,6 +1,10 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_REPLICATOR_HH
 # define INFINIT_MODEL_DOUGHNUT_REPLICATOR_HH
 
+# include <boost/filesystem.hpp>
+
+# include <reactor/thread.hh>
+
 # include <infinit/model/doughnut/Consensus.hh>
 
 
@@ -13,7 +17,9 @@ namespace infinit
       class Replicator: public Consensus
       {
       public:
-        Replicator(Doughnut& doughnut, int factor);
+        Replicator(Doughnut& doughnut, int factor,
+                   boost::filesystem::path const& journal_dir);
+        ~Replicator();
         ELLE_ATTRIBUTE_R(int, factor);
       protected:
         virtual
@@ -25,6 +31,13 @@ namespace infinit
         virtual
         void
         _remove(overlay::Overlay& overlay, Address address) override;
+        void
+        _process_cache();
+        void
+        _process_loop();
+        overlay::Overlay* _overlay;
+        boost::filesystem::path _journal_dir;
+        reactor::Thread _process_thread;
       };
     }
   }
