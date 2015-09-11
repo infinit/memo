@@ -133,7 +133,7 @@ namespace infinit
           }
           catch(std::exception const& e)
           {
-            ELLE_WARN("Replicator: candidate failed with %s", e);
+            ELLE_WARN("Replicator: candidate failed with %s", e.what());
           }
         }
         throw elle::Error("Replicator: All candidates failed.");
