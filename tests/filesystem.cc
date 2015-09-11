@@ -194,7 +194,8 @@ static void make_nodes(std::string store, int node_count,
           static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
-            })
+            }),
+          store / boost::filesystem::unique_path()
           );
       nodes[i]->doughnut() = model;
     }
@@ -254,7 +255,8 @@ static void run_filesystem_dht(std::string const& store,
           static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
-            })
+            }),
+          store / boost::filesystem::unique_path()
           );
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;

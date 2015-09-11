@@ -45,7 +45,7 @@ public:
 
 static
 void
-parse_options(int argc, char** argv, Config& cfg)
+parse_options(int argc, char** argv, Config& cfg, boost::filesystem::path & p)
 {
   ELLE_TRACE_SCOPE("parse command line");
   using namespace boost::program_options;
@@ -93,6 +93,7 @@ parse_options(int argc, char** argv, Config& cfg)
       throw elle::Error(
         elle::sprintf("error in configuration file %s: %s", config, e.what()));
     }
+    p = boost::filesystem::path(config).parent_path() / "cache";
   }
   else
     throw elle::Error("missing mandatory 'config' option");
@@ -110,9 +111,10 @@ main(int argc, char** argv)
       [argc, argv]
       {
         Config cfg;
-        parse_options(argc, argv, cfg);
+        boost::filesystem::path p;
+        parse_options(argc, argv, cfg, p);
         ELLE_ASSERT(cfg.model.get());
-        auto model = cfg.model->make({}, false, true);
+        auto model = cfg.model->make({}, false, true, p);
         if (cfg.storage)
         {
           auto storage = cfg.storage->make();

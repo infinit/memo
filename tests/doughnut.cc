@@ -39,7 +39,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
         return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
-      })
+      }),
+    boost::filesystem::path(".")
     );
   local_a->doughnut() = dht_a.get();
   dht_a->overlay()->register_local(local_a);
@@ -51,7 +52,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
         return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
-      })
+      }),
+    boost::filesystem::path(".")
     );
   local_b->doughnut() = dht_b.get();
   local_b->serve();
@@ -106,7 +108,8 @@ ELLE_TEST_SCHEDULED(ACB)
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
         return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
-      })
+      }),
+    boost::filesystem::path(".")
     );
   local_a->doughnut() = dht_a.get();
   dht_a->overlay()->register_local(local_a);
@@ -118,7 +121,8 @@ ELLE_TEST_SCHEDULED(ACB)
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
         return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
-      })
+      }),
+    boost::filesystem::path(".")
     );
   local_b->doughnut() = dht_b.get();
   dht_b->overlay()->register_local(local_b);

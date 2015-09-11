@@ -135,7 +135,8 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(std::vector<std::string> const&, bool, bool)
+        make(std::vector<std::string> const&, bool, bool,
+          boost::filesystem::path const&)
         {
           if (!this->keys)
           {

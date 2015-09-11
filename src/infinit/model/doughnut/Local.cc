@@ -62,6 +62,7 @@ namespace infinit
 
       Local::~Local()
       {
+        ELLE_TRACE("~Local");
         if (this->_server_thread)
           this->_server_thread->terminate_now();
         if (this->_utp_server_thread)

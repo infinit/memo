@@ -39,6 +39,7 @@ namespace infinit
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          OverlayBuilder overlay_builder,
+                         boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
                          int replicas)
         : _keys(std::move(keys))
@@ -63,12 +64,14 @@ namespace infinit
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          OverlayBuilder overlay_builder,
+                         boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
                          int replicas)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(overlay_builder),
+                   std::move(dir),
                    std::move(local),
                    std::move(replicas))
       {
@@ -114,7 +117,9 @@ namespace infinit
       }
 
       Doughnut::~Doughnut()
-      {}
+      {
+        ELLE_TRACE("~Doughnut");
+      }
 
       std::unique_ptr<blocks::MutableBlock>
       Doughnut::_make_mutable_block() const
@@ -246,8 +251,9 @@ namespace infinit
 
       std::unique_ptr<infinit::model::Model>
       Configuration::make(std::vector<std::string> const& hosts,
-                                bool client,
-                                bool server)
+                          bool client,
+                          bool server,
+                          boost::filesystem::path const& dir)
       {
         if (!client || !this->name)
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -258,6 +264,7 @@ namespace infinit
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return overlay->make(hosts, server, doughnut);
             }),
+            dir,
             nullptr);
         else
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -269,13 +276,15 @@ namespace infinit
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return overlay->make(hosts, server, doughnut);
             }),
+            dir,
             nullptr);
       }
 
       std::shared_ptr<Doughnut>
       Configuration::make(std::vector<std::string> const& hosts,
                                 bool client,
-                                std::shared_ptr<Local> local)
+                                std::shared_ptr<Local> local,
+                                boost::filesystem::path const& dir)
       {
         if (!client || !this->name)
           return std::make_shared<infinit::model::doughnut::Doughnut>(
@@ -286,6 +295,7 @@ namespace infinit
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return overlay->make(hosts, bool(local), doughnut);
             }),
+            dir,
             local,
             replicas? *replicas : 1);
         else
@@ -298,6 +308,7 @@ namespace infinit
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return overlay->make(hosts, bool(local), doughnut);
             }),
+            dir,
             local,
             replicas? *replicas : 1);
       }

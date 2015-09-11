@@ -2,6 +2,7 @@
 # define INFINIT_MODEL_MODEL_HH
 
 # include <memory>
+# include <boost/filesystem.hpp>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/User.hh>
@@ -68,7 +69,8 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(std::vector<std::string> const& hosts, bool client, bool server) = 0;
+      make(std::vector<std::string> const& hosts, bool client, bool server,
+           boost::filesystem::path const& dir) = 0;
     };
   }
 }

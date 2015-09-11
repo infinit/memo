@@ -2,6 +2,7 @@
 # define INFINIT_MODEL_DOUGHNUT_DOUGHNUT_HH
 
 # include <memory>
+# include <boost/filesystem.hpp>
 
 # include <cryptography/rsa/KeyPair.hh>
 
@@ -32,15 +33,18 @@ namespace infinit
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  OverlayBuilder overlay_builder,
+                 boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  OverlayBuilder overlay_builder,
+                 boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1);
         ~Doughnut();
+
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
@@ -96,11 +100,13 @@ namespace infinit
         serialize(elle::serialization::Serializer& s);
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(std::vector<std::string> const& hosts, bool client, bool server);
+        make(std::vector<std::string> const& hosts, bool client, bool server,
+             boost::filesystem::path const& p);
         std::shared_ptr<Doughnut>
         make(std::vector<std::string> const& hosts,
              bool client,
-             std::shared_ptr<Local> local);
+             std::shared_ptr<Local> local,
+             boost::filesystem::path const& p);
       };
     }
   }

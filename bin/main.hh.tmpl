@@ -370,12 +370,13 @@ namespace infinit
         boost::optional<int> cache_size = {},
         bool async_writes = false)
     {
+      boost::filesystem::path p = root_dir() / "cache" / name;
       if (this->storage)
       {
         auto storage = this->storage->make();
         if (async_writes)
         {
-          boost::filesystem::path journal = root_dir() / "cache" / name / "async";
+          boost::filesystem::path journal = p / "async";
           storage.reset(new storage::Async(std::move(storage), 10000, -1, true, journal.string()));
         }
         if (cache)
@@ -384,14 +385,14 @@ namespace infinit
           (std::move(storage), this->port ? this->port.get() : 0);
         local->serve();
         return std::make_pair(std::move(local),
-                              this->dht()->make(hosts, client, local));
+                              this->dht()->make(hosts, client, local, p));
       }
       else
       {
         std::shared_ptr<infinit::model::doughnut::Local> local;
         return
           std::make_pair(local,
-                         this->dht()->make(hosts, client, local));
+                         this->dht()->make(hosts, client, local, p));
       }
     }
 

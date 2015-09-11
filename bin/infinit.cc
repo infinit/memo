@@ -69,7 +69,8 @@ public:
 static
 void
 parse_options(int argc, char** argv, Config& cfg,
-              std::unique_ptr<infinit::model::ModelConfig>& model_config)
+              std::unique_ptr<infinit::model::ModelConfig>& model_config,
+              boost::filesystem::path & p)
 {
   ELLE_TRACE_SCOPE("parse command line");
   using namespace boost::program_options;
@@ -121,6 +122,7 @@ parse_options(int argc, char** argv, Config& cfg,
         elle::serialization::json::SerializerIn input(input_file, false);
         cfg.serialize(input);
       }
+      p = boost::filesystem::path(config).parent_path() / "cache";
     }
     catch (elle ::serialization::Error const& e)
     {
@@ -151,16 +153,17 @@ main(int argc, char** argv)
         std::unique_ptr<infinit::model::ModelConfig> model_cfg;
         std::unique_ptr<infinit::model::Model> model;
         std::unique_ptr<infinit::model::Model> model2;
-        parse_options(argc, argv, cfg, model_cfg);
+        boost::filesystem::path p;
+        parse_options(argc, argv, cfg, model_cfg, p);
         if (model_cfg)
         {
-          model = model_cfg->make({}, true, true);
+          model = model_cfg->make({}, true, true, p);
         }
         else
         {
           if (!cfg.model)
             throw elle::Error("missing mandatory \"model\" configuration key");
-          model = cfg.model->make({}, true, true);
+          model = cfg.model->make({}, true, true, p);
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
           ELLE_TRACE("initialize filesystem")
             if (cfg.root_address)
