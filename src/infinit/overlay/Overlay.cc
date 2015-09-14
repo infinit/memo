@@ -12,8 +12,9 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Overlay::Overlay()
-      : _doughnut(nullptr)
+    Overlay::Overlay(elle::UUID node_id)
+      : _node_id(std::move(node_id))
+      , _doughnut(nullptr)
     {}
 
     /*-------.
@@ -46,7 +47,6 @@ namespace infinit
     {
       this->_node_id = elle::UUID::random();
     }
-
 
     void
     Configuration::serialize(elle::serialization::Serializer& s)

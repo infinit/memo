@@ -32,13 +32,15 @@ ELLE_TEST_SCHEDULED(doughnut)
   infinit::overlay::Stonehenge::Hosts members;
   members.push_back(local_a->server_endpoint());
   members.push_back(local_b->server_endpoint());
+
   auto dht_a = std::make_shared<dht::Doughnut>(
     keys_a,
     keys_a.K(),
     passport_a,
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
-        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(
+          elle::UUID::random(), members, d);
       }),
     boost::filesystem::path(".")
     );
@@ -51,7 +53,8 @@ ELLE_TEST_SCHEDULED(doughnut)
     passport_b,
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
-        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(
+          elle::UUID::random(), members, d);
       }),
     boost::filesystem::path(".")
     );
@@ -107,7 +110,8 @@ ELLE_TEST_SCHEDULED(ACB)
     passport_a,
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
-        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(
+          elle::UUID::random(), members, d);
       }),
     boost::filesystem::path(".")
     );
@@ -120,7 +124,8 @@ ELLE_TEST_SCHEDULED(ACB)
     passport_b,
     static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
       [=](infinit::model::doughnut::Doughnut*d) {
-        return elle::make_unique<infinit::overlay::Stonehenge>(members, d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(
+          elle::UUID::random(), members, d);
       }),
     boost::filesystem::path(".")
     );

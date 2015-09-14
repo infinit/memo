@@ -16,7 +16,8 @@ namespace infinit
     public:
       typedef boost::asio::ip::tcp::endpoint Host;
       typedef std::vector<Host> Hosts;
-      Stonehenge(Hosts hosts, model::doughnut::Doughnut* doughnut);
+      Stonehenge(elle::UUID node_id,
+                 Hosts hosts, model::doughnut::Doughnut* doughnut);
       ELLE_ATTRIBUTE_R(Hosts, hosts);
 
     /*-------.

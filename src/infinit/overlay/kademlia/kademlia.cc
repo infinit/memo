@@ -87,21 +87,18 @@ static std::default_random_engine gen;
 namespace kademlia
 {
   Configuration::Configuration()
-  : node_id(Address::random())
-  , port(0)
-  , wait(1)
-  , wait_ms(500)
-  , address_size(40)
-  , k(8)
-  , alpha(3)
-  , ping_interval_ms(1000)
-  , refresh_interval_ms(10000)
-  , storage_lifetime_ms(120000)
-  {
-    
-  }
-  
-  
+    : port(0)
+    , wait(1)
+    , wait_ms(500)
+    , address_size(40)
+    , k(8)
+    , alpha(3)
+    , ping_interval_ms(1000)
+    , refresh_interval_ms(10000)
+    , storage_lifetime_ms(120000)
+  {}
+
+
   namespace packet
   {
     #define REGISTER(classname, type) \
@@ -196,9 +193,11 @@ namespace kademlia
   {
     dst = E2(src.address(), src.port());
   }
-  Kademlia::Kademlia(Configuration const& config, bool server,
-    infinit::model::doughnut::Doughnut* doughnut)
-  : _config(config)
+  Kademlia::Kademlia(elle::UUID node_id,
+                     Configuration const& config, bool server,
+                     infinit::model::doughnut::Doughnut* doughnut)
+    : Overlay(std::move(node_id))
+    , _config(config)
   {
     this->doughnut(doughnut);
     srand(time(nullptr) + getpid());
@@ -294,7 +293,7 @@ namespace kademlia
     _bootstrap();
     _reload(*local);
   }
-  
+
   void Kademlia::_loop()
   {
     elle::Buffer buf;
@@ -591,7 +590,7 @@ namespace kademlia
   void Kademlia::remove(Address address)
   {
   }
-  
+
   void Kademlia::fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b)
   {
   }
@@ -977,11 +976,11 @@ namespace infinit
         config.bootstrap_nodes.push_back(
           elle::serialization::Serialize< ::kademlia::PrettyEndpoint>
           ::convert(host));
-        return elle::make_unique< ::kademlia::Kademlia>(config, server, doughnut);
+        return elle::make_unique< ::kademlia::Kademlia>(
+          this->node_id(), config, server, doughnut);
       }
       static const elle::serialization::Hierarchy<overlay::Configuration>::
       Register<Configuration> _registerKademliaOverlayConfig("kademlia");
     }
   }
 }
-

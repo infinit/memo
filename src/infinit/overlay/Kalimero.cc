@@ -10,8 +10,9 @@ namespace infinit
 {
   namespace overlay
   {
-    Kalimero::Kalimero()
-      : _local()
+    Kalimero::Kalimero(elle::UUID node_id)
+      : Overlay(std::move(node_id))
+      , _local()
     {}
 
     Kalimero::Members
@@ -53,7 +54,7 @@ namespace infinit
       if (!hosts.empty())
         throw elle::Error(
           elle::sprintf("kalimero cannot access other nodes (%s)", hosts));
-      return elle::make_unique<Kalimero>();
+      return elle::make_unique<Kalimero>(this->node_id());
     }
 
     static const

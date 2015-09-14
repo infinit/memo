@@ -34,8 +34,9 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      Overlay();
+      Overlay(elle::UUID node_id);
       virtual ~Overlay() {}
+      ELLE_ATTRIBUTE_R(elle::UUID, node_id);
 
     /*-------.
     | Lookup |

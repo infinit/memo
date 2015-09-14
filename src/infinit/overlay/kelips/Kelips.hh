@@ -220,7 +220,6 @@ namespace kelips
     int _next_id;
     int _port;
     bool _observer;
-    ELLE_ATTRIBUTE_R(elle::UUID, node_id);
   };
 }
 

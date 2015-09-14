@@ -402,10 +402,10 @@ namespace kelips
 
   Node::Node(Configuration const& config, bool observer, elle::UUID node_id,
              infinit::model::doughnut::Doughnut* doughnut)
-    : _config(config)
+    : Overlay(std::move(node_id))
+    , _config(config)
     , _next_id(1)
     , _observer(observer)
-    , _node_id(std::move(node_id))
   {
     if (observer)
       ELLE_LOG("Running in observer mode");

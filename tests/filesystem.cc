@@ -193,7 +193,8 @@ static void make_nodes(std::string store, int node_count,
           passport,
           static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
             [=](infinit::model::doughnut::Doughnut* doughnut) {
-              return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
+              return elle::make_unique<infinit::overlay::Stonehenge>(
+                elle::UUID::random(), endpoints, doughnut);
             }),
           store / boost::filesystem::unique_path()
           );
@@ -254,7 +255,8 @@ static void run_filesystem_dht(std::string const& store,
           passport,
           static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
             [=](infinit::model::doughnut::Doughnut* doughnut) {
-              return elle::make_unique<infinit::overlay::Stonehenge>(endpoints, doughnut);
+              return elle::make_unique<infinit::overlay::Stonehenge>(
+                elle::UUID::random(), endpoints, doughnut);
             }),
           store / boost::filesystem::unique_path()
           );

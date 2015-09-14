@@ -11,7 +11,7 @@ namespace infinit
       : public Overlay
     {
     public:
-      Kalimero();
+      Kalimero(elle::UUID node_id);
       virtual
       Members
       _lookup(model::Address address, int n, Operation op) const override;
