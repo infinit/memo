@@ -525,11 +525,11 @@ namespace kelips
     }
     return nullptr;
   }
-  void Node::send(packet::Packet const& p, GossipEndpoint e, Address a)
+  void Node::send(packet::Packet& p, GossipEndpoint e, Address a)
   {
     ELLE_ASSERT(e.port() != 0);
     if (this->_observer)
-      a = Address::null;
+      p.sender = Address::null;
     bool is_crypto = dynamic_cast<const packet::EncryptedPayload*>(&p)
     || dynamic_cast<const packet::RequestKey*>(&p)
     || dynamic_cast<const packet::KeyReply*>(&p);
@@ -563,7 +563,7 @@ namespace kelips
     if (send_key_request)
     {
       packet::RequestKey req(doughnut()->passport());
-      req.sender = address_of_uuid(this->node_id());
+      req.sender = _observer ? Address::null : address_of_uuid(this->node_id());
       send(req, e, Address::null);
     }
     if (b.size() == 0)
@@ -1463,7 +1463,7 @@ namespace kelips
     packet::GetFileRequest r;
     r.sender = address_of_uuid(this->node_id());
     r.request_id = ++ _next_id;
-    r.originAddress = address_of_uuid(this->node_id());
+    r.originAddress = _observer ? Address::null : address_of_uuid(this->node_id());
     r.originEndpoint = _local_endpoint;
     r.fileAddress = file;
     r.ttl = _config.query_get_ttl;
@@ -1538,7 +1538,7 @@ namespace kelips
     int fg = group_of(file);
     packet::PutFileRequest p;
     p.sender = address_of_uuid(this->node_id());
-    p.originAddress = address_of_uuid(this->node_id());
+    p.originAddress = _observer ? Address::null : address_of_uuid(this->node_id());
     p.originEndpoint = _local_endpoint;
     p.fileAddress = file;
     p.ttl = _config.query_put_ttl;
@@ -2050,6 +2050,7 @@ namespace infinit
       void
       Configuration::serialize(elle::serialization::Serializer& s)
       {
+        overlay::Configuration::serialize(s);
         s.serialize("config", this->config);
       }
 

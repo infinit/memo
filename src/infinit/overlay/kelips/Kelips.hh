@@ -170,7 +170,7 @@ namespace kelips
     typedef infinit::overlay::Overlay Overlay;
     void reload_state(Local& l);
     void wait(int contacts);
-    void send(packet::Packet const& p, GossipEndpoint e, Address a);
+    void send(packet::Packet& p, GossipEndpoint e, Address a);
     int group_of(Address const& address); // consistent address -> group mapper
     void gossipListener();
     void gossipEmitter();
