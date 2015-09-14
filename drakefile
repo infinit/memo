@@ -50,6 +50,21 @@ def configure(
             os.makedirs(tgtdir)
           if not os.path.exists(tgtfile):
             shutil.copy(l, tgtdir)
+            output = subprocess.check_output(
+              ['otool', '-L',  tgtfile])
+            lines = output.decode('utf-8').strip().split('\n')
+            lines = [
+              x.replace('\t', '').split(' ')[0]
+              for x in lines if 'libstdc++' in x or 'libgcc_s' in x
+            ]
+            for l in lines:
+              os.chmod(tgtfile, 0o755)
+              self.cmd(
+                'Localize libstdc++ of %s' % tgtfile,
+                ['install_name_tool', '-change',
+                l, '@rpath/%s' % (os.path.basename(l)), tgtfile],
+                throw = True)
+              os.chmod(tgtfile, 0o555)
       return True
 
   prefix = drake.Path(prefix)
