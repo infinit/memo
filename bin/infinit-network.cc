@@ -99,6 +99,7 @@ create(variables_map const& args)
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
+  overlay_config->join();
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   auto storage_count = args.count("storage");
   if (storage_count > 0)
