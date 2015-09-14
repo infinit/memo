@@ -62,7 +62,7 @@ namespace infinit
 
       Local::~Local()
       {
-        ELLE_TRACE("~Local");
+        ELLE_TRACE_SCOPE("%s: terminate", *this);
         if (this->_server_thread)
           this->_server_thread->terminate_now();
         if (this->_utp_server_thread)
@@ -245,14 +245,17 @@ namespace elle
     {
       switch (p)
       {
-      case Local::Protocol::tcp:
-        return "tcp";
-      case Local::Protocol::utp:
-        return "utp";
-      case Local::Protocol::all:
-        return "all";
+        case Local::Protocol::tcp:
+          return "tcp";
+        case Local::Protocol::utp:
+          return "utp";
+        case Local::Protocol::all:
+          return "all";
+        default:
+          elle::unreachable();
       }
     }
+
     Local::Protocol
     Serialize<Local::Protocol>::convert(std::string const& repr)
     {
