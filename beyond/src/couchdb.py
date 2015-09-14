@@ -55,7 +55,7 @@ python=python -m couchdb
             file = f)
     try:
       os.remove(self.__path('uri'))
-    except FileNotFoundError:
+    except:
       pass
     subprocess.check_call(
       ['couchdb', '-a', config,
