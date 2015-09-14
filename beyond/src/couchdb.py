@@ -226,7 +226,7 @@ class CouchDBDatastore:
         if endpoints is None:
           u.pop(node, None)
           if not u:
-            network.pop(user)
+            n.pop(user)
         else:
           u[node] = endpoints
     return [network, {'json': json.dumps(update)}]
