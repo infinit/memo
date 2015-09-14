@@ -252,7 +252,8 @@ class Network(metaclass = Entity,
               insert = 'network_insert',
               update = 'network_update',
               fields = fields('name', 'owner', 'overlay', 'replicas',
-                              passports = {})):
+                              passports = {},
+                              endpoints = {})):
 
   @property
   def id(self):

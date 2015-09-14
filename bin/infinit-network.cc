@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/network/Interface.hh>
 #include <elle/serialization/json.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -300,6 +301,16 @@ push(variables_map const& args)
   }
 }
 
+struct Endpoints
+{
+  std::vector<std::string> addresses;
+  int port;
+};
+
+DAS_MODEL(Endpoints, (addresses, port), DasEndpoints);
+DAS_MODEL_DEFAULT(Endpoints, DasEndpoints);
+DAS_MODEL_SERIALIZE(Endpoints);
+
 static
 void
 run(variables_map const& args)
@@ -310,11 +321,46 @@ run(variables_map const& args)
   std::vector<std::string> hosts;
   if (args.count("host"))
     hosts = args["host"].as<std::vector<std::string>>();
+  bool push = args.count("push") && args["push"].as<bool>();
   auto local = network.run(hosts);
   if (!local.first)
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
-  report_action("running", "network", network.name);
-  reactor::sleep();
+  reactor::scheduler().signal_handle(
+    SIGINT,
+    [&]
+    {
+      ELLE_TRACE("terminating");
+      reactor::scheduler().terminate();
+    });
+  auto run = [&]
+    {
+      report_action("running", "network", network.name);
+      reactor::sleep();
+    };
+  if (push)
+  {
+    Endpoints endpoints;
+    for (auto const& itf: elle::network::Interface::get_map(
+           elle::network::Interface::Filter::only_up |
+           elle::network::Interface::Filter::no_loopback |
+           elle::network::Interface::Filter::no_autoip))
+      if (itf.second.ipv4_address.size() > 0)
+        endpoints.addresses.push_back(itf.second.ipv4_address);
+    endpoints.port = local.first->server_endpoint().port();
+    auto url =
+      elle::sprintf("networks/%s/endpoints/%s/%s",
+                    network.name, self.name,
+                    local.second->overlay()->node_id());
+    beyond_push(url, "endpoints for", network.name, endpoints);
+    elle::With<elle::Finally>(
+      [&] { beyond_delete(url, "endpoints for",
+                          network.name, endpoints); }) << [&]
+    {
+      run();
+    };
+  }
+  else
+    run();
 }
 
 int main(int argc, char** argv)
@@ -448,9 +494,11 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         option_owner,
-        { "name", value<std::string>(), "created network name" },
         { "host", value<std::vector<std::string>>()->multitoken(),
-          "hosts to connect to" },
+            "hosts to connect to" },
+        { "name", value<std::string>(), "created network name" },
+        { "push", bool_switch(),
+            elle::sprintf("push endpoint to %s", beyond()).c_str() },
       },
     },
   };

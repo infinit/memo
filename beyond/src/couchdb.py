@@ -53,6 +53,7 @@ file = %(root)s/db.log
 python=python -m couchdb
 ''' % {'root': self.__dir, 'port': self.__port},
             file = f)
+    os.remove(self.__path('uri'))
     subprocess.check_call(
       ['couchdb', '-a', config,
        '-b', '-p', pid, '-o', stdout, '-e', stderr])
@@ -218,6 +219,16 @@ class CouchDBDatastore:
     }
     for user, passport in update.get('passports', {}).items():
       network.setdefault('passports', {})[user] = passport
+    for user, node in update.get('endpoints', {}).items():
+      for node, endpoints in node.items():
+        n = network.setdefault('endpoints', {})
+        u = n.setdefault(user, {})
+        if endpoints is None:
+          u.pop(node, None)
+          if not u:
+            network.pop(user)
+        else:
+          u[node] = endpoints
     return [network, {'json': json.dumps(update)}]
 
   def network_update(self, id, diff):

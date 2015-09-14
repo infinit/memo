@@ -55,6 +55,12 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.network_passport_get)
     self.route('/networks/<owner>/<name>/passports/<invitee>',
                method = 'PUT')(self.network_passport_put)
+    self.route('/networks/<owner>/<name>/endpoints/<user>/<node_id>',
+               method = 'DELETE')(self.network_endpoint_delete)
+    self.route('/networks/<owner>/<name>/endpoints',
+               method = 'GET')(self.network_endpoints_get)
+    self.route('/networks/<owner>/<name>/endpoints/<user>/<node_id>',
+               method = 'PUT')(self.network_endpoint_put)
     # Volume
     self.route('/volumes/<owner>/<name>',
                method = 'GET')(self.volume_get)
@@ -178,6 +184,40 @@ class Bottle(bottle.Bottle):
       network.passports[invitee] = bottle.request.json
       network.save()
       bottle.response.status = 201
+      return {}
+    except Network.NotFound:
+      return self.__not_found('network', '%s/%s' % (owner, name))
+
+  def network_endpoints_get(self, owner, name):
+    try:
+      network = self.__beyond.network_get(owner = owner,
+                                          name = name)
+      return network.endpoints
+    except Network.NotFound:
+      return self.__not_found('network', '%s/%s' % (owner, name))
+
+  def network_endpoint_put(self, owner, name, user, node_id):
+    try:
+      user = self.__beyond.user_get(name = user)
+      self.authenticate(user)
+      network = Network(self.__beyond, owner = owner, name = name)
+      json = bottle.request.json
+      # FIXME
+      # if 'port' not in json or 'addresses' not in json
+      network.endpoints.setdefault(user.name, {})[node_id] = json
+      network.save()
+      bottle.response.status = 201 # FIXME: 200 if existed
+      return {}
+    except Network.NotFound:
+      return self.__not_found('network', '%s/%s' % (owner, name))
+
+  def network_endpoint_delete(self, owner, name, user, node_id):
+    try:
+      user = self.__beyond.user_get(name = user)
+      self.authenticate(user)
+      network = Network(self.__beyond, owner = owner, name = name)
+      network.endpoints.setdefault(user.name, {})[node_id] = None
+      network.save()
       return {}
     except Network.NotFound:
       return self.__not_found('network', '%s/%s' % (owner, name))
