@@ -177,7 +177,7 @@ namespace infinit
                     mode = &m;
                   else if (mode->name == "fetch" || mode->name == "push")
                   {
-                    args.push_back("--" + m.name);
+                    args.push_back("--" + mode->name);
                     mode = &m;
                   }
                   else
@@ -377,15 +377,17 @@ namespace infinit
         if (async_writes)
         {
           boost::filesystem::path journal = p / "async";
-          storage.reset(new storage::Async(std::move(storage), 10000, -1, true, journal.string()));
+          storage.reset(new storage::Async(std::move(storage), 10000, -1,
+                                           true, journal.string()));
         }
         if (cache)
           storage.reset(new storage::Cache(std::move(storage), cache_size));
         auto local = std::make_shared<infinit::model::doughnut::Local>
           (std::move(storage), this->port ? this->port.get() : 0);
         local->serve();
-        return std::make_pair(std::move(local),
-                              this->dht()->make(hosts, client, local, p));
+        auto res = std::make_pair(
+          std::move(local), this->dht()->make(hosts, client, local, p));
+        return res;
       }
       else
       {
