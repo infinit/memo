@@ -92,7 +92,6 @@ create(variables_map const& args)
         throw elle::Error("protocol must be one of: utp, tcp, all");
       }
     }
-    kelips->config.node_id = infinit::model::Address::random();
     overlay_config = std::move(kelips);
   }
   if (!overlay_config)

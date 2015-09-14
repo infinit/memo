@@ -107,7 +107,6 @@ namespace kelips
     Configuration(elle::serialization::SerializerIn& input) {serialize(input);}
     void
     serialize(elle::serialization::Serializer& s);
-    Address node_id;
     int k; // number of groups
     int max_other_contacts; // max number of contacts on each other group
     int query_get_retries;    // query retry
@@ -145,7 +144,9 @@ namespace kelips
     , public elle::Printable
   {
   public:
-    Node(Configuration const& config, bool observer,
+    Node(Configuration const& config,
+         bool observer,
+         elle::UUID node_id,
          infinit::model::doughnut::Doughnut* doughnut);
     virtual ~Node();
     void start();
@@ -202,7 +203,6 @@ namespace kelips
     Address _ping_target;
     Time _ping_time;
     reactor::Barrier _ping_barrier;
-    Address _self;
     GossipEndpoint _local_endpoint;
     int _group; // group we are in
     Configuration _config;
@@ -220,6 +220,7 @@ namespace kelips
     int _next_id;
     int _port;
     bool _observer;
+    ELLE_ATTRIBUTE_R(elle::UUID, node_id);
   };
 }
 
@@ -238,10 +239,6 @@ namespace infinit
 
         void
         serialize(elle::serialization::Serializer& s);
-
-        virtual
-        void
-        join() override;
 
         virtual
         std::unique_ptr<infinit::overlay::Overlay>

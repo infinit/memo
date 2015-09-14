@@ -400,13 +400,14 @@ namespace kelips
     dst = E2(src.address(), src.port());
   }
 
-  Node::Node(Configuration const& config, bool observer,
-    infinit::model::doughnut::Doughnut* doughnut)
-  : _config(config)
-  , _next_id(1)
-  , _observer(observer)
+  Node::Node(Configuration const& config, bool observer, elle::UUID node_id,
+             infinit::model::doughnut::Doughnut* doughnut)
+    : _config(config)
+    , _next_id(1)
+    , _observer(observer)
+    , _node_id(std::move(node_id))
   {
-    if (_config.node_id == Address::null)
+    if (observer)
       ELLE_LOG("Running in observer mode");
     this->doughnut(doughnut);
     _remotes_server.listen(0);
@@ -435,6 +436,15 @@ namespace kelips
       _pinger_thread->terminate_now();
   }
 
+  Address
+  address_of_uuid(elle::UUID const& id)
+  {
+    auto hash = infinit::cryptography::hash(
+      elle::ConstWeakBuffer(id.data, id.static_size()),
+      infinit::cryptography::Oneway::sha256);
+    return Address(hash.contents());
+  }
+
   void Node::engage()
   {
     _gossip.socket()->close();
@@ -449,7 +459,7 @@ namespace kelips
       std::bind(&Node::pinger, this));
     // Send a bootstrap request to bootstrap nodes
     packet::BootstrapRequest req;
-    req.sender = _config.node_id;
+    req.sender = address_of_uuid(this->node_id());
     for (auto const& e: _config.bootstrap_nodes)
     {
       if (!_config.encrypt || _config.accept_plain)
@@ -457,7 +467,7 @@ namespace kelips
       else
       {
         packet::RequestKey req(doughnut()->passport());
-        req.sender = _self;
+        req.sender = address_of_uuid(this->node_id());
         send(req, e, Address::null);
         _pending_bootstrap.push_back(e);
       }
@@ -468,17 +478,7 @@ namespace kelips
 
   void Node::start()
   {
-    if (_config.node_id == Address::null && !_observer)
-    {
-      _config.node_id = Address::random();
-      std::cout << "Generating node_id:" << std::endl;
-      elle::serialization::json::SerializerOut output(std::cout, false);
-      output.serialize_forward(_config.node_id);
-    }
-    if (_observer)
-      _config.node_id = Address::null;
-    _self = _config.node_id;
-    _group = group_of(_config.node_id);
+    _group = group_of(address_of_uuid(this->node_id()));
     _state.contacts.resize(_config.k);
     // If we are not an observer, we must wait for Local port information
     if (_observer)
@@ -561,7 +561,7 @@ namespace kelips
     if (send_key_request)
     {
       packet::RequestKey req(doughnut()->passport());
-      req.sender = _self;
+      req.sender = address_of_uuid(this->node_id());
       send(req, e, Address::null);
     }
     if (b.size() == 0)
@@ -642,7 +642,7 @@ namespace kelips
           { // send a key request
             ELLE_DEBUG("%s: sending key request to %s", *this, source);
             packet::RequestKey rk(doughnut()->passport());
-            rk.sender = _self;
+            rk.sender = address_of_uuid(this->node_id());
             elle::Buffer s = packet::serialize(rk);
             send(rk, source, p->sender);
             return;
@@ -664,7 +664,7 @@ namespace kelips
           elle::Buffer password = sk.password();
           setKey(p->sender, p->endpoint, std::move(sk));
           packet::KeyReply kr(doughnut()->passport());
-          kr.sender = _self;
+          kr.sender = address_of_uuid(this->node_id());
           kr.encrypted_key = p->passport.user().seal(
             password,
             infinit::cryptography::Cipher::aes256,
@@ -700,7 +700,7 @@ namespace kelips
             *it = _pending_bootstrap[_pending_bootstrap.size() - 1];
             _pending_bootstrap.pop_back();
             packet::BootstrapRequest req;
-            req.sender = _self;
+            req.sender = address_of_uuid(this->node_id());
             send(req, source, p->sender);
           }
           return;
@@ -729,7 +729,7 @@ namespace kelips
         CASE(Ping)
         {
           packet::Pong r;
-          r.sender = _self;
+          r.sender = address_of_uuid(this->node_id());
           r.remote_endpoint = source;
           send(r, source, p->sender);
         }
@@ -919,7 +919,7 @@ namespace kelips
     // update self file last seen, this will avoid us some ifs at other places
     for (auto& f: _state.files)
     {
-      if (f.second.home_node == _self)
+      if (f.second.home_node == address_of_uuid(this->node_id()))
       {
         f.second.last_seen = now();
       }
@@ -950,7 +950,7 @@ namespace kelips
     std::vector<std::pair<Address, std::pair<Time, Address>>> old_files;
     for (auto& f: _state.files)
     {
-      if (f.second.home_node == _self
+      if (f.second.home_node == address_of_uuid(this->node_id())
         && ((now() - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
         && !has(res, f.first, f.second.home_node))
           old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
@@ -1000,7 +1000,7 @@ namespace kelips
     int v = random(_gen);
     reactor::sleep(boost::posix_time::milliseconds(v));
     packet::Gossip p;
-    p.sender = _self;
+    p.sender = address_of_uuid(this->node_id());
     while (true)
     {
       reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
@@ -1023,7 +1023,7 @@ namespace kelips
         if (!p.files.empty())
           ELLE_TRACE("%s: info on %s files %s   %x %x", *this, p.files.size(),
                    serialize_time(p.files.begin()->second.first),
-                   _self, p.files.begin()->second.second);
+                   address_of_uuid(this->node_id()), p.files.begin()->second.second);
         send(p, e.first, e.second);
       }
     }
@@ -1090,7 +1090,7 @@ namespace kelips
       ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
     for (auto const& c: p->contacts)
     {
-      if (c.first == _self)
+      if (c.first == address_of_uuid(this->node_id()))
         continue;
       int g = group_of(c.first);
       auto& target = _state.contacts[g];
@@ -1142,7 +1142,7 @@ namespace kelips
   {
     int g = group_of(p->sender);
     packet::Gossip res;
-    res.sender = _self;
+    res.sender = address_of_uuid(this->node_id());
     int group_count = _state.contacts[g].size();
     // Special case to avoid the randomized fetcher running for ever
     if (group_count <= _config.gossip.bootstrap_group_target + 5)
@@ -1234,7 +1234,7 @@ namespace kelips
       // find the corresponding endpoint
       RpcEndpoint endpoint;
       bool found = false;
-      if (it->second.home_node == _self)
+      if (it->second.home_node == address_of_uuid(this->node_id()))
       {
         ELLE_DEBUG("%s: found self", *this);
         if (_local_endpoint.address().to_string() == "0.0.0.0")
@@ -1283,7 +1283,7 @@ namespace kelips
     if (p->result.size() >= unsigned(p->count))
     { // We got the full result, send reply
       packet::GetFileReply res;
-      res.sender = _self;
+      res.sender = address_of_uuid(this->node_id());
       res.fileAddress = p->fileAddress;
       res.origin = p->originAddress;
       res.request_id = p->request_id;
@@ -1300,7 +1300,7 @@ namespace kelips
     {
       // FIXME not in initial protocol, but we cant distinguish get and put
       packet::GetFileReply res;
-      res.sender = _self;
+      res.sender = address_of_uuid(this->node_id());
       res.fileAddress = p->fileAddress;
       res.origin = p->originAddress;
       res.request_id = p->request_id;
@@ -1310,7 +1310,7 @@ namespace kelips
       return;
     }
     p->ttl--;
-    p->sender = _self;
+    p->sender = address_of_uuid(this->node_id());
     int count = _state.contacts[fg].size();
     if (count == 0)
       return;
@@ -1357,19 +1357,19 @@ namespace kelips
         auto its = _state.files.equal_range(p->fileAddress);
         auto it = std::find_if(its.first, its.second,
           [&](decltype(*its.first) i) ->bool {
-            return i.second.home_node == _self;
+            return i.second.home_node == address_of_uuid(this->node_id());
           });
         if (it == its.second)
         { // Nope, insert here
           // That makes us a home node for this address, but
           // wait until we get the RPC to store anything
           packet::PutFileReply res;
-          res.sender = _self;
+          res.sender = address_of_uuid(this->node_id());
           res.request_id = p->request_id;
           res.origin = p->originAddress;
           endpoint_to_endpoint(_local_endpoint, res.resultEndpoint);
           res.fileAddress = p->fileAddress;
-          res.resultAddress = _self;
+          res.resultAddress = address_of_uuid(this->node_id());
           res.ttl = p->ttl;
           _promised_files.push_back(p->fileAddress);
           send(res, p->originEndpoint, p->originAddress);
@@ -1396,7 +1396,7 @@ namespace kelips
       ELLE_ERR("%s: No contact founds", *this);
       return;
     }
-    p->sender = _self;
+    p->sender = address_of_uuid(this->node_id());
     p->ttl--;
     send(*p, it->second.endpoint, it->second.address);
   }
@@ -1459,9 +1459,9 @@ namespace kelips
   {
     std::set<RpcEndpoint> result_set;
     packet::GetFileRequest r;
-    r.sender = _self;
+    r.sender = address_of_uuid(this->node_id());
     r.request_id = ++ _next_id;
-    r.originAddress = _self;
+    r.originAddress = address_of_uuid(this->node_id());
     r.originEndpoint = _local_endpoint;
     r.fileAddress = file;
     r.ttl = _config.query_get_ttl;
@@ -1535,8 +1535,8 @@ namespace kelips
   {
     int fg = group_of(file);
     packet::PutFileRequest p;
-    p.sender = _self;
-    p.originAddress = _self;
+    p.sender = address_of_uuid(this->node_id());
+    p.originAddress = address_of_uuid(this->node_id());
     p.originEndpoint = _local_endpoint;
     p.fileAddress = file;
     p.ttl = _config.query_put_ttl;
@@ -1754,7 +1754,7 @@ namespace kelips
         break;
       }
       packet::Ping p;
-      p.sender = _self;
+      p.sender = address_of_uuid(this->node_id());
       p.remote_endpoint = endpoint;
       _ping_time = now();
       ELLE_DEBUG("%s: pinging %x at %s", *this, _ping_target, endpoint);
@@ -1780,7 +1780,7 @@ namespace kelips
     auto t = now();
     while (it != _state.files.end())
     {
-      if (!(it->second.home_node == _self) && t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
+      if (!(it->second.home_node == address_of_uuid(this->node_id())) && t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
       {
         ELLE_TRACE("%s: Erasing file %x", *this, it->first);
         it = _state.files.erase(it);
@@ -1805,7 +1805,7 @@ namespace kelips
     int my_files = 0;
     for (auto const& f: _state.files)
     {
-      if (f.second.home_node == _self)
+      if (f.second.home_node == address_of_uuid(this->node_id()))
         ++my_files;
     }
     int time_send_all = my_files / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
@@ -1859,10 +1859,10 @@ namespace kelips
   {
     auto its = _state.files.equal_range(block.address());
     if (std::find_if(its.first, its.second, [&](Files::value_type const& f) {
-        return f.second.home_node == _self;
+        return f.second.home_node == address_of_uuid(this->node_id());
     }) == its.second)
       _state.files.insert(std::make_pair(block.address(),
-        File{block.address(), _self, now(), Time(), 0}));
+        File{block.address(), address_of_uuid(this->node_id()), now(), Time(), 0}));
     auto itp = std::find(_promised_files.begin(), _promised_files.end(), block.address());
     if (itp != _promised_files.end())
     {
@@ -1876,7 +1876,7 @@ namespace kelips
     auto its = _state.files.equal_range(address);
     for (auto it = its.first; it != its.second; ++it)
     {
-      if (it->second.home_node == _self)
+      if (it->second.home_node == address_of_uuid(this->node_id()))
       {
         _state.files.erase(it);
         break;
@@ -1967,14 +1967,13 @@ namespace kelips
     for (auto const& k: keys)
     {
       _state.files.insert(std::make_pair(k,
-        File{k, _self, now(), Time(), 0}));
+        File{k, address_of_uuid(this->node_id()), now(), Time(), 0}));
       ELLE_DEBUG("%s: reloaded %x", *this, k);
     }
   }
 
   void Configuration::serialize(elle::serialization::Serializer& s)
   {
-    s.serialize("node_id", node_id);
     s.serialize("k", k);
     s.serialize("max_other_contacts", max_other_contacts);
     s.serialize("query_get_retries", query_get_retries);
@@ -1996,8 +1995,7 @@ namespace kelips
   }
 
   Configuration::Configuration()
-    : node_id()
-    , k(6)
+    : k(6)
     , max_other_contacts(6)
     , query_get_retries(30)
     , query_put_retries(12)
@@ -2061,13 +2059,8 @@ namespace infinit
           config.bootstrap_nodes.push_back(
             elle::serialization::Serialize< ::kelips::PrettyGossipEndpoint>
             ::convert(host));
-        return elle::make_unique< ::kelips::Node>(config, !server, doughnut);
-      }
-
-      void
-      Configuration::join()
-      {
-        this->config.node_id = infinit::model::Address::random();
+        return elle::make_unique< ::kelips::Node>(
+          config, !server, this->node_id(), doughnut);
       }
 
       static const

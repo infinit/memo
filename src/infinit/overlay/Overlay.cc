@@ -1,6 +1,6 @@
-#include <infinit/overlay/Overlay.hh>
-
 #include <elle/log.hh>
+
+#include <infinit/overlay/Overlay.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
 
@@ -39,6 +39,19 @@ namespace infinit
     Overlay::lookup(model::Address address, Operation op) const
     {
       return this->lookup(address, 1, op)[0];
+    }
+
+    void
+    Configuration::join()
+    {
+      this->_node_id = elle::UUID::random();
+    }
+
+
+    void
+    Configuration::serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("node_id", this->_node_id);
     }
   }
 }

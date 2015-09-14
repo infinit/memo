@@ -1,6 +1,8 @@
 #ifndef INFINIT_OVERLAY_OVERLAY_HH
 # define INFINIT_OVERLAY_OVERLAY_HH
 
+# include <elle/UUID.hh>
+
 # include <reactor/network/tcp-socket.hh>
 
 # include <infinit/model/Address.hh>
@@ -66,12 +68,18 @@ namespace infinit
       /// Perform any initialization required at join time.
       virtual
       void
-      join() {}
+      join();
+
+      virtual
+      void
+      serialize(elle::serialization::Serializer& s) override;
 
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(std::vector<std::string> const& hosts, bool server,
         model::doughnut::Doughnut* doughnut) = 0;
+
+      ELLE_ATTRIBUTE_R(elle::UUID, node_id);
     };
   }
 }
