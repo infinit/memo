@@ -696,7 +696,6 @@ namespace infinit
       }
       _block = elle::cast<ACLBlock>::runtime
         (_owner.fetch_or_die(_address));
-      _last_fetch = now;
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       ELLE_DEBUG("Deserializing directory");
@@ -708,7 +707,10 @@ namespace infinit
         }
         , EPERM));
       if (empty)
+      {
+        _last_fetch = now;
         return;
+      }
       elle::serialization::json::SerializerIn input(is, version);
       try
       {
@@ -734,6 +736,7 @@ namespace infinit
           itr->second = itl.second;
         }
       }
+      _last_fetch = now;
     }
 
     void
@@ -831,6 +834,7 @@ namespace infinit
     void
     Directory::rmdir()
     {
+      _fetch();
       if (!_files.empty())
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
       if (_parent.get() == nullptr)
