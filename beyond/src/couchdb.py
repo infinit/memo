@@ -53,7 +53,10 @@ file = %(root)s/db.log
 python=python -m couchdb
 ''' % {'root': self.__dir, 'port': self.__port},
             file = f)
-    os.remove(self.__path('uri'))
+    try:
+      os.remove(self.__path('uri'))
+    except FileNotFoundError:
+      pass
     subprocess.check_call(
       ['couchdb', '-a', config,
        '-b', '-p', pid, '-o', stdout, '-e', stderr])
