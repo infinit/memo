@@ -323,6 +323,29 @@ run(variables_map const& args)
   if (args.count("host"))
     hosts = args["host"].as<std::vector<std::string>>();
   bool push = args.count("push") && args["push"].as<bool>();
+  bool fetch = args.count("fetch") && args["fetch"].as<bool>();
+  if (fetch)
+  {
+    reactor::http::Request r(
+      elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
+    reactor::wait(r);
+    if (r.status() == reactor::http::StatusCode::OK)
+      report_action("fetched", "enpoints for", network.name);
+    else
+      throw elle::Error(
+        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                      r.status(), network.name));
+    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+    for (auto const& user: json)
+      for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
+      {
+        elle::serialization::json::SerializerIn s(node.second, false);
+        auto endpoints = s.deserialize<Endpoints>();
+        for (auto const& addr: endpoints.addresses)
+          hosts.push_back(elle::sprintf("%s:%s", addr, endpoints.port));
+      }
+  }
+  std::cerr << "HOSTS: " << hosts << std::endl;
   auto local = network.run(hosts);
   if (!local.first)
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
@@ -495,11 +518,13 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         option_owner,
+        { "fetch", bool_switch(),
+            elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "host", value<std::vector<std::string>>()->multitoken(),
             "hosts to connect to" },
         { "name", value<std::string>(), "created network name" },
         { "push", bool_switch(),
-            elle::sprintf("push endpoint to %s", beyond()).c_str() },
+            elle::sprintf("push endpoints to %s", beyond()).c_str() },
       },
     },
   };
