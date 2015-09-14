@@ -528,6 +528,8 @@ namespace kelips
   void Node::send(packet::Packet const& p, GossipEndpoint e, Address a)
   {
     ELLE_ASSERT(e.port() != 0);
+    if (this->_observer)
+      a = Address::null;
     bool is_crypto = dynamic_cast<const packet::EncryptedPayload*>(&p)
     || dynamic_cast<const packet::RequestKey*>(&p)
     || dynamic_cast<const packet::KeyReply*>(&p);
