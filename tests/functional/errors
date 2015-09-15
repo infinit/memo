@@ -9,8 +9,14 @@ with Infinit() as infinit:
       'type' : 'kalimero'
     },
     'owner' : {
-      'rsa' : 'MIIBCgKCAQEAp0uoRP+SKv6ryQo8TLapW8SFVZfmc0clf2HxBSx+uKAvGASbW2/pGJsE7m7R2aiHlCUkvW19TbNtkRoZ8IlnOu1E52wJEDiZvEjUYm+3T6Re8eyFj2ZakCGjOzQWP7G8DGdVBHdKdtcljvmXaWUbJDDI5MMzk9v+C3q2NmQiRfRD/V0T3hRgCejN7fbYJ3cgySRxIEhaUr0SqHGJioD8jiRoYXLJ9w4xsSLkofFltmkbaqynimzvQ6rKnz4lKx2wl8X59YUDXT7UWb6yIPBMMhOnDxdOgojgQxbbkzp6ilGh+wS14KR6sp948jURYD7qDtdiluI78mlajzhEADuyTQIDAQAB'
-    }
+      'rsa' : 'MIIBCgKCAQEAp0uoRP+SKv6ryQo8TLapW8SFVZfmc0clf2HxBSx+uK'
+      'AvGASbW2/pGJsE7m7R2aiHlCUkvW19TbNtkRoZ8IlnOu1E52wJEDiZvEjUYm+3'
+      'T6Re8eyFj2ZakCGjOzQWP7G8DGdVBHdKdtcljvmXaWUbJDDI5MMzk9v+C3q2Nm'
+      'QiRfRD/V0T3hRgCejN7fbYJ3cgySRxIEhaUr0SqHGJioD8jiRoYXLJ9w4xsSLk'
+      'ofFltmkbaqynimzvQ6rKnz4lKx2wl8X59YUDXT7UWb6yIPBMMhOnDxdOgojgQx'
+      'bbkzp6ilGh+wS14KR6sp948jURYD7qDtdiluI78mlajzhEADuyTQIDAQAB'
+    },
+    'replicas': 1,
   }
   infinit.run(['infinit-user', '--create', '--name', 'user'])
   infinit.run(['infinit-network', '--import'], input = descriptor)
