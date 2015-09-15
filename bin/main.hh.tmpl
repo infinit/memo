@@ -4,8 +4,10 @@
 
 #include <elle/Error.hh>
 #include <elle/Exit.hh>
+#include <elle/With.hh>
 #include <elle/cast.hh>
 #include <elle/format/base64url.hh>
+#include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
 #include <elle/system/home_directory.hh>
 #include <elle/system/username.hh>
@@ -1163,10 +1165,9 @@ beyond_fetch(std::string const& type,
   return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
 }
 
-template <typename T>
 void
 beyond_delete(std::string const& where,
-              std::string const& type, std::string const& name, T const& o)
+              std::string const& type, std::string const& name)
 {
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::DELETE);
@@ -1199,4 +1200,71 @@ self_user(infinit::Infinit const& ifnt,
     throw elle::Error(
       elle::sprintf("user \"%s\" has no private key", res.name));
   return res;
+}
+
+struct Endpoints
+{
+  std::vector<std::string> addresses;
+  int port;
+};
+
+DAS_MODEL(Endpoints, (addresses, port), DasEndpoints);
+DAS_MODEL_DEFAULT(Endpoints, DasEndpoints);
+DAS_MODEL_SERIALIZE(Endpoints);
+
+class InterfacePublisher
+{
+public:
+  friend class elle::With<InterfacePublisher>;
+private:
+  InterfacePublisher(infinit::Network const& network,
+                     infinit::User const& self,
+                     elle::UUID const& node_id,
+                     int port)
+    : _url(elle::sprintf("networks/%s/endpoints/%s/%s",
+                         network.name, self.name, node_id))
+    , _network(network)
+  {
+    Endpoints endpoints;
+    for (auto const& itf: elle::network::Interface::get_map(
+           elle::network::Interface::Filter::only_up |
+           elle::network::Interface::Filter::no_loopback |
+           elle::network::Interface::Filter::no_autoip))
+      if (itf.second.ipv4_address.size() > 0)
+        endpoints.addresses.push_back(itf.second.ipv4_address);
+    endpoints.port = port;
+    beyond_push(this->_url, "endpoints for", network.name, endpoints);
+  }
+
+  ~InterfacePublisher()
+  {
+    beyond_delete(this->_url, "endpoints for", this->_network.name);
+  }
+
+  ELLE_ATTRIBUTE(std::string, url);
+  ELLE_ATTRIBUTE(infinit::Network const&, network);
+};
+
+void
+beyond_fetch_endpoints(infinit::Network const& network,
+                       std::vector<std::string>& hosts)
+{
+  reactor::http::Request r(
+    elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
+  reactor::wait(r);
+  if (r.status() == reactor::http::StatusCode::OK)
+    report_action("fetched", "enpoints for", network.name);
+  else
+    throw elle::Error(
+      elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
+                    r.status(), network.name));
+  auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+  for (auto const& user: json)
+    for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
+    {
+      elle::serialization::json::SerializerIn s(node.second, false);
+      auto endpoints = s.deserialize<Endpoints>();
+      for (auto const& addr: endpoints.addresses)
+        hosts.push_back(elle::sprintf("%s:%s", addr, endpoints.port));
+    }
 }

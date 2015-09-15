@@ -110,13 +110,13 @@ static
 void
 run(variables_map const& args)
 {
-  auto owner = self_user(ifnt, args);
-  auto name = volume_name(args, owner);
+  auto self = self_user(ifnt, args);
+  auto name = volume_name(args, self);
   std::vector<std::string> hosts;
   if (args.count("host"))
     hosts = args["host"].as<std::vector<std::string>>();
   auto volume = ifnt.volume_get(name);
-  auto network = ifnt.network_get(volume.network, owner);
+  auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
   bool cache = args.count("cache");
   boost::optional<int> cache_size;
@@ -124,11 +124,6 @@ run(variables_map const& args)
     cache_size = args["cache"].as<int>();
   bool async_writes =
     args.count("async-writes") && args["async-writes"].as<bool>();
-  report_action("running", "network", network.name);
-  auto model = network.run(hosts, true, cache, cache_size, async_writes);
-  ELLE_TRACE("run volume");
-  report_action("running", "volume", volume.name);
-  auto fs = volume.run(model.second, optional(args, "mountpoint"));
   reactor::scheduler().signal_handle(
     SIGINT,
     [&]
@@ -136,65 +131,86 @@ run(variables_map const& args)
       ELLE_TRACE("terminating");
       reactor::scheduler().terminate();
     });
-  elle::SafeFinally unmount(
-    [&]
+  bool push = args.count("push") && args["push"].as<bool>();
+  bool fetch = args.count("fetch") && args["fetch"].as<bool>();
+  if (fetch)
+    beyond_fetch_endpoints(network, hosts);
+  report_action("running", "network", network.name);
+  auto model = network.run(hosts, true, cache, cache_size, async_writes);
+  auto run = [&]
+  {
+    ELLE_TRACE_SCOPE("run volume");
+    report_action("running", "volume", volume.name);
+    auto fs = volume.run(model.second, optional(args, "mountpoint"));
+    elle::SafeFinally unmount([&]
     {
       ELLE_TRACE("unmounting")
         fs->unmount();
     });
-  if (script_mode)
-  {
-    reactor::FDStream stdin(0);
-    while (true)
+    if (script_mode)
     {
-      try
+      reactor::FDStream stdin(0);
+      while (true)
       {
-        auto json =
-          boost::any_cast<elle::json::Object>(elle::json::read(stdin));
-        ELLE_TRACE("got command: %s", json);
-        elle::serialization::json::SerializerIn command(json, false);
-        auto op = command.deserialize<std::string>("operation");
-        auto path =
-          fs->path(command.deserialize<std::string>("path"));
-        if (op == "list_directory")
+        try
         {
-          std::vector<std::string> entries;
-          path->list_directory(
-            [&] (std::string const& path, struct stat*)
-            {
-              entries.push_back(path);
-            });
+          auto json =
+            boost::any_cast<elle::json::Object>(elle::json::read(stdin));
+          ELLE_TRACE("got command: %s", json);
+          elle::serialization::json::SerializerIn command(json, false);
+          auto op = command.deserialize<std::string>("operation");
+          auto path =
+            fs->path(command.deserialize<std::string>("path"));
+          if (op == "list_directory")
+          {
+            std::vector<std::string> entries;
+            path->list_directory(
+              [&] (std::string const& path, struct stat*)
+              {
+                entries.push_back(path);
+              });
+            elle::serialization::json::SerializerOut response(std::cout);
+            response.serialize("entries", entries);
+            response.serialize("success", true);
+            continue;
+          }
+          else if (op == "mkdir")
+          {
+            path->mkdir(0777);
+          }
+          else
+            throw elle::Error(elle::sprintf("operation %s does not exist", op));
           elle::serialization::json::SerializerOut response(std::cout);
-          response.serialize("entries", entries);
           response.serialize("success", true);
-          continue;
         }
-        else if (op == "mkdir")
+        catch (reactor::FDStream::EOF const&)
         {
-          path->mkdir(0777);
+          return;
         }
-        else
-          throw elle::Error(elle::sprintf("operation %s does not exist", op));
-        elle::serialization::json::SerializerOut response(std::cout);
-        response.serialize("success", true);
-      }
-      catch (reactor::FDStream::EOF const&)
-      {
-        return;
-      }
-      catch (elle::Error const& e)
-      {
-        elle::serialization::json::SerializerOut response(std::cout);
-        response.serialize("success", false);
-        response.serialize("message", e.what());
+        catch (elle::Error const& e)
+        {
+          elle::serialization::json::SerializerOut response(std::cout);
+          response.serialize("success", false);
+          response.serialize("message", e.what());
+        }
       }
     }
-  }
+    else
+    {
+      ELLE_TRACE("wait filesystem");
+      reactor::wait(*fs);
+    }
+  };
+  if (push)
+    elle::With<InterfacePublisher>(
+      network, self, model.second->overlay()->node_id(),
+      model.first->server_endpoint().port()) << [&]
+    {
+      run();
+    };
   else
-  {
-    ELLE_TRACE("wait filesystem");
-    reactor::wait(*fs);
-  }
+    run();
+
 }
 
 static
@@ -284,11 +300,15 @@ main(int argc, char** argv)
         { "cache,c", value<int>()->implicit_value(0),
           "enable storage caching, "
           "optional arguments specifies maximum size in bytes" },
+        { "fetch", bool_switch(),
+            elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "mountpoint,m", value<std::string>(),
           "where to mount the filesystem" },
         { "name", value<std::string>(), "volume name" },
         { "host", value<std::vector<std::string>>()->multitoken(),
           "hosts to connect to" },
+        { "push", bool_switch(),
+            elle::sprintf("push endpoints to %s", beyond()).c_str() },
         option_owner,
       },
     },

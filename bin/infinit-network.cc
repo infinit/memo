@@ -1,5 +1,4 @@
 #include <elle/log.hh>
-#include <elle/network/Interface.hh>
 #include <elle/serialization/json.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -302,16 +301,6 @@ push(variables_map const& args)
   }
 }
 
-struct Endpoints
-{
-  std::vector<std::string> addresses;
-  int port;
-};
-
-DAS_MODEL(Endpoints, (addresses, port), DasEndpoints);
-DAS_MODEL_DEFAULT(Endpoints, DasEndpoints);
-DAS_MODEL_SERIALIZE(Endpoints);
-
 static
 void
 run(variables_map const& args)
@@ -325,26 +314,7 @@ run(variables_map const& args)
   bool push = args.count("push") && args["push"].as<bool>();
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
-  {
-    reactor::http::Request r(
-      elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
-    reactor::wait(r);
-    if (r.status() == reactor::http::StatusCode::OK)
-      report_action("fetched", "enpoints for", network.name);
-    else
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
-                      r.status(), network.name));
-    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-    for (auto const& user: json)
-      for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
-      {
-        elle::serialization::json::SerializerIn s(node.second, false);
-        auto endpoints = s.deserialize<Endpoints>();
-        for (auto const& addr: endpoints.addresses)
-          hosts.push_back(elle::sprintf("%s:%s", addr, endpoints.port));
-      }
-  }
+    beyond_fetch_endpoints(network, hosts);
   auto local = network.run(hosts);
   if (!local.first)
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
@@ -361,27 +331,12 @@ run(variables_map const& args)
       reactor::sleep();
     };
   if (push)
-  {
-    Endpoints endpoints;
-    for (auto const& itf: elle::network::Interface::get_map(
-           elle::network::Interface::Filter::only_up |
-           elle::network::Interface::Filter::no_loopback |
-           elle::network::Interface::Filter::no_autoip))
-      if (itf.second.ipv4_address.size() > 0)
-        endpoints.addresses.push_back(itf.second.ipv4_address);
-    endpoints.port = local.first->server_endpoint().port();
-    auto url =
-      elle::sprintf("networks/%s/endpoints/%s/%s",
-                    network.name, self.name,
-                    local.second->overlay()->node_id());
-    beyond_push(url, "endpoints for", network.name, endpoints);
-    elle::With<elle::Finally>(
-      [&] { beyond_delete(url, "endpoints for",
-                          network.name, endpoints); }) << [&]
+    elle::With<InterfacePublisher>(
+      network, self, local.second->overlay()->node_id(),
+      local.first->server_endpoint().port()) << [&]
     {
       run();
     };
-  }
   else
     run();
 }
