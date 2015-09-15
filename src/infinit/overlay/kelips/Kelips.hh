@@ -45,6 +45,7 @@ namespace kelips
   typedef std::chrono::time_point<std::chrono::system_clock> Time;
   typedef Time::duration Duration;
   //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
+
   struct Contact
   {
     GossipEndpoint endpoint;
@@ -54,6 +55,10 @@ namespace kelips
     Time last_gossip;
     int gossip_count;
   };
+
+  std::ostream&
+  operator << (std::ostream& output, Contact const& contact);
+
   struct File
   {
     Address address;
@@ -62,6 +67,7 @@ namespace kelips
     Time last_gossip;
     int gossip_count;
   };
+
   typedef std::unordered_multimap<Address, File> Files;
   typedef std::unordered_map<Address, Contact> Contacts;
   struct State
@@ -139,6 +145,7 @@ namespace kelips
     struct PutFileReply;
   }
   struct PendingRequest;
+
   class Node
     : public infinit::overlay::Overlay
     , public elle::Printable
@@ -150,7 +157,8 @@ namespace kelips
          infinit::model::doughnut::Doughnut* doughnut);
     virtual ~Node();
     void start();
-    void engage();
+    void
+    engage();
     void
     register_local(
       std::shared_ptr<infinit::model::doughnut::Local> local) override;
@@ -217,6 +225,7 @@ namespace kelips
     std::unordered_map<GossipEndpoint, infinit::cryptography::SecretKey> _observer_keys;
     std::vector<GossipEndpoint> _pending_bootstrap; // bootstrap pending auth
     reactor::network::UTPServer _remotes_server;
+    /// Whether we've seen someone from our group.
     reactor::Barrier _bootstraping;
     int _next_id;
     int _port;

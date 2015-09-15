@@ -449,11 +449,13 @@ namespace kelips
     return Address(hash.contents());
   }
 
-  void Node::engage()
+  void
+  Node::engage()
   {
     _gossip.socket()->close();
     _gossip.bind(GossipEndpoint({}, _port));
-    ELLE_LOG("kelips listening on port %s", _gossip.local_endpoint().port());
+    ELLE_LOG("%s: listening on port %s",
+             *this, _gossip.local_endpoint().port());
     ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
     _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
       std::bind(&Node::gossipEmitter, this));
@@ -1038,30 +1040,36 @@ namespace kelips
     }
   }
 
-  void Node::onContactSeen(Address addr, GossipEndpoint endpoint)
+  void
+  Node::onContactSeen(Address addr, GossipEndpoint endpoint)
   {
-    ELLE_TRACE("%s: onContactSeen %x: %s", *this, addr, endpoint);
+    // Drop self
     if (addr == address_of_uuid(this->node_id()))
-    {
-      ELLE_DEBUG("%s: contact is self, dropping", *this);
       return;
-    }
     int g = group_of(addr);
     if (g == _group)
       _bootstraping.open();
     Contacts& target = _state.contacts[g];
-
     auto it = target.find(addr);
-    // FIXME: limit size of other contacts
     if (it == target.end())
     {
-      if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
-        target[addr] = Contact{endpoint, addr, Duration(0), now(), Time(), 0};
+      if (g == _group || signed(target.size()) < _config.max_other_contacts)
+      {
+        Contact contact{endpoint, addr, Duration(0), now(), Time(), 0};
+        ELLE_LOG("%s: register %s", *this, contact);
+        target[addr] = std::move(contact);
+      }
     }
     else
     {
       it->second.last_seen = now();
-      it->second.endpoint = endpoint;
+      if (it->second.endpoint != endpoint)
+      {
+        it->second.endpoint = endpoint;
+        ELLE_LOG("%s: re-register %s", *this, it->second);
+      }
+      else
+        ELLE_DUMP("%s: just seen %s", *this, it->second);
     }
   }
 
@@ -1813,11 +1821,13 @@ namespace kelips
   {
     auto it = _state.files.begin();
     auto t = now();
+    auto file_timeout = std::chrono::milliseconds(_config.file_timeout_ms);
     while (it != _state.files.end())
     {
-      if (!(it->second.home_node == address_of_uuid(this->node_id())) && t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
+      if (!(it->second.home_node == address_of_uuid(this->node_id())) &&
+          t - it->second.last_seen > file_timeout)
       {
-        ELLE_TRACE("%s: Erasing file %x", *this, it->first);
+        ELLE_TRACE("%s: erase file %x", *this, it->first);
         it = _state.files.erase(it);
       }
       else
@@ -1828,9 +1838,9 @@ namespace kelips
       auto it = contacts.begin();
       while (it != contacts.end())
       {
-        if (t - it->second.last_seen > std::chrono::milliseconds(_config.file_timeout_ms))
+        if (t - it->second.last_seen > file_timeout)
         {
-          ELLE_TRACE("%s: Erasing contact %x", *this, it->first);
+          ELLE_LOG("%s: erase %s", *this, it->second);
           it = contacts.erase(it);
         }
         else
@@ -1847,23 +1857,29 @@ namespace kelips
     ELLE_DEBUG("time_send_all is %s", time_send_all);
     if (time_send_all >= _config.file_timeout_ms / 2)
     {
-      ELLE_LOG("too many files for configuration: files=%s, per packet=%s, interval=%s, timeout=%s",
-                my_files, _config.gossip.files, _config.gossip.interval_ms, _config.file_timeout_ms);
+      ELLE_TRACE_SCOPE(
+        "%s: too many files for configuration: "
+        "files=%s, per packet=%s, interval=%s, timeout=%s",
+        *this, my_files, _config.gossip.files,
+        _config.gossip.interval_ms, _config.file_timeout_ms);
       if (_config.gossip.files < 20)
-      { // keep it so it fits in 'standard' MTU of +/- 1k
+      {
+        // Keep it so it fits in 'standard' MTU of +/- 1k
         _config.gossip.files = std::min(20, _config.gossip.files * 3 / 2);
-        ELLE_LOG("Increasing files/packet to %s", _config.gossip.files);
+        ELLE_DEBUG("Increasing files/packet to %s", _config.gossip.files);
       }
       else if (_config.gossip.interval_ms > 400)
       {
-        _config.gossip.interval_ms = std::max(400, _config.gossip.interval_ms * 2 / 3);
-        ELLE_LOG("Decreasing interval to %s", _config.gossip.interval_ms);
+        _config.gossip.interval_ms =
+          std::max(400, _config.gossip.interval_ms * 2 / 3);
+        ELLE_DEBUG("Decreasing interval to %s", _config.gossip.interval_ms);
       }
       else
-      { // We're assuming each node has roughly the same number of files,
-        // so others will increase their timeout as we do
+      {
+        // We're assuming each node has roughly the same number of files, so
+        // others will increase their timeout as we do.
         _config.file_timeout_ms =  _config.file_timeout_ms * 3 / 2;
-        ELLE_LOG("Increasing timeout to %s", _config.file_timeout_ms);
+        ELLE_DEBUG("Increasing timeout to %s", _config.file_timeout_ms);
       }
     }
   }
@@ -2063,6 +2079,14 @@ namespace kelips
     , bootstrap_group_target(12)
     , bootstrap_other_target(12)
   {}
+
+  std::ostream&
+  operator << (std::ostream& output, Contact const& contact)
+  {
+    elle::fprintf(output, "contact %x at %s",
+                  contact.address, contact.endpoint);
+    return output;
+  }
 }
 
 namespace infinit
