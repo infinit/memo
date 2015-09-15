@@ -585,6 +585,22 @@ namespace infinit
       return s.deserialize<std::unique_ptr<infinit::storage::StorageConfig>>();
     }
 
+    std::vector<std::string>
+    storages_get()
+    {
+      std::vector<std::string> res;
+      for (boost::filesystem::recursive_directory_iterator it(this->_storage_path());
+           it != boost::filesystem::recursive_directory_iterator();
+           ++it)
+      {
+        if (is_regular_file(it->status()))
+        {
+          res.push_back(it->path().filename().string());
+        }
+      }
+      return res;
+    }
+
     void
     storage_save(std::string const& name,
                  infinit::storage::StorageConfig const& storage)
@@ -620,6 +636,25 @@ namespace infinit
       this->_open(f, this->_volume_path(volume.name), volume.name, "volume");
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(volume);
+    }
+
+    std::vector<Volume>
+    volumes_get() const
+    {
+      std::vector<Volume> res;
+      for (boost::filesystem::recursive_directory_iterator it(this->_volume_path());
+           it != boost::filesystem::recursive_directory_iterator();
+           ++it)
+      {
+        if (is_regular_file(it->status()))
+        {
+          boost::filesystem::ifstream f;
+          this->_open(f, it->path(), "volume", it->path().filename().string());
+          res.push_back(
+            elle::serialization::json::deserialize<Volume>(f, false));
+        }
+      }
+      return res;
     }
 
     void
@@ -730,11 +765,17 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _storage_path(std::string const& name) const
+    _storage_path() const
     {
       auto root = root_dir() / "storage";
       create_directories(root);
-      return root / name;
+      return root;
+    }
+
+    boost::filesystem::path
+    _storage_path(std::string const& name) const
+    {
+      return _storage_path() / name;
     }
 
     boost::filesystem::path
@@ -746,11 +787,17 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _volume_path(std::string const& name) const
+    _volume_path() const
     {
       auto root = root_dir() / "volumes";
       create_directories(root);
-      return root / name;
+      return root;
+    }
+
+    boost::filesystem::path
+    _volume_path(std::string const& name) const
+    {
+      return this->_volume_path() / name;
     }
 
     void

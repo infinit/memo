@@ -197,6 +197,19 @@ run(variables_map const& args)
   }
 }
 
+static
+void
+list(variables_map const& args)
+{
+  for (auto const& volume: ifnt.volumes_get())
+  {
+    std::cout << volume.name << " : network " << volume.network;
+    if (volume.mountpoint)
+      std::cout << " on " << *volume.mountpoint;
+    std::cout << std::endl;
+  }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -219,7 +232,7 @@ main(int argc, char** argv)
     },
     {
       "export",
-      "export a network for someone else to import",
+      "export a volume for someone else to import",
       &export_,
       "--name VOLUME",
       {
@@ -231,7 +244,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("fetch network from %s", beyond()).c_str(),
+      elle::sprintf("fetch volume from %s", beyond()).c_str(),
       &fetch,
       "--name NETWORK",
       {
@@ -278,6 +291,12 @@ main(int argc, char** argv)
           "hosts to connect to" },
         option_owner,
       },
+    },
+    {
+      "list",
+      "List volumes",
+      &list,
+      {},
     },
   };
   return infinit::main("Infinit volume management utility", modes, argc, argv);

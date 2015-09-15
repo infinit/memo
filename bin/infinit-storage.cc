@@ -57,6 +57,17 @@ create(variables_map const& args)
   }
 }
 
+static
+void
+list(variables_map const& args)
+{
+  auto s = ifnt.storages_get();
+  for (auto const& name: s)
+  {
+    std::cout << name << std::endl;
+  }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -92,6 +103,13 @@ main(int argc, char** argv)
         fs_storage_options,
         dropbox_storage_options,
       },
+    },
+    {
+      "list",
+      "List storages",
+      &list,
+      "",
+      {},
     },
   };
   return infinit::main("Infinit storage management utility", modes, argc, argv);
