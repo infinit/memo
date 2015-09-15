@@ -148,6 +148,19 @@ class User:
     return self.__google_accounts
 
 
+class MissingField(Exception):
+
+  def __init__(self, field):
+    self.__field = field
+
+  def __str__(self):
+    return 'missing field: %r' % self.field
+
+  @property
+  def field(self):
+    return self.__field
+
+
 class Entity(type):
 
   def __new__(self, name, superclasses, content,
@@ -193,7 +206,11 @@ class Entity(type):
     # Create
     if insert:
       def create(self):
-        assert all(getattr(self, m) is not None for m in fields)
+        missing = next((f for f, d in fields.items()
+                        if getattr(self, f) is None and d is None),
+                       None)
+        if missing is not None:
+          raise MissingField(f)
         getattr(self.__beyond._Beyond__datastore, insert)(self)
       content['create'] = create
     # Save
