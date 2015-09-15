@@ -50,6 +50,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
+        ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
 
       protected:
         virtual

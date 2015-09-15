@@ -1940,7 +1940,9 @@ namespace kelips
                 int n,
                 infinit::overlay::Operation op) const
   {
+    ELLE_TRACE("Waiting for bootstrap");
     reactor::wait(const_cast<Node*>(this)->_bootstraping);
+    ELLE_TRACE("bootstrap opened");
     Members res;
     auto hosts = const_cast<Node*>(this)->address(address, op, n);
     ELLE_TRACE("address produced %s hosts:", hosts.size());
