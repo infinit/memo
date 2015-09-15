@@ -308,6 +308,7 @@ static void run_filesystem_dht(std::string const& store,
           v.push_back("127.0.0.1:" + std::to_string(ep.port()));
         overlay["hosts"] = v;
         model["overlay"] = overlay;
+        model["replicas"] = 1;
         r["model"] = model;
         std::string kps = serialize(kp);
         std::string owner_ser = serialize(owner_keys.K());
