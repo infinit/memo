@@ -217,6 +217,7 @@ namespace kelips
     std::unordered_map<GossipEndpoint, infinit::cryptography::SecretKey> _observer_keys;
     std::vector<GossipEndpoint> _pending_bootstrap; // bootstrap pending auth
     reactor::network::UTPServer _remotes_server;
+    reactor::Barrier _bootstraping;
     int _next_id;
     int _port;
     bool _observer;

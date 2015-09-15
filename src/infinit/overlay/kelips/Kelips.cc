@@ -411,6 +411,10 @@ namespace kelips
       ELLE_LOG("Running in observer mode");
     this->doughnut(doughnut);
     _remotes_server.listen(0);
+    if (_config.bootstrap_nodes.empty())
+      _bootstraping.open();
+    else
+      _bootstraping.close();
     start();
 
   }
@@ -462,6 +466,7 @@ namespace kelips
     req.sender = address_of_uuid(this->node_id());
     for (auto const& e: _config.bootstrap_nodes)
     {
+      ELLE_TRACE("%s: sending bootstrap to node %s", *this, e);
       if (!_config.encrypt || _config.accept_plain)
         send(req, e, Address::null);
       else
@@ -705,6 +710,8 @@ namespace kelips
             req.sender = address_of_uuid(this->node_id());
             send(req, source, p->sender);
           }
+          if (packet->sender != Address::null)
+            onContactSeen(packet->sender, source);
           return;
         } // keyreply
 
@@ -1034,7 +1041,14 @@ namespace kelips
   void Node::onContactSeen(Address addr, GossipEndpoint endpoint)
   {
     ELLE_TRACE("%s: onContactSeen %x: %s", *this, addr, endpoint);
+    if (addr == address_of_uuid(this->node_id()))
+    {
+      ELLE_DEBUG("%s: contact is self, dropping", *this);
+      return;
+    }
     int g = group_of(addr);
+    if (g == _group)
+      _bootstraping.open();
     Contacts& target = _state.contacts[g];
 
     auto it = target.find(addr);
@@ -1891,6 +1905,7 @@ namespace kelips
                 int n,
                 infinit::overlay::Operation op) const
   {
+    reactor::wait(const_cast<Node*>(this)->_bootstraping);
     Members res;
     auto hosts = const_cast<Node*>(this)->address(address, op, n);
     ELLE_TRACE("address produced %s hosts:", hosts.size());
