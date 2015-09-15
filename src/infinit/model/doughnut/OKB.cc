@@ -43,23 +43,28 @@ namespace infinit
       blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
-        auto expected_address = this->_hash_address();
-        if (address != expected_address)
+        ELLE_DEBUG("%s: check address", *this)
         {
-          auto reason = elle::sprintf("address %x invalid, expecting %x",
-                                      address, expected_address);
-          ELLE_DUMP("%s: %s", *this, reason);
-          return blocks::ValidationResult::failure(reason);
+          auto expected_address = this->_hash_address();
+          if (address != expected_address)
+          {
+            auto reason = elle::sprintf("address %x invalid, expecting %x",
+                                        address, expected_address);
+            ELLE_DEBUG("%s: %s", *this, reason);
+            return blocks::ValidationResult::failure(reason);
+          }
         }
-        else
-          ELLE_DUMP("%s: address is valid", *this);
-        auto owner_key_buffer = elle::serialization::serialize
-          <cryptography::rsa::PublicKey, elle::serialization::Json>
-          (this->_owner_key);
-        if (!this->_key.verify(this->OKBHeader::_signature, owner_key_buffer))
-          return blocks::ValidationResult::failure("owner key invalid");
-        else
-          ELLE_DUMP("%s: owner key is valid", *this);
+        ELLE_DEBUG("%s: check owner key", *this)
+        {
+          auto owner_key_buffer = elle::serialization::serialize
+            <cryptography::rsa::PublicKey, elle::serialization::Json>
+            (this->_owner_key);
+          if (!this->_key.verify(this->OKBHeader::_signature, owner_key_buffer))
+          {
+            ELLE_DEBUG("%s: invalid owner key", *this);
+            return blocks::ValidationResult::failure("invalid owner key");
+          }
+        }
         return blocks::ValidationResult::success();
       }
 
@@ -213,9 +218,11 @@ namespace infinit
       {
         if (auto res = this->_validate()); else
           return res;
-        if (!this->_validate_version<BaseOKB<Block>>
-            (previous, &BaseOKB<Block>::_version, this->version()))
-          return blocks::ValidationResult::failure("version validation failed");
+        ELLE_DEBUG("%s: check version", *this)
+          if (!this->_validate_version<BaseOKB<Block>>
+              (previous, &BaseOKB<Block>::_version, this->version()))
+            return blocks::ValidationResult::failure
+              ("version validation failed");
         return blocks::ValidationResult::success();
       }
 
@@ -226,10 +233,16 @@ namespace infinit
         if (auto res = static_cast<OKBHeader const*>
             (this)->validate(this->address())); else
           return res;
-        auto sign = this->_sign();
-        if (!this->_check_signature
-            (this->_owner_key, this->_signature, sign, "owner"))
-          return blocks::ValidationResult::failure("invalid signature");
+        ELLE_DEBUG("%s: check signature", *this)
+        {
+          auto sign = this->_sign();
+          if (!this->_check_signature
+              (this->_owner_key, this->_signature, sign, "owner"))
+          {
+            ELLE_DEBUG("%s: invalid signature", *this);
+            return blocks::ValidationResult::failure("invalid signature");
+          }
+        }
         return blocks::ValidationResult::success();
       }
 

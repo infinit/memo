@@ -281,25 +281,37 @@ namespace infinit
         {
           ELLE_DEBUG_SCOPE("%s: check author has write permissions", *this);
           if (this->_acl == Address::null || this->_editor < 0)
+          {
+            ELLE_DEBUG("%s: no ACL or no editor", *this);
             return blocks::ValidationResult::failure("no ACL or no editor");
+          }
           auto acl = this->doughnut()->fetch(this->_acl);
           elle::IOStream input(acl->data().istreambuf());
           elle::serialization::json::SerializerIn s(input);
           s.serialize("entries", entries);
           if (this->_editor >= signed(entries.size()))
+          {
+            ELLE_DEBUG("%s: editor index out of bounds", *this);
             return blocks::ValidationResult::failure
               ("editor index out of bounds");
+          }
           entry = &entries[this->_editor];
           if (!entry->write)
-            return blocks::ValidationResult::failure("no write permission");
+          {
+            ELLE_DEBUG("%s: no write permissions", *this);
+            return blocks::ValidationResult::failure("no write permissions");
+          }
         }
         ELLE_DEBUG("%s: check author signature", *this)
         {
           auto sign = this->_data_sign();
           auto& key = entry ? entry->key : this->owner_key();
           if (!this->_check_signature(key, this->_data_signature, sign, "data"))
+          {
+            ELLE_DEBUG("%s: author signature invalid", *this);
             return blocks::ValidationResult::failure
               ("author signature invalid");
+          }
         }
         return blocks::ValidationResult::success();
       }
