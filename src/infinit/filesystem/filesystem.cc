@@ -2056,29 +2056,38 @@ namespace infinit
             (_owner->_owner.block_store()->fetch(address));
           _owner->_first_block->data();
         }
-        catch(infinit::model::MissingBlock const& err)
+        catch (infinit::model::MissingBlock const& err)
         {
           // This is not a mistake if file is already opened but data has not
           // been pushed yet.
           if (!_owner->_first_block)
           {
             _owner->_handle_count--;
-            ELLE_ERR("Block missing in storage and not in cache.");
+            ELLE_WARN("%s: block missing in model and not in cache", *this);
             throw;
           }
         }
-        catch(elle::Error const& e)
+        catch (elle::Error const& e)
         {
           _owner->_handle_count--;
-          ELLE_WARN("assuming permissiond denied for error %s", e.what());
+          ELLE_WARN("%s: assuming permissiond denied for error: %s",
+                    *this, e.what());
           _owner->_first_block.reset();
           THROW_ACCES;
         }
-        catch(std::exception const& e)
+        // FIXME: I *really* don't like those.
+        catch (std::exception const& e)
         {
           _owner->_handle_count--;
-          ELLE_WARN("Unexpected exception while fetching: %s", e.what());
+          ELLE_ERR("%s: unexpected exception while fetching: %s",
+                   *this, e.what());
           throw rfs::Error(EIO, e.what());
+        }
+        catch (...)
+        {
+          _owner->_handle_count--;
+          ELLE_ERR("%s: unkown while fetching", *this);
+          throw rfs::Error(EIO, "unkown error");
         }
       }
     }
