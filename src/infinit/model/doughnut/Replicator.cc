@@ -104,6 +104,7 @@ namespace infinit
             elle::unreachable();
         }
         auto peers = overlay.lookup(block.address(), _factor, op, false);
+        ELLE_TRACE("Overlay produced %s peers", peers.size());
         for (auto const& p: peers)
           p->store(block, mode);
         std::string saddress = elle::sprintf("%s", block.address());
@@ -162,6 +163,7 @@ namespace infinit
 
       void Replicator::_process_cache()
       {
+        int network_size = 0;
         if (!_overlay)
           return;
         ELLE_TRACE("checking cache");
@@ -174,6 +176,11 @@ namespace infinit
           {
             boost::filesystem::ifstream ifs(it->path());
             ifs >> known_replicas;
+          }
+          if (network_size && known_replicas >= network_size)
+          {
+            ELLE_DEBUG("not dequeuing: network_size = %s", network_size);
+            continue;
           }
           overlay::Overlay::Members peers;
           try
@@ -221,6 +228,12 @@ namespace infinit
           if (signed(peers.size()) == need)
           {
             boost::filesystem::remove(it->path());
+          }
+          else
+          {
+            int ns = peers.size() + (_factor - need);
+            if (network_size == 0 || network_size < ns)
+              network_size = ns;
           }
         }
         ELLE_TRACE("done checking cache");
