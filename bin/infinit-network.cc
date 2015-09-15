@@ -239,8 +239,8 @@ join(variables_map const& args)
       if (fetch)
         return beyond_fetch<infinit::model::doughnut::Passport>(
             elle::sprintf("networks/%s/passports/%s", network_name, owner.name),
-            network_name,
-            owner.name);
+            "passport for",
+            network_name);
       if (!args.count("input") && owner.public_key == desc.owner)
       {
         return infinit::model::doughnut::Passport(
