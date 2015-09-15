@@ -1149,6 +1149,7 @@ self_user(infinit::Infinit const& ifnt,
     as = env;
   auto res = ifnt.user_get(as);
   if (!res.private_key)
-    throw elle::Error(elle::sprintf("user %s has no private key", as));
+    throw elle::Error(
+      elle::sprintf("user \"%s\" has no private key", res.name));
   return res;
 }
