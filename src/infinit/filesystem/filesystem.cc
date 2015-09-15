@@ -19,6 +19,8 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/doughnut/ValidationFailed.hh>
+
 #include <infinit/version.hh>
 
 #ifdef INFINIT_LINUX
@@ -46,9 +48,14 @@ namespace infinit
       {
         throw;
       }
+      catch (infinit::model::doughnut::ValidationFailed const& e)
+      {
+        ELLE_TRACE("perm exception %s", e);
+        throw rfs::Error(EPERM, elle::sprintf("%s", e));
+      }
       catch(elle::Exception const& e)
       {
-        ELLE_WARN("unexpected exception %s", e);
+        ELLE_WARN("unexpected exception %s", e.what());
         throw rfs::Error(err, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
@@ -536,6 +543,11 @@ namespace infinit
       {
         throw;
       }
+      catch (infinit::model::doughnut::ValidationFailed const& e)
+      {
+        ELLE_TRACE("perm exception %s", e);
+        throw rfs::Error(EPERM, elle::sprintf("%s", e));
+      }
       catch (model::MissingBlock const& mb)
       {
         ELLE_WARN("Unexpected storage result on store: %s", mb);
@@ -568,6 +580,11 @@ namespace infinit
       catch(reactor::Terminate const& e)
       {
         throw;
+      }
+      catch (infinit::model::doughnut::ValidationFailed const& e)
+      {
+        ELLE_TRACE("perm exception %s", e);
+        throw rfs::Error(EPERM, elle::sprintf("%s", e));
       }
       catch (model::MissingBlock const& mb)
       {
