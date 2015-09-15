@@ -1398,7 +1398,15 @@ namespace kelips
       p->insert_ttl--;
     if (p->ttl == 0)
     {
-      ELLE_WARN("%s: dropping putfile request for %x", *this, p->fileAddress);
+      packet::PutFileReply res;
+      res.sender = address_of_uuid(this->node_id());
+      res.request_id = p->request_id;
+      res.origin = p->originAddress;
+      res.fileAddress = p->fileAddress;
+      res.resultAddress = Address::null;
+      res.ttl = 0;
+      send(res, p->originEndpoint, p->originAddress);
+      ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
       return;
     }
 
@@ -1604,8 +1612,12 @@ namespace kelips
         if (r->barrier.opened())
         {
           ELLE_ASSERT(r->result.size());
-          results.push_back(r->result.front().second);
-          return;
+          if (r->result.front().first != Address::null)
+          {
+            results.push_back(r->result.front().second);
+            return;
+          }
+          ELLE_TRACE("%s: put failed, retry %s", *this, i);
         }
       }
     };
