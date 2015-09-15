@@ -119,9 +119,11 @@ run(variables_map const& args)
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
   bool cache = args.count("cache");
-  boost::optional<int> cache_size;
+  boost::optional<int> cache_size(0); // Not initializing warns on GCC 4.9
   if (args.count("cache") && args["cache"].as<int>() != 0)
     cache_size = args["cache"].as<int>();
+  else
+    cache_size.reset();
   bool async_writes =
     args.count("async-writes") && args["async-writes"].as<bool>();
   reactor::scheduler().signal_handle(
