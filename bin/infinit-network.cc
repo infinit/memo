@@ -114,7 +114,7 @@ create(variables_map const& args)
       storage.reset(
         new infinit::storage::StripStorageConfig(std::move(backends)));
   }
-  boost::optional<int> replicas;
+  int replicas = 1;
   if (args.count("replicas"))
     replicas = args["replicas"].as<int>();
   auto dht =

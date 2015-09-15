@@ -301,7 +301,7 @@ namespace infinit
     NetworkDescriptor(std::string name_,
                       std::unique_ptr<infinit::overlay::Configuration> overlay_,
                       infinit::cryptography::rsa::PublicKey owner_,
-                      boost::optional<int> replicas_)
+                      int replicas_)
       : name(std::move(name_))
       , overlay(std::move(overlay_))
       , owner(std::move(owner_))
@@ -313,10 +313,8 @@ namespace infinit
       , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-      , replicas(s.deserialize<boost::optional<int>>("replicas"))
-    {
-      this->serialize(s);
-    }
+      , replicas(s.deserialize<int>("replicas"))
+    {}
 
     void
     serialize(elle::serialization::Serializer& s)
@@ -330,7 +328,7 @@ namespace infinit
     std::string name;
     std::unique_ptr<infinit::overlay::Configuration> overlay;
     infinit::cryptography::rsa::PublicKey owner;
-    boost::optional<int> replicas;
+    int replicas;
   };
 
   struct Network

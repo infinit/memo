@@ -85,7 +85,7 @@ namespace infinit
         cryptography::rsa::PublicKey owner;
         Passport passport;
         boost::optional<std::string> name;
-        boost::optional<int> replicas;
+        int replicas;
 
         Configuration(
           std::unique_ptr<overlay::Configuration> overlay,
@@ -93,7 +93,7 @@ namespace infinit
           cryptography::rsa::PublicKey owner,
           Passport passport,
           boost::optional<std::string> name,
-          boost::optional<int> replicas);
+          int replicas);
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void

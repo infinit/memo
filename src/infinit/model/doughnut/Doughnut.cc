@@ -219,7 +219,7 @@ namespace infinit
         cryptography::rsa::PublicKey owner_,
         Passport passport_,
         boost::optional<std::string> name_,
-        boost::optional<int> replicas_)
+        int replicas_)
         : overlay(std::move(overlay_))
         , keys(std::move(keys_))
         , owner(std::move(owner_))
@@ -236,7 +236,7 @@ namespace infinit
         , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
-        , replicas(s.deserialize<boost::optional<int>>("replicas"))
+        , replicas(s.deserialize<int>("replicas"))
       {}
 
       void
@@ -298,7 +298,7 @@ namespace infinit
             }),
             dir,
             local,
-            replicas? *replicas : 1);
+            replicas);
         else
           return std::make_shared<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -311,7 +311,7 @@ namespace infinit
             }),
             dir,
             local,
-            replicas? *replicas : 1);
+            replicas);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
