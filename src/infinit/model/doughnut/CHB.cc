@@ -30,18 +30,20 @@ namespace infinit
         {}
 
         virtual
-        bool
+        blocks::ValidationResult
         _validate() const override
         {
           ELLE_DEBUG_SCOPE("%s: validate", *this);
           auto expected_address = CHB::_hash_address(this->data(), this->_salt);
           if (this->address() != expected_address)
           {
-            ELLE_DUMP("%s: address %x invalid, expecting %x",
-                      *this, this->address(), expected_address);
-            return false;
+            auto reason =
+              elle::sprintf("address %x invalid, expecting %x",
+                            this->address(), expected_address);
+            ELLE_DUMP("%s: %s", *this, reason);
+            return blocks::ValidationResult::failure(reason);
           }
-          return true;
+          return blocks::ValidationResult::success();
         }
 
       // Serialization

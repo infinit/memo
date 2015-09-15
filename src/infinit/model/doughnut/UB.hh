@@ -46,7 +46,7 @@ namespace infinit
         void
         _seal() override;
         virtual
-        bool
+        blocks::ValidationResult
         _validate() const override;
 
       /*--------------.

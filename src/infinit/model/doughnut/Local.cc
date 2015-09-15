@@ -84,13 +84,13 @@ namespace infinit
           typename elle::serialization::binary::SerializerIn input(s, false);
           input.set_context<Doughnut*>(this->_doughnut);
           auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
-          if (!block.validate(*previous))
-            throw ValidationFailed("FIXME");
+          if (auto res = block.validate(*previous)); else
+            throw ValidationFailed(res.reason());
         }
         catch (storage::MissingKey const&)
         {
-          if (!block.validate())
-            throw ValidationFailed("FIXME");
+          if (auto res = block.validate()); else
+            throw ValidationFailed(res.reason());
         }
         elle::Buffer data;
         {

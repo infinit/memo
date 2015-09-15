@@ -64,27 +64,27 @@ namespace infinit
       Block::_seal()
       {}
 
-      bool
+      ValidationResult
       Block::validate() const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
         return this->_validate();
       }
 
-      bool
+      ValidationResult
       Block::validate(Block const& previous) const
       {
         ELLE_DEBUG_SCOPE("%s: validate against %s", *this, previous);
         return this->_validate(previous);
       }
 
-      bool
+      ValidationResult
       Block::_validate() const
       {
-        return true;
+        return ValidationResult::success();
       }
 
-      bool
+      ValidationResult
       Block::_validate(Block const&) const
       {
         return this->_validate();

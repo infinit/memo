@@ -5,6 +5,7 @@
 # include <elle/Printable.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/model/blocks/ValidationResult.hh>
 # include <infinit/model/fwd.hh>
 
 namespace infinit
@@ -50,19 +51,19 @@ namespace infinit
       public:
         void
         seal();
-        bool
+        ValidationResult
         validate() const;
-        bool
+        ValidationResult
         validate(Block const& previous) const;
       protected:
         virtual
         void
         _seal();
         virtual
-        bool
+        ValidationResult
         _validate() const;
         virtual
-        bool
+        ValidationResult
         _validate(Block const& previous) const;
 
       /*--------------.

@@ -40,15 +40,16 @@ namespace infinit
         return Address(hash.contents());
       }
 
-      bool
+      blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
         auto expected_address = this->_hash_address();
         if (address != expected_address)
         {
-          ELLE_DUMP("%s: address %x invalid, expecting %x",
-                    *this, address, expected_address);
-          return false;
+          auto reason = elle::sprintf("address %x invalid, expecting %x",
+                                      address, expected_address);
+          ELLE_DUMP("%s: %s", *this, reason);
+          return blocks::ValidationResult::failure(reason);
         }
         else
           ELLE_DUMP("%s: address is valid", *this);
@@ -56,10 +57,10 @@ namespace infinit
           <cryptography::rsa::PublicKey, elle::serialization::Json>
           (this->_owner_key);
         if (!this->_key.verify(this->OKBHeader::_signature, owner_key_buffer))
-          return false;
+          return blocks::ValidationResult::failure("owner key invalid");
         else
           ELLE_DUMP("%s: owner key is valid", *this);
-        return true;
+        return blocks::ValidationResult::success();
       }
 
       OKBHeader::OKBHeader(cryptography::rsa::PublicKey key,
@@ -207,28 +208,29 @@ namespace infinit
       }
 
       template <typename Block>
-      bool
+      blocks::ValidationResult
       BaseOKB<Block>::_validate(blocks::Block const& previous) const
       {
-        if (!this->_validate())
-          return false;
+        if (auto res = this->_validate()); else
+          return res;
         if (!this->_validate_version<BaseOKB<Block>>
             (previous, &BaseOKB<Block>::_version, this->version()))
-          return false;
-        return true;
+          return blocks::ValidationResult::failure("version validation failed");
+        return blocks::ValidationResult::success();
       }
 
       template <typename Block>
-      bool
+      blocks::ValidationResult
       BaseOKB<Block>::_validate() const
       {
-        if (!static_cast<OKBHeader const*>(this)->validate(this->address()))
-          return false;
+        if (auto res = static_cast<OKBHeader const*>
+            (this)->validate(this->address())); else
+          return res;
         auto sign = this->_sign();
         if (!this->_check_signature
             (this->_owner_key, this->_signature, sign, "owner"))
-          return false;
-        return true;
+          return blocks::ValidationResult::failure("invalid signature");
+        return blocks::ValidationResult::success();
       }
 
       template <typename Block>

@@ -258,48 +258,50 @@ namespace infinit
       | Validation |
       `-----------*/
 
-      bool
+      blocks::ValidationResult
       ACB::_validate(blocks::Block const& previous) const
       {
-        if (!Super::_validate(previous))
-          return false;
-        if (!this->_validate_version<ACB>
-            (previous, &ACB::_data_version, this->_data_version))
-          return false;
-        return true;
+        if (auto res = Super::_validate(previous)); else
+          return res;
+        if (auto res = this->_validate_version<ACB>
+            (previous, &ACB::_data_version, this->_data_version)); else
+          return res;
+        return blocks::ValidationResult::success();
       }
 
-      bool
+      blocks::ValidationResult
       ACB::_validate() const
       {
         ELLE_DEBUG("%s: check owner signature", *this)
-          if (!Super::_validate())
-            return false;
+          if (auto res = Super::_validate()); else
+            return res;
         ACLEntry* entry = nullptr;
         std::vector<ACLEntry> entries;
         if (this->_editor != -1)
         {
           ELLE_DEBUG_SCOPE("%s: check author has write permissions", *this);
           if (this->_acl == Address::null || this->_editor < 0)
-            return false;
+            return blocks::ValidationResult::failure("no ACL or no editor");
           auto acl = this->doughnut()->fetch(this->_acl);
           elle::IOStream input(acl->data().istreambuf());
           elle::serialization::json::SerializerIn s(input);
           s.serialize("entries", entries);
           if (this->_editor >= signed(entries.size()))
-            return false;
+            return blocks::ValidationResult::failure
+              ("editor index out of bounds");
           entry = &entries[this->_editor];
           if (!entry->write)
-            return false;
+            return blocks::ValidationResult::failure("no write permission");
         }
         ELLE_DEBUG("%s: check author signature", *this)
         {
           auto sign = this->_data_sign();
           auto& key = entry ? entry->key : this->owner_key();
           if (!this->_check_signature(key, this->_data_signature, sign, "data"))
-            return false;
+            return blocks::ValidationResult::failure
+              ("author signature invalid");
         }
-        return true;
+        return blocks::ValidationResult::success();
       }
 
       void

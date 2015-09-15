@@ -73,10 +73,10 @@ namespace infinit
       `-----------*/
       protected:
         virtual
-        bool
+        blocks::ValidationResult
         _validate(blocks::Block const& previous) const override;
         virtual
-        bool
+        blocks::ValidationResult
         _validate() const override;
         virtual
         void

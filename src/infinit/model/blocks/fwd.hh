@@ -9,8 +9,9 @@ namespace infinit
     {
       class ACLBlock;
       class Block;
-      class MutableBlock;
       class ImmutableBlock;
+      class MutableBlock;
+      class ValidationResult;
     }
   }
 }

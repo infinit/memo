@@ -153,6 +153,8 @@ def configure(
     'src/infinit/model/blocks/ImmutableBlock.hh',
     'src/infinit/model/blocks/MutableBlock.cc',
     'src/infinit/model/blocks/MutableBlock.hh',
+    'src/infinit/model/blocks/ValidationResult.cc',
+    'src/infinit/model/blocks/ValidationResult.hh',
     'src/infinit/model/blocks/fwd.hh',
     'src/infinit/model/doughnut/ACB.cc',
     'src/infinit/model/doughnut/ACB.hh',

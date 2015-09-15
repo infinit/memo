@@ -876,7 +876,7 @@ void test_acl()
   BOOST_CHECK(can_access(m1 / "dirs" / "dir" / "coin"));
   BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 2);
 
-    // readonly
+  // readonly
   bfs::create_directory(m0 / "dir2");
   setxattr((m0 / "dir2").c_str(), "user.infinit.auth.setr",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);

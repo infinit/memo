@@ -30,7 +30,7 @@ namespace infinit
       | Contents |
       `---------*/
       public:
-        bool
+        blocks::ValidationResult
         validate(Address const& address) const;
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner_key);
@@ -106,10 +106,10 @@ namespace infinit
         void
         _seal_okb();
         virtual
-        bool
+        blocks::ValidationResult
         _validate(blocks::Block const& previous) const override;
         virtual
-        bool
+        blocks::ValidationResult
         _validate() const override;
       protected:
         virtual
@@ -122,7 +122,7 @@ namespace infinit
                          std::string const& name) const;
 
         template <typename T>
-        bool
+        blocks::ValidationResult
         _validate_version(blocks::Block const& other_,
                           int T::*member,
                           int version) const;

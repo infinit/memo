@@ -53,7 +53,7 @@ namespace infinit
       {}
 
       // FIXME: factor with CHB
-      bool
+      blocks::ValidationResult
       UB::_validate() const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
@@ -63,11 +63,12 @@ namespace infinit
 
         if (this->address() != expected_address)
         {
-          ELLE_DUMP("%s: address %x invalid, expecting %x",
-                    *this, this->address(), expected_address);
-          return false;
+          auto reason = elle::sprintf("address %x invalid, expecting %x",
+                                      this->address(), expected_address);
+          ELLE_DUMP("%s: %s", *this, reason);
+          return blocks::ValidationResult::failure(reason);
         }
-        return true;
+        return blocks::ValidationResult::success();
       }
 
       /*--------------.
