@@ -51,7 +51,7 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("perm exception %s", e);
-        throw rfs::Error(EPERM, elle::sprintf("%s", e));
+        throw rfs::Error(EACCES, elle::sprintf("%s", e));
       }
       catch(elle::Exception const& e)
       {
@@ -546,7 +546,7 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("perm exception %s", e);
-        throw rfs::Error(EPERM, elle::sprintf("%s", e));
+        throw rfs::Error(EACCES, elle::sprintf("%s", e));
       }
       catch (model::MissingBlock const& mb)
       {
@@ -584,7 +584,7 @@ namespace infinit
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
         ELLE_TRACE("perm exception %s", e);
-        throw rfs::Error(EPERM, elle::sprintf("%s", e));
+        throw rfs::Error(EACCES, elle::sprintf("%s", e));
       }
       catch (model::MissingBlock const& mb)
       {
@@ -722,7 +722,7 @@ namespace infinit
           empty = d.empty();
           return d.istreambuf();
         }
-        , EPERM));
+        , EACCES));
       if (empty)
       {
         _last_fetch = now;
@@ -1517,7 +1517,7 @@ namespace infinit
         if (!_first_block || !_handle_count)
           _first_block = elle::cast<MutableBlock>::runtime
             (_owner.fetch_or_die(_parent->_files.at(_name).address));
-        Header header = umbrella([&] {return _header();}, EPERM);
+        Header header = umbrella([&] {return _header();}, EACCES);
         st->st_size = header.total_size;
         st->st_nlink = header.links;
         st->st_blocks = st->st_size / 512;
@@ -1944,7 +1944,7 @@ namespace infinit
         ELLE_ASSERT(acl);
         ELLE_TRACE("Setting permission at %s", acl->address());
         umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
-          EPERM);
+          EACCES);
         _owner.store_or_die(*acl); // FIXME STORE MODE
       }
       else
@@ -1984,7 +1984,7 @@ namespace infinit
         }
         ELLE_TRACE("Setting permission at %s", acl->address());
         umbrella([&] { acl->set_permissions(*user, perms.first, perms.second);},
-          EPERM);
+          EACCES);
         ELLE_TRACE("Storing acl block at %s", acl->address());
         _owner.store_or_die(*acl); // FIXME STORE MODE
       }
