@@ -345,7 +345,6 @@ run(variables_map const& args)
           hosts.push_back(elle::sprintf("%s:%s", addr, endpoints.port));
       }
   }
-  std::cerr << "HOSTS: " << hosts << std::endl;
   auto local = network.run(hosts);
   if (!local.first)
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
