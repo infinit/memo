@@ -499,7 +499,7 @@ namespace kelips
     auto oldkey = getKey(a, e);
     if (oldkey)
     {
-      ELLE_WARN("%s: overriding key %s -> %s  for %s : %s",
+      ELLE_DEBUG("%s: overriding key %s -> %s  for %s : %s",
         *this, key_hash(*oldkey), key_hash(sk), e, a);
       if (a != Address())
         _keys.find(a)->second = std::move(sk);
@@ -554,9 +554,10 @@ namespace kelips
     else
     {
       if (!key)
-      { // FIXME queue packet
-        ELLE_WARN("%s: dropping packet to %s : %s, no key available",
-                  *this, e, a);
+      {
+        // FIXME queue packet
+        ELLE_DEBUG("%s: dropping packet to %s : %s, no key available",
+                   *this, e, a);
         send_key_request = true;
       }
       else
@@ -643,8 +644,9 @@ namespace kelips
             }
             catch (infinit::cryptography::Error const& e)
             {
-              ELLE_WARN("%s: decryption with %s from %s : %s failed: %s",
-                        *this, key_hash(*key), source, packet->sender, e.what());
+              ELLE_DEBUG(
+                "%s: decryption with %s from %s : %s failed: %s",
+                *this, key_hash(*key), source, packet->sender, e.what());
             }
           }
           if (failure)
