@@ -1588,7 +1588,7 @@ namespace kelips
         {
           if (fg != _group || _observer)
             throw std::runtime_error("No contacts in self/target groups");
-          // Store locally if not already there
+          // Bootstraping only: Store locally if not already there
           bool have_file = std::find_if(_state.files.begin(), _state.files.end(),
             [&] (Files::value_type const& v)
           {
@@ -1596,7 +1596,7 @@ namespace kelips
               && v.second.home_node == address_of_uuid(this->node_id());
           }) != _state.files.end();
 
-          if (!have_file && std::find(_promised_files.begin(), _promised_files.end(), p.fileAddress)
+          if (_config.bootstrap_nodes.empty() && !have_file && std::find(_promised_files.begin(), _promised_files.end(), p.fileAddress)
             == _promised_files.end())
           {
             _promised_files.push_back(p.fileAddress);
