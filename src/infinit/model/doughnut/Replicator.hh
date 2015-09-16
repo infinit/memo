@@ -35,6 +35,8 @@ namespace infinit
         _process_cache();
         void
         _process_loop();
+        std::unique_ptr<blocks::Block>
+        _vote(overlay::Overlay::Members peers, Address address);
         overlay::Overlay* _overlay;
         boost::filesystem::path _journal_dir;
         reactor::Thread _process_thread;

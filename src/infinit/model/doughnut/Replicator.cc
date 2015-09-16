@@ -165,9 +165,38 @@ namespace infinit
           p->remove(address);
       }
 
+      std::unique_ptr<blocks::Block>
+      Replicator::_vote(overlay::Overlay::Members peers, Address address)
+      {
+        std::vector<std::unique_ptr<blocks::Block>> blocks;
+        for (auto& peer: peers)
+          blocks.push_back(peer->fetch(address));
+        std::vector<std::unique_ptr<blocks::Block>> voted_blocks;
+        std::vector<int> votes;
+        for (auto& b: blocks)
+        {
+          auto it = std::find_if(voted_blocks.begin(), voted_blocks.end(),
+            [&] (std::unique_ptr<blocks::Block>& vb) {
+              return *b == *vb;
+            });
+          if (it == voted_blocks.end())
+          {
+            voted_blocks.push_back(std::move(b));
+            votes.push_back(1);
+          }
+          else
+            votes[it - voted_blocks.begin()]++;
+        }
+        auto maxIndex = std::max_element(votes.begin(), votes.end()) - votes.begin();
+        int nmax = std::count(votes.begin(), votes.end(), votes[maxIndex]);
+        if (nmax > 1)
+          throw elle::Error(
+            elle::sprintf("Multiple values with %s votes", votes[maxIndex]));
+        return std::move(voted_blocks[maxIndex]);
+      }
+
       void Replicator::_process_cache()
       {
-        int network_size = 0;
         if (!_overlay)
           return;
         ELLE_TRACE("checking cache");
@@ -181,11 +210,6 @@ namespace infinit
             boost::filesystem::ifstream ifs(it->path());
             ifs >> known_replicas;
           }
-          if (network_size && known_replicas >= network_size)
-          {
-            ELLE_DEBUG("not dequeuing: network_size = %s", network_size);
-            continue;
-          }
           overlay::Overlay::Members peers;
           try
           {
@@ -197,47 +221,30 @@ namespace infinit
             boost::filesystem::remove(it->path());
             continue;
           }
-          ELLE_TRACE("Expected %s results, got %s for %s",
-                     known_replicas, peers.size(), address);
-          if (signed(peers.size()) >= _factor)
+          ELLE_TRACE("got %s/%s peers for %s",
+                     peers.size(), known_replicas, address);
+          if (signed(peers.size()) <=  known_replicas)
           {
-            boost::filesystem::remove(it->path());
+            ELLE_TRACE("No new matches for %s", address);
             continue;
           }
           std::unique_ptr<blocks::Block> block;
           try
           {
-            block = fetch_from_members(peers, address);
+            block = _vote(peers, address);
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("Failed to fetch block data");
+            ELLE_WARN("Failed to resolve block conflict");
             continue;
           }
-          int need = _factor - peers.size();
-          try
-          {
-            peers = _overlay->lookup(address, need, overlay::OP_INSERT, false);
-          }
-          catch (MissingBlock const& b)
-          {
-            ELLE_TRACE("Got 0 out of %s peers", need);
-            continue;
-          }
-          ELLE_TRACE("Got %s out of %s peers", peers.size(), need);
           for (auto const& p: peers)
           {
-            p->store(*block, STORE_INSERT);
+            p->store(*block, STORE_UPDATE);
           }
-          if (signed(peers.size()) == need)
+          if (signed(peers.size()) == _factor)
           {
             boost::filesystem::remove(it->path());
-          }
-          else
-          {
-            int ns = peers.size() + (_factor - need);
-            if (network_size == 0 || network_size < ns)
-              network_size = ns;
           }
         }
         ELLE_TRACE("done checking cache");
