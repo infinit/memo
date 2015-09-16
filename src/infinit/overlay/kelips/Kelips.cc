@@ -1507,7 +1507,6 @@ namespace kelips
       if (result_set.size() >= unsigned(n))
       { // Request completed locally
         std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
-        result.resize(n);
         return result;
       }
     }
@@ -1530,8 +1529,6 @@ namespace kelips
           throw reactor::Timeout(boost::posix_time::milliseconds(
             _config.query_timeout_ms * _config.query_get_retries));
         std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
-        if (result.size() > unsigned(n))
-          result.resize(n);
         return result;
       }
       ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
@@ -1557,8 +1554,6 @@ namespace kelips
       throw reactor::Timeout(boost::posix_time::milliseconds(
         _config.query_timeout_ms * _config.query_get_retries));
     std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
-    if (signed(result.size()) > n)
-      result.resize(n);
     return result;
   }
 
