@@ -85,9 +85,9 @@ class User:
     self.__name = name
     self.__public_key = public_key
     self.__dropbox_accounts = dropbox_accounts or {}
-    self.__dropbox_accounts_original = dict(self.dropbox_accounts)
+    self.__dropbox_accounts_original = deepcopy(self.dropbox_accounts)
     self.__google_accounts = google_accounts or {}
-    self.__google_accounts_original = dict(self.google_accounts)
+    self.__google_accounts_original = deepcopy(self.google_accounts)
 
   @classmethod
   def from_json(self, beyond, json):

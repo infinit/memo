@@ -119,6 +119,7 @@ namespace infinit
         {
           throw MissingBlock(e.key());
         }
+        ELLE_DUMP("data: %s", data.string());
         elle::IOStream s(data.istreambuf());
         Serializer::SerializerIn input(s, false);
         input.set_context<Doughnut*>(this->_doughnut);

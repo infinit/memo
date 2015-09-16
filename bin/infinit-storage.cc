@@ -6,6 +6,7 @@
 #include <elle/serialization/json.hh>
 
 #include <infinit/storage/Dropbox.hh>
+#include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Storage.hh>
 
@@ -43,8 +44,21 @@ create(variables_map const& args)
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
       (std::move(*path));
   }
+  if (args.count("google"))
+  {
+    auto root = optional(args, "root");
+    if (!root)
+      root = name;
+    auto account_name = mandatory(args, "account");
+    auto account = ifnt.credentials_google(account_name);
+    config =
+      elle::make_unique<infinit::storage::GoogleDriveStorageConfig>
+      (std::move(root),
+       account.refresh_token,
+       self_user(ifnt, {}).name);
+  }
   if (!config)
-      throw CommandLineError("storage type unspecified");
+    throw CommandLineError("storage type unspecified");
   if (!args.count("stdout") || !args["stdout"].as<bool>())
   {
     ifnt.storage_save(name, *config);
@@ -74,6 +88,7 @@ main(int argc, char** argv)
   options_description storage_types("Storage types");
   storage_types.add_options()
     ("dropbox", "store data in a Dropbox account")
+    ("google", "store data in a Google Drive account")
     ("filesystem", "store files on a local filesystem")
     ;
   options_description fs_storage_options("Filesystem storage options");
@@ -91,18 +106,18 @@ main(int argc, char** argv)
   Modes modes {
     {
       "create",
-      "Create a storage",
-      &create,
-      "STORAGE-TYPE [STORAGE-OPTIONS...]",
-      {
-        { "name", value<std::string>(), "storage name" },
-        { "stdout", bool_switch(), "output configuration to stdout" },
-      },
-      {
-        storage_types,
-        fs_storage_options,
-        dropbox_storage_options,
-      },
+        "Create a storage",
+        &create,
+        "STORAGE-TYPE [STORAGE-OPTIONS...]",
+        {
+          { "name", value<std::string>(), "storage name" },
+          { "stdout", bool_switch(), "output configuration to stdout" },
+        },
+        {
+          storage_types,
+          fs_storage_options,
+          dropbox_storage_options,
+        },
     },
     {
       "list",

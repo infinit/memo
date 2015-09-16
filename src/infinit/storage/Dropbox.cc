@@ -36,6 +36,7 @@ namespace infinit
       ELLE_DEBUG("get %x", key);
       try
       {
+        ELLE_DEBUG("get path: %s", this->_path(key));
         return this->_dropbox.get(this->_path(key));
       }
       catch (dropbox::NoSuchFile const&)

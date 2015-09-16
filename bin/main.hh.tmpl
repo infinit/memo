@@ -39,6 +39,7 @@ struct Credentials
   std::string uid;
   std::string display_name;
   std::string token;
+  std::string refresh_token;
 };
 
 class CommandLineError
@@ -51,7 +52,7 @@ public:
   {}
 };
 
-DAS_MODEL(Credentials, (uid, display_name, token), DasCredentials);
+DAS_MODEL(Credentials, (uid, display_name, token, refresh_token), DasCredentials);
 DAS_MODEL_DEFAULT(Credentials, DasCredentials);
 DAS_MODEL_SERIALIZE(Credentials);
 
@@ -224,6 +225,13 @@ namespace infinit
     catch (elle::Exit const& e)
     {
       return e.return_code();
+    }
+    catch (elle::Exception const& e)
+    {
+      if (!elle::os::getenv("INFINIT_BACKTRACE", "").empty())
+        elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.backtrace());
+      else
+        elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
     }
     catch (std::exception const& e)
     {

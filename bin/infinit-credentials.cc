@@ -62,6 +62,7 @@ fetch_credentials(infinit::User const& user,
     throw elle::Error(elle::sprintf("user %s is not published",
                                     user.name));
   }
+  ELLE_DUMP("response: %s", r);
   auto credentials =
     elle::serialization::json::deserialize<std::vector<Credentials>>
     (r, "credentials", false);

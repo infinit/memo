@@ -210,6 +210,8 @@ def configure(
     'src/infinit/storage/Dropbox.hh',
     'src/infinit/storage/Filesystem.cc',
     'src/infinit/storage/Filesystem.hh',
+    'src/infinit/storage/GoogleDrive.cc',
+    'src/infinit/storage/GoogleDrive.hh',
     'src/infinit/storage/Key.hh',
     'src/infinit/storage/Latency.cc',
     'src/infinit/storage/Latency.hh',
