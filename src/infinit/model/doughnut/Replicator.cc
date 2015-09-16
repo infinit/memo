@@ -144,7 +144,8 @@ namespace infinit
       Replicator::_fetch(overlay::Overlay& overlay, Address address)
       {
         _overlay = &overlay;
-        auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH, false);
+        static bool redundancy = getenv("INFINIT_REPLICATOR_REDUNDANT_GET");
+        auto peers = overlay.lookup(address, redundancy ? _factor : 1, overlay::OP_FETCH, false);
         if (signed(peers.size()) != _factor)
         {
           ELLE_TRACE("fetch with only %s of %s members", peers.size(), _factor);
