@@ -51,7 +51,7 @@ namespace infinit
       , _journal_dir(journal_dir)
       , _process_thread("replicator", [&] { _process_loop();})
       {
-        ELLE_LOG("using journal at %s", _journal_dir);
+        ELLE_TRACE("%s: using journal at %s", *this, this->_journal_dir);
         boost::filesystem::create_directories(_journal_dir);
       }
 
