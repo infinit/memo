@@ -39,7 +39,6 @@ create(variables_map const& args)
     hosts = args["host"].as<std::vector<std::string>>();
   auto model = network.run(hosts);
   ELLE_TRACE("create volume");
-  report("creating volume root blocks");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
   infinit::Volume volume(
     name, mountpoint, network.name);
