@@ -103,7 +103,10 @@ namespace infinit
           default:
             elle::unreachable();
         }
-        auto peers = overlay.lookup(block.address(), _factor, op, false);
+        // Only allow create through if _factor nodes are reached.
+        // Let other operations through with degraded node count.
+        auto peers = overlay.lookup(block.address(), _factor, op,
+          op == overlay::OP_INSERT);
         ELLE_TRACE("Overlay produced %s peers", peers.size());
         for (auto const& p: peers)
           p->store(block, mode);
