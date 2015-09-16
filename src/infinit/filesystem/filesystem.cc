@@ -524,13 +524,19 @@ namespace infinit
       {
         _block_store->remove(address);
       }
-      catch (model::MissingBlock const& mb)
+      catch (model::MissingBlock const&)
       {
-        ELLE_WARN("Unexpected storage result: %s", mb);
+        ELLE_DEBUG("%s: block was not published", *this);
       }
       catch (elle::Exception const& e)
       {
-        ELLE_WARN("Unexpected exception: %s", e.what());
+        ELLE_ERR("%s: unexpected exception: %s", *this, e.what());
+        throw;
+      }
+      catch (...)
+      {
+        ELLE_ERR("%s: unknown exception", *this);
+        throw;
       }
     }
 
