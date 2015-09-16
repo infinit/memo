@@ -228,7 +228,6 @@ static void run_filesystem_dht(std::string const& store,
   ELLE_TRACE("got %s nodes, preparing %s mounts", nodes.size(), nmount);
   std::vector<reactor::Thread*> threads;
   reactor::Thread t(*sched, "fs", [&] {
-    std::string root;
     mount_points.reserve(nmount);
     for (int i=0; i< nmount; ++i)
     {
@@ -243,14 +242,15 @@ static void run_filesystem_dht(std::string const& store,
       if (nmount == 1)
       {
         ELLE_TRACE("configuring mounter...");
-        auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-        keys.push_back(kp.K());
-        infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner_keys.k());
+        //auto kp = infinit::cryptography::rsa::keypair::generate(2048);
+        //keys.push_back(kp.K());
+        keys.push_back(owner_keys.K());
+        infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys.k());
         ELLE_TRACE("instantiating dougnut...");
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
           "testnet",
-          std::move(kp),
+          owner_keys,
           owner_keys.K(),
           passport,
           static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
@@ -262,7 +262,7 @@ static void run_filesystem_dht(std::string const& store,
           );
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
-        ops = elle::make_unique<ifs::FileSystem>(std::move(model));
+        ops = elle::make_unique<ifs::FileSystem>("default-volume", std::move(model));
         ELLE_TRACE("instantiating fs...");
         fs = new reactor::filesystem::FileSystem(std::move(ops), true);
         ELLE_TRACE("running mounter...");
@@ -287,10 +287,6 @@ static void run_filesystem_dht(std::string const& store,
         // Having more than one mount in the same process is failing
         // Make a config file.
         elle::json::Object r;
-        if( i > 0)
-        {
-          r["root_address"] = root;
-        }
         r["single_mount"] = false;
         r["mountpoint"] = mp;
         elle::json::Object model;
@@ -310,9 +306,14 @@ static void run_filesystem_dht(std::string const& store,
         model["overlay"] = overlay;
         model["replicas"] = 1;
         r["model"] = model;
-        std::string kps = serialize(kp);
+        std::string kps;
+        if (i == 0)
+          kps = serialize(owner_keys);
+        else
+          kps = serialize(kp);
         std::string owner_ser = serialize(owner_keys.K());
-        infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner_keys.k());
+        infinit::model::doughnut::Passport passport(
+          i == 0 ? owner_keys.K() : kp.K(), "testnet", owner_keys.k());
         std::string passport_ser = serialize(passport);
         std::stringstream ss;
         elle::json::write(ss, r, true);
@@ -333,28 +334,8 @@ static void run_filesystem_dht(std::string const& store,
           "-c",
           (mountpoint + "/" + std::to_string(i))
         };
-        if (i == 0)
-        {
-          args.push_back("--rootfile");
-          args.push_back(mountpoint + "/" +"root");
-        }
         processes.emplace_back(new elle::system::Process(args));
-        if (i == 0)
-        {
-          ELLE_TRACE("Waiting for root address");
-          while (true)
-          {
-            usleep(10000);
-            std::ifstream ifs(mountpoint + "/" +"root");
-            if (ifs.good())
-            {
-              ifs >> root;
-              if (!root.empty())
-                break;
-            }
-          }
-          ELLE_TRACE("Got root: %s", root);
-        }
+        reactor::sleep(1_sec);
       }
     }
   });
@@ -392,7 +373,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     model = elle::make_unique<infinit::model::faith::Faith>(
       std::unique_ptr<infinit::storage::Storage>(storage));
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
-      std::move(model));
+      "default-volume", std::move(model));
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
     mount_points.push_back(mountpoint);
     mounted = true;
@@ -899,7 +880,7 @@ ELLE_TEST_SUITE()
   signal(SIGCHLD, SIG_IGN);
   boost::unit_test::test_suite* filesystem = BOOST_TEST_SUITE("filesystem");
   boost::unit_test::framework::master_test_suite().add(filesystem);
-  filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
+  // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
   filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 120);
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails

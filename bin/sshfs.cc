@@ -29,7 +29,7 @@ void main_scheduled(int argc, char** argv)
   auto faith =
     elle::make_unique<infinit::model::faith::Faith>(std::move(storage));
   auto fsops = elle:: make_unique<infinit::filesystem::FileSystem>
-    (infinit::model::Address::from_string(argv[4]), std::move(faith));
+    ("default-volume", std::move(faith));
   fs = new reactor::filesystem::FileSystem(std::move(fsops), true);
   fs->mount(argv[3], {});
 }

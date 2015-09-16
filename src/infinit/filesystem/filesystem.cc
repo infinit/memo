@@ -19,7 +19,9 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
+#include <infinit/model/doughnut/NB.hh>
 
 #include <infinit/version.hh>
 
@@ -505,11 +507,11 @@ namespace infinit
       return block->address();
     }
 
-    FileSystem::FileSystem(model::Address root,
+    FileSystem::FileSystem(std::string const& volume_name,
                            std::shared_ptr<model::Model> model)
-      : _root_address(root)
-      , _block_store(std::move(model))
+      : _block_store(std::move(model))
       , _single_mount(false)
+      , _volume_name(volume_name)
     {
       reactor::scheduler().signal_handle
         (SIGUSR1, [this] { this->print_cache_stats();});
@@ -623,27 +625,6 @@ namespace infinit
       return {};
     }
 
-    static
-    std::unique_ptr<model::blocks::ACLBlock>
-    _make_root_block(infinit::model::Model& model)
-    {
-      std::unique_ptr<model::blocks::ACLBlock> root
-        = model.make_block<model::blocks::ACLBlock>();
-      ELLE_DEBUG("Creating and storing root block at %x", root->address());
-      model.store(*root, model::STORE_INSERT);
-      return root;
-    }
-
-    FileSystem::FileSystem(std::shared_ptr<model::Model> model)
-      : _root_address(_make_root_block(*model)->address())
-      , _block_store(nullptr)
-      , _single_mount(false)
-    {
-      ELLE_ASSERT(model.get());
-      this->_block_store = std::move(model);
-      ELLE_TRACE("create root block at address: %x", this->_root_address);
-    }
-
     void
     FileSystem::print_cache_stats()
     {
@@ -678,7 +659,36 @@ namespace infinit
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
-      return elle::cast<MutableBlock>::runtime(fetch_or_die(_root_address));
+      auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
+      Address addr = model::doughnut::NB::address(dn->owner(), _volume_name + ".root");
+      while (true)
+      {
+        try
+        {
+          ELLE_DEBUG("Fetching bootstrap block at %x", addr);
+          auto block = _block_store->fetch(addr);
+          ELLE_DEBUG("got %s", block->data().string());
+          addr = Address::from_string(block->data().string().substr(2));
+          break;
+        }
+        catch (model::MissingBlock const& e)
+        {
+          ELLE_TRACE("No root NB");
+          if (dn->owner() == dn->keys().K())
+          {
+            ELLE_TRACE("Creating root block");
+            std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
+            auto saddr = elle::sprintf("%x", mb->address());
+            elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
+            store_or_die(*mb, model::STORE_INSERT);
+            model::doughnut::NB nb(dn.get(), dn->owner(), _volume_name + ".root", baddr);
+            store_or_die(nb, model::STORE_INSERT);
+            return mb;
+          }
+          reactor::sleep(1_sec);
+        }
+      }
+      return elle::cast<MutableBlock>::runtime(fetch_or_die(addr));
     }
 
     static const int DIRECTORY_MASK = 0040000;

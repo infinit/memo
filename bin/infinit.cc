@@ -166,31 +166,9 @@ main(int argc, char** argv)
           model = cfg.model->make({}, true, true, p);
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
           ELLE_TRACE("initialize filesystem")
-            if (cfg.root_address)
             {
-              using infinit::model::Address;
-              auto root = elle::serialization::Serialize<Address>::
-                convert(cfg.root_address.get());
               fs = elle::make_unique<infinit::filesystem::FileSystem>
-                (root, std::move(model));
-            }
-            else
-            {
-              fs = elle::make_unique<infinit::filesystem::FileSystem>(
-                std::move(model));
-              std::cout << "No root block specified, generating fresh one:"
-                        << std::endl;
-              std::stringstream ss;
-              {
-                elle::serialization::json::SerializerOut output(ss);
-                output.serialize_forward(fs->root_address());
-              }
-              std::cout << ss.str();
-              if (root_address_file)
-              {
-                std::ofstream ofs(*root_address_file);
-                ofs << ss.str().substr(1, ss.str().size()-3);
-              }
+                ("default-volume", std::move(model));
             }
           if (cfg.single_mount && *cfg.single_mount)
             fs->single_mount(true);

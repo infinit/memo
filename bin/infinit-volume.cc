@@ -40,9 +40,9 @@ create(variables_map const& args)
   auto model = network.run(hosts);
   ELLE_TRACE("create volume");
   report("creating volume root blocks");
-  auto fs = elle::make_unique<infinit::filesystem::FileSystem>(model.second);
+  auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
   infinit::Volume volume(
-    name, mountpoint, fs->root_address(), network.name);
+    name, mountpoint, network.name);
   if (args.count("stdout") && args["stdout"].as<bool>())
   {
     elle::serialization::json::SerializerOut s(std::cout, false);
