@@ -232,6 +232,7 @@ namespace infinit
         elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.backtrace());
       else
         elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
+      return 1;
     }
     catch (std::exception const& e)
     {

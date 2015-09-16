@@ -180,10 +180,10 @@ namespace infinit
                                id);
       auto r = this->_request(url,
                               Method::DELETE,
-                              {},
+                              Request::QueryDict{},
                               conf,
-                              {{StatusCode::Not_Found,
-                                StatusCode::No_Content}});
+                              std::vector<StatusCode>{StatusCode::Not_Found,
+                                                      StatusCode::No_Content});
 
       if (r.status() == StatusCode::Not_Found)
         throw elle::Error(elle::sprintf("File %s not found", id));

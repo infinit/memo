@@ -257,7 +257,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       'state': username,
     }
     if name == 'google':
-        params['approval_prompt'] = 'force'
+      params['approval_prompt'] = 'force'
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)
     url = req.prepare().url
@@ -284,10 +284,9 @@ for name, conf in Bottle._Bottle__oauth_services.items():
     contents = response.json()
     access_token = contents['access_token']
     if 'refresh_token' in contents:
-        refresh_token = contents['refresh_token']
+      refresh_token = contents['refresh_token']
     else:
-        # FIXME: If name != google the refresh_token is useless
-        refresh_token = ''
+      refresh_token = ''
     user = User(beyond, name = username)
     response = requests.get(
       conf['info_url'], params = {'access_token': access_token})
