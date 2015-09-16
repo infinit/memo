@@ -8,6 +8,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
@@ -147,9 +148,28 @@ ELLE_TEST_SCHEDULED(ACB)
   }
 }
 
+ELLE_TEST_SCHEDULED(NB)
+{
+  DHTs dhts;
+  auto block = elle::make_unique<dht::NB>(
+    dhts.dht_a.get(), dhts.keys_a.K(), "blockname",
+    elle::Buffer("blockdata", 9));
+  ELLE_LOG("owner: store NB")
+    dhts.dht_a->store(*block);
+  {
+    ELLE_LOG("other: fetch NB");
+    auto fetched =
+      dhts.dht_b->fetch(dht::NB::address(dhts.keys_a.K(), "blockname"));
+    BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
+    auto nb = elle::cast<dht::NB>::runtime(fetched);
+    BOOST_CHECK(nb);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(doughnut));
   suite.add(BOOST_TEST_CASE(ACB));
+  suite.add(BOOST_TEST_CASE(NB));
 }

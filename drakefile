@@ -164,6 +164,8 @@ def configure(
     'src/infinit/model/doughnut/Doughnut.hh',
     'src/infinit/model/doughnut/Local.cc',
     'src/infinit/model/doughnut/Local.hh',
+    'src/infinit/model/doughnut/NB.cc',
+    'src/infinit/model/doughnut/NB.hh',
     'src/infinit/model/doughnut/OKB.cc',
     'src/infinit/model/doughnut/OKB.hh',
     'src/infinit/model/doughnut/Passport.cc',
