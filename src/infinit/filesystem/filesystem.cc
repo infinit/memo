@@ -4,6 +4,7 @@
 #include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
+#include <elle/unordered_map.hh>
 
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json/SerializerIn.hh>
@@ -317,7 +318,7 @@ namespace infinit
       void _push_changes(bool first_write = false);
       Address _address;
       std::unique_ptr<ACLBlock> _block;
-      std::unordered_map<std::string, FileData> _files;
+      elle::unordered_map<std::string, FileData> _files;
       bool _inherit_auth; //child nodes inherit this dir's permissions
       boost::posix_time::ptime _last_fetch;
       friend class FileSystem;
