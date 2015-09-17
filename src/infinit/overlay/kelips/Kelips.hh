@@ -83,7 +83,7 @@ namespace infinit
       struct GossipConfiguration
       {
         GossipConfiguration();
-        GossipConfiguration(elle::serialization::SerializerIn& input) {serialize(input);}
+        GossipConfiguration(elle::serialization::SerializerIn& input);
         void
         serialize(elle::serialization::Serializer& s);
 
@@ -158,7 +158,8 @@ namespace infinit
              elle::UUID node_id,
              infinit::model::doughnut::Doughnut* doughnut);
         virtual ~Node();
-        void start();
+        void
+        start();
         void
         engage();
         void
@@ -167,65 +168,113 @@ namespace infinit
         std::vector<RpcEndpoint> address(Address file,
                                          infinit::overlay::Operation op,
                                          int n);
-        void print(std::ostream& stream) const override;
-        // local hooks interface
-        void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);
-        void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block>& res);
-        void remove(Address address);
-        // overlay
+        void
+        print(std::ostream& stream) const override;
+        /// local hooks interface
+        void
+        store(infinit::model::blocks::Block const& block,
+              infinit::model::StoreMode mode);
+        void
+        fetch(Address address,
+              std::unique_ptr<infinit::model::blocks::Block>& res);
+        void
+        remove(Address address);
+
+      /*--------.
+      | Overlay |
+      `--------*/
       protected:
-        virtual Overlay::Members _lookup(infinit::model::Address address, int n, infinit::overlay::Operation op) const override;
+        virtual
+        Overlay::Members
+        _lookup(infinit::model::Address address, int n,
+                infinit::overlay::Operation op) const override;
+
       private:
         typedef infinit::model::doughnut::Local Local;
         typedef infinit::overlay::Overlay Overlay;
-        void reload_state(Local& l);
-        void wait(int contacts);
-        void send(packet::Packet& p, GossipEndpoint e, Address a);
-        int group_of(Address const& address); // consistent address -> group mapper
-        void gossipListener();
-        void gossipEmitter();
-        void pinger();
-        // opportunistic contact grabbing
-        void onContactSeen(Address addr, GossipEndpoint endpoint);
-        void onPong(packet::Pong*);
-        void onGossip(packet::Gossip*);
-        void onBootstrapRequest(packet::BootstrapRequest*);
-        void onGetFileRequest(packet::GetFileRequest*);
-        void onGetFileReply(packet::GetFileReply*);
-        void onPutFileRequest(packet::PutFileRequest*);
-        void onPutFileReply(packet::PutFileReply*);
-        void filterAndInsert(std::vector<Address> files, int target_count,
-                             std::unordered_map<Address, std::pair<Time, Address>>& p);
-        void filterAndInsert(std::vector<Address> files, int target_count, int group,
-                             std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& p);
-        void cleanup();
-        void addLocalResults(packet::GetFileRequest* p);
-        std::vector<RpcEndpoint> kelipsGet(Address file, int n);
-        std::vector<RpcEndpoint> kelipsPut(Address file, int n);
-        std::unordered_multimap<Address, std::pair<Time, Address>> pickFiles();
-        std::unordered_map<Address, std::pair<Time, GossipEndpoint>> pickContacts();
-        std::vector<std::pair<GossipEndpoint, Address>> pickOutsideTargets();
-        std::vector<std::pair<GossipEndpoint, Address>> pickGroupTargets();
-        infinit::cryptography::SecretKey* getKey(Address const& a,
-                                                 GossipEndpoint const& e);
-        void setKey(Address const& a, GossipEndpoint const& e,
-                    infinit::cryptography::SecretKey sk);
+        void
+        reload_state(Local& l);
+        void
+        wait(int contacts);
+        void
+        send(packet::Packet& p, GossipEndpoint e, Address a);
+        /// consistent address -> group mapper
+        int
+        group_of(Address const& address);
+        void
+        gossipListener();
+        void
+        gossipEmitter();
+        void
+        pinger();
+        /// opportunistic contact grabbing
+        void
+        onContactSeen(Address addr, GossipEndpoint endpoint);
+        void
+        onPong(packet::Pong*);
+        void
+        onGossip(packet::Gossip*);
+        void
+        onBootstrapRequest(packet::BootstrapRequest*);
+        void
+        onGetFileRequest(packet::GetFileRequest*);
+        void
+        onGetFileReply(packet::GetFileReply*);
+        void
+        onPutFileRequest(packet::PutFileRequest*);
+        void
+        onPutFileReply(packet::PutFileReply*);
+        void
+        filterAndInsert(
+          std::vector<Address> files, int target_count,
+          std::unordered_map<Address, std::pair<Time, Address>>& p);
+        void
+        filterAndInsert(
+          std::vector<Address> files, int target_count, int group,
+          std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& p);
+        void
+        cleanup();
+        void
+        addLocalResults(packet::GetFileRequest* p);
+        std::vector<RpcEndpoint>
+        kelipsGet(Address file, int n);
+        std::vector<RpcEndpoint>
+        kelipsPut(Address file, int n);
+        std::unordered_multimap<Address, std::pair<Time, Address>>
+        pickFiles();
+        std::unordered_map<Address, std::pair<Time, GossipEndpoint>>
+        pickContacts();
+        std::vector<std::pair<GossipEndpoint, Address>>
+        pickOutsideTargets();
+        std::vector<std::pair<GossipEndpoint, Address>> \
+        pickGroupTargets();
+        infinit::cryptography::SecretKey*
+        getKey(Address const& a, GossipEndpoint const& e);
+        void
+        setKey(Address const& a, GossipEndpoint const& e,
+               infinit::cryptography::SecretKey sk);
         Address _ping_target;
         Time _ping_time;
         reactor::Barrier _ping_barrier;
         GossipEndpoint _local_endpoint;
-        int _group; // group we are in
+        /// group we are in
+        int _group;
         Configuration _config;
         State _state;
         reactor::network::UDPSocket _gossip;
         reactor::Mutex _udp_send_mutex;
-        std::unique_ptr<reactor::Thread> _emitter_thread, _listener_thread, _pinger_thread;
+        std::unique_ptr<reactor::Thread>
+          _emitter_thread, _listener_thread, _pinger_thread;
         std::default_random_engine _gen;
-        std::unordered_map<int, std::shared_ptr<PendingRequest>> _pending_requests;
-        std::vector<Address> _promised_files; // addresses for which we accepted a put
+        std::unordered_map<int, std::shared_ptr<PendingRequest>>
+          _pending_requests;
+        /// Addresses for which we accepted a put.
+        std::vector<Address> _promised_files;
         std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
-        std::unordered_map<GossipEndpoint, infinit::cryptography::SecretKey> _observer_keys;
-        std::vector<GossipEndpoint> _pending_bootstrap; // bootstrap pending auth
+        std::unordered_map<GossipEndpoint, infinit::cryptography::SecretKey>
+          _observer_keys;
+        /// Bootstrap pending auth.
+        std::vector<GossipEndpoint> _pending_bootstrap;
         reactor::network::UTPServer _remotes_server;
         std::shared_ptr<infinit::model::doughnut::Local> _local;
         /// Whether we've seen someone from our group.

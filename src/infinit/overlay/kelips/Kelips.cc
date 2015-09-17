@@ -2265,6 +2265,12 @@ namespace infinit
         , bootstrap_other_target(12)
       {}
 
+      GossipConfiguration::GossipConfiguration(
+        elle::serialization::SerializerIn& input)
+      {
+        this->serialize(input);
+      }
+
       void
       GossipConfiguration::serialize(elle::serialization::Serializer& s)
       {
