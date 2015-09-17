@@ -2161,15 +2161,18 @@ namespace infinit
     void
     FileHandle::close()
     {
-      ELLE_TRACE_SCOPE("%s: close (dirty: %s)", *this, this->_dirty);
+      ELLE_DEBUG("Closing %s (dirty=%s  handles=%s)",
+                 _owner->_name, _dirty, _owner->_handle_count);
+      elle::SafeFinally cleanup([&] {
+        _dirty = false;
+        if (_owner->_handle_count == 0)
+        {
+          _owner->_blocks.clear();
+          _owner->_first_block.reset();
+        }
+      });
       if (_dirty)
-        this->_owner->_commit();
-      _dirty = false;
-      if (_owner->_handle_count == 0)
-      {
-        _owner->_blocks.clear();
-        _owner->_first_block.reset();
-      }
+        _owner->_commit();
     }
 
     int
