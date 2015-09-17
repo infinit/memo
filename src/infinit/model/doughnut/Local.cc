@@ -100,10 +100,10 @@ namespace infinit
           Serializer::SerializerOut output(s, false);
           output.serialize_forward(block);
         }
-        on_store(block, mode);
         this->_storage->set(block.address(), data,
                             mode == STORE_ANY || mode == STORE_INSERT,
                             mode == STORE_ANY || mode == STORE_UPDATE);
+        on_store(block, mode);
       }
 
       std::unique_ptr<blocks::Block>
