@@ -1503,6 +1503,21 @@ namespace kelips
     int fg = group_of(file);
     if (fg == _group)
     {
+      // check if we have it locally
+      auto its = _state.files.equal_range(file);
+      auto it_us = std::find_if(its.first, its.second,
+        [&](std::pair<const infinit::model::Address, File> const& f) {
+          return f.second.home_node == address_of_uuid(this->node_id());
+      });
+      if (it_us != its.second && n == 1)
+      {
+        ELLE_DEBUG("Satisfied get lookup locally.");
+        std::vector<RpcEndpoint> result;
+        result.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
+            this->_port);
+        return result;
+      }
+      // add result for our own file table
       addLocalResults(&r);
       for (auto const& e: r.result)
         result_set.insert(e.second);
