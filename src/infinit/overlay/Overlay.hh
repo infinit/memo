@@ -3,6 +3,8 @@
 
 # include <elle/UUID.hh>
 
+# include <elle/json/json.hh>
+
 # include <reactor/network/tcp-socket.hh>
 
 # include <infinit/model/Address.hh>
@@ -55,6 +57,10 @@ namespace infinit
 
       ELLE_ATTRIBUTE_RWX(model::doughnut::Doughnut*, doughnut);
 
+      /// Return statistics about the overlay
+      virtual
+      elle::json::Json
+      stats() { return {};}
     protected:
       virtual
       Members

@@ -2038,6 +2038,15 @@ namespace infinit
         _fetch();
         return _inherit_auth ? "true" : "false";
       }
+      else if (key == "user.infinit.overlay")
+      {
+        elle::json::Json v =
+          dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())->overlay()->stats();
+        if (v.empty())
+          return "{}";
+        else
+          return elle::json::pretty_print(v);
+      }
       else
         return Node::getxattr(key);
     }

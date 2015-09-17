@@ -542,6 +542,8 @@ namespace infinit
         , _config(config)
         , _next_id(1)
         , _observer(observer)
+        , _dropped_puts(0)
+        , _dropped_gets(0)
       {
         if (observer)
           ELLE_LOG("Running in observer mode");
@@ -1470,6 +1472,7 @@ namespace infinit
           res.result = p->result;
           res.ttl = 1;
           send(res, p->originEndpoint, p->originAddress);
+          _dropped_gets++;
           return;
         }
         p->ttl--;
@@ -1556,6 +1559,7 @@ namespace infinit
           res.ttl = 0;
           send(res, p->originEndpoint, p->originAddress);
           ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
+          _dropped_puts++;
           return;
         }
         // Forward the packet to an other node
@@ -2189,6 +2193,16 @@ namespace infinit
             File{k, address_of_uuid(this->node_id()), now(), Time(), 0}));
           ELLE_DEBUG("%s: reloaded %x", *this, k);
         }
+      }
+
+      elle::json::Json
+      Node::stats()
+      {
+        elle::json::Object res;
+        res["group_contacts"] = _state.contacts[_group].size();
+        res["dropped_puts"] = _dropped_puts;
+        res["dropped_gets"] = _dropped_gets;
+        return res;
       }
 
       std::ostream&

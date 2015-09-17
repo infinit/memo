@@ -179,6 +179,8 @@ namespace infinit
               std::unique_ptr<infinit::model::blocks::Block>& res);
         void
         remove(Address address);
+        elle::json::Json
+        stats() override;
 
       /*--------.
       | Overlay |
@@ -282,6 +284,8 @@ namespace infinit
         int _next_id;
         int _port;
         bool _observer;
+        int _dropped_puts;
+        int _dropped_gets;
       };
     }
   }
