@@ -576,7 +576,7 @@ namespace kelips
     }
     if (b.size() == 0)
       return;
-    static elle::Bench bencher("packet size", 5_sec);
+    static elle::Bench bencher("kelips.packet_size", 5_sec);
     bencher.add(b.size());
     reactor::Lock l(_udp_send_mutex);
     ELLE_DUMP("%s: sending %s bytes packet to %s\n%s", *this, b.size(), e, b.string());
@@ -1358,10 +1358,10 @@ namespace kelips
     }
     ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                p->result);
-    static elle::Bench stime = elle::Bench("GET RTT", boost::posix_time::seconds(5));
+    static elle::Bench stime = elle::Bench("kelips.GET_RTT", boost::posix_time::seconds(5));
     stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
       (now() - it->second->startTime)).count());
-    static elle::Bench shops = elle::Bench("GET HOPS", boost::posix_time::seconds(5));
+    static elle::Bench shops = elle::Bench("kelips.GET_HOPS", boost::posix_time::seconds(5));
     shops.add(p->ttl);
     it->second->result = p->result;
     it->second->barrier.open();
@@ -1444,10 +1444,10 @@ namespace kelips
       ELLE_TRACE("%s: Unknown request id %s", *this, p->request_id);
       return;
     }
-    static elle::Bench stime = elle::Bench("PUT RTT", boost::posix_time::seconds(5));
+    static elle::Bench stime = elle::Bench("kelips.PUT_RTT", boost::posix_time::seconds(5));
     stime.add(std::chrono::duration_cast<std::chrono::microseconds>(
       (now() - it->second->startTime)).count());
-    static elle::Bench shops = elle::Bench("PUT HOPS", boost::posix_time::seconds(5));
+    static elle::Bench shops = elle::Bench("kelips.PUT_HOPS", boost::posix_time::seconds(5));
     shops.add(p->ttl);
     ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
                p->resultAddress);
