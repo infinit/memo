@@ -544,6 +544,7 @@ namespace infinit
         , _observer(observer)
         , _dropped_puts(0)
         , _dropped_gets(0)
+        , _failed_puts(0)
       {
         if (observer)
           ELLE_LOG("Running in observer mode");
@@ -1788,8 +1789,9 @@ namespace infinit
                 results.push_back(r->result.front().second);
                 return;
               }
-              ELLE_TRACE("%s: put failed, retry %s", *this, i);
             }
+            ELLE_TRACE("%s: put failed, retry %s", *this, i);
+            ++_failed_puts;
           }
         };
         elle::With<reactor::Scope>() << [&](reactor::Scope& s)
@@ -2204,6 +2206,7 @@ namespace infinit
         res["group_contacts"] = _state.contacts[_group].size();
         res["dropped_puts"] = _dropped_puts;
         res["dropped_gets"] = _dropped_gets;
+        res["failed_puts"] = _failed_puts;
         return res;
       }
 

@@ -286,6 +286,7 @@ namespace infinit
         bool _observer;
         int _dropped_puts;
         int _dropped_gets;
+        int _failed_puts;
       };
     }
   }
