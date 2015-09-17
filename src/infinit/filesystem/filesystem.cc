@@ -418,7 +418,7 @@ namespace infinit
       // Switch from direct to indexed mode
       void _switch_to_multi(bool alloc_first_block);
       void _ensure_first_block();
-      void _changed();
+      void _commit();
       Header _header(); // Get header, must be in multi mode
       void _header(Header const&);
       bool _multi(); // True if mode is index
@@ -1687,7 +1687,7 @@ namespace infinit
           _owner.store_or_die(*_first_block, infinit::model::STORE_UPDATE);
         }
       }
-      _changed();
+      this->_commit();
     }
 
     std::unique_ptr<rfs::Handle>
@@ -1722,19 +1722,22 @@ namespace infinit
     }
 
     void
-    File::_changed()
+    File::_commit()
     {
+      ELLE_TRACE_SCOPE("%s: commit", *this);
       auto& data = _parent->_files.at(_name);
       data.mtime = time(nullptr);
       data.ctime = time(nullptr);
-      if (!_multi())
+      // Compute file size
+      if (!this->_multi())
         data.size = _first_block->data().size();
       else
       {
         std::unordered_map<int, CacheEntry> blocks;
-        std::swap(blocks, _blocks);
+        std::swap(blocks, this->_blocks);
         for (auto& b: blocks)
-        { // FIXME: incremental size compute
+        {
+          // FIXME: incremental size compute
           ELLE_DEBUG("Checking data block %s :%x, size %s",
             b.first, b.second.block.address(), b.second.block.data().size());
           if (b.second.dirty)
@@ -1742,21 +1745,24 @@ namespace infinit
             ELLE_DEBUG("Writing data block %s", b.first);
             b.second.dirty = false;
             Address prev = b.second.block.address();
-            Address addr = b.second.block.store(*_owner.block_store(), b.second.new_block? model::STORE_INSERT : model::STORE_ANY);
+            Address addr = b.second.block.store(
+              *this->_owner.block_store(),
+              b.second.new_block ? model::STORE_INSERT : model::STORE_ANY);
             if (addr != prev)
             {
               ELLE_DEBUG("Changing address of block %s: %s -> %s", b.first,
-                prev, addr);
-              int offset = (b.first+1) * sizeof(Address);
-              _first_block->data([&] (elle::Buffer& data)
+                         prev, addr);
+              int offset = (b.first + 1) * sizeof(Address);
+              _first_block->data(
+                [&] (elle::Buffer& data)
                 {
-                  ELLE_ASSERT_GTE(data.size() , offset + sizeof(Address::Value));
-                  memcpy(data.contents() + offset, addr.value(), sizeof(Address::Value));
+                  ELLE_ASSERT_GTE(data.size() ,
+                                  offset + sizeof(Address::Value));
+                  memcpy(data.contents() + offset, addr.value(),
+                         sizeof(Address::Value));
                 });
               if (!b.second.new_block)
-              {
-                _owner.unchecked_remove(prev);
-              }
+                this->_owner.unchecked_remove(prev);
               b.second.new_block = true;
             }
             b.second.new_block = false;
@@ -1764,15 +1770,10 @@ namespace infinit
           }
         }
       }
-      ELLE_DEBUG("Storing first block %x, size %s (datablocks: %s)",
-                 _first_block->address(), _first_block->data().size(),
-                 _first_block->data().size() / sizeof(Address::Value) - 1
-                 );
-      Header h = _header();
-      ELLE_DEBUG("First block: v:%s bs:%s l:%s ts:%s", h.version, h.block_size,
-                 h.links, h.total_size);
-      _owner.store_or_die(*_first_block,
-                          _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+      ELLE_DEBUG("%s: store first block: %f", *this, this->_first_block);
+      _owner.store_or_die(
+        *this->_first_block,
+        this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
       _first_block_new = false;
       _parent->_changed(false);
     }
@@ -1820,7 +1821,7 @@ namespace infinit
         if (old_size != signed(default_block_size))
           b.block.zero(old_size, default_block_size - old_size);
       }
-      _changed();
+      this->_commit();
     }
 
     void
@@ -2087,7 +2088,7 @@ namespace infinit
       : _owner(owner)
       , _dirty(dirty)
     {
-      ELLE_TRACE_SCOPE("%s: create (handle count = %s)",
+      ELLE_TRACE_SCOPE("%s: create (previous handle count = %s)",
                        *this, _owner->_handle_count);
       _owner->_handle_count++;
       _owner->_parent->_fetch();
@@ -2162,7 +2163,7 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: close (dirty: %s)", *this, this->_dirty);
       if (_dirty)
-        _owner->_changed();
+        this->_owner->_commit();
       _dirty = false;
       if (_owner->_handle_count == 0)
       {
