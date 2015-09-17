@@ -723,13 +723,11 @@ namespace infinit
     Directory::Directory(DirectoryPtr parent, FileSystem& owner,
                          std::string const& name,
                          Address address)
-    : Node(owner, parent, name)
-    , _address(address)
-    , _inherit_auth(_parent?_parent->_inherit_auth : false)
-    , _last_fetch(boost::posix_time::not_a_date_time)
-    {
-      ELLE_DEBUG("Directory::Directory %s, parent %s address %s", this, parent, address);
-    }
+      : Node(owner, parent, name)
+      , _address(address)
+      , _inherit_auth(_parent?_parent->_inherit_auth : false)
+      , _last_fetch(boost::posix_time::not_a_date_time)
+    {}
 
     void Directory::_fetch()
     {
@@ -861,9 +859,9 @@ namespace infinit
     void
     Directory::list_directory(rfs::OnDirectoryEntry cb)
     {
+      ELLE_TRACE_SCOPE("%s: list", *this);
       if (!_owner.single_mount() || ! _block)
         _fetch();
-      ELLE_DEBUG("Directory list: %s", this);
       struct stat st;
       for (auto const& e: _files)
       {
@@ -881,6 +879,7 @@ namespace infinit
     void
     Directory::rmdir()
     {
+      ELLE_TRACE_SCOPE("%s: remove", *this);
       _fetch();
       if (!_files.empty())
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
@@ -1116,13 +1115,19 @@ namespace infinit
     std::string
     Node::getxattr(std::string const& k)
     {
-      auto& xattrs = _parent ?
-         _parent->_files.at(_name).xattrs
-         : static_cast<Directory*>(this)->_files[""].xattrs;
+      ELLE_TRACE_SCOPE("%s: get attribute \"%s\"", *this, k);
+      auto& xattrs = this->_parent
+        ? this->_parent->_files.at(this->_name).xattrs
+        : static_cast<Directory*>(this)->_files[""].xattrs;
       auto it = xattrs.find(k);
       if (it == xattrs.end())
+      {
+        ELLE_DEBUG("no such attribute");
         THROW_NOATTR;
-      return it->second.string();
+      }
+      std::string value = it->second.string();
+      ELLE_DUMP("value: \"%s\"", it, value);
+      return value;
     }
 
     void
@@ -1910,9 +1915,9 @@ namespace infinit
       return ss.str();
     }
 
-    std::string File::getxattr(std::string const& key)
+    std::string
+    File::getxattr(std::string const& key)
     {
-      ELLE_TRACE_SCOPE("%s: get attribute \"%s\"", *this, key);
       if (key == "user.infinit.block")
       {
         if (_first_block)
@@ -2035,7 +2040,6 @@ namespace infinit
     std::string
     Directory::getxattr(std::string const& key)
     {
-      ELLE_TRACE("getxattr %s", key);
       if (key == "user.infinit.block")
       {
         if (_block)
