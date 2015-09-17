@@ -721,7 +721,7 @@ namespace infinit
     void Directory::_fetch()
     {
       auto now = boost::posix_time::microsec_clock::universal_time();
-      if (_last_fetch != boost::posix_time::not_a_date_time
+      if (_block && _last_fetch != boost::posix_time::not_a_date_time
         && now - _last_fetch < directory_cache_time)
       {
         ELLE_DEBUG("Using directory cache");
@@ -786,6 +786,7 @@ namespace infinit
     void
     Directory::_changed(bool set_mtime)
     {
+      elle::SafeFinally clean_cache([&] { _block.reset();});
       ELLE_DEBUG("Directory changed: %s with %s entries", this, _files.size());
       elle::Buffer data;
       {
@@ -807,15 +808,18 @@ namespace infinit
         _parent->_changed();
       }
       _push_changes();
+      clean_cache.abort();
     }
 
     void
     Directory::_push_changes(bool first_write)
     {
-      ELLE_DEBUG("Directory pushChanges: %s on %x size %s",
-                 this, _block->address(), _block->data().size());
+      elle::SafeFinally clean_cache([&] { _block.reset();});
+      ELLE_DEBUG("Directory pushChanges: %s on %x size %s, first=%s",
+                 this, _block->address(), _block->data().size(), first_write);
       _owner.store_or_die(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
       ELLE_DEBUG("pushChange ok");
+      clean_cache.abort();
     }
 
     std::shared_ptr<rfs::Path>
