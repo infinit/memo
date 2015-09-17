@@ -1267,7 +1267,9 @@ namespace infinit
           else if (it->second.last_seen < c.second.first)
           { // Also update endpoint in case it changed
             if (it->second.endpoint != c.second.second)
-              ELLE_WARN("%s: Endpoint change %s %s", *this, it->second.endpoint, c.second.second);
+              ELLE_DEBUG(
+                "%s: %s endpoint change from %s to %s",
+                *this, it->first, it->second.endpoint, c.second.second);
             it->second.last_seen = c.second.first;
             it->second.endpoint = c.second.second;
           }
