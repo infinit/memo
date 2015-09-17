@@ -16,6 +16,9 @@ namespace infinit
     public:
       typedef elle::Error Super;
       MissingBlock(Address address);
+      MissingBlock(elle::serialization::SerializerIn& input);
+      void
+      serialize(elle::serialization::Serializer& s) override;
       ELLE_ATTRIBUTE_R(Address, address);
     };
   }
