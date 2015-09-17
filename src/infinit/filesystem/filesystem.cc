@@ -326,7 +326,9 @@ namespace infinit
     static const boost::posix_time::time_duration directory_cache_time
       = boost::posix_time::seconds(2);
 
-    class FileHandle: public rfs::Handle
+    class FileHandle
+      : public rfs::Handle
+      , public elle::Printable
     {
     public:
       FileHandle(std::shared_ptr<File> owner,
@@ -334,16 +336,30 @@ namespace infinit
                  bool no_prefetch = false,
                  bool mark_dirty = false);
       ~FileHandle();
-      int read(elle::WeakBuffer buffer, size_t size, off_t offset) override;
-      int write(elle::WeakBuffer buffer, size_t size, off_t offset) override;
-      void ftruncate(off_t offset) override;
-      void close() override;
+      virtual
+      int
+      read(elle::WeakBuffer buffer, size_t size, off_t offset) override;
+      virtual
+      int
+      write(elle::WeakBuffer buffer, size_t size, off_t offset) override;
+      virtual
+      void
+      ftruncate(off_t offset) override;
+      virtual
+      void
+      close() override;
+      virtual
+      void
+      print(std::ostream& stream) const override;
     private:
       std::shared_ptr<File> _owner;
       bool _dirty;
     };
 
-    class File: public rfs::Path, public Node
+    class File
+      : public rfs::Path
+      , public Node
+      , public elle::Printable
     {
     public:
       File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
@@ -372,6 +388,10 @@ namespace infinit
       bool allow_cache() override;
       // check cached data size, remove entries if needed
       void check_cache();
+      virtual
+      void
+      print(std::ostream& output) const override;
+
     private:
       static const unsigned long default_block_size;
       static const unsigned long max_cache_size; // in blocks
@@ -1951,7 +1971,9 @@ namespace infinit
         THROW_NODATA;
       return std::make_pair(r, w);
     }
-    void File::setxattr(std::string const& name, std::string const& value, int flags)
+
+    void
+    File::setxattr(std::string const& name, std::string const& value, int flags)
     {
       ELLE_TRACE("file setxattr %s", name);
       if (name.find("user.infinit.auth.") == 0)
@@ -1971,6 +1993,13 @@ namespace infinit
       else
         Node::setxattr(name, value, flags);
     }
+
+    void
+    File::print(std::ostream& stream) const
+    {
+      elle::fprintf(stream, "File(\"%s\")", this->_name);
+    }
+
     void Directory::setxattr(std::string const& name, std::string const& value, int flags)
     {
       ELLE_TRACE("directory setxattr %s", name);
@@ -2131,7 +2160,7 @@ namespace infinit
     void
     FileHandle::close()
     {
-      ELLE_DEBUG("Closing %s with dirty=%s", _owner->_name, _dirty);
+      ELLE_TRACE_SCOPE("%s: close (dirty: %s)", *this, this->_dirty);
       if (_dirty)
         _owner->_changed();
       _dirty = false;
@@ -2181,7 +2210,6 @@ namespace infinit
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.fetch_or_die(address));
         }
-        ELLE_ASSERT_EQ(signed(block->data().size()), total_size);
         memcpy(buffer.mutable_contents(),
                block->data().mutable_contents() + offset,
                size);
@@ -2394,6 +2422,13 @@ namespace infinit
     FileHandle::ftruncate(off_t offset)
     {
       return _owner->truncate(offset);
+    }
+
+    void
+    FileHandle::print(std::ostream& stream) const
+    {
+      elle::fprintf(stream, "FileHandle(%x, \"%s\")",
+                    this, this->_owner->_name);
     }
   }
 }
