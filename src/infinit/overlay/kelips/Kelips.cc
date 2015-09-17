@@ -1885,6 +1885,7 @@ namespace kelips
   Node::register_local(std::shared_ptr<infinit::model::doughnut::Local> local)
   {
     ELLE_ASSERT(!this->_observer);
+    this->_local = local;
     local->on_fetch.connect(std::bind(&Node::fetch, this,
                                       std::placeholders::_1,
                                       std::placeholders::_2));
@@ -1949,6 +1950,11 @@ namespace kelips
     for (auto const& host: hosts)
     {
       ELLE_TRACE("connecting to %s", host);
+      if (host.address().to_string() == "127.0.0.1" && host.port() == _port)
+      {
+        res.emplace_back(_local);
+        continue;
+      }
       using Protocol = infinit::model::doughnut::Local::Protocol;
       if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
       {
