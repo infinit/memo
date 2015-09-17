@@ -130,13 +130,17 @@ namespace infinit
   {
     namespace kelips
     {
-      static uint64_t serialize_time(const Time& t)
+      static
+      uint64_t
+      serialize_time(const Time& t)
       {
         return elle::serialization::Serialize<Time>::convert(
           const_cast<Time&>(t));
       }
 
-      static std::string key_hash(infinit::cryptography::SecretKey const& k)
+      static
+      std::string
+      key_hash(infinit::cryptography::SecretKey const& k)
       {
         auto hk = infinit::cryptography::hash(k.password(),
                                                infinit::cryptography::Oneway::sha256);
@@ -147,7 +151,9 @@ namespace infinit
       typedef std::pair<Address, RpcEndpoint> GetFileResult;
       namespace packet
       {
-        template<typename T> elle::Buffer serialize(T const& packet)
+        template<typename T>
+        elle::Buffer
+        serialize(T const& packet)
         {
           elle::Buffer buf;
           elle::IOStream stream(buf.ostreambuf());
@@ -163,7 +169,7 @@ namespace infinit
         _registerPacket##classname(type)
 
         struct Packet
-        : public elle::serialization::VirtuallySerializable
+          : public elle::serialization::VirtuallySerializable
         {
           GossipEndpoint endpoint;
           Address sender;
@@ -172,26 +178,37 @@ namespace infinit
 
         struct EncryptedPayload: public Packet
         {
-          EncryptedPayload() {}
-          EncryptedPayload(elle::serialization::SerializerIn& input) {serialize(input);}
+          EncryptedPayload()
+          {}
+
+          EncryptedPayload(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
             s.serialize("payload", payload);
           }
-          std::unique_ptr<Packet> decrypt(infinit::cryptography::SecretKey const& k)
+
+          std::unique_ptr<Packet>
+          decrypt(infinit::cryptography::SecretKey const& k)
           {
-            elle::Buffer plain = k.decipher(payload,
-                                            infinit::cryptography::Cipher::aes256,
-                                            infinit::cryptography::Mode::cbc,
-                                            infinit::cryptography::Oneway::sha256);
+            elle::Buffer plain = k.decipher(
+              payload,
+              infinit::cryptography::Cipher::aes256,
+              infinit::cryptography::Mode::cbc,
+              infinit::cryptography::Oneway::sha256);
             elle::IOStream stream(plain.istreambuf());
             Serializer::SerializerIn input(stream, false);
             std::unique_ptr<packet::Packet> packet;
             input.serialize_forward(packet);
             return packet;
+
           }
+
           void encrypt(infinit::cryptography::SecretKey const& k,
                        Packet const& p)
           {
@@ -207,29 +224,40 @@ namespace infinit
 
         struct RequestKey: public Packet
         {
-          RequestKey(infinit::model::doughnut::Passport p) : passport(p) {}
+          RequestKey(infinit::model::doughnut::Passport p)
+            : passport(p)
+          {}
+
           RequestKey(elle::serialization::SerializerIn& input)
-          : passport(input) {
+            : passport(input)
+          {
             input.serialize("sender", sender);
           }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
             passport.serialize(s);
             s.serialize("sender", sender);
           }
+
           infinit::model::doughnut::Passport passport;
         };
         REGISTER(RequestKey, "reqk");
 
         struct KeyReply: public Packet
         {
-          KeyReply(infinit::model::doughnut::Passport p) : passport(p) {}
+          KeyReply(infinit::model::doughnut::Passport p)
+            : passport(p)
+          {}
+
           KeyReply(elle::serialization::SerializerIn& input)
-           : passport(input) {
-             input.serialize("sender", sender);
-             input.serialize("encrypted_key", encrypted_key);
-           }
+            : passport(input)
+          {
+            input.serialize("sender", sender);
+            input.serialize("encrypted_key", encrypted_key);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
@@ -237,6 +265,7 @@ namespace infinit
             s.serialize("sender", sender);
             s.serialize("encrypted_key", encrypted_key);
           }
+
           elle::Buffer encrypted_key;
           infinit::model::doughnut::Passport passport;
         };
@@ -244,30 +273,45 @@ namespace infinit
 
         struct Ping: public Packet
         {
-          Ping() {}
-          Ping(elle::serialization::SerializerIn& input) {serialize(input);}
+          Ping()
+          {}
+
+          Ping(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
             s.serialize("endpoint", remote_endpoint);
           }
+
           GossipEndpoint remote_endpoint;
         };
         REGISTER(Ping, "ping");
 
         struct Pong: public Ping
         {
-          Pong() {}
+          Pong()
+          {}
           Pong(elle::serialization::SerializerIn& input)
-          : Ping(input) {}
+            : Ping(input)
+          {}
         };
         REGISTER(Pong, "pong");
 
         struct BootstrapRequest: public Packet
         {
-          BootstrapRequest() {}
-          BootstrapRequest(elle::serialization::SerializerIn& input) {serialize(input);}
+          BootstrapRequest()
+          {}
+
+          BootstrapRequest(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
@@ -278,8 +322,14 @@ namespace infinit
 
         struct Gossip: public Packet
         {
-          Gossip() {}
-          Gossip(elle::serialization::SerializerIn& input) {serialize(input);}
+          Gossip()
+          {}
+
+          Gossip(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
@@ -295,8 +345,14 @@ namespace infinit
 
         struct GetFileRequest: public Packet
         {
-          GetFileRequest() {}
-          GetFileRequest(elle::serialization::SerializerIn& input) {serialize(input);}
+          GetFileRequest()
+          {}
+
+          GetFileRequest(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
@@ -309,20 +365,31 @@ namespace infinit
             s.serialize("count", count);
             s.serialize("result", result);
           }
+
           int request_id;
-          Address originAddress; //origin node
+          /// origin node
+          Address originAddress;
           GossipEndpoint originEndpoint;
-          Address fileAddress; //file address requested
+          /// file address requested
+          Address fileAddress;
           int ttl;
-          int count; // number of results we want
-          std::vector<GetFileResult> result; // partial result
+          /// number of results we want
+          int count;
+          /// partial result
+          std::vector<GetFileResult> result;
         };
         REGISTER(GetFileRequest, "get");
 
         struct GetFileReply: public Packet
         {
-          GetFileReply() {}
-          GetFileReply(elle::serialization::SerializerIn& input) {serialize(input);}
+          GetFileReply()
+          {}
+
+          GetFileReply(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
@@ -333,8 +400,10 @@ namespace infinit
             s.serialize("result", result);
             s.serialize("ttl", ttl);
           }
+
           int request_id;
-          Address origin; // node who created the request
+          /// node who created the request
+          Address origin;
           Address fileAddress;
           int ttl;
           std::vector<GetFileResult> result;
@@ -343,22 +412,36 @@ namespace infinit
 
         struct PutFileRequest: public GetFileRequest
         {
-          int insert_ttl; // insert when this reaches 0
-          PutFileRequest() {}
-          PutFileRequest(elle::serialization::SerializerIn& input) {serialize(input);}
+          PutFileRequest()
+          {}
+
+          PutFileRequest(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s) override
           {
             GetFileRequest::serialize(s);
             s.serialize("insert_ttl", insert_ttl);
           }
+
+          /// insert when this reaches 0
+          int insert_ttl;
         };
         REGISTER(PutFileRequest, "put");
 
         struct PutFileReply: public Packet
         {
-          PutFileReply() {}
-          PutFileReply(elle::serialization::SerializerIn& input) {serialize(input);}
+          PutFileReply()
+          {}
+
+          PutFileReply(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
           void
           serialize(elle::serialization::Serializer& s)
           {
@@ -370,8 +453,10 @@ namespace infinit
             s.serialize("resultEndpoint", resultEndpoint);
             s.serialize("ttl", ttl);
           }
+
           int request_id;
-          Address origin; // node who created the request
+          /// node who created the request
+          Address origin;
           Address fileAddress;
           int ttl;
           Address resultAddress;
@@ -389,13 +474,16 @@ namespace infinit
         Time startTime;
       };
 
-      static inline Time now()
+      static inline
+      Time
+      now()
       {
         return std::chrono::system_clock::now();
       }
 
       template<typename C>
-      typename C::iterator random_from(C& container, std::default_random_engine& gen)
+      typename C::iterator
+      random_from(C& container, std::default_random_engine& gen)
       {
         if (container.empty())
           return container.end();
@@ -407,7 +495,8 @@ namespace infinit
       }
 
       template<typename C, typename G>
-      C pick_n(C const& src, int count, G& generator)
+      C
+      pick_n(C const& src, int count, G& generator)
       {
         C res;
         std::uniform_int_distribution<> random(0, src.size()-1);
@@ -424,7 +513,8 @@ namespace infinit
       }
 
       template<typename C, typename G>
-      C remove_n(C const& src, int count, G& generator)
+      C
+      remove_n(C const& src, int count, G& generator)
       {
         C res(src);
         for (int i=0; i<count; ++i)
@@ -438,12 +528,15 @@ namespace infinit
       }
 
       template<typename E1, typename E2>
-      void endpoint_to_endpoint(E1 const& src, E2& dst)
+      void
+      endpoint_to_endpoint(E1 const& src, E2& dst)
       {
         dst = E2(src.address(), src.port());
       }
 
-      Node::Node(Configuration const& config, bool observer, elle::UUID node_id,
+      Node::Node(Configuration const& config,
+                 bool observer,
+                 elle::UUID node_id,
                  infinit::model::doughnut::Doughnut* doughnut)
         : Overlay(std::move(node_id))
         , _config(config)
@@ -459,10 +552,10 @@ namespace infinit
         else
           _bootstraping.close();
         start();
-
       }
 
-      int Node::group_of(Address const& a)
+      int
+      Node::group_of(Address const& a)
       {
         auto address = a.value();
         unsigned int addr4 = address[0]
@@ -575,7 +668,9 @@ namespace infinit
         }
         return nullptr;
       }
-      void Node::send(packet::Packet& p, GossipEndpoint e, Address a)
+
+      void
+      Node::send(packet::Packet& p, GossipEndpoint e, Address a)
       {
         ELLE_ASSERT(e.port() != 0);
         if (this->_observer)
@@ -626,8 +721,8 @@ namespace infinit
         _gossip.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
       }
 
-
-      void Node::gossipListener()
+      void
+      Node::gossipListener()
       {
         elle::Buffer buf;
         while (true)
@@ -658,7 +753,6 @@ namespace infinit
             }
             packet->endpoint = source;
             bool was_crypted = false;
-
             // First handle crypto related packets
             if (auto p = dynamic_cast<packet::EncryptedPayload*>(packet.get()))
             {
@@ -713,7 +807,6 @@ namespace infinit
                           *this, source, p->sender);
                 return;
               }
-
               auto sk = infinit::cryptography::secretkey::generate(256);
               elle::Buffer password = sk.password();
               setKey(p->sender, p->endpoint, std::move(sk));
@@ -743,7 +836,6 @@ namespace infinit
                 infinit::cryptography::Mode::cbc);
               infinit::cryptography::SecretKey sk(std::move(password));
               setKey(p->sender, p->endpoint, std::move(sk));
-
               // Flush operations waiting on crypto ready
               auto it = std::find(_pending_bootstrap.begin(),
                                   _pending_bootstrap.end(),
@@ -761,22 +853,18 @@ namespace infinit
                 onContactSeen(packet->sender, source);
               return;
             } // keyreply
-
             if (!was_crypted && !_config.accept_plain)
             {
               ELLE_WARN("%s: rejecting plain packet from %s : %s",
                         *this, source, packet->sender);
               return;
             }
-
             if (packet->sender != Address::null)
               onContactSeen(packet->sender, source);
-
             // TRAP: some packets inherit from each other, so most specific ones
             // must be first
             #define CASE(type) \
               else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
-
             if (false) {}
             CASE(Pong)
             {
@@ -801,7 +889,6 @@ namespace infinit
               onGetFileRequest(p);
             CASE(GetFileReply)
               onGetFileReply(p);
-
             else
               ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
 #undef CASE
@@ -810,12 +897,12 @@ namespace infinit
       }
 
       template<typename T, typename U, typename G, typename C>
-      void filterAndInsert(std::vector<Address> files, int target_count,
-                           std::unordered_map<Address, std::pair<Time, T>>& res,
-                           C& data,
-                           T U::*access,
-                           G& gen
-                           )
+      void
+      filterAndInsert(std::vector<Address> files, int target_count,
+                      std::unordered_map<Address, std::pair<Time, T>>& res,
+                      C& data,
+                      T U::*access,
+                      G& gen)
       {
         if (signed(files.size()) > target_count)
         {
@@ -834,24 +921,29 @@ namespace infinit
         }
       }
 
-      void Node::filterAndInsert(std::vector<Address> files, int target_count, int group,
-                                 std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& res)
+      void
+      Node::filterAndInsert(
+        std::vector<Address> files, int target_count, int group,
+        std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& res)
       {
         kelips::filterAndInsert(files, target_count, res, _state.contacts[group],
                         &Contact::endpoint, _gen);
       }
 
-      void Node::filterAndInsert(std::vector<Address> files, int target_count,
-                                 std::unordered_map<Address, std::pair<Time, Address>>& res)
+      void
+      Node::filterAndInsert(
+        std::vector<Address> files, int target_count,
+        std::unordered_map<Address, std::pair<Time, Address>>& res)
       {
         kelips::filterAndInsert(files, target_count, res, _state.files,
                                 &File::home_node, _gen);
       }
 
-      void filterAndInsert2(std::vector<Contact*> new_contacts, unsigned int max_new,
+      void
+      filterAndInsert2(
+        std::vector<Contact*> new_contacts, unsigned int max_new,
         std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& res,
-        std::default_random_engine gen
-        )
+        std::default_random_engine gen)
       {
         if (new_contacts.size() > max_new)
         {
@@ -907,8 +999,6 @@ namespace infinit
           }
           filterAndInsert(available, n, _group, res);
         }
-
-
         int size0 = res.size();
         // And now, do the same thing for other contacts, argh
         max_new = _config.gossip.contacts_other / 2;
@@ -963,7 +1053,8 @@ namespace infinit
       }
 
       template<typename C, typename K, typename V>
-      bool has(C const& c, K const& k, V const& v)
+      bool
+      has(C const& c, K const& k, V const& v)
       {
         auto its = c.equal_range(k);
         return std::find_if(its.first, its.second,
@@ -1023,7 +1114,6 @@ namespace infinit
         {
           res.insert(nf);
         }
-
         // Check if we have room for more files
         if (res.size() < (unsigned)_config.gossip.files)
         {
@@ -1051,7 +1141,8 @@ namespace infinit
         return res;
       }
 
-      void Node::gossipEmitter()
+      void
+      Node::gossipEmitter()
       {
         std::uniform_int_distribution<> random(0, _config.gossip.interval_ms);
         int v = random(_gen);
@@ -1063,7 +1154,6 @@ namespace infinit
           reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
           p.contacts.clear();
           p.files.clear();
-
           p.contacts = pickContacts();
           elle::Buffer buf = serialize(p);
           auto targets = pickOutsideTargets();
@@ -1119,7 +1209,8 @@ namespace infinit
         }
       }
 
-      void Node::onPong(packet::Pong* p)
+      void
+      Node::onPong(packet::Pong* p)
       {
         if (!(p->sender == _ping_target))
         {
@@ -1152,7 +1243,8 @@ namespace infinit
             endpoint, _local_endpoint);
       }
 
-      void Node::onGossip(packet::Gossip* p)
+      void
+      Node::onGossip(packet::Gossip* p)
       {
         ELLE_TRACE("%s: rocessing gossip from %s", *this, p->endpoint);
         int g = group_of(p->sender);
@@ -1208,7 +1300,8 @@ namespace infinit
         }
       }
 
-      void Node::onBootstrapRequest(packet::BootstrapRequest* p)
+      void
+      Node::onBootstrapRequest(packet::BootstrapRequest* p)
       {
         int g = group_of(p->sender);
         packet::Gossip res;
@@ -1235,7 +1328,6 @@ namespace infinit
               res.contacts[it->first] = std::make_pair(it->second.last_seen, it->second.endpoint);
           }
         }
-
         // Same thing for other groups
         int other_count = 0;
         for (auto const& e: _state.contacts)
@@ -1281,7 +1373,8 @@ namespace infinit
         send(res, p->endpoint, p->sender);
       }
 
-      void Node::addLocalResults(packet::GetFileRequest* p)
+      void
+      Node::addLocalResults(packet::GetFileRequest* p)
       {
         int fg = group_of(p->fileAddress);
         auto its = _state.files.equal_range(p->fileAddress);
@@ -1290,7 +1383,6 @@ namespace infinit
         for (auto it = its.first; it != its.second; ++it)
           iterators.push_back(it);
         std::shuffle(iterators.begin(), iterators.end(), _gen);
-
         for (auto iti = iterators.begin(); iti != iterators.end()
           && p->result.size() < unsigned(p->count); ++iti)
         {
@@ -1339,7 +1431,8 @@ namespace infinit
         }
       }
 
-      void Node::onGetFileRequest(packet::GetFileRequest* p)
+      void
+      Node::onGetFileRequest(packet::GetFileRequest* p)
       {
         ELLE_TRACE("%s: getFileRequest %s/%x %s/%s", *this, p->request_id, p->fileAddress,
                  p->result.size(), p->count);
@@ -1391,7 +1484,8 @@ namespace infinit
         send(*p, it->second.endpoint, it->second.address);
       }
 
-      void Node::onGetFileReply(packet::GetFileReply* p)
+      void
+      Node::onGetFileReply(packet::GetFileReply* p)
       {
         ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->result);
         auto it = _pending_requests.find(p->request_id);
@@ -1412,7 +1506,8 @@ namespace infinit
         _pending_requests.erase(it);
       }
 
-      void Node::onPutFileRequest(packet::PutFileRequest* p)
+      void
+      Node::onPutFileRequest(packet::PutFileRequest* p)
       {
         ELLE_TRACE("%s: putFileRequest %s %s %x", *this, p->ttl, p->insert_ttl, p->fileAddress);
         if (p->originEndpoint.port() == 0)
@@ -1463,7 +1558,6 @@ namespace infinit
           ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
           return;
         }
-
         // Forward the packet to an other node
         int fg = group_of(p->fileAddress);
         auto it = random_from(_state.contacts[fg], _gen);
@@ -1479,7 +1573,8 @@ namespace infinit
         send(*p, it->second.endpoint, it->second.address);
       }
 
-      void Node::onPutFileReply(packet::PutFileReply* p)
+      void
+      Node::onPutFileReply(packet::PutFileReply* p)
       {
         ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->resultAddress);
         auto it = _pending_requests.find(p->request_id);
@@ -1500,9 +1595,10 @@ namespace infinit
         _pending_requests.erase(it);
       }
 
-      std::vector<RpcEndpoint> Node::address(Address file,
-                                infinit::overlay::Operation op,
-                                int n)
+      std::vector<RpcEndpoint>
+      Node::address(Address file,
+                    infinit::overlay::Operation op,
+                    int n)
       {
         if (op == infinit::overlay::OP_INSERT)
           return kelipsPut(file, n);
@@ -1605,7 +1701,6 @@ namespace infinit
           }
           ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
                      r->result.size());
-
           for (auto const& e: r->result)
             result_set.insert(e.second);
           if (signed(result_set.size()) >= n)
@@ -1656,7 +1751,6 @@ namespace infinit
                 return v.second.address == file
                   && v.second.home_node == address_of_uuid(this->node_id());
               }) != _state.files.end();
-
               if (_config.bootstrap_nodes.empty() && !have_file && std::find(_promised_files.begin(), _promised_files.end(), p.fileAddress)
                 == _promised_files.end())
               {
@@ -1700,8 +1794,6 @@ namespace infinit
         };
         return results;
       }
-
-
       /* For node selection, the paper [5] in kelips recommand:
         proba = c*(d+1)^(-Dp)
         c: Normalizer
@@ -1710,12 +1802,13 @@ namespace infinit
         D: space dimension
         kelips use
         1/(d^2)
-
         We only consider nodes with an rtt value set
       */
 
-      static std::vector<Address> pick(std::map<Address, Duration> candidates, int count,
-        std::default_random_engine& gen)
+      static
+      std::vector<Address>
+      pick(std::map<Address, Duration> candidates, int count,
+           std::default_random_engine& gen)
       {
         std::vector<Address> res;
         if (unsigned(count) >= candidates.size())
@@ -1724,7 +1817,6 @@ namespace infinit
             res.push_back(e.first);
           return res;
         }
-
         typedef std::chrono::duration<int, std::ratio<1, 1000000>> US;
         // get average latency, will be used for those with no rtt information
         long total = 0;
@@ -1777,7 +1869,8 @@ namespace infinit
         return res;
       }
 
-      std::vector<std::pair<GossipEndpoint, Address>> Node::pickOutsideTargets()
+      std::vector<std::pair<GossipEndpoint, Address>>
+      Node::pickOutsideTargets()
       {
         std::map<Address, int> group_of;
         std::map<Address, Duration> candidates;
@@ -1801,7 +1894,8 @@ namespace infinit
         return res;
       }
 
-      std::vector<std::pair<GossipEndpoint, Address>> Node::pickGroupTargets()
+      std::vector<std::pair<GossipEndpoint, Address>>
+      Node::pickGroupTargets()
       {
         std::map<Address, Duration> candidates;
         for (auto const& e: _state.contacts[_group])
@@ -1813,7 +1907,8 @@ namespace infinit
         return result;
       }
 
-      void Node::pinger()
+      void
+      Node::pinger()
       {
         std::uniform_int_distribution<> random(0, _config.ping_interval_ms);
         int v = random(_gen);
@@ -1823,7 +1918,6 @@ namespace infinit
           ELLE_DUMP("%s: sleep for %s ms", *this, _config.ping_interval_ms);
           reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
           cleanup();
-
           // some stats
           std::stringstream ss;
           ss << "g: " << _group << "  f: " << _state.files.size() << "  c:";
@@ -1873,7 +1967,8 @@ namespace infinit
         }
       }
 
-      void Node::cleanup()
+      void
+      Node::cleanup()
       {
         auto it = _state.files.begin();
         auto t = now();
@@ -1941,29 +2036,31 @@ namespace infinit
       }
 
       void
-      Node::register_local(std::shared_ptr<infinit::model::doughnut::Local> local)
+      Node::register_local(std::shared_ptr<infinit::model::doughnut::Local> l)
       {
         ELLE_ASSERT(!this->_observer);
-        this->_local = local;
-        local->on_fetch.connect(std::bind(&Node::fetch, this,
+        this->_local = l;
+        l->on_fetch.connect(std::bind(&Node::fetch, this,
                                           std::placeholders::_1,
                                           std::placeholders::_2));
-        local->on_store.connect(std::bind(&Node::store, this,
+        l->on_store.connect(std::bind(&Node::store, this,
                                           std::placeholders::_1,
                                           std::placeholders::_2));
-        local->on_remove.connect(std::bind(&Node::remove, this,
+        l->on_remove.connect(std::bind(&Node::remove, this,
                                            std::placeholders::_1));
-        this->_port = local->server_endpoint().port();
-        reload_state(*local);
+        this->_port = l->server_endpoint().port();
+        reload_state(*l);
         this->engage();
       }
 
-      void Node::fetch(Address address,
-                       std::unique_ptr<infinit::model::blocks::Block> & b)
+      void
+      Node::fetch(Address address,
+                  std::unique_ptr<infinit::model::blocks::Block> & b)
       {}
 
-      void Node::store(infinit::model::blocks::Block const& block,
-                       infinit::model::StoreMode mode)
+      void
+      Node::store(infinit::model::blocks::Block const& block,
+                  infinit::model::StoreMode mode)
       {
         auto its = _state.files.equal_range(block.address());
         if (std::find_if(its.first, its.second, [&](Files::value_type const& f) {
@@ -1979,7 +2076,8 @@ namespace infinit
         }
       }
 
-      void Node::remove(Address address)
+      void
+      Node::remove(Address address)
       {
         auto its = _state.files.equal_range(address);
         for (auto it = its.first; it != its.second; ++it)
@@ -2055,16 +2153,17 @@ namespace infinit
             }
           }
         }
-
         return res;
       }
 
-      void Node::print(std::ostream& stream) const
+      void
+      Node::print(std::ostream& stream) const
       {
         stream << "Kelips(" << _local_endpoint << ')';
       }
 
-      void Node::wait(int count)
+      void
+      Node::wait(int count)
       {
         ELLE_LOG("%s: waiting for %s nodes", *this, count);
         while (true)
@@ -2080,7 +2179,8 @@ namespace infinit
         reactor::sleep(1_sec);
       }
 
-      void Node::reload_state(Local& l)
+      void
+      Node::reload_state(Local& l)
       {
         auto keys = l.storage()->list();
         for (auto const& k: keys)
