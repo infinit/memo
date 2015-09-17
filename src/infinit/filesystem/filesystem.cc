@@ -2154,6 +2154,7 @@ namespace infinit
 
     FileHandle::~FileHandle()
     {
+      ELLE_DEBUG("~FileHandle, handles=%s", _owner->_handle_count);
       _owner->_handle_count--;
       close();
     }
@@ -2200,7 +2201,7 @@ namespace infinit
       }
       if (signed(offset + size) > total_size)
       {
-        ELLE_DEBUG("read past end, reducing size from %s to %s", size,
+        ELLE_DEBUG("read past size end, reducing size from %s to %s", size,
                    total_size - offset);
         size = total_size - offset;
       }
@@ -2213,6 +2214,12 @@ namespace infinit
           auto address = _owner->_parent->_files.at(_owner->_name).address;
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.fetch_or_die(address));
+        }
+        if (offset + size > block->data().size())
+        {
+          ELLE_DEBUG("read past buffer end, reducing size from %s to %s", size,
+                     block->data().size() - offset);
+          size = block->data().size() - offset;
         }
         memcpy(buffer.mutable_contents(),
                block->data().mutable_contents() + offset,
