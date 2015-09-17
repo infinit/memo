@@ -118,17 +118,26 @@ ELLE_TEST_SCHEDULED(ACB)
   {
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
-    // No read permissions.
     BOOST_CHECK_THROW(fetched->data(), elle::Error);
     auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-(", 3));
     ELLE_LOG("other: stored edited ACB")
-      // FIXME: slice
-      BOOST_CHECK_THROW(dhts.dht_b->store(*acb), elle::Exception);
-      // BOOST_CHECK_THROW(dhts.dht_a->store(*acb),
-      //                   dht::ValidationFailed);
+      BOOST_CHECK_THROW(dhts.dht_b->store(*acb), dht::ValidationFailed);
   }
-  ELLE_LOG("owner: add ACB permissions")
+  ELLE_LOG("owner: add ACB read permissions")
+    block->set_permissions(dht::User(dhts.keys_b.K(), ""), true, false);
+  ELLE_LOG("owner: store ACB")
+    dhts.dht_a->store(*block);
+  {
+    ELLE_LOG("other: fetch ACB");
+    auto fetched = dhts.dht_b->fetch(block->address());
+    BOOST_CHECK_EQUAL(fetched->data(), "\\_o<");
+    auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
+    acb->data(elle::Buffer(":-(", 3));
+    ELLE_LOG("other: stored edited ACB")
+      BOOST_CHECK_THROW(dhts.dht_b->store(*acb), dht::ValidationFailed);
+  }
+  ELLE_LOG("owner: add ACB write permissions")
     block->set_permissions(dht::User(dhts.keys_b.K(), ""), true, true);
   ELLE_LOG("owner: store ACB")
     dhts.dht_a->store(*block);

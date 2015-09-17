@@ -12,6 +12,7 @@
 
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/User.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
@@ -370,7 +371,7 @@ namespace infinit
             ++idx;
           }
           if (!owner && !found)
-            throw elle::Error("not owner and no write permissions");
+            throw ValidationFailed("not owner and no write permissions");
           if (changed)
           {
             ELLE_TRACE_SCOPE("%s: store new ACL", *this);
