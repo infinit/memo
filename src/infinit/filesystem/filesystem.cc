@@ -572,37 +572,21 @@ namespace infinit
     void
     FileSystem::store_or_die(model::blocks::Block& block, model::StoreMode mode)
     {
+      ELLE_TRACE_SCOPE("%s: store or die: %s", *this, block);
+
       try
       {
-        _block_store->store(block, mode);
-      }
-      catch(reactor::Terminate const& e)
-      {
-        throw;
+        this->_block_store->store(block, mode);
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
-        ELLE_TRACE("perm exception %s", e);
-        throw rfs::Error(EACCES, elle::sprintf("%s", e));
+        ELLE_TRACE("permission exception: %s", e.what());
+        throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
-      catch (model::MissingBlock const& mb)
+      catch(elle::Error const& e)
       {
-        ELLE_WARN("Unexpected storage result on store: %s", mb);
-        throw rfs::Error(EIO, elle::sprintf("%s", mb));
-      }
-      catch (elle::serialization::Error const& se)
-      {
-        ELLE_WARN("serialization error on store %x: %s", block.address(), se);
-        throw rfs::Error(EIO, elle::sprintf("%s", se));
-      }
-      catch(elle::Exception const& e)
-      {
-        ELLE_WARN("unexpected exception on store %x: %s", block.address(), e);
-        throw rfs::Error(EIO, elle::sprintf("%s", e));
-      }
-      catch(std::exception const& e)
-      {
-        ELLE_WARN("unexpected exception on store %x: %s", block.address(), e);
+        ELLE_WARN("unexpected exception storing %x: %s",
+                  block.address(), e.what());
         throw rfs::Error(EIO, e.what());
       }
     }
