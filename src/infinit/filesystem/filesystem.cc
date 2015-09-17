@@ -1727,14 +1727,9 @@ namespace infinit
     File::_commit()
     {
       ELLE_TRACE_SCOPE("%s: commit", *this);
-      auto& data = _parent->_files.at(_name);
-      data.mtime = time(nullptr);
-      data.ctime = time(nullptr);
-      // Compute file size
-      if (!this->_multi())
-        data.size = _first_block->data().size();
-      else
+      if (this->_multi())
       {
+        ELLE_DEBUG_SCOPE("%s: push blocks", *this);
         std::unordered_map<int, CacheEntry> blocks;
         std::swap(blocks, this->_blocks);
         for (auto& b: blocks)
@@ -1772,12 +1767,20 @@ namespace infinit
           }
         }
       }
-      ELLE_DEBUG("%s: store first block: %f", *this, this->_first_block);
-      _owner.store_or_die(
-        *this->_first_block,
-        this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
-      _first_block_new = false;
-      _parent->_changed(false);
+      ELLE_DEBUG("store first block: %f", *this->_first_block)
+        _owner.store_or_die(
+          *this->_first_block,
+          this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+      this->_first_block_new = false;
+      ELLE_DEBUG("update parent directory");
+      {
+        auto& data = _parent->_files.at(_name);
+        data.mtime = time(nullptr);
+        data.ctime = time(nullptr);
+        if (!this->_multi())
+          data.size = this->_first_block->data().size();
+        this->_parent->_commit(false);
+      }
     }
 
     void
