@@ -12,6 +12,7 @@
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/Model.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Local");
@@ -109,7 +110,15 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Local::fetch(Address address) const
       {
-        auto data = this->_storage->get(address);
+        elle::Buffer data;
+        try
+        {
+          data = this->_storage->get(address);
+        }
+        catch (storage::MissingKey const& e)
+        {
+          throw MissingBlock(e.key());
+        }
         elle::IOStream s(data.istreambuf());
         Serializer::SerializerIn input(s, false);
         input.set_context<Doughnut*>(this->_doughnut);
@@ -122,7 +131,14 @@ namespace infinit
       Local::remove(Address address)
       {
         ELLE_DEBUG("remove %x", address);
-        this->_storage->erase(address);
+        try
+        {
+          this->_storage->erase(address);
+        }
+        catch (storage::MissingKey const& k)
+        {
+          throw MissingBlock(k.key());
+        }
         on_remove(address);
       }
 
