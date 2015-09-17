@@ -91,6 +91,39 @@ namespace elle
   }
 }
 
+struct PrettyGossipEndpoint
+{
+  PrettyGossipEndpoint(
+    infinit::overlay::kelips::GossipEndpoint const& e)
+    : _repr(e.address().to_string() + ":" + std::to_string(e.port()))
+  {}
+
+  PrettyGossipEndpoint(elle::serialization::Serializer& input)
+  {
+    this->serialize(input);
+  }
+
+  PrettyGossipEndpoint(std::string repr)
+    : _repr(std::move(repr))
+  {}
+
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize_forward(this->_repr);
+  }
+
+  operator infinit::overlay::kelips::GossipEndpoint()
+  {
+    size_t sep = this->_repr.find_first_of(':');
+    auto a = boost::asio::ip::address::from_string(this->_repr.substr(0, sep));
+    int p = std::stoi(this->_repr.substr(sep + 1));
+    return infinit::overlay::kelips::GossipEndpoint(a, p);
+  }
+
+  ELLE_ATTRIBUTE(std::string, repr);
+};
+
 namespace infinit
 {
   namespace overlay
@@ -2111,7 +2144,8 @@ namespace infinit
         s.serialize("ping_interval_ms", ping_interval_ms);
         s.serialize("ping_timeout_ms", ping_timeout_ms);
         s.serialize("gossip", gossip);
-        s.serialize("bootstrap_nodes", bootstrap_nodes);
+        s.serialize("bootstrap_nodes", bootstrap_nodes,
+                    elle::serialization::as<PrettyGossipEndpoint>());
         s.serialize("wait", wait);
         s.serialize("encrypt", encrypt);
         s.serialize("accept_plain", accept_plain);
@@ -2136,9 +2170,7 @@ namespace infinit
                           infinit::model::doughnut::Doughnut* doughnut)
       {
         for (auto const& host: hosts)
-          this->bootstrap_nodes.push_back(
-            elle::serialization::Serialize<PrettyGossipEndpoint>
-            ::convert(host));
+          this->bootstrap_nodes.push_back(PrettyGossipEndpoint(host));
         return elle::make_unique<Node>(
           *this, !server, this->node_id(), doughnut);
       }

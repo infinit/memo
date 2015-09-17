@@ -19,11 +19,7 @@ namespace std
   struct hash<boost::asio::ip::udp::endpoint>
   {
     size_t
-    operator ()(boost::asio::ip::udp::endpoint const& e) const
-    {
-      return std::hash<std::string>()(e.address().to_string()
-        + ":" + std::to_string(e.port()));
-    }
+    operator ()(boost::asio::ip::udp::endpoint const& e) const;
   };
 }
 
@@ -35,15 +31,6 @@ namespace infinit
     {
       typedef boost::asio::ip::tcp::endpoint RpcEndpoint;
       typedef boost::asio::ip::udp::endpoint GossipEndpoint;
-      struct PrettyGossipEndpoint: public GossipEndpoint
-      {
-        PrettyGossipEndpoint() {}
-        PrettyGossipEndpoint(const PrettyGossipEndpoint& b)
-          : GossipEndpoint(b)
-        {}
-        PrettyGossipEndpoint(boost::asio::ip::address const& addr, int port)
-          : GossipEndpoint(addr, port) {}
-      };
       typedef infinit::model::Address Address;
       typedef std::chrono::time_point<std::chrono::system_clock> Time;
       typedef Time::duration Duration;
@@ -142,7 +129,7 @@ namespace infinit
         int file_timeout_ms; // entry lifetime before supression
         int ping_interval_ms;
         int ping_timeout_ms;
-        std::vector<PrettyGossipEndpoint> bootstrap_nodes;
+        std::vector<GossipEndpoint> bootstrap_nodes;
         int wait; // wait for 'wait' nodes before starting
         bool encrypt;
         bool accept_plain;
@@ -244,30 +231,6 @@ namespace infinit
   }
 }
 
-namespace elle
-{
-  namespace serialization
-  {
-    template<>
-    struct Serialize<infinit::overlay::kelips::PrettyGossipEndpoint>
-    {
-      typedef infinit::overlay::kelips::PrettyGossipEndpoint Endpoint;
-      typedef std::string Type;
-      static std::string convert(Endpoint const& ep)
-      {
-        return ep.address().to_string() + ":" + std::to_string(ep.port());
-      }
-
-      static
-      Endpoint convert(std::string const& repr)
-      {
-        size_t sep = repr.find_first_of(':');
-        auto addr = boost::asio::ip::address::from_string(repr.substr(0, sep));
-        int port = std::stoi(repr.substr(sep + 1));
-        return Endpoint(addr, port);
-      }
-    };
-  }
-}
+# include <infinit/overlay/kelips/Kelips.hxx>
 
 #endif
