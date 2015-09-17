@@ -595,7 +595,7 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
   BOOST_CHECK_EQUAL(res, strlen(data));
   close(fd);
   stat((mount / "foo").string().c_str(), &st);
-  BOOST_CHECK_EQUAL(st.st_size, 1024*1024 - 10 + 26);
+  BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 - 10 + 26);
   char output[36];
   fd = open((mount / "foo").string().c_str(), O_RDONLY);
   BOOST_CHECK_GE(fd, 0);

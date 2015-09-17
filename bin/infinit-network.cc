@@ -42,49 +42,49 @@ create(variables_map const& args)
     auto kelips =
       elle::make_unique<infinit::overlay::kelips::Configuration>();
     if (args.count("k"))
-      kelips->config.k = args["k"].as<int>();
+      kelips->k = args["k"].as<int>();
     else if (args.count("nodes"))
     {
       int nodes = args["nodes"].as<int>();
       if (nodes < 10)
-        kelips->config.k = 1;
+        kelips->k = 1;
       else if (sqrt(nodes) < 5)
-        kelips->config.k = nodes / 5;
+        kelips->k = nodes / 5;
       else
-        kelips->config.k = sqrt(nodes);
+        kelips->k = sqrt(nodes);
     }
     if (args.count("encrypt"))
     {
       std::string enc = args["encrypt"].as<std::string>();
       if (enc == "no")
       {
-        kelips->config.encrypt = false;
-        kelips->config.accept_plain = true;
+        kelips->encrypt = false;
+        kelips->accept_plain = true;
       }
       else if (enc == "lazy")
       {
-        kelips->config.encrypt = true;
-        kelips->config.accept_plain = true;
+        kelips->encrypt = true;
+        kelips->accept_plain = true;
       }
       else if (enc == "yes")
       {
-        kelips->config.encrypt = true;
-        kelips->config.accept_plain = false;
+        kelips->encrypt = true;
+        kelips->accept_plain = false;
       }
       else
         throw elle::Error("'encrypt' must be 'no', 'lazy' or 'yes'");
     }
     else
     {
-      kelips->config.encrypt = false;
-      kelips->config.accept_plain = true;
+      kelips->encrypt = false;
+      kelips->accept_plain = true;
     }
     if (args.count("protocol"))
     {
       std::string proto = args["protocol"].as<std::string>();
       try
       {
-        kelips->config.rpc_protocol =
+        kelips->rpc_protocol =
           elle::serialization::Serialize<infinit::model::doughnut::Local::Protocol>::convert(proto);
       }
       catch (elle::serialization::Error const& e)
