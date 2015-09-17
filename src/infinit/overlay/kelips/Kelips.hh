@@ -85,27 +85,23 @@ namespace infinit
         GossipConfiguration();
         GossipConfiguration(elle::serialization::SerializerIn& input) {serialize(input);}
         void
-        serialize(elle::serialization::Serializer& s)
-        {
-          s.serialize("interval_ms", interval_ms);
-          s.serialize("new_threshold", new_threshold);
-          s.serialize("old_threshold_ms", old_threshold_ms);
-          s.serialize("files", files);
-          s.serialize("contacts_group", contacts_group);
-          s.serialize("contacts_other", contacts_other);
-          s.serialize("group_target", group_target);
-          s.serialize("other_target", other_target);
-          s.serialize("bootstrap_group_target", bootstrap_group_target);
-          s.serialize("bootstrap_other_target", bootstrap_other_target);
-        }
+        serialize(elle::serialization::Serializer& s);
+
         int interval_ms;
-        int new_threshold; // entry considered new if gossip_count < threshold
-        int old_threshold_ms; // entry considered old if last_gossip below that duration
-        int files; //how many files per packet
-        int contacts_group; // how many nodes in other groups per packet
-        int contacts_other; // how many nodes in self group per packet
-        int group_target; // how many gossip targets in group
-        int other_target; // how many gossip targets in other groups
+        /// entry considered new if gossip_count < threshold
+        int new_threshold;
+        /// entry considered old if last_gossip below that duration
+        int old_threshold_ms;
+        ///how many files per packet
+        int files;
+        /// how many nodes in other groups per packet
+        int contacts_group;
+        /// how many nodes in self group per packet
+        int contacts_other;
+        /// how many gossip targets in group
+        int group_target;
+        /// how many gossip targets in other groups
+        int other_target;
         int bootstrap_group_target;
         int bootstrap_other_target;
       };
@@ -117,20 +113,31 @@ namespace infinit
         Configuration(elle::serialization::SerializerIn& input);
         void
         serialize(elle::serialization::Serializer& s);
-        int k; // number of groups
-        int max_other_contacts; // max number of contacts on each other group
-        int query_get_retries;    // query retry
-        int query_put_retries;    // query retry
-        int query_timeout_ms; // query timeout
-        int query_get_ttl; // query initial ttl
-        int query_put_ttl; // query initial ttl
-        int query_put_insert_ttl; // query initial ttl
-        int contact_timeout_ms; // entry lifetime before supression
-        int file_timeout_ms; // entry lifetime before supression
+        /// number of groups
+        int k;
+        /// max number of contacts on each other group
+        int max_other_contacts;
+        /// query retry
+        int query_get_retries;
+        /// query retry
+        int query_put_retries;
+        /// query timeout
+        int query_timeout_ms;
+        /// query initial ttl
+        int query_get_ttl;
+        /// query initial ttl
+        int query_put_ttl;
+        /// query initial ttl
+        int query_put_insert_ttl;
+        /// entry lifetime before supression
+        int contact_timeout_ms;
+        /// entry lifetime before supression
+        int file_timeout_ms;
         int ping_interval_ms;
         int ping_timeout_ms;
         std::vector<GossipEndpoint> bootstrap_nodes;
-        int wait; // wait for 'wait' nodes before starting
+        /// wait for 'wait' nodes before starting
+        int wait;
         bool encrypt;
         bool accept_plain;
         infinit::model::doughnut::Local::Protocol rpc_protocol;

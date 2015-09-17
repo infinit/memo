@@ -2265,6 +2265,21 @@ namespace infinit
         , bootstrap_other_target(12)
       {}
 
+      void
+      GossipConfiguration::serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("interval_ms", interval_ms);
+        s.serialize("new_threshold", new_threshold);
+        s.serialize("old_threshold_ms", old_threshold_ms);
+        s.serialize("files", files);
+        s.serialize("contacts_group", contacts_group);
+        s.serialize("contacts_other", contacts_other);
+        s.serialize("group_target", group_target);
+        s.serialize("other_target", other_target);
+        s.serialize("bootstrap_group_target", bootstrap_group_target);
+        s.serialize("bootstrap_other_target", bootstrap_other_target);
+      }
+
       std::unique_ptr<infinit::overlay::Overlay>
       Configuration::make(std::vector<std::string> const& hosts, bool server,
                           infinit::model::doughnut::Doughnut* doughnut)
