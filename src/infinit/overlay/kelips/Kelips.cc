@@ -449,8 +449,7 @@ namespace infinit
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddress);
-            s.serialize("result", resultAddress);
-            s.serialize("resultEndpoint", resultEndpoint);
+            s.serialize("results", results);
             s.serialize("ttl", ttl);
           }
 
@@ -459,8 +458,7 @@ namespace infinit
           Address origin;
           Address fileAddress;
           int ttl;
-          Address resultAddress;
-          RpcEndpoint resultEndpoint;
+          std::vector<GetFileResult> results;
         };
         REGISTER(PutFileReply, "putReply");
 
@@ -675,6 +673,8 @@ namespace infinit
       void
       Node::send(packet::Packet& p, GossipEndpoint e, Address a)
       {
+        //std::string ptype = elle::type_info(p).name();
+        //std::cerr << ptype << std::endl;
         ELLE_ASSERT(e.port() != 0);
         if (this->_observer)
           p.sender = Address::null;
@@ -705,7 +705,11 @@ namespace infinit
           {
             packet::EncryptedPayload ep;
             ep.sender = p.sender;
-            ep.encrypt(*key, p);
+            {
+              static elle::Bench decrypt("kelips.encrypt", 10_sec);
+              elle::Bench::BenchScope bs(decrypt);
+              ep.encrypt(*key, p);
+            }
             b = packet::serialize(ep);
           }
         }
@@ -1539,14 +1543,17 @@ namespace infinit
       void
       Node::onPutFileRequest(packet::PutFileRequest* p)
       {
-        ELLE_TRACE("%s: putFileRequest %s %s %x", *this, p->ttl, p->insert_ttl, p->fileAddress);
+        ELLE_TRACE("%s: putFileRequest %s %s %s %x", *this, p->ttl, p->insert_ttl,
+                   p->result.size(), p->fileAddress);
         if (p->originEndpoint.port() == 0)
           p->originEndpoint = p->endpoint;
         if (p->insert_ttl == 0)
         {
           // check if we didn't already accept this file
-          if (std::find(_promised_files.begin(), _promised_files.end(), p->fileAddress)
-            == _promised_files.end())
+          if (std::find_if(p->result.begin(), p->result.end(),
+            [&] (GetFileResult const& r) {
+              return r.first == address_of_uuid(this->node_id());
+            }) == p->result.end())
           {
             // Check if we already have the block
             auto its = _state.files.equal_range(p->fileAddress);
@@ -1558,40 +1565,35 @@ namespace infinit
             { // Nope, insert here
               // That makes us a home node for this address, but
               // wait until we get the RPC to store anything
-              ELLE_DEBUG("%s: inserting promise for %x", *this, p->fileAddress);
-              packet::PutFileReply res;
-              res.sender = address_of_uuid(this->node_id());
-              res.request_id = p->request_id;
-              res.origin = p->originAddress;
-              endpoint_to_endpoint(_local_endpoint, res.resultEndpoint);
-              res.fileAddress = p->fileAddress;
-              res.resultAddress = address_of_uuid(this->node_id());
-              res.ttl = p->ttl;
+              ELLE_DEBUG("%s: inserting", *this);
+              RpcEndpoint ep;
+              endpoint_to_endpoint(_local_endpoint, ep);
+              p->result.push_back(std::make_pair(address_of_uuid(this->node_id()), ep));
               _promised_files.push_back(p->fileAddress);
-              send(res, p->originEndpoint, p->originAddress);
-              return;
             }
             else
               ELLE_DEBUG("%s: not inserting %x: already present", *this, p->fileAddress);
           }
           else
-            ELLE_DEBUG("%s: not inserting %x: already promised", *this, p->fileAddress);
+            ELLE_DEBUG("%s: not inserting %x: already inserted", *this, p->fileAddress);
         }
         // Forward
         if (p->insert_ttl > 0)
           p->insert_ttl--;
-        if (p->ttl == 0)
+        if (p->ttl == 0 || p->count <= signed(p->result.size()))
         {
           packet::PutFileReply res;
           res.sender = address_of_uuid(this->node_id());
           res.request_id = p->request_id;
           res.origin = p->originAddress;
-          res.fileAddress = p->fileAddress;
-          res.resultAddress = Address::null;
+          res.results = p->result;
           res.ttl = 0;
           send(res, p->originEndpoint, p->originAddress);
-          ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
-          _dropped_puts++;
+          if (p->count > signed(p->result.size()))
+          {
+            ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
+            _dropped_puts++;
+          }
           return;
         }
         // Forward the packet to an other node
@@ -1612,7 +1614,7 @@ namespace infinit
       void
       Node::onPutFileReply(packet::PutFileReply* p)
       {
-        ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->resultAddress);
+        ELLE_DEBUG("%s: got reply for %s: %s", *this, p->request_id, p->results);
         auto it = _pending_requests.find(p->request_id);
         if (it == _pending_requests.end())
         {
@@ -1624,9 +1626,8 @@ namespace infinit
           (now() - it->second->startTime)).count());
         static elle::Bench shops = elle::Bench("kelips.PUT_HOPS", boost::posix_time::seconds(5));
         shops.add(p->ttl);
-        ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
-                   p->resultAddress);
-        it->second->result.push_back(std::make_pair(p->resultAddress, p->resultEndpoint));
+        ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id, p->results);
+        it->second->result = p->results;
         it->second->barrier.open();
         _pending_requests.erase(it);
       }
@@ -1710,7 +1711,8 @@ namespace infinit
           auto r = std::make_shared<PendingRequest>();
           r->startTime = now();
           r->barrier.close();
-          _pending_requests[req.request_id] = r;
+          auto ir = _pending_requests.insert(std::make_pair(req.request_id, r));
+          ELLE_ASSERT(ir.second);
           // Select target node
           auto it = random_from(_state.contacts[fg], _gen);
           if (it == _state.contacts[fg].end())
@@ -1726,21 +1728,19 @@ namespace infinit
           }
           ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
           send(req, it->second.endpoint, it->second.address);
-          try
-          {
-            reactor::wait(r->barrier,
-              boost::posix_time::milliseconds(_config.query_timeout_ms));
-          }
-          catch (reactor::Timeout const& t)
-          {
+          reactor::wait(r->barrier,
+            boost::posix_time::milliseconds(_config.query_timeout_ms));
+          if (!r->barrier.opened())
             ELLE_LOG("%s: Timeout on attempt %s", *this, i);
+          else
+          {
+            ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
+              r->result.size());
+            for (auto const& e: r->result)
+              result_set.insert(e.second);
+            if (signed(result_set.size()) >= n)
+              break;
           }
-          ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
-                     r->result.size());
-          for (auto const& e: r->result)
-            result_set.insert(e.second);
-          if (signed(result_set.size()) >= n)
-            break;
         }
         if (result_set.empty())
           throw reactor::Timeout(boost::posix_time::milliseconds(
@@ -1759,33 +1759,33 @@ namespace infinit
         p.originEndpoint = _local_endpoint;
         p.fileAddress = file;
         p.ttl = _config.query_put_ttl;
-        p.count = 1;
+        p.count = n;
         p.insert_ttl = _config.query_put_insert_ttl;
         std::vector<RpcEndpoint> results;
-        auto make_one = [&] {
-          for (int i=0; i< _config.query_put_retries; ++i)
+
+        for (int i=0; i< _config.query_put_retries; ++i)
+        {
+          packet::PutFileRequest req = p;
+          req.request_id = ++_next_id;
+          auto r = std::make_shared<PendingRequest>();
+          r->startTime = now();
+          r->barrier.close();
+          _pending_requests[req.request_id] = r;
+          elle::Buffer buf = serialize(req);
+          // Select target node
+          auto it = random_from(_state.contacts[fg], _gen);
+          if (it == _state.contacts[fg].end())
+            it = random_from(_state.contacts[_group], _gen);
+          if (it == _state.contacts[_group].end())
           {
-            packet::PutFileRequest req = p;
-            req.request_id = ++_next_id;
-            auto r = std::make_shared<PendingRequest>();
-            r->startTime = now();
-            r->barrier.close();
-            _pending_requests[req.request_id] = r;
-            elle::Buffer buf = serialize(req);
-            // Select target node
-            auto it = random_from(_state.contacts[fg], _gen);
-            if (it == _state.contacts[fg].end())
-              it = random_from(_state.contacts[_group], _gen);
-            if (it == _state.contacts[_group].end())
-            {
-              if (fg != _group || _observer)
-                throw std::runtime_error("No contacts in self/target groups");
-              // Bootstraping only: Store locally if not already there
-              bool have_file = std::find_if(_state.files.begin(), _state.files.end(),
-                [&] (Files::value_type const& v)
+            if (fg != _group || _observer)
+              throw std::runtime_error("No contacts in self/target groups");
+            // Bootstraping only: Store locally if not already there
+            bool have_file = std::find_if(_state.files.begin(), _state.files.end(),
+              [&] (Files::value_type const& v)
               {
                 return v.second.address == file
-                  && v.second.home_node == address_of_uuid(this->node_id());
+                && v.second.home_node == address_of_uuid(this->node_id());
               }) != _state.files.end();
               if (_config.bootstrap_nodes.empty() && !have_file && std::find(_promised_files.begin(), _promised_files.end(), p.fileAddress)
                 == _promised_files.end())
@@ -1794,41 +1794,37 @@ namespace infinit
                 results.push_back(RpcEndpoint(
                   boost::asio::ip::address::from_string("127.0.0.1"),
                   this->_port));
-                return;
+                return results;
               }
               else
-                return;
-            }
-            ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
-            send(req, it->second.endpoint, it->second.address);
-            try
-            {
-              reactor::wait(r->barrier,
-                boost::posix_time::milliseconds(_config.query_timeout_ms));
-            }
-            catch (reactor::Timeout const& t)
-            {
-              ELLE_LOG("%s: Timeout on attempt %s", *this, i);
-            }
-            if (r->barrier.opened())
-            {
-              ELLE_ASSERT(r->result.size());
-              if (r->result.front().first != Address::null)
-              {
-                results.push_back(r->result.front().second);
-                return;
-              }
-            }
-            ELLE_TRACE("%s: put failed, retry %s", *this, i);
-            ++_failed_puts;
+                return results;
           }
-        };
-        elle::With<reactor::Scope>() << [&](reactor::Scope& s)
-        {
-          for (int i=0; i<n; ++i)
-            s.run_background("put", make_one);
-          s.wait();
-        };
+          ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
+          send(req, it->second.endpoint, it->second.address);
+
+          reactor::wait(r->barrier,
+            boost::posix_time::milliseconds(_config.query_timeout_ms));
+          if (!r->barrier.opened())
+          {
+            ELLE_LOG("%s: Timeout on attempt %s", *this, i);
+          }
+          else
+          {
+            for (auto const& rp: r->result)
+            {
+              if (std::find(results.begin(), results.end(), rp.second)
+                == results.end())
+                results.push_back(rp.second);
+            }
+            if (signed(results.size()) >= n)
+            {
+              return results;
+            }
+          }
+          ELLE_TRACE("%s: put failed, retry %s", *this, i);
+          ++_failed_puts;
+        }
+
         return results;
       }
       /* For node selection, the paper [5] in kelips recommand:
