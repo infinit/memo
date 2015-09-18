@@ -368,11 +368,11 @@ namespace infinit
       print(std::ostream& stream) const override;
     private:
       int
-      _write_single(elle::WeakBuffer buffer, int offset);
+      _write_single(elle::WeakBuffer buffer, off_t offset);
       int
-      _write_multi_single(elle::WeakBuffer buffer, int offset, int block);
+      _write_multi_single(elle::WeakBuffer buffer, off_t offset, int block);
       int
-      _write_multi_multi(elle::WeakBuffer buffer, int offset,
+      _write_multi_multi(elle::WeakBuffer buffer, off_t offset,
                          int start_block, int end_block);
       ELLE_ATTRIBUTE(std::shared_ptr<File>, owner);
       ELLE_ATTRIBUTE(bool, dirty);
@@ -2231,30 +2231,8 @@ namespace infinit
       ELLE_ASSERT_EQ(buffer.size(), size);
       int64_t total_size;
       int32_t block_size;
-      if (_owner->_multi())
-      {
-        File::Header h = _owner->_header();
-        total_size = h.total_size;
-        block_size = h.block_size;
-      }
-      else
-      {
-        total_size = _owner->_parent->_files.at(_owner->_name).size;
-        block_size = _owner->default_block_size;
-      }
-      if (offset >= total_size)
-      {
-        ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
-        return 0;
-      }
-      if (signed(offset + size) > total_size)
-      {
-        ELLE_DEBUG("read past size end, reducing size from %s to %s", size,
-                   total_size - offset);
-        size = total_size - offset;
-      }
       if (!_owner->_multi())
-      { // single block case
+      {
         auto& block = _owner->_first_block;
         if (!block)
         {
@@ -2276,6 +2254,20 @@ namespace infinit
         return size;
       }
       // multi case
+      File::Header h = _owner->_header();
+      total_size = h.total_size;
+      block_size = h.block_size;
+      if (offset >= total_size)
+      {
+        ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
+        return 0;
+      }
+      if (signed(offset + size) > total_size)
+      {
+        ELLE_DEBUG("read past size end, reducing size from %s to %s", size,
+                   total_size - offset);
+        size = total_size - offset;
+      }
       off_t end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
       int end_block = end ? (end - 1) / block_size : 0;
@@ -2402,11 +2394,12 @@ namespace infinit
 
     int
     FileHandle::_write_multi_single(
-      elle::WeakBuffer buffer, off_t offset, int block)
+      elle::WeakBuffer buffer, off_t offset, int block_idx)
     {
+      auto const block_size = this->_owner->_header().block_size;
       auto const size = buffer.size();
       AnyBlock* block;
-      auto const it = this->_owner->_blocks.find(block);
+      auto const it = this->_owner->_blocks.find(block_idx);
       if (it != this->_owner->_blocks.end())
       {
         block = &it->second.block;
@@ -2415,10 +2408,10 @@ namespace infinit
       }
       else
       {
-        block = this->_owner->_block_at(block, true);
+        block = this->_owner->_block_at(block_idx, true);
         ELLE_ASSERT(block != nullptr);
         this->_owner->check_cache();
-        auto const it = this->_owner->_blocks.find(block);
+        auto const it = this->_owner->_blocks.find(block_idx);
         ELLE_ASSERT(it != this->_owner->_blocks.end());
         it->second.dirty = true;
         it->second.last_use = std::chrono::system_clock::now();
@@ -2458,21 +2451,22 @@ namespace infinit
     FileHandle::_write_multi_multi(
       elle::WeakBuffer buffer, off_t offset, int start_block, int end_block)
     {
+      uint64_t const block_size = this->_owner->_header().block_size;
       ELLE_ASSERT(start_block == end_block - 1);
       auto const size = buffer.size();
-      int64_t second_size = (offset + size) % block_size; // second block
+      int64_t second_size = (offset + size) % block_size;
       int64_t first_size = size - second_size;
       int64_t second_offset = (int64_t)end_block * (int64_t)block_size;
-      int r1 = write(elle::WeakBuffer(buffer.mutable_contents(), first_size),
-                    first_size, offset);
+      int r1 = this->_write_multi_single(buffer.range(0, first_size),
+                                         offset, start_block);
       if (r1 <= 0)
         return r1;
-      int r2 = write(elle::WeakBuffer(buffer.mutable_contents() + first_size, second_size),
-                    second_size, second_offset);
+      int r2 = this->_write_multi_single(buffer.range(first_size),
+                                         second_offset, end_block);
       if (r2 < 0)
         return r2;
       // Assuming linear writes, this is a good time to flush start block since
-      // it just got filled
+      // it just got filled.
       File::CacheEntry& ent = this->_owner->_blocks.at(start_block);
       Address prev = ent.block.address();
       Address cur = ent.block.store(*this->_owner->_owner.block_store(),
@@ -2484,7 +2478,8 @@ namespace infinit
         int offset = (start_block+1) * sizeof(Address);
         this->_owner->_first_block->data([&](elle::Buffer& data)
           {
-            memcpy(data.mutable_contents() + offset, cur.value(), sizeof(Address::Value));
+            memcpy(data.mutable_contents() + offset, cur.value(),
+                   sizeof(Address::Value));
           });
         if (!ent.new_block)
           this->_owner->_owner.block_store()->remove(prev);
@@ -2492,7 +2487,9 @@ namespace infinit
       ent.dirty = false;
       ent.new_block = false;
       this->_owner->_owner.store_or_die(*this->_owner->_first_block,
-                                  this->_owner->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+                                        this->_owner->_first_block_new
+                                        ? model::STORE_INSERT
+                                        : model::STORE_ANY);
       this->_owner->_first_block_new = false;
       return r1 + r2;
     }

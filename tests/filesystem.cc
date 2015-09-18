@@ -548,21 +548,31 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
     BOOST_CHECK_EQUAL(std::string(buffer, buffer + 16), std::string(expect, expect + 16));
   }
   bfs::remove(mount / "test");
-  // use after unlink
-  fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
-  if (fd < 0)
-    perror("open");
-  ELLE_ENFORCE_EQ(write(fd, "foo", 3), 3);
-  bfs::remove(mount / "test");
-  int res = write(fd, "foo", 3);
-  BOOST_CHECK_EQUAL(res, 3);
-  lseek(fd, 0, SEEK_SET);
-  char buf[7] = {0};
-  res = read(fd, buf, 6);
-  BOOST_CHECK_EQUAL(res, 6);
-  BOOST_CHECK_EQUAL(buf, "foofoo");
-  close(fd);
-  BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  ELLE_LOG("test use after unlink")
+  {
+    fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
+    if (fd < 0)
+      perror("open");
+    ELLE_LOG("write initial data")
+      ELLE_ENFORCE_EQ(write(fd, "foo", 3), 3);
+    ELLE_LOG("unlink")
+      bfs::remove(mount / "test");
+    ELLE_LOG("write additional data")
+    {
+      int res = write(fd, "foo", 3);
+      BOOST_CHECK_EQUAL(res, 3);
+    }
+    ELLE_LOG("reread data")
+    {
+      lseek(fd, 0, SEEK_SET);
+      char buf[7] = {0};
+      int res = read(fd, buf, 6);
+      BOOST_CHECK_EQUAL(res, 6);
+      BOOST_CHECK_EQUAL(buf, "foofoo");
+    }
+    close(fd);
+    BOOST_CHECK_EQUAL(directory_count(mount), 0);
+  }
 
   //rename
   {
@@ -591,7 +601,7 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
   BOOST_CHECK_GE(fd, 0);
   lseek(fd, 1024*1024 - 10, SEEK_SET);
   const char* data = "abcdefghijklmnopqrstuvwxyz";
-  res = write(fd, data, strlen(data));
+  int res = write(fd, data, strlen(data));
   BOOST_CHECK_EQUAL(res, strlen(data));
   close(fd);
   stat((mount / "foo").string().c_str(), &st);
