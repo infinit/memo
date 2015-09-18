@@ -200,6 +200,7 @@ namespace infinit
     #define THROW_ACCES { throw rfs::Error(EACCES, "Access denied");}
 
     class Node
+      : public elle::Printable
     {
     protected:
       Node(FileSystem& owner, std::shared_ptr<Directory> parent, std::string const& name)
@@ -222,15 +223,15 @@ namespace infinit
       std::shared_ptr<Directory> _parent;
       std::string _name;
     };
-    class Unknown: public Node, public rfs::Path
+
+    class Unknown
+      : public Node
+      , public rfs::Path
     {
     public:
       Unknown(DirectoryPtr parent, FileSystem& owner, std::string const& name);
-      void stat(struct stat*) override
-      {
-        ELLE_DEBUG("Stat on unknown %s", _name);
-        THROW_NOENT;
-      }
+      void
+      stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override THROW_NOENT;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_NOENT;
       std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override;
@@ -249,10 +250,15 @@ namespace infinit
       std::shared_ptr<Path> child(std::string const& name) override THROW_NOENT;
       bool allow_cache() override { return false;}
       std::string getxattr(std::string const& k) override {THROW_NODATA;}
+      virtual
+      void
+      print(std::ostream& stream) const override;
     private:
     };
 
-    class Symlink: public Node, public rfs::Path
+    class Symlink
+      : public Node
+      , public rfs::Path
     {
     public:
       Symlink(DirectoryPtr parent, FileSystem& owner, std::string const& name);
@@ -274,12 +280,14 @@ namespace infinit
       void truncate(off_t new_size) override THROW_NOSYS;
       std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
       bool allow_cache() override { return false;}
+      virtual
+      void
+      print(std::ostream& stream) const override;
     };
 
     class Directory
       : public rfs::Path
       , public Node
-      , public elle::Printable
     {
     public:
       Directory(DirectoryPtr parent, FileSystem& owner, std::string const& name,
@@ -368,7 +376,6 @@ namespace infinit
     class File
       : public rfs::Path
       , public Node
-      , public elle::Printable
     {
     public:
       File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
@@ -1274,6 +1281,19 @@ namespace infinit
       throw rfs::Error(ENOENT, "link source does not exist");
     }
 
+    void
+    Unknown::stat(struct stat*)
+    {
+      ELLE_DEBUG("Stat on unknown %s", _name);
+      THROW_NOENT;
+    }
+
+    void
+    Unknown::print(std::ostream& stream) const
+    {
+      elle::fprintf(stream, "Unknown(\"%s\")", this->_name);
+    }
+
     Symlink::Symlink(DirectoryPtr parent,
                      FileSystem& owner,
                      std::string const& name)
@@ -1316,12 +1336,18 @@ namespace infinit
       unk->symlink(readlink());
     }
 
+    void
+    Symlink::print(std::ostream& stream) const
+    {
+      elle::fprintf(stream, "Symlink(\"%s\")", this->_name);
+    }
+
     File::File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
                std::unique_ptr<MutableBlock> block)
-    : Node(owner, parent, name)
-    , _first_block(std::move(block))
-    , _first_block_new(false)
-    , _handle_count(0)
+      : Node(owner, parent, name)
+      , _first_block(std::move(block))
+      , _first_block_new(false)
+      , _handle_count(0)
     {}
 
     bool
