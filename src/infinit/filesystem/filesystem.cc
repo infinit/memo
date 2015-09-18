@@ -675,15 +675,15 @@ namespace infinit
     std::shared_ptr<rfs::Path>
     FileSystem::path(std::string const& path)
     {
-      // In the infinit filesystem, we never query a path other than the
-      // root.
+      ELLE_TRACE_SCOPE("%s: fetch root", *this);
+      // In the infinit filesystem, we never query a path other than the root.
       ELLE_ASSERT_EQ(path, "/");
-      ELLE_DEBUG("Processing request for root path");
       auto root = this->_root_block();
       ELLE_ASSERT(!!root);
       auto acl_root =  elle::cast<ACLBlock>::runtime(std::move(root));
       ELLE_ASSERT(!!acl_root);
-      auto res =  std::make_shared<Directory>(nullptr, *this, "", acl_root->address());
+      auto res =
+        std::make_shared<Directory>(nullptr, *this, "", acl_root->address());
       res->_block = std::move(acl_root);
       return res;
     }
@@ -691,29 +691,30 @@ namespace infinit
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
-      auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
-      Address addr = model::doughnut::NB::address(dn->owner(), _volume_name + ".root");
+      auto dn =
+        std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
+      Address addr =
+        model::doughnut::NB::address(dn->owner(), _volume_name + ".root");
       while (true)
       {
         try
         {
-          ELLE_DEBUG("Fetching bootstrap block at %x", addr);
+          ELLE_DEBUG_SCOPE("fetch root boostrap block at %x", addr);
           auto block = _block_store->fetch(addr);
-          ELLE_DEBUG("got %s", block->data().string());
           addr = Address::from_string(block->data().string().substr(2));
           break;
         }
         catch (model::MissingBlock const& e)
         {
-          ELLE_TRACE("No root NB");
           if (dn->owner() == dn->keys().K())
           {
-            ELLE_TRACE("Creating root block");
+            ELLE_TRACE("create missing root bootsrap block");
             std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
             auto saddr = elle::sprintf("%x", mb->address());
             elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
             store_or_die(*mb, model::STORE_INSERT);
-            model::doughnut::NB nb(dn.get(), dn->owner(), _volume_name + ".root", baddr);
+            model::doughnut::NB nb(dn.get(), dn->owner(),
+                                   this->_volume_name + ".root", baddr);
             store_or_die(nb, model::STORE_INSERT);
             return mb;
           }
@@ -1007,7 +1008,7 @@ namespace infinit
     void
     Directory::stat(struct stat* st)
     {
-      ELLE_DEBUG("stat on dir %s", _name);
+      ELLE_TRACE_SCOPE("%s: stat", *this);
       Node::stat(st);
     }
 
@@ -1295,7 +1296,7 @@ namespace infinit
     void
     Unknown::stat(struct stat*)
     {
-      ELLE_DEBUG("Stat on unknown %s", _name);
+      ELLE_TRACE_SCOPE("%s: stat", *this);
       THROW_NOENT;
     }
 
@@ -1314,6 +1315,7 @@ namespace infinit
     void
     Symlink::stat(struct stat* s)
     {
+      ELLE_TRACE_SCOPE("%s: stat", *this);
       Node::stat(s);
     }
 
