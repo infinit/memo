@@ -752,7 +752,7 @@ namespace infinit
           buf.size(sz);
           ELLE_DUMP("%s: received %s bytes from %s:\n%s", *this, sz, source, buf.string());
           static int counter = 1;
-          new reactor::Thread(elle::sprintf("process %s", counter++), [buf, source, this]
+          auto process =  [buf, source, this]
             {
             //deserialize
             std::unique_ptr<packet::Packet> packet;
@@ -784,7 +784,12 @@ namespace infinit
               {
                 try
                 {
-                  std::unique_ptr<packet::Packet> plain = p->decrypt(*key);
+                  std::unique_ptr<packet::Packet> plain;
+                  {
+                    static elle::Bench decrypt("kelips.decrypt", 10_sec);
+                    elle::Bench::BenchScope bs(decrypt);
+                    plain = p->decrypt(*key);
+                  }
                   if (plain->sender != p->sender)
                   {
                     ELLE_WARN("%s: sender inconsistency in encrypted packet: %s != %s",
@@ -909,7 +914,12 @@ namespace infinit
             else
               ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
 #undef CASE
-            }, true);
+            };
+          static bool async = getenv("INFINIT_KELIPS_ASYNC");
+          if (async)
+            new reactor::Thread(elle::sprintf("process %s", counter++), process, true);
+          else
+            process();
         }
       }
 
