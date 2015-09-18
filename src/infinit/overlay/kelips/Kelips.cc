@@ -720,8 +720,22 @@ namespace infinit
         static elle::Bench bencher("kelips.packet_size", 5_sec);
         bencher.add(b.size());
         reactor::Lock l(_udp_send_mutex);
+        static elle::Bench bench("kelips.send", 5_sec);
+        elle::Bench::BenchScope bs(bench);
         ELLE_DUMP("%s: sending %s bytes packet to %s\n%s", *this, b.size(), e, b.string());
-        _gossip.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
+        static bool async = getenv("INFINIT_KELIPS_ASYNC_SEND");
+        if (async)
+        {
+          std::shared_ptr<elle::Buffer> sbuf = std::make_shared<elle::Buffer>(std::move(b));
+          _gossip.socket()->async_send_to(
+            boost::asio::buffer(sbuf->contents(), sbuf->size()),
+            e,
+            [sbuf] (  const boost::system::error_code& error,
+              std::size_t bytes_transferred) {}
+            );
+        }
+        else
+          _gossip.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
       }
 
       void
