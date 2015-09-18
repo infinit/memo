@@ -376,7 +376,6 @@ namespace infinit
                          int start_block, int end_block);
       ELLE_ATTRIBUTE(std::shared_ptr<File>, owner);
       ELLE_ATTRIBUTE(bool, dirty);
-      ELLE_ATTRIBUTE(bool, closed);
     };
 
     class File
@@ -2126,7 +2125,6 @@ namespace infinit
                            bool dirty)
       : _owner(owner)
       , _dirty(dirty)
-      , _closed(false)
     {
       ELLE_TRACE_SCOPE("%s: create (previous handle count = %s)",
                        *this, _owner->_handle_count);
@@ -2152,6 +2150,7 @@ namespace infinit
         try
         {
           auto address = _owner->_parent->_files.at(_owner->_name).address;
+          ELLE_TRACE_SCOPE("fetch first block %x", address);
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.block_store()->fetch(address));
           _owner->_first_block->data();
@@ -2194,34 +2193,26 @@ namespace infinit
 
     FileHandle::~FileHandle()
     {
-      ELLE_DEBUG_SCOPE("%s: delete", *this);
-      this->close();
+      ELLE_TRACE_SCOPE("%s: close", *this);
+      if (--this->_owner->_handle_count == 0)
+      {
+        ELLE_TRACE("last handle closed, clear cache");
+        this->_owner->_blocks.clear();
+        this->_owner->_first_block.reset();
+      }
     }
 
     void
     FileHandle::close()
     {
-      if (this->_closed)
-      {
-        ELLE_DEBUG("%s: skip duplicate close", *this);
-        return;
-      }
-      ELLE_TRACE_SCOPE("%s: close (dirty: %s, count: %s)",
-                       *this, this->_dirty, _owner->_handle_count);
-      this->_closed = true;
-      _owner->_handle_count--;
-      elle::SafeFinally cleanup(
-        [&]
-        {
-          this->_dirty = false;
-          if (this->_owner->_handle_count == 0)
-          {
-            this->_owner->_blocks.clear();
-            this->_owner->_first_block.reset();
-          }
-        });
       if (this->_dirty)
+      {
+        ELLE_TRACE_SCOPE("%s: flush", *this);
+        elle::SafeFinally cleanup([&] {this->_dirty = false;});
         this->_owner->_commit();
+      }
+      else
+        ELLE_DEBUG("%s: skip non-dirty flush", *this);
     }
 
     int
