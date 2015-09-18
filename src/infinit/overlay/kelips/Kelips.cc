@@ -2256,6 +2256,11 @@ namespace infinit
         res["dropped_puts"] = this->_dropped_puts;
         res["dropped_gets"] = this->_dropped_gets;
         res["failed_puts"] = this->_failed_puts;
+        elle::json::Array rtts;
+        for (auto const& c: _state.contacts[_group])
+          rtts.push_back(
+            std::chrono::duration_cast<std::chrono::microseconds>(c.second.rtt).count());
+        res["ping_rtt"] = rtts;
         return res;
       }
 
