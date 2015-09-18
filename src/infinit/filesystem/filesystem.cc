@@ -1179,7 +1179,7 @@ namespace infinit
         ELLE_ASSERT(!!_parent->_block);
         // We must store first to ready ACL layer
         _owner.store_or_die(*b, model::STORE_INSERT);
-        _parent->_block->copy_permissions(*b);
+        umbrella([&] { _parent->_block->copy_permissions(*b);});
         Directory d(_parent, _owner, _name, address);
         d._block = std::move(b);
         d._inherit_auth = true;
@@ -1225,15 +1225,19 @@ namespace infinit
                                        b->address(),
                                        FileStoreMode::direct,
                                        std::unordered_map<std::string, elle::Buffer>{}}));
-      try
-      {
-        _parent->_commit(true);
-      }
-      catch(elle::Exception const& e)
-      {
-        ELLE_WARN("Error updating directory at %s: %s", full_path(), e.what());
-        THROW_ACCES;
-      }
+
+      _parent->_commit(true);
+      elle::SafeFinally remove_from_parent( [&] {
+          _parent->_files.erase(_name);
+          try
+          {
+            _parent->_commit(true);
+          }
+          catch(...)
+          {
+            ELLE_WARN("Rollback failure on %s", _name);
+          }
+      });
       _remove_from_cache();
       auto raw = _owner.filesystem()->path(full_path().string());
       auto f = std::dynamic_pointer_cast<File>(raw);
@@ -1246,14 +1250,16 @@ namespace infinit
         _owner.store_or_die(*f->_first_block, model::STORE_INSERT);
         // now it is :)
         f->_first_block_new = false;
-        _parent->_block->copy_permissions(
+        umbrella([&] { _parent->_block->copy_permissions(
           dynamic_cast<ACLBlock&>(*f->_first_block));
+        });
       }
       else
         f->_first_block_new = true;
       // Mark dirty since we did not push first_block
       _owner.filesystem()->set(f->full_path().string(), f);
       std::unique_ptr<rfs::Handle> h(new FileHandle(f, true, true, true));
+      remove_from_parent.abort();
       return h;
     }
 
