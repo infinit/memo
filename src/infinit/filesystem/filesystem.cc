@@ -360,8 +360,9 @@ namespace infinit
       void
       print(std::ostream& stream) const override;
     private:
-      std::shared_ptr<File> _owner;
-      bool _dirty;
+      ELLE_ATTRIBUTE(std::shared_ptr<File>, owner);
+      ELLE_ATTRIBUTE(bool, dirty);
+      ELLE_ATTRIBUTE(bool, closed);
     };
 
     class File
@@ -2087,6 +2088,7 @@ namespace infinit
                            bool dirty)
       : _owner(owner)
       , _dirty(dirty)
+      , _closed(false)
     {
       ELLE_TRACE_SCOPE("%s: create (previous handle count = %s)",
                        *this, _owner->_handle_count);
@@ -2155,25 +2157,33 @@ namespace infinit
     FileHandle::~FileHandle()
     {
       ELLE_DEBUG_SCOPE("%s: delete", *this);
-      _owner->_handle_count--;
-      close();
+      this->close();
     }
 
     void
     FileHandle::close()
     {
+      if (this->_closed)
+      {
+        ELLE_DEBUG("%s: skip duplicate close", *this);
+        return;
+      }
       ELLE_TRACE_SCOPE("%s: close (dirty: %s, count: %s)",
                        *this, this->_dirty, _owner->_handle_count);
-      elle::SafeFinally cleanup([&] {
-        _dirty = false;
-        if (_owner->_handle_count == 0)
+      this->_closed = true;
+      _owner->_handle_count--;
+      elle::SafeFinally cleanup(
+        [&]
         {
-          _owner->_blocks.clear();
-          _owner->_first_block.reset();
-        }
-      });
-      if (_dirty)
-        _owner->_commit();
+          this->_dirty = false;
+          if (this->_owner->_handle_count == 0)
+          {
+            this->_owner->_blocks.clear();
+            this->_owner->_first_block.reset();
+          }
+        });
+      if (this->_dirty)
+        this->_owner->_commit();
     }
 
     int
