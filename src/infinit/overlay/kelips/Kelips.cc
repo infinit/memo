@@ -1287,14 +1287,14 @@ namespace infinit
             {
               _state.files.insert(std::make_pair(f.first,
                 File{f.first, f.second.second, f.second.first, Time(), 0}));
-              ELLE_TRACE("%s: registering %x live since %s (%s)", *this,
+              ELLE_DUMP("%s: registering %x live since %s (%s)", *this,
                          f.first,
                          std::chrono::duration_cast<std::chrono::seconds>(now() - f.second.first).count(),
                          (now() - f.second.first).count());
             }
             else
             {
-              ELLE_TRACE("%s: %s %s %s %x", *this,
+              ELLE_DUMP("%s: %s %s %s %x", *this,
                        it->second.last_seen < f.second.first,
                        serialize_time(it->second.last_seen),
                        serialize_time(f.second.first),
@@ -1534,6 +1534,7 @@ namespace infinit
             { // Nope, insert here
               // That makes us a home node for this address, but
               // wait until we get the RPC to store anything
+              ELLE_DEBUG("%s: inserting promise for %x", *this, p->fileAddress);
               packet::PutFileReply res;
               res.sender = address_of_uuid(this->node_id());
               res.request_id = p->request_id;
@@ -1546,7 +1547,11 @@ namespace infinit
               send(res, p->originEndpoint, p->originAddress);
               return;
             }
+            else
+              ELLE_DEBUG("%s: not inserting %x: already present", *this, p->fileAddress);
           }
+          else
+            ELLE_DEBUG("%s: not inserting %x: already promised", *this, p->fileAddress);
         }
         // Forward
         if (p->insert_ttl > 0)
