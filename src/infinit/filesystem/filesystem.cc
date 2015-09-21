@@ -810,39 +810,38 @@ namespace infinit
     void
     Directory::_commit(bool set_mtime)
     {
+      ELLE_TRACE_SCOPE("%s: commit %s entries", *this, _files.size());
       elle::SafeFinally clean_cache([&] { _block.reset();});
-      ELLE_DEBUG("Directory changed: %s with %s entries", this, _files.size());
       elle::Buffer data;
       {
         elle::IOStream os(data.ostreambuf());
         elle::serialization::json::SerializerOut output(os, version);
         output.serialize_forward(*this);
       }
+      ELLE_DUMP("content: %s", data);
       if (!_block)
-      {
-        _block = elle::cast<ACLBlock>::runtime(_owner.fetch_or_die(_address));
-      }
+	ELLE_DEBUG("fetch root block")
+	  _block = elle::cast<ACLBlock>::runtime(_owner.fetch_or_die(_address));
       _block->data(data);
       if (set_mtime && _parent)
       {
+	ELLE_DEBUG_SCOPE("set mtime");
         FileData& f = _parent->_files.at(_name);
         f.mtime = time(nullptr);
         f.ctime = time(nullptr);
         f.address = _block->address();
-        _parent->_commit();
+        this->_parent->_commit();
       }
-      _push_changes();
+      this->_push_changes();
       clean_cache.abort();
     }
 
     void
     Directory::_push_changes(bool first_write)
     {
+      ELLE_DEBUG_SCOPE("%s: store changes", *this);
       elle::SafeFinally clean_cache([&] { _block.reset();});
-      ELLE_DEBUG("Directory pushChanges: %s on %x size %s, first=%s",
-                 this, _block->address(), _block->data().size(), first_write);
       _owner.store_or_die(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
-      ELLE_DEBUG("pushChange ok");
       clean_cache.abort();
     }
 
@@ -948,6 +947,7 @@ namespace infinit
         _owner.filesystem()->path(newpath.string()));
       if (dir->_files.find(newname) != dir->_files.end())
       {
+	ELLE_TRACE_SCOPE("%s: remove existing destination");
         // File and empty dir gets removed.
         auto target = _owner.filesystem()->path(where.string());
         struct stat st;
@@ -1379,6 +1379,7 @@ namespace infinit
       st->f_bavail = 1000000;
       st->f_fsid = 1;
     }
+
     bool
     File::_multi()
     {
@@ -1515,6 +1516,7 @@ namespace infinit
     void
     File::unlink()
     {
+      ELLE_TRACE_SCOPE("%s: unlink", *this);
       static bool no_unlink = !elle::os::getenv("INHIBIT_UNLINK", "").empty();
       if (no_unlink)
       { // DEBUG: link the file in root directory
@@ -1577,6 +1579,7 @@ namespace infinit
     void
     File::rename(boost::filesystem::path const& where)
     {
+      ELLE_TRACE_SCOPE("%s: rename to %s", *this, where);
       Node::rename(where);
     }
 
