@@ -548,6 +548,7 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
     BOOST_CHECK_EQUAL(std::string(buffer, buffer + 16), std::string(expect, expect + 16));
   }
   bfs::remove(mount / "test");
+#ifndef INFINIT_MACOSX
   ELLE_LOG("test use after unlink")
   {
     fd = open((mount / "test").string().c_str(), O_RDWR|O_CREAT, 0644);
@@ -573,6 +574,7 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
     close(fd);
     BOOST_CHECK_EQUAL(directory_count(mount), 0);
   }
+#endif
 
   //rename
   {
