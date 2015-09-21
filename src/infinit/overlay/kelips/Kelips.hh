@@ -255,6 +255,7 @@ namespace infinit
         void
         setKey(Address const& a, GossipEndpoint const& e,
                infinit::cryptography::SecretKey sk);
+        Address _self;
         Address _ping_target;
         Time _ping_time;
         reactor::Barrier _ping_barrier;

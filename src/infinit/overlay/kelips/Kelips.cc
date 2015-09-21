@@ -532,6 +532,15 @@ namespace infinit
         dst = E2(src.address(), src.port());
       }
 
+      Address
+      address_of_uuid(elle::UUID const& id)
+      {
+        auto hash = infinit::cryptography::hash(
+          elle::ConstWeakBuffer(id.data, id.static_size()),
+          infinit::cryptography::Oneway::sha256);
+        return Address(hash.contents());
+      }
+
       Node::Node(Configuration const& config,
                  bool observer,
                  elle::UUID node_id,
@@ -544,6 +553,7 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
+        _self = address_of_uuid(this->node_id());
         if (observer)
           ELLE_LOG("Running in observer mode");
         this->doughnut(doughnut);
@@ -577,15 +587,6 @@ namespace infinit
           _pinger_thread->terminate_now();
       }
 
-      Address
-      address_of_uuid(elle::UUID const& id)
-      {
-        auto hash = infinit::cryptography::hash(
-          elle::ConstWeakBuffer(id.data, id.static_size()),
-          infinit::cryptography::Oneway::sha256);
-        return Address(hash.contents());
-      }
-
       void
       Node::engage()
       {
@@ -602,7 +603,7 @@ namespace infinit
           std::bind(&Node::pinger, this));
         // Send a bootstrap request to bootstrap nodes
         packet::BootstrapRequest req;
-        req.sender = address_of_uuid(this->node_id());
+        req.sender = _self;
         for (auto const& e: _config.bootstrap_nodes)
         {
           ELLE_TRACE("%s: sending bootstrap to node %s", *this, e);
@@ -611,7 +612,7 @@ namespace infinit
           else
           {
             packet::RequestKey req(doughnut()->passport());
-            req.sender = address_of_uuid(this->node_id());
+            req.sender = _self;
             send(req, e, Address::null);
             _pending_bootstrap.push_back(e);
           }
@@ -622,7 +623,7 @@ namespace infinit
 
       void Node::start()
       {
-        _group = group_of(address_of_uuid(this->node_id()));
+        _group = group_of(_self);
         _state.contacts.resize(_config.k);
         // If we are not an observer, we must wait for Local port information
         if (_observer)
@@ -716,7 +717,7 @@ namespace infinit
         if (send_key_request)
         {
           packet::RequestKey req(doughnut()->passport());
-          req.sender = _observer ? Address::null : address_of_uuid(this->node_id());
+          req.sender = _observer ? Address::null : _self;
           send(req, e, Address::null);
         }
         if (b.size() == 0)
@@ -816,7 +817,7 @@ namespace infinit
               { // send a key request
                 ELLE_DEBUG("%s: sending key request to %s", *this, source);
                 packet::RequestKey rk(doughnut()->passport());
-                rk.sender = address_of_uuid(this->node_id());
+                rk.sender = _self;
                 elle::Buffer s = packet::serialize(rk);
                 send(rk, source, p->sender);
                 return;
@@ -837,7 +838,7 @@ namespace infinit
               elle::Buffer password = sk.password();
               setKey(p->sender, p->endpoint, std::move(sk));
               packet::KeyReply kr(doughnut()->passport());
-              kr.sender = address_of_uuid(this->node_id());
+              kr.sender = _self;
               kr.encrypted_key = p->passport.user().seal(
                 password,
                 infinit::cryptography::Cipher::aes256,
@@ -872,7 +873,7 @@ namespace infinit
                 *it = _pending_bootstrap[_pending_bootstrap.size() - 1];
                 _pending_bootstrap.pop_back();
                 packet::BootstrapRequest req;
-                req.sender = address_of_uuid(this->node_id());
+                req.sender = _self;
                 send(req, source, p->sender);
               }
               if (packet->sender != Address::null)
@@ -899,7 +900,7 @@ namespace infinit
             CASE(Ping)
             {
               packet::Pong r;
-              r.sender = address_of_uuid(this->node_id());
+              r.sender = _self;
               r.remote_endpoint = source;
               send(r, source, p->sender);
             }
@@ -1098,7 +1099,7 @@ namespace infinit
         // update self file last seen, this will avoid us some ifs at other places
         for (auto& f: _state.files)
         {
-          if (f.second.home_node == address_of_uuid(this->node_id()))
+          if (f.second.home_node == _self)
           {
             f.second.last_seen = now();
           }
@@ -1129,7 +1130,7 @@ namespace infinit
         std::vector<std::pair<Address, std::pair<Time, Address>>> old_files;
         for (auto& f: _state.files)
         {
-          if (f.second.home_node == address_of_uuid(this->node_id())
+          if (f.second.home_node == _self
             && ((now() - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
             && !has(res, f.first, f.second.home_node))
               old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
@@ -1179,7 +1180,7 @@ namespace infinit
         int v = random(_gen);
         reactor::sleep(boost::posix_time::milliseconds(v));
         packet::Gossip p;
-        p.sender = address_of_uuid(this->node_id());
+        p.sender = _self;
         while (true)
         {
           reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
@@ -1201,7 +1202,7 @@ namespace infinit
             if (!p.files.empty())
               ELLE_TRACE("%s: info on %s files %s   %x %x", *this, p.files.size(),
                        serialize_time(p.files.begin()->second.first),
-                       address_of_uuid(this->node_id()), p.files.begin()->second.second);
+                       _self, p.files.begin()->second.second);
             send(p, e.first, e.second);
           }
         }
@@ -1211,7 +1212,7 @@ namespace infinit
       Node::onContactSeen(Address addr, GossipEndpoint endpoint)
       {
         // Drop self
-        if (addr == address_of_uuid(this->node_id()))
+        if (addr == _self)
           return;
         int g = group_of(addr);
         if (g == _group)
@@ -1283,7 +1284,7 @@ namespace infinit
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
         for (auto const& c: p->contacts)
         {
-          if (c.first == address_of_uuid(this->node_id()))
+          if (c.first == _self)
             continue;
           int g = group_of(c.first);
           auto& target = _state.contacts[g];
@@ -1338,7 +1339,7 @@ namespace infinit
       {
         int g = group_of(p->sender);
         packet::Gossip res;
-        res.sender = address_of_uuid(this->node_id());
+        res.sender = _self;
         int group_count = _state.contacts[g].size();
         // Special case to avoid the randomized fetcher running for ever
         if (group_count <= _config.gossip.bootstrap_group_target + 5)
@@ -1429,7 +1430,7 @@ namespace infinit
           // find the corresponding endpoint
           RpcEndpoint endpoint;
           bool found = false;
-          if (it->second.home_node == address_of_uuid(this->node_id()))
+          if (it->second.home_node == _self)
           {
             ELLE_DEBUG("%s: found self", *this);
             if (_local_endpoint.address().to_string() == "0.0.0.0")
@@ -1479,7 +1480,7 @@ namespace infinit
         if (p->result.size() >= unsigned(p->count))
         { // We got the full result, send reply
           packet::GetFileReply res;
-          res.sender = address_of_uuid(this->node_id());
+          res.sender = _self;
           res.fileAddress = p->fileAddress;
           res.origin = p->originAddress;
           res.request_id = p->request_id;
@@ -1496,7 +1497,7 @@ namespace infinit
         {
           // FIXME not in initial protocol, but we cant distinguish get and put
           packet::GetFileReply res;
-          res.sender = address_of_uuid(this->node_id());
+          res.sender = _self;
           res.fileAddress = p->fileAddress;
           res.origin = p->originAddress;
           res.request_id = p->request_id;
@@ -1507,7 +1508,7 @@ namespace infinit
           return;
         }
         p->ttl--;
-        p->sender = address_of_uuid(this->node_id());
+        p->sender = _self;
         int count = _state.contacts[fg].size();
         if (count == 0)
           return;
@@ -1552,14 +1553,14 @@ namespace infinit
           // check if we didn't already accept this file
           if (std::find_if(p->result.begin(), p->result.end(),
             [&] (GetFileResult const& r) {
-              return r.first == address_of_uuid(this->node_id());
+              return r.first == _self;
             }) == p->result.end())
           {
             // Check if we already have the block
             auto its = _state.files.equal_range(p->fileAddress);
             auto it = std::find_if(its.first, its.second,
               [&](decltype(*its.first) i) ->bool {
-                return i.second.home_node == address_of_uuid(this->node_id());
+                return i.second.home_node == _self;
               });
             if (it == its.second)
             { // Nope, insert here
@@ -1568,7 +1569,7 @@ namespace infinit
               ELLE_DEBUG("%s: inserting", *this);
               RpcEndpoint ep;
               endpoint_to_endpoint(_local_endpoint, ep);
-              p->result.push_back(std::make_pair(address_of_uuid(this->node_id()), ep));
+              p->result.push_back(std::make_pair(_self, ep));
               _promised_files.push_back(p->fileAddress);
             }
             else
@@ -1583,7 +1584,7 @@ namespace infinit
         if (p->ttl == 0 || p->count <= signed(p->result.size()))
         {
           packet::PutFileReply res;
-          res.sender = address_of_uuid(this->node_id());
+          res.sender = _self;
           res.request_id = p->request_id;
           res.origin = p->originAddress;
           res.results = p->result;
@@ -1606,7 +1607,7 @@ namespace infinit
           ELLE_ERR("%s: No contact founds", *this);
           return;
         }
-        p->sender = address_of_uuid(this->node_id());
+        p->sender = _self;
         p->ttl--;
         send(*p, it->second.endpoint, it->second.address);
       }
@@ -1670,9 +1671,9 @@ namespace infinit
       {
         std::set<RpcEndpoint> result_set;
         packet::GetFileRequest r;
-        r.sender = address_of_uuid(this->node_id());
+        r.sender = _self;
         r.request_id = ++ _next_id;
-        r.originAddress = _observer ? Address::null : address_of_uuid(this->node_id());
+        r.originAddress = _observer ? Address::null : _self;
         r.originEndpoint = _local_endpoint;
         r.fileAddress = file;
         r.ttl = _config.query_get_ttl;
@@ -1684,7 +1685,7 @@ namespace infinit
           auto its = _state.files.equal_range(file);
           auto it_us = std::find_if(its.first, its.second,
             [&](std::pair<const infinit::model::Address, File> const& f) {
-              return f.second.home_node == address_of_uuid(this->node_id());
+              return f.second.home_node == _self;
           });
           if (it_us != its.second && n == 1)
           {
@@ -1754,8 +1755,8 @@ namespace infinit
       {
         int fg = group_of(file);
         packet::PutFileRequest p;
-        p.sender = address_of_uuid(this->node_id());
-        p.originAddress = _observer ? Address::null : address_of_uuid(this->node_id());
+        p.sender = _self;
+        p.originAddress = _observer ? Address::null : _self;
         p.originEndpoint = _local_endpoint;
         p.fileAddress = file;
         p.ttl = _config.query_put_ttl;
@@ -1785,7 +1786,7 @@ namespace infinit
               [&] (Files::value_type const& v)
               {
                 return v.second.address == file
-                && v.second.home_node == address_of_uuid(this->node_id());
+                && v.second.home_node == _self;
               }) != _state.files.end();
               if (_config.bootstrap_nodes.empty() && !have_file && std::find(_promised_files.begin(), _promised_files.end(), p.fileAddress)
                 == _promised_files.end())
@@ -1980,7 +1981,7 @@ namespace infinit
             break;
           }
           packet::Ping p;
-          p.sender = address_of_uuid(this->node_id());
+          p.sender = _self;
           p.remote_endpoint = endpoint;
           _ping_time = now();
           ELLE_DEBUG("%s: pinging %x at %s", *this, _ping_target, endpoint);
@@ -2008,7 +2009,7 @@ namespace infinit
         auto file_timeout = std::chrono::milliseconds(_config.file_timeout_ms);
         while (it != _state.files.end())
         {
-          if (!(it->second.home_node == address_of_uuid(this->node_id())) &&
+          if (!(it->second.home_node == _self) &&
               t - it->second.last_seen > file_timeout)
           {
             ELLE_TRACE("%s: erase file %x", *this, it->first);
@@ -2034,7 +2035,7 @@ namespace infinit
         int my_files = 0;
         for (auto const& f: _state.files)
         {
-          if (f.second.home_node == address_of_uuid(this->node_id()))
+          if (f.second.home_node == _self)
             ++my_files;
         }
         int time_send_all = my_files / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
@@ -2097,10 +2098,10 @@ namespace infinit
       {
         auto its = _state.files.equal_range(block.address());
         if (std::find_if(its.first, its.second, [&](Files::value_type const& f) {
-            return f.second.home_node == address_of_uuid(this->node_id());
+            return f.second.home_node == _self;
         }) == its.second)
           _state.files.insert(std::make_pair(block.address(),
-            File{block.address(), address_of_uuid(this->node_id()), now(), Time(), 0}));
+            File{block.address(), _self, now(), Time(), 0}));
         auto itp = std::find(_promised_files.begin(), _promised_files.end(), block.address());
         if (itp != _promised_files.end())
         {
@@ -2115,7 +2116,7 @@ namespace infinit
         auto its = _state.files.equal_range(address);
         for (auto it = its.first; it != its.second; ++it)
         {
-          if (it->second.home_node == address_of_uuid(this->node_id()))
+          if (it->second.home_node == _self)
           {
             _state.files.erase(it);
             break;
@@ -2219,7 +2220,7 @@ namespace infinit
         for (auto const& k: keys)
         {
           _state.files.insert(std::make_pair(k,
-            File{k, address_of_uuid(this->node_id()), now(), Time(), 0}));
+            File{k, _self, now(), Time(), 0}));
           ELLE_DEBUG("%s: reloaded %x", *this, k);
         }
       }
