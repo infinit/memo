@@ -1424,7 +1424,7 @@ namespace infinit
     File::_header(Header const& h)
     {
       _first_block->data([&](elle::Buffer& data) {
-          if (data.size() < header_size)
+          if (data.size() < unsigned(header_size))
             data.size(header_size);
           uint32_t v;
           v = htonl(h.current_version | (h.is_bare ? 0x01000000 : 0));
