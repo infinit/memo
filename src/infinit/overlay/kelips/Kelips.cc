@@ -1200,7 +1200,7 @@ namespace infinit
           for (auto const& e: targets)
           {
             if (!p.files.empty())
-              ELLE_TRACE("%s: info on %s files %s   %x %x", *this, p.files.size(),
+              ELLE_DUMP("%s: info on %s files %s   %x %x", *this, p.files.size(),
                        serialize_time(p.files.begin()->second.first),
                        _self, p.files.begin()->second.second);
             send(p, e.first, e.second);
@@ -1278,7 +1278,7 @@ namespace infinit
       void
       Node::onGossip(packet::Gossip* p)
       {
-        ELLE_TRACE("%s: rocessing gossip from %s", *this, p->endpoint);
+        ELLE_DUMP("%s: processing gossip from %s", *this, p->endpoint);
         int g = group_of(p->sender);
         if (g != _group && !p->files.empty())
           ELLE_WARN("%s: Received files from another group: %s at %s", *this, p->sender, p->endpoint);
@@ -1588,7 +1588,7 @@ namespace infinit
           res.request_id = p->request_id;
           res.origin = p->originAddress;
           res.results = p->result;
-          res.ttl = 0;
+          res.ttl = p->ttl;
           send(res, p->originEndpoint, p->originAddress);
           if (p->count > signed(p->result.size()))
           {
@@ -1732,7 +1732,7 @@ namespace infinit
           reactor::wait(r->barrier,
             boost::posix_time::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
-            ELLE_LOG("%s: Timeout on attempt %s", *this, i);
+            ELLE_LOG("%s: Timeout on GET attempt %s", *this, i);
           else
           {
             ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
@@ -1807,7 +1807,7 @@ namespace infinit
             boost::posix_time::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
           {
-            ELLE_LOG("%s: Timeout on attempt %s", *this, i);
+            ELLE_LOG("%s: Timeout on PUT attempt %s", *this, i);
           }
           else
           {
@@ -1984,7 +1984,7 @@ namespace infinit
           p.sender = _self;
           p.remote_endpoint = endpoint;
           _ping_time = now();
-          ELLE_DEBUG("%s: pinging %x at %s", *this, _ping_target, endpoint);
+          ELLE_DUMP("%s: pinging %x at %s", *this, _ping_target, endpoint);
           send(p, endpoint, address);
           try
           {
@@ -2012,7 +2012,7 @@ namespace infinit
           if (!(it->second.home_node == _self) &&
               t - it->second.last_seen > file_timeout)
           {
-            ELLE_TRACE("%s: erase file %x", *this, it->first);
+            ELLE_DUMP("%s: erase file %x", *this, it->first);
             it = _state.files.erase(it);
           }
           else
@@ -2039,7 +2039,7 @@ namespace infinit
             ++my_files;
         }
         int time_send_all = my_files / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
-        ELLE_DEBUG("time_send_all is %s", time_send_all);
+        ELLE_DUMP("time_send_all is %s", time_send_all);
         if (time_send_all >= _config.file_timeout_ms / 2)
         {
           ELLE_TRACE_SCOPE(
