@@ -56,14 +56,19 @@ namespace infinit
         ELLE_TRACE("perm exception %s", e);
         throw rfs::Error(EACCES, elle::sprintf("%s", e));
       }
+      catch (rfs::Error const& e)
+      {
+        ELLE_TRACE("rethrowing rfs exception: %s", e);
+        throw;
+      }
       catch(elle::Exception const& e)
       {
-        ELLE_WARN("unexpected exception %s", e.what());
+        ELLE_WARN("unexpected elle::exception %s", e.what());
         throw rfs::Error(err, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
       {
-        ELLE_WARN("unexpected exception %s", e);
+        ELLE_WARN("unexpected std::exception %s", e);
         throw rfs::Error(err, e.what());
       }
     }
@@ -74,6 +79,8 @@ namespace infinit
     typedef infinit::model::blocks::ACLBlock ACLBlock;
     typedef infinit::model::Address Address;
 
+    static const int header_size = sizeof(Address::Value);
+    static_assert(sizeof(Address) == header_size, "Glitch in Address size");
     class AnyBlock
     {
     public:
@@ -102,12 +109,7 @@ namespace infinit
     class Directory;
     class File;
     typedef std::shared_ptr<Directory> DirectoryPtr;
-    enum class FileStoreMode
-    {
-      direct = 0, // address points to file data
-      index = 1,   // address points to index of addresses
-      none = 2,    // no storage (symlink)
-    };
+
     static Address::Value zeros = {0};
     struct FileData
     {
@@ -120,13 +122,12 @@ namespace infinit
       uint64_t mtime; // content change  dir: create/delete file
       uint64_t ctime; //attribute change+content change
       Address address;
-      FileStoreMode store_mode;
       boost::optional<std::string> symlink_target;
       std::unordered_map<std::string, elle::Buffer> xattrs;
 
 
       FileData(std::string name, uint64_t size, uint32_t mode, uint64_t atime,
-        uint64_t mtime, uint64_t ctime, Address const& address, FileStoreMode store_mode,
+        uint64_t mtime, uint64_t ctime, Address const& address,
         std::unordered_map<std::string, elle::Buffer> xattrs)
         : name(name)
         , size(size)
@@ -135,7 +136,6 @@ namespace infinit
         , mtime(mtime)
         , ctime(ctime)
         , address(address)
-        , store_mode(store_mode)
         , xattrs(std::move(xattrs))
       {}
 
@@ -148,7 +148,6 @@ namespace infinit
         , mtime(0)
         , ctime(0)
         , address(zeros)
-        , store_mode(FileStoreMode::direct)
       {}
 
       FileData(elle::serialization::SerializerIn& s)
@@ -166,9 +165,6 @@ namespace infinit
         s.serialize("mtime", mtime);
         s.serialize("ctime", ctime);
         s.serialize("address", address);
-        int sm = (int)store_mode;
-        s.serialize("store_mode", sm);
-        store_mode = (FileStoreMode)sm;
         try {
           s.serialize("uid", uid);
           s.serialize("gid", gid);
@@ -425,6 +421,7 @@ namespace infinit
       struct Header
       { // max size we can grow is sizeof(Address)
         static const uint32_t current_version = 1;
+        bool     is_bare; // true if bare data below, false if block address table
         uint32_t version;
         uint32_t block_size;
         uint32_t links;
@@ -947,7 +944,7 @@ namespace infinit
         _owner.filesystem()->path(newpath.string()));
       if (dir->_files.find(newname) != dir->_files.end())
       {
-	ELLE_TRACE_SCOPE("%s: remove existing destination");
+        ELLE_TRACE_SCOPE("%s: remove existing destination", *this);
         // File and empty dir gets removed.
         auto target = _owner.filesystem()->path(where.string());
         struct stat st;
@@ -1201,7 +1198,6 @@ namespace infinit
                                 uint64_t(time(nullptr)),
                                 uint64_t(time(nullptr)),
                                 address,
-                                FileStoreMode::direct,
                                 std::unordered_map<std::string, elle::Buffer>{}}));
       _parent->_commit();
       _remove_from_cache();
@@ -1229,7 +1225,6 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
                                        b->address(),
-                                       FileStoreMode::direct,
                                        std::unordered_map<std::string, elle::Buffer>{}}));
 
       _parent->_commit(true);
@@ -1250,6 +1245,13 @@ namespace infinit
       if (!f)
         ELLE_ERR("Expected valid pointer from %s, got nullptr", raw.get());
       f->_first_block = std::move(b);
+      File::Header h;
+      h.version = File::Header::current_version;
+      h.is_bare = true;
+      h.block_size = File::default_block_size;
+      h.links = 1;
+      h.total_size = 0;
+      f->_header(h);
       if (_parent->_inherit_auth)
       {
         // ACLblock is not ready yet, we cant use permissions
@@ -1264,9 +1266,9 @@ namespace infinit
         f->_first_block_new = true;
       // Mark dirty since we did not push first_block
       _owner.filesystem()->set(f->full_path().string(), f);
-      std::unique_ptr<rfs::Handle> h(new FileHandle(f, true, true, true));
+      std::unique_ptr<rfs::Handle> handle(new FileHandle(f, true, true, true));
       remove_from_parent.abort();
-      return h;
+      return handle;
     }
 
     void
@@ -1280,7 +1282,6 @@ namespace infinit
                                        uint64_t(time(nullptr)),
                                        uint64_t(time(nullptr)),
                                        Address(v),
-                                       FileStoreMode::none,
                                        std::unordered_map<std::string, elle::Buffer>{}}));
       it.first->second.symlink_target = where.string();
       _parent->_commit(true);
@@ -1383,9 +1384,9 @@ namespace infinit
     bool
     File::_multi()
     {
-      ELLE_ASSERT(!!_parent);
-      ELLE_ASSERT(_parent->_files.find(_name) != _parent->_files.end());
-      return _parent->_files.at(_name).store_mode == FileStoreMode::index;
+      ELLE_ASSERT(!!_first_block);
+      Header h = _header();
+      return !h.is_bare;
     }
 
     void
@@ -1406,6 +1407,8 @@ namespace infinit
       uint32_t v;
       memcpy(&v, _first_block->data().mutable_contents(), 4);
       res.version = ntohl(v);
+      res.is_bare = res.version & 0xFF000000;
+      res.version = res.version & 0x00FFFFFF;
       memcpy(&v, _first_block->data().mutable_contents()+4, 4);
       res.block_size = ntohl(v);
       memcpy(&v, _first_block->data().mutable_contents()+8, 4);
@@ -1421,8 +1424,10 @@ namespace infinit
     File::_header(Header const& h)
     {
       _first_block->data([&](elle::Buffer& data) {
+          if (data.size() < header_size)
+            data.size(header_size);
           uint32_t v;
-          v = htonl(h.current_version);
+          v = htonl(h.current_version | (h.is_bare ? 0x01000000 : 0));
           memcpy(data.mutable_contents(), &v, 4);
           v = htonl(h.block_size);
           memcpy(data.mutable_contents()+4, &v, 4);
@@ -1500,6 +1505,9 @@ namespace infinit
       if (dir->_files.find(newname) != dir->_files.end())
         throw rfs::Error(EEXIST, "target file exists");
       // we need a place to store the link count
+      if (!_first_block)
+        _first_block = elle::cast<MutableBlock>::runtime
+          (_owner.fetch_or_die(_parent->_files.at(_name).address));
       bool multi = _multi();
       if (!multi)
         _switch_to_multi(false);
@@ -1532,6 +1540,9 @@ namespace infinit
         dir->_files.at(n).name = n;
       }
       // multi method can't be called after deletion from parent
+      if (!_first_block)
+        _first_block = elle::cast<MutableBlock>::runtime
+          (_owner.fetch_or_die(_parent->_files.at(_name).address));
       bool multi = _multi();
       Address addr = _parent->_files.at(_name).address;
       _parent->_files.erase(_name);
@@ -1588,23 +1599,39 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: stat", *this);
       Node::stat(st);
-      if (_multi())
+      st->st_size = _parent->_files.at(_name).size;
+      st->st_blocks = st->st_size / 512;
+      st->st_nlink = 1;
+      st->st_mode &= ~0777;
+      try
       {
-        if (!_first_block || !_handle_count)
+        ELLE_DEBUG( (!!_handle_count) ? "block from cache" : "feching block");
+        if (!_handle_count)
           _first_block = elle::cast<MutableBlock>::runtime
-            (_owner.fetch_or_die(_parent->_files.at(_name).address));
-        Header header = umbrella([&] {return _header();}, EACCES);
-        st->st_size = header.total_size;
-        st->st_nlink = header.links;
+        (_owner.fetch_or_die(_parent->_files.at(_name).address));
+        auto h = _header();
+        st->st_mode |= 00777;
+        ELLE_DEBUG("%s: overriding in-dir size %s with %s from %s",
+                   *this, st->st_size, h.total_size,
+                   _first_block->address());
+        st->st_size = h.total_size;
         st->st_blocks = st->st_size / 512;
-        ELLE_DEBUG("multi stat size: %s", header.total_size);
+        st->st_nlink = h.links;
       }
-      else
+      catch (infinit::model::doughnut::ValidationFailed const& e)
       {
-        st->st_size = _parent->_files.at(_name).size;
-        st->st_nlink = 1;
-        ELLE_DEBUG("single stat size: %s", st->st_size);
+        ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
       }
+      catch (reactor::Terminate const& t)
+      {
+        throw;
+      }
+      catch (elle::Exception const& e)
+      {
+        ELLE_WARN("unexpected elle::exception %s", e.what());
+        throw rfs::Error(EIO, elle::sprintf("%s", e));
+      }
+      ELLE_DEBUG("stat size: %s", st->st_size);
     }
 
     void
@@ -1634,12 +1661,15 @@ namespace infinit
     void
     File::truncate(off_t new_size)
     {
+      if (!_handle_count)
+        _first_block = elle::cast<MutableBlock>::runtime
+          (_owner.fetch_or_die(_parent->_files.at(_name).address));
       if (!_multi() && new_size > signed(default_block_size))
         _switch_to_multi(true);
       if (!_multi())
       {
         _first_block->data
-          ([new_size] (elle::Buffer& data) { data.size(new_size); });
+          ([new_size] (elle::Buffer& data) { data.size(header_size + new_size); });
       }
       else
       {
@@ -1697,7 +1727,6 @@ namespace infinit
         if (new_size <= block_size && header.links == 1)
         { // switch back from multi to direct
           auto& data = _parent->_files.at(_name);
-          data.store_mode = FileStoreMode::direct;
           data.size = new_size;
           _parent->_commit();
           // Replacing FAT block with first block would be simpler,
@@ -1715,9 +1744,10 @@ namespace infinit
           _owner.block_store()->remove(addr[1]);
           _first_block->data
             ([&] (elle::Buffer& data) {
-              data.size(0);
+              data.size(header_size);
               data.append(data_block->data().contents(), new_size);
             });
+           _header(Header {true, Header::current_version, default_block_size, 1, (uint64_t)new_size});
           _blocks.clear();
           _owner.store_or_die(*_first_block, infinit::model::STORE_UPDATE);
         }
@@ -1732,15 +1762,10 @@ namespace infinit
       if (flags & O_TRUNC)
         truncate(0);
       _owner.filesystem()->set(full_path().string(), shared_from_this());
-      try {
+      return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(new FileHandle(
           std::dynamic_pointer_cast<File>(shared_from_this())));
-      }
-      catch(elle::Error const& e)
-      {
-        ELLE_WARN("Error opening file %s: %s", full_path(), e.what());
-        THROW_ACCES;
-      }
+      });
     }
 
     std::unique_ptr<rfs::Handle>
@@ -1799,7 +1824,13 @@ namespace infinit
           }
         }
       }
-      ELLE_DEBUG("store first block: %f", *this->_first_block)
+      else {
+        Header h = _header();
+        h.total_size = this->_first_block->data().size() - header_size;
+        _header(h);
+      }
+      ELLE_DEBUG("store first block: %f with payload %s, total_size %s", *this->_first_block,
+        this->_first_block->data().size() - header_size, _header().total_size)
         _owner.store_or_die(
           *this->_first_block,
           this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
@@ -1810,7 +1841,9 @@ namespace infinit
         data.mtime = time(nullptr);
         data.ctime = time(nullptr);
         if (!this->_multi())
-          data.size = this->_first_block->data().size();
+          data.size = this->_first_block->data().size() - header_size;
+        else
+          data.size = _header().total_size;
         this->_parent->_commit(false);
       }
     }
@@ -1820,11 +1853,12 @@ namespace infinit
     {
       // Switch without changing our address
       if (!_first_block)
-      _first_block = elle::cast<MutableBlock>::runtime
-        (_owner.fetch_or_die(_parent->_files.at(_name).address));
-      uint64_t current_size = _first_block->data().size();
+        _first_block = elle::cast<MutableBlock>::runtime
+          (_owner.fetch_or_die(_parent->_files.at(_name).address));
+      uint64_t current_size = _first_block->data().size() - header_size;
+      auto const& data = _first_block->data();
       auto new_block = _owner.block_store()->make_block<ImmutableBlock>(
-        _first_block->data());
+        elle::Buffer(data.contents() + header_size, data.size()-header_size));
       ELLE_ASSERT_EQ(current_size, new_block->data().size());
       _blocks.insert(std::make_pair(0, CacheEntry{
         AnyBlock(std::move(new_block)), true, {}, true}));
@@ -1839,24 +1873,23 @@ namespace infinit
       _first_block->data
         ([] (elle::Buffer& data) { data.size(sizeof(Address)* 2); });
       // store block size in headers
-      Header h { Header::current_version, default_block_size, 1, current_size};
+      Header h {false, Header::current_version, default_block_size, 1, current_size};
       _header(h);
       _first_block->data([&](elle::Buffer& data)
         {
           memcpy(data.mutable_contents() + sizeof(Address),
             _blocks.at(0).block.address().value(), sizeof(Address::Value));
         });
-      _parent->_files.at(_name).store_mode = FileStoreMode::index;
-      _parent->_commit();
+
       // we know the operation that triggered us is going to expand data
       // beyond first block, so it is safe to resize here
       if (alloc_first_block)
       {
         auto& b = _blocks.at(0);
         int64_t old_size = b.block.data().size();
-        b.block.data([] (elle::Buffer& data) {data.size(default_block_size);});
-        if (old_size != signed(default_block_size))
-          b.block.zero(old_size, default_block_size - old_size);
+        b.block.data([] (elle::Buffer& data) {data.size(header_size + default_block_size);});
+        if (old_size != signed(default_block_size + header_size))
+          b.block.zero(old_size, default_block_size + header_size - old_size);
       }
       this->_commit();
     }
@@ -2150,7 +2183,7 @@ namespace infinit
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
-      if (!no_fetch && !_owner->_first_block)
+      if (!no_fetch && _owner->_handle_count == 1)
       {
         try
         {
@@ -2158,6 +2191,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("fetch first block %x", address);
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.block_store()->fetch(address));
+          // access data to detect and report permission issues
           _owner->_first_block->data();
         }
         catch (infinit::model::MissingBlock const& err)
@@ -2171,13 +2205,19 @@ namespace infinit
             throw;
           }
         }
+        catch (infinit::model::doughnut::ValidationFailed const& e)
+        {
+          _owner->_handle_count--;
+          ELLE_TRACE("%s: validation failed: %s", *this, e);
+          THROW_ACCES;
+        }
         catch (elle::Error const& e)
         {
           _owner->_handle_count--;
-          ELLE_WARN("%s: assuming permissiond denied for error: %s",
+          ELLE_WARN("%s: unexpected elle exception while fetching: %s",
                     *this, e.what());
           _owner->_first_block.reset();
-          THROW_ACCES;
+          throw rfs::Error(EIO, e.what());
         }
         // FIXME: I *really* don't like those.
         catch (std::exception const& e)
@@ -2237,14 +2277,14 @@ namespace infinit
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.fetch_or_die(address));
         }
-        if (offset + size > block->data().size())
+        if (offset + size > block->data().size() - header_size)
         {
           ELLE_DEBUG("read past buffer end, reducing size from %s to %s", size,
-                     block->data().size() - offset);
-          size = block->data().size() - offset;
+                     block->data().size() - offset - header_size);
+          size = block->data().size() - offset - header_size;
         }
         memcpy(buffer.mutable_contents(),
-               block->data().mutable_contents() + offset,
+               block->data().mutable_contents() + offset + header_size,
                size);
         ELLE_DEBUG("read %s bytes", size);
         return size;
@@ -2367,22 +2407,22 @@ namespace infinit
     FileHandle::_write_single(elle::WeakBuffer buffer, off_t offset)
     {
       auto& block = this->_owner->_first_block;
-      if (offset + buffer.size() > block->data().size())
+      if (offset + buffer.size() > block->data().size() - header_size)
       {
-        int64_t old_size = block->data().size();
+        int64_t old_size = block->data().size() - header_size;
         block->data (
           [&] (elle::Buffer& data)
           {
-            data.size(offset + buffer.size());
+            data.size(offset + buffer.size() + header_size);
             if (old_size < offset)
-              memset(data.mutable_contents() + old_size, 0,
+              memset(data.mutable_contents() + old_size + header_size, 0,
                      offset - old_size);
           });
       }
       block->data(
         [&] (elle::Buffer& data)
         {
-          memcpy(data.mutable_contents() + offset,
+          memcpy(data.mutable_contents() + offset + header_size,
                  buffer.contents(), buffer.size());
         });
       return buffer.size();
