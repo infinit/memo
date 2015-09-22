@@ -111,7 +111,7 @@ namespace infinit
         if (!encrypted_secret)
         {
           // FIXME: better exceptions
-          throw elle::Error("no read permissions");
+          throw ValidationFailed("no read permissions");
         }
         auto secret_buffer =
           this->doughnut()->keys().k().open(*encrypted_secret);
