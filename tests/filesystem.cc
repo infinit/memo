@@ -269,7 +269,7 @@ static void run_filesystem_dht(std::string const& store,
         new reactor::Thread("mounter", [mp] {
             ELLE_LOG("mounting on %s", mp);
             mounted = true;
-            fs->mount(mp, {""}); // {"", "-d" /*, "-o", "use_ino"*/});
+            fs->mount(mp, {"", "-o", "hard_remove"}); // {"", "-d" /*, "-o", "use_ino"*/});
             ELLE_TRACE("waiting...");
             reactor::wait(*fs);
             ELLE_TRACE("...done");
@@ -377,7 +377,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);
     mount_points.push_back(mountpoint);
     mounted = true;
-    fs->mount(mountpoint, {""}); // {"", "-d" /*, "-o", "use_ino"*/});
+    fs->mount(mountpoint, {"", "-ohard_remove"}); // {"", "-d" /*, "-o", "use_ino"*/});
     reactor::wait(*fs);
   });
   sched->run();

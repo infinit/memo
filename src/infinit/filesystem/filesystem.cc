@@ -211,7 +211,7 @@ namespace infinit
       std::string getxattr(std::string const& key);
       void setxattr(std::string const& k, std::string const& v, int flags);
       void removexattr(std::string const& k);
-      void _remove_from_cache();
+      void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       boost::filesystem::path full_path();
       FileSystem& _owner;
@@ -381,6 +381,7 @@ namespace infinit
     public:
       File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
                 std::unique_ptr<MutableBlock> b = std::unique_ptr<MutableBlock>());
+      ~File();
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) THROW_NOTDIR;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;
@@ -451,6 +452,7 @@ namespace infinit
       std::unique_ptr<MutableBlock> _first_block;
       bool _first_block_new;
       int _handle_count;
+      boost::filesystem::path _full_path;
     };
 
     const unsigned long File::default_block_size = 1024 * 1024;
@@ -985,11 +987,13 @@ namespace infinit
     }
 
     void
-    Node::_remove_from_cache()
+    Node::_remove_from_cache(boost::filesystem::path full_path)
     {
-      ELLE_DEBUG("remove_from_cache: %s entering", _name);
-      std::shared_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path().string());
-      ELLE_DEBUG("remove_from_cache: %s released", _name);
+      if (full_path == boost::filesystem::path())
+        full_path = this->full_path();
+      ELLE_DEBUG("remove_from_cache: %s (%s) entering", _name, full_path);
+      std::shared_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path.string());
+      ELLE_DEBUG("remove_from_cache: %s released (%s), this %s", _name, self, this);
       new reactor::Thread("delayed_cleanup", [self] { ELLE_DEBUG("async_clean");}, true);
       ELLE_DEBUG("remove_from_cache: %s exiting with async cleaner", _name);
     }
@@ -1362,7 +1366,13 @@ namespace infinit
       , _first_block(std::move(block))
       , _first_block_new(false)
       , _handle_count(0)
+      , _full_path(full_path())
     {}
+
+    File::~File()
+    {
+      ELLE_DEBUG("%s: destroyed", *this);
+    }
 
     bool
     File::allow_cache()
@@ -1524,7 +1534,7 @@ namespace infinit
     void
     File::unlink()
     {
-      ELLE_TRACE_SCOPE("%s: unlink", *this);
+      ELLE_TRACE_SCOPE("%s: unlink, handle_count %s", *this, _handle_count);
       static bool no_unlink = !elle::os::getenv("INHIBIT_UNLINK", "").empty();
       if (no_unlink)
       { // DEBUG: link the file in root directory
@@ -1541,25 +1551,36 @@ namespace infinit
       }
       // multi method can't be called after deletion from parent
       if (!_first_block)
+      {
+        if (!_parent)
+        {
+          ELLE_ERR("%s: parent is null and root block unavailable", *this);
+          _remove_from_cache(_full_path);
+          return;
+        }
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
+      }
       bool multi = _multi();
-      Address addr = _parent->_files.at(_name).address;
-      _parent->_files.erase(_name);
-      _parent->_commit(true);
+      if (_parent)
+      {
+        _parent->_files.erase(_name);
+        _parent->_commit(true);
+        _parent = nullptr;
+        _remove_from_cache(_full_path);
+      }
+      if (_handle_count)
+        return;
       if (!multi)
       {
         if (!no_unlink)
-          _owner.unchecked_remove(addr);
+        {
+          _owner.unchecked_remove(_first_block->address());
+          _first_block.reset();
+        }
       }
       else
       {
-        _first_block = _owner.unchecked_fetch(addr);
-        if (!_first_block)
-        {
-          _remove_from_cache();
-          return;
-        }
         int links = _header().links;
         if (links > 1)
         {
@@ -1584,7 +1605,7 @@ namespace infinit
           _owner.block_store()->remove(_first_block->address());
         }
       }
-      _remove_from_cache();
+      _remove_from_cache(_full_path);
     }
 
     void
@@ -1592,23 +1613,30 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: rename to %s", *this, where);
       Node::rename(where);
+      _full_path = full_path();
     }
 
     void
     File::stat(struct stat* st)
     {
-      ELLE_TRACE_SCOPE("%s: stat", *this);
+      ELLE_TRACE_SCOPE("%s: stat, parent %s", *this, _parent);
       Node::stat(st);
-      st->st_size = _parent->_files.at(_name).size;
+      if (_parent)
+        st->st_size = _parent->_files.at(_name).size;
       st->st_blocks = st->st_size / 512;
       st->st_nlink = 1;
       st->st_mode &= ~0777;
       try
       {
         ELLE_DEBUG( (!!_handle_count) ? "block from cache" : "feching block");
-        if (!_handle_count)
+        if (!_handle_count && _parent)
           _first_block = elle::cast<MutableBlock>::runtime
         (_owner.fetch_or_die(_parent->_files.at(_name).address));
+        if (!_first_block)
+        {
+          ELLE_WARN("%s: stat on unlinked file", *this);
+          return;
+        }
         auto h = _header();
         st->st_mode |= 00777;
         ELLE_DEBUG("%s: overriding in-dir size %s with %s from %s",
@@ -1837,14 +1865,17 @@ namespace infinit
       this->_first_block_new = false;
       ELLE_DEBUG("update parent directory");
       {
-        auto& data = _parent->_files.at(_name);
-        data.mtime = time(nullptr);
-        data.ctime = time(nullptr);
-        if (!this->_multi())
-          data.size = this->_first_block->data().size() - header_size;
-        else
-          data.size = _header().total_size;
-        this->_parent->_commit(false);
+        if (_parent)
+        {
+          auto& data = _parent->_files.at(_name);
+          data.mtime = time(nullptr);
+          data.ctime = time(nullptr);
+          if (!this->_multi())
+            data.size = this->_first_block->data().size() - header_size;
+          else
+            data.size = _header().total_size;
+          this->_parent->_commit(false);
+        }
       }
     }
 
@@ -2238,12 +2269,16 @@ namespace infinit
 
     FileHandle::~FileHandle()
     {
-      ELLE_TRACE_SCOPE("%s: close", *this);
+      ELLE_TRACE_SCOPE("%s: close, %s remain", *this, this->_owner->_handle_count-1);
       if (--this->_owner->_handle_count == 0)
       {
         ELLE_TRACE("last handle closed, clear cache");
+        //unlink first, so that it can use cached info to delete the blocks
+        if (!this->_owner->_parent)
+          this->_owner->unlink();
         this->_owner->_blocks.clear();
         this->_owner->_first_block.reset();
+
       }
     }
 
