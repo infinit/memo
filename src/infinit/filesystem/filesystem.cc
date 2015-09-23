@@ -1624,6 +1624,7 @@ namespace infinit
         st->st_size = _parent->_files.at(_name).size;
       st->st_blocks = st->st_size / 512;
       st->st_nlink = 1;
+      mode_t mode = st->st_mode;
       st->st_mode &= ~0777;
       try
       {
@@ -1637,7 +1638,6 @@ namespace infinit
           return;
         }
         auto h = _header();
-        st->st_mode |= 00777;
         ELLE_DEBUG("%s: overriding in-dir size %s with %s from %s",
                    *this, st->st_size, h.total_size,
                    _first_block->address());
@@ -1653,6 +1653,7 @@ namespace infinit
         }
         st->st_blocks = st->st_size / 512;
         st->st_nlink = h.links;
+        st->st_mode = mode;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
