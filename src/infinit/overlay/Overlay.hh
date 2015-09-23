@@ -2,13 +2,13 @@
 # define INFINIT_OVERLAY_OVERLAY_HH
 
 # include <elle/UUID.hh>
-
 # include <elle/json/json.hh>
 
 # include <reactor/network/tcp-socket.hh>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/doughnut/fwd.hh>
+# include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -80,6 +80,7 @@ namespace infinit
       virtual
       void
       serialize(elle::serialization::Serializer& s) override;
+      typedef infinit::serialization_tag serialization_tag;
 
       virtual
       std::unique_ptr<infinit::overlay::Overlay>

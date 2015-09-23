@@ -9,6 +9,7 @@
 # include <elle/serialization/Serializer.hh>
 
 # include <infinit/model/Address.hh>
+# include <infinit/serialization.hh>
 # include <infinit/storage/fwd.hh>
 
 namespace infinit
@@ -62,9 +63,10 @@ namespace infinit
     instantiate(std::string const& name,
                 std::string const& args);
 
-    struct StorageConfig:
-    public elle::serialization::VirtuallySerializable
+    struct StorageConfig
+      : public elle::serialization::VirtuallySerializable
     {
+      typedef infinit::serialization_tag serialization_tag;
       static constexpr char const* virtually_serializable_key = "type";
       virtual
       std::unique_ptr<infinit::storage::Storage>

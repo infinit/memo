@@ -2,6 +2,7 @@ import json
 import pipes
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -48,6 +49,7 @@ class Infinit(TemporaryDirectory):
       time.sleep(0.5)
     out, err = process.communicate(input)
     if process.returncode != return_code:
+      print(err.decode('utf-8'), file = sys.stderr)
       raise Exception('command failed with code %s: %s' % \
                       (process.returncode, pretty))
     try:

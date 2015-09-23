@@ -6,6 +6,8 @@
 
 # include <cryptography/rsa/KeyPair.hh>
 
+# include <infinit/serialization.hh>
+
 namespace infinit
 {
   namespace model
@@ -22,6 +24,7 @@ namespace infinit
         ~Passport();
         void
         serialize(elle::serialization::Serializer& s);
+        typedef infinit::serialization_tag serialization_tag;
 
         bool
         verify(cryptography::rsa::PublicKey const& owner);

@@ -7,6 +7,7 @@
 
 # include <infinit/model/blocks/MutableBlock.hh>
 # include <infinit/model/doughnut/fwd.hh>
+# include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -50,6 +51,7 @@ namespace infinit
                   elle::Buffer signature);
         void
         serialize(elle::serialization::Serializer& s);
+        typedef infinit::serialization_tag serialization_tag;
       };
 
       template <typename Block>

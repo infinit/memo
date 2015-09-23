@@ -4,6 +4,32 @@
 
 #include <elle/factory.hh>
 
+namespace elle
+{
+  namespace serialization
+  {
+    template <>
+    struct Serialize<reactor::Duration>
+    {
+      typedef double Type;
+
+      static
+      double
+      convert(reactor::Duration const& d)
+      {
+        return (double)d.total_microseconds() / 1000000.0;
+      }
+
+      static
+      reactor::Duration
+      convert(double val)
+      {
+        return boost::posix_time::microseconds(val * 1000000.0);
+      }
+    };
+  }
+}
+
 namespace infinit
 {
   namespace storage
@@ -59,32 +85,6 @@ namespace infinit
         latency_get, latency_set, latency_erase);
     }
 
-    class SDuration
-    {
-    public:
-      SDuration() {}
-      SDuration(reactor::Duration const& d)
-      : _d(d)
-      {}
-      SDuration(elle::serialization::SerializerIn& s)
-      {
-        double val;
-        s.serialize("value", val);
-        _d = boost::posix_time::microseconds(val * 1000000.0);
-      }
-      void
-      serialize(elle::serialization::Serializer& s)
-      {
-        double val = (double)_d.total_microseconds() / 1000000.0;
-        s.serialize("value", val);
-        _d = boost::posix_time::microseconds(val * 1000000.0);
-      }
-      operator reactor::Duration() const
-      {
-        return _d;
-      }
-      reactor::Duration _d;
-    };
     struct LatencyStorageConfig:
     public StorageConfig
     {
@@ -103,12 +103,9 @@ namespace infinit
       serialize(elle::serialization::Serializer& s)
       {
         s.serialize("backend", this->storage);
-        s.serialize("latency_get", this->latency_get,
-          elle::serialization::as<boost::optional<SDuration>>());
-        s.serialize("latency_set", this->latency_set,
-          elle::serialization::as<boost::optional<SDuration>>());
-        s.serialize("latency_erase", this->latency_erase,
-          elle::serialization::as<boost::optional<SDuration>>());
+        s.serialize("latency_get", this->latency_get);
+        s.serialize("latency_set", this->latency_set);
+        s.serialize("latency_erase", this->latency_erase);
       }
 
       virtual

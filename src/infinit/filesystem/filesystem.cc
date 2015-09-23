@@ -24,17 +24,13 @@
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/NB.hh>
-
-#include <infinit/version.hh>
+#include <infinit/serialization.hh>
 
 #ifdef INFINIT_LINUX
   #include <attr/xattr.h>
 #endif
 
 ELLE_LOG_COMPONENT("infinit.fs");
-
-static elle::Version const version
-  (INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
 
 namespace rfs = reactor::filesystem;
 
@@ -125,7 +121,7 @@ namespace infinit
       Address address;
       boost::optional<std::string> symlink_target;
       std::unordered_map<std::string, elle::Buffer> xattrs;
-
+      typedef infinit::serialization_tag serialization_tag;
 
       FileData(std::string name, uint64_t size, uint32_t mode, uint64_t atime,
         uint64_t mtime, uint64_t ctime, Address const& address,
@@ -198,6 +194,8 @@ namespace infinit
     class Node
       : public elle::Printable
     {
+    public:
+      typedef infinit::serialization_tag serialization_tag;
     protected:
       Node(FileSystem& owner, std::shared_ptr<Directory> parent, std::string const& name)
       : _owner(owner)
@@ -768,7 +766,7 @@ namespace infinit
         _last_fetch = now;
         return;
       }
-      elle::serialization::json::SerializerIn input(is, version);
+      elle::serialization::json::SerializerIn input(is);
       try
       {
         input.serialize_forward(*this);
@@ -815,7 +813,7 @@ namespace infinit
       elle::Buffer data;
       {
         elle::IOStream os(data.ostreambuf());
-        elle::serialization::json::SerializerOut output(os, version);
+        elle::serialization::json::SerializerOut output(os);
         output.serialize_forward(*this);
       }
       ELLE_DUMP("content: %s", data);

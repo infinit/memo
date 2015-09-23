@@ -196,6 +196,8 @@ def configure(
     'src/infinit/overlay/kelips/Kelips.hh',
     'src/infinit/overlay/kademlia/kademlia.cc',
     'src/infinit/overlay/kademlia/kademlia.hh',
+    'src/infinit/serialization.cc',
+    'src/infinit/serialization.hh',
     'src/infinit/storage/Adb.cc',
     'src/infinit/storage/Adb.hh',
     'src/infinit/storage/Async.cc',

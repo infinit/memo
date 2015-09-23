@@ -7,12 +7,8 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/storage/MissingKey.hh>
-#include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.paranoid.Paranoid");
-
-static elle::Version const version
-  (INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
 
 namespace infinit
 {
@@ -61,7 +57,7 @@ namespace infinit
         elle::Buffer raw;
         {
           elle::IOStream output(raw.ostreambuf());
-          elle::serialization::json::SerializerOut serializer(output, version);
+          elle::serialization::json::SerializerOut serializer(output);
           serializer.serialize_forward(crypted);
         }
         this->_storage->set(
@@ -86,7 +82,7 @@ namespace infinit
           return nullptr;
         }
         elle::IOStream input(raw.istreambuf());
-        elle::serialization::json::SerializerIn serializer(input, version);
+        elle::serialization::json::SerializerIn serializer(input);
         CryptedBlock crypted(serializer);
         if (crypted.address != address)
           throw elle::Error(

@@ -14,6 +14,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/serialization.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
 
@@ -37,6 +38,8 @@ struct ACLEntry
   ACLEntry(elle::serialization::SerializerIn& s)
     : ACLEntry(deserialize(s))
   {}
+
+  typedef infinit::serialization_tag serialization_tag;
 
   static ACLEntry deserialize(elle::serialization::SerializerIn& s);
 };
@@ -431,6 +434,15 @@ namespace infinit
             <std::vector<ACLEntry>, elle::serialization::Json>
             (acl->data(), "entries");
         }
+        static_assert(
+          elle::serialization::has_serialization_tag<ACLEntry>(),
+          "oops");
+        static_assert(
+          elle::serialization::has_serialization_tag<DasACLEntryPermissions>(),
+          "oops");
+        static_assert(
+          elle::serialization::has_serialization_tag<das::Serializer<DasACLEntryPermissions>>(),
+          "oops");
         s.serialize(
           "acls", entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());

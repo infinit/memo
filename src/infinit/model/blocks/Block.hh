@@ -7,6 +7,7 @@
 # include <infinit/model/Address.hh>
 # include <infinit/model/blocks/ValidationResult.hh>
 # include <infinit/model/fwd.hh>
+# include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -74,6 +75,7 @@ namespace infinit
         Block(elle::serialization::Serializer& input);
         void
         serialize(elle::serialization::Serializer& s);
+        typedef infinit::serialization_tag serialization_tag;
 
       /*----------.
       | Printable |

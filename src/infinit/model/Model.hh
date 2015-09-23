@@ -7,6 +7,7 @@
 # include <infinit/model/Address.hh>
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/fwd.hh>
+# include <infinit/serialization.hh>
 
 namespace infinit
 {
@@ -71,6 +72,7 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       make(std::vector<std::string> const& hosts, bool client, bool server,
            boost::filesystem::path const& dir) = 0;
+      typedef infinit::serialization_tag serialization_tag;
     };
   }
 }
