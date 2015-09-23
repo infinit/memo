@@ -1643,6 +1643,15 @@ namespace infinit
                    *this, st->st_size, h.total_size,
                    _first_block->address());
         st->st_size = h.total_size;
+        if (!_multi())
+        {
+          int64_t sz = _first_block->data().size() - header_size;
+          if (sz > st->st_size)
+          {
+            ELLE_DEBUG("%s: overriding size with block size %s", *this, sz);
+            st->st_size = sz;
+          }
+        }
         st->st_blocks = st->st_size / 512;
         st->st_nlink = h.links;
       }
