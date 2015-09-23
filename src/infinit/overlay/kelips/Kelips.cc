@@ -1548,7 +1548,9 @@ namespace infinit
                    p->result.size(), p->fileAddress);
         if (p->originEndpoint.port() == 0)
           p->originEndpoint = p->endpoint;
-        if (p->insert_ttl == 0)
+        // don't accept put requests until we know our endpoint
+        if (p->insert_ttl == 0
+          && _local_endpoint.address().to_string() != "0.0.0.0")
         {
           // check if we didn't already accept this file
           if (std::find_if(p->result.begin(), p->result.end(),
