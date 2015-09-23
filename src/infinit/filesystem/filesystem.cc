@@ -21,6 +21,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/NB.hh>
 
@@ -1798,6 +1799,29 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: open", *this);
       if (flags & O_TRUNC)
         truncate(0);
+      else
+      { // preemptive  permissions check
+        bool needw = (flags & O_ACCMODE) != O_RDONLY;
+        bool needr = (flags & O_ACCMODE) != O_WRONLY;
+
+        auto dn =
+          std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
+        auto keys = dn->keys();
+        Address addr = _parent->_files.at(_name).address;
+        if (!_handle_count)
+          _first_block = elle::cast<MutableBlock>::runtime(
+            _owner.fetch_or_die(addr));
+        auto acl = dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
+        ELLE_ASSERT(acl);
+        umbrella([&] {
+            for (auto const& e: acl->list_permissions())
+            {
+              if (e.write >= needw && e.read >= needr && dynamic_cast<model::doughnut::User*>(e.user.get())->key() == keys.K())
+                return;
+            }
+            throw rfs::Error(EACCES, "No write permissions.");
+        });
+      }
       _owner.filesystem()->set(full_path().string(), shared_from_this());
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(new FileHandle(
