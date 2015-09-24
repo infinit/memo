@@ -86,8 +86,10 @@ namespace infinit
       }
 
       void
-      Replicator::_store(overlay::Overlay& overlay, blocks::Block& block, StoreMode mode)
+      Replicator::_store(overlay::Overlay& overlay,
+                         blocks::Block& block, StoreMode mode)
       {
+        ELLE_TRACE_SCOPE("%s: store %s", *this, block);
         _overlay = &overlay;
         overlay::Operation op;
         switch (mode)
@@ -108,7 +110,7 @@ namespace infinit
         // Let other operations through with degraded node count.
         auto peers = overlay.lookup(block.address(), _factor, op,
           op == overlay::OP_INSERT);
-        ELLE_TRACE("Overlay produced %s peers", peers.size());
+        ELLE_DEBUG("overlay returned %s peers", peers.size());
         elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
           for (auto p: peers)
@@ -123,7 +125,7 @@ namespace infinit
         std::string saddress = elle::sprintf("%s", block.address());
         if (peers.size() < unsigned(_factor))
         {
-          ELLE_TRACE("store with %s of %s nodes", peers.size(), _factor);
+          ELLE_TRACE("store with only %s of %s nodes", peers.size(), _factor);
           boost::filesystem::ofstream ofs(_journal_dir / saddress);
           ofs << peers.size();
         }
