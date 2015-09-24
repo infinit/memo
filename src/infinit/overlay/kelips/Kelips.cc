@@ -1821,6 +1821,9 @@ namespace infinit
             }
             if (signed(results.size()) >= n)
             {
+              // If we got a partial reply first, then a full reply, we
+              // can have more results than asked for.
+              results.resize(n);
               return results;
             }
           }
