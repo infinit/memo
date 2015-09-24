@@ -357,6 +357,12 @@ namespace infinit
       ftruncate(off_t offset) override;
       virtual
       void
+      fsync(int datasync) override;
+      virtual
+      void
+      fsyncdir(int datasync) override;
+      virtual
+      void
       close() override;
       virtual
       void
@@ -2626,6 +2632,19 @@ namespace infinit
     FileHandle::ftruncate(off_t offset)
     {
       return _owner->truncate(offset);
+    }
+
+    void
+    FileHandle::fsyncdir(int datasync)
+    {
+      ELLE_TRACE("%s: fsyncdir", *this);
+      fsync(datasync);
+    }
+
+    void
+    FileHandle::fsync(int datasync)
+    {
+      ELLE_LOG("%s: fsync", *this);
     }
 
     void
