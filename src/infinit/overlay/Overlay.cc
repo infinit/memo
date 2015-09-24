@@ -30,9 +30,14 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, address);
       auto res = this->_lookup(address, n, op);
-      if (strict && signed(res.size()) != n)
+      if (strict && signed(res.size()) < n)
         throw elle::Error(elle::sprintf("%s: got only %s of the %s requested nodes",
                                         *this, res.size(), n));
+      if (strict && signed(res.size()) > n)
+      { // this should not happen at least with kelips
+        ELLE_WARN("%s: got %s results with %s requested", *this, res.size(), n);
+        res.resize(n);
+      }
       return res;
     }
 
