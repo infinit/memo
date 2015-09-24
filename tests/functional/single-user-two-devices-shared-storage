@@ -4,38 +4,38 @@ from utils import *
 
 with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
   # Device 1
-  infinit_1.run(['infinit-user', '--create', '--name', 'user'])
+  infinit_1.run(['infinit-user', '--create',  'user'])
   user = infinit_1.run([
-    'infinit-user', '--export', '--full', '--name', 'user'
+    'infinit-user', '--export', '--full',  'user'
   ])
   infinit_1.run([
     'infinit-storage', '--create',
-    '--name', 'storage',
+     'storage',
     '--filesystem', '--path', tmp.dir,
   ])
   network_name = infinit_1.run([
     'infinit-network', '--create',
-    '--name', 'network', '--storage', 'storage',
+     'network', '--storage', 'storage',
     '--as', 'user',
   ])
   network = infinit_1.run([
     'infinit-network', '--export',
-    '--name', 'network',
+     'network',
     '--as', 'user',
   ])
   infinit_1.run([
     'infinit-volume', '--create',
-    '--name', 'volume', '--network', 'network',
+     'volume', '--network', 'network',
     '--as', 'user',
   ])
   volume = infinit_1.run([
     'infinit-volume', '--export',
-    '--name', 'volume',
+     'volume',
     '--as', 'user',
   ])
   response = infinit_1.run([
     'infinit-volume', '--run',
-    '--name', 'volume',
+     'volume',
     '--as', 'user',
   ],
   input = {'operation': 'mkdir', 'path': '/beacon'})
@@ -43,20 +43,20 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   infinit_2.run(['infinit-user', '--import'], input = user)
   infinit_2.run([
     'infinit-storage', '--create',
-    '--name', 'storage',
+     'storage',
     '--filesystem', '--path', tmp.dir,
   ])
   infinit_2.run(['infinit-network', '--import'], input = network)
   infinit_2.run([
     'infinit-network', '--join',
-    '--name', 'network',
+     'network',
     '--storage', 'storage',
     '--as', 'user',
   ])
   infinit_2.run(['infinit-volume', '--import'], input = volume)
   response = infinit_2.run([
     'infinit-volume', '--run',
-    '--name', 'volume',
+     'volume',
     '--as', 'user',
   ],
   input = {'operation': 'list_directory', 'path': '/'})
