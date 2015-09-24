@@ -3,6 +3,7 @@
 
 # include <reactor/network/tcp-socket.hh>
 # include <reactor/network/utp-socket.hh>
+# include <reactor/thread.hh>
 
 # include <protocol/Serializer.hh>
 # include <protocol/ChanneledStream.hh>
@@ -27,11 +28,23 @@ namespace infinit
         Remote(Doughnut& doughnut, std::string const& host, int port);
         Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
                reactor::network::UTPServer& server);
+        virtual
+        ~Remote();
         ELLE_ATTRIBUTE(Doughnut&, doughnut);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
-        ELLE_ATTRIBUTE(protocol::Serializer, serializer);
-        ELLE_ATTRIBUTE(protocol::ChanneledStream, channels);
+        ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
+        ELLE_ATTRIBUTE(std::unique_ptr<protocol::ChanneledStream>, channels);
+
+      /*-----------.
+      | Networking |
+      `-----------*/
+      public:
+        virtual
+        void
+        connect() override;
+        ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
+        ELLE_ATTRIBUTE(reactor::Barrier, connected);
 
       /*-------.
       | Blocks |
@@ -46,7 +59,6 @@ namespace infinit
         virtual
         void
         remove(Address address) override;
-      private:
       };
     }
   }

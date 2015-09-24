@@ -20,13 +20,19 @@ namespace infinit
       class Local
         : public Peer
       {
+      /*------.
+      | Types |
+      `------*/
       public:
+        typedef Local Self;
+        typedef Peer Super;
         enum class Protocol
         {
           tcp = 1,
           utp = 2,
           all = 3
         };
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -36,6 +42,14 @@ namespace infinit
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
         ELLE_ATTRIBUTE_RX(Doughnut*, doughnut);
+
+      /*-----------.
+      | Networking |
+      `-----------*/
+      public:
+        virtual
+        void
+        connect() override;
 
       /*-------.
       | Blocks |

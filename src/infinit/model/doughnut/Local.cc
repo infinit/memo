@@ -70,6 +70,14 @@ namespace infinit
           this->_utp_server_thread->terminate_now();
       }
 
+      /*-----------.
+      | Networking |
+      `-----------*/
+
+      void
+      Local::connect()
+      {}
+
       /*-------.
       | Blocks |
       `-------*/

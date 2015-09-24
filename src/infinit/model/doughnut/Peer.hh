@@ -20,6 +20,14 @@ namespace infinit
         virtual
         ~Peer();
 
+      /*-----------.
+      | Networking |
+      `-----------*/
+      public:
+        virtual
+        void
+        connect() = 0;
+
       /*-------.
       | Blocks |
       `-------*/
