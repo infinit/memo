@@ -85,7 +85,7 @@ namespace infinit
                 new reactor::network::UTPSocket(
                   server, endpoint.address().to_string(), endpoint.port()));
               this->_serializer.reset(
-                new protocol::Serializer(*this->_socket));
+                new protocol::Serializer(*this->_utp_socket));
               this->_channels.reset(
                 new protocol::ChanneledStream(*this->_serializer));
               this->_connected.open();
