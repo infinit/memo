@@ -1010,6 +1010,31 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: stat", *this);
       Node::stat(st);
+      if (_parent)
+      {
+        try
+        {
+          mode_t mode = st->st_mode;
+          st->st_mode &= ~0777;
+          _block = elle::cast<ACLBlock>::runtime
+            (_owner.fetch_or_die(_parent->_files.at(_name).address));
+          _block->data();
+          st->st_mode = mode;
+        }
+        catch (infinit::model::doughnut::ValidationFailed const& e)
+        {
+          ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
+        }
+        catch (reactor::Terminate const& t)
+        {
+          throw;
+        }
+        catch (elle::Exception const& e)
+        {
+          ELLE_WARN("unexpected elle::exception %s", e.what());
+          throw rfs::Error(EIO, elle::sprintf("%s", e));
+        }
+      }
     }
 
     void
