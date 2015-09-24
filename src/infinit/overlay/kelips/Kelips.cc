@@ -2023,12 +2023,13 @@ namespace infinit
           else
             ++it;
         }
+        auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
         for (auto& contacts: _state.contacts)
         {
           auto it = contacts.begin();
           while (it != contacts.end())
           {
-            if (t - it->second.last_seen > file_timeout)
+            if (t - it->second.last_seen > contact_timeout)
             {
               ELLE_LOG("%s: erase %s", *this, it->second);
               it = contacts.erase(it);
