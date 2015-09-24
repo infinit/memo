@@ -10,6 +10,7 @@
 
 #include <reactor/exception.hh>
 #include <reactor/scheduler.hh>
+#include <reactor/Scope.hh>
 
 #include <boost/filesystem/fstream.hpp>
 
@@ -108,8 +109,17 @@ namespace infinit
         auto peers = overlay.lookup(block.address(), _factor, op,
           op == overlay::OP_INSERT);
         ELLE_TRACE("Overlay produced %s peers", peers.size());
-        for (auto const& p: peers)
-          p->store(block, mode);
+        elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+        {
+          for (auto p: peers)
+          {
+            s.run_background("store", [p,&block, mode]
+            {
+              p->store(block, mode);
+            });
+          }
+          reactor::wait(s);
+        };
         std::string saddress = elle::sprintf("%s", block.address());
         if (peers.size() < unsigned(_factor))
         {
@@ -125,33 +135,81 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       fetch_from_members(overlay::Overlay::Members const& peers, Address address)
       {
-        for (auto& p: peers)
+        std::unique_ptr<blocks::Block> result;
+        elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
-          try
+          overlay::Overlay::Members connected;
+          reactor::Barrier b;
+          b.close();
+          for (auto p: peers)
+            s.run_background("connect", [p,&b,&connected] {
+                try
+                {
+                  ELLE_DEBUG("calling connect");
+                  p->connect();
+                  ELLE_DEBUG("connected");
+                }
+                catch (reactor::Terminate const& e)
+                {
+                  throw;
+                }
+                catch (std::exception const& e)
+                {
+                  ELLE_TRACE("connect failed with %s", e);
+                  connected.push_back(nullptr);
+                  b.open();
+                  return;
+                }
+                connected.push_back(p);
+                b.open();
+            });
+          for (int processed = 0; processed < signed(peers.size()); ++processed)
           {
-            return p->fetch(address);
+            if (signed(connected.size()) <= processed)
+            {
+              ELLE_DEBUG("Waiting for connect event");
+              b.close();
+              b.wait();
+              ELLE_DEBUG("processing one: %s", processed);
+            }
+            ELLE_ASSERT_GT(connected.size(), processed);
+            if (!connected[processed])
+            {
+              ELLE_DEBUG("attempt %s reports failure", processed);
+              continue;
+            }
+            try
+            {
+              result = connected[processed]->fetch(address);
+              ELLE_DEBUG("got one result");
+              s.terminate_now();
+              return;
+            }
+            catch (reactor::Terminate const& e)
+            {
+              throw;
+            }
+            catch (std::exception const& e)
+            {
+              ELLE_WARN("Replicator: candidate failed with %s", e.what());
+            }
           }
-          catch(reactor::Terminate const& e)
-          {
-            throw;
-          }
-          catch(std::exception const& e)
-          {
-            ELLE_WARN("Replicator: candidate failed with %s", e.what());
-          }
-        }
-        throw elle::Error("Replicator: All candidates failed.");
+        };
+        ELLE_DEBUG("fetch finishing");
+        if (result)
+          return result;
+        else
+          throw elle::Error("Replicator: All candidates failed.");
       }
 
       std::unique_ptr<blocks::Block>
       Replicator::_fetch(overlay::Overlay& overlay, Address address)
       {
         _overlay = &overlay;
-        static bool redundancy = getenv("INFINIT_REPLICATOR_REDUNDANT_GET");
-        auto peers = overlay.lookup(address, redundancy ? _factor : 1, overlay::OP_FETCH, false);
+        auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH, false);
         if (signed(peers.size()) != _factor)
         {
-          ELLE_TRACE("fetch with only %s of %s members", peers.size(), _factor);
+          ELLE_TRACE("fetch with %s of %s members", peers.size(), _factor);
         }
         return fetch_from_members(peers, address);
       }
