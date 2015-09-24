@@ -1659,7 +1659,7 @@ namespace infinit
         {
           try
           {
-            return kelipsGet(file, n);
+            return kelipsGet(file, n, op == infinit::overlay::OP_FETCH);
           }
           catch (reactor::Timeout const& e)
           {
@@ -1669,7 +1669,7 @@ namespace infinit
       }
 
       std::vector<RpcEndpoint>
-      Node::kelipsGet(Address file, int n)
+      Node::kelipsGet(Address file, int n, bool local_override)
       {
         std::set<RpcEndpoint> result_set;
         packet::GetFileRequest r;
@@ -1689,7 +1689,7 @@ namespace infinit
             [&](std::pair<const infinit::model::Address, File> const& f) {
               return f.second.home_node == _self;
           });
-          if (it_us != its.second && n == 1)
+          if (it_us != its.second && (n == 1 || local_override))
           {
             ELLE_DEBUG("Satisfied get lookup locally.");
             std::vector<RpcEndpoint> result;

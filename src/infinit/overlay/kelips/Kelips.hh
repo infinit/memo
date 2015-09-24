@@ -239,7 +239,7 @@ namespace infinit
         void
         addLocalResults(packet::GetFileRequest* p);
         std::vector<RpcEndpoint>
-        kelipsGet(Address file, int n);
+        kelipsGet(Address file, int n, bool local_override = false);
         std::vector<RpcEndpoint>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
