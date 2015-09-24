@@ -172,7 +172,7 @@ namespace infinit
               b.wait();
               ELLE_DEBUG("processing one: %s", processed);
             }
-            ELLE_ASSERT_GT(connected.size(), processed);
+            ELLE_ASSERT_GT(signed(connected.size()), processed);
             if (!connected[processed])
             {
               ELLE_DEBUG("attempt %s reports failure", processed);
