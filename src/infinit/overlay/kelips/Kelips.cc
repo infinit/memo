@@ -1740,7 +1740,20 @@ namespace infinit
             ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
               r->result.size());
             for (auto const& e: r->result)
+            {
+              if (fg == _group)
+              { // oportunistically add the entry to our tables
+                auto its = _state.files.equal_range(file);
+                auto it_r = std::find_if(its.first, its.second,
+                  [&](std::pair<const infinit::model::Address, File> const& f) {
+                    return f.second.home_node == e.first;
+                  });
+                if (it_r == its.second)
+                  _state.files.insert(std::make_pair(file,
+                    File{file, e.first, now(), Time(), 0}));
+              }
               result_set.insert(e.second);
+            }
             if (signed(result_set.size()) >= n)
               break;
           }
