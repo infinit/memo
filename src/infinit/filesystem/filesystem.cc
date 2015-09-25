@@ -87,7 +87,7 @@ namespace infinit
       AnyBlock(AnyBlock const& b) = delete;
       AnyBlock& operator = (const AnyBlock& b) = delete;
       void operator = (AnyBlock && b);
-      Address address() {return _backend->address();}
+      Address address() {return _address;}
       void
       data(std::function<void (elle::Buffer&)> transformation);
       const elle::Buffer& data();
@@ -101,6 +101,7 @@ namespace infinit
       std::unique_ptr<Block> _backend;
       bool _is_mutable;
       elle::Buffer _buf;
+      Address _address;
     };
 
     class Directory;
@@ -469,6 +470,7 @@ namespace infinit
     : _backend(std::move(block))
     , _is_mutable(dynamic_cast<MutableBlock*>(_backend.get()))
     {
+      _address = _backend->address();
       ELLE_DEBUG("Anyblock mutable=%s, addr = %x", _is_mutable, _backend->address());
       if (!_is_mutable)
       {
@@ -481,6 +483,7 @@ namespace infinit
     : _backend(std::move(b._backend))
     , _is_mutable(b._is_mutable)
     , _buf(std::move(b._buf))
+    , _address(b._address)
     {
 
     }
@@ -489,6 +492,7 @@ namespace infinit
       _backend = std::move(b._backend);
      _is_mutable = b._is_mutable;
      _buf = std::move(b._buf);
+     _address = b._address;
     }
     void AnyBlock::data(std::function<void (elle::Buffer&)> transformation)
     {
@@ -550,7 +554,8 @@ namespace infinit
       }
       auto block = model.make_block<ImmutableBlock>(_buf);
       umbrella([&] { model.store(*block, mode);});
-      return block->address();
+      _address = block->address();
+      return _address;
     }
 
     FileSystem::FileSystem(std::string const& volume_name,
