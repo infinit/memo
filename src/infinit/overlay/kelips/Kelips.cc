@@ -2067,7 +2067,7 @@ namespace infinit
         }
         int time_send_all = my_files / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
         ELLE_DUMP("time_send_all is %s", time_send_all);
-        if (time_send_all >= _config.file_timeout_ms / 2)
+        if (time_send_all >= _config.file_timeout_ms / 4)
         {
           ELLE_TRACE_SCOPE(
             "%s: too many files for configuration: "
@@ -2308,7 +2308,7 @@ namespace infinit
         , query_put_ttl(10)
         , query_put_insert_ttl(3)
         , contact_timeout_ms(120000)
-        , file_timeout_ms(120000)
+        , file_timeout_ms(1200000)
         , ping_interval_ms(1000)
         , ping_timeout_ms(1000)
         , bootstrap_nodes()
