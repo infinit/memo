@@ -1410,6 +1410,8 @@ namespace infinit
       void
       Node::addLocalResults(packet::GetFileRequest* p)
       {
+        static elle::Bench nlocalhit("kelips.localhit", 10_sec);
+        int nhit = 0;
         int fg = group_of(p->fileAddress);
         auto its = _state.files.equal_range(p->fileAddress);
         // Shuffle the match list
@@ -1417,9 +1419,9 @@ namespace infinit
         for (auto it = its.first; it != its.second; ++it)
           iterators.push_back(it);
         std::shuffle(iterators.begin(), iterators.end(), _gen);
-        for (auto iti = iterators.begin(); iti != iterators.end()
-          && p->result.size() < unsigned(p->count); ++iti)
+        for (auto iti = iterators.begin(); iti != iterators.end(); ++iti)
         {
+          ++nhit;
           auto it = *iti;
           // Check if this one is already in results
           if (std::find_if(p->result.begin(), p->result.end(),
@@ -1463,6 +1465,7 @@ namespace infinit
           endpoint_to_endpoint(endpoint, res.second);
           p->result.push_back(res);
         }
+        nlocalhit.add(nhit);
       }
 
       void
@@ -1681,6 +1684,8 @@ namespace infinit
         r.ttl = _config.query_get_ttl;
         r.count = n;
         int fg = group_of(file);
+        static elle::Bench bench_localresult("kelips.localresult", 10_sec);
+        static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
         if (fg == _group)
         {
           // check if we have it locally
@@ -1695,6 +1700,7 @@ namespace infinit
             std::vector<RpcEndpoint> result;
             result.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
                 this->_port);
+            bench_localbypass.add(1);
             return result;
           }
           // add result for our own file table
@@ -1703,10 +1709,12 @@ namespace infinit
             result_set.insert(e.second);
           if (result_set.size() >= unsigned(n))
           { // Request completed locally
+            bench_localresult.add(1);
             std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
             return result;
           }
         }
+        ELLE_TRACE("%s: request did not complete locally(%s)", *this, result_set.size());
         for (int i=0; i < _config.query_get_retries; ++i)
         {
           packet::GetFileRequest req(r);
@@ -2269,6 +2277,7 @@ namespace infinit
             {"contacts", std::move(contacts)}
           };
         }
+        res["files"] = this->_state.files.size();
         res["dropped_puts"] = this->_dropped_puts;
         res["dropped_gets"] = this->_dropped_gets;
         res["failed_puts"] = this->_failed_puts;
