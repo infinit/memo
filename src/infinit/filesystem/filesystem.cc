@@ -1492,51 +1492,40 @@ namespace infinit
       int sz = _first_block->data().size();
       if (sz < offset + signed(sizeof(Address)))
       {
+        ELLE_TRACE("%s: block_at(%s) out of range", *this, index);
         if (!create)
         {
           return nullptr;
         }
-        this->_first_block->data(
-          [offset, sz] (elle::Buffer& data)
-          {
-            data.size(offset + sizeof(Address));
-            memset
-              (data.mutable_contents() + sz, 0, offset + sizeof(Address) - sz);
-          });
       }
       char zeros[sizeof(Address)];
       memset(zeros, 0, sizeof(Address));
       AnyBlock b;
       Address addr;
-      if (!memcmp(zeros, _first_block->data().mutable_contents() + offset,
+      bool is_new = false;
+      if (sz < offset+signed(sizeof(Address)) || !memcmp(zeros, _first_block->data().mutable_contents() + offset,
                  sizeof(Address)))
       { // allocate
+        ELLE_TRACE("%s: block_at(%s) is zero", *this, index);
         if (!create)
         {
           return nullptr;
         }
         b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>());
-        // Store it, since our FAT will reference it
-        ELLE_DEBUG("Storing newly created block for %s as %x", index, b.address());
-        addr = b.store(*_owner.block_store(), model::STORE_INSERT);
-        _first_block->data([&](elle::Buffer& data)
-        {
-          memcpy(data.mutable_contents() + offset,
-            addr.value(), sizeof(Address::Value));
-        });
-        _owner.store_or_die(*_first_block);
+        is_new = true;
       }
       else
       {
         addr = Address(*(Address*)(_first_block->data().mutable_contents() + offset));
         b = AnyBlock(_owner.fetch_or_die(addr));
+        is_new = false;
       }
 
       auto inserted = _blocks.insert(std::make_pair(index,
         File::CacheEntry{AnyBlock(std::move(b)), false}));
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
-      inserted.first->second.new_block = false;
+      inserted.first->second.new_block = is_new;
       return &inserted.first->second.block;
     }
 
@@ -1563,7 +1552,8 @@ namespace infinit
       dir->_files.at(newname).name = newname;
       dir->_commit(true);
       _owner.filesystem()->extract(where.string());
-      _owner.store_or_die(*_first_block);
+      if (!_handle_count)
+        _commit();
     }
 
     void
@@ -1906,8 +1896,8 @@ namespace infinit
               _first_block->data(
                 [&] (elle::Buffer& data)
                 {
-                  ELLE_ASSERT_GTE(data.size() ,
-                                  offset + sizeof(Address::Value));
+                  if (data.size() < offset +sizeof(Address::Value))
+                    data.size(offset + sizeof(Address::Value));
                   memcpy(data.contents() + offset, addr.value(),
                          sizeof(Address::Value));
                 });
@@ -1974,6 +1964,8 @@ namespace infinit
       // store block size in headers
       Header h {false, Header::current_version, default_block_size, 1, current_size};
       _header(h);
+      ELLE_DEBUG("%s _switch_to_multi: storing b0 address %x", *this,
+        _blocks.at(0).block.address());
       _first_block->data([&](elle::Buffer& data)
         {
           memcpy(data.mutable_contents() + sizeof(Address),
@@ -1990,7 +1982,8 @@ namespace infinit
         if (old_size != signed(default_block_size + header_size))
           b.block.zero(old_size, default_block_size + header_size - old_size);
       }
-      this->_commit();
+      if (!_handle_count)
+        this->_commit();
     }
 
     void
@@ -2020,6 +2013,8 @@ namespace infinit
             int offset = (it->first+1) * sizeof(Address);
             _first_block->data([&] (elle::Buffer& data)
               {
+                if (data.size() < offset + sizeof(Address::Value))
+                  data.size(offset +  sizeof(Address::Value));
                 memcpy(data.contents() + offset, addr.value(), sizeof(Address::Value));
               });
             if (!it->second.new_block)
@@ -2291,7 +2286,8 @@ namespace infinit
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.block_store()->fetch(address));
           // access data to detect and report permission issues
-          _owner->_first_block->data();
+          auto len = _owner->_first_block->data().size();
+          ELLE_DEBUG("First block has %s bytes", len);
         }
         catch (infinit::model::MissingBlock const& err)
         {
@@ -2617,6 +2613,8 @@ namespace infinit
         int offset = (start_block+1) * sizeof(Address);
         this->_owner->_first_block->data([&](elle::Buffer& data)
           {
+            if (data.size() < offset + sizeof(Address::Value))
+              data.size(offset + sizeof(Address::Value));
             memcpy(data.mutable_contents() + offset, cur.value(),
                    sizeof(Address::Value));
           });
