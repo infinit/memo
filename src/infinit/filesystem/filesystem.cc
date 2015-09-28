@@ -1586,7 +1586,7 @@ namespace infinit
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
       }
-      bool multi = _multi();
+      bool multi = umbrella([&] { return _multi();});
       if (_parent)
       {
         _parent->_files.erase(_name);
