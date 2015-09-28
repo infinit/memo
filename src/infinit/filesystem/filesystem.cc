@@ -1841,7 +1841,10 @@ namespace infinit
         umbrella([&] {
             for (auto const& e: acl->list_permissions())
             {
-              if (e.write >= needw && e.read >= needr && dynamic_cast<model::doughnut::User*>(e.user.get())->key() == keys.K())
+              auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
+              if (!u)
+                continue;
+              if (e.write >= needw && e.read >= needr && u->key() == keys.K())
                 return;
             }
             throw rfs::Error(EACCES, "No write permissions.");
