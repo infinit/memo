@@ -117,7 +117,8 @@ namespace infinit
             break;
         }
         ELLE_DEBUG("overlay returned %s peers", peers.size());
-        if (op == overlay::OP_INSERT && signed(peers.size()) < _factor)
+        if (peers.empty() ||
+             (op == overlay::OP_INSERT && signed(peers.size()) < _factor))
         {
           throw elle::Error(elle::sprintf("Got only %s of %s required peers",
                                           peers.size(), _factor));
@@ -207,8 +208,14 @@ namespace infinit
       {
         _overlay = &overlay;
         auto peers = overlay.lookup(address, _factor, overlay::OP_REMOVE);
+        int count = 0;
         for (auto const& p: peers)
+        {
           p->remove(address);
+          ++count;
+        }
+        if (!count)
+          throw elle::Error(elle::sprintf("lookup for removal of %x gave no results", address));
       }
 
       std::unique_ptr<blocks::Block>

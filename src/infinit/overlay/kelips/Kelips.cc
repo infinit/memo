@@ -1775,11 +1775,6 @@ namespace infinit
                 break;
             }
           }
-          if (result_set.empty())
-            throw reactor::Timeout(boost::posix_time::milliseconds(
-              _config.query_timeout_ms * _config.query_get_retries));
-          std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
-          return;
         };
         return reactor::generator<RpcEndpoint>(f);
       }
