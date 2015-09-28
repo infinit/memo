@@ -59,6 +59,15 @@ namespace infinit
         virtual
         void
         remove(Address address) override;
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        /// Print pretty representation to \a stream.
+        virtual
+        void
+        print(std::ostream& stream) const override;
       };
     }
   }

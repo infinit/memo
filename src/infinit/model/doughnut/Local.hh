@@ -86,6 +86,15 @@ namespace infinit
         _serve();
         void
         _serve_utp();
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        /// Print pretty representation to \a stream.
+        virtual
+        void
+        print(std::ostream& stream) const override;
       };
     }
   }

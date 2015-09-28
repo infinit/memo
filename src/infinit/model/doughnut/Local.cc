@@ -257,6 +257,15 @@ namespace infinit
         };
       }
 
+      /*----------.
+      | Printable |
+      `----------*/
+
+      void
+      Local::print(std::ostream& stream) const
+      {
+        elle::fprintf(stream, "Local()");
+      }
     }
   }
 }

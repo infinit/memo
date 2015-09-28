@@ -11,6 +11,7 @@ namespace infinit
     namespace doughnut
     {
       class Peer
+        : public elle::Printable
       {
       /*-------------.
       | Construction |

@@ -139,6 +139,20 @@ namespace infinit
         remove(address);
       }
 
+      /*----------.
+      | Printable |
+      `----------*/
+
+      void
+      Remote::print(std::ostream& stream) const
+      {
+        if (this->_socket)
+          elle::fprintf(stream, "Remote(%s)", *this->_socket);
+        else if (this->_utp_socket)
+          elle::fprintf(stream, "Remote(%s)", *this->_utp_socket);
+        else
+          elle::fprintf(stream, "Remote()");
+      }
     }
   }
 }
