@@ -3,6 +3,7 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 
+#include <reactor/exception.hh>
 #include <das/model.hh>
 #include <das/serializer.hh>
 
@@ -237,11 +238,22 @@ namespace infinit
       ACB::_list_permissions()
       {
         std::vector<ACB::Entry> res;
-        auto user = this->doughnut()->make_user(
-          elle::serialization::serialize
-            <cryptography::rsa::PublicKey, elle::serialization::Json>(
-              this->owner_key()));
-        res.emplace_back(std::move(user), true, true);
+        try
+        {
+          auto user = this->doughnut()->make_user(
+            elle::serialization::serialize
+              <cryptography::rsa::PublicKey, elle::serialization::Json>(
+                this->owner_key()));
+          res.emplace_back(std::move(user), true, true);
+        }
+        catch (reactor::Terminate const& e)
+        {
+          throw;
+        }
+        catch(std::exception const& e)
+        {
+          ELLE_TRACE("Exception making owner: %s", e);
+        }
         if (this->_acl == Address::null)
           return std::move(res);
         auto acl = this->doughnut()->fetch(this->_acl);
@@ -252,11 +264,23 @@ namespace infinit
           (acl->data(), "entries");
         for (auto const& ent: entries)
         {
-          auto user = this->doughnut()->make_user(
-          elle::serialization::serialize
-            <cryptography::rsa::PublicKey, elle::serialization::Json>(
-              ent.key));
-          res.emplace_back(std::move(user), ent.read, ent.write);
+          try
+          {
+            auto user = this->doughnut()->make_user(
+              elle::serialization::serialize
+              <cryptography::rsa::PublicKey, elle::serialization::Json>(
+                ent.key));
+            res.emplace_back(std::move(user), ent.read, ent.write);
+          }
+          catch(reactor::Terminate const& e)
+          {
+            throw;
+          }
+          catch(std::exception const& e)
+          {
+            ELLE_TRACE("Exception making user: %s", e);
+            res.emplace_back(elle::make_unique<model::User>(), ent.read, ent.write);
+          }
         }
         return res;
       }
