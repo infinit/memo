@@ -126,7 +126,8 @@ create(variables_map const& args)
         ifnt.qualified_name(name, owner),
         owner.private_key.get()),
       owner.name,
-      replicas);
+      replicas,
+      args.count("async"));
   {
     infinit::Network network;
     network.storage = std::move(storage);
@@ -315,7 +316,8 @@ run(variables_map const& args)
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
-  auto local = network.run(hosts);
+  auto local = network.run(hosts, false, false, {}, false, args.count("async")
+      && args["async"].as<bool>());
   if (!local.first)
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
   reactor::scheduler().signal_handle(
@@ -378,6 +380,7 @@ int main(int argc, char** argv)
         option_owner,
         { "port,p", value<int>(), "port to listen on (random by default)" },
         { "replicas,r", value<int>(), "data replication factor" },
+        { "async", bool_switch(), "Use asynchronious operations" },
         { "stdout", bool_switch(), "output configuration to stdout" },
       },
       {
@@ -479,6 +482,7 @@ int main(int argc, char** argv)
         { "name", value<std::string>(), "created network name" },
         { "push", bool_switch(),
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
+        { "async", bool_switch(), "Use asynchronious operations" },
       },
     },
   };

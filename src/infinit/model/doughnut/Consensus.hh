@@ -16,7 +16,8 @@ namespace infinit
       public:
         Consensus(Doughnut& doughnut);
         virtual ~Consensus() {}
-        ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
+      protected:
+        Doughnut& _doughnut;
 
       public:
         void
@@ -37,7 +38,6 @@ namespace infinit
         void
         _remove(overlay::Overlay& overlay, Address address);
 
-      private:
         std::shared_ptr<Peer>
         _owner(overlay::Overlay& overlay,
                Address const& address,

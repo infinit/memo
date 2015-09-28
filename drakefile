@@ -158,6 +158,8 @@ def configure(
     'src/infinit/model/blocks/fwd.hh',
     'src/infinit/model/doughnut/ACB.cc',
     'src/infinit/model/doughnut/ACB.hh',
+    'src/infinit/model/doughnut/Async.cc',
+    'src/infinit/model/doughnut/Async.hh',
     'src/infinit/model/doughnut/Consensus.cc',
     'src/infinit/model/doughnut/Consensus.hh',
     'src/infinit/model/doughnut/Doughnut.cc',

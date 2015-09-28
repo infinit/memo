@@ -26,13 +26,17 @@ public:
   DHTs()
     : keys_a(infinit::cryptography::rsa::keypair::generate(2048))
     , keys_b(infinit::cryptography::rsa::keypair::generate(2048))
+    , keys_c(infinit::cryptography::rsa::keypair::generate(2048))
   {
     this->local_a = std::make_shared<dht::Local>(
       elle::make_unique<storage::Memory>());
     this->local_b = std::make_shared<dht::Local>(
       elle::make_unique<storage::Memory>());
+    this->local_c = std::make_shared<dht::Local>(
+      elle::make_unique<storage::Memory>());
     dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
     dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
+    dht::Passport passport_c(keys_c.K(), "network-name", keys_a.k());
     infinit::overlay::Stonehenge::Hosts members;
     members.push_back(local_a->server_endpoint());
     members.push_back(local_b->server_endpoint());
@@ -61,17 +65,40 @@ public:
         }),
       boost::filesystem::path(".")
       );
+    this->dht_c = std::make_shared<dht::Doughnut>(
+      keys_c,
+      keys_a.K(),
+      passport_c,
+      static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
+        [=](infinit::model::doughnut::Doughnut*d) {
+          return elle::make_unique<infinit::overlay::Stonehenge>(
+            elle::UUID::random(), members, d);
+        }),
+      boost::filesystem::path("."),
+      nullptr,
+      1,
+      true
+      );
+    local_a->doughnut() = dht_a.get();
+    dht_a->overlay()->register_local(local_a);
+    local_a->serve();
     local_b->doughnut() = dht_b.get();
     dht_b->overlay()->register_local(local_b);
     local_b->serve();
+    local_c->doughnut() = dht_c.get();
+    dht_c->overlay()->register_local(local_c);
+    local_c->serve();
   }
 
   infinit::cryptography::rsa::KeyPair keys_a;
   infinit::cryptography::rsa::KeyPair keys_b;
+  infinit::cryptography::rsa::KeyPair keys_c;
   std::shared_ptr<dht::Local> local_a;
   std::shared_ptr<dht::Local> local_b;
+  std::shared_ptr<dht::Local> local_c;
   std::shared_ptr<dht::Doughnut> dht_a;
   std::shared_ptr<dht::Doughnut> dht_b;
+  std::shared_ptr<dht::Doughnut> dht_c;
 };
 
 ELLE_TEST_SCHEDULED(doughnut)
@@ -85,6 +112,53 @@ ELLE_TEST_SCHEDULED(doughnut)
       dht.store(*block);
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
+    ELLE_LOG("remove block")
+      dht.remove(block->address());
+  }
+  {
+    auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
+    elle::Buffer data("\\_o<", 4);
+    block->data(elle::Buffer(data));
+    ELLE_LOG("store block")
+      dht.store(*block);
+    elle::Buffer updated(">o_/", 4);
+    block->data(elle::Buffer(updated));
+    ELLE_LOG("fetch block")
+      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
+    ELLE_LOG("store block")
+      dht.store(*block);
+    ELLE_LOG("fetch block")
+      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), updated);
+    ELLE_LOG("remove block")
+      dht.remove(block->address());
+  }
+}
+
+ELLE_TEST_SCHEDULED(async)
+{
+  DHTs dhts;
+  auto& dht = *dhts.dht_c;
+  {
+    elle::Buffer data("\\_o<", 4);
+    auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(data);
+    std::vector<std::unique_ptr<infinit::model::blocks::ImmutableBlock>> blocks_;
+    for (int i = 0; i < 10; ++i)
+    {
+      auto s = elle::sprintf("\\_o< %d", i);
+      elle::Buffer data(elle::sprintf(s).c_str(),
+                        (int)std::strlen(s.c_str()));
+      blocks_.push_back(
+          std::move(dht.make_block<infinit::model::blocks::ImmutableBlock>(data)));
+    }
+    ELLE_LOG("store block")
+      dht.store(*block);
+    for (auto const& block: blocks_)
+      dht.store(*block);
+
+    ELLE_LOG("fetch block")
+      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
+    for (auto const& block: blocks_)
+      dht.fetch(block->address());
     ELLE_LOG("remove block")
       dht.remove(block->address());
   }
@@ -179,6 +253,7 @@ ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(doughnut));
+  suite.add(BOOST_TEST_CASE(async));
   suite.add(BOOST_TEST_CASE(ACB));
   suite.add(BOOST_TEST_CASE(NB));
 }

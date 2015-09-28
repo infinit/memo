@@ -35,14 +35,16 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
-                 int replicas = 1);
+                 int replicas = 1,
+                 bool async = false);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  OverlayBuilder overlay_builder,
                  boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
-                 int replicas = 1);
+                 int replicas = 1,
+                 bool async = false);
         ~Doughnut();
 
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
@@ -87,6 +89,7 @@ namespace infinit
         Passport passport;
         boost::optional<std::string> name;
         int replicas;
+        bool async;
 
         Configuration(
           std::unique_ptr<overlay::Configuration> overlay,
@@ -94,7 +97,8 @@ namespace infinit
           cryptography::rsa::PublicKey owner,
           Passport passport,
           boost::optional<std::string> name,
-          int replicas);
+          int replicas,
+          bool async = false);
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void
@@ -107,7 +111,8 @@ namespace infinit
         make(std::vector<std::string> const& hosts,
              bool client,
              std::shared_ptr<Local> local,
-             boost::filesystem::path const& p);
+             boost::filesystem::path const& p,
+             bool async = false);
       };
     }
   }

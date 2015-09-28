@@ -379,7 +379,8 @@ namespace infinit
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
-        bool async_writes = false)
+        bool async_writes = false,
+        bool async_consensus = false)
     {
       boost::filesystem::path p = root_dir() / "cache" / name;
       if (this->storage)
@@ -397,7 +398,8 @@ namespace infinit
           (std::move(storage), this->port ? this->port.get() : 0);
         local->serve();
         auto res = std::make_pair(
-          std::move(local), this->dht()->make(hosts, client, local, p));
+          std::move(local), this->dht()->make(hosts, client, local, p,
+          async_consensus));
         return res;
       }
       else
@@ -405,7 +407,8 @@ namespace infinit
         std::shared_ptr<infinit::model::doughnut::Local> local;
         return
           std::make_pair(local,
-                         this->dht()->make(hosts, client, local, p));
+                         this->dht()->make(hosts, client, local, p,
+                         async_consensus));
       }
     }
 

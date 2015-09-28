@@ -22,6 +22,7 @@
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Replicator.hh>
 #include <infinit/storage/MissingKey.hh>
 
@@ -41,14 +42,20 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
-                         int replicas)
+                         int replicas,
+                         bool async)
         : _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _overlay(overlay_builder(this))
       {
         if (replicas == 1)
-          this->_consensus = elle::make_unique<Consensus>(*this);
+        {
+          if (async)
+            this->_consensus = elle::make_unique<Async>(*this);
+          else
+            this->_consensus = elle::make_unique<Consensus>(*this);
+        }
         else
           this->_consensus = elle::make_unique<Replicator>(*this, replicas,
             dir / "replicator");
@@ -67,14 +74,16 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
-                         int replicas)
+                         int replicas,
+                         bool async)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(overlay_builder),
                    std::move(dir),
                    std::move(local),
-                   std::move(replicas))
+                   std::move(replicas),
+                   std::move(async))
       {
         auto check_user_blocks = [name, this]
           {
@@ -229,13 +238,15 @@ namespace infinit
         cryptography::rsa::PublicKey owner_,
         Passport passport_,
         boost::optional<std::string> name_,
-        int replicas_)
+        int replicas_,
+        bool async_)
         : overlay(std::move(overlay_))
         , keys(std::move(keys_))
         , owner(std::move(owner_))
         , passport(std::move(passport_))
         , name(std::move(name_))
         , replicas(std::move(replicas_))
+        , async(std::move(async_))
       {}
 
       Configuration::Configuration
@@ -247,6 +258,7 @@ namespace infinit
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , replicas(s.deserialize<int>("replicas"))
+        , async(s.deserialize<bool>("async"))
       {}
 
       void
@@ -258,6 +270,7 @@ namespace infinit
         s.serialize("passport", this->passport);
         s.serialize("name", this->name);
         s.serialize("replicas", this->replicas);
+        s.serialize("async", this->async);
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -295,7 +308,8 @@ namespace infinit
       Configuration::make(std::vector<std::string> const& hosts,
                                 bool client,
                                 std::shared_ptr<Local> local,
-                                boost::filesystem::path const& dir)
+                                boost::filesystem::path const& dir,
+                                bool async)
       {
         if (!client || !this->name)
           return std::make_shared<infinit::model::doughnut::Doughnut>(
@@ -308,7 +322,8 @@ namespace infinit
             }),
             dir,
             local,
-            replicas);
+            replicas,
+            async);
         else
           return std::make_shared<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -321,7 +336,8 @@ namespace infinit
             }),
             dir,
             local,
-            replicas);
+            replicas,
+            async);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
