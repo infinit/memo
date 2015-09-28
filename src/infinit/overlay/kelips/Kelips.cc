@@ -1271,8 +1271,11 @@ namespace infinit
           _local_endpoint = endpoint;
         }
         else if (_local_endpoint != endpoint)
-          ELLE_WARN("%s: Received a different local endpoint: %s, current %s", *this,
+        {
+          ELLE_LOG("%s: Received a different local endpoint: %s, current %s", *this,
             endpoint, _local_endpoint);
+          _local_endpoint = endpoint;
+        }
       }
 
       void
