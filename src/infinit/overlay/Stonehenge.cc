@@ -33,30 +33,32 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    Stonehenge::Members
+    reactor::Generator<Overlay::Member>
     Stonehenge::_lookup(model::Address address,
                         int n,
                         Operation) const
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
-      int size = this->_hosts.size();
-      ELLE_ASSERT_LTE(n, size);
-      auto owner = address.value()[0] % size;
-      Stonehenge::Members res;
-      ELLE_ASSERT(this->doughnut());
-      int i = owner;
-      do
+      return reactor::generator<Overlay::Member>( [this, address, n]
+        (reactor::Generator<Overlay::Member>::yielder const& yield)
       {
-        ELLE_DEBUG("%s: yield %s", *this, this->_hosts[i]);
-        res.emplace_back(
-          new model::doughnut::Remote(
-            const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
-            this->_hosts[i]));
-        i = (i + 1) % size;
-      }
-      while (i != (owner + n) % size);
-      return res;
+        int size = this->_hosts.size();
+        ELLE_ASSERT_LTE(n, size);
+        auto owner = address.value()[0] % size;
+        ELLE_ASSERT(this->doughnut());
+        int i = owner;
+        do
+        {
+          ELLE_DEBUG("%s: yield %s", *this, this->_hosts[i]);
+          yield(
+            Overlay::Member(new model::doughnut::Remote(
+              const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
+              this->_hosts[i])));
+          i = (i + 1) % size;
+        }
+        while (i != (owner + n) % size);
+        });
     }
 
     StonehengeConfiguration::StonehengeConfiguration()

@@ -15,7 +15,7 @@ namespace infinit
       , _local()
     {}
 
-    Kalimero::Members
+    reactor::Generator<Kalimero::Member>
     Kalimero::_lookup(model::Address address, int n, Operation op) const
     {
       if (n != 1)
@@ -24,9 +24,9 @@ namespace infinit
       auto local = this->_local.lock();
       if (!local)
         throw elle::Error("kalimero can only be a server");
-      Members res;
-      res.emplace_back(local);
-      return res;
+      return reactor::generator<Kalimero::Member>([local] (std::function<void (Kalimero::Member)> yield) {
+          yield(local);
+      });
     }
 
     void

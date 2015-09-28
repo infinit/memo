@@ -4,6 +4,7 @@
 # include <infinit/overlay/Overlay.hh>
 # include <reactor/network/udp-socket.hh>
 # include <reactor/Barrier.hh>
+# include <reactor/Generator.hh>
 # include <elle/serialization/Serializer.hh>
 
 #include <infinit/model/doughnut/Local.hh>
@@ -165,9 +166,10 @@ namespace infinit
         void
         register_local(
           std::shared_ptr<infinit::model::doughnut::Local> local) override;
-        std::vector<RpcEndpoint> address(Address file,
-                                         infinit::overlay::Operation op,
-                                         int n);
+         reactor::Generator<RpcEndpoint>
+         address(Address file,
+                 infinit::overlay::Operation op,
+                 int n);
         void
         print(std::ostream& stream) const override;
         /// local hooks interface
@@ -187,7 +189,7 @@ namespace infinit
       `--------*/
       protected:
         virtual
-        Overlay::Members
+        reactor::Generator<Overlay::Member>
         _lookup(infinit::model::Address address, int n,
                 infinit::overlay::Operation op) const override;
 
@@ -237,8 +239,8 @@ namespace infinit
         void
         cleanup();
         void
-        addLocalResults(packet::GetFileRequest* p);
-        std::vector<RpcEndpoint>
+        addLocalResults(packet::GetFileRequest* p, reactor::yielder<RpcEndpoint>::type const* yield);
+        reactor::Generator<RpcEndpoint>
         kelipsGet(Address file, int n, bool local_override = false);
         std::vector<RpcEndpoint>
         kelipsPut(Address file, int n);

@@ -13,7 +13,7 @@ namespace infinit
     public:
       Kalimero(elle::UUID node_id);
       virtual
-      Members
+      reactor::Generator<Member>
       _lookup(model::Address address, int n, Operation op) const override;
       virtual
       void

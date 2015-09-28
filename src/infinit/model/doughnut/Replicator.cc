@@ -108,9 +108,20 @@ namespace infinit
         }
         // Only allow create through if _factor nodes are reached.
         // Let other operations through with degraded node count.
-        auto peers = overlay.lookup(block.address(), _factor, op,
-          op == overlay::OP_INSERT);
+        auto ipeers = overlay.lookup(block.address(), _factor, op);
+        std::vector<overlay::Overlay::Member> peers;
+        for (auto p: ipeers)
+        {
+          peers.push_back(p);
+          if (signed(peers.size()) == _factor)
+            break;
+        }
         ELLE_DEBUG("overlay returned %s peers", peers.size());
+        if (op == overlay::OP_INSERT && signed(peers.size()) < _factor)
+        {
+          throw elle::Error(elle::sprintf("Got only %s of %s required peers",
+                                          peers.size(), _factor));
+        }
         elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
           for (auto p: peers)
@@ -135,48 +146,51 @@ namespace infinit
 
       static
       std::unique_ptr<blocks::Block>
-      fetch_from_members(overlay::Overlay::Members const& peers,
+      fetch_from_members(reactor::Generator<overlay::Overlay::Member>& peers,
                          Address address)
       {
         std::unique_ptr<blocks::Block> result;
         reactor::Channel<overlay::Overlay::Member> connected;
-        return elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
-        {
-          for (auto p: peers)
-            s.run_background(
-              elle::sprintf("connect to %s", *p),
-              [p, &connected]
+        typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
+        // try connecting to all peers in parallel
+        auto connected_peers = PeerGenerator([&](PeerGenerator::yielder yield) {
+            elle::With<reactor::Scope>() <<  [&peers,&yield] (reactor::Scope& s)
+            {
+              for (auto p: peers)
               {
-                try
+                s.run_background(elle::sprintf("connect to %s", *p),
+                [p,&yield]
                 {
-                  ELLE_DEBUG_SCOPE("connect to %s", *p);
-                  p->connect();
-                  connected.put(p);
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_TRACE("connect with %s failed: %s", *p, e);
-                  connected.put(nullptr);
-                }
-              });
-          for (int processed = 0; processed < signed(peers.size()); ++processed)
+                  try
+                  {
+                    ELLE_DEBUG_SCOPE("connect to %s", *p);
+                    p->connect();
+                    yield(p);
+                  }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_TRACE("connect with %s failed: %s", *p, e);
+                  }
+                });
+              }
+              reactor::wait(s);
+            };
+        });
+        // try to get on all connected peers sequentially to avoid wasting bandwidth
+        for (auto peer: connected_peers)
+        {
+          try
           {
-            auto peer = connected.get();
-            if (!peer)
-              continue;
-            try
-            {
-              ELLE_TRACE_SCOPE("fetch from %s", *peer);
-              return peer->fetch(address);
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("fetching from %s failed: %s", *peer, e.what());
-            }
+            ELLE_TRACE_SCOPE("fetch from %s", *peer);
+            return peer->fetch(address);
           }
-          throw elle::Error(
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("fetching from %s failed: %s", *peer, e.what());
+          }
+        }
+        throw elle::Error(
             elle::sprintf("fetching of %s failed on all candidates", address));
-        };
       }
 
       std::unique_ptr<blocks::Block>
@@ -184,11 +198,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
         this->_overlay = &overlay;
-        auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH, false);
-        if (signed(peers.size()) != this->_factor)
-          ELLE_DEBUG("fetch with only %s of %s members",
-                     peers.size(), this->_factor);
-        ELLE_DUMP("peers: %s", peers);
+        auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH);
         return fetch_from_members(peers, address);
       }
 
@@ -196,7 +206,7 @@ namespace infinit
       Replicator::_remove(overlay::Overlay& overlay, Address address)
       {
         _overlay = &overlay;
-        auto peers = overlay.lookup(address, _factor, overlay::OP_REMOVE, false);
+        auto peers = overlay.lookup(address, _factor, overlay::OP_REMOVE);
         for (auto const& p: peers)
           p->remove(address);
       }
@@ -249,7 +259,8 @@ namespace infinit
           overlay::Overlay::Members peers;
           try
           {
-            peers = _overlay->lookup(address, _factor, overlay::OP_FETCH, false);
+            for (auto p: _overlay->lookup(address, _factor, overlay::OP_FETCH))
+            peers.push_back(p);
           }
           catch (MissingBlock const&)
           { // assume block was deleted

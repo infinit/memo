@@ -1408,7 +1408,8 @@ namespace infinit
       }
 
       void
-      Node::addLocalResults(packet::GetFileRequest* p)
+      Node::addLocalResults(packet::GetFileRequest* p,
+        reactor::yielder<RpcEndpoint>::type const* yield)
       {
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
@@ -1464,6 +1465,8 @@ namespace infinit
           res.first = it->second.home_node;
           endpoint_to_endpoint(endpoint, res.second);
           p->result.push_back(res);
+          if (yield)
+            (*yield)(res.second);
         }
         nlocalhit.add(nhit);
       }
@@ -1478,7 +1481,7 @@ namespace infinit
         int fg = group_of(p->fileAddress);
         if (fg == _group)
         {
-          addLocalResults(p);
+          addLocalResults(p, nullptr);
         }
         if (p->result.size() >= unsigned(p->count))
         { // We got the full result, send reply
@@ -1638,39 +1641,149 @@ namespace infinit
         _pending_requests.erase(it);
       }
 
-      std::vector<RpcEndpoint>
+      reactor::Generator<RpcEndpoint>
       Node::address(Address file,
                     infinit::overlay::Operation op,
                     int n)
       {
         if (op == infinit::overlay::OP_INSERT)
-          return kelipsPut(file, n);
+        {
+          std::vector<RpcEndpoint> res = kelipsPut(file, n);
+          return reactor::generator<RpcEndpoint>([res] (reactor::yielder<RpcEndpoint>::type const& yield)
+          {
+            for (auto r: res)
+              yield(r);
+          });
+        }
         else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
         {
-          try
+          return reactor::generator<RpcEndpoint>([this,file,n] (reactor::yielder<RpcEndpoint>::type const& yield)
           {
-            return kelipsGet(file, n);
-          }
-          catch (reactor::Timeout const& e)
-          {
-            ELLE_TRACE("%s: get failed on %x, trying put", *this, file);
-            ELLE_TRACE("%s", e.backtrace());
-            return kelipsPut(file, n);
-          }
+            bool hit = false;
+            for (auto r: kelipsGet(file, n))
+            {
+              hit = true;
+              yield(r);
+            }
+            if (!hit)
+            {
+              ELLE_TRACE("%s: get failed on %x, trying put", *this, file);
+              std::vector<RpcEndpoint> res = kelipsPut(file, n);
+              for (auto e: res)
+                yield(e);
+            }
+          });
         }
         else
         {
-          try
-          {
-            return kelipsGet(file, n, op == infinit::overlay::OP_FETCH);
-          }
-          catch (reactor::Timeout const& e)
-          {
-            throw infinit::model::MissingBlock(file);
-          }
+          return kelipsGet(file, n, op == infinit::overlay::OP_FETCH);
         }
       }
 
+      reactor::Generator<RpcEndpoint>
+      Node::kelipsGet(Address file, int n, bool local_override)
+      {
+        auto f = [this,file,n,local_override](reactor::yielder<RpcEndpoint>::type const& yield) {
+          ELLE_DEBUG("Driver starting");
+          std::set<RpcEndpoint> result_set;
+          packet::GetFileRequest r;
+          r.sender = _self;
+          r.request_id = ++ _next_id;
+          r.originAddress = _observer ? Address::null : _self;
+          r.originEndpoint = _local_endpoint;
+          r.fileAddress = file;
+          r.ttl = _config.query_get_ttl;
+          r.count = n;
+          int fg = group_of(file);
+          static elle::Bench bench_localresult("kelips.localresult", 10_sec);
+          static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
+          if (fg == _group)
+          {
+            // check if we have it locally
+            auto its = _state.files.equal_range(file);
+            auto it_us = std::find_if(its.first, its.second,
+              [&](std::pair<const infinit::model::Address, File> const& f) {
+                return f.second.home_node == _self;
+              });
+            if (it_us != its.second && (n == 1 || local_override))
+            {
+              ELLE_DEBUG("Satisfied get lookup locally.");
+              yield(RpcEndpoint(boost::asio::ip::address::from_string("127.0.0.1"),
+                this->_port));
+              return;
+            }
+            // add result for our own file table
+            addLocalResults(&r, &yield);
+            for (auto const& e: r.result)
+              result_set.insert(e.second);
+            if (result_set.size() >= unsigned(n))
+            { // Request completed locally
+              ELLE_DEBUG("Driver exiting");
+              bench_localresult.add(1);
+              return;
+            }
+          }
+          ELLE_TRACE("%s: request did not complete locally(%s)", *this, result_set.size());
+          for (int i=0; i < _config.query_get_retries; ++i)
+          {
+            packet::GetFileRequest req(r);
+            req.request_id = ++_next_id;
+            auto r = std::make_shared<PendingRequest>();
+            r->startTime = now();
+            r->barrier.close();
+            auto ir = _pending_requests.insert(std::make_pair(req.request_id, r));
+            ELLE_ASSERT(ir.second);
+            // Select target node
+            auto it = random_from(_state.contacts[fg], _gen);
+            if (it == _state.contacts[fg].end())
+              it = random_from(_state.contacts[_group], _gen);
+            if (it == _state.contacts[_group].end())
+            {
+              ELLE_TRACE("No contact to forward GET to");
+              if (result_set.empty())
+                throw reactor::Timeout(boost::posix_time::milliseconds(
+                  _config.query_timeout_ms * _config.query_get_retries));
+              return;
+            }
+            ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
+            send(req, it->second.endpoint, it->second.address);
+            reactor::wait(r->barrier,
+              boost::posix_time::milliseconds(_config.query_timeout_ms));
+            if (!r->barrier.opened())
+              ELLE_LOG("%s: Timeout on GET attempt %s", *this, i);
+            else
+            {
+              ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
+                r->result.size());
+              for (auto const& e: r->result)
+              {
+                if (fg == _group)
+                { // oportunistically add the entry to our tables
+                  auto its = _state.files.equal_range(file);
+                  auto it_r = std::find_if(its.first, its.second,
+                    [&](std::pair<const infinit::model::Address, File> const& f) {
+                      return f.second.home_node == e.first;
+                    });
+                  if (it_r == its.second)
+                  _state.files.insert(std::make_pair(file,
+                    File{file, e.first, now(), Time(), 0}));
+                }
+                if (result_set.insert(e.second).second)
+                  yield(e.second);
+              }
+              if (signed(result_set.size()) >= n)
+                break;
+            }
+          }
+          if (result_set.empty())
+            throw reactor::Timeout(boost::posix_time::milliseconds(
+              _config.query_timeout_ms * _config.query_get_retries));
+          std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
+          return;
+        };
+        return reactor::generator<RpcEndpoint>(f);
+      }
+      /*
       std::vector<RpcEndpoint>
       Node::kelipsGet(Address file, int n, bool local_override)
       {
@@ -1771,7 +1884,7 @@ namespace infinit
             _config.query_timeout_ms * _config.query_get_retries));
         std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
         return result;
-      }
+      }*/
 
       std::vector<RpcEndpoint>
       Node::kelipsPut(Address file, int n)
@@ -2151,7 +2264,7 @@ namespace infinit
         }
       }
 
-      Node::Members
+      reactor::Generator<Node::Member>
       Node::_lookup(infinit::model::Address address,
                     int n,
                     infinit::overlay::Operation op) const
@@ -2162,59 +2275,60 @@ namespace infinit
           reactor::wait(const_cast<Node*>(this)->_bootstraping);
           ELLE_TRACE("bootstrap opened");
         }
-        Members res;
-        auto hosts = const_cast<Node*>(this)->address(address, op, n);
-        ELLE_TRACE("address produced %s hosts:", hosts.size());
-        for (auto const& host: hosts)
+        return reactor::generator<Node::Member>(
+          [this, address, n, op] (reactor::Generator<Node::Member>::yielder const& yield)
         {
-          ELLE_TRACE("connecting to %s", host);
-          if (host.address().to_string() == "127.0.0.1" && host.port() == _port)
+          for (auto const& host: const_cast<Node*>(this)->address(address, op, n))
           {
-            res.emplace_back(_local);
-            continue;
-          }
-          using Protocol = infinit::model::doughnut::Local::Protocol;
-          if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
-          {
-            try
+            ELLE_TRACE("connecting to %s", host);
+            if (host.address().to_string() == "127.0.0.1" && host.port() == _port)
             {
-              res.emplace_back(
-                new infinit::model::doughnut::Remote(
-                  const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                  boost::asio::ip::udp::endpoint(host.address(), host.port()+100),
-                  const_cast<Node*>(this)->_remotes_server));
+              yield(_local);
               continue;
             }
-            catch (reactor::Terminate const& e)
+            using Protocol = infinit::model::doughnut::Local::Protocol;
+            if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
             {
-              throw;
+              try
+              {
+                yield(Overlay::Member(
+                  new infinit::model::doughnut::Remote(
+                    const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                    boost::asio::ip::udp::endpoint(host.address(), host.port()+100),
+                    const_cast<Node*>(this)->_remotes_server)));
+                continue;
+              }
+              catch (reactor::Terminate const& e)
+              {
+                throw;
+              }
+              catch (std::exception const& e)
+              {
+                ELLE_WARN("Failed to connect with utp to node %s", host);
+              }
             }
-            catch (std::exception const& e)
+            if (_config.rpc_protocol == Protocol::tcp || _config.rpc_protocol == Protocol::all)
             {
-              ELLE_WARN("Failed to connect with utp to node %s", host);
+              try
+              {
+                yield(
+                  std::shared_ptr<infinit::model::doughnut::Peer>(
+                  new infinit::model::doughnut::Remote(
+                    const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                    host)));
+                continue;
+              }
+              catch (reactor::Terminate const& e)
+              {
+                throw;
+              }
+              catch (std::exception const& e)
+              {
+                ELLE_WARN("Failed to connect with tcp to node %s", host);
+              }
             }
           }
-          if (_config.rpc_protocol == Protocol::tcp || _config.rpc_protocol == Protocol::all)
-          {
-            try
-            {
-              res.emplace_back(
-                new infinit::model::doughnut::Remote(
-                  const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                  host));
-              continue;
-            }
-            catch (reactor::Terminate const& e)
-            {
-              throw;
-            }
-            catch (std::exception const& e)
-            {
-              ELLE_WARN("Failed to connect with tcp to node %s", host);
-            }
-          }
-        }
-        return res;
+        });
       }
 
       void

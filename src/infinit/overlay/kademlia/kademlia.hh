@@ -6,6 +6,7 @@
 # include <elle/serialization/Serializer.hh>
 # include <reactor/network/udp-socket.hh>
 # include <reactor/Barrier.hh>
+# include <reactor/Generator.hh>
 # include <infinit/model/doughnut/Local.hh>
 
 namespace kademlia
@@ -64,7 +65,7 @@ namespace kademlia
     register_local(
       std::shared_ptr<infinit::model::doughnut::Local> local) override;
   protected:
-    virtual Overlay::Members _lookup(infinit::model::Address address,
+    virtual reactor::Generator<Member> _lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op)
                                   const override;
   public:

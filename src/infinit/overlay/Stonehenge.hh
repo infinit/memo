@@ -25,7 +25,7 @@ namespace infinit
     `-------*/
     protected:
       virtual
-      Members
+      reactor::Generator<Member>
       _lookup(model::Address address,
               int n,
               Operation op) const override;

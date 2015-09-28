@@ -451,8 +451,9 @@ namespace kademlia
     }
   }
 
-  infinit::overlay::Overlay::Members Kademlia::_lookup(infinit::model::Address address,
-                                     int n, infinit::overlay::Operation op) const
+  reactor::Generator<Kademlia::Member>
+  Kademlia::_lookup(infinit::model::Address address,
+                    int n, infinit::overlay::Operation op) const
   {
     ELLE_TRACE("%s: lookup %s with mode %s", *this, address, op);
     auto self = const_cast<Kademlia*>(this);
@@ -483,7 +484,10 @@ namespace kademlia
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
           ep));
       ELLE_TRACE("%s: returning", *this);
-      return res;
+      return reactor::generator<Member>([res]  (reactor::yielder<Member>::type const& yield)
+      {
+        for (auto r: res) yield(r);
+      });
     }
 
     std::shared_ptr<Query> q = self->startQuery(address, true);
@@ -506,7 +510,10 @@ namespace kademlia
     }
     else
       throw infinit::model::MissingBlock(address);
-    return res;
+    return reactor::generator<Member>([res]  (reactor::yielder<Member>::type const& yield)
+      {
+        for (auto r: res) yield(r);
+      });
   }
 
   static int qid = 0;

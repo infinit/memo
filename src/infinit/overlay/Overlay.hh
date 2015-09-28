@@ -5,6 +5,7 @@
 # include <elle/json/json.hh>
 
 # include <reactor/network/tcp-socket.hh>
+# include <reactor/Generator.hh>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/doughnut/fwd.hh>
@@ -45,8 +46,8 @@ namespace infinit
     `-------*/
     public:
       /// Lookup a list of nodes
-      Members
-      lookup(model::Address address, int n, Operation op, bool strict=true) const;
+      reactor::Generator<Member>
+      lookup(model::Address address, int n, Operation op) const;
       /// Lookup a single node
       Member
       lookup(model::Address address, Operation op) const;
@@ -63,7 +64,7 @@ namespace infinit
       stats() { return {};}
     protected:
       virtual
-      Members
+      reactor::Generator<Member>
       _lookup(model::Address address, int n, Operation op) const = 0;
     };
 
