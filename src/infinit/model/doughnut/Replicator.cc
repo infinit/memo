@@ -215,7 +215,7 @@ namespace infinit
           ++count;
         }
         if (!count)
-          throw elle::Error(elle::sprintf("lookup for removal of %x gave no results", address));
+          throw MissingBlock(address);
       }
 
       std::unique_ptr<blocks::Block>
