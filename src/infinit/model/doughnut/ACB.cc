@@ -461,15 +461,6 @@ namespace infinit
             <std::vector<ACLEntry>, elle::serialization::Json>
             (acl->data(), "entries");
         }
-        static_assert(
-          elle::serialization::has_serialization_tag<ACLEntry>(),
-          "oops");
-        static_assert(
-          elle::serialization::has_serialization_tag<DasACLEntryPermissions>(),
-          "oops");
-        static_assert(
-          elle::serialization::has_serialization_tag<das::Serializer<DasACLEntryPermissions>>(),
-          "oops");
         s.serialize(
           "acls", entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
