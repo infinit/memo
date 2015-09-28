@@ -24,6 +24,7 @@
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/NB.hh>
+#include <infinit/model/doughnut/ACB.hh>
 #include <infinit/serialization.hh>
 
 #ifdef INFINIT_LINUX
@@ -2153,6 +2154,13 @@ namespace infinit
         auto block = _owner.fetch_or_die(addr);
         auto acl = dynamic_cast<model::blocks::ACLBlock*>(block.get());
         ELLE_ASSERT(acl);
+        // permission check
+        auto acb = dynamic_cast<model::doughnut::ACB*>(block.get());
+        auto dn =
+          std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
+        auto keys = dn->keys();
+        if (keys.K() != acb->owner_key())
+          THROW_ACCES;
         ELLE_TRACE("Setting permission at %s", acl->address());
         umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
           EACCES);
