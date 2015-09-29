@@ -25,8 +25,6 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connection_thread()
-        , _connected()
-        , _connection_exception()
       {
         this->_connect(
           elle::sprintf("%s:%s", host, port),
@@ -45,8 +43,6 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connection_thread()
-        , _connected()
-        , _connection_exception()
       {
         this->_connect(
           elle::sprintf("%s", endpoint),
@@ -66,8 +62,6 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connection_thread()
-        , _connected()
-        , _connection_exception()
       {
         this->_connect(
           elle::sprintf("%s", endpoint),
@@ -102,31 +96,21 @@ namespace infinit
                 this->_serializer.reset(new protocol::Serializer(socket()));
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
-                this->_connected.open();
               }
               catch (elle::Error const&)
               {
-                try
-                {
-                  elle::throw_with_nested(
-                    elle::Error(
-                      elle::sprintf("connection failed to %s", endpoint)));
-                }
-                catch (...)
-                {
-                  this->_connection_exception = std::current_exception();
-                  this->_connected.open();
-                }
+                elle::throw_with_nested(
+                  elle::Error(
+                    elle::sprintf("connection failed to %s", endpoint)));
               }
-            }));
+            },
+            reactor::Thread::managed = true));
       }
 
       void
       Remote::connect()
       {
-        if (this->_connection_exception)
-          std::rethrow_exception(this->_connection_exception);
-        reactor::wait(this->_connected);
+        reactor::wait(*this->_connection_thread);
       }
 
       /*-------.
