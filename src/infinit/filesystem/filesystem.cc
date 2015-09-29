@@ -632,22 +632,22 @@ namespace infinit
       }
       catch (model::MissingBlock const& mb)
       {
-        ELLE_WARN("Unexpected storage result on fetch: %s", mb);
+        ELLE_WARN("unexpected storage result fetching: %s", mb);
         throw rfs::Error(EIO, elle::sprintf("%s", mb));
       }
       catch (elle::serialization::Error const& se)
       {
-        ELLE_WARN("serialization error on fetch %x: %s", address, se);
+        ELLE_WARN("serialization error fetching %x: %s", address, se);
         throw rfs::Error(EIO, elle::sprintf("%s", se));
       }
       catch(elle::Exception const& e)
       {
-        ELLE_WARN("unexpected exception on fetch %x: %s", address, e);
+        ELLE_WARN("unexpected exception fetching %x: %s", address, e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
       {
-        ELLE_WARN("unexpected exception on fetch %x: %s", address, e);
+        ELLE_WARN("unexpected exception on fetching %x: %s", address, e);
         throw rfs::Error(EIO, e.what());
       }
     }
@@ -1037,13 +1037,13 @@ namespace infinit
         {
           ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
         }
-        catch (reactor::Terminate const& t)
+        catch (rfs::Error const&)
         {
           throw;
         }
-        catch (elle::Exception const& e)
+        catch (elle::Error const& e)
         {
-          ELLE_WARN("unexpected elle::exception %s", e.what());
+          ELLE_WARN("unexpected exception on stat: %s", e);
           throw rfs::Error(EIO, elle::sprintf("%s", e));
         }
       }
@@ -1686,13 +1686,13 @@ namespace infinit
       {
         ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
       }
-      catch (reactor::Terminate const& t)
+      catch (rfs::Error const&)
       {
         throw;
       }
-      catch (elle::Exception const& e)
+      catch (elle::Error const& e)
       {
-        ELLE_WARN("unexpected elle::exception %s", e.what());
+        ELLE_WARN("unexpected exception on stat: %s", e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
       ELLE_DEBUG("stat size: %s", st->st_size);
