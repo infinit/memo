@@ -115,6 +115,7 @@ namespace infinit
                 catch (...)
                 {
                   this->_connection_exception = std::current_exception();
+                  this->_connected.open();
                 }
               }
             }));
