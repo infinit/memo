@@ -95,7 +95,7 @@ namespace infinit
         this->_connection_thread.reset(
           new reactor::Thread(
             elle::sprintf("%s connection", *this),
-            [this, endpoint, &socket]
+            [this, endpoint, socket]
             {
               try
               {
