@@ -456,10 +456,19 @@ namespace infinit
         if (this->_acl != Address::null)
         {
           ELLE_ASSERT(this->doughnut());
-          auto acl = this->doughnut()->fetch(this->_acl);
-          entries = elle::serialization::deserialize
-            <std::vector<ACLEntry>, elle::serialization::Json>
-            (acl->data(), "entries");
+          try
+          {
+            auto acl = this->doughnut()->fetch(this->_acl);
+            entries = elle::serialization::deserialize
+              <std::vector<ACLEntry>, elle::serialization::Json>
+              (acl->data(), "entries");
+          }
+          catch (elle::Error const& e)
+          {
+            elle::throw_with_nested(
+              elle::Error(
+                elle::sprintf("unable to fetch ACL block %s", this->_acl)));
+          }
         }
         s.serialize(
           "acls", entries,
