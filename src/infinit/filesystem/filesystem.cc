@@ -2353,7 +2353,8 @@ namespace infinit
           this->_owner->unlink();
         this->_owner->_blocks.clear();
         this->_owner->_first_block.reset();
-
+        if (this->_owner->_parent)
+          this->_owner->_remove_from_cache();
       }
     }
 
