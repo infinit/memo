@@ -43,8 +43,13 @@ namespace infinit
         virtual
         void
         connect() override;
+      private:
+        void
+        _connect(std::string endpoint,
+                 std::function <std::iostream& ()> const& socket);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, connected);
+        ELLE_ATTRIBUTE(std::exception_ptr, connection_exception);
 
       /*-------.
       | Blocks |

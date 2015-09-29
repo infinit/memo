@@ -26,20 +26,16 @@ namespace infinit
         , _channels()
         , _connection_thread()
         , _connected()
+        , _connection_exception()
       {
-        this->_connection_thread.reset(
-          new reactor::Thread(
-            elle::sprintf("%s connection", *this),
-            [host, port, this]
-            {
-              this->_socket.reset(
-                new reactor::network::TCPSocket(host, port));
-              this->_serializer.reset(
-                new protocol::Serializer(*this->_socket));
-              this->_channels.reset(
-                new protocol::ChanneledStream(*this->_serializer));
-              this->_connected.open();
-            }));
+        this->_connect(
+          elle::sprintf("%s:%s", host, port),
+          [host, port, this] () -> std::iostream&
+          {
+            this->_socket.reset(
+              new reactor::network::TCPSocket(host, port));
+            return *this->_socket;
+          });
       }
 
       Remote::Remote(Doughnut& doughnut,
@@ -50,20 +46,16 @@ namespace infinit
         , _channels()
         , _connection_thread()
         , _connected()
+        , _connection_exception()
       {
-        this->_connection_thread.reset(
-          new reactor::Thread(
-            elle::sprintf("%s connection", *this),
-            [endpoint, this]
-            {
-              this->_socket.reset(
-                new reactor::network::TCPSocket(endpoint));
-              this->_serializer.reset(
-                new protocol::Serializer(*this->_socket));
-              this->_channels.reset(
-                new protocol::ChanneledStream(*this->_serializer));
-              this->_connected.open();
-            }));
+        this->_connect(
+          elle::sprintf("%s", endpoint),
+          [endpoint, this] () -> std::iostream&
+          {
+            this->_socket.reset(
+              new reactor::network::TCPSocket(endpoint));
+            return *this->_socket;
+          });
       }
 
       Remote::Remote(Doughnut& doughnut,
@@ -75,21 +67,17 @@ namespace infinit
         , _channels()
         , _connection_thread()
         , _connected()
+        , _connection_exception()
       {
-        this->_connection_thread.reset(
-          new reactor::Thread(
-            elle::sprintf("%s connection", *this),
-            [endpoint, this, &server]
-            {
-              this->_utp_socket.reset(
-                new reactor::network::UTPSocket(
-                  server, endpoint.address().to_string(), endpoint.port()));
-              this->_serializer.reset(
-                new protocol::Serializer(*this->_utp_socket));
-              this->_channels.reset(
-                new protocol::ChanneledStream(*this->_serializer));
-              this->_connected.open();
-            }));
+        this->_connect(
+          elle::sprintf("%s", endpoint),
+          [this, endpoint, &server] () -> std::iostream&
+          {
+            this->_utp_socket.reset(
+              new reactor::network::UTPSocket(
+                server, endpoint.address().to_string(), endpoint.port()));
+            return *this->_utp_socket;
+          });
       }
 
       Remote::~Remote()
@@ -100,8 +88,43 @@ namespace infinit
       `-----------*/
 
       void
+      Remote::_connect(
+        std::string endpoint,
+        std::function <std::iostream& ()> const& socket)
+      {
+        this->_connection_thread.reset(
+          new reactor::Thread(
+            elle::sprintf("%s connection", *this),
+            [this, endpoint, &socket]
+            {
+              try
+              {
+                this->_serializer.reset(new protocol::Serializer(socket()));
+                this->_channels.reset(
+                  new protocol::ChanneledStream(*this->_serializer));
+                this->_connected.open();
+              }
+              catch (elle::Error const&)
+              {
+                try
+                {
+                  elle::throw_with_nested(
+                    elle::Error(
+                      elle::sprintf("connection failed to %s", endpoint)));
+                }
+                catch (...)
+                {
+                  this->_connection_exception = std::current_exception();
+                }
+              }
+            }));
+      }
+
+      void
       Remote::connect()
       {
+        if (this->_connection_exception)
+          std::rethrow_exception(this->_connection_exception);
         reactor::wait(this->_connected);
       }
 
