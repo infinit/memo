@@ -2210,6 +2210,27 @@ namespace infinit
           set_permissions(name.substr(strlen("user.infinit.auth.")), value,
                           _block->address()));
       }
+      else if (name == "user.infinit.fsck.unlink")
+      {
+        auto it = _files.find(value);
+        if (it == _files.end())
+          THROW_NOENT;
+        auto c = child(value);
+        auto f = dynamic_cast<File*>(c.get());
+        if (!f)
+          THROW_ISDIR;
+        try
+        {
+          f->unlink();
+        }
+        catch(std::exception const& e)
+        {
+          ELLE_WARN("%s: unlink of %s failed with %s, forcibly remove from parent",
+                    *this, value, e.what());
+          _files.erase(value);
+          _commit(true);
+        }
+      }
       else
         Node::setxattr(name, value, flags);
     }
