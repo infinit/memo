@@ -212,6 +212,8 @@ namespace infinit
       std::string getxattr(std::string const& key);
       void setxattr(std::string const& k, std::string const& v, int flags);
       void removexattr(std::string const& k);
+      std::unique_ptr<Block> set_permissions(std::string const& flags, std::string const& userkey,
+                                             Address self_address);
       void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       boost::filesystem::path full_path();
@@ -2141,30 +2143,46 @@ namespace infinit
       return std::make_pair(r, w);
     }
 
+    std::unique_ptr<Block>
+    Node::set_permissions(std::string const& flags, std::string const& userkey,
+                          Address self_address)
+    {
+      std::pair<bool, bool> perms = parse_flags(flags);
+      std::unique_ptr<infinit::model::User> user =
+        umbrella([&] {return _get_user(userkey);}, EINVAL);
+      if (!user)
+      {
+        ELLE_WARN("user %s does not exist", userkey);
+        THROW_INVAL;
+      }
+      auto block = _owner.fetch_or_die(self_address);
+      auto acl = dynamic_cast<model::blocks::ACLBlock*>(block.get());
+      if (!acl)
+        throw rfs::Error(EIO, "Block is not an ACL block");
+      // permission check
+      auto acb = dynamic_cast<model::doughnut::ACB*>(block.get());
+      if (!acb)
+        throw rfs::Error(EIO, "Block is not an ACB block");
+      auto dn =
+        std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
+      auto keys = dn->keys();
+      if (keys.K() != acb->owner_key())
+        THROW_ACCES;
+      ELLE_TRACE("Setting permission at %s for %s", acl->address(), user->name());
+      umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
+        EACCES);
+      _owner.store_or_die(*acl);
+      return block;
+    }
+
     void
     File::setxattr(std::string const& name, std::string const& value, int flags)
     {
       ELLE_TRACE("file setxattr %s", name);
       if (name.find("user.infinit.auth.") == 0)
       {
-        std::string flags = name.substr(strlen("user.infinit.auth."));
-        std::pair<bool, bool> perms = parse_flags(flags);
-        std::unique_ptr<infinit::model::User> user = _get_user(value);
-        Address addr = _parent->_files.at(_name).address;
-        auto block = _owner.fetch_or_die(addr);
-        auto acl = dynamic_cast<model::blocks::ACLBlock*>(block.get());
-        ELLE_ASSERT(acl);
-        // permission check
-        auto acb = dynamic_cast<model::doughnut::ACB*>(block.get());
-        auto dn =
-          std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
-        auto keys = dn->keys();
-        if (keys.K() != acb->owner_key())
-          THROW_ACCES;
-        ELLE_TRACE("Setting permission at %s", acl->address());
-        umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
-          EACCES);
-        _owner.store_or_die(*acl); // FIXME STORE MODE
+        set_permissions(name.substr(strlen("user.infinit.auth.")), value,
+                        _parent->_files.at(_name).address);
       }
       else
         Node::setxattr(name, value, flags);
@@ -2188,31 +2206,9 @@ namespace infinit
       }
       else if (name.find("user.infinit.auth.") == 0)
       {
-        std::string flags = name.substr(strlen("user.infinit.auth."));
-        std::pair<bool, bool> perms = parse_flags(flags);
-        std::unique_ptr<infinit::model::User> user = _get_user(value);
-        if (!user)
-        {
-          ELLE_WARN("user %s does not exist", value);
-          THROW_INVAL;
-        }
-        model::blocks::ACLBlock* acl
-          = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
-        if (acl == 0)
-        { // Damm
-          ELLE_TRACE("Not an acl block, updating");
-          std::unique_ptr<model::blocks::ACLBlock> nacl
-            = _owner.block_store()->make_block<model::blocks::ACLBlock>();
-          _owner.block_store()->remove(_block->address());
-          _block = std::move(nacl);
-          _commit(true);
-          acl = dynamic_cast<model::blocks::ACLBlock*>(_block.get());
-        }
-        ELLE_TRACE("Setting permission at %s", acl->address());
-        umbrella([&] { acl->set_permissions(*user, perms.first, perms.second);},
-          EACCES);
-        ELLE_TRACE("Storing acl block at %s", acl->address());
-        _owner.store_or_die(*acl); // FIXME STORE MODE
+        _block = elle::cast<ACLBlock>::runtime(
+          set_permissions(name.substr(strlen("user.infinit.auth.")), value,
+                          _block->address()));
       }
       else
         Node::setxattr(name, value, flags);
