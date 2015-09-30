@@ -1157,9 +1157,10 @@ namespace infinit
       if (k.substr(0, strlen("user.infinit.overlay.")) == "user.infinit.overlay.")
       {
         std::string okey = k.substr(strlen("user.infinit.overlay."));
-        elle::json::Json r =
+        umbrella([&] {
           dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())
             ->overlay()->query(okey, v);
+        }, EINVAL);
         return;
       }
       auto& xattrs = _parent ?
@@ -1180,9 +1181,10 @@ namespace infinit
       if (k.substr(0, strlen("user.infinit.overlay.")) == "user.infinit.overlay.")
       {
         std::string okey = k.substr(strlen("user.infinit.overlay."));
-        elle::json::Json v =
-          dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())
+        elle::json::Json v = umbrella([&] {
+          return dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())
             ->overlay()->query(okey, {});
+        }, EINVAL);
         if (v.empty())
           return "{}";
         else
