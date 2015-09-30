@@ -2316,6 +2316,29 @@ namespace infinit
             std::chrono::duration_cast<std::chrono::microseconds>(c.second.rtt).count());
           res["ping_rtt"] = rtts;
         }
+        if (k == "blockcount")
+        {
+          auto files = _state.files;
+          std::vector<int> counts;
+          std::set<Address> processed;
+          for (auto const& f: files)
+          {
+            if (processed.count(f.first))
+              continue;
+            processed.insert(f.first);
+            auto its = files.equal_range(f.first);
+            int count=0;
+            for (; its.first != its.second; ++count, ++its.first)
+              ;
+            if (signed(counts.size()) <= count)
+              counts.resize(count + 1, 0);
+            counts[count]++;
+          }
+          elle::json::Array ares;
+          for (auto c: counts)
+            ares.push_back(c);
+          res["counts"] = ares;
+        }
         return res;
       }
 
