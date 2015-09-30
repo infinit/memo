@@ -61,7 +61,7 @@ namespace infinit
       }
       catch(elle::Exception const& e)
       {
-        ELLE_WARN("unexpected elle::exception %s", e.what());
+        ELLE_WARN("unexpected elle::exception %s", e);
         throw rfs::Error(err, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
@@ -611,7 +611,7 @@ namespace infinit
       catch(elle::Error const& e)
       {
         ELLE_WARN("unexpected exception storing %x: %s",
-                  block.address(), e.what());
+                  block.address(), e);
         throw rfs::Error(EIO, e.what());
       }
     }
