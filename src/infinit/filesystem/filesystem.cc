@@ -1154,6 +1154,14 @@ namespace infinit
       */
       if (k == "com.apple.quarantine")
         return;
+      if (k.substr(0, strlen("user.infinit.overlay.")) == "user.infinit.overlay.")
+      {
+        std::string okey = k.substr(strlen("user.infinit.overlay."));
+        elle::json::Json r =
+          dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())
+            ->overlay()->query(okey, v);
+        return;
+      }
       auto& xattrs = _parent ?
          _parent->_files.at(_name).xattrs
          : static_cast<Directory*>(this)->_files[""].xattrs;
@@ -1169,6 +1177,17 @@ namespace infinit
     Node::getxattr(std::string const& k)
     {
       ELLE_TRACE_SCOPE("%s: get attribute \"%s\"", *this, k);
+      if (k.substr(0, strlen("user.infinit.overlay.")) == "user.infinit.overlay.")
+      {
+        std::string okey = k.substr(strlen("user.infinit.overlay."));
+        elle::json::Json v =
+          dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())
+            ->overlay()->query(okey, {});
+        if (v.empty())
+          return "{}";
+        else
+          return elle::json::pretty_print(v);
+      }
       auto& xattrs = this->_parent
         ? this->_parent->_files.at(this->_name).xattrs
         : static_cast<Directory*>(this)->_files[""].xattrs;
@@ -2259,15 +2278,6 @@ namespace infinit
       {
         _fetch();
         return _inherit_auth ? "true" : "false";
-      }
-      else if (key == "user.infinit.overlay")
-      {
-        elle::json::Json v =
-          dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())->overlay()->stats();
-        if (v.empty())
-          return "{}";
-        else
-          return elle::json::pretty_print(v);
       }
       else
         return Node::getxattr(key);

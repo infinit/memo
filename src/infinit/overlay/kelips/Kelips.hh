@@ -182,7 +182,7 @@ namespace infinit
         void
         remove(Address address);
         elle::json::Json
-        stats() override;
+        query(std::string const& k, boost::optional<std::string> const& v) override;
 
       /*--------.
       | Overlay |

@@ -2262,39 +2262,43 @@ namespace infinit
       }
 
       elle::json::Json
-      Node::stats()
+      Node::query(std::string const& k, boost::optional<std::string> const& v)
       {
         elle::json::Object res;
-        res["group"] = this->_group;
-        for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
+        if (k == "stats")
         {
-          auto const& group = this->_state.contacts[i];
-          elle::json::Array contacts;
-          for (auto const& contact: group)
+          res["group"] = this->_group;
+          for (int i = 0; i < signed(this->_state.contacts.size()); ++i)
           {
-            auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
+            auto const& group = this->_state.contacts[i];
+            elle::json::Array contacts;
+            for (auto const& contact: group)
+            {
+              auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
               (std::chrono::system_clock::now() - contact.second.last_seen);
-            contacts.push_back(elle::json::Object{
-                {"address", elle::sprintf("%x", contact.second.address)},
-                {"endpoint",
-                    PrettyGossipEndpoint(contact.second.endpoint).repr()},
-                {"last_seen",
-                    elle::sprintf("%ss", last_seen.count())},
+              contacts.push_back(elle::json::Object{
+                  {"address", elle::sprintf("%x", contact.second.address)},
+                  {"endpoint",
+                  PrettyGossipEndpoint(contact.second.endpoint).repr()},
+                  {"last_seen",
+                  elle::sprintf("%ss", last_seen.count())},
               });
+            }
+            res[elle::sprintf("%s", i)] = elle::json::Object{
+              {"contacts", std::move(contacts)}
+            };
           }
-          res[elle::sprintf("%s", i)] = elle::json::Object{
-            {"contacts", std::move(contacts)}
-          };
-        }
-        res["files"] = this->_state.files.size();
-        res["dropped_puts"] = this->_dropped_puts;
-        res["dropped_gets"] = this->_dropped_gets;
-        res["failed_puts"] = this->_failed_puts;
-        elle::json::Array rtts;
-        for (auto const& c: _state.contacts[_group])
+          res["files"] = this->_state.files.size();
+          res["dropped_puts"] = this->_dropped_puts;
+          res["dropped_gets"] = this->_dropped_gets;
+          res["failed_puts"] = this->_failed_puts;
+          elle::json::Array rtts;
+          for (auto const& c: _state.contacts[_group])
           rtts.push_back(
             std::chrono::duration_cast<std::chrono::microseconds>(c.second.rtt).count());
-        res["ping_rtt"] = rtts;
+          res["ping_rtt"] = rtts;
+          return res;
+        }
         return res;
       }
 

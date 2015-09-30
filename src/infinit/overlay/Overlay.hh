@@ -58,10 +58,10 @@ namespace infinit
 
       ELLE_ATTRIBUTE_RWX(model::doughnut::Doughnut*, doughnut);
 
-      /// Return statistics about the overlay
+      /// overlay-specific queries
       virtual
       elle::json::Json
-      stats() { return {};}
+      query(std::string const& k, boost::optional<std::string> const& v);
     protected:
       virtual
       reactor::Generator<Member>

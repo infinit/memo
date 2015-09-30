@@ -17,6 +17,12 @@ namespace infinit
       , _doughnut(nullptr)
     {}
 
+    elle::json::Json
+    Overlay::query(std::string const& k, boost::optional<std::string> const& v)
+    {
+      return {};
+    }
+
     /*-------.
     | Lookup |
     `-------*/
