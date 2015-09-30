@@ -1727,14 +1727,15 @@ namespace infinit
             }
           }
           ELLE_TRACE("%s: request did not complete locally(%s)", *this, result_set.size());
-          for (int i=0; i < _config.query_get_retries; ++i)
+          for (int i = 0; i < _config.query_get_retries; ++i)
           {
             packet::GetFileRequest req(r);
-            req.request_id = ++_next_id;
+            req.request_id = ++this->_next_id;
             auto r = std::make_shared<PendingRequest>();
             r->startTime = now();
             r->barrier.close();
-            auto ir = _pending_requests.insert(std::make_pair(req.request_id, r));
+            auto ir =
+              this->_pending_requests.insert(std::make_pair(req.request_id, r));
             ELLE_ASSERT(ir.second);
             // Select target node
             auto it = random_from(_state.contacts[fg], _gen);
@@ -1753,7 +1754,8 @@ namespace infinit
             reactor::wait(r->barrier,
               boost::posix_time::milliseconds(_config.query_timeout_ms));
             if (!r->barrier.opened())
-              ELLE_LOG("%s: Timeout on GET attempt %s", *this, i);
+              ELLE_LOG("%s: get request on %s timeout (try %s)",
+                        *this, file, i);
             else
             {
               ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
@@ -1781,108 +1783,6 @@ namespace infinit
         };
         return reactor::generator<RpcEndpoint>(f);
       }
-      /*
-      std::vector<RpcEndpoint>
-      Node::kelipsGet(Address file, int n, bool local_override)
-      {
-        std::set<RpcEndpoint> result_set;
-        packet::GetFileRequest r;
-        r.sender = _self;
-        r.request_id = ++ _next_id;
-        r.originAddress = _observer ? Address::null : _self;
-        r.originEndpoint = _local_endpoint;
-        r.fileAddress = file;
-        r.ttl = _config.query_get_ttl;
-        r.count = n;
-        int fg = group_of(file);
-        static elle::Bench bench_localresult("kelips.localresult", 10_sec);
-        static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
-        if (fg == _group)
-        {
-          // check if we have it locally
-          auto its = _state.files.equal_range(file);
-          auto it_us = std::find_if(its.first, its.second,
-            [&](std::pair<const infinit::model::Address, File> const& f) {
-              return f.second.home_node == _self;
-          });
-          if (it_us != its.second && (n == 1 || local_override))
-          {
-            ELLE_DEBUG("Satisfied get lookup locally.");
-            std::vector<RpcEndpoint> result;
-            result.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
-                this->_port);
-            bench_localbypass.add(1);
-            return result;
-          }
-          // add result for our own file table
-          addLocalResults(&r);
-          for (auto const& e: r.result)
-            result_set.insert(e.second);
-          if (result_set.size() >= unsigned(n))
-          { // Request completed locally
-            bench_localresult.add(1);
-            std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
-            return result;
-          }
-        }
-        ELLE_TRACE("%s: request did not complete locally(%s)", *this, result_set.size());
-        for (int i=0; i < _config.query_get_retries; ++i)
-        {
-          packet::GetFileRequest req(r);
-          req.request_id = ++_next_id;
-          auto r = std::make_shared<PendingRequest>();
-          r->startTime = now();
-          r->barrier.close();
-          auto ir = _pending_requests.insert(std::make_pair(req.request_id, r));
-          ELLE_ASSERT(ir.second);
-          // Select target node
-          auto it = random_from(_state.contacts[fg], _gen);
-          if (it == _state.contacts[fg].end())
-            it = random_from(_state.contacts[_group], _gen);
-          if (it == _state.contacts[_group].end())
-          {
-            ELLE_TRACE("No contact to forward GET to");
-            if (result_set.empty())
-              throw reactor::Timeout(boost::posix_time::milliseconds(
-                _config.query_timeout_ms * _config.query_get_retries));
-            std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
-            return result;
-          }
-          ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
-          send(req, it->second.endpoint, it->second.address);
-          reactor::wait(r->barrier,
-            boost::posix_time::milliseconds(_config.query_timeout_ms));
-          if (!r->barrier.opened())
-            ELLE_LOG("%s: Timeout on GET attempt %s", *this, i);
-          else
-          {
-            ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
-              r->result.size());
-            for (auto const& e: r->result)
-            {
-              if (fg == _group)
-              { // oportunistically add the entry to our tables
-                auto its = _state.files.equal_range(file);
-                auto it_r = std::find_if(its.first, its.second,
-                  [&](std::pair<const infinit::model::Address, File> const& f) {
-                    return f.second.home_node == e.first;
-                  });
-                if (it_r == its.second)
-                  _state.files.insert(std::make_pair(file,
-                    File{file, e.first, now(), Time(), 0}));
-              }
-              result_set.insert(e.second);
-            }
-            if (signed(result_set.size()) >= n)
-              break;
-          }
-        }
-        if (result_set.empty())
-          throw reactor::Timeout(boost::posix_time::milliseconds(
-            _config.query_timeout_ms * _config.query_get_retries));
-        std::vector<RpcEndpoint> result(result_set.begin(), result_set.end());
-        return result;
-      }*/
 
       std::vector<RpcEndpoint>
       Node::kelipsPut(Address file, int n)
@@ -1897,8 +1797,7 @@ namespace infinit
         p.count = n;
         p.insert_ttl = _config.query_put_insert_ttl;
         std::vector<RpcEndpoint> results;
-
-        for (int i=0; i< _config.query_put_retries; ++i)
+        for (int i = 0; i < _config.query_put_retries; ++i)
         {
           packet::PutFileRequest req = p;
           req.request_id = ++_next_id;
@@ -1936,7 +1835,6 @@ namespace infinit
           }
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
           send(req, it->second.endpoint, it->second.address);
-
           reactor::wait(r->barrier,
             boost::posix_time::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
@@ -1962,7 +1860,6 @@ namespace infinit
           ELLE_TRACE("%s: put failed, retry %s", *this, i);
           ++_failed_puts;
         }
-
         return results;
       }
       /* For node selection, the paper [5] in kelips recommand:
