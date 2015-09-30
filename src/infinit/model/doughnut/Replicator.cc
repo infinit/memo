@@ -12,6 +12,7 @@
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
 #include <reactor/scheduler.hh>
+#include <reactor/network/exception.hh>
 
 #include <boost/filesystem/fstream.hpp>
 
@@ -127,9 +128,25 @@ namespace infinit
         {
           for (auto p: peers)
           {
-            s.run_background("store", [p,&block, mode]
+            s.run_background("store", [this, p, &block, mode]
             {
-              p->store(block, mode);
+              for (int i=0; i<5; ++i)
+              {
+                try
+                {
+                  if (i!=0)
+                    p->reconnect();
+                  p->store(block, mode);
+                  return;
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_TRACE("%s: network exception %s", *this, e);
+                  reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
+                }
+              }
+              throw reactor::network::Exception(elle::sprintf(
+                "%s: too many retries storing %s, aborting", *this, block.address()));
             });
           }
           reactor::wait(s);
@@ -162,15 +179,23 @@ namespace infinit
                 s.run_background(elle::sprintf("connect to %s", *p),
                 [p,&yield]
                 {
-                  try
+                  for (int i=0; i<5; ++i)
                   {
                     ELLE_DEBUG_SCOPE("connect to %s", *p);
-                    p->connect();
-                    yield(p);
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_TRACE("connect with %s failed: %s", *p, e);
+                    try
+                    {
+                      if (i!=0)
+                        p->reconnect();
+                      else
+                        p->connect();
+                      yield(p);
+                      return;
+                    }
+                    catch (elle::Error const& e)
+                    {
+                      ELLE_TRACE("network exception %s", e);
+                      reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
+                    }
                   }
                 });
               }
