@@ -2265,6 +2265,24 @@ namespace infinit
       Node::query(std::string const& k, boost::optional<std::string> const& v)
       {
         elle::json::Object res;
+        if (k == "protocol")
+        {
+          using Protocol = infinit::model::doughnut::Local::Protocol;
+          if (!v)
+            res["protocol"] = _config.rpc_protocol == Protocol::utp ?
+          "utp" : (_config.rpc_protocol == Protocol::tcp ? "tcp" : "all");
+          else
+          {
+            if (*v == "tcp")
+              _config.rpc_protocol = Protocol::tcp;
+            else if (*v == "utp")
+              _config.rpc_protocol = Protocol::utp;
+            else if (*v == "all")
+              _config.rpc_protocol = Protocol::all;
+            else
+              throw elle::Error("Invalid protocol");
+          }
+        }
         if (k == "stats")
         {
           res["group"] = this->_group;
@@ -2297,7 +2315,6 @@ namespace infinit
           rtts.push_back(
             std::chrono::duration_cast<std::chrono::microseconds>(c.second.rtt).count());
           res["ping_rtt"] = rtts;
-          return res;
         }
         return res;
       }
