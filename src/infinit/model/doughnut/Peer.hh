@@ -28,6 +28,9 @@ namespace infinit
         virtual
         void
         connect() = 0;
+        virtual
+        void
+        reconnect() = 0;
 
       /*-------.
       | Blocks |

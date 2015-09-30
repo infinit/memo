@@ -50,7 +50,9 @@ namespace infinit
         virtual
         void
         connect() override;
-
+        virtual
+        void
+        reconnect() override;
       /*-------.
       | Blocks |
       `-------*/

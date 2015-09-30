@@ -78,6 +78,10 @@ namespace infinit
       Local::connect()
       {}
 
+      void
+      Local::reconnect()
+      {}
+
       /*-------.
       | Blocks |
       `-------*/

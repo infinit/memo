@@ -86,6 +86,8 @@ namespace infinit
         std::string endpoint,
         std::function <std::iostream& ()> const& socket)
       {
+        this->_connector = socket;
+        this->_endpoint = endpoint;
         this->_connection_thread.reset(
           new reactor::Thread(
             elle::sprintf("%s connection", *this),
@@ -111,6 +113,13 @@ namespace infinit
       Remote::connect()
       {
         reactor::wait(*this->_connection_thread);
+      }
+
+      void
+      Remote::reconnect()
+      {
+        _connect(this->_endpoint, this->_connector);
+        connect();
       }
 
       /*-------.

@@ -43,10 +43,15 @@ namespace infinit
         virtual
         void
         connect() override;
+        virtual
+        void
+        reconnect() override;
       private:
         void
         _connect(std::string endpoint,
                  std::function <std::iostream& ()> const& socket);
+        ELLE_ATTRIBUTE(std::function <std::iostream& ()>, connector);
+        ELLE_ATTRIBUTE(std::string, endpoint);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
 
       /*-------.
