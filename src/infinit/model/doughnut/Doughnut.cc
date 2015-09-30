@@ -246,7 +246,6 @@ namespace infinit
         , passport(std::move(passport_))
         , name(std::move(name_))
         , replicas(std::move(replicas_))
-        , async(std::move(async_))
       {}
 
       Configuration::Configuration
@@ -258,7 +257,6 @@ namespace infinit
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , replicas(s.deserialize<int>("replicas"))
-        , async(s.deserialize<bool>("async"))
       {}
 
       void
@@ -270,7 +268,6 @@ namespace infinit
         s.serialize("passport", this->passport);
         s.serialize("name", this->name);
         s.serialize("replicas", this->replicas);
-        s.serialize("async", this->async);
       }
 
       std::unique_ptr<infinit::model::Model>

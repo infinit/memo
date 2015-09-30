@@ -89,7 +89,6 @@ namespace infinit
         Passport passport;
         boost::optional<std::string> name;
         int replicas;
-        bool async;
 
         Configuration(
           std::unique_ptr<overlay::Configuration> overlay,
