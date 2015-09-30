@@ -40,6 +40,8 @@ namespace infinit
         overlay::Overlay* _overlay;
         boost::filesystem::path _journal_dir;
         reactor::Thread _process_thread;
+        std::unordered_map<Address, int> _retries;
+        int _frame;
       };
     }
   }

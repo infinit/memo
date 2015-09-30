@@ -53,6 +53,7 @@ namespace infinit
       , _overlay(nullptr)
       , _journal_dir(journal_dir)
       , _process_thread("replicator", [&] { _process_loop();})
+      , _frame(0)
       {
         ELLE_TRACE("%s: using journal at %s", *this, this->_journal_dir);
         boost::filesystem::create_directories(_journal_dir);
@@ -278,11 +279,15 @@ namespace infinit
         if (!_overlay)
           return;
         ELLE_TRACE("checking cache");
+        ++_frame;
         boost::filesystem::directory_iterator it(_journal_dir);
         for (;it != boost::filesystem::directory_iterator(); ++it)
         {
-          ELLE_TRACE("considering %s", it->path());
           Address address = Address::from_string(it->path().filename().string().substr(2));
+          if (_frame % (1 << _retries[address]) != 0)
+            continue;
+          _retries[address] = std::min(10, _retries[address] + 1);
+          ELLE_TRACE("considering %s", it->path());
           int known_replicas = 0;
           {
             boost::filesystem::ifstream ifs(it->path());
