@@ -235,11 +235,32 @@ namespace infinit
         _overlay = &overlay;
         auto peers = overlay.lookup(address, _factor, overlay::OP_REMOVE);
         int count = 0;
-        for (auto const& p: peers)
+        elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
         {
-          p->remove(address);
-          ++count;
-        }
+          for (auto const& p: peers)
+          {
+            s.run_background("remove", [this, p, address,&count]
+            {
+              for (int i=0; i<5; ++i)
+              {
+                try
+                {
+                  if (i!=0)
+                    p->reconnect();
+                  p->remove(address);
+                  ++count;
+                  return;
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_TRACE("%s: network exception %s", *this, e);
+                  reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
+                }
+              }
+            });
+          }
+          reactor::wait(s);
+        };
         if (!count)
           throw MissingBlock(address);
       }
