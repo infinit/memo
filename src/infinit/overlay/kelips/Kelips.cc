@@ -1098,61 +1098,140 @@ namespace infinit
       {
         static elle::Bench bencher("kelips.pickFiles", 10_sec);
         elle::Bench::BenchScope bench_scope(bencher);
-        static elle::Bench new_candidates("kelips.newCandidates", 10_sec);
-        static elle::Bench old_candidates("kelips.oldCandidates", 10_sec);
+        static elle::Bench bench_new_candidates("kelips.newCandidates", 10_sec);
+        static elle::Bench bench_old_candidates("kelips.oldCandidates", 10_sec);
         auto current_time = now();
+        std::unordered_multimap<Address, std::pair<Time, Address>> res;
+        int max_new = _config.gossip.files / 2;
+        int max_old = _config.gossip.files / 2 + (_config.gossip.files % 2);
+        ELLE_ASSERT_EQ(max_new + max_old, _config.gossip.files);
         // update self file last seen, this will avoid us some ifs at other places
+        int new_candidates = 0;
+        int old_candidates = 0;
         for (auto& f: _state.files)
         {
           if (f.second.home_node == _self)
           {
             f.second.last_seen = current_time;
           }
-        }
-        std::unordered_multimap<Address, std::pair<Time, Address>> res;
-        unsigned int max_new = _config.gossip.files / 2;
-        unsigned int max_old = _config.gossip.files / 2 + (_config.gossip.files % 2);
-        ELLE_ASSERT_EQ(max_new + max_old, _config.gossip.files);
-        // insert new files
-        std::vector<std::pair<Address, std::pair<Time, Address>>> new_files;
-        for (auto const& f: _state.files)
-        {
           if (f.second.gossip_count < _config.gossip.new_threshold)
+            new_candidates++;
+          if (f.second.home_node == _self
+            && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms)))
+            old_candidates++;
+        }
+        bench_new_candidates.add(new_candidates);
+        bench_old_candidates.add(old_candidates);
+        if (new_candidates  >= max_new * 2)
+        {
+          // pick max_new indexes in 0..new_candidates
+          std::uniform_int_distribution<> random(0, new_candidates-1);
+          std::vector<int> indexes;
+          for (int i=0; i<max_new; ++i)
+          {
+            int v = random(_gen);
+            if (std::find(indexes.begin(), indexes.end(), v) != indexes.end())
+              --i;
+            else
+              indexes.push_back(v);
+          }
+          std::sort(indexes.begin(), indexes.end());
+          int ipos = 0;
+          int idx = 0;
+          for (auto& f: _state.files)
+          {
+            if (ipos >= signed(indexes.size()))
+              break;
+            if (f.second.gossip_count < _config.gossip.new_threshold)
+            {
+              if (idx == indexes[ipos])
+              {
+                res.insert(std::make_pair(f.first,
+                  std::make_pair(f.second.last_seen, f.second.home_node)));
+                ipos++;
+              }
+              ++idx;
+            }
+          }
+          ELLE_ASSERT_EQ(max_new, res.size());
+        }
+        else
+        {
+          // insert new files
+          std::vector<std::pair<Address, std::pair<Time, Address>>> new_files;
+          for (auto const& f: _state.files)
+          {
+            if (f.second.gossip_count < _config.gossip.new_threshold)
             new_files.push_back(std::make_pair(f.first,
               std::make_pair(f.second.last_seen, f.second.home_node)));
+          }
+          if (signed(new_files.size()) > max_new)
+          {
+            if (max_new < signed(new_files.size()) - max_new)
+              new_files = pick_n(new_files, max_new, _gen);
+            else
+              new_files = remove_n(new_files, new_files.size() - max_new, _gen);
+          }
+          for (auto const& nf: new_files)
+          {
+            res.insert(nf);
+          }
         }
-        new_candidates.add(new_files.size());
-        if (new_files.size() > max_new)
+        if (old_candidates >= max_old * 2)
         {
-          if (max_new < new_files.size() - max_new)
-            new_files = pick_n(new_files, max_new, _gen);
-          else
-            new_files = remove_n(new_files, new_files.size() - max_new, _gen);
+          // pick max_new indexes in 0..new_candidates
+          std::uniform_int_distribution<> random(0, old_candidates-1);
+          std::vector<int> indexes;
+          for (int i=0; i<max_old; ++i)
+          {
+            int v = random(_gen);
+            if (std::find(indexes.begin(), indexes.end(), v) != indexes.end())
+              --i;
+            else
+              indexes.push_back(v);
+          }
+          std::sort(indexes.begin(), indexes.end());
+          int ipos = 0;
+          int idx = 0;
+          for (auto& f: _state.files)
+          {
+            if (ipos >= signed(indexes.size()))
+              break;
+            if (f.second.home_node == _self
+              && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms)))
+            {
+              if (idx == indexes[ipos])
+              {
+                res.insert(std::make_pair(f.first,
+                  std::make_pair(f.second.last_seen, f.second.home_node)));
+                ipos++;
+              }
+              ++idx;
+            }
+          }
         }
-        for (auto const& nf: new_files)
+        else
         {
-          res.insert(nf);
-        }
-        // insert old files, only our own for which we can update the last_seen value
-        std::vector<std::pair<Address, std::pair<Time, Address>>> old_files;
-        for (auto& f: _state.files)
-        {
-          if (f.second.home_node == _self
-            && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
-            && !has(res, f.first, f.second.home_node))
+          // insert old files, only our own for which we can update the last_seen value
+          std::vector<std::pair<Address, std::pair<Time, Address>>> old_files;
+          for (auto& f: _state.files)
+          {
+            if (f.second.home_node == _self
+              && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
+              && !has(res, f.first, f.second.home_node))
               old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
-        }
-        old_candidates.add(old_files.size());
-        if (old_files.size() > max_old)
-        {
-          if (max_old < old_files.size() - max_old)
-            old_files = pick_n(old_files, max_old, _gen);
-          else
-            old_files = remove_n(old_files, old_files.size() - max_old, _gen);
-        }
-        for (auto const& nf: old_files)
-        {
-          res.insert(nf);
+          }
+          if (signed(old_files.size()) > max_old)
+          {
+            if (max_old < signed(old_files.size()) - max_old)
+              old_files = pick_n(old_files, max_old, _gen);
+            else
+              old_files = remove_n(old_files, old_files.size() - max_old, _gen);
+          }
+          for (auto const& nf: old_files)
+          {
+            res.insert(nf);
+          }
         }
         // Check if we have room for more files
         if (res.size() < (unsigned)_config.gossip.files)
