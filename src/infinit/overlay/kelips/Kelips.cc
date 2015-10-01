@@ -1779,9 +1779,11 @@ namespace infinit
       }
 
       reactor::Generator<RpcEndpoint>
-      Node::kelipsGet(Address file, int n, bool local_override)
+      Node::kelipsGet(Address file, int n, bool local_override, int attempts)
       {
-        auto f = [this,file,n,local_override](reactor::yielder<RpcEndpoint>::type const& yield) {
+        if (attempts == -1)
+          attempts = _config.query_get_retries;
+        auto f = [this,file,n,local_override, attempts](reactor::yielder<RpcEndpoint>::type const& yield) {
           ELLE_DEBUG("Driver starting");
           std::set<RpcEndpoint> result_set;
           packet::GetFileRequest r;
@@ -1822,7 +1824,7 @@ namespace infinit
             }
           }
           ELLE_TRACE("%s: request did not complete locally(%s)", *this, result_set.size());
-          for (int i = 0; i < _config.query_get_retries; ++i)
+          for (int i = 0; i < attempts; ++i)
           {
             packet::GetFileRequest req(r);
             req.request_id = ++this->_next_id;
@@ -2429,6 +2431,52 @@ namespace infinit
               counts.resize(count + 1, 0);
             counts[count]++;
           }
+          elle::json::Array ares;
+          for (auto c: counts)
+            ares.push_back(c);
+          res["counts"] = ares;
+        }
+        if (k.substr(0, strlen("scan.")) == "scan.")
+        {
+          int factor = std::stoi(k.substr(strlen("scan.")));
+          std::vector<Address> to_scan;
+          std::set<Address> processed;
+          // get addresses with copy count < factor
+          for (auto const& f: _state.files)
+          {
+            if (processed.count(f.first))
+              continue;
+            processed.insert(f.first);
+            auto its = _state.files.equal_range(f.first);
+            int count=0;
+            for (; its.first != its.second; ++count, ++its.first)
+              ;
+            if (count < factor)
+              to_scan.push_back(f.first);
+          }
+          std::vector<int> counts;
+          auto scanner = [&]
+          {
+            while (!to_scan.empty())
+            {
+              Address addr = to_scan.back();
+              to_scan.pop_back();
+              auto gen = kelipsGet(addr, factor, false, 3);
+              std::vector<RpcEndpoint> res;
+              for (auto ep: gen)
+                res.push_back(ep);
+              if (counts.size() <= res.size())
+                counts.resize(res.size()+1, 0);
+              counts[res.size()]++;
+            }
+          };
+          elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+          {
+            for (int i=0; i<10; ++i)
+              s.run_background("scanner", scanner);
+            while (!reactor::wait(s, 10_sec))
+              ELLE_TRACE("scanner: %s remaining", to_scan.size());
+          };
           elle::json::Array ares;
           for (auto c: counts)
             ares.push_back(c);
