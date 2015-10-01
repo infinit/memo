@@ -320,6 +320,24 @@ namespace infinit
         };
         REGISTER(BootstrapRequest, "bootstrapRequest");
 
+        struct FileBootstrapRequest: public Packet
+        {
+          FileBootstrapRequest()
+          {}
+
+          FileBootstrapRequest(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("sender", sender);
+          }
+        };
+        REGISTER(FileBootstrapRequest, "fileBootstrapRequest");
+
         struct Gossip: public Packet
         {
           Gossip()
@@ -908,6 +926,8 @@ namespace infinit
               onGossip(p);
             CASE(BootstrapRequest)
               onBootstrapRequest(p);
+            CASE(FileBootstrapRequest)
+              onFileBootstrapRequest(p);
             CASE(PutFileRequest)
               onPutFileRequest(p);
             CASE(PutFileReply)
@@ -1433,11 +1453,21 @@ namespace infinit
       }
 
       void
+      Node::onFileBootstrapRequest(packet::FileBootstrapRequest* p)
+      {
+        packet::Gossip res;
+        res.sender = _self;
+        res.files = pickFiles();
+        send(res, p->endpoint, p->sender);
+      }
+
+      void
       Node::onBootstrapRequest(packet::BootstrapRequest* p)
       {
         int g = group_of(p->sender);
         packet::Gossip res;
         res.sender = _self;
+
         int group_count = _state.contacts[g].size();
         // Special case to avoid the randomized fetcher running for ever
         if (group_count <= _config.gossip.bootstrap_group_target + 5)
@@ -2481,6 +2511,24 @@ namespace infinit
           for (auto c: counts)
             ares.push_back(c);
           res["counts"] = ares;
+        }
+        if (k == "bootstrap")
+        {
+          int count = 100;
+          if (v)
+            count = std::stoi(*v);
+          for (int i=0; i<count; ++i)
+          {
+            int peers = _state.contacts[_group].size();
+            std::uniform_int_distribution<> random(0, peers-1);
+            int v = random(_gen);
+            packet::FileBootstrapRequest req;
+            req.sender = _self;
+            auto it = _state.contacts[_group].begin();
+            while (v--) ++it;
+            send(req, it->second.endpoint, it->first);
+            reactor::sleep(10_ms);
+          }
         }
         return res;
       }

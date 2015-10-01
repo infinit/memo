@@ -74,6 +74,7 @@ namespace infinit
         struct Pong;
         struct Gossip;
         struct BootstrapRequest;
+        struct FileBootstrapRequest;
         struct GetFileRequest;
         struct GetFileReply;
         struct PutFileRequest;
@@ -220,6 +221,8 @@ namespace infinit
         onGossip(packet::Gossip*);
         void
         onBootstrapRequest(packet::BootstrapRequest*);
+        void
+        onFileBootstrapRequest(packet::FileBootstrapRequest*);
         void
         onGetFileRequest(packet::GetFileRequest*);
         void
