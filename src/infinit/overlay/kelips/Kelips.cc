@@ -1177,6 +1177,14 @@ namespace infinit
             res.insert(nf);
           }
         }
+        for (auto const& r: res)
+        {
+          auto its = _state.files.equal_range(r.first);
+          auto it = std::find_if(its.first, its.second,
+            [&](decltype(*its.first) e) { return r.second.second == e.second.home_node;});
+          it->second.gossip_count++;
+          it->second.last_gossip = current_time;
+        }
         assert(res.size() == unsigned(_config.gossip.files) || res.size() == _state.files.size());
         return res;
       }
