@@ -1096,12 +1096,15 @@ namespace infinit
       std::unordered_multimap<Address, std::pair<Time, Address>>
       Node::pickFiles()
       {
+        static elle::Bench bencher("kelips.pickFiles", 10_sec);
+        elle::Bench::BenchScope bench_scope(bencher);
+        auto current_time = now();
         // update self file last seen, this will avoid us some ifs at other places
         for (auto& f: _state.files)
         {
           if (f.second.home_node == _self)
           {
-            f.second.last_seen = now();
+            f.second.last_seen = current_time;
           }
         }
         std::unordered_multimap<Address, std::pair<Time, Address>> res;
@@ -1131,7 +1134,7 @@ namespace infinit
         for (auto& f: _state.files)
         {
           if (f.second.home_node == _self
-            && ((now() - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
+            && ((current_time - f.second.last_gossip) > std::chrono::milliseconds(_config.gossip.old_threshold_ms))
             && !has(res, f.first, f.second.home_node))
               old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
         }
