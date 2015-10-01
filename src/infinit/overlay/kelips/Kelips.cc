@@ -1098,6 +1098,8 @@ namespace infinit
       {
         static elle::Bench bencher("kelips.pickFiles", 10_sec);
         elle::Bench::BenchScope bench_scope(bencher);
+        static elle::Bench new_candidates("kelips.newCandidates", 10_sec);
+        static elle::Bench old_candidates("kelips.oldCandidates", 10_sec);
         auto current_time = now();
         // update self file last seen, this will avoid us some ifs at other places
         for (auto& f: _state.files)
@@ -1109,7 +1111,8 @@ namespace infinit
         }
         std::unordered_multimap<Address, std::pair<Time, Address>> res;
         unsigned int max_new = _config.gossip.files / 2;
-        unsigned int max_old = _config.gossip.files / 2;
+        unsigned int max_old = _config.gossip.files / 2 + (_config.gossip.files % 2);
+        ELLE_ASSERT_EQ(max_new + max_old, _config.gossip.files);
         // insert new files
         std::vector<std::pair<Address, std::pair<Time, Address>>> new_files;
         for (auto const& f: _state.files)
@@ -1118,6 +1121,7 @@ namespace infinit
             new_files.push_back(std::make_pair(f.first,
               std::make_pair(f.second.last_seen, f.second.home_node)));
         }
+        new_candidates.add(new_files.size());
         if (new_files.size() > max_new)
         {
           if (max_new < new_files.size() - max_new)
@@ -1138,6 +1142,7 @@ namespace infinit
             && !has(res, f.first, f.second.home_node))
               old_files.push_back(std::make_pair(f.first, std::make_pair(f.second.last_seen, f.second.home_node)));
         }
+        old_candidates.add(old_files.size());
         if (old_files.size() > max_old)
         {
           if (max_old < old_files.size() - max_old)
