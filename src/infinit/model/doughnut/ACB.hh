@@ -24,6 +24,22 @@ namespace infinit
       public:
         typedef ACB Self;
         typedef BaseOKB<blocks::ACLBlock> Super;
+        struct ACLEntry
+        {
+          infinit::cryptography::rsa::PublicKey key;
+          bool read;
+          bool write;
+          elle::Buffer token;
+
+          ACLEntry(infinit::cryptography::rsa::PublicKey key_,
+           bool read_,
+                   bool write_,
+                   elle::Buffer token_);
+          ACLEntry(elle::serialization::SerializerIn& s);
+
+          typedef infinit::serialization_tag serialization_tag;
+          static ACLEntry deserialize(elle::serialization::SerializerIn& s);
+        };
 
       /*-------------.
       | Construction |
@@ -34,6 +50,7 @@ namespace infinit
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE_R(Address, acl);
         ELLE_ATTRIBUTE(bool, acl_changed);
+        ELLE_ATTRIBUTE(boost::optional<std::vector<ACLEntry>>, acl_entries);
         ELLE_ATTRIBUTE(int, data_version);
         ELLE_ATTRIBUTE(elle::Buffer, data_signature);
 
@@ -63,15 +80,21 @@ namespace infinit
         virtual
         void
         _copy_permissions(ACLBlock& to) override;
-
         virtual
         std::vector<Entry>
         _list_permissions() override;
+        std::vector<ACLEntry>&
+        acl_entries();
+        std::vector<ACLEntry> const&
+        acl_entries() const;
 
       /*-----------.
       | Validation |
       `-----------*/
       protected:
+        virtual
+        bool
+        _compare_payload(BaseOKB<blocks::ACLBlock> const& other) const override;
         virtual
         blocks::ValidationResult
         _validate(blocks::Block const& previous) const override;

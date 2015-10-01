@@ -249,6 +249,37 @@ ELLE_TEST_SCHEDULED(NB)
   }
 }
 
+ELLE_TEST_SCHEDULED(conflict)
+{
+  DHTs dhts;
+  std::unique_ptr<infinit::model::blocks::ACLBlock> block_alice;
+  ELLE_LOG("alice: create block")
+  {
+    block_alice = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    block_alice->data(elle::Buffer("alice_1", 7));
+    block_alice->set_permissions(dht::User(dhts.keys_b.K(), "bob"), true, true);
+    dhts.dht_a->store(*block_alice);
+  }
+  std::unique_ptr<infinit::model::blocks::ACLBlock> block_bob;
+  ELLE_LOG("bob: fetch block");
+  {
+    block_bob = std::static_pointer_cast<infinit::model::blocks::ACLBlock>
+      (dhts.dht_b->fetch(block_alice->address()));
+    BOOST_CHECK_EQUAL(block_bob->data(), "alice_1");
+  }
+  ELLE_LOG("alice: modify block")
+  {
+    block_alice->data(elle::Buffer("alice_2", 7));
+    dhts.dht_a->store(*block_alice);
+  }
+  ELLE_LOG("bob: modify block")
+  {
+    block_bob->data(elle::Buffer("bob_1", 5));
+    BOOST_CHECK_THROW(dhts.dht_b->store(*block_bob),
+                      infinit::model::doughnut::ValidationFailed);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -256,4 +287,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(async));
   suite.add(BOOST_TEST_CASE(ACB));
   suite.add(BOOST_TEST_CASE(NB));
+  suite.add(BOOST_TEST_CASE(conflict));
 }

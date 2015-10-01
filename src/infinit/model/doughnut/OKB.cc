@@ -183,6 +183,13 @@ namespace infinit
       }
 
       template <typename Block>
+      bool
+      BaseOKB<Block>::_compare_payload(BaseOKB<Block> const& other) const
+      {
+        return this->_data == other._data;
+      }
+
+      template <typename Block>
       void
       BaseOKB<Block>::_seal()
       {
@@ -220,7 +227,11 @@ namespace infinit
           return res;
         ELLE_DEBUG("%s: check version", *this)
           if (!this->_validate_version<BaseOKB<Block>>
-              (previous, &BaseOKB<Block>::_version, this->version()))
+              (previous, &BaseOKB<Block>::_version, this->version(),
+               [this] (BaseOKB<Block> const& b) -> bool
+               {
+                 return this->_compare_payload(b);
+               }))
             return blocks::ValidationResult::failure
               ("version validation failed");
         return blocks::ValidationResult::success();

@@ -10,9 +10,11 @@ namespace infinit
       template <typename Block>
       template <typename T>
       blocks::ValidationResult
-      BaseOKB<Block>::_validate_version(blocks::Block const& other_,
-                                        int T::*member,
-                                        int version) const
+      BaseOKB<Block>::_validate_version(
+        blocks::Block const& other_,
+        int T::*member,
+        int version,
+        std::function<bool (T const&)> const& compare) const
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
         auto other = dynamic_cast<T const*>(&other_);
@@ -25,10 +27,11 @@ namespace infinit
           return blocks::ValidationResult::failure(reason);
         }
         auto other_version = other->*member;
-        if (version < other_version)
+        if (version < other_version ||
+            version == other_version && !compare(*other))
         {
           auto reason = elle::sprintf(
-            "version (%s) is older than stored version (%s)",
+            "version (%s) is not newer than stored version (%s)",
             version, other_version);
           ELLE_TRACE("%s: %s", *this, reason);
           return blocks::ValidationResult::failure(reason);
@@ -36,7 +39,7 @@ namespace infinit
         else
         {
           ELLE_DUMP(
-            "%s: version (%s) is newer or equal than stored version (%s)",
+            "%s: version (%s) is newer than stored version (%s)",
             *this, version, other_version);
           return blocks::ValidationResult::success();
         }

@@ -117,6 +117,9 @@ namespace infinit
         virtual
         void
         _sign(elle::serialization::SerializerOut& s) const;
+        virtual
+        bool
+        _compare_payload(BaseOKB<Block> const& other) const;
         bool
         _check_signature(cryptography::rsa::PublicKey const& key,
                          elle::Buffer const& signature,
@@ -125,9 +128,11 @@ namespace infinit
 
         template <typename T>
         blocks::ValidationResult
-        _validate_version(blocks::Block const& other_,
-                          int T::*member,
-                          int version) const;
+        _validate_version(
+          blocks::Block const& other_,
+          int T::*member,
+          int version,
+          std::function<bool (T const&)> const& compare) const;
       private:
         elle::Buffer
         _sign() const;
