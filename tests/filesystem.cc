@@ -743,7 +743,8 @@ void unmounter(boost::filesystem::path mount,
                std::thread& t)
 {
   ELLE_LOG("unmounting");
-  nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
+  if (!nodes_sched->done())
+    nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
   ELLE_LOG("cleaning up: TERM %s", processes.size());
   for (auto const& p: processes)
     kill(p->pid(), SIGTERM);
@@ -779,6 +780,7 @@ void test_conflicts()
   bfs::create_directories(store);
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
+  mount_points.clear();
   std::thread t([&] {
       run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2);
   });
@@ -845,6 +847,7 @@ void test_acl()
   bfs::create_directories(store);
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
+  mount_points.clear();
   std::thread t([&] {
       run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2);
   });
