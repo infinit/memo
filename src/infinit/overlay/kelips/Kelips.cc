@@ -1173,7 +1173,7 @@ namespace infinit
               ++idx;
             }
           }
-          ELLE_ASSERT_EQ(max_new, res.size());
+          ELLE_ASSERT_EQ(max_new, signed(res.size()));
         }
         else
         {
