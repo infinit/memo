@@ -737,6 +737,105 @@ void test_dht_crypto()
   test_filesystem(true, 5, 1, 1);
 }
 
+
+void unmounter(boost::filesystem::path mount,
+               boost::filesystem::path store,
+               std::thread& t)
+{
+  ELLE_LOG("unmounting");
+  nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
+  ELLE_LOG("cleaning up: TERM %s", processes.size());
+  for (auto const& p: processes)
+    kill(p->pid(), SIGTERM);
+  usleep(200000);
+  ELLE_LOG("cleaning up: KILL");
+  for (auto const& p: processes)
+    kill(p->pid(), SIGKILL);
+  usleep(200000);
+  // unmount all
+  for (auto const& mp: mount_points)
+  {
+    std::vector<std::string> args
+#ifdef INFINIT_MACOSX
+    {"umount", mp};
+#else
+    {"fusermount", "-u", mp};
+#endif
+    elle::system::Process p(args);
+  }
+  usleep(200000);
+  boost::filesystem::remove_all(mount);
+  boost::filesystem::remove_all(store);
+  t.join();
+  ELLE_LOG("teardown complete");
+}
+
+void test_conflicts()
+{
+  namespace bfs = boost::filesystem;
+  auto store = bfs::temp_directory_path() / bfs::unique_path();
+  auto mount = bfs::temp_directory_path() / bfs::unique_path();
+  bfs::create_directories(mount);
+  bfs::create_directories(store);
+  struct statvfs statstart;
+  statvfs(mount.string().c_str(), &statstart);
+  std::thread t([&] {
+      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2);
+  });
+  wait_for_mounts(mount, 2, &statstart);
+  ELLE_LOG("Test start");
+  elle::SafeFinally remover([&] {
+      unmounter(mount, store, t);
+  });
+  // Mounts/keys are in mount_points and keys
+  // First entry got the root!
+  BOOST_CHECK_EQUAL(mount_points.size(), 2);
+  bfs::path m0 = mount_points[0];
+  bfs::path m1 = mount_points[1];
+  BOOST_CHECK_EQUAL(keys.size(), 2);
+  std::string k1 = serialize(keys[1]);
+  setxattr(m0.c_str(), "user.infinit.auth.setrw",
+    k1.c_str(), k1.length(), 0 SXA_EXTRA);
+  setxattr(m0.c_str(), "user.infinit.auth.inherit",
+    "true", strlen("true"), 0 SXA_EXTRA);
+
+  // file create/write conflict
+  int fd0, fd1;
+  fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+  BOOST_CHECK(fd0 != -1);
+  fd1 = open((m1 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+  BOOST_CHECK(fd1 != -1);
+  BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
+  BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
+  BOOST_CHECK_EQUAL(close(fd0), 0);
+  BOOST_CHECK_EQUAL(close(fd1), -1);
+  BOOST_CHECK_EQUAL(read(m0/"file"), "foo");
+  BOOST_CHECK_EQUAL(read(m1/"file"), "foo");
+
+  // file create/write without acl inheritance
+  setxattr(m0.c_str(), "user.infinit.auth.inherit",
+    "false", strlen("false"), 0 SXA_EXTRA);
+  fd0 = open((m0 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
+  BOOST_CHECK(fd0 != -1);
+  fd1 = open((m1 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
+  BOOST_CHECK(fd1 == -1);
+  BOOST_CHECK_EQUAL(close(fd0), 0);
+
+  // directory conflict
+  struct stat st;
+  // force file node into filesystem cache
+  stat((m0/"file3").c_str(), &st);
+  stat((m1/"file4").c_str(), &st);
+  fd0 = open((m0 / "file3").string().c_str(), O_CREAT|O_RDWR, 0644);
+  BOOST_CHECK(fd0 != -1);
+  fd1 = open((m1 / "file4").string().c_str(), O_CREAT|O_RDWR, 0644);
+  BOOST_CHECK(fd1 == -1);
+  BOOST_CHECK_EQUAL(close(fd0), 0);
+  BOOST_CHECK_EQUAL(close(fd1), -1);
+  BOOST_CHECK_EQUAL(stat((m0/"file3").c_str(), &st), 0);
+  BOOST_CHECK_EQUAL(stat((m1/"file4").c_str(), &st), -1);
+}
+
 void test_acl()
 {
   namespace bfs = boost::filesystem;
@@ -752,32 +851,7 @@ void test_acl()
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
   elle::SafeFinally remover([&] {
-      ELLE_LOG("unmounting");
-      nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
-      ELLE_LOG("cleaning up: TERM %s", processes.size());
-      for (auto const& p: processes)
-        kill(p->pid(), SIGTERM);
-      usleep(200000);
-      ELLE_LOG("cleaning up: KILL");
-      for (auto const& p: processes)
-        kill(p->pid(), SIGKILL);
-      usleep(200000);
-      // unmount all
-      for (auto const& mp: mount_points)
-      {
-        std::vector<std::string> args
-#ifdef INFINIT_MACOSX
-          {"umount", mp};
-#else
-          {"fusermount", "-u", mp};
-#endif
-        elle::system::Process p(args);
-      }
-      usleep(200000);
-      boost::filesystem::remove_all(mount);
-      boost::filesystem::remove_all(store);
-      t.join();
-      ELLE_LOG("teardown complete");
+      unmounter(mount, store, t);
   });
   // Mounts/keys are in mount_points and keys
   // First entry got the root!
@@ -896,6 +970,7 @@ ELLE_TEST_SUITE()
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails
   // with a mysterious 'permission denied'
-  // filesystem->add(BOOST_TEST_CASE(test_acl), 0, 120);
+  filesystem->add(BOOST_TEST_CASE(test_acl), 0, 120);
+  filesystem->add(BOOST_TEST_CASE(test_conflicts), 0, 120);
 #endif
 }
