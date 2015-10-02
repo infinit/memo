@@ -171,12 +171,14 @@ namespace infinit
         std::unique_ptr<blocks::Block> result;
         reactor::Channel<overlay::Overlay::Member> connected;
         typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
+        bool hit = false;
         // try connecting to all peers in parallel
         auto connected_peers = PeerGenerator([&](PeerGenerator::yielder yield) {
-            elle::With<reactor::Scope>() <<  [&peers,&yield] (reactor::Scope& s)
+            elle::With<reactor::Scope>() <<  [&peers,&yield,&hit] (reactor::Scope& s)
             {
               for (auto p: peers)
               {
+                hit = true;
                 s.run_background(elle::sprintf("connect to %s", *p),
                 [p,&yield]
                 {
@@ -216,7 +218,10 @@ namespace infinit
             ELLE_WARN("fetching from %s failed: %s", *peer, e.what());
           }
         }
-        throw elle::Error(
+        if (!hit)
+          throw MissingBlock(address);
+        else
+          throw elle::Error(
             elle::sprintf("fetching of %s failed on all candidates", address));
       }
 
