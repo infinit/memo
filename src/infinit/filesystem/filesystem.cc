@@ -1317,17 +1317,12 @@ namespace infinit
       f->_header(h);
       if (_parent->_inherit_auth)
       {
-        // ACLblock is not ready yet, we cant use permissions
-        _owner.store_or_die(*f->_first_block, model::STORE_INSERT);
-        // now it is :)
-        f->_first_block_new = false;
         umbrella([&] { _parent->_block->copy_permissions(
           dynamic_cast<ACLBlock&>(*f->_first_block));
         });
       }
-      else
-        f->_first_block_new = true;
-      // Mark dirty since we did not push first_block
+      _owner.store_or_die(*f->_first_block, model::STORE_INSERT);
+      f->_first_block_new = false;
       _owner.filesystem()->set(f->full_path().string(), f);
       std::unique_ptr<rfs::Handle> handle(new FileHandle(f, true, true, true));
       remove_from_parent.abort();
