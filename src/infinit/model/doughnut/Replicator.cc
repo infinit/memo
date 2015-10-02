@@ -140,7 +140,7 @@ namespace infinit
                   p->store(block, mode);
                   return;
                 }
-                catch (elle::Error const& e)
+                catch (reactor::network::Exception const& e)
                 {
                   ELLE_TRACE("%s: network exception %s", *this, e);
                   reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
@@ -192,7 +192,7 @@ namespace infinit
                       yield(p);
                       return;
                     }
-                    catch (elle::Error const& e)
+                    catch (reactor::network::Exception const& e)
                     {
                       ELLE_TRACE("network exception %s", e);
                       reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
@@ -251,7 +251,7 @@ namespace infinit
                   ++count;
                   return;
                 }
-                catch (elle::Error const& e)
+                catch (reactor::network::Exception const& e)
                 {
                   ELLE_TRACE("%s: network exception %s", *this, e);
                   reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));

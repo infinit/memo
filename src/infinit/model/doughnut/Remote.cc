@@ -99,6 +99,10 @@ namespace infinit
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
               }
+              catch (reactor::network::Exception const&)
+              { // Upper layers may retry on network::Exception
+                throw;
+              }
               catch (elle::Error const&)
               {
                 elle::throw_with_nested(
