@@ -114,8 +114,8 @@ create(variables_map const& args)
         new infinit::storage::StripStorageConfig(std::move(backends)));
   }
   int replicas = 1;
-  if (args.count("replicas"))
-    replicas = args["replicas"].as<int>();
+  if (args.count("replication-factor"))
+    replicas = args["replication-factor"].as<int>();
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       std::move(overlay_config),
@@ -379,7 +379,7 @@ int main(int argc, char** argv)
             "optional storage to contribute" },
         option_owner,
         { "port,p", value<int>(), "port to listen on (random by default)" },
-        { "replicas,r", value<int>(), "data replication factor" },
+        { "replication-factor,r", value<int>(), "data replication factor" },
         { "async", bool_switch(), "Use asynchronious operations" },
         { "stdout", bool_switch(), "output configuration to stdout" },
       },

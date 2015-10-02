@@ -11,7 +11,7 @@ user=test
 port_base=5050
 nports=5 # allocate fixed port port_base+i to the first nports nodes
 
-#network_args="--kelips  --k $k --replicas $replicas"
+#network_args="--kelips  --k $k --replication-factor $replicas"
 network_args="--kademlia"
 
 # port(id, port_base, nports
@@ -97,4 +97,3 @@ for i in $(seq 0 $observers); do
   echo "INFINIT_HOME=$rootdir/observer_conf_$i infinit-volume --run --as obs$i --name $obs_user_hash/kelips --host 127.0.0.1:$port_base" > $rootdir/run-volume-$i.sh
   chmod a+x $rootdir/run-volume-$i.sh
 done
-
