@@ -11,6 +11,7 @@
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/overlay/Stonehenge.hh>
 #include <infinit/storage/Memory.hh>
@@ -276,7 +277,7 @@ ELLE_TEST_SCHEDULED(conflict)
   {
     block_bob->data(elle::Buffer("bob_1", 5));
     BOOST_CHECK_THROW(dhts.dht_b->store(*block_bob),
-                      infinit::model::doughnut::ValidationFailed);
+                      infinit::model::doughnut::Conflict);
   }
 }
 
