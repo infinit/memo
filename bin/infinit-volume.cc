@@ -35,8 +35,8 @@ create(variables_map const& args)
   ELLE_TRACE("start network");
   report_action("starting", "network", network.name);
   std::vector<std::string> hosts;
-  if (args.count("host"))
-    hosts = args["host"].as<std::vector<std::string>>();
+  if (args.count("peer"))
+    hosts = args["peer"].as<std::vector<std::string>>();
   auto model = network.run(hosts);
   ELLE_TRACE("create volume");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
@@ -112,8 +112,8 @@ run(variables_map const& args)
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
   std::vector<std::string> hosts;
-  if (args.count("host"))
-    hosts = args["host"].as<std::vector<std::string>>();
+  if (args.count("peer"))
+    hosts = args["peer"].as<std::vector<std::string>>();
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
@@ -244,8 +244,8 @@ main(int argc, char** argv)
         { "mountpoint", value<std::string>(), "where to mount the filesystem" },
         option_owner,
         { "stdout", bool_switch(), "output configuration to stdout" },
-        { "host", value<std::vector<std::string>>()->multitoken(),
-          "hosts to connect to" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+          "peer to connect to (host:port)" },
       },
     },
     {
@@ -307,8 +307,8 @@ main(int argc, char** argv)
         { "mountpoint,m", value<std::string>(),
           "where to mount the filesystem" },
         { "name", value<std::string>(), "volume name" },
-        { "host", value<std::vector<std::string>>()->multitoken(),
-          "hosts to connect to" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+          "peer to connect to (host:port)" },
         { "push", bool_switch(),
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations"},

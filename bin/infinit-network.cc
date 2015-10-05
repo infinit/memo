@@ -29,7 +29,7 @@ create(variables_map const& args)
     auto stonehenge =
       elle::make_unique<infinit::overlay::StonehengeConfiguration>();
     stonehenge->hosts =
-      mandatory<std::vector<std::string>>(args, "host", "stonehenge hosts");
+      mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
     overlay_config = std::move(stonehenge);
   }
   if (args.count("kademlia"))
@@ -310,8 +310,8 @@ run(variables_map const& args)
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
   std::vector<std::string> hosts;
-  if (args.count("host"))
-    hosts = args["host"].as<std::vector<std::string>>();
+  if (args.count("peer"))
+    hosts = args["peer"].as<std::vector<std::string>>();
   bool push = args.count("push") && args["push"].as<bool>();
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
@@ -356,7 +356,7 @@ int main(int argc, char** argv)
     ;
   options_description stonehenge_options("Stonehenge options");
   stonehenge_options.add_options()
-    ("host", value<std::vector<std::string>>()->multitoken(),
+    ("peer", value<std::vector<std::string>>()->multitoken(),
      "hosts to connect to")
     ;
   options_description kelips_options("Kelips options");
@@ -477,8 +477,8 @@ int main(int argc, char** argv)
         option_owner,
         { "fetch", bool_switch(),
             elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
-        { "host", value<std::vector<std::string>>()->multitoken(),
-            "hosts to connect to" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+            "peer to connect to (host:port)" },
         { "name", value<std::string>(), "created network name" },
         { "push", bool_switch(),
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
