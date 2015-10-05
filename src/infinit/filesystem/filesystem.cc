@@ -23,6 +23,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/serialization.hh>
@@ -79,6 +80,19 @@ namespace infinit
 
     static const int header_size = sizeof(Address::Value);
     static_assert(sizeof(Address) == header_size, "Glitch in Address size");
+
+    enum class OperationType
+    {
+      insert,
+      update,
+      remove
+    };
+    struct Operation
+    {
+      OperationType type;
+      std::string target;
+    };
+
     class AnyBlock
     {
     public:
@@ -327,8 +341,8 @@ namespace infinit
       friend class Symlink;
       friend class Node;
       friend class FileHandle;
-      void _commit(bool set_mtime = false);
-      void _push_changes(bool first_write = false);
+      void _commit(Operation op, bool set_mtime = false);
+      void _push_changes(Operation op, bool first_write = false);
       Address _address;
       std::unique_ptr<ACLBlock> _block;
       elle::unordered_map<std::string, FileData> _files;
@@ -820,7 +834,7 @@ namespace infinit
     }
 
     void
-    Directory::_commit(bool set_mtime)
+    Directory::_commit(Operation op, bool set_mtime)
     {
       ELLE_TRACE_SCOPE("%s: commit %s entries", *this, _files.size());
       elle::SafeFinally clean_cache([&] { _block.reset();});
@@ -842,18 +856,87 @@ namespace infinit
         f.mtime = time(nullptr);
         f.ctime = time(nullptr);
         f.address = _block->address();
-        this->_parent->_commit();
+        this->_parent->_commit({OperationType::update, _name});
       }
-      this->_push_changes();
+      this->_push_changes(op);
       clean_cache.abort();
     }
 
     void
-    Directory::_push_changes(bool first_write)
+    Directory::_push_changes(Operation op, bool first_write)
     {
       ELLE_DEBUG_SCOPE("%s: store changes", *this);
       elle::SafeFinally clean_cache([&] { _block.reset();});
-      _owner.store_or_die(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
+      while (true)
+      {
+        try
+        {
+          _owner.block_store()->store(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
+          break;
+        }
+        catch (infinit::model::doughnut::Conflict const& e)
+        {
+          ELLE_TRACE("%s: edit conflict on %s (%s %s): %s",
+                     *this, _block->address(), op.type, op.target, e);
+          // Fetch and deserialize live block
+          _last_fetch = boost::posix_time::not_a_date_time;
+          Directory d(_parent, _owner, _name, _address);
+          d._fetch();
+          // Apply current operation to it
+          switch(op.type)
+          {
+          case OperationType::insert:
+            if (d._files.find(op.target) != d._files.end())
+            {
+              ELLE_LOG("Conflict: the object %s was also created remotely,"
+                " your changes will overwrite the previous content.",
+                full_path() / op.target);
+            }
+            d._files[op.target] = _files[op.target];
+            break;
+          case OperationType::update:
+            if (d._files.find(op.target) == d._files.end())
+            {
+              ELLE_LOG("Conflict: the object %s was removed remotely,"
+                " your changes will be dropped.",
+                full_path() / op.target);
+              break;
+            }
+            else if (d._files[op.target].address != _files[op.target].address)
+            {
+              ELLE_LOG("Conflict: the object %s was replaced remotely,"
+                " your changes will be dropped.",
+                full_path() / op.target);
+              break;
+            }
+            d._files[op.target] = _files[op.target];
+            break;
+          case OperationType::remove:
+            d._files.erase(op.target);
+            break;
+          }
+          elle::Buffer data;
+          {
+            elle::IOStream os(data.ostreambuf());
+            elle::serialization::json::SerializerOut output(os);
+            output.serialize_forward(d);
+          }
+          d._block->data(data);
+          _block = std::move(d._block);
+        }
+        catch (infinit::model::doughnut::ValidationFailed const& e)
+        {
+          ELLE_TRACE("permission exception: %s", e.what());
+          throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
+        }
+        catch(elle::Error const& e)
+        {
+          ELLE_WARN("unexpected exception storing %x: %s",
+            _block->address(), e);
+          throw rfs::Error(EIO, e.what());
+        }
+      }
+      //_owner.store_or_die(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
       clean_cache.abort();
     }
 
@@ -911,7 +994,7 @@ namespace infinit
       if (_parent.get() == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
       _parent->_files.erase(_name);
-      _parent->_commit();
+      _parent->_commit({OperationType::remove, _name});
       umbrella([&] {_owner.block_store()->remove(_block->address());});
       _remove_from_cache();
     }
@@ -981,10 +1064,10 @@ namespace infinit
       }
       auto data = _parent->_files.at(_name);
       _parent->_files.erase(_name);
-      _parent->_commit();
+      _parent->_commit({OperationType::remove, _name});
       data.name = newname;
       dir->_files.insert(std::make_pair(newname, data));
-      dir->_commit();
+      dir->_commit({OperationType::insert, _name});
       _name = newname;
       _parent = dir;
       // Move the node in cache
@@ -1095,7 +1178,7 @@ namespace infinit
       auto & f = _parent->_files.at(_name);
       f.mode = (f.mode & ~07777) | (mode & 07777);
       f.ctime = time(nullptr);
-      _parent->_commit();
+      _parent->_commit({OperationType::update, _name});
     }
 
     void
@@ -1119,7 +1202,7 @@ namespace infinit
       f.uid = uid;
       f.gid = gid;
       f.ctime = time(nullptr);
-      _parent->_commit();
+      _parent->_commit({OperationType::update, _name});
     }
 
     void File::removexattr(std::string const& k)
@@ -1141,9 +1224,9 @@ namespace infinit
       ELLE_DEBUG("got xattrs with %s entries", xattrs.size());
       xattrs.erase(k);
       if (_parent)
-        _parent->_commit(false);
+        _parent->_commit({OperationType::update, _name},false);
       else
-        static_cast<Directory*>(this)->_commit(false);
+        static_cast<Directory*>(this)->_commit({OperationType::update, ""},  false);
     }
 
     void
@@ -1169,9 +1252,9 @@ namespace infinit
       ELLE_DEBUG("got xattrs with %s entries", xattrs.size());
       xattrs[k] = elle::Buffer(v.data(), v.size());
       if (_parent)
-        _parent->_commit(false);
+        _parent->_commit({OperationType::update, _name}, false);
       else
-        static_cast<Directory*>(this)->_commit(false);
+        static_cast<Directory*>(this)->_commit({OperationType::update, ""},false);
     }
 
     std::string
@@ -1249,7 +1332,7 @@ namespace infinit
         Directory d(_parent, _owner, _name, address);
         d._block = std::move(b);
         d._inherit_auth = true;
-        d._push_changes();
+        d._push_changes({OperationType::insert, ""});
       }
       else
         _owner.store_or_die(*b, model::STORE_INSERT);
@@ -1262,7 +1345,7 @@ namespace infinit
                                 uint64_t(time(nullptr)),
                                 address,
                                 std::unordered_map<std::string, elle::Buffer>{}}));
-      _parent->_commit();
+      _parent->_commit({OperationType::insert, _name});
       _remove_from_cache();
     }
 
@@ -1290,12 +1373,12 @@ namespace infinit
                                        b->address(),
                                        std::unordered_map<std::string, elle::Buffer>{}}));
 
-      _parent->_commit(true);
+      _parent->_commit({OperationType::insert, _name}, true);
       elle::SafeFinally remove_from_parent( [&] {
           _parent->_files.erase(_name);
           try
           {
-            _parent->_commit(true);
+            _parent->_commit({OperationType::remove, _name}, true);
           }
           catch(...)
           {
@@ -1342,7 +1425,7 @@ namespace infinit
                                        Address(v),
                                        std::unordered_map<std::string, elle::Buffer>{}}));
       it.first->second.symlink_target = where.string();
-      _parent->_commit(true);
+      _parent->_commit({OperationType::insert, _name}, true);
       _remove_from_cache();
     }
 
@@ -1382,7 +1465,7 @@ namespace infinit
     Symlink::unlink()
     {
       _parent->_files.erase(_name);
-      _parent->_commit(true);
+      _parent->_commit({OperationType::remove, _name},true);
       _remove_from_cache();
     }
 
@@ -1569,7 +1652,7 @@ namespace infinit
       _header(header);
       dir->_files.insert(std::make_pair(newname, _parent->_files.at(_name)));
       dir->_files.at(newname).name = newname;
-      dir->_commit(true);
+      dir->_commit({OperationType::insert, newname}, true);
       _owner.filesystem()->extract(where.string());
       if (!_handle_count)
         _commit();
@@ -1609,7 +1692,7 @@ namespace infinit
       if (_parent)
       {
         _parent->_files.erase(_name);
-        _parent->_commit(true);
+        _parent->_commit({OperationType::remove, _name}, true);
         _parent = nullptr;
         _remove_from_cache(_full_path);
       }
@@ -1737,7 +1820,7 @@ namespace infinit
       auto & f = _parent->_files.at(_name);
       f.atime = tv[0].tv_sec;
       f.mtime = tv[1].tv_sec;
-      _parent->_commit();
+      _parent->_commit({OperationType::update, _name});
     }
 
     void
@@ -1810,7 +1893,7 @@ namespace infinit
         { // switch back from multi to direct
           auto& data = _parent->_files.at(_name);
           data.size = new_size;
-          _parent->_commit();
+          _parent->_commit({OperationType::update, _name});
           // Replacing FAT block with first block would be simpler,
           // but it might be immutable
           AnyBlock* data_block;
@@ -1939,9 +2022,40 @@ namespace infinit
       }
       ELLE_DEBUG("store first block: %f with payload %s, total_size %s", *this->_first_block,
         this->_first_block->data().size() - header_size, _header().total_size)
-        _owner.store_or_die(
-          *this->_first_block,
-          this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+      {
+        while (true)
+        {
+          try
+          {
+            _owner.block_store()->store( *this->_first_block,
+              this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
+            break;
+          }
+          catch (infinit::model::doughnut::Conflict const& e)
+          {
+            ELLE_TRACE("%s: edit conflict on %s: %s", *this,
+                       this->_first_block->address(), e);
+            ELLE_LOG("Conflict: the file %s was modified since last read. Your"
+              " changes will overwrite the previous modifications",
+              full_path());
+            auto block = elle::cast<MutableBlock>::runtime(
+              _owner.block_store()->fetch(this->_first_block->address()));
+            block->data(this->_first_block->data());
+            this->_first_block = std::move(block);
+          }
+          catch (infinit::model::doughnut::ValidationFailed const& e)
+          {
+            ELLE_TRACE("permission exception: %s", e.what());
+            throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
+          }
+          catch(elle::Error const& e)
+          {
+            ELLE_WARN("unexpected exception storing %x: %s",
+              this->_first_block->address(), e);
+            throw rfs::Error(EIO, e.what());
+          }
+        }
+      }
       this->_first_block_new = false;
       ELLE_DEBUG("update parent directory");
       {
@@ -1954,7 +2068,7 @@ namespace infinit
             data.size = this->_first_block->data().size() - header_size;
           else
             data.size = _header().total_size;
-          this->_parent->_commit(false);
+        this->_parent->_commit({OperationType::update, _name}, false);
         }
       }
     }
@@ -2218,7 +2332,7 @@ namespace infinit
       {
         bool on = !(value == "0" || value == "false" || value=="");
         _inherit_auth = on;
-        _commit();
+        _commit({OperationType::update, ""});
       }
       else if (name.find("user.infinit.auth.") == 0)
       {
@@ -2244,7 +2358,7 @@ namespace infinit
           ELLE_WARN("%s: unlink of %s failed with %s, forcibly remove from parent",
                     *this, value, e.what());
           _files.erase(value);
-          _commit(true);
+          _commit({OperationType::remove, value}, true);
         }
       }
       else
