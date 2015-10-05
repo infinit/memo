@@ -7,6 +7,7 @@
 
 #include <infinit/RPC.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
@@ -99,7 +100,12 @@ namespace infinit
           auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
           ELLE_DEBUG("%s: validate block against previous version", *this)
             if (auto res = block.validate(*previous)); else
-              throw ValidationFailed(res.reason());
+            {
+              if (res.conflict())
+                throw Conflict(res.reason());
+              else
+                throw ValidationFailed(res.reason());
+            }
         }
         catch (storage::MissingKey const&)
         {

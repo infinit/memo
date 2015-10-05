@@ -232,7 +232,7 @@ namespace infinit
                {
                  return this->_compare_payload(b);
                }))
-            return blocks::ValidationResult::failure
+            return blocks::ValidationResult::conflict
               ("version validation failed");
         return blocks::ValidationResult::success();
       }

@@ -34,7 +34,7 @@ namespace infinit
             "version (%s) is not newer than stored version (%s)",
             version, other_version);
           ELLE_TRACE("%s: %s", *this, reason);
-          return blocks::ValidationResult::failure(reason);
+          return blocks::ValidationResult::conflict(reason);
         }
         else
         {

@@ -20,12 +20,16 @@ namespace infinit
         static
         ValidationResult
         failure(std::string const& reason);
+        static
+        ValidationResult
+        conflict(std::string const& reason);
         operator bool ();
         ELLE_ATTRIBUTE_R(std::string, reason);
 
       private:
-        ValidationResult(bool success, std::string const& reason);
+        ValidationResult(bool success, bool conflict, std::string const& reason);
         ELLE_ATTRIBUTE(bool, success);
+        ELLE_ATTRIBUTE_R(bool, conflict);
       };
     }
   }
