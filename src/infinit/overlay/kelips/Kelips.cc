@@ -1872,9 +1872,7 @@ namespace infinit
             {
               ELLE_TRACE("No contact to forward GET to");
               if (result_set.empty())
-                throw reactor::Timeout(boost::posix_time::milliseconds(
-                  _config.query_timeout_ms * _config.query_get_retries));
-              return;
+                throw model::MissingBlock(file);
             }
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
             send(req, it->second.endpoint, it->second.address);
@@ -2147,16 +2145,12 @@ namespace infinit
           _ping_time = now();
           ELLE_DUMP("%s: pinging %x at %s", *this, _ping_target, endpoint);
           send(p, endpoint, address);
-          try
-          {
-            reactor::wait(_ping_barrier,
-                          boost::posix_time::milliseconds(_config.ping_timeout_ms));
+          bool ok = reactor::wait(_ping_barrier,
+                                  boost::posix_time::milliseconds(_config.ping_timeout_ms));
+          if (ok)
             ELLE_DUMP("%s: got pong reply", *this);
-          }
-          catch(reactor::Timeout const& e)
-          {
+          else
             ELLE_TRACE("%s: Ping timeout on %x", *this, _ping_target);
-          }
           // onPong did the job for us
           _ping_barrier.close();
         }
