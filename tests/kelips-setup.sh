@@ -90,7 +90,7 @@ chmod a+x $rootdir/run-nodes.sh
 echo "INFINIT_HOME=$rootdir/conf0 infinit-network --run --as $user --name $user_hash/kelips &" >> $rootdir/run-nodes.sh
 echo 'sleep 2' >> $rootdir/run-nodes.sh
 for i in $(seq 1 $nodes); do
-  echo "INFINIT_HOME=$rootdir/conf$i infinit-network --run --as $user$i --name $user_hash/kelips --host 127.0.0.1:$port_base &" >> $rootdir/run-nodes.sh
+  echo "INFINIT_HOME=$rootdir/conf$i infinit-network --run --as $user$i --name $user_hash/kelips --peer 127.0.0.1:$port_base &" >> $rootdir/run-nodes.sh
 done
 
 for i in $(seq 0 $observers); do
