@@ -849,6 +849,7 @@ void test_conflicts()
   BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
   fsync(fd0);
   BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), 0);
+  usleep(2100000);
   BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), 0);
   bfs::remove(m1 / "file5");
   BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
@@ -868,8 +869,11 @@ void test_conflicts()
 
   fd0 = open((m0 / "file6").string().c_str(), O_CREAT|O_RDWR|O_APPEND, 0644);
   BOOST_CHECK(fd0 != -1);
+  ELLE_LOG("write");
   BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
+  ELLE_LOG("rename");
   bfs::rename(m1 / "file6bis", m1 / "file6");
+  ELLE_LOG("close");
   BOOST_CHECK_EQUAL(close(fd0), 0);
   BOOST_CHECK_EQUAL(read(m0/"file6"), "nioc");
   BOOST_CHECK_EQUAL(read(m1/"file6"), "nioc");
