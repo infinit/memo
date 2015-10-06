@@ -50,7 +50,7 @@ namespace infinit
       };
 
       void
-      Paranoid::_store(blocks::Block& block, StoreMode mode)
+      Paranoid::_store(blocks::Block& block, StoreMode mode, ConflictResolver resolver)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         CryptedBlock crypted(block.address(), block.data());

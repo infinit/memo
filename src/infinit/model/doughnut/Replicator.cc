@@ -1,5 +1,6 @@
 #include <infinit/model/doughnut/Replicator.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
 
 #include <elle/serialization/Serializer.hh>
@@ -89,7 +90,8 @@ namespace infinit
 
       void
       Replicator::_store(overlay::Overlay& overlay,
-                         blocks::Block& block, StoreMode mode)
+                         blocks::Block& block, StoreMode mode,
+                         ConflictResolver resolver)
       {
         ELLE_TRACE_SCOPE("%s: store %s", *this, block);
         _overlay = &overlay;
@@ -129,16 +131,29 @@ namespace infinit
         {
           for (auto p: peers)
           {
-            s.run_background("store", [this, p, &block, mode]
+            s.run_background("store", [this, p, &block, mode, &resolver]
             {
+              std::unique_ptr<blocks::Block> nb;
               for (int i=0; i<5; ++i)
               {
                 try
                 {
                   if (i!=0)
                     p->reconnect();
-                  p->store(block, mode);
+                  p->store(nb ? *nb: block, mode);
                   return;
+                }
+                catch (Conflict const& e)
+                {
+                  ELLE_TRACE("%s: conflict pushing %s to %s", *this,
+                             block.address(), *p);
+                  if (!resolver)
+                    throw;
+                  --i;
+                  nb = resolver(block, mode);
+                  if (!nb)
+                    throw;
+                  nb->seal();
                 }
                 catch (reactor::network::Exception const& e)
                 {

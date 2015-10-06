@@ -1,5 +1,6 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 
 namespace infinit
 {
@@ -14,15 +15,17 @@ namespace infinit
       void
       Consensus::store(overlay::Overlay& overlay,
                        blocks::Block& block,
-                       StoreMode mode)
+                       StoreMode mode,
+                       ConflictResolver resolver)
       {
-        this->_store(overlay, block, mode);
+        this->_store(overlay, block, mode, resolver);
       }
 
       void
       Consensus::_store(overlay::Overlay& overlay,
                        blocks::Block& block,
-                       StoreMode mode)
+                       StoreMode mode,
+                       ConflictResolver resolver)
       {
         overlay::Operation op;
         switch (mode)
@@ -39,7 +42,25 @@ namespace infinit
           default:
             elle::unreachable();
         }
-        this->_owner(overlay, block.address(), op)->store(block, mode);
+        auto owner =  this->_owner(overlay, block.address(), op);
+        std::unique_ptr<blocks::Block> nb;
+        while (true)
+        {
+          try
+          {
+            owner->store(nb? *nb : block, mode);
+            break;
+          }
+          catch (Conflict const& c)
+          {
+            if (!resolver)
+              throw;
+            nb = resolver(block, mode);
+            if (!nb)
+              throw;
+            nb->seal();
+          }
+        }
       }
 
       std::unique_ptr<blocks::Block>

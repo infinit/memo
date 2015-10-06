@@ -69,7 +69,7 @@ namespace infinit
         _make_user(elle::Buffer const& data) const;
         virtual
         void
-        _store(blocks::Block& block, StoreMode mode) override;
+        _store(blocks::Block& block, StoreMode mode, ConflictResolver resolver) override;
         virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address) const override;

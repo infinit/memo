@@ -27,7 +27,7 @@ namespace infinit
       {}
 
       void
-      Faith::_store(blocks::Block& block, StoreMode mode)
+      Faith::_store(blocks::Block& block, StoreMode mode, ConflictResolver resolver)
       {
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         elle::Buffer data;

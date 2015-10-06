@@ -20,6 +20,12 @@ namespace infinit
       STORE_UPDATE
     };
 
+    // Called in case of conflict error. Returns the new block to retry with
+    // or null to abort
+    typedef std::function<
+      std::unique_ptr<blocks::Block> (blocks::Block& block, StoreMode mode)>
+      ConflictResolver;
+
     class Model
     {
     public:
@@ -30,7 +36,7 @@ namespace infinit
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
       void
-      store(blocks::Block& block, StoreMode mode = STORE_ANY);
+      store(blocks::Block& block, StoreMode mode = STORE_ANY, ConflictResolver = {});
       std::unique_ptr<blocks::Block>
       fetch(Address address) const;
       void
@@ -54,7 +60,7 @@ namespace infinit
       _make_user(elle::Buffer const& data) const;
       virtual
       void
-      _store(blocks::Block& block, StoreMode mode) = 0;
+      _store(blocks::Block& block, StoreMode mode, ConflictResolver resolver) = 0;
       virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address) const = 0;

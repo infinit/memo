@@ -204,9 +204,9 @@ namespace infinit
       }
 
       void
-      Doughnut::_store(blocks::Block& block, StoreMode mode)
+      Doughnut::_store(blocks::Block& block, StoreMode mode, ConflictResolver resolver)
       {
-        this->_consensus->store(*this->_overlay, block, mode);
+        this->_consensus->store(*this->_overlay, block, mode, resolver);
       }
 
       std::unique_ptr<blocks::Block>

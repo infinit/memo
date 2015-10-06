@@ -30,7 +30,8 @@ namespace infinit
       void
       Async::_store(overlay::Overlay& overlay,
                     blocks::Block& block,
-                    StoreMode mode)
+                    StoreMode mode,
+                    ConflictResolver resolver)
       {
         ELLE_TRACE("_store: %.7s", block.address());
         overlay::Operation op;
