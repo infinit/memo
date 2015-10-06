@@ -24,6 +24,7 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Replicator.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -43,7 +44,8 @@ namespace infinit
                          boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
                          int replicas,
-                         bool async)
+                         bool async,
+                         bool cache)
         : _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
@@ -64,6 +66,12 @@ namespace infinit
           this->_consensus = elle::make_unique<Async>(*this,
                                                       std::move(this->_consensus));
         }
+        if (cache)
+        {
+          this->_consensus = elle::make_unique<Cache>(*this,
+                                                      std::move(this->_consensus),
+                                                      std::chrono::seconds(5));
+        }
         this->overlay()->doughnut(this);
         if (local)
         {
@@ -80,7 +88,8 @@ namespace infinit
                          boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
                          int replicas,
-                         bool async)
+                         bool async,
+                         bool cache)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
@@ -88,7 +97,8 @@ namespace infinit
                    std::move(dir),
                    std::move(local),
                    std::move(replicas),
-                   std::move(async))
+                   std::move(async),
+                   std::move(cache))
       {
         auto check_user_blocks = [name, this]
           {
@@ -311,7 +321,8 @@ namespace infinit
                                 bool client,
                                 std::shared_ptr<Local> local,
                                 boost::filesystem::path const& dir,
-                                bool async)
+                                bool async,
+                                bool cache)
       {
         if (!client || !this->name)
           return std::make_shared<infinit::model::doughnut::Doughnut>(
@@ -325,7 +336,8 @@ namespace infinit
             dir,
             local,
             replicas,
-            async);
+            async,
+            cache);
         else
           return std::make_shared<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -339,7 +351,8 @@ namespace infinit
             dir,
             local,
             replicas,
-            async);
+            async,
+            cache);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

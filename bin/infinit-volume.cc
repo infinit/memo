@@ -138,7 +138,8 @@ run(variables_map const& args)
     beyond_fetch_endpoints(network, hosts);
   report_action("running", "network", network.name);
   auto model = network.run(hosts, true, cache, cache_size, async_writes,
-      args.count("async") && args["async"].as<bool>());
+      args.count("async") && args["async"].as<bool>(),
+      args.count("cache-model") && args["cache-model"].as<bool>());
   auto run = [&]
   {
     ELLE_TRACE_SCOPE("run volume");
@@ -312,6 +313,7 @@ main(int argc, char** argv)
         { "push", bool_switch(),
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations"},
+        { "cache-model", bool_switch(), "Enable model caching"},
         option_owner,
       },
     },

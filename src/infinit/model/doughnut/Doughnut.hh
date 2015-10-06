@@ -36,7 +36,8 @@ namespace infinit
                  boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1,
-                 bool async = false);
+                 bool async = false,
+                 bool cache = false);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
@@ -44,7 +45,8 @@ namespace infinit
                  boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1,
-                 bool async = false);
+                 bool async = false,
+                 bool cache = false);
         ~Doughnut();
 
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
@@ -111,7 +113,8 @@ namespace infinit
              bool client,
              std::shared_ptr<Local> local,
              boost::filesystem::path const& p,
-             bool async = false);
+             bool async = false,
+             bool cache = false);
       };
     }
   }

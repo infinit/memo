@@ -380,7 +380,8 @@ namespace infinit
         bool cache = false,
         boost::optional<int> cache_size = {},
         bool async_writes = false,
-        bool async_consensus = false)
+        bool async_consensus = false,
+        bool cache_consensus = false)
     {
       boost::filesystem::path p = root_dir() / "cache" / name;
       if (this->storage)
@@ -399,7 +400,7 @@ namespace infinit
         local->serve();
         auto res = std::make_pair(
           std::move(local), this->dht()->make(hosts, client, local, p,
-          async_consensus));
+          async_consensus, cache_consensus));
         return res;
       }
       else
@@ -408,7 +409,7 @@ namespace infinit
         return
           std::make_pair(local,
                          this->dht()->make(hosts, client, local, p,
-                         async_consensus));
+                         async_consensus, cache_consensus));
       }
     }
 
