@@ -1067,7 +1067,7 @@ namespace infinit
       _parent->_commit({OperationType::remove, _name});
       data.name = newname;
       dir->_files.insert(std::make_pair(newname, data));
-      dir->_commit({OperationType::insert, _name});
+      dir->_commit({OperationType::insert, newname});
       _name = newname;
       _parent = dir;
       // Move the node in cache
