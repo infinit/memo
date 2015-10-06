@@ -49,16 +49,21 @@ namespace infinit
         , _passport(std::move(passport))
         , _overlay(overlay_builder(this))
       {
+
         if (replicas == 1)
         {
-          if (async)
-            this->_consensus = elle::make_unique<Async>(*this);
-          else
-            this->_consensus = elle::make_unique<Consensus>(*this);
+          this->_consensus = elle::make_unique<Consensus>(*this);
         }
         else
+        {
           this->_consensus = elle::make_unique<Replicator>(*this, replicas,
             dir / "replicator");
+        }
+        if (async)
+        {
+          this->_consensus = elle::make_unique<Async>(*this,
+                                                      std::move(this->_consensus));
+        }
         this->overlay()->doughnut(this);
         if (local)
         {

@@ -19,7 +19,7 @@ namespace infinit
         : public Consensus
       {
         public:
-          Async(Doughnut& doughnut);
+          Async(Doughnut& doughnut, std::unique_ptr<Consensus> backend);
           virtual ~Async();
 
         protected:
@@ -45,24 +45,25 @@ namespace infinit
           struct Op
           {
             Op(overlay::Overlay& overlay_,
-               overlay::Operation type_,
                Address addr_,
                std::unique_ptr<blocks::Block>&& block_,
-               boost::optional<StoreMode> mode_ = {})
+               boost::optional<StoreMode> mode_ = {},
+               ConflictResolver resolver_ = {})
               : overlay(overlay_)
-              , type{std::move(type_)}
               , addr{addr_}
               , block{std::move(block_)}
               , mode{std::move(mode_)}
+              , resolver{resolver_}
             {}
 
             overlay::Overlay& overlay;
-            overlay::Operation type;
             Address addr;
             std::unique_ptr<blocks::Block> block;
             boost::optional<StoreMode> mode;
+            ConflictResolver resolver;
           };
 
+          std::unique_ptr<Consensus> _backend;
           reactor::Thread _process_thread;
           reactor::Channel<Op> _ops;
 

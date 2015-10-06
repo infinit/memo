@@ -15,8 +15,10 @@ namespace infinit
   {
     namespace doughnut
     {
-      Async::Async(Doughnut& doughnut)
+      Async::Async(Doughnut& doughnut,
+                   std::unique_ptr<Consensus> backend)
         : Consensus(doughnut)
+        , _backend(std::move(backend))
         , _process_thread("async consensus", [&] { _process_loop();})
       {}
 
@@ -34,29 +36,15 @@ namespace infinit
                     ConflictResolver resolver)
       {
         ELLE_TRACE("_store: %.7s", block.address());
-        overlay::Operation op;
-        switch (mode)
-        {
-          case STORE_ANY:
-            op = overlay::OP_INSERT_OR_UPDATE;
-            break;
-          case STORE_INSERT:
-            op = overlay::OP_INSERT;
-            break;
-          case STORE_UPDATE:
-            op = overlay::OP_UPDATE;
-            break;
-          default:
-            elle::unreachable();
-        }
 
         auto cpy = this->_copy(block);
         _last[cpy->address()] = cpy.get();
         _ops.put(Op{overlay,
-                    op,
                     cpy->address(),
                     std::move(cpy),
-                    mode});
+                    mode,
+                    resolver
+        });
       }
 
       void
@@ -64,7 +52,7 @@ namespace infinit
               Address address)
       {
         ELLE_TRACE("_remove: %.7s", address);
-        _ops.put({overlay, overlay::OP_REMOVE, address, nullptr, {}});
+        _ops.put({overlay, address, nullptr, {}});
       }
 
       // Fetch operation must be synchronious, else the consistency is not
@@ -83,7 +71,7 @@ namespace infinit
         }
 
         ELLE_DUMP("_fetch: network");
-        return this->_owner(overlay, address, overlay::OP_FETCH)->fetch(address);
+        return this->_backend->fetch(overlay, address);
       }
 
       void
@@ -96,19 +84,18 @@ namespace infinit
             Op op = _ops.get();
 
             overlay::Overlay& overlay = op.overlay;
-            overlay::Operation type = op.type;
             Address addr = op.addr;
             boost::optional<StoreMode> mode = op.mode;
+            ConflictResolver resolver = op.resolver;
 
-            if (type == overlay::OP_REMOVE)
+            if (!mode)
             {
               ELLE_TRACE("remove: %.7s", addr);
-              this->_owner(overlay, addr, type)->remove(addr);
+              this->_backend->remove(overlay, addr);
             }
             else // store
             {
-              this->_owner(overlay, addr, type)->store(*(op.block), *mode);
-
+              this->_backend->store(overlay, *op.block, *mode, resolver);
               if (op.block.get() == _last[addr])
               {
                 ELLE_DUMP("store: block(%.7s) data: %s", addr, _last[addr]->data());
