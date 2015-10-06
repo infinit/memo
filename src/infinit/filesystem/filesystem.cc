@@ -341,6 +341,13 @@ namespace infinit
       friend class Symlink;
       friend class Node;
       friend class FileHandle;
+      friend std::unique_ptr<Block>
+      resolve_directory_conflict(Block& b, model::StoreMode store_mode,
+                                 boost::filesystem::path p,
+                                 FileSystem& owner,
+                                 Operation op,
+                                 FileData fd,
+                                 std::weak_ptr<Directory> wd);
       void _commit(Operation op, bool set_mtime = false);
       void _push_changes(Operation op, bool first_write = false);
       Address _address;
@@ -573,6 +580,86 @@ namespace infinit
       umbrella([&] { model.store(*block, mode);});
       _address = block->address();
       return _address;
+    }
+
+    static std::unique_ptr<Block>
+    resolve_file_conflict(Block& b, model::StoreMode store_mode,
+                          boost::filesystem::path p,
+                          infinit::model::Model const& m)
+    {
+      ELLE_LOG("Conflict: the file %s was modified since last read. Your"
+        " changes will overwrite the previous modifications",
+        p);
+      auto block = elle::cast<MutableBlock>::runtime(m.fetch(b.address()));
+      block->data(b.data());
+      return elle::cast<Block>::runtime(block);
+    }
+
+    std::unique_ptr<Block>
+    resolve_directory_conflict(Block& b, model::StoreMode store_mode,
+                               boost::filesystem::path p,
+                               FileSystem& owner,
+                               Operation op,
+                               FileData fd,
+                               std::weak_ptr<Directory> wd)
+    {
+       ELLE_TRACE("edit conflict on %s (%s %s)",
+                  b.address(), op.type, op.target);
+       Directory d({}, owner, "", b.address());
+       d._fetch();
+       switch(op.type)
+       {
+       case OperationType::insert:
+         if (d._files.find(op.target) != d._files.end())
+         {
+           ELLE_LOG("Conflict: the object %s was also created remotely,"
+             " your changes will overwrite the previous content.",
+             p / op.target);
+         }
+         ELLE_TRACE("insert: Overriding entry %s", op.target);
+         d._files[op.target] = fd;
+         break;
+       case OperationType::update:
+         if (d._files.find(op.target) == d._files.end())
+         {
+           ELLE_LOG("Conflict: the object %s was removed remotely,"
+             " your changes will be dropped.",
+             p / op.target);
+           if (!wd.expired())
+           {
+             auto sd = wd.lock();
+             sd->_files.erase(op.target);
+           }
+           break;
+         }
+         else if (d._files[op.target].address != fd.address)
+         {
+           ELLE_LOG("Conflict: the object %s was replaced remotely,"
+             " your changes will be dropped.",
+             p / op.target);
+           if (!wd.expired())
+           {
+             auto sd = wd.lock();
+             if (sd->_files.find(op.target) != sd->_files.end())
+               sd->_files[op.target] = d._files[op.target];
+           }
+           break;
+         }
+         ELLE_TRACE("update: Overriding entry %s", op.target);
+         d._files[op.target] = fd;
+         break;
+       case OperationType::remove:
+         d._files.erase(op.target);
+         break;
+       }
+       elle::Buffer data;
+       {
+         elle::IOStream os(data.ostreambuf());
+         elle::serialization::json::SerializerOut output(os);
+         output.serialize_forward(d);
+       }
+       d._block->data(data);
+       return std::move(d._block);
     }
 
     FileSystem::FileSystem(std::string const& volume_name,
@@ -867,76 +954,44 @@ namespace infinit
     {
       ELLE_DEBUG_SCOPE("%s: store changes", *this);
       elle::SafeFinally clean_cache([&] { _block.reset();});
-      while (true)
+      try
       {
+        FileData fd;
+        auto it = _files.find(op.target);
+        if (it != _files.end())
+          fd = it->second;
+        std::weak_ptr<Directory> wptr;
+        // The directory can be a temp on the stack, in which case
+        // shared_from_this will fail
         try
         {
-          _owner.block_store()->store(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
-          break;
+          std::shared_ptr<Directory> dptr = std::dynamic_pointer_cast<Directory>(shared_from_this());
+          wptr = dptr;
         }
-        catch (infinit::model::doughnut::Conflict const& e)
+        catch (std::bad_weak_ptr const&)
         {
-          ELLE_TRACE("%s: edit conflict on %s (%s %s): %s",
-                     *this, _block->address(), op.type, op.target, e);
-          // Fetch and deserialize live block
-          _last_fetch = boost::posix_time::not_a_date_time;
-          Directory d(_parent, _owner, _name, _address);
-          d._fetch();
-          // Apply current operation to it
-          switch(op.type)
-          {
-          case OperationType::insert:
-            if (d._files.find(op.target) != d._files.end())
-            {
-              ELLE_LOG("Conflict: the object %s was also created remotely,"
-                " your changes will overwrite the previous content.",
-                full_path() / op.target);
-            }
-            d._files[op.target] = _files[op.target];
-            break;
-          case OperationType::update:
-            if (d._files.find(op.target) == d._files.end())
-            {
-              ELLE_LOG("Conflict: the object %s was removed remotely,"
-                " your changes will be dropped.",
-                full_path() / op.target);
-              break;
-            }
-            else if (d._files[op.target].address != _files[op.target].address)
-            {
-              ELLE_LOG("Conflict: the object %s was replaced remotely,"
-                " your changes will be dropped.",
-                full_path() / op.target);
-              break;
-            }
-            d._files[op.target] = _files[op.target];
-            break;
-          case OperationType::remove:
-            d._files.erase(op.target);
-            break;
-          }
-          elle::Buffer data;
-          {
-            elle::IOStream os(data.ostreambuf());
-            elle::serialization::json::SerializerOut output(os);
-            output.serialize_forward(d);
-          }
-          d._block->data(data);
-          _block = std::move(d._block);
         }
-        catch (infinit::model::doughnut::ValidationFailed const& e)
-        {
-          ELLE_TRACE("permission exception: %s", e.what());
-          throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
-        }
-        catch(elle::Error const& e)
-        {
-          ELLE_WARN("unexpected exception storing %x: %s",
-            _block->address(), e);
-          throw rfs::Error(EIO, e.what());
-        }
+        ELLE_DEBUG("%s: store changes engage!", *this);
+        _owner.block_store()->store(*_block,
+          first_write ? model::STORE_INSERT : model::STORE_ANY,
+          std::bind(resolve_directory_conflict,
+            std::placeholders::_1,
+            std::placeholders::_2,
+            full_path(), std::ref(_owner), op, fd,
+            wptr
+           ));
       }
-      //_owner.store_or_die(*_block, first_write ? model::STORE_INSERT : model::STORE_ANY);
+      catch (infinit::model::doughnut::ValidationFailed const& e)
+      {
+        ELLE_TRACE("permission exception: %s", e.what());
+        throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
+      }
+      catch(elle::Error const& e)
+      {
+        ELLE_WARN("unexpected elle error storing %x: %s",
+          _block->address(), e);
+        throw rfs::Error(EIO, e.what());
+      }
       clean_cache.abort();
     }
 
@@ -2023,37 +2078,23 @@ namespace infinit
       ELLE_DEBUG("store first block: %f with payload %s, total_size %s", *this->_first_block,
         this->_first_block->data().size() - header_size, _header().total_size)
       {
-        while (true)
+        try
         {
-          try
-          {
-            _owner.block_store()->store( *this->_first_block,
-              this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY);
-            break;
-          }
-          catch (infinit::model::doughnut::Conflict const& e)
-          {
-            ELLE_TRACE("%s: edit conflict on %s: %s", *this,
-                       this->_first_block->address(), e);
-            ELLE_LOG("Conflict: the file %s was modified since last read. Your"
-              " changes will overwrite the previous modifications",
-              full_path());
-            auto block = elle::cast<MutableBlock>::runtime(
-              _owner.block_store()->fetch(this->_first_block->address()));
-            block->data(this->_first_block->data());
-            this->_first_block = std::move(block);
-          }
-          catch (infinit::model::doughnut::ValidationFailed const& e)
-          {
-            ELLE_TRACE("permission exception: %s", e.what());
-            throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
-          }
-          catch(elle::Error const& e)
-          {
-            ELLE_WARN("unexpected exception storing %x: %s",
-              this->_first_block->address(), e);
-            throw rfs::Error(EIO, e.what());
-          }
+          _owner.block_store()->store( *this->_first_block,
+            this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
+            std::bind(resolve_file_conflict, std::placeholders::_1,
+              std::placeholders::_2, full_path(), std::ref(*_owner.block_store())));
+        }
+        catch (infinit::model::doughnut::ValidationFailed const& e)
+        {
+          ELLE_TRACE("permission exception: %s", e.what());
+          throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
+        }
+        catch(elle::Error const& e)
+        {
+          ELLE_WARN("unexpected exception storing %x: %s",
+            this->_first_block->address(), e);
+          throw rfs::Error(EIO, e.what());
         }
       }
       this->_first_block_new = false;
