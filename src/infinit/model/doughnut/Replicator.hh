@@ -25,7 +25,7 @@ namespace infinit
         virtual
         void
         _store(overlay::Overlay& overlay, blocks::Block& block, StoreMode mode,
-               ConflictResolver resolver) override;
+               std::unique_ptr<ConflictResolver> resolver) override;
         virtual
         std::unique_ptr<blocks::Block>
         _fetch(overlay::Overlay& overlay, Address address) override;

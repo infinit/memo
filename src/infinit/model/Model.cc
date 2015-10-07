@@ -76,10 +76,11 @@ namespace infinit
     }
 
     void
-    Model::store(blocks::Block& block, StoreMode mode, ConflictResolver resolver)
+    Model::store(blocks::Block& block, StoreMode mode,
+                 std::unique_ptr<ConflictResolver> resolver)
     {
       block.seal();
-      return this->_store(block, mode, resolver);
+      return this->_store(block, mode, std::move(resolver));
     }
 
     std::unique_ptr<blocks::Block>

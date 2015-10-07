@@ -16,16 +16,16 @@ namespace infinit
       Consensus::store(overlay::Overlay& overlay,
                        blocks::Block& block,
                        StoreMode mode,
-                       ConflictResolver resolver)
+                       std::unique_ptr<ConflictResolver> resolver)
       {
-        this->_store(overlay, block, mode, resolver);
+        this->_store(overlay, block, mode, std::move(resolver));
       }
 
       void
       Consensus::_store(overlay::Overlay& overlay,
                        blocks::Block& block,
                        StoreMode mode,
-                       ConflictResolver resolver)
+                       std::unique_ptr<ConflictResolver> resolver)
       {
         overlay::Operation op;
         switch (mode)
@@ -55,7 +55,7 @@ namespace infinit
           {
             if (!resolver)
               throw;
-            nb = resolver(block, mode);
+            nb = (*resolver)(block, mode);
             if (!nb)
               throw;
             nb->seal();

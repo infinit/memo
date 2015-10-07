@@ -28,7 +28,7 @@ namespace infinit
           _store(overlay::Overlay& overlay,
                  blocks::Block& block,
                  StoreMode mode,
-                 ConflictResolver resolver) override;
+                 std::unique_ptr<ConflictResolver> resolver) override;
           virtual
           std::unique_ptr<blocks::Block>
           _fetch(overlay::Overlay& overlay,
@@ -48,19 +48,19 @@ namespace infinit
                Address addr_,
                std::unique_ptr<blocks::Block>&& block_,
                boost::optional<StoreMode> mode_ = {},
-               ConflictResolver resolver_ = {})
+               std::unique_ptr<ConflictResolver> resolver_ = {})
               : overlay(overlay_)
               , addr{addr_}
               , block{std::move(block_)}
               , mode{std::move(mode_)}
-              , resolver{resolver_}
+              , resolver{std::move(resolver_)}
             {}
 
             overlay::Overlay& overlay;
             Address addr;
             std::unique_ptr<blocks::Block> block;
             boost::optional<StoreMode> mode;
-            ConflictResolver resolver;
+            std::unique_ptr<ConflictResolver> resolver;
           };
 
           std::unique_ptr<Consensus> _backend;

@@ -83,6 +83,72 @@ namespace infinit
        return std::move(d._block);
     }
 
+     class DirectoryConflictResolver: public model::ConflictResolver
+    {
+    public:
+      DirectoryConflictResolver(elle::serialization::SerializerIn& s)
+      {
+        serialize(s);
+      }
+      DirectoryConflictResolver()
+      : _owner(nullptr)
+      {}
+      DirectoryConflictResolver(boost::filesystem::path p,
+                                FileSystem* owner,
+                                Operation op,
+                                FileData fd,
+                                std::weak_ptr<Directory> wd)
+      : _path(p)
+      , _owner(owner)
+      , _owner_allocated(false)
+      , _op(op)
+      , _fd(fd)
+      , _wptr(wd)
+      {
+      }
+      ~DirectoryConflictResolver()
+      {
+        if (_owner_allocated)
+        {
+          std::shared_ptr<infinit::model::Model> b = _owner->block_store();
+          new std::shared_ptr<infinit::model::Model>(b);
+          delete _owner;
+        }
+      }
+      std::unique_ptr<Block>
+      operator() (Block& block, model::StoreMode mode) override
+      {
+        return resolve_directory_conflict(block, mode, _path, *_owner, _op, _fd,
+                                          _wptr);
+      }
+      void serialize(elle::serialization::Serializer& s) override
+      {
+        std::string spath = _path.string();
+        s.serialize("path", spath);
+        _path = spath;
+        s.serialize("optype", _op.type, elle::serialization::as<int>());
+        s.serialize("optarget", _op.target);
+        s.serialize("fd", _fd);
+        if (s.in())
+        {
+          infinit::model::Model* model = nullptr;
+          const_cast<elle::serialization::Context&>(s.context()).get(model);
+          ELLE_ASSERT(model);
+          _owner_allocated = true;
+          _owner = new FileSystem("", std::shared_ptr<model::Model>(model));
+        }
+      }
+      boost::filesystem::path _path;
+      FileSystem* _owner;
+      bool _owner_allocated;
+      Operation _op;
+      FileData _fd;
+      std::weak_ptr<Directory> _wptr;
+      typedef infinit::serialization_tag serialization_tag;
+    };
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<DirectoryConflictResolver> _register_dcr("dcr");
+
     void Directory::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("content", this->_files);
@@ -215,13 +281,9 @@ namespace infinit
           }
           ELLE_DEBUG("%s: store changes engage!", *this);
           _owner.block_store()->store(*_block,
-              first_write ? model::STORE_INSERT : model::STORE_ANY,
-              std::bind(resolve_directory_conflict,
-                std::placeholders::_1,
-                std::placeholders::_2,
-                full_path(), std::ref(_owner), op, fd,
-                wptr
-                ));
+          first_write ? model::STORE_INSERT : model::STORE_ANY,
+          elle::make_unique<DirectoryConflictResolver>(
+            full_path(), &_owner, op, fd, wptr));
         }
         catch (infinit::model::doughnut::ValidationFailed const& e)
         {

@@ -91,7 +91,7 @@ namespace infinit
       Cache::_store(overlay::Overlay& overlay,
                     blocks::Block& block,
                     StoreMode mode,
-                    ConflictResolver resolver)
+                    std::unique_ptr<ConflictResolver> resolver)
       {
         _cleanup();
         auto hit = _cache.find(block.address());
@@ -119,7 +119,7 @@ namespace infinit
           _cache.insert(std::make_pair(block.address(),
             std::make_pair(t, _copy(block))));
         }
-        _backend->store(overlay, block, mode, resolver);
+        _backend->store(overlay, block, mode, std::move(resolver));
       }
       void
       Cache::_cleanup()

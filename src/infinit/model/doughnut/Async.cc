@@ -33,7 +33,7 @@ namespace infinit
       Async::_store(overlay::Overlay& overlay,
                     blocks::Block& block,
                     StoreMode mode,
-                    ConflictResolver resolver)
+                    std::unique_ptr<ConflictResolver> resolver)
       {
         ELLE_TRACE("_store: %.7s", block.address());
 
@@ -43,7 +43,7 @@ namespace infinit
                     cpy->address(),
                     std::move(cpy),
                     mode,
-                    resolver
+                    std::move(resolver)
         });
       }
 
@@ -86,7 +86,7 @@ namespace infinit
             overlay::Overlay& overlay = op.overlay;
             Address addr = op.addr;
             boost::optional<StoreMode> mode = op.mode;
-            ConflictResolver resolver = op.resolver;
+            std::unique_ptr<ConflictResolver>& resolver = op.resolver;
 
             if (!mode)
             {
@@ -95,7 +95,7 @@ namespace infinit
             }
             else // store
             {
-              this->_backend->store(overlay, *op.block, *mode, resolver);
+              this->_backend->store(overlay, *op.block, *mode, std::move(resolver));
               if (op.block.get() == _last[addr])
               {
                 ELLE_DUMP("store: block(%.7s) data: %s", addr, _last[addr]->data());

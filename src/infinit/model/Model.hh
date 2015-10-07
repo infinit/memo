@@ -22,9 +22,14 @@ namespace infinit
 
     // Called in case of conflict error. Returns the new block to retry with
     // or null to abort
-    typedef std::function<
-      std::unique_ptr<blocks::Block> (blocks::Block& block, StoreMode mode)>
-      ConflictResolver;
+    class ConflictResolver
+      : public elle::serialization::VirtuallySerializable
+    {
+    public:
+      virtual std::unique_ptr<blocks::Block>
+      operator () (blocks::Block& block, StoreMode mode) = 0;
+      virtual void serialize(elle::serialization::Serializer& s) override = 0;
+    };
 
     class Model
     {
@@ -36,7 +41,8 @@ namespace infinit
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
       void
-      store(blocks::Block& block, StoreMode mode = STORE_ANY, ConflictResolver = {});
+      store(blocks::Block& block, StoreMode mode = STORE_ANY,
+            std::unique_ptr<ConflictResolver> = {});
       std::unique_ptr<blocks::Block>
       fetch(Address address) const;
       void
@@ -60,7 +66,8 @@ namespace infinit
       _make_user(elle::Buffer const& data) const;
       virtual
       void
-      _store(blocks::Block& block, StoreMode mode, ConflictResolver resolver) = 0;
+      _store(blocks::Block& block, StoreMode mode,
+             std::unique_ptr<ConflictResolver> resolver) = 0;
       virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address) const = 0;

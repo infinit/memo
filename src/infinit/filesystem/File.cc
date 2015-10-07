@@ -28,6 +28,45 @@ namespace infinit
       return elle::cast<Block>::runtime(block);
     }
 
+        class FileConflictResolver: public model::ConflictResolver
+    {
+    public:
+      FileConflictResolver(elle::serialization::SerializerIn& s)
+      {
+        serialize(s);
+      }
+      FileConflictResolver()
+      : _model(nullptr)
+      {
+      }
+      FileConflictResolver(boost::filesystem::path path, model::Model* model)
+      : _path(path)
+      , _model(model)
+      {}
+      std::unique_ptr<Block> operator()(Block& b, model::StoreMode store_mode) override
+      {
+        return resolve_file_conflict(b, store_mode, _path, *_model);
+      }
+      void serialize(elle::serialization::Serializer& s) override
+      {
+        std::string spath = _path.string();
+        s.serialize("path", spath);
+        _path = spath;
+        if (s.in())
+        {
+          infinit::model::Model* model = nullptr;
+          const_cast<elle::serialization::Context&>(s.context()).get(model);
+          ELLE_ASSERT(model);
+          _model = model;
+        }
+      }
+      boost::filesystem::path _path;
+      model::Model* _model;
+      typedef infinit::serialization_tag serialization_tag;
+    };
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<FileConflictResolver> _register_fcr("fcr");
+
     static std::string perms_to_json(ACLBlock& block)
     {
       auto perms = block.list_permissions();
@@ -575,8 +614,7 @@ namespace infinit
         {
           _owner.block_store()->store( *this->_first_block,
             this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
-            std::bind(resolve_file_conflict, std::placeholders::_1,
-              std::placeholders::_2, full_path(), std::ref(*_owner.block_store())));
+            elle::make_unique<FileConflictResolver>(full_path(), _owner.block_store().get()));
         }
         catch (infinit::model::doughnut::ValidationFailed const& e)
         {

@@ -26,7 +26,8 @@ namespace infinit
       protected:
         virtual
         void
-        _store(blocks::Block& block, StoreMode mode, ConflictResolver resolver) override;
+        _store(blocks::Block& block, StoreMode mode,
+               std::unique_ptr<ConflictResolver> resolver) override;
         virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address) const override;

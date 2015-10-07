@@ -91,7 +91,7 @@ namespace infinit
       void
       Replicator::_store(overlay::Overlay& overlay,
                          blocks::Block& block, StoreMode mode,
-                         ConflictResolver resolver)
+                         std::unique_ptr<ConflictResolver> resolver)
       {
         ELLE_TRACE_SCOPE("%s: store %s", *this, block);
         _overlay = &overlay;
@@ -150,7 +150,7 @@ namespace infinit
                   if (!resolver)
                     throw;
                   --i;
-                  nb = resolver(block, mode);
+                  nb = (*resolver)(block, mode);
                   if (!nb)
                     throw;
                   nb->seal();
