@@ -95,7 +95,7 @@ namespace infinit
             {
               try
               {
-                this->_serializer.reset(new protocol::Serializer(socket()));
+                this->_serializer.reset(new protocol::Serializer(socket(), false));
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
               }
