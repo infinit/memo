@@ -23,7 +23,8 @@ namespace infinit
     {
       Async::Async(Doughnut& doughnut,
                    std::unique_ptr<Consensus> backend,
-                   boost::filesystem::path journal_dir)
+                   boost::filesystem::path journal_dir,
+                   int max_size)
         : Consensus(doughnut)
         , _backend(std::move(backend))
         , _process_thread("async consensus", [&] { _process_loop();})
@@ -35,6 +36,8 @@ namespace infinit
         {
           boost::filesystem::create_directories(_journal_dir);
         }
+        if (max_size)
+          _ops.max_size(max_size);
       }
 
       Async::~Async()
