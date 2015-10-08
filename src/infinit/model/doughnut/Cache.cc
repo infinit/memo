@@ -2,8 +2,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 
 #include <elle/serialization/json.hh>
-#include <elle/serialization/binary/SerializerIn.hh>
-#include <elle/serialization/binary/SerializerOut.hh>
+#include <elle/serialization/binary.hh>
 #include <elle/bench.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Cache");
@@ -149,21 +148,10 @@ namespace infinit
       Cache::_copy(blocks::Block& block)
       {
         std::stringstream ss;
-        elle::serialization::json::serialize(block, ss, false);
-        elle::serialization::json::SerializerIn out(ss, false);
-        out.set_context<Doughnut*>(&this->_doughnut);
-        return out.deserialize<std::unique_ptr<blocks::Block>>();
-        /*
-        elle::Buffer buf;
-        elle::IOStream os(buf.ostreambuf());
-        {
-          elle::serialization::binary::SerializerOut out(os, false);
-          out.serialize_forward(block);
-        }
-        elle::IOStream is(buf.istreambuf());
-        elle::serialization::binary::SerializerIn in(is, false);
+        elle::serialization::binary::serialize(block, ss, false);
+        elle::serialization::binary::SerializerIn in(ss, false);
         in.set_context<Doughnut*>(&this->_doughnut);
-        return in.deserialize<std::unique_ptr<blocks::Block>>();*/
+        return in.deserialize<std::unique_ptr<blocks::Block>>();
       }
     }
   }
