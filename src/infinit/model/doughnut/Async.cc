@@ -166,6 +166,15 @@ namespace infinit
             boost::optional<StoreMode> mode = op.mode;
             std::unique_ptr<ConflictResolver>& resolver = op.resolver;
 
+            elle::SafeFinally delete_entry([&] {
+                if (!_journal_dir.empty())
+                {
+                  auto path = boost::filesystem::path(_journal_dir) / std::to_string(op.index);
+                  ELLE_DEBUG("deleting %s", path);
+                  boost::filesystem::remove(path);
+                }
+            });
+
             if (!mode)
             {
               ELLE_TRACE("remove: %.7s", addr);
@@ -184,12 +193,6 @@ namespace infinit
               }
 
               ELLE_TRACE("store: %.7s OK", addr);
-            }
-            if (!_journal_dir.empty())
-            {
-              auto path = boost::filesystem::path(_journal_dir) / std::to_string(op.index);
-              ELLE_DEBUG("deleting %s", path);
-              boost::filesystem::remove(path);
             }
           }
           catch (reactor::Terminate const&)
