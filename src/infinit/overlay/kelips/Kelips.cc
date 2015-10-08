@@ -1871,8 +1871,8 @@ namespace infinit
             if (it == _state.contacts[_group].end())
             {
               ELLE_TRACE("No contact to forward GET to");
-              if (result_set.empty())
-                throw model::MissingBlock(file);
+              reactor::sleep(500_ms);
+              continue;
             }
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
             send(req, it->second.endpoint, it->second.address);
