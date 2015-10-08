@@ -19,7 +19,8 @@ namespace infinit
         : public Consensus
       {
         public:
-          Async(Doughnut& doughnut, std::unique_ptr<Consensus> backend);
+          Async(Doughnut& doughnut, std::unique_ptr<Consensus> backend,
+                boost::filesystem::path journal_dir);
           virtual ~Async();
 
         protected:
@@ -44,6 +45,9 @@ namespace infinit
 
           struct Op
           {
+            Op(overlay::Overlay& overlay_)
+              : overlay(overlay_)
+            {}
             Op(overlay::Overlay& overlay_,
                Address addr_,
                std::unique_ptr<blocks::Block>&& block_,
@@ -61,15 +65,21 @@ namespace infinit
             std::unique_ptr<blocks::Block> block;
             boost::optional<StoreMode> mode;
             std::unique_ptr<ConflictResolver> resolver;
+            int index;
           };
 
+          void _push_op(Op op);
+          void _restore_journal(overlay::Overlay& overlay);
           std::unique_ptr<Consensus> _backend;
           reactor::Thread _process_thread;
           reactor::Channel<Op> _ops;
 
+          int _next_index;
           // This map contains for a given address the last version of each
           // block.
           std::unordered_map<Address, blocks::Block*> _last;
+          boost::filesystem::path _journal_dir;
+          bool _restored_journal;
       };
 
     } // namespace doughnut

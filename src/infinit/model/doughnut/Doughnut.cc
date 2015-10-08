@@ -64,7 +64,8 @@ namespace infinit
         if (async)
         {
           this->_consensus = elle::make_unique<Async>(*this,
-                                                      std::move(this->_consensus));
+                                                      std::move(this->_consensus),
+                                                      dir / "async");
         }
         if (cache)
         {
