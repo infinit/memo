@@ -5,8 +5,7 @@
 
 #include <elle/serialization/json.hh>
 
-#include <elle/serialization/binary/SerializerIn.hh>
-#include <elle/serialization/binary/SerializerOut.hh>
+#include <elle/serialization/binary.hh>
 
 #include <reactor/exception.hh>
 #include <reactor/scheduler.hh>
@@ -211,10 +210,10 @@ namespace infinit
       Async::_copy(blocks::Block& block) const
       {
         std::stringstream ss;
-        elle::serialization::json::serialize(block, ss, false);
-        elle::serialization::json::SerializerIn out(ss, false);
-        out.set_context<Doughnut*>(&this->_doughnut);
-        return out.deserialize<std::unique_ptr<blocks::Block>>();
+        elle::serialization::binary::serialize(block, ss, false);
+        elle::serialization::binary::SerializerIn in(ss, false);
+        in.set_context<Doughnut*>(&this->_doughnut);
+        return in.deserialize<std::unique_ptr<blocks::Block>>();
       }
     } // namespace doughnut
   } // namespace model
