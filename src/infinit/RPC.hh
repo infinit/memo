@@ -205,7 +205,7 @@ namespace infinit
     void
     serve(reactor::network::Socket& s)
     {
-      protocol::Serializer serializer(s);
+      protocol::Serializer serializer(s, false);
       serve(serializer);
     }
 
