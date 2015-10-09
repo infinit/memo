@@ -27,6 +27,15 @@ namespace infinit
       Block::~Block()
       {}
 
+      void
+      Block::stored()
+      {
+        _stored();
+      }
+      void
+      Block::_stored()
+      {}
+
       /*--------.
       | Content |
       `--------*/

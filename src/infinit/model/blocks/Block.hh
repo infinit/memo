@@ -56,6 +56,7 @@ namespace infinit
         validate() const;
         ValidationResult
         validate(Block const& previous) const;
+        void stored(); // called right after a successful store
       protected:
         virtual
         void
@@ -66,6 +67,9 @@ namespace infinit
         virtual
         ValidationResult
         _validate(Block const& previous) const;
+        virtual
+        void
+        _stored();
 
       /*--------------.
       | Serialization |
