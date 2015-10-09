@@ -595,7 +595,6 @@ namespace infinit
                 });
               if (!b.second.new_block)
                 this->_owner.unchecked_remove(prev);
-              b.second.new_block = true;
             }
             b.second.new_block = false;
             b.second.dirty = false;
@@ -660,6 +659,7 @@ namespace infinit
       _blocks.insert(std::make_pair(0, CacheEntry{
         AnyBlock(std::move(new_block)), true, {}, true}));
       ELLE_ASSERT_EQ(current_size, _blocks.at(0).block.data().size());
+      ELLE_ASSERT(_blocks.at(0).new_block);
       /*
       // current first_block becomes block[0], first_block becomes the index
       _blocks[0] = std::move(_first_block);
@@ -712,7 +712,6 @@ namespace infinit
           Address prev = it->second.block.address();
           Address addr = it->second.block.store(*_owner.block_store(),
                                                 it->second.new_block? model::STORE_INSERT : model::STORE_ANY);
-          it->second.new_block = false;
           if (addr != prev)
           {
             ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
@@ -729,8 +728,8 @@ namespace infinit
             {
               _owner.unchecked_remove(prev);
             }
-            it->second.new_block = true;
           }
+          it->second.new_block = false;
         }
         _blocks.erase(it);
       }
