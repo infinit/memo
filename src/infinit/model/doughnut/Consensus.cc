@@ -49,6 +49,7 @@ namespace infinit
           try
           {
             owner->store(nb? *nb : block, mode);
+            (nb? nb.get() : &block)->stored();
             break;
           }
           catch (Conflict const& c)

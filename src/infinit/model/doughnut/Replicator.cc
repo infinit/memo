@@ -167,6 +167,7 @@ namespace infinit
           }
           reactor::wait(s);
         };
+        block.stored();
         std::string saddress = elle::sprintf("%s", block.address());
         if (peers.size() < unsigned(_factor))
         {
