@@ -53,6 +53,7 @@ namespace infinit
         ELLE_ATTRIBUTE(boost::optional<std::vector<ACLEntry>>, acl_entries);
         ELLE_ATTRIBUTE(int, data_version);
         ELLE_ATTRIBUTE(elle::Buffer, data_signature);
+        ELLE_ATTRIBUTE(Address, prev_acl);
 
       /*--------.
       | Content |
@@ -61,7 +62,7 @@ namespace infinit
         virtual
         elle::Buffer
         _decrypt_data(elle::Buffer const& data) const;
-
+        void _stored() override;
       /*------------.
       | Permissions |
       `------------*/
@@ -122,6 +123,8 @@ namespace infinit
       private:
         void
         _serialize(elle::serialization::Serializer& input);
+        std::unique_ptr<blocks::Block>
+        _fetch_acl() const;
       };
     }
   }

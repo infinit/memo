@@ -4,6 +4,7 @@
 
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
+#include <elle/cast.hh>
 
 #include <reactor/exception.hh>
 #include <das/model.hh>
@@ -13,6 +14,7 @@
 #include <cryptography/rsa/PublicKey.hh>
 #include <cryptography/SecretKey.hh>
 
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
@@ -108,7 +110,7 @@ namespace infinit
         else if (this->_acl != Address::null)
         {
           // FIXME: factor searching the token
-          auto acl = this->doughnut()->fetch(this->_acl);
+          auto acl = this->_fetch_acl();
           entries =
             elle::serialization::deserialize
               <std::vector<ACLEntry>, elle::serialization::Json>
@@ -207,7 +209,7 @@ namespace infinit
         other->set_permissions(this->owner_key(), true, true);
         if (this->_acl == Address::null)
           return; // nothing to do
-        auto acl = this->doughnut()->fetch(this->_acl);
+        auto acl = this->_fetch_acl();
         std::vector<ACLEntry> entries;
         entries =
           elle::serialization::deserialize
@@ -244,7 +246,7 @@ namespace infinit
         }
         if (this->_acl == Address::null)
           return std::move(res);
-        auto acl = this->doughnut()->fetch(this->_acl);
+        auto acl = this->_fetch_acl();
         std::vector<ACLEntry> entries;
         entries =
           elle::serialization::deserialize
@@ -280,7 +282,7 @@ namespace infinit
           if (this->_acl != Address::null)
           {
             ELLE_DEBUG_SCOPE("%s: fetch old ACL at %s", *this, this->_acl);
-            auto acl = this->doughnut()->fetch(this->_acl);
+            auto acl = this->_fetch_acl();
             ELLE_DUMP("%s: ACL content: %s", *this, acl->data());
             this->_acl_entries =
               elle::serialization::deserialize
@@ -346,7 +348,7 @@ namespace infinit
             ELLE_DEBUG("%s: no ACL or no editor", *this);
             return blocks::ValidationResult::failure("no ACL or no editor");
           }
-          auto acl = this->doughnut()->fetch(this->_acl);
+          auto acl = this->_fetch_acl();
           elle::IOStream input(acl->data().istreambuf());
           elle::serialization::json::SerializerIn s(input);
           s.serialize("entries", entries);
@@ -395,11 +397,9 @@ namespace infinit
                 <std::vector<ACLEntry>, elle::serialization::Json>
                 (entries, "entries"));
               this->doughnut()->store(*new_acl, STORE_INSERT);
-              Address prev_acl = this->_acl;
+              this->_prev_acl = this->_acl;
               this->_acl = new_acl->address();
               this->_acl_changed = true;
-              if (prev_acl != Address())
-                this->doughnut()->remove(prev_acl);
               ELLE_DUMP("%s: new ACL address: %s", *this, this->_acl);
             }
           }
@@ -425,7 +425,7 @@ namespace infinit
           auto acl_address = this->_acl;
           if (acl_address != Address::null)
           {
-            auto acl = this->doughnut()->fetch(acl_address);
+            auto acl = this->_fetch_acl();
             ELLE_DUMP("%s: previous ACL: %s", *this, *acl);
             elle::IOStream input(acl->data().istreambuf());
             elle::serialization::json::SerializerIn s(input);
@@ -462,6 +462,7 @@ namespace infinit
             auto new_acl_block =
               this->doughnut()->make_block<blocks::ImmutableBlock>(new_acl);
             this->doughnut()->store(*new_acl_block, STORE_INSERT);
+            this->_prev_acl = this->_acl;
             this->_acl = new_acl_block->address();
           }
           this->MutableBlock::data(secret.encipher(this->data_plain()));
@@ -506,7 +507,7 @@ namespace infinit
           ELLE_ASSERT(this->doughnut());
           try
           {
-            auto acl = this->doughnut()->fetch(this->_acl);
+            auto acl = this->_fetch_acl();
             entries = elle::serialization::deserialize
               <std::vector<ACLEntry>, elle::serialization::Json>
               (acl->data(), "entries");
@@ -551,6 +552,34 @@ namespace infinit
             return false;
         }
         return true;
+      }
+
+      void
+      ACB::_stored()
+      {
+        if (this->_prev_acl != Address::null)
+        {
+          this->doughnut()->remove(this->_prev_acl);
+          this->_prev_acl = Address();
+        }
+      }
+
+      std::unique_ptr<blocks::Block>
+      ACB::_fetch_acl() const
+      {
+        try
+        {
+          return this->doughnut()->fetch(this->_acl);
+        }
+        catch (MissingBlock const& mb)
+        { // assuming the block got updated
+          auto new_self = this->doughnut()->fetch(this->address());
+          auto acb = elle::cast<ACB>::runtime(new_self);
+          if (acb->_acl == _acl)
+            throw;
+          const_cast<ACB*>(this)->_acl = acb->_acl;
+          return this->doughnut()->fetch(this->_acl);
+        }
       }
 
       /*--------------.
