@@ -220,6 +220,7 @@ def configure(
     'src/infinit/overlay/kademlia/kademlia.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
+    'src/infinit/smb/smb.cc',
     'src/infinit/storage/Adb.cc',
     'src/infinit/storage/Adb.hh',
     'src/infinit/storage/Async.cc',
@@ -304,6 +305,7 @@ def configure(
     ('infinit-volume', []),
     ('s3fs', [aws_lib]),
     ('sshfs', []),
+    ('smb', []),
   ]
   for bin_name, libs in binaries:
     source = drake.node('bin/%s.cc' % bin_name)
