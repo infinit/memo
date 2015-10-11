@@ -225,6 +225,7 @@ namespace infinit
         st->f_frsize = 32768;
         st->f_blocks = 1000000;
         st->f_bavail = 1000000;
+        st->f_bfree = 1000000;
         st->f_fsid = 1;
       }
 
