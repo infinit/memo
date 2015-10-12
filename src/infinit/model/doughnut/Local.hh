@@ -85,7 +85,9 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
         void
-        _serve();
+        _serve(std::function<std::unique_ptr<std::iostream> ()>);
+        void
+        _serve_tcp();
         void
         _serve_utp();
 

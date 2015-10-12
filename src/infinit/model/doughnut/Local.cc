@@ -40,7 +40,7 @@ namespace infinit
         {
           this->_server_thread = elle::make_unique<reactor::Thread>(
             elle::sprintf("%s server", *this),
-            [this] { this->_serve(); });
+            [this] { this->_serve_tcp(); });
           this->_server = elle::make_unique<reactor::network::TCPServer>();
           this->_server->listen(port);
         }
@@ -185,7 +185,7 @@ namespace infinit
       }
 
       void
-      Local::_serve()
+      Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
         RPCServer rpcs;
         rpcs.add("store",
@@ -207,11 +207,11 @@ namespace infinit
                     this->remove(address);
                   }));
         reactor::wait(this->_server_barrier);
-        elle::With<reactor::Scope>() << [this, &rpcs] (reactor::Scope& scope)
+        elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)
           {
-            auto socket = elle::utility::move_on_copy(this->_server->accept());
+            auto socket = elle::utility::move_on_copy(accept());
             auto name = elle::sprintf("%s: %s server", *this, **socket);
             scope.run_background(
               name,
@@ -225,43 +225,15 @@ namespace infinit
       }
 
       void
+      Local::_serve_tcp()
+      {
+        this->_serve([this] { return this->_server->accept(); });
+      }
+
+      void
       Local::_serve_utp()
       {
-        RPCServer rpcs;
-        rpcs.add("store",
-                 std::function<void (blocks::Block const& data, StoreMode)>(
-                   [this] (blocks::Block const& block, StoreMode mode)
-                   {
-                     return this->store(block, mode);
-                   }));
-        rpcs.add("fetch",
-                std::function<std::unique_ptr<blocks::Block> (Address address)>(
-                  [this] (Address address)
-                  {
-                    return this->fetch(address);
-                  }));
-        rpcs.add("remove",
-                std::function<void (Address address)>(
-                  [this] (Address address)
-                  {
-                    this->remove(address);
-                  }));
-        reactor::wait(this->_server_barrier);
-        elle::With<reactor::Scope>() << [this, &rpcs] (reactor::Scope& scope)
-        {
-          while (true)
-          {
-            auto socket = elle::utility::move_on_copy(this->_utp_server->accept());
-            auto name = elle::sprintf("%s: %s server", *this, **socket);
-            scope.run_background(
-              name,
-              [this, socket, &rpcs]
-              {
-                rpcs.set_context<Doughnut*>(this->_doughnut);
-                rpcs.serve(**socket);
-              });
-          }
-        };
+        this->_serve([this] { return this->_utp_server->accept(); });
       }
 
       /*----------.
