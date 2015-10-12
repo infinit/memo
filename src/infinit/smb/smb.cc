@@ -882,6 +882,14 @@ namespace infinit
         std::string const& fname = di.content[i].first;
         std::string wfn = to_utf16(fname);
         wp.w32(wfn.size());
+        uint64_t fuid = 0;
+        if (fclass == FileIdBothDirectoryInformation || fclass == FileIdFullDirectoryInformation)
+        {
+          auto fpath = di.directory->child(fname);
+          std::string block = fpath->getxattr("user.infinit.block");
+          auto addr = model::Address::from_string(block.substr(2));
+          fuid = *(uint64_t*)addr.value();
+        }
         if (fclass != FileDirectoryInformation && fclass != FileNamesInformation)
         {
           wp.w32(0); // easize
@@ -890,11 +898,11 @@ namespace infinit
         {
           wp.w8(0).w8(0).w64(0).w64(0).w64(0); // shortname
           if (fclass == FileIdBothDirectoryInformation)
-            wp.w16(0).w64(0); // res fileid
+            wp.w16(0).w64(fuid); // res fileid
         }
         if (fclass == FileIdFullDirectoryInformation)
         {
-          wp.w32(0).w64(0); // res fileid
+          wp.w32(0).w64(fuid); // res fileid
         }
         // and finally, the filename
         wp.w(wfn.data(), wfn.size());
