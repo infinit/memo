@@ -2314,13 +2314,9 @@ namespace infinit
                     const_cast<Node*>(this)->_remotes_server)));
                 continue;
               }
-              catch (reactor::Terminate const& e)
+              catch (elle::Error const& e)
               {
-                throw;
-              }
-              catch (std::exception const& e)
-              {
-                ELLE_WARN("Failed to connect with utp to node %s", host);
+                ELLE_WARN("%s: UTP connection failed with %s", *this, host);
               }
             }
             if (_config.rpc_protocol == Protocol::tcp || _config.rpc_protocol == Protocol::all)
@@ -2334,13 +2330,9 @@ namespace infinit
                     host)));
                 continue;
               }
-              catch (reactor::Terminate const& e)
+              catch (elle::Error const& e)
               {
-                throw;
-              }
-              catch (std::exception const& e)
-              {
-                ELLE_WARN("Failed to connect with tcp to node %s", host);
+                ELLE_WARN("%s: TCP connection failed with %s", *this, host);
               }
             }
           }
