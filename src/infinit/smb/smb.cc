@@ -786,7 +786,6 @@ namespace infinit
     }
     void SMBConnection::query_directory(SMB2Header* hin)
     {
-      // FIXME: honor search pattern
       // FIXME: honor index
       // FIXME: honor SINGLE_ENTRY
       // FIXME: honor max buffer size
@@ -807,6 +806,7 @@ namespace infinit
       if (flags & 0x1)
         glob = di.glob;
       di.glob = glob;
+      bool exact = false;
       if (di.offset == -1)
       {
         di.offset = 0;
@@ -816,7 +816,10 @@ namespace infinit
         {
           auto p = glob.find('*');
           if (p == glob.npos)
+          {
             pre = glob;
+            exact = true;
+          }
           else
           {
             pre = glob.substr(0, p);
@@ -824,19 +827,28 @@ namespace infinit
           }
           ELLE_LOG("glob: pre %s post %s", pre, post);
         }
-        di.directory->list_directory([&](std::string const& n, struct stat* st)
+        auto adder = [&](std::string const& n, struct stat* st)
+        {
+          if (exact)
+          {
+            if (pre != n)
+              return;
+          }
+          else
           {
             if (!pre.empty() && (n.size() < pre.size() || n.substr(0, pre.size()) != pre))
               return;
             if (!post.empty() && (n.size() < post.size() || n.substr(n.size()-post.size()) != post))
               return;
-            di.content.push_back(std::make_pair(n, *st));
-          });
+          }
+          di.content.push_back(std::make_pair(n, *st));
+        };
+        di.directory->list_directory(adder);
         struct stat st;
         memset(&st, 0, sizeof(st));
         st.st_mode = 0777 | S_IFDIR;
-        di.content.push_back(std::make_pair(".", st));
-        di.content.push_back(std::make_pair("..", st));
+        adder(".", &st);
+        adder("..", &st);
       }
 
       if (di.offset >= signed(di.content.size()))
