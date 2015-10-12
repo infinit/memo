@@ -887,8 +887,17 @@ namespace infinit
         uint64_t fuid = 0;
         if (fclass == FileIdBothDirectoryInformation || fclass == FileIdFullDirectoryInformation)
         {
-          auto fpath = di.directory->child(fname);
-          std::string block = fpath->getxattr("user.infinit.block");
+          std::string block;
+          if (fname == ".")
+            block = di.directory->getxattr("user.infinit.block");
+          else if (fname == "..")
+            block = "0x0000000000000000000000000000000000000000000000000000000000000000";
+          else
+          {
+            auto fpath = di.directory->child(fname);
+            block = fpath->getxattr("user.infinit.block");
+          }
+          ELLE_LOG("got block %s", block);
           auto addr = model::Address::from_string(block.substr(2));
           fuid = *(uint64_t*)addr.value();
         }
