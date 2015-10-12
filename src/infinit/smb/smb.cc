@@ -224,6 +224,7 @@ namespace infinit
       {
         std::string glob;
         std::string name;
+        std::string full_path;
         std::shared_ptr<reactor::filesystem::Path> directory;
         std::vector<std::pair<std::string, struct stat>> content;
         int offset;
@@ -232,6 +233,7 @@ namespace infinit
       struct FileInfo
       {
         std::string name;
+        std::string full_path;
         std::unique_ptr<reactor::filesystem::Handle> handle;
         std::shared_ptr<reactor::filesystem::Path> file;
         bool deleteOnClose;
@@ -692,12 +694,12 @@ namespace infinit
       if (handle)
       {
         guid = ++_next_file_id;
-        _file_handles[guid] = FileInfo{name, std::move(handle), entry, deleteOnClose};
+        _file_handles[guid] = FileInfo{name, path, std::move(handle), entry, deleteOnClose};
       }
       else
       {
         guid = ++ _next_directory_id;
-        _dir_handles[guid] = DirInfo{"", name, entry, {}, -1, deleteOnClose};
+        _dir_handles[guid] = DirInfo{"", name, path, entry, {}, -1, deleteOnClose};
       }
       
       elle::Buffer buf = make_reply(*hin,
