@@ -26,6 +26,7 @@ namespace infinit
       public:
         OKBHeader(cryptography::rsa::KeyPair const& keys,
                   cryptography::rsa::KeyPair const& block_keys);
+        OKBHeader(OKBHeader const& other);
 
       /*---------.
       | Contents |
@@ -71,10 +72,18 @@ namespace infinit
       `-------------*/
       public:
         BaseOKB(Doughnut* owner);
+        BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE_R(int, version);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      virtual
+      std::unique_ptr<blocks::Block>
+      clone() const override;
 
       /*--------.
       | Content |

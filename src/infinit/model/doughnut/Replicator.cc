@@ -90,10 +90,11 @@ namespace infinit
 
       void
       Replicator::_store(overlay::Overlay& overlay,
-                         blocks::Block& block, StoreMode mode,
+                         std::unique_ptr<blocks::Block> block,
+                         StoreMode mode,
                          std::unique_ptr<ConflictResolver> resolver)
       {
-        ELLE_TRACE_SCOPE("%s: store %s", *this, block);
+        ELLE_TRACE_SCOPE("%s: store %s", *this, *block);
         _overlay = &overlay;
         overlay::Operation op;
         switch (mode)
@@ -112,7 +113,7 @@ namespace infinit
         }
         // Only allow create through if _factor nodes are reached.
         // Let other operations through with degraded node count.
-        auto ipeers = overlay.lookup(block.address(), _factor, op);
+        auto ipeers = overlay.lookup(block->address(), _factor, op);
         std::vector<overlay::Overlay::Member> peers;
         for (auto p: ipeers)
         {
@@ -140,17 +141,17 @@ namespace infinit
                 {
                   if (i!=0)
                     p->reconnect();
-                  p->store(nb ? *nb: block, mode);
+                  p->store(nb ? *nb: *block, mode);
                   return;
                 }
                 catch (Conflict const& e)
                 {
                   ELLE_TRACE("%s: conflict pushing %s to %s", *this,
-                             block.address(), *p);
+                             block->address(), *p);
                   if (!resolver)
                     throw;
                   --i;
-                  nb = (*resolver)(block, mode);
+                  nb = (*resolver)(*block, mode);
                   if (!nb)
                     throw;
                   nb->seal();
@@ -162,13 +163,12 @@ namespace infinit
                 }
               }
               throw reactor::network::Exception(elle::sprintf(
-                "%s: too many retries storing %s, aborting", *this, block.address()));
+                "%s: too many retries storing %s, aborting", *this, block->address()));
             });
           }
           reactor::wait(s);
         };
-        block.stored();
-        std::string saddress = elle::sprintf("%s", block.address());
+        std::string saddress = elle::sprintf("%s", block->address());
         if (peers.size() < unsigned(_factor))
         {
           ELLE_TRACE("store with only %s of %s nodes", peers.size(), _factor);

@@ -14,16 +14,16 @@ namespace infinit
 
       void
       Consensus::store(overlay::Overlay& overlay,
-                       blocks::Block& block,
+                       std::unique_ptr<blocks::Block> block,
                        StoreMode mode,
                        std::unique_ptr<ConflictResolver> resolver)
       {
-        this->_store(overlay, block, mode, std::move(resolver));
+        this->_store(overlay, std::move(block), mode, std::move(resolver));
       }
 
       void
       Consensus::_store(overlay::Overlay& overlay,
-                       blocks::Block& block,
+                       std::unique_ptr<blocks::Block> block,
                        StoreMode mode,
                        std::unique_ptr<ConflictResolver> resolver)
       {
@@ -42,21 +42,20 @@ namespace infinit
           default:
             elle::unreachable();
         }
-        auto owner =  this->_owner(overlay, block.address(), op);
+        auto owner =  this->_owner(overlay, block->address(), op);
         std::unique_ptr<blocks::Block> nb;
         while (true)
         {
           try
           {
-            owner->store(nb? *nb : block, mode);
-            (nb? nb.get() : &block)->stored();
+            owner->store(nb ? *nb : *block, mode);
             break;
           }
           catch (Conflict const& c)
           {
             if (!resolver)
               throw;
-            nb = (*resolver)(block, mode);
+            nb = (*resolver)(*block, mode);
             if (!nb)
               throw;
             nb->seal();

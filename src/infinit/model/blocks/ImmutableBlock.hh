@@ -25,7 +25,17 @@ namespace infinit
       protected:
         ImmutableBlock(Address address);
         ImmutableBlock(Address address, elle::Buffer data);
+        ImmutableBlock(ImmutableBlock const& other);
         friend class infinit::model::Model;
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      public:
+      virtual
+      std::unique_ptr<Block>
+      clone() const override;
+
 
       /*--------------.
       | Serialization |

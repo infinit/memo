@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/test.hh>
@@ -109,29 +111,30 @@ ELLE_TEST_SCHEDULED(doughnut)
   {
     elle::Buffer data("\\_o<", 4);
     auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(data);
-    ELLE_LOG("store block")
-      dht.store(*block);
+    auto addr = block->address();
+    dht.store(*block);
     ELLE_LOG("fetch block")
-      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
+      ELLE_ASSERT_EQ(dht.fetch(addr)->data(), data);
     ELLE_LOG("remove block")
-      dht.remove(block->address());
+      dht.remove(addr);
   }
   {
     auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
-    ELLE_LOG("store block")
-      dht.store(*block);
+    auto addr = block->address();
+    ELLE_LOG("store mutable block")
+    dht.store(*block);
     elle::Buffer updated(">o_/", 4);
     block->data(elle::Buffer(updated));
     ELLE_LOG("fetch block")
-      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
-    ELLE_LOG("store block")
-      dht.store(*block);
+    ELLE_ASSERT_EQ(dht.fetch(addr)->data(), data);
+    ELLE_LOG("store updated mutable block")
+    dht.store(*block);
     ELLE_LOG("fetch block")
-      ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), updated);
+    ELLE_ASSERT_EQ(dht.fetch(addr)->data(), updated);
     ELLE_LOG("remove block")
-      dht.remove(block->address());
+    dht.remove(addr);
   }
 }
 
@@ -152,13 +155,13 @@ ELLE_TEST_SCHEDULED(async)
           std::move(dht.make_block<infinit::model::blocks::ImmutableBlock>(data)));
     }
     ELLE_LOG("store block")
-      dht.store(*block);
-    for (auto const& block: blocks_)
+    dht.store(*block);
+    for (auto& block: blocks_)
       dht.store(*block);
 
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
-    for (auto const& block: blocks_)
+    for (auto& block: blocks_)
       dht.fetch(block->address());
     ELLE_LOG("remove block")
       dht.remove(block->address());
@@ -168,13 +171,13 @@ ELLE_TEST_SCHEDULED(async)
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
     ELLE_LOG("store block")
-      dht.store(*block);
+    dht.store(*block);
     elle::Buffer updated(">o_/", 4);
     block->data(elle::Buffer(updated));
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
     ELLE_LOG("store block")
-      dht.store(*block);
+    dht.store(*block);
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), updated);
     ELLE_LOG("remove block")
@@ -189,7 +192,7 @@ ELLE_TEST_SCHEDULED(ACB)
   elle::Buffer data("\\_o<", 4);
   block->data(elle::Buffer(data));
   ELLE_LOG("owner: store ACB")
-    dhts.dht_a->store(*block);
+  dhts.dht_a->store(*block);
   {
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());

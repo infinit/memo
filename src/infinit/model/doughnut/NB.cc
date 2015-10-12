@@ -30,6 +30,14 @@ namespace infinit
         , _name(std::move(name))
       {}
 
+      NB::NB(NB const& other)
+        : Super(other)
+        , _doughnut(other._doughnut)
+        , _owner(other._owner)
+        , _name(other._name)
+        , _signature(other._signature)
+      {}
+
       Address
       NB::address(infinit::cryptography::rsa::PublicKey const& owner,
                        std::string const& name)
@@ -39,6 +47,16 @@ namespace infinit
           elle::sprintf("NB/%s/%s", std::move(der), name),
           cryptography::Oneway::sha256);
         return Address(hash.contents());
+      }
+
+      /*-------.
+      | Clone  |
+      `-------*/
+
+      std::unique_ptr<blocks::Block>
+      NB::clone() const
+      {
+        return std::unique_ptr<blocks::Block>(new NB(*this));
       }
 
       /*-----------.

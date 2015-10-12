@@ -92,12 +92,13 @@ namespace infinit
       ELLE_DEBUG("Anyblock store: %x", _backend->address());
       if (_is_mutable)
       {
-        umbrella([&] {model.store(*_backend, mode);});
-        return _backend->address();
+        auto addr = _backend->address();
+        umbrella([&] {model.store(std::move(_backend), mode);});
+        return addr;
       }
       auto block = model.make_block<ImmutableBlock>(_buf);
-      umbrella([&] { model.store(*block, mode);});
       _address = block->address();
+      umbrella([&] { model.store(std::move(block), mode);});
       return _address;
     }
   }

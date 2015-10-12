@@ -29,6 +29,7 @@ namespace infinit
       public:
         UB(std::string name, cryptography::rsa::PublicKey key,
            bool reverse = false);
+        UB(UB const& other);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(bool, reverse);
@@ -38,6 +39,15 @@ namespace infinit
         static
         Address
         hash_address(cryptography::rsa::PublicKey const& key);
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      public:
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone() const override;
+
       /*-----------.
       | Validation |
       `-----------*/

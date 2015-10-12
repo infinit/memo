@@ -22,6 +22,19 @@ namespace infinit
           , _salt(_last_salt())
         {}
 
+        CHB(CHB const& other)
+          : Super(other)
+          , _salt(other._salt)
+        {}
+
+      // Clone.
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone() const override
+        {
+          return std::unique_ptr<blocks::Block>(new CHB(*this));
+        }
+
       // Validation
       protected:
         virtual
@@ -88,6 +101,7 @@ namespace infinit
         }
         elle::Buffer _salt;
       };
+
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<CHB> _register_chb_serialization("CHB");
 

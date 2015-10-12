@@ -23,10 +23,19 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
+        ACLBlock(ACLBlock const& other);
       protected:
         ACLBlock(Address address);
         ACLBlock(Address address, elle::Buffer data);
         friend class infinit::model::Model;
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      public:
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone() const override;
 
       /*------------.
       | Permissions |

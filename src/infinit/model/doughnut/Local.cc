@@ -97,8 +97,11 @@ namespace infinit
           typename elle::serialization::binary::SerializerIn input(s, false);
           input.set_context<Doughnut*>(this->_doughnut);
           auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+
           ELLE_DEBUG("%s: validate block against previous version", *this)
-            if (auto res = block.validate(*previous)); else
+            if (auto res = block.validate(*previous))
+              /* nothing */;
+            else
             {
               if (res.conflict())
                 throw Conflict(res.reason());

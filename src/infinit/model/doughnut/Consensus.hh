@@ -21,7 +21,9 @@ namespace infinit
 
       public:
         void
-        store(overlay::Overlay& overlay, blocks::Block& block, StoreMode mode,
+        store(overlay::Overlay& overlay,
+              std::unique_ptr<blocks::Block> block,
+              StoreMode mode,
               std::unique_ptr<ConflictResolver> resolver);
         std::unique_ptr<blocks::Block>
         fetch(overlay::Overlay& overlay, Address address);
@@ -31,7 +33,9 @@ namespace infinit
       protected:
         virtual
         void
-        _store(overlay::Overlay& overlay, blocks::Block& block, StoreMode mode,
+        _store(overlay::Overlay& overlay,
+               std::unique_ptr<blocks::Block> block,
+               StoreMode mode,
                std::unique_ptr<ConflictResolver> resolver);
         virtual
         std::unique_ptr<blocks::Block>

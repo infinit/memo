@@ -7,6 +7,8 @@
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 
+#include <memory>
+
 ELLE_LOG_COMPONENT("infinit.filesystem.Node");
 
 namespace infinit
@@ -261,7 +263,8 @@ namespace infinit
         THROW_INVAL;
       }
       auto block = _owner.fetch_or_die(self_address);
-      auto acl = dynamic_cast<model::blocks::ACLBlock*>(block.get());
+      std::unique_ptr<model::blocks::ACLBlock> acl
+        = std::static_pointer_cast<model::blocks::ACLBlock>(std::move(block));
       if (!acl)
         throw rfs::Error(EIO, "Block is not an ACL block");
       // permission check
@@ -276,7 +279,7 @@ namespace infinit
       ELLE_TRACE("Setting permission at %s for %s", acl->address(), user->name());
       umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
         EACCES);
-      _owner.store_or_die(*acl);
+      _owner.store_or_die(std::move(acl));
       return block;
     }
   }

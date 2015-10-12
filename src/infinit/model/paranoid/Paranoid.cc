@@ -50,11 +50,12 @@ namespace infinit
       };
 
       void
-      Paranoid::_store(blocks::Block& block, StoreMode mode,
+      Paranoid::_store(std::unique_ptr<blocks::Block> block,
+                       StoreMode mode,
                        std::unique_ptr<ConflictResolver> resolver)
       {
-        ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        CryptedBlock crypted(block.address(), block.data());
+        ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
+        CryptedBlock crypted(block->address(), block->data());
         elle::Buffer raw;
         {
           elle::IOStream output(raw.ostreambuf());
@@ -62,7 +63,7 @@ namespace infinit
           serializer.serialize_forward(crypted);
         }
         this->_storage->set(
-          block.address(),
+          block->address(),
           this->_keys.K().seal(raw),
           mode == STORE_ANY || mode == STORE_INSERT,
           mode == STORE_ANY || mode == STORE_UPDATE);

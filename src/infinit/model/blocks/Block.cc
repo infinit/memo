@@ -24,6 +24,11 @@ namespace infinit
         , _data(std::move(data))
       {}
 
+      Block::Block(Block const& other)
+        : _address(other._address)
+        , _data(other._data)
+      {}
+
       Block::~Block()
       {}
 

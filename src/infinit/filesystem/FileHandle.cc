@@ -1,6 +1,8 @@
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <elle/cast.hh>
+#include <elle/serialization/binary.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 
 #include <infinit/model/MissingBlock.hh>
 
@@ -383,10 +385,11 @@ namespace infinit
         }
         ent.dirty = false;
         ent.new_block = false;
-        this->_owner->_owner.store_or_die(*this->_owner->_first_block,
-            this->_owner->_first_block_new
-            ? model::STORE_INSERT
-            : model::STORE_ANY);
+        auto cpy = this->_owner->_first_block->clone();
+        this->_owner->_owner.store_or_die(std::move(cpy),
+                                          this->_owner->_first_block_new
+                                          ? model::STORE_INSERT
+                                          : model::STORE_ANY);
         this->_owner->_first_block_new = false;
         return r1 + r2;
       }

@@ -28,7 +28,8 @@ namespace infinit
       return elle::cast<Block>::runtime(block);
     }
 
-        class FileConflictResolver: public model::ConflictResolver
+    class FileConflictResolver
+      : public model::ConflictResolver
     {
     public:
       FileConflictResolver(elle::serialization::SerializerIn& s)
@@ -320,7 +321,7 @@ namespace infinit
           Header header = _header();
           header.links--;
           _header(header);
-          _owner.store_or_die(*_first_block);
+          _owner.store_or_die(std::move(_first_block));
         }
         else
         {
@@ -430,7 +431,7 @@ namespace infinit
         {
           header.total_size = new_size;
           _header(header);
-          _owner.store_or_die(*_first_block);
+          _owner.store_or_die(std::move(_first_block));
           return;
         }
         // FIXME: addr should be a Address::Value
@@ -501,7 +502,7 @@ namespace infinit
             });
            _header(Header {true, Header::current_version, default_block_size, 1, (uint64_t)new_size});
           _blocks.clear();
-          _owner.store_or_die(*_first_block, infinit::model::STORE_UPDATE);
+          _owner.store_or_die(std::move(_first_block->clone()), infinit::model::STORE_UPDATE);
         }
       }
       this->_commit();
@@ -611,9 +612,11 @@ namespace infinit
       {
         try
         {
-          _owner.block_store()->store( *this->_first_block,
-            this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
-            elle::make_unique<FileConflictResolver>(full_path(), _owner.block_store().get()));
+          _owner.block_store()->store(std::move(_first_block->clone()),
+             this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
+             elle::make_unique<FileConflictResolver>(
+               full_path(), _owner.block_store().get()));
+          
         }
         catch (infinit::model::doughnut::ValidationFailed const& e)
         {
@@ -735,7 +738,7 @@ namespace infinit
       }
       if (fat_change)
       {
-        _owner.store_or_die(*_first_block,
+        _owner.store_or_die(std::move(_first_block),
                             _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
         _first_block_new = false;
       }

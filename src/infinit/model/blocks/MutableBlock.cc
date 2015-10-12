@@ -16,6 +16,11 @@ namespace infinit
         , _data_changed(true)
       {}
 
+      MutableBlock::MutableBlock(MutableBlock const& other)
+        : Super(other)
+        , _data_changed(other._data_changed)
+      {}
+
       void
       MutableBlock::data(elle::Buffer data)
       {
@@ -28,6 +33,15 @@ namespace infinit
       {
         transformation(this->_data);
         this->_data_changed = true;
+      }
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      std::unique_ptr<Block>
+      MutableBlock::clone() const
+      {
+        return std::unique_ptr<Block>(new MutableBlock(*this));
       }
 
       /*--------------.

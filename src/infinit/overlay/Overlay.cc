@@ -41,6 +41,7 @@ namespace infinit
     Overlay::Member
     Overlay::lookup(model::Address address, Operation op) const
     {
+      ELLE_DEBUG("address %7.s", address);
       auto gen = this->lookup(address, 1, op);
       for (auto res: gen)
         return res;

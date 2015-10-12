@@ -14,6 +14,19 @@ namespace infinit
         : Super(address, data)
       {}
 
+      ImmutableBlock::ImmutableBlock(ImmutableBlock const& other)
+        : Super(other)
+      {}
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      std::unique_ptr<Block>
+      ImmutableBlock::clone() const
+      {
+        return std::unique_ptr<Block>(new ImmutableBlock(*this));
+      }
+
       /*--------------.
       | Serialization |
       `--------------*/

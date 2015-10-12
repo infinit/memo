@@ -32,6 +32,7 @@ namespace infinit
            infinit::cryptography::rsa::PublicKey owner,
            std::string name,
            elle::Buffer data);
+        NB(NB const& other);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(std::string, name);
@@ -42,6 +43,13 @@ namespace infinit
                 std::string const& name);
         using Super::address;
 
+      /*-------.
+      | Clone  |
+      `-------*/
+      public:
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone() const override;
       /*-----------.
       | Validation |
       `-----------*/

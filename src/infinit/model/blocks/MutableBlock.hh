@@ -22,11 +22,20 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
+        MutableBlock(MutableBlock const& other);
       protected:
         MutableBlock(Address address);
         MutableBlock(Address address, elle::Buffer data);
         friend class infinit::model::Model;
         bool _data_changed;
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      public:
+        virtual
+        std::unique_ptr<Block>
+        clone() const override;
 
       /*--------------.
       | Serialization |

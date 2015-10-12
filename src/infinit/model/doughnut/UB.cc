@@ -26,6 +26,13 @@ namespace infinit
         , _reverse(reverse)
       {}
 
+      UB::UB(UB const& other)
+        : Super(other)
+        , _name{other._name}
+        , _key{other._key}
+        , _reverse{other._reverse}
+      {}
+
       Address
       UB::hash_address(std::string const& name)
       {
@@ -44,6 +51,18 @@ namespace infinit
                                         cryptography::Oneway::sha256);
         return Address(hash.contents());
       }
+
+
+      /*-------.
+      | Clone  |
+      `-------*/
+
+      std::unique_ptr<blocks::Block>
+      UB::clone() const
+      {
+        return std::unique_ptr<blocks::Block>(new UB(*this));
+      }
+
       /*-----------.
       | Validation |
       `-----------*/

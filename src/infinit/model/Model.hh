@@ -41,8 +41,13 @@ namespace infinit
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
       void
-      store(blocks::Block& block, StoreMode mode = STORE_ANY,
+      store(std::unique_ptr<blocks::Block> block,
+            StoreMode mode = STORE_ANY,
             std::unique_ptr<ConflictResolver> = {});
+      void
+      store(blocks::Block& block,
+            StoreMode mode = STORE_ANY,
+            std::unique_ptr<ConflictResolver> = {}); 
       std::unique_ptr<blocks::Block>
       fetch(Address address) const;
       void
@@ -66,7 +71,8 @@ namespace infinit
       _make_user(elle::Buffer const& data) const;
       virtual
       void
-      _store(blocks::Block& block, StoreMode mode,
+      _store(std::unique_ptr<blocks::Block> block,
+             StoreMode mode,
              std::unique_ptr<ConflictResolver> resolver) = 0;
       virtual
       std::unique_ptr<blocks::Block>

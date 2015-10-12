@@ -79,13 +79,14 @@ namespace infinit
     }
 
     void
-    FileSystem::store_or_die(model::blocks::Block& block, model::StoreMode mode)
+    FileSystem::store_or_die(std::unique_ptr<model::blocks::Block> block,
+                             model::StoreMode mode)
     {
-      ELLE_TRACE_SCOPE("%s: store or die: %s", *this, block);
+      ELLE_TRACE_SCOPE("%s: store or die: %s", *this, *block);
 
       try
       {
-        this->_block_store->store(block, mode);
+        this->_block_store->store(std::move(block), mode);
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
@@ -95,7 +96,7 @@ namespace infinit
       catch(elle::Error const& e)
       {
         ELLE_WARN("unexpected exception storing %x: %s",
-                  block.address(), e);
+                  block->address(), e);
         throw rfs::Error(EIO, e.what());
       }
     }
@@ -208,10 +209,11 @@ namespace infinit
             std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
             auto saddr = elle::sprintf("%x", mb->address());
             elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
-            store_or_die(*mb, model::STORE_INSERT);
-            model::doughnut::NB nb(dn.get(), dn->owner(),
-                                   this->_volume_name + ".root", baddr);
-            store_or_die(nb, model::STORE_INSERT);
+            auto cpy = mb->clone();
+            store_or_die(std::move(cpy), model::STORE_INSERT);
+            auto nb = elle::make_unique<model::doughnut::NB>(
+                dn.get(), dn->owner(), this->_volume_name + ".root", baddr);
+            store_or_die(std::move(nb), model::STORE_INSERT);
             return mb;
           }
           reactor::sleep(1_sec);

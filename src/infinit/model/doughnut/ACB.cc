@@ -64,6 +64,13 @@ namespace infinit
         , token(std::move(token_))
       {}
 
+      ACB::ACLEntry::ACLEntry(ACLEntry const& other)
+        : key{other.key}
+        , read{other.read}
+        , write{other.write}
+        , token{other.token}
+      {}
+
       ACB::ACLEntry::ACLEntry(elle::serialization::SerializerIn& s)
         : ACLEntry(deserialize(s))
       {}
@@ -91,6 +98,26 @@ namespace infinit
         , _data_version(-1)
         , _data_signature()
       {}
+
+      ACB::ACB(ACB const& other)
+        : Super(other)
+        , _editor(other._editor)
+        , _owner_token(other._owner_token)
+        , _acl(other._acl)
+        , _acl_changed(other._acl_changed)
+        , _acl_entries(other._acl_entries)
+        , _data_version(other._data_version)
+        , _data_signature(other._data_signature)
+      {}
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      std::unique_ptr<blocks::Block>
+      ACB::clone() const
+      {
+        return std::unique_ptr<blocks::Block>(new ACB(*this));
+      }
 
       /*--------.
       | Content |
@@ -396,7 +423,7 @@ namespace infinit
                 elle::serialization::serialize
                 <std::vector<ACLEntry>, elle::serialization::Json>
                 (entries, "entries"));
-              this->doughnut()->store(*new_acl, STORE_INSERT);
+              this->doughnut()->store(std::move(new_acl), STORE_INSERT);
               this->_prev_acl = this->_acl;
               this->_acl = new_acl->address();
               this->_acl_changed = true;
@@ -461,9 +488,9 @@ namespace infinit
             }
             auto new_acl_block =
               this->doughnut()->make_block<blocks::ImmutableBlock>(new_acl);
-            this->doughnut()->store(*new_acl_block, STORE_INSERT);
             this->_prev_acl = this->_acl;
             this->_acl = new_acl_block->address();
+            this->doughnut()->store(std::move(new_acl_block), STORE_INSERT);
           }
           this->MutableBlock::data(secret.encipher(this->data_plain()));
           this->_data_changed = false;

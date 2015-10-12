@@ -27,18 +27,18 @@ namespace infinit
       {}
 
       void
-      Faith::_store(blocks::Block& block, StoreMode mode,
+      Faith::_store(std::unique_ptr<blocks::Block> block,
+                    StoreMode mode,
                     std::unique_ptr<ConflictResolver> resolver)
       {
-        ELLE_TRACE_SCOPE("%s: store %f", *this, block);
+        ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());
           Serializer::SerializerOut output(s, false);
-          auto ptr = &block;
-          output.serialize_forward(ptr);
+          output.serialize_forward(*block);
         }
-        this->_storage->set(block.address(),
+        this->_storage->set(block->address(),
                             data,
                             mode == STORE_ANY || mode == STORE_INSERT,
                             mode == STORE_ANY || mode == STORE_UPDATE);

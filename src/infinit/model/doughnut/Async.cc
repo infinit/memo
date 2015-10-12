@@ -105,19 +105,18 @@ namespace infinit
 
       void
       Async::_store(overlay::Overlay& overlay,
-                    blocks::Block& block,
+                    std::unique_ptr<blocks::Block> block,
                     StoreMode mode,
                     std::unique_ptr<ConflictResolver> resolver)
       {
         if (!_restored_journal)
           _restore_journal(overlay);
-        ELLE_TRACE("_store: %.7s", block.address());
+        ELLE_TRACE("_store: %.7s", block->address());
 
-        auto cpy = this->_copy(block);
-        _last[cpy->address()] = cpy.get();
+        _last[block->address()] = block.get();
         _push_op(Op{overlay,
-                    cpy->address(),
-                    std::move(cpy),
+                    block->address(),
+                    std::move(block),
                     mode,
                     std::move(resolver)
         });
@@ -145,7 +144,7 @@ namespace infinit
         if (_last.find(address) != _last.end())
         {
           ELLE_DUMP("_fetch: cache");
-          auto cpy = this->_copy(*(_last[address]));
+          auto cpy = _last[address]->clone();
           ELLE_DUMP("_fetch: cpy'd block data(%.7s): %s", cpy->address(), cpy->data());
           return cpy;
         }
@@ -184,7 +183,10 @@ namespace infinit
             }
             else // store
             {
-              this->_backend->store(overlay, *op.block, *mode, std::move(resolver));
+              this->_backend->store(overlay,
+                                    std::move(op.block),
+                                    *mode,
+                                    std::move(resolver));
               if (op.block.get() == _last[addr])
               {
                 ELLE_DUMP("store: block(%.7s) data: %s", addr, _last[addr]->data());
@@ -207,17 +209,6 @@ namespace infinit
             ELLE_WARN("Exception escaped Async loop: %s", e.what());
           }
         }
-      }
-
-      std::unique_ptr<blocks::Block>
-      Async::_copy(blocks::Block& block) const
-      {
-        std::stringstream ss;
-        blocks::Block* ptr = &block;
-        elle::serialization::binary::serialize(ptr, ss, false);
-        elle::serialization::binary::SerializerIn in(ss, false);
-        in.set_context<Doughnut*>(&this->_doughnut);
-        return in.deserialize<std::unique_ptr<blocks::Block>>();
       }
     } // namespace doughnut
   } // namespace model

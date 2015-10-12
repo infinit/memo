@@ -3,6 +3,7 @@
 
 # include <elle/Buffer.hh>
 # include <elle/Printable.hh>
+# include <elle/Clonable.hh>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/blocks/ValidationResult.hh>
@@ -18,6 +19,7 @@ namespace infinit
       class Block
         : public elle::Printable
         , public elle::serialization::VirtuallySerializable
+        , public elle::Clonable<Block>
       {
       /*-------------.
       | Construction |
@@ -25,6 +27,7 @@ namespace infinit
       protected:
         Block(Address address);
         Block(Address address, elle::Buffer data);
+        Block(Block const& other);
         friend class infinit::model::Model;
       public:
         virtual

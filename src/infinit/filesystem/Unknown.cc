@@ -1,6 +1,7 @@
 #include <infinit/filesystem/Unknown.hh>
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/File.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <reactor/filesystem.hh>
 
 #include <sys/stat.h> // S_IMFT...
@@ -29,7 +30,7 @@ namespace infinit
       {
         ELLE_ASSERT(!!_parent->_block);
         // We must store first to ready ACL layer
-        _owner.store_or_die(*b, model::STORE_INSERT);
+        _owner.store_or_die(std::move(b->clone()), model::STORE_INSERT);
         umbrella([&] { _parent->_block->copy_permissions(*b);});
         Directory d(_parent, _owner, _name, address);
         d._block = std::move(b);
@@ -37,7 +38,7 @@ namespace infinit
         d._push_changes({OperationType::insert, ""});
       }
       else
-        _owner.store_or_die(*b, model::STORE_INSERT);
+        _owner.store_or_die(std::move(b), model::STORE_INSERT);
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name,
@@ -106,7 +107,8 @@ namespace infinit
           dynamic_cast<ACLBlock&>(*f->_first_block));
         });
       }
-      _owner.store_or_die(*f->_first_block, model::STORE_INSERT);
+      auto cpy = f->_first_block->clone();
+      _owner.store_or_die(std::move(cpy), model::STORE_INSERT);
       f->_first_block_new = false;
       _owner.filesystem()->set(f->full_path().string(), f);
       std::unique_ptr<rfs::Handle> handle(new FileHandle(f, true, true, true));

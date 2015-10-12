@@ -68,12 +68,12 @@ namespace infinit
             hit->second.first = t;
           }
           bench_hit.add(1);
-          return _copy(*hit->second.second);
+          return hit->second.second->clone();
         }
         bench_hit.add(0);
         auto res = _backend->fetch(overlay, address);
         auto t = now();
-        _cache.insert(std::make_pair(address, std::make_pair(t, _copy(*res))));
+        _cache.insert(std::make_pair(address, std::make_pair(t, res->clone())));
         if (dynamic_cast<blocks::ImmutableBlock*>(res.get()))
         {
           auto ir = _const_cache_time.insert(std::make_pair(t, address));
@@ -88,38 +88,39 @@ namespace infinit
       }
       void
       Cache::_store(overlay::Overlay& overlay,
-                    blocks::Block& block,
+                    std::unique_ptr<blocks::Block> block,
                     StoreMode mode,
                     std::unique_ptr<ConflictResolver> resolver)
       {
         _cleanup();
-        auto hit = _cache.find(block.address());
+        auto hit = _cache.find(block->address());
         if (hit != _cache.end())
         {
           TimePoint t = hit->second.first;
-          if (dynamic_cast<blocks::ImmutableBlock*>(&block))
+          if (dynamic_cast<blocks::ImmutableBlock*>(block.get()))
             ; // nothing to do, this does not count as a use
           else
           { // but counts as a refresh
             _mut_cache_time.erase(t);
             t = now();
-            _mut_cache_time.insert(std::make_pair(t, block.address()));
+            _mut_cache_time.insert(std::make_pair(t, block->address()));
             hit->second.first = t;
           }
-          hit->second.second = _copy(block);
+          hit->second.second = block->clone();
         }
         else
         {
           auto t = now();
-          if (dynamic_cast<blocks::ImmutableBlock*>(&block))
-            _const_cache_time.insert(std::make_pair(t, block.address()));
+          if (dynamic_cast<blocks::ImmutableBlock*>(block.get()))
+            _const_cache_time.insert(std::make_pair(t, block->address()));
           else
-            _mut_cache_time.insert(std::make_pair(t, block.address()));
-          _cache.insert(std::make_pair(block.address(),
-            std::make_pair(t, _copy(block))));
+            _mut_cache_time.insert(std::make_pair(t, block->address()));
+          _cache.insert(std::make_pair(block->address(),
+            std::make_pair(t, block->clone())));
         }
-        _backend->store(overlay, block, mode, std::move(resolver));
+        _backend->store(overlay, std::move(block), mode, std::move(resolver));
       }
+
       void
       Cache::_cleanup()
       {
@@ -143,16 +144,6 @@ namespace infinit
         }
         ELLE_ASSERT_EQ(_cache.size(), _const_cache_time.size() + _mut_cache_time.size());
         ELLE_DEBUG("cache: mut %s  const %s", _mut_cache_time.size(), _const_cache_time.size()); 
-      }
-      std::unique_ptr<blocks::Block>
-      Cache::_copy(blocks::Block& block)
-      {
-        std::stringstream ss;
-        blocks::Block* ptr = &block;
-        elle::serialization::binary::serialize(ptr, ss, false);
-        elle::serialization::binary::SerializerIn in(ss, false);
-        in.set_context<Doughnut*>(&this->_doughnut);
-        return in.deserialize<std::unique_ptr<blocks::Block>>();
       }
     }
   }

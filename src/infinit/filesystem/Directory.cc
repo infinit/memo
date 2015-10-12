@@ -6,6 +6,9 @@
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/Unknown.hh>
 #include <infinit/filesystem/Node.hh>
+
+#include <elle/serialization/binary.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 // #include <infinit/filesystem/FileHandle.hh>
 
 #include <sys/stat.h> // S_IMFT...
@@ -281,10 +284,10 @@ namespace infinit
           {
           }
           ELLE_DEBUG("%s: store changes engage!", *this);
-          _owner.block_store()->store(*_block,
-          first_write ? model::STORE_INSERT : model::STORE_ANY,
-          elle::make_unique<DirectoryConflictResolver>(
-            full_path(), &_owner, op, fd, wptr));
+          _owner.block_store()->store(std::move(_block->clone()),
+             first_write ? model::STORE_INSERT : model::STORE_ANY,
+             elle::make_unique<DirectoryConflictResolver>(
+               full_path(), &_owner, op, fd, wptr));
         }
         catch (infinit::model::doughnut::ValidationFailed const& e)
         {

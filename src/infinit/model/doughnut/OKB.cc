@@ -31,6 +31,12 @@ namespace infinit
         this->_signature = block_keys.k().sign(owner_key_buffer);
       }
 
+      OKBHeader::OKBHeader(OKBHeader const& other)
+        : _key(other._key)
+        , _owner_key(other._owner_key)
+        , _signature(other._signature)
+      {}
+
       Address
       OKBHeader::_hash_address() const
       {
@@ -108,6 +114,29 @@ namespace infinit
         , _data_plain()
         , _data_decrypted(true)
       {}
+
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other)
+        : OKBHeader(other)
+        , Super(other)
+        , _version{other._version}
+        , _signature{other._signature}
+        , _doughnut{other._doughnut}
+        , _data_plain{other._data_plain}
+        , _data_decrypted{other._data_decrypted}
+      {
+        ELLE_DEBUG("copy: me: %s, other: %s", _version, other._version);
+      }
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      template <typename Block>
+      std::unique_ptr<blocks::Block>
+      BaseOKB<Block>::clone() const
+      {
+        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this));
+      }
 
       /*--------.
       | Content |

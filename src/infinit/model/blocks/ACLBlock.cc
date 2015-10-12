@@ -22,6 +22,19 @@ namespace infinit
         : Super(address, data)
       {}
 
+      ACLBlock::ACLBlock(ACLBlock const& other)
+        : Super(other)
+      {}
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      std::unique_ptr<Block>
+      ACLBlock::clone() const
+      {
+        return std::unique_ptr<Block>(new ACLBlock(*this));
+      }
+
       /*------------.
       | Permissions |
       `------------*/

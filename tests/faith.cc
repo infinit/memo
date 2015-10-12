@@ -8,6 +8,16 @@
 
 ELLE_LOG_COMPONENT("infinit.model.faith.test");
 
+template <typename B>
+static
+void
+copy_and_store(B const& block, infinit::model::faith::Faith& d)
+{
+  namespace blk = infinit::model::blocks;
+  auto ptr = block.clone();
+  d.store(std::move(ptr));
+}
+
 static
 void
 faith()
@@ -21,9 +31,9 @@ faith()
   BOOST_CHECK_NE(block1->address(), block2->address());
   ELLE_LOG("store blocks")
   {
-    faith.store(*block1);
+    copy_and_store(*block1, faith);
     BOOST_CHECK_EQUAL(*faith.fetch(block1->address()), *block1);
-    faith.store(*block2);
+    copy_and_store(*block2, faith);
     BOOST_CHECK_EQUAL(*faith.fetch(block2->address()), *block2);
   }
   ELLE_LOG("update block")
@@ -32,7 +42,7 @@ faith()
     block2->data(elle::Buffer(update.c_str(), update.length()));
     BOOST_CHECK_NE(*faith.fetch(block2->address()), *block2);
     ELLE_LOG("STORE %x", block2->data());
-    faith.store(*block2);
+    copy_and_store(*block2, faith);
     ELLE_LOG("STORED %x", block2->data());
     BOOST_CHECK_EQUAL(*faith.fetch(block2->address()), *block2);
   }

@@ -118,10 +118,11 @@ namespace infinit
             }
             catch (MissingBlock const&)
             {
-              UB user(name, this->keys().K());
+              auto user = elle::make_unique<UB>(name, this->keys().K());
               ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
-                               *this, user.address(), name);
-              this->store(user);
+                               *this, user->address(), name);
+
+              this->store(std::move(user));
             }
             try
             {
@@ -139,10 +140,10 @@ namespace infinit
             }
             catch(MissingBlock const&)
             {
-              UB user(name, this->keys().K(), true);
+              auto user = elle::make_unique<UB>(name, this->keys().K(), true);
               ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
-                               user.address());
-              this->store(user);
+                               user->address());
+              this->store(std::move(user));
             }
           };
         _user_init.reset(new reactor::Thread(
@@ -220,10 +221,14 @@ namespace infinit
       }
 
       void
-      Doughnut::_store(blocks::Block& block, StoreMode mode,
-        std::unique_ptr<ConflictResolver> resolver)
+      Doughnut::_store(std::unique_ptr<blocks::Block> block,
+                       StoreMode mode,
+                       std::unique_ptr<ConflictResolver> resolver)
       {
-        this->_consensus->store(*this->_overlay, block, mode, std::move(resolver));
+        this->_consensus->store(*this->_overlay,
+                                std::move(block),
+                                mode,
+                                std::move(resolver));
       }
 
       std::unique_ptr<blocks::Block>

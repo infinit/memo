@@ -76,11 +76,23 @@ namespace infinit
     }
 
     void
-    Model::store(blocks::Block& block, StoreMode mode,
+    Model::store(std::unique_ptr<blocks::Block> block,
+                 StoreMode mode,
+                 std::unique_ptr<ConflictResolver> resolver)
+    {
+      block->seal();
+      return this->_store(std::move(block), mode, std::move(resolver));
+    }
+
+    void
+    Model::store(blocks::Block& block,
+                 StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver)
     {
       block.seal();
-      return this->_store(block, mode, std::move(resolver));
+      ELLE_TRACE_SCOPE("%s: copy block after seal", *this);
+      auto copy = block.clone();
+      return this->_store(std::move(copy), mode, std::move(resolver));
     }
 
     std::unique_ptr<blocks::Block>

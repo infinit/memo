@@ -35,6 +35,7 @@ namespace infinit
            bool read_,
                    bool write_,
                    elle::Buffer token_);
+          ACLEntry(ACLEntry const& other);
           ACLEntry(elle::serialization::SerializerIn& s);
 
           typedef infinit::serialization_tag serialization_tag;
@@ -46,6 +47,7 @@ namespace infinit
       `-------------*/
       public:
         ACB(Doughnut* owner);
+        ACB(ACB const& other);
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE_R(Address, acl);
@@ -54,6 +56,14 @@ namespace infinit
         ELLE_ATTRIBUTE(int, data_version);
         ELLE_ATTRIBUTE(elle::Buffer, data_signature);
         ELLE_ATTRIBUTE(Address, prev_acl);
+
+      /*-------.
+      | Clone  |
+      `-------*/
+      public:
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone() const override;
 
       /*--------.
       | Content |
