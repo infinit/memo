@@ -851,6 +851,12 @@ namespace infinit
         st.st_mode = 0777 | S_IFDIR;
         adder(".", &st);
         adder("..", &st);
+        std::sort(di.content.begin(), di.content.end(),
+          [] (std::pair<std::string, struct stat> a,
+             std::pair<std::string, struct stat> b) -> bool
+          {
+            return a.first < b.first;
+          });
       }
 
       if (di.offset >= signed(di.content.size()))
