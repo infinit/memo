@@ -145,6 +145,22 @@ namespace infinit
       `--------*/
 
       template <typename Block>
+      bool
+      BaseOKB<Block>::operator ==(blocks::Block const& other) const
+      {
+        auto other_okb = dynamic_cast<Self const*>(&other);
+        if (!other_okb)
+          return false;
+        if (this->_key != other_okb->_key)
+          return false;
+        if (this->_owner_key != other_okb->_owner_key)
+          return false;
+        if (this->_signature != other_okb->_signature)
+          return false;
+        return this->Super::operator ==(other);
+      }
+
+      template <typename Block>
       elle::Buffer const&
       BaseOKB<Block>::data() const
       {

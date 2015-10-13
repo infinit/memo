@@ -6,15 +6,16 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
-#include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
+#include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/User.hh>
-#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/Stonehenge.hh>
 #include <infinit/storage/Memory.hh>
 
@@ -26,23 +27,41 @@ namespace storage = infinit::storage;
 class DHTs
 {
 public:
-  DHTs()
+  DHTs(bool paxos = true)
     : keys_a(infinit::cryptography::rsa::keypair::generate(2048))
     , keys_b(infinit::cryptography::rsa::keypair::generate(2048))
     , keys_c(infinit::cryptography::rsa::keypair::generate(2048))
   {
-    this->local_a = std::make_shared<dht::Local>(
-      elle::make_unique<storage::Memory>());
-    this->local_b = std::make_shared<dht::Local>(
-      elle::make_unique<storage::Memory>());
-    this->local_c = std::make_shared<dht::Local>(
-      elle::make_unique<storage::Memory>());
+    dht::Doughnut::ConsensusBuilder consensus;
+    if (paxos)
+    {
+      consensus = [&] (dht::Doughnut& dht)
+        { return elle::make_unique<dht::consensus::Paxos>(dht, 3); };
+      this->local_a = std::make_shared<dht::consensus::Paxos::LocalPeer>(
+        elle::make_unique<storage::Memory>());
+      this->local_b = std::make_shared<dht::consensus::Paxos::LocalPeer>(
+        elle::make_unique<storage::Memory>());
+      this->local_c = std::make_shared<dht::consensus::Paxos::LocalPeer>(
+        elle::make_unique<storage::Memory>());
+    }
+    else
+    {
+      consensus = [&] (dht::Doughnut& dht)
+        { return elle::make_unique<dht::Consensus>(dht); };
+      this->local_a = std::make_shared<dht::Local>(
+        elle::make_unique<storage::Memory>());
+      this->local_b = std::make_shared<dht::Local>(
+        elle::make_unique<storage::Memory>());
+      this->local_c = std::make_shared<dht::Local>(
+        elle::make_unique<storage::Memory>());
+    }
     dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
     dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
     dht::Passport passport_c(keys_c.K(), "network-name", keys_a.k());
     infinit::overlay::Stonehenge::Hosts members;
     members.push_back(local_a->server_endpoint());
     members.push_back(local_b->server_endpoint());
+    members.push_back(local_c->server_endpoint());
     this->dht_a = std::make_shared<dht::Doughnut>(
       keys_a,
       keys_a.K(),
@@ -52,7 +71,8 @@ public:
           return elle::make_unique<infinit::overlay::Stonehenge>(
             elle::UUID::random(), members, d);
         }),
-      boost::filesystem::path(".")
+      nullptr,
+      consensus
       );
     local_a->doughnut() = dht_a.get();
     dht_a->overlay()->register_local(local_a);
@@ -66,7 +86,8 @@ public:
           return elle::make_unique<infinit::overlay::Stonehenge>(
             elle::UUID::random(), members, d);
         }),
-      boost::filesystem::path(".")
+      nullptr,
+      consensus
       );
     this->dht_c = std::make_shared<dht::Doughnut>(
       keys_c,
@@ -77,10 +98,8 @@ public:
           return elle::make_unique<infinit::overlay::Stonehenge>(
             elle::UUID::random(), members, d);
         }),
-      boost::filesystem::path("."),
       nullptr,
-      1,
-      true
+      consensus
       );
     local_a->doughnut() = dht_a.get();
     dht_a->overlay()->register_local(local_a);
@@ -104,7 +123,7 @@ public:
   std::shared_ptr<dht::Doughnut> dht_c;
 };
 
-ELLE_TEST_SCHEDULED(doughnut)
+ELLE_TEST_SCHEDULED(CHB)
 {
   DHTs dhts;
   auto& dht = *dhts.dht_a;
@@ -114,10 +133,16 @@ ELLE_TEST_SCHEDULED(doughnut)
     auto addr = block->address();
     dht.store(*block);
     ELLE_LOG("fetch block")
-      ELLE_ASSERT_EQ(dht.fetch(addr)->data(), data);
+      BOOST_CHECK_EQUAL(dht.fetch(addr)->data(), data);
     ELLE_LOG("remove block")
       dht.remove(addr);
   }
+}
+
+ELLE_TEST_SCHEDULED(OKB)
+{
+  DHTs dhts;
+  auto& dht = *dhts.dht_a;
   {
     auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
     elle::Buffer data("\\_o<", 4);
@@ -262,8 +287,9 @@ ELLE_TEST_SCHEDULED(conflict)
     block_alice = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
     block_alice->data(elle::Buffer("alice_1", 7));
     block_alice->set_permissions(dht::User(dhts.keys_b.K(), "bob"), true, true);
-    dhts.dht_a->store(*block_alice);
   }
+  ELLE_LOG("alice: store block")
+    dhts.dht_a->store(*block_alice);
   std::unique_ptr<infinit::model::blocks::ACLBlock> block_bob;
   ELLE_LOG("bob: fetch block");
   {
@@ -287,7 +313,8 @@ ELLE_TEST_SCHEDULED(conflict)
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(doughnut));
+  suite.add(BOOST_TEST_CASE(CHB));
+  suite.add(BOOST_TEST_CASE(OKB));
   suite.add(BOOST_TEST_CASE(async));
   suite.add(BOOST_TEST_CASE(ACB));
   suite.add(BOOST_TEST_CASE(NB));

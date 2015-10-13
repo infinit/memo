@@ -10,17 +10,20 @@ namespace infinit
       : Super(elle::sprintf("missing block: %x", address))
       , _address(address)
     {}
+
     MissingBlock::MissingBlock(elle::serialization::SerializerIn& input)
-    : Super(input)
+      : Super(input)
     {
       input.serialize("address", _address);
     }
+
     void
     MissingBlock::serialize(elle::serialization::Serializer& s)
     {
       Super::serialize(s);
       s.serialize("address", _address);
     }
+
     static const elle::serialization::Hierarchy<elle::Exception>::
     Register<MissingBlock> _register_serialization;
   }

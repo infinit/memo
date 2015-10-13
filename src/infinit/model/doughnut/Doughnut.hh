@@ -26,8 +26,15 @@ namespace infinit
       `-------------*/
       public:
         typedef std::function<
-           std::unique_ptr<infinit::overlay::Overlay>
-           (Doughnut*)> OverlayBuilder;
+          std::unique_ptr<infinit::overlay::Overlay>(Doughnut*)> OverlayBuilder;
+        typedef std::function<
+          std::unique_ptr<Consensus>(Doughnut&)> ConsensusBuilder;
+        Doughnut(infinit::cryptography::rsa::KeyPair keys,
+                 infinit::cryptography::rsa::PublicKey owner,
+                 Passport passport,
+                 OverlayBuilder overlay_builder,
+                 std::shared_ptr<Local> local,
+                 ConsensusBuilder consensus);
         Doughnut(std::string name,
                  infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,

@@ -30,11 +30,13 @@ namespace infinit
                reactor::network::UTPServer& server);
         virtual
         ~Remote();
-        ELLE_ATTRIBUTE(Doughnut&, doughnut);
+      protected:
+        Doughnut& _doughnut;
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
-        ELLE_ATTRIBUTE(std::unique_ptr<protocol::ChanneledStream>, channels);
+      protected:
+        std::unique_ptr<protocol::ChanneledStream> _channels;
 
       /*-----------.
       | Networking |

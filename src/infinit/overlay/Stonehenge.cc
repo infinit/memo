@@ -7,6 +7,7 @@
 #include <elle/log.hh>
 
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
 ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
 
@@ -51,10 +52,12 @@ namespace infinit
         do
         {
           ELLE_DEBUG("%s: yield %s", *this, this->_hosts[i]);
+          // FIXME: don't always yield Paxos
           yield(
-            Overlay::Member(new model::doughnut::Remote(
-              const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
-              this->_hosts[i])));
+            Overlay::Member(
+              new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+                const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
+                this->_hosts[i])));
           i = (i + 1) % size;
         }
         while (i != (owner + n) % size);

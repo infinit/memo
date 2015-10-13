@@ -37,6 +37,7 @@ namespace infinit
       | Content |
       `--------*/
       public:
+        virtual
         bool
         operator ==(Block const& rhs) const;
         virtual

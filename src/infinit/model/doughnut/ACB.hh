@@ -57,7 +57,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Address, acl);
         ELLE_ATTRIBUTE(bool, acl_changed);
         ELLE_ATTRIBUTE(boost::optional<std::vector<ACLEntry>>, acl_entries);
-        ELLE_ATTRIBUTE(int, data_version);
+        ELLE_ATTRIBUTE_R(int, data_version);
         ELLE_ATTRIBUTE(elle::Buffer, data_signature);
         ELLE_ATTRIBUTE(Address, prev_acl);
       protected:
@@ -79,7 +79,12 @@ namespace infinit
         virtual
         elle::Buffer
         _decrypt_data(elle::Buffer const& data) const;
-        void _stored() override;
+        void
+        _stored() override;
+        virtual
+        bool
+        operator ==(Block const& rhs) const override;
+
       /*------------.
       | Permissions |
       `------------*/

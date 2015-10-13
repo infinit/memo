@@ -27,8 +27,9 @@
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/Passport.hh>
+#include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
@@ -2314,14 +2315,16 @@ namespace infinit
               return;
             }
             using Protocol = infinit::model::doughnut::Local::Protocol;
-            if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
+            auto protocol = this->_config.rpc_protocol;
+            if (protocol == Protocol::utp || protocol == Protocol::all)
             {
               try
               {
+                // FIXME: don't always yield paxos
                 yield(Overlay::Member(
-                  new infinit::model::doughnut::Remote(
+                  new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                     const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                    boost::asio::ip::udp::endpoint(host.address(), host.port()+100),
+                    boost::asio::ip::udp::endpoint(host.address(), host.port() + 100),
                     const_cast<Node*>(this)->_remotes_server)));
                 return;
               }
@@ -2330,13 +2333,13 @@ namespace infinit
                 ELLE_WARN("%s: UTP connection failed with %s", *this, host);
               }
             }
-            if (_config.rpc_protocol == Protocol::tcp || _config.rpc_protocol == Protocol::all)
+            if (protocol == Protocol::tcp || protocol == Protocol::all)
             {
               try
               {
-                yield(
-                  std::shared_ptr<infinit::model::doughnut::Peer>(
-                  new infinit::model::doughnut::Remote(
+                // FIXME: don't always yield paxos
+                yield(Overlay::Member(
+                  new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                     const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
                     host)));
                 return;

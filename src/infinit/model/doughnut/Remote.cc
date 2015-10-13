@@ -95,7 +95,8 @@ namespace infinit
             {
               try
               {
-                this->_serializer.reset(new protocol::Serializer(socket(), false));
+                this->_serializer.reset(
+                  new protocol::Serializer(socket(), false));
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
               }
@@ -133,6 +134,7 @@ namespace infinit
       void
       Remote::store(blocks::Block const& block, StoreMode mode)
       {
+        ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         this->connect();
         RPC<void (blocks::Block const&, StoreMode)> store

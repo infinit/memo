@@ -89,6 +89,7 @@ namespace infinit
       void
       Local::store(blocks::Block const& block, StoreMode mode)
       {
+        ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         try
         {
@@ -131,6 +132,7 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Local::fetch(Address address) const
       {
+        ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
         elle::Buffer data;
         try
         {

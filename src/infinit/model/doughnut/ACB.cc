@@ -644,6 +644,10 @@ namespace infinit
       | Content |
       `--------*/
 
+      /*--------.
+      | Content |
+      `--------*/
+
       void
       ACB::_stored()
       {
@@ -652,6 +656,25 @@ namespace infinit
           this->doughnut()->remove(this->_prev_acl);
           this->_prev_acl = Address();
         }
+      }
+
+      bool
+      ACB::operator ==(blocks::Block const& rhs) const
+      {
+        auto other_acb = dynamic_cast<ACB const*>(&rhs);
+        if (!other_acb)
+          return false;
+        if (this->_editor != other_acb->_editor)
+          return false;
+        if (this->_owner_token != other_acb->_owner_token)
+          return false;
+        if (this->_acl != other_acb->_acl)
+          return false;
+        if (this->_data_version != other_acb->_data_version)
+          return false;
+        if (this->_data_signature != other_acb->_data_signature)
+          return false;
+        return this->Super::operator ==(rhs);
       }
 
       std::unique_ptr<blocks::Block>

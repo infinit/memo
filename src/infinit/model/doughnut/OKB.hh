@@ -102,6 +102,9 @@ namespace infinit
         virtual
         void
         data(std::function<void (elle::Buffer&)> transformation) override;
+        virtual
+        bool
+        operator ==(blocks::Block const& rhs) const override;
         ELLE_ATTRIBUTE_RP(elle::Buffer, data_plain, protected:);
         ELLE_ATTRIBUTE_P(bool, data_decrypted, protected:);
       protected:

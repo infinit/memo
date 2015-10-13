@@ -41,38 +41,14 @@ namespace infinit
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          OverlayBuilder overlay_builder,
-                         boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
-                         int replicas,
-                         bool async,
-                         bool cache)
-        : _keys(std::move(keys))
+                         ConsensusBuilder consensus)
+        : _consensus(consensus(*this))
+        , _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _overlay(overlay_builder(this))
       {
-
-        if (replicas == 1)
-        {
-          this->_consensus = elle::make_unique<Consensus>(*this);
-        }
-        else
-        {
-          this->_consensus = elle::make_unique<Replicator>(*this, replicas,
-            dir / "replicator");
-        }
-        if (async)
-        {
-          this->_consensus = elle::make_unique<Async>(*this,
-                                                      std::move(this->_consensus),
-                                                      dir / "async");
-        }
-        if (cache)
-        {
-          this->_consensus = elle::make_unique<Cache>(*this,
-                                                      std::move(this->_consensus),
-                                                      std::chrono::seconds(5));
-        }
         this->overlay()->doughnut(this);
         if (local)
         {
@@ -80,6 +56,48 @@ namespace infinit
           this->overlay()->register_local(local);
         }
       }
+
+      static
+      std::unique_ptr<Consensus>
+      consensus(Doughnut& self,
+                int replicas,
+                boost::filesystem::path const& dir,
+                bool async,
+                bool cache)
+      {
+        std::unique_ptr<Consensus> consensus;
+        if (replicas == 1)
+          consensus = elle::make_unique<Consensus>(self);
+        else
+          consensus = elle::make_unique<Replicator>(
+            self, replicas, dir / "replicator");
+        if (async)
+          consensus = elle::make_unique<Async>(
+            self, std::move(consensus), dir / "async");
+        if (cache)
+          consensus = elle::make_unique<Cache>(self,
+                                               std::move(consensus),
+                                               std::chrono::seconds(5));
+        return consensus;
+      }
+
+      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
+                         cryptography::rsa::PublicKey owner,
+                         Passport passport,
+                         OverlayBuilder overlay_builder,
+                         boost::filesystem::path const& dir,
+                         std::shared_ptr<Local> local,
+                         int replicas,
+                         bool async,
+                         bool cache)
+        : Doughnut(std::move(keys),
+                   std::move(owner),
+                   std::move(passport),
+                   std::move(overlay_builder),
+                   std::move(local),
+                   [&] (Doughnut& dht)
+                   { return consensus(dht, replicas, dir, async, cache); })
+      {}
 
       Doughnut::Doughnut(std::string name,
                          cryptography::rsa::KeyPair keys,

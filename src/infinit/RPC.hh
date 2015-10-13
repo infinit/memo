@@ -229,7 +229,7 @@ namespace infinit
         {
           auto channel = channels.accept();
           auto request = channel.read();
-          elle::serialization::binary::SerializerIn input(request, false);
+          elle::serialization::json::SerializerIn input(request, false);
           input.set_context(this->_context);
           std::string name;
           input.serialize("procedure", name);
@@ -243,7 +243,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
           protocol::Packet response;
           {
-            elle::serialization::binary::SerializerOut output(response, false);
+            elle::serialization::json::SerializerOut output(response, false);
             try
             {
               it->second->handle(input, output);
@@ -407,7 +407,7 @@ namespace infinit
         protocol::Packet call;
         ELLE_DEBUG("%s: build request", self)
         {
-          elle::serialization::binary::SerializerOut output(call, false);
+          elle::serialization::json::SerializerOut output(call, false);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
         }
@@ -417,7 +417,7 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
-        elle::serialization::binary::SerializerIn input(response, false);
+        elle::serialization::json::SerializerIn input(response, false);
         input.set_context(self._context);
         bool success = false;
         input.serialize("success", success);

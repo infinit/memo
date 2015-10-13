@@ -127,8 +127,9 @@ namespace infinit
       void
       Block::print(std::ostream& output) const
       {
-        elle::fprintf(output, "Block(%x, %f)",
-                      this->_address, this->_data);
+        elle::fprintf(
+          output, "%s(%f, %f)",
+          elle::type_info(*this).name(), this->_address, this->_data);
       }
     }
   }
