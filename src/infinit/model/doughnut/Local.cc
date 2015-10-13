@@ -224,8 +224,6 @@ namespace infinit
         };
       }
 
-
-
       void
       Local::_serve_utp()
       {
@@ -260,8 +258,7 @@ namespace infinit
               [this, socket, &rpcs]
               {
                 rpcs.set_context<Doughnut*>(this->_doughnut);
-                protocol::Serializer serializer(**socket, false);
-                rpcs.serve(serializer);
+                rpcs.serve(**socket);
               });
           }
         };

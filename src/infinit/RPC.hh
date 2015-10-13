@@ -203,7 +203,7 @@ namespace infinit
 
 
     void
-    serve(reactor::network::Socket& s)
+    serve(std::iostream& s)
     {
       protocol::Serializer serializer(s, false);
       serve(serializer);
