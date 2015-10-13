@@ -5,7 +5,6 @@
 
 #include <reactor/Scope.hh>
 
-#include <infinit/RPC.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -38,17 +37,14 @@ namespace infinit
       {
         if (p == Protocol::tcp || p == Protocol::all)
         {
+          this->_server = elle::make_unique<reactor::network::TCPServer>();
+          this->_server->listen(port);
           this->_server_thread = elle::make_unique<reactor::Thread>(
             elle::sprintf("%s server", *this),
             [this] { this->_serve_tcp(); });
-          this->_server = elle::make_unique<reactor::network::TCPServer>();
-          this->_server->listen(port);
         }
         if (p == Protocol::utp || p == Protocol::all)
         {
-          this->_utp_server_thread = elle::make_unique<reactor::Thread>(
-            elle::sprintf("%s utp server", *this),
-            [this] { this->_serve_utp(); });
           this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
           // FIXME: kelips already use the Local's port on udp for its
           // gossip protocol, so use a fixed delta until we advertise
@@ -58,6 +54,9 @@ namespace infinit
           else if (port)
             port += 100;
           this->_utp_server->listen(port);
+          this->_utp_server_thread = elle::make_unique<reactor::Thread>(
+            elle::sprintf("%s utp server", *this),
+            [this] { this->_serve_utp(); });
         }
         ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
       }
@@ -185,9 +184,8 @@ namespace infinit
       }
 
       void
-      Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
+      Local::_register_rpcs(RPCServer& rpcs)
       {
-        RPCServer rpcs;
         rpcs.add("store",
                  std::function<void (blocks::Block const& data, StoreMode)>(
                    [this] (blocks::Block const& block, StoreMode mode)
@@ -206,7 +204,13 @@ namespace infinit
                   {
                     this->remove(address);
                   }));
-        reactor::wait(this->_server_barrier);
+      }
+
+      void
+      Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
+      {
+        RPCServer rpcs;
+        this->_register_rpcs(rpcs);
         elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)
@@ -227,12 +231,14 @@ namespace infinit
       void
       Local::_serve_tcp()
       {
+        reactor::wait(this->_server_barrier);
         this->_serve([this] { return this->_server->accept(); });
       }
 
       void
       Local::_serve_utp()
       {
+        reactor::wait(this->_server_barrier);
         this->_serve([this] { return this->_utp_server->accept(); });
       }
 

@@ -7,6 +7,7 @@
 # include <reactor/network/tcp-server.hh>
 # include <reactor/network/utp-socket.hh>
 
+# include <infinit/RPC.hh>
 # include <infinit/model/doughnut/Peer.hh>
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/storage/Storage.hh>
@@ -84,6 +85,10 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPServer>, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
+      protected:
+        virtual
+        void
+        _register_rpcs(RPCServer& rpcs);
         void
         _serve(std::function<std::unique_ptr<std::iostream> ()>);
         void
