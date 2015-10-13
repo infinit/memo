@@ -167,12 +167,13 @@ namespace infinit
       void
       Remote::print(std::ostream& stream) const
       {
+        auto name = elle::type_info(*this).name();
         if (this->_socket)
-          elle::fprintf(stream, "Remote(%s)", *this->_socket);
+          elle::fprintf(stream, "%s(%s)", name, *this->_socket);
         else if (this->_utp_socket)
-          elle::fprintf(stream, "Remote(%s)", *this->_utp_socket);
+          elle::fprintf(stream, "%s(%s)", name, *this->_utp_socket);
         else
-          elle::fprintf(stream, "Remote()");
+          elle::fprintf(stream, "%s()", name);
       }
     }
   }
