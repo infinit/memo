@@ -6,6 +6,7 @@
 # include <elle/log.hh>
 
 # include <reactor/network/exception.hh>
+# include <reactor/network/socket.hh>
 
 # include <protocol/ChanneledStream.hh>
 # include <protocol/Serializer.hh>
@@ -94,35 +95,43 @@ namespace infinit
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
-            Parsed& ... parsed)
+            Parsed&& ... parsed)
     {
       typedef
-        typename std::remove_reference<typename Remaining::Head>::type
+        typename std::remove_const<
+          typename std::remove_reference<typename Remaining::Head>::type>::type
         Head;
       ELLE_LOG_COMPONENT("infinit.RPC");
       ELLE_DEBUG("%s: get argument %s", *this, n);
       auto arg = input.deserialize<Head>(elle::sprintf("arg%s", n));
       ELLE_DEBUG("%s: got argument: %s", *this, arg);
-      this->_handle<typename Remaining::Tail, Parsed..., Head&>(
-        n + 1, input, output, parsed..., arg);
+      this->_handle<typename Remaining::Tail,
+                    Parsed..., typename Remaining::Head>(
+        n + 1, input, output, std::forward<Parsed>(parsed)..., std::move(arg));
     }
 
     template <typename Remaining, typename ... Parsed>
-    typename std::enable_if<!Remaining::empty && std::is_base_of<elle::serialization::VirtuallySerializable, typename std::remove_reference<typename Remaining::Head>::type>::value, void>::type
+    typename std::enable_if<
+      !Remaining::empty &&
+      std::is_base_of<elle::serialization::VirtuallySerializable,
+                      typename std::remove_reference<typename Remaining::Head>::type>::value,
+      void>::type
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
-            Parsed& ... parsed)
+            Parsed&& ... parsed)
     {
       typedef
         typename std::remove_const<typename std::remove_reference<typename Remaining::Head>::type>::type
         Head;
       ELLE_LOG_COMPONENT("infinit.RPC");
       ELLE_DEBUG("%s: get argument %s", *this, n);
-      auto arg = input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
+      auto arg =
+        input.deserialize<std::unique_ptr<Head>>(elle::sprintf("arg%s", n));
       ELLE_DEBUG("%s: got argument: %s", *this, *arg);
-      this->_handle<typename Remaining::Tail, Parsed..., Head&>(
-        n + 1, input, output, parsed..., *arg);
+      this->_handle<typename Remaining::Tail,
+                    Parsed..., typename Remaining::Head>(
+        n + 1, input, output, std::forward<Parsed>(parsed)..., std::move(*arg));
     }
     template <typename Remaining, typename ... Parsed>
     typename std::enable_if<
@@ -131,13 +140,13 @@ namespace infinit
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
-            Parsed& ... parsed)
+            Parsed&& ... parsed)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       try
       {
         ELLE_TRACE_SCOPE("%s: run", *this);
-        this->_function(parsed...);
+        this->_function(std::forward<Parsed>(parsed)...);
         ELLE_TRACE("%s: success", *this);
         output.serialize("success", true);
       }
@@ -163,13 +172,13 @@ namespace infinit
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
-            Parsed& ... parsed)
+            Parsed&& ... parsed)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       try
       {
         ELLE_TRACE_SCOPE("%s: run", *this);
-        R res = this->_function(parsed...);
+        R res = this->_function(std::forward<Parsed>(parsed)...);
         ELLE_TRACE("%s: success: %s", *this, res);
         output.serialize("success", true);
         output.serialize("value", res);
@@ -212,6 +221,7 @@ namespace infinit
     void
     serve(protocol::Serializer& serializer)
     {
+      ELLE_LOG_COMPONENT("infinit.RPC");
       try
       {
         protocol::ChanneledStream channels(serializer);
@@ -224,7 +234,11 @@ namespace infinit
           std::string name;
           input.serialize("procedure", name);
           auto it = this->_rpcs.find(name);
-          ELLE_ASSERT(it != this->_rpcs.end());
+          if (it == this->_rpcs.end())
+          {
+            ELLE_WARN("%s: unknown RPC: %s", *this, name);
+            throw elle::Error(elle::sprintf("unknown RPC: %s", name));
+          }
           ELLE_LOG_COMPONENT("infinit.RPC");
           ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
           protocol::Packet response;
