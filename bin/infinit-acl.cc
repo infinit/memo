@@ -73,7 +73,8 @@ void apply(std::string const& file, bool from_rec)
         std::stringstream output;
         output << file << ":" << std::endl;
         if (dir_inherit)
-          output << "  inherit: " << (dir_inherit.get() ? "yes" : "no") << std::endl;
+          output << "  inherit: "
+                 << (dir_inherit.get() ? "yes" : "no") << std::endl;
         Json j = elle::json::read(ss);
         auto a = boost::any_cast<Array>(j);
         for (auto& li: a)
