@@ -29,7 +29,7 @@ ELLE_TEST_SCHEDULED(move)
     });
 
   reactor::network::TCPSocket stream("127.0.0.1", server.port());
-  infinit::protocol::Serializer serializer(stream);
+  infinit::protocol::Serializer serializer(stream, false);
   infinit::protocol::ChanneledStream channels(serializer);
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
     rpc("coin", channels);
