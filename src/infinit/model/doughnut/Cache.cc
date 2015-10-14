@@ -148,7 +148,8 @@ namespace infinit
       Cache::_copy(blocks::Block& block)
       {
         std::stringstream ss;
-        elle::serialization::binary::serialize(block, ss, false);
+        blocks::Block* ptr = &block;
+        elle::serialization::binary::serialize(ptr, ss, false);
         elle::serialization::binary::SerializerIn in(ss, false);
         in.set_context<Doughnut*>(&this->_doughnut);
         return in.deserialize<std::unique_ptr<blocks::Block>>();
