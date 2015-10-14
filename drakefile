@@ -7,6 +7,8 @@ import drake.valgrind
 import os
 import shutil
 
+installed_binaries = []
+
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
@@ -293,19 +295,26 @@ def configure(
       drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
   bin_cxx_config.library_add(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
+  global installed_binaries
+  to_install = [
+    'infinit-credentials',
+    'infinit-network',
+    'infinit-storage',
+    'infinit-user',
+    'infinit-volume',
+    'infinit-acl',
+  ]
+
   binaries = [
     ('doughnode', []),
     ('generatekeys', []),
     ('infinit', []),
-    ('infinit-acl', []),
-    ('infinit-credentials', []),
-    ('infinit-network', []),
-    ('infinit-storage', []),
-    ('infinit-user', []),
-    ('infinit-volume', []),
     ('s3fs', [aws_lib]),
     ('sshfs', []),
     ('infinit-smb', []),
+  ]
+  binaries += [
+    (x, []) for x in to_install
   ]
   for bin_name, libs in binaries:
     source = drake.node('bin/%s.cc' % bin_name)
@@ -320,6 +329,8 @@ def configure(
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
+    if bin_name in to_install:
+      installed_binaries.append(bin)
   steg = drake.cxx.Executable(
     'bin/steg',
     drake.nodes('src/infinit/model/steg/Steg.hh',
@@ -333,21 +344,7 @@ def configure(
   ## ------- ##
   ## Install ##
   ## ------- ##
-
   install = drake.Rule('install')
-  installed_binaries = [
-    drake.node('bin/%s' % bin_name)
-    for bin_name in [
-        'infinit-credentials',
-        'infinit-network',
-        'infinit-storage',
-        'infinit-user',
-        'infinit-volume',
-        'infinit-acl',
-    ]
-  ]
-
-
   install << drake.copy(installed_binaries, prefix, None, builder = PatchAndInstall)
   # man = drake.nodes(
   #   'share/man/man1/infinit.1',
