@@ -343,7 +343,27 @@ namespace infinit
   {
     template <typename Head, typename ... Tail>
     static
-    void
+    typename std::enable_if<std::is_base_of<elle::serialization::VirtuallySerializable,
+                      typename std::remove_const<typename std::remove_reference<Head>::type>::type>::value,
+                      void>::type
+    call_arguments(int n,
+                   elle::serialization::SerializerOut& output,
+                   Head&& head,
+                   Tail&& ... tail)
+    {
+      typedef
+      typename std::remove_const<typename std::remove_reference<Head>::type>::type
+        RawHead;
+      RawHead* ptr = const_cast<RawHead*>(&head);
+      output.serialize(elle::sprintf("arg%s", n), ptr);
+      call_arguments(n + 1, output, std::forward<Tail>(tail)...);
+    }
+
+    template <typename Head, typename ... Tail>
+    static
+    typename std::enable_if<!std::is_base_of<elle::serialization::VirtuallySerializable,
+      typename std::remove_reference<Head>::type>::value,
+    void>::type
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
