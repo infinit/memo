@@ -7,6 +7,7 @@ import drake.valgrind
 import os
 import shutil
 
+elle = None
 installed_binaries = []
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
@@ -81,6 +82,7 @@ def configure(
 
   git = drake.git.Git()
 
+  global elle
   elle = drake.include('elle',
                        production_build = production_build,
                        cxx_toolkit = cxx_toolkit,
