@@ -167,10 +167,10 @@ namespace infinit
         void
         register_local(
           std::shared_ptr<infinit::model::doughnut::Local> local) override;
-         reactor::Generator<RpcEndpoint>
+         void
          address(Address file,
                  infinit::overlay::Operation op,
-                 int n);
+                 int n, std::function<void(RpcEndpoint)> yield);
         void
         print(std::ostream& stream) const override;
         /// local hooks interface
@@ -243,8 +243,8 @@ namespace infinit
         cleanup();
         void
         addLocalResults(packet::GetFileRequest* p, reactor::yielder<RpcEndpoint>::type const* yield);
-        reactor::Generator<RpcEndpoint>
-        kelipsGet(Address file, int n, bool local_override = false, int attempts=-1);
+        void
+        kelipsGet(Address file, int n, bool local_override, int attempts, std::function<void(RpcEndpoint)> yield);
         std::vector<RpcEndpoint>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>

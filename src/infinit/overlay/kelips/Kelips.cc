@@ -1770,51 +1770,46 @@ namespace infinit
         _pending_requests.erase(it);
       }
 
-      reactor::Generator<RpcEndpoint>
+      void
       Node::address(Address file,
                     infinit::overlay::Operation op,
-                    int n)
+                    int n,
+                    std::function<void (RpcEndpoint)> yield)
       {
         if (op == infinit::overlay::OP_INSERT)
         {
           std::vector<RpcEndpoint> res = kelipsPut(file, n);
-          return reactor::generator<RpcEndpoint>([res] (reactor::yielder<RpcEndpoint>::type const& yield)
-          {
-            for (auto r: res)
-              yield(r);
-          });
+          for (auto r: res)
+            yield(r);
         }
         else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
         {
-          return reactor::generator<RpcEndpoint>([this,file,n] (reactor::yielder<RpcEndpoint>::type const& yield)
-          {
-            bool hit = false;
-            for (auto r: kelipsGet(file, n))
-            {
+          bool hit = false;
+          kelipsGet(file, n, false, -1, [&](RpcEndpoint r) {
               hit = true;
               yield(r);
-            }
-            if (!hit)
-            {
-              ELLE_TRACE("%s: get failed on %x, trying put", *this, file);
-              std::vector<RpcEndpoint> res = kelipsPut(file, n);
-              for (auto e: res)
-                yield(e);
-            }
           });
+          if (!hit)
+          {
+            ELLE_ERR("%s: get failed on %x, trying put", *this, file);
+            std::vector<RpcEndpoint> res = kelipsPut(file, n);
+            for (auto e: res)
+              yield(e);
+          }
         }
         else
         {
-          return kelipsGet(file, n, op == infinit::overlay::OP_FETCH);
+          kelipsGet(file, n, op == infinit::overlay::OP_FETCH, -1, yield);
         }
       }
 
-      reactor::Generator<RpcEndpoint>
-      Node::kelipsGet(Address file, int n, bool local_override, int attempts)
+      void
+      Node::kelipsGet(Address file, int n, bool local_override, int attempts,
+        std::function <void(RpcEndpoint)> yield)
       {
         if (attempts == -1)
           attempts = _config.query_get_retries;
-        auto f = [this,file,n,local_override, attempts](reactor::yielder<RpcEndpoint>::type const& yield) {
+        auto f = [this,file,n,local_override, attempts, yield]() {
           ELLE_DEBUG("Driver starting");
           std::set<RpcEndpoint> result_set;
           packet::GetFileRequest r;
@@ -1907,7 +1902,7 @@ namespace infinit
             }
           }
         };
-        return reactor::generator<RpcEndpoint>(f);
+        return f();
       }
 
       std::vector<RpcEndpoint>
@@ -1980,12 +1975,27 @@ namespace infinit
               // If we got a partial reply first, then a full reply, we
               // can have more results than asked for.
               results.resize(n);
-              return results;
+              break;
             }
           }
           ELLE_TRACE("%s: put failed, retry %s", *this, i);
           ++_failed_puts;
         }
+        // ILLEGAL HACK: assume success and add info to our file table
+        /*
+        for (auto const& r: results)
+        {
+          GossipEndpoint ge;
+          endpoint_to_endpoint(r, ge);
+          auto & cs = _state.contacts[_group];
+          auto it = std::find_if(cs.begin(), cs.end(),
+            [&] (Contacts::value_type const& v) {
+              return v.second.endpoint == ge;
+            });
+          if (it != cs.end())
+            _state.files.insert(std::make_pair(file,
+              File {file, it->first, now(), Time(), 0}));
+        }*/
         return results;
       }
       /* For node selection, the paper [5] in kelips recommand:
@@ -2295,13 +2305,13 @@ namespace infinit
         return reactor::generator<Node::Member>(
           [this, address, n, op] (reactor::Generator<Node::Member>::yielder const& yield)
         {
-          for (auto const& host: const_cast<Node*>(this)->address(address, op, n))
+          std::function<void(RpcEndpoint)> handle = [&](RpcEndpoint host)
           {
             ELLE_TRACE("connecting to %s", host);
             if (host.address().to_string() == "127.0.0.1" && host.port() == _port)
             {
               yield(_local);
-              continue;
+              return;
             }
             using Protocol = infinit::model::doughnut::Local::Protocol;
             if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
@@ -2313,7 +2323,7 @@ namespace infinit
                     const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
                     boost::asio::ip::udp::endpoint(host.address(), host.port()+100),
                     const_cast<Node*>(this)->_remotes_server)));
-                continue;
+                return;
               }
               catch (elle::Error const& e)
               {
@@ -2329,14 +2339,15 @@ namespace infinit
                   new infinit::model::doughnut::Remote(
                     const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
                     host)));
-                continue;
+                return;
               }
               catch (elle::Error const& e)
               {
                 ELLE_WARN("%s: TCP connection failed with %s", *this, host);
               }
             }
-          }
+          };
+          const_cast<Node*>(this)->address(address, op, n, handle);
         });
       }
 
@@ -2478,10 +2489,10 @@ namespace infinit
             {
               Address addr = to_scan.back();
               to_scan.pop_back();
-              auto gen = kelipsGet(addr, factor, false, 3);
               std::vector<RpcEndpoint> res;
-              for (auto ep: gen)
-                res.push_back(ep);
+              kelipsGet(addr, factor, false, 3, [&](RpcEndpoint ep) {
+                  res.push_back(ep);
+              });
               if (counts.size() <= res.size())
                 counts.resize(res.size()+1, 0);
               counts[res.size()]++;
