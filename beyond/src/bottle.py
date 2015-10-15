@@ -56,6 +56,8 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.network_get)
     self.route('/networks/<owner>/<name>',
                method = 'PUT')(self.network_put)
+    self.route('/networks/<owner>/<name>',
+               method = 'DELETE')(self.network_delete)
     self.route('/networks/<owner>/<name>/passports/<invitee>',
                method = 'GET')(self.network_passport_get)
     self.route('/networks/<owner>/<name>/passports/<invitee>',
@@ -71,6 +73,8 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.volume_get)
     self.route('/volumes/<owner>/<name>',
                method = 'PUT')(self.volume_put)
+    self.route('/volumes/<owner>/<name>',
+               method = 'DELETE')(self.volume_delete)
 
   def authenticate(self, user):
     pass
@@ -227,6 +231,9 @@ class Bottle(bottle.Bottle):
     except Network.NotFound:
       return self.__not_found('network', '%s/%s' % (owner, name))
 
+  def network_delete(self, owner, name):
+    self.__beyond.network_delete(owner, name)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
@@ -249,6 +256,9 @@ class Bottle(bottle.Bottle):
         'error': 'volume/conflict',
         'reason': 'volume %r already exists' % name,
       }
+
+  def volume_delete(self, owner, name):
+    self.__beyond.volume_delete(owner = owner, name = name)
 
 for name, conf in Bottle._Bottle__oauth_services.items():
   def oauth_get(self, username, name = name, conf = conf):

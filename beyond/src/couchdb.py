@@ -268,6 +268,13 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
 
+  def network_delete(self, owner, name):
+    try:
+      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
+      self.__couchdb['networks'].delete(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.Network.Duplicate()
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
@@ -286,3 +293,10 @@ class CouchDBDatastore:
       return infinit.beyond.Volume.from_json(self.beyond, json)
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Volume.NotFound()
+
+  def volume_delete(self, owner, name):
+    try:
+      json = self.__couchdb['volumes']['%s/%s' % (owner, name)]
+      self.__couchdb['volumes'].delete(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.Volume.Duplicate()

@@ -48,6 +48,10 @@ class Beyond:
     return self.__datastore.network_fetch(
       owner = owner, name = name)
 
+  def network_delete(self, owner, name):
+    return self.__datastore.network_delete(
+      owner = owner, name = name)
+
   ## ---- ##
   ## User ##
   ## ---- ##
@@ -64,6 +68,9 @@ class Beyond:
     return self.__datastore.volume_fetch(
       owner = owner, name = name)
 
+  def volume_delete(self, owner, name):
+    return self.__datastore.volume_delete(
+      owner = owner, name = name)
 
 class User:
 
