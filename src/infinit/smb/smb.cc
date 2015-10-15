@@ -108,6 +108,10 @@ namespace infinit
       STATUS_NO_MORE_FILES = 0x80000006,
       STATUS_NOT_IMPLEMENTED = 0xC0000002,
       STATUS_IO_DEVICE_ERROR = 0xC0000185,
+      STATUS_OBJECT_NAME_NOT_FOUND = 0xC0000034,
+      STATUS_OBJECT_PATH_NOT_FOUND = 0xC000003a,
+      STATUS_FILE_CLOSED = 0xC0000128,
+      STATUS_CANCELLED = 0xC0000120,
     };
     enum FileInformationClass
     {
@@ -124,7 +128,7 @@ namespace infinit
       FileRenameInformation = 10,
       FileModeInformation = 16,
       FileAllocationInformation = 19,
-      
+
     };
     struct SMB2Header
     {
@@ -181,7 +185,7 @@ namespace infinit
       Reader& r16(uint16_t& v) { v =*(uint16_t*)_d; _d += 2; return *this;}
       Reader& r32(uint32_t& v) { v =*(uint32_t*)_d; _d += 4; return *this;}
       Reader& r64(uint64_t& v) { v =*(uint64_t*)_d; _d += 8; return *this;}
-      
+
       const unsigned char* _d;
     };
 
@@ -278,7 +282,7 @@ namespace infinit
       data[3] = sz;
       return std::move(buf);
     }
-    
+
     SMBServer::SMBServer(std::unique_ptr<infinit::filesystem::FileSystem> fs)
     : _fs(new reactor::filesystem::FileSystem(std::move(fs), true))
     {
@@ -297,7 +301,7 @@ namespace infinit
           {
             auto socket = elle::utility::move_on_copy(this->_server->accept());
             _connections.insert(elle::make_unique<SMBConnection>(*this, std::move(*socket)));
-            
+
           }
         };
     }
@@ -307,7 +311,7 @@ namespace infinit
       Reader(*hin).skip(12).r16(secBufOffset);
       const char* secBuf = (char*)hin + secBufOffset;
       bool raw = !memcmp("NTLMSSP", secBuf, 7);
-      
+
       SMB2Header h;
       memset(&h, 0, sizeof(h));
       h.protocolId[0] = 0xFE;
@@ -454,10 +458,16 @@ namespace infinit
               case SMB2_WRITE:
                 write(h);
                 break;
+              case SMB2_IOCTL:
+                error(h, STATUS_NOT_IMPLEMENTED, 9);
+                break;
+              case SMB2_CANCEL:
+                // FIXME: wrong, command should be the one of op being cancelled
+                error(h, STATUS_CANCELLED, 9);
+                break;
               case SMB2_FLUSH:
               case SMB2_LOCK:
-              case SMB2_IOCTL:
-              case SMB2_CANCEL:
+
               case SMB2_OPLOCK_BREAK:
                 error(h, STATUS_NOT_IMPLEMENTED);
                 break;
@@ -619,10 +629,18 @@ namespace infinit
       std::string path = from_utf16(d + c->nameOffset, c->nameLength);
       std::replace( path.begin(), path.end(), '\\', '/');
       ELLE_LOG("create %s", path);
-      auto entry = _server._fs->path(path);
       bool exists = false;
       bool isdir = false;
       struct stat st;
+      std::shared_ptr<reactor::filesystem::Path> entry;
+      try
+      {
+        entry = _server._fs->path(path);
+      }
+      catch (reactor::filesystem::Error const& e)
+      {
+        return error(hin, STATUS_OBJECT_PATH_NOT_FOUND, 89);
+      }
       try
       {
         entry->stat(&st);
@@ -631,6 +649,10 @@ namespace infinit
       }
       catch (reactor::filesystem::Error const& e)
       {}
+      catch (std::exception const& e)
+      {
+        ELLE_LOG("non rfs exception: %s", e.what());
+      }
       int cdisp = c->createDispositions;
       int copt = c->createOptions;
       bool deleteOnClose = copt & FILE_DELETE_ON_CLOSE;
@@ -640,7 +662,7 @@ namespace infinit
       if (exists && cdisp == FILE_CREATE)
         return error(hin, STATUS_OBJECT_NAME_COLLISION, 89);
       if (!exists && (cdisp == FILE_OVERWRITE || cdisp == FILE_OPEN))
-        return error(hin, STATUS_NO_SUCH_FILE, 89);
+        return error(hin, STATUS_OBJECT_NAME_NOT_FOUND, 89);
       if ((copt & FILE_DIRECTORY_FILE) && exists && !isdir && cdisp == FILE_CREATE)
         return error(hin, STATUS_OBJECT_NAME_COLLISION, 89);
       if ((copt & FILE_DIRECTORY_FILE) && exists && !isdir)
@@ -701,7 +723,7 @@ namespace infinit
         guid = ++ _next_directory_id;
         _dir_handles[guid] = DirInfo{"", name, path, entry, {}, -1, deleteOnClose};
       }
-      
+
       elle::Buffer buf = make_reply(*hin,
         [&](Writer& w) {
           w.w16(89).w8(1).w8(0);
@@ -800,12 +822,12 @@ namespace infinit
       .r64(guid).r16(nameOffset).r16(nameLength);
       const char* data = (const char*)(const void*)hin + nameOffset;
       std::string glob = from_utf16(data, nameLength);
-      ELLE_LOG("querydict guid %s  fclass %s  flags %s  index %s glob %s",
-               guid, (int)fclass, (int)flags, index, glob);
+      ELLE_LOG("querydict guid %s  fclass %s  flags %s  index %s glob(%s) '%s'",
+               guid, (int)fclass, (int)flags, index, glob.size(), glob);
       DirInfo& di = _dir_handles.at(guid);
       if ((flags & 0x1) || (flags & 0x10)) // RESTART_SCAN, REOPEN
         di.offset = -1;
-      if (flags & 0x1)
+      if ((flags & 0x1) && !di.glob.empty())
         glob = di.glob;
       di.glob = glob;
       bool exact = false;
@@ -827,7 +849,7 @@ namespace infinit
             pre = glob.substr(0, p);
             post = glob.substr(p+1);
           }
-          ELLE_LOG("glob: pre %s post %s", pre, post);
+          ELLE_LOG("glob: pre '%s' post '%s' exact %s", pre, post, exact);
         }
         auto adder = [&](std::string const& n, struct stat* st)
         {
@@ -843,6 +865,7 @@ namespace infinit
             if (!post.empty() && (n.size() < post.size() || n.substr(n.size()-post.size()) != post))
               return;
           }
+          ELLE_LOG("Adding %s to listing", n);
           di.content.push_back(std::make_pair(n, *st));
         };
         di.directory->list_directory(adder);
@@ -976,17 +999,24 @@ namespace infinit
       {
         struct stat st;
         std::string name;
-        if (guid >= _directory_start)
+        try
         {
-          auto& e = _dir_handles.at(guid);
-          e.directory->stat(&st);
-          name = e.name;
+          if (guid >= _directory_start)
+          {
+            auto& e = _dir_handles.at(guid);
+            e.directory->stat(&st);
+            name = e.name;
+          }
+          else
+          {
+            auto& e = _file_handles.at(guid);
+            e.file->stat(&st);
+            name = e.name;
+          }
         }
-        else
+        catch (std::exception const& e)
         {
-          auto& e = _file_handles.at(guid);
-          e.file->stat(&st);
-          name = e.name;
+          error(hin, STATUS_FILE_CLOSED, 9);
         }
         // gn, there is no less than 18 values for infoclass...
         if (infoclass == 0x06) // INTERNAL
@@ -996,6 +1026,11 @@ namespace infinit
         if (infoclass == 0x14) // EOF
         {
           w.w64(st.st_size);
+        }
+        if (infoclass == 0x05) // STANDARD_INFO
+        {
+          w.w64(st.st_size).w64(st.st_size);
+          w.w32(st.st_nlink).w8(0).w8(S_ISDIR(st.st_mode)).w16(0);
         }
         if (infoclass == 0x12) // ALL_INFO
         {
@@ -1008,7 +1043,7 @@ namespace infinit
           //standard
           w.w64(st.st_size).w64(st.st_size);
           w.w32(st.st_nlink).w8(0).w8(S_ISDIR(st.st_mode)).w16(0);
-          
+
           w.w64(0); //internal
           w.w32(0); // easize
           w.w32(0x101FF); //access
@@ -1040,7 +1075,7 @@ namespace infinit
       uint32_t size;
       uint64_t guid;
       uint32_t mincount; // min read count or error
-      
+
       Reader(*hin).skip(4).r32(size).r64(offset).skip(8).r64(guid).r32(mincount);
       ELLE_LOG("read %s bytes at %s on %s", size, offset, guid);
       auto& handle = _file_handles.at(guid).handle;
@@ -1085,9 +1120,13 @@ namespace infinit
       ELLE_LOG("logoff %s", buf.size());
       _socket->write(buf);
     }
-    void SMBConnection::notify(SMB2Header* bin)
+    void SMBConnection::notify(SMB2Header* hin)
     {
-      
+      elle::Buffer buf = make_reply(*hin, [&](Writer& w) {
+          w.w16(9).w16(0).w16(0).w16(0).w8(0x21);
+      });
+      ELLE_LOG("notify %s", buf.size());
+      _socket->write(buf);
     }
     void SMBConnection::set_info(SMB2Header* hin)
     {
@@ -1110,7 +1149,7 @@ namespace infinit
         }
         if (infoclass == FileRenameInformation)
         {
-          
+
         }
       }
       if (!handled)
