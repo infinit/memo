@@ -1121,13 +1121,22 @@ beyond()
 template <typename T>
 void
 beyond_push(std::string const& where,
-            std::string const& type, std::string const& name, T const& o)
+            std::string const& type, std::string const& name, T const& o,
+            infinit::User const& self)
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", "application/json");
+  std::stringstream payload;
+  elle::serialization::json::serialize(o, payload, false);
+  auto sig = self.private_key->sign(
+    elle::ConstWeakBuffer(payload.str().data(), payload.str().size()),
+    infinit::cryptography::rsa::Padding::pkcs1,
+    infinit::cryptography::Oneway::sha256);
+  auto sig64 = elle::format::base64::encode(sig);
+  c.header_add("infinit-signature", sig64.string());
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::PUT, std::move(c));
-  elle::serialization::json::serialize(o, r, false);
+  r << payload.str();
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::Created)
@@ -1145,9 +1154,10 @@ beyond_push(std::string const& where,
 
 template <typename T>
 void
-beyond_push(std::string const& type, std::string const& name, T const& o)
+beyond_push(std::string const& type, std::string const& name, T const& o,
+  infinit::User const& self)
 {
-  beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o);
+  beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self);
 }
 
 template <typename T>
@@ -1245,7 +1255,7 @@ private:
       if (itf.second.ipv4_address.size() > 0)
         endpoints.addresses.push_back(itf.second.ipv4_address);
     endpoints.port = port;
-    beyond_push(this->_url, "endpoints for", network.name, endpoints);
+    beyond_push(this->_url, "endpoints for", network.name, endpoints, self);
   }
 
   ~InterfacePublisher()

@@ -1,5 +1,10 @@
 import bottle
 import cryptography
+import hashlib
+from Crypto.PublicKey import RSA
+import Crypto.Signature.PKCS1_v1_5
+import Crypto.Hash.SHA256
+import Crypto.Hash.SHA
 from copy import deepcopy
 from requests import Request, Session
 
@@ -77,6 +82,21 @@ class Bottle(bottle.Bottle):
                method = 'DELETE')(self.volume_delete)
 
   def authenticate(self, user):
+    rawk = user.public_key['rsa']
+    der = base64.b64decode(rawk.encode('latin-1'))
+    k = RSA.importKey(der)
+    to_sign = bottle.request.body.getvalue()
+    local_hash = Crypto.Hash.SHA256.new(to_sign)
+
+    remote_signature_raw = bottle.request.headers.get('infinit-signature')
+    if remote_signature_raw is None:
+      bottle.response.status = 403
+      raise Exception("Missing signature header")
+    remote_signature_crypted = base64.b64decode(remote_signature_raw)
+    verifier = Crypto.Signature.PKCS1_v1_5.new(k)
+    if not verifier.verify(local_hash, remote_signature_crypted):
+      bottle.response.status = 403
+      raise Exception("authenticate error")
     pass
 
   def root(self):
@@ -161,6 +181,8 @@ class Bottle(bottle.Bottle):
 
   def network_put(self, owner, name):
     try:
+      user = self.__beyond.user_get(name = owner)
+      self.authenticate(user)
       json = bottle.request.json
       network = Network(self.__beyond, **json)
       network.create()
@@ -175,7 +197,6 @@ class Bottle(bottle.Bottle):
 
   def network_passport_get(self, owner, name, invitee):
     user = self.__beyond.user_get(name = owner)
-    self.authenticate(user)
     network = self.__beyond.network_get(
       owner = owner, name = name)
     passport = network.passports.get(invitee)
@@ -188,7 +209,12 @@ class Bottle(bottle.Bottle):
   def network_passport_put(self, owner, name, invitee):
     try:
       user = self.__beyond.user_get(name = owner)
-      self.authenticate(user)
+      try:
+        self.authenticate(user)
+      except Exception:
+        u_invitee = self.__beyond.user_get(name = invitee)
+        self.authenticate(u_invitee)
+
       network = Network(self.__beyond, owner = owner, name = name)
       network.passports[invitee] = bottle.request.json
       network.save()
@@ -232,6 +258,8 @@ class Bottle(bottle.Bottle):
       return self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_delete(self, owner, name):
+    user = self.__beyond.user_get(name = owner)
+    self.authenticate(user)
     self.__beyond.network_delete(owner, name)
 
   ## ------ ##
@@ -246,6 +274,8 @@ class Bottle(bottle.Bottle):
       return self.__not_found('volume', '%s/%s' % (owner, name))
 
   def volume_put(self, owner, name):
+    user = self.__beyond.user_get(name = owner)
+    self.authenticate(user)
     try:
       json = bottle.request.json
       volume = Volume(self.__beyond, **json)
@@ -258,6 +288,8 @@ class Bottle(bottle.Bottle):
       }
 
   def volume_delete(self, owner, name):
+    user = self.__beyond.user_get(name = owner)
+    self.authenticate(user)
     self.__beyond.volume_delete(owner = owner, name = name)
 
 for name, conf in Bottle._Bottle__oauth_services.items():

@@ -9,6 +9,11 @@ import threading
 from functools import partial
 from itertools import chain
 
+import base64
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+
 def __enter__(self):
   thread = threading.Thread(
     target = partial(bottle.run, app = self, port = 0))
@@ -55,13 +60,20 @@ class Beyond:
     self.__app.__enter__()
     return self
 
-  def request(self, url, json = None,**kwargs):
+  def request(self, url, json = None, auth = None, **kwargs):
     # Older requests don't have json parameter
     if json is not None:
       j = json
       import json
       kwargs['data'] = json.dumps(j)
       kwargs['headers'] = {'Content-Type': 'application/json'}
+      if auth is not None:
+        der = base64.b64decode(auth)
+        k = RSA.importKey(der)
+        h = SHA256.new(kwargs['data'].encode('latin-1'))
+        raw_sig = PKCS1_v1_5.new(k).sign(h)
+        sig = base64.b64encode(raw_sig)
+        kwargs['headers']['infinit-signature'] = sig
     return requests.request(url = '%s/%s' % (self.host, url),
                             allow_redirects = False,
                             **kwargs)
@@ -83,15 +95,19 @@ class Beyond:
   def host(self):
     return 'http://127.0.0.1:%s' % self.__app.port
 
+mefyl_priv = 'MIIEpAIBAAKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQABAoIBAADxmSB5tVRWrGGL6q4kOIWxTGb5hU8llApZgKEhdLFjSsvFZIzFYYjrab9iLRroQgw/tMENLdBy7AWtcZWZ6J8SAP/QJ7KQJ9XdR34hG5xViIRG1VS19W3Ve+RROcynZwkyYMkG4Gp+/z5MhsVk1IdAbO5b1IhrQbc8CLB/dpdqwcicWqiR6t3mc5HkQ4mDOBSjrU11voiv8dIc0G6aOWEpqzoTYw7ewxoXugezmJnkOsObRWno2OZO83IVFXEmAjMe73+jhPKPbMD7WcT7ktKynPfFYh2kTrkhDDaTTs4I2UBCP6UlUaAt3IPFIZEJXCGplRTOldL3W+VEuTcXpZECgYEA58zLVUhgqFkpvxI7unu6ijjvLipgsBefbDseKfuHTHx9T7Unb2ESHW551e5lF5yuRmCjE2vJXFCQidyq0mwbhAaQK4PWuea5+RrPmYDpOQP3kQQAfsOrwauQR6sX2HxxIWwYcet4bO2dDEOOgN8d7fS6DpWw8yYSqiiUrXMAdPkCgYEA13rzCpXGzFU6H2pBmfamXFR56q0J+bmNanXMZ044UPyNdVYhJ8hFqs0bRjjR9QiHxg9/94Cfer7VKQePlxVh3JTduZQUcANXXowyFi6wLzmVABaM55jEDE0WkZcOIYMZIJWka92AsHP7ODp8QR752zC3Qwn48RlN3clzC7dfPScCgYEA5r0oZqNefBYNhUKMLCy/2pmkFStgBcnuCxmqBBZ6bvu47aAhOjDBjISNSRQ+k0uG+010538y+O7FgkYj0MSGe1zhJD/ffjwbQcmbf20gO34kcLkwGP+EOIwkWgMJAJmXL7Lffn7r6Fp7K1sQPl5a96TVlHETrGZoy/MLVMEWYlkCgYAqYZpP6KmTIugtqZ6Bg8uwuUTJbYNaxK4V1FmBsBbPhvzjqS8YPgHF2FWW+DIDecwKnp3Stk+nusT+LuiFFMWMtxLtHzzt0xpqFDT9u+0XPMIbpFPOcXON39Oiiw1SdhCJIiWWuZhIHGe65XXu8QK/o9NHsjxuX0W7a5XfJg/rXQKBgQDEo+kYUAW6JM2tod+4OxF8+s7q1E7fzZ7jgACoNzJ0RJVW9hGAlUhuXRkHIjnnhd2mDqYry7KNA5kvIS+oSH+wKjIpB6ZiBOhvgjww16LE6+aDoSLqmgwfHh2T2LpNfsc2UupCDp5W7jI4LPGbStiAeMLTtXU/XQ35Ov1BMWXN8g=='
+
 mefyl = {
   'name': 'mefyl',
-  'public_key': {'rsa': 'MIIBCAKCAQEAq1pXuFI8l8MopHufZ4S3fe+WoR5wgeaPtZhw9IFuHZ+3F7V7fCzy76gKp5EPz5sk2Dowd90d+TuEUjUUkI0fRLJipRPjo2reFsuOAZ244ee/NLtG601vQUS/sV8ow2QZEAoNAiNZQGr4jEqvmjIB+rwOmx9eUgs887KjUYlX+wH5984EAr/qd62VddYXga8o4T2QX4GlYik/s/yKm0dlCQgZXQPYM5Wogv6KluGdLFKBaNc2HYkGEArZE51sATRcDOSQcycg2sGuwfL/LfClsCkx2LSYjJh9qkiBNUsAg+LeRt/9Hv3S32tcMszCph3nSX5u+1yz8VURHjVGh9ptAwIBIw=='},
+  'public_key': {'rsa': 'MIIBCgKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQAB'},
 }
+
+mefyl2_priv = 'MIIEpAIBAAKCAQEAzonW3m0tPEkMfVfIRHIh7YEIMjSgewwTHcLlL47S/tXjkZ4fFXGIZPnvuqnva+NtBLhSv9roz/lxpYyqNikjdCPUjVZem14Xkj5imEi3ACCX03cdFKmfGmGFCi7gF1zZYtH2S3yql823yXudFDjp1iVqxky5gnkFyEYhImsanrpuhs2EIHfkV5mNFToB6U4+VkJgbeugURQXeTmlJ8BPKl+rPWABigPd+U1KCB/UO0EQO7eDdLqC2WBGQp2afTaX/j5KrMivt6sfI0eQft8WlNsUtbcunpRP+ak+tRoTL81edHMNmDVWU95vQTGw+iSeIE5o8ao/F7BT6IWC7Sw3XQIDAQABAoIBAAtHdceB2NWQ+7CgqZwrS3UH9eWgAB+YIjce3JtDRnyKO7pJE1N9dsBk8dWU0DFpIxv94O7/SnWJHs62ptj8WCZQipwJWnNLqSfgZkwAtJW6MfBncdweA0VSjAxpUO2VsX13D+dBcKOHpYDIUmS3UvXR50nbCMp6R3mPcuHJTZPba2JTBUk6ooG/UqaliY0iLveGnnbv1subhY0+X5hTbV5uxGfjSsYG5jA9eGR4lZneEAg8T7w3k/sa32oh483uc9RVmEHFqGTLinQlYInHWXkCk0xAFy7s8SSI34kZR+3t50Y9mg/Efu1U5KzYGLmNsHpXWmJ8oAIO4USLTFjQI5UCgYEA9HSG5g1lwbrycMg2Q7VzQ8f/ZbeS/ydlCNksj1PoxGgnV8aItT1wzq1NIouqMmvc9qsCbvN1sk9ozS53wk0LfrQgd5up1jJ7Z8uH9spBtsi7qLlWxxQ9BXukjX8hHaTeCc8YF7BErLEFD2E/6A2L0+AbGXlemVR+Z/wugM+MUxMCgYEA2ErluXO2GNtS5Kdpum9izcy8SsjHX+WjPln1a8Er5VLXM7r1Jkt0EpPEmO8xUTyjjX3MnXGnOTUk/9Z39qwJf2AwPIuC+j9zb4z6RrizLCDPEs1tGwD/YLQXtrh0DrSl20CCWeBRdlzV8M9dwIJGrFmIl4Kqmg3zPUrJ0a7dKc8CgYEAm6loDS4S0d49a1vSUiNFFrBQDXFsBVYMnCnOmiYQXqEEDHy7qM1K/BCWwZy18A2HUvtqPUSCedzfG2ivkeaFn1UMJ53T9DWJJ3sPRTNdzQrdlH8QpwxYHxmwmvmNGNdXHF/nM45m7KB8XGLM0vNtSqm2F+6VMoX/SC/pXNTMwkkCgYBuSVpzwo2ihQrybm7Z0nv15iRImbIXstcXLvWWGSyRxTjYNsdT3Ht2EYTYWnayLpJSzkdsLIyQ/gk8rpYC4FwDZ/+Qj66cfYgV5DOlpf4uTRhpRPgSIeMV4x6IW+tJqFE9x9nvjBLdoJ6yKHpsc8Enlouwfb8RyHUz1pOr6Fb7PwKBgQDmoiOqLuztGLcGHLI/ShwTkb78okd67jr2Ix8IuW+J/oOnYKA6Rj3hdo5D7iTIall+wSDzp/Sv7TsFF70dCN6O7XgYLAwcuJOBY1Z3mo5HOyOGt1gWAhu9Hi2OFKWUMrhl7HLNGX2X9DUDJQyHm5aO48seoofEgqkhktkiclasrg=='
 
 mefyl2 = {
   'name': 'mefyl',
   'public_key':
-  {'rsa': 'MIIBCgKCAQEA7nhbx8j2hGaMjSrFGCToNcduUX1uHwB8GbmhjkMhspq57YTJ5Krx3N21BAbZnUpSjR/t36YtsvUgPSRGMmKl8W0YouKe18z2ihmO502zzOqloazZeVcOxrF5jRx2mCk+3DszDGUJgOETyY/5lJnb/ToNCvyKEF5epW0suyw4tFZoGI5unBXN7V90dPq+h7zli7XQ23JAExXFLzOzdiCD6DVWoYN13sROg2SUqMTtyFN8047A7rR/J87Son0x5f/cIIIS4imQVE0PLFaQOpB45RxE9yI3rHy+8MDlWyTG74BUFpxOVLM2FjLvGhIg/mv0TM9awrmyY+YPgGbRDmm/BQIDAQAB'},
+  {'rsa': 'MIIBCgKCAQEAzonW3m0tPEkMfVfIRHIh7YEIMjSgewwTHcLlL47S/tXjkZ4fFXGIZPnvuqnva+NtBLhSv9roz/lxpYyqNikjdCPUjVZem14Xkj5imEi3ACCX03cdFKmfGmGFCi7gF1zZYtH2S3yql823yXudFDjp1iVqxky5gnkFyEYhImsanrpuhs2EIHfkV5mNFToB6U4+VkJgbeugURQXeTmlJ8BPKl+rPWABigPd+U1KCB/UO0EQO7eDdLqC2WBGQp2afTaX/j5KrMivt6sfI0eQft8WlNsUtbcunpRP+ak+tRoTL81edHMNmDVWU95vQTGw+iSeIE5o8ao/F7BT6IWC7Sw3XQIDAQAB'},
 }
 
 network = {

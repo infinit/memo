@@ -210,7 +210,8 @@ invite(variables_map const& args)
       elle::sprintf("networks/%s/passports/%s", network.name, user_name),
       "passport for",
       user_name,
-      passport);
+      passport,
+      self);
   if (!push || args.count("output"))
   {
     auto output = get_output(args);
@@ -298,7 +299,7 @@ push(variables_map const& args)
     auto owner_uid = infinit::User::uid(dht.owner);
     infinit::NetworkDescriptor desc(
       network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
-    beyond_push("network", desc.name, desc);
+    beyond_push("network", desc.name, desc, self);
   }
 }
 

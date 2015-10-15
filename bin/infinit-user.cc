@@ -156,7 +156,7 @@ push(variables_map const& args)
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   das::Serializer<infinit::DasPublicUser> view(user);
-  beyond_push("user", user.name, view);
+  beyond_push("user", user.name, view, user);
 }
 
 static

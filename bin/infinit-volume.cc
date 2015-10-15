@@ -91,7 +91,7 @@ push(variables_map const& args)
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, owner);
   auto owner_uid = infinit::User::uid(network.dht()->owner);
-  beyond_push("volume", name, volume);
+  beyond_push("volume", name, volume, owner);
 }
 
 static
