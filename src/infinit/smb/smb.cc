@@ -112,6 +112,8 @@ namespace infinit
       STATUS_OBJECT_PATH_NOT_FOUND = 0xC000003a,
       STATUS_FILE_CLOSED = 0xC0000128,
       STATUS_CANCELLED = 0xC0000120,
+      STATUS_PENDING = 0x103,
+      STATUS_FS_DRIVER_REQUIRED = 0xC000019c,
     };
     enum FileInformationClass
     {
@@ -141,7 +143,7 @@ namespace infinit
       uint32_t flags;
       uint32_t nextCommand; // offset of next header in compound
       uint64_t messageId;   // uid on the connection
-      uint32_t reserverd1;
+      uint32_t reserved1;
       uint32_t treeId;
       uint64_t sessionId;
       uint8_t  signature[16];
@@ -206,6 +208,7 @@ namespace infinit
           [this] { this->_serve(); });
       }
       void _serve();
+      void _process(SMB2Header* h);
       void send_negotiate_reply();
       void send_session_setup_reply(SMB2Header* h);
       void tree_connect(SMB2Header* h);
@@ -274,6 +277,7 @@ namespace infinit
         w.w32(0); // nbs
         w.ws(h);
         f(w);
+        ios.flush();
       }
       uint32_t sz = buf.size() - 4;
       auto data = buf.mutable_contents();
@@ -426,66 +430,18 @@ namespace infinit
           }
           else
           {
-            ELLE_ASSERT_EQ(data[0], 0xFE);
             SMB2Header* h = (SMB2Header*)data;
-            ELLE_LOG("command %s", (int)h->command);
-            switch ((SMBCommand)h->command)
+            while (h)
             {
-              case SMB2_NEGOTIATE:
-                send_negotiate_reply();
-                break;
-              case SMB2_SESSION_SETUP:
-                send_session_setup_reply(h);
-                break;
-              case SMB2_LOGOFF:
-                logoff(h);
-                break;
-              case SMB2_TREE_CONNECT:
-                tree_connect(h);
-                break;
-              case SMB2_TREE_DISCONNECT:
-                tree_disconnect(h);
-                break;
-              case SMB2_CREATE:
-                create(h);
-                break;
-              case SMB2_CLOSE:
-                close(h);
-                break;
-              case SMB2_READ:
-                read(h);
-                break;
-              case SMB2_WRITE:
-                write(h);
-                break;
-              case SMB2_IOCTL:
-                error(h, STATUS_NOT_IMPLEMENTED, 9);
-                break;
-              case SMB2_CANCEL:
-                // FIXME: wrong, command should be the one of op being cancelled
-                error(h, STATUS_CANCELLED, 9);
-                break;
-              case SMB2_FLUSH:
-              case SMB2_LOCK:
-
-              case SMB2_OPLOCK_BREAK:
-                error(h, STATUS_NOT_IMPLEMENTED);
-                break;
-              case SMB2_ECHO:
-                echo(h);
-                break;
-              case SMB2_QUERY_DIRECTORY:
-                query_directory(h);
-                break;
-              case SMB2_CHANGE_NOTIFY:
-                notify(h);
-                break;
-              case SMB2_QUERY_INFO:
-                query_info(h);
-                break;
-              case SMB2_SET_INFO:
-                set_info(h);
-                break;
+              ELLE_ASSERT_EQ((int)h->protocolId[0], 0xFE);
+              _process(h);
+              if (h->nextCommand)
+              {
+                ELLE_LOG("nextCommand %s", (int)h->nextCommand);
+                h = (SMB2Header*)(((const char*)h) + (int)h->nextCommand);
+              }
+              else
+                h = nullptr;
             }
           }
         }
@@ -496,6 +452,69 @@ namespace infinit
       }
       _socket->close();
       _serve_thread->terminate_now();
+    }
+
+    void SMBConnection::_process(SMB2Header* h)
+    {
+      ELLE_LOG("command %s", (int)h->command);
+      switch ((SMBCommand)h->command)
+      {
+      case SMB2_NEGOTIATE:
+        send_negotiate_reply();
+        break;
+      case SMB2_SESSION_SETUP:
+        send_session_setup_reply(h);
+        break;
+      case SMB2_LOGOFF:
+        logoff(h);
+        break;
+      case SMB2_TREE_CONNECT:
+        tree_connect(h);
+        break;
+      case SMB2_TREE_DISCONNECT:
+        tree_disconnect(h);
+        break;
+      case SMB2_CREATE:
+        create(h);
+        break;
+      case SMB2_CLOSE:
+        close(h);
+        break;
+      case SMB2_READ:
+        read(h);
+        break;
+      case SMB2_WRITE:
+        write(h);
+        break;
+      case SMB2_IOCTL:
+        error(h, STATUS_FS_DRIVER_REQUIRED, 9);
+        break;
+      case SMB2_CANCEL:
+        // FIXME: wrong, command should be the one of op being cancelled
+        error(h, STATUS_CANCELLED, 9);
+        break;
+      case SMB2_FLUSH:
+      case SMB2_LOCK:
+
+      case SMB2_OPLOCK_BREAK:
+        error(h, STATUS_NOT_IMPLEMENTED);
+        break;
+      case SMB2_ECHO:
+        echo(h);
+        break;
+      case SMB2_QUERY_DIRECTORY:
+        query_directory(h);
+        break;
+      case SMB2_CHANGE_NOTIFY:
+        notify(h);
+        break;
+      case SMB2_QUERY_INFO:
+        query_info(h);
+        break;
+      case SMB2_SET_INFO:
+        set_info(h);
+        break;
+      }
     }
 
     static std::string from_utf16(const char* data, int len)
@@ -1125,7 +1144,11 @@ namespace infinit
       elle::Buffer buf = make_reply(*hin, [&](Writer& w) {
           w.w16(9).w16(0).w16(0).w16(0).w8(0x21);
       });
-      ELLE_LOG("notify %s", buf.size());
+      ELLE_LOG("notify tadaam %s", buf.size());
+      SMB2Header* hout = (SMB2Header*)(buf.mutable_contents()+4);
+      hout->ntstatus = STATUS_PENDING;
+      hout->flags |= 0x2; // async
+      hout->reserved1 = hin->messageId;
       _socket->write(buf);
     }
     void SMBConnection::set_info(SMB2Header* hin)
