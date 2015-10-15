@@ -92,7 +92,7 @@ class Bottle(bottle.Bottle):
     if remote_signature_raw is None:
       bottle.response.status = 403
       raise Exception("Missing signature header")
-    remote_signature_crypted = base64.b64decode(remote_signature_raw)
+    remote_signature_crypted = base64.b64decode(remote_signature_raw.encode('utf-8'))
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
     if not verifier.verify(local_hash, remote_signature_crypted):
       bottle.response.status = 403
