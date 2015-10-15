@@ -68,7 +68,7 @@ class Beyond:
       kwargs['data'] = json.dumps(j)
       kwargs['headers'] = {'Content-Type': 'application/json'}
       if auth is not None:
-        der = base64.b64decode(auth)
+        der = base64.b64decode(auth.encode('utf-8'))
         k = RSA.importKey(der)
         h = SHA256.new(kwargs['data'].encode('latin-1'))
         raw_sig = PKCS1_v1_5.new(k).sign(h)
