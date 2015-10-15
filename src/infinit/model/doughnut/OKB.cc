@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/OKB.hh>
 
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 
 #include <cryptography/hash.hh>
@@ -89,7 +90,11 @@ namespace infinit
 
       static cryptography::rsa::KeyPool& pool_get()
       {
-        static cryptography::rsa::KeyPool pool(2048, 10);
+        static int key_size = std::stoi(elle::os::getenv("INFINIT_KEY_SIZE", "2048"));
+        static int n_threads = std::stoi(elle::os::getenv("INFINIT_KEY_POOL_THREADS",
+          std::to_string(std::thread::hardware_concurrency())));
+        static int pool_size = std::stoi(elle::os::getenv("INFINIT_KEY_POOL_SIZE", "40"));
+        static cryptography::rsa::KeyPool pool(key_size, pool_size, n_threads);
         return pool;
       }
 
