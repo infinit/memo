@@ -232,8 +232,11 @@ class Bottle(bottle.Bottle):
   ## ------ ##
 
   def volume_get(self, owner, name):
-    return self.__beyond.volume_get(
-      owner = owner, name = name).json()
+    try:
+      return self.__beyond.volume_get(
+        owner = owner, name = name).json()
+    except Volume.NotFound:
+      return self.__not_found('volume', '%s/%s' % (owner, name))
 
   def volume_put(self, owner, name):
     try:
