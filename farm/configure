@@ -57,7 +57,6 @@ with open('%s/drake' % os.environ['DIR_BUILD'], 'w') as drake:
       'PATH': os.environ['PATH'] + ':/usr/local/Cellar/gcc49/4.9.3/bin/'
       }
     parameters['flags'] = ('-ftemplate-depth=512',)
-    parameters['fuse'] = '/usr/local'
     parameters['python'] = \
       '/usr/local/Frameworks/Python.framework/Versions/3.4'
     parameters['valgrind'] = False
