@@ -57,6 +57,7 @@ class Bottle(bottle.Bottle):
     # User
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
+    self.route('/users/<name>', method = 'DELETE')(self.user_delete)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -169,6 +170,11 @@ class Bottle(bottle.Bottle):
       'reason': 'user %r does not exist' % name,
       'name': name,
     }
+
+  def user_delete(self, name):
+    user = self.__beyond.user_get(name = name)
+    self.authenticate(user)
+    self.__beyond.user_delete(name)
 
   ## ------- ##
   ## Network ##

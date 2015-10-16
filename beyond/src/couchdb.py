@@ -169,6 +169,9 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 
+  def user_delete(self, name):
+    doc = self.__couchdb['users'][name]
+    self.__couchdb['users'].delete(doc)
 
   def user_update(self, id, diff = None):
     args = {

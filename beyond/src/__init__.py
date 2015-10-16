@@ -60,6 +60,10 @@ class Beyond:
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)
 
+  def user_delete(self, name):
+    return self.__datastore.user_delete(
+      name = name)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
@@ -153,7 +157,6 @@ class User:
   @property
   def google_accounts(self):
     return self.__google_accounts
-
 
 class MissingField(Exception):
 

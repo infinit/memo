@@ -161,6 +161,30 @@ push(variables_map const& args)
 
 static
 void
+unpush(variables_map const& args)
+{
+  auto name = get_name(args);
+  auto user = ifnt.user_get(name);
+  beyond_delete("user", user.name, user);
+}
+
+static
+void
+delete_(variables_map const& args)
+{
+  auto name = get_name(args);
+  auto user = ifnt.user_get(name);
+  auto path = ifnt._user_path(user.name);
+  bool ok = boost::filesystem::remove(path);
+  if (ok)
+    report_action("deleted", "user", user.name);
+  else
+  throw elle::Error(
+      elle::sprintf("File for user could not be deleted: %s", path));
+}
+
+static
+void
 signup_(variables_map const& args)
 {
   create(args);
@@ -218,6 +242,26 @@ main(int argc, char** argv)
       {
         { "input,i", value<std::string>(),
           "file to read user from (defaults to stdin)" },
+      },
+    },
+    {
+      "unpush",
+      elle::sprintf("Remove a user from %s", beyond()).c_str(),
+      &unpush,
+      {},
+      {
+        { "name,n", value<std::string>(),
+          "user to push (defaults to system user)" },
+      },
+    },
+    {
+      "delete",
+      "Delete a user",
+      &delete_,
+      {},
+      {
+        { "name,n", value<std::string>(),
+          "user to delete (defaults to system user)" },
       },
     },
     {
