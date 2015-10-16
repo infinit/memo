@@ -516,7 +516,7 @@ namespace infinit
         elle::Buffer res;
         {
           elle::IOStream output(res.ostreambuf());
-          elle::serialization::json::SerializerOut s(output);
+          elle::serialization::binary::SerializerOut s(output);
           s.serialize("block_key", this->key());
           s.serialize("version", this->_data_version);
           s.serialize("data", this->Block::data());
