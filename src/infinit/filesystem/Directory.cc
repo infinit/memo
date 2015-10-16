@@ -308,8 +308,7 @@ namespace infinit
       Directory::child(std::string const& name)
       {
         ELLE_TRACE_SCOPE("%s: get child \"%s\"", *this, name);
-        if (!_owner.single_mount() || !_block)
-          _fetch();
+        _fetch();
         auto it = _files.find(name);
         auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
         if (it != _files.end())
@@ -332,8 +331,7 @@ namespace infinit
       Directory::list_directory(rfs::OnDirectoryEntry cb)
       {
         ELLE_TRACE_SCOPE("%s: list", *this);
-        if (!_owner.single_mount() || ! _block)
-          _fetch();
+        _fetch();
         struct stat st;
         for (auto const& e: _files)
         {
@@ -396,6 +394,7 @@ namespace infinit
     void
       Directory::stat(struct stat* st)
       {
+        _fetch();
         ELLE_TRACE_SCOPE("%s: stat", *this);
         Node::stat(st);
         if (_parent)
