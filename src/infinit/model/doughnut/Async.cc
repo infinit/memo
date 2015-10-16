@@ -183,20 +183,18 @@ namespace infinit
             }
             else // store
             {
+              auto ptr = op.block.get();
               this->_backend->store(overlay,
                                     std::move(op.block),
                                     *mode,
                                     std::move(resolver));
-              if (op.block.get() == _last[addr])
+              if (ptr == _last[addr])
               {
-                ELLE_DUMP("store: block(%.7s) data: %s", addr, _last[addr]->data());
                 _last.erase(addr);
                 ELLE_DUMP("store: %.7s removed from cache", addr);
                 for (auto const& i: _last)
                   ELLE_DUMP("store: _last[%.7s] = %p", i.first, i.second);
               }
-
-              ELLE_TRACE("store: %.7s OK", addr);
             }
           }
           catch (reactor::Terminate const&)

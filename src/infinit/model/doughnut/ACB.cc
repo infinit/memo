@@ -423,9 +423,10 @@ namespace infinit
                 elle::serialization::serialize
                 <std::vector<ACLEntry>, elle::serialization::Json>
                 (entries, "entries"));
+              auto new_acl_address = new_acl->address();
               this->doughnut()->store(std::move(new_acl), STORE_INSERT);
               this->_prev_acl = this->_acl;
-              this->_acl = new_acl->address();
+              this->_acl = new_acl_address;
               this->_acl_changed = true;
               ELLE_DUMP("%s: new ACL address: %s", *this, this->_acl);
             }
