@@ -5,6 +5,7 @@ from Crypto.PublicKey import RSA
 import Crypto.Signature.PKCS1_v1_5
 import Crypto.Hash.SHA256
 import Crypto.Hash.SHA
+import time
 from copy import deepcopy
 from requests import Request, Session
 
@@ -82,16 +83,26 @@ class Bottle(bottle.Bottle):
                method = 'DELETE')(self.volume_delete)
 
   def authenticate(self, user):
-    rawk = user.public_key['rsa']
-    der = base64.b64decode(rawk.encode('latin-1'))
-    k = RSA.importKey(der)
-    to_sign = bottle.request.body.getvalue()
-    local_hash = Crypto.Hash.SHA256.new(to_sign)
-
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
       bottle.response.status = 403
       raise Exception("Missing signature header")
+    request_time = bottle.request.headers.get('infinit-time')
+    if request_time is None:
+      raise Exception("Missing time header")
+    if abs(time.time() - int(request_time)) > 300: # UTC
+      raise Exception("Time too far away: got %s, current %s" % (request_time, time.time()))
+    rawk = user.public_key['rsa']
+    der = base64.b64decode(rawk.encode('latin-1'))
+    k = RSA.importKey(der)
+    to_sign = bottle.request.method + ';' + bottle.request.path[1:] + ';'
+    to_sign += base64.b64encode(
+      hashlib.sha256(bottle.request.body.getvalue()).digest()).decode('utf-8') + ";"
+    to_sign += request_time
+
+    local_hash = Crypto.Hash.SHA256.new(to_sign.encode('utf-8'))
+
+
     remote_signature_crypted = base64.b64decode(remote_signature_raw.encode('utf-8'))
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
     if not verifier.verify(local_hash, remote_signature_crypted):

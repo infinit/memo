@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
@@ -1124,16 +1126,29 @@ beyond_push(std::string const& where,
             std::string const& type, std::string const& name, T const& o,
             infinit::User const& self)
 {
+  using namespace infinit::cryptography;
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", "application/json");
   std::stringstream payload;
   elle::serialization::json::serialize(o, payload, false);
+  elle::Buffer string_to_sign("PUT;", 4);
+  string_to_sign.append(where.data(), where.size());
+  string_to_sign.append(";", 1);
+  auto payload_hash = hash(elle::ConstWeakBuffer(payload.str().data(), payload.str().size()),
+                           Oneway::sha256);
+  auto pl64 = elle::format::base64::encode(payload_hash);
+  string_to_sign.append(pl64.contents(), pl64.size());
+
+  string_to_sign.append(";", 1);
+  auto now = std::to_string(time(0));
+  string_to_sign.append(now.data(), now.size());
   auto sig = self.private_key->sign(
-    elle::ConstWeakBuffer(payload.str().data(), payload.str().size()),
+    string_to_sign,
     infinit::cryptography::rsa::Padding::pkcs1,
     infinit::cryptography::Oneway::sha256);
   auto sig64 = elle::format::base64::encode(sig);
   c.header_add("infinit-signature", sig64.string());
+  c.header_add("infinit-time", now);
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::PUT, std::move(c));
   r << payload.str();
