@@ -94,6 +94,27 @@ push(variables_map const& args)
   beyond_push("volume", name, volume, owner);
 }
 
+static void
+unpush(variables_map const& args)
+{
+  auto owner = self_user(ifnt, args);
+  auto name = volume_name(args, owner);
+  beyond_delete("volume", name, owner);
+}
+
+static void
+delete_(variables_map const& args)
+{
+  auto owner = self_user(ifnt, args);
+  auto name = volume_name(args, owner);
+  auto path = ifnt._volume_path(name);
+  if (boost::filesystem::remove(path))
+    report_action("deleted", "volume", name);
+  else
+    throw elle::Error(
+      elle::sprintf("File for volume could not be deleted: %s", path));
+}
+
 static
 void
 fetch(variables_map const& args)
@@ -314,6 +335,26 @@ main(int argc, char** argv)
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations"},
         { "cache-model", bool_switch(), "Enable model caching"},
+        option_owner,
+      },
+    },
+    {
+      "delete",
+      "Delete a volume",
+      &delete_,
+      {"--name VOLUME"},
+      {
+        {"name,n", value<std::string>(), "volume to delete"},
+        option_owner,
+      },
+    },
+    {
+      "unpush",
+      elle::sprintf("Remove a volume from %s", beyond()).c_str(),
+      &unpush,
+      "--name VOLUME",
+      {
+        { "name,n", value<std::string>(), "volume to remove" },
         option_owner,
       },
     },

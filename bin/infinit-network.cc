@@ -303,6 +303,27 @@ push(variables_map const& args)
   }
 }
 
+static void
+unpush(variables_map const& args)
+{
+  auto network_name = mandatory(args, "name", "network name");
+  auto owner = self_user(ifnt, args);
+  beyond_delete("network", network_name, owner);
+}
+
+static void
+delete_(variables_map const& args)
+{
+  auto owner = self_user(ifnt, args);
+  auto network_name = mandatory(args, "name", "network name");
+  auto path = ifnt._network_path(network_name);
+  if (boost::filesystem::remove(path))
+    report_action("deleted", "network", network_name);
+  else
+    throw elle::Error(
+      elle::sprintf("File for network could not be deleted: %s", path));
+}
+
 static
 void
 run(variables_map const& args)
@@ -468,6 +489,26 @@ int main(int argc, char** argv)
       {
         option_owner,
         { "name,n", value<std::string>(), "network to push" }
+      },
+    },
+    {
+      "delete",
+      "Delete a network",
+      &delete_,
+      {"--name NETWORK"},
+      {
+        {"name,n", value<std::string>(), "network to delete"},
+        option_owner,
+      },
+    },
+    {
+      "unpush",
+      elle::sprintf("Remove a network from %s", beyond()).c_str(),
+      &unpush,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "volume to remove" },
+        option_owner,
       },
     },
     {

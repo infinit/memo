@@ -1204,10 +1204,33 @@ beyond_fetch(std::string const& type,
 
 void
 beyond_delete(std::string const& where,
-              std::string const& type, std::string const& name)
+              std::string const& type, std::string const& name,
+              infinit::User const& self)
 {
+  using namespace infinit::cryptography;
+  elle::Buffer string_to_sign("DELETE;", 7);
+  string_to_sign.append(where.data(), where.size());
+  string_to_sign.append(";", 1);
+  auto payload_hash = hash(elle::ConstWeakBuffer(),
+                           Oneway::sha256);
+  auto pl64 = elle::format::base64::encode(payload_hash);
+  string_to_sign.append(pl64.contents(), pl64.size());
+
+  string_to_sign.append(";", 1);
+  auto now = std::to_string(time(0));
+  string_to_sign.append(now.data(), now.size());
+  auto sig = self.private_key->sign(
+    string_to_sign,
+    infinit::cryptography::rsa::Padding::pkcs1,
+    infinit::cryptography::Oneway::sha256);
+  auto sig64 = elle::format::base64::encode(sig);
+  reactor::http::Request::Configuration c;
+  c.header_add("infinit-signature", sig64.string());
+  c.header_add("infinit-time", now);
+
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
-                           reactor::http::Method::DELETE);
+                           reactor::http::Method::DELETE,
+                           std::move(c));
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
@@ -1216,6 +1239,13 @@ beyond_delete(std::string const& where,
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
                     r.status(), type, name));
+}
+
+void
+beyond_delete(std::string const& type, std::string const& name,
+              infinit::User const& self)
+{
+  beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self);
 }
 
 boost::program_options::option_description option_owner(
@@ -1261,6 +1291,7 @@ private:
     : _url(elle::sprintf("networks/%s/endpoints/%s/%s",
                          network.name, self.name, node_id))
     , _network(network)
+    , _self(self)
   {
     Endpoints endpoints;
     for (auto const& itf: elle::network::Interface::get_map(
@@ -1275,11 +1306,12 @@ private:
 
   ~InterfacePublisher()
   {
-    beyond_delete(this->_url, "endpoints for", this->_network.name);
+    beyond_delete(this->_url, "endpoints for", this->_network.name, _self);
   }
 
   ELLE_ATTRIBUTE(std::string, url);
   ELLE_ATTRIBUTE(infinit::Network const&, network);
+  ELLE_ATTRIBUTE(infinit::User, self);
 };
 
 void
