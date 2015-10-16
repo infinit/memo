@@ -502,9 +502,9 @@ namespace infinit
       }
       else if (name.find("user.infinit.auth.") == 0)
       {
-        _block = elle::cast<ACLBlock>::runtime(
-          set_permissions(name.substr(strlen("user.infinit.auth.")), value,
-                          _block->address()));
+        set_permissions(name.substr(strlen("user.infinit.auth.")), value,
+                        _block->address());
+        _block.reset();
       }
       else if (name == "user.infinit.fsck.unlink")
       {

@@ -250,7 +250,7 @@ namespace infinit
       return std::make_pair(r, w);
     }
 
-    std::unique_ptr<Block>
+    void
     Node::set_permissions(std::string const& flags, std::string const& userkey,
                           Address self_address)
     {
@@ -268,9 +268,10 @@ namespace infinit
       if (!acl)
         throw rfs::Error(EIO, "Block is not an ACL block");
       // permission check
-      auto acb = dynamic_cast<model::doughnut::ACB*>(block.get());
+      auto acb = dynamic_cast<model::doughnut::ACB*>(acl.get());
       if (!acb)
-        throw rfs::Error(EIO, "Block is not an ACB block");
+        throw rfs::Error(EIO,
+          elle::sprintf("Block is not an ACB block: %s", typeid(*acl).name()));
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
       auto keys = dn->keys();
@@ -280,7 +281,6 @@ namespace infinit
       umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
         EACCES);
       _owner.store_or_die(std::move(acl));
-      return block;
     }
   }
 }

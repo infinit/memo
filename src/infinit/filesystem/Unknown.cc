@@ -28,9 +28,10 @@ namespace infinit
       auto address = b->address();
       if (_parent->_inherit_auth)
       {
+        ELLE_DEBUG("Inheriting auth");
         ELLE_ASSERT(!!_parent->_block);
         // We must store first to ready ACL layer
-        _owner.store_or_die(std::move(b->clone()), model::STORE_INSERT);
+        _owner.store_or_die(*b, model::STORE_INSERT);
         umbrella([&] { _parent->_block->copy_permissions(*b);});
         Directory d(_parent, _owner, _name, address);
         d._block = std::move(b);

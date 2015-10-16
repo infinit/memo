@@ -35,7 +35,7 @@ namespace infinit
       std::string getxattr(std::string const& key);
       void setxattr(std::string const& k, std::string const& v, int flags);
       void removexattr(std::string const& k);
-      std::unique_ptr<Block> set_permissions(std::string const& flags,
+      void set_permissions(std::string const& flags,
         std::string const& userkey, Address self_address);
       void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
