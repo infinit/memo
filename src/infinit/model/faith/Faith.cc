@@ -36,7 +36,7 @@ namespace infinit
         {
           elle::IOStream s(data.ostreambuf());
           Serializer::SerializerOut output(s, false);
-          output.serialize_forward(*block);
+          output.serialize_forward(block);
         }
         this->_storage->set(block->address(),
                             data,
