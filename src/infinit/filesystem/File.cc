@@ -502,7 +502,7 @@ namespace infinit
             });
            _header(Header {true, Header::current_version, default_block_size, 1, (uint64_t)new_size});
           _blocks.clear();
-          _owner.store_or_die(std::move(_first_block->clone()), infinit::model::STORE_UPDATE);
+          _owner.store_or_die(*_first_block, infinit::model::STORE_UPDATE);
         }
       }
       this->_commit();
@@ -612,11 +612,10 @@ namespace infinit
       {
         try
         {
-          _owner.block_store()->store(std::move(_first_block->clone()),
+          _owner.block_store()->store(*_first_block,
              this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
              elle::make_unique<FileConflictResolver>(
                full_path(), _owner.block_store().get()));
-          
         }
         catch (infinit::model::doughnut::ValidationFailed const& e)
         {

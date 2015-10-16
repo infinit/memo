@@ -284,10 +284,11 @@ namespace infinit
           {
           }
           ELLE_DEBUG("%s: store changes engage!", *this);
-          _owner.block_store()->store(std::move(_block->clone()),
+          _owner.block_store()->store(std::move(_block),
              first_write ? model::STORE_INSERT : model::STORE_ANY,
              elle::make_unique<DirectoryConflictResolver>(
                full_path(), &_owner, op, fd, wptr));
+          ELLE_ASSERT(!_block);
         }
         catch (infinit::model::doughnut::ValidationFailed const& e)
         {

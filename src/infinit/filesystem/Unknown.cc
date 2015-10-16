@@ -107,8 +107,7 @@ namespace infinit
           dynamic_cast<ACLBlock&>(*f->_first_block));
         });
       }
-      auto cpy = f->_first_block->clone();
-      _owner.store_or_die(std::move(cpy), model::STORE_INSERT);
+      _owner.store_or_die(*f->_first_block, model::STORE_INSERT);
       f->_first_block_new = false;
       _owner.filesystem()->set(f->full_path().string(), f);
       std::unique_ptr<rfs::Handle> handle(new FileHandle(f, true, true, true));

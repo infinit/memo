@@ -79,6 +79,15 @@ namespace infinit
     }
 
     void
+    FileSystem::store_or_die(model::blocks::Block& block,
+                             model::StoreMode mode)
+    {
+      block.seal();
+      auto copy = block.clone();
+      store_or_die(std::move(copy), mode);
+    }
+
+    void
     FileSystem::store_or_die(std::unique_ptr<model::blocks::Block> block,
                              model::StoreMode mode)
     {

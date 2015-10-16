@@ -34,6 +34,9 @@ namespace infinit
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,
                    model::StoreMode mode = model::STORE_ANY);
+      void
+      store_or_die(model::blocks::Block& block,
+                   model::StoreMode mode = model::STORE_ANY);
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
