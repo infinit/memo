@@ -114,6 +114,7 @@ namespace infinit
       STATUS_CANCELLED = 0xC0000120,
       STATUS_PENDING = 0x103,
       STATUS_FS_DRIVER_REQUIRED = 0xC000019c,
+      STATUS_DIRECTORY_NOT_EMPTY = 0xC0000101,
     };
     enum FileInformationClass
     {
@@ -808,7 +809,17 @@ namespace infinit
       {
         auto& e = _dir_handles.at(guid);
         if (e.deleteOnClose)
-          e.directory->rmdir();
+        {
+          try
+          {
+            e.directory->rmdir();
+          }
+          catch(reactor::filesystem::Error const& e)
+          {
+            ELLE_LOG("delete: %s", e.what());
+            return error(hin, STATUS_DIRECTORY_NOT_EMPTY, 60);
+          }
+        }
         _dir_handles.erase(guid);
         ok = true;
       }
@@ -846,7 +857,10 @@ namespace infinit
       std::string glob = from_utf16(data, nameLength);
       ELLE_LOG("querydict guid %s  fclass %s  flags %s  index %s glob(%s) '%s'",
                guid, (int)fclass, (int)flags, index, glob.size(), glob);
-      DirInfo& di = _dir_handles.at(guid);
+      auto it = _dir_handles.find(guid);
+      if (it == _dir_handles.end())
+        return error(hin, STATUS_FILE_CLOSED, 9);
+      DirInfo& di = it->second;
       if ((flags & 0x1) || (flags & 0x10)) // RESTART_SCAN, REOPEN
         di.offset = -1;
       if ((flags & 0x1) && !di.glob.empty())
@@ -1194,7 +1208,20 @@ namespace infinit
           uint8_t doc;
           payload.r8(doc);
           if (guid >= _directory_start)
-            _dir_handles.at(guid).deleteOnClose = doc;
+          {
+            auto& di = _dir_handles.at(guid);
+            if (doc)
+            {
+              bool empty = true;
+              di.directory->list_directory([&](std::string const&, struct stat*)
+                {
+                  empty = false;
+                });
+              if (!empty)
+                return error(hin, STATUS_DIRECTORY_NOT_EMPTY, 2);
+            }
+            di.deleteOnClose = doc;
+          }
           else
             _file_handles.at(guid).deleteOnClose = doc;
           handled = true;
