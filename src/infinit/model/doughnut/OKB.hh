@@ -98,8 +98,8 @@ namespace infinit
         virtual
         void
         data(std::function<void (elle::Buffer&)> transformation) override;
-        ELLE_ATTRIBUTE_R(elle::Buffer, data_plain);
-        ELLE_ATTRIBUTE(bool, data_decrypted);
+        ELLE_ATTRIBUTE_RP(elle::Buffer, data_plain, protected:);
+        ELLE_ATTRIBUTE_P(bool, data_decrypted, protected:);
       protected:
         void
         _decrypt_data() const;

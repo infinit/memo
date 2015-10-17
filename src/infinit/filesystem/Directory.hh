@@ -99,6 +99,7 @@ namespace infinit
         elle::unordered_map<std::string, FileData> _files;
         bool _inherit_auth; //child nodes inherit this dir's permissions
         boost::posix_time::ptime _last_fetch;
+        std::unique_ptr<model::blocks::MutableBlock::Cache> _block_cache;
         friend class FileSystem;
     };
 

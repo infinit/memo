@@ -66,6 +66,12 @@ namespace infinit
       MutableBlock::_serialize(elle::serialization::Serializer&)
       {}
 
+      std::unique_ptr<MutableBlock::Cache>
+      MutableBlock::cache_update(std::unique_ptr<Cache> previous)
+      {
+        return {};
+      }
+
       static const elle::serialization::Hierarchy<Block>::
       Register<MutableBlock> _register_serialization("mutable");
     }

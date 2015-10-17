@@ -178,6 +178,9 @@ namespace infinit
       }
       _block = elle::cast<ACLBlock>::runtime
         (_owner.fetch_or_die(_address));
+      umbrella([&] {
+          this->_block_cache = _block->cache_update(std::move(this->_block_cache));
+      });
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       bool empty = false;
@@ -405,6 +408,9 @@ namespace infinit
             st->st_mode &= ~0777;
             _block = elle::cast<ACLBlock>::runtime
               (_owner.fetch_or_die(_parent->_files.at(_name).address));
+            umbrella([&] {
+                this->_block_cache = _block->cache_update(std::move(this->_block_cache));
+            });
             _block->data();
             st->st_mode = mode;
           }

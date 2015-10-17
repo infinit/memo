@@ -150,6 +150,9 @@ namespace infinit
       Address addr = _parent->_files.at(_name).address;
       _first_block = elle::cast<MutableBlock>::runtime(
         _owner.fetch_or_die(addr));
+      umbrella([&] {
+          this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
+      });
     }
 
     File::Header
@@ -248,8 +251,13 @@ namespace infinit
         throw rfs::Error(EEXIST, "target file exists");
       // we need a place to store the link count
       if (!_first_block)
+      {
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
+        umbrella([&] {
+            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
+        });
+      }
       bool multi = _multi();
       if (!multi)
         _switch_to_multi(false);
@@ -293,6 +301,9 @@ namespace infinit
         }
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
+        umbrella([&] {
+            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
+        });
       }
       bool multi = umbrella([&] { return _multi();});
       if (_parent)
@@ -364,8 +375,13 @@ namespace infinit
       {
         ELLE_DEBUG( (!!_handle_count) ? "block from cache" : "feching block");
         if (!_handle_count && _parent)
+        {
           _first_block = elle::cast<MutableBlock>::runtime
-        (_owner.fetch_or_die(_parent->_files.at(_name).address));
+            (_owner.fetch_or_die(_parent->_files.at(_name).address));
+          umbrella([&] {
+              this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
+          });
+        }
         if (!_first_block)
         {
           ELLE_WARN("%s: stat on unlinked file", *this);
@@ -415,8 +431,13 @@ namespace infinit
     File::truncate(off_t new_size)
     {
       if (!_handle_count)
+      {
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
+        umbrella([&] {
+            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
+        });
+      }
       if (!_multi() && new_size > signed(default_block_size))
         _switch_to_multi(true);
       if (!_multi())
@@ -524,8 +545,13 @@ namespace infinit
         auto keys = dn->keys();
         Address addr = _parent->_files.at(_name).address;
         if (!_handle_count)
+        {
           _first_block = elle::cast<MutableBlock>::runtime(
             _owner.fetch_or_die(addr));
+          umbrella([&] {
+            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
+          });
+        }
         auto acl = dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
         ELLE_ASSERT(acl);
         umbrella([&] {

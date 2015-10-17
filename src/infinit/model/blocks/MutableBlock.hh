@@ -60,6 +60,19 @@ namespace infinit
         virtual
         void
         data(std::function<void (elle::Buffer&)> transformation);
+
+        class Cache
+        {
+        public:
+          virtual ~Cache() {}
+        };
+        /** Use this function to speedup block unsealing if the block
+         *  has not changed.
+         *  Call cache_update() before the first call to data().
+        */
+        virtual
+        std::unique_ptr<Cache>
+        cache_update(std::unique_ptr<Cache> previous);
       };
     }
   }

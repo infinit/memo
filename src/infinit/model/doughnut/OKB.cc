@@ -1,5 +1,6 @@
 #include <infinit/model/doughnut/OKB.hh>
 
+#include <elle/bench.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
@@ -174,6 +175,8 @@ namespace infinit
       {
         if (!this->_data_decrypted)
         {
+          static elle::Bench bench("bench.decrypt", 10000_sec);
+          elle::Bench::BenchScope scope(bench);
           ELLE_TRACE_SCOPE("%s: decrypt data", *this);
           const_cast<BaseOKB<Block>*>(this)->_data_plain =
             this->_decrypt_data(this->_data);
