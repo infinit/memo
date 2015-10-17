@@ -7,6 +7,8 @@ import drake.valgrind
 import os
 import shutil
 
+git = None
+
 elle = None
 installed_binaries = []
 
@@ -83,6 +85,7 @@ def configure(
   if production_build:
     cxx_config.enable_optimization()
 
+  global git
   git = drake.git.Git()
 
   global elle
