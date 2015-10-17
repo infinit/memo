@@ -10,6 +10,7 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
+#include <elle/Exit.hh>
 #include <elle/log.hh>
 #include <elle/json/json.hh>
 
@@ -19,7 +20,7 @@
   #define SXA_EXTRA
 #endif
 
-
+#include <infinit/version.hh>
 bool recursive = false;
 bool inherit = false;
 bool disinherit = false;
@@ -137,6 +138,7 @@ int main(int argc, char** argv)
   options_description options("options");
   options.add_options()
    ("help,h", "display the help")
+   ("version,v", "display version")
    ("recursive,R", bool_switch(&recursive), "apply operation recursively")
    ("list,l", bool_switch(&list), "list current ACL")
    ("inherit,i", bool_switch(&inherit), "if set, new files/folder will inherit ACLs frome their parent directory")
@@ -181,6 +183,11 @@ int main(int argc, char** argv)
       std::cout << "Usage: " << argv[0] << " [options] path..." << std::endl;
       std::cout << options << std::endl;
       exit(0);
+    }
+    if (vm.count("version"))
+    {
+      std::cout << INFINIT_VERSION << std::endl;
+      throw elle::Exit(0);
     }
     std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
     mode = modes_map[it - modes.begin()];
