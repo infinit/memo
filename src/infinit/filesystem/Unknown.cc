@@ -93,7 +93,8 @@ namespace infinit
       auto raw = _owner.filesystem()->path(full_path().string());
       auto f = std::dynamic_pointer_cast<File>(raw);
       if (!f)
-        ELLE_ERR("Expected valid pointer from %s, got nullptr", raw.get());
+        ELLE_ERR("Expected valid pointer from %s(%s), got nullptr",
+                 raw.get(), typeid(*raw).name());
       f->_first_block = std::move(b);
       File::Header h;
       h.version = File::Header::current_version;
