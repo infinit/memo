@@ -130,7 +130,6 @@ namespace infinit
       FileRenameInformation = 10,
       FileModeInformation = 16,
       FileAllocationInformation = 19,
-
     };
     struct SMB2Header
     {
@@ -448,7 +447,7 @@ namespace infinit
       }
       catch(std::exception const& e)
       {
-        ELLE_LOG("exception %s", e.what());
+        ELLE_WARN("exception %s", e.what());
       }
       _socket->close();
       _serve_thread->terminate_now();
@@ -693,6 +692,7 @@ namespace infinit
         createAction = 2; // FILE_CREATED
         if (copt & FILE_DIRECTORY_FILE)
         {
+          ELLE_LOG("mkdir");
           entry->mkdir(0777);
           entry = _server._fs->path(path);
           entry->stat(&st);
@@ -700,6 +700,7 @@ namespace infinit
         }
         else
         {
+          ELLE_LOG("mkfile");
           int flags = O_CREAT;
           if ((c->desiredAccess & 0x02) || (c->desiredAccess & 0x40000000))
             flags |= O_RDWR;
@@ -729,6 +730,8 @@ namespace infinit
           handle = entry->open(flags, 0777);
           entry = _server._fs->path(path);
         }
+        else
+          createAction = 1; // FILE_OPENED
       }
       uint64_t guid = 0;
       std::string name = boost::filesystem::path(path).filename().string();
@@ -1013,6 +1016,13 @@ namespace infinit
           w.w64(0).w32(0).w32(6).w8(0).w8(0);
           w.w("f\0o\0o\0", 6);
         }
+        else if (infoclass == 5) // FileFsAttributeInformation
+        {
+          // xattr hardlink unicode preservecase casesensitive
+          w.w32(0x00800000 | 0x00400000 | 0x00000004 |0x00000002 | 0x00000001)
+          .w32(256) // maxnamelen
+          .w32(6).w("f\0o\0o\0", 6);
+        }
       }
       if (infotype == 0x01) // FILE_INFO
       {
@@ -1045,6 +1055,15 @@ namespace infinit
         if (infoclass == 0x14) // EOF
         {
           w.w64(st.st_size);
+        }
+        if (infoclass == 13) // FILE_DISPOSITION_INFO
+        {
+          bool doc;
+          if (guid >= _directory_start)
+            doc = _dir_handles.at(guid).deleteOnClose;
+          else
+            doc = _file_handles.at(guid).deleteOnClose;
+          w.w8(doc);
         }
         if (infoclass == 0x05) // STANDARD_INFO
         {
@@ -1170,9 +1189,33 @@ namespace infinit
           _file_handles.at(guid).file->truncate(eof);
           handled = true;
         }
+        if (infoclass == 13) // fileDispositionInformation
+        {
+          uint8_t doc;
+          payload.r8(doc);
+          if (guid >= _directory_start)
+            _dir_handles.at(guid).deleteOnClose = doc;
+          else
+            _file_handles.at(guid).deleteOnClose = doc;
+          handled = true;
+        }
         if (infoclass == FileRenameInformation)
         {
-
+          uint8_t replace;
+          uint32_t path_length;
+          payload.r8(replace).skip(15).r32(path_length);
+          std::string path = from_utf16((const char*)payload._d, path_length);
+          std::replace( path.begin(), path.end(), '\\', '/');
+          if (guid >= _directory_start)
+          {
+            _dir_handles.at(guid).directory->rename(path);
+          }
+          else
+          {
+            _file_handles.at(guid).file->rename(path);
+          }
+          ELLE_LOG("rename to %s", path);
+          handled = true;
         }
       }
       if (!handled)
