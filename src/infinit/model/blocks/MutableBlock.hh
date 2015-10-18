@@ -73,6 +73,7 @@ namespace infinit
         virtual
         std::unique_ptr<Cache>
         cache_update(std::unique_ptr<Cache> previous);
+        ELLE_ATTRIBUTE_RP(bool, is_local, protected:)
       };
     }
   }

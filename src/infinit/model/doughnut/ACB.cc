@@ -407,6 +407,8 @@ namespace infinit
       blocks::ValidationResult
       ACB::_validate() const
       {
+        if (_is_local)
+          return blocks::ValidationResult::success();
         ELLE_DEBUG("%s: validate owner part", *this)
           if (auto res = Super::_validate()); else
             return res;
