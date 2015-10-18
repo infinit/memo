@@ -1,4 +1,5 @@
 #include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/ACB.hh>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -73,6 +74,7 @@ namespace infinit
           sin.set_context<Model*>((Model*)&this->_doughnut);
           sin.set_context<Doughnut*>(&this->_doughnut);
           Op op(overlay);
+          sin.set_context(ACBDontWaitForSignature{});
           sin.serialize("address", op.addr);
           sin.serialize("block", op.block);
           sin.serialize("mode", op.mode);
@@ -95,6 +97,7 @@ namespace infinit
           ELLE_DEBUG("creating %s", path);
           boost::filesystem::ofstream os(path);
           elle::serialization::binary::SerializerOut sout(os, false);
+          sout.set_context(ACBDontWaitForSignature{});
           sout.serialize("address", op.addr);
           sout.serialize("block", op.block);
           sout.serialize("mode", op.mode);

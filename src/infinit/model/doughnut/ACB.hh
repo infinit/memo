@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_ACB_HH
 # define INFINIT_MODEL_DOUGHNUT_ACB_HH
 
+# include <thread>
+
 # include <elle/serialization/fwd.hh>
 
 # include <cryptography/rsa/KeyPair.hh>
@@ -15,6 +17,7 @@ namespace infinit
   {
     namespace doughnut
     {
+      struct ACBDontWaitForSignature {};
       class ACB
         : public BaseOKB<blocks::ACLBlock>
       {
@@ -48,6 +51,7 @@ namespace infinit
       public:
         ACB(Doughnut* owner);
         ACB(ACB const& other);
+        ~ACB();
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE_R(Address, acl);
@@ -56,6 +60,15 @@ namespace infinit
         ELLE_ATTRIBUTE(int, data_version);
         ELLE_ATTRIBUTE(elle::Buffer, data_signature);
         ELLE_ATTRIBUTE(Address, prev_acl);
+        class Signer
+        {
+        public:
+          std::unique_ptr<std::thread> thread;
+          elle::Buffer to_sign;
+          elle::Buffer signature;
+        };
+        mutable std::shared_ptr<Signer> _signer;
+        elle::Buffer const& data_signature() const;
 
       /*-------.
       | Clone  |

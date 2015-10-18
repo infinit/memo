@@ -110,7 +110,10 @@ namespace infinit
         , _acl_entries(other._acl_entries)
         , _data_version(other._data_version)
         , _data_signature(other._data_signature)
-      {}
+        , _signer(other._signer)
+      {
+
+      }
 
       /*-------.
       | Clone  |
@@ -444,7 +447,7 @@ namespace infinit
         {
           auto sign = this->_data_sign();
           auto& key = entry ? entry->key : this->owner_key();
-          if (!this->_check_signature(key, this->_data_signature, sign, "data"))
+          if (!this->_check_signature(key, this->data_signature(), sign, "data"))
           {
             ELLE_DEBUG("%s: author signature invalid", *this);
             return blocks::ValidationResult::failure
@@ -457,10 +460,14 @@ namespace infinit
       void
       ACB::_seal()
       {
+        static elle::Bench bench("bench.acb.seal", 10000_sec);
+        elle::Bench::BenchScope scope(bench);
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
         if (acl_changed)
         {
+          static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
+          elle::Bench::BenchScope scope(bench);
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
           if (this->_acl_entries)
           {
@@ -486,6 +493,8 @@ namespace infinit
           ELLE_DEBUG("%s: ACL didn't change", *this);
         if (data_changed)
         {
+          static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
+          elle::Bench::BenchScope scope(bench);
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
           ELLE_TRACE_SCOPE("%s: data changed, seal", *this);
           bool owner = this->doughnut()->keys().K() == this->owner_key();
@@ -550,12 +559,46 @@ namespace infinit
         // address is part of the signature.
         if (acl_changed || data_changed)
         {
-          auto sign = this->_data_sign();
-          auto const& key = this->doughnut()->keys().k();
-          this->_data_signature = key.sign(sign);
-          ELLE_DUMP("%s: sign %f with %s: %f",
-                    *this, sign, key, this->_data_signature);
+          static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
+          elle::Bench::BenchScope scope(bench);
+          auto const key = &this->doughnut()->keys().k();
+          bool disabled = getenv("INFINIT_ACB_DISABLE_ASYNC_SIGN");
+          if (disabled)
+          {
+            auto to_sign = this->_data_sign();
+            this->_data_signature = key->sign(to_sign);
+          }
+          else
+          {
+
+            _signer.reset(new Signer);
+            _signer->to_sign = this->_data_sign();
+            auto signer = _signer;
+            _signer->thread.reset(new std::thread([signer, key] {
+                signer->signature = key->sign(signer->to_sign);
+            }));
+          }
         }
+      }
+
+      ACB::~ACB()
+      {
+      }
+
+      elle::Buffer const&
+      ACB::data_signature() const
+      {
+        if (_signer)
+        {
+          if (_signer->thread)
+          {
+            _signer->thread->join();
+            _signer->thread.reset();
+          }
+          const_cast<ACB&>(*this)._data_signature = elle::Buffer(_signer->signature);
+          _signer.reset();
+        }
+        return _data_signature;
       }
 
       elle::Buffer
@@ -688,7 +731,20 @@ namespace infinit
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl);
         s.serialize("data_version", this->_data_version);
+        bool need_signature = ! s.context().has<ACBDontWaitForSignature>();
+        if (need_signature)
+          this->data_signature();
         s.serialize("data_signature", this->_data_signature);
+        if (s.in() && !need_signature)
+        {
+          auto const key = &this->doughnut()->keys().k();
+          _signer.reset(new Signer);
+          _signer->to_sign = this->_data_sign();
+          auto signer = _signer;
+          _signer->thread.reset(new std::thread([signer, key] {
+              signer->signature = key->sign(signer->to_sign);
+          }));
+        }
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::
