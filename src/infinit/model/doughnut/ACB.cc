@@ -386,25 +386,7 @@ namespace infinit
         if (auto res = Super::_validate(previous)); else
           return res;
         return this->_validate_version<ACB>(
-          previous, &ACB::_data_version, this->_data_version,
-          [this] (ACB const& b)
-          {
-            return this->Block::data() == b.Block::data() &&
-              this->_owner_token == b._owner_token
-            // By not checking ACL are equal there, we allow anyone to update a
-            // block with the same version and screwing the tokens - and only
-            // the tokens since the permissions and user keys are signed by the
-            // owner.  This could bee seen as a flow since anyone can basically
-            // deny anyone access to a file by messing with his token.  However,
-            // he has write permission, so he could do the exact same bumping
-            // the version number, the version being the same is hardly the
-            // problem, so checking this has no added value.  Not checking it
-            // enables to not bump the data version when only the ACL are
-            // updated.
-            //
-            // && this->_acl == b._acl
-            ;
-          });
+          previous, &ACB::_data_version, this->_data_version);
       }
 
       blocks::ValidationResult
@@ -488,6 +470,9 @@ namespace infinit
           }
           this->_acl_changed = false;
           Super::_seal_okb();
+          if (!data_changed)
+            // FIXME: idempotence in case the write fails ?
+            ++this->_data_version;
         }
         else
           ELLE_DEBUG("%s: ACL didn't change", *this);
@@ -655,23 +640,9 @@ namespace infinit
         return boost::make_iterator_range(zip_begin, zip_end);
       }
 
-      bool
-      ACB::_compare_payload(BaseOKB<blocks::ACLBlock> const& other) const
-      {
-        auto other_acb = dynamic_cast<ACB const*>(&other);
-        if (!other_acb)
-          return false;
-        if (this->acl_entries().size() != other_acb->acl_entries().size())
-          return false;
-        for (auto const p: zip(this->acl_entries(), other_acb->acl_entries()))
-        {
-          if (p.get<0>().key != p.get<1>().key ||
-              p.get<0>().read != p.get<1>().read ||
-              p.get<0>().write != p.get<1>().write)
-            return false;
-        }
-        return true;
-      }
+      /*--------.
+      | Content |
+      `--------*/
 
       void
       ACB::_stored()

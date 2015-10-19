@@ -114,9 +114,6 @@ namespace infinit
       `-----------*/
       protected:
         virtual
-        bool
-        _compare_payload(BaseOKB<blocks::ACLBlock> const& other) const override;
-        virtual
         blocks::ValidationResult
         _validate(blocks::Block const& previous) const override;
         virtual

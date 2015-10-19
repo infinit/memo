@@ -130,9 +130,6 @@ namespace infinit
         virtual
         void
         _sign(elle::serialization::SerializerOut& s) const;
-        virtual
-        bool
-        _compare_payload(BaseOKB<Block> const& other) const;
         bool
         _check_signature(cryptography::rsa::PublicKey const& key,
                          elle::Buffer const& signature,
@@ -144,8 +141,7 @@ namespace infinit
         _validate_version(
           blocks::Block const& other_,
           int T::*member,
-          int version,
-          std::function<bool (T const&)> const& compare) const;
+          int version) const;
 
         class Signer
         {
@@ -157,6 +153,7 @@ namespace infinit
         };
         mutable std::shared_ptr<Signer> _signer;
         elle::Buffer const& signature() const;
+
       private:
         elle::Buffer
         _sign() const;
