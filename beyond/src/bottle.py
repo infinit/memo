@@ -1,15 +1,60 @@
 import bottle
 import cryptography
+import datetime
 import hashlib
-from Crypto.PublicKey import RSA
-import Crypto.Signature.PKCS1_v1_5
-import Crypto.Hash.SHA256
-import Crypto.Hash.SHA
+import json
 import time
+
+import Crypto.Hash.SHA
+import Crypto.Hash.SHA256
+import Crypto.PublicKey
+import Crypto.Signature.PKCS1_v1_5
+
 from copy import deepcopy
 from requests import Request, Session
 
 from infinit.beyond import *
+from infinit.beyond.gcs import GCS
+
+
+## -------- ##
+## Response ##
+## -------- ##
+
+class Response(Exception):
+
+  def __init__(self, status = 200, body = None):
+    self.__status = status
+    self.__body = body
+
+  @property
+  def status(self):
+    return self.__status
+
+  @property
+  def body(self):
+    return self.__body
+
+class ResponsePlugin(object):
+
+  '''Bottle plugin to generate throw a response.'''
+
+  name = 'meta.short-circuit'
+  api  = 2
+
+  def apply(self, f, route):
+    def wrapper(*args, **kwargs):
+      try:
+        return f(*args, **kwargs)
+      except Response as response:
+        bottle.response.status = response.status
+        return response.body
+    return wrapper
+
+
+## ------ ##
+## Bottle ##
+## ------ ##
 
 class Bottle(bottle.Bottle):
 
@@ -38,11 +83,21 @@ class Bottle(bottle.Bottle):
     },
   }
 
-  def __init__(self, beyond):
+  def __init__(
+      self,
+      beyond,
+      gcs = None,
+  ):
     super().__init__()
     self.__beyond = beyond
     self.install(bottle.CertificationPlugin())
+    self.install(ResponsePlugin())
     self.route('/')(self.root)
+    # GCS
+    if gcs is not None:
+      self.__gcs = gcs
+    else:
+      self.__gcs = gcs
     # OAuth
     for s in Bottle.__oauth_services:
       self.route('/oauth/%s' % s)(getattr(self, 'oauth_%s' % s))
@@ -58,6 +113,12 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
+    self.route('/users/<name>/avatar', method = 'GET')(
+      self.user_avatar_get)
+    self.route('/users/<name>/avatar', method = 'PUT')(
+      self.user_avatar_put)
+    self.route('/users/<name>/avatar', method = 'DELETE')(
+      self.user_avatar_delete)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -95,7 +156,7 @@ class Bottle(bottle.Bottle):
       raise Exception("Time too far away: got %s, current %s" % (request_time, time.time()))
     rawk = user.public_key['rsa']
     der = base64.b64decode(rawk.encode('latin-1'))
-    k = RSA.importKey(der)
+    k = Crypto.PublicKey.RSA.importKey(der)
     to_sign = bottle.request.method + ';' + bottle.request.path[1:] + ';'
     to_sign += base64.b64encode(
       hashlib.sha256(bottle.request.body.getvalue()).digest()).decode('utf-8') + ";"
@@ -175,6 +236,21 @@ class Bottle(bottle.Bottle):
     user = self.__beyond.user_get(name = name)
     self.authenticate(user)
     self.__beyond.user_delete(name)
+
+  def user_avatar_put(self, name):
+    return self.__user_avatar_manipulate(
+      name, self.__cloud_image_upload)
+
+  def user_avatar_get(self, name):
+    return self.__user_avatar_manipulate(
+      name, self.__cloud_image_get)
+
+  def user_avatar_delete(self, name):
+    return self.__user_avatar_manipulate(
+      name, self.__cloud_image_delete)
+
+  def __user_avatar_manipulate(self, name, f):
+    return f('users', '%s/avatar' % name)
 
   ## ------- ##
   ## Network ##
@@ -309,6 +385,60 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     self.__beyond.volume_delete(owner = owner, name = name)
 
+  ## --- ##
+  ## GCS ##
+  ## --- ##
+
+  def __check_gcs(self):
+    if self.__gcs is None:
+      raise Response(501, {
+        'reason': 'GCS support not enabled',
+      })
+
+  def __cloud_image_upload(self, bucket, name):
+    self.__check_gcs()
+    t = bottle.request.headers['Content-Type']
+    l = bottle.request.headers['Content-Length']
+    if t not in ['image/gif', 'image/jpeg', 'image/png']:
+      bottle.response.status = 415
+      return {
+        'reason': 'invalid image format: %s' % t,
+        'mime-type': t,
+      }
+    url = self.__gcs.upload_url(
+      bucket,
+      name,
+      content_type = t,
+      content_length = l,
+      expiration = datetime.timedelta(minutes = 3),
+    )
+    bottle.response.status = 307
+    bottle.response.headers['Location'] = url
+
+  def __cloud_image_get(self, bucket, name):
+    self.__check_gcs()
+    url = self.__gcs.download_url(
+      bucket,
+      name,
+      expiration = datetime.timedelta(minutes = 3),
+    )
+    bottle.response.status = 307
+    bottle.response.headers['Location'] = url
+
+  def __cloud_image_delete(self, bucket, name):
+    self.__check_gcs()
+    url = self.__gcs.delete_url(
+      bucket,
+      name,
+      expiration = datetime.timedelta(minutes = 3),
+    )
+    bottle.response.status = 307
+    bottle.response.headers['Location'] = url
+    # self.gcs.delete(
+    #   bucket,
+    #   name)
+    # bottle.response.status = 204
+
 for name, conf in Bottle._Bottle__oauth_services.items():
   def oauth_get(self, username, name = name, conf = conf):
     beyond = self._Bottle__beyond
@@ -379,9 +509,10 @@ for name, conf in Bottle._Bottle__oauth_services.items():
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
   setattr(Bottle, user_credentials_get.__name__, user_credentials_get)
 
-# This function first checks if the google account `token` field is valid.
-# If not it asks google for another access_token and updates the client,
-# else it return to the client the access_token of the database.
+# This function first checks if the google account `token` field is
+# valid.  If not it asks google for another access_token and updates
+# the client, else it return to the client the access_token of the
+# database.
 def user_credentials_google_refresh(self, username):
     try:
         beyond = self._Bottle__beyond
@@ -389,13 +520,10 @@ def user_credentials_google_refresh(self, username):
         refresh_token = bottle.request.query.refresh_token
         for id, account in user.google_accounts.items():
             google_account = user.google_accounts[id]
-
             # https://developers.google.com/identity/protocols/OAuth2InstalledApp
-
             # The associate google account.
             if google_account['refresh_token'] == refresh_token:
                 google_url = "https://www.googleapis.com/oauth2/v3/token"
-
                 # Get a new token and update the db and the client
                 query = {
                   'client_id': beyond.google_app_key,
@@ -403,7 +531,6 @@ def user_credentials_google_refresh(self, username):
                   'refresh_token': google_account['refresh_token'],
                   'grant_type': 'refresh_token',
                 }
-
                 res = requests.post(google_url, params=query)
                 if res.status_code != 200:
                     raise HTTPError(status=400)
@@ -412,7 +539,6 @@ def user_credentials_google_refresh(self, username):
                     user.google_accounts[id]['token'] = token
                     user.save()
                     return token
-
     except User.NotFound:
         return self._Bottle__user_not_found(unsername)
 
