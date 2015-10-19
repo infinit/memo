@@ -98,6 +98,7 @@ namespace infinit
           boost::filesystem::ofstream os(path);
           elle::serialization::binary::SerializerOut sout(os, false);
           sout.set_context(ACBDontWaitForSignature{});
+          sout.set_context(OKBDontWaitForSignature{});
           sout.serialize("address", op.addr);
           sout.serialize("block", op.block);
           sout.serialize("mode", op.mode);

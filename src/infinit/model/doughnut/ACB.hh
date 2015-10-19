@@ -60,13 +60,7 @@ namespace infinit
         ELLE_ATTRIBUTE(int, data_version);
         ELLE_ATTRIBUTE(elle::Buffer, data_signature);
         ELLE_ATTRIBUTE(Address, prev_acl);
-        class Signer
-        {
-        public:
-          std::unique_ptr<std::thread> thread;
-          elle::Buffer to_sign;
-          elle::Buffer signature;
-        };
+      protected:
         mutable std::shared_ptr<Signer> _signer;
         elle::Buffer const& data_signature() const;
 

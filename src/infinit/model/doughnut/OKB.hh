@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_OKB_HH
 # define INFINIT_MODEL_DOUGHNUT_OKB_HH
 
+# include <thread>
+
 # include <elle/serialization/fwd.hh>
 
 # include <cryptography/rsa/KeyPair.hh>
@@ -15,6 +17,8 @@ namespace infinit
   {
     namespace doughnut
     {
+      struct OKBDontWaitForSignature {};
+
       template <typename Block>
       class BaseOKB;
 
@@ -74,7 +78,7 @@ namespace infinit
         BaseOKB(Doughnut* owner);
         BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE_R(int, version);
-        ELLE_ATTRIBUTE_R(elle::Buffer, signature);
+        ELLE_ATTRIBUTE(elle::Buffer, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
 
@@ -142,6 +146,17 @@ namespace infinit
           int T::*member,
           int version,
           std::function<bool (T const&)> const& compare) const;
+
+        class Signer
+        {
+        public:
+          ~Signer();
+          std::unique_ptr<std::thread> thread;
+          elle::Buffer to_sign;
+          elle::Buffer signature;
+        };
+        mutable std::shared_ptr<Signer> _signer;
+        elle::Buffer const& signature() const;
       private:
         elle::Buffer
         _sign() const;

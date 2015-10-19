@@ -125,6 +125,7 @@ namespace infinit
         , _doughnut{other._doughnut}
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
+        , _signer{other._signer}
       {
         ELLE_DEBUG("copy: me: %s, other: %s", _version, other._version);
       }
@@ -251,9 +252,40 @@ namespace infinit
       {
         ++this->_version; // FIXME: idempotence in case the write fails ?
         auto sign = this->_sign();
-        this->_signature = this->_doughnut->keys().k().sign(sign);
-        ELLE_DUMP("%s: sign %s with %s: %f",
-                  *this, sign, this->_doughnut->keys().k(), this->_signature);
+        bool disabled = getenv("INFINIT_OKB_DISABLE_ASYNC_SIGN");
+        if (disabled)
+        {
+          this->_signature = this->_doughnut->keys().k().sign(sign);
+          ELLE_DUMP("%s: sign %s with %s: %f",
+                    *this, sign, this->_doughnut->keys().k(), this->_signature);
+        }
+        else
+        {
+          _signer.reset(new Signer);
+          _signer->to_sign = std::move(sign);
+          auto signer = _signer;
+          auto key = &this->_doughnut->keys().k();
+          _signer->thread.reset(new std::thread([signer, key] {
+              signer->signature = key->sign(signer->to_sign);
+          }));
+        }
+      }
+
+      template <typename Block>
+      elle::Buffer const&
+      BaseOKB<Block>::signature() const
+      {
+        if (_signer)
+        {
+          if (_signer->thread)
+          {
+            _signer->thread->join();
+            _signer->thread.reset();
+          }
+          const_cast<BaseOKB<Block>*>(this)->_signature = elle::Buffer(_signer->signature);
+          _signer.reset();
+        }
+        return _signature;
       }
 
       template <typename Block>
@@ -285,7 +317,7 @@ namespace infinit
         {
           auto sign = this->_sign();
           if (!this->_check_signature
-              (this->_owner_key, this->_signature, sign, "owner"))
+              (this->_owner_key, this->signature(), sign, "owner"))
           {
             ELLE_DEBUG("%s: invalid signature", *this);
             return blocks::ValidationResult::failure("invalid signature");
@@ -382,10 +414,30 @@ namespace infinit
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
         ELLE_ASSERT(this->_doughnut);
+        bool need_signature = ! s.context().has<OKBDontWaitForSignature>();
+        if (need_signature)
+          this->signature();
         s.serialize("key", this->_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
         s.serialize("signature", this->_signature);
+        if (s.in() && !need_signature)
+        {
+          auto const key = &this->doughnut()->keys().k();
+          _signer.reset(new Signer);
+          _signer->to_sign = this->_sign();
+          auto signer = _signer;
+          _signer->thread.reset(new std::thread([signer, key] {
+              signer->signature = key->sign(signer->to_sign);
+          }));
+        }
+      }
+
+      template <typename Block>
+      BaseOKB<Block>::Signer::~Signer()
+      {
+        if (thread)
+          thread->detach();
       }
 
       template
