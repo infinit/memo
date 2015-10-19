@@ -27,7 +27,8 @@ class Infinit(TemporaryDirectory):
 
   def run(self, args, input = None, return_code = 0):
     env = {
-      'PATH': 'bin',
+      # Add bin path for when being built by the frontend.
+      'PATH': 'bin:backend/bin',
       'INFINIT_HOME': self.dir,
     }
     pretty = '%s %s' % (
