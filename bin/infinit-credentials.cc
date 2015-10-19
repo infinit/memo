@@ -54,9 +54,32 @@ fetch_credentials(infinit::User const& user,
                   std::string const& pretty,
                   std::function<void (Credentials)> add)
 {
+  using namespace infinit::cryptography;
+  std::string where = elle::sprintf(
+    "users/%s/credentials/%s",
+    user.name, name);
+  elle::Buffer string_to_sign("GET;", 4);
+  string_to_sign.append(where.data(), where.size());
+  string_to_sign.append(";", 1);
+  auto payload_hash = hash(elle::ConstWeakBuffer(),
+                           Oneway::sha256);
+  auto pl64 = elle::format::base64::encode(payload_hash);
+  string_to_sign.append(pl64.contents(), pl64.size());
+
+  string_to_sign.append(";", 1);
+  auto now = std::to_string(time(0));
+  string_to_sign.append(now.data(), now.size());
+  auto sig = user.private_key->sign(
+    string_to_sign,
+    infinit::cryptography::rsa::Padding::pkcs1,
+    infinit::cryptography::Oneway::sha256);
+  auto sig64 = elle::format::base64::encode(sig);
+  reactor::http::Request::Configuration c;
+  c.header_add("infinit-signature", sig64.string());
+  c.header_add("infinit-time", now);
   reactor::http::Request r(
-    elle::sprintf("%s/users/%s/credentials/%s", beyond(), user.name, name),
-    reactor::http::Method::GET);
+    elle::sprintf("%s/%s", beyond(), where),
+    reactor::http::Method::GET, std::move(c));
   if (r.status() == reactor::http::StatusCode::Not_Found)
   {
     throw elle::Error(elle::sprintf("user %s is not published",
