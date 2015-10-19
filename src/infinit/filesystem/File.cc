@@ -268,8 +268,7 @@ namespace infinit
       dir->_files.at(newname).name = newname;
       dir->_commit({OperationType::insert, newname}, true);
       _owner.filesystem()->extract(where.string());
-      if (!_handle_count)
-        _commit();
+      _commit();
     }
 
     void

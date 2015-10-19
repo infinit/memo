@@ -529,6 +529,24 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
   BOOST_CHECK_EQUAL(text, "TestcoinBcoinA");
   bfs::remove(mount / "test2");
 
+  // hardlink opened handle
+  {
+    bfs::ofstream ofs(mount / "test");
+    ofs << "Test";
+  }
+  {
+    bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    ofs << "a";
+    bfs::create_hard_link(mount / "test", mount / "test2");
+    ofs << "b";
+    ofs.close();
+    text = read(mount / "test");
+    BOOST_CHECK_EQUAL(text, "Testab");
+    text = read(mount / "test2");
+    BOOST_CHECK_EQUAL(text, "Testab");
+    bfs::remove(mount / "test");
+    bfs::remove(mount / "test2");
+  }
 #endif
 
   //holes
