@@ -47,6 +47,10 @@ def parse_options():
                       type = str,
                       help = 'Google app secret',
                       default = ${repr(google_app_secret)})
+  parser.add_argument('--reload',
+                      help = 'Reload automatically when code changes',
+                      action = 'store_true',
+                      default = False)
   parser.add_argument(
     '--couchdb-directory',
     metavar = 'PATH',
@@ -81,7 +85,7 @@ try:
     if args.port is not None:
       kwargs['port'] = args.port
     bottle.DEBUG = True
-    bottle.run(app = app, **kwargs)
+    bottle.run(app = app, reloader = args.reload, **kwargs)
 except Exception as e:
   print('%s: fatal error: %s' % (sys.argv[0], e))
   raise
