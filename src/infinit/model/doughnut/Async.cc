@@ -75,6 +75,7 @@ namespace infinit
           sin.set_context<Doughnut*>(&this->_doughnut);
           Op op(overlay);
           sin.set_context(ACBDontWaitForSignature{});
+          sin.set_context(OKBDontWaitForSignature{});
           sin.serialize("address", op.addr);
           sin.serialize("block", op.block);
           sin.serialize("mode", op.mode);
