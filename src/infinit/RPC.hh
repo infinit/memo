@@ -5,11 +5,17 @@
 # include <elle/serialization/binary.hh>
 # include <elle/log.hh>
 
+# include <cryptography/SecretKey.hh>
+
 # include <reactor/network/exception.hh>
 # include <reactor/network/socket.hh>
+# include <reactor/storage.hh>
 
 # include <protocol/ChanneledStream.hh>
 # include <protocol/Serializer.hh>
+
+# include <infinit/model/doughnut/Doughnut.hh>
+# include <infinit/model/doughnut/Passport.hh>
 
 namespace infinit
 {
@@ -202,6 +208,8 @@ namespace infinit
   class RPCServer
   {
   public:
+    using Passport = infinit::model::doughnut::Passport;
+    using Doughnut = infinit::model::doughnut::Doughnut;
     template <typename R, typename ... Args>
     void
     add(std::string const& name, std::function<R (Args...)> f)
@@ -210,7 +218,35 @@ namespace infinit
         elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
     }
 
-
+    RPCServer(Doughnut* doughnut = nullptr)
+    : _doughnut(doughnut)
+    {
+      add("auth_syn", std::function<Passport*(Passport const&)>(
+        [this] (Passport const& p) -> Passport*
+        {
+          ELLE_LOG_COMPONENT("infinit.RPC");
+          ELLE_TRACE("entering auth_syn, dn=%s", this->_doughnut);
+          bool verify = const_cast<Passport&>(p).verify(this->_doughnut->owner());
+          ELLE_TRACE("auth_syn verify = %s", verify);
+          if (!verify)
+            throw elle::Error("Passport validation failed");
+          return const_cast<Passport*>(&_doughnut->passport());
+        }));
+      add("auth_ack", std::function<bool(elle::Buffer const&)>(
+        [this](elle::Buffer const& enc_key) -> bool
+        {
+          ELLE_LOG_COMPONENT("infinit.RPC");
+          ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+          elle::Buffer password = this->_doughnut->keys().k().open(
+                enc_key,
+                infinit::cryptography::Cipher::aes256,
+                infinit::cryptography::Mode::cbc);
+          this->_key.Get().reset(new infinit::cryptography::SecretKey(
+            std::move(password)));
+          ELLE_TRACE("auth_ack exiting");
+          return true;
+        }));
+    }
     void
     serve(std::iostream& s)
     {
@@ -229,6 +265,24 @@ namespace infinit
         {
           auto channel = channels.accept();
           auto request = channel.read();
+
+          ELLE_DEBUG("Processing one request, key=%s, len=%s data=%x",
+            !!this->_key.Get(), request.size(), request);
+          bool had_key = !!_key.Get();
+          if (had_key)
+          {
+            try
+            {
+              request = this->_key.Get()->decipher(request);
+              ELLE_DEBUG("Wrote %s plain bytes", request.size());
+            }
+            catch(std::exception const& e)
+            {
+              ELLE_ERR("decypher request: %s", e.what());
+              throw;
+            }
+          }
+          ELLE_DEBUG("Deserializing...");
           elle::IOStream ins(request.istreambuf());
           elle::serialization::binary::SerializerIn input(ins, false);
           input.set_context(this->_context);
@@ -240,7 +294,6 @@ namespace infinit
             ELLE_WARN("%s: unknown RPC: %s", *this, name);
             throw elle::Error(elle::sprintf("unknown RPC: %s", name));
           }
-          ELLE_LOG_COMPONENT("infinit.RPC");
           ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
           elle::Buffer response;
           elle::IOStream outs(response.ostreambuf());
@@ -257,7 +310,13 @@ namespace infinit
               throw;
             }
           }
+
           outs.flush();
+          if (had_key)
+          {
+            response = _key.Get()->encipher(
+              elle::ConstWeakBuffer(response.contents(), response.size()));
+          }
           channel.write(response);
         }
       }
@@ -276,6 +335,9 @@ namespace infinit
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
+    reactor::LocalStorage<std::unique_ptr<infinit::cryptography::SecretKey>> _key;
+    infinit::model::doughnut::Doughnut* _doughnut;
+
   };
 
   /*-------.
@@ -285,11 +347,19 @@ namespace infinit
   class BaseRPC
   {
   public:
-    BaseRPC(std::string name, protocol::ChanneledStream& channels)
-      : _name(std::move(name))
-      , _channels(channels)
-    {}
+    using Passport = infinit::model::doughnut::Passport;
+    using Doughnut = infinit::model::doughnut::Doughnut;
+    BaseRPC(std::string name, protocol::ChanneledStream& channels,
+            infinit::model::doughnut::Doughnut* doughnut = nullptr,
+            elle::Buffer* credentials = nullptr);
 
+    elle::Buffer credentials()
+    {
+      if (this->_key)
+        return this->_key->password();
+      else
+        return {};
+    }
     template <typename T>
     void
     set_context(T value)
@@ -303,6 +373,8 @@ namespace infinit
     elle::serialization::Context _context;
     ELLE_ATTRIBUTE_R(std::string, name);
     ELLE_ATTRIBUTE_R(protocol::ChanneledStream&, channels);
+    std::unique_ptr<infinit::cryptography::SecretKey> _key;
+    infinit::model::doughnut::Doughnut* _doughnut;
   };
 
   template <typename Proto>
@@ -314,8 +386,10 @@ namespace infinit
     : public BaseRPC
   {
   public:
-    RPC(std::string name, protocol::ChanneledStream& channels)
-      : BaseRPC(std::move(name), channels)
+    RPC(std::string name, protocol::ChanneledStream& channels,
+      Doughnut* doughnut = nullptr,
+      elle::Buffer* credentials = nullptr)
+      : BaseRPC(std::move(name), channels, doughnut, credentials)
     {}
 
     void
@@ -327,8 +401,10 @@ namespace infinit
     : public BaseRPC
   {
   public:
-    RPC(std::string name, protocol::ChanneledStream& channels)
-      : BaseRPC(std::move(name), channels)
+    RPC(std::string name, protocol::ChanneledStream& channels,
+        Doughnut* doughnut = nullptr,
+        elle::Buffer* credentials = nullptr)
+      : BaseRPC(std::move(name), channels, doughnut, credentials)
     {}
 
     R
@@ -416,12 +492,22 @@ namespace infinit
           call_arguments(0, output, args...);
         }
         outs.flush();
+        if (self._key)
+        {
+          call = self._key->encipher(
+            elle::ConstWeakBuffer(call.contents(), call.size()));
+        }
         ELLE_DEBUG("%s: send request", self)
           channel.write(call);
       }
       {
         ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
+        if (self._key)
+        {
+          response = self._key->decipher(
+            elle::ConstWeakBuffer(response.contents(), response.size()));
+        }
         elle::IOStream ins(response.istreambuf());
         elle::serialization::binary::SerializerIn input(ins, false);
         input.set_context(self._context);
@@ -444,7 +530,60 @@ namespace infinit
       }
     }
   };
+
+  inline BaseRPC::BaseRPC(std::string name,
+                          protocol::ChanneledStream& channels,
+                          infinit::model::doughnut::Doughnut* doughnut,
+                          elle::Buffer* credentials
+    )
+    : _name(std::move(name))
+    , _channels(channels)
+    , _doughnut(doughnut)
+    {
+      if (credentials && !credentials->empty())
+      {
+        elle::Buffer creds(*credentials);
+        _key = elle::make_unique<cryptography::SecretKey>(std::move(creds));
+      }
+      else if (_doughnut)
+      {
+        ELLE_LOG_COMPONENT("infinit.RPC");
+        ELLE_TRACE("starting key exchange");
+        RPC<std::unique_ptr<Passport>(Passport const&)>
+        auth_syn("auth_syn", this->_channels, nullptr);
+        auto remote_passport = auth_syn(this->_doughnut->passport());
+        ELLE_ASSERT(remote_passport);
+        // validate res
+        bool check = remote_passport->verify(this->_doughnut->owner());
+        ELLE_TRACE("got remote passport, check=%s", check);
+        if (!check)
+          throw elle::Error("Passport validation failed");
+        // generate, seal
+        // dont set _key yet so that our 2 rpcs are in cleartext
+        auto key = infinit::cryptography::secretkey::generate(256);
+        ELLE_TRACE("passwording...");
+        elle::Buffer password = key.password();
+        ELLE_TRACE("sealing...");
+        auto sealed_key = remote_passport->user().seal(password,
+          infinit::cryptography::Cipher::aes256,
+          infinit::cryptography::Mode::cbc);
+        ELLE_TRACE("Invoking auth_ack...");
+        RPC<bool(elle::Buffer const&)> auth_ack("auth_ack", this->_channels,
+          nullptr);
+        auth_ack(sealed_key);
+        this->_key = elle::make_unique<infinit::cryptography::SecretKey>
+          (std::move(key));
+        if (credentials)
+        {
+          credentials->size(0);
+          auto const& p = this->_key->password();
+          credentials->append(p.contents(), p.size());
+        }
+      }
+    }
 }
+
+
 
 # include <infinit/RPC.hxx>
 

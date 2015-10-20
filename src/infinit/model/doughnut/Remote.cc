@@ -122,6 +122,7 @@ namespace infinit
       void
       Remote::reconnect()
       {
+        this->_credentials = {};
         _connect(this->_endpoint, this->_connector);
         connect();
       }
@@ -136,7 +137,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         this->connect();
         RPC<void (blocks::Block const&, StoreMode)> store
-          ("store", *this->_channels);
+        ("store", *this->_channels, &this->_doughnut, &this->_credentials);
         store(block, mode);
       }
 
@@ -146,7 +147,8 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
         const_cast<Remote*>(this)->connect();
         RPC<std::unique_ptr<blocks::Block> (Address)> fetch(
-          "fetch", *const_cast<Remote*>(this)->_channels);
+          "fetch", *const_cast<Remote*>(this)->_channels,
+          &this->_doughnut, &const_cast<Remote*>(this)->_credentials);
         fetch.set_context<Doughnut*>(&this->_doughnut);
         return fetch(address);
       }
@@ -156,7 +158,8 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
         this->connect();
-        RPC<void (Address)> remove("remove", *this->_channels);
+        RPC<void (Address)> remove("remove", *this->_channels,
+          &this->_doughnut, &this->_credentials);
         remove(address);
       }
 
@@ -173,7 +176,7 @@ namespace infinit
         else if (this->_utp_socket)
           elle::fprintf(stream, "%s(%s)", name, *this->_utp_socket);
         else
-          elle::fprintf(stream, "%s()", name);
+          elle::fprintf(stream, "%s(%s)", name, this);
       }
     }
   }

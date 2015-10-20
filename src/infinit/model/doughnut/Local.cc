@@ -35,7 +35,7 @@ namespace infinit
         : _storage(std::move(storage))
         , _doughnut(nullptr)
       {
-        this->_register_rpcs(this->_rpcs);
+        _register_rpcs(_rpcs);
         if (p == Protocol::tcp || p == Protocol::all)
         {
           this->_server = elle::make_unique<reactor::network::TCPServer>();
@@ -225,6 +225,7 @@ namespace infinit
               [this, socket]
               {
                 _rpcs.set_context<Doughnut*>(this->_doughnut);
+                _rpcs._doughnut = this->_doughnut;
                 _rpcs.serve(**socket);
               });
           }
