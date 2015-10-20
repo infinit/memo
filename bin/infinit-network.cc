@@ -143,6 +143,15 @@ create(variables_map const& args)
     }
     if (stdout || script_mode)
       elle::serialization::json::serialize(network, std::cout, false);
+    if (args.count("push"))
+    {
+      infinit::NetworkDescriptor desc(
+        network.name,
+        std::move(network.dht()->overlay),
+        std::move(network.dht()->owner),
+        network.dht()->replicas);
+      beyond_push("network", desc.name, desc, owner);
+    }
   }
 }
 
@@ -405,6 +414,8 @@ int main(int argc, char** argv)
         { "replication-factor,r", value<int>(), "data replication factor" },
         { "async", bool_switch(), "Use asynchronious operations" },
         { "stdout", bool_switch(), "output configuration to stdout" },
+        { "push", bool_switch(),
+          elle::sprintf("push the network to %s", beyond()).c_str() },
       },
       {
         overlay_types_options,
