@@ -112,8 +112,6 @@ namespace infinit
             virtual
             std::unique_ptr<blocks::Block>
             fetch(Address address) const override;
-            std::unique_ptr<blocks::Block>
-            fetch(Address address, boost::optional<int> skip) const;
           protected:
             virtual
             void

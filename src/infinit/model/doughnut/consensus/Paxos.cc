@@ -209,13 +209,6 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Paxos::LocalPeer::fetch(Address address) const
         {
-          return this->fetch(address, {});
-        }
-
-        std::unique_ptr<blocks::Block>
-        Paxos::LocalPeer::fetch(Address address,
-                                boost::optional<int> skip) const
-        {
           ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
           auto decision = this->_addresses.find(address);
           if (decision != this->_addresses.end())
