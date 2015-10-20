@@ -94,10 +94,7 @@ class Bottle(bottle.Bottle):
     self.install(ResponsePlugin())
     self.route('/')(self.root)
     # GCS
-    if gcs is not None:
-      self.__gcs = gcs
-    else:
-      self.__gcs = gcs
+    self.__gcs = gcs
     # OAuth
     for s in Bottle.__oauth_services:
       self.route('/oauth/%s' % s)(getattr(self, 'oauth_%s' % s))
