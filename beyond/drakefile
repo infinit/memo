@@ -117,7 +117,7 @@ def configure(
                      where / python_prefix,
                      strip_prefix = 'couchdb-python'):
       yield node
-    yield how(drake.node('bottle/bottle.py'),
+    yield how(bottle,
               where / python_prefix, strip_prefix = True)
     yield how(drake.node('beyond'),
               where / 'bin', strip_prefix = True)
