@@ -289,15 +289,7 @@ namespace infinit
           auto owners = this->_owners(overlay, block->address(), op);
           if (auto* m = dynamic_cast<blocks::MutableBlock*>(block.get()))
           {
-            int version;
-            if (auto* okb =
-                dynamic_cast<OKB*>(m))
-              version = okb->version();
-            else if (auto* acb =
-                dynamic_cast<ACB*>(m))
-              version = acb->data_version();
-            else
-              ELLE_ABORT("unknown mutable block type: %s", *block);
+            auto version = m->version();
             Paxos::PaxosClient::Peers peers;
             for (int i = 0; i < this->_factor; ++i)
               peers.push_back(

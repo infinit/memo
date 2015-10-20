@@ -161,6 +161,13 @@ namespace infinit
       }
 
       template <typename Block>
+      int
+      BaseOKB<Block>::version() const
+      {
+        return this->_version;
+      }
+
+      template <typename Block>
       elle::Buffer const&
       BaseOKB<Block>::data() const
       {
@@ -295,20 +302,6 @@ namespace infinit
           _signer.reset();
         }
         return _signature;
-      }
-
-      template <typename Block>
-      blocks::ValidationResult
-      BaseOKB<Block>::_validate(blocks::Block const& previous) const
-      {
-        if (auto res = this->_validate()); else
-          return res;
-        ELLE_DEBUG("%s: check version", *this)
-          if (!this->_validate_version<BaseOKB<Block>>
-              (previous, &BaseOKB<Block>::_version, this->version()))
-            return blocks::ValidationResult::conflict
-              ("version validation failed");
-        return blocks::ValidationResult::success();
       }
 
       template <typename Block>

@@ -91,31 +91,28 @@ namespace infinit
       {
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        try
-        {
-          auto previous_buffer = this->_storage->get(block.address());
-          elle::IOStream s(previous_buffer.istreambuf());
-          typename elle::serialization::binary::SerializerIn input(s, false);
-          input.set_context<Doughnut*>(this->_doughnut);
-          auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
-
-          ELLE_DEBUG("%s: validate block against previous version", *this)
-            if (auto res = block.validate(*previous))
-              /* nothing */;
-            else
-            {
-              if (res.conflict())
-                throw Conflict(res.reason());
-              else
-                throw ValidationFailed(res.reason());
-            }
-        }
-        catch (storage::MissingKey const&)
-        {
-          ELLE_DEBUG("%s: validate block", *this)
-            if (auto res = block.validate()); else
-              throw ValidationFailed(res.reason());
-        }
+        ELLE_DEBUG("%s: validate block", *this)
+          if (auto res = block.validate()); else
+            throw ValidationFailed(res.reason());
+        if (auto *mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
+          try
+          {
+            auto previous_buffer = this->_storage->get(block.address());
+            elle::IOStream s(previous_buffer.istreambuf());
+            typename elle::serialization::binary::SerializerIn input(s, false);
+            input.set_context<Doughnut*>(this->_doughnut);
+            auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+            auto mprevious =
+              dynamic_cast<blocks::MutableBlock const*>(previous.get());
+            if (!mprevious)
+              throw ValidationFailed("overwriting a non-mutable block");
+            if (mblock->version() <= mprevious->version())
+              throw Conflict(
+                elle::sprintf("version %s is not superior to current version %s",
+                              mblock->version(), mprevious->version()));
+          }
+          catch (storage::MissingKey const&)
+          {}
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());

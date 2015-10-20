@@ -172,6 +172,12 @@ namespace infinit
         return elle::make_unique<ACBCache>(std::move(md5), std::move(decrypted));
       }
 
+      int
+      ACB::version() const
+      {
+        return this->_data_version;
+      }
+
       elle::Buffer
       ACB::_decrypt_data(elle::Buffer const& data) const
       {
@@ -379,15 +385,6 @@ namespace infinit
       /*-----------.
       | Validation |
       `-----------*/
-
-      blocks::ValidationResult
-      ACB::_validate(blocks::Block const& previous) const
-      {
-        if (auto res = Super::_validate(previous)); else
-          return res;
-        return this->_validate_version<ACB>(
-          previous, &ACB::_data_version, this->_data_version);
-      }
 
       blocks::ValidationResult
       ACB::_validate() const

@@ -77,22 +77,18 @@ namespace infinit
       public:
         BaseOKB(Doughnut* owner);
         BaseOKB(BaseOKB const& other);
-        ELLE_ATTRIBUTE_R(int, version);
+        ELLE_ATTRIBUTE(int, version);
         ELLE_ATTRIBUTE(elle::Buffer, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
-
-      /*-------.
-      | Clone  |
-      `-------*/
-      virtual
-      std::unique_ptr<blocks::Block>
-      clone() const override;
 
       /*--------.
       | Content |
       `--------*/
       public:
+        virtual
+        int
+        version() const override;
         virtual
         elle::Buffer const&
         data() const;
@@ -123,9 +119,6 @@ namespace infinit
         _seal() override;
         void
         _seal_okb();
-        virtual
-        blocks::ValidationResult
-        _validate(blocks::Block const& previous) const override;
         virtual
         blocks::ValidationResult
         _validate() const override;
@@ -160,6 +153,14 @@ namespace infinit
       private:
         elle::Buffer
         _sign() const;
+
+      /*---------.
+      | Clonable |
+      `---------*/
+      public:
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone() const override;
 
       /*--------------.
       | Serialization |

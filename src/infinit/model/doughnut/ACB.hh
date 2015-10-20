@@ -77,6 +77,9 @@ namespace infinit
       `--------*/
       protected:
         virtual
+        int
+        version() const override;
+        virtual
         elle::Buffer
         _decrypt_data(elle::Buffer const& data) const;
         void
@@ -118,9 +121,6 @@ namespace infinit
       | Validation |
       `-----------*/
       protected:
-        virtual
-        blocks::ValidationResult
-        _validate(blocks::Block const& previous) const override;
         virtual
         blocks::ValidationResult
         _validate() const override;
