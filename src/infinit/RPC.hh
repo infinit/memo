@@ -229,7 +229,8 @@ namespace infinit
         {
           auto channel = channels.accept();
           auto request = channel.read();
-          elle::serialization::binary::SerializerIn input(request, false);
+          elle::IOStream ins(request.istreambuf());
+          elle::serialization::binary::SerializerIn input(ins, false);
           input.set_context(this->_context);
           std::string name;
           input.serialize("procedure", name);
@@ -241,9 +242,10 @@ namespace infinit
           }
           ELLE_LOG_COMPONENT("infinit.RPC");
           ELLE_TRACE_SCOPE("%s: run procedure %s", *this, name);
-          protocol::Packet response;
+          elle::Buffer response;
+          elle::IOStream outs(response.ostreambuf());
           {
-            elle::serialization::binary::SerializerOut output(response, false);
+            elle::serialization::binary::SerializerOut output(outs, false);
             try
             {
               it->second->handle(input, output);
@@ -255,6 +257,7 @@ namespace infinit
               throw;
             }
           }
+          outs.flush();
           channel.write(response);
         }
       }
@@ -404,20 +407,23 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: call", self);
       protocol::Channel channel(self.channels());
       {
-        protocol::Packet call;
+        elle::Buffer call;
+        elle::IOStream outs(call.ostreambuf());
         ELLE_DEBUG("%s: build request", self)
         {
-          elle::serialization::binary::SerializerOut output(call, false);
+          elle::serialization::binary::SerializerOut output(outs, false);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
         }
+        outs.flush();
         ELLE_DEBUG("%s: send request", self)
           channel.write(call);
       }
       {
         ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
-        elle::serialization::binary::SerializerIn input(response, false);
+        elle::IOStream ins(response.istreambuf());
+        elle::serialization::binary::SerializerIn input(ins, false);
         input.set_context(self._context);
         bool success = false;
         input.serialize("success", success);
