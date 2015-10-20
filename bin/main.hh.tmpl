@@ -197,7 +197,9 @@ namespace infinit
                 output << std::endl;
                 output << options;
                 output << std::endl;
-                if (!help)
+                if (help)
+                  throw elle::Exit(0);
+                else
                   throw elle::Error("mode unspecified");
               }
               if (help)
