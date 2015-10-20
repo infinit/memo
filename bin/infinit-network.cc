@@ -143,7 +143,7 @@ create(variables_map const& args)
     }
     if (stdout || script_mode)
       elle::serialization::json::serialize(network, std::cout, false);
-    if (args.count("push"))
+    if (args.count("push") && args["push"].as<bool>())
     {
       infinit::NetworkDescriptor desc(
         network.name,
