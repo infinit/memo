@@ -54,6 +54,26 @@ public:
   {}
 };
 
+class MissingResource
+  : public elle::Error
+{
+public:
+  template <typename ... Args>
+  MissingResource(Args&& ... args)
+    : elle::Error(std::forward<Args>(args)...)
+  {}
+};
+
+class MissingLocalResource
+  : public MissingResource
+{
+public:
+  template <typename ... Args>
+  MissingLocalResource(Args&& ... args)
+    : MissingResource(std::forward<Args>(args)...)
+  {}
+};
+
 DAS_MODEL(Credentials, (uid, display_name, token, refresh_token), DasCredentials);
 DAS_MODEL_DEFAULT(Credentials, DasCredentials);
 DAS_MODEL_SERIALIZE(Credentials);
@@ -826,7 +846,8 @@ namespace infinit
     {
       f.open(path);
       if (!f.good())
-        throw elle::Error(elle::sprintf("%s '%s' does not exist", type, name));
+        throw MissingLocalResource(
+          elle::sprintf("%s '%s' does not exist", type, name));
     }
 
     void
