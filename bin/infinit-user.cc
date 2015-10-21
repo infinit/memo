@@ -201,6 +201,7 @@ networks(variables_map const& args)
       elle::sprintf("users/%s/networks", owner.name),
       "networks for",
       owner.name,
+      owner,
       false
     );
   for (std::string const& network: res["networks"])
