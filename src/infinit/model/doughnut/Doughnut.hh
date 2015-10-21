@@ -49,6 +49,7 @@ namespace infinit
                  bool cache = false);
         ~Doughnut();
 
+        ELLE_ATTRIBUTE_R(int, replicas);
         ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);

@@ -46,7 +46,8 @@ namespace infinit
                          int replicas,
                          bool async,
                          bool cache)
-        : _keys(std::move(keys))
+        : _replicas(replicas)
+        , _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _overlay(overlay_builder(this))
@@ -97,7 +98,7 @@ namespace infinit
                    std::move(overlay_builder),
                    std::move(dir),
                    std::move(local),
-                   std::move(replicas),
+                   replicas,
                    std::move(async),
                    std::move(cache))
       {
