@@ -216,15 +216,14 @@ class Bottle(bottle.Bottle):
     try:
       return self.__beyond.user_get(name = name).json()
     except User.NotFound:
-      return self.__user_not_found(name)
+      raise self.__user_not_found(name)
 
   def __user_not_found(self, name):
-    bottle.response.status = 404
-    return {
+    return Response(404, {
       'error': 'user/not_found',
       'reason': 'user %r does not exist' % name,
       'name': name,
-    }
+    })
 
   def user_delete(self, name):
     user = self.__beyond.user_get(name = name)
@@ -247,7 +246,10 @@ class Bottle(bottle.Bottle):
     return f('users', '%s/avatar' % name)
 
   def user_networks_get(self, name):
-    user = self.__beyond.user_get(name = name)
+    try:
+      user = self.__beyond.user_get(name = name)
+    except User.NotFound:
+      raise self.__user_not_found(name)
     self.authenticate(user)
     return {'networks': self.__beyond.user_networks_get(user = user)}
 
@@ -491,7 +493,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       user.save()
       return info
     except User.NotFound:
-      return self._Bottle__user_not_found(username)
+      raise self.__user_not_found(username)
   oauth.__name__ = 'oauth_%s' % name
   setattr(Bottle, oauth.__name__, oauth)
   def user_credentials_get(self, username, name = name):
@@ -504,7 +506,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
           list(getattr(user, '%s_accounts' % name).values()),
       }
     except User.NotFound:
-      return self._Bottle__user_not_found(username)
+      raise self.__user_not_found(username)
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
   setattr(Bottle, user_credentials_get.__name__, user_credentials_get)
 
@@ -539,7 +541,7 @@ def user_credentials_google_refresh(self, username):
                     user.save()
                     return token
     except User.NotFound:
-        return self._Bottle__user_not_found(unsername)
+      raise self.__user_not_found(username)
 
 setattr(Bottle,
         user_credentials_google_refresh.__name__,
