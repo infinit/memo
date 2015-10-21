@@ -34,7 +34,8 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
-        ELLE_ATTRIBUTE(std::unique_ptr<protocol::ChanneledStream>, channels);
+      protected:
+        ELLE_ATTRIBUTE_RP(std::unique_ptr<protocol::ChanneledStream>, channels, protected:);
 
       /*-----------.
       | Networking |
