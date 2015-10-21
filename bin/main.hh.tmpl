@@ -604,8 +604,17 @@ namespace infinit
     void
     user_save(User const& user)
     {
+      // Check if a user is not already present.
+      bool overwrite = false;
+      try
+      {
+        auto local_user = user_get(user.name);
+        overwrite = local_user == user;
+      }
+      catch (MissingLocalResource const&)
+      {}
       boost::filesystem::ofstream f;
-      this->_open(f, this->_user_path(user.name), user.name, "user");
+      this->_open(f, this->_user_path(user.name), user.name, "user", overwrite);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(user);
     }
