@@ -291,8 +291,8 @@ class Network(metaclass = Entity,
 
 
 class Volume(metaclass = Entity,
-              insert = 'volume_insert',
-              fields = fields('name', 'network')):
+             insert = 'volume_insert',
+             fields = fields('name', 'network')):
 
   @property
   def id(self):
