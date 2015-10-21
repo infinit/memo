@@ -116,6 +116,7 @@ class Bottle(bottle.Bottle):
       self.user_avatar_put)
     self.route('/users/<name>/avatar', method = 'DELETE')(
       self.user_avatar_delete)
+    self.route('/users/<name>/networks', method = 'GET')(self.user_networks_get)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -248,6 +249,12 @@ class Bottle(bottle.Bottle):
 
   def __user_avatar_manipulate(self, name, f):
     return f('users', '%s/avatar' % name)
+
+  def user_networks_get(self, name):
+    user = self.__beyond.user_get(name = name)
+    # XXX: Readd when beyond_fetch signs requests.
+    # self.authenticate(user)
+    return {'networks': self.__beyond.user_networks_get(user = user)}
 
   ## ------- ##
   ## Network ##
