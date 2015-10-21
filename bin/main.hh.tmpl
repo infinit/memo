@@ -328,6 +328,13 @@ namespace infinit
       return uid(this->public_key);
     }
 
+    bool
+    operator ==(User const& user) const
+    {
+      return this->name == user.name &&
+        this->public_key == user.public_key;
+    }
+
     std::string name;
     cryptography::rsa::PublicKey public_key;
     boost::optional<cryptography::rsa::PrivateKey> private_key;
