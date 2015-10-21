@@ -142,6 +142,16 @@ class Bottle(bottle.Bottle):
     self.route('/volumes/<owner>/<name>',
                method = 'DELETE')(self.volume_delete)
 
+  def __not_found(self, type, name):
+    Response(404, {
+      'error': '%s/not_found' % type,
+      'reason': '%s %r does not exist' % (type, name),
+      'name': name,
+    })
+
+  def __user_not_found(self, name):
+    return self.__not_found('user', name)
+
   def authenticate(self, user):
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
@@ -218,13 +228,6 @@ class Bottle(bottle.Bottle):
     except User.NotFound:
       raise self.__user_not_found(name)
 
-  def __user_not_found(self, name):
-    return Response(404, {
-      'error': 'user/not_found',
-      'reason': 'user %r does not exist' % name,
-      'name': name,
-    })
-
   def user_delete(self, name):
     user = self.__beyond.user_get(name = name)
     self.authenticate(user)
@@ -257,21 +260,12 @@ class Bottle(bottle.Bottle):
   ## Network ##
   ## ------- ##
 
-  def __not_found(self, type, name):
-    bottle.response.status = 404
-    return {
-      'error': '%s/not_found' % type,
-      'reason': '%s %r does not exist' % (type, name),
-      'name': name,
-    }
-
-
   def network_get(self, owner, name):
     try:
       return self.__beyond.network_get(
         owner = owner, name = name).json()
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_put(self, owner, name):
     try:
@@ -295,7 +289,7 @@ class Bottle(bottle.Bottle):
       owner = owner, name = name)
     passport = network.passports.get(invitee)
     if passport is None:
-      return self.__not_found(
+      raise self.__not_found(
         'passport', '%s/%s/%s' % (owner, name, invitee))
     else:
       return passport
@@ -315,7 +309,7 @@ class Bottle(bottle.Bottle):
       bottle.response.status = 201
       return {}
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_endpoints_get(self, owner, name):
     try:
@@ -323,7 +317,7 @@ class Bottle(bottle.Bottle):
                                           name = name)
       return network.endpoints
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_endpoint_put(self, owner, name, user, node_id):
     try:
@@ -338,7 +332,7 @@ class Bottle(bottle.Bottle):
       bottle.response.status = 201 # FIXME: 200 if existed
       return {}
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_endpoint_delete(self, owner, name, user, node_id):
     try:
@@ -349,7 +343,7 @@ class Bottle(bottle.Bottle):
       network.save()
       return {}
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_delete(self, owner, name):
     user = self.__beyond.user_get(name = owner)
@@ -365,7 +359,7 @@ class Bottle(bottle.Bottle):
       return self.__beyond.volume_get(
         owner = owner, name = name).json()
     except Volume.NotFound:
-      return self.__not_found('volume', '%s/%s' % (owner, name))
+      raise self.__not_found('volume', '%s/%s' % (owner, name))
 
   def volume_put(self, owner, name):
     user = self.__beyond.user_get(name = owner)
