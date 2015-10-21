@@ -157,8 +157,9 @@ namespace infinit
           ELLE_DEBUG("%s: validate block", *this)
             if (auto res = value->validate()); else
               throw ValidationFailed(res.reason());
-          return
-            this->_addresses.at(address).paxos.accept(p, value);
+          auto res = this->_addresses.at(address).paxos.accept(p, value);
+          on_store(*value, STORE_ANY);
+          return std::move(res);
         }
 
         void
@@ -244,7 +245,6 @@ namespace infinit
                   this->storage()->set(
                     block->address(),
                     elle::serialization::binary::serialize(block), true, true);
-                  on_store(*block, STORE_ANY);
                 }
                 unconst(decision->second).chosen = version;
                 // ELLE_ASSERT(block.unique());
