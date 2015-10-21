@@ -145,13 +145,13 @@ class Bottle(bottle.Bottle):
   def authenticate(self, user):
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
-      bottle.response.status = 403
-      raise Exception("Missing signature header")
+      raise Response(401, 'Missing signature header')
     request_time = bottle.request.headers.get('infinit-time')
     if request_time is None:
-      raise Exception("Missing time header")
+      raise Response(400, 'Missing time header')
     if abs(time.time() - int(request_time)) > 300: # UTC
-      raise Exception("Time too far away: got %s, current %s" % (request_time, time.time()))
+      raise Response(401, 'Time too far away: got %s, current %s' % \
+                     (request_time, time.time()))
     rawk = user.public_key['rsa']
     der = base64.b64decode(rawk.encode('latin-1'))
     k = Crypto.PublicKey.RSA.importKey(der)
@@ -159,15 +159,11 @@ class Bottle(bottle.Bottle):
     to_sign += base64.b64encode(
       hashlib.sha256(bottle.request.body.getvalue()).digest()).decode('utf-8') + ";"
     to_sign += request_time
-
     local_hash = Crypto.Hash.SHA256.new(to_sign.encode('utf-8'))
-
-
     remote_signature_crypted = base64.b64decode(remote_signature_raw.encode('utf-8'))
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
     if not verifier.verify(local_hash, remote_signature_crypted):
-      bottle.response.status = 403
-      raise Exception("authenticate error")
+      raise Response(403, 'Authentication error')
     pass
 
   def root(self):
