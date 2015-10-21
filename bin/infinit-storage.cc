@@ -82,6 +82,16 @@ list(variables_map const& args)
   }
 }
 
+static
+void
+export_(variables_map const& args)
+{
+  auto name = mandatory(args, "name", "storage name");
+  auto storage = ifnt.storage_get(ifnt.qualified_name(name, ifnt.user_get()));
+  elle::serialization::json::SerializerOut out(*get_output(args), false);
+  out.serialize_forward(storage);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -125,6 +135,18 @@ main(int argc, char** argv)
       &list,
       "",
       {},
+    },
+    {
+      "export",
+      "Export a storage informations",
+      &export_,
+      "--name STORAGE_NAME",
+      {
+        { "name,n", value<std::string>(), "storage to export" },
+        { "output,o", value<std::string>(),
+          "file to write storage to (stdout by default)" },
+        option_owner,
+      }
     },
   };
   return infinit::main("Infinit storage management utility", modes, argc, argv);

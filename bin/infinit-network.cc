@@ -375,6 +375,38 @@ run(variables_map const& args)
     run();
 }
 
+static
+void
+list_storage(variables_map const& args)
+{
+  std::string name;
+  {
+    std::string network_name = mandatory(args, "name", "network name");
+    infinit::User owner = self_user(ifnt, args);
+    name = ifnt.network_path_get(network_name, owner);
+  }
+  namespace bf = boost::filesystem;
+  std::ifstream is(name);
+  auto json = boost::any_cast<elle::json::Object>(elle::json::read(is));
+  auto storage = boost::any_cast<elle::json::Object>(json["storage"]);
+  std::string type = boost::any_cast<std::string>(storage["type"]);
+  if (type == "strip")
+    for (auto const& b: boost::any_cast<elle::json::Array>(storage["backend"]))
+    {
+      auto bb = boost::any_cast<elle::json::Object>(b);
+      std::string path = boost::any_cast<std::string>(bb["path"]);
+      name = bf::path(path).filename().string();
+      std::cout << name << "\n";
+    }
+  else
+  {
+    std::string path = boost::any_cast<std::string>(storage["path"]);
+    name = bf::path(path).filename().string();
+    std::cout << name << "\n";
+  }
+  std::cout << std::endl;
+}
+
 int main(int argc, char** argv)
 {
   program = argv[0];
@@ -538,6 +570,16 @@ int main(int argc, char** argv)
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations" },
         { "cache-model", bool_switch(), "Enable model caching"},
+      },
+    },
+    {
+      "list-storage",
+      "List all contributed storage of a network",
+      &list_storage,
+      "--name NETWORK",
+      {
+        option_owner,
+        {"name", value<std::string>(), "network name" }
       },
     },
   };
