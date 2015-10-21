@@ -271,6 +271,8 @@ namespace infinit
         bootstrap(bool use_bootstrap_nodes);
         SerState
         get_serstate(GossipEndpoint peer);
+        void
+        deoverduplicate();
         Address _self;
         Address _ping_target;
         Time _ping_time;

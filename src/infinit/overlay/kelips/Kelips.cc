@@ -691,9 +691,40 @@ namespace infinit
       }
 
       void
+      Node::deoverduplicate()
+      {
+        auto it = _state.files.begin();
+        while (it != _state.files.end())
+        {
+          if (it->second.home_node == _self)
+          {
+            auto its = _state.files.equal_range(it->first);
+            int count = 0;
+            while (its.first != its.second)
+            {
+              ++count;
+              ++its.first;
+            }
+            if (count > doughnut()->replicas())
+            {
+              ELLE_DEBUG("Removing over-duplicated block %s (%s > %s)",
+                         it->first, count, doughnut()->replicas());
+              // dont reorder, local->remove will call our hook remove()
+              auto address = it->first;
+              it = _state.files.erase(it);
+              _local->remove(address);
+              continue;
+            }
+          }
+          ++it;
+        }
+      }
+
+      void
       Node::engage()
       {
         bootstrap(true);
+        deoverduplicate();
 
         _gossip.socket()->close();
         _gossip.bind(GossipEndpoint({}, _port));
