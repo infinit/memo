@@ -87,7 +87,15 @@ void
 export_(variables_map const& args)
 {
   auto name = mandatory(args, "name", "storage name");
-  auto storage = ifnt.storage_get(ifnt.qualified_name(name, ifnt.user_get()));
+  std::unique_ptr<infinit::storage::StorageConfig> storage = nullptr;
+  try
+  {
+    storage = ifnt.storage_get(name);
+  }
+  catch(...)
+  {
+    storage = ifnt.storage_get(ifnt.qualified_name(name, ifnt.user_get()));
+  }
   elle::serialization::json::SerializerOut out(*get_output(args), false);
   out.serialize_forward(storage);
 }
