@@ -248,8 +248,7 @@ class Bottle(bottle.Bottle):
 
   def user_networks_get(self, name):
     user = self.__beyond.user_get(name = name)
-    # XXX: Readd when beyond_fetch signs requests.
-    # self.authenticate(user)
+    self.authenticate(user)
     return {'networks': self.__beyond.user_networks_get(user = user)}
 
   ## ------- ##
