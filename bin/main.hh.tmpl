@@ -1157,10 +1157,56 @@ beyond()
   return res;
 }
 
+static
+std::unordered_map<std::string, std::string>
+signature_headers(
+  reactor::http::Method method,
+  std::string const& where,
+  infinit::User const& self,
+  boost::optional<std::stringstream const&> payload_ = boost::none)
+{
+  using namespace infinit::cryptography;
+  auto semi_colon_append = [](elle::Buffer& buffer, std::string const& str)
+    {
+      std::string res = elle::sprintf("%s;", str);
+      return buffer.append(res.data(), res.size());
+    };
+  elle::Buffer string_to_sign = elle::Buffer();
+  semi_colon_append(string_to_sign, elle::sprintf("%s", method));
+  semi_colon_append(string_to_sign, where);
+  elle::Buffer payload_hash;
+  if (payload_)
+  {
+    auto payload = payload_.get().str();
+    payload_hash = hash(
+      elle::ConstWeakBuffer(payload.data(), payload.size()), Oneway::sha256);
+  }
+  else
+  {
+    payload_hash = hash(elle::ConstWeakBuffer(), Oneway::sha256);
+  }
+  auto encoded_hash = elle::format::base64::encode(payload_hash);
+  semi_colon_append(string_to_sign, encoded_hash.string());
+  auto now = std::to_string(time(0));
+  string_to_sign.append(now.data(), now.size());
+  auto signature = self.private_key->sign(
+    string_to_sign,
+    infinit::cryptography::rsa::Padding::pkcs1,
+    infinit::cryptography::Oneway::sha256);
+  auto encoded_signature = elle::format::base64::encode(signature);
+  std::unordered_map<std::string, std::string> res = {
+    { "infinit-signature", encoded_signature.string() },
+    { "infinit-time", now },
+  };
+  return res;
+}
+
 template <typename T>
 void
 beyond_push(std::string const& where,
-            std::string const& type, std::string const& name, T const& o,
+            std::string const& type,
+            std::string const& name,
+            T const& o,
             infinit::User const& self)
 {
   using namespace infinit::cryptography;
@@ -1168,24 +1214,12 @@ beyond_push(std::string const& where,
   c.header_add("Content-Type", "application/json");
   std::stringstream payload;
   elle::serialization::json::serialize(o, payload, false);
-  elle::Buffer string_to_sign("PUT;", 4);
-  string_to_sign.append(where.data(), where.size());
-  string_to_sign.append(";", 1);
-  auto payload_hash = hash(elle::ConstWeakBuffer(payload.str().data(), payload.str().size()),
-                           Oneway::sha256);
-  auto pl64 = elle::format::base64::encode(payload_hash);
-  string_to_sign.append(pl64.contents(), pl64.size());
-
-  string_to_sign.append(";", 1);
-  auto now = std::to_string(time(0));
-  string_to_sign.append(now.data(), now.size());
-  auto sig = self.private_key->sign(
-    string_to_sign,
-    infinit::cryptography::rsa::Padding::pkcs1,
-    infinit::cryptography::Oneway::sha256);
-  auto sig64 = elle::format::base64::encode(sig);
-  c.header_add("infinit-signature", sig64.string());
-  c.header_add("infinit-time", now);
+  auto headers = signature_headers(reactor::http::Method::PUT,
+                                  where,
+                                  self,
+                                  payload);
+  for (auto const& header: headers)
+    c.header_add(header.first, header.second);
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::PUT, std::move(c));
   r << payload.str();
@@ -1217,9 +1251,21 @@ T
 beyond_fetch(std::string const& where,
              std::string const& type,
              std::string const& name,
+             boost::optional<infinit::User const&> self = boost::none,
              bool output_report_action = true)
 {
-  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where));
+  reactor::http::Request::Configuration c;
+  if (self)
+  {
+    auto headers = signature_headers(reactor::http::Method::GET,
+                                     where,
+                                     self.get());
+    for (auto const& header: headers)
+      c.header_add(header.first, header.second);
+  }
+  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
+                           reactor::http::Method::GET,
+                           std::move(c));
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
   {
@@ -1249,27 +1295,12 @@ beyond_delete(std::string const& where,
               std::string const& type, std::string const& name,
               infinit::User const& self)
 {
-  using namespace infinit::cryptography;
-  elle::Buffer string_to_sign("DELETE;", 7);
-  string_to_sign.append(where.data(), where.size());
-  string_to_sign.append(";", 1);
-  auto payload_hash = hash(elle::ConstWeakBuffer(),
-                           Oneway::sha256);
-  auto pl64 = elle::format::base64::encode(payload_hash);
-  string_to_sign.append(pl64.contents(), pl64.size());
-
-  string_to_sign.append(";", 1);
-  auto now = std::to_string(time(0));
-  string_to_sign.append(now.data(), now.size());
-  auto sig = self.private_key->sign(
-    string_to_sign,
-    infinit::cryptography::rsa::Padding::pkcs1,
-    infinit::cryptography::Oneway::sha256);
-  auto sig64 = elle::format::base64::encode(sig);
   reactor::http::Request::Configuration c;
-  c.header_add("infinit-signature", sig64.string());
-  c.header_add("infinit-time", now);
-
+  auto headers = signature_headers(reactor::http::Method::DELETE,
+                                   where,
+                                   self);
+  for (auto const& header: headers)
+    c.header_add(header.first, header.second);
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::DELETE,
                            std::move(c));
