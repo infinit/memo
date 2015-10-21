@@ -407,6 +407,23 @@ list_storage(variables_map const& args)
   std::cout << std::endl;
 }
 
+static
+void
+users(variables_map const& args)
+{
+  std::string network_name = mandatory(args, "name", "network_name");
+  auto res =
+    beyond_fetch<std::unordered_map<std::string, std::vector<std::string>>>(
+      elle::sprintf("networks/%s/users", network_name),
+      "users of",
+      network_name,
+      boost::none,
+      false
+    );
+  for (std::string const& user: res["users"])
+    std::cout << user << std::endl;
+}
+
 int main(int argc, char** argv)
 {
   program = argv[0];
@@ -579,7 +596,16 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         option_owner,
-        {"name", value<std::string>(), "network name" }
+        { "name", value<std::string>(), "network name" },
+      },
+    },
+    {
+      "users",
+      "List all users in a network",
+      &users,
+      "--name NETWORK",
+      {
+        { "name", value<std::string>(), "network name" },
       },
     },
   };
