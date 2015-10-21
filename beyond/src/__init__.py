@@ -289,7 +289,6 @@ class Network(metaclass = Entity,
   def id(self):
     return '%s/%s' % (self.owner, self.name)
 
-
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
              fields = fields('name', 'network')):
