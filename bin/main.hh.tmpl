@@ -1215,12 +1215,17 @@ beyond_push(std::string const& type, std::string const& name, T const& o,
 template <typename T>
 T
 beyond_fetch(std::string const& where,
-             std::string const& type, std::string const& name)
+             std::string const& type,
+             std::string const& name,
+             bool output_report_action = true)
 {
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where));
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    report_action("fetched", type, name);
+  {
+    if (output_report_action)
+      report_action("fetched", type, name);
+  }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
     throw elle::Error(
       elle::sprintf("%s \"%s\" not found", type, name));
