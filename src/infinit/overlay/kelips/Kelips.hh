@@ -150,6 +150,11 @@ namespace infinit
              model::doughnut::Doughnut* doughnut) override;
       };
 
+      typedef std::pair<
+        std::unordered_map<Address, GossipEndpoint>, // contacts
+        std::vector<std::pair<Address, Address>> // address, home_node
+      > SerState;
+
       class Node
         : public infinit::overlay::Overlay
         , public elle::Printable
@@ -260,6 +265,12 @@ namespace infinit
         void
         setKey(Address const& a, GossipEndpoint const& e,
                infinit::cryptography::SecretKey sk);
+        void
+        process_update(SerState const& s);
+        void
+        bootstrap(bool use_bootstrap_nodes);
+        SerState
+        get_serstate(GossipEndpoint peer);
         Address _self;
         Address _ping_target;
         Time _ping_time;

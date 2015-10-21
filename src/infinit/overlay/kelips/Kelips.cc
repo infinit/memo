@@ -6,7 +6,9 @@
 #include <boost/filesystem.hpp>
 
 #include <elle/bench.hh>
+#include <elle/container/map.hh>
 #include <elle/format/base64.hh>
+#include <elle/network/Interface.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
@@ -606,9 +608,93 @@ namespace infinit
           _pinger_thread->terminate_now();
       }
 
+      SerState Node::get_serstate(GossipEndpoint gep)
+      {
+        RpcEndpoint host;
+        endpoint_to_endpoint(gep, host);
+        using Protocol = infinit::model::doughnut::Local::Protocol;
+        auto protocol = this->_config.rpc_protocol;
+        if (protocol == Protocol::utp || protocol == Protocol::all)
+        {
+          try
+          {
+            infinit::model::doughnut::Remote peer(
+                  const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                  boost::asio::ip::udp::endpoint(host.address(), host.port() + 100),
+                  const_cast<Node*>(this)->_remotes_server);
+            peer.connect();
+            RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
+            return rpc();
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("%s: UTP connection failed with %s", *this, host);
+          }
+        }
+        if (protocol == Protocol::tcp || protocol == Protocol::all)
+        {
+          try
+          {
+            infinit::model::doughnut::Remote peer(
+                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                host);
+            peer.connect();
+            RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
+            return rpc();
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("%s: TCP connection failed with %s", *this, host);
+          }
+        }
+        throw elle::Error(
+          elle::sprintf("%s: Failed to contact peer %s", *this, host));
+      }
+
+      void
+      Node::bootstrap(bool use_bootstrap_nodes)
+      {
+        ELLE_TRACE("starting bootstrap procedure");
+        std::set<Address> scanned;
+        std::set<GossipEndpoint> candidates;
+        if (use_bootstrap_nodes)
+          candidates.insert(_config.bootstrap_nodes.begin(), _config.bootstrap_nodes.end());
+        for (auto const& c: this->_state.contacts[_group])
+          candidates.insert(c.second.endpoint);
+        while (!candidates.empty())
+        {
+          GossipEndpoint ep = *candidates.begin();
+          candidates.erase(ep);
+          ELLE_DEBUG("fetching %s, %s candidates remaining", ep, candidates.size());
+          try
+          {
+            SerState res = get_serstate(ep);
+            // ugly hack, embeded self address
+            scanned.insert(res.second.back().second);
+            res.second.pop_back();
+            process_update(res);
+            for (auto const&c: _state.contacts[_group])
+            {
+              if (!scanned.count(c.first))
+              {
+                candidates.insert(c.second.endpoint);
+              }
+            }
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("%s", e);
+          }
+        }
+        ELLE_TRACE("scanned %s nodes", scanned.size());
+        // FIXME: weed out over-duplicated blocks
+      }
+
       void
       Node::engage()
       {
+        bootstrap(true);
+
         _gossip.socket()->close();
         _gossip.bind(GossipEndpoint({}, _port));
         ELLE_LOG("%s: listening on port %s",
@@ -620,10 +706,13 @@ namespace infinit
           std::bind(&Node::gossipListener, this));
         _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
           std::bind(&Node::pinger, this));
-        // Send a bootstrap request to bootstrap nodes
+
+        // Send a bootstrap request to bootstrap nodes and all
+        // nodes in group
         packet::BootstrapRequest req;
         req.sender = _self;
-        for (auto const& e: _config.bootstrap_nodes)
+
+        auto send_bootstrap = [&req, this](GossipEndpoint e)
         {
           ELLE_TRACE("%s: sending bootstrap to node %s", *this, e);
           if (!_config.encrypt || _config.accept_plain)
@@ -634,6 +723,21 @@ namespace infinit
             req.sender = _self;
             send(req, e, Address::null);
             _pending_bootstrap.push_back(e);
+          }
+        };
+        std::set<GossipEndpoint> recipients;
+        for (auto const& e: _config.bootstrap_nodes)
+        {
+          send_bootstrap(e);
+          recipients.insert(e);
+        }
+        for (auto const& c: _state.contacts[_group])
+        {
+          auto e = c.second.endpoint;
+          if (!recipients.count(e))
+          {
+            send_bootstrap(e);
+            recipients.insert(e);
           }
         }
         if (_config.wait)
@@ -646,7 +750,10 @@ namespace infinit
         _state.contacts.resize(_config.k);
         // If we are not an observer, we must wait for Local port information
         if (_observer)
+        {
+          ELLE_TRACE("%s: engage", *this);
           engage();
+        }
       }
 
       void
@@ -1465,7 +1572,26 @@ namespace infinit
       void
       Node::onBootstrapRequest(packet::BootstrapRequest* p)
       {
+        auto ep = p->endpoint;
         int g = group_of(p->sender);
+        if (g == _group)
+        {
+          new reactor::Thread("reverse bootstraper",
+            [this, ep] {
+              try
+              {
+                SerState state = get_serstate(ep);
+                state.second.pop_back(); // pop remote address
+                ELLE_DEBUG("%s: inserting serstate from %s", *this, ep);
+                process_update(state);
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN("Error processing bootstrap data: %s", e);
+              }
+            }, true);
+        }
+
         packet::Gossip res;
         res.sender = _self;
 
@@ -2128,11 +2254,9 @@ namespace infinit
           reactor::sleep(boost::posix_time::milliseconds(_config.ping_interval_ms));
           cleanup();
           // some stats
-          std::stringstream ss;
-          ss << "g: " << _group << "  f: " << _state.files.size() << "  c:";
-          for(auto const& c: _state.contacts)
-            ss << c.size() << ' ';
-          ELLE_TRACE("%s: %s", *this, ss.str());
+          static elle::Bench n_files("kelips.file_count", 10_sec);
+          n_files.add(_state.files.size());
+
           // pick a target
           GossipEndpoint endpoint;
           Address address;
@@ -2175,9 +2299,11 @@ namespace infinit
       void
       Node::cleanup()
       {
+        static elle::Bench bench("kelips.cleared_files", 10_sec);
         auto it = _state.files.begin();
         auto t = now();
         auto file_timeout = std::chrono::milliseconds(_config.file_timeout_ms);
+        int cleared = 0;
         while (it != _state.files.end())
         {
           if (!(it->second.home_node == _self) &&
@@ -2185,10 +2311,12 @@ namespace infinit
           {
             ELLE_DUMP("%s: erase file %x", *this, it->first);
             it = _state.files.erase(it);
+            ++cleared;
           }
           else
             ++it;
         }
+        bench.add(cleared);
         auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
         for (auto& contacts: _state.contacts)
         {
@@ -2204,20 +2332,15 @@ namespace infinit
               ++it;
           }
         }
-        int my_files = 0;
-        for (auto const& f: _state.files)
-        {
-          if (f.second.home_node == _self)
-            ++my_files;
-        }
-        int time_send_all = my_files / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
+
+        int time_send_all = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
         ELLE_DUMP("time_send_all is %s", time_send_all);
         if (time_send_all >= _config.file_timeout_ms / 4)
         {
           ELLE_TRACE_SCOPE(
             "%s: too many files for configuration: "
             "files=%s, per packet=%s, interval=%s, timeout=%s",
-            *this, my_files, _config.gossip.files,
+            *this, _state.files.size(), _config.gossip.files,
             _config.gossip.interval_ms, _config.file_timeout_ms);
           if (_config.gossip.files < 20)
           {
@@ -2254,7 +2377,35 @@ namespace infinit
                                           std::placeholders::_2));
         l->on_remove.connect(std::bind(&Node::remove, this,
                                            std::placeholders::_1));
+
+        l->rpcs().add("kelips_fetch_state",
+          std::function<SerState ()>(
+            [this] ()
+            {
+              SerState res;
+              res.first.insert(std::make_pair(_self, _local_endpoint));
+              for (auto const& contacts: this->_state.contacts)
+                for (auto const& c: contacts)
+                  res.first.insert(std::make_pair(c.second.address, c.second.endpoint));
+              for (auto const& f: this->_state.files)
+                res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
+              // OH THE UGLY HACK, we need a place to store our own address
+              res.second.push_back(std::make_pair(Address::null, _self));
+              return res;
+            }));
         this->_port = l->server_endpoint().port();
+        for (auto const& itf: elle::network::Interface::get_map(
+           elle::network::Interface::Filter::only_up |
+           elle::network::Interface::Filter::no_loopback |
+           elle::network::Interface::Filter::no_autoip))
+          if (itf.second.ipv4_address.size() > 0)
+          {
+            this->_local_endpoint = GossipEndpoint(
+              boost::asio::ip::address::from_string(itf.second.ipv4_address),
+              _port);
+            ELLE_LOG("Setting endpoint to %s", this->_local_endpoint);
+            break;
+          }
         reload_state(*l);
         this->engage();
       }
@@ -2386,8 +2537,31 @@ namespace infinit
         for (auto const& k: keys)
         {
           _state.files.insert(std::make_pair(k,
-            File{k, _self, now(), Time(), 0}));
-          ELLE_DEBUG("%s: reloaded %x", *this, k);
+            File{k, _self, now(), now(), _config.gossip.new_threshold + 1}));
+          ELLE_DUMP("%s: reloaded %x", *this, k);
+        }
+      }
+
+      void
+      Node::process_update(SerState const& s)
+      {
+        for (auto const& c: s.first)
+        {
+          onContactSeen(c.first, c.second);
+        }
+        for (auto const& f: s.second)
+        {
+          if (group_of(f.first) != _group)
+            continue;
+          auto its = _state.files.equal_range(f.first);
+          auto it = std::find_if(its.first, its.second,
+            [&](decltype(*its.first) i) -> bool {
+            return i.second.home_node == f.second;});
+          if (it == its.second)
+          {
+            _state.files.insert(std::make_pair(f.first,
+                File{f.first, f.second, now(), now(), _config.gossip.new_threshold+1}));
+          }
         }
       }
 
@@ -2517,21 +2691,22 @@ namespace infinit
         }
         if (k == "bootstrap")
         {
-          int count = 100;
-          if (v)
-            count = std::stoi(*v);
-          for (int i=0; i<count; ++i)
-          {
-            int peers = _state.contacts[_group].size();
-            std::uniform_int_distribution<> random(0, peers-1);
-            int v = random(_gen);
-            packet::FileBootstrapRequest req;
-            req.sender = _self;
-            auto it = _state.contacts[_group].begin();
-            while (v--) ++it;
-            send(req, it->second.endpoint, it->first);
-            reactor::sleep(10_ms);
-          }
+          bootstrap(false);
+        }
+        if (k == "gossip")
+        {
+          if (!v)
+            return elle::sprintf("files per packet: %s,  interval: %s ms, timeout: %s",
+              _config.gossip.files, _config.gossip.interval_ms, _config.file_timeout_ms);
+          size_t s1 = v->find_first_of(',');
+          size_t s2 = v->find_last_of(',');
+          ELLE_ASSERT(s1 != s2 && s1 != std::string::npos);
+          std::string fpp = v->substr(0, s1);
+          std::string interval = v->substr(s1+1, s2-s1-1);
+          std::string timeout = v->substr(s2+1);
+          _config.gossip.files = std::stol(fpp);
+          _config.gossip.interval_ms = std::stol(interval);
+          _config.file_timeout_ms = std::stol(timeout);
         }
         return res;
       }
