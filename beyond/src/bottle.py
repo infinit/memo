@@ -145,7 +145,7 @@ class Bottle(bottle.Bottle):
                method = 'DELETE')(self.volume_delete)
 
   def __not_found(self, type, name):
-    Response(404, {
+    return Response(404, {
       'error': '%s/not_found' % type,
       'reason': '%s %r does not exist' % (type, name),
       'name': name,
