@@ -64,6 +64,9 @@ class Beyond:
     return self.__datastore.user_delete(
       name = name)
 
+  def user_networks_get(self, user):
+    return self.__datastore.user_networks_fetch(user.name)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
