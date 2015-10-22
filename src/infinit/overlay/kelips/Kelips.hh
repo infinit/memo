@@ -273,6 +273,10 @@ namespace infinit
         get_serstate(GossipEndpoint peer);
         void
         deoverduplicate();
+        void
+        rereplicate();
+        void
+        rereplicator();
         Address _self;
         Address _ping_target;
         Time _ping_time;
@@ -285,7 +289,7 @@ namespace infinit
         reactor::network::UDPSocket _gossip;
         reactor::Mutex _udp_send_mutex;
         std::unique_ptr<reactor::Thread>
-          _emitter_thread, _listener_thread, _pinger_thread;
+          _emitter_thread, _listener_thread, _pinger_thread, _rereplicator_thread;
         std::default_random_engine _gen;
         std::unordered_map<int, std::shared_ptr<PendingRequest>>
           _pending_requests;

@@ -606,6 +606,8 @@ namespace infinit
           _listener_thread->terminate_now();
         if (_pinger_thread)
           _pinger_thread->terminate_now();
+        if (_rereplicator_thread)
+          _rereplicator_thread->terminate_now();
       }
 
       SerState Node::get_serstate(GossipEndpoint gep)
@@ -691,6 +693,69 @@ namespace infinit
       }
 
       void
+      Node::rereplicator()
+      {
+        while (true)
+        {
+          reactor::sleep(40_sec); // FINME awfully short for testing
+          try
+          {
+            rereplicate();
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("Error running rereplicate: %s", e);
+          }
+        }
+      }
+
+      void
+      Node::rereplicate()
+      {
+        bootstrap(false);
+        // FIXME: race with original file creation, require multiple
+        // scans with same value to rereplicate
+        auto it = _state.files.begin();
+        for (;it != _state.files.end(); ++it)
+        {
+          if (it->second.home_node == _self)
+          {
+            bool responsible = true;
+            auto its = _state.files.equal_range(it->first);
+            int count = 0;
+            while (its.first != its.second)
+            {
+              if (its.first->second.home_node < _self)
+              {
+                responsible = false;
+                break;
+              }
+              ++count;
+              ++its.first;
+            }
+            if (responsible && count < doughnut()->replicas())
+            {
+              ELLE_DEBUG("re-duplicating %s (%s < %s)",
+                it->first, count, doughnut()->replicas());
+              auto block = _local->fetch(it->first);
+              // Note: to be on the safe side, rereplicate by 1 at most
+              // we can't ask the overlay, no way to set the replication count
+              auto members = _lookup(block->address(), 1,
+                infinit::overlay::Operation::OP_INSERT);
+              Overlay::Member m;
+              for (auto i: members)
+              {
+                m = i;
+                break;
+              }
+              if (m)
+                m->store(*block, model::STORE_INSERT);
+            }
+          }
+        }
+      }
+
+      void
       Node::deoverduplicate()
       {
         auto it = _state.files.begin();
@@ -737,6 +802,8 @@ namespace infinit
           std::bind(&Node::gossipListener, this));
         _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
           std::bind(&Node::pinger, this));
+        _rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
+          std::bind(&Node::rereplicator, this));
 
         // Send a bootstrap request to bootstrap nodes and all
         // nodes in group
