@@ -1612,8 +1612,9 @@ namespace infinit
         {
           addLocalResults(p, nullptr);
         }
-        if (p->result.size() >= unsigned(p->count))
-        { // We got the full result, send reply
+        if (p->result.size() >= unsigned(p->count)
+          || _state.contacts[fg].empty())
+        { // We got the full result or we cant forward, send reply
           packet::GetFileReply res;
           res.sender = _self;
           res.fileAddress = p->fileAddress;
@@ -1681,11 +1682,14 @@ namespace infinit
       {
         ELLE_TRACE("%s: putFileRequest %s %s %s %x", *this, p->ttl, p->insert_ttl,
                    p->result.size(), p->fileAddress);
+        int fg = group_of(p->fileAddress);
         if (p->originEndpoint.port() == 0)
           p->originEndpoint = p->endpoint;
         // don't accept put requests until we know our endpoint
-        if (p->insert_ttl == 0
-          && _local_endpoint.address().to_string() != "0.0.0.0")
+        // Accept the put locally if we know no other node
+        if (fg == _group
+          &&  ((p->insert_ttl == 0 && _local_endpoint.address().to_string() != "0.0.0.0")
+              || _state.contacts[_group].empty()))
         {
           // check if we didn't already accept this file
           if (std::find_if(p->result.begin(), p->result.end(),
@@ -1718,7 +1722,9 @@ namespace infinit
         // Forward
         if (p->insert_ttl > 0)
           p->insert_ttl--;
-        if (p->ttl == 0 || p->count <= signed(p->result.size()))
+        if (p->ttl == 0
+          || p->count <= signed(p->result.size())
+          || _state.contacts[_group].empty())
         {
           packet::PutFileReply res;
           res.sender = _self;
@@ -1735,7 +1741,6 @@ namespace infinit
           return;
         }
         // Forward the packet to an other node
-        int fg = group_of(p->fileAddress);
         auto it = random_from(_state.contacts[fg], _gen);
         if (it == _state.contacts[fg].end())
           it = random_from(_state.contacts[_group], _gen);
