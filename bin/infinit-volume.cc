@@ -226,7 +226,7 @@ run(variables_map const& args)
       reactor::wait(*fs);
     }
   };
-  if (push)
+  if (push && model.first)
     elle::With<InterfacePublisher>(
       network, self, model.second->overlay()->node_id(),
       model.first->server_endpoint().port()) << [&]
