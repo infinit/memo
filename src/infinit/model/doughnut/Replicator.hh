@@ -18,7 +18,8 @@ namespace infinit
       {
       public:
         Replicator(Doughnut& doughnut, int factor,
-                   boost::filesystem::path const& journal_dir);
+                   boost::filesystem::path const& journal_dir,
+                   bool rereplicate);
         ~Replicator();
         ELLE_ATTRIBUTE_R(int, factor);
       protected:
@@ -45,6 +46,7 @@ namespace infinit
         reactor::Thread _process_thread;
         std::unordered_map<Address, int> _retries;
         int _frame;
+        bool _rereplicate;
       };
     }
   }

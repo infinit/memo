@@ -60,7 +60,7 @@ namespace infinit
         else
         {
           this->_consensus = elle::make_unique<Replicator>(*this, replicas,
-            dir / "replicator");
+            dir / "replicator", false);
         }
         if (async)
         {
