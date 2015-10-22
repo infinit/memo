@@ -278,6 +278,8 @@ class Bottle(bottle.Bottle):
       network.create()
       bottle.response.status = 201
       return {}
+    except User.NotFound:
+      raise self.__user_not_found(owner)
     except Network.Duplicate:
       bottle.response.status = 409
       return {
