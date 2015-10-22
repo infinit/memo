@@ -33,7 +33,7 @@ namespace infinit
         void chmod(mode_t mode) override THROW_NOSYS; // target
         void chown(int uid, int gid) override THROW_NOSYS; // target
         void statfs(struct statvfs *) override THROW_NOSYS;
-        void utimens(const struct timespec tv[2]) THROW_NOSYS;
+        void utimens(const struct timespec tv[2]) override THROW_NOSYS;
         void truncate(off_t new_size) override THROW_NOSYS;
         std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
         bool allow_cache() override { return false;}

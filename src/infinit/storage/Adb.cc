@@ -105,7 +105,7 @@ namespace infinit
       }
 
       void
-      serialize(elle::serialization::Serializer& s)
+      serialize(elle::serialization::Serializer& s) override
       {
         s.serialize("root", this->root);
       }

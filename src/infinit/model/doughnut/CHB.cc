@@ -66,7 +66,7 @@ namespace infinit
         {
           input.serialize("salt", _salt);
         }
-        void serialize(elle::serialization::Serializer& s)
+        void serialize(elle::serialization::Serializer& s) override
         {
           Super::serialize(s);
           s.serialize("salt", _salt);

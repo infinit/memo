@@ -95,7 +95,7 @@ namespace infinit
       public:
         virtual
         elle::Buffer const&
-        data() const;
+        data() const override;
         virtual
         void
         data(elle::Buffer data) override;

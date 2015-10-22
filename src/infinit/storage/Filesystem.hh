@@ -24,10 +24,10 @@ namespace infinit
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
       void
-      _erase(Key k);
+      _erase(Key k) override;
       virtual
       std::vector<Key>
-      _list();
+      _list() override;
       ELLE_ATTRIBUTE_R(boost::filesystem::path, root);
     private:
       boost::filesystem::path

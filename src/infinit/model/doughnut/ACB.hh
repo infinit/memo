@@ -78,7 +78,7 @@ namespace infinit
       protected:
         virtual
         elle::Buffer
-        _decrypt_data(elle::Buffer const& data) const;
+        _decrypt_data(elle::Buffer const& data) const override;
         void _stored() override;
       /*------------.
       | Permissions |

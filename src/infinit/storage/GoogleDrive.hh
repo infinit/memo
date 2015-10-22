@@ -50,7 +50,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::string, refresh_token);
         ELLE_ATTRIBUTE_R(std::string, dir_id);
         ELLE_ATTRIBUTE_R(std::string, name);
-      
+
         boost::filesystem::path _path(Key key) const;
 
         reactor::http::Request
