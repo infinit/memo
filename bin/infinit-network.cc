@@ -600,12 +600,12 @@ int main(int argc, char** argv)
       },
     },
     {
-      "users",
+      "members",
       "List all users in a network",
       &users,
       "--name NETWORK",
       {
-        { "name", value<std::string>(), "network name" },
+        { "name,n", value<std::string>(), "network name" },
       },
     },
   };
