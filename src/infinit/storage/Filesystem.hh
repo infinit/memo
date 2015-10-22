@@ -40,7 +40,7 @@ namespace infinit
       FilesystemStorageConfig(std::string path);
       FilesystemStorageConfig(elle::serialization::SerializerIn& input);
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;

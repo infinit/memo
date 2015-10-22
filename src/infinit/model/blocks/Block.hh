@@ -81,7 +81,7 @@ namespace infinit
         static constexpr char const* virtually_serializable_key = "type";
         Block(elle::serialization::Serializer& input);
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s) override;
         typedef infinit::serialization_tag serialization_tag;
 
       /*----------.

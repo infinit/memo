@@ -114,7 +114,7 @@ namespace infinit
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s) override;
         /// number of groups
         int k;
         /// max number of contacts on each other group

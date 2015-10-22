@@ -50,7 +50,7 @@ namespace infinit
                            boost::optional<std::string> root);
       DropboxStorageConfig(elle::serialization::SerializerIn& input);
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::storage::Storage>
       make() override;

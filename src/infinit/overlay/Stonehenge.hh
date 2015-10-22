@@ -38,7 +38,7 @@ namespace infinit
       StonehengeConfiguration();
       StonehengeConfiguration(elle::serialization::SerializerIn& input);
       void
-      serialize(elle::serialization::Serializer& s);
+      serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(std::vector<std::string> const& hosts, bool server,
