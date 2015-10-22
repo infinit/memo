@@ -712,9 +712,13 @@ namespace infinit
       void
       Node::rereplicate()
       {
+        /* Rereplicate blocks:
+        - for which we are responsible (we store it and have the lowest address)
+        - that have been seen under-replicated for two runs
+        */
         bootstrap(false);
-        // FIXME: race with original file creation, require multiple
-        // scans with same value to rereplicate
+        std::unordered_map<Address, int> prev_run;
+        std::swap(prev_run, _under_duplicated);
         auto it = _state.files.begin();
         for (;it != _state.files.end(); ++it)
         {
@@ -735,21 +739,28 @@ namespace infinit
             }
             if (responsible && count < doughnut()->replicas())
             {
-              ELLE_DEBUG("re-duplicating %s (%s < %s)",
-                it->first, count, doughnut()->replicas());
-              auto block = _local->fetch(it->first);
-              // Note: to be on the safe side, rereplicate by 1 at most
-              // we can't ask the overlay, no way to set the replication count
-              auto members = _lookup(block->address(), 1,
-                infinit::overlay::Operation::OP_INSERT);
-              Overlay::Member m;
-              for (auto i: members)
+              if (prev_run.find(it->first) != prev_run.end())
               {
-                m = i;
-                break;
+                ELLE_DEBUG("re-duplicating %s (%s < %s)",
+                  it->first, count, doughnut()->replicas());
+                auto block = _local->fetch(it->first);
+                // Note: to be on the safe side, rereplicate by 1 at most
+                // we can't call overlay::store, no way to set the replication count
+                auto members = _lookup(block->address(), 1,
+                  infinit::overlay::Operation::OP_INSERT);
+                Overlay::Member m;
+                for (auto i: members)
+                {
+                  m = i;
+                  break;
+                }
+                if (m)
+                {
+                  m->store(*block, model::STORE_INSERT);
+                }
               }
-              if (m)
-                m->store(*block, model::STORE_INSERT);
+              else
+                _under_duplicated.insert(std::make_pair(it->first, count));
             }
           }
         }

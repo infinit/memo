@@ -310,6 +310,7 @@ namespace infinit
         int _dropped_puts;
         int _dropped_gets;
         int _failed_puts;
+        std::unordered_map<Address, int> _under_duplicated;
       };
     }
   }
