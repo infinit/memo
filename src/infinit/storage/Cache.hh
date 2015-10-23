@@ -37,9 +37,9 @@ namespace infinit
       ELLE_ATTRIBUTE_R(bool, use_list);
       ELLE_ATTRIBUTE_R(bool, use_status);
       typedef std::unordered_map<Key, elle::Buffer> Blocks;
-      ELLE_ATTRIBUTE_P(Blocks, blocks, mutable);
+      ELLE_ATTRIBUTE(Blocks, blocks, mutable);
       typedef std::set<Key> Keys;
-      ELLE_ATTRIBUTE_P(boost::optional<Keys>, keys, mutable);
+      ELLE_ATTRIBUTE(boost::optional<Keys>, keys, mutable);
     };
   }
 }
