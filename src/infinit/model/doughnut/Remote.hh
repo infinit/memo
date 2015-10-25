@@ -28,6 +28,9 @@ namespace infinit
         Remote(Doughnut& doughnut, std::string const& host, int port);
         Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
                reactor::network::UTPServer& server);
+        Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
+               std::string const& peer_id,
+               reactor::network::UTPServer& server);
         virtual
         ~Remote();
         ELLE_ATTRIBUTE(Doughnut&, doughnut);

@@ -74,6 +74,26 @@ namespace infinit
           });
       }
 
+      Remote::Remote(Doughnut& doughnut,
+                     boost::asio::ip::udp::endpoint endpoint,
+                     std::string const& peer_id,
+                     reactor::network::UTPServer& server)
+        : _doughnut(doughnut)
+        , _utp_socket(nullptr)
+        , _serializer()
+        , _channels()
+        , _connection_thread()
+      {
+        this->_connect(
+          elle::sprintf("%s", endpoint),
+          [this, endpoint, peer_id, &server] () -> std::iostream&
+          {
+            this->_utp_socket.reset(new reactor::network::UTPSocket(server));
+            this->_utp_socket->connect(peer_id, {endpoint});
+            return *this->_utp_socket;
+          });
+      }
+
       Remote::~Remote()
       {}
 
