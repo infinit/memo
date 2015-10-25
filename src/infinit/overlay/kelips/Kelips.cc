@@ -9,6 +9,7 @@
 #include <elle/container/map.hh>
 #include <elle/format/base64.hh>
 #include <elle/network/Interface.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/binary/SerializerIn.hh>
@@ -578,6 +579,16 @@ namespace infinit
           ELLE_LOG("Running in observer mode");
         this->doughnut(doughnut);
         _remotes_server.listen(0);
+        _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.io:7890");
+        _rdv_id = elle::sprintf("rpc.%x", this->_self);
+        if (!_rdv_host.empty())
+          _rdv_connect_thread = elle::make_unique<reactor::Thread>("rdv_connect",
+            [this] {
+              // The remotes_server does not accept incoming connections,
+              // it is used to connect Remotes
+              this->_remotes_server.rdv_connect(
+                this->_rdv_id + "_", this->_rdv_host);
+          });
         if (_config.bootstrap_nodes.empty())
           _bootstraping.open();
         else
@@ -607,6 +618,10 @@ namespace infinit
           _pinger_thread->terminate_now();
         if (_rereplicator_thread)
           _rereplicator_thread->terminate_now();
+        if (_rdv_connect_thread)
+          _rdv_connect_thread->terminate_now();
+        if (_rdv_connect_thread_local)
+          _rdv_connect_thread_local->terminate_now();
       }
 
       SerState Node::get_serstate(GossipEndpoint gep)
@@ -2513,6 +2528,12 @@ namespace infinit
             ELLE_LOG("Setting endpoint to %s", this->_local_endpoint);
             break;
           }
+        if (!this->_rdv_host.empty())
+          _rdv_connect_thread_local = elle::make_unique<reactor::Thread>("rdv_connect",
+            [this,l] {
+              l->utp_server()->rdv_connect(
+                this->_rdv_id, this->_rdv_host);
+          });
         reload_state(*l);
         this->engage();
       }
@@ -2581,11 +2602,22 @@ namespace infinit
             {
               try
               {
-                yield(Overlay::Member(
+                if (host.first != Address::null && _remotes_server.rdv_connected())
+                {
+                  std::string uid = elle::sprintf("rpc.%x", host.first);
+                  yield(Overlay::Member(
                   new infinit::model::doughnut::Remote(
                     const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
                     boost::asio::ip::udp::endpoint(host.second.address(), host.second.port()+100),
+                    uid,
                     const_cast<Node*>(this)->_remotes_server)));
+                }
+                else
+                  yield(Overlay::Member(
+                    new infinit::model::doughnut::Remote(
+                      const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                      boost::asio::ip::udp::endpoint(host.second.address(), host.second.port()+100),
+                      const_cast<Node*>(this)->_remotes_server)));
                 return;
               }
               catch (elle::Error const& e)

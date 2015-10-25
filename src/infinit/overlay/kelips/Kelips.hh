@@ -291,7 +291,8 @@ namespace infinit
         reactor::network::UDPSocket _gossip;
         reactor::Mutex _udp_send_mutex;
         std::unique_ptr<reactor::Thread>
-          _emitter_thread, _listener_thread, _pinger_thread, _rereplicator_thread;
+          _emitter_thread, _listener_thread, _pinger_thread,
+          _rereplicator_thread, _rdv_connect_thread, _rdv_connect_thread_local;
         std::default_random_engine _gen;
         std::unordered_map<int, std::shared_ptr<PendingRequest>>
           _pending_requests;
@@ -313,6 +314,8 @@ namespace infinit
         int _dropped_gets;
         int _failed_puts;
         std::unordered_map<Address, int> _under_duplicated;
+        std::string _rdv_id;
+        std::string _rdv_host;
       };
     }
   }

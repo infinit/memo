@@ -82,7 +82,7 @@ namespace infinit
         server_endpoint();
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, server_thread);
-        ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPServer>, utp_server);
+        ELLE_ATTRIBUTE_RX(std::unique_ptr<reactor::network::UTPServer>, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
         ELLE_ATTRIBUTE_RX(RPCServer, rpcs);
