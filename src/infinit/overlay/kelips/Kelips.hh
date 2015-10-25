@@ -47,6 +47,8 @@ namespace infinit
         int gossip_count;
       };
 
+      typedef std::pair<Address, RpcEndpoint> PeerLocation;
+
       std::ostream&
       operator << (std::ostream& output, Contact const& contact);
 
@@ -172,10 +174,10 @@ namespace infinit
         void
         register_local(
           std::shared_ptr<infinit::model::doughnut::Local> local) override;
-         void
-         address(Address file,
-                 infinit::overlay::Operation op,
-                 int n, std::function<void(RpcEndpoint)> yield);
+        void
+        address(Address file,
+                infinit::overlay::Operation op,
+                int n, std::function<void(PeerLocation)> yield);
         void
         print(std::ostream& stream) const override;
         /// local hooks interface
@@ -247,10 +249,10 @@ namespace infinit
         void
         cleanup();
         void
-        addLocalResults(packet::GetFileRequest* p, reactor::yielder<RpcEndpoint>::type const* yield);
+        addLocalResults(packet::GetFileRequest* p, reactor::yielder<PeerLocation>::type const* yield);
         void
-        kelipsGet(Address file, int n, bool local_override, int attempts, std::function<void(RpcEndpoint)> yield);
-        std::vector<RpcEndpoint>
+        kelipsGet(Address file, int n, bool local_override, int attempts, std::function<void(PeerLocation)> yield);
+        std::vector<PeerLocation>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
         pickFiles();

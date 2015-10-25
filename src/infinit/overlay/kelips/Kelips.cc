@@ -150,7 +150,6 @@ namespace infinit
         return hkhex.substr(0,3) + hkhex.substr(hkhex.length()-3);
       }
 
-      typedef std::pair<Address, RpcEndpoint> GetFileResult;
       namespace packet
       {
         template<typename T>
@@ -397,7 +396,7 @@ namespace infinit
           /// number of results we want
           int count;
           /// partial result
-          std::vector<GetFileResult> result;
+          std::vector<PeerLocation> result;
         };
         REGISTER(GetFileRequest, "get");
 
@@ -427,7 +426,7 @@ namespace infinit
           Address origin;
           Address fileAddress;
           int ttl;
-          std::vector<GetFileResult> result;
+          std::vector<PeerLocation> result;
         };
         REGISTER(GetFileReply, "getReply");
 
@@ -479,7 +478,7 @@ namespace infinit
           Address origin;
           Address fileAddress;
           int ttl;
-          std::vector<GetFileResult> results;
+          std::vector<PeerLocation> results;
         };
         REGISTER(PutFileReply, "putReply");
 
@@ -488,7 +487,7 @@ namespace infinit
 
       struct PendingRequest
       {
-        std::vector<GetFileResult> result;
+        std::vector<PeerLocation> result;
         reactor::Barrier barrier;
         Time startTime;
       };
@@ -1773,7 +1772,7 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::GetFileRequest* p,
-        reactor::yielder<RpcEndpoint>::type const* yield)
+        reactor::yielder<PeerLocation>::type const* yield)
       {
         static elle::Bench nlocalhit("kelips.localhit", 10_sec);
         int nhit = 0;
@@ -1790,7 +1789,7 @@ namespace infinit
           auto it = *iti;
           // Check if this one is already in results
           if (std::find_if(p->result.begin(), p->result.end(),
-            [&](GetFileResult const& r) -> bool {
+            [&](PeerLocation const& r) -> bool {
               return r.first == it->second.home_node;
             }) != p->result.end())
           continue;
@@ -1825,12 +1824,12 @@ namespace infinit
           }
           if (!found)
             continue;
-          GetFileResult res;
+          PeerLocation res;
           res.first = it->second.home_node;
           endpoint_to_endpoint(endpoint, res.second);
           p->result.push_back(res);
           if (yield)
-            (*yield)(res.second);
+            (*yield)(res);
         }
         nlocalhit.add(nhit);
       }
@@ -1928,7 +1927,7 @@ namespace infinit
         {
           // check if we didn't already accept this file
           if (std::find_if(p->result.begin(), p->result.end(),
-            [&] (GetFileResult const& r) {
+            [&] (PeerLocation const& r) {
               return r.first == _self;
             }) == p->result.end())
           {
@@ -2014,25 +2013,25 @@ namespace infinit
       Node::address(Address file,
                     infinit::overlay::Operation op,
                     int n,
-                    std::function<void (RpcEndpoint)> yield)
+                    std::function<void (PeerLocation)> yield)
       {
         if (op == infinit::overlay::OP_INSERT)
         {
-          std::vector<RpcEndpoint> res = kelipsPut(file, n);
+          std::vector<PeerLocation> res = kelipsPut(file, n);
           for (auto r: res)
             yield(r);
         }
         else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
         {
           bool hit = false;
-          kelipsGet(file, n, false, -1, [&](RpcEndpoint r) {
+          kelipsGet(file, n, false, -1, [&](PeerLocation r) {
               hit = true;
               yield(r);
           });
           if (!hit)
           {
             ELLE_ERR("%s: get failed on %x, trying put", *this, file);
-            std::vector<RpcEndpoint> res = kelipsPut(file, n);
+            std::vector<PeerLocation> res = kelipsPut(file, n);
             for (auto e: res)
               yield(e);
           }
@@ -2045,13 +2044,13 @@ namespace infinit
 
       void
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
-        std::function <void(RpcEndpoint)> yield)
+        std::function <void(PeerLocation)> yield)
       {
         if (attempts == -1)
           attempts = _config.query_get_retries;
         auto f = [this,file,n,local_override, attempts, yield]() {
           ELLE_DEBUG("Driver starting");
-          std::set<RpcEndpoint> result_set;
+          std::set<PeerLocation> result_set;
           packet::GetFileRequest r;
           r.sender = _self;
           r.request_id = ++ _next_id;
@@ -2074,14 +2073,14 @@ namespace infinit
             if (it_us != its.second && (n == 1 || local_override))
             {
               ELLE_DEBUG("Satisfied get lookup locally.");
-              yield(RpcEndpoint(boost::asio::ip::address::from_string("127.0.0.1"),
-                this->_port));
+              yield(PeerLocation(Address::null, RpcEndpoint(boost::asio::ip::address::from_string("127.0.0.1"),
+                this->_port)));
               return;
             }
             // add result for our own file table
             addLocalResults(&r, &yield);
             for (auto const& e: r.result)
-              result_set.insert(e.second);
+              result_set.insert(e);
             if (result_set.size() >= unsigned(n))
             { // Request completed locally
               ELLE_DEBUG("Driver exiting");
@@ -2134,8 +2133,8 @@ namespace infinit
                   _state.files.insert(std::make_pair(file,
                     File{file, e.first, now(), Time(), 0}));
                 }
-                if (result_set.insert(e.second).second)
-                  yield(e.second);
+                if (result_set.insert(PeerLocation{e.first, e.second}).second)
+                  yield(PeerLocation{e.first, e.second});
               }
               if (signed(result_set.size()) >= n)
                 break;
@@ -2145,7 +2144,7 @@ namespace infinit
         return f();
       }
 
-      std::vector<RpcEndpoint>
+      std::vector<PeerLocation>
       Node::kelipsPut(Address file, int n)
       {
         int fg = group_of(file);
@@ -2157,7 +2156,7 @@ namespace infinit
         p.ttl = _config.query_put_ttl;
         p.count = n;
         p.insert_ttl = _config.query_put_insert_ttl;
-        std::vector<RpcEndpoint> results;
+        std::vector<PeerLocation> results;
         for (int i = 0; i < _config.query_put_retries; ++i)
         {
           packet::PutFileRequest req = p;
@@ -2186,9 +2185,9 @@ namespace infinit
                 == _promised_files.end())
               {
                 _promised_files.push_back(p.fileAddress);
-                results.push_back(RpcEndpoint(
+                results.push_back(std::make_pair (Address::null, RpcEndpoint(
                   boost::asio::ip::address::from_string("127.0.0.1"),
-                  this->_port));
+                  this->_port)));
                 return results;
               }
               else
@@ -2206,9 +2205,8 @@ namespace infinit
           {
             for (auto const& rp: r->result)
             {
-              if (std::find(results.begin(), results.end(), rp.second)
-                == results.end())
-                results.push_back(rp.second);
+              if (std::find(results.begin(), results.end(), rp) == results.end())
+                results.push_back(rp);
             }
             if (signed(results.size()) >= n)
             {
@@ -2570,10 +2568,10 @@ namespace infinit
         return reactor::generator<Node::Member>(
           [this, address, n, op] (reactor::Generator<Node::Member>::yielder const& yield)
         {
-          std::function<void(RpcEndpoint)> handle = [&](RpcEndpoint host)
+          std::function<void(PeerLocation)> handle = [&](PeerLocation host)
           {
             ELLE_TRACE("connecting to %s", host);
-            if (host.address().to_string() == "127.0.0.1" && host.port() == _port)
+            if (host.second.address().to_string() == "127.0.0.1" && host.second.port() == _port)
             {
               yield(_local);
               return;
@@ -2586,7 +2584,7 @@ namespace infinit
                 yield(Overlay::Member(
                   new infinit::model::doughnut::Remote(
                     const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                    boost::asio::ip::udp::endpoint(host.address(), host.port()+100),
+                    boost::asio::ip::udp::endpoint(host.second.address(), host.second.port()+100),
                     const_cast<Node*>(this)->_remotes_server)));
                 return;
               }
@@ -2603,7 +2601,7 @@ namespace infinit
                   std::shared_ptr<infinit::model::doughnut::Peer>(
                   new infinit::model::doughnut::Remote(
                     const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                    host)));
+                    host.second)));
                 return;
               }
               catch (elle::Error const& e)
@@ -2777,9 +2775,9 @@ namespace infinit
             {
               Address addr = to_scan.back();
               to_scan.pop_back();
-              std::vector<RpcEndpoint> res;
-              kelipsGet(addr, factor, false, 3, [&](RpcEndpoint ep) {
-                  res.push_back(ep);
+              std::vector<PeerLocation> res;
+              kelipsGet(addr, factor, false, 3, [&](PeerLocation pl) {
+                  res.push_back(pl);
               });
               if (counts.size() <= res.size())
                 counts.resize(res.size()+1, 0);
