@@ -2,7 +2,7 @@
 # define INFINIT_OVERLAY_KELIPS_HH
 
 # include <infinit/overlay/Overlay.hh>
-# include <reactor/network/udp-socket.hh>
+# include <reactor/network/rdv-socket.hh>
 # include <reactor/Barrier.hh>
 # include <reactor/Generator.hh>
 # include <elle/serialization/Serializer.hh>
@@ -272,7 +272,7 @@ namespace infinit
         void
         bootstrap(bool use_bootstrap_nodes);
         SerState
-        get_serstate(GossipEndpoint peer);
+        get_serstate(PeerLocation peer);
         void
         deoverduplicate();
         void
@@ -288,11 +288,12 @@ namespace infinit
         int _group;
         Configuration _config;
         State _state;
-        reactor::network::UDPSocket _gossip;
+        reactor::network::RDVSocket _gossip;
         reactor::Mutex _udp_send_mutex;
         std::unique_ptr<reactor::Thread>
           _emitter_thread, _listener_thread, _pinger_thread,
-          _rereplicator_thread, _rdv_connect_thread, _rdv_connect_thread_local;
+          _rereplicator_thread, _rdv_connect_thread, _rdv_connect_thread_local,
+          _rdv_connect_gossip_thread;
         std::default_random_engine _gen;
         std::unordered_map<int, std::shared_ptr<PendingRequest>>
           _pending_requests;

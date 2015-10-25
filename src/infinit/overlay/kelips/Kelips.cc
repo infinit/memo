@@ -553,6 +553,13 @@ namespace infinit
         dst = E2(src.address(), src.port());
       }
 
+      RpcEndpoint e2e(GossipEndpoint const& src)
+      {
+        RpcEndpoint res;
+        endpoint_to_endpoint(src, res);
+        return res;
+      }
+
       Address
       address_of_uuid(elle::UUID const& id)
       {
@@ -622,25 +629,41 @@ namespace infinit
           _rdv_connect_thread->terminate_now();
         if (_rdv_connect_thread_local)
           _rdv_connect_thread_local->terminate_now();
+        if (_rdv_connect_gossip_thread)
+          _rdv_connect_gossip_thread->terminate_now();
       }
 
-      SerState Node::get_serstate(GossipEndpoint gep)
+      SerState Node::get_serstate(PeerLocation pl)
       {
-        RpcEndpoint host;
-        endpoint_to_endpoint(gep, host);
+        RpcEndpoint host = pl.second;
         using Protocol = infinit::model::doughnut::Local::Protocol;
         auto protocol = this->_config.rpc_protocol;
         if (protocol == Protocol::utp || protocol == Protocol::all)
         {
           try
           {
-            infinit::model::doughnut::Remote peer(
-                  const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                  boost::asio::ip::udp::endpoint(host.address(), host.port() + 100),
-                  const_cast<Node*>(this)->_remotes_server);
-            peer.connect();
-            RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
-            return rpc();
+            if (pl.first != Address::null && _remotes_server.rdv_connected())
+            {
+              std::string uid = elle::sprintf("rpc.%x", pl.first);
+              infinit::model::doughnut::Remote peer(
+                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                boost::asio::ip::udp::endpoint(host.address(), host.port() + 100),
+                uid,
+                const_cast<Node*>(this)->_remotes_server);
+              peer.connect();
+              RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
+              return rpc();
+            }
+            else
+            {
+              infinit::model::doughnut::Remote peer(
+                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                boost::asio::ip::udp::endpoint(host.address(), host.port() + 100),
+                const_cast<Node*>(this)->_remotes_server);
+              peer.connect();
+              RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
+              return rpc();
+            }
           }
           catch (elle::Error const& e)
           {
@@ -672,19 +695,20 @@ namespace infinit
       {
         ELLE_TRACE("starting bootstrap procedure");
         std::set<Address> scanned;
-        std::set<GossipEndpoint> candidates;
+        std::set<PeerLocation> candidates;
         if (use_bootstrap_nodes)
-          candidates.insert(_config.bootstrap_nodes.begin(), _config.bootstrap_nodes.end());
+          for (auto const& b: _config.bootstrap_nodes)
+            candidates.insert(std::make_pair(Address::null, e2e(b)));
         for (auto const& c: this->_state.contacts[_group])
-          candidates.insert(c.second.endpoint);
+          candidates.insert(PeerLocation(c.second.address, e2e(c.second.endpoint)));
         while (!candidates.empty())
         {
-          GossipEndpoint ep = *candidates.begin();
-          candidates.erase(ep);
-          ELLE_DEBUG("fetching %s, %s candidates remaining", ep, candidates.size());
+          PeerLocation pl = *candidates.begin();
+          candidates.erase(pl);
+          ELLE_DEBUG("fetching %s, %s candidates remaining", pl, candidates.size());
           try
           {
-            SerState res = get_serstate(ep);
+            SerState res = get_serstate(pl);
             // ugly hack, embeded self address
             scanned.insert(res.second.back().second);
             res.second.pop_back();
@@ -693,7 +717,7 @@ namespace infinit
             {
               if (!scanned.count(c.first))
               {
-                candidates.insert(c.second.endpoint);
+                candidates.insert(PeerLocation(c.first, e2e(c.second.endpoint)));
               }
             }
           }
@@ -818,6 +842,20 @@ namespace infinit
 
         _gossip.socket()->close();
         _gossip.bind(GossipEndpoint({}, _port));
+        if (!_rdv_host.empty())
+          _rdv_connect_gossip_thread = elle::make_unique<reactor::Thread>(
+            "rdv gossip connect", [this] {
+              std::string id = elle::sprintf("gossip.%x", _self);
+              std::string host = _rdv_host;
+              int port = 7890;
+              auto p = host.find_first_of(':');
+              if ( p!= host.npos)
+              {
+                port = std::stoi(host.substr(p+1));
+                host = host.substr(0, p);
+              }
+              _gossip.rdv_connect(id, host, port);
+          });
         ELLE_LOG("%s: listening on port %s",
                  *this, _gossip.local_endpoint().port());
         ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
@@ -1699,13 +1737,14 @@ namespace infinit
         int g = group_of(p->sender);
         if (g == _group)
         {
+          PeerLocation peer(p->sender, e2e(ep));
           new reactor::Thread("reverse bootstraper",
-            [this, ep] {
+            [this, peer] {
               try
               {
-                SerState state = get_serstate(ep);
+                SerState state = get_serstate(peer);
                 state.second.pop_back(); // pop remote address
-                ELLE_DEBUG("%s: inserting serstate from %s", *this, ep);
+                ELLE_DEBUG("%s: inserting serstate from %s", *this, peer);
                 process_update(state);
               }
               catch (elle::Error const& e)
