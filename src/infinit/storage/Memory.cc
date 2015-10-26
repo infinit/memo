@@ -12,11 +12,19 @@ namespace infinit
 {
   namespace storage
   {
+    Memory::Memory()
+      : _blocks(new Blocks, std::default_delete<Blocks>())
+    {}
+
+    Memory::Memory(Blocks& blocks)
+      : _blocks(&blocks, [] (Blocks*) {})
+    {}
+
     elle::Buffer
     Memory::_get(Key key) const
     {
-      auto it = this->_blocks.find(key);
-      if (it == this->_blocks.end())
+      auto it = this->_blocks->find(key);
+      if (it == this->_blocks->end())
         throw MissingKey(key);
       auto& buffer = it->second;
       return elle::Buffer(buffer.contents(), buffer.size());
@@ -28,29 +36,33 @@ namespace infinit
       if (insert)
       {
         auto insertion =
-          this->_blocks.insert(std::make_pair(key, elle::Buffer()));
+          this->_blocks->insert(std::make_pair(key, elle::Buffer()));
         if (!insertion.second && !update)
           throw Collision(key);
         insertion.first->second = elle::Buffer(value.contents(), value.size());
-        if (insert && update && insertion.second)
+        if (insertion.second)
           ELLE_DEBUG("%s: block inserted", *this);
-        else if (insert && update && insertion.second)
-          ELLE_DEBUG("%s: block updated", *this);
+        else if (!insertion.second)
+          ELLE_DEBUG("%s: block updated: %s", *this,
+                     this->get(key));
       }
       else
       {
-        auto search = this->_blocks.find(key);
-        if (search == this->_blocks.end())
+        auto search = this->_blocks->find(key);
+        if (search == this->_blocks->end())
           throw MissingKey(key);
         else
+        {
+          ELLE_DEBUG("%s: block updated", *this);
           search->second = elle::Buffer(value.contents(), value.size());
+        }
       }
     }
 
     void
     Memory::_erase(Key key)
     {
-      if (this->_blocks.erase(key) == 0)
+      if (this->_blocks->erase(key) == 0)
         throw MissingKey(key);
     }
 
@@ -58,7 +70,7 @@ namespace infinit
     Memory::_list()
     {
       std::vector<Key> res;
-      for (auto const& b: this->_blocks)
+      for (auto const& b: *this->_blocks)
         res.push_back(b.first);
       return res;
     }
