@@ -37,7 +37,7 @@
   #include <attr/xattr.h>
 #endif
 
-ELLE_LOG_COMPONENT("infinit.fs");
+ELLE_LOG_COMPONENT("infinit.filesystem");
 
 namespace rfs = reactor::filesystem;
 
