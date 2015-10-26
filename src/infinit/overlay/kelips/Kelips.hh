@@ -263,9 +263,9 @@ namespace infinit
         std::vector<std::pair<GossipEndpoint, Address>> \
         pickGroupTargets();
         infinit::cryptography::SecretKey*
-        getKey(Address const& a, GossipEndpoint const& e);
+        getKey(Address const& a);
         void
-        setKey(Address const& a, GossipEndpoint const& e,
+        setKey(Address const& a,
                infinit::cryptography::SecretKey sk);
         void
         process_update(SerState const& s);
@@ -300,8 +300,6 @@ namespace infinit
         /// Addresses for which we accepted a put.
         std::vector<Address> _promised_files;
         std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
-        std::unordered_map<GossipEndpoint, infinit::cryptography::SecretKey>
-          _observer_keys;
         /// Bootstrap pending auth.
         std::vector<GossipEndpoint> _pending_bootstrap;
         reactor::network::UTPServer _remotes_server;

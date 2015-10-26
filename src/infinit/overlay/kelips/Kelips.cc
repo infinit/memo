@@ -941,43 +941,28 @@ namespace infinit
       }
 
       void
-      Node::setKey(Address const& a, GossipEndpoint const& e,
-        infinit::cryptography::SecretKey sk)
+      Node::setKey(Address const& a,
+                   infinit::cryptography::SecretKey sk)
       {
-        auto oldkey = getKey(a, e);
+        auto oldkey = getKey(a);
         if (oldkey)
         {
-          ELLE_DEBUG("%s: overriding key %s -> %s  for %s : %s",
-            *this, key_hash(*oldkey), key_hash(sk), e, a);
-          if (a != Address())
-            _keys.find(a)->second = std::move(sk);
-          else
-            _observer_keys.find(e)->second = std::move(sk);
+          ELLE_DEBUG("%s: overriding key %s -> %s  for %s",
+            *this, key_hash(*oldkey), key_hash(sk), a);
+          _keys.find(a)->second = std::move(sk);
         }
         else
         {
-          if (a != Address())
-            _keys.insert(std::make_pair(a, std::move(sk)));
-          else
-            _observer_keys.insert(std::make_pair(e, std::move(sk)));
+          _keys.insert(std::make_pair(a, std::move(sk)));
         }
       }
 
       infinit::cryptography::SecretKey*
-      Node::getKey(Address const& a, GossipEndpoint const& e)
+      Node::getKey(Address const& a)
       {
-        if (a == Address())
-        {
-          auto it = _observer_keys.find(e);
-          if (it != _observer_keys.end())
-            return &it->second;
-        }
-        else
-        {
-          auto it = _keys.find(a);
-          if (it != _keys.end())
-            return &it->second;
-        }
+        auto it = _keys.find(a);
+        if (it != _keys.end())
+          return &it->second;
         return nullptr;
       }
 
@@ -993,7 +978,7 @@ namespace infinit
         || dynamic_cast<const packet::KeyReply*>(&p);
         elle::Buffer b;
         bool send_key_request = false;
-        auto key = getKey(a, e);
+        auto key = getKey(a);
         if (is_crypto
           || !_config.encrypt
           || (!key && _config.accept_plain)
@@ -1087,7 +1072,7 @@ namespace infinit
             // First handle crypto related packets
             if (auto p = dynamic_cast<packet::EncryptedPayload*>(packet.get()))
             {
-              auto key = getKey(packet->sender, packet->endpoint);
+              auto key = getKey(packet->sender);
               bool failure = true;
               if (!key)
               {
@@ -1145,7 +1130,7 @@ namespace infinit
               }
               auto sk = infinit::cryptography::secretkey::generate(256);
               elle::Buffer password = sk.password();
-              setKey(p->sender, p->endpoint, std::move(sk));
+              setKey(p->sender, std::move(sk));
               packet::KeyReply kr(doughnut()->passport());
               kr.sender = _self;
               kr.encrypted_key = p->passport.user().seal(
@@ -1171,7 +1156,7 @@ namespace infinit
                 infinit::cryptography::Cipher::aes256,
                 infinit::cryptography::Mode::cbc);
               infinit::cryptography::SecretKey sk(std::move(password));
-              setKey(p->sender, p->endpoint, std::move(sk));
+              setKey(p->sender, std::move(sk));
               // Flush operations waiting on crypto ready
               auto it = std::find(_pending_bootstrap.begin(),
                                   _pending_bootstrap.end(),
