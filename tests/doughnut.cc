@@ -27,33 +27,45 @@ namespace storage = infinit::storage;
 class DHTs
 {
 public:
-  DHTs(bool paxos)
-    : keys_a(infinit::cryptography::rsa::keypair::generate(2048))
-    , keys_b(infinit::cryptography::rsa::keypair::generate(2048))
-    , keys_c(infinit::cryptography::rsa::keypair::generate(2048))
+  DHTs(bool paxos,
+       infinit::cryptography::rsa::KeyPair keys_a_ =
+       infinit::cryptography::rsa::keypair::generate(2048),
+       infinit::cryptography::rsa::KeyPair keys_b_ =
+       infinit::cryptography::rsa::keypair::generate(2048),
+       infinit::cryptography::rsa::KeyPair keys_c_ =
+       infinit::cryptography::rsa::keypair::generate(2048),
+       std::unique_ptr<storage::Storage> storage_a = nullptr,
+       std::unique_ptr<storage::Storage> storage_b = nullptr,
+       std::unique_ptr<storage::Storage> storage_c = nullptr)
+    : keys_a(std::move(keys_a_))
+    , keys_b(std::move(keys_b_))
+    , keys_c(std::move(keys_c_))
   {
+    if (!storage_a)
+      storage_a = elle::make_unique<storage::Memory>();
+    if (!storage_b)
+      storage_b = elle::make_unique<storage::Memory>();
+    if (!storage_c)
+      storage_c = elle::make_unique<storage::Memory>();
     dht::Doughnut::ConsensusBuilder consensus;
     if (paxos)
     {
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::consensus::Paxos>(dht, 3); };
       this->local_a = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        elle::make_unique<storage::Memory>());
+        std::move(storage_a));
       this->local_b = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        elle::make_unique<storage::Memory>());
+        std::move(storage_b));
       this->local_c = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        elle::make_unique<storage::Memory>());
+        std::move(storage_c));
     }
     else
     {
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::Consensus>(dht); };
-      this->local_a = std::make_shared<dht::Local>(
-        elle::make_unique<storage::Memory>());
-      this->local_b = std::make_shared<dht::Local>(
-        elle::make_unique<storage::Memory>());
-      this->local_c = std::make_shared<dht::Local>(
-        elle::make_unique<storage::Memory>());
+      this->local_a = std::make_shared<dht::Local>(std::move(storage_a));
+      this->local_b = std::make_shared<dht::Local>(std::move(storage_b));
+      this->local_c = std::make_shared<dht::Local>(std::move(storage_c));
     }
     dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
     dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
@@ -308,6 +320,54 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
   }
 }
 
+void
+noop(storage::Storage*)
+{}
+
+ELLE_TEST_SCHEDULED(restart, (bool, paxos))
+{
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
+  auto keys_c = infinit::cryptography::rsa::keypair::generate(2048);
+  storage::Memory::Blocks storage_a;
+  storage::Memory::Blocks storage_b;
+  storage::Memory::Blocks storage_c;
+  // std::unique_ptr<infinit::model::blocks::ImmutableBlock> iblock;
+  std::unique_ptr<infinit::model::blocks::MutableBlock> mblock;
+  ELLE_LOG("store blocks")
+  {
+    DHTs dhts(
+      paxos,
+      keys_a, keys_b, keys_c,
+      elle::make_unique<storage::Memory>(storage_a),
+      elle::make_unique<storage::Memory>(storage_b),
+      elle::make_unique<storage::Memory>(storage_c)
+      );
+    // iblock =
+    //   dhts.dht_a->make_block<infinit::model::blocks::ImmutableBlock>(
+    //     elle::Buffer("immutable", 9));
+    // dhts.dht_a->store(*iblock);
+    mblock =
+      dhts.dht_a->make_block<infinit::model::blocks::MutableBlock>(
+        elle::Buffer("mutable", 7));
+    dhts.dht_a->store(*mblock);
+  }
+  ELLE_LOG("load blocks")
+  {
+    DHTs dhts(
+      paxos,
+      keys_a, keys_b, keys_c,
+      elle::make_unique<storage::Memory>(storage_a),
+      elle::make_unique<storage::Memory>(storage_b),
+      elle::make_unique<storage::Memory>(storage_c)
+      );
+    // auto ifetched = dhts.dht_a->fetch(iblock->address());
+    // BOOST_CHECK_EQUAL(iblock->data(), ifetched->data());
+    auto mfetched = dhts.dht_a->fetch(mblock->address());
+    BOOST_CHECK_EQUAL(mblock->data(), mfetched->data());
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -330,5 +390,6 @@ ELLE_TEST_SUITE()
   TEST(ACB);
   TEST(NB);
   TEST(conflict);
+  TEST(restart);
 #undef TEST
 }

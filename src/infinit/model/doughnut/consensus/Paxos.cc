@@ -14,8 +14,10 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
+#include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos");
 
@@ -27,6 +29,42 @@ namespace infinit
     {
       namespace consensus
       {
+        template <typename T>
+        static
+        void
+        null_deleter(T*)
+        {}
+
+        struct BlockOrPaxos
+        {
+          BlockOrPaxos(blocks::Block* b)
+            : block(b)
+            , paxos()
+          {}
+
+          BlockOrPaxos(Paxos::LocalPeer::Decision* p)
+            : block(nullptr)
+            , paxos(p)
+          {}
+
+          BlockOrPaxos(elle::serialization::SerializerIn& s)
+          {
+            this->serialize(s);
+          }
+
+          blocks::Block* block;
+          Paxos::LocalPeer::Decision* paxos;
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("block", this->block);
+            s.serialize("paxos", this->paxos);
+          }
+
+          typedef infinit::serialization_tag serialization_tag;
+        };
+
         /*-------------.
         | Construction |
         `-------------*/
@@ -143,8 +181,32 @@ namespace infinit
                                   int version,
                                   Paxos::PaxosClient::Proposal const& p)
         {
-          // FIXME: load paxos from storage
-          return this->_addresses[address].paxos.propose(p);
+          auto decision = this->_addresses.find(address);
+          if (decision == this->_addresses.end())
+            try
+            {
+              auto buffer = this->storage()->get(address);
+              elle::serialization::Context context;
+              context.set<Doughnut*>(this->doughnut());
+              auto stored =
+                elle::serialization::binary::deserialize<BlockOrPaxos>(
+                  buffer, true, context);
+              if (!stored.paxos)
+                throw elle::Error("running Paxos on an immutable block");
+              decision = this->_addresses.emplace(
+                address, std::move(*stored.paxos)).first;
+            }
+            catch (storage::MissingKey const&)
+            {
+              decision = this->_addresses.emplace(address, Decision()).first;
+            }
+          auto res = decision->second.paxos.propose(p);
+          this->storage()->set(
+            address,
+            elle::serialization::binary::serialize(
+              BlockOrPaxos(&decision->second)),
+            true, true);
+          return res;
         }
 
         Paxos::PaxosClient::Proposal
@@ -153,11 +215,22 @@ namespace infinit
                                  Paxos::PaxosClient::Proposal const& p,
                                  std::shared_ptr<blocks::Block> const& value)
         {
+          ELLE_TRACE_SCOPE("%s: accept version %s of %s: %s",
+                           *this, version, address, p);
           // FIXME: factor with validate in doughnut::Local::store
-          ELLE_DEBUG("%s: validate block", *this)
+          ELLE_DEBUG("validate block")
             if (auto res = value->validate()); else
               throw ValidationFailed(res.reason());
-          auto res = this->_addresses.at(address).paxos.accept(p, value);
+          auto& decision = this->_addresses.at(address);
+          auto& paxos = decision.paxos;
+          auto res = paxos.accept(p, value);
+          {
+            ELLE_DEBUG_SCOPE("store accepted paxos");
+            this->storage()->set(
+              address,
+              elle::serialization::binary::serialize(BlockOrPaxos(&decision)),
+              true, true);
+          }
           on_store(*value, STORE_ANY);
           return std::move(res);
         }
@@ -195,12 +268,6 @@ namespace infinit
         }
 
         template <typename T>
-        static
-        void
-        null_deleter(T*)
-        {}
-
-        template <typename T>
         T&
         unconst(T const& v)
         {
@@ -212,49 +279,101 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
           auto decision = this->_addresses.find(address);
-          if (decision != this->_addresses.end())
-          {
-            if (auto highest = decision->second.paxos.highest_accepted())
+          if (decision == this->_addresses.end())
+            try
             {
-              auto version = highest->proposal.version;
-              if (decision->second.chosen == version)
-                return highest->value->clone();
+              elle::serialization::Context context;
+              context.set<Doughnut*>(this->doughnut());
+              auto data =
+                elle::serialization::binary::deserialize<BlockOrPaxos>(
+                  this->storage()->get(address), true, context);
+              if (data.block)
+              {
+                ELLE_DEBUG("loaded immutable block from storage");
+                return std::unique_ptr<blocks::Block>(data.block);
+              }
               else
               {
-                ELLE_TRACE_SCOPE("%s: finalize running Paxos for version %s",
-                                 *this, version);
-                // FIXME: actual replica factor
-                auto const replica_factor = 3;
-                auto owners = this->doughnut()->overlay()->lookup(
-                  address, replica_factor, overlay::OP_UPDATE);
-                // FIXME: factor with RemotePeer paxos client routine
-                Paxos::PaxosClient::Peers peers;
-                auto block = highest->value;
-                for (int i = 0; i < replica_factor; ++i)
-                {
-                  std::unique_ptr<consensus::Peer> peer(
-                    new consensus::Peer(owners, block->address(), version));
-                  peers.push_back(std::move(peer));
-                }
-                Paxos::PaxosClient client(uid(this->doughnut()->keys().K()),
-                                          std::move(peers));
-                auto chosen = client.choose(version, block);
-                // FIXME: factor with the end of doughnut::Local::store
-                ELLE_DEBUG("%s: store chosen block", *this)
-                {
-                  this->storage()->set(
-                    block->address(),
-                    elle::serialization::binary::serialize(block), true, true);
-                }
-                unconst(decision->second).chosen = version;
-                // ELLE_ASSERT(block.unique());
-                // FIXME: Don't clone, it's useless, find a way to steal
-                // ownership from the shared_ptr.
-                return block->clone();
+                ELLE_DEBUG("loaded mutable block from storage");
+                decision = const_cast<LocalPeer*>(this)->_addresses.emplace(
+                  address, std::move(*data.paxos)).first;
               }
             }
+            catch (storage::MissingKey const& e)
+            {
+              ELLE_TRACE("missing block %x", address);
+              throw MissingBlock(e.key());
+            }
+          else
+            ELLE_DEBUG("mutable block already loaded");
+          if (auto highest = decision->second.paxos.highest_accepted())
+          {
+            auto version = highest->proposal.version;
+            if (decision->second.chosen == version)
+            {
+              ELLE_DEBUG("return already chosen mutable block");
+              return highest->value->clone();
+            }
+            else
+            {
+              ELLE_TRACE_SCOPE(
+                "finalize running Paxos for version %s", version);
+              // FIXME: actual replica factor
+              auto const replica_factor = 3;
+              auto owners = this->doughnut()->overlay()->lookup(
+                address, replica_factor, overlay::OP_UPDATE);
+              // FIXME: factor with RemotePeer paxos client routine
+              Paxos::PaxosClient::Peers peers;
+              auto block = highest->value;
+              for (int i = 0; i < replica_factor; ++i)
+              {
+                std::unique_ptr<consensus::Peer> peer(
+                  new consensus::Peer(owners, block->address(), version));
+                peers.push_back(std::move(peer));
+              }
+              Paxos::PaxosClient client(uid(this->doughnut()->keys().K()),
+                                        std::move(peers));
+              auto chosen = client.choose(version, block);
+              // FIXME: factor with the end of doughnut::Local::store
+              ELLE_DEBUG("%s: store chosen block", *this)
+              unconst(decision->second).chosen = version;
+              {
+                this->storage()->set(
+                  address,
+                  elle::serialization::binary::serialize(
+                    BlockOrPaxos(const_cast<Decision*>(&decision->second))),
+                  true, true);
+              }
+              // ELLE_ASSERT(block.unique());
+              // FIXME: Don't clone, it's useless, find a way to steal
+              // ownership from the shared_ptr.
+              return block->clone();
+            }
           }
-          return Local::fetch(address);
+          else
+          {
+            ELLE_TRACE("%s: block has running Paxos but no value: %x",
+                       *this, address);
+            throw MissingBlock(address);
+          }
+        }
+
+        void
+        Paxos::LocalPeer::store(blocks::Block const& block, StoreMode mode)
+        {
+          ELLE_TRACE_SCOPE("%s: store %f", *this, block);
+          ELLE_DEBUG("%s: validate block", *this)
+            if (auto res = block.validate()); else
+              throw ValidationFailed(res.reason());
+          if (!dynamic_cast<blocks::ImmutableBlock const*>(&block))
+            throw ValidationFailed("bypassing Paxos for a non-immutable block");
+          elle::Buffer data =
+            elle::serialization::binary::serialize(
+              BlockOrPaxos(const_cast<blocks::Block*>(&block)));
+          this->storage()->set(block.address(), data,
+                              mode == STORE_ANY || mode == STORE_INSERT,
+                              mode == STORE_ANY || mode == STORE_UPDATE);
+          on_store(block, mode);
         }
 
         void
@@ -355,6 +474,20 @@ namespace infinit
           : chosen(-1)
           , paxos()
         {}
+
+        Paxos::LocalPeer::Decision::Decision(
+          elle::serialization::SerializerIn& s)
+        {
+          this->serialize(s);
+        }
+
+        void
+        Paxos::LocalPeer::Decision::serialize(
+          elle::serialization::Serializer& s)
+        {
+          s.serialize("chosen", this->chosen);
+          s.serialize("paxos", this->paxos);
+        }
       }
     }
   }

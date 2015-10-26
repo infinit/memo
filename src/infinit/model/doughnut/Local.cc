@@ -35,7 +35,6 @@ namespace infinit
         : _storage(std::move(storage))
         , _doughnut(nullptr)
       {
-        _register_rpcs(_rpcs);
         if (p == Protocol::tcp || p == Protocol::all)
         {
           this->_server = elle::make_unique<reactor::network::TCPServer>();
@@ -100,7 +99,7 @@ namespace infinit
           {
             auto previous_buffer = this->_storage->get(block.address());
             elle::IOStream s(previous_buffer.istreambuf());
-            typename elle::serialization::binary::SerializerIn input(s, false);
+            typename elle::serialization::binary::SerializerIn input(s);
             input.set_context<Doughnut*>(this->_doughnut);
             auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
             auto mprevious =
@@ -117,7 +116,7 @@ namespace infinit
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());
-          Serializer::SerializerOut output(s, false);
+          Serializer::SerializerOut output(s);
           auto ptr = &block;
           output.serialize_forward(ptr);
         }
@@ -141,10 +140,10 @@ namespace infinit
           throw MissingBlock(e.key());
         }
         ELLE_DUMP("data: %s", data.string());
-        elle::IOStream s(data.istreambuf());
-        Serializer::SerializerIn input(s, false);
-        input.set_context<Doughnut*>(this->_doughnut);
-        auto res = input.deserialize<std::unique_ptr<blocks::Block>>();
+        elle::serialization::Context ctx;
+        ctx.set<Doughnut*>(this->_doughnut);
+        auto res = elle::serialization::binary::deserialize<
+          std::unique_ptr<blocks::Block>>(data, true, ctx);
         on_fetch(address, res);
         return std::move(res);
       }
@@ -213,6 +212,7 @@ namespace infinit
       void
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
+        this->_register_rpcs(_rpcs);
         elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)

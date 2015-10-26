@@ -110,18 +110,25 @@ namespace infinit
                    PaxosClient::Proposal const& p,
                    std::shared_ptr<blocks::Block> const& value);
             virtual
+            void
+            store(blocks::Block const& block, StoreMode mode) override;
+            virtual
             std::unique_ptr<blocks::Block>
             fetch(Address address) const override;
+            struct Decision
+            {
+              Decision();
+              Decision(elle::serialization::SerializerIn& s);
+              void
+              serialize(elle::serialization::Serializer& s);
+              typedef infinit::serialization_tag serialization_tag;
+              int chosen;
+              PaxosServer paxos;
+            };
           protected:
             virtual
             void
             _register_rpcs(RPCServer& rpcs) override;
-            struct Decision
-            {
-              Decision();
-              int chosen;
-              PaxosServer paxos;
-            };
             typedef elle::unordered_map<Address, Decision> Addresses;
             ELLE_ATTRIBUTE(Addresses, addresses);
           };
