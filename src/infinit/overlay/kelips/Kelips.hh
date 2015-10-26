@@ -37,17 +37,23 @@ namespace infinit
       typedef Time::duration Duration;
       //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
 
+      typedef std::pair<GossipEndpoint, Time> TimedEndpoint;
       struct Contact
       {
-        GossipEndpoint endpoint;
+        // Endpoint we last received a message from
+        boost::optional<TimedEndpoint> validated_endpoint;
+        // all advertised endpoints
+        std::vector<TimedEndpoint> endpoints;
         Address address;
         Duration rtt;
-        Time last_seen;
         Time last_gossip;
         int gossip_count;
+        // thread performing a contact() call on this node
+        reactor::Thread* contacter;
+        std::vector<elle::Buffer> pending;
       };
 
-      typedef std::pair<Address, RpcEndpoint> PeerLocation;
+      typedef std::pair<Address, std::vector<RpcEndpoint>> PeerLocation;
 
       std::ostream&
       operator << (std::ostream& output, Contact const& contact);
@@ -68,6 +74,7 @@ namespace infinit
         Files files;
         //contacts from all groups. We will allow contacts[_group] to grow more
         std::vector<Contacts> contacts; //contacts from other groups
+        Contacts observers;
       };
 
       namespace packet
@@ -153,7 +160,7 @@ namespace infinit
       };
 
       typedef std::pair<
-        std::unordered_map<Address, GossipEndpoint>, // contacts
+        std::unordered_map<Address, std::vector<GossipEndpoint>>, // contacts
         std::vector<std::pair<Address, Address>> // address, home_node
       > SerState;
 
@@ -209,7 +216,11 @@ namespace infinit
         void
         wait(int contacts);
         void
-        send(packet::Packet& p, GossipEndpoint e, Address a);
+        send(packet::Packet& p, Contact& c);
+        void
+        send(packet::Packet& p, GossipEndpoint ep, Address addr);
+        void
+        send(packet::Packet& p, Contact* c, GossipEndpoint* ep, Address* addr);
         /// consistent address -> group mapper
         int
         group_of(Address const& address);
@@ -245,7 +256,7 @@ namespace infinit
         void
         filterAndInsert(
           std::vector<Address> files, int target_count, int group,
-          std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& p);
+          std::unordered_map<Address, std::vector<TimedEndpoint>>& p);
         void
         cleanup();
         void
@@ -256,11 +267,11 @@ namespace infinit
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
         pickFiles();
-        std::unordered_map<Address, std::pair<Time, GossipEndpoint>>
+        std::unordered_map<Address, std::vector<TimedEndpoint>>
         pickContacts();
-        std::vector<std::pair<GossipEndpoint, Address>>
+        std::vector<Address>
         pickOutsideTargets();
-        std::vector<std::pair<GossipEndpoint, Address>> \
+        std::vector<Address>
         pickGroupTargets();
         infinit::cryptography::SecretKey*
         getKey(Address const& a);
@@ -279,11 +290,16 @@ namespace infinit
         rereplicate();
         void
         rereplicator();
+        void
+        contact(Address address); // establish contact with peer and flush buffer
+        Contact&
+        get_or_make(Address address, bool observer,
+          std::vector<GossipEndpoint> endponits);
         Address _self;
         Address _ping_target;
         Time _ping_time;
         reactor::Barrier _ping_barrier;
-        GossipEndpoint _local_endpoint;
+        std::vector<TimedEndpoint> _local_endpoints;
         /// group we are in
         int _group;
         Configuration _config;
