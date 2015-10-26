@@ -96,7 +96,10 @@ namespace infinit
                    std::move(overlay_builder),
                    std::move(local),
                    [&] (Doughnut& dht)
-                   { return consensus(dht, replicas, dir, async, cache); })
+                   {
+                     this->_replicas = replicas;
+                     return consensus(dht, replicas, dir, async, cache);
+                   })
       {}
 
       Doughnut::Doughnut(std::string name,
