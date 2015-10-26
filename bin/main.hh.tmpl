@@ -523,7 +523,11 @@ namespace infinit
     network_path_get(std::string const& name_, User const& owner)
     {
       std::string name = qualified_name(name_, owner);
-      return this->_network_path(name).string();
+      std::string path = this->_network_path(name).string();
+      if (boost::filesystem::exists(path))
+        return path;
+      throw elle::Error(
+        elle::sprintf("network \"%s\" not found", name));
     }
 
     Network

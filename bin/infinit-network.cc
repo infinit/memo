@@ -1,5 +1,6 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
+#include <elle/json/exceptions.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
