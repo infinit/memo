@@ -667,7 +667,7 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("%s: UTP connection failed with %s", *this, host);
+            ELLE_WARN("%s: UTP connection failed with %s: %s", *this, host, e);
           }
         }
         if (protocol == Protocol::tcp || protocol == Protocol::all)
@@ -683,7 +683,7 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("%s: TCP connection failed with %s", *this, host);
+            ELLE_WARN("%s: TCP connection failed with %s: %s", *this, host, e);
           }
         }
         throw elle::Error(
@@ -2661,7 +2661,7 @@ namespace infinit
               }
               catch (elle::Error const& e)
               {
-                ELLE_WARN("%s: UTP connection failed with %s", *this, host);
+                ELLE_WARN("%s: UTP connection failed with %s: %s", *this, host, e);
               }
             }
             if (_config.rpc_protocol == Protocol::tcp || _config.rpc_protocol == Protocol::all)
@@ -2730,6 +2730,8 @@ namespace infinit
         for (auto const& f: s.second)
         {
           if (group_of(f.first) != _group)
+            continue;
+          if (f.second == _self)
             continue;
           auto its = _state.files.equal_range(f.first);
           auto it = std::find_if(its.first, its.second,
