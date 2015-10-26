@@ -361,6 +361,7 @@ namespace infinit
 
           cryptography::rsa::PublicKey key;
           elle::Buffer signature;
+          typedef infinit::serialization_tag serialization_tag;
         };
 
         SerializationContent(elle::serialization::SerializerIn& s)
@@ -376,6 +377,7 @@ namespace infinit
         Header header;
         int version;
         elle::Buffer signature;
+        typedef infinit::serialization_tag serialization_tag;
       };
 
       template <typename Block>

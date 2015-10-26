@@ -70,7 +70,7 @@ namespace infinit
           consensus = elle::make_unique<Consensus>(self);
         else
           consensus = elle::make_unique<Replicator>(
-            self, replicas, dir / "replicator");
+            self, replicas, dir / "replicator", false);
         if (async)
           consensus = elle::make_unique<Async>(
             self, std::move(consensus), dir / "async");
