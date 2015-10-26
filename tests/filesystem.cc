@@ -16,15 +16,15 @@
 
 #include <infinit/filesystem/filesystem.hh>
 
-#include <infinit/storage/Storage.hh>
-#include <infinit/storage/Memory.hh>
-#include <infinit/storage/Filesystem.hh>
-
-#include <infinit/model/faith/Faith.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
-
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <infinit/model/faith/Faith.hh>
 #include <infinit/overlay/Stonehenge.hh>
+#include <infinit/storage/Filesystem.hh>
+#include <infinit/storage/Memory.hh>
+#include <infinit/storage/Storage.hh>
 
 #include <random>
 
@@ -156,8 +156,8 @@ template<typename T> std::string serialize(T & t)
 // ndmefyl: WHAT THE FUCK is that supposed to imply O.o
 reactor::Scheduler* nodes_sched;
 static void make_nodes(std::string store, int node_count,
-  infinit::cryptography::rsa::KeyPair const& owner
-  )
+                       infinit::cryptography::rsa::KeyPair const& owner,
+                       bool paxos)
 {
   reactor::Scheduler s;
   nodes_sched = &s;
@@ -174,7 +174,12 @@ static void make_nodes(std::string store, int node_count,
         boost::filesystem::create_directories(tmp);
         s.reset(new infinit::storage::Filesystem(tmp));
       }
-      auto l = new infinit::model::doughnut::Local(std::move(s));
+      infinit::model::doughnut::Local* l = nullptr;
+      if (paxos)
+        l = new infinit::model::doughnut::consensus::Paxos::LocalPeer(
+          std::move(s));
+      else
+        l = new infinit::model::doughnut::Local(std::move(s));
       auto ep = l->server_endpoint();
       endpoints.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
                              ep.port());
@@ -185,6 +190,17 @@ static void make_nodes(std::string store, int node_count,
     {
       auto kp = infinit::cryptography::rsa::keypair::generate(2048);
       infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner.k());
+      infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
+        [paxos] (infinit::model::doughnut::Doughnut& dht)
+          -> std::unique_ptr<infinit::model::doughnut::Consensus>
+        {
+          if (paxos)
+            return elle::make_unique<
+              infinit::model::doughnut::consensus::Paxos>(dht, 3);
+          else
+            return elle::make_unique<
+              infinit::model::doughnut::Consensus>(dht);
+        };
       auto model =
         new infinit::model::doughnut::Doughnut(
           std::move(kp),
@@ -195,8 +211,8 @@ static void make_nodes(std::string store, int node_count,
               return elle::make_unique<infinit::overlay::Stonehenge>(
                 elle::UUID::random(), endpoints, doughnut);
             }),
-          store / boost::filesystem::unique_path()
-          );
+          nullptr,
+          consensus);
       nodes[i]->doughnut() = model;
       nodes[i]->serve();
     }
@@ -206,12 +222,15 @@ static void make_nodes(std::string store, int node_count,
   ELLE_LOG("Exiting node scheduler");
 }
 
-static void run_filesystem_dht(std::string const& store,
-                               std::string const& mountpoint,
-                               int node_count,
-                               int nread = 1,
-                               int nwrite = 1,
-                               int nmount = 1)
+static
+void
+run_filesystem_dht(std::string const& store,
+                   std::string const& mountpoint,
+                   int node_count,
+                   int nread = 1,
+                   int nwrite = 1,
+                   int nmount = 1,
+                   bool paxos = true)
 {
   sched = new reactor::Scheduler();
   fs = nullptr;
@@ -222,7 +241,7 @@ static void run_filesystem_dht(std::string const& store,
   processes.clear();
   mounted = false;
   auto owner_keys = infinit::cryptography::rsa::keypair::generate(2048);
-  new std::thread([&] { make_nodes(store, node_count, owner_keys);});
+  new std::thread([&] { make_nodes(store, node_count, owner_keys, paxos);});
   while (nodes.size() != unsigned(node_count))
     usleep(100000);
   ELLE_TRACE("got %s nodes, preparing %s mounts", nodes.size(), nmount);
@@ -409,7 +428,12 @@ static void write(boost::filesystem::path const& where, std::string const& what)
   ofs << what;
 }
 
-void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
+void
+test_filesystem(bool dht,
+                int nnodes = 5,
+                int nread = 1,
+                int nwrite = 1,
+                bool paxos = true)
 {
   namespace bfs = boost::filesystem;
   auto store = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
@@ -422,7 +446,7 @@ void test_filesystem(bool dht, int nnodes=5, int nread=1, int nwrite=1)
   std::thread t([&] {
       if (dht)
         run_filesystem_dht(store.string(), mount.string(), 5,
-                           nread, nwrite);
+                           nread, nwrite, paxos);
       else
         run_filesystem(store.string(), mount.string());
   });
@@ -752,9 +776,13 @@ void test_basic()
 
 void test_dht_crypto()
 {
-  test_filesystem(true, 5, 1, 1);
+  test_filesystem(true, 5, 1, 1, false);
 }
 
+void test_dht_crypto_paxos()
+{
+  test_filesystem(true, 5, 1, 1, true);
+}
 
 void unmounter(boost::filesystem::path mount,
                boost::filesystem::path store,
@@ -789,7 +817,7 @@ void unmounter(boost::filesystem::path mount,
   ELLE_LOG("teardown complete");
 }
 
-void test_conflicts()
+void test_conflicts(bool paxos)
 {
   namespace bfs = boost::filesystem;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
@@ -800,7 +828,7 @@ void test_conflicts()
   statvfs(mount.string().c_str(), &statstart);
   mount_points.clear();
   std::thread t([&] {
-      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2);
+      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
@@ -897,7 +925,7 @@ void test_conflicts()
   BOOST_CHECK_EQUAL(read(m1/"file6"), "nioc");
 }
 
-void test_acl()
+void test_acl(bool paxos)
 {
   namespace bfs = boost::filesystem;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
@@ -908,7 +936,7 @@ void test_acl()
   statvfs(mount.string().c_str(), &statstart);
   mount_points.clear();
   std::thread t([&] {
-      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2);
+      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
@@ -1025,14 +1053,16 @@ ELLE_TEST_SUITE()
   // There is unfortunately no more specific way.
   setenv("BOOST_TEST_CATCH_SYSTEM_ERRORS", "no", 1);
   signal(SIGCHLD, SIG_IGN);
-  boost::unit_test::test_suite* filesystem = BOOST_TEST_SUITE("filesystem");
-  boost::unit_test::framework::master_test_suite().add(filesystem);
+  auto& suite = boost::unit_test::framework::master_test_suite();
   // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
-  filesystem->add(BOOST_TEST_CASE(test_dht_crypto), 0, 120);
+  suite.add(BOOST_TEST_CASE(test_dht_crypto), 0, 120);
+  suite.add(BOOST_TEST_CASE(test_dht_crypto_paxos), 0, 120);
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails
   // with a mysterious 'permission denied'
-  filesystem->add(BOOST_TEST_CASE(test_acl), 0, 120);
-  filesystem->add(BOOST_TEST_CASE(test_conflicts), 0, 120);
+  suite.add(BOOST_TEST_CASE(boost::bind(test_acl, false)), 0, 120);
+  suite.add(BOOST_TEST_CASE(boost::bind(test_acl, true)), 0, 120);
+  suite.add(BOOST_TEST_CASE(boost::bind(test_conflicts, false)), 0, 120);
+  suite.add(BOOST_TEST_CASE(boost::bind(test_conflicts, true)), 0, 120);
 #endif
 }
