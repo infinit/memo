@@ -1,5 +1,6 @@
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
+#include <elle/json/exceptions.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/overlay/Kalimero.hh>
@@ -143,6 +144,15 @@ create(variables_map const& args)
     }
     if (stdout || script_mode)
       elle::serialization::json::serialize(network, std::cout, false);
+    if (args.count("push") && args["push"].as<bool>())
+    {
+      infinit::NetworkDescriptor desc(
+        network.name,
+        std::move(network.dht()->overlay),
+        std::move(network.dht()->owner),
+        network.dht()->replicas);
+      beyond_push("network", desc.name, desc, owner);
+    }
   }
 }
 
@@ -366,6 +376,55 @@ run(variables_map const& args)
     run();
 }
 
+static
+void
+list_storage(variables_map const& args)
+{
+  std::string name;
+  {
+    std::string network_name = mandatory(args, "name", "network name");
+    infinit::User owner = self_user(ifnt, args);
+    name = ifnt.network_path_get(network_name, owner);
+  }
+  namespace bf = boost::filesystem;
+  std::ifstream is(name);
+  auto json = boost::any_cast<elle::json::Object>(elle::json::read(is));
+  auto storage = boost::any_cast<elle::json::Object>(json["storage"]);
+  std::string type = boost::any_cast<std::string>(storage["type"]);
+  if (type == "strip")
+    for (auto const& b: boost::any_cast<elle::json::Array>(storage["backend"]))
+    {
+      auto bb = boost::any_cast<elle::json::Object>(b);
+      std::string path = boost::any_cast<std::string>(bb["path"]);
+      name = bf::path(path).filename().string();
+      std::cout << name << "\n";
+    }
+  else
+  {
+    std::string path = boost::any_cast<std::string>(storage["path"]);
+    name = bf::path(path).filename().string();
+    std::cout << name << "\n";
+  }
+  std::cout << std::endl;
+}
+
+static
+void
+users(variables_map const& args)
+{
+  std::string network_name = mandatory(args, "name", "network_name");
+  auto res =
+    beyond_fetch<std::unordered_map<std::string, std::vector<std::string>>>(
+      elle::sprintf("networks/%s/users", network_name),
+      "users of",
+      network_name,
+      boost::none,
+      false
+    );
+  for (std::string const& user: res["users"])
+    std::cout << user << std::endl;
+}
+
 int main(int argc, char** argv)
 {
   program = argv[0];
@@ -405,6 +464,8 @@ int main(int argc, char** argv)
         { "replication-factor,r", value<int>(), "data replication factor" },
         { "async", bool_switch(), "Use asynchronious operations" },
         { "stdout", bool_switch(), "output configuration to stdout" },
+        { "push", bool_switch(),
+          elle::sprintf("push the network to %s", beyond()).c_str() },
       },
       {
         overlay_types_options,
@@ -527,6 +588,25 @@ int main(int argc, char** argv)
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations" },
         { "cache-model", bool_switch(), "Enable model caching"},
+      },
+    },
+    {
+      "list-storage",
+      "List all contributed storage of a network",
+      &list_storage,
+      "--name NETWORK",
+      {
+        option_owner,
+        { "name", value<std::string>(), "network name" },
+      },
+    },
+    {
+      "members",
+      "List all users in a network",
+      &users,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network name" },
       },
     },
   };

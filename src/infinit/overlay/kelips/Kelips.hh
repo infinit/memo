@@ -2,7 +2,7 @@
 # define INFINIT_OVERLAY_KELIPS_HH
 
 # include <infinit/overlay/Overlay.hh>
-# include <reactor/network/udp-socket.hh>
+# include <reactor/network/rdv-socket.hh>
 # include <reactor/Barrier.hh>
 # include <reactor/Generator.hh>
 # include <elle/serialization/Serializer.hh>
@@ -46,6 +46,8 @@ namespace infinit
         Time last_gossip;
         int gossip_count;
       };
+
+      typedef std::pair<Address, RpcEndpoint> PeerLocation;
 
       std::ostream&
       operator << (std::ostream& output, Contact const& contact);
@@ -114,7 +116,7 @@ namespace infinit
         Configuration();
         Configuration(elle::serialization::SerializerIn& input);
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s) override;
         /// number of groups
         int k;
         /// max number of contacts on each other group
@@ -150,6 +152,11 @@ namespace infinit
              model::doughnut::Doughnut* doughnut) override;
       };
 
+      typedef std::pair<
+        std::unordered_map<Address, GossipEndpoint>, // contacts
+        std::vector<std::pair<Address, Address>> // address, home_node
+      > SerState;
+
       class Node
         : public infinit::overlay::Overlay
         , public elle::Printable
@@ -167,10 +174,10 @@ namespace infinit
         void
         register_local(
           std::shared_ptr<infinit::model::doughnut::Local> local) override;
-         void
-         address(Address file,
-                 infinit::overlay::Operation op,
-                 int n, std::function<void(RpcEndpoint)> yield);
+        void
+        address(Address file,
+                infinit::overlay::Operation op,
+                int n, std::function<void(PeerLocation)> yield);
         void
         print(std::ostream& stream) const override;
         /// local hooks interface
@@ -242,10 +249,10 @@ namespace infinit
         void
         cleanup();
         void
-        addLocalResults(packet::GetFileRequest* p, reactor::yielder<RpcEndpoint>::type const* yield);
+        addLocalResults(packet::GetFileRequest* p, reactor::yielder<PeerLocation>::type const* yield);
         void
-        kelipsGet(Address file, int n, bool local_override, int attempts, std::function<void(RpcEndpoint)> yield);
-        std::vector<RpcEndpoint>
+        kelipsGet(Address file, int n, bool local_override, int attempts, std::function<void(PeerLocation)> yield);
+        std::vector<PeerLocation>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
         pickFiles();
@@ -260,6 +267,18 @@ namespace infinit
         void
         setKey(Address const& a, GossipEndpoint const& e,
                infinit::cryptography::SecretKey sk);
+        void
+        process_update(SerState const& s);
+        void
+        bootstrap(bool use_bootstrap_nodes);
+        SerState
+        get_serstate(PeerLocation peer);
+        void
+        deoverduplicate();
+        void
+        rereplicate();
+        void
+        rereplicator();
         Address _self;
         Address _ping_target;
         Time _ping_time;
@@ -269,10 +288,12 @@ namespace infinit
         int _group;
         Configuration _config;
         State _state;
-        reactor::network::UDPSocket _gossip;
+        reactor::network::RDVSocket _gossip;
         reactor::Mutex _udp_send_mutex;
         std::unique_ptr<reactor::Thread>
-          _emitter_thread, _listener_thread, _pinger_thread;
+          _emitter_thread, _listener_thread, _pinger_thread,
+          _rereplicator_thread, _rdv_connect_thread, _rdv_connect_thread_local,
+          _rdv_connect_gossip_thread;
         std::default_random_engine _gen;
         std::unordered_map<int, std::shared_ptr<PendingRequest>>
           _pending_requests;
@@ -293,6 +314,9 @@ namespace infinit
         int _dropped_puts;
         int _dropped_gets;
         int _failed_puts;
+        std::unordered_map<Address, int> _under_duplicated;
+        std::string _rdv_id;
+        std::string _rdv_host;
       };
     }
   }

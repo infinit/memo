@@ -156,7 +156,7 @@ namespace infinit
         Configuration(elle::serialization::SerializerIn& input);
 
         void
-        serialize(elle::serialization::Serializer& s);
+        serialize(elle::serialization::Serializer& s) override;
 
         virtual
         void

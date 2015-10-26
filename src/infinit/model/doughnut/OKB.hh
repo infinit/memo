@@ -91,7 +91,7 @@ namespace infinit
         version() const override;
         virtual
         elle::Buffer const&
-        data() const;
+        data() const override;
         virtual
         void
         data(elle::Buffer data) override;
@@ -101,8 +101,8 @@ namespace infinit
         virtual
         bool
         operator ==(blocks::Block const& rhs) const override;
-        ELLE_ATTRIBUTE_RP(elle::Buffer, data_plain, protected:);
-        ELLE_ATTRIBUTE_P(bool, data_decrypted, protected:);
+        ELLE_ATTRIBUTE_R(elle::Buffer, data_plain, protected);
+        ELLE_ATTRIBUTE(bool, data_decrypted, protected);
       protected:
         void
         _decrypt_data() const;

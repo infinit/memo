@@ -75,7 +75,7 @@ namespace infinit
       }
 
       void
-      serialize(elle::serialization::Serializer& s)
+      serialize(elle::serialization::Serializer& s) override
       {
         s.serialize("configuration", this->configuration);
       }

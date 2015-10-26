@@ -48,16 +48,19 @@ namespace infinit
     namespace doughnut
     {
       Replicator::Replicator(Doughnut& doughnut, int factor,
-                             boost::filesystem::path const& journal_dir)
+                             boost::filesystem::path const& journal_dir,
+                             bool rereplicate)
       : Consensus(doughnut)
       , _factor(factor)
       , _overlay(nullptr)
       , _journal_dir(journal_dir)
-      , _process_thread("replicator", [&] { _process_loop();})
+      , _process_thread("replicator", [&] { if (this->_rereplicate) _process_loop();})
       , _frame(0)
+      , _rereplicate(rereplicate)
       {
         ELLE_TRACE("%s: using journal at %s", *this, this->_journal_dir);
-        boost::filesystem::create_directories(_journal_dir);
+        if (_rereplicate)
+          boost::filesystem::create_directories(_journal_dir);
       }
 
       Replicator::~Replicator()
@@ -169,14 +172,17 @@ namespace infinit
           reactor::wait(s);
         };
         std::string saddress = elle::sprintf("%s", block->address());
-        if (peers.size() < unsigned(_factor))
+        if (_rereplicate)
         {
-          ELLE_TRACE("store with only %s of %s nodes", peers.size(), _factor);
-          boost::filesystem::ofstream ofs(_journal_dir / saddress);
-          ofs << peers.size();
+          if (peers.size() < unsigned(_factor))
+          {
+            ELLE_TRACE("store with only %s of %s nodes", peers.size(), _factor);
+            boost::filesystem::ofstream ofs(_journal_dir / saddress);
+            ofs << peers.size();
+          }
+          else
+            boost::filesystem::remove(_journal_dir /saddress);
         }
-        else
-          boost::filesystem::remove(_journal_dir /saddress);
       }
 
       static

@@ -1,6 +1,7 @@
 #include <elle/log.hh>
 
 #include <infinit/overlay/Overlay.hh>
+#include <infinit/model/MissingBlock.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
 
@@ -45,7 +46,7 @@ namespace infinit
       auto gen = this->lookup(address, 1, op);
       for (auto res: gen)
         return res;
-      throw elle::Error("Lookup produced no peer.");
+      throw model::MissingBlock(address);
     }
 
     void

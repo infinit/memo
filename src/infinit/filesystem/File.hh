@@ -25,7 +25,7 @@ namespace infinit
             std::unique_ptr<MutableBlock> b = std::unique_ptr<MutableBlock>());
         ~File();
         void stat(struct stat*) override;
-        void list_directory(rfs::OnDirectoryEntry cb) THROW_NOTDIR;
+        void list_directory(rfs::OnDirectoryEntry cb) override THROW_NOTDIR;
         std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;
         std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override;
         void unlink() override;
@@ -38,7 +38,7 @@ namespace infinit
         void chmod(mode_t mode) override;
         void chown(int uid, int gid) override;
         void statfs(struct statvfs *) override;
-        void utimens(const struct timespec tv[2]);
+        void utimens(const struct timespec tv[2]) override;
         void truncate(off_t new_size) override;
         std::string getxattr(std::string const& name) override;
         std::vector<std::string> listxattr() override;

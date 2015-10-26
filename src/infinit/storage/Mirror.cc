@@ -112,7 +112,7 @@ namespace infinit
       }
 
       void
-      serialize(elle::serialization::Serializer& s)
+      serialize(elle::serialization::Serializer& s) override
       {
         s.serialize("parallel", this->parallel);
         s.serialize("balance", this->balance);

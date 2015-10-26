@@ -40,8 +40,7 @@ create(variables_map const& args)
   auto model = network.run(hosts);
   ELLE_TRACE("create volume");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
-  infinit::Volume volume(
-    name, mountpoint, network.name);
+  infinit::Volume volume(name, mountpoint, network.name);
   if (args.count("stdout") && args["stdout"].as<bool>())
   {
     elle::serialization::json::SerializerOut s(std::cout, false);
@@ -52,6 +51,8 @@ create(variables_map const& args)
     report_created("volume", name);
     ifnt.volume_save(volume);
   }
+  if (args.count("push") && args["push"].as<bool>())
+    beyond_push("volume", name, volume, owner);
 }
 
 static
@@ -225,7 +226,7 @@ run(variables_map const& args)
       reactor::wait(*fs);
     }
   };
-  if (push)
+  if (push && model.first)
     elle::With<InterfacePublisher>(
       network, self, model.second->overlay()->node_id(),
       model.first->server_endpoint().port()) << [&]
@@ -268,6 +269,8 @@ main(int argc, char** argv)
         { "stdout", bool_switch(), "output configuration to stdout" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
+        { "push", bool_switch(),
+          elle::sprintf("push the volume to %s", beyond()).c_str() },
       },
     },
     {

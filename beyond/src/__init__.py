@@ -64,6 +64,9 @@ class Beyond:
     return self.__datastore.user_delete(
       name = name)
 
+  def user_networks_get(self, user):
+    return self.__datastore.user_networks_fetch(user.name)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
@@ -286,10 +289,9 @@ class Network(metaclass = Entity,
   def id(self):
     return '%s/%s' % (self.owner, self.name)
 
-
 class Volume(metaclass = Entity,
-              insert = 'volume_insert',
-              fields = fields('name', 'network')):
+             insert = 'volume_insert',
+             fields = fields('name', 'network')):
 
   @property
   def id(self):

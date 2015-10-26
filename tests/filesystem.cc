@@ -179,7 +179,6 @@ static void make_nodes(std::string store, int node_count,
       endpoints.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
                              ep.port());
       nodes.emplace_back(l);
-      l->serve();
     }
     // now give each a model
     for (int i = 0; i < node_count; ++i)
@@ -199,6 +198,7 @@ static void make_nodes(std::string store, int node_count,
           store / boost::filesystem::unique_path()
           );
       nodes[i]->doughnut() = model;
+      nodes[i]->serve();
     }
   });
   ELLE_LOG("Running node scheduler");

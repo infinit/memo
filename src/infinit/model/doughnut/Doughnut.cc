@@ -115,7 +115,7 @@ namespace infinit
                    std::move(overlay_builder),
                    std::move(dir),
                    std::move(local),
-                   std::move(replicas),
+                   replicas,
                    std::move(async),
                    std::move(cache))
       {

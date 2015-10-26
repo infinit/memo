@@ -35,6 +35,7 @@ namespace infinit
         : _storage(std::move(storage))
         , _doughnut(nullptr)
       {
+        _register_rpcs(_rpcs);
         if (p == Protocol::tcp || p == Protocol::all)
         {
           this->_server = elle::make_unique<reactor::network::TCPServer>();
@@ -212,8 +213,6 @@ namespace infinit
       void
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
-        RPCServer rpcs;
-        this->_register_rpcs(rpcs);
         elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)
@@ -222,10 +221,11 @@ namespace infinit
             auto name = elle::sprintf("%s: %s server", *this, **socket);
             scope.run_background(
               name,
-              [this, socket, &rpcs]
+              [this, socket]
               {
-                rpcs.set_context<Doughnut*>(this->_doughnut);
-                rpcs.serve(**socket);
+                _rpcs.set_context<Doughnut*>(this->_doughnut);
+                _rpcs._doughnut = this->_doughnut;
+                _rpcs.serve(**socket);
               });
           }
         };

@@ -144,6 +144,14 @@ class CouchDBDatastore:
               ('update', self.__network_update),
           ]
         },
+        'views' : {
+          name : {
+            'map': getsource(view_map)
+          }
+          for name, view_map in [
+            ('per_user_name', self.__networks_per_user_name_map),
+          ]
+        }
       })
     self.__couchdb['networks'].save(design)
 
@@ -188,6 +196,11 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 
+  def user_networks_fetch(self, user_name):
+    rows = self.__couchdb['networks'].view('beyond/per_user_name',
+                                           key = user_name)
+    return list(map(lambda row: row.value, rows))
+
   def __user_per_name(user):
     yield user['name'], user
 
@@ -209,6 +222,47 @@ class CouchDBDatastore:
     for id, account in update.get('google_accounts', {}).items():
       user.setdefault('google_accounts', {})[id] = account
     return [user, {'json': json.dumps(user)}]
+
+  ## ------- ##
+  ## Network ##
+  ## ------- ##
+
+  def network_insert(self, network):
+    json = network.json()
+    json['_id'] = network.name
+    try:
+      self.__couchdb['networks'].save(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.Network.Duplicate()
+
+  def network_fetch(self, owner, name):
+    try:
+      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
+      return infinit.beyond.Network.from_json(self.beyond, json)
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.Network.NotFound()
+
+  def network_delete(self, owner, name):
+    try:
+      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
+      self.__couchdb['networks'].delete(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.Network.Duplicate()
+
+  def network_update(self, id, diff):
+    args = {
+      name: json.dumps(value)
+      for name, value in diff.items()
+      if value is not None
+    }
+    try:
+      self.__couchdb['networks'].update_doc(
+        'beyond/update',
+        id,
+        **args
+      )
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.Network.NotFound()
 
   def __network_update(network, req):
     if network is None:
@@ -237,46 +291,9 @@ class CouchDBDatastore:
           u[node] = endpoints
     return [network, {'json': json.dumps(update)}]
 
-  def network_update(self, id, diff):
-    args = {
-      name: json.dumps(value)
-      for name, value in diff.items()
-      if value is not None
-    }
-    try:
-      self.__couchdb['networks'].update_doc(
-        'beyond/update',
-        id,
-        **args
-      )
-    except couchdb.http.ResourceNotFound:
-      raise infinit.beyond.Network.NotFound()
-
-  ## ------- ##
-  ## Network ##
-  ## ------- ##
-
-  def network_insert(self, network):
-    json = network.json()
-    json['_id'] = network.name
-    try:
-      self.__couchdb['networks'].save(json)
-    except couchdb.ResourceConflict:
-      raise infinit.beyond.Network.Duplicate()
-
-  def network_fetch(self, owner, name):
-    try:
-      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
-      return infinit.beyond.Network.from_json(self.beyond, json)
-    except couchdb.http.ResourceNotFound:
-      raise infinit.beyond.Network.NotFound()
-
-  def network_delete(self, owner, name):
-    try:
-      json = self.__couchdb['networks']['%s/%s' % (owner, name)]
-      self.__couchdb['networks'].delete(json)
-    except couchdb.ResourceConflict:
-      raise infinit.beyond.Network.Duplicate()
+  def __networks_per_user_name_map(network):
+    for p in network['passports']:
+      yield p, network['name']
 
   ## ------ ##
   ## Volume ##

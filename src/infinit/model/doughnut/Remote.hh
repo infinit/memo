@@ -28,6 +28,9 @@ namespace infinit
         Remote(Doughnut& doughnut, std::string const& host, int port);
         Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
                reactor::network::UTPServer& server);
+        Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
+               std::string const& peer_id,
+               reactor::network::UTPServer& server);
         virtual
         ~Remote();
       protected:
@@ -35,8 +38,8 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
-      protected:
-        std::unique_ptr<protocol::ChanneledStream> _channels;
+        ELLE_ATTRIBUTE_R(std::unique_ptr<protocol::ChanneledStream>,
+                         channels, protected);
 
       /*-----------.
       | Networking |
@@ -55,7 +58,7 @@ namespace infinit
         ELLE_ATTRIBUTE(std::function <std::iostream& ()>, connector);
         ELLE_ATTRIBUTE(std::string, endpoint);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
-
+        ELLE_ATTRIBUTE(elle::Buffer, credentials);
       /*-------.
       | Blocks |
       `-------*/

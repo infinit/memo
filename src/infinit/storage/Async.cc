@@ -371,7 +371,7 @@ namespace infinit
       }
 
       void
-      serialize(elle::serialization::Serializer& s)
+      serialize(elle::serialization::Serializer& s) override
       {
         s.serialize("max_blocks", this->max_blocks);
         s.serialize("max_size", this->max_size);

@@ -50,7 +50,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::string, refresh_token);
         ELLE_ATTRIBUTE_R(std::string, dir_id);
         ELLE_ATTRIBUTE_R(std::string, name);
-      
+
         boost::filesystem::path _path(Key key) const;
 
         reactor::http::Request
@@ -89,7 +89,7 @@ namespace infinit
                                std::string refresh_token,
                                std::string name);
       GoogleDriveStorageConfig(elle::serialization::SerializerIn& input);
-      void serialize(elle::serialization::Serializer& s);
+      void serialize(elle::serialization::Serializer& s) override;
       virtual std::unique_ptr<infinit::storage::Storage> make() override;
 
       boost::optional<std::string> root;

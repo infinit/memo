@@ -94,10 +94,7 @@ class Bottle(bottle.Bottle):
     self.install(ResponsePlugin())
     self.route('/')(self.root)
     # GCS
-    if gcs is not None:
-      self.__gcs = gcs
-    else:
-      self.__gcs = gcs
+    self.__gcs = gcs
     # OAuth
     for s in Bottle.__oauth_services:
       self.route('/oauth/%s' % s)(getattr(self, 'oauth_%s' % s))
@@ -119,6 +116,7 @@ class Bottle(bottle.Bottle):
       self.user_avatar_put)
     self.route('/users/<name>/avatar', method = 'DELETE')(
       self.user_avatar_delete)
+    self.route('/users/<name>/networks', method = 'GET')(self.user_networks_get)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -136,6 +134,8 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.network_endpoints_get)
     self.route('/networks/<owner>/<name>/endpoints/<user>/<node_id>',
                method = 'PUT')(self.network_endpoint_put)
+    self.route('/networks/<owner>/<name>/users',
+               method = 'GET')(self.network_users_get)
     # Volume
     self.route('/volumes/<owner>/<name>',
                method = 'GET')(self.volume_get)
@@ -144,16 +144,26 @@ class Bottle(bottle.Bottle):
     self.route('/volumes/<owner>/<name>',
                method = 'DELETE')(self.volume_delete)
 
+  def __not_found(self, type, name):
+    return Response(404, {
+      'error': '%s/not_found' % type,
+      'reason': '%s %r does not exist' % (type, name),
+      'name': name,
+    })
+
+  def __user_not_found(self, name):
+    return self.__not_found('user', name)
+
   def authenticate(self, user):
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
-      bottle.response.status = 403
-      raise Exception("Missing signature header")
+      raise Response(401, 'Missing signature header')
     request_time = bottle.request.headers.get('infinit-time')
     if request_time is None:
-      raise Exception("Missing time header")
+      raise Response(400, 'Missing time header')
     if abs(time.time() - int(request_time)) > 300: # UTC
-      raise Exception("Time too far away: got %s, current %s" % (request_time, time.time()))
+      raise Response(401, 'Time too far away: got %s, current %s' % \
+                     (request_time, time.time()))
     rawk = user.public_key['rsa']
     der = base64.b64decode(rawk.encode('latin-1'))
     k = Crypto.PublicKey.RSA.importKey(der)
@@ -161,15 +171,11 @@ class Bottle(bottle.Bottle):
     to_sign += base64.b64encode(
       hashlib.sha256(bottle.request.body.getvalue()).digest()).decode('utf-8') + ";"
     to_sign += request_time
-
     local_hash = Crypto.Hash.SHA256.new(to_sign.encode('utf-8'))
-
-
     remote_signature_crypted = base64.b64decode(remote_signature_raw.encode('utf-8'))
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
     if not verifier.verify(local_hash, remote_signature_crypted):
-      bottle.response.status = 403
-      raise Exception("authenticate error")
+      raise Response(403, 'Authentication error')
     pass
 
   def root(self):
@@ -222,15 +228,7 @@ class Bottle(bottle.Bottle):
     try:
       return self.__beyond.user_get(name = name).json()
     except User.NotFound:
-      return self.__user_not_found(name)
-
-  def __user_not_found(self, name):
-    bottle.response.status = 404
-    return {
-      'error': 'user/not_found',
-      'reason': 'user %r does not exist' % name,
-      'name': name,
-    }
+      raise self.__user_not_found(name)
 
   def user_delete(self, name):
     user = self.__beyond.user_get(name = name)
@@ -252,25 +250,24 @@ class Bottle(bottle.Bottle):
   def __user_avatar_manipulate(self, name, f):
     return f('users', '%s/avatar' % name)
 
+  def user_networks_get(self, name):
+    try:
+      user = self.__beyond.user_get(name = name)
+    except User.NotFound:
+      raise self.__user_not_found(name)
+    self.authenticate(user)
+    return {'networks': self.__beyond.user_networks_get(user = user)}
+
   ## ------- ##
   ## Network ##
   ## ------- ##
-
-  def __not_found(self, type, name):
-    bottle.response.status = 404
-    return {
-      'error': '%s/not_found' % type,
-      'reason': '%s %r does not exist' % (type, name),
-      'name': name,
-    }
-
 
   def network_get(self, owner, name):
     try:
       return self.__beyond.network_get(
         owner = owner, name = name).json()
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_put(self, owner, name):
     try:
@@ -281,6 +278,8 @@ class Bottle(bottle.Bottle):
       network.create()
       bottle.response.status = 201
       return {}
+    except User.NotFound:
+      raise self.__user_not_found(owner)
     except Network.Duplicate:
       bottle.response.status = 409
       return {
@@ -294,7 +293,7 @@ class Bottle(bottle.Bottle):
       owner = owner, name = name)
     passport = network.passports.get(invitee)
     if passport is None:
-      return self.__not_found(
+      raise self.__not_found(
         'passport', '%s/%s/%s' % (owner, name, invitee))
     else:
       return passport
@@ -314,7 +313,7 @@ class Bottle(bottle.Bottle):
       bottle.response.status = 201
       return {}
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_endpoints_get(self, owner, name):
     try:
@@ -322,7 +321,7 @@ class Bottle(bottle.Bottle):
                                           name = name)
       return network.endpoints
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_endpoint_put(self, owner, name, user, node_id):
     try:
@@ -337,7 +336,7 @@ class Bottle(bottle.Bottle):
       bottle.response.status = 201 # FIXME: 200 if existed
       return {}
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_endpoint_delete(self, owner, name, user, node_id):
     try:
@@ -348,12 +347,23 @@ class Bottle(bottle.Bottle):
       network.save()
       return {}
     except Network.NotFound:
-      return self.__not_found('network', '%s/%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   def network_delete(self, owner, name):
     user = self.__beyond.user_get(name = owner)
     self.authenticate(user)
     self.__beyond.network_delete(owner, name)
+
+  def network_users_get(self, owner, name):
+    try:
+      network = self.__beyond.network_get(owner = owner, name = name)
+      res = [owner]
+      res.extend(network.passports.keys())
+      return {
+        'users': res,
+      }
+    except Network.NotFound:
+      raise self.__not_found('network', '%s\%s' % (owner, name))
 
   ## ------ ##
   ## Volume ##
@@ -364,7 +374,7 @@ class Bottle(bottle.Bottle):
       return self.__beyond.volume_get(
         owner = owner, name = name).json()
     except Volume.NotFound:
-      return self.__not_found('volume', '%s/%s' % (owner, name))
+      raise self.__not_found('volume', '%s/%s' % (owner, name))
 
   def volume_put(self, owner, name):
     user = self.__beyond.user_get(name = owner)
@@ -492,7 +502,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       user.save()
       return info
     except User.NotFound:
-      return self._Bottle__user_not_found(username)
+      raise self.__user_not_found(username)
   oauth.__name__ = 'oauth_%s' % name
   setattr(Bottle, oauth.__name__, oauth)
   def user_credentials_get(self, username, name = name):
@@ -505,7 +515,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
           list(getattr(user, '%s_accounts' % name).values()),
       }
     except User.NotFound:
-      return self._Bottle__user_not_found(username)
+      raise self.__user_not_found(username)
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
   setattr(Bottle, user_credentials_get.__name__, user_credentials_get)
 
@@ -540,7 +550,7 @@ def user_credentials_google_refresh(self, username):
                     user.save()
                     return token
     except User.NotFound:
-        return self._Bottle__user_not_found(unsername)
+      raise self.__user_not_found(username)
 
 setattr(Bottle,
         user_credentials_google_refresh.__name__,
