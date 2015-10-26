@@ -179,6 +179,7 @@ namespace infinit
         {
           GossipEndpoint endpoint;
           Address sender;
+          bool observer; // true if sender is observer (no storage)
           static constexpr char const* virtually_serializable_key = "type";
         };
 
@@ -196,6 +197,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("payload", payload);
           }
 
@@ -238,6 +240,7 @@ namespace infinit
             : passport(input)
           {
             input.serialize("sender", sender);
+            input.serialize("observer", observer);
           }
 
           void
@@ -245,6 +248,7 @@ namespace infinit
           {
             passport.serialize(s);
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
           }
 
           infinit::model::doughnut::Passport passport;
@@ -261,6 +265,7 @@ namespace infinit
             : passport(input)
           {
             input.serialize("sender", sender);
+            input.serialize("observer", observer);
             input.serialize("encrypted_key", encrypted_key);
           }
 
@@ -269,6 +274,7 @@ namespace infinit
           {
             passport.serialize(s);
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("encrypted_key", encrypted_key);
           }
 
@@ -291,6 +297,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("endpoint", remote_endpoint);
           }
 
@@ -322,6 +329,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
           }
         };
         REGISTER(BootstrapRequest, "bootstrapRequest");
@@ -340,6 +348,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
           }
         };
         REGISTER(FileBootstrapRequest, "fileBootstrapRequest");
@@ -358,6 +367,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("contacts", contacts);
             s.serialize("files", files);
           }
@@ -381,6 +391,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("id", request_id);
             s.serialize("origin", originAddress);
             s.serialize("endpoint", originEndpoint);
@@ -418,6 +429,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddress);
@@ -470,6 +482,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddress);
@@ -865,14 +878,18 @@ namespace infinit
         ELLE_LOG("%s: listening on port %s",
                  *this, _gossip.local_endpoint().port());
         ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
-        _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
-          std::bind(&Node::gossipEmitter, this));
+
         _listener_thread = elle::make_unique<reactor::Thread>("listener",
           std::bind(&Node::gossipListener, this));
-        _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
-          std::bind(&Node::pinger, this));
-        _rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
-          std::bind(&Node::rereplicator, this));
+        if (!_observer)
+        {
+          _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
+            std::bind(&Node::pinger, this));
+          _rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
+            std::bind(&Node::rereplicator, this));
+          _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
+            std::bind(&Node::gossipEmitter, this));
+        }
 
         // Send a bootstrap request to bootstrap nodes and all
         // nodes in group
@@ -970,8 +987,7 @@ namespace infinit
         //std::string ptype = elle::type_info(p).name();
         //std::cerr << ptype << std::endl;
         ELLE_ASSERT(e.port() != 0);
-        if (this->_observer)
-          p.sender = Address::null;
+        p.observer = this->_observer;
         bool is_crypto = dynamic_cast<const packet::EncryptedPayload*>(&p)
         || dynamic_cast<const packet::RequestKey*>(&p)
         || dynamic_cast<const packet::KeyReply*>(&p);
@@ -1010,8 +1026,8 @@ namespace infinit
         if (send_key_request)
         {
           packet::RequestKey req(doughnut()->passport());
-          req.sender = _observer ? Address::null : _self;
-          send(req, e, Address::null);
+          req.sender = _self;
+          send(req, e, a);
         }
         if (b.size() == 0)
           return;
@@ -1169,8 +1185,7 @@ namespace infinit
                 req.sender = _self;
                 send(req, source, p->sender);
               }
-              if (packet->sender != Address::null)
-                onContactSeen(packet->sender, source);
+              onContactSeen(packet->sender, source, packet->observer);
               return;
             } // keyreply
             if (!was_crypted && !_config.accept_plain)
@@ -1179,8 +1194,8 @@ namespace infinit
                         *this, source, packet->sender);
               return;
             }
-            if (packet->sender != Address::null)
-              onContactSeen(packet->sender, source);
+
+            onContactSeen(packet->sender, source, packet->observer);
             // TRAP: some packets inherit from each other, so most specific ones
             // must be first
             #define CASE(type) \
@@ -1599,8 +1614,10 @@ namespace infinit
       }
 
       void
-      Node::onContactSeen(Address addr, GossipEndpoint endpoint)
+      Node::onContactSeen(Address addr, GossipEndpoint endpoint, bool observer)
       {
+        if (observer)
+          return;
         // Drop self
         if (addr == _self)
           return;
@@ -2114,7 +2131,7 @@ namespace infinit
           packet::GetFileRequest r;
           r.sender = _self;
           r.request_id = ++ _next_id;
-          r.originAddress = _observer ? Address::null : _self;
+          r.originAddress = _self;
           r.originEndpoint = _local_endpoint;
           r.fileAddress = file;
           r.ttl = _config.query_get_ttl;
@@ -2210,7 +2227,7 @@ namespace infinit
         int fg = group_of(file);
         packet::PutFileRequest p;
         p.sender = _self;
-        p.originAddress = _observer ? Address::null : _self;
+        p.originAddress = _self;
         p.originEndpoint = _local_endpoint;
         p.fileAddress = file;
         p.ttl = _config.query_put_ttl;
@@ -2735,7 +2752,7 @@ namespace infinit
       {
         for (auto const& c: s.first)
         {
-          onContactSeen(c.first, c.second);
+          onContactSeen(c.first, c.second, false);
         }
         for (auto const& f: s.second)
         {

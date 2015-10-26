@@ -221,7 +221,7 @@ namespace infinit
         pinger();
         /// opportunistic contact grabbing
         void
-        onContactSeen(Address addr, GossipEndpoint endpoint);
+        onContactSeen(Address addr, GossipEndpoint endpoint, bool observer);
         void
         onPong(packet::Pong*);
         void
