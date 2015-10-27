@@ -645,6 +645,25 @@ namespace infinit
       return s.deserialize<User>();
     }
 
+    std::vector<User>
+    users_get() const
+    {
+      namespace boost_fs = boost::filesystem;
+      std::vector<User> res;
+      for (boost_fs::recursive_directory_iterator it(this->_user_path());
+           it != boost_fs::recursive_directory_iterator();
+           ++it)
+      {
+        if (is_regular_file(it->status()))
+        {
+          boost_fs::ifstream f;
+          this->_open(f, it->path(), "user", it->path().filename().string());
+          res.push_back(elle::serialization::json::deserialize<User>(f, false));
+        }
+      }
+      return res;
+    }
+
     std::unique_ptr<infinit::storage::StorageConfig>
     storage_get(std::string const& name)
     {
@@ -858,11 +877,17 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _user_path(std::string const& name) const
+    _user_path() const
     {
       auto root = root_dir() / "users";
       create_directories(root);
-      return root / name;
+      return root;
+    }
+
+    boost::filesystem::path
+    _user_path(std::string const& name) const
+    {
+      return this->_user_path() / name;
     }
 
     boost::filesystem::path
