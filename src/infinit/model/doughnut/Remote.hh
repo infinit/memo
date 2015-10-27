@@ -39,7 +39,7 @@ namespace infinit
                boost::asio::ip::udp::endpoint endpoint,
                reactor::network::UTPServer& server);
         Remote(Doughnut& doughnut, Address id,
-               boost::asio::ip::udp::endpoint endpoint,
+               std::vector<boost::asio::ip::udp::endpoint> endpoints,
                std::string const& peer_id,
                reactor::network::UTPServer& server);
         virtual

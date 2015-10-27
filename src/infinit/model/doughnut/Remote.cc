@@ -79,7 +79,7 @@ namespace infinit
       }
 
       Remote::Remote(Doughnut& doughnut, Address id,
-                     boost::asio::ip::udp::endpoint endpoint,
+                     std::vector<boost::asio::ip::udp::endpoint> endpoints,
                      std::string const& peer_id,
                      reactor::network::UTPServer& server)
         : Super(std::move(id))
@@ -90,11 +90,11 @@ namespace infinit
         , _connection_thread()
       {
         this->_connect(
-          elle::sprintf("%s", endpoint),
-          [this, endpoint, peer_id, &server] () -> std::iostream&
+          elle::sprintf("%s", endpoints),
+          [this, endpoints, peer_id, &server] () -> std::iostream&
           {
             this->_utp_socket.reset(new reactor::network::UTPSocket(server));
-            this->_utp_socket->connect(peer_id, {endpoint});
+            this->_utp_socket->connect(peer_id, endpoints);
             return *this->_utp_socket;
           });
       }
