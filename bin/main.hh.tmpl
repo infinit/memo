@@ -74,7 +74,9 @@ public:
   {}
 };
 
-DAS_MODEL(Credentials, (uid, display_name, token, refresh_token), DasCredentials);
+DAS_MODEL(Credentials,
+          (uid, display_name, token, refresh_token),
+          DasCredentials);
 DAS_MODEL_DEFAULT(Credentials, DasCredentials);
 DAS_MODEL_SERIALIZE(Credentials);
 
@@ -229,7 +231,9 @@ namespace infinit
               }
               for (auto const& unrecognized:
                      collect_unrecognized(parsed.options, include_positional))
+              {
                 args.push_back(unrecognized);
+              }
               try
               {
                 mode->action(parse_args(mode->options, args));
@@ -242,7 +246,8 @@ namespace infinit
             }
             catch (invalid_command_line_syntax const& e)
             {
-              throw elle::Error(elle::sprintf("command line error: %s", e.what()));
+              throw elle::Error(
+                elle::sprintf("command line error: %s", e.what()));
             }
           }
         });
@@ -255,9 +260,14 @@ namespace infinit
     catch (elle::Exception const& e)
     {
       if (!elle::os::getenv("INFINIT_BACKTRACE", "").empty())
-        elle::fprintf(std::cerr, "%s: fatal error: %s\n%s\n", argv[0], e.what(), e.backtrace());
+      {
+        elle::fprintf(std::cerr, "%s: fatal error: %s\n%s\n", argv[0],
+                      e.what(), e.backtrace());
+      }
       else
+      {
         elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
+      }
       return 1;
     }
     catch (std::exception const& e)
@@ -272,11 +282,10 @@ namespace infinit
   boost::filesystem::path
   root_dir()
   {
-    static auto const env  = elle::os::getenv("INFINIT_HOME", "");
+    static auto const env = elle::os::getenv("INFINIT_HOME", "");
     static auto const res =
-    env.empty() ?
-    elle::system::home_directory() / ".infinit" :
-    boost::filesystem::path(env);
+      env.empty() ? elle::system::home_directory() / ".infinit"
+                  : boost::filesystem::path(env);
     return res;
   }
 
@@ -299,10 +308,12 @@ namespace infinit
     keypair() const
     {
       if (!this->private_key)
+      {
         throw elle::Error(
           elle::sprintf("user \"%s\" has no private key", this->name));
-      return infinit::cryptography::rsa::KeyPair
-        (this->public_key, this->private_key.get());
+      }
+      return infinit::cryptography::rsa::KeyPair(this->public_key,
+                                                 this->private_key.get());
     }
 
     void
@@ -475,10 +486,11 @@ namespace infinit
 
     std::unique_ptr<reactor::filesystem::FileSystem>
     run(std::shared_ptr<infinit::model::doughnut::Doughnut> dht,
-        boost::optional<std::string> mountpoint_ = {})
+        boost::optional<std::string> mountpoint_ = {},
+        boost::optional<std::string> volname_ = {})
     {
       auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-          this->name, dht);
+        this->name, dht);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       boost::optional<boost::filesystem::path> mountpoint;
@@ -514,9 +526,7 @@ namespace infinit
       if (network_name.find("/") != std::string::npos)
         return network_name;
       else
-      {
         return elle::sprintf("%s/%s", owner.name, network_name);
-      }
     }
 
     std::string
@@ -538,23 +548,26 @@ namespace infinit
       this->_open(f, this->_network_path(name), name, "network");
       auto res = elle::serialization::json::deserialize<Network>(f, false);
       if (!res.model)
+      {
         throw elle::Error(
           elle::sprintf("you are not part of network %s, join it first",
                         name_));
+      }
       return res;
     }
 
     std::vector<Network>
     networks_get() const
     {
+      namespace boost_fs = boost::filesystem;
       std::vector<Network> res;
-      for (boost::filesystem::recursive_directory_iterator it(this->_network_path());
-           it != boost::filesystem::recursive_directory_iterator();
+      for (boost_fs::recursive_directory_iterator it(this->_network_path());
+           it != boost_fs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()))
         {
-          boost::filesystem::ifstream f;
+          boost_fs::ifstream f;
           this->_open(f, it->path(), "network", it->path().filename().string());
           res.push_back(
             elle::serialization::json::deserialize<Network>(f, false));
@@ -644,9 +657,10 @@ namespace infinit
     std::vector<std::string>
     storages_get()
     {
+      namespace boost_fs = boost::filesystem;
       std::vector<std::string> res;
-      for (boost::filesystem::recursive_directory_iterator it(this->_storage_path());
-           it != boost::filesystem::recursive_directory_iterator();
+      for (boost_fs::recursive_directory_iterator it(this->_storage_path());
+           it != boost_fs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()))
@@ -672,8 +686,10 @@ namespace infinit
     {
       auto path = this->_storage_path(name);
       if (!remove(path))
+      {
         throw elle::Error(
           elle::sprintf("storage '%s' does not exist", name));
+      }
     }
 
     Volume
@@ -697,14 +713,15 @@ namespace infinit
     std::vector<Volume>
     volumes_get() const
     {
+      namespace boost_fs = boost::filesystem;
       std::vector<Volume> res;
-      for (boost::filesystem::recursive_directory_iterator it(this->_volume_path());
-           it != boost::filesystem::recursive_directory_iterator();
+      for (boost_fs::recursive_directory_iterator it(this->_volume_path());
+           it != boost_fs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()))
         {
-          boost::filesystem::ifstream f;
+          boost_fs::ifstream f;
           this->_open(f, it->path(), "volume", it->path().filename().string());
           res.push_back(
             elle::serialization::json::deserialize<Volume>(f, false));
@@ -719,8 +736,10 @@ namespace infinit
       auto path = this->_credentials_path(name, elle::sprintf("%s", a.uid));
       boost::filesystem::ofstream f(path);
       if (!f.good())
+      {
         throw elle::Error(
           elle::sprintf("unable to open %s for writing", path));
+      }
       elle::serialization::json::serialize(a, f, false);
     }
 
@@ -738,8 +757,10 @@ namespace infinit
         {
           boost::filesystem::ifstream f(it->path());
           if (!f.good())
+          {
             throw elle::Error(
               elle::sprintf("unable to open %s for reading", path));
+          }
           res.push_back(
             elle::serialization::json::deserialize<Credentials>(f, false));
         }
@@ -751,8 +772,10 @@ namespace infinit
     credentials(std::string const& name, std::string const& uid) const
     {
       for (auto const& account: this->credentials(name))
+      {
         if (account.display_name == uid || account.uid == uid)
           return account;
+      }
       throw elle::Error(elle::sprintf("no such %s account: %s", name, uid));
     }
 
@@ -864,8 +887,10 @@ namespace infinit
     {
       f.open(path);
       if (!f.good())
+      {
         throw MissingLocalResource(
           elle::sprintf("%s '%s' does not exist", type, name));
+      }
     }
 
     void
@@ -877,12 +902,16 @@ namespace infinit
     {
       create_directories(path.parent_path());
       if (!overwrite && exists(path))
+      {
         throw elle::Error(
           elle::sprintf("%s '%s' already exists", type, name));
+      }
       f.open(path);
       if (!f.good())
+      {
         throw elle::Error(
           elle::sprintf("unable to open '%s' for writing", path));
+      }
     }
   };
 }
@@ -1026,8 +1055,10 @@ mandatory(boost::program_options::variables_map const& vm,
           std::string const& desc)
 {
   if (!vm.count(name))
+  {
     throw CommandLineError(
       elle::sprintf("%s unspecified (use --%s)", desc, name));
+  }
   return vm[name].as<T>();
 }
 
@@ -1050,8 +1081,10 @@ get_output(boost::program_options::variables_map const& args)
       std::unique_ptr<std::ostream, std::function<void (std::ostream*)>> file
         (new std::ofstream(dest), [] (std::ostream* p) { delete p; });
       if (!file->good())
+      {
         throw elle::Error(
           elle::sprintf("unable to open \"%s\" for writing", dest));
+      }
       return file;
     }
   }
@@ -1070,8 +1103,10 @@ get_input(boost::program_options::variables_map const& args)
       std::unique_ptr<std::istream, std::function<void (std::istream*)>> file
         (new std::ifstream(dest), [] (std::istream* p) { delete p; });
       if (!file->good())
+      {
         throw elle::Error(
           elle::sprintf("unable to open \"%s\" for reading", dest));
+      }
       return file;
     }
   }
@@ -1167,7 +1202,7 @@ signature_headers(
   reactor::http::Method method,
   std::string const& where,
   infinit::User const& self,
-  boost::optional<std::stringstream const&> payload_ = boost::none)
+  boost::optional<std::stringstream const&> payload_ = {})
 {
   using namespace infinit::cryptography;
   auto semi_colon_append = [](elle::Buffer& buffer, std::string const& str)
@@ -1234,12 +1269,16 @@ beyond_push(std::string const& where,
   else if (r.status() == reactor::http::StatusCode::OK)
     report_action("Already pushed", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
+  {
     throw elle::Error(
       elle::sprintf("%s \"%s\" already exists with a different key", type, name));
+  }
   else
+  {
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s pushing %s",
                     r.status(), type));
+  }
 }
 
 template <typename T>
@@ -1255,7 +1294,7 @@ T
 beyond_fetch(std::string const& where,
              std::string const& type,
              std::string const& name,
-             boost::optional<infinit::User const&> self = boost::none,
+             boost::optional<infinit::User const&> self = {},
              bool output_report_action = true)
 {
   reactor::http::Request::Configuration c;
@@ -1277,12 +1316,16 @@ beyond_fetch(std::string const& where,
       report_action("fetched", type, name);
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
+  {
     throw elle::Error(
       elle::sprintf("%s \"%s\" not found", type, name));
+  }
   else
+  {
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s fetching %s",
                     r.status(), type));
+  }
   return elle::serialization::json::deserialize<T>(r, false);
 }
 
@@ -1313,9 +1356,11 @@ beyond_delete(std::string const& where,
   if (r.status() == reactor::http::StatusCode::OK)
     report_action("deleted", type, name);
   else
+  {
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
                     r.status(), type, name));
+  }
 }
 
 void
@@ -1341,8 +1386,10 @@ self_user(infinit::Infinit const& ifnt,
     as = env;
   auto res = ifnt.user_get(as);
   if (!res.private_key)
+  {
     throw elle::Error(
       elle::sprintf("user \"%s\" has no private key", res.name));
+  }
   return res;
 }
 
@@ -1401,9 +1448,11 @@ beyond_fetch_endpoints(infinit::Network const& network,
   if (r.status() == reactor::http::StatusCode::OK)
     report_action("fetched", "enpoints for", network.name);
   else
+  {
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s fetching endpoints for \"%s\"",
                     r.status(), network.name));
+  }
   auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
   for (auto const& user: json)
   {
