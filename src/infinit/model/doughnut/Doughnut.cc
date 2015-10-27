@@ -57,6 +57,70 @@ namespace infinit
         }
       }
 
+      Doughnut::Doughnut(std::string const& name,
+                         cryptography::rsa::KeyPair keys,
+                         cryptography::rsa::PublicKey owner,
+                         Passport passport,
+                         OverlayBuilder overlay_builder,
+                         std::shared_ptr<Local> local,
+                         ConsensusBuilder consensus)
+        : Doughnut(std::move(keys),
+                   std::move(owner),
+                   std::move(passport),
+                   std::move(overlay_builder),
+                   std::move(local),
+                   std::move(consensus))
+      {
+        auto check_user_blocks = [name, this]
+          {
+            try
+            {
+              ELLE_TRACE_SCOPE("%s: check user block", *this);
+              auto block = this->fetch(UB::hash_address(name));
+              ELLE_DEBUG("%s: user block for %s already present at %x",
+                         *this, name, block->address());
+              auto ub = elle::cast<UB>::runtime(block);
+              if (ub->key() != this->keys().K())
+                throw elle::Error(
+                  elle::sprintf(
+                    "user block exists at %s(%x) with different key",
+                    name, UB::hash_address(name)));
+            }
+            catch (MissingBlock const&)
+            {
+              auto user = elle::make_unique<UB>(name, this->keys().K());
+              ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
+                               *this, user->address(), name);
+
+              this->store(std::move(user));
+            }
+            try
+            {
+              ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
+              auto block = this->fetch(UB::hash_address(this->keys().K()));
+              ELLE_DEBUG("%s: user reverse block for %s already present at %x",
+                         *this, name, block->address());
+              auto ub = elle::cast<UB>::runtime(block);
+              if (ub->name() != name)
+                throw elle::Error(
+                  elle::sprintf(
+                    "user reverse block exists at %s(%x) "
+                    "with different name: %s",
+                    name, UB::hash_address(this->keys().K()), ub->name()));
+            }
+            catch(MissingBlock const&)
+            {
+              auto user = elle::make_unique<UB>(name, this->keys().K(), true);
+              ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
+                               user->address());
+              this->store(std::move(user));
+            }
+          };
+        _user_init.reset(new reactor::Thread(
+                           elle::sprintf("%s: user blocks checker", *this),
+                           check_user_blocks));
+      }
+
       static
       std::unique_ptr<Consensus>
       consensus(Doughnut& self,
@@ -112,65 +176,18 @@ namespace infinit
                          int replicas,
                          bool async,
                          bool cache)
-        : Doughnut(std::move(keys),
+        : Doughnut(std::move(name),
+                   std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(overlay_builder),
-                   std::move(dir),
                    std::move(local),
-                   replicas,
-                   std::move(async),
-                   std::move(cache))
-      {
-        auto check_user_blocks = [name, this]
-          {
-            try
-            {
-              ELLE_TRACE_SCOPE("%s: check user block", *this);
-              auto block = this->fetch(UB::hash_address(name));
-              ELLE_DEBUG("%s: user block for %s already present at %x",
-                         *this, name, block->address());
-              auto ub = elle::cast<UB>::runtime(block);
-              if (ub->key() != this->keys().K())
-                throw elle::Error(
-                  elle::sprintf(
-                    "user block exists at %s(%x) with different key",
-                    name, UB::hash_address(name)));
-            }
-            catch (MissingBlock const&)
-            {
-              auto user = elle::make_unique<UB>(name, this->keys().K());
-              ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
-                               *this, user->address(), name);
-
-              this->store(std::move(user));
-            }
-            try
-            {
-              ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
-              auto block = this->fetch(UB::hash_address(this->keys().K()));
-              ELLE_DEBUG("%s: user reverse block for %s already present at %x",
-                         *this, name, block->address());
-              auto ub = elle::cast<UB>::runtime(block);
-              if (ub->name() != name)
-                throw elle::Error(
-                  elle::sprintf(
-                    "user reverse block exists at %s(%x) "
-                    "with different name: %s",
-                    name, UB::hash_address(this->keys().K()), ub->name()));
-            }
-            catch(MissingBlock const&)
-            {
-              auto user = elle::make_unique<UB>(name, this->keys().K(), true);
-              ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
-                               user->address());
-              this->store(std::move(user));
-            }
-          };
-        _user_init.reset(new reactor::Thread(
-                           elle::sprintf("%s: user blocks checker", *this),
-                           check_user_blocks));
-      }
+                   [&] (Doughnut& dht)
+                   {
+                     this->_replicas = replicas;
+                     return consensus(dht, replicas, dir, async, cache);
+                   })
+      {}
 
       Doughnut::~Doughnut()
       {

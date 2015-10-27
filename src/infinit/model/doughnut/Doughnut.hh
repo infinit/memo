@@ -35,6 +35,13 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  std::shared_ptr<Local> local,
                  ConsensusBuilder consensus);
+        Doughnut(std::string const& name,
+                 infinit::cryptography::rsa::KeyPair keys,
+                 infinit::cryptography::rsa::PublicKey owner,
+                 Passport passport,
+                 OverlayBuilder overlay_builder,
+                 std::shared_ptr<Local> local,
+                 ConsensusBuilder consensus);
         Doughnut(std::string name,
                  infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,

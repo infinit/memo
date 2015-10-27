@@ -266,6 +266,17 @@ run_filesystem_dht(std::string const& store,
         keys.push_back(owner_keys.K());
         infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys.k());
         ELLE_TRACE("instantiating dougnut...");
+        infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
+        [paxos] (infinit::model::doughnut::Doughnut& dht)
+          -> std::unique_ptr<infinit::model::doughnut::Consensus>
+        {
+          if (paxos)
+            return elle::make_unique<
+              infinit::model::doughnut::consensus::Paxos>(dht, 3);
+          else
+            return elle::make_unique<
+              infinit::model::doughnut::Consensus>(dht);
+        };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
           "testnet",
@@ -277,7 +288,8 @@ run_filesystem_dht(std::string const& store,
               return elle::make_unique<infinit::overlay::Stonehenge>(
                 elle::UUID::random(), endpoints, doughnut);
             }),
-          store / boost::filesystem::unique_path()
+          nullptr,
+          consensus
           );
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
