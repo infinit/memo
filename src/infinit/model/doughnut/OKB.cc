@@ -126,9 +126,7 @@ namespace infinit
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
         , _signer{other._signer}
-      {
-        ELLE_DEBUG("copy: me: %s, other: %s", _version, other._version);
-      }
+      {}
 
       /*-------.
       | Clone  |
