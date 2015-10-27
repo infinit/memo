@@ -380,71 +380,68 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          ELLE_ASSERT(block);
-          overlay::Operation op;
-          switch (mode)
+          do
           {
-            case STORE_ANY:
-              op = overlay::OP_INSERT_OR_UPDATE;
-              break;
-            case STORE_INSERT:
-              op = overlay::OP_INSERT;
-              break;
-            case STORE_UPDATE:
-              op = overlay::OP_UPDATE;
-              break;
-            default:
-              elle::unreachable();
-          }
-          auto owners = this->_owners(overlay, block->address(), op);
-          if (auto* m = dynamic_cast<blocks::MutableBlock*>(block.get()))
-          {
-            auto version = m->version();
-            Paxos::PaxosClient::Peers peers;
-            for (int i = 0; i < this->_factor; ++i)
-              peers.push_back(
-                elle::make_unique<Peer>(owners, block->address(), version));
-            Paxos::PaxosClient client(uid(this->_doughnut.keys().K()),
-                                      std::move(peers));
-            std::shared_ptr<blocks::Block> b(
-              block.get(), &null_deleter<blocks::Block>);
-            auto chosen = client.choose(version, b);
-            if (chosen && *chosen.get() != *block)
+            ELLE_ASSERT(block);
+            overlay::Operation op;
+            switch (mode)
             {
-              ELLE_TRACE("%s: chosen block differs, signal conflict", *this);
-              throw infinit::model::doughnut::Conflict(
-                "Paxos chose a different value");
+              case STORE_ANY:
+                op = overlay::OP_INSERT_OR_UPDATE;
+                break;
+              case STORE_INSERT:
+                op = overlay::OP_INSERT;
+                break;
+              case STORE_UPDATE:
+                op = overlay::OP_UPDATE;
+                break;
+              default:
+                elle::unreachable();
             }
-          }
-          else
-          {
-            elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+            auto owners = this->_owners(overlay, block->address(), op);
+            if (auto* m = dynamic_cast<blocks::MutableBlock*>(block.get()))
             {
-              for (auto owner: owners)
-                scope.run_background(
-                  "store block",
-                  [&, owner] { owner->store(*block, mode); });
-              reactor::wait(scope);
-            };
-          }
-          // std::unique_ptr<blocks::Block> nb;
-          // while (true)
-          // {
-          //   try
-          //   {
-          //     owner->store(nb? *nb : block, mode);
-          //     break;
-          //   }
-          //   catch (Conflict const& c)
-          //   {
-          //     if (!resolver)
-          //       throw;
-          //     nb = resolver(block, mode);
-          //     if (!nb)
-          //       throw;
-          //     nb->seal();
-          //   }
-          // }
+              auto version = m->version();
+              Paxos::PaxosClient::Peers peers;
+              for (int i = 0; i < this->_factor; ++i)
+                peers.push_back(
+                  elle::make_unique<Peer>(owners, block->address(), version));
+              Paxos::PaxosClient client(uid(this->_doughnut.keys().K()),
+                                        std::move(peers));
+              std::shared_ptr<blocks::Block> b(
+                block.get(), &null_deleter<blocks::Block>);
+              auto chosen = client.choose(version, b);
+              if (chosen && *chosen.get() != *block)
+              {
+                if (resolver)
+                {
+                  ELLE_TRACE(
+                    "%s: chosen block differs, run conflict resolution", *this);
+                  block = (*resolver)(*block, mode);
+                  if (block)
+                  {
+                    block->seal();
+                    continue;
+                  }
+                }
+                ELLE_TRACE("%s: chosen block differs, signal conflict", *this);
+                throw infinit::model::doughnut::Conflict(
+                  "Paxos chose a different value");
+              }
+            }
+            else
+            {
+              elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+              {
+                for (auto owner: owners)
+                  scope.run_background(
+                    "store block",
+                    [&, owner] { owner->store(*block, mode); });
+                reactor::wait(scope);
+              };
+            }
+            break;
+          } while (true);
         }
 
         std::unique_ptr<blocks::Block>
