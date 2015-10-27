@@ -545,11 +545,15 @@ namespace infinit
         Address addr = _parent->_files.at(_name).address;
         if (!_handle_count)
         {
-          _first_block = elle::cast<MutableBlock>::runtime(
-            _owner.fetch_or_die(addr));
-          umbrella([&] {
-            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
-          });
+          ELLE_DEBUG("fetch first block")
+            this->_first_block = elle::cast<MutableBlock>::runtime(
+              this->_owner.fetch_or_die(addr));
+          umbrella(
+            [&]
+            {
+              this->_block_cache =
+                this->_first_block->cache_update(std::move(this->_block_cache));
+            });
         }
         auto acl = dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
         ELLE_ASSERT(acl);
