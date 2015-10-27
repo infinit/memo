@@ -92,7 +92,6 @@ namespace infinit
                              model::StoreMode mode)
     {
       ELLE_TRACE_SCOPE("%s: store or die: %s", *this, *block);
-
       try
       {
         this->_block_store->store(std::move(block), mode);
@@ -214,15 +213,20 @@ namespace infinit
         {
           if (dn->owner() == dn->keys().K())
           {
-            ELLE_TRACE("create missing root bootsrap block");
             std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
             auto saddr = elle::sprintf("%x", mb->address());
             elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
-            auto cpy = mb->clone();
-            store_or_die(std::move(cpy), model::STORE_INSERT);
-            auto nb = elle::make_unique<model::doughnut::NB>(
+            ELLE_TRACE("create missing root block")
+            {
+              auto cpy = mb->clone();
+              this->store_or_die(std::move(cpy), model::STORE_INSERT);
+            }
+            ELLE_TRACE("create missing root bootstrap block")
+            {
+              auto nb = elle::make_unique<model::doughnut::NB>(
                 dn.get(), dn->owner(), this->_volume_name + ".root", baddr);
-            store_or_die(std::move(nb), model::STORE_INSERT);
+              this->store_or_die(std::move(nb), model::STORE_INSERT);
+            }
             return mb;
           }
           reactor::sleep(1_sec);
