@@ -161,7 +161,7 @@ push(variables_map const& args)
 
 static
 void
-unpush(variables_map const& args)
+pull(variables_map const& args)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
@@ -272,9 +272,9 @@ main(int argc, char** argv)
       },
     },
     {
-      "unpush",
+      "pull",
       elle::sprintf("Remove a user from %s", beyond()).c_str(),
-      &unpush,
+      &pull,
       {},
       {
         { "name,n", value<std::string>(),

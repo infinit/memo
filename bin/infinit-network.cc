@@ -314,7 +314,7 @@ push(variables_map const& args)
 }
 
 static void
-unpush(variables_map const& args)
+pull(variables_map const& args)
 {
   auto network_name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
@@ -563,9 +563,9 @@ int main(int argc, char** argv)
       },
     },
     {
-      "unpush",
+      "pull",
       elle::sprintf("Remove a network from %s", beyond()).c_str(),
-      &unpush,
+      &pull,
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "volume to remove" },

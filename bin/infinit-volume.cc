@@ -96,7 +96,7 @@ push(variables_map const& args)
 }
 
 static void
-unpush(variables_map const& args)
+pull(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
@@ -352,9 +352,9 @@ main(int argc, char** argv)
       },
     },
     {
-      "unpush",
+      "pull",
       elle::sprintf("Remove a volume from %s", beyond()).c_str(),
-      &unpush,
+      &pull,
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to remove" },
