@@ -336,6 +336,7 @@ run_filesystem_dht(std::string const& store,
         overlay["hosts"] = v;
         model["overlay"] = overlay;
         model["replicas"] = 1;
+        model["paxos"] = paxos;
         r["model"] = model;
         std::string kps;
         if (i == 0)

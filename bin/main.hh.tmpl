@@ -29,6 +29,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Async.hh>
 #include <infinit/storage/Cache.hh>
@@ -426,8 +427,13 @@ namespace infinit
         }
         if (cache)
           storage.reset(new storage::Cache(std::move(storage), cache_size));
-        auto local = std::make_shared<infinit::model::doughnut::Local>
-          (std::move(storage), this->port ? this->port.get() : 0);
+        // FIXME: don't always use paxos
+        auto local =
+          std::make_shared<
+            infinit::model::doughnut::consensus::paxos::LocalPeer>(
+              std::move(storage), this->port ? this->port.get() : 0);
+        // auto local = std::make_shared<infinit::model::doughnut::Local>
+        //   (std::move(storage), this->port ? this->port.get() : 0);
         local->serve();
         auto res = std::make_pair(
           std::move(local), this->dht()->make(hosts, client, local, p,

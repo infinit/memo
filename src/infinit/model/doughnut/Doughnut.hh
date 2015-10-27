@@ -51,7 +51,8 @@ namespace infinit
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1,
                  bool async = false,
-                 bool cache = false);
+                 bool cache = false,
+                 bool paxos = false);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
@@ -60,7 +61,8 @@ namespace infinit
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1,
                  bool async = false,
-                 bool cache = false);
+                 bool cache = false,
+                 bool paxos = false);
         ~Doughnut();
 
         ELLE_ATTRIBUTE_R(int, replicas);
@@ -108,6 +110,7 @@ namespace infinit
         Passport passport;
         boost::optional<std::string> name;
         int replicas;
+        bool paxos;
 
         Configuration(
           std::unique_ptr<overlay::Configuration> overlay,
@@ -131,7 +134,8 @@ namespace infinit
              std::shared_ptr<Local> local,
              boost::filesystem::path const& p,
              bool async = false,
-             bool cache = false);
+             bool cache = false,
+             bool paxos = false);
       };
     }
   }
