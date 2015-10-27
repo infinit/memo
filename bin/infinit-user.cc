@@ -179,8 +179,10 @@ delete_(variables_map const& args)
   if (ok)
     report_action("deleted", "user", user.name);
   else
-  throw elle::Error(
-      elle::sprintf("File for user could not be deleted: %s", path));
+  {
+    throw elle::Error(
+        elle::sprintf("File for user could not be deleted: %s", path));
+  }
 }
 
 static
@@ -206,6 +208,14 @@ networks(variables_map const& args)
     );
   for (std::string const& network: res["networks"])
     std::cout << network << std::endl;
+}
+
+static
+void
+list(variables_map const& args)
+{
+  for (auto const& user: ifnt.users_get())
+    std::cout << user.name << std::endl;
 }
 
 int
@@ -321,7 +331,12 @@ main(int argc, char** argv)
       {},
       {
         option_owner,
-      }
+      },
+    },
+    {
+      "list",
+      "List users",
+      &list,
     },
   };
   return infinit::main("Infinit user utility", modes, argc, argv);
