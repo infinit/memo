@@ -177,7 +177,7 @@ static void make_nodes(std::string store, int node_count,
       infinit::model::doughnut::Local* l = nullptr;
       if (paxos)
         l = new infinit::model::doughnut::consensus::Paxos::LocalPeer(
-          std::move(s));
+          3, std::move(s));
       else
         l = new infinit::model::doughnut::Local(std::move(s));
       auto ep = l->server_endpoint();

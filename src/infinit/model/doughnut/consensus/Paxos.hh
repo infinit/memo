@@ -95,9 +95,13 @@ namespace infinit
           {
           public:
             template <typename ... Args>
-            LocalPeer(Args&& ... args)
+            LocalPeer(int factor, Args&& ... args)
               : doughnut::Local(std::forward<Args>(args) ...)
+              , _factor(factor)
             {}
+
+            ELLE_ATTRIBUTE_R(int, factor);
+
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(Address address,

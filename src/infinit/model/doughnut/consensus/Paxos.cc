@@ -318,14 +318,12 @@ namespace infinit
             {
               ELLE_TRACE_SCOPE(
                 "finalize running Paxos for version %s", version);
-              // FIXME: actual replica factor
-              auto const replica_factor = 3;
               auto owners = this->doughnut()->overlay()->lookup(
-                address, replica_factor, overlay::OP_UPDATE);
+                address, this->_factor, overlay::OP_UPDATE);
               // FIXME: factor with RemotePeer paxos client routine
               Paxos::PaxosClient::Peers peers;
               auto block = highest->value;
-              for (int i = 0; i < replica_factor; ++i)
+              for (int i = 0; i < this->_factor; ++i)
               {
                 std::unique_ptr<consensus::Peer> peer(
                   new consensus::Peer(owners, block->address(), version));
