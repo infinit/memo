@@ -446,7 +446,7 @@ test_filesystem(bool dht,
   std::thread t([&] {
       if (dht)
         run_filesystem_dht(store.string(), mount.string(), 5,
-                           nread, nwrite, paxos);
+                           nread, nwrite, 1, paxos);
       else
         run_filesystem(store.string(), mount.string());
   });
