@@ -12,6 +12,7 @@ namespace infinit
     namespace doughnut
     {
       class Consensus
+        : public elle::Printable
       {
       public:
         Consensus(Doughnut& doughnut);
@@ -49,6 +50,13 @@ namespace infinit
         _owner(overlay::Overlay& overlay,
                Address const& address,
                overlay::Operation op) const;
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        void
+        print(std::ostream&) const override;
       };
     }
   }

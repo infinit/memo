@@ -2,6 +2,8 @@
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 
+ELLE_LOG_COMPONENT("infinit.model.doughnut.Consensus");
+
 namespace infinit
 {
   namespace model
@@ -18,6 +20,7 @@ namespace infinit
                        StoreMode mode,
                        std::unique_ptr<ConflictResolver> resolver)
       {
+        ELLE_TRACE_SCOPE("%s: store %s", *this, block);
         this->_store(overlay, std::move(block), mode, std::move(resolver));
       }
 
@@ -94,6 +97,16 @@ namespace infinit
                         overlay::Operation op) const
       {
         return overlay.lookup(address, op);
+      }
+
+      /*----------.
+      | Printable |
+      `----------*/
+
+      void
+      Consensus::print(std::ostream& output) const
+      {
+        elle::fprintf(output, "%s(%x)", elle::type_info(*this), this);
       }
     }
   }
