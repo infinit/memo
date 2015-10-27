@@ -53,11 +53,11 @@ public:
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::consensus::Paxos>(dht, 3); };
       this->local_a = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        std::move(storage_a));
+        3, std::move(storage_a));
       this->local_b = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        std::move(storage_b));
+        3, std::move(storage_b));
       this->local_c = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        std::move(storage_c));
+        3, std::move(storage_c));
     }
     else
     {
