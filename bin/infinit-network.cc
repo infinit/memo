@@ -344,9 +344,8 @@ run(variables_map const& args)
   std::vector<std::string> hosts;
   if (args.count("peer"))
     hosts = args["peer"].as<std::vector<std::string>>();
-  bool publish = args.count("publish") && args["publish"].as<bool>();
-  bool push = publish || (args.count("push") && args["push"].as<bool>());
-  bool fetch = publish || (args.count("fetch") && args["fetch"].as<bool>());
+  bool push = args.count("push") && args["push"].as<bool>();
+  bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
   auto local = network.run(hosts, false, false, {}, false,
@@ -550,16 +549,16 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         option_owner,
-        { "name,n", value<std::string>(), "network to push" },
+        { "name,n", value<std::string>(), "network to push" }
       },
     },
     {
       "delete",
       "Delete a network",
       &delete_,
-      "--name NETWORK",
+      {"--name NETWORK"},
       {
-        { "name,n", value<std::string>(), "network to delete" },
+        {"name,n", value<std::string>(), "network to delete"},
         option_owner,
       },
     },
@@ -588,8 +587,7 @@ int main(int argc, char** argv)
         { "push", bool_switch(),
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching" },
-        { "publish", bool_switch(), "Alias for --fetch --push" },
+        { "cache-model", bool_switch(), "Enable model caching"},
       },
     },
     {

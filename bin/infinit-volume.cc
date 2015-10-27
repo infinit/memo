@@ -154,9 +154,8 @@ run(variables_map const& args)
       ELLE_TRACE("terminating");
       reactor::scheduler().terminate();
     });
-  bool publish = args.count("publish") && args["fetch"].as<bool>();
-  bool push = publish || (args.count("push") && args["push"].as<bool>());
-  bool fetch = publish || (args.count("fetch") && args["fetch"].as<bool>());
+  bool push = args.count("push") && args["push"].as<bool>();
+  bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
   report_action("running", "network", network.name);
@@ -337,9 +336,8 @@ main(int argc, char** argv)
           "peer to connect to (host:port)" },
         { "push", bool_switch(),
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
-        { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching" },
-        { "publish", bool_switch(), "Alias for --fetch --push" },
+        { "async", bool_switch(), "Use asynchronious operations"},
+        { "cache-model", bool_switch(), "Enable model caching"},
         option_owner,
       },
     },
