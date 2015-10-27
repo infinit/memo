@@ -597,9 +597,15 @@ namespace infinit
                 this->_rdv_id + "_", this->_rdv_host);
           });
         if (_config.bootstrap_nodes.empty())
+        {
+          ELLE_LOG("Filesystem running in bootstrap read/write mode.");
           _bootstraping.open();
+        }
         else
+        {
+          ELLE_LOG("Filesystem is read-only until peers are reached");
           _bootstraping.close();
+        }
         start();
       }
 
@@ -1599,8 +1605,11 @@ namespace infinit
         if (addr == _self)
           return;
         int g = group_of(addr);
-        if (g == _group)
+        if (g == _group && !_bootstraping.opened())
+        {
+          ELLE_LOG("Peer found, write enabled");
           _bootstraping.open();
+        }
         Contacts& target = _state.contacts[g];
         auto it = target.find(addr);
         if (it == target.end())
