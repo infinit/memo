@@ -524,33 +524,33 @@ for name, conf in Bottle._Bottle__oauth_services.items():
 # the client, else it return to the client the access_token of the
 # database.
 def user_credentials_google_refresh(self, username):
-    try:
-        beyond = self._Bottle__beyond
-        user = beyond.user_get(name = username)
-        refresh_token = bottle.request.query.refresh_token
-        for id, account in user.google_accounts.items():
-            google_account = user.google_accounts[id]
-            # https://developers.google.com/identity/protocols/OAuth2InstalledApp
-            # The associate google account.
-            if google_account['refresh_token'] == refresh_token:
-                google_url = "https://www.googleapis.com/oauth2/v3/token"
-                # Get a new token and update the db and the client
-                query = {
-                  'client_id': beyond.google_app_key,
-                  'client_secret': beyond.google_app_secret,
-                  'refresh_token': google_account['refresh_token'],
-                  'grant_type': 'refresh_token',
-                }
-                res = requests.post(google_url, params=query)
-                if res.status_code != 200:
-                    raise HTTPError(status=400)
-                else:
-                    token = res.json()['access_token']
-                    user.google_accounts[id]['token'] = token
-                    user.save()
-                    return token
-    except User.NotFound:
-      raise self.__user_not_found(username)
+  try:
+    beyond = self._Bottle__beyond
+    user = beyond.user_get(name = username)
+    refresh_token = bottle.request.query.refresh_token
+    for id, account in user.google_accounts.items():
+      google_account = user.google_accounts[id]
+      # https://developers.google.com/identity/protocols/OAuth2InstalledApp
+      # The associate google account.
+      if google_account['refresh_token'] == refresh_token:
+        google_url = "https://www.googleapis.com/oauth2/v3/token"
+        # Get a new token and update the db and the client
+        query = {
+          'client_id': beyond.google_app_key,
+          'client_secret': beyond.google_app_secret,
+          'refresh_token': google_account['refresh_token'],
+          'grant_type': 'refresh_token',
+        }
+        res = requests.post(google_url, params=query)
+        if res.status_code != 200:
+          raise HTTPError(status=400)
+        else:
+          token = res.json()['access_token']
+          user.google_accounts[id]['token'] = token
+          user.save()
+          return token
+  except User.NotFound:
+    raise self.__user_not_found(username)
 
 setattr(Bottle,
         user_credentials_google_refresh.__name__,
