@@ -252,7 +252,7 @@ namespace infinit
       void
       Local::print(std::ostream& stream) const
       {
-        elle::fprintf(stream, "Local()");
+        elle::fprintf(stream, "%s()", elle::type_info(*this));
       }
     }
   }
