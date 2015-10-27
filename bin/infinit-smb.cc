@@ -20,7 +20,6 @@ void run(variables_map const& args)
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
   std::vector<std::string> hosts;
-  bool push = args.count("push") && args["push"].as<bool>();
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
@@ -41,8 +40,8 @@ void run(variables_map const& args)
   auto smb = new infinit::smb::SMBServer(std::move(fs));
   reactor::sleep();
 }
-  
-  
+
+
 int main(int argc, char** argv)
 {
   Modes modes {
@@ -59,10 +58,8 @@ int main(int argc, char** argv)
             "peer to connect to (host:port)" },
         { "name", value<std::string>(), "created network name" },
         { "volume", value<std::string>(), "created volume name" },
-        { "push", bool_switch(),
-            elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching"},
+        { "cache-model", bool_switch(), "Enable model caching" },
       },
     },
   };
