@@ -587,7 +587,7 @@ int main(int argc, char** argv)
         { "push", bool_switch(),
             elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching"},
+        { "cache-model", bool_switch(), "Enable model caching" },
       },
     },
     {
