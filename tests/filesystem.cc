@@ -803,12 +803,12 @@ void test_basic()
   test_filesystem(false);
 }
 
-void test_dht_crypto()
+void filesystem()
 {
   test_filesystem(true, 5, 1, 1, false);
 }
 
-void test_dht_crypto_paxos()
+void filesystem_paxos()
 {
   test_filesystem(true, 5, 1, 1, true);
 }
@@ -846,7 +846,8 @@ void unmounter(boost::filesystem::path mount,
   ELLE_LOG("teardown complete");
 }
 
-void test_conflicts(bool paxos)
+void
+test_conflicts(bool paxos)
 {
   namespace bfs = boost::filesystem;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
@@ -875,7 +876,6 @@ void test_conflicts(bool paxos)
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   setxattr(m0.c_str(), "user.infinit.auth.inherit",
     "true", strlen("true"), 0 SXA_EXTRA);
-
   // file create/write conflict
   int fd0, fd1;
   fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
@@ -888,7 +888,6 @@ void test_conflicts(bool paxos)
   BOOST_CHECK_EQUAL(close(fd1), 0);
   BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
   BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
-
   // file create/write without acl inheritance
   setxattr(m0.c_str(), "user.infinit.auth.inherit",
     "false", strlen("false"), 0 SXA_EXTRA);
@@ -901,7 +900,6 @@ void test_conflicts(bool paxos)
   BOOST_CHECK_EQUAL(close(fd0), 0);
   BOOST_CHECK_EQUAL(close(fd1), 0);
   BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
-
   // directory conflict
   struct stat st;
   // force file node into filesystem cache
@@ -915,7 +913,6 @@ void test_conflicts(bool paxos)
   BOOST_CHECK_EQUAL(close(fd1), 0);
   BOOST_CHECK_EQUAL(stat((m0/"file3").c_str(), &st), 0);
   BOOST_CHECK_EQUAL(stat((m1/"file4").c_str(), &st), 0);
-
   //write/unlink
   setxattr(m0.c_str(), "user.infinit.auth.inherit",
     "true", strlen("true"), 0 SXA_EXTRA);
@@ -931,7 +928,6 @@ void test_conflicts(bool paxos)
   BOOST_CHECK_EQUAL(close(fd0), 0);
   BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), -1);
   BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), -1);
-
   // write/replace
   fd0 = open((m0 / "file6").string().c_str(), O_CREAT|O_RDWR, 0644);
   BOOST_CHECK(fd0 != -1);
@@ -941,7 +937,6 @@ void test_conflicts(bool paxos)
   BOOST_CHECK(fd1 != -1);
   BOOST_CHECK_EQUAL(write(fd1, "nioc", 4), 4);
   BOOST_CHECK_EQUAL(close(fd1), 0);
-
   fd0 = open((m0 / "file6").string().c_str(), O_CREAT|O_RDWR|O_APPEND, 0644);
   BOOST_CHECK(fd0 != -1);
   ELLE_LOG("write");
@@ -954,7 +949,21 @@ void test_conflicts(bool paxos)
   BOOST_CHECK_EQUAL(read(m1/"file6"), "nioc");
 }
 
-void test_acl(bool paxos)
+void
+conflicts()
+{
+  test_conflicts(false);
+}
+
+void
+conflicts_paxos()
+{
+  test_conflicts(true);
+}
+
+static
+void
+test_acl(bool paxos)
 {
   namespace bfs = boost::filesystem;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
@@ -980,7 +989,6 @@ void test_acl(bool paxos)
   //bfs::path m2 = mount_points[2];
   BOOST_CHECK_EQUAL(keys.size(), 2);
   std::string k1 = serialize(keys[1]);
-
   {
     boost::filesystem::ofstream ofs(m0 / "test");
     ofs << "Test";
@@ -1019,7 +1027,6 @@ void test_acl(bool paxos)
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   usleep(2100000);
   BOOST_CHECK(can_access(m1/"test"));
-
   bfs::create_directory(m0 / "dir1");
   BOOST_CHECK(touch(m0 / "dir1" / "pan"));
   BOOST_CHECK(!can_access(m1 / "dir1"));
@@ -1031,8 +1038,6 @@ void test_acl(bool paxos)
   BOOST_CHECK(can_access(m1 / "dir1"));
   BOOST_CHECK(!can_access(m1 / "dir1" / "pan"));
   BOOST_CHECK(touch(m1 / "dir1" / "coin"));
-
-
   // test by user name
   touch(m0 / "byuser");
   BOOST_CHECK(!can_access(m1 / "byuser"));
@@ -1041,7 +1046,6 @@ void test_acl(bool paxos)
   usleep(2100000);
   BOOST_CHECK(can_access(m1/"test"));
   BOOST_CHECK(can_access(m1 / "byuser"));
-
   // inheritance
   bfs::create_directory(m0 / "dirs");
   ELLE_LOG("setattrs");
@@ -1060,7 +1064,6 @@ void test_acl(bool paxos)
   BOOST_CHECK(can_access(m1 / "dirs" / "coin"));
   BOOST_CHECK(can_access(m1 / "dirs" / "dir" / "coin"));
   BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 2);
-
   // readonly
   bfs::create_directory(m0 / "dir2");
   setxattr((m0 / "dir2").c_str(), "user.infinit.auth.setr",
@@ -1072,8 +1075,21 @@ void test_acl(bool paxos)
   BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
-
   ELLE_LOG("test end");
+}
+
+static
+void
+acl()
+{
+  test_acl(false);
+}
+
+static
+void
+acl_paxos()
+{
+  test_acl(true);
 }
 
 ELLE_TEST_SUITE()
@@ -1084,14 +1100,14 @@ ELLE_TEST_SUITE()
   signal(SIGCHLD, SIG_IGN);
   auto& suite = boost::unit_test::framework::master_test_suite();
   // only doughnut supported filesystem->add(BOOST_TEST_CASE(test_basic), 0, 50);
-  suite.add(BOOST_TEST_CASE(test_dht_crypto), 0, 120);
-  suite.add(BOOST_TEST_CASE(test_dht_crypto_paxos), 0, 120);
+  suite.add(BOOST_TEST_CASE(filesystem), 0, 120);
+  suite.add(BOOST_TEST_CASE(filesystem_paxos), 0, 120);
 #ifndef INFINIT_MACOSX
   // osxfuse fails to handle two mounts at the same time, the second fails
   // with a mysterious 'permission denied'
-  suite.add(BOOST_TEST_CASE(boost::bind(test_acl, false)), 0, 120);
-  suite.add(BOOST_TEST_CASE(boost::bind(test_acl, true)), 0, 120);
-  suite.add(BOOST_TEST_CASE(boost::bind(test_conflicts, false)), 0, 120);
-  suite.add(BOOST_TEST_CASE(boost::bind(test_conflicts, true)), 0, 120);
+  suite.add(BOOST_TEST_CASE(acl), 0, 120);
+  suite.add(BOOST_TEST_CASE(acl_paxos), 0, 120);
+  suite.add(BOOST_TEST_CASE(conflicts), 0, 120);
+  suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
 #endif
 }
