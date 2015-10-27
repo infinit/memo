@@ -629,156 +629,173 @@ test_filesystem(bool dht,
     BOOST_CHECK_EQUAL(directory_count(mount), 0);
   }
 
-  //rename
+  ELLE_LOG("test rename")
   {
-    boost::filesystem::ofstream ofs(mount / "test");
-    ofs << "Test";
-  }
-  bfs::rename(mount / "test", mount / "test2");
-  BOOST_CHECK_EQUAL(read(mount / "test2"), "Test");
-  write(mount / "test3", "foo");
-  bfs::rename(mount / "test2", mount / "test3");
-  BOOST_CHECK_EQUAL(read(mount / "test3"), "Test");
-  BOOST_CHECK_EQUAL(directory_count(mount), 1);
-  bfs::create_directory(mount / "dir");
-  write(mount / "dir" / "foo", "bar");
-  bfs::rename(mount / "test3", mount / "dir", erc);
-  BOOST_CHECK_EQUAL(!!erc, true);
-  bfs::rename(mount / "dir", mount / "dir2");
-  bfs::remove(mount / "dir2", erc);
-  BOOST_CHECK_EQUAL(!!erc, true);
-  bfs::rename(mount / "dir2" / "foo", mount / "foo");
-  bfs::remove(mount / "dir2");
-  bfs::remove(mount / "foo");
-
-  // cross-block
-  fd = open((mount / "foo").string().c_str(), O_RDWR|O_CREAT, 0644);
-  BOOST_CHECK_GE(fd, 0);
-  lseek(fd, 1024*1024 - 10, SEEK_SET);
-  const char* data = "abcdefghijklmnopqrstuvwxyz";
-  int res = write(fd, data, strlen(data));
-  BOOST_CHECK_EQUAL(res, strlen(data));
-  close(fd);
-  stat((mount / "foo").string().c_str(), &st);
-  BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 - 10 + 26);
-  char output[36];
-  fd = open((mount / "foo").string().c_str(), O_RDONLY);
-  BOOST_CHECK_GE(fd, 0);
-  lseek(fd, 1024*1024 - 15, SEEK_SET);
-  res = read(fd, output, 36);
-  BOOST_CHECK_EQUAL(31, res);
-  BOOST_CHECK_EQUAL(std::string(output, output+31),
-                    std::string(5, 0) + data);
-  close(fd);
-
-  // link/unlink
-  fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
-  ::close(fd);
-  bfs::remove(mount / "u");
-
-  // multiple open, but with only one open
-  {
-    boost::filesystem::ofstream ofs(mount / "test");
-    ofs << "Test";
-  }
-  BOOST_CHECK_EQUAL(read(mount / "test"), "Test");
-  bfs::remove(mount / "test");
-  // multiple opens
-  {
-    boost::filesystem::ofstream ofs(mount / "test");
-    ofs << "Test";
-    boost::filesystem::ofstream ofs2(mount / "test");
-  }
-  BOOST_CHECK_EQUAL(read(mount / "test"), "Test");
-  bfs::remove(mount / "test");
-  {
-    boost::filesystem::ofstream ofs(mount / "test");
-    ofs << "Test";
     {
-      boost::filesystem::ofstream ofs2(mount / "test");
+      boost::filesystem::ofstream ofs(mount / "test");
+      ofs << "Test";
     }
-    ofs << "Test";
+    bfs::rename(mount / "test", mount / "test2");
+    BOOST_CHECK_EQUAL(read(mount / "test2"), "Test");
+    write(mount / "test3", "foo");
+    bfs::rename(mount / "test2", mount / "test3");
+    BOOST_CHECK_EQUAL(read(mount / "test3"), "Test");
+    BOOST_CHECK_EQUAL(directory_count(mount), 1);
+    bfs::create_directory(mount / "dir");
+    write(mount / "dir" / "foo", "bar");
+    bfs::rename(mount / "test3", mount / "dir", erc);
+    BOOST_CHECK_EQUAL(!!erc, true);
+    bfs::rename(mount / "dir", mount / "dir2");
+    bfs::remove(mount / "dir2", erc);
+    BOOST_CHECK_EQUAL(!!erc, true);
+    bfs::rename(mount / "dir2" / "foo", mount / "foo");
+    bfs::remove(mount / "dir2");
+    bfs::remove(mount / "foo");
   }
-  BOOST_CHECK_EQUAL(read(mount / "test"), "TestTest");
-  bfs::remove(mount / "test");
 
-  ELLE_TRACE("Randomizing a file");
-  // randomized manyops
-  std::default_random_engine gen;
-  std::uniform_int_distribution<>dist(0, 255);
+  ELLE_LOG("test cross-block")
   {
-    boost::filesystem::ofstream ofs(mount / "tbig");
-    for (int i=0; i<10000000; ++i)
-      ofs.put(dist(gen));
-  }
-  usleep(1000000);
-  ELLE_TRACE("random writes");
-
-  BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
-  std::uniform_int_distribution<>dist2(0, 9999999);
-  for (int i=0; i < (dht?1:10); ++i)
-  {
-    if (! (i%10))
-      ELLE_TRACE("Run %s", i);
-    ELLE_TRACE("opening");
-    int fd = open((mount / "tbig").string().c_str(), O_RDWR);
-    for (int i=0; i < 5; ++i)
-    {
-      int sv = dist2(gen);
-      lseek(fd, sv, SEEK_SET);
-      unsigned char c = dist(gen);
-      ELLE_TRACE("Write 1 at %s", sv);
-      write(fd, &c, 1);
-    }
-    ELLE_TRACE("Closing");
+    fd = open((mount / "foo").string().c_str(), O_RDWR|O_CREAT, 0644);
+    BOOST_CHECK_GE(fd, 0);
+    lseek(fd, 1024*1024 - 10, SEEK_SET);
+    const char* data = "abcdefghijklmnopqrstuvwxyz";
+    int res = write(fd, data, strlen(data));
+    BOOST_CHECK_EQUAL(res, strlen(data));
+    close(fd);
+    stat((mount / "foo").string().c_str(), &st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 - 10 + 26);
+    char output[36];
+    fd = open((mount / "foo").string().c_str(), O_RDONLY);
+    BOOST_CHECK_GE(fd, 0);
+    lseek(fd, 1024*1024 - 15, SEEK_SET);
+    res = read(fd, output, 36);
+    BOOST_CHECK_EQUAL(31, res);
+    BOOST_CHECK_EQUAL(std::string(output, output+31),
+                      std::string(5, 0) + data);
     close(fd);
   }
-  ELLE_TRACE("truncates");
-  BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
-  // truncate
-  ELLE_TRACE("truncate 9");
-  boost::filesystem::resize_file(mount / "tbig", 9000000);
-  read_all(mount / "tbig");
-  ELLE_TRACE("truncate 8");
-  boost::filesystem::resize_file(mount / "tbig", 8000000);
-  read_all(mount / "tbig");
-  ELLE_TRACE("truncate 5");
-  boost::filesystem::resize_file(mount / "tbig", 5000000);
-  read_all(mount / "tbig");
-  ELLE_TRACE("truncate 2");
-  boost::filesystem::resize_file(mount / "tbig", 2000000);
-  read_all(mount / "tbig");
-  ELLE_TRACE("truncate .9");
-  boost::filesystem::resize_file(mount / "tbig", 900000);
-  read_all(mount / "tbig");
-  bfs::remove(mount / "tbig");
 
-  // extended attributes
-  setxattr(mount.c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
-  touch(mount / "file");
-  setxattr((mount / "file").c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
-  char attrlist[1024];
-  ssize_t sz = listxattr(mount.c_str(), attrlist, 1024 SXA_EXTRA);
-  BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
-  BOOST_CHECK_EQUAL(attrlist, "testattr");
-  sz = listxattr( (mount / "file").c_str(), attrlist, 1024 SXA_EXTRA);
-  BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
-  BOOST_CHECK_EQUAL(attrlist, "testattr");
-  sz = getxattr(mount.c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
-  BOOST_CHECK_EQUAL(sz, strlen("foo"));
-  attrlist[sz] = 0;
-  BOOST_CHECK_EQUAL(attrlist, "foo");
-  sz = getxattr( (mount / "file").c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
-  BOOST_CHECK_EQUAL(sz, strlen("foo"));
-  attrlist[sz] = 0;
-  BOOST_CHECK_EQUAL(attrlist, "foo");
-  sz = getxattr( (mount / "file").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
-  BOOST_CHECK_EQUAL(sz, -1);
-  sz = getxattr( (mount / "nope").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
-  BOOST_CHECK_EQUAL(sz, -1);
-  sz = getxattr( mount.c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
-  BOOST_CHECK_EQUAL(sz, -1);
-  bfs::remove(mount / "file");
+  ELLE_LOG("test link/unlink")
+  {
+    fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
+    ::close(fd);
+    bfs::remove(mount / "u");
+  }
+
+  ELLE_LOG("test multiple open, but with only one open")
+  {
+    {
+      boost::filesystem::ofstream ofs(mount / "test");
+      ofs << "Test";
+    }
+    BOOST_CHECK_EQUAL(read(mount / "test"), "Test");
+    bfs::remove(mount / "test");
+  }
+
+  ELLE_LOG("test multiple opens")
+  {
+    {
+      boost::filesystem::ofstream ofs(mount / "test");
+      ofs << "Test";
+      boost::filesystem::ofstream ofs2(mount / "test");
+    }
+    BOOST_CHECK_EQUAL(read(mount / "test"), "Test");
+    bfs::remove(mount / "test");
+    {
+      boost::filesystem::ofstream ofs(mount / "test");
+      ofs << "Test";
+      {
+        boost::filesystem::ofstream ofs2(mount / "test");
+      }
+      ofs << "Test";
+    }
+    BOOST_CHECK_EQUAL(read(mount / "test"), "TestTest");
+    bfs::remove(mount / "test");
+  }
+
+  ELLE_LOG("test randomizing a file");
+  {
+    // randomized manyops
+    std::default_random_engine gen;
+    std::uniform_int_distribution<>dist(0, 255);
+    {
+      boost::filesystem::ofstream ofs(mount / "tbig");
+      for (int i=0; i<10000000; ++i)
+        ofs.put(dist(gen));
+    }
+    usleep(1000000);
+    ELLE_TRACE("random writes");
+    BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
+    std::uniform_int_distribution<>dist2(0, 9999999);
+    for (int i=0; i < (dht?1:10); ++i)
+    {
+      if (! (i%10))
+        ELLE_TRACE("Run %s", i);
+      ELLE_TRACE("opening");
+      int fd = open((mount / "tbig").string().c_str(), O_RDWR);
+      for (int i=0; i < 5; ++i)
+      {
+        int sv = dist2(gen);
+        lseek(fd, sv, SEEK_SET);
+        unsigned char c = dist(gen);
+        ELLE_TRACE("Write 1 at %s", sv);
+        write(fd, &c, 1);
+      }
+      ELLE_TRACE("Closing");
+      close(fd);
+    }
+    ELLE_TRACE("truncates");
+    BOOST_CHECK_EQUAL(boost::filesystem::file_size(mount / "tbig"), 10000000);
+  }
+
+  ELLE_LOG("test truncate")
+  {
+    ELLE_TRACE("truncate 9");
+    boost::filesystem::resize_file(mount / "tbig", 9000000);
+    read_all(mount / "tbig");
+    ELLE_TRACE("truncate 8");
+    boost::filesystem::resize_file(mount / "tbig", 8000000);
+    read_all(mount / "tbig");
+    ELLE_TRACE("truncate 5");
+    boost::filesystem::resize_file(mount / "tbig", 5000000);
+    read_all(mount / "tbig");
+    ELLE_TRACE("truncate 2");
+    boost::filesystem::resize_file(mount / "tbig", 2000000);
+    read_all(mount / "tbig");
+    ELLE_TRACE("truncate .9");
+    boost::filesystem::resize_file(mount / "tbig", 900000);
+    read_all(mount / "tbig");
+    bfs::remove(mount / "tbig");
+  }
+
+  ELLE_LOG("test extended attributes")
+  {
+    setxattr(mount.c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
+    touch(mount / "file");
+    setxattr((mount / "file").c_str(), "testattr", "foo", 3, 0 SXA_EXTRA);
+    char attrlist[1024];
+    ssize_t sz = listxattr(mount.c_str(), attrlist, 1024 SXA_EXTRA);
+    BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
+    BOOST_CHECK_EQUAL(attrlist, "testattr");
+    sz = listxattr( (mount / "file").c_str(), attrlist, 1024 SXA_EXTRA);
+    BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
+    BOOST_CHECK_EQUAL(attrlist, "testattr");
+    sz = getxattr(mount.c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    BOOST_CHECK_EQUAL(sz, strlen("foo"));
+    attrlist[sz] = 0;
+    BOOST_CHECK_EQUAL(attrlist, "foo");
+    sz = getxattr( (mount / "file").c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    BOOST_CHECK_EQUAL(sz, strlen("foo"));
+    attrlist[sz] = 0;
+    BOOST_CHECK_EQUAL(attrlist, "foo");
+    sz = getxattr( (mount / "file").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    BOOST_CHECK_EQUAL(sz, -1);
+    sz = getxattr( (mount / "nope").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    BOOST_CHECK_EQUAL(sz, -1);
+    sz = getxattr( mount.c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    BOOST_CHECK_EQUAL(sz, -1);
+    bfs::remove(mount / "file");
+  }
 }
 
 void test_basic()
