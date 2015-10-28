@@ -65,6 +65,12 @@ class Beyond:
   def user_networks_get(self, user):
     return self.__datastore.user_networks_fetch(user = user)
 
+  def user_volumes_get(self, user):
+    # XXX: This requires two requests as we cannot combine results across
+    # databases.
+    networks = self.__datastore.user_networks_fetch(user = user)
+    return self.__datastore.networks_volumes_fetch(networks = networks)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
