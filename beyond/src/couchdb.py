@@ -156,6 +156,30 @@ class CouchDBDatastore:
         }
       })
     self.__couchdb['networks'].save(design)
+    try:
+      design = self.__couchdb['volumes']['_design/beyond']
+    except couchdb.http.ResourceNotFound:
+      design = couchdb.client.Document()
+    design.update(
+      {
+        '_id': '_design/beyond',
+        'language': 'python',
+        'updates': {
+          name: getsource(update)
+          for name, update in [
+              ('update', self.__volume_update),
+          ]
+        },
+        'views' : {
+          name : {
+            'map': getsource(view_map)
+          }
+          for name, view_map in [
+            ('per_network_id', self.__volumes_per_network_id_map),
+          ]
+        }
+      })
+    self.__couchdb['volumes'].save(design)
 
   ## ---- ##
   ## User ##
@@ -280,6 +304,12 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
 
+  def networks_volumes_fetch(self, networks):
+    rows = self.__couchdb['volumes'].view(
+      'beyond/per_network_id', keys = list(map(lambda n: n.id, networks)))
+    volume_from_db = infinit.beyond.Volume.from_json
+    return list(map(lambda r: volume_from_db(self.beyond, r.value), rows))
+
   def __network_update(network, req):
     if network is None:
       return [
@@ -344,3 +374,21 @@ class CouchDBDatastore:
       self.__couchdb['volumes'].delete(json)
     except couchdb.ResourceConflict:
       raise infinit.beyond.Volume.Duplicate()
+
+  def __volume_update(volume, req):
+    if network is None:
+      return [
+        None,
+        {
+          'code': 404,
+        }
+      ]
+    import json
+    update = {
+      name: json.loads(value)
+      for name, value in req['query'].items()
+    }
+    return [volume, {'json': json.dumps(update)}]
+
+  def __volumes_per_network_id_map(volume):
+    yield volume['network'], volume
