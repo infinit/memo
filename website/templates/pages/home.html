@@ -4,14 +4,18 @@
 
   <section class="presentation">
 
-    <div class="bg">
-      <div class="cover">
-        <h1>Powerful storage platform for developers and sysadmins</h1>
-        <h2>#peer­to­peer #encrypted #redundancy #access­control #filesystem</h2>
-      </div>
+    <div class="headline">
+      <h1>Decentralized software-based file storage platform</h1>
+      <h3>#peer­to­peer #encrypted #redundancy #access­control #filesystem</h3>
+      <hr>
+      <p>­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­Create your first network in 55 seconds</p>
+      <a class="button" href="${route('doc_get_started')}">Try it now</a>
     </div>
 
     <div class="terminal">
+    <div class="header">
+      <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
+    </div>
 <pre><code id="commands">
 $> infinit-storage --create —dropbox —account 455444556 —name dropbox
 Created storage “dropbox".
@@ -30,31 +34,31 @@ Mounting volume “personal-drive".
     </div>
   </section>
 
-  <section class="cta">
-    <p>­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­Create your distributed file storage infrastructure in 55 seconds</p>
-    <a class="try button" href="${route('doc_get_started')}">Try it!</a>
-    <a class="button border black" href="#what-is-infinit">What is Infinit?</a>
-  </section>
+  <div class="wrapper">
+    <section class="features">
+      <div class="network">
+        <img src="${url('images/icons/network.png')}">
+        <h3>Create Network</h3>
+        <p>Create a storage network composed of several machines, clients and/or servers.</p>
+      </div>
 
-  <section class="features">
-    <div class="network">
-      <img src="${url('images/icons/network.png')}">
-      <h3>Network</h3>
-      <p>Create a storage network composed of several machines, clients and/or servers.</p>
-    </div>
+      <span class="arrow"><img src="${url('images/icons/arrow-right.png')}"></span>
 
-    <div class="storage">
-      <img src="${url('images/icons/storage.png')}">
-      <h3>Storage</h3>
-      <p>Attach one or more storages to a machine, being a local disk, a remote storage resource i.e cloud</p>
-    </div>
+      <div class="storage">
+        <img src="${url('images/icons/storage.png')}">
+        <h3>Add Storages</h3>
+        <p>Attach one or more storages to a machine, being a local disk, a remote storage resource i.e cloud</p>
+      </div>
 
-    <div class="volume">
-      <img src="${url('images/icons/folder.png')}">
-      <h3>Volume</h3>
-      <p>Create a volume and access files through a UNIX­ like file system interface.­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­</p>
-    </div>
-  </section>
+      <span class="arrow"><img src="${url('images/icons/arrow-right.png')}"></span>
+
+      <div class="volume">
+        <img src="${url('images/icons/folder.png')}">
+        <h3>Mount Volume</h3>
+        <p>Create a volume and access files through a UNIX­ like file system interface.­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­</p>
+      </div>
+    </section>
+  </div>
 
   <section class="description" id="what-is-infinit">
     <h4 class="title">What is Infinit?</h4>
@@ -63,40 +67,100 @@ Mounting volume “personal-drive".
     <img src="${url('images/schema-global.png')}" alt="Schema of Infinit">
   </section>
 
-  <section class="usecases">
-    <h4 class="title">How is it used?</h4>
-    <p class="subtitle">Infinit can be configured and deployed in numerous ways</p>
 
-    <a class="usecase" href="${route('doc_deployment_personal_cloud')}">
-      <img src="${url('images/home-personal-cloud.png')}" alt="Unlimited Dropbox ­like Personal Cloud">
-      <h2>Unlimited Dropbox ­like Personal Cloud</h2>
-      <p>Create a virtual drive with the storage capacity equals to the sum of the cloud
-providers you connect: Dropbox, Flickr, Google Drive, Amazon S3 and more.</p>
-    </a>
+  <div class="wrapper">
+    <section class="features benefits">
+      <p class="title">Infinit is deployed once and scales according to your needs</p>
 
-    <a class="usecase" href="${route('doc_deployment_file_system')}">
-      <img src="${url('images/home-storage-infrastructure.png')}" alt="Storage Infrastructure on Commodity Hardware">
-      <h2>Storage Infrastructure on Commodity Hardware</h2>
-      <p>Connect computers together to create a controlled peer ­to ­peer storage
-infrastructure (public, private or hybrid cloud) that is secure, scalable and
-flexible yet controlled.</p>
-    </a>
+      <div>
+        <img src="${url('images/icons/scalable.png')}">
+        <h3>Scalable</h3>
+        <p>Scales on demand according to your needs, from 10TB to petabytes and beyond.</p>
+      </div>
 
-    <a class="usecase" href="#">
-      <img src="${url('images/home-filesystem-api.png')}" alt="Filesystem on top of an API">
-      <h2>Filesystem on top of an API</h2>
-      <p>Render any file­ meaningful API (Flickr, Youtube etc.) accessible through a
-native file system interface.</p>
-    </a>
+      <div>
+        <img src="${url('images/icons/lock.png')}">
+        <h3>Secure</h3>
+        <p>All the files are encrypted both in transit and at rest through bank-level cryptographic algorithms (RSA/AES).</p>
+      </div>
+
+      <div>
+        <img src="${url('images/icons/fault.png')}">
+        <h3>Fault Tolerant</h3>
+        <p>Detects failures and automatically adapts the network to guarantee the reliability of the data.</p>
+      </div>
+
+      <div>
+        <img src="${url('images/icons/network.png')}">
+        <h3>High Performance</h3>
+        <p>Benefit from a high-throughput network protocols for faster and on-demand data retrieval.</p>
+      </div>
+
+      <div>
+        <img src="${url('images/icons/storage.png')}">
+        <h3>Flexible</h3>
+        <p>100% software-defined architecture that dynamically adjusts to changing demands and network conditions.</p>
+      </div>
+
+      <div>
+        <img src="${url('images/icons/folder.png')}">
+        <h3>Control</h3>
+        <p>Control your costs and the localisation of your data by selecting the storage resources/providers involved in your infrastructure.</p>
+      </div>
+
+      <div class="cta"><a class="button border black" href="${route('doc_overview')}">Learn More</a></div>
+    </section>
+  </div>
+
+
+  <section class="client">
+    <div class="app">
+      <img src="${url('images/desktop-client.png')}" alt="Infinit Drive Desktop App">
+    </div>
+
+    <div class="users">
+      <h3>Desktop Client</h3>
+      <p>Join your company’s drive and create shared workspaces to collaborate and exchange with partners, clients or other collaborates.</p>
+      <a href="#"><img src="${url('images/icons/platforms.png')}" alt="Available for Mac, Windows and Linux"><br>
+
+      <a class="button" href="#">Download for Mac</a>
+    </div>
   </section>
 
+
+  <section class="usecases">
+    <h4 class="title">Technology</h4>
+    <p class="subtitle">Infinit is the result of 8 years of research and development</p>
+
+    <div class="usecase infrastructure">
+      <img src="${url('images/schema-infrastructure.png')}" alt="">
+      <h2>Overlay Network</h2>
+      <p>Connects thousands of computing devices in peer-to-peer in order to scale and prevent any bottleneck or single point of failure.</p>
+    </div>
+
+    <div class="usecase dht">
+      <img src="${url('images/schema-dht.png')}" alt="">
+      <h2>Distributed Hash Table</h2>
+      <p>Replicates encrypted blocks of data in order to ensure their availability and reliability in a decentralized manner.</p>
+    </div>
+
+    <div class="usecase fs">
+      <img src="${url('images/schema-file-system.png')}" alt="">
+      <h2>File System</h2>
+      <p>Builds a low-level virtual disk interface on top of the DHT in order to provide a hierarchical organization of files.</p>
+    </div>
+
+    <a class="button border black" href="${route('doc_technology')}">More about our technology</a>
+  </section>
+
+
   <section class="commercial">
-    <h4 class="title">Commercial</h4>
-    <strong>Infinit brings a cutting ­edge technology for both object­ and file­based scalable storage infrastructures to businesses across the world.</strong>
+    <h4 class="title">How can Infinit create value for your users?</h4>
+    <strong>Infinit brings a cutting-edge technology for building scalable block and file storage applications.</strong>
 
-    <p>Being to create a white­labelled drive on top of your file­based storage API, to set up a complicated geographically distributed multi­domain storage infrastructure or subscribe to a enterprise license, we are here for you.</p>
+    <p>Providers your users with a custom-branded file storage solutions to increase revenue, retention and reduce churn.</p>
 
-    <a class="button" href="#">Contact Us</a>
+    <a class="button" href="#">Browse our integrated solutions</a>
   </section>
 
 

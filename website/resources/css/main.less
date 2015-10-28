@@ -17,30 +17,28 @@
 body {
   font-family: @sourcesans;
   font-size: 14px;
-  color: #353535;
+  color: @infinitblack;
 }
 
-a { text-decoration: none; color: @black; }
+a { text-decoration: none; color: @infinitblack; }
 ul { list-style-type: none; }
 
 a.button, button.button, input.button {
-  display: inline-block; overflow: hidden;
-  background: #F25E5A; border-radius: 40px;
-  padding: 10px 25px;
-  position: relative;
-  font-family: @sourcesans; color: white; text-transform: uppercase; font-size:16px;
-  font-weight: 600; border: none;
-  outline: none; .transition();
+  background: @infinitred; border-radius: 3px; font-size: 15px; font-weight: 600;
+  box-shadow: 0px 3px 0px 0px darken(#C73F3C, 10%); padding: 6px 10px;
+  color: white; text-transform: uppercase; border: none; outline: none;
+  display: inline-block; overflow: hidden; .transition();
 
-  &:hover, &:active {
-    background: darken(@infinitred, 10%);
-  }
+  &:hover, &:active { background: darken(@infinitred, 10%); }
 
   &:focus { outline: none; }
 
   &.border { background: none; }
-  &.border.black { border: 1px solid @black; color: @black;}
-  &.border.black:hover { background: @black; color: white;}
+  &.border.black {
+    border: 1px solid @infinitblack;
+    box-shadow: 0px 3px 0px 0px @infinitblack; color: @infinitblack;
+  }
+  &.border.black:hover { background: lighten(@black, 20%); color: white;}
 }
 
 .spacer { clear: both; }
@@ -67,8 +65,16 @@ input[type="email"], input[type="text"], input[type="password"], textarea {
   &:focus { border: 2px solid darken(white, 40%); }
 }
 
+.wrapper { width: 90%; margin: auto;}
+
+
+/*------------.
+| Layout      |
+`------------*/
+
 header {
-  padding: 10px 8% 5px 8%;
+  background: #F9F9F9; border-bottom: 2px solid #F3F3F3;
+  padding: 10px 7% 5px 7%;
 
   ul {
     float: right; margin-top: 18px;
@@ -100,7 +106,7 @@ section.blue {
 }
 
 footer {
-   background: darken(@infinitblack, 7%); clear: both;
+   background: darken(#515149, 7%); clear: both;
    padding: 80px 0; min-height: 155px;
    font-size: 13px;
 
@@ -179,7 +185,6 @@ footer nav > ul > li {
   }
 }
 
-
 #slack {
   text-align: center;
 
@@ -194,8 +199,12 @@ footer nav > ul > li {
 }
 
 
+/*------------.
+| Home        |
+`------------*/
 
 body.home {
+  section { clear: both; }
 
   h4.title {
     font-size: 33px; line-height: 41px; text-align: center;
@@ -207,121 +216,172 @@ body.home {
     font-weight: 300; text-align: center; margin-top: 10px;
   }
 
+  p.title { font-family: @helvetica; font-weight: 300; font-size: 30px; }
+
   section.presentation {
-    position: relative;
+    min-height: 490px;
 
+    // .bg {
+    //   width: 100%; height: 100%;
+    //   position: absolute; top:0;
+    //   // -webkit-filter: hue-rotate(70deg);
+    //   -webkit-filter: grayscale(100%);
+    // }
 
-    // .at2x('../images/bg-header-home.png', 150px, 149px);
-    background-position: top center;
-    background-repeat: repeat;
-    min-height: 537px;
+    // .cover {
+    //   background: rgba(0, 0, 0, 0.4); width: 100%; height: 100%;
+    //   position: absolute; top:0;
+    // }
 
-    .bg {
-      background: url('../images/bg-header-home.gif'); width: 100%; height: 100%;
-      position: absolute; top:0;
-      // -webkit-filter: hue-rotate(70deg);
-      -webkit-filter: grayscale(100%);
-    }
-
-    .cover {
-      background: rgba(0, 0, 0, 0.4); width: 100%; height: 100%;
-      position: absolute; top:0;
-
+    .headline {
+      float: left; width: 34%; padding-left: 7%; padding-right: 4%;
     }
 
     h1 {
-      font-size: 32px; color: white; line-height: 40px; font-weight: bold;
-      text-align: center; padding-top: 60px; margin-top: 0;
+      font-size: 32px; line-height: 40px; font-weight: bold;
+      padding-top: 60px; margin: 0;
     }
 
-    h2 {
-      font-family: monospace; font-size: 18px; color: darken(white, 15%); line-height: 17px;
-      text-align: center; font-weight: normal;
-      font-family: @monospace;
+    hr {
+      height: 1px; background: gray; border:none; width: 30%; float: left;
+      margin: 20px 0 25px 0;
+     }
+
+    p {
+      font-size: 24px; line-height: 30px; clear: both;
     }
+
+    h3 {
+      font-family: monospace; font-size: 16px; color: lighten(gray, 15%); line-height: 17px;
+      font-weight: normal; font-family: @monospace; line-height: 23px; clear: both;
+    }
+
+    a.button { font-size: 16px; }
 
     .terminal {
-      .at2x('../images/bg-terminal.png', 895px, 366px);
-      width: 895px; height: 366px; margin: auto;
-      position: absolute; bottom: 0; left:50%; margin-left: -447px;
+      background: #333; float: left; min-height: 365px;
+      width: 47%; margin: 90px 5% 50px 2%; border-right: 2px solid #333;
+      text-align: left; border-bottom-left-radius: 5px; border-bottom-left-radius: 5px;
 
+      .header {
+        height: 27px; width: 100%;
+        margin-top: -28px;
+        border-top: 1px solid #D6D6D6; border-top-left-radius: 5px;
+        border-right: 1px solid #D6D6D6; border-top-right-radius: 5px;
+        border-left: 1px solid #D6D6D6;
+
+        li {
+          float: left; width: 11px; height: 11px; border-radius: 11px; margin-right: 6px;
+        }
+        ul { margin: 7px 0 0 9px; }
+        li.red { background: #FF5F52; }
+        li.yellow { background: #FFBE05; }
+        li.green { background: #15CC35; }
+      }
+      pre { margin: 2%; padding:0; }
       pre code {
-        background: none; margin: 55px 55px 0 55px;
-
+        background: none; margin: 0; padding:0; color: darken(white, 10%);
+        mark { font-weight: bold; background: none; color: white; }
         ins { text-decoration: none;}
       }
     }
   }
 
-
-  section.cta {
-    padding: 10px 8%; text-align: center;
-
-    p { font-family: @helvetica; font-size: 19px; font-weight: 300; }
-    a { margin-left: 20px; margin-top: 10px;}
-  }
-
-
   section.features {
-    clear: both; padding: 0 5%;
+    width: 100%; margin: auto; text-align: center;
 
-    div { float: left; width: 23%; text-align: center; padding: 80px 5% 50px 5%;}
-    div.network { margin-top: -16px; }
+    p.title {
+      margin-top: 40px; padding: 10px 8%; text-align: center;
+    }
 
+    div {
+      float: left; width: 31%; text-align: center; padding: 20px 0 30px 0;
+      min-height: 180px;
+    }
+    div.network { margin-top: -15px; }
+    div.storage { margin-top: 14px; }
+    span.arrow { width: 3%; display: block; float: left; margin-top: 93px;}
     h3 { text-transform: uppercase; }
-    p { font-size: 15px; color: #959595; line-height: 19px; }
+    div p { font-size: 15px; color: #959595; line-height: 19px; padding: 0 12%;}
   }
 
   section.description {
-    clear: both; text-align: center; background: #F2F2F2; padding-top: 40px;
-
+    text-align: center; background: #F9F9F9; padding-top: 40px;
     img { margin: 40px 0;}
+  }
+
+  section.cta {
+    clear: both; text-align: center; margin-bottom: 50px;
+  }
+
+  section.features.benefits {
+    padding: 30px 0 60px 0;
+
+    p.subtitle { padding-bottom: 20px;}
+    div { width: 33%; }
+    div:nth-child(5) { clear: both; }
+    div.cta { width: 100%; min-height: 0; padding:0;}
+    a.button { clear: both; margin-bottom: 40px;  }
+    &:after { content:''; clear: both; display: table;}
+  }
+
+  section.features.benefits.technology {
+    background: #F2F2F2;
+  }
+
+  section.client {
+    background: #F9F9F9; padding: 70px 0 80px 0;
+
+    .users { width: 29%; padding: 0 4% 0 7%; float: right; }
+    .app { width: 60%; float: right; overflow: hidden; }
+    .app img { float: left;  width: 738px; height: 453px;}
+
+    .users h3 { font-size: 32px; }
+    .users p { font-size: 18px; color: #959595; line-height: 25px; }
+    .users img { margin: 20px 0 30px 0;}
+
+    &:after { content:''; clear: both; display: table;}
   }
 
 
   section.usecases {
-    padding: 30px 17% 50px 17%;
+    padding: 30px 17% 50px 17%; text-align: center;
 
     p.subtitle { font-size: 22px; color: #939393;}
-
-    a.usecase {
-      padding: 70px 3% 70px 3%; display: block;
-      border-bottom: 1px solid #E4E4E4;
-      .transition();
+    div.usecase {
+      padding: 50px 3% 50px 3%; display: block;
+      border-bottom: 1px solid #E4E4E4; text-align: left;
     }
 
-    a.usecase:hover {
-      background: darken(white, 2%);
-    }
-
-    a.usecase:hover h2 { color: lighten(@black, 10%) }
-    a.usecase:hover p { color: lighten(#939393, 10%) }
-    a.usecase:hover img { opacity: 0.7; }
-
-    a.usecase:nth-of-type(3) { border: none; }
-
+    div.usecase.infrastructure img { margin-top: -20px; }
+    div.usecase.dht img { margin: -7px 95px 0 30px; }
+    div.usecase.fs { border: none; }
     img { float: left; margin-right: 70px; .transition(); }
-
     h2 { font-size: 22px; font-weight: bold; margin-bottom: 0;}
     p { font-size: 16px; color: #939393;}
     a.more { color: @infinitblue; font-weight: bold; font-size: 16px;}
+    a.button { margin: 30px 0 50px 0;}
   }
 
   section.commercial {
-    background: #F2F2F2; padding: 50px 17% 200px 17%;
+    background: #F9F9F9; padding: 50px 17% 200px 17%;
 
     strong {
       font-weight: 300; font-family: @helvetica; font-size: 22px;
       margin-top: 40px; line-height: 33px; display: block; margin-bottom: 20px;
     }
     p { font-size: 15px; color: #747474; line-height: 24px;}
+    h4 { text-align: left; }
     .button { margin-top: 20px; }
   }
 }
 
 
+/*----------------.
+| Documentation   |
+`----------------*/
+
 body.documentation, body.legal, body.contact {
-  header { background: #F9F9F9; border-bottom: 2px solid #F3F3F3; }
 
   #sidebar {
     padding-left: 8%; width: 10%; float: left; margin-top: 20px;
@@ -329,9 +389,7 @@ body.documentation, body.legal, body.contact {
   }
 
   ul.menu { position: absolute; padding-top: 20px; }
-
   ul.menu li a { font-family: @helvetica; font-weight: 300; }
-
   ul.menu li a:hover,
   ul.menu li.active > a {
     color: @infinitred;
@@ -339,10 +397,8 @@ body.documentation, body.legal, body.contact {
 
   ul.menu > li { padding-top: 5px; padding-bottom: 5px; }
   ul.menu li > a { font-size: 15px;  }
-
   ul.menu ul { list-style-type: circle; padding-left: 20px; }
   ul.menu ul li a { font-size: 13px; }
-
 
   section.doc {
     float: left; width: 50%; padding: 0 15% 100px 30%;
@@ -488,7 +544,9 @@ body.legal {
 }
 
 
-
+/*------------.
+| About       |
+`------------*/
 
 body.about {
   .wrapper { width: 90%; margin: auto;}
@@ -663,7 +721,9 @@ body.about {
   }
 }
 
-
+/*------------.
+| Contact     |
+`------------*/
 
 body.contact {
   section.doc { margin-top: 30px; padding: 0 15% 100px 25%;}

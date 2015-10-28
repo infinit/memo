@@ -16,8 +16,9 @@ $(document).ready(function() {
     '<mark>$></mark> <ins>2</ins>'+
 
     'infinit-volume —mount —name personal-drive —mountpoint /mnt/personal-drive/' +
-    '<ins>0.5</ins><ins>\nMounting volume “personal-drive". \n\n</ins>' +
-    '<mark><a href="' + $('.button.try').attr('href') +'">Get started now!</a></mark> ',
+    '<ins>0.5</ins><ins>\nMounting volume “personal-drive". \n\n</ins>'+
+
+    '<mark>$></mark> ',
     {
       speed: 20,
       speed_vary: true,
