@@ -1314,13 +1314,15 @@ beyond_push(std::string const& type, std::string const& name, T const& o,
   beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self);
 }
 
-template <typename T>
-T
-beyond_fetch(std::string const& where,
-             std::string const& type,
-             std::string const& name,
-             boost::optional<infinit::User const&> self = {},
-             bool output_report_action = true)
+// FIXME: Workaround used to handle objects that have had their copy
+// constructor deleted. See infinit-network.cc:fetch(), NetworkDescriptor.
+// Remove when serialization does not require copy.
+elle::json::Json
+beyond_fetch_json(std::string const& where,
+                  std::string const& type,
+                  std::string const& name,
+                  boost::optional<infinit::User const&> self = {},
+                  bool output_report_action = true)
 {
   reactor::http::Request::Configuration c;
   if (self)
@@ -1351,7 +1353,20 @@ beyond_fetch(std::string const& where,
       elle::sprintf("unexpected HTTP error %s fetching %s",
                     r.status(), type));
   }
-  return elle::serialization::json::deserialize<T>(r, false);
+  return elle::json::read(r);
+}
+
+template <typename T>
+T
+beyond_fetch(std::string const& where,
+             std::string const& type,
+             std::string const& name,
+             boost::optional<infinit::User const&> self = {},
+             bool output_report_action = true)
+{
+  auto json = beyond_fetch_json(where, type, name, self, output_report_action);
+  elle::serialization::json::SerializerIn input(json, false);
+  return input.deserialize<T>();
 }
 
 template <typename T>
