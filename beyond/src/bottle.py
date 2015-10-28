@@ -137,6 +137,8 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.network_endpoint_put)
     self.route('/networks/<owner>/<name>/users',
                method = 'GET')(self.network_users_get)
+    self.route('/networks/<owner>/<name>/volumes',
+               method = 'GET')(self.network_volumes_get)
     # Volume
     self.route('/volumes/<owner>/<name>',
                method = 'GET')(self.volume_get)
@@ -373,6 +375,14 @@ class Bottle(bottle.Bottle):
       }
     except Network.NotFound:
       raise self.__not_found('network', '%s/%s' % (owner, name))
+
+  def network_volumes_get(self, owner, name):
+    try:
+      network = self.__beyond.network_get(owner = owner, name = name)
+    except Network.NotFound:
+      raise self.__not_found('network', '%s/%s' % (owner, name))
+    volumes = self.__beyond.network_volumes_get(network = network)
+    return {'volumes': list(map(lambda v: v.json(), volumes))}
 
   ## ------ ##
   ## Volume ##
