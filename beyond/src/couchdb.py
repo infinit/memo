@@ -149,7 +149,8 @@ class CouchDBDatastore:
             'map': getsource(view_map)
           }
           for name, view_map in [
-            ('per_user_name', self.__networks_per_user_name_map),
+            ('per_invitee_name', self.__networks_per_invitee_name_map),
+            ('per_owner_key', self.__networks_per_owner_key_map),
           ]
         }
       })
@@ -196,10 +197,17 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 
-  def user_networks_fetch(self, user_name):
-    rows = self.__couchdb['networks'].view('beyond/per_user_name',
-                                           key = user_name)
-    return list(map(lambda row: row.value, rows))
+  def invitee_networks_fetch(self, invitee):
+    rows = self.__couchdb['networks'].view('beyond/per_invitee_name',
+                                           key = invitee.name)
+    network_from_db = infinit.beyond.Network.from_json
+    return list(map(lambda r: network_from_db(self.beyond, r.value), rows))
+
+  def owner_networks_fetch(self, owner):
+    rows = self.__couchdb['networks'].view('beyond/per_owner_key',
+                                           key = owner.public_key)
+    network_from_db = infinit.beyond.Network.from_json
+    return list(map(lambda r: network_from_db(self.beyond, r.value), rows))
 
   def __user_per_name(user):
     yield user['name'], user
@@ -291,9 +299,12 @@ class CouchDBDatastore:
           u[node] = endpoints
     return [network, {'json': json.dumps(update)}]
 
-  def __networks_per_user_name_map(network):
+  def __networks_per_invitee_name_map(network):
     for p in network['passports']:
-      yield p, network['name']
+      yield p, network
+
+  def __networks_per_owner_key_map(network):
+    yield network['owner'], network
 
   ## ------ ##
   ## Volume ##
