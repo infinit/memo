@@ -300,8 +300,7 @@ class Bottle(bottle.Bottle):
 
   def network_passport_get(self, owner, name, invitee):
     user = self.__beyond.user_get(name = owner)
-    network = self.__beyond.network_get(
-      owner = owner, name = name)
+    network = self.__beyond.network_get(owner = owner, name = name)
     passport = network.passports.get(invitee)
     if passport is None:
       raise self.__not_found(
@@ -317,8 +316,7 @@ class Bottle(bottle.Bottle):
       except Exception:
         u_invitee = self.__beyond.user_get(name = invitee)
         self.authenticate(u_invitee)
-
-      network = Network(self.__beyond, owner = owner, name = name)
+      network = self.__beyond.network_get(owner = owner, name = name)
       network.passports[invitee] = bottle.request.json
       network.save()
       bottle.response.status = 201
