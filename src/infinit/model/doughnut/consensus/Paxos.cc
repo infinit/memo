@@ -414,13 +414,14 @@ namespace infinit
 
         void
         Paxos::_store(overlay::Overlay& overlay,
-                      std::unique_ptr<blocks::Block> block,
+                      std::unique_ptr<blocks::Block> inblock,
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
+          std::shared_ptr<blocks::Block> b(inblock.release());
           do
           {
-            ELLE_ASSERT(block);
+            ELLE_ASSERT(b);
             overlay::Operation op;
             switch (mode)
             {
@@ -436,8 +437,8 @@ namespace infinit
               default:
                 elle::unreachable();
             }
-            auto owners = this->_owners(overlay, block->address(), op);
-            if (auto* m = dynamic_cast<blocks::MutableBlock*>(block.get()))
+            auto owners = this->_owners(overlay, b->address(), op);
+            if (auto* m = dynamic_cast<blocks::MutableBlock*>(b.get()))
             {
               auto version = m->version();
               // FIXME: this voids the whole "query on the fly" optimisation
@@ -453,26 +454,25 @@ namespace infinit
               {
                 peers.push_back(
                   elle::make_unique<Peer>(std::move(member), peers_id,
-                                          block->address(), version));
+                                          b->address(), version));
               }
               // for (int i = 0; i < this->_factor; ++i)
               //   peers.push_back(
               //     elle::make_unique<Peer>(owners, block->address(), version));
               Paxos::PaxosClient client(uid(this->_doughnut.keys().K()),
                                         std::move(peers));
-              std::shared_ptr<blocks::Block> b(
-                block.get(), &null_deleter<blocks::Block>);
               auto chosen = client.choose(version, b);
-              if (chosen && *chosen.get() != *block)
+              if (chosen && *chosen.get() != *b)
               {
                 if (resolver)
                 {
                   ELLE_TRACE(
                     "%s: chosen block differs, run conflict resolution", *this);
-                  block = (*resolver)(*block, mode);
+                  auto block = (*resolver)(*b, mode);
                   if (block)
                   {
                     block->seal();
+                    b.reset(block.release());
                     continue;
                   }
                 }
@@ -488,7 +488,7 @@ namespace infinit
                 for (auto owner: owners)
                   scope.run_background(
                     "store block",
-                    [&, owner] { owner->store(*block, mode); });
+                    [&, owner] { owner->store(*b, mode); });
                 reactor::wait(scope);
               };
             }
