@@ -49,8 +49,7 @@ class Beyond:
       owner = owner, name = name)
 
   def network_delete(self, owner, name):
-    return self.__datastore.network_delete(
-      owner = owner, name = name)
+    return self.__datastore.network_delete(owner = owner, name = name)
 
   ## ---- ##
   ## User ##
