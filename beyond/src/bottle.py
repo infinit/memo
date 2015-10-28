@@ -117,6 +117,7 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>/avatar', method = 'DELETE')(
       self.user_avatar_delete)
     self.route('/users/<name>/networks', method = 'GET')(self.user_networks_get)
+    self.route('/users/<name>/volumes', method = 'GET')(self.user_volumes_get)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -259,6 +260,15 @@ class Bottle(bottle.Bottle):
     networks = self.__beyond.user_networks_get(user = user)
     return {'networks': list(map(lambda n: n.json(), networks))}
 
+  def user_volumes_get(self, name):
+    try:
+      user = self.__beyond.user_get(name = name)
+    except User.NotFound:
+      raise self.__user_not_found(name)
+    self.authenticate(user)
+    volumes = self.__beyond.user_volumes_get(user = user)
+    return {'volumes': list(map(lambda v: v.json(), volumes))}
+
   ## ------- ##
   ## Network ##
   ## ------- ##
@@ -364,7 +374,7 @@ class Bottle(bottle.Bottle):
         'users': res,
       }
     except Network.NotFound:
-      raise self.__not_found('network', '%s\%s' % (owner, name))
+      raise self.__not_found('network', '%s/%s' % (owner, name))
 
   ## ------ ##
   ## Volume ##
