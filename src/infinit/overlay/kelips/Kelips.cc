@@ -744,7 +744,7 @@ namespace infinit
               uid = elle::sprintf("rpc.%x", pl.first);
             infinit::model::doughnut::Remote peer(
               elle::unconst(*this->doughnut()),
-              /* FIXME BEARCLAW */ model::Address(),
+              pl.first,
               endpoints,
               uid,
               elle::unconst(this)->_remotes_server);
@@ -766,7 +766,7 @@ namespace infinit
             {
               infinit::model::doughnut::consensus::Paxos::RemotePeer peer(
                 elle::unconst(*this->doughnut()),
-                /* FIXME BEARCLAW */ model::Address(),
+                pl.first,
                 pl.second.front());
               peer.connect();
               RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
@@ -2825,7 +2825,7 @@ namespace infinit
             return Overlay::Member(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                 elle::unconst(*this->doughnut()),
-                /* FIXME BEARCLAW */ model::Address(),
+                hosts.first,
                 endpoints,
                 uid,
                 elle::unconst(this)->_remotes_server));
@@ -2845,7 +2845,7 @@ namespace infinit
               return Overlay::Member(
                 new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                   elle::unconst(*this->doughnut()),
-                  /* FIXME BEARCLAW */ model::Address(),
+                  hosts.first,
                   hosts.second.front()));
             }
             catch (elle::Error const& e)

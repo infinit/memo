@@ -415,6 +415,7 @@ namespace infinit
         bool async_consensus = false,
         bool cache_consensus = false)
     {
+      bool paxos = getenv("INFINIT_PAXOS");
       boost::filesystem::path p = root_dir() / "cache" / name;
       if (this->storage)
       {
@@ -427,13 +428,21 @@ namespace infinit
         }
         if (cache)
           storage.reset(new storage::Cache(std::move(storage), cache_size));
-        auto local = std::make_shared<infinit::model::doughnut::Local>(
-          /* FIXME BEARCLAW */ model::Address(),
+        auto id = dht()->overlay->node_id();
+        auto hash = infinit::cryptography::hash(
+          elle::ConstWeakBuffer(id.data, id.static_size()),
+          infinit::cryptography::Oneway::sha256);
+        infinit::model::Address uid(hash.contents());
+        auto local = std::make_shared<infinit::model::doughnut::consensus::Paxos::LocalPeer>(
+          dht()->replicas,
+          uid,
           std::move(storage), this->port ? this->port.get() : 0);
+        //auto local = std::make_shared<infinit::model::doughnut::Local>
+        //  (std::move(storage), this->port ? this->port.get() : 0);
         local->serve();
         auto res = std::make_pair(
           std::move(local), this->dht()->make(hosts, client, local, p,
-          async_consensus, cache_consensus));
+          async_consensus, cache_consensus, paxos));
         return res;
       }
       else
@@ -442,7 +451,7 @@ namespace infinit
         return
           std::make_pair(local,
                          this->dht()->make(hosts, client, local, p,
-                         async_consensus, cache_consensus));
+                         async_consensus, cache_consensus, paxos));
       }
     }
 
