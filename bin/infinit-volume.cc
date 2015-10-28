@@ -90,6 +90,8 @@ push(variables_map const& args)
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto volume = ifnt.volume_get(name);
+  // Don't push the mountpoint to beyond.
+  volume.mountpoint = boost::none;
   auto network = ifnt.network_get(volume.network, owner);
   auto owner_uid = infinit::User::uid(network.dht()->owner);
   beyond_push("volume", name, volume, owner);
