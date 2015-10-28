@@ -1721,6 +1721,7 @@ namespace infinit
         reactor::sleep(boost::posix_time::milliseconds(v));
         packet::Gossip p;
         p.sender = _self;
+        p.observer = _observer;
         while (true)
         {
           reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
