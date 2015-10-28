@@ -195,23 +195,6 @@ signup_(variables_map const& args)
 
 static
 void
-networks(variables_map const& args)
-{
-  auto owner = self_user(ifnt, args);
-  auto res =
-    beyond_fetch<std::unordered_map<std::string, std::vector<std::string>>>(
-      elle::sprintf("users/%s/networks", owner.name),
-      "networks for",
-      owner.name,
-      owner,
-      false
-    );
-  for (std::string const& network: res["networks"])
-    std::cout << network << std::endl;
-}
-
-static
-void
 list(variables_map const& args)
 {
   for (auto const& user: ifnt.users_get())
@@ -322,15 +305,6 @@ main(int argc, char** argv)
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key"
             " (generated if unspecified)" },
-      },
-    },
-    {
-      "networks",
-      "Fetch list of user's networks",
-      &networks,
-      {},
-      {
-        option_owner,
       },
     },
     {
