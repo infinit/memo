@@ -179,11 +179,32 @@ void
 fetch(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
-  auto network_name = mandatory(args, "name", "network name");
-  network_name = ifnt.qualified_name(network_name, owner);
-  auto desc =
-    beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
-  ifnt.network_save(std::move(desc));
+  auto network_name_ = optional(args, "name");
+  if (network_name_)
+  {
+    std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
+    auto desc =
+      beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
+    ifnt.network_save(std::move(desc));
+  }
+  else // Fetch all networks for owner.
+  {
+    // FIXME: Workaround for NetworkDescriptor's copy constructor being deleted.
+    // Remove when serialization does not require copy.
+    auto res = beyond_fetch_json(elle::sprintf("users/%s/networks", owner.name),
+                                 "networks for",
+                                 owner.name,
+                                 owner);
+    auto root = boost::any_cast<elle::json::Object>(res);
+    auto networks_vec =
+      boost::any_cast<std::vector<elle::json::Json>>(root["networks"]);
+    for (auto const& network_json: networks_vec)
+    {
+      elle::serialization::json::SerializerIn input(network_json, false);
+      auto desc = input.deserialize<infinit::NetworkDescriptor>();
+      ifnt.network_save(std::move(desc));
+    }
+  }
 }
 
 static
@@ -307,8 +328,10 @@ push(variables_map const& args)
   {
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(dht.owner);
-    infinit::NetworkDescriptor desc(
-      network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
+    infinit::NetworkDescriptor desc(network.name,
+                                    std::move(dht.overlay),
+                                    std::move(dht.owner),
+                                    std::move(dht.replicas));
     beyond_push("network", desc.name, desc, self);
   }
 }
