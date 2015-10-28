@@ -53,19 +53,22 @@ public:
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::consensus::Paxos>(dht, 3); };
       this->local_a = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, std::move(storage_a));
+        3, infinit::model::Address::random(), std::move(storage_a));
       this->local_b = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, std::move(storage_b));
+        3, infinit::model::Address::random(), std::move(storage_b));
       this->local_c = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, std::move(storage_c));
+        3, infinit::model::Address::random(), std::move(storage_c));
     }
     else
     {
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::Consensus>(dht); };
-      this->local_a = std::make_shared<dht::Local>(std::move(storage_a));
-      this->local_b = std::make_shared<dht::Local>(std::move(storage_b));
-      this->local_c = std::make_shared<dht::Local>(std::move(storage_c));
+      this->local_a = std::make_shared<dht::Local>(
+        infinit::model::Address::random(), std::move(storage_a));
+      this->local_b = std::make_shared<dht::Local>(
+        infinit::model::Address::random(), std::move(storage_b));
+      this->local_c = std::make_shared<dht::Local>(
+        infinit::model::Address::random(), std::move(storage_c));
     }
     dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
     dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());

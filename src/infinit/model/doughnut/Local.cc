@@ -29,10 +29,12 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Local::Local(std::unique_ptr<storage::Storage> storage,
+      Local::Local(Address id,
+                   std::unique_ptr<storage::Storage> storage,
                    int port,
                    Protocol p)
-        : _storage(std::move(storage))
+        : Super(std::move(id))
+        , _storage(std::move(storage))
         , _doughnut(nullptr)
       {
         if (p == Protocol::tcp || p == Protocol::all)

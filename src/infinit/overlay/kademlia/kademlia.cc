@@ -482,12 +482,14 @@ namespace kademlia
       res.emplace_back(
         new infinit::model::doughnut::Remote(
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+          /* FIXME BEARCLAW */ Address(),
           ep));
       ELLE_TRACE("%s: returning", *this);
-      return reactor::generator<Member>([res]  (reactor::yielder<Member>::type const& yield)
-      {
-        for (auto r: res) yield(r);
-      });
+      return reactor::generator<Member>(
+        [res] (reactor::yielder<Member>::type const& yield)
+        {
+          for (auto r: res) yield(r);
+        });
     }
 
     std::shared_ptr<Query> q = self->startQuery(address, true);
@@ -506,6 +508,7 @@ namespace kademlia
       res.emplace_back(
         new infinit::model::doughnut::Remote(
           const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+          /* FIXME BEARCLAW */ Address(),
           ep));
     }
     else

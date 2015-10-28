@@ -20,15 +20,26 @@ namespace infinit
       class Remote
         : public Peer
       {
+      /*------.
+      | Types |
+      `------*/
+      public:
+        typedef Remote Self;
+        typedef Peer Super;
+
       /*-------------.
       | Construction |
       `-------------*/
       public:
-        Remote(Doughnut& doughnut, boost::asio::ip::tcp::endpoint endpoint);
-        Remote(Doughnut& doughnut, std::string const& host, int port);
-        Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
+        Remote(Doughnut& doughnut, Address id,
+               boost::asio::ip::tcp::endpoint endpoint);
+        Remote(Doughnut& doughnut, Address id,
+               std::string const& host, int port);
+        Remote(Doughnut& doughnut, Address id,
+               boost::asio::ip::udp::endpoint endpoint,
                reactor::network::UTPServer& server);
-        Remote(Doughnut& doughnut, boost::asio::ip::udp::endpoint endpoint,
+        Remote(Doughnut& doughnut, Address id,
+               boost::asio::ip::udp::endpoint endpoint,
                std::string const& peer_id,
                reactor::network::UTPServer& server);
         virtual

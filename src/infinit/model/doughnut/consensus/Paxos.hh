@@ -77,14 +77,17 @@ namespace infinit
             RemotePeer(Args&& ... args)
               : doughnut::Remote(std::forward<Args>(args) ...)
             {}
+
             virtual
             boost::optional<PaxosClient::Accepted>
-            propose(Address address,
+            propose(std::vector<Address> const& peers,
+                    Address address,
                     int version,
                     PaxosClient::Proposal const& p);
             virtual
             PaxosClient::Proposal
-            accept(Address address,
+            accept(std::vector<Address> const& peers,
+                   Address address,
                    int version,
                    PaxosClient::Proposal const& p,
                    std::shared_ptr<blocks::Block> const& value);
@@ -104,12 +107,14 @@ namespace infinit
 
             virtual
             boost::optional<PaxosClient::Accepted>
-            propose(Address address,
+            propose(std::vector<Address> peers,
+                    Address address,
                     int version,
                     PaxosClient::Proposal const& p);
             virtual
             PaxosClient::Proposal
-            accept(Address address,
+            accept(std::vector<Address> peers,
+                   Address address,
                    int version,
                    PaxosClient::Proposal const& p,
                    std::shared_ptr<blocks::Block> const& value);
@@ -121,7 +126,7 @@ namespace infinit
             fetch(Address address) const override;
             struct Decision
             {
-              Decision();
+              Decision(PaxosServer paxos);
               Decision(elle::serialization::SerializerIn& s);
               void
               serialize(elle::serialization::Serializer& s);

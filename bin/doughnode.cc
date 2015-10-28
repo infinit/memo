@@ -119,6 +119,7 @@ main(int argc, char** argv)
         {
           auto storage = cfg.storage->make();
           auto local = std::make_shared<infinit::model::doughnut::Local>(
+            /* FIXME BEARCLAW */ infinit::model::Address(),
             std::move(storage), cfg.port ? *cfg.port : 0);
           auto doughnut = elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
           doughnut->overlay()->register_local(local);

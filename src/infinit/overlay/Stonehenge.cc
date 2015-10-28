@@ -57,6 +57,7 @@ namespace infinit
             Overlay::Member(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                 const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
+                /* FIXME BEARCLAW */ model::Address(),
                 this->_hosts[i])));
           i = (i + 1) % size;
         }

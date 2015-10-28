@@ -19,8 +19,10 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Remote::Remote(Doughnut& doughnut, std::string const& host, int port)
-        : _doughnut(doughnut)
+      Remote::Remote(Doughnut& doughnut, Address id,
+                     std::string const& host, int port)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _socket()
         , _serializer()
         , _channels()
@@ -36,9 +38,10 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut,
+      Remote::Remote(Doughnut& doughnut, Address id,
                      boost::asio::ip::tcp::endpoint endpoint)
-        : _doughnut(doughnut)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _socket(nullptr)
         , _serializer()
         , _channels()
@@ -54,10 +57,11 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut,
+      Remote::Remote(Doughnut& doughnut, Address id,
                      boost::asio::ip::udp::endpoint endpoint,
                      reactor::network::UTPServer& server)
-        : _doughnut(doughnut)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()
@@ -74,11 +78,12 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut,
+      Remote::Remote(Doughnut& doughnut, Address id,
                      boost::asio::ip::udp::endpoint endpoint,
                      std::string const& peer_id,
                      reactor::network::UTPServer& server)
-        : _doughnut(doughnut)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()

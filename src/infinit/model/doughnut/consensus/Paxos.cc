@@ -29,6 +29,15 @@ namespace infinit
     {
       namespace consensus
       {
+        static
+        Address
+        uid(cryptography::rsa::PublicKey const& key)
+        {
+          auto serial = cryptography::rsa::publickey::der::encode(key);
+          return
+            cryptography::hash(serial, cryptography::Oneway::sha256).contents();
+        }
+
         template <typename T>
         static
         void
@@ -83,9 +92,23 @@ namespace infinit
         {
         public:
           Peer(reactor::Generator<overlay::Overlay::Member>& members,
+               std::vector<Address> peers,
                Address address,
                int version)
-            : _members(members)
+            : _members(&members)
+            , _member()
+            , _peers(std::move(peers))
+            , _address(address)
+            , _version(version)
+          {}
+
+          Peer(overlay::Overlay::Member member,
+               std::vector<Address> peers,
+               Address address,
+               int version)
+            : _members(nullptr)
+            , _member(std::move(member))
+            , _peers(std::move(peers))
             , _address(address)
             , _version(version)
           {}
@@ -97,9 +120,11 @@ namespace infinit
             auto& member = this->member();
             member.connect();
             if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
-              return local->propose(this->_address, this->_version, p);
+              return local->propose(
+                this->_peers, this->_address, this->_version, p);
             else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
-              return remote->propose(this->_address, this->_version, p);
+              return remote->propose(
+                this->_peers, this->_address, this->_version, p);
             ELLE_ABORT("invalid paxos peer: %s", member);
           }
 
@@ -111,10 +136,12 @@ namespace infinit
             auto& member = this->member();
             member.connect();
             if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
-              return local->accept(this->_address, this->_version, p, value);
+              return local->accept(
+                this->_peers, this->_address, this->_version, p, value);
             else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
-              return remote->accept(this->_address, this->_version, p, value);
-            elle::unreachable();
+              return remote->accept(
+                this->_peers, this->_address, this->_version, p, value);
+            ELLE_ABORT("invalid paxos peer: %s", member);
           }
 
           infinit::model::doughnut::Peer&
@@ -123,7 +150,8 @@ namespace infinit
             if (!this->_member)
               try
               {
-                this->_member = this->_members.next();
+                ELLE_ASSERT(this->_members);
+                this->_member = this->_members->next();
               }
               catch (reactor::Generator<overlay::Overlay::Member>::End const&)
               {
@@ -132,9 +160,10 @@ namespace infinit
             return *this->_member;
           }
 
-          ELLE_ATTRIBUTE(reactor::Generator<overlay::Overlay::Member>&,
+          ELLE_ATTRIBUTE(reactor::Generator<overlay::Overlay::Member>*,
                          members);
           ELLE_ATTRIBUTE(overlay::Overlay::Member, member);
+          ELLE_ATTRIBUTE(std::vector<Address>, peers);
           ELLE_ATTRIBUTE(Address, address);
           ELLE_ATTRIBUTE(int, version);
         };
@@ -144,32 +173,39 @@ namespace infinit
         `-----------*/
 
         boost::optional<Paxos::PaxosClient::Accepted>
-        Paxos::RemotePeer::propose(Address address,
+        Paxos::RemotePeer::propose(std::vector<Address> const& peers,
+                                   Address address,
                                    int version,
                                    PaxosClient::Proposal const& p)
         {
           this->connect();
-          RPC<boost::optional<PaxosClient::Accepted>
-              (Address, int, PaxosClient::Proposal const&)>
+          RPC<boost::optional<PaxosClient::Accepted>(
+            std::vector<Address>,
+            Address,
+            int,
+            PaxosClient::Proposal const&)>
             propose("propose", *this->_channels);
           propose.set_context<Doughnut*>(&this->_doughnut);
-          return propose(address, version, p);
+          return propose(peers, address, version, p);
         }
 
         Paxos::PaxosClient::Proposal
-        Paxos::RemotePeer::accept(Address address,
+        Paxos::RemotePeer::accept(std::vector<Address> const& peers,
+                                  Address address,
                                   int version,
                                   Paxos::PaxosClient::Proposal const& p,
                                   std::shared_ptr<blocks::Block> const& value)
         {
           this->connect();
-          RPC<Paxos::PaxosClient::Proposal (Address,
-                                     int,
-                                     Paxos::PaxosClient::Proposal const&,
-                                     std::shared_ptr<blocks::Block> const&)>
+          RPC<Paxos::PaxosClient::Proposal (
+            std::vector<Address> peers,
+            Address,
+            int,
+            Paxos::PaxosClient::Proposal const&,
+            std::shared_ptr<blocks::Block> const&)>
             accept("accept", *this->_channels);
           accept.set_context<Doughnut*>(&this->_doughnut);
-          return accept(address, version, p, value);
+          return accept(peers, address, version, p, value);
         }
 
         /*----------.
@@ -177,7 +213,8 @@ namespace infinit
         `----------*/
 
         boost::optional<Paxos::PaxosClient::Accepted>
-        Paxos::LocalPeer::propose(Address address,
+        Paxos::LocalPeer::propose(std::vector<Address> peers,
+                                  Address address,
                                   int version,
                                   Paxos::PaxosClient::Proposal const& p)
         {
@@ -198,7 +235,10 @@ namespace infinit
             }
             catch (storage::MissingKey const&)
             {
-              decision = this->_addresses.emplace(address, Decision()).first;
+              decision = this->_addresses.emplace(
+                address,
+                Decision(PaxosServer(uid(this->doughnut()->keys().K()),
+                                     std::move(peers)))).first;
             }
           auto res = decision->second.paxos.propose(p);
           this->storage()->set(
@@ -210,7 +250,8 @@ namespace infinit
         }
 
         Paxos::PaxosClient::Proposal
-        Paxos::LocalPeer::accept(Address address,
+        Paxos::LocalPeer::accept(std::vector<Address> peers,
+                                 Address address,
                                  int version,
                                  Paxos::PaxosClient::Proposal const& p,
                                  std::shared_ptr<blocks::Block> const& value)
@@ -244,27 +285,19 @@ namespace infinit
             "propose",
             std::function<
             boost::optional<Paxos::PaxosClient::Accepted>(
-              Address address, int version,
-              Paxos::PaxosClient::Proposal const&)>
-            (std::bind(&LocalPeer::propose, this, ph::_1, ph::_2, ph::_3)));
+              std::vector<Address>, Address,
+              int, Paxos::PaxosClient::Proposal const&)>
+            (std::bind(&LocalPeer::propose,
+                       this, ph::_1, ph::_2, ph::_3, ph::_4)));
           rpcs.add(
             "accept",
             std::function<
             Paxos::PaxosClient::Proposal(
-              Address address, int version,
-              Paxos::PaxosClient::Proposal const& p,
+              std::vector<Address>, Address,
+              int, Paxos::PaxosClient::Proposal const& p,
               std::shared_ptr<blocks::Block> const& value)>
             (std::bind(&LocalPeer::accept,
-                       this, ph::_1, ph::_2, ph::_3, ph::_4)));
-        }
-
-        static
-        Address
-        uid(cryptography::rsa::PublicKey const& key)
-        {
-          auto serial = cryptography::rsa::publickey::der::encode(key);
-          return
-            cryptography::hash(serial, cryptography::Oneway::sha256).contents();
+                       this, ph::_1, ph::_2, ph::_3, ph::_4, ph::_5)));
         }
 
         template <typename T>
@@ -306,7 +339,8 @@ namespace infinit
             }
           else
             ELLE_DEBUG("mutable block already loaded");
-          if (auto highest = decision->second.paxos.highest_accepted())
+          auto& paxos = decision->second.paxos;
+          if (auto highest = paxos.highest_accepted())
           {
             auto version = highest->proposal.version;
             if (decision->second.chosen == version)
@@ -318,15 +352,19 @@ namespace infinit
             {
               ELLE_TRACE_SCOPE(
                 "finalize running Paxos for version %s", version);
+              // FIXME: use ids
               auto owners = this->doughnut()->overlay()->lookup(
                 address, this->_factor, overlay::OP_UPDATE);
+              // auto owners = this->doughnut()->overlay()->lookup(
+              //   paxos.peers(), overlay::OP_UPDATE);
               // FIXME: factor with RemotePeer paxos client routine
               Paxos::PaxosClient::Peers peers;
               auto block = highest->value;
               for (int i = 0; i < this->_factor; ++i)
               {
                 std::unique_ptr<consensus::Peer> peer(
-                  new consensus::Peer(owners, block->address(), version));
+                  new consensus::Peer(owners, paxos.peers(),
+                                      block->address(), version));
                 peers.push_back(std::move(peer));
               }
               Paxos::PaxosClient client(uid(this->doughnut()->keys().K()),
@@ -402,10 +440,24 @@ namespace infinit
             if (auto* m = dynamic_cast<blocks::MutableBlock*>(block.get()))
             {
               auto version = m->version();
+              // FIXME: this voids the whole "query on the fly" optimisation
+              std::vector<Address> peers_id;
+              std::vector<overlay::Overlay::Member> members;
+              for (auto member: owners)
+              {
+                peers_id.push_back(member->id());
+                members.push_back(member);
+              }
               Paxos::PaxosClient::Peers peers;
-              for (int i = 0; i < this->_factor; ++i)
+              for (auto member: members)
+              {
                 peers.push_back(
-                  elle::make_unique<Peer>(owners, block->address(), version));
+                  elle::make_unique<Peer>(std::move(member), peers_id,
+                                          block->address(), version));
+              }
+              // for (int i = 0; i < this->_factor; ++i)
+              //   peers.push_back(
+              //     elle::make_unique<Peer>(owners, block->address(), version));
               Paxos::PaxosClient client(uid(this->_doughnut.keys().K()),
                                         std::move(peers));
               std::shared_ptr<blocks::Block> b(
@@ -465,16 +517,16 @@ namespace infinit
           return overlay.lookup(address, this->_factor, op);
         }
 
-        Paxos::LocalPeer::Decision::Decision()
+        Paxos::LocalPeer::Decision::Decision(PaxosServer paxos)
           : chosen(-1)
-          , paxos()
+          , paxos(std::move(paxos))
         {}
 
         Paxos::LocalPeer::Decision::Decision(
           elle::serialization::SerializerIn& s)
-        {
-          this->serialize(s);
-        }
+          : chosen(s.deserialize<int>("chosen"))
+          , paxos(s.deserialize<PaxosServer>("paxos"))
+        {}
 
         void
         Paxos::LocalPeer::Decision::serialize(

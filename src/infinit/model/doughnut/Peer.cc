@@ -7,7 +7,8 @@ namespace infinit
   {
     namespace doughnut
     {
-      Peer::Peer()
+      Peer::Peer(Address id)
+        : _id(std::move(id))
       {}
 
       Peer::~Peer()

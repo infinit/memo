@@ -177,9 +177,10 @@ static void make_nodes(std::string store, int node_count,
       infinit::model::doughnut::Local* l = nullptr;
       if (paxos)
         l = new infinit::model::doughnut::consensus::Paxos::LocalPeer(
-          3, std::move(s));
+          3, infinit::model::Address::random(), std::move(s));
       else
-        l = new infinit::model::doughnut::Local(std::move(s));
+        l = new infinit::model::doughnut::Local(
+          infinit::model::Address::random(), std::move(s));
       auto ep = l->server_endpoint();
       endpoints.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
                              ep.port());

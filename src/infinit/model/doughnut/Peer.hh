@@ -17,9 +17,10 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Peer();
+        Peer(Address id);
         virtual
         ~Peer();
+        ELLE_ATTRIBUTE_R(Address, id);
 
       /*-----------.
       | Networking |
