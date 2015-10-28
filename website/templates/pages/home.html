@@ -17,19 +17,21 @@
       <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
     </div>
 <pre><code id="commands">
-$> infinit-storage --create -—aws-s3 —-account 455444556 —-name s3 --contribution 10TB
-Created storage "S3".
+$> infinit-storage --create —-aws-s3 -—name s3 --contribution 10TB
+Created storage "s3".
 
-$> infinit-network -—create -—storage s3 —-storage local —-name hybrid-cloud --replication-factor 3
+$> infinit-network --create —-storage s3 -—storage local —-name hybrid-cloud
 Created network "hybrid-cloud".
 
-$> infinit-volume -—create -—network hybrid-cloud —-name company
+$> infinit-volume —-create -—network hybrid-cloud —-name company
 Starting network "hybrid-cloud".
 Creating volume root blocks.
 Created volume "company".
 
 $> infinit-volume -—mount /mnt/company/ -—name company
 Mounting volume "company".
+
+$> ​▎
 </code></pre>
     </div>
   </section>
@@ -91,7 +93,7 @@ Mounting volume "company".
       </div>
 
       <div>
-        <img src="${url('images/icons/network.png')}">
+        <img src="${url('images/icons/rocket.png')}">
         <h3>High Performance</h3>
         <p>Benefit from a high-throughput network protocols for faster and on-demand data retrieval.</p>
       </div>

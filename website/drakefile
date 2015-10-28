@@ -121,6 +121,8 @@ def configure(
     'resources/images/icons/arrow-right@2x.png',
     'resources/images/icons/platforms.png',
     'resources/images/icons/platforms@2x.png',
+    'resources/images/icons/rocket.png',
+    'resources/images/icons/rocket@2x.png',
 
     'resources/images/team/antony.png',
     'resources/images/team/antony@2x.png',
