@@ -68,6 +68,7 @@ namespace kademlia
     virtual reactor::Generator<Member> _lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op)
                                   const override;
+    virtual Overlay::Member _lookup_node(infinit::model::Address address) override;
   public:
 
   private:

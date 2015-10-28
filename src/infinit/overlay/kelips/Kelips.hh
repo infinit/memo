@@ -207,7 +207,9 @@ namespace infinit
         reactor::Generator<Overlay::Member>
         _lookup(infinit::model::Address address, int n,
                 infinit::overlay::Operation op) const override;
-
+        virtual
+        Overlay::Member
+        _lookup_node(Address address) override;
       private:
         typedef infinit::model::doughnut::Local Local;
         typedef infinit::overlay::Overlay Overlay;
@@ -262,7 +264,9 @@ namespace infinit
         void
         addLocalResults(packet::GetFileRequest* p, reactor::yielder<PeerLocation>::type const* yield);
         void
-        kelipsGet(Address file, int n, bool local_override, int attempts, std::function<void(PeerLocation)> yield);
+        kelipsGet(Address file, int n, bool local_override, int attempts,
+          bool query_node,
+          std::function<void(PeerLocation)> yield);
         std::vector<PeerLocation>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
@@ -295,6 +299,8 @@ namespace infinit
         Contact&
         get_or_make(Address address, bool observer,
           std::vector<GossipEndpoint> endponits);
+        Node::Member
+        make_peer(PeerLocation pl);
         Address _self;
         Address _ping_target;
         Time _ping_time;

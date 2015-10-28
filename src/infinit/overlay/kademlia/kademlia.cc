@@ -519,6 +519,11 @@ namespace kademlia
       });
   }
 
+  Kademlia::Member Kademlia::_lookup_node(infinit::model::Address address)
+  {
+    return Overlay::Member();
+  }
+
   static int qid = 0;
   std::shared_ptr<Kademlia::Query> Kademlia::startQuery(Address const& target, bool storage)
   {

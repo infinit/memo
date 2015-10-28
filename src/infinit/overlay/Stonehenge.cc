@@ -65,6 +65,12 @@ namespace infinit
         });
     }
 
+    Overlay::Member
+    Stonehenge::_lookup_node(model::Address address)
+    {
+      return Overlay::Member();
+    }
+
     StonehengeConfiguration::StonehengeConfiguration()
       : overlay::Configuration()
     {}

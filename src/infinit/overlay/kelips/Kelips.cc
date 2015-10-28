@@ -488,6 +488,7 @@ namespace infinit
             s.serialize("ttl", ttl);
             s.serialize("count", count);
             s.serialize("result", result);
+            s.serialize("query_node", query_node);
           }
 
           int request_id;
@@ -501,6 +502,8 @@ namespace infinit
           int count;
           /// partial result
           std::vector<PeerLocation> result;
+          /// Request is for a node and not a file
+          bool query_node;
         };
         REGISTER(GetFileRequest, "get");
 
@@ -2046,7 +2049,15 @@ namespace infinit
         if (p->originEndpoints.empty())
           p->originEndpoints = {p->endpoint};
         int fg = group_of(p->fileAddress);
-        if (fg == _group)
+        if (p->query_node)
+        {
+          auto& target = _state.contacts[fg];
+          auto it = target.find(p->fileAddress);
+          if (it != target.end())
+            p->result.push_back(PeerLocation(it->first,
+              endpoints_extract_convert(it->second.endpoints)));
+        }
+        else if (fg == _group)
         {
           addLocalResults(p, nullptr);
         }
@@ -2231,7 +2242,7 @@ namespace infinit
         else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
         {
           bool hit = false;
-          kelipsGet(file, n, false, -1, [&](PeerLocation r) {
+          kelipsGet(file, n, false, -1, false, [&](PeerLocation r) {
               hit = true;
               yield(r);
           });
@@ -2245,22 +2256,24 @@ namespace infinit
         }
         else
         {
-          kelipsGet(file, n, op == infinit::overlay::OP_FETCH, -1, yield);
+          kelipsGet(file, n, op == infinit::overlay::OP_FETCH, -1, false, yield);
         }
       }
 
       void
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
+        bool query_node,
         std::function <void(PeerLocation)> yield)
       {
         if (attempts == -1)
           attempts = _config.query_get_retries;
-        auto f = [this,file,n,local_override, attempts, yield]() {
+        auto f = [this,file,n,local_override, attempts, yield, query_node]() {
           ELLE_DEBUG("Driver starting");
           std::set<Address> result_set;
           packet::GetFileRequest r;
           r.sender = _self;
           r.request_id = ++ _next_id;
+          r.query_node = query_node;
           r.originAddress = _self;
           for (auto const& te: _local_endpoints)
             r.originEndpoints.push_back(te.first);
@@ -2270,7 +2283,7 @@ namespace infinit
           int fg = group_of(file);
           static elle::Bench bench_localresult("kelips.localresult", 10_sec);
           static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
-          if (fg == _group)
+          if (!query_node && fg == _group)
           {
             // check if we have it locally
             auto its = _state.files.equal_range(file);
@@ -2294,6 +2307,17 @@ namespace infinit
             { // Request completed locally
               ELLE_DEBUG("Driver exiting");
               bench_localresult.add(1);
+              return;
+            }
+          }
+          if (query_node)
+          {
+            auto& target = _state.contacts[fg];
+            auto it = target.find(file);
+            if (it != target.end())
+            {
+              yield(PeerLocation(it->first,
+                endpoints_extract_convert(it->second.endpoints)));
               return;
             }
           }
@@ -2331,7 +2355,7 @@ namespace infinit
                 r->result.size());
               for (auto const& e: r->result)
               {
-                if (fg == _group)
+                if (fg == _group && !query_node)
                 { // oportunistically add the entry to our tables
                   auto its = _state.files.equal_range(file);
                   auto it_r = std::find_if(its.first, its.second,
@@ -2358,6 +2382,7 @@ namespace infinit
       {
         int fg = group_of(file);
         packet::PutFileRequest p;
+        p.query_node = false;
         p.sender = _self;
         p.originAddress = _self;
         for (auto const& te: _local_endpoints)
@@ -2768,6 +2793,64 @@ namespace infinit
         }
       }
 
+      Node::Member
+      Node::make_peer(PeerLocation hosts)
+      {
+        ELLE_TRACE("connecting to %s", hosts);
+        for (auto const& ep: hosts.second)
+        {
+          for (auto const& l: _local_endpoints)
+            if (ep == e2e(l.first))
+            {
+              ELLE_TRACE("target is local");
+              return _local;
+            }
+        }
+        std::vector<GossipEndpoint> endpoints;
+        for (auto const& ep: hosts.second)
+          endpoints.push_back(GossipEndpoint(ep.address(), ep.port() + 100));
+        using Protocol = infinit::model::doughnut::Local::Protocol;
+        auto protocol = this->_config.rpc_protocol;
+        if (protocol == Protocol::utp || protocol == Protocol::all)
+        {
+          try
+          {
+            std::string uid;
+            if (hosts.first != Address::null)
+              uid = elle::sprintf("rpc.%x", hosts.first);
+            return Overlay::Member(
+              new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                endpoints,
+                uid,
+                const_cast<Node*>(this)->_remotes_server));
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("%s: UTP connection failed with %s: %s", *this, hosts, e);
+          }
+        }
+        if (protocol == Protocol::tcp || protocol == Protocol::all)
+        {
+          if (!hosts.second.empty())
+          {
+            try
+            {
+              // FIXME: don't always yield paxos
+              return Overlay::Member(
+                new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+                  const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                  hosts.second.front()));
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("%s: TCP connection failed with %s: %s", *this, hosts, e);
+            }
+          }
+        }
+        throw elle::Error(elle::sprintf("Failed to connect to %s", hosts));
+      }
+
       reactor::Generator<Node::Member>
       Node::_lookup(infinit::model::Address address,
                     int n,
@@ -2784,61 +2867,7 @@ namespace infinit
         {
           std::function<void(PeerLocation)> handle = [&](PeerLocation hosts)
           {
-            ELLE_TRACE("connecting to %s", hosts);
-            for (auto const& ep: hosts.second)
-            {
-              for (auto const& l: _local_endpoints)
-                if (ep == e2e(l.first))
-                {
-                  ELLE_TRACE("target is local");
-                  yield(_local);
-                  return;
-                }
-            }
-            std::vector<GossipEndpoint> endpoints;
-            for (auto const& ep: hosts.second)
-              endpoints.push_back(GossipEndpoint(ep.address(), ep.port() + 100));
-            using Protocol = infinit::model::doughnut::Local::Protocol;
-            auto protocol = this->_config.rpc_protocol;
-            if (protocol == Protocol::utp || protocol == Protocol::all)
-            {
-              try
-              {
-                std::string uid;
-                if (hosts.first != Address::null)
-                  uid = elle::sprintf("rpc.%x", hosts.first);
-                yield(Overlay::Member(
-                  new infinit::model::doughnut::consensus::Paxos::RemotePeer(
-                    const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                    endpoints,
-                    uid,
-                    const_cast<Node*>(this)->_remotes_server)));
-                return;
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_WARN("%s: UTP connection failed with %s: %s", *this, hosts, e);
-              }
-            }
-            if (protocol == Protocol::tcp || protocol == Protocol::all)
-            {
-              if (!hosts.second.empty())
-              {
-                try
-                {
-                // FIXME: don't always yield paxos
-                yield(Overlay::Member(
-                  new infinit::model::doughnut::consensus::Paxos::RemotePeer(
-                    const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                    hosts.second.front())));
-                return;
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_WARN("%s: TCP connection failed with %s: %s", *this, hosts, e);
-                }
-              }
-            }
+            yield(make_peer(hosts));
           };
           const_cast<Node*>(this)->address(address, op, n, handle);
         });
@@ -2989,6 +3018,19 @@ namespace infinit
         return it->second;
       }
 
+      Overlay::Member
+      Node::_lookup_node(Address address)
+      {
+        boost::optional<PeerLocation> result;
+        kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
+          {
+            result = p;
+          });
+        if (!result)
+          throw elle::Error(elle::sprintf("Node %s not found", address));
+        return make_peer(*result);
+      }
+
       elle::json::Json
       Node::query(std::string const& k, boost::optional<std::string> const& v)
       {
@@ -3096,7 +3138,7 @@ namespace infinit
               Address addr = to_scan.back();
               to_scan.pop_back();
               std::vector<PeerLocation> res;
-              kelipsGet(addr, factor, false, 3, [&](PeerLocation pl) {
+              kelipsGet(addr, factor, false, 3, false, [&](PeerLocation pl) {
                   res.push_back(pl);
               });
               if (counts.size() <= res.size())
@@ -3134,6 +3176,19 @@ namespace infinit
           _config.gossip.files = std::stol(fpp);
           _config.gossip.interval_ms = std::stol(interval);
           _config.file_timeout_ms = std::stol(timeout);
+        }
+        if (k.substr(0,5) == "node.")
+        {
+          Address target = Address::from_string(k.substr(5));
+          Overlay::Member n;
+          try {
+            n = lookup_node(target);
+            res["status"] = "got it";
+          }
+          catch (elle::Error const& e)
+          {
+            res["status"] = std::string("failed: ") + e.what();
+          }
         }
         return res;
       }

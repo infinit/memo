@@ -56,11 +56,16 @@ namespace infinit
       /// Lookup a single node
       Member
       lookup(model::Address address, Operation op) const;
+      /// Lookup a node from its uid
+      Member
+      lookup_node(model::Address address);
     protected:
       virtual
       reactor::Generator<Member>
       _lookup(model::Address address, int n, Operation op) const = 0;
-
+      virtual
+      Member
+      _lookup_node(model::Address address) = 0;
     /*------.
     | Query |
     `------*/

@@ -16,6 +16,9 @@ namespace infinit
       reactor::Generator<Member>
       _lookup(model::Address address, int n, Operation op) const override;
       virtual
+      Overlay::Member
+      _lookup_node(model::Address address) override;
+      virtual
       void
       register_local(std::shared_ptr<model::doughnut::Local> local) override;
       ELLE_ATTRIBUTE_R(std::weak_ptr<model::doughnut::Local>, local);

@@ -29,6 +29,9 @@ namespace infinit
       _lookup(model::Address address,
               int n,
               Operation op) const override;
+      virtual
+      Overlay::Member
+      _lookup_node(model::Address address) override;
     };
 
     struct StonehengeConfiguration

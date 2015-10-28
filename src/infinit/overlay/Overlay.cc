@@ -49,6 +49,12 @@ namespace infinit
       throw model::MissingBlock(address);
     }
 
+    Overlay::Member
+    Overlay::lookup_node(model::Address address)
+    {
+      return this->_lookup_node(address);
+    }
+
     void
     Configuration::join()
     {

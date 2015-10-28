@@ -29,6 +29,12 @@ namespace infinit
       });
     }
 
+    Overlay::Member
+    Kalimero::_lookup_node(model::Address address)
+    {
+      return this->_local.lock();
+    }
+
     void
     Kalimero::register_local(std::shared_ptr<model::doughnut::Local> local)
     {
