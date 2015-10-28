@@ -123,18 +123,30 @@ void
 fetch(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
+  auto network_name_ = optional(args, "network");
   if (optional(args, "name"))
   {
     auto name = volume_name(args, owner);
     auto desc = beyond_fetch<infinit::Volume>("volume", name);
     ifnt.volume_save(std::move(desc));
   }
+  else if (network_name_) // Fetch all networks for network.
+  {
+    std::string network_name = ifnt.qualified_name(network_name_.get(), owner);
+    auto res = beyond_fetch<
+      std::unordered_map<std::string, std::vector<infinit::Volume>>>(
+        elle::sprintf("networks/%s/volumes", network_name),
+        "volumes for network",
+        network_name);
+    for (auto const& volume: res["volumes"])
+      ifnt.volume_save(std::move(volume));
+  }
   else // Fetch all networks for owner.
   {
     auto res = beyond_fetch<
       std::unordered_map<std::string, std::vector<infinit::Volume>>>(
         elle::sprintf("users/%s/volumes", owner.name),
-        "volumes for",
+        "volumes for user",
         owner.name,
         owner);
     for (auto const& volume: res["volumes"])
@@ -307,6 +319,7 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "volume to fetch" },
+        { "network", value<std::string>(), "network to fetch volumes for" },
         option_owner,
       },
     },
