@@ -18,6 +18,7 @@
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
 #include <elle/serialization/json.hh>
+#include <elle/utils.hh>
 
 #include <cryptography/SecretKey.hh>
 #include <cryptography/Error.hh>
@@ -742,10 +743,11 @@ namespace infinit
             if (pl.first != Address::null)
               uid = elle::sprintf("rpc.%x", pl.first);
             infinit::model::doughnut::Remote peer(
-              const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+              elle::unconst(*this->doughnut()),
+              /* FIXME BEARCLAW */ model::Address(),
               endpoints,
               uid,
-              const_cast<Node*>(this)->_remotes_server);
+              elle::unconst(this)->_remotes_server);
             peer.connect();
             ELLE_DEBUG("utp connected");
             RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
@@ -763,7 +765,8 @@ namespace infinit
             try
             {
               infinit::model::doughnut::consensus::Paxos::RemotePeer peer(
-                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                elle::unconst(*this->doughnut()),
+                /* FIXME BEARCLAW */ model::Address(),
                 pl.second.front());
               peer.connect();
               RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
@@ -2821,10 +2824,11 @@ namespace infinit
               uid = elle::sprintf("rpc.%x", hosts.first);
             return Overlay::Member(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
-                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                elle::unconst(*this->doughnut()),
+                /* FIXME BEARCLAW */ model::Address(),
                 endpoints,
                 uid,
-                const_cast<Node*>(this)->_remotes_server));
+                elle::unconst(this)->_remotes_server));
           }
           catch (elle::Error const& e)
           {
@@ -2840,7 +2844,8 @@ namespace infinit
               // FIXME: don't always yield paxos
               return Overlay::Member(
                 new infinit::model::doughnut::consensus::Paxos::RemotePeer(
-                  const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
+                  elle::unconst(*this->doughnut()),
+                  /* FIXME BEARCLAW */ model::Address(),
                   hosts.second.front()));
             }
             catch (elle::Error const& e)
@@ -2860,7 +2865,7 @@ namespace infinit
         if (op != infinit::overlay::Operation::OP_FETCH)
         {
           ELLE_TRACE("Waiting for bootstrap");
-          reactor::wait(const_cast<Node*>(this)->_bootstraping);
+          reactor::wait(elle::unconst(this)->_bootstraping);
           ELLE_TRACE("bootstrap opened");
         }
         return reactor::generator<Node::Member>(
@@ -2870,7 +2875,7 @@ namespace infinit
           {
             yield(make_peer(hosts));
           };
-          const_cast<Node*>(this)->address(address, op, n, handle);
+          elle::unconst(this)->address(address, op, n, handle);
         });
       }
 
