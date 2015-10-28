@@ -17,18 +17,18 @@
       <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
     </div>
 <pre><code id="commands">
-$> infinit-storage --create —-aws-s3 -—name s3 --contribution 10TB
+$> infinit-storage --create --aws-s3 --name s3 --contribution 10TB
 Created storage "s3".
 
-$> infinit-network --create —-storage s3 -—storage local —-name hybrid-cloud
+$> infinit-network --create --storage s3 --storage local --name hybrid-cloud
 Created network "hybrid-cloud".
 
-$> infinit-volume —-create -—network hybrid-cloud —-name company
+$> infinit-volume --create --network hybrid-cloud --name company
 Starting network "hybrid-cloud".
 Creating volume root blocks.
 Created volume "company".
 
-$> infinit-volume -—mount /mnt/company/ -—name company
+$> infinit-volume --mount /mnt/company/ --name company
 Mounting volume "company".
 
 $> ​▎
@@ -63,8 +63,7 @@ $> ​▎
   </div>
 
   <section class="description" id="what-is-infinit">
-    <h4 class="title">What is Infinit?</h4>
-    <p class="subtitle">A platform for creating flexible and controlled storage infrastructures</p>
+    <p class="title">Infinit is a platform for creating flexible and controlled storage infrastructures</p>
 
     <img src="${url('images/schema-global.png')}" alt="Schema of Infinit">
   </section>
