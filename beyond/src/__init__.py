@@ -61,11 +61,12 @@ class Beyond:
     return User.from_json(self, json)
 
   def user_delete(self, name):
-    return self.__datastore.user_delete(
-      name = name)
+    return self.__datastore.user_delete(name = name)
 
   def user_networks_get(self, user):
-    return self.__datastore.user_networks_fetch(user.name)
+    res = self.__datastore.owner_networks_fetch(user)
+    res += self.__datastore.invitee_networks_fetch(user)
+    return res
 
   ## ------ ##
   ## Volume ##
