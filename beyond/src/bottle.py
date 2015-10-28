@@ -256,7 +256,8 @@ class Bottle(bottle.Bottle):
     except User.NotFound:
       raise self.__user_not_found(name)
     self.authenticate(user)
-    return {'networks': self.__beyond.user_networks_get(user = user)}
+    networks = self.__beyond.user_networks_get(user = user)
+    return {'networks': list(map(lambda n: n.json(), networks))}
 
   ## ------- ##
   ## Network ##
