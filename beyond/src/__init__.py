@@ -287,7 +287,7 @@ class Network(metaclass = Entity,
 
   @property
   def id(self):
-    return '%s/%s' % (self.owner, self.name)
+    return self.name
 
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
