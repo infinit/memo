@@ -5,10 +5,10 @@
   <section class="presentation">
 
     <div class="headline">
-      <h1>Decentralized software-based file storage platform</h1>
-      <h3>#peer­to­peer #encrypted #redundancy #access­control #filesystem</h3>
+      <h1>Decentralized Software-Based File Storage Platform</h1>
+      <h3>#peer-to-peer #security #redundancy #filesystem #open-source</h3>
       <hr>
-      <p>­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­Create your first network in 55 seconds</p>
+      <p>­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­Deploy your own infrastructure in 5 minutes.</p>
       <a class="button" href="${route('doc_get_started')}">Try it now</a>
     </div>
 
@@ -17,19 +17,19 @@
       <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
     </div>
 <pre><code id="commands">
-$> infinit-storage --create —dropbox —account 455444556 —name dropbox
-Created storage “dropbox".
+$> infinit-storage --create -—aws-s3 —-account 455444556 —-name s3 --contribution 10TB
+Created storage "S3".
 
-$> infinit-network —create —storage dropbox —storage flickr —name clouds
-Created network "clouds".
+$> infinit-network -—create -—storage s3 —-storage local —-name hybrid-cloud --replication-factor 3
+Created network "hybrid-cloud".
 
-$> infinit-volume —create —network clouds —name personal-drive
-Starting network "clouds".
+$> infinit-volume -—create -—network hybrid-cloud —-name company
+Starting network "hybrid-cloud".
 Creating volume root blocks.
-Created volume “personal-drive".
+Created volume "company".
 
-$> infinit-volume —mount —name personal-drive —mountpoint /mnt/personal-drive/
-Mounting volume “personal-drive".
+$> infinit-volume -—mount /mnt/company/ -—name company
+Mounting volume "company".
 </code></pre>
     </div>
   </section>
