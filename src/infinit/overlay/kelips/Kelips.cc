@@ -2801,6 +2801,11 @@ namespace infinit
       Node::make_peer(PeerLocation hosts)
       {
         ELLE_TRACE("connecting to %s", hosts);
+        if (hosts.first == _self || hosts.first == Address::null)
+        {
+          ELLE_TRACE("target is local");
+          return _local;
+        }
         for (auto const& ep: hosts.second)
         {
           for (auto const& l: _local_endpoints)
