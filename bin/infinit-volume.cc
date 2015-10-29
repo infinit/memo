@@ -302,7 +302,7 @@ main(int argc, char** argv)
     },
     {
       "export",
-      "export a volume for someone else to import",
+      "Export a volume for someone else to import",
       &export_,
       "--name VOLUME",
       {
