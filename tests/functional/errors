@@ -6,7 +6,8 @@ with Infinit() as infinit:
   descriptor = {
     'name' : 'clouds',
     'overlay' : {
-      'type' : 'kalimero'
+      'type' : 'kalimero',
+      'node_id': '1624d7d5-c4f2-4985-8bdb-a76f551fdf7e',
     },
     'owner' : {
       'rsa' : 'MIIBCgKCAQEAp0uoRP+SKv6ryQo8TLapW8SFVZfmc0clf2HxBSx+uK'
