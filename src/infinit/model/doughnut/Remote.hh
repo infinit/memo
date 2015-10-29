@@ -69,7 +69,7 @@ namespace infinit
         ELLE_ATTRIBUTE(std::function <std::iostream& ()>, connector);
         ELLE_ATTRIBUTE(std::string, endpoint);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
-        ELLE_ATTRIBUTE(elle::Buffer, credentials);
+        ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
       /*-------.
       | Blocks |
       `-------*/

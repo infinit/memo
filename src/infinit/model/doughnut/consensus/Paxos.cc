@@ -184,7 +184,8 @@ namespace infinit
             Address,
             int,
             PaxosClient::Proposal const&)>
-            propose("propose", *this->_channels);
+            propose("propose", *this->_channels,
+              &this->_doughnut, &this->_credentials);
           propose.set_context<Doughnut*>(&this->_doughnut);
           return propose(peers, address, version, p);
         }
@@ -203,7 +204,8 @@ namespace infinit
             int,
             Paxos::PaxosClient::Proposal const&,
             std::shared_ptr<blocks::Block> const&)>
-            accept("accept", *this->_channels);
+            accept("accept", *this->_channels,
+              &this->_doughnut, &this->_credentials);
           accept.set_context<Doughnut*>(&this->_doughnut);
           return accept(peers, address, version, p, value);
         }
