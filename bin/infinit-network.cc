@@ -362,7 +362,7 @@ join(variables_map const& args)
     if (args.count("port"))
       network.port = args["port"].as<int>();
     ifnt.network_save(network, true);
-    report_action("joined", "network", network.name);
+    report_action("joined", "network", network.name, std::string("locally"));
   }
 }
 
@@ -407,7 +407,7 @@ delete_(variables_map const& args)
   auto network_name = mandatory(args, "name", "network name");
   auto path = ifnt._network_path(network_name);
   if (boost::filesystem::remove(path))
-    report_action("deleted", "network", network_name);
+    report_action("deleted", "network", network_name, std::string("locally"));
   else
     throw elle::Error(
       elle::sprintf("File for network could not be deleted: %s", path));
@@ -441,7 +441,7 @@ run(variables_map const& args)
     });
   auto run = [&]
     {
-      report_action("running", "network", network.name);
+      report_action("running", "network", network.name, std::string("locally"));
       reactor::sleep();
     };
   if (push)

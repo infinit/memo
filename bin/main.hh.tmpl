@@ -1177,15 +1177,17 @@ report(std::string const& msg)
 void
 report_action(std::string const& action,
               std::string const& type,
-              std::string const& name)
+              std::string const& name,
+              boost::optional<std::string> where_ = {})
 {
-  report(elle::sprintf("%s %s \"\%s\"", action, type, name));
+  std::string where = where_ ? elle::sprintf("%s ", where_.get()) : "";
+  report(elle::sprintf("%s%s %s \"\%s\"", where, action, type, name));
 }
 
 void
 report_created(std::string const& type, std::string const& name)
 {
-  report_action("created", type, name);
+  report_action("created", type, name, std::string("locally"));
 }
 
 void
@@ -1291,7 +1293,7 @@ beyond_push(std::string const& where,
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::Created)
-    report_action("pushed", type, name);
+    report_action("pushed", type, name, std::string("remotely"));
   else if (r.status() == reactor::http::StatusCode::OK)
     report_action("Already pushed", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
@@ -1395,7 +1397,7 @@ beyond_delete(std::string const& where,
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    report_action("deleted", type, name);
+    report_action("deleted", type, name, std::string("remotely"));
   else
   {
     throw elle::Error(

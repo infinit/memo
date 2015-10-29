@@ -133,7 +133,7 @@ create(variables_map const& args)
     }();
   infinit::User user(name, keys);
   ifnt.user_save(user);
-  report_action("generated", "user", name);
+  report_action("generated", "user", name, std::string("locally"));
 }
 
 static
@@ -177,7 +177,7 @@ delete_(variables_map const& args)
   auto path = ifnt._user_path(user.name);
   bool ok = boost::filesystem::remove(path);
   if (ok)
-    report_action("deleted", "user", user.name);
+    report_action("deleted", "user", user.name, std::string("locally"));
   else
   {
     throw elle::Error(

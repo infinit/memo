@@ -33,7 +33,7 @@ create(variables_map const& args)
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
   ELLE_TRACE("start network");
-  report_action("starting", "network", network.name);
+  report_action("starting", "network", network.name, std::string("locally"));
   std::vector<std::string> hosts;
   if (args.count("peer"))
     hosts = args["peer"].as<std::vector<std::string>>();
@@ -112,7 +112,7 @@ delete_(variables_map const& args)
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
   if (boost::filesystem::remove(path))
-    report_action("deleted", "volume", name);
+    report_action("deleted", "volume", name, std::string("locally"));
   else
     throw elle::Error(
       elle::sprintf("File for volume could not be deleted: %s", path));
