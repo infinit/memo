@@ -480,7 +480,8 @@ namespace infinit
     serialize(elle::serialization::Serializer& s)
     {
       s.serialize("name", this->name);
-      s.serialize("mountpoint", this->mountpoint);
+      if (s.out() && !this->mountpoint)
+        s.serialize("mountpoint", this->mountpoint);
       s.serialize("network", this->network);
     }
 
