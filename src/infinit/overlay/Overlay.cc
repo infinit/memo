@@ -49,6 +49,11 @@ namespace infinit
       throw model::MissingBlock(address);
     }
 
+    Configuration::Configuration(elle::serialization::SerializerIn& input)
+    {
+      this->serialize(input);
+    }
+
     void
     Configuration::join()
     {

@@ -67,7 +67,7 @@ namespace infinit
 
     StonehengeConfiguration::StonehengeConfiguration
       (elle::serialization::SerializerIn& input)
-      : Configuration()
+      : Configuration(input)
     {
       this->serialize(input);
     }
@@ -75,6 +75,7 @@ namespace infinit
     void
     StonehengeConfiguration::serialize(elle::serialization::Serializer& s)
     {
+      Configuration::serialize(s);
       s.serialize("hosts", this->hosts);
     }
 

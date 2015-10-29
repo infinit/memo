@@ -19,14 +19,18 @@ namespace infinit
     Kalimero::_lookup(model::Address address, int n, Operation op) const
     {
       if (n != 1)
+      {
         throw elle::Error(
           elle::sprintf("kalimero cannot fetch several (%s) nodes", n));
+      }
       auto local = this->_local.lock();
       if (!local)
         throw elle::Error("kalimero can only be a server");
-      return reactor::generator<Kalimero::Member>([local] (std::function<void (Kalimero::Member)> yield) {
+      return reactor::generator<Kalimero::Member>(
+        [local] (std::function<void (Kalimero::Member)> yield)
+        {
           yield(local);
-      });
+        });
     }
 
     void
@@ -41,11 +45,14 @@ namespace infinit
 
     KalimeroConfiguration::KalimeroConfiguration(
       elle::serialization::SerializerIn& input)
+      : Configuration(input)
     {}
 
     void
     KalimeroConfiguration::serialize(elle::serialization::Serializer& s)
-    {}
+    {
+      Configuration::serialize(s);
+    }
 
     std::unique_ptr<infinit::overlay::Overlay>
     KalimeroConfiguration::make(std::vector<std::string> const& hosts, bool,
