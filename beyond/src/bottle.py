@@ -214,8 +214,7 @@ class Bottle(bottle.Bottle):
       json = bottle.request.json
       user = User.from_json(self.__beyond, json)
       user.create()
-      bottle.response.status = 201
-      return {}
+      raise Response(201, {})
     except User.Duplicate:
       if user.public_key == self.__beyond.user_get(user.name).public_key:
           bottle.response.status = 200
@@ -289,8 +288,7 @@ class Bottle(bottle.Bottle):
       json = bottle.request.json
       network = Network(self.__beyond, **json)
       network.create()
-      bottle.response.status = 201
-      return {}
+      raise Response(201, {})
     except User.NotFound:
       raise self.__user_not_found(owner)
     except Network.Duplicate:
@@ -321,8 +319,7 @@ class Bottle(bottle.Bottle):
       network = self.__beyond.network_get(owner = owner, name = name)
       network.passports[invitee] = bottle.request.json
       network.save()
-      bottle.response.status = 201
-      return {}
+      raise Response(201, {})
     except Network.NotFound:
       raise self.__not_found('network', '%s/%s' % (owner, name))
 
@@ -344,8 +341,7 @@ class Bottle(bottle.Bottle):
       # if 'port' not in json or 'addresses' not in json
       network.endpoints.setdefault(user.name, {})[node_id] = json
       network.save()
-      bottle.response.status = 201 # FIXME: 200 if existed
-      return {}
+      raise Response(201, {}) # FIXME: 200 if existed
     except Network.NotFound:
       raise self.__not_found('network', '%s/%s' % (owner, name))
 
@@ -402,6 +398,7 @@ class Bottle(bottle.Bottle):
       json = bottle.request.json
       volume = Volume(self.__beyond, **json)
       volume.create()
+      raise Response(201, {})
     except Volume.Duplicate:
       raise Response(409, {
         'error': 'volume/conflict',
