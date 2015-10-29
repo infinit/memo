@@ -111,8 +111,10 @@ create(variables_map const& args)
     if (backends.size() == 1)
       storage = std::move(backends[0]);
     else
+    {
       storage.reset(
         new infinit::storage::StripStorageConfig(std::move(backends)));
+    }
   }
   int replicas = 1;
   if (args.count("replication-factor"))
@@ -445,12 +447,14 @@ run(variables_map const& args)
       reactor::sleep();
     };
   if (push)
+  {
     elle::With<InterfacePublisher>(
       network, self, local.second->overlay()->node_id(),
       local.first->server_endpoint().port()) << [&]
     {
       run();
     };
+  }
   else
     run();
 }
@@ -597,6 +601,7 @@ int main(int argc, char** argv)
         { "push,p", bool_switch(),
             elle::sprintf("push the passport to %s", beyond()).c_str() },
         { "user,u", value<std::string>(), "user to create the passport for" },
+        { "force", bool_switch(), "force invite" },
       },
     },
     {
