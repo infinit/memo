@@ -187,8 +187,8 @@ run(variables_map const& args)
     beyond_fetch_endpoints(network, hosts);
   report_action("running", "network", network.name);
   auto model = network.run(hosts, true, cache, cache_size, async_writes,
-      args.count("async") && args["async"].as<bool>(),
-      args.count("cache-model") && args["cache-model"].as<bool>());
+    args.count("async") && args["async"].as<bool>(),
+    args.count("cache-model") && args["cache-model"].as<bool>());
   auto run = [&]
   {
     ELLE_TRACE_SCOPE("run volume");
@@ -254,15 +254,16 @@ run(variables_map const& args)
     }
   };
   if (push && model.first)
+  {
     elle::With<InterfacePublisher>(
       network, self, model.second->overlay()->node_id(),
       model.first->server_endpoint().port()) << [&]
     {
       run();
     };
+  }
   else
     run();
-
 }
 
 static
