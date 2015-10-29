@@ -302,4 +302,4 @@ class Volume(metaclass = Entity,
 
   @property
   def id(self):
-    return '%s/%s' % (self.network, self.name)
+    return self.name
