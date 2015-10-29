@@ -403,11 +403,10 @@ class Bottle(bottle.Bottle):
       volume = Volume(self.__beyond, **json)
       volume.create()
     except Volume.Duplicate:
-      bottle.response.status = 409
-      return {
+      raise Response(409, {
         'error': 'volume/conflict',
         'reason': 'volume %r already exists' % name,
-      }
+      })
 
   def volume_delete(self, owner, name):
     user = self.__beyond.user_get(name = owner)
