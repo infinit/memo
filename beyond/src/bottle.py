@@ -335,7 +335,7 @@ class Bottle(bottle.Bottle):
     try:
       user = self.__beyond.user_get(name = user)
       self.authenticate(user)
-      network = Network(self.__beyond, owner = owner, name = name)
+      network = self.__beyond.network_get(owner = owner, name = name)
       json = bottle.request.json
       # FIXME
       # if 'port' not in json or 'addresses' not in json
@@ -349,7 +349,7 @@ class Bottle(bottle.Bottle):
     try:
       user = self.__beyond.user_get(name = user)
       self.authenticate(user)
-      network = Network(self.__beyond, owner = owner, name = name)
+      network = self.__beyond.network_get(owner = owner, name = name)
       network.endpoints.setdefault(user.name, {})[node_id] = None
       network.save()
       return {}
