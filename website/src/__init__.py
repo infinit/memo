@@ -31,7 +31,7 @@ class Website(bottle.Bottle):
   @view('pages/home')
   def root(self):
     return {
-      'description': 'Infinit Filesystem',
+      'description': 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.',
     }
 
   @route('/overview', name = 'doc_overview')
@@ -96,6 +96,14 @@ class Website(bottle.Bottle):
     return {
       'title': 'Roadmap',
       'description': 'Discover the next developments of the Infinit platform.',
+    }
+
+  @route('/open-source', name = 'opensource')
+  @view('pages/opensource.html')
+  def root(self):
+    return {
+      'title': 'Contribute to the Infinit File System',
+      'description': 'Check out our open source projects and join a growing community of developers.',
     }
 
   @route('/about', name = 'about')

@@ -63,6 +63,7 @@ def configure(
     'templates/pages/doc/deployments/decentralized_fs.html',
     'templates/pages/doc/reference.html',
     'templates/pages/doc/roadmap.html',
+    'templates/pages/opensource.html',
     'templates/pages/about.html',
     'templates/pages/contact.html',
     'templates/pages/legal.html',
@@ -123,6 +124,10 @@ def configure(
     'resources/images/icons/platforms@2x.png',
     'resources/images/icons/rocket.png',
     'resources/images/icons/rocket@2x.png',
+    'resources/images/icons/globe.png',
+    'resources/images/icons/globe@2x.png',
+    'resources/images/icons/code.png',
+    'resources/images/icons/code@2x.png',
 
     'resources/images/team/antony.png',
     'resources/images/team/antony@2x.png',

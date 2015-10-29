@@ -55,7 +55,7 @@
       <p>Ask questions to our team or our contributors, get involved in the project...</p>
 
       <form action="${route('slack')}" type="POST">
-        <input type="email" name="email" placeholder="you@domain.com" required><br>
+        <input type="email" name="email" placeholder="you@domain.com" required>
         <button type="submit" class="button">Get an invitation</button>
       </form>
 
@@ -75,21 +75,24 @@
             </li>
             <li class="list-company">
               <ul>
-                <li class="category">Company</li>
                 <li><a href="${route('about')}">About</a></li>
-                <li><a href="#">Blog</a></li>
+                <li><a href="https://blog.infinit.io">Blog</a></li>
                 <li><a href="${route('legal')}">Legal</a></li>
                 <li><a href="${route('contact')}">Contact</a></li>
               </ul>
             </li>
             <li class="list-product">
               <ul>
-                <li class="category">Resources</li>
-
                 <li><a href="${route('doc_overview')}">Documentation</a></li>
+                <li><a href="#">Pricing</a></li>
                 <li><a href="http://help.infinit.sh/">Feedback</a></li>
-                <li><a href="#">Partners</a></li>
-                <li><a href="#">Contribute</a></li>
+                <li><a href="${route('opensource')}">Open Source</a></li>
+              </ul>
+            </li>
+            <li class="list-product">
+              <ul>
+                <li><a href="#">Network Operators</a></li>
+                <li><a href="#">Device Manufacturer</a></li>
               </ul>
             </li>
             <li class="connect">
