@@ -15,6 +15,8 @@ namespace infinit
 {
   namespace overlay
   {
+    typedef std::unordered_map<elle::UUID, std::vector<std::string>> NodeEndpoints;
+
     enum Operation
     {
       OP_FETCH,
@@ -90,7 +92,7 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(std::vector<std::string> const& hosts, bool server,
+      make(NodeEndpoints const&, bool server,
         model::doughnut::Doughnut* doughnut) = 0;
       ELLE_ATTRIBUTE_R(elle::UUID, node_id);
     };

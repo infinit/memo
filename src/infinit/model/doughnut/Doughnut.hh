@@ -17,6 +17,7 @@ namespace infinit
   {
     namespace doughnut
     {
+
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
         , public std::enable_shared_from_this<Doughnut>
@@ -126,10 +127,10 @@ namespace infinit
         serialize(elle::serialization::Serializer& s);
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(std::vector<std::string> const& hosts, bool client, bool server,
+        make(overlay::NodeEndpoints const& hosts, bool client, bool server,
              boost::filesystem::path const& p);
         std::shared_ptr<Doughnut>
-        make(std::vector<std::string> const& hosts,
+        make(overlay::NodeEndpoints const& hosts,
              bool client,
              std::shared_ptr<Local> local,
              boost::filesystem::path const& p,

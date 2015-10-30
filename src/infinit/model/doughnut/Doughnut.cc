@@ -342,7 +342,7 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::model::Model>
-      Configuration::make(std::vector<std::string> const& hosts,
+      Configuration::make(overlay::NodeEndpoints const& hosts,
                           bool client,
                           bool server,
                           boost::filesystem::path const& dir)
@@ -381,7 +381,7 @@ namespace infinit
       }
 
       std::shared_ptr<Doughnut>
-      Configuration::make(std::vector<std::string> const& hosts,
+      Configuration::make(overlay::NodeEndpoints const& hosts,
                           bool client,
                           std::shared_ptr<Local> local,
                           boost::filesystem::path const& dir,

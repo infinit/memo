@@ -341,14 +341,18 @@ run(variables_map const& args)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
-  std::vector<std::string> hosts;
+  infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
-    hosts = args["peer"].as<std::vector<std::string>>();
+  {
+    auto hosts = args["peer"].as<std::vector<std::string>>();
+    for (auto const& h: hosts)
+      eps[elle::UUID()].push_back(h);
+  }
   bool push = args.count("push") && args["push"].as<bool>();
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
-    beyond_fetch_endpoints(network, hosts);
-  auto local = network.run(hosts, false, false, {}, false,
+    beyond_fetch_endpoints(network, eps);
+  auto local = network.run(eps, false, false, {}, false,
                            args.count("async") && args["async"].as<bool>(),
                            args.count("cache-model") && args["cache-model"].as<bool>());
   if (!local.first)

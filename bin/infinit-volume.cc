@@ -35,9 +35,14 @@ create(variables_map const& args)
   ELLE_TRACE("start network");
   report_action("starting", "network", network.name);
   std::vector<std::string> hosts;
+  infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
+  {
     hosts = args["peer"].as<std::vector<std::string>>();
-  auto model = network.run(hosts);
+    for (auto const& h: hosts)
+      eps[elle::UUID()].push_back(h);
+  }
+  auto model = network.run(eps);
   ELLE_TRACE("create volume");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
   infinit::Volume volume(name, mountpoint, network.name);
@@ -133,9 +138,14 @@ run(variables_map const& args)
 {
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
+  infinit::overlay::NodeEndpoints eps;
   std::vector<std::string> hosts;
   if (args.count("peer"))
+  {
     hosts = args["peer"].as<std::vector<std::string>>();
+    for (auto const& h: hosts)
+      eps[elle::UUID()].push_back(h);
+  }
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
@@ -157,9 +167,9 @@ run(variables_map const& args)
   bool push = args.count("push") && args["push"].as<bool>();
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
-    beyond_fetch_endpoints(network, hosts);
+    beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
-  auto model = network.run(hosts, true, cache, cache_size, async_writes,
+  auto model = network.run(eps, true, cache, cache_size, async_writes,
       args.count("async") && args["async"].as<bool>(),
       args.count("cache-model") && args["cache-model"].as<bool>());
   auto run = [&]

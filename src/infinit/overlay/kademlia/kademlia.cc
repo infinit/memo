@@ -984,13 +984,14 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(std::vector<std::string> const& hosts, bool server,
+      Configuration::make(NodeEndpoints const& hosts, bool server,
         model::doughnut::Doughnut* doughnut)
       {
         for (auto const& host: hosts)
+          for (auto const& ep: host.second)
         config.bootstrap_nodes.push_back(
           elle::serialization::Serialize< ::kademlia::PrettyEndpoint>
-          ::convert(host));
+          ::convert(ep));
         return elle::make_unique< ::kademlia::Kademlia>(
           this->node_id(), config, server, doughnut);
       }

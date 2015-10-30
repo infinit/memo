@@ -54,7 +54,7 @@ namespace infinit
     {}
 
     std::unique_ptr<infinit::overlay::Overlay>
-    KalimeroConfiguration::make(std::vector<std::string> const& hosts, bool,
+    KalimeroConfiguration::make(NodeEndpoints const& hosts, bool,
       model::doughnut::Doughnut*)
     {
       if (!hosts.empty())

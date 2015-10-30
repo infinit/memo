@@ -146,7 +146,7 @@ namespace infinit
         int file_timeout_ms;
         int ping_interval_ms;
         int ping_timeout_ms;
-        std::vector<GossipEndpoint> bootstrap_nodes;
+        std::vector<PeerLocation> bootstrap_nodes;
         /// wait for 'wait' nodes before starting
         int wait;
         bool encrypt;
@@ -155,7 +155,7 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(std::vector<std::string> const& hosts, bool server,
+        make(NodeEndpoints const& hosts, bool server,
              model::doughnut::Doughnut* doughnut) override;
       };
 
@@ -323,7 +323,9 @@ namespace infinit
         std::vector<Address> _promised_files;
         std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
         /// Bootstrap pending auth.
-        std::vector<GossipEndpoint> _pending_bootstrap;
+        std::vector<GossipEndpoint> _pending_bootstrap_endpoints;
+        std::vector<Address> _pending_bootstrap_address;
+        std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
         std::shared_ptr<infinit::model::doughnut::Local> _local;
         /// Whether we've seen someone from our group.

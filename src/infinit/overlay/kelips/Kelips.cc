@@ -158,6 +158,12 @@ namespace infinit
         endpoint_to_endpoint(src, res);
         return res;
       }
+      GossipEndpoint e2e(RpcEndpoint const& src)
+      {
+        GossipEndpoint res;
+        endpoint_to_endpoint(src, res);
+        return res;
+      }
 
       static
       void
@@ -738,7 +744,7 @@ namespace infinit
         {
           try
           {
-            ELLE_DEBUG("utp connect to %s", endpoints);
+            ELLE_DEBUG("utp connect to %s", pl);
             std::string uid;
             if (pl.first != Address::null)
               uid = elle::sprintf("rpc.%x", pl.first);
@@ -791,7 +797,7 @@ namespace infinit
         std::set<PeerLocation> candidates;
         if (use_bootstrap_nodes)
           for (auto const& b: _config.bootstrap_nodes)
-            candidates.insert(PeerLocation(Address::null, {e2e(b)}));
+            candidates.insert(b);
         for (auto const& c: this->_state.contacts[_group])
           candidates.insert(PeerLocation(c.second.address,
             endpoints_extract_convert(c.second.endpoints)));
@@ -979,50 +985,51 @@ namespace infinit
         packet::BootstrapRequest req;
         req.sender = _self;
 
-        auto send_bootstrap = [&req, this](GossipEndpoint e)
+        auto send_bootstrap = [&req, this](PeerLocation const& l)
         {
-          ELLE_TRACE("%s: sending bootstrap to node %s", *this, e);
-          if (!_config.encrypt || _config.accept_plain)
-            send(req, e, Address::null);
-          else
+          if (l.first != Address::null)
           {
-            packet::RequestKey req(doughnut()->passport());
-            req.sender = _self;
-            send(req, e, Address::null);
-            _pending_bootstrap.push_back(e);
-          }
-        };
-        std::set<GossipEndpoint> recipients;
-        for (auto const& e: _config.bootstrap_nodes)
-        {
-          send_bootstrap(e);
-          recipients.insert(e);
-        }
-        for (auto& c: _state.contacts[_group])
-        {
-          bool skip = false;
-          for (auto const& ep: c.second.endpoints)
-          {
-            if (recipients.count(ep.first))
-              skip = true;
-          }
-          for (auto const& ep: c.second.endpoints)
-          {
-            recipients.insert(ep.first);
+            std::vector<GossipEndpoint> eps;
+            for (auto const& ep: l.second)
+              eps.push_back(e2e(ep));
+            Contact& c = get_or_make(l.first, false, eps);
+            ELLE_TRACE("%s: sending bootstrap to node %s", *this, l);
             if (!_config.encrypt || _config.accept_plain)
-              _pending_bootstrap.push_back(ep.first);
-          }
-          if (!skip)
-          {
-            if (!_config.encrypt || _config.accept_plain)
-              send(req, c.second);
+              send(req, c);
             else
             {
               packet::RequestKey req(doughnut()->passport());
               req.sender = _self;
-              send(req, c.second);
+              send(req, c);
+              _pending_bootstrap_address.push_back(l.first);
             }
           }
+          else
+          {
+            if (!_config.encrypt || _config.accept_plain)
+            {
+              for (auto const& ep: l.second)
+                send(req, e2e(ep), Address::null);
+            }
+            else
+            {
+              packet::RequestKey req(doughnut()->passport());
+              req.sender = _self;
+              for (auto const& ep: l.second)
+                send(req, e2e(ep), Address::null);
+            }
+            for (auto const& ep: l.second)
+              _pending_bootstrap_endpoints.push_back(e2e(ep));
+          }
+        };
+        for (auto const& e: _config.bootstrap_nodes)
+        {
+          send_bootstrap(e);
+        }
+        for (auto& c: _state.contacts[_group])
+        {
+          send_bootstrap(PeerLocation(c.second.address,
+            endpoints_extract_convert(c.second.endpoints)));
         }
         if (_config.wait)
           wait(_config.wait);
@@ -1298,18 +1305,41 @@ namespace infinit
               infinit::cryptography::SecretKey sk(std::move(password));
               setKey(p->sender, std::move(sk));
               // Flush operations waiting on crypto ready
-              auto it = std::find(_pending_bootstrap.begin(),
-                                  _pending_bootstrap.end(),
-                                  source);
-              if (it != _pending_bootstrap.end())
+              bool bootstrap_requested = false;
               {
-                ELLE_DEBUG("%s: processing queued operation to %s", *this, source);
-                *it = _pending_bootstrap[_pending_bootstrap.size() - 1];
-                _pending_bootstrap.pop_back();
+                auto it = std::find(_pending_bootstrap_endpoints.begin(),
+                                    _pending_bootstrap_endpoints.end(),
+                                    source);
+                if (it != _pending_bootstrap_endpoints.end())
+                {
+                  ELLE_DEBUG("%s: processing queued operation to %s", *this, source);
+                  *it = _pending_bootstrap_endpoints[_pending_bootstrap_endpoints.size() - 1];
+                  _pending_bootstrap_endpoints.pop_back();
+                  bootstrap_requested = true;
+                }
+              }
+              {
+                auto it = std::find(_pending_bootstrap_address.begin(),
+                                    _pending_bootstrap_address.end(),
+                                    p->sender);
+                if (it != _pending_bootstrap_address.end())
+                {
+                  *it = _pending_bootstrap_address[_pending_bootstrap_address.size() - 1];
+                  _pending_bootstrap_address.pop_back();
+                  bootstrap_requested = true;
+                }
+              }
+              if (bootstrap_requested &&
+                std::find(_bootstrap_requests_sent.begin(),
+                          _bootstrap_requests_sent.end(),
+                          p->sender) == _bootstrap_requests_sent.end())
+              {
+                _bootstrap_requests_sent.push_back(p->sender);
                 packet::BootstrapRequest req;
                 req.sender = _self;
                 send(req, source, p->sender);
               }
+
               onContactSeen(packet->sender, source, packet->observer);
               return;
             } // keyreply
@@ -2815,6 +2845,7 @@ namespace infinit
       Node::Member
       Node::make_peer(PeerLocation hosts)
       {
+        static std::unordered_map<Address, Node::Member> cache;
         ELLE_TRACE("connecting to %s", hosts);
         if (hosts.first == _self || hosts.first == Address::null)
         {
@@ -2830,6 +2861,9 @@ namespace infinit
               return _local;
             }
         }
+        /*auto it = cache.find(hosts.first);
+        if (it != cache.end())
+          return it->second;*/
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: hosts.second)
           endpoints.push_back(GossipEndpoint(ep.address(), ep.port() + 100));
@@ -2842,13 +2876,15 @@ namespace infinit
             std::string uid;
             if (hosts.first != Address::null)
               uid = elle::sprintf("rpc.%x", hosts.first);
-            return Overlay::Member(
+            auto res = Overlay::Member(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                 elle::unconst(*this->doughnut()),
                 hosts.first,
                 endpoints,
                 uid,
                 elle::unconst(this)->_remotes_server));
+            //cache[hosts.first] = res;
+            return res;
           }
           catch (elle::Error const& e)
           {
@@ -3271,8 +3307,7 @@ namespace infinit
         s.serialize("ping_interval_ms", ping_interval_ms);
         s.serialize("ping_timeout_ms", ping_timeout_ms);
         s.serialize("gossip", gossip);
-        s.serialize("bootstrap_nodes", bootstrap_nodes,
-                    elle::serialization::as<PrettyGossipEndpoint>());
+        s.serialize("bootstrap_nodes", bootstrap_nodes);
         s.serialize("wait", wait);
         s.serialize("encrypt", encrypt);
         s.serialize("accept_plain", accept_plain);
@@ -3314,11 +3349,38 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(std::vector<std::string> const& hosts, bool server,
+      Configuration::make(NodeEndpoints const& hosts, bool server,
                           infinit::model::doughnut::Doughnut* doughnut)
       {
         for (auto const& host: hosts)
-          this->bootstrap_nodes.push_back(PrettyGossipEndpoint(host));
+        {
+          ELLE_LOG("processing %s", host);
+          if (host.first == this->node_id())
+            continue;
+          PeerLocation pl;
+          if (host.first == elle::UUID())
+            pl.first = Address::null;
+          else
+            pl.first = address_of_uuid(host.first);
+          for (auto const& ep: host.second)
+          {
+            try
+            {
+              auto p = ep.find_first_of(':');
+              if (p == ep.npos)
+                throw std::runtime_error("missing ':'");
+              auto addr = ep.substr(0, p);
+              auto port = std::stoi(ep.substr(p+1));
+              pl.second.push_back(RpcEndpoint(
+                boost::asio::ip::address::from_string(addr), port));
+            }
+            catch(std::exception const& e)
+            {
+              ELLE_LOG("skipping malformed address: %s", ep);
+            }
+          }
+          this->bootstrap_nodes.push_back(pl);
+        }
         return elle::make_unique<Node>(
           *this, !server, this->node_id(), doughnut);
       }

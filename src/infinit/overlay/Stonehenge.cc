@@ -89,7 +89,7 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeConfiguration::make(std::vector<std::string> const&, bool,
+    StonehengeConfiguration::make(NodeEndpoints const&, bool,
      model::doughnut::Doughnut* doughnut)
     {
       Stonehenge::Hosts hosts;
