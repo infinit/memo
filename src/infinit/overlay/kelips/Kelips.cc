@@ -2075,9 +2075,14 @@ namespace infinit
           res.request_id = p->request_id;
           res.result = p->result;
           res.ttl = p->ttl;
-          Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
-          ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoints, p->request_id);
-          send(res, c);
+          if (p->originAddress == _self)
+            onGetFileReply(&res);
+          else
+          {
+            Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
+            ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoints, p->request_id);
+            send(res, c);
+          }
           // FIXME: should we route the reply back the same path?
           return;
         }
@@ -2093,8 +2098,13 @@ namespace infinit
           res.request_id = p->request_id;
           res.result = p->result;
           res.ttl = 1;
-          Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
-          send(res, c);
+          if (p->originAddress == _self)
+            onGetFileReply(&res);
+          else
+          {
+            Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
+            send(res, c);
+          }
           _dropped_gets++;
           return;
         }
@@ -2186,9 +2196,14 @@ namespace infinit
           res.origin = p->originAddress;
           res.results = p->result;
           res.ttl = p->ttl;
-          Contact& c = get_or_make(p->originAddress, p->observer,
-                                   p->originEndpoints);
-          send(res, c);
+          if (p->originAddress == _self)
+            onPutFileReply(&res);
+          else
+          {
+            Contact& c = get_or_make(p->originAddress, p->observer,
+                                     p->originEndpoints);
+            send(res, c);
+          }
           if (p->count > signed(p->result.size()))
           {
             ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
