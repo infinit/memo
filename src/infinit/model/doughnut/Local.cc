@@ -48,13 +48,8 @@ namespace infinit
         if (p == Protocol::utp || p == Protocol::all)
         {
           this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
-          // FIXME: kelips already use the Local's port on udp for its
-          // gossip protocol, so use a fixed delta until we advertise
-          // tcp and utp endpoints separately
           if (this->_server)
-            port = this->_server->port() + 100;
-          else if (port)
-            port += 100;
+            port = this->_server->port();
           this->_utp_server->listen(port);
           this->_utp_server_thread = elle::make_unique<reactor::Thread>(
             elle::sprintf("%s utp server", *this),
