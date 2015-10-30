@@ -106,6 +106,14 @@ class Website(bottle.Bottle):
       'description': 'Check out our open source projects and join a growing community of developers.',
     }
 
+  @route('/pricing', name = 'pricing')
+  @view('pages/pricing.html')
+  def root(self):
+    return {
+      'title': 'Plans',
+      'description': 'Discover the different plans for small, medium and large enterprises.',
+    }
+
   @route('/about', name = 'about')
   @view('pages/about.html')
   def root(self):
