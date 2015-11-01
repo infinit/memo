@@ -2,6 +2,7 @@
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/xattribute.hh>
 
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
@@ -849,6 +850,20 @@ namespace infinit
       }
       else
         Node::setxattr(name, value, flags);
+    }
+
+    std::shared_ptr<rfs::Path>
+    File::child(std::string const& name)
+    {
+      static const char* attr_key = "$xattr.";
+      if (name.size() > strlen(attr_key)
+        && name.substr(0, strlen(attr_key)) == attr_key)
+      {
+        return std::make_shared<XAttributeFile>(shared_from_this(),
+          name.substr(strlen(attr_key)));
+      }
+      else
+        THROW_NOTDIR;
     }
 
     void

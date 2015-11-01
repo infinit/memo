@@ -187,6 +187,8 @@ def configure(
     'src/infinit/filesystem/umbrella.hh',
     'src/infinit/filesystem/Unknown.cc',
     'src/infinit/filesystem/Unknown.hh',
+    'src/infinit/filesystem/xattribute.cc',
+    'src/infinit/filesystem/xattribute.hh',
     'src/infinit/model/Address.cc',
     'src/infinit/model/Address.hh',
     'src/infinit/model/MissingBlock.cc',

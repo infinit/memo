@@ -44,7 +44,7 @@ namespace infinit
         std::vector<std::string> listxattr() override;
         void setxattr(std::string const& name, std::string const& value, int flags) override;
         void removexattr(std::string const& name) override;
-        std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
+        std::shared_ptr<Path> child(std::string const& name) override;
         bool allow_cache() override;
         // check cached data size, remove entries if needed
         void check_cache();

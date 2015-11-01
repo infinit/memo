@@ -6,6 +6,7 @@
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/Unknown.hh>
 #include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/xattribute.hh>
 
 #include <elle/serialization/binary.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -308,10 +309,26 @@ namespace infinit
         clean_cache.abort();
       }
 
-    std::shared_ptr<rfs::Path>
+      std::shared_ptr<rfs::Path>
       Directory::child(std::string const& name)
       {
         ELLE_TRACE_SCOPE("%s: get child \"%s\"", *this, name);
+        if (name == ".")
+          return shared_from_this();
+        // Alternate access to extended attributes
+        static const char* attr_key = "$xattr.";
+        if (name.size() > strlen(attr_key)
+          && name.substr(0, strlen(attr_key)) == attr_key)
+        {
+          return std::make_shared<XAttributeFile>(shared_from_this(),
+            name.substr(strlen(attr_key)));
+        }
+        if (name.size() > strlen("$xattrs.")
+          && name.substr(0, strlen("$xattrs.")) == "$xattrs.")
+        {
+          auto c = child(name.substr(strlen("$xattrs.")));
+          return std::make_shared<XAttributeDirectory>(c);
+        }
         _fetch();
         auto it = _files.find(name);
         auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
