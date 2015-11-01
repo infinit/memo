@@ -74,6 +74,16 @@ public:
   {}
 };
 
+class ResourceAlreadyFetched
+  : public elle::Error
+{
+public:
+  template <typename ... Args>
+  ResourceAlreadyFetched(Args&& ... args)
+    : elle::Error(std::forward<Args>(args)...)
+  {}
+};
+
 DAS_MODEL(Credentials,
           (uid, display_name, token, refresh_token),
           DasCredentials);
@@ -929,7 +939,7 @@ namespace infinit
       create_directories(path.parent_path());
       if (!overwrite && exists(path))
       {
-        throw elle::Error(
+        throw ResourceAlreadyFetched(
           elle::sprintf("%s '%s' already exists", type, name));
       }
       f.open(path);
