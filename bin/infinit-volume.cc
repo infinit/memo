@@ -395,6 +395,9 @@ main(int argc, char** argv)
       "List volumes",
       &list,
       {},
+      {
+        option_owner,
+      }
     },
   };
   return infinit::main("Infinit volume management utility", modes, argc, argv);
