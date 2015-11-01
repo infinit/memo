@@ -202,9 +202,15 @@ fetch(variables_map const& args)
       boost::any_cast<std::vector<elle::json::Json>>(root["networks"]);
     for (auto const& network_json: networks_vec)
     {
-      elle::serialization::json::SerializerIn input(network_json, false);
-      auto desc = input.deserialize<infinit::NetworkDescriptor>();
-      ifnt.network_save(std::move(desc));
+      try
+      {
+        elle::serialization::json::SerializerIn input(network_json, false);
+        auto desc = input.deserialize<infinit::NetworkDescriptor>();
+        ifnt.network_save(std::move(desc));
+      }
+      catch (ResourceAlreadyFetched const& error)
+      {
+      }
     }
   }
 }

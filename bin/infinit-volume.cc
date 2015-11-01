@@ -150,7 +150,15 @@ fetch(variables_map const& args)
         owner.name,
         owner);
     for (auto const& volume: res["volumes"])
-      ifnt.volume_save(std::move(volume));
+    {
+      try
+      {
+        ifnt.volume_save(std::move(volume));
+      }
+      catch (ResourceAlreadyFetched const& error)
+      {
+      }
+    }
   }
 }
 
