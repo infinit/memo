@@ -378,6 +378,7 @@ def configure(
     ('infinit', []),
     ('s3fs', [aws_lib]),
     ('infinit-smb', []),
+    ('infinit-webdav', []),
   ]
   if not windows:
       _binaries += [('sshfs', [])]
