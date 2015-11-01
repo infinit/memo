@@ -364,6 +364,7 @@ def configure(
 
   global installed_binaries
   to_install = [
+    'infinit-acl',
     'infinit-credentials',
     'infinit-network',
     'infinit-passport',
@@ -372,8 +373,7 @@ def configure(
     'infinit-volume',
     'infinit-drive',
   ]
-  if not windows:
-    to_install += ['infinit-acl']
+
   _binaries = [
     ('doughnode', []),
     ('generatekeys', []),

@@ -29,6 +29,48 @@ infinit::Infinit ifnt;
 using namespace boost::program_options;
 options_description mode_options("Modes");
 
+int port_getxattr(std::string const& file, std::string const& key,
+                   char* val, int val_size)
+{
+#ifndef INFINIT_WINDOWS
+  int res = -1;
+  res = getxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
+  if (res >=0)
+    return res;
+#endif
+
+  boost::filesystem::path p(file);
+  auto filename = p.filename();
+  auto dir = p.parent_path();
+  auto attrdir = dir / ("$xattrs." + filename.string());
+  boost::system::error_code erc;
+  boost::filesystem::create_directory(attrdir, erc);
+  boost::filesystem::ifstream ifs(attrdir / key);
+  ifs.read(val, val_size);
+  return ifs.gcount();
+}
+
+int port_setxattr(std::string const& file, std::string const& key,
+                  std::string const& value)
+{
+#ifndef INFINIT_WINDOWS
+  int res = setxattr(file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
+  if (res >= 0)
+  {
+    return res;
+  }
+#endif
+  boost::filesystem::path p(file);
+  auto filename = p.filename();
+  auto dir = p.parent_path();
+  auto attrdir = dir / ("$xattrs." + filename.string());
+  boost::system::error_code erc;
+  boost::filesystem::create_directory(attrdir, erc);
+  boost::filesystem::ofstream ofs(attrdir / key);
+  ofs.write(value.data(), value.size());
+  return 0;
+}
+
 class InvalidArgument
   : public elle::Error
 {
@@ -75,8 +117,8 @@ list_action(std::string const& path, bool verbose)
     std::cout << "processing " << path << std::endl;
   bool dir = boost::filesystem::is_directory(path);
   char buf[4096];
-  int sz = getxattr(
-    path.c_str(), "user.infinit.auth", buf, 4095 SXA_EXTRA SXA_EXTRA);
+  int sz = port_getxattr(
+    path.c_str(), "user.infinit.auth", buf, 4095);
   if (sz < 0)
     perror(path.c_str());
   else
@@ -87,10 +129,10 @@ list_action(std::string const& path, bool verbose)
     boost::optional<bool> dir_inherit;
     if (dir)
     {
-      int sz = getxattr(path.c_str(),
+      int sz = port_getxattr(path.c_str(),
                         "user.infinit.auth.inherit",
                         buf,
-                        4095 SXA_EXTRA SXA_EXTRA);
+                        4095);
       if (sz < 0)
         perror(path.c_str());
       else
@@ -151,12 +193,10 @@ set_action(std::string const& path,
       try
       {
         std::string value = inherit ? "true" : "false";
-        check(setxattr,
-              path.c_str(),
+        check(port_setxattr,
+              path,
               "user.infinit.auth.inherit",
-              value.c_str(),
-              value.length(),
-              0 SXA_EXTRA);
+              value);
       }
       catch (elle::Error const& error)
       {
@@ -170,12 +210,10 @@ set_action(std::string const& path,
     for (auto& username: users)
     {
       auto set_attribute = [path, mode] (std::string const& value) {
-        check(setxattr,
-              path.c_str(),
-              ("user.infinit.auth." + mode).c_str(),
-              value.c_str(),
-              value.size(),
-              0 SXA_EXTRA);
+        check(port_setxattr,
+              path,
+              ("user.infinit.auth." + mode),
+              value);
       };
       try
       {
