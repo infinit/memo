@@ -276,13 +276,32 @@ run(variables_map const& args)
 
 static
 void
+mount(variables_map const& args)
+{
+  auto mountpoint = optional(args, "mountpoint");
+  if (!mountpoint)
+  {
+    auto self = self_user(ifnt, args);
+    auto name = volume_name(args, self);
+    auto volume = ifnt.volume_get(name);
+    if (!volume.mountpoint)
+    {
+      mandatory(args, "mountpoint",
+                "No default mountpoint for volume. mountpoint");
+    }
+  }
+  run(args);
+}
+
+static
+void
 list(variables_map const& args)
 {
   for (auto const& volume: ifnt.volumes_get())
   {
-    std::cout << volume.name << " : network " << volume.network;
+    std::cout << volume.name << ": network " << volume.network;
     if (volume.mountpoint)
-      std::cout << " on " << *volume.mountpoint;
+      std::cout << " on " << volume.mountpoint.get();
     std::cout << std::endl;
   }
 }
@@ -317,7 +336,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to export" },
         { "output,o", value<std::string>(),
-          "file to write volume to  (stdout by default)"},
+          "file to write volume to  (stdout by default)" },
         option_owner,
       },
     },
@@ -359,26 +378,55 @@ main(int argc, char** argv)
       &run,
       "--name VOLUME [--mountpoint PATH]",
       {
-        { "async-writes,a", bool_switch(),
-          "do not wait for writes on the backend" },
-        { "cache,c", value<int>()->implicit_value(0),
-          "enable storage caching, "
-          "optional arguments specifies maximum size in bytes" },
+        { "name,n", value<std::string>(), "volume name" },
+        { "mountpoint,m", value<std::string>(),
+          "where to mount the filesystem" },
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "fetch", bool_switch(), "alias for --fetch-endpoints" },
-        { "mountpoint,m", value<std::string>(),
-          "where to mount the filesystem" },
-        { "name", value<std::string>(), "volume name" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
         { "push-endpoints", bool_switch(),
           elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "push", bool_switch(), "alias for --push-endpoints" },
-        { "async", bool_switch(), "use asynchronious operations" },
-        { "cache-model", bool_switch(), "enable model caching" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
+        { "async", bool_switch(), "use asynchronious operations" },
+        { "async-writes,a", bool_switch(),
+          "do not wait for writes on the backend" },
+        { "cache,c", value<int>()->implicit_value(0),
+          "enable storage caching, "
+          "optional arguments specifies maximum size in bytes" },
+        { "cache-model", bool_switch(), "enable model caching" },
+        option_owner,
+      },
+    },
+    {
+      "mount",
+      "Mount a volume",
+      &mount,
+      "--name VOLUME [--mountpoint PATH]",
+      {
+        { "name,n", value<std::string>(), "volume name" },
+        { "mountpoint,m", value<std::string>(),
+          "where to mount the filesystem" },
+        { "fetch-endpoints", bool_switch(),
+          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "fetch", bool_switch(), "alias for --fetch-endpoints" },
+        { "peer", value<std::vector<std::string>>()->multitoken(),
+          "peer to connect to (host:port)" },
+        { "push-endpoints", bool_switch(),
+          elle::sprintf("push endpoints to %s", beyond()).c_str() },
+        { "push", bool_switch(), "alias for --push-endpoints" },
+        { "publish", bool_switch(),
+          "alias for --fetch-endpoints --push-endpoints" },
+        { "async", bool_switch(), "use asynchronious operations" },
+        { "async-writes,a", bool_switch(),
+          "do not wait for writes on the backend" },
+        { "cache,c", value<int>()->implicit_value(0),
+          "enable storage caching, "
+          "optional arguments specifies maximum size in bytes" },
+        { "cache-model", bool_switch(), "enable model caching" },
         option_owner,
       },
     },
