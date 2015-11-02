@@ -14,8 +14,10 @@ namespace infinit
 {
   namespace overlay
   {
-    typedef std::unordered_map<elle::UUID, std::vector<std::string>> NodeEndpoints;
+    typedef std::unordered_map<model::Address, std::vector<std::string>>
+      NodeEndpoints;
   }
+
   namespace model
   {
     enum StoreMode
@@ -52,7 +54,7 @@ namespace infinit
       void
       store(blocks::Block& block,
             StoreMode mode = STORE_ANY,
-            std::unique_ptr<ConflictResolver> = {}); 
+            std::unique_ptr<ConflictResolver> = {});
       std::unique_ptr<blocks::Block>
       fetch(Address address) const;
       void

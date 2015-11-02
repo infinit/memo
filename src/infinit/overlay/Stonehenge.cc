@@ -6,10 +6,17 @@
 #include <elle/assert.hh>
 #include <elle/log.hh>
 
+#include <das/serializer.hh>
+
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
 ELLE_LOG_COMPONENT("infinit.overlay.Stonehenge");
+
+DAS_MODEL(infinit::overlay::StonehengeConfiguration::Peer,
+          (host, port, id), DasPeer);
+DAS_MODEL_DEFAULT(infinit::overlay::StonehengeConfiguration::Peer, DasPeer);
+DAS_MODEL_SERIALIZE(infinit::overlay::StonehengeConfiguration::Peer);
 
 namespace infinit
 {
@@ -19,13 +26,12 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Stonehenge::Stonehenge(elle::UUID node_id,
-                           Hosts hosts,
+    Stonehenge::Stonehenge(model::Address node_id, Peers peers,
                            model::doughnut::Doughnut* doughnut)
       : Overlay(std::move(node_id))
-      , _hosts(std::move(hosts))
+      , _peers(std::move(peers))
     {
-      if (this->_hosts.empty())
+      if (this->_peers.empty())
         throw elle::Error("empty peer list");
       this->doughnut(doughnut);
     }
@@ -44,25 +50,25 @@ namespace infinit
       return reactor::generator<Overlay::Member>( [this, address, n]
         (reactor::Generator<Overlay::Member>::yielder const& yield)
       {
-        int size = this->_hosts.size();
+        int size = this->_peers.size();
         ELLE_ASSERT_LTE(n, size);
         auto owner = address.value()[0] % size;
         ELLE_ASSERT(this->doughnut());
         int i = owner;
         do
         {
-          ELLE_DEBUG("%s: yield %s", *this, this->_hosts[i]);
+          ELLE_DEBUG("%s: yield %s", *this, this->_peers[i]);
           // FIXME: don't always yield Paxos
           yield(
             Overlay::Member(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                 const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
-                /* FIXME BEARCLAW */ model::Address(),
-                this->_hosts[i])));
+                this->_peers[i].second,
+                this->_peers[i].first)));
           i = (i + 1) % size;
         }
         while (i != (owner + n) % size);
-        });
+      });
     }
 
     Overlay::Member
@@ -85,26 +91,23 @@ namespace infinit
     void
     StonehengeConfiguration::serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("hosts", this->hosts);
+      s.serialize("peers", this->peers);
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
     StonehengeConfiguration::make(NodeEndpoints const&, bool,
      model::doughnut::Doughnut* doughnut)
     {
-      Stonehenge::Hosts hosts;
-      for (auto const& host: this->hosts)
+      Stonehenge::Peers peers;
+      for (auto const& peer: this->peers)
       {
-        size_t p = host.find_first_of(':');
-        if (p == host.npos)
-          throw elle::Error(
-            elle::sprintf("failed to parse host:port: %s", host));
-        hosts.emplace_back(
-          boost::asio::ip::address::from_string(host.substr(0, p)),
-          std::stoi(host.substr(p + 1)));
+        peers.emplace_back(
+          Stonehenge::Host(
+            boost::asio::ip::address::from_string(peer.host), peer.port),
+          peer.id);
       }
       return elle::make_unique<infinit::overlay::Stonehenge>(
-        this->node_id(), hosts, doughnut);
+        this->node_id(), peers, doughnut);
     }
 
     static const elle::serialization::Hierarchy<Configuration>::

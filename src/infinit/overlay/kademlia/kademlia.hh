@@ -54,7 +54,7 @@ namespace kademlia
     , public elle::Printable
   {
   public:
-    Kademlia(elle::UUID node_id, Configuration const& config, bool server,
+    Kademlia(infinit::model::Address node_id, Configuration const& config, bool server,
       infinit::model::doughnut::Doughnut* doughnut);
     ~Kademlia();
     void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);

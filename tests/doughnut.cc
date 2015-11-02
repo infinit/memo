@@ -73,10 +73,10 @@ public:
     dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
     dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
     dht::Passport passport_c(keys_c.K(), "network-name", keys_a.k());
-    infinit::overlay::Stonehenge::Hosts members;
-    members.push_back(local_a->server_endpoint());
-    members.push_back(local_b->server_endpoint());
-    members.push_back(local_c->server_endpoint());
+    infinit::overlay::Stonehenge::Peers members;
+    members.emplace_back(local_a->server_endpoint(), local_a->id());
+    members.emplace_back(local_b->server_endpoint(), local_b->id());
+    members.emplace_back(local_c->server_endpoint(), local_c->id());
     this->dht_a = std::make_shared<dht::Doughnut>(
       keys_a,
       keys_a.K(),
@@ -84,14 +84,11 @@ public:
       static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
         [=](infinit::model::doughnut::Doughnut*d) {
           return elle::make_unique<infinit::overlay::Stonehenge>(
-            elle::UUID::random(), members, d);
+            this->local_a->id(), members, d);
         }),
       nullptr,
       consensus
       );
-    local_a->doughnut() = dht_a.get();
-    dht_a->overlay()->register_local(local_a);
-    local_a->serve();
     this->dht_b = std::make_shared<dht::Doughnut>(
       keys_b,
       keys_a.K(),
@@ -99,7 +96,7 @@ public:
       static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
         [=](infinit::model::doughnut::Doughnut*d) {
           return elle::make_unique<infinit::overlay::Stonehenge>(
-            elle::UUID::random(), members, d);
+            this->local_b->id(), members, d);
         }),
       nullptr,
       consensus
@@ -111,7 +108,7 @@ public:
       static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
         [=](infinit::model::doughnut::Doughnut*d) {
           return elle::make_unique<infinit::overlay::Stonehenge>(
-            elle::UUID::random(), members, d);
+            this->local_c->id(), members, d);
         }),
       nullptr,
       consensus

@@ -10,7 +10,7 @@ namespace infinit
 {
   namespace overlay
   {
-    Kalimero::Kalimero(elle::UUID node_id)
+    Kalimero::Kalimero(model::Address node_id)
       : Overlay(std::move(node_id))
       , _local()
     {}

@@ -80,13 +80,13 @@ namespace infinit
 
             virtual
             boost::optional<PaxosClient::Accepted>
-            propose(std::vector<Address> const& peers,
+            propose(PaxosServer::Quorum const& peers,
                     Address address,
                     int version,
                     PaxosClient::Proposal const& p);
             virtual
             PaxosClient::Proposal
-            accept(std::vector<Address> const& peers,
+            accept(PaxosServer::Quorum const& peers,
                    Address address,
                    int version,
                    PaxosClient::Proposal const& p,
@@ -107,13 +107,13 @@ namespace infinit
 
             virtual
             boost::optional<PaxosClient::Accepted>
-            propose(std::vector<Address> peers,
+            propose(PaxosServer::Quorum peers,
                     Address address,
                     int version,
                     PaxosClient::Proposal const& p);
             virtual
             PaxosClient::Proposal
-            accept(std::vector<Address> peers,
+            accept(PaxosServer::Quorum peers,
                    Address address,
                    int version,
                    PaxosClient::Proposal const& p,

@@ -15,10 +15,10 @@ namespace infinit
     `-------------*/
     public:
       typedef boost::asio::ip::tcp::endpoint Host;
-      typedef std::vector<Host> Hosts;
-      Stonehenge(elle::UUID node_id,
-                 Hosts hosts, model::doughnut::Doughnut* doughnut);
-      ELLE_ATTRIBUTE_R(Hosts, hosts);
+      typedef std::vector<std::pair<Host, model::Address>> Peers;
+      Stonehenge(model::Address node_id,
+                 Peers hosts, model::doughnut::Doughnut* doughnut);
+      ELLE_ATTRIBUTE_R(Peers, peers);
 
     /*-------.
     | Lookup |
@@ -37,7 +37,14 @@ namespace infinit
     struct StonehengeConfiguration
       : public Configuration
     {
-      std::vector<std::string> hosts;
+      struct Peer
+      {
+        std::string host;
+        int port;
+        model::Address id;
+      };
+
+      std::vector<Peer> peers;
       StonehengeConfiguration();
       StonehengeConfiguration(elle::serialization::SerializerIn& input);
       void

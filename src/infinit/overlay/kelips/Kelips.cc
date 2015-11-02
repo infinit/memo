@@ -669,18 +669,9 @@ namespace infinit
         return res;
       }
 
-      Address
-      address_of_uuid(elle::UUID const& id)
-      {
-        auto hash = infinit::cryptography::hash(
-          elle::ConstWeakBuffer(id.data, id.static_size()),
-          infinit::cryptography::Oneway::sha256);
-        return Address(hash.contents());
-      }
-
       Node::Node(Configuration const& config,
                  bool observer,
-                 elle::UUID node_id,
+                 model::Address node_id,
                  infinit::model::doughnut::Doughnut* doughnut)
         : Overlay(std::move(node_id))
         , _config(config)
@@ -690,7 +681,7 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
-        _self = address_of_uuid(this->node_id());
+        _self = Address(this->node_id());
         if (observer)
           ELLE_LOG("Running in observer mode");
         this->doughnut(doughnut);
@@ -3419,10 +3410,10 @@ namespace infinit
           if (host.first == this->node_id())
             continue;
           PeerLocation pl;
-          if (host.first == elle::UUID())
+          if (host.first == model::Address())
             pl.first = Address::null;
           else
-            pl.first = address_of_uuid(host.first);
+            pl.first = Address(host.first);
           for (auto const& ep: host.second)
           {
             try
