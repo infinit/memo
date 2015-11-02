@@ -65,6 +65,7 @@ def configure(
     'templates/pages/doc/roadmap.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
+    'templates/pages/solutions.html',
     'templates/pages/about.html',
     'templates/pages/contact.html',
     'templates/pages/legal.html',
@@ -106,6 +107,8 @@ def configure(
     'resources/images/schema-dht@2x.png',
     'resources/images/branded-apps.png',
     'resources/images/branded-apps@2x.png',
+    'resources/images/custom-branded-apps.png',
+    'resources/images/custom-branded-apps@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
