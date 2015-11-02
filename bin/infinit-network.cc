@@ -523,7 +523,7 @@ int main(int argc, char** argv)
     ("kalimero", "use a kalimero overlay network")
     ("kelips", "use a kelips overlay network")
     ("stonehenge", "use a stonehenge overlay network")
-    ("kademlia", "Use a Kademlia overlay network")
+    ("kademlia", "use a Kademlia overlay network")
     ;
   options_description stonehenge_options("Stonehenge options");
   stonehenge_options.add_options()
@@ -550,7 +550,7 @@ int main(int argc, char** argv)
             "optional storage to contribute" },
         { "port,p", value<int>(), "port to listen on (random by default)" },
         { "replication-factor,r", value<int>(), "data replication factor" },
-        { "async", bool_switch(), "Use asynchronious operations" },
+        { "async", bool_switch(), "use asynchronious operations" },
         { "stdout", bool_switch(), "output configuration to stdout" },
         { "push", bool_switch(),
           elle::sprintf("push the network to %s", beyond()).c_str() },
@@ -617,10 +617,10 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         { "input,i", value<std::string>(),
-            "file to read passport from (defaults to stdin)" },
+          "file to read passport from (defaults to stdin)" },
         { "name,n", value<std::string>(), "network to join" },
         { "fetch,f", bool_switch(),
-            elle::sprintf("fetch the passport from %s", beyond()).c_str() },
+          elle::sprintf("fetch the passport from %s", beyond()).c_str() },
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
         option_owner,
@@ -668,19 +668,19 @@ int main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
+        { "name,n", value<std::string>(), "created network name" },
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "fetch", bool_switch(), "alias for --fetch-endpoints" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
-        { "name", value<std::string>(), "created network name" },
         { "push-endpoints", bool_switch(),
           elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "push", bool_switch(), "alias for --push-endpoints" },
-        { "async", bool_switch(), "use asynchronious operations" },
-        { "cache-model", bool_switch(), "enable model caching" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
+        { "async", bool_switch(), "use asynchronious operations" },
+        { "cache-model", bool_switch(), "enable model caching" },
         option_owner,
       },
     },
@@ -690,7 +690,7 @@ int main(int argc, char** argv)
       &list_storage,
       "--name NETWORK",
       {
-        { "name", value<std::string>(), "network name" },
+        { "name,n", value<std::string>(), "network name" },
         option_owner,
       },
     },
