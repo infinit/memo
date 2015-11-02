@@ -60,6 +60,7 @@ export_(variables_map const& args)
     UserView<das::Serializer<infinit::DasPublicUser>> view(user);
     elle::serialization::json::serialize(view, *output, false);
   }
+  report_exported(*output, "user", user.name);
 }
 
 static
