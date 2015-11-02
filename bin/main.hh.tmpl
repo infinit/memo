@@ -407,7 +407,8 @@ namespace infinit
 
     std::pair<std::shared_ptr<infinit::model::doughnut::Local>,
               std::shared_ptr<infinit::model::doughnut::Doughnut>>
-    run(std::unordered_map<elle::UUID, std::vector<std::string>> const& hosts = {},
+    run(infinit::overlay::NodeEndpoints const& hosts
+          = infinit::overlay::NodeEndpoints(),
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
