@@ -29,6 +29,7 @@ def configure(
     valgrind_tests = False,
     python = None,
     fuse = None,
+    codesign = False,
 ):
 
   class PatchAndInstall(drake.Install):
@@ -96,7 +97,8 @@ def configure(
                        python3 = python,
                        fuse = fuse,
                        valgrind = valgrind,
-                       prefix = False)
+                       prefix = False,
+                       codesign = codesign)
   elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
                         strip_prefix = True)
   aws_lib = drake.copy(elle.aws.library, 'lib',
