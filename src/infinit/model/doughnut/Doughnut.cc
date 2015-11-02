@@ -308,13 +308,14 @@ namespace infinit
         Passport passport_,
         boost::optional<std::string> name_,
         int replicas_,
-        bool async_)
+        bool paxos_)
         : overlay(std::move(overlay_))
         , keys(std::move(keys_))
         , owner(std::move(owner_))
         , passport(std::move(passport_))
         , name(std::move(name_))
         , replicas(std::move(replicas_))
+        , paxos(std::move(paxos_))
       {}
 
       Configuration::Configuration
@@ -386,8 +387,8 @@ namespace infinit
                           std::shared_ptr<Local> local,
                           boost::filesystem::path const& dir,
                           bool async,
-                          bool cache,
-                          bool paxos)
+                          bool cache
+                          )
       {
         if (!client || !this->name)
           return std::make_shared<infinit::model::doughnut::Doughnut>(
@@ -403,7 +404,7 @@ namespace infinit
             replicas,
             async,
             cache,
-            paxos);
+            this->paxos);
         else
           return std::make_shared<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -419,7 +420,7 @@ namespace infinit
             replicas,
             async,
             cache,
-            paxos);
+            this->paxos);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::
