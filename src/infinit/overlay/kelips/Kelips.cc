@@ -132,12 +132,27 @@ struct PrettyGossipEndpoint
   ELLE_ATTRIBUTE_R(std::string, repr);
 };
 
+namespace std
+{
+  namespace chrono
+  {
+    std::ostream& operator << (std::ostream&o,
+                               time_point<std::chrono::system_clock> const& t)
+    {
+      return o << std::chrono::duration_cast<std::chrono::milliseconds>(
+        t.time_since_epoch()).count();
+    }
+  }
+}
+
+
 namespace infinit
 {
   namespace overlay
   {
     namespace kelips
     {
+
       static inline
       Time
       now()
@@ -145,7 +160,7 @@ namespace infinit
         return std::chrono::system_clock::now();
       }
 
-            template<typename E1, typename E2>
+      template<typename E1, typename E2>
       void
       endpoint_to_endpoint(E1 const& src, E2& dst)
       {
