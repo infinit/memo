@@ -1,6 +1,12 @@
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/Conflict.hh>
+#include <infinit/model/MissingBlock.hh>
+
+#include <reactor/Channel.hh>
+#include <reactor/Scope.hh>
+#include <reactor/scheduler.hh>
+#include <reactor/network/exception.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Consensus");
 
@@ -99,6 +105,101 @@ namespace infinit
         return overlay.lookup(address, op);
       }
 
+      void
+      Consensus::remove_many(overlay::Overlay& overlay, Address address, int factor)
+      {
+        auto peers = overlay.lookup(address, factor, overlay::OP_REMOVE);
+        int count = 0;
+        elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+        {
+          for (auto const& p: peers)
+          {
+            s.run_background("remove", [this, p, address,&count]
+            {
+              for (int i=0; i<5; ++i)
+              {
+                try
+                {
+                  if (i!=0)
+                    p->reconnect();
+                  p->remove(address);
+                  ++count;
+                  return;
+                }
+                catch (reactor::network::Exception const& e)
+                {
+                  ELLE_TRACE("%s: network exception %s", *this, e);
+                  reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
+                }
+              }
+            });
+          }
+          reactor::wait(s);
+        };
+        if (!count)
+          throw MissingBlock(address);
+      }
+
+      std::unique_ptr<blocks::Block>
+      Consensus::fetch_from_members(reactor::Generator<overlay::Overlay::Member>& peers,
+                                    Address address)
+      {
+        std::unique_ptr<blocks::Block> result;
+        reactor::Channel<overlay::Overlay::Member> connected;
+        typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
+        bool hit = false;
+        // try connecting to all peers in parallel
+        auto connected_peers = PeerGenerator([&](PeerGenerator::yielder yield) {
+            elle::With<reactor::Scope>() <<  [&peers,&yield,&hit] (reactor::Scope& s)
+            {
+              for (auto p: peers)
+              {
+                hit = true;
+                s.run_background(elle::sprintf("connect to %s", *p),
+                [p,&yield]
+                {
+                  for (int i=0; i<5; ++i)
+                  {
+                    ELLE_DEBUG_SCOPE("connect to %s", *p);
+                    try
+                    {
+                      if (i!=0)
+                        p->reconnect();
+                      else
+                        p->connect();
+                      yield(p);
+                      return;
+                    }
+                    catch (reactor::network::Exception const& e)
+                    {
+                      ELLE_TRACE("network exception %s", e);
+                      reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
+                    }
+                  }
+                });
+              }
+              reactor::wait(s);
+            };
+        });
+        // try to get on all connected peers sequentially to avoid wasting bandwidth
+        for (auto peer: connected_peers)
+        {
+          try
+          {
+            ELLE_TRACE_SCOPE("fetch from %s", *peer);
+            return peer->fetch(address);
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("fetching from %s failed: %s", *peer, e.what());
+          }
+        }
+        if (!hit)
+          throw MissingBlock(address);
+        else
+          throw elle::Error(
+            elle::sprintf("fetching of %s failed on all candidates", address));
+      }
       /*----------.
       | Printable |
       `----------*/

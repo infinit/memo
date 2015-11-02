@@ -505,14 +505,14 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Paxos::_fetch(overlay::Overlay& overlay, Address address)
         {
-          return
-            this->_owner(overlay, address, overlay::OP_FETCH)->fetch(address);
+          auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH);
+          return fetch_from_members(peers, address);
         }
 
         void
         Paxos::_remove(overlay::Overlay& overlay, Address address)
         {
-          this->_owner(overlay, address, overlay::OP_REMOVE)->remove(address);
+          this->remove_many(overlay, address, _factor);
         }
 
         reactor::Generator<overlay::Overlay::Member>
