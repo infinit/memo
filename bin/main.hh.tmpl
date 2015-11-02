@@ -407,8 +407,8 @@ namespace infinit
 
     std::pair<std::shared_ptr<infinit::model::doughnut::Local>,
               std::shared_ptr<infinit::model::doughnut::Doughnut>>
-    run(infinit::overlay::NodeEndpoints const& hosts
-          = infinit::overlay::NodeEndpoints(),
+    run(infinit::overlay::NodeEndpoints const& hosts =
+          infinit::overlay::NodeEndpoints(),
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -429,13 +429,9 @@ namespace infinit
         if (cache)
           storage.reset(new storage::Cache(std::move(storage), cache_size));
         auto id = dht()->overlay->node_id();
-        auto hash = infinit::cryptography::hash(
-          elle::ConstWeakBuffer(id.data, id.static_size()),
-          infinit::cryptography::Oneway::sha256);
-        infinit::model::Address uid(hash.contents());
         auto local = std::make_shared<infinit::model::doughnut::consensus::Paxos::LocalPeer>(
           dht()->replicas,
-          uid,
+          id,
           std::move(storage), this->port ? this->port.get() : 0);
         //auto local = std::make_shared<infinit::model::doughnut::Local>
         //  (std::move(storage), this->port ? this->port.get() : 0);
@@ -1374,7 +1370,7 @@ public:
 private:
   InterfacePublisher(infinit::Network const& network,
                      infinit::User const& self,
-                     elle::UUID const& node_id,
+                     infinit::model::Address const& node_id,
                      int port)
     : _url(elle::sprintf("networks/%s/endpoints/%s/%s",
                          network.name, self.name, node_id))
@@ -1404,7 +1400,7 @@ private:
 
 void
 beyond_fetch_endpoints(infinit::Network const& network,
-                       std::unordered_map<elle::UUID, std::vector<std::string>>& hosts)
+                       std::unordered_map<infinit::model::Address, std::vector<std::string>>& hosts)
 {
   reactor::http::Request r(
     elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
@@ -1422,7 +1418,7 @@ beyond_fetch_endpoints(infinit::Network const& network,
     {
       for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
       {
-        elle::UUID uuid(node.first);
+        infinit::model::Address uuid(node.first);
         elle::serialization::json::SerializerIn s(node.second, false);
         auto endpoints = s.deserialize<Endpoints>();
         std::vector<std::string> addresses;

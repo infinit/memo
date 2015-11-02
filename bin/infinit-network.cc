@@ -29,9 +29,10 @@ create(variables_map const& args)
   {
     auto stonehenge =
       elle::make_unique<infinit::overlay::StonehengeConfiguration>();
-    stonehenge->hosts =
-      mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
-    overlay_config = std::move(stonehenge);
+    ELLE_ABORT("FIXME: stonehenge CLI peer parsing not implemented");
+    // stonehenge->peers =
+    //   mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
+    // overlay_config = std::move(stonehenge);
   }
   if (args.count("kademlia"))
   {
@@ -347,7 +348,7 @@ run(variables_map const& args)
   {
     auto hosts = args["peer"].as<std::vector<std::string>>();
     for (auto const& h: hosts)
-      eps[elle::UUID()].push_back(h);
+      eps[infinit::model::Address()].push_back(h);
   }
   bool push = args.count("push") && args["push"].as<bool>();
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
