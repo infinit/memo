@@ -294,7 +294,7 @@ namespace infinit
   {
     static auto const env = elle::os::getenv("INFINIT_HOME", "");
     static auto const res =
-      env.empty() ? elle::system::home_directory() / ".infinit"
+      env.empty() ? elle::system::home_directory() / ".infinit-drive"
                   : boost::filesystem::path(env);
     return res;
   }
