@@ -5,6 +5,7 @@
 #include <elle/Error.hh>
 #include <elle/assert.hh>
 #include <elle/log.hh>
+#include <elle/utils.hh>
 
 #include <das/serializer.hh>
 
@@ -62,7 +63,7 @@ namespace infinit
           yield(
             Overlay::Member(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
-                const_cast<model::doughnut::Doughnut&>(*this->doughnut()),
+                elle::unconst(*this->doughnut()),
                 this->_peers[i].second,
                 this->_peers[i].first)));
           i = (i + 1) % size;
@@ -74,7 +75,13 @@ namespace infinit
     Overlay::Member
     Stonehenge::_lookup_node(model::Address address)
     {
-      return Overlay::Member();
+      for (auto const& peer: this->_peers)
+        if (peer.second == address)
+          return Overlay::Member(
+              new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+                elle::unconst(*this->doughnut()), peer.second, peer.first));
+      ELLE_WARN("%s: could not find peer %s", *this, address);
+      return nullptr;
     }
 
     StonehengeConfiguration::StonehengeConfiguration()
