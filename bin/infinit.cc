@@ -157,13 +157,14 @@ main(int argc, char** argv)
         parse_options(argc, argv, cfg, model_cfg, p);
         if (model_cfg)
         {
-          model = model_cfg->make({}, true, true, p);
+          model = model_cfg->make(infinit::overlay::NodeEndpoints(),
+                                  true, true, p);
         }
         else
         {
           if (!cfg.model)
             throw elle::Error("missing mandatory \"model\" configuration key");
-          model = cfg.model->make({}, true, true, p);
+          model = cfg.model->make(infinit::overlay::NodeEndpoints(), true, true, p);
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
           ELLE_TRACE("initialize filesystem")
             {
