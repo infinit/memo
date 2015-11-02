@@ -34,6 +34,9 @@ public:
        infinit::cryptography::rsa::keypair::generate(2048),
        infinit::cryptography::rsa::KeyPair keys_c_ =
        infinit::cryptography::rsa::keypair::generate(2048),
+       infinit::model::Address id_a = infinit::model::Address::random(),
+       infinit::model::Address id_b = infinit::model::Address::random(),
+       infinit::model::Address id_c = infinit::model::Address::random(),
        std::unique_ptr<storage::Storage> storage_a = nullptr,
        std::unique_ptr<storage::Storage> storage_b = nullptr,
        std::unique_ptr<storage::Storage> storage_c = nullptr)
@@ -53,22 +56,19 @@ public:
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::consensus::Paxos>(dht, 3); };
       this->local_a = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, infinit::model::Address::random(), std::move(storage_a));
+        3, id_a, std::move(storage_a));
       this->local_b = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, infinit::model::Address::random(), std::move(storage_b));
+        3, id_b, std::move(storage_b));
       this->local_c = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, infinit::model::Address::random(), std::move(storage_c));
+        3, id_c, std::move(storage_c));
     }
     else
     {
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::Consensus>(dht); };
-      this->local_a = std::make_shared<dht::Local>(
-        infinit::model::Address::random(), std::move(storage_a));
-      this->local_b = std::make_shared<dht::Local>(
-        infinit::model::Address::random(), std::move(storage_b));
-      this->local_c = std::make_shared<dht::Local>(
-        infinit::model::Address::random(), std::move(storage_c));
+      this->local_a = std::make_shared<dht::Local>(id_a, std::move(storage_a));
+      this->local_b = std::make_shared<dht::Local>(id_b, std::move(storage_b));
+      this->local_c = std::make_shared<dht::Local>(id_c, std::move(storage_c));
     }
     dht::Passport passport_a(keys_a.K(), "network-name", keys_a.k());
     dht::Passport passport_b(keys_b.K(), "network-name", keys_a.k());
@@ -329,6 +329,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
   auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
   auto keys_c = infinit::cryptography::rsa::keypair::generate(2048);
+  auto id_a = infinit::model::Address::random();
+  auto id_b = infinit::model::Address::random();
+  auto id_c = infinit::model::Address::random();
   storage::Memory::Blocks storage_a;
   storage::Memory::Blocks storage_b;
   storage::Memory::Blocks storage_c;
@@ -339,6 +342,7 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
     DHTs dhts(
       paxos,
       keys_a, keys_b, keys_c,
+      id_a, id_b, id_c,
       elle::make_unique<storage::Memory>(storage_a),
       elle::make_unique<storage::Memory>(storage_b),
       elle::make_unique<storage::Memory>(storage_c)
@@ -357,6 +361,7 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
     DHTs dhts(
       paxos,
       keys_a, keys_b, keys_c,
+      id_a, id_b, id_c,
       elle::make_unique<storage::Memory>(storage_a),
       elle::make_unique<storage::Memory>(storage_b),
       elle::make_unique<storage::Memory>(storage_c)

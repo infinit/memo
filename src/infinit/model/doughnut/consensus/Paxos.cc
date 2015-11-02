@@ -350,19 +350,14 @@ namespace infinit
             {
               ELLE_TRACE_SCOPE(
                 "finalize running Paxos for version %s", version);
-              // FIXME: query with ids
-              auto owners = this->doughnut()->overlay()->lookup(
-                address, this->_factor, overlay::OP_UPDATE);
-              // auto owners = this->doughnut()->overlay()->lookup(
-              //   paxos.peers(), overlay::OP_UPDATE);
-              // FIXME: factor with RemotePeer paxos client routine
-              Paxos::PaxosClient::Peers peers;
               auto block = highest->value;
-              for (int i = 0; i < this->_factor; ++i)
+              Paxos::PaxosClient::Peers peers;
+              for (auto member:
+                     this->doughnut()->overlay()->lookup_nodes(paxos.quorum()))
               {
                 peers.push_back(
                   elle::make_unique<consensus::Peer>(
-                    owners, block->address(), version));
+                    std::move(member), block->address(), version));
               }
               Paxos::PaxosClient client(uid(this->doughnut()->keys().K()),
                                         std::move(peers));
