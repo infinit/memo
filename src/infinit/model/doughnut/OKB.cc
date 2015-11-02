@@ -197,6 +197,8 @@ namespace infinit
       {
         if (!this->_data_decrypted)
         {
+          if (this->doughnut()->keys().K() != this->key())
+            throw elle::Error("attempting to decrypt an unowned OKB");
           static elle::Bench bench("bench.decrypt", 10000_sec);
           elle::Bench::BenchScope scope(bench);
           ELLE_TRACE_SCOPE("%s: decrypt data", *this);
