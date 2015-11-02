@@ -120,7 +120,7 @@ namespace infinit
           Passport passport,
           boost::optional<std::string> name,
           int replicas,
-          bool async = false);
+          bool paxos = true);
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void
@@ -135,8 +135,8 @@ namespace infinit
              std::shared_ptr<Local> local,
              boost::filesystem::path const& p,
              bool async = false,
-             bool cache = false,
-             bool paxos = false);
+             bool cache = false
+             );
       };
     }
   }
