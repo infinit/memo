@@ -6,6 +6,7 @@
 # include <functional>
 # include <utility>
 
+# include <elle/UUID.hh>
 # include <elle/attribute.hh>
 # include <elle/serialization/Serializer.hh>
 
@@ -21,6 +22,7 @@ namespace infinit
       typedef uint8_t Value[32];
       Address();
       Address(Value bytes);
+      Address(elle::UUID const& id);
       bool
       operator ==(Address const& rhs) const;
       bool

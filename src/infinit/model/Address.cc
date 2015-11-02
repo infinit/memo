@@ -22,6 +22,12 @@ namespace infinit
       ::memcpy(this->_value, value, sizeof(Value));
     }
 
+    Address::Address(elle::UUID const& id)
+      : Address(infinit::cryptography::hash(
+                  elle::ConstWeakBuffer(id.data, id.static_size()),
+                  infinit::cryptography::Oneway::sha256).contents())
+    {}
+
     bool
     Address::operator ==(Address const& rhs) const
     {
