@@ -1,6 +1,8 @@
 #ifndef INFINIT_OVERLAY_OVERLAY_HH
 # define INFINIT_OVERLAY_OVERLAY_HH
 
+# include <unordered_map>
+
 # include <elle/json/json.hh>
 
 # include <reactor/network/tcp-socket.hh>
@@ -61,6 +63,9 @@ namespace infinit
       /// Lookup a node from its uid
       Member
       lookup_node(model::Address address);
+      /// Lookup nodes from uids
+      reactor::Generator<Overlay::Member>
+      lookup_nodes(std::unordered_set<model::Address> address);
     protected:
       virtual
       reactor::Generator<Member>

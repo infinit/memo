@@ -1,5 +1,7 @@
 #include <elle/log.hh>
 
+#include <reactor/Scope.hh>
+
 #include <infinit/overlay/Overlay.hh>
 #include <infinit/model/MissingBlock.hh>
 
@@ -53,6 +55,27 @@ namespace infinit
     Overlay::lookup_node(model::Address address)
     {
       return this->_lookup_node(address);
+    }
+
+    reactor::Generator<Overlay::Member>
+    Overlay::lookup_nodes(std::unordered_set<model::Address> addresses)
+    {
+      return reactor::generator<Overlay::Member>(
+        [this, addresses]
+        (reactor::Generator<Overlay::Member>::yielder const& yield)
+        {
+          elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+          {
+            for (auto const& address: addresses)
+              scope.run_background(
+                elle::sprintf("%s: fetch node by address", *this),
+                [&]
+                {
+                  yield(this->lookup_node(address));
+                });
+            reactor::wait(scope);
+          };
+        });
     }
 
     void
