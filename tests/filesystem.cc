@@ -57,6 +57,7 @@ std::vector<std::string> mount_points;
 std::vector<infinit::cryptography::rsa::PublicKey> keys;
 std::vector<std::unique_ptr<infinit::model::doughnut::Local>> nodes;
 std::vector<boost::asio::ip::tcp::endpoint> endpoints;
+infinit::overlay::Stonehenge::Peers peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
 
 static void sig_int()
@@ -186,6 +187,14 @@ static void make_nodes(std::string store, int node_count,
                              ep.port());
       nodes.emplace_back(l);
     }
+    // attribute ids
+    peers.clear();
+    for (int i = 0; i < node_count; ++i)
+      peers.push_back(std::make_pair(
+        endpoints[i],
+        infinit::model::Address::random()
+        ));
+
     // now give each a model
     for (int i = 0; i < node_count; ++i)
     {
@@ -210,7 +219,7 @@ static void make_nodes(std::string store, int node_count,
           static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return elle::make_unique<infinit::overlay::Stonehenge>(
-                elle::UUID::random(), endpoints, doughnut);
+                peers[i].second, peers, doughnut);
             }),
           nullptr,
           consensus);
@@ -240,6 +249,7 @@ run_filesystem_dht(std::string const& store,
   nodes.clear();
   endpoints.clear();
   processes.clear();
+  peers.clear();
   mounted = false;
   auto owner_keys = infinit::cryptography::rsa::keypair::generate(2048);
   new std::thread([&] { make_nodes(store, node_count, owner_keys, paxos);});
@@ -287,7 +297,7 @@ run_filesystem_dht(std::string const& store,
           static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
             [=](infinit::model::doughnut::Doughnut* doughnut) {
               return elle::make_unique<infinit::overlay::Stonehenge>(
-                elle::UUID::random(), endpoints, doughnut);
+                infinit::model::Address::random(), peers, doughnut);
             }),
           nullptr,
           consensus
