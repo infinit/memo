@@ -257,7 +257,7 @@ body.home {
     }
 
     a.button {
-      font-size: 16px;width: 33%; font-size: 19px; text-align: center; padding: 13px 20px;
+      font-size: 16px; min-width: 33%; font-size: 16px; text-align: center; padding: 13px 20px;
     }
 
     .terminal {
@@ -372,14 +372,16 @@ body.home {
   }
 
   section.commercial {
-    background: #F9F9F9; padding: 50px 17% 200px 17%;
+    background: #F9F9F9; padding: 80px 10% 130px 10%;
+    &:after { display: table; content: ''; clear: both; }
 
+    img { float: left; margin-right: 80px; margin-top: 20px;}
     strong {
       font-weight: 300; font-family: @helvetica; font-size: 22px;
       margin-top: 40px; line-height: 33px; display: block; margin-bottom: 20px;
     }
     p { font-size: 15px; color: #747474; line-height: 24px;}
-    h4 { text-align: left; }
+    p.title { font-size: 26px; color: @infinitblack; line-height: 36px; }
     .button { margin-top: 20px; }
   }
 }
@@ -389,14 +391,27 @@ body.home {
 | Documentation   |
 `----------------*/
 
-body.documentation, body.legal, body.contact, body.opensource {
+body.documentation, body.legal, body.contact, body.opensource, body.solutions {
+
+  // header { position: fixed; width: 100%;}
+  // .content { padding-top: 80px; }
+  progress {
+    position: fixed; left: 0; top: 0; border: none; color: @infinitred;
+    width: 100%; height: 2px; background-color: transparent;
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  }
+
+  progress::-webkit-progress-bar { background-color: transparent; }
+  progress::-webkit-progress-value { background-color: @infinitred; }
+  progress::-moz-progress-bar { background-color: @infinitred; }
+
 
   #sidebar {
     padding-left: 8%; width: 10%; float: left; margin-top: 20px;
-    margin-bottom: 30px; padding-bottom: 30px;
+    margin-bottom: 30px;
   }
 
-  ul.menu { position: absolute; }
+  ul.menu { position: absolute; margin-top: 20px; }
   ul.menu #menu-anchor { height: 1px; width: 100%;}
   ul.menu.fixed { position: fixed; top: 20px;}
   ul.menu li a { font-family: @helvetica; font-weight: 300; }
@@ -411,7 +426,7 @@ body.documentation, body.legal, body.contact, body.opensource {
   ul.menu ul li a { font-size: 13px; }
 
   section.doc {
-    float: left; width: 50%; padding: 0 15% 100px 30%;
+    float: left; width: 50%; padding: 0 15% 100px 12%; margin-top: 40px;
 
     h1 {
       font-size: 33px; line-height: 41px; padding-bottom: 15px;
@@ -467,9 +482,7 @@ body.documentation, body.legal, body.contact, body.opensource {
 body.doc_overview {
 
   section.doc {
-
     .features {
-
       div {
         float: left; width: 31%; margin-right: 3%;
 
@@ -480,7 +493,6 @@ body.doc_overview {
       div:nth-child(3n) { margin-right: 0; }
       div:nth-child(3n+1) { clear: both; }
     }
-
   }
 }
 
@@ -522,9 +534,7 @@ body.doc_roadmap {
 
 body.doc_comparisons {
   section.doc {
-
     table.centralized tr:nth-child(1) td { width: 4%;}
-
     table.centralized tr:nth-child(2n) td { background: #F9F9F9; }
   }
 }
@@ -775,7 +785,7 @@ body.pricing {
 | Contact     |
 `------------*/
 
-body.contact {
+body.contact, body.solutions {
   form { margin-top: 40px; }
 
   section.doc { padding-left: 20%; width: 60%;}
@@ -790,6 +800,7 @@ body.contact {
 /*--------------.
 | Open Source   |
 `--------------*/
+
 body.opensource {
   section.doc {
     padding: 0 17% 100px 17%; width: 66%;
@@ -809,6 +820,38 @@ body.opensource {
 }
 
 
+/*--------------.
+| Solutions     |
+`--------------*/
+
+body.solutions {
+  section.doc {
+    margin-top: 50px; padding: 0 10% 100px 10%; width: 80%;
+
+    h1, p.title {
+      text-align: center; border-bottom: none; padding-bottom: 0; margin-top: 0;
+    }
+
+    .increase { width: 29%; padding: 20px 2% 40px 2%; float: left; text-align: center; }
+
+    .cloud_system { padding-right: 5%; }
+    .custom_apps { padding-left: 5%; }
+
+    .cloud_system, .custom_apps {
+      width: 45%; float: left; text-align: center;
+      padding-bottom: 60px;
+
+      h2 { margin-top: 20px;}
+      img { margin-top: 60px;}
+    }
+  }
+
+  form { clear:both; margin: 0; padding: 0 10%;}
+  form h2 { text-align: center;  margin: 30px 0; }
+  form input[type="text"], form input[type="email"] {
+    width: 44%; margin-right: 2%;
+  }
+}
 
 
 

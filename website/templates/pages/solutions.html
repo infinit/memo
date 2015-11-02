@@ -1,0 +1,61 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <section class="doc">
+    <h1>Increase your revenue and user retention</h1>
+    <p class="title">Integrate a cloud file storage solution in order to create additional value to existing subscriptions.</p>
+
+    <div class="increase">
+      <h3>Maintain Competivity</h4>
+      <p>Increase your market share by developing additional high-value services.</p>
+    </div>
+
+    <div class="increase">
+      <h3>Increase Loyalty</h4>
+      <p>Retain users on your services by providing file storage, access and sharing from within your services.</p>
+    </div>
+
+    <div class="increase">
+      <h3>Diversify Revenue</h4>
+      <p>Add file storage subscriptions within existing offerings or as an add-on service.</p>
+    </div>
+
+    <p class="spacer">The Infinit Cloud Solutions provide software developers, device manufacturers and network operators with a complete suite of secure infrastructure, APIs and end-user applications that enable you to offer file storage, sharing, backup and collaboration within your suite of existing services.</p>
+
+    <div class="cloud_system">
+      <img src="${url('images/custom-branded-apps.png')}" alt="Branded Apps">
+      <h2>Infinit Cloud File System</h2>
+      <p>A set of development components that enables any business to create a file storage service on top of any API, being proprietary or public.</p>
+      <p>On top of this infrastructure can be built specific user interfaces (desktop, mobile and/or Web) or the set of Infinit Custom Branded Apps could be used instead.</p>
+    </div>
+
+    <div class="custom_apps">
+      <img src="${url('images/custom-branded-apps.png')}" alt="Branded Apps">
+      <h2>Infinit Custom Branded Apps</h2>
+      <p>A complete set of white label applications for desktop (MacOS X, Windows and Linux) and mobile (iOS and Android).</p>
+      <p>Through these applications, any business has the means to provide their users with a perfect cloud storage experience without the cost and complexity of building such applications in house.</p>
+    </div>
+
+    <form action="" id="contact_form" method="POST">
+      <h2 class="spacer">Find out more about Infinit integration solutions</h2>
+
+      <input type="text" name="first_name" placeholder="First Name" required>
+      <input type="text" name="last_name" placeholder="Last Name" required>
+      <input class="email" type="email" name="email" placeholder="Email" required>
+      <input type="text" name="phone" placeholder="Phone" required>
+
+      <input type="text" name="company_name" placeholder="Company Name">
+      <input type="text" name="company_url" placeholder="Company URL">
+
+      <input type="text" name="country" placeholder="Country">
+      <br><br>
+
+      <textarea name="message" required></textarea>
+
+      <button type="submit" class="button">Send</button>
+    </form>
+
+  </section>
+
+</%block>

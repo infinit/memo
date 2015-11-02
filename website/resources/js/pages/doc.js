@@ -4,6 +4,19 @@ $(document).ready(function() {
     hljs.highlightBlock(block);
   });
 
+  $('a[href*=#]:not([href=#])').click(function() {
+    if (location.pathname.replace(/^\//,'') === this.pathname.replace(/^\//,'') && location.hostname === this.hostname) {
+      var target = $(this.hash);
+      target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+      if (target.length) {
+        $('html,body').animate({
+          scrollTop: target.offset().top
+        }, 500);
+        return false;
+      }
+    }
+  });
+
   var a = function () {
     var height = $(window).scrollTop();
     var menu_anchor = $("#menu-anchor").offset().top - 13;
@@ -40,5 +53,19 @@ $(document).ready(function() {
   };
 
   $(window).scroll(a);
+
+
+  var winHeight = $(window).height(),
+      docHeight = $(document).height(),
+      progressBar = $('progress'),
+      max, value;
+
+  max = docHeight - winHeight - $("footer").height();
+  progressBar.attr('max', max);
+
+  $(document).on('scroll', function(){
+     value = $(window).scrollTop();
+     progressBar.attr('value', value);
+  });
 
 });

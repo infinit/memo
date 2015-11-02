@@ -114,6 +114,14 @@ class Website(bottle.Bottle):
       'description': 'Discover the different plans for small, medium and large enterprises.',
     }
 
+  @route('/solutions', name = 'solutions')
+  @view('pages/solutions.html')
+  def root(self):
+    return {
+      'title': 'Business solutions',
+      'description': 'Infinit is used by device manufacturers, network operators and other businesses throughout the world to provide value to their customers.',
+    }
+
   @route('/about', name = 'about')
   @view('pages/about.html')
   def root(self):
