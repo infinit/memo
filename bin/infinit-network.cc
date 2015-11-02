@@ -431,9 +431,8 @@ run(variables_map const& args)
   std::vector<std::string> hosts;
   if (args.count("peer"))
     hosts = args["peer"].as<std::vector<std::string>>();
-  bool publish = args.count("publish") && args["publish"].as<bool>();
-  bool push = publish || (args.count("push") && args["push"].as<bool>());
-  bool fetch = publish || (args.count("fetch") && args["fetch"].as<bool>());
+  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"});
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
   auto local = network.run(hosts, false, false, {}, false,
@@ -549,13 +548,13 @@ int main(int argc, char** argv)
         { "name,n", value<std::string>(), "created network name" },
         { "storage,s", value<std::vector<std::string>>()->multitoken(),
             "optional storage to contribute" },
-        option_owner,
         { "port,p", value<int>(), "port to listen on (random by default)" },
         { "replication-factor,r", value<int>(), "data replication factor" },
         { "async", bool_switch(), "Use asynchronious operations" },
         { "stdout", bool_switch(), "output configuration to stdout" },
         { "push", bool_switch(),
           elle::sprintf("push the network to %s", beyond()).c_str() },
+        option_owner,
       },
       {
         overlay_types_options,
@@ -570,9 +569,9 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to export" },
-        option_owner,
         { "output,o", value<std::string>(),
-            "file to write exported network to (defaults to stdout)" },
+          "file to write exported network to (defaults to stdout)" },
+        option_owner,
       },
     },
     {
@@ -592,7 +591,7 @@ int main(int argc, char** argv)
       "",
       {
         { "input,i", value<std::string>(),
-            "file to read network from (defaults to stdin)" },
+          "file to read network from (defaults to stdin)" },
       },
     },
     {
@@ -601,7 +600,6 @@ int main(int argc, char** argv)
       &invite,
       "--name NETWORK --user USER",
       {
-        option_owner,
         { "name,n", value<std::string>(), "network to create the passport to" },
         { "output,o", value<std::string>(),
             "file to write the passport to (defaults to stdout)" },
@@ -609,6 +607,7 @@ int main(int argc, char** argv)
             elle::sprintf("push the passport to %s", beyond()).c_str() },
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "force", bool_switch(), "force invite" },
+        option_owner,
       },
     },
     {
@@ -617,7 +616,6 @@ int main(int argc, char** argv)
       &join,
       "--name NETWORK",
       {
-        option_owner,
         { "input,i", value<std::string>(),
             "file to read passport from (defaults to stdin)" },
         { "name,n", value<std::string>(), "network to join" },
@@ -625,6 +623,7 @@ int main(int argc, char** argv)
             elle::sprintf("fetch the passport from %s", beyond()).c_str() },
         { "port", value<int>(), "port to listen on (random by default)" },
         { "storage", value<std::string>(), "optional storage to contribute" },
+        option_owner,
       },
     },
     {
@@ -639,8 +638,8 @@ int main(int argc, char** argv)
       &push,
       "--name NETWORK",
       {
-        option_owner,
         { "name,n", value<std::string>(), "network to push" },
+        option_owner,
       },
     },
     {
@@ -669,17 +668,20 @@ int main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
-        option_owner,
-        { "fetch", bool_switch(),
-            elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "fetch-endpoints", bool_switch(),
+          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "fetch", bool_switch(), "alias for --fetch-endpoints" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
-            "peer to connect to (host:port)" },
+          "peer to connect to (host:port)" },
         { "name", value<std::string>(), "created network name" },
-        { "push", bool_switch(),
-            elle::sprintf("push endpoints to %s", beyond()).c_str() },
-        { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching" },
-        { "publish", bool_switch(), "Alias for --fetch --push" },
+        { "push-endpoints", bool_switch(),
+          elle::sprintf("push endpoints to %s", beyond()).c_str() },
+        { "push", bool_switch(), "alias for --push-endpoints" },
+        { "async", bool_switch(), "use asynchronious operations" },
+        { "cache-model", bool_switch(), "enable model caching" },
+        { "publish", bool_switch(),
+          "alias for --fetch-endpoints --push-endpoints" },
+        option_owner,
       },
     },
     {
@@ -688,8 +690,8 @@ int main(int argc, char** argv)
       &list_storage,
       "--name NETWORK",
       {
-        option_owner,
         { "name", value<std::string>(), "network name" },
+        option_owner,
       },
     },
     {

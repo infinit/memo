@@ -1106,6 +1106,18 @@ mandatory(boost::program_options::variables_map const& vm,
   return mandatory<T>(vm, name, name);
 }
 
+bool
+aliased_flag(boost::program_options::variables_map const& vm,
+             std::vector<std::string> aliases)
+{
+  for (std::string const& alias: aliases)
+  {
+    if (vm.count(alias) && vm[alias].as<bool>())
+      return true;
+  }
+  return false;
+}
+
 std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
 get_output(boost::program_options::variables_map const& args)
 {

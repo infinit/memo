@@ -189,9 +189,8 @@ run(variables_map const& args)
       ELLE_TRACE("terminating");
       reactor::scheduler().terminate();
     });
-  bool publish = args.count("publish") && args["fetch"].as<bool>();
-  bool push = publish || (args.count("push") && args["push"].as<bool>());
-  bool fetch = publish || (args.count("fetch") && args["fetch"].as<bool>());
+  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"});
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
   report_action("running", "network", network.name);
@@ -302,12 +301,12 @@ main(int argc, char** argv)
         { "name", value<std::string>(), "created volume name" },
         { "network", value<std::string>(), "underlying network to use" },
         { "mountpoint", value<std::string>(), "where to mount the filesystem" },
-        option_owner,
         { "stdout", bool_switch(), "output configuration to stdout" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
         { "push", bool_switch(),
           elle::sprintf("push the volume to %s", beyond()).c_str() },
+        option_owner,
       },
     },
     {
@@ -365,18 +364,21 @@ main(int argc, char** argv)
         { "cache,c", value<int>()->implicit_value(0),
           "enable storage caching, "
           "optional arguments specifies maximum size in bytes" },
-        { "fetch", bool_switch(),
-            elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "fetch-endpoints", bool_switch(),
+          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "fetch", bool_switch(), "alias for --fetch-endpoints" },
         { "mountpoint,m", value<std::string>(),
           "where to mount the filesystem" },
         { "name", value<std::string>(), "volume name" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
-        { "push", bool_switch(),
-            elle::sprintf("push endpoints to %s", beyond()).c_str() },
-        { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching" },
-        { "publish", bool_switch(), "Alias for --fetch --push" },
+        { "push-endpoints", bool_switch(),
+          elle::sprintf("push endpoints to %s", beyond()).c_str() },
+        { "push", bool_switch(), "alias for --push-endpoints" },
+        { "async", bool_switch(), "use asynchronious operations" },
+        { "cache-model", bool_switch(), "enable model caching" },
+        { "publish", bool_switch(),
+          "alias for --fetch-endpoints --push-endpoints" },
         option_owner,
       },
     },
