@@ -960,8 +960,6 @@ namespace infinit
       {
         ELLE_TRACE("bootstraping");
         bootstrap(true);
-        ELLE_TRACE("deoverdeplicating");
-        deoverduplicate();
         ELLE_TRACE("joining");
         _gossip.socket()->close();
         if (!_local)
@@ -1009,8 +1007,9 @@ namespace infinit
         {
           _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
             std::bind(&Node::pinger, this));
-          _rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
-            std::bind(&Node::rereplicator, this));
+          // Rereplication will be handled by the overlay
+          //_rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
+          //  std::bind(&Node::rereplicator, this));
           _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
             std::bind(&Node::gossipEmitter, this));
         }
