@@ -191,14 +191,15 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("attempt fetching %s from %s failed: %s",
-                      address, *peer, e.what());
+            ELLE_TRACE("attempt fetching %s from %s failed: %s",
+                       address, *peer, e.what());
           }
         }
         // Some overlays may return peers even if they don't have the block,
         // so we have to return MissingBlock here.
         throw MissingBlock(address);
       }
+
       /*----------.
       | Printable |
       `----------*/

@@ -205,7 +205,6 @@ private:
     dht_c->overlay()->register_local(local_c);
     local_c->serve();
   }
-
 };
 
 ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
