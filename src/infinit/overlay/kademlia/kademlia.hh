@@ -56,7 +56,7 @@ namespace kademlia
   public:
     Kademlia(infinit::model::Address node_id, Configuration const& config, bool server,
       infinit::model::doughnut::Doughnut* doughnut);
-    ~Kademlia();
+    virtual ~Kademlia();
     void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);
     void remove(Address address);
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
