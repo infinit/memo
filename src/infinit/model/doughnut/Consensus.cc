@@ -191,14 +191,13 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("fetching from %s failed: %s", *peer, e.what());
+            ELLE_WARN("attempt fetching %s from %s failed: %s",
+                      address, *peer, e.what());
           }
         }
-        if (!hit)
-          throw MissingBlock(address);
-        else
-          throw elle::Error(
-            elle::sprintf("fetching of %s failed on all candidates", address));
+        // Some overlays may return peers even if they don't have the block,
+        // so we have to return MissingBlock here.
+        throw MissingBlock(address);
       }
       /*----------.
       | Printable |
