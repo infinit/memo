@@ -882,7 +882,6 @@ test_conflicts(bool paxos)
       run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
-  ELLE_LOG("Test start");
   elle::SafeFinally remover([&] {
       unmounter(mount, store, t);
   });
@@ -893,81 +892,98 @@ test_conflicts(bool paxos)
   bfs::path m1 = mount_points[1];
   BOOST_CHECK_EQUAL(keys.size(), 2);
   std::string k1 = serialize(keys[1]);
-  setxattr(m0.c_str(), "user.infinit.auth.setrw",
-    k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  setxattr(m0.c_str(), "user.infinit.auth.inherit",
-    "true", strlen("true"), 0 SXA_EXTRA);
-  // file create/write conflict
-  int fd0, fd1;
-  fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd0 != -1);
-  fd1 = open((m1 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd1 != -1);
-  BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
-  BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
-  BOOST_CHECK_EQUAL(close(fd0), 0);
-  BOOST_CHECK_EQUAL(close(fd1), 0);
-  BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
-  BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
-  // file create/write without acl inheritance
-  setxattr(m0.c_str(), "user.infinit.auth.inherit",
-    "false", strlen("false"), 0 SXA_EXTRA);
-  fd0 = open((m0 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd0 != -1);
-  fd1 = open((m1 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd1 != -1);
-  BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
-  BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
-  BOOST_CHECK_EQUAL(close(fd0), 0);
-  BOOST_CHECK_EQUAL(close(fd1), 0);
-  BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
-  // directory conflict
+  ELLE_LOG("set permissions");
+  {
+    setxattr(m0.c_str(), "user.infinit.auth.setrw",
+             k1.c_str(), k1.length(), 0 SXA_EXTRA);
+    setxattr(m0.c_str(), "user.infinit.auth.inherit",
+           "true", strlen("true"), 0 SXA_EXTRA);
+  }
+  ELLE_LOG("file create/write conflict")
+  {
+    int fd0, fd1;
+    fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd0 != -1);
+    fd1 = open((m1 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd1 != -1);
+    BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
+    BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
+    BOOST_CHECK_EQUAL(close(fd0), 0);
+    BOOST_CHECK_EQUAL(close(fd1), 0);
+    BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
+    BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
+  }
+  ELLE_LOG("file create/write without acl inheritance")
+  {
+    int fd0, fd1;
+    setxattr(m0.c_str(), "user.infinit.auth.inherit",
+             "false", strlen("false"), 0 SXA_EXTRA);
+    fd0 = open((m0 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd0 != -1);
+    fd1 = open((m1 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd1 != -1);
+    BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
+    BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
+    BOOST_CHECK_EQUAL(close(fd0), 0);
+    BOOST_CHECK_EQUAL(close(fd1), 0);
+    BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
+  }
   struct stat st;
-  // force file node into filesystem cache
-  stat((m0/"file3").c_str(), &st);
-  stat((m1/"file4").c_str(), &st);
-  fd0 = open((m0 / "file3").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd0 != -1);
-  fd1 = open((m1 / "file4").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd1 != -1);
-  BOOST_CHECK_EQUAL(close(fd0), 0);
-  BOOST_CHECK_EQUAL(close(fd1), 0);
-  BOOST_CHECK_EQUAL(stat((m0/"file3").c_str(), &st), 0);
-  BOOST_CHECK_EQUAL(stat((m1/"file4").c_str(), &st), 0);
-  //write/unlink
-  setxattr(m0.c_str(), "user.infinit.auth.inherit",
-    "true", strlen("true"), 0 SXA_EXTRA);
-  fd0 = open((m0 / "file5").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd0 != -1);
-  BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-  fsync(fd0);
-  BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), 0);
-  usleep(2100000);
-  BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), 0);
-  bfs::remove(m1 / "file5");
-  BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-  BOOST_CHECK_EQUAL(close(fd0), 0);
-  BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), -1);
-  BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), -1);
-  // write/replace
-  fd0 = open((m0 / "file6").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd0 != -1);
-  BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-  BOOST_CHECK_EQUAL(close(fd0), 0);
-  fd1 = open((m1 / "file6bis").string().c_str(), O_CREAT|O_RDWR, 0644);
-  BOOST_CHECK(fd1 != -1);
-  BOOST_CHECK_EQUAL(write(fd1, "nioc", 4), 4);
-  BOOST_CHECK_EQUAL(close(fd1), 0);
-  fd0 = open((m0 / "file6").string().c_str(), O_CREAT|O_RDWR|O_APPEND, 0644);
-  BOOST_CHECK(fd0 != -1);
-  ELLE_LOG("write");
-  BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-  ELLE_LOG("rename");
-  bfs::rename(m1 / "file6bis", m1 / "file6");
-  ELLE_LOG("close");
-  BOOST_CHECK_EQUAL(close(fd0), 0);
-  BOOST_CHECK_EQUAL(read(m0/"file6"), "nioc");
-  BOOST_CHECK_EQUAL(read(m1/"file6"), "nioc");
+  ELLE_LOG("directory conflict")
+  {
+    int fd0, fd1;
+    // force file node into filesystem cache
+    stat((m0/"file3").c_str(), &st);
+    stat((m1/"file4").c_str(), &st);
+    fd0 = open((m0 / "file3").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd0 != -1);
+    fd1 = open((m1 / "file4").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd1 != -1);
+    BOOST_CHECK_EQUAL(close(fd0), 0);
+    BOOST_CHECK_EQUAL(close(fd1), 0);
+    BOOST_CHECK_EQUAL(stat((m0/"file3").c_str(), &st), 0);
+    BOOST_CHECK_EQUAL(stat((m1/"file4").c_str(), &st), 0);
+  }
+  ELLE_LOG("write/unlink")
+  {
+    int fd0;
+    setxattr(m0.c_str(), "user.infinit.auth.inherit",
+             "true", strlen("true"), 0 SXA_EXTRA);
+    fd0 = open((m0 / "file5").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd0 != -1);
+    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
+    fsync(fd0);
+    BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), 0);
+    usleep(2100000);
+    BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), 0);
+    bfs::remove(m1 / "file5");
+    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
+    BOOST_CHECK_EQUAL(close(fd0), 0);
+    BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), -1);
+    BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), -1);
+  }
+  ELLE_LOG("write/replace")
+  {
+    int fd0, fd1;
+    fd0 = open((m0 / "file6").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd0 != -1);
+    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
+    BOOST_CHECK_EQUAL(close(fd0), 0);
+    fd1 = open((m1 / "file6bis").string().c_str(), O_CREAT|O_RDWR, 0644);
+    BOOST_CHECK(fd1 != -1);
+    BOOST_CHECK_EQUAL(write(fd1, "nioc", 4), 4);
+    BOOST_CHECK_EQUAL(close(fd1), 0);
+    fd0 = open((m0 / "file6").string().c_str(), O_CREAT|O_RDWR|O_APPEND, 0644);
+    BOOST_CHECK(fd0 != -1);
+    ELLE_LOG("write");
+    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
+    ELLE_LOG("rename");
+    bfs::rename(m1 / "file6bis", m1 / "file6");
+    ELLE_LOG("close");
+    BOOST_CHECK_EQUAL(close(fd0), 0);
+    BOOST_CHECK_EQUAL(read(m0/"file6"), "nioc");
+    BOOST_CHECK_EQUAL(read(m1/"file6"), "nioc");
+  }
 }
 
 void
