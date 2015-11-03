@@ -3141,6 +3141,8 @@ namespace infinit
       Overlay::Member
       Node::_lookup_node(Address address)
       {
+        if (address == _self)
+          return _local;
         boost::optional<PeerLocation> result;
         kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
           {
