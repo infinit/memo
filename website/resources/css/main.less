@@ -62,7 +62,7 @@ a.button, button.button, input.button {
 
 input[type="text"], input[type="email"], input[type="password"], textarea {
   border: 1px solid @infinitgray; border-radius: 3px;
-  padding: 10px 10px; outline: none; font-size: 13px;
+  padding: 1.5% 1.5%; outline: none; font-size: 13px;
   .transition();
   &:focus { border: 1px solid @infinitblack;}
   &.error { -webkit-animation: shake .5s linear; border: 1px solid @infinitred; }
@@ -109,7 +109,7 @@ section.blue {
 }
 
 p.subtitle {
-  font-family: @helvetica; font-size: 22px; color: #5D5D5D; line-height: 26px;
+  font-family: @helvetica; font-size: 22px; color: #5D5D5D; line-height: 32px;
   font-weight: 300; text-align: center; margin-top: 10px;
 }
 
@@ -830,14 +830,17 @@ body.solutions {
   section.doc {
     margin-top: 50px; padding: 0 10% 20px 10%; width: 80%;
 
-    h1, p.subtitle {
+    h1 {
       text-align: center; border-bottom: none; padding-bottom: 0; margin-top: 0;
+      margin-bottom: 10px;
     }
 
-    .cloud_solutions { clear: both; margin: 50px auto 0 auto; width: 70%; }
-    .cloud_solutions > img { float: left; margin-right: 50px; }
-    .cloud_solutions h2 { padding-top: 128px; font-size: 23px; }
-    .cloud_solutions .apps { text-align: center; clear: both; padding-top: 110px; }
+    h2 { font-size: 23px; }
+    h2 img { margin-right: 5px; }
+    .cloud_solutions { clear: both; margin: 50px auto 0 auto; width: 80%; }
+    .cloud_solutions > img { float: left; margin-right: 50px; margin-top: 20px; }
+    .cloud_solutions h2 { padding-top: 148px; font-size: 23px; }
+    .cloud_solutions p { font-size: 18px; line-height: 28px; }
     .cloud_solutions:after { content: ''; display: table; clear: both; }
 
     .cloud_system { padding-right: 5%; clear: both; }
@@ -847,17 +850,22 @@ body.solutions {
       width: 45%; float: left; text-align: center;
       padding-bottom: 70px;
 
-      h2 { font-size: 23px; }
       img { margin-top: 60px;}
-      h2 img { margin-top: 0; vertical-align: text-top; margin-right: 5px; }
+      h2 img { margin-top: 0; vertical-align: text-top; }
     }
 
     .cloud_system h2 img {vertical-align: middle;}
+
+    .apps { text-align: center; clear: both; padding-top: 40px; }
+    .apps p { width: 52%; margin: 20px auto;}
+    .apps h2 img { vertical-align: text-top; margin-top: 0;}
+    .apps img { margin-top: 40px;}
   }
 
   section {
-    form { clear:both; margin: 0; padding: 0 20% 80px 20%;}
+    form { clear:both; margin: 0; padding: 0 23% 80px 27%;}
     form h2 { text-align: center;  margin: 30px 0; padding-top: 50px; }
+    textarea { width: 92%;}
     form input[type="text"], form input[type="email"] {
       width: 44%; margin-right: 2%;
     }
@@ -869,6 +877,8 @@ body.solutions {
     &:after { content:''; clear: both; display: table;}
 
     .increase:first-child { clear: both; }
+    .increase:nth-child(2) { margin-top: 10px; }
+    .increase:last-child { margin-top: 13px; }
     .increase {
       width: 25%; color: white; margin: 0px 2%; padding: 50px 2% 50px 2%; float: left;
       text-align: center; border-radius: 5px; -webkit-font-smoothing: antialiased;

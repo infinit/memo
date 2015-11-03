@@ -150,6 +150,12 @@ def configure(
     'resources/images/icons/infinit-cloud-drive@2x.png',
     'resources/images/icons/infinit-cloud-apps.png',
     'resources/images/icons/infinit-cloud-apps@2x.png',
+    'resources/images/icons/globe-white.png',
+    'resources/images/icons/globe-white@2x.png',
+    'resources/images/icons/heart.png',
+    'resources/images/icons/heart@2x.png',
+    'resources/images/icons/cash.png',
+    'resources/images/icons/cash@2x.png',
 
     'resources/images/team/antony.png',
     'resources/images/team/antony@2x.png',
