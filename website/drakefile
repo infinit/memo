@@ -72,6 +72,8 @@ def configure(
   )
 
   resources = drake.nodes(
+    'resources/robots.txt',
+
     'resources/images/favicon@2x.png',
     'resources/images/logo.png',
     'resources/images/logo@2x.png',

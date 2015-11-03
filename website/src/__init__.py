@@ -194,3 +194,7 @@ class Website(bottle.Bottle):
   def images(self, path):
     d = bottle.request.urlparts.path.split('/')[1]
     return static_file('%s/%s' % (d,  path))
+
+  @route('/robots.txt')
+  def file(self):
+    return static_file('robots.txt')
