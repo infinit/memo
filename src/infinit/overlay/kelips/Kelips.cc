@@ -2986,7 +2986,7 @@ namespace infinit
         {
           std::function<void(PeerLocation)> handle = [&](PeerLocation hosts)
           {
-            yield(make_peer(hosts));
+            yield(elle::unconst(this)->make_peer(hosts));
           };
           elle::unconst(this)->address(address, op, n, handle);
         });
