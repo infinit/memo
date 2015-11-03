@@ -355,7 +355,7 @@ run_filesystem_dht(std::string const& store,
         }
         overlay["peers"] = v;
         model["overlay"] = overlay;
-        model["replicas"] = 1;
+        model["replicas"] = paxos ? 3 : 1;
         model["paxos"] = paxos;
         r["model"] = model;
         std::string kps;
