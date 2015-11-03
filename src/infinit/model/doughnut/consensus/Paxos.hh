@@ -82,13 +82,11 @@ namespace infinit
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum const& peers,
                     Address address,
-                    int version,
                     PaxosClient::Proposal const& p);
             virtual
             PaxosClient::Proposal
             accept(PaxosServer::Quorum const& peers,
                    Address address,
-                   int version,
                    PaxosClient::Proposal const& p,
                    std::shared_ptr<blocks::Block> const& value);
           };
@@ -109,13 +107,11 @@ namespace infinit
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,
                     Address address,
-                    int version,
                     PaxosClient::Proposal const& p);
             virtual
             PaxosClient::Proposal
             accept(PaxosServer::Quorum peers,
                    Address address,
-                   int version,
                    PaxosClient::Proposal const& p,
                    std::shared_ptr<blocks::Block> const& value);
             virtual
