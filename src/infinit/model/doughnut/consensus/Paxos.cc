@@ -458,10 +458,12 @@ namespace infinit
                 peers.push_back(
                   elle::make_unique<Peer>(peer, b->address(), version));
               }
+              // FIXME: client is persisted on conflict resolution, hence the
+              // round number is kept and won't start at 0.
+              Paxos::PaxosClient client(
+                uid(this->_doughnut.keys().K()), std::move(peers));
               while (true)
               {
-                Paxos::PaxosClient client(
-                  uid(this->_doughnut.keys().K()), std::move(peers));
                 try
                 {
                   auto chosen = client.choose(peers_id, version, b);
@@ -469,7 +471,7 @@ namespace infinit
                   {
                     if (resolver)
                     {
-                      ELLE_TRACE(
+                      ELLE_TRACE_SCOPE(
                         "%s: chosen block differs, run conflict resolution",
                         *this);
                       auto block = (*resolver)(*b, mode);
