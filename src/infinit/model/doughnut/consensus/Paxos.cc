@@ -208,6 +208,8 @@ namespace infinit
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p)
         {
+          ELLE_TRACE_SCOPE("%s: get proposal at %s: %s",
+                           *this, address, p);
           auto decision = this->_addresses.find(address);
           if (decision == this->_addresses.end())
             try
@@ -432,7 +434,7 @@ namespace infinit
                 elle::unreachable();
             }
             auto owners = this->_owners(overlay, b->address(), op);
-            if (auto* m = dynamic_cast<blocks::MutableBlock*>(b.get()))
+            if (dynamic_cast<blocks::MutableBlock*>(b.get()))
             {
               // FIXME: this voids the whole "query on the fly" optimisation
               Paxos::PaxosClient::Peers peers;
@@ -456,28 +458,40 @@ namespace infinit
                     uid(this->_doughnut.keys().K()), std::move(peers));
                   while (true)
                   {
-                    auto chosen = client.choose(peers_id, m->version(), b);
+                    auto version =
+                      dynamic_cast<blocks::MutableBlock*>(b.get())->version();
+                    boost::optional<std::shared_ptr<blocks::Block>> chosen;
+                    ELLE_DEBUG("run Paxos for version %s", version)
+                      chosen = client.choose(peers_id, version, b);
                     if (chosen && *chosen.get() != *b)
                     {
                       if (resolver)
                       {
                         ELLE_TRACE_SCOPE(
-                          "%s: chosen block differs, run conflict resolution",
-                          *this);
+                          "chosen block differs, run conflict resolution");
                         auto block = (*resolver)(*b, mode);
                         if (block)
                         {
+                          ELLE_DEBUG_SCOPE("seal resolved block");
                           block->seal();
                           b.reset(block.release());
-                          continue;
+                        }
+                        else
+                        {
+                          ELLE_TRACE("resolution failed");
+                          throw infinit::model::doughnut::Conflict(
+                            "Paxos chose a different value");
                         }
                       }
-                      ELLE_TRACE(
-                        "%s: chosen block differs, signal conflict", *this);
-                      throw infinit::model::doughnut::Conflict(
-                        "Paxos chose a different value");
+                      else
+                      {
+                        ELLE_TRACE("chosen block differs, signal conflict");
+                        throw infinit::model::doughnut::Conflict(
+                          "Paxos chose a different value");
+                      }
                     }
-                    break;
+                    else
+                      break;
                   }
                 }
                 catch (Paxos::PaxosServer::WrongQuorum const& e)
