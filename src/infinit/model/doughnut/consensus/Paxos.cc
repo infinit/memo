@@ -448,32 +448,36 @@ namespace infinit
               }
               // FIXME: client is persisted on conflict resolution, hence the
               // round number is kept and won't start at 0.
-              Paxos::PaxosClient client(
-                uid(this->_doughnut.keys().K()), std::move(peers));
               while (true)
               {
                 try
                 {
-                  auto chosen = client.choose(peers_id, version, b);
-                  if (chosen && *chosen.get() != *b)
+                  Paxos::PaxosClient client(
+                    uid(this->_doughnut.keys().K()), std::move(peers));
+                  while (true)
                   {
-                    if (resolver)
+                    auto chosen = client.choose(peers_id, m->version(), b);
+                    if (chosen && *chosen.get() != *b)
                     {
-                      ELLE_TRACE_SCOPE(
-                        "%s: chosen block differs, run conflict resolution",
-                        *this);
-                      auto block = (*resolver)(*b, mode);
-                      if (block)
+                      if (resolver)
                       {
-                        block->seal();
-                        b.reset(block.release());
-                        continue;
+                        ELLE_TRACE_SCOPE(
+                          "%s: chosen block differs, run conflict resolution",
+                          *this);
+                        auto block = (*resolver)(*b, mode);
+                        if (block)
+                        {
+                          block->seal();
+                          b.reset(block.release());
+                          continue;
+                        }
                       }
+                      ELLE_TRACE(
+                        "%s: chosen block differs, signal conflict", *this);
+                      throw infinit::model::doughnut::Conflict(
+                        "Paxos chose a different value");
                     }
-                    ELLE_TRACE(
-                      "%s: chosen block differs, signal conflict", *this);
-                    throw infinit::model::doughnut::Conflict(
-                      "Paxos chose a different value");
+                    break;
                   }
                 }
                 catch (Paxos::PaxosServer::WrongQuorum const& e)
