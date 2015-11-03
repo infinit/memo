@@ -305,6 +305,23 @@ namespace infinit
           return const_cast<T&>(v);
         }
 
+        static
+        Paxos::PaxosClient::Peers
+        lookup_nodes(Doughnut& dht,
+                     Paxos::PaxosServer::Quorum const& q,
+                     Address address,
+                     int version)
+        {
+          Paxos::PaxosClient::Peers res;
+          for (auto member: dht.overlay()->lookup_nodes(q))
+          {
+            res.push_back(
+              elle::make_unique<consensus::Peer>(
+                std::move(member), address, version));
+          }
+          return res;
+        }
+
         std::unique_ptr<blocks::Block>
         Paxos::LocalPeer::fetch(Address address) const
         {
@@ -351,14 +368,9 @@ namespace infinit
               ELLE_TRACE_SCOPE(
                 "finalize running Paxos for version %s", version);
               auto block = highest->value;
-              Paxos::PaxosClient::Peers peers;
-              for (auto member:
-                     this->doughnut()->overlay()->lookup_nodes(paxos.quorum()))
-              {
-                peers.push_back(
-                  elle::make_unique<consensus::Peer>(
-                    std::move(member), block->address(), version));
-              }
+              Paxos::PaxosClient::Peers peers =
+                lookup_nodes(*this->doughnut(), paxos.quorum(),
+                             block->address(), version);
               Paxos::PaxosClient client(uid(this->doughnut()->keys().K()),
                                         std::move(peers));
               auto chosen = client.choose(paxos.quorum(), version, block);
@@ -435,56 +447,57 @@ namespace infinit
             {
               auto version = m->version();
               // FIXME: this voids the whole "query on the fly" optimisation
-              PaxosServer::Quorum peers_id;
-              std::vector<overlay::Overlay::Member> members;
               Paxos::PaxosClient::Peers peers;
-              ELLE_DEBUG("query quorum")
+              PaxosServer::Quorum peers_id;
+              // FIXME: This void the "query on the fly" optimization as it
+              // forces resolution of all peers to get their idea. Any other
+              // way ?
+              for (auto peer: owners)
               {
-                for (auto member: owners)
-                {
-                  peers_id.insert(member->id());
-                  members.push_back(member);
-                }
-                for (auto member: members)
-                {
-                  peers.push_back(
-                    elle::make_unique<Peer>(
-                      std::move(member), b->address(), version));
-                }
+                peers_id.insert(peer->id());
+                peers.push_back(
+                  elle::make_unique<Peer>(peer, b->address(), version));
               }
-              ELLE_DEBUG("quorum: %s", peers_id);
-              // for (int i = 0; i < this->_factor; ++i)
-              //   peers.push_back(
-              //     elle::make_unique<Peer>(owners, block->address(), version));
-              Paxos::PaxosClient client(uid(this->_doughnut.keys().K()),
-                                        std::move(peers));
-              try
+              while (true)
               {
-                auto chosen = client.choose(peers_id, version, b);
-                if (chosen && *chosen.get() != *b)
+                Paxos::PaxosClient client(
+                  uid(this->_doughnut.keys().K()), std::move(peers));
+                try
                 {
-                  if (resolver)
+                  auto chosen = client.choose(peers_id, version, b);
+                  if (chosen && *chosen.get() != *b)
                   {
-                    ELLE_TRACE(
-                      "%s: chosen block differs, run conflict resolution", *this);
-                    auto block = (*resolver)(*b, mode);
-                    if (block)
+                    if (resolver)
                     {
-                      block->seal();
-                      b.reset(block.release());
-                      continue;
+                      ELLE_TRACE(
+                        "%s: chosen block differs, run conflict resolution",
+                        *this);
+                      auto block = (*resolver)(*b, mode);
+                      if (block)
+                      {
+                        block->seal();
+                        b.reset(block.release());
+                        continue;
+                      }
                     }
+                    ELLE_TRACE(
+                      "%s: chosen block differs, signal conflict", *this);
+                    throw infinit::model::doughnut::Conflict(
+                      "Paxos chose a different value");
                   }
-                  ELLE_TRACE("%s: chosen block differs, signal conflict", *this);
-                  throw infinit::model::doughnut::Conflict(
-                    "Paxos chose a different value");
                 }
-              }
-              catch (Paxos::PaxosServer::WrongQuorum const& e)
-              {
-                ELLE_ERR("%s: %s instead of %s",
-                         e, e.effective(), e.expected());
-                throw;
+                catch (Paxos::PaxosServer::WrongQuorum const& e)
+                {
+                  ELLE_TRACE("%s: %s instead of %s",
+                             e.what(), e.effective(), e.expected());
+                  peers = lookup_nodes(this->_doughnut, e.expected(),
+                                       b->address(), version);
+                  peers_id.clear();
+                  for (auto const& peer: peers)
+                    peers_id.insert(static_cast<Peer&>(*peer).member().id());
+                  continue;
+                }
+                break;
               }
             }
             else
