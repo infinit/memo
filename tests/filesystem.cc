@@ -192,7 +192,7 @@ static void make_nodes(std::string store, int node_count,
     for (int i = 0; i < node_count; ++i)
       peers.push_back(std::make_pair(
         endpoints[i],
-        infinit::model::Address::random()
+        nodes[i]->id()
         ));
 
     // now give each a model
@@ -342,9 +342,18 @@ run_filesystem_dht(std::string const& store,
         elle::json::Object overlay;
         overlay["type"] = "stonehenge";
         elle::json::Array v;
-        for(auto const& ep: endpoints)
-          v.push_back("127.0.0.1:" + std::to_string(ep.port()));
-        overlay["hosts"] = v;
+        for (auto const& p: peers)
+        {
+          elle::json::Object po;
+          po["host"] = p.first.address().to_string();
+          po["port"] = p.first.port();
+          po["id"] = elle::format::base64::encode(
+            elle::ConstWeakBuffer(p.second.value(),
+                                  sizeof(infinit::model::Address::Value))
+            ).string();
+          v.push_back(po);
+        }
+        overlay["peers"] = v;
         model["overlay"] = overlay;
         model["replicas"] = 1;
         model["paxos"] = paxos;
