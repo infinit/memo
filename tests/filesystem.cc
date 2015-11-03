@@ -11,6 +11,7 @@
 #include <elle/serialization/json.hh>
 
 #include <elle/system/Process.hh>
+#include <elle/UUID.hh>
 
 #include <reactor/scheduler.hh>
 
@@ -335,6 +336,7 @@ run_filesystem_dht(std::string const& store,
         for(auto const& ep: endpoints)
           v.push_back("127.0.0.1:" + std::to_string(ep.port()));
         overlay["hosts"] = v;
+        overlay["node_id"] = elle::UUID::random().repr();
         model["overlay"] = overlay;
         model["replicas"] = 1;
         model["paxos"] = paxos;
