@@ -2847,7 +2847,8 @@ namespace infinit
             this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
               boost::asio::ip::address::from_string(itf.second.ipv4_address),
               _port), now()));
-            ELLE_LOG("Setting endpoint to %s", itf.second.ipv4_address);
+            ELLE_LOG("Setting endpoint to %s:%s",
+                     itf.second.ipv4_address, this->_port);
           }
         if (!this->_rdv_host.empty())
           _rdv_connect_thread_local = elle::make_unique<reactor::Thread>("rdv_connect",
