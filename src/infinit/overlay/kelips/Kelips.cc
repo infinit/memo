@@ -271,6 +271,7 @@ namespace infinit
         elle::Buffer
         serialize(T const& packet)
         {
+          ELLE_ASSERT(&packet);
           elle::Buffer buf;
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
@@ -941,7 +942,7 @@ namespace infinit
             }
             if (count > doughnut()->replicas())
             {
-              ELLE_DEBUG("Removing over-duplicated block %s (%s > %s)",
+              ELLE_LOG("Removing over-duplicated block %s (%s > %s)",
                          it->first, count, doughnut()->replicas());
               // dont reorder, local->remove will call our hook remove()
               auto address = it->first;
@@ -1240,7 +1241,13 @@ namespace infinit
           ELLE_TRACE("%x", buf);
           return;
         }
-        ELLE_ASSERT(packet);
+        if (!packet)
+        {
+          ELLE_WARN("%s: Received message without payload from %s.",
+            *this, source);
+          return;
+        }
+
         packet->endpoint = source;
         bool was_crypted = false;
         // First handle crypto related packets
@@ -2838,7 +2845,7 @@ namespace infinit
             this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
               boost::asio::ip::address::from_string(itf.second.ipv4_address),
               _port), now()));
-            ELLE_LOG("Setting endpoint to %s", itf.second.ipv4_address);
+            ELLE_LOG("Setting endpoint to %s:%s", itf.second.ipv4_address, _port);
           }
         if (!this->_rdv_host.empty())
           _rdv_connect_thread_local = elle::make_unique<reactor::Thread>("rdv_connect",
