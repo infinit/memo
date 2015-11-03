@@ -41,7 +41,7 @@ namespace infinit
     public:
       Overlay(elle::UUID node_id);
       virtual
-      ~Overlay() = default;
+      ~Overlay() {}
       virtual
       void
       register_local(std::shared_ptr<model::doughnut::Local> local);
