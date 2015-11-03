@@ -132,6 +132,27 @@ struct PrettyGossipEndpoint
   ELLE_ATTRIBUTE_R(std::string, repr);
 };
 
+
+static void retry_forever(elle::Duration start_delay, elle::Duration max_delay,
+                          std::string action_name,
+                          std::function<void()> action)
+{
+  elle::Duration delay = start_delay;
+  while (true)
+  {
+    try
+    {
+      action();
+      return;
+    }
+    catch (elle::Exception const& e)
+    {
+      ELLE_WARN("%s: execption %s", action_name, e);
+      delay = std::min(delay * 2, max_delay);
+      reactor::sleep(delay);
+    }
+  }
+}
 namespace std
 {
   namespace chrono
@@ -695,8 +716,11 @@ namespace infinit
             [this] {
               // The remotes_server does not accept incoming connections,
               // it is used to connect Remotes
-              this->_remotes_server.rdv_connect(
-                this->_rdv_id + "_", this->_rdv_host);
+              retry_forever(10_sec, 120_sec, "Remote RDV connect",
+                [&] {
+                  this->_remotes_server.rdv_connect(
+                    this->_rdv_id + "_", this->_rdv_host, 120_sec);
+                });
           });
         if (_config.bootstrap_nodes.empty())
         {
@@ -977,7 +1001,10 @@ namespace infinit
                 port = std::stoi(host.substr(p+1));
                 host = host.substr(0, p);
               }
-              _gossip.rdv_connect(id, host, port);
+              retry_forever(10_sec, 120_sec, "RDV connect",
+                [&] {
+                  _gossip.rdv_connect(id, host, port, 120_sec);
+                });
             });
           else
           {
@@ -2850,8 +2877,11 @@ namespace infinit
         if (!this->_rdv_host.empty())
           _rdv_connect_thread_local = elle::make_unique<reactor::Thread>("rdv_connect",
             [this,l] {
-              l->utp_server()->rdv_connect(
-                this->_rdv_id, this->_rdv_host);
+              retry_forever(10_sec, 120_sec, "RDV connect",
+                [&] {
+                  l->utp_server()->rdv_connect(
+                    this->_rdv_id, this->_rdv_host, 120_sec);
+                });
           });
         else
           l->utp_server()->set_local_id(this->_rdv_id);
