@@ -229,57 +229,6 @@ import(variables_map const& args)
 }
 
 static
-bool
-volumes_valid(infinit::NetworkDescriptor const& network)
-{
-  auto res = beyond_fetch<
-    std::unordered_map<std::string, std::vector<infinit::Volume>>>(
-      elle::sprintf("networks/%s/volumes", network.name),
-      "volumes for network",
-      network.name,
-      boost::none,
-      false);
-  auto const& beyond_volumes = res["volumes"];
-  std::string error = "";
-  auto short_name = [] (std::string const& long_name) -> std::string
-  {
-    return long_name.substr(long_name.find("/") + 1);
-  };
-  if (beyond_volumes.size() == 0)
-  {
-    error = elle::sprintf(
-      "There are currently no volumes pushed to %s for this network.\nCreate "
-      "and push a volume with the same name as the network so that GUI users "
-      "can easily mount it.",
-      beyond());
-  }
-  else if (beyond_volumes.size() > 1)
-  {
-    error = elle::sprintf(
-      "There are currently %d volumes pushed to %s for this network.\nGUI users "
-      "will not be able to easily mount any of the volumes.\nConsider creating "
-      "and pushing a single volume per network, using the same name for both.",
-      beyond_volumes.size(), beyond());
-  }
-  else if (short_name(beyond_volumes[0].name) != short_name(network.name))
-  {
-    error = elle::sprintf(
-      "The volume name (%s) on %s does not match the network name (%s).\nGUI "
-      "users will not easily be able to mount it.\nConsider creating and "
-      "pushing a single volume per network, using the same name for both.",
-      short_name(beyond_volumes[0].name), beyond(), short_name(network.name));
-  }
-  if (!error.empty())
-  {
-    error.insert(0, "WARNING: User NOT invited.\n");
-    error += "\nUse --force to invite anyway.";
-    std::cout << error << std::endl;
-    return false;
-  }
-  return true;
-}
-
-static
 void
 invite(variables_map const& args)
 {
@@ -293,9 +242,6 @@ invite(variables_map const& args)
     throw elle::Error(
       elle::sprintf("not owner of network \"%s\"", network_name));
   }
-  bool force = args.count("force") && args["force"].as<bool>();
-  if (!force && !volumes_valid(network))
-    return;
   infinit::model::doughnut::Passport passport(
     user.public_key,
     network.name,
@@ -612,7 +558,6 @@ int main(int argc, char** argv)
         { "push,p", bool_switch(),
             elle::sprintf("push the passport to %s", beyond()).c_str() },
         { "user,u", value<std::string>(), "user to create the passport for" },
-        { "force", bool_switch(), "force invite" },
         option_owner,
       },
     },
