@@ -111,6 +111,8 @@ def configure(
     'resources/images/branded-apps@2x.png',
     'resources/images/custom-branded-apps.png',
     'resources/images/custom-branded-apps@2x.png',
+    'resources/images/infinit-cloud-solutions.png',
+    'resources/images/infinit-cloud-solutions@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
@@ -142,6 +144,12 @@ def configure(
     'resources/images/icons/business@2x.png',
     'resources/images/icons/enterprise.png',
     'resources/images/icons/enterprise@2x.png',
+    'resources/images/icons/infinit-cloud-api.png',
+    'resources/images/icons/infinit-cloud-api@2x.png',
+    'resources/images/icons/infinit-cloud-drive.png',
+    'resources/images/icons/infinit-cloud-drive@2x.png',
+    'resources/images/icons/infinit-cloud-apps.png',
+    'resources/images/icons/infinit-cloud-apps@2x.png',
 
     'resources/images/team/antony.png',
     'resources/images/team/antony@2x.png',

@@ -149,7 +149,7 @@ class Website(bottle.Bottle):
         email_id = 'tem_KL7zioLvZEASeg5M4QTv53',
         recipient = {'address': 'contact@infinit.sh'},
         email_data = {
-          f: bottle.request.forms.get(f) for f in ['first_name', 'last_name', 'email', 'message', 'company', 'country'] if bottle.request.forms.get(f)
+          f: bottle.request.forms.get(f) for f in ['first_name', 'last_name', 'email', 'message', 'phone', 'company', 'country'] if bottle.request.forms.get(f)
         })
       if response.status_code // 100 != 2:
         bottle.response.status = 503

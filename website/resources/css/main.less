@@ -108,6 +108,15 @@ section.blue {
   background: #EBF0F3;
 }
 
+p.subtitle {
+  font-family: @helvetica; font-size: 22px; color: #5D5D5D; line-height: 26px;
+  font-weight: 300; text-align: center; margin-top: 10px;
+}
+
+p.title, h2.title {
+  font-family: @helvetica; font-weight: 300; font-size: 30px; line-height: 42px;
+}
+
 footer {
    background: darken(#515149, 7%); clear: both;
    padding: 80px 0; min-height: 155px;
@@ -210,13 +219,6 @@ body.home {
     font-size: 33px; line-height: 41px; text-align: center;
     margin-bottom: 0px;
   }
-
-  p.subtitle {
-    font-family: @helvetica; font-size: 22px; color: #5D5D5D; line-height: 26px;
-    font-weight: 300; text-align: center; margin-top: 10px;
-  }
-
-  p.title { font-family: @helvetica; font-weight: 300; font-size: 30px; line-height: 42px; }
 
   section.presentation {
     min-height: 490px;
@@ -786,7 +788,7 @@ body.pricing {
 `------------*/
 
 body.contact, body.solutions {
-  form { margin-top: 40px; }
+  section form { margin-top: 40px; }
 
   section.doc { padding-left: 20%; width: 60%;}
   input[type="text"], input[type="email"] { height: 25px; width: 40%;}
@@ -826,30 +828,52 @@ body.opensource {
 
 body.solutions {
   section.doc {
-    margin-top: 50px; padding: 0 10% 100px 10%; width: 80%;
+    margin-top: 50px; padding: 0 10% 20px 10%; width: 80%;
 
-    h1, p.title {
+    h1, p.subtitle {
       text-align: center; border-bottom: none; padding-bottom: 0; margin-top: 0;
     }
 
-    .increase { width: 29%; padding: 20px 2% 40px 2%; float: left; text-align: center; }
+    .cloud_solutions { clear: both; margin: 50px auto 0 auto; width: 70%; }
+    .cloud_solutions > img { float: left; margin-right: 50px; }
+    .cloud_solutions h2 { padding-top: 128px; font-size: 23px; }
+    .cloud_solutions .apps { text-align: center; clear: both; padding-top: 110px; }
+    .cloud_solutions:after { content: ''; display: table; clear: both; }
 
-    .cloud_system { padding-right: 5%; }
-    .custom_apps { padding-left: 5%; }
+    .cloud_system { padding-right: 5%; clear: both; }
+    .custom_apps { padding-left: 5%;   }
 
     .cloud_system, .custom_apps {
       width: 45%; float: left; text-align: center;
-      padding-bottom: 60px;
+      padding-bottom: 70px;
 
-      h2 { margin-top: 20px;}
+      h2 { font-size: 23px; }
       img { margin-top: 60px;}
+      h2 img { margin-top: 0; vertical-align: text-top; margin-right: 5px; }
     }
+
+    .cloud_system h2 img {vertical-align: middle;}
   }
 
-  form { clear:both; margin: 0; padding: 0 10%;}
-  form h2 { text-align: center;  margin: 30px 0; }
-  form input[type="text"], form input[type="email"] {
-    width: 44%; margin-right: 2%;
+  section {
+    form { clear:both; margin: 0; padding: 0 20% 80px 20%;}
+    form h2 { text-align: center;  margin: 30px 0; padding-top: 50px; }
+    form input[type="text"], form input[type="email"] {
+      width: 44%; margin-right: 2%;
+    }
+    button { margin-top: 20px;}
+  }
+
+  section.benefits {
+    padding: 0 10% 0 10%; width: 80%; background: #404040; clear: both;
+    &:after { content:''; clear: both; display: table;}
+
+    .increase:first-child { clear: both; }
+    .increase {
+      width: 25%; color: white; margin: 0px 2%; padding: 50px 2% 50px 2%; float: left;
+      text-align: center; border-radius: 5px; -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
   }
 }
 
