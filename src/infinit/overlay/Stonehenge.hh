@@ -29,6 +29,9 @@ namespace infinit
       _lookup(model::Address address,
               int n,
               Operation op) const override;
+      virtual
+      Overlay::Member
+      _lookup_node(model::Address address) override;
     };
 
     struct StonehengeConfiguration
@@ -41,7 +44,7 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(std::vector<std::string> const& hosts, bool server,
+      make(NodeEndpoints const& hosts, bool server,
         model::doughnut::Doughnut* doughnut) override;
     };
   }

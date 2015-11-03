@@ -80,6 +80,7 @@ namespace infinit
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver)
     {
+      ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
       block->seal();
       return this->_store(std::move(block), mode, std::move(resolver));
     }
@@ -89,8 +90,8 @@ namespace infinit
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver)
     {
+      ELLE_TRACE_SCOPE("%s: store %f", *this, block);
       block.seal();
-      ELLE_TRACE_SCOPE("%s: copy block after seal", *this);
       auto copy = block.clone();
       return this->_store(std::move(copy), mode, std::move(resolver));
     }

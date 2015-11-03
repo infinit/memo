@@ -25,6 +25,7 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Replicator.hh>
 #include <infinit/model/doughnut/Cache.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
@@ -41,39 +42,14 @@ namespace infinit
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          OverlayBuilder overlay_builder,
-                         boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
-                         int replicas,
-                         bool async,
-                         bool cache)
-        : _replicas(replicas)
+                         ConsensusBuilder consensus)
+        : _consensus(consensus(*this))
         , _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _overlay(overlay_builder(this))
       {
-
-        if (replicas == 1)
-        {
-          this->_consensus = elle::make_unique<Consensus>(*this);
-        }
-        else
-        {
-          this->_consensus = elle::make_unique<Replicator>(*this, replicas,
-            dir / "replicator", false);
-        }
-        if (async)
-        {
-          this->_consensus = elle::make_unique<Async>(*this,
-                                                      std::move(this->_consensus),
-                                                      dir / "async");
-        }
-        if (cache)
-        {
-          this->_consensus = elle::make_unique<Cache>(*this,
-                                                      std::move(this->_consensus),
-                                                      std::chrono::seconds(5));
-        }
         this->overlay()->doughnut(this);
         if (local)
         {
@@ -82,25 +58,19 @@ namespace infinit
         }
       }
 
-      Doughnut::Doughnut(std::string name,
+      Doughnut::Doughnut(std::string const& name,
                          cryptography::rsa::KeyPair keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          OverlayBuilder overlay_builder,
-                         boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
-                         int replicas,
-                         bool async,
-                         bool cache)
+                         ConsensusBuilder consensus)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(overlay_builder),
-                   std::move(dir),
                    std::move(local),
-                   replicas,
-                   std::move(async),
-                   std::move(cache))
+                   std::move(consensus))
       {
         auto check_user_blocks = [name, this]
           {
@@ -151,6 +121,82 @@ namespace infinit
                            elle::sprintf("%s: user blocks checker", *this),
                            check_user_blocks));
       }
+
+      static
+      std::unique_ptr<Consensus>
+      make_consensus(Doughnut& self,
+                int replicas,
+                boost::filesystem::path const& dir,
+                bool async,
+                bool cache,
+                bool paxos)
+      {
+        std::unique_ptr<Consensus> consensus;
+        if (paxos)
+          consensus =
+            elle::make_unique<consensus::Paxos>(self, replicas);
+        else if (replicas == 1)
+          consensus = elle::make_unique<Consensus>(self);
+        else
+          consensus = elle::make_unique<Replicator>(
+            self, replicas, dir / "replicator", false);
+        if (async)
+          consensus = elle::make_unique<Async>(
+            self, std::move(consensus), dir / "async");
+        if (cache)
+          consensus = elle::make_unique<Cache>(self,
+                                               std::move(consensus),
+                                               std::chrono::seconds(5));
+        return consensus;
+      }
+
+      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
+                         cryptography::rsa::PublicKey owner,
+                         Passport passport,
+                         OverlayBuilder overlay_builder,
+                         boost::filesystem::path const& dir,
+                         std::shared_ptr<Local> local,
+                         int replicas,
+                         bool async,
+                         bool cache,
+                         bool paxos)
+        : Doughnut(std::move(keys),
+                   std::move(owner),
+                   std::move(passport),
+                   std::move(overlay_builder),
+                   std::move(local),
+                   [&] (Doughnut& dht)
+                   {
+                     this->_replicas = replicas;
+                     return make_consensus(
+                       dht, replicas, dir, async, cache, paxos);
+                   })
+      {}
+
+      Doughnut::Doughnut(std::string name,
+                         cryptography::rsa::KeyPair keys,
+                         cryptography::rsa::PublicKey owner,
+                         Passport passport,
+                         OverlayBuilder overlay_builder,
+                         boost::filesystem::path const& dir,
+                         std::shared_ptr<Local> local,
+                         int replicas,
+                         bool async,
+                         bool cache,
+                         bool paxos)
+        : Doughnut(std::move(name),
+                   std::move(keys),
+                   std::move(owner),
+                   std::move(passport),
+                   std::move(overlay_builder),
+                   std::move(local),
+                   [&] (Doughnut& dht)
+                   {
+                     this->_replicas = replicas;
+                     return make_consensus(
+                       dht, replicas, dir, async, cache, paxos);
+                   })
+      {}
 
       Doughnut::~Doughnut()
       {
@@ -262,13 +308,14 @@ namespace infinit
         Passport passport_,
         boost::optional<std::string> name_,
         int replicas_,
-        bool async_)
+        bool paxos_)
         : overlay(std::move(overlay_))
         , keys(std::move(keys_))
         , owner(std::move(owner_))
         , passport(std::move(passport_))
         , name(std::move(name_))
         , replicas(std::move(replicas_))
+        , paxos(std::move(paxos_))
       {}
 
       Configuration::Configuration
@@ -280,6 +327,7 @@ namespace infinit
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , replicas(s.deserialize<int>("replicas"))
+        , paxos(s.deserialize<bool>("paxos"))
       {}
 
       void
@@ -291,10 +339,11 @@ namespace infinit
         s.serialize("passport", this->passport);
         s.serialize("name", this->name);
         s.serialize("replicas", this->replicas);
+        s.serialize("paxos", this->paxos);
       }
 
       std::unique_ptr<infinit::model::Model>
-      Configuration::make(std::vector<std::string> const& hosts,
+      Configuration::make(overlay::NodeEndpoints const& hosts,
                           bool client,
                           bool server,
                           boost::filesystem::path const& dir)
@@ -309,7 +358,11 @@ namespace infinit
               return overlay->make(hosts, server, doughnut);
             }),
             dir,
-            nullptr);
+            nullptr,
+            this->replicas,
+            false,
+            false,
+            this->paxos);
         else
           return elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -321,16 +374,21 @@ namespace infinit
               return overlay->make(hosts, server, doughnut);
             }),
             dir,
-            nullptr);
+            nullptr,
+            this->replicas,
+            false,
+            false,
+            this->paxos);
       }
 
       std::shared_ptr<Doughnut>
-      Configuration::make(std::vector<std::string> const& hosts,
-                                bool client,
-                                std::shared_ptr<Local> local,
-                                boost::filesystem::path const& dir,
-                                bool async,
-                                bool cache)
+      Configuration::make(overlay::NodeEndpoints const& hosts,
+                          bool client,
+                          std::shared_ptr<Local> local,
+                          boost::filesystem::path const& dir,
+                          bool async,
+                          bool cache
+                          )
       {
         if (!client || !this->name)
           return std::make_shared<infinit::model::doughnut::Doughnut>(
@@ -338,14 +396,15 @@ namespace infinit
             owner,
             passport,
             static_cast<Doughnut::OverlayBuilder>(
-            [=](infinit::model::doughnut::Doughnut* doughnut) {
-              return overlay->make(hosts, bool(local), doughnut);
-            }),
+              [=](infinit::model::doughnut::Doughnut* doughnut) {
+                return overlay->make(hosts, bool(local), doughnut);
+              }),
             dir,
             local,
             replicas,
             async,
-            cache);
+            cache,
+            this->paxos);
         else
           return std::make_shared<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -353,14 +412,15 @@ namespace infinit
             owner,
             passport,
             static_cast<Doughnut::OverlayBuilder>(
-            [=](infinit::model::doughnut::Doughnut* doughnut) {
-              return overlay->make(hosts, bool(local), doughnut);
-            }),
+              [=](infinit::model::doughnut::Doughnut* doughnut) {
+                return overlay->make(hosts, bool(local), doughnut);
+              }),
             dir,
             local,
             replicas,
             async,
-            cache);
+            cache,
+            this->paxos);
       }
 
       static const elle::serialization::Hierarchy<ModelConfig>::

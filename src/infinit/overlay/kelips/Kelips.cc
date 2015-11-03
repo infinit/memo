@@ -2,6 +2,9 @@
 
 #include <algorithm>
 #include <random>
+#include <vector>
+#include <utility>
+#include <unordered_map>
 
 #include <boost/filesystem.hpp>
 
@@ -15,6 +18,7 @@
 #include <elle/serialization/binary/SerializerIn.hh>
 #include <elle/serialization/binary/SerializerOut.hh>
 #include <elle/serialization/json.hh>
+#include <elle/utils.hh>
 
 #include <cryptography/SecretKey.hh>
 #include <cryptography/Error.hh>
@@ -30,8 +34,9 @@
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
-#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/Passport.hh>
+#include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh> // FIXME
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
@@ -127,12 +132,121 @@ struct PrettyGossipEndpoint
   ELLE_ATTRIBUTE_R(std::string, repr);
 };
 
+namespace std
+{
+  namespace chrono
+  {
+    std::ostream& operator << (std::ostream&o,
+                               time_point<std::chrono::system_clock> const& t)
+    {
+      return o << std::chrono::duration_cast<std::chrono::milliseconds>(
+        t.time_since_epoch()).count();
+    }
+  }
+}
+
+
 namespace infinit
 {
   namespace overlay
   {
     namespace kelips
     {
+
+      static inline
+      Time
+      now()
+      {
+        return std::chrono::system_clock::now();
+      }
+
+      template<typename E1, typename E2>
+      void
+      endpoint_to_endpoint(E1 const& src, E2& dst)
+      {
+        dst = E2(src.address(), src.port());
+      }
+
+      RpcEndpoint e2e(GossipEndpoint const& src)
+      {
+        RpcEndpoint res;
+        endpoint_to_endpoint(src, res);
+        return res;
+      }
+      GossipEndpoint e2e(RpcEndpoint const& src)
+      {
+        GossipEndpoint res;
+        endpoint_to_endpoint(src, res);
+        return res;
+      }
+
+      static
+      void
+      endpoints_update(std::vector<TimedEndpoint>& endpoints, GossipEndpoint entry,
+                       Time t = now())
+      {
+        auto hit = std::find_if(endpoints.begin(), endpoints.end(),
+            [&](TimedEndpoint const& e) { return e.first == entry;});
+        if (hit == endpoints.end())
+          endpoints.push_back(TimedEndpoint(entry, now()));
+        else
+          hit->second = std::max(t, hit->second);
+      }
+
+      static
+      void
+      endpoints_update(std::vector<TimedEndpoint>& endpoints,
+                       const std::vector<TimedEndpoint>& src)
+      {
+        for (auto const& te: src)
+          endpoints_update(endpoints, te.first, te.second);
+      }
+
+      static
+      void
+      endpoints_cleanup(std::vector<TimedEndpoint>& endpoints, Time deadline)
+      {
+        for (unsigned i=0; i<endpoints.size(); ++i)
+        {
+          if (endpoints[i].second < deadline)
+          {
+            std::swap(endpoints[i], endpoints[endpoints.size()-1]);
+            endpoints.pop_back();
+            --i;
+          }
+        }
+      }
+
+      static
+      Time
+      endpoints_max(std::vector<TimedEndpoint> const& endpoints)
+      {
+        return std::max_element(endpoints.begin(), endpoints.end(),
+          [](TimedEndpoint const& a, TimedEndpoint const& b) {
+            return a.second < b.second;
+          })->second;
+      }
+
+      static
+      std::vector<RpcEndpoint>
+      endpoints_extract_convert(std::vector<TimedEndpoint> const& endpoints)
+      {
+        std::vector<RpcEndpoint> res;
+        for (auto const& ep: endpoints)
+          res.push_back(e2e(ep.first));
+        return res;
+      }
+
+      static
+      std::vector<GossipEndpoint>
+      endpoints_extract(std::vector<TimedEndpoint> const& endpoints)
+      {
+        std::vector<GossipEndpoint> res;
+        for (auto const& ep: endpoints)
+          res.push_back(ep.first);
+        return res;
+      }
+
       static
       uint64_t
       serialize_time(const Time& t)
@@ -176,6 +290,7 @@ namespace infinit
         {
           GossipEndpoint endpoint;
           Address sender;
+          bool observer; // true if sender is observer (no storage)
           static constexpr char const* virtually_serializable_key = "type";
         };
 
@@ -193,6 +308,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("payload", payload);
           }
 
@@ -235,6 +351,7 @@ namespace infinit
             : passport(input)
           {
             input.serialize("sender", sender);
+            input.serialize("observer", observer);
           }
 
           void
@@ -242,6 +359,7 @@ namespace infinit
           {
             passport.serialize(s);
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
           }
 
           infinit::model::doughnut::Passport passport;
@@ -258,6 +376,7 @@ namespace infinit
             : passport(input)
           {
             input.serialize("sender", sender);
+            input.serialize("observer", observer);
             input.serialize("encrypted_key", encrypted_key);
           }
 
@@ -266,6 +385,7 @@ namespace infinit
           {
             passport.serialize(s);
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("encrypted_key", encrypted_key);
           }
 
@@ -288,6 +408,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("endpoint", remote_endpoint);
           }
 
@@ -319,6 +440,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
           }
         };
         REGISTER(BootstrapRequest, "bootstrapRequest");
@@ -337,6 +459,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
           }
         };
         REGISTER(FileBootstrapRequest, "fileBootstrapRequest");
@@ -355,11 +478,12 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("contacts", contacts);
             s.serialize("files", files);
           }
           // address -> (last_seen, val)
-          std::unordered_map<Address, std::pair<Time, GossipEndpoint>> contacts;
+          std::unordered_map<Address, std::vector<TimedEndpoint>> contacts;
           std::unordered_multimap<Address, std::pair<Time, Address>> files;
         };
         REGISTER(Gossip, "gossip");
@@ -378,19 +502,21 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("id", request_id);
             s.serialize("origin", originAddress);
-            s.serialize("endpoint", originEndpoint);
+            s.serialize("endpoint", originEndpoints);
             s.serialize("address", fileAddress);
             s.serialize("ttl", ttl);
             s.serialize("count", count);
             s.serialize("result", result);
+            s.serialize("query_node", query_node);
           }
 
           int request_id;
           /// origin node
           Address originAddress;
-          GossipEndpoint originEndpoint;
+          std::vector<GossipEndpoint> originEndpoints;
           /// file address requested
           Address fileAddress;
           int ttl;
@@ -398,6 +524,8 @@ namespace infinit
           int count;
           /// partial result
           std::vector<PeerLocation> result;
+          /// Request is for a node and not a file
+          bool query_node;
         };
         REGISTER(GetFileRequest, "get");
 
@@ -415,6 +543,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddress);
@@ -467,6 +596,7 @@ namespace infinit
           serialize(elle::serialization::Serializer& s)
           {
             s.serialize("sender", sender);
+            s.serialize("observer", observer);
             s.serialize("id", request_id);
             s.serialize("origin", origin);
             s.serialize("address", fileAddress);
@@ -492,13 +622,6 @@ namespace infinit
         reactor::Barrier barrier;
         Time startTime;
       };
-
-      static inline
-      Time
-      now()
-      {
-        return std::chrono::system_clock::now();
-      }
 
       template<typename C>
       typename C::iterator
@@ -546,20 +669,6 @@ namespace infinit
         return res;
       }
 
-      template<typename E1, typename E2>
-      void
-      endpoint_to_endpoint(E1 const& src, E2& dst)
-      {
-        dst = E2(src.address(), src.port());
-      }
-
-      RpcEndpoint e2e(GossipEndpoint const& src)
-      {
-        RpcEndpoint res;
-        endpoint_to_endpoint(src, res);
-        return res;
-      }
-
       Address
       address_of_uuid(elle::UUID const& id)
       {
@@ -586,8 +695,9 @@ namespace infinit
           ELLE_LOG("Running in observer mode");
         this->doughnut(doughnut);
         _remotes_server.listen(0);
+        ELLE_DEBUG("remotes server listening on %s", _remotes_server.local_endpoint());
         _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.io:7890");
-        _rdv_id = elle::sprintf("rpc.%x", this->_self);
+        _rdv_id = elle::sprintf("%x", this->_self);
         if (!_rdv_host.empty())
           _rdv_connect_thread = elle::make_unique<reactor::Thread>("rdv_connect",
             [this] {
@@ -641,59 +751,70 @@ namespace infinit
 
       SerState Node::get_serstate(PeerLocation pl)
       {
-        RpcEndpoint host = pl.second;
+        std::vector<GossipEndpoint> endpoints;
+        for (auto const& ep: pl.second)
+          endpoints.push_back(GossipEndpoint(ep.address(), ep.port()));
         using Protocol = infinit::model::doughnut::Local::Protocol;
         auto protocol = this->_config.rpc_protocol;
         if (protocol == Protocol::utp || protocol == Protocol::all)
         {
           try
           {
-            if (pl.first != Address::null && _remotes_server.rdv_connected())
-            {
-              std::string uid = elle::sprintf("rpc.%x", pl.first);
-              infinit::model::doughnut::Remote peer(
-                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                boost::asio::ip::udp::endpoint(host.address(), host.port() + 100),
-                uid,
-                const_cast<Node*>(this)->_remotes_server);
-              peer.connect();
-              RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
-              return rpc();
-            }
-            else
-            {
-              infinit::model::doughnut::Remote peer(
-                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                boost::asio::ip::udp::endpoint(host.address(), host.port() + 100),
-                const_cast<Node*>(this)->_remotes_server);
-              peer.connect();
-              RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
-              return rpc();
-            }
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_WARN("%s: UTP connection failed with %s: %s", *this, host, e);
-          }
-        }
-        if (protocol == Protocol::tcp || protocol == Protocol::all)
-        {
-          try
-          {
+            ELLE_DEBUG("utp connect to %s", pl);
+            std::string uid;
+            if (pl.first != Address::null)
+              uid = elle::sprintf("%x", pl.first);
             infinit::model::doughnut::Remote peer(
-                const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                host);
+              elle::unconst(*this->doughnut()),
+              pl.first,
+              endpoints,
+              uid,
+              elle::unconst(this)->_remotes_server);
             peer.connect();
+            ELLE_DEBUG("utp connected");
             RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
             return rpc();
           }
           catch (elle::Error const& e)
           {
-            ELLE_WARN("%s: TCP connection failed with %s: %s", *this, host, e);
+            ELLE_WARN("%s: UTP connection failed with %s: %s", *this, endpoints, e);
+          }
+        }
+        if (protocol == Protocol::tcp || protocol == Protocol::all)
+        {
+          if (!pl.second.empty())
+          {
+            try
+            {
+              infinit::model::doughnut::consensus::Paxos::RemotePeer peer(
+                elle::unconst(*this->doughnut()),
+                pl.first,
+                pl.second.front());
+              peer.connect();
+              RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
+              return rpc();
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("%s: TCP connection failed with %s: %s", *this,
+                endpoints.front(), e);
+            }
           }
         }
         throw elle::Error(
-          elle::sprintf("%s: Failed to contact peer %s", *this, host));
+          elle::sprintf("%s: Failed to contact peer %s", *this, endpoints.front()));
+      }
+
+      void
+      Node::onPacket(reactor::network::Buffer nbuf, GossipEndpoint source)
+      {
+        elle::Buffer buf(nbuf.data()+8, nbuf.size()-8);
+        static bool async = getenv("INFINIT_KELIPS_ASYNC");
+        if (async)
+        new reactor::Thread(elle::sprintf("process"),
+          [=] { this->process(buf, source);}, true);
+        else
+          process(buf, source);
       }
 
       void
@@ -704,9 +825,10 @@ namespace infinit
         std::set<PeerLocation> candidates;
         if (use_bootstrap_nodes)
           for (auto const& b: _config.bootstrap_nodes)
-            candidates.insert(std::make_pair(Address::null, e2e(b)));
+            candidates.insert(b);
         for (auto const& c: this->_state.contacts[_group])
-          candidates.insert(PeerLocation(c.second.address, e2e(c.second.endpoint)));
+          candidates.insert(PeerLocation(c.second.address,
+            endpoints_extract_convert(c.second.endpoints)));
         while (!candidates.empty())
         {
           PeerLocation pl = *candidates.begin();
@@ -723,7 +845,8 @@ namespace infinit
             {
               if (!scanned.count(c.first))
               {
-                candidates.insert(PeerLocation(c.first, e2e(c.second.endpoint)));
+                candidates.insert(PeerLocation(c.first,
+                  endpoints_extract_convert(c.second.endpoints)));
               }
             }
           }
@@ -741,7 +864,7 @@ namespace infinit
       {
         while (true)
         {
-          reactor::sleep(40_sec); // FINME awfully short for testing
+          reactor::sleep(600_sec); // FINME awfully short for testing
           try
           {
             rereplicate();
@@ -843,15 +966,19 @@ namespace infinit
       void
       Node::engage()
       {
+        ELLE_TRACE("bootstraping");
         bootstrap(true);
+        ELLE_TRACE("deoverdeplicating");
         deoverduplicate();
-
+        ELLE_TRACE("joining");
         _gossip.socket()->close();
-        _gossip.bind(GossipEndpoint({}, _port));
-        if (!_rdv_host.empty())
+        if (!_local)
+        {
+          _gossip.bind(GossipEndpoint({}, _port));
+          if (!_rdv_host.empty())
           _rdv_connect_gossip_thread = elle::make_unique<reactor::Thread>(
             "rdv gossip connect", [this] {
-              std::string id = elle::sprintf("gossip.%x", _self);
+              std::string id = elle::sprintf("%x", _self);
               std::string host = _rdv_host;
               int port = 7890;
               auto p = host.find_first_of(':');
@@ -861,51 +988,91 @@ namespace infinit
                 host = host.substr(0, p);
               }
               _gossip.rdv_connect(id, host, port);
-          });
-        ELLE_LOG("%s: listening on port %s",
-                 *this, _gossip.local_endpoint().port());
+            });
+          else
+          {
+            std::string id = elle::sprintf("%x", _self);
+            _gossip.set_local_id(id);
+          }
+        }
+
         ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
-        _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
-          std::bind(&Node::gossipEmitter, this));
-        _listener_thread = elle::make_unique<reactor::Thread>("listener",
-          std::bind(&Node::gossipListener, this));
-        _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
-          std::bind(&Node::pinger, this));
-        _rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
-          std::bind(&Node::rereplicator, this));
+
+        if (!_local)
+        {
+          _listener_thread = elle::make_unique<reactor::Thread>("listener",
+            std::bind(&Node::gossipListener, this));
+          ELLE_LOG("%s: listening on port %s",
+            *this, _gossip.local_endpoint().port());
+        }
+        else
+        {
+          _local->utp_server()->socket()->register_reader(
+            "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
+              std::placeholders::_2));
+          ELLE_LOG("%s: listening on %s",
+            *this, _local->utp_server()->local_endpoint());
+        }
+        if (!_observer)
+        {
+          _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
+            std::bind(&Node::pinger, this));
+          _rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
+            std::bind(&Node::rereplicator, this));
+          _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
+            std::bind(&Node::gossipEmitter, this));
+        }
 
         // Send a bootstrap request to bootstrap nodes and all
         // nodes in group
         packet::BootstrapRequest req;
         req.sender = _self;
 
-        auto send_bootstrap = [&req, this](GossipEndpoint e)
+        auto send_bootstrap = [&req, this](PeerLocation const& l)
         {
-          ELLE_TRACE("%s: sending bootstrap to node %s", *this, e);
-          if (!_config.encrypt || _config.accept_plain)
-            send(req, e, Address::null);
+          if (l.first != Address::null)
+          {
+            std::vector<GossipEndpoint> eps;
+            for (auto const& ep: l.second)
+              eps.push_back(e2e(ep));
+            Contact& c = get_or_make(l.first, false, eps);
+            ELLE_TRACE("%s: sending bootstrap to node %s", *this, l);
+            if (!_config.encrypt || _config.accept_plain)
+              send(req, c);
+            else
+            {
+              packet::RequestKey req(doughnut()->passport());
+              req.sender = _self;
+              send(req, c);
+              _pending_bootstrap_address.push_back(l.first);
+            }
+          }
           else
           {
-            packet::RequestKey req(doughnut()->passport());
-            req.sender = _self;
-            send(req, e, Address::null);
-            _pending_bootstrap.push_back(e);
+            if (!_config.encrypt || _config.accept_plain)
+            {
+              for (auto const& ep: l.second)
+                send(req, e2e(ep), Address::null);
+            }
+            else
+            {
+              packet::RequestKey req(doughnut()->passport());
+              req.sender = _self;
+              for (auto const& ep: l.second)
+                send(req, e2e(ep), Address::null);
+            }
+            for (auto const& ep: l.second)
+              _pending_bootstrap_endpoints.push_back(e2e(ep));
           }
         };
-        std::set<GossipEndpoint> recipients;
         for (auto const& e: _config.bootstrap_nodes)
         {
           send_bootstrap(e);
-          recipients.insert(e);
         }
-        for (auto const& c: _state.contacts[_group])
+        for (auto& c: _state.contacts[_group])
         {
-          auto e = c.second.endpoint;
-          if (!recipients.count(e))
-          {
-            send_bootstrap(e);
-            recipients.insert(e);
-          }
+          send_bootstrap(PeerLocation(c.second.address,
+            endpoints_extract_convert(c.second.endpoints)));
         }
         if (_config.wait)
           wait(_config.wait);
@@ -924,60 +1091,59 @@ namespace infinit
       }
 
       void
-      Node::setKey(Address const& a, GossipEndpoint const& e,
-        infinit::cryptography::SecretKey sk)
+      Node::setKey(Address const& a,
+                   infinit::cryptography::SecretKey sk)
       {
-        auto oldkey = getKey(a, e);
+        auto oldkey = getKey(a);
         if (oldkey)
         {
-          ELLE_DEBUG("%s: overriding key %s -> %s  for %s : %s",
-            *this, key_hash(*oldkey), key_hash(sk), e, a);
-          if (a != Address())
-            _keys.find(a)->second = std::move(sk);
-          else
-            _observer_keys.find(e)->second = std::move(sk);
+          ELLE_DEBUG("%s: overriding key %s -> %s  for %s",
+            *this, key_hash(*oldkey), key_hash(sk), a);
+          _keys.find(a)->second = std::move(sk);
         }
         else
         {
-          if (a != Address())
-            _keys.insert(std::make_pair(a, std::move(sk)));
-          else
-            _observer_keys.insert(std::make_pair(e, std::move(sk)));
+          _keys.insert(std::make_pair(a, std::move(sk)));
         }
       }
 
       infinit::cryptography::SecretKey*
-      Node::getKey(Address const& a, GossipEndpoint const& e)
+      Node::getKey(Address const& a)
       {
-        if (a == Address())
-        {
-          auto it = _observer_keys.find(e);
-          if (it != _observer_keys.end())
-            return &it->second;
-        }
-        else
-        {
-          auto it = _keys.find(a);
-          if (it != _keys.end())
-            return &it->second;
-        }
+        auto it = _keys.find(a);
+        if (it != _keys.end())
+          return &it->second;
         return nullptr;
       }
 
       void
-      Node::send(packet::Packet& p, GossipEndpoint e, Address a)
+      Node::send(packet::Packet& p, Contact& c)
+      {
+        ELLE_DUMP("send to contact %x", c.address);
+        send(p, &c, nullptr, nullptr);
+      }
+      void
+      Node::send(packet::Packet& p, GossipEndpoint ep, Address addr)
+      {
+        ELLE_DUMP("send to endpoint %s : %s", addr, ep);
+        send(p, nullptr, &ep, &addr);
+      }
+      void
+      Node::send(packet::Packet& p, Contact* c, GossipEndpoint* ep,
+                 Address* addr)
       {
         //std::string ptype = elle::type_info(p).name();
         //std::cerr << ptype << std::endl;
-        ELLE_ASSERT(e.port() != 0);
-        if (this->_observer)
-          p.sender = Address::null;
+        ELLE_ASSERT(c || ep);
+        ELLE_ASSERT(c || addr);
+        auto address = c ? c->address : *addr;
+        p.observer = this->_observer;
         bool is_crypto = dynamic_cast<const packet::EncryptedPayload*>(&p)
         || dynamic_cast<const packet::RequestKey*>(&p)
         || dynamic_cast<const packet::KeyReply*>(&p);
         elle::Buffer b;
         bool send_key_request = false;
-        auto key = getKey(a, e);
+        auto key = getKey(address);
         if (is_crypto
           || !_config.encrypt
           || (!key && _config.accept_plain)
@@ -991,14 +1157,15 @@ namespace infinit
           if (!key)
           {
             // FIXME queue packet
-            ELLE_DEBUG("%s: dropping packet to %s : %s, no key available",
-                       *this, e, a);
+            ELLE_DEBUG("%s: dropping packet to %s: no key available",
+                       *this, address);
             send_key_request = true;
           }
           else
           {
             packet::EncryptedPayload ep;
             ep.sender = p.sender;
+            ep.observer = p.observer;
             {
               static elle::Bench decrypt("kelips.encrypt", 10_sec);
               elle::Bench::BenchScope bs(decrypt);
@@ -1010,22 +1177,51 @@ namespace infinit
         if (send_key_request)
         {
           packet::RequestKey req(doughnut()->passport());
-          req.sender = _observer ? Address::null : _self;
-          send(req, e, Address::null);
+          req.sender = _self;
+          req.observer = this->_observer;
+          send(req, c, ep, addr);
         }
         if (b.size() == 0)
           return;
+
+        GossipEndpoint e;
+        if (ep)
+          e = *ep;
+        else if (c)
+        {
+          if (c->validated_endpoint)
+            e = c->validated_endpoint->first;
+          else
+          {
+            if (!c->contacter)
+            {
+              ELLE_DEBUG("Running contacter on %s", address);
+              c->contacter = new reactor::Thread("contacter",
+                [this, address] { this->contact(address);}, true);
+            }
+            else
+              ELLE_DEBUG("Contacter already running on %s", address);
+            if (c->pending.size() < 5)
+              c->pending.push_back(b);
+            return;
+          }
+        }
         static elle::Bench bencher("kelips.packet_size", 5_sec);
         bencher.add(b.size());
         reactor::Lock l(_udp_send_mutex);
         static elle::Bench bench("kelips.send", 5_sec);
         elle::Bench::BenchScope bs(bench);
         ELLE_DUMP("%s: sending %s bytes packet to %s\n%s", *this, b.size(), e, b.string());
+        b.size(b.size()+8);
+        memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
+        memcpy(b.mutable_contents(), "KELIPSGS", 8);
+        auto& sock = _local ? *_local->utp_server()->socket()
+          : _gossip;
         static bool async = getenv("INFINIT_KELIPS_ASYNC_SEND");
         if (async)
         {
           std::shared_ptr<elle::Buffer> sbuf = std::make_shared<elle::Buffer>(std::move(b));
-          _gossip.socket()->async_send_to(
+          sock.socket()->async_send_to(
             boost::asio::buffer(sbuf->contents(), sbuf->size()),
             e,
             [sbuf] (  const boost::system::error_code& error,
@@ -1033,8 +1229,198 @@ namespace infinit
             );
         }
         else
-          _gossip.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
+          sock.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
       }
+
+      void
+      Node::process(elle::Buffer const& buf, GossipEndpoint source)
+      {
+        //deserialize
+        std::unique_ptr<packet::Packet> packet;
+        elle::IOStream stream(buf.istreambuf());
+        Serializer::SerializerIn input(stream, false);
+        try
+        {
+          input.serialize_forward(packet);
+        }
+        catch(elle::serialization::Error const& e)
+        {
+          ELLE_WARN("%s: Failed to deserialize packet: %s", *this, e);
+          ELLE_TRACE("%x", buf);
+          return;
+        }
+        ELLE_ASSERT(packet);
+        packet->endpoint = source;
+        bool was_crypted = false;
+        // First handle crypto related packets
+        if (auto p = dynamic_cast<packet::EncryptedPayload*>(packet.get()))
+        {
+          auto key = getKey(packet->sender);
+          bool failure = true;
+          if (!key)
+          {
+            ELLE_WARN("%s: key unknown for %s : %s",
+              *this, source, packet->sender);
+          }
+          else
+          {
+            try
+            {
+              std::unique_ptr<packet::Packet> plain;
+              {
+                static elle::Bench decrypt("kelips.decrypt", 10_sec);
+                elle::Bench::BenchScope bs(decrypt);
+                plain = p->decrypt(*key);
+              }
+              if (plain->sender != p->sender)
+              {
+                ELLE_WARN("%s: sender inconsistency in encrypted packet: %s != %s",
+                  *this, p->sender, plain->sender);
+                return;
+              }
+              packet = std::move(plain);
+              packet->endpoint = source;
+              failure = false;
+              was_crypted = true;
+            }
+            catch (infinit::cryptography::Error const& e)
+            {
+              ELLE_DEBUG(
+                "%s: decryption with %s from %s : %s failed: %s",
+                *this, key_hash(*key), source, packet->sender, e.what());
+            }
+          }
+          if (failure)
+          { // send a key request
+            ELLE_DEBUG("%s: sending key request to %s", *this, source);
+            packet::RequestKey rk(doughnut()->passport());
+            rk.sender = _self;
+            elle::Buffer s = packet::serialize(rk);
+            send(rk, source, p->sender);
+            return;
+          }
+        } // EncryptedPayload
+        if (auto p = dynamic_cast<packet::RequestKey*>(packet.get()))
+        {
+          ELLE_DEBUG("%s: processing key request from %s", *this, source);
+          // validate passport
+          bool ok = p->passport.verify(doughnut()->owner());
+          if (!ok)
+          {
+            ELLE_WARN("%s: failed to validate passport from %s : %s",
+              *this, source, p->sender);
+            return;
+          }
+          auto sk = infinit::cryptography::secretkey::generate(256);
+          elle::Buffer password = sk.password();
+          setKey(p->sender, std::move(sk));
+          packet::KeyReply kr(doughnut()->passport());
+          kr.sender = _self;
+          kr.encrypted_key = p->passport.user().seal(
+            password,
+            infinit::cryptography::Cipher::aes256,
+            infinit::cryptography::Mode::cbc);
+          send(kr, source, p->sender);
+          return;
+        } // requestkey
+        if (auto p = dynamic_cast<packet::KeyReply*>(packet.get()))
+        {
+          ELLE_DEBUG("%s: processing key reply from %s", *this, source);
+          // validate passport
+          bool ok = p->passport.verify(doughnut()->owner());
+          if (!ok)
+          {
+            ELLE_WARN("%s: failed to validate passport from %s : %s",
+              *this, source, p->sender);
+            return;
+          }
+          elle::Buffer password = doughnut()->keys().k().open(
+            p->encrypted_key,
+            infinit::cryptography::Cipher::aes256,
+            infinit::cryptography::Mode::cbc);
+          infinit::cryptography::SecretKey sk(std::move(password));
+          setKey(p->sender, std::move(sk));
+          // Flush operations waiting on crypto ready
+          bool bootstrap_requested = false;
+          {
+            auto it = std::find(_pending_bootstrap_endpoints.begin(),
+              _pending_bootstrap_endpoints.end(),
+              source);
+            if (it != _pending_bootstrap_endpoints.end())
+            {
+              ELLE_DEBUG("%s: processing queued operation to %s", *this, source);
+              *it = _pending_bootstrap_endpoints[_pending_bootstrap_endpoints.size() - 1];
+              _pending_bootstrap_endpoints.pop_back();
+              bootstrap_requested = true;
+            }
+          }
+          {
+            auto it = std::find(_pending_bootstrap_address.begin(),
+              _pending_bootstrap_address.end(),
+              p->sender);
+            if (it != _pending_bootstrap_address.end())
+            {
+              *it = _pending_bootstrap_address[_pending_bootstrap_address.size() - 1];
+              _pending_bootstrap_address.pop_back();
+              bootstrap_requested = true;
+            }
+          }
+          if (bootstrap_requested &&
+            std::find(_bootstrap_requests_sent.begin(),
+              _bootstrap_requests_sent.end(),
+              p->sender) == _bootstrap_requests_sent.end())
+          {
+            _bootstrap_requests_sent.push_back(p->sender);
+            packet::BootstrapRequest req;
+            req.sender = _self;
+            send(req, source, p->sender);
+          }
+
+          onContactSeen(packet->sender, source, packet->observer);
+          return;
+        } // keyreply
+        if (!was_crypted && !_config.accept_plain)
+        {
+          ELLE_WARN("%s: rejecting plain packet from %s : %s",
+            *this, source, packet->sender);
+          return;
+        }
+
+        onContactSeen(packet->sender, source, packet->observer);
+        // TRAP: some packets inherit from each other, so most specific ones
+        // must be first
+        #define CASE(type) \
+        else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
+          if (false) {}
+        CASE(Pong)
+        {
+          onPong(p);
+        }
+        CASE(Ping)
+        {
+          packet::Pong r;
+          r.sender = _self;
+          r.remote_endpoint = source;
+          send(r, source, p->sender);
+        }
+        CASE(Gossip)
+        onGossip(p);
+        CASE(BootstrapRequest)
+        onBootstrapRequest(p);
+        CASE(FileBootstrapRequest)
+        onFileBootstrapRequest(p);
+        CASE(PutFileRequest)
+        onPutFileRequest(p);
+        CASE(PutFileReply)
+        onPutFileReply(p);
+        CASE(GetFileRequest)
+        onGetFileRequest(p);
+        CASE(GetFileReply)
+        onGetFileReply(p);
+        else
+          ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
+        #undef CASE
+      };
 
       void
       Node::gossipListener()
@@ -1049,177 +1435,17 @@ namespace infinit
                                         source);
           buf.size(sz);
           ELLE_DUMP("%s: received %s bytes from %s:\n%s", *this, sz, source, buf.string());
+          memmove(buf.mutable_contents(), buf.contents()+8, buf.size()-8);
+          buf.size(sz - 8);
+          ELLE_DUMP("%s: received %s bytes from %s:\n%s", *this, sz, source, buf.string());
           static int counter = 1;
-          auto process =  [buf, source, this]
-            {
-            //deserialize
-            std::unique_ptr<packet::Packet> packet;
-            elle::IOStream stream(buf.istreambuf());
-            Serializer::SerializerIn input(stream, false);
-            try
-            {
-              input.serialize_forward(packet);
-            }
-            catch(elle::serialization::Error const& e)
-            {
-              ELLE_WARN("%s: Failed to deserialize packet: %s", *this, e);
-              ELLE_TRACE("%x", buf);
-              return;
-            }
-            packet->endpoint = source;
-            bool was_crypted = false;
-            // First handle crypto related packets
-            if (auto p = dynamic_cast<packet::EncryptedPayload*>(packet.get()))
-            {
-              auto key = getKey(packet->sender, packet->endpoint);
-              bool failure = true;
-              if (!key)
-              {
-                ELLE_WARN("%s: key unknown for %s : %s",
-                          *this, source, packet->sender);
-              }
-              else
-              {
-                try
-                {
-                  std::unique_ptr<packet::Packet> plain;
-                  {
-                    static elle::Bench decrypt("kelips.decrypt", 10_sec);
-                    elle::Bench::BenchScope bs(decrypt);
-                    plain = p->decrypt(*key);
-                  }
-                  if (plain->sender != p->sender)
-                  {
-                    ELLE_WARN("%s: sender inconsistency in encrypted packet: %s != %s",
-                              *this, p->sender, plain->sender);
-                    return;
-                  }
-                  packet = std::move(plain);
-                  packet->endpoint = source;
-                  failure = false;
-                  was_crypted = true;
-                }
-                catch (infinit::cryptography::Error const& e)
-                {
-                  ELLE_DEBUG(
-                    "%s: decryption with %s from %s : %s failed: %s",
-                    *this, key_hash(*key), source, packet->sender, e.what());
-                }
-              }
-              if (failure)
-              { // send a key request
-                ELLE_DEBUG("%s: sending key request to %s", *this, source);
-                packet::RequestKey rk(doughnut()->passport());
-                rk.sender = _self;
-                elle::Buffer s = packet::serialize(rk);
-                send(rk, source, p->sender);
-                return;
-              }
-            } // EncryptedPayload
-            if (auto p = dynamic_cast<packet::RequestKey*>(packet.get()))
-            {
-              ELLE_DEBUG("%s: processing key request from %s", *this, source);
-              // validate passport
-              bool ok = p->passport.verify(doughnut()->owner());
-              if (!ok)
-              {
-                ELLE_WARN("%s: failed to validate passport from %s : %s",
-                          *this, source, p->sender);
-                return;
-              }
-              auto sk = infinit::cryptography::secretkey::generate(256);
-              elle::Buffer password = sk.password();
-              setKey(p->sender, p->endpoint, std::move(sk));
-              packet::KeyReply kr(doughnut()->passport());
-              kr.sender = _self;
-              kr.encrypted_key = p->passport.user().seal(
-                password,
-                infinit::cryptography::Cipher::aes256,
-                infinit::cryptography::Mode::cbc);
-              send(kr, source, p->sender);
-              return;
-            } // requestkey
-            if (auto p = dynamic_cast<packet::KeyReply*>(packet.get()))
-            {
-              ELLE_DEBUG("%s: processing key reply from %s", *this, source);
-              // validate passport
-              bool ok = p->passport.verify(doughnut()->owner());
-              if (!ok)
-              {
-                ELLE_WARN("%s: failed to validate passport from %s : %s",
-                          *this, source, p->sender);
-                return;
-              }
-              elle::Buffer password = doughnut()->keys().k().open(
-                p->encrypted_key,
-                infinit::cryptography::Cipher::aes256,
-                infinit::cryptography::Mode::cbc);
-              infinit::cryptography::SecretKey sk(std::move(password));
-              setKey(p->sender, p->endpoint, std::move(sk));
-              // Flush operations waiting on crypto ready
-              auto it = std::find(_pending_bootstrap.begin(),
-                                  _pending_bootstrap.end(),
-                                  source);
-              if (it != _pending_bootstrap.end())
-              {
-                ELLE_DEBUG("%s: processing queued operation to %s", *this, source);
-                *it = _pending_bootstrap[_pending_bootstrap.size() - 1];
-                _pending_bootstrap.pop_back();
-                packet::BootstrapRequest req;
-                req.sender = _self;
-                send(req, source, p->sender);
-              }
-              if (packet->sender != Address::null)
-                onContactSeen(packet->sender, source);
-              return;
-            } // keyreply
-            if (!was_crypted && !_config.accept_plain)
-            {
-              ELLE_WARN("%s: rejecting plain packet from %s : %s",
-                        *this, source, packet->sender);
-              return;
-            }
-            if (packet->sender != Address::null)
-              onContactSeen(packet->sender, source);
-            // TRAP: some packets inherit from each other, so most specific ones
-            // must be first
-            #define CASE(type) \
-              else if (packet::type* p = dynamic_cast<packet::type*>(packet.get()))
-            if (false) {}
-            CASE(Pong)
-            {
-              onPong(p);
-            }
-            CASE(Ping)
-            {
-              packet::Pong r;
-              r.sender = _self;
-              r.remote_endpoint = source;
-              send(r, source, p->sender);
-            }
-            CASE(Gossip)
-              onGossip(p);
-            CASE(BootstrapRequest)
-              onBootstrapRequest(p);
-            CASE(FileBootstrapRequest)
-              onFileBootstrapRequest(p);
-            CASE(PutFileRequest)
-              onPutFileRequest(p);
-            CASE(PutFileReply)
-              onPutFileReply(p);
-            CASE(GetFileRequest)
-              onGetFileRequest(p);
-            CASE(GetFileReply)
-              onGetFileReply(p);
-            else
-              ELLE_WARN("%s: Unknown packet type %s", *this, typeid(*p).name());
-#undef CASE
-            };
+
           static bool async = getenv("INFINIT_KELIPS_ASYNC");
           if (async)
-            new reactor::Thread(elle::sprintf("process %s", counter++), process, true);
+            new reactor::Thread(elle::sprintf("process %s", counter++),
+              [buf, source, this] { this->process(buf, source);}, true);
           else
-            process();
+            process(buf, source);
         }
       }
 
@@ -1251,10 +1477,22 @@ namespace infinit
       void
       Node::filterAndInsert(
         std::vector<Address> files, int target_count, int group,
-        std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& res)
+        std::unordered_map<Address, std::vector<TimedEndpoint>>& res)
       {
-        kelips::filterAndInsert(files, target_count, res, _state.contacts[group],
-                        &Contact::endpoint, _gen);
+        if (signed(files.size()) > target_count)
+        {
+          if (target_count < signed(files.size()) - target_count)
+            files = pick_n(files, target_count, _gen);
+          else
+            files = remove_n(files, files.size() - target_count, _gen);
+        }
+        for (auto const& f: files)
+        {
+          auto& fd = _state.contacts[group].find(f)->second;
+          res.insert(std::make_pair(f, fd.endpoints));
+          fd.last_gossip = now();
+          fd.gossip_count++;
+        }
       }
 
       void
@@ -1269,7 +1507,7 @@ namespace infinit
       void
       filterAndInsert2(
         std::vector<Contact*> new_contacts, unsigned int max_new,
-        std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& res,
+        std::unordered_map<Address,std::vector<TimedEndpoint>>& res,
         std::default_random_engine gen)
       {
         if (new_contacts.size() > max_new)
@@ -1281,17 +1519,16 @@ namespace infinit
         }
         for (auto const& f: new_contacts)
         {
-          res.insert(std::make_pair(f->address,
-            std::make_pair(f->last_seen, f->endpoint)));
+          res.insert(std::make_pair(f->address, f->endpoints));
           f->last_gossip = now();
           f->gossip_count++;
         }
       }
 
-      std::unordered_map<Address, std::pair<Time, GossipEndpoint>>
+      std::unordered_map<Address, std::vector<TimedEndpoint>>
       Node::pickContacts()
       {
-        std::unordered_map<Address, std::pair<Time, GossipEndpoint>> res;
+        std::unordered_map<Address, std::vector<TimedEndpoint>> res;
         // start with our own group
         unsigned int max_new = _config.gossip.contacts_group / 2;
         unsigned int max_old = _config.gossip.contacts_group / 2;
@@ -1307,8 +1544,9 @@ namespace infinit
         // insert old contacts, for which we got a refresh but did not gossip about
         for (auto const& f: _state.contacts[_group])
         {
-          if (f.second.last_gossip < f.second.last_seen
-            && now() - f.second.last_seen > std::chrono::milliseconds(_config.gossip.old_threshold_ms)
+          auto last_seen = endpoints_max(f.second.endpoints);
+          if (f.second.last_gossip < last_seen
+            && now() - last_seen > std::chrono::milliseconds(_config.gossip.old_threshold_ms)
             && res.find(f.first) == res.end())
             new_files.push_back(f.first);
         }
@@ -1351,10 +1589,11 @@ namespace infinit
             continue;
           for (auto& f: _state.contacts[g])
           {
-            if (f.second.last_gossip < f.second.last_seen
-            && now() - f.second.last_seen > std::chrono::milliseconds(_config.gossip.old_threshold_ms)
-            && res.find(f.first) == res.end())
-            new_contacts.push_back(&f.second);
+            auto last_seen = endpoints_max(f.second.endpoints);
+            if (f.second.last_gossip < last_seen
+              && now() - last_seen > std::chrono::milliseconds(_config.gossip.old_threshold_ms)
+              && res.find(f.first) == res.end())
+                new_contacts.push_back(&f.second);
           }
         }
         filterAndInsert2(new_contacts, max_old, res, _gen);
@@ -1571,6 +1810,7 @@ namespace infinit
         reactor::sleep(boost::posix_time::milliseconds(v));
         packet::Gossip p;
         p.sender = _self;
+        p.observer = _observer;
         while (true)
         {
           reactor::sleep(boost::posix_time::millisec(_config.gossip.interval_ms));
@@ -1579,27 +1819,33 @@ namespace infinit
           p.contacts = pickContacts();
           elle::Buffer buf = serialize(p);
           auto targets = pickOutsideTargets();
-          for (auto const& e: targets)
-            send(p, e.first, e.second);
+          for (auto const& a: targets)
+          {
+            auto it = _state.contacts[group_of(a)].find(a);
+            if (it != _state.contacts[group_of(a)].end())
+              send(p, it->second);
+          }
           // Add some files, just for group targets
           p.files = pickFiles();
           buf = serialize(p);
           targets = pickGroupTargets();
           if (p.files.size() && targets.empty())
             ELLE_TRACE("%s: have files but no group member known", *this);
-          for (auto const& e: targets)
+          for (auto const& a: targets)
           {
             if (!p.files.empty())
               ELLE_DUMP("%s: info on %s files %s   %x %x", *this, p.files.size(),
                        serialize_time(p.files.begin()->second.first),
                        _self, p.files.begin()->second.second);
-            send(p, e.first, e.second);
+            auto it = _state.contacts[group_of(a)].find(a);
+            if (it != _state.contacts[group_of(a)].end())
+              send(p, it->second);
           }
         }
       }
 
       void
-      Node::onContactSeen(Address addr, GossipEndpoint endpoint)
+      Node::onContactSeen(Address addr, GossipEndpoint endpoint, bool observer)
       {
         // Drop self
         if (addr == _self)
@@ -1610,27 +1856,30 @@ namespace infinit
           ELLE_LOG("Peer found, write enabled");
           _bootstraping.open();
         }
-        Contacts& target = _state.contacts[g];
+        Contacts& target = observer? _state.observers : _state.contacts[g];
         auto it = target.find(addr);
         if (it == target.end())
         {
-          if (g == _group || signed(target.size()) < _config.max_other_contacts)
+          if (observer || g == _group || signed(target.size()) < _config.max_other_contacts)
           {
-            Contact contact{endpoint, addr, Duration(0), now(), Time(), 0};
+            Contact contact{TimedEndpoint(endpoint, now()),
+                            {TimedEndpoint(endpoint, now())},
+                            addr, Duration(0), Time(), 0};
             ELLE_LOG("%s: register %s", *this, contact);
             target[addr] = std::move(contact);
           }
         }
         else
         {
-          it->second.last_seen = now();
-          if (it->second.endpoint != endpoint)
+          // reset validated endpoint
+          if (it->second.validated_endpoint && it->second.validated_endpoint->first != endpoint)
           {
-            it->second.endpoint = endpoint;
-            ELLE_LOG("%s: re-register %s", *this, it->second);
+            ELLE_LOG("%s: change validated endpoint %s -> %s", *this,
+                     it->second.validated_endpoint->first, endpoint);
           }
-          else
-            ELLE_DUMP("%s: just seen %s", *this, it->second);
+          it->second.validated_endpoint = TimedEndpoint(endpoint, now());
+          // add/update to endpoint list
+          endpoints_update(it->second.endpoints, endpoint);
         }
       }
 
@@ -1652,23 +1901,14 @@ namespace infinit
         }
         else
         {
-          it->second.last_seen = now();
           it->second.rtt = d;
         }
         _ping_target = Address();
         _ping_barrier.open();
         GossipEndpoint endpoint = p->remote_endpoint;
-        if (_local_endpoint.port() == 0)
-        {
-          ELLE_TRACE("%s: Setting local endpoint to %s", *this, endpoint);
-          _local_endpoint = endpoint;
-        }
-        else if (_local_endpoint != endpoint)
-        {
-          ELLE_LOG("%s: Received a different local endpoint: %s, current %s", *this,
-            endpoint, _local_endpoint);
-          _local_endpoint = endpoint;
-        }
+        endpoints_update(_local_endpoints, endpoint);
+        auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
+        endpoints_cleanup(_local_endpoints, now() - contact_timeout);
       }
 
       void
@@ -1688,17 +1928,10 @@ namespace infinit
           if (it == target.end())
           {
             if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
-              target[c.first] = Contact{c.second.second, c.first, Duration(), c.second.first, Time(), 0};
+              target[c.first] = Contact{{}, c.second, c.first, Duration(), Time(), 0};
           }
-          else if (it->second.last_seen < c.second.first)
-          { // Also update endpoint in case it changed
-            if (it->second.endpoint != c.second.second)
-              ELLE_DEBUG(
-                "%s: %s endpoint change from %s to %s",
-                *this, it->first, it->second.endpoint, c.second.second);
-            it->second.last_seen = c.second.first;
-            it->second.endpoint = c.second.second;
-          }
+          else
+            endpoints_update(it->second.endpoints, c.second);
         }
         if (g == _group)
         {
@@ -1744,9 +1977,9 @@ namespace infinit
       {
         auto ep = p->endpoint;
         int g = group_of(p->sender);
-        if (g == _group)
+        if (g == _group && !p->observer)
         {
-          PeerLocation peer(p->sender, e2e(ep));
+          PeerLocation peer(p->sender, {e2e(ep)});
           new reactor::Thread("reverse bootstraper",
             [this, peer] {
               try
@@ -1772,7 +2005,7 @@ namespace infinit
         {
           for (auto const& e: _state.contacts[g])
             res.contacts.insert(std::make_pair(e.first,
-              std::make_pair(e.second.last_seen, e.second.endpoint)));
+              e.second.endpoints));
         }
         else
         {
@@ -1785,7 +2018,7 @@ namespace infinit
             if (res.contacts.find(it->first) != res.contacts.end())
               --i;
             else
-              res.contacts[it->first] = std::make_pair(it->second.last_seen, it->second.endpoint);
+              res.contacts[it->first] = it->second.endpoints;
           }
         }
         // Same thing for other groups
@@ -1803,8 +2036,7 @@ namespace infinit
               continue;
             else
               for (auto const& e: _state.contacts[i])
-                res.contacts.insert(std::make_pair(e.first,
-                  std::make_pair(e.second.last_seen, e.second.endpoint)));
+                res.contacts.insert(std::make_pair(e.first, e.second.endpoints));
           }
         }
         else
@@ -1827,7 +2059,7 @@ namespace infinit
             if (res.contacts.find(it->first) != res.contacts.end())
               --i;
             else
-              res.contacts[it->first] = std::make_pair(it->second.last_seen, it->second.endpoint);
+              res.contacts[it->first] = it->second.endpoints;
           }
         }
         send(res, p->endpoint, p->sender);
@@ -1856,21 +2088,23 @@ namespace infinit
               return r.first == it->second.home_node;
             }) != p->result.end())
           continue;
-          // find the corresponding endpoint
-          RpcEndpoint endpoint;
+          // find the corresponding endpoints
+          std::vector<RpcEndpoint> endpoints;
           bool found = false;
           if (it->second.home_node == _self)
           {
             ELLE_DEBUG("%s: found self", *this);
-            if (_local_endpoint.address().to_string() == "0.0.0.0")
+            if (_local_endpoints.empty())
             {
               ELLE_TRACE("Endpoint yet unknown, assuming localhost");
-              endpoint = RpcEndpoint(
+              endpoints.push_back(RpcEndpoint(
                 boost::asio::ip::address::from_string("127.0.0.1"),
-                this->_port);
+                this->_port));
             }
             else
-              endpoint_to_endpoint(_local_endpoint, endpoint);
+            {
+              endpoints = endpoints_extract_convert(_local_endpoints);
+            }
             found = true;
           }
           else
@@ -1879,7 +2113,7 @@ namespace infinit
             if (contact_it != _state.contacts[fg].end())
             {
               ELLE_DEBUG("%s: found other", *this);
-              endpoint_to_endpoint(contact_it->second.endpoint, endpoint);
+              endpoints = endpoints_extract_convert(contact_it->second.endpoints);
               found = true;
             }
             else
@@ -1889,7 +2123,7 @@ namespace infinit
             continue;
           PeerLocation res;
           res.first = it->second.home_node;
-          endpoint_to_endpoint(endpoint, res.second);
+          res.second = endpoints;
           p->result.push_back(res);
           if (yield)
             (*yield)(res);
@@ -1902,10 +2136,18 @@ namespace infinit
       {
         ELLE_TRACE("%s: getFileRequest %s/%x %s/%s", *this, p->request_id, p->fileAddress,
                  p->result.size(), p->count);
-        if (p->originEndpoint.port() == 0)
-          p->originEndpoint = p->endpoint;
+        if (p->originEndpoints.empty())
+          p->originEndpoints = {p->endpoint};
         int fg = group_of(p->fileAddress);
-        if (fg == _group)
+        if (p->query_node)
+        {
+          auto& target = _state.contacts[fg];
+          auto it = target.find(p->fileAddress);
+          if (it != target.end())
+            p->result.push_back(PeerLocation(it->first,
+              endpoints_extract_convert(it->second.endpoints)));
+        }
+        else if (fg == _group)
         {
           addLocalResults(p, nullptr);
         }
@@ -1919,8 +2161,14 @@ namespace infinit
           res.request_id = p->request_id;
           res.result = p->result;
           res.ttl = p->ttl;
-          ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoint, p->request_id);
-          send(res, p->originEndpoint, p->originAddress);
+          if (p->originAddress == _self)
+            onGetFileReply(&res);
+          else
+          {
+            Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
+            ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoints, p->request_id);
+            send(res, c);
+          }
           // FIXME: should we route the reply back the same path?
           return;
         }
@@ -1936,7 +2184,13 @@ namespace infinit
           res.request_id = p->request_id;
           res.result = p->result;
           res.ttl = 1;
-          send(res, p->originEndpoint, p->originAddress);
+          if (p->originAddress == _self)
+            onGetFileReply(&res);
+          else
+          {
+            Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
+            send(res, c);
+          }
           _dropped_gets++;
           return;
         }
@@ -1949,7 +2203,7 @@ namespace infinit
         int idx = random(_gen);
         auto it = _state.contacts[fg].begin();
         while (idx--) ++it;
-        send(*p, it->second.endpoint, it->second.address);
+        send(*p, it->second);
       }
 
       void
@@ -1980,12 +2234,12 @@ namespace infinit
         ELLE_TRACE("%s: putFileRequest %s %s %s %x", *this, p->ttl, p->insert_ttl,
                    p->result.size(), p->fileAddress);
         int fg = group_of(p->fileAddress);
-        if (p->originEndpoint.port() == 0)
-          p->originEndpoint = p->endpoint;
+        if (p->originEndpoints.empty())
+          p->originEndpoints = {p->endpoint};
         // don't accept put requests until we know our endpoint
         // Accept the put locally if we know no other node
         if (fg == _group
-          &&  ((p->insert_ttl == 0 && _local_endpoint.address().to_string() != "0.0.0.0")
+          &&  ((p->insert_ttl == 0 && !_local_endpoints.empty())
               || _state.contacts[_group].empty()))
         {
           // check if we didn't already accept this file
@@ -2005,9 +2259,8 @@ namespace infinit
               // That makes us a home node for this address, but
               // wait until we get the RPC to store anything
               ELLE_DEBUG("%s: inserting", *this);
-              RpcEndpoint ep;
-              endpoint_to_endpoint(_local_endpoint, ep);
-              p->result.push_back(std::make_pair(_self, ep));
+              p->result.push_back(std::make_pair(_self,
+                endpoints_extract_convert(_local_endpoints)));
               _promised_files.push_back(p->fileAddress);
             }
             else
@@ -2029,7 +2282,14 @@ namespace infinit
           res.origin = p->originAddress;
           res.results = p->result;
           res.ttl = p->ttl;
-          send(res, p->originEndpoint, p->originAddress);
+          if (p->originAddress == _self)
+            onPutFileReply(&res);
+          else
+          {
+            Contact& c = get_or_make(p->originAddress, p->observer,
+                                     p->originEndpoints);
+            send(res, c);
+          }
           if (p->count > signed(p->result.size()))
           {
             ELLE_TRACE("%s: reporting failed putfile request for %x", *this, p->fileAddress);
@@ -2048,7 +2308,7 @@ namespace infinit
         }
         p->sender = _self;
         p->ttl--;
-        send(*p, it->second.endpoint, it->second.address);
+        send(*p, it->second);
       }
 
       void
@@ -2087,7 +2347,7 @@ namespace infinit
         else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
         {
           bool hit = false;
-          kelipsGet(file, n, false, -1, [&](PeerLocation r) {
+          kelipsGet(file, n, false, -1, false, [&](PeerLocation r) {
               hit = true;
               yield(r);
           });
@@ -2101,31 +2361,34 @@ namespace infinit
         }
         else
         {
-          kelipsGet(file, n, op == infinit::overlay::OP_FETCH, -1, yield);
+          kelipsGet(file, n, op == infinit::overlay::OP_FETCH, -1, false, yield);
         }
       }
 
       void
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
+        bool query_node,
         std::function <void(PeerLocation)> yield)
       {
         if (attempts == -1)
           attempts = _config.query_get_retries;
-        auto f = [this,file,n,local_override, attempts, yield]() {
+        auto f = [this,file,n,local_override, attempts, yield, query_node]() {
           ELLE_DEBUG("Driver starting");
-          std::set<PeerLocation> result_set;
+          std::set<Address> result_set;
           packet::GetFileRequest r;
           r.sender = _self;
           r.request_id = ++ _next_id;
-          r.originAddress = _observer ? Address::null : _self;
-          r.originEndpoint = _local_endpoint;
+          r.query_node = query_node;
+          r.originAddress = _self;
+          for (auto const& te: _local_endpoints)
+            r.originEndpoints.push_back(te.first);
           r.fileAddress = file;
           r.ttl = _config.query_get_ttl;
           r.count = n;
           int fg = group_of(file);
           static elle::Bench bench_localresult("kelips.localresult", 10_sec);
           static elle::Bench bench_localbypass("kelips.localbypass", 10_sec);
-          if (fg == _group)
+          if (!query_node && fg == _group)
           {
             // check if we have it locally
             auto its = _state.files.equal_range(file);
@@ -2136,18 +2399,30 @@ namespace infinit
             if (it_us != its.second && (n == 1 || local_override))
             {
               ELLE_DEBUG("Satisfied get lookup locally.");
-              yield(PeerLocation(Address::null, RpcEndpoint(boost::asio::ip::address::from_string("127.0.0.1"),
-                this->_port)));
+              yield(PeerLocation(Address::null,
+                {RpcEndpoint(boost::asio::ip::address::from_string("127.0.0.1"),
+                            this->_port)}));
               return;
             }
             // add result for our own file table
             addLocalResults(&r, &yield);
             for (auto const& e: r.result)
-              result_set.insert(e);
+              result_set.insert(e.first);
             if (result_set.size() >= unsigned(n))
             { // Request completed locally
               ELLE_DEBUG("Driver exiting");
               bench_localresult.add(1);
+              return;
+            }
+          }
+          if (query_node)
+          {
+            auto& target = _state.contacts[fg];
+            auto it = target.find(file);
+            if (it != target.end())
+            {
+              yield(PeerLocation(it->first,
+                endpoints_extract_convert(it->second.endpoints)));
               return;
             }
           }
@@ -2173,7 +2448,7 @@ namespace infinit
               continue;
             }
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
-            send(req, it->second.endpoint, it->second.address);
+            send(req, it->second);
             reactor::wait(r->barrier,
               boost::posix_time::milliseconds(_config.query_timeout_ms));
             if (!r->barrier.opened())
@@ -2185,7 +2460,7 @@ namespace infinit
                 r->result.size());
               for (auto const& e: r->result)
               {
-                if (fg == _group)
+                if (fg == _group && !query_node)
                 { // oportunistically add the entry to our tables
                   auto its = _state.files.equal_range(file);
                   auto it_r = std::find_if(its.first, its.second,
@@ -2196,7 +2471,7 @@ namespace infinit
                   _state.files.insert(std::make_pair(file,
                     File{file, e.first, now(), Time(), 0}));
                 }
-                if (result_set.insert(PeerLocation{e.first, e.second}).second)
+                if (result_set.insert(e.first).second)
                   yield(PeerLocation{e.first, e.second});
               }
               if (signed(result_set.size()) >= n)
@@ -2212,9 +2487,11 @@ namespace infinit
       {
         int fg = group_of(file);
         packet::PutFileRequest p;
+        p.query_node = false;
         p.sender = _self;
-        p.originAddress = _observer ? Address::null : _self;
-        p.originEndpoint = _local_endpoint;
+        p.originAddress = _self;
+        for (auto const& te: _local_endpoints)
+          p.originEndpoints.push_back(te.first);
         p.fileAddress = file;
         p.ttl = _config.query_put_ttl;
         p.count = n;
@@ -2248,16 +2525,16 @@ namespace infinit
                 == _promised_files.end())
               {
                 _promised_files.push_back(p.fileAddress);
-                results.push_back(std::make_pair (Address::null, RpcEndpoint(
+                results.push_back(PeerLocation(Address::null, {RpcEndpoint(
                   boost::asio::ip::address::from_string("127.0.0.1"),
-                  this->_port)));
+                this->_port)}));
                 return results;
               }
               else
                 return results;
           }
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
-          send(req, it->second.endpoint, it->second.address);
+          send(req, it->second);
           reactor::wait(r->barrier,
             boost::posix_time::milliseconds(_config.query_timeout_ms));
           if (!r->barrier.opened())
@@ -2374,7 +2651,7 @@ namespace infinit
         return res;
       }
 
-      std::vector<std::pair<GossipEndpoint, Address>>
+      std::vector<Address>
       Node::pickOutsideTargets()
       {
         std::map<Address, int> group_of;
@@ -2390,26 +2667,17 @@ namespace infinit
           }
         }
         std::vector<Address> addresses = pick(candidates, _config.gossip.other_target, _gen);
-        std::vector<std::pair<GossipEndpoint, Address>> res;
-        for (auto const& a: addresses)
-        {
-          int i = group_of.at(a);
-          res.push_back(std::make_pair(_state.contacts[i].at(a).endpoint, a));
-        }
-        return res;
+        return addresses;
       }
 
-      std::vector<std::pair<GossipEndpoint, Address>>
+      std::vector<Address>
       Node::pickGroupTargets()
       {
         std::map<Address, Duration> candidates;
         for (auto const& e: _state.contacts[_group])
           candidates[e.first] = e.second.rtt;
         std::vector<Address> r = pick(candidates, _config.gossip.group_target, _gen);
-        std::vector<std::pair<GossipEndpoint, Address>> result;
-        for (auto const& a: r)
-          result.push_back(std::make_pair(_state.contacts[_group].at(a).endpoint, a));
-        return result;
+        return r;
       }
 
       void
@@ -2428,8 +2696,7 @@ namespace infinit
           n_files.add(_state.files.size());
 
           // pick a target
-          GossipEndpoint endpoint;
-          Address address;
+          Contact* target;
           int group;
           while (true)
           {
@@ -2444,17 +2711,15 @@ namespace infinit
             int v = random2(_gen);
             auto it = _state.contacts[group].begin();
             while(v--) ++it;
-            endpoint = it->second.endpoint;
-            address = it->second.address;
+            target = &it->second;
             _ping_target = it->first;
             break;
           }
           packet::Ping p;
           p.sender = _self;
-          p.remote_endpoint = endpoint;
           _ping_time = now();
-          ELLE_DUMP("%s: pinging %x at %s", *this, _ping_target, endpoint);
-          send(p, endpoint, address);
+          ELLE_DUMP("%s: pinging %x", *this, _ping_target);
+          send(p, *target);
           bool ok = reactor::wait(_ping_barrier,
                                   boost::posix_time::milliseconds(_config.ping_timeout_ms));
           if (ok)
@@ -2493,7 +2758,8 @@ namespace infinit
           auto it = contacts.begin();
           while (it != contacts.end())
           {
-            if (t - it->second.last_seen > contact_timeout)
+            endpoints_cleanup(it->second.endpoints, now() - contact_timeout);
+            if (it->second.endpoints.empty())
             {
               ELLE_LOG("%s: erase %s", *this, it->second);
               it = contacts.erase(it);
@@ -2553,10 +2819,18 @@ namespace infinit
             [this] ()
             {
               SerState res;
-              res.first.insert(std::make_pair(_self, _local_endpoint));
+              std::vector<GossipEndpoint> eps;
+              for (auto const& e: _local_endpoints)
+                eps.push_back(e.first);
+              res.first.insert(std::make_pair(_self, eps));
               for (auto const& contacts: this->_state.contacts)
                 for (auto const& c: contacts)
-                  res.first.insert(std::make_pair(c.second.address, c.second.endpoint));
+                {
+                  std::vector<GossipEndpoint> eps;
+                  for (auto const& e: c.second.endpoints)
+                    eps.push_back(e.first);
+                  res.first.insert(std::make_pair(c.second.address, eps));
+                }
               for (auto const& f: this->_state.files)
                 res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
               // OH THE UGLY HACK, we need a place to store our own address
@@ -2570,11 +2844,10 @@ namespace infinit
            elle::network::Interface::Filter::no_autoip))
           if (itf.second.ipv4_address.size() > 0)
           {
-            this->_local_endpoint = GossipEndpoint(
+            this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
               boost::asio::ip::address::from_string(itf.second.ipv4_address),
-              _port);
-            ELLE_LOG("Setting endpoint to %s", this->_local_endpoint);
-            break;
+              _port), now()));
+            ELLE_LOG("Setting endpoint to %s", itf.second.ipv4_address);
           }
         if (!this->_rdv_host.empty())
           _rdv_connect_thread_local = elle::make_unique<reactor::Thread>("rdv_connect",
@@ -2582,6 +2855,8 @@ namespace infinit
               l->utp_server()->rdv_connect(
                 this->_rdv_id, this->_rdv_host);
           });
+        else
+          l->utp_server()->set_local_id(this->_rdv_id);
         reload_state(*l);
         this->engage();
       }
@@ -2623,6 +2898,77 @@ namespace infinit
         }
       }
 
+      Node::Member
+      Node::make_peer(PeerLocation hosts)
+      {
+        static std::unordered_map<Address, Node::Member> cache;
+        ELLE_TRACE("connecting to %s", hosts);
+        if (hosts.first == _self || hosts.first == Address::null)
+        {
+          ELLE_TRACE("target is local");
+          return _local;
+        }
+        for (auto const& ep: hosts.second)
+        {
+          for (auto const& l: _local_endpoints)
+            if (ep == e2e(l.first))
+            {
+              ELLE_TRACE("target is local");
+              return _local;
+            }
+        }
+        /*auto it = cache.find(hosts.first);
+        if (it != cache.end())
+          return it->second;*/
+        std::vector<GossipEndpoint> endpoints;
+        for (auto const& ep: hosts.second)
+          endpoints.push_back(GossipEndpoint(ep.address(), ep.port()));
+        using Protocol = infinit::model::doughnut::Local::Protocol;
+        auto protocol = this->_config.rpc_protocol;
+        if (protocol == Protocol::utp || protocol == Protocol::all)
+        {
+          try
+          {
+            std::string uid;
+            if (hosts.first != Address::null)
+              uid = elle::sprintf("%x", hosts.first);
+            auto res = Overlay::Member(
+              new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+                elle::unconst(*this->doughnut()),
+                hosts.first,
+                endpoints,
+                uid,
+                elle::unconst(this)->_remotes_server));
+            //cache[hosts.first] = res;
+            return res;
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_WARN("%s: UTP connection failed with %s: %s", *this, hosts, e);
+          }
+        }
+        if (protocol == Protocol::tcp || protocol == Protocol::all)
+        {
+          if (!hosts.second.empty())
+          {
+            try
+            {
+              // FIXME: don't always yield paxos
+              return Overlay::Member(
+                new infinit::model::doughnut::consensus::Paxos::RemotePeer(
+                  elle::unconst(*this->doughnut()),
+                  hosts.first,
+                  hosts.second.front()));
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("%s: TCP connection failed with %s: %s", *this, hosts, e);
+            }
+          }
+        }
+        throw elle::Error(elle::sprintf("Failed to connect to %s", hosts));
+      }
+
       reactor::Generator<Node::Member>
       Node::_lookup(infinit::model::Address address,
                     int n,
@@ -2631,73 +2977,26 @@ namespace infinit
         if (op != infinit::overlay::Operation::OP_FETCH)
         {
           ELLE_TRACE("Waiting for bootstrap");
-          reactor::wait(const_cast<Node*>(this)->_bootstraping);
+          reactor::wait(elle::unconst(this)->_bootstraping);
           ELLE_TRACE("bootstrap opened");
         }
         return reactor::generator<Node::Member>(
           [this, address, n, op] (reactor::Generator<Node::Member>::yielder const& yield)
         {
-          std::function<void(PeerLocation)> handle = [&](PeerLocation host)
+          std::function<void(PeerLocation)> handle = [&](PeerLocation hosts)
           {
-            ELLE_TRACE("connecting to %s", host);
-            if (host.second.address().to_string() == "127.0.0.1" && host.second.port() == _port)
-            {
-              yield(_local);
-              return;
-            }
-            using Protocol = infinit::model::doughnut::Local::Protocol;
-            if (_config.rpc_protocol == Protocol::utp || _config.rpc_protocol == Protocol::all)
-            {
-              try
-              {
-                if (host.first != Address::null && _remotes_server.rdv_connected())
-                {
-                  std::string uid = elle::sprintf("rpc.%x", host.first);
-                  yield(Overlay::Member(
-                  new infinit::model::doughnut::Remote(
-                    const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                    boost::asio::ip::udp::endpoint(host.second.address(), host.second.port()+100),
-                    uid,
-                    const_cast<Node*>(this)->_remotes_server)));
-                }
-                else
-                  yield(Overlay::Member(
-                    new infinit::model::doughnut::Remote(
-                      const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                      boost::asio::ip::udp::endpoint(host.second.address(), host.second.port()+100),
-                      const_cast<Node*>(this)->_remotes_server)));
-                return;
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_WARN("%s: UTP connection failed with %s: %s", *this, host, e);
-              }
-            }
-            if (_config.rpc_protocol == Protocol::tcp || _config.rpc_protocol == Protocol::all)
-            {
-              try
-              {
-                yield(
-                  std::shared_ptr<infinit::model::doughnut::Peer>(
-                  new infinit::model::doughnut::Remote(
-                    const_cast<infinit::model::doughnut::Doughnut&>(*this->doughnut()),
-                    host.second)));
-                return;
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_WARN("%s: TCP connection failed with %s", *this, host);
-              }
-            }
+            yield(make_peer(hosts));
           };
-          const_cast<Node*>(this)->address(address, op, n, handle);
+          elle::unconst(this)->address(address, op, n, handle);
         });
       }
 
       void
       Node::print(std::ostream& stream) const
       {
-        stream << "Kelips(" << _local_endpoint << ')';
+        stream << "Kelips(" <<
+          (_local_endpoints.empty() ? GossipEndpoint() : _local_endpoints.front().first)
+          << ')';
       }
 
       void
@@ -2725,7 +3024,7 @@ namespace infinit
         {
           _state.files.insert(std::make_pair(k,
             File{k, _self, now(), now(), _config.gossip.new_threshold + 1}));
-          ELLE_DUMP("%s: reloaded %x", *this, k);
+          //ELLE_DUMP("%s: reloaded %x", *this, k);
         }
       }
 
@@ -2734,7 +3033,27 @@ namespace infinit
       {
         for (auto const& c: s.first)
         {
-          onContactSeen(c.first, c.second);
+          if (c.first == _self)
+            continue;
+          int g = group_of(c.first);
+          Contacts& target = _state.contacts[g];
+          auto it = target.find(c.first);
+          if (it == target.end())
+          {
+            if (g == _group || signed(target.size()) < _config.max_other_contacts)
+            {
+              Contact contact{{}, {}, c.first, Duration(0), Time(), 0};
+              for (auto const& ep: c.second)
+                contact.endpoints.push_back(TimedEndpoint(ep, now()));
+              ELLE_LOG("%s: register %s", *this, contact);
+              target[c.first] = std::move(contact);
+            }
+          }
+          else
+          {
+            for (auto const& ep: c.second)
+              endpoints_update(it->second.endpoints, ep);
+          }
         }
         for (auto const& f: s.second)
         {
@@ -2752,6 +3071,87 @@ namespace infinit
                 File{f.first, f.second, now(), now(), _config.gossip.new_threshold+1}));
           }
         }
+      }
+
+      void
+      Node::contact(Address address)
+      {
+        auto id = elle::sprintf("%x", address);
+        int g = group_of(address);
+        Contacts* contacts;
+        auto it = _state.contacts[g].find(address);
+        if (it != _state.contacts[g].end())
+          contacts = &_state.contacts[g];
+        else
+        {
+          it = _state.observers.find(address);
+          if (it == _state.observers.end())
+          {
+            ELLE_WARN("Address %s not found in contacts", address);
+            return;
+          }
+          contacts = &_state.observers;
+        }
+        elle::SafeFinally remove_thread([this, address, contacts] {
+            auto it = contacts->find(address);
+            if (it != contacts->end())
+              it->second.contacter = nullptr;
+        });
+        auto peers = endpoints_extract(it->second.endpoints);
+        // !! this yield, thus invalidating it
+        ELLE_DEBUG("contacting %s on %s", id, peers);
+        auto& rsock = _local ? *_local->utp_server()->socket() : _gossip;
+        auto res = rsock.contact(id, peers);
+        it = contacts->find(address);
+        if (it == contacts->end())
+          return;
+        if (!it->second.validated_endpoint)
+        {
+          it->second.validated_endpoint = TimedEndpoint(res, now());
+        }
+        else
+          res = it->second.validated_endpoint->first;
+        std::vector<elle::Buffer> buf;
+        std::swap(it->second.pending, buf);
+        ELLE_DEBUG("flushing send buffer to %s on %s", id, res);
+        for (auto& b: buf)
+        {
+          b.size(b.size()+8);
+          memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
+          memcpy(b.mutable_contents(), "KELIPSGS", 8);
+          auto& sock = _local ? *_local->utp_server()->socket() : _gossip;
+          sock.send_to(reactor::network::Buffer(b.contents(), b.size()), res);
+        }
+      }
+
+      Contact&
+      Node::get_or_make(Address address, bool observer,
+                        std::vector<GossipEndpoint> endpoints)
+      {
+        Contacts& target = observer ?
+        _state.observers : _state.contacts[group_of(address)];
+        auto it = target.find(address);
+        if (it == target.end())
+        {
+          Contact c {{},  {}, address, Duration(), Time(), 0};
+          for (auto const& ep: endpoints)
+            c.endpoints.push_back(TimedEndpoint(ep, now()));
+          it = target.insert(std::make_pair(address, std::move(c))).first;
+        }
+        return it->second;
+      }
+
+      Overlay::Member
+      Node::_lookup_node(Address address)
+      {
+        boost::optional<PeerLocation> result;
+        kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
+          {
+            result = p;
+          });
+        if (!result)
+          throw elle::Error(elle::sprintf("Node %s not found", address));
+        return make_peer(*result);
       }
 
       elle::json::Json
@@ -2786,11 +3186,14 @@ namespace infinit
             for (auto const& contact: group)
             {
               auto last_seen = std::chrono::duration_cast<std::chrono::seconds>
-              (std::chrono::system_clock::now() - contact.second.last_seen);
+              (std::chrono::system_clock::now() - endpoints_max(contact.second.endpoints));
               contacts.push_back(elle::json::Object{
                   {"address", elle::sprintf("%x", contact.second.address)},
-                  {"endpoint",
-                  PrettyGossipEndpoint(contact.second.endpoint).repr()},
+                  {"validated_endpoint",
+                    elle::sprintf("%s", (contact.second.validated_endpoint?
+                    PrettyGossipEndpoint(contact.second.validated_endpoint->first)
+                  : PrettyGossipEndpoint(GossipEndpoint())).repr())},
+                  {"endpoints", elle::sprintf("%s", contact.second.endpoints.size())},
                   {"last_seen",
                   elle::sprintf("%ss", last_seen.count())},
               });
@@ -2858,7 +3261,7 @@ namespace infinit
               Address addr = to_scan.back();
               to_scan.pop_back();
               std::vector<PeerLocation> res;
-              kelipsGet(addr, factor, false, 3, [&](PeerLocation pl) {
+              kelipsGet(addr, factor, false, 3, false, [&](PeerLocation pl) {
                   res.push_back(pl);
               });
               if (counts.size() <= res.size())
@@ -2897,14 +3300,26 @@ namespace infinit
           _config.gossip.interval_ms = std::stol(interval);
           _config.file_timeout_ms = std::stol(timeout);
         }
+        if (k.substr(0,5) == "node.")
+        {
+          Address target = Address::from_string(k.substr(5));
+          Overlay::Member n;
+          try {
+            n = lookup_node(target);
+            res["status"] = "got it";
+          }
+          catch (elle::Error const& e)
+          {
+            res["status"] = std::string("failed: ") + e.what();
+          }
+        }
         return res;
       }
 
       std::ostream&
       operator << (std::ostream& output, Contact const& contact)
       {
-        elle::fprintf(output, "contact %x at %s",
-                      contact.address, contact.endpoint);
+        elle::fprintf(output, "contact %x", contact.address);
         return output;
       }
 
@@ -2953,8 +3368,7 @@ namespace infinit
         s.serialize("ping_interval_ms", ping_interval_ms);
         s.serialize("ping_timeout_ms", ping_timeout_ms);
         s.serialize("gossip", gossip);
-        s.serialize("bootstrap_nodes", bootstrap_nodes,
-                    elle::serialization::as<PrettyGossipEndpoint>());
+        s.serialize("bootstrap_nodes", bootstrap_nodes);
         s.serialize("wait", wait);
         s.serialize("encrypt", encrypt);
         s.serialize("accept_plain", accept_plain);
@@ -2996,11 +3410,38 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(std::vector<std::string> const& hosts, bool server,
+      Configuration::make(NodeEndpoints const& hosts, bool server,
                           infinit::model::doughnut::Doughnut* doughnut)
       {
         for (auto const& host: hosts)
-          this->bootstrap_nodes.push_back(PrettyGossipEndpoint(host));
+        {
+          ELLE_LOG("processing %s", host);
+          if (host.first == this->node_id())
+            continue;
+          PeerLocation pl;
+          if (host.first == elle::UUID())
+            pl.first = Address::null;
+          else
+            pl.first = address_of_uuid(host.first);
+          for (auto const& ep: host.second)
+          {
+            try
+            {
+              auto p = ep.find_first_of(':');
+              if (p == ep.npos)
+                throw std::runtime_error("missing ':'");
+              auto addr = ep.substr(0, p);
+              auto port = std::stoi(ep.substr(p+1));
+              pl.second.push_back(RpcEndpoint(
+                boost::asio::ip::address::from_string(addr), port));
+            }
+            catch(std::exception const& e)
+            {
+              ELLE_LOG("skipping malformed address: %s", ep);
+            }
+          }
+          this->bootstrap_nodes.push_back(pl);
+        }
         return elle::make_unique<Node>(
           *this, !server, this->node_id(), doughnut);
       }

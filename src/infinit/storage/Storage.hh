@@ -22,7 +22,9 @@ namespace infinit
       missing,
       unknown
     };
+
     class Storage
+      : public elle::Printable
     {
     public:
       virtual
@@ -57,6 +59,14 @@ namespace infinit
       virtual
       BlockStatus
       _status(Key k);
+
+    /*----------.
+    | Printable |
+    `----------*/
+    public:
+      virtual
+      void
+      print(std::ostream& out) const override;
     };
 
     std::unique_ptr<Storage>

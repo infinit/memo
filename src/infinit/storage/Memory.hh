@@ -11,6 +11,11 @@ namespace infinit
     class Memory
       : public Storage
     {
+    public:
+      typedef std::unordered_map<Key, elle::Buffer> Blocks;
+      Memory();
+      Memory(Blocks& blocks);
+
     protected:
       virtual
       elle::Buffer
@@ -24,8 +29,8 @@ namespace infinit
       virtual
       std::vector<Key>
       _list() override;
-      typedef std::unordered_map<Key, elle::Buffer> Blocks;
-      ELLE_ATTRIBUTE(Blocks, blocks);
+      ELLE_ATTRIBUTE((std::unique_ptr<Blocks, std::function<void (Blocks*)>>),
+                     blocks);
     };
   }
 }

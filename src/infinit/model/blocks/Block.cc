@@ -86,22 +86,9 @@ namespace infinit
       }
 
       ValidationResult
-      Block::validate(Block const& previous) const
-      {
-        ELLE_DEBUG_SCOPE("%s: validate against %s", *this, previous);
-        return this->_validate(previous);
-      }
-
-      ValidationResult
       Block::_validate() const
       {
         return ValidationResult::success();
-      }
-
-      ValidationResult
-      Block::_validate(Block const&) const
-      {
-        return this->_validate();
       }
 
       /*--------------.
@@ -127,8 +114,9 @@ namespace infinit
       void
       Block::print(std::ostream& output) const
       {
-        elle::fprintf(output, "Block(%x, %f)",
-                      this->_address, this->_data);
+        elle::fprintf(
+          output, "%s(%f, %f)",
+          elle::type_info(*this).name(), this->_address, this->_data);
       }
     }
   }

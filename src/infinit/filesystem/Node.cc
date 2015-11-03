@@ -251,7 +251,8 @@ namespace infinit
     }
 
     void
-    Node::set_permissions(std::string const& flags, std::string const& userkey,
+    Node::set_permissions(std::string const& flags,
+                          std::string const& userkey,
                           Address self_address)
     {
       std::pair<bool, bool> perms = parse_flags(flags);

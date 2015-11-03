@@ -17,6 +17,7 @@ namespace infinit
   {
     namespace doughnut
     {
+
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
         , public std::enable_shared_from_this<Doughnut>
@@ -26,8 +27,22 @@ namespace infinit
       `-------------*/
       public:
         typedef std::function<
-           std::unique_ptr<infinit::overlay::Overlay>
-           (Doughnut*)> OverlayBuilder;
+          std::unique_ptr<infinit::overlay::Overlay>(Doughnut*)> OverlayBuilder;
+        typedef std::function<
+          std::unique_ptr<Consensus>(Doughnut&)> ConsensusBuilder;
+        Doughnut(infinit::cryptography::rsa::KeyPair keys,
+                 infinit::cryptography::rsa::PublicKey owner,
+                 Passport passport,
+                 OverlayBuilder overlay_builder,
+                 std::shared_ptr<Local> local,
+                 ConsensusBuilder consensus);
+        Doughnut(std::string const& name,
+                 infinit::cryptography::rsa::KeyPair keys,
+                 infinit::cryptography::rsa::PublicKey owner,
+                 Passport passport,
+                 OverlayBuilder overlay_builder,
+                 std::shared_ptr<Local> local,
+                 ConsensusBuilder consensus);
         Doughnut(std::string name,
                  infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
@@ -37,7 +52,8 @@ namespace infinit
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1,
                  bool async = false,
-                 bool cache = false);
+                 bool cache = false,
+                 bool paxos = false);
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
@@ -46,7 +62,8 @@ namespace infinit
                  std::shared_ptr<Local> local = nullptr,
                  int replicas = 1,
                  bool async = false,
-                 bool cache = false);
+                 bool cache = false,
+                 bool paxos = false);
         ~Doughnut();
 
         ELLE_ATTRIBUTE_R(int, replicas);
@@ -94,6 +111,7 @@ namespace infinit
         Passport passport;
         boost::optional<std::string> name;
         int replicas;
+        bool paxos;
 
         Configuration(
           std::unique_ptr<overlay::Configuration> overlay,
@@ -102,22 +120,23 @@ namespace infinit
           Passport passport,
           boost::optional<std::string> name,
           int replicas,
-          bool async = false);
+          bool paxos = true);
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void
         serialize(elle::serialization::Serializer& s);
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(std::vector<std::string> const& hosts, bool client, bool server,
+        make(overlay::NodeEndpoints const& hosts, bool client, bool server,
              boost::filesystem::path const& p);
         std::shared_ptr<Doughnut>
-        make(std::vector<std::string> const& hosts,
+        make(overlay::NodeEndpoints const& hosts,
              bool client,
              std::shared_ptr<Local> local,
              boost::filesystem::path const& p,
              bool async = false,
-             bool cache = false);
+             bool cache = false
+             );
       };
     }
   }

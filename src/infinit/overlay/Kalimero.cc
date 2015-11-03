@@ -33,6 +33,12 @@ namespace infinit
         });
     }
 
+    Overlay::Member
+    Kalimero::_lookup_node(model::Address address)
+    {
+      return this->_local.lock();
+    }
+
     void
     Kalimero::register_local(std::shared_ptr<model::doughnut::Local> local)
     {
@@ -55,7 +61,7 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    KalimeroConfiguration::make(std::vector<std::string> const& hosts, bool,
+    KalimeroConfiguration::make(NodeEndpoints const& hosts, bool,
       model::doughnut::Doughnut*)
     {
       if (!hosts.empty())

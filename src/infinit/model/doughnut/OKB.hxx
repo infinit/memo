@@ -13,8 +13,7 @@ namespace infinit
       BaseOKB<Block>::_validate_version(
         blocks::Block const& other_,
         int T::*member,
-        int version,
-        std::function<bool (T const&)> const& compare) const
+        int version) const
       {
         ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
         auto other = dynamic_cast<T const*>(&other_);
@@ -27,8 +26,7 @@ namespace infinit
           return blocks::ValidationResult::failure(reason);
         }
         auto other_version = other->*member;
-        if (version < other_version ||
-            version == other_version && !compare(*other))
+        if (version <= other_version)
         {
           auto reason = elle::sprintf(
             "version (%s) is not newer than stored version (%s)",

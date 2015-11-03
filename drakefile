@@ -111,9 +111,12 @@ def configure(
                                 strip_prefix = True)
   protocol_lib = drake.copy(elle.protocol.lib_dynamic, 'lib',
                             strip_prefix = True)
+  athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
+                          strip_prefix = True)
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
   cxx_config += elle.dropbox.config
+  cxx_config += elle.athena.config
   cxx_config.add_local_include_path('src')
   cxx_config.define('_FILE_OFFSET_BITS=64')
 
@@ -217,6 +220,8 @@ def configure(
     'src/infinit/model/doughnut/User.hh',
     'src/infinit/model/doughnut/ValidationFailed.cc',
     'src/infinit/model/doughnut/ValidationFailed.hh',
+    'src/infinit/model/doughnut/consensus/Paxos.cc',
+    'src/infinit/model/doughnut/consensus/Paxos.hh',
     'src/infinit/model/faith/Faith.cc',
     'src/infinit/model/faith/Faith.hh',
     'src/infinit/model/paranoid/Paranoid.cc',
@@ -227,10 +232,10 @@ def configure(
     'src/infinit/overlay/Overlay.hh',
     'src/infinit/overlay/Stonehenge.cc',
     'src/infinit/overlay/Stonehenge.hh',
-    'src/infinit/overlay/kelips/Kelips.cc',
-    'src/infinit/overlay/kelips/Kelips.hh',
     'src/infinit/overlay/kademlia/kademlia.cc',
     'src/infinit/overlay/kademlia/kademlia.hh',
+    'src/infinit/overlay/kelips/Kelips.cc',
+    'src/infinit/overlay/kelips/Kelips.hh',
     'src/infinit/serialization.cc',
     'src/infinit/serialization.hh',
     'src/infinit/smb/smb.cc',
@@ -278,7 +283,8 @@ def configure(
 
   infinit_lib = drake.cxx.DynLib(
     'lib/infinit',
-    infinit_sources + [elle_lib,
+    infinit_sources + [athena_lib,
+                       elle_lib,
                        cryptography_lib,
                        aws_lib,
                        protocol_lib,

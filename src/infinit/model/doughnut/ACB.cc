@@ -172,6 +172,12 @@ namespace infinit
         return elle::make_unique<ACBCache>(std::move(md5), std::move(decrypted));
       }
 
+      int
+      ACB::version() const
+      {
+        return this->_data_version;
+      }
+
       elle::Buffer
       ACB::_decrypt_data(elle::Buffer const& data) const
       {
@@ -381,33 +387,6 @@ namespace infinit
       `-----------*/
 
       blocks::ValidationResult
-      ACB::_validate(blocks::Block const& previous) const
-      {
-        if (auto res = Super::_validate(previous)); else
-          return res;
-        return this->_validate_version<ACB>(
-          previous, &ACB::_data_version, this->_data_version,
-          [this] (ACB const& b)
-          {
-            return this->Block::data() == b.Block::data() &&
-              this->_owner_token == b._owner_token
-            // By not checking ACL are equal there, we allow anyone to update a
-            // block with the same version and screwing the tokens - and only
-            // the tokens since the permissions and user keys are signed by the
-            // owner.  This could bee seen as a flow since anyone can basically
-            // deny anyone access to a file by messing with his token.  However,
-            // he has write permission, so he could do the exact same bumping
-            // the version number, the version being the same is hardly the
-            // problem, so checking this has no added value.  Not checking it
-            // enables to not bump the data version when only the ACL are
-            // updated.
-            //
-            // && this->_acl == b._acl
-            ;
-          });
-      }
-
-      blocks::ValidationResult
       ACB::_validate() const
       {
         if (_is_local)
@@ -488,6 +467,9 @@ namespace infinit
           }
           this->_acl_changed = false;
           Super::_seal_okb();
+          if (!data_changed)
+            // FIXME: idempotence in case the write fails ?
+            ++this->_data_version;
         }
         else
           ELLE_DEBUG("%s: ACL didn't change", *this);
@@ -655,23 +637,13 @@ namespace infinit
         return boost::make_iterator_range(zip_begin, zip_end);
       }
 
-      bool
-      ACB::_compare_payload(BaseOKB<blocks::ACLBlock> const& other) const
-      {
-        auto other_acb = dynamic_cast<ACB const*>(&other);
-        if (!other_acb)
-          return false;
-        if (this->acl_entries().size() != other_acb->acl_entries().size())
-          return false;
-        for (auto const p: zip(this->acl_entries(), other_acb->acl_entries()))
-        {
-          if (p.get<0>().key != p.get<1>().key ||
-              p.get<0>().read != p.get<1>().read ||
-              p.get<0>().write != p.get<1>().write)
-            return false;
-        }
-        return true;
-      }
+      /*--------.
+      | Content |
+      `--------*/
+
+      /*--------.
+      | Content |
+      `--------*/
 
       void
       ACB::_stored()
@@ -681,6 +653,25 @@ namespace infinit
           this->doughnut()->remove(this->_prev_acl);
           this->_prev_acl = Address();
         }
+      }
+
+      bool
+      ACB::operator ==(blocks::Block const& rhs) const
+      {
+        auto other_acb = dynamic_cast<ACB const*>(&rhs);
+        if (!other_acb)
+          return false;
+        if (this->_editor != other_acb->_editor)
+          return false;
+        if (this->_owner_token != other_acb->_owner_token)
+          return false;
+        if (this->_acl != other_acb->_acl)
+          return false;
+        if (this->_data_version != other_acb->_data_version)
+          return false;
+        if (this->_data_signature != other_acb->_data_signature)
+          return false;
+        return this->Super::operator ==(rhs);
       }
 
       std::unique_ptr<blocks::Block>

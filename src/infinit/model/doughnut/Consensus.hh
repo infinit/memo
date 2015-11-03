@@ -12,6 +12,7 @@ namespace infinit
     namespace doughnut
     {
       class Consensus
+        : public elle::Printable
       {
       public:
         Consensus(Doughnut& doughnut);
@@ -19,6 +20,9 @@ namespace infinit
       protected:
         Doughnut& _doughnut;
 
+      /*-------.
+      | Blocks |
+      `-------*/
       public:
         void
         store(overlay::Overlay& overlay,
@@ -29,7 +33,6 @@ namespace infinit
         fetch(overlay::Overlay& overlay, Address address);
         void
         remove(overlay::Overlay& overlay, Address address);
-
       protected:
         virtual
         void
@@ -43,11 +46,17 @@ namespace infinit
         virtual
         void
         _remove(overlay::Overlay& overlay, Address address);
-
         std::shared_ptr<Peer>
         _owner(overlay::Overlay& overlay,
                Address const& address,
                overlay::Operation op) const;
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        void
+        print(std::ostream&) const override;
       };
     }
   }

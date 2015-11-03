@@ -269,6 +269,7 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("%s: store changes", *this);
         elle::SafeFinally clean_cache([&] { _block.reset();});
+        auto address = _block->address();
         try
         {
           FileData fd;
@@ -301,7 +302,7 @@ namespace infinit
         catch(elle::Error const& e)
         {
           ELLE_WARN("unexpected elle error storing %x: %s",
-              _block->address(), e);
+                    address, e);
           throw rfs::Error(EIO, e.what());
         }
         clean_cache.abort();

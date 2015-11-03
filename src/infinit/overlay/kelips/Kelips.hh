@@ -37,17 +37,23 @@ namespace infinit
       typedef Time::duration Duration;
       //typedef std::chrono::duration<long, std::ratio<1, 1000000>> Duration;
 
+      typedef std::pair<GossipEndpoint, Time> TimedEndpoint;
       struct Contact
       {
-        GossipEndpoint endpoint;
+        // Endpoint we last received a message from
+        boost::optional<TimedEndpoint> validated_endpoint;
+        // all advertised endpoints
+        std::vector<TimedEndpoint> endpoints;
         Address address;
         Duration rtt;
-        Time last_seen;
         Time last_gossip;
         int gossip_count;
+        // thread performing a contact() call on this node
+        reactor::Thread* contacter;
+        std::vector<elle::Buffer> pending;
       };
 
-      typedef std::pair<Address, RpcEndpoint> PeerLocation;
+      typedef std::pair<Address, std::vector<RpcEndpoint>> PeerLocation;
 
       std::ostream&
       operator << (std::ostream& output, Contact const& contact);
@@ -68,6 +74,7 @@ namespace infinit
         Files files;
         //contacts from all groups. We will allow contacts[_group] to grow more
         std::vector<Contacts> contacts; //contacts from other groups
+        Contacts observers;
       };
 
       namespace packet
@@ -139,7 +146,7 @@ namespace infinit
         int file_timeout_ms;
         int ping_interval_ms;
         int ping_timeout_ms;
-        std::vector<GossipEndpoint> bootstrap_nodes;
+        std::vector<PeerLocation> bootstrap_nodes;
         /// wait for 'wait' nodes before starting
         int wait;
         bool encrypt;
@@ -148,12 +155,12 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(std::vector<std::string> const& hosts, bool server,
+        make(NodeEndpoints const& hosts, bool server,
              model::doughnut::Doughnut* doughnut) override;
       };
 
       typedef std::pair<
-        std::unordered_map<Address, GossipEndpoint>, // contacts
+        std::unordered_map<Address, std::vector<GossipEndpoint>>, // contacts
         std::vector<std::pair<Address, Address>> // address, home_node
       > SerState;
 
@@ -200,7 +207,9 @@ namespace infinit
         reactor::Generator<Overlay::Member>
         _lookup(infinit::model::Address address, int n,
                 infinit::overlay::Operation op) const override;
-
+        virtual
+        Overlay::Member
+        _lookup_node(Address address) override;
       private:
         typedef infinit::model::doughnut::Local Local;
         typedef infinit::overlay::Overlay Overlay;
@@ -209,7 +218,11 @@ namespace infinit
         void
         wait(int contacts);
         void
-        send(packet::Packet& p, GossipEndpoint e, Address a);
+        send(packet::Packet& p, Contact& c);
+        void
+        send(packet::Packet& p, GossipEndpoint ep, Address addr);
+        void
+        send(packet::Packet& p, Contact* c, GossipEndpoint* ep, Address* addr);
         /// consistent address -> group mapper
         int
         group_of(Address const& address);
@@ -221,7 +234,7 @@ namespace infinit
         pinger();
         /// opportunistic contact grabbing
         void
-        onContactSeen(Address addr, GossipEndpoint endpoint);
+        onContactSeen(Address addr, GossipEndpoint endpoint, bool observer);
         void
         onPong(packet::Pong*);
         void
@@ -245,27 +258,29 @@ namespace infinit
         void
         filterAndInsert(
           std::vector<Address> files, int target_count, int group,
-          std::unordered_map<Address, std::pair<Time, GossipEndpoint>>& p);
+          std::unordered_map<Address, std::vector<TimedEndpoint>>& p);
         void
         cleanup();
         void
         addLocalResults(packet::GetFileRequest* p, reactor::yielder<PeerLocation>::type const* yield);
         void
-        kelipsGet(Address file, int n, bool local_override, int attempts, std::function<void(PeerLocation)> yield);
+        kelipsGet(Address file, int n, bool local_override, int attempts,
+          bool query_node,
+          std::function<void(PeerLocation)> yield);
         std::vector<PeerLocation>
         kelipsPut(Address file, int n);
         std::unordered_multimap<Address, std::pair<Time, Address>>
         pickFiles();
-        std::unordered_map<Address, std::pair<Time, GossipEndpoint>>
+        std::unordered_map<Address, std::vector<TimedEndpoint>>
         pickContacts();
-        std::vector<std::pair<GossipEndpoint, Address>>
+        std::vector<Address>
         pickOutsideTargets();
-        std::vector<std::pair<GossipEndpoint, Address>> \
+        std::vector<Address>
         pickGroupTargets();
         infinit::cryptography::SecretKey*
-        getKey(Address const& a, GossipEndpoint const& e);
+        getKey(Address const& a);
         void
-        setKey(Address const& a, GossipEndpoint const& e,
+        setKey(Address const& a,
                infinit::cryptography::SecretKey sk);
         void
         process_update(SerState const& s);
@@ -279,11 +294,20 @@ namespace infinit
         rereplicate();
         void
         rereplicator();
+        void
+        contact(Address address); // establish contact with peer and flush buffer
+        void onPacket(reactor::network::Buffer buf, GossipEndpoint source);
+        void process(elle::Buffer const& buf, GossipEndpoint source);
+        Contact&
+        get_or_make(Address address, bool observer,
+          std::vector<GossipEndpoint> endponits);
+        Node::Member
+        make_peer(PeerLocation pl);
         Address _self;
         Address _ping_target;
         Time _ping_time;
         reactor::Barrier _ping_barrier;
-        GossipEndpoint _local_endpoint;
+        std::vector<TimedEndpoint> _local_endpoints;
         /// group we are in
         int _group;
         Configuration _config;
@@ -300,10 +324,10 @@ namespace infinit
         /// Addresses for which we accepted a put.
         std::vector<Address> _promised_files;
         std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
-        std::unordered_map<GossipEndpoint, infinit::cryptography::SecretKey>
-          _observer_keys;
         /// Bootstrap pending auth.
-        std::vector<GossipEndpoint> _pending_bootstrap;
+        std::vector<GossipEndpoint> _pending_bootstrap_endpoints;
+        std::vector<Address> _pending_bootstrap_address;
+        std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
         std::shared_ptr<infinit::model::doughnut::Local> _local;
         /// Whether we've seen someone from our group.

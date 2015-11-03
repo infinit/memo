@@ -68,6 +68,7 @@ namespace kademlia
     virtual reactor::Generator<Member> _lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op)
                                   const override;
+    virtual Overlay::Member _lookup_node(infinit::model::Address address) override;
   public:
 
   private:
@@ -164,7 +165,7 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(std::vector<std::string> const& hosts, bool server,
+        make(NodeEndpoints const& hosts, bool server,
              model::doughnut::Doughnut* doughnut) override;
 
         ::kademlia::Configuration config;

@@ -114,11 +114,13 @@ main(int argc, char** argv)
         boost::filesystem::path p;
         parse_options(argc, argv, cfg, p);
         ELLE_ASSERT(cfg.model.get());
-        auto model = cfg.model->make({}, false, true, p);
+        auto model = cfg.model->make(infinit::overlay::NodeEndpoints(),
+                                     false, true, p);
         if (cfg.storage)
         {
           auto storage = cfg.storage->make();
           auto local = std::make_shared<infinit::model::doughnut::Local>(
+            /* FIXME BEARCLAW */ infinit::model::Address(),
             std::move(storage), cfg.port ? *cfg.port : 0);
           auto doughnut = elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
           doughnut->overlay()->register_local(local);

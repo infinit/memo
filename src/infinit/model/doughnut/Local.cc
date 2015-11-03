@@ -29,13 +29,14 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Local::Local(std::unique_ptr<storage::Storage> storage,
+      Local::Local(Address id,
+                   std::unique_ptr<storage::Storage> storage,
                    int port,
                    Protocol p)
-        : _storage(std::move(storage))
+        : Super(std::move(id))
+        , _storage(std::move(storage))
         , _doughnut(nullptr)
       {
-        _register_rpcs(_rpcs);
         if (p == Protocol::tcp || p == Protocol::all)
         {
           this->_server = elle::make_unique<reactor::network::TCPServer>();
@@ -47,13 +48,8 @@ namespace infinit
         if (p == Protocol::utp || p == Protocol::all)
         {
           this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
-          // FIXME: kelips already use the Local's port on udp for its
-          // gossip protocol, so use a fixed delta until we advertise
-          // tcp and utp endpoints separately
           if (this->_server)
-            port = this->_server->port() + 100;
-          else if (port)
-            port += 100;
+            port = this->_server->port();
           this->_utp_server->listen(port);
           this->_utp_server_thread = elle::make_unique<reactor::Thread>(
             elle::sprintf("%s utp server", *this),
@@ -90,36 +86,34 @@ namespace infinit
       void
       Local::store(blocks::Block const& block, StoreMode mode)
       {
+        ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        try
-        {
-          auto previous_buffer = this->_storage->get(block.address());
-          elle::IOStream s(previous_buffer.istreambuf());
-          typename elle::serialization::binary::SerializerIn input(s, false);
-          input.set_context<Doughnut*>(this->_doughnut);
-          auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
-
-          ELLE_DEBUG("%s: validate block against previous version", *this)
-            if (auto res = block.validate(*previous))
-              /* nothing */;
-            else
-            {
-              if (res.conflict())
-                throw Conflict(res.reason());
-              else
-                throw ValidationFailed(res.reason());
-            }
-        }
-        catch (storage::MissingKey const&)
-        {
-          ELLE_DEBUG("%s: validate block", *this)
-            if (auto res = block.validate()); else
-              throw ValidationFailed(res.reason());
-        }
+        ELLE_DEBUG("%s: validate block", *this)
+          if (auto res = block.validate()); else
+            throw ValidationFailed(res.reason());
+        if (auto *mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
+          try
+          {
+            auto previous_buffer = this->_storage->get(block.address());
+            elle::IOStream s(previous_buffer.istreambuf());
+            typename elle::serialization::binary::SerializerIn input(s);
+            input.set_context<Doughnut*>(this->_doughnut);
+            auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+            auto mprevious =
+              dynamic_cast<blocks::MutableBlock const*>(previous.get());
+            if (!mprevious)
+              throw ValidationFailed("overwriting a non-mutable block");
+            if (mblock->version() <= mprevious->version())
+              throw Conflict(
+                elle::sprintf("version %s is not superior to current version %s",
+                              mblock->version(), mprevious->version()));
+          }
+          catch (storage::MissingKey const&)
+          {}
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());
-          Serializer::SerializerOut output(s, false);
+          Serializer::SerializerOut output(s);
           auto ptr = &block;
           output.serialize_forward(ptr);
         }
@@ -132,6 +126,7 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Local::fetch(Address address) const
       {
+        ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
         elle::Buffer data;
         try
         {
@@ -142,10 +137,10 @@ namespace infinit
           throw MissingBlock(e.key());
         }
         ELLE_DUMP("data: %s", data.string());
-        elle::IOStream s(data.istreambuf());
-        Serializer::SerializerIn input(s, false);
-        input.set_context<Doughnut*>(this->_doughnut);
-        auto res = input.deserialize<std::unique_ptr<blocks::Block>>();
+        elle::serialization::Context ctx;
+        ctx.set<Doughnut*>(this->_doughnut);
+        auto res = elle::serialization::binary::deserialize<
+          std::unique_ptr<blocks::Block>>(data, true, ctx);
         on_fetch(address, res);
         return std::move(res);
       }
@@ -214,6 +209,7 @@ namespace infinit
       void
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
+        this->_register_rpcs(_rpcs);
         elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)
@@ -253,7 +249,7 @@ namespace infinit
       void
       Local::print(std::ostream& stream) const
       {
-        elle::fprintf(stream, "Local()");
+        elle::fprintf(stream, "%s()", elle::type_info(*this));
       }
     }
   }

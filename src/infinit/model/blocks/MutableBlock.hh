@@ -55,6 +55,9 @@ namespace infinit
       public:
         using Super::data;
         virtual
+        int
+        version() const /* = 0 */ { return 0; }; // FIXME
+        virtual
         void
         data(elle::Buffer data);
         virtual

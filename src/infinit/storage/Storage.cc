@@ -60,6 +60,16 @@ namespace infinit
       return BlockStatus::unknown;
     }
 
+    /*----------.
+    | Printable |
+    `----------*/
+
+    void
+    Storage::print(std::ostream& out) const
+    {
+      elle::fprintf(out, "%s(%x)", elle::type_info(*this), this);
+    }
+
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args)
@@ -73,5 +83,7 @@ namespace infinit
       std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
       return std::move(backend);
     }
+
+
   }
 }

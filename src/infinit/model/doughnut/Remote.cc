@@ -19,8 +19,10 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Remote::Remote(Doughnut& doughnut, std::string const& host, int port)
-        : _doughnut(doughnut)
+      Remote::Remote(Doughnut& doughnut, Address id,
+                     std::string const& host, int port)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _socket()
         , _serializer()
         , _channels()
@@ -36,9 +38,10 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut,
+      Remote::Remote(Doughnut& doughnut, Address id,
                      boost::asio::ip::tcp::endpoint endpoint)
-        : _doughnut(doughnut)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _socket(nullptr)
         , _serializer()
         , _channels()
@@ -54,10 +57,11 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut,
+      Remote::Remote(Doughnut& doughnut, Address id,
                      boost::asio::ip::udp::endpoint endpoint,
                      reactor::network::UTPServer& server)
-        : _doughnut(doughnut)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()
@@ -74,22 +78,23 @@ namespace infinit
           });
       }
 
-      Remote::Remote(Doughnut& doughnut,
-                     boost::asio::ip::udp::endpoint endpoint,
+      Remote::Remote(Doughnut& doughnut, Address id,
+                     std::vector<boost::asio::ip::udp::endpoint> endpoints,
                      std::string const& peer_id,
                      reactor::network::UTPServer& server)
-        : _doughnut(doughnut)
+        : Super(std::move(id))
+        , _doughnut(doughnut)
         , _utp_socket(nullptr)
         , _serializer()
         , _channels()
         , _connection_thread()
       {
         this->_connect(
-          elle::sprintf("%s", endpoint),
-          [this, endpoint, peer_id, &server] () -> std::iostream&
+          elle::sprintf("%s", endpoints),
+          [this, endpoints, peer_id, &server] () -> std::iostream&
           {
             this->_utp_socket.reset(new reactor::network::UTPSocket(server));
-            this->_utp_socket->connect(peer_id, {endpoint});
+            this->_utp_socket->connect(peer_id, endpoints);
             return *this->_utp_socket;
           });
       }
@@ -115,7 +120,8 @@ namespace infinit
             {
               try
               {
-                this->_serializer.reset(new protocol::Serializer(socket(), false));
+                this->_serializer.reset(
+                  new protocol::Serializer(socket(), false));
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
               }
@@ -154,6 +160,7 @@ namespace infinit
       void
       Remote::store(blocks::Block const& block, StoreMode mode)
       {
+        ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         this->connect();
         RPC<void (blocks::Block const&, StoreMode)> store

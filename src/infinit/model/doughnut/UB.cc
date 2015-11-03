@@ -44,14 +44,11 @@ namespace infinit
       Address
       UB::hash_address(cryptography::rsa::PublicKey const& key)
       {
-        elle::Buffer buf = elle::serialization::serialize
-          <cryptography::rsa::PublicKey, elle::serialization::Json>
-          (key);
+        auto buf = cryptography::rsa::publickey::der::encode(key);
         auto hash = cryptography::hash (elle::sprintf("RUB/%s", buf),
                                         cryptography::Oneway::sha256);
         return Address(hash.contents());
       }
-
 
       /*-------.
       | Clone  |

@@ -3,6 +3,7 @@
 
 # include <memory>
 # include <boost/filesystem.hpp>
+# include <elle/UUID.hh>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/User.hh>
@@ -11,6 +12,10 @@
 
 namespace infinit
 {
+  namespace overlay
+  {
+    typedef std::unordered_map<elle::UUID, std::vector<std::string>> NodeEndpoints;
+  }
   namespace model
   {
     enum StoreMode
@@ -89,7 +94,7 @@ namespace infinit
 
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(std::vector<std::string> const& hosts, bool client, bool server,
+      make(overlay::NodeEndpoints const& hosts, bool client, bool server,
            boost::filesystem::path const& dir) = 0;
       typedef infinit::serialization_tag serialization_tag;
     };

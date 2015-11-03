@@ -77,22 +77,18 @@ namespace infinit
       public:
         BaseOKB(Doughnut* owner);
         BaseOKB(BaseOKB const& other);
-        ELLE_ATTRIBUTE_R(int, version);
+        ELLE_ATTRIBUTE(int, version);
         ELLE_ATTRIBUTE(elle::Buffer, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
-
-      /*-------.
-      | Clone  |
-      `-------*/
-      virtual
-      std::unique_ptr<blocks::Block>
-      clone() const override;
 
       /*--------.
       | Content |
       `--------*/
       public:
+        virtual
+        int
+        version() const override;
         virtual
         elle::Buffer const&
         data() const override;
@@ -102,6 +98,9 @@ namespace infinit
         virtual
         void
         data(std::function<void (elle::Buffer&)> transformation) override;
+        virtual
+        bool
+        operator ==(blocks::Block const& rhs) const override;
         ELLE_ATTRIBUTE_R(elle::Buffer, data_plain, protected);
         ELLE_ATTRIBUTE(bool, data_decrypted, protected);
       protected:
@@ -122,17 +121,11 @@ namespace infinit
         _seal_okb();
         virtual
         blocks::ValidationResult
-        _validate(blocks::Block const& previous) const override;
-        virtual
-        blocks::ValidationResult
         _validate() const override;
       protected:
         virtual
         void
         _sign(elle::serialization::SerializerOut& s) const;
-        virtual
-        bool
-        _compare_payload(BaseOKB<Block> const& other) const;
         bool
         _check_signature(cryptography::rsa::PublicKey const& key,
                          elle::Buffer const& signature,
@@ -144,8 +137,7 @@ namespace infinit
         _validate_version(
           blocks::Block const& other_,
           int T::*member,
-          int version,
-          std::function<bool (T const&)> const& compare) const;
+          int version) const;
 
         class Signer
         {
@@ -157,9 +149,18 @@ namespace infinit
         };
         mutable std::shared_ptr<Signer> _signer;
         elle::Buffer const& signature() const;
+
       private:
         elle::Buffer
         _sign() const;
+
+      /*---------.
+      | Clonable |
+      `---------*/
+      public:
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone() const override;
 
       /*--------------.
       | Serialization |

@@ -126,9 +126,7 @@ namespace infinit
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
         , _signer{other._signer}
-      {
-        ELLE_DEBUG("copy: me: %s, other: %s", _version, other._version);
-      }
+      {}
 
       /*-------.
       | Clone  |
@@ -143,6 +141,29 @@ namespace infinit
       /*--------.
       | Content |
       `--------*/
+
+      template <typename Block>
+      bool
+      BaseOKB<Block>::operator ==(blocks::Block const& other) const
+      {
+        auto other_okb = dynamic_cast<Self const*>(&other);
+        if (!other_okb)
+          return false;
+        if (this->_key != other_okb->_key)
+          return false;
+        if (this->_owner_key != other_okb->_owner_key)
+          return false;
+        if (this->_signature != other_okb->_signature)
+          return false;
+        return this->Super::operator ==(other);
+      }
+
+      template <typename Block>
+      int
+      BaseOKB<Block>::version() const
+      {
+        return this->_version;
+      }
 
       template <typename Block>
       elle::Buffer const&
@@ -221,13 +242,6 @@ namespace infinit
       }
 
       template <typename Block>
-      bool
-      BaseOKB<Block>::_compare_payload(BaseOKB<Block> const& other) const
-      {
-        return this->_data == other._data;
-      }
-
-      template <typename Block>
       void
       BaseOKB<Block>::_seal()
       {
@@ -290,24 +304,6 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
-      BaseOKB<Block>::_validate(blocks::Block const& previous) const
-      {
-        if (auto res = this->_validate()); else
-          return res;
-        ELLE_DEBUG("%s: check version", *this)
-          if (!this->_validate_version<BaseOKB<Block>>
-              (previous, &BaseOKB<Block>::_version, this->version(),
-               [this] (BaseOKB<Block> const& b) -> bool
-               {
-                 return this->_compare_payload(b);
-               }))
-            return blocks::ValidationResult::conflict
-              ("version validation failed");
-        return blocks::ValidationResult::success();
-      }
-
-      template <typename Block>
-      blocks::ValidationResult
       BaseOKB<Block>::_validate() const
       {
         if (auto res = static_cast<OKBHeader const*>
@@ -363,6 +359,7 @@ namespace infinit
 
           cryptography::rsa::PublicKey key;
           elle::Buffer signature;
+          typedef infinit::serialization_tag serialization_tag;
         };
 
         SerializationContent(elle::serialization::SerializerIn& s)
@@ -378,6 +375,7 @@ namespace infinit
         Header header;
         int version;
         elle::Buffer signature;
+        typedef infinit::serialization_tag serialization_tag;
       };
 
       template <typename Block>

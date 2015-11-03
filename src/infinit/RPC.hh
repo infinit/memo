@@ -265,7 +265,6 @@ namespace infinit
         {
           auto channel = channels.accept();
           auto request = channel.read();
-
           ELLE_DEBUG("Processing one request, key=%s, len=%s data=%x",
             !!this->_key.Get(), request.size(), request);
           bool had_key = !!_key.Get();

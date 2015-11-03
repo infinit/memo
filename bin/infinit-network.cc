@@ -119,6 +119,7 @@ create(variables_map const& args)
   int replicas = 1;
   if (args.count("replication-factor"))
     replicas = args["replication-factor"].as<int>();
+  bool paxos = !(args.count("replicator") && args["replicator"].as<bool>());
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       std::move(overlay_config),
@@ -130,7 +131,7 @@ create(variables_map const& args)
         owner.private_key.get()),
       owner.name,
       replicas,
-      args.count("async"));
+      paxos);
   {
     infinit::Network network;
     network.storage = std::move(storage);
@@ -428,14 +429,18 @@ run(variables_map const& args)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
-  std::vector<std::string> hosts;
+  infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
-    hosts = args["peer"].as<std::vector<std::string>>();
+  {
+    auto hosts = args["peer"].as<std::vector<std::string>>();
+    for (auto const& h: hosts)
+      eps[elle::UUID()].push_back(h);
+  }
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"});
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
-    beyond_fetch_endpoints(network, hosts);
-  auto local = network.run(hosts, false, false, {}, false,
+    beyond_fetch_endpoints(network, eps);
+  auto local = network.run(eps, false, false, {}, false,
                            args.count("async") && args["async"].as<bool>(),
                            args.count("cache-model") && args["cache-model"].as<bool>());
   if (!local.first)
@@ -551,6 +556,7 @@ int main(int argc, char** argv)
         { "port,p", value<int>(), "port to listen on (random by default)" },
         { "replication-factor,r", value<int>(), "data replication factor" },
         { "async", bool_switch(), "use asynchronious operations" },
+        { "replicator", bool_switch(), "Use replicator overlay instead of default paxos"},
         { "stdout", bool_switch(), "output configuration to stdout" },
         { "push", bool_switch(),
           elle::sprintf("push the network to %s", beyond()).c_str() },
