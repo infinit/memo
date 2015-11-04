@@ -49,6 +49,7 @@ def configure(
     'src/__init__.py',
     'src/__main__.py',
     'src/utils.py',
+    'src/wsgi.py',
   )
 
   templates = drake.nodes(
