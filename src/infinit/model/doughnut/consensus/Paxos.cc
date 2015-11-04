@@ -126,16 +126,16 @@ namespace infinit
                   Paxos::PaxosClient::Proposal const& p)
           {
             auto& member = this->member();
-            network_exception_to_unavailable([&] {
-                member.connect();
+            return network_exception_to_unavailable([&] {
+              member.connect_retry();
+              if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
+                return local->propose(
+                  q, this->_address, p);
+              else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
+                return remote->propose(
+                  q, this->_address, p);
+              ELLE_ABORT("invalid paxos peer: %s", member);
             });
-            if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
-              return local->propose(
-                q, this->_address, p);
-            else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
-              return remote->propose(
-                q, this->_address, p);
-            ELLE_ABORT("invalid paxos peer: %s", member);
           }
 
           virtual
@@ -146,7 +146,7 @@ namespace infinit
           {
             auto& member = this->member();
             return network_exception_to_unavailable([&] {
-              member.connect();
+              member.connect_retry();
               if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
                 return local->accept(
                   q, this->_address, p, value);
