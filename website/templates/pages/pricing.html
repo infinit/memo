@@ -109,8 +109,11 @@
     <h2>Estimate and compare</h2>
     <p class="subtitle">Choose the number of users and the storage capacity you need.</p>
 
+    <label for="usersInput" id="usersLabel"><span>1</span> users</label>
     <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 100" data-slider-step="1">
-    <input type="text" name="capacity" id="capacityInput">
+
+    <label for="capacityInput" id="capacityLabel"><span>100</span> GB</label>
+    <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="100, 2000" data-slider-step="100">
 
     <table>
       <tr>
@@ -125,11 +128,11 @@
         <td><span>1</span> users</td>
         <td><span>1</span> users</td>
       </tr>
-      <tr class="storage">
-        <td><span></span> TB</td>
-        <td><span></span> TB</td>
-        <td><span></span> TB</td>
-        <td><span></span> TB</td>
+      <tr class="capacity">
+        <td><span></span> GB</td>
+        <td><span></span> GB</td>
+        <td><span></span> GB</td>
+        <td><span></span> GB</td>
       </tr>
       <tr>
         <td>No file size limit</td>
