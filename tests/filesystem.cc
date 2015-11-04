@@ -514,11 +514,18 @@ test_filesystem(bool dht,
 #endif
         elle::system::Process p(args);
       }
-      usleep(200000);
-      boost::filesystem::remove_all(store);
-      ELLE_TRACE("remove mount");
-      boost::filesystem::remove_all(mount);
-      ELLE_TRACE("Cleaning done");
+      try
+      {
+        usleep(200000);
+        boost::filesystem::remove_all(store);
+        ELLE_TRACE("remove mount");
+        boost::filesystem::remove_all(mount);
+        ELLE_TRACE("Cleaning done");
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_TRACE("Exception cleaning up: %s", e.what());
+      }
   });
   std::string text;
 
@@ -887,7 +894,14 @@ test_conflicts(bool paxos)
   });
   wait_for_mounts(mount, 2, &statstart);
   elle::SafeFinally remover([&] {
-      unmounter(mount, store, t);
+      try
+      {
+        unmounter(mount, store, t);
+      }
+      catch (std::exception const& e)
+      {
+        ELLE_TRACE("unmounter threw %s", e.what());
+      }
   });
   // Mounts/keys are in mount_points and keys
   // First entry got the root!
@@ -1020,8 +1034,16 @@ test_acl(bool paxos)
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
   elle::SafeFinally remover([&] {
+    try
+    {
       unmounter(mount, store, t);
+    }
+    catch (std::exception const& e)
+    {
+      ELLE_TRACE("unmounter threw %s", e.what());
+    }
   });
+
   // Mounts/keys are in mount_points and keys
   // First entry got the root!
   BOOST_CHECK_EQUAL(mount_points.size(), 2);
