@@ -208,6 +208,19 @@ main(int argc, char** argv)
   program = argv[0];
   Modes modes {
     {
+      "create",
+      "Create a user",
+      &create,
+      {},
+      {
+        { "name,n", value<std::string>(),
+          "user name (defaults to system user)" },
+        { "key,k", value<std::string>(),
+          "RSA key pair in PEM format - e.g. your SSH key "
+          "(generated if unspecified)" },
+      },
+    },
+    {
       "export",
       "Export a user for someone else to import",
       &export_,
@@ -215,24 +228,11 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to export (defaults to system user)" },
-        { "full,f", bool_switch(),
-          "also export private information "
+        { "full", bool_switch(),
+          "include private information "
           "(do not use this unless you understand the implications)" },
         { "output,o", value<std::string>(),
           "file to write user to (defaults to stdout)" },
-      },
-    },
-    {
-      "create",
-      "Create a user",
-      &create,
-      {},
-      {
-        { "name,n", value<std::string>(),
-          "user name (defaults to system username)" },
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key"
-            " (generated if unspecified)" },
       },
     },
     {
@@ -302,7 +302,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user name (defaults to system username)" },
+          "user name (defaults to system user)" },
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key"
             " (generated if unspecified)" },

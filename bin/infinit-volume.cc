@@ -46,9 +46,10 @@ create(variables_map const& args)
   ELLE_TRACE("create volume");
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
   infinit::Volume volume(name, mountpoint, network.name);
-  if (args.count("stdout") && args["stdout"].as<bool>())
+  if (args.count("output"))
   {
-    elle::serialization::json::SerializerOut s(std::cout, false);
+    auto output = get_output(args);
+    elle::serialization::json::SerializerOut s(*output, false);
     s.serialize_forward(volume);
   }
   else
@@ -56,7 +57,7 @@ create(variables_map const& args)
     report_created("volume", name);
     ifnt.volume_save(volume);
   }
-  if (args.count("push") && args["push"].as<bool>())
+  if (aliased_flag(args, {"push-volume", "push"}))
     beyond_push("volume", name, volume, owner);
 }
 
@@ -327,14 +328,17 @@ main(int argc, char** argv)
       &create,
       "--name VOLUME --network NETWORK [--mountpoint PATH]",
       {
-        { "name", value<std::string>(), "created volume name" },
+        { "name,n", value<std::string>(), "created volume name" },
         { "network", value<std::string>(), "underlying network to use" },
-        { "mountpoint", value<std::string>(), "where to mount the filesystem" },
-        { "stdout", bool_switch(), "output configuration to stdout" },
+        { "mountpoint,m", value<std::string>(),
+          "default location to mount the volume (optional)" },
+        { "output,o", value<std::string>(),
+          "file to write volume to (stdout by default)" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
-        { "push", bool_switch(),
+        { "push-volume", bool_switch(),
           elle::sprintf("push the volume to %s", beyond()).c_str() },
+        { "push,p", bool_switch(), "alias for --push-volume" },
         option_owner,
       },
     },
@@ -354,10 +358,11 @@ main(int argc, char** argv)
       "fetch",
       elle::sprintf("fetch volume from %s", beyond()).c_str(),
       &fetch,
-      "--name NETWORK",
+      "",
       {
-        { "name,n", value<std::string>(), "volume to fetch" },
-        { "network", value<std::string>(), "network to fetch volumes for" },
+        { "name,n", value<std::string>(), "volume to fetch (optional)" },
+        { "network", value<std::string>(),
+          "network to fetch volumes for (optional)" },
         option_owner,
       },
     },
@@ -369,7 +374,8 @@ main(int argc, char** argv)
       {
         { "input,i", value<std::string>(),
           "file to read volume from (defaults to stdin)" },
-        { "mountpoint", value<std::string>(), "where to mount the filesystem" },
+        { "mountpoint", value<std::string>(),
+          "default location to mount the volume (optional)" },
       },
     },
     {
@@ -388,26 +394,26 @@ main(int argc, char** argv)
       &run,
       "--name VOLUME [--mountpoint PATH]",
       {
-        { "name,n", value<std::string>(), "volume name" },
+        { "name", value<std::string>(), "volume name" },
         { "mountpoint,m", value<std::string>(),
           "where to mount the filesystem" },
+        { "async", bool_switch(), "use asynchronous operations" },
+        { "async-writes", bool_switch(),
+          "do not wait for writes on the backend" },
+        { "cache", value<int>()->implicit_value(0),
+          "enable storage caching, "
+          "optional argument specifies maximum size in bytes" },
+        { "cache-model", bool_switch(), "enable model caching" },
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
-        { "fetch", bool_switch(), "alias for --fetch-endpoints" },
+        { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
         { "push-endpoints", bool_switch(),
           elle::sprintf("push endpoints to %s", beyond()).c_str() },
-        { "push", bool_switch(), "alias for --push-endpoints" },
+        { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
-        { "async", bool_switch(), "use asynchronious operations" },
-        { "async-writes,a", bool_switch(),
-          "do not wait for writes on the backend" },
-        { "cache,c", value<int>()->implicit_value(0),
-          "enable storage caching, "
-          "optional arguments specifies maximum size in bytes" },
-        { "cache-model", bool_switch(), "enable model caching" },
         option_owner,
       },
     },
@@ -417,26 +423,26 @@ main(int argc, char** argv)
       &mount,
       "--name VOLUME [--mountpoint PATH]",
       {
-        { "name,n", value<std::string>(), "volume name" },
+        { "name", value<std::string>(), "volume name" },
         { "mountpoint,m", value<std::string>(),
           "where to mount the filesystem" },
+        { "async", bool_switch(), "use asynchronous operations" },
+        { "async-writes", bool_switch(),
+          "do not wait for writes on the backend" },
+        { "cache", value<int>()->implicit_value(0),
+          "enable storage caching, "
+          "optional argument specifies maximum size in bytes" },
+        { "cache-model", bool_switch(), "enable model caching" },
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
-        { "fetch", bool_switch(), "alias for --fetch-endpoints" },
+        { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
         { "push-endpoints", bool_switch(),
           elle::sprintf("push endpoints to %s", beyond()).c_str() },
-        { "push", bool_switch(), "alias for --push-endpoints" },
+        { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
-        { "async", bool_switch(), "use asynchronious operations" },
-        { "async-writes,a", bool_switch(),
-          "do not wait for writes on the backend" },
-        { "cache,c", value<int>()->implicit_value(0),
-          "enable storage caching, "
-          "optional arguments specifies maximum size in bytes" },
-        { "cache-model", bool_switch(), "enable model caching" },
         option_owner,
       },
     },

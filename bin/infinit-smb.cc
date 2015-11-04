@@ -20,8 +20,7 @@ void run(variables_map const& args)
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
   std::unordered_map<elle::UUID, std::vector<std::string>> hosts;
-  bool push = args.count("push") && args["push"].as<bool>();
-  bool fetch = args.count("fetch") && args["fetch"].as<bool>();
+  bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch"});
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
   bool cache = args.count("cache");
@@ -34,8 +33,8 @@ void run(variables_map const& args)
     args.count("async-writes") && args["async-writes"].as<bool>();
   report_action("running", "network", network.name);
   auto model = network.run(hosts, true, cache, cache_size, async_writes,
-      args.count("async") && args["async"].as<bool>(),
-      args.count("cache-model") && args["cache-model"].as<bool>());
+    args.count("async") && args["async"].as<bool>(),
+    args.count("cache-model") && args["cache-model"].as<bool>());
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(), model.second);
   auto smb = new infinit::smb::SMBServer(std::move(fs));
@@ -52,15 +51,16 @@ int main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
-        option_owner,
-        { "fetch", bool_switch(),
-            elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "name,n", value<std::string>(), "network name" },
+        { "volume", value<std::string>(), "volume name" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
-            "peer to connect to (host:port)" },
-        { "name", value<std::string>(), "created network name" },
-        { "volume", value<std::string>(), "created volume name" },
-        { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching" },
+          "peer to connect to (host:port)" },
+        { "async", bool_switch(), "use asynchronous operations" },
+        { "cache-model", bool_switch(), "enable model caching" },
+        { "fetch-endpoints", bool_switch(),
+          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
+        option_owner,
       },
     },
   };

@@ -139,15 +139,17 @@ create(variables_map const& args)
     network.name = ifnt.qualified_name(name, owner);
     if (args.count("port"))
       network.port = args["port"].as<int>();
-    bool stdout = args.count("stdout") && args["stdout"].as<bool>();
-    if (!stdout)
+    if (args.count("output"))
+    {
+      auto output = get_output(args);
+      elle::serialization::json::serialize(network, *output, false);
+    }
+    else
     {
       ifnt.network_save(network);
       report_created("network", name);
     }
-    if (stdout || script_mode)
-      elle::serialization::json::serialize(network, std::cout, false);
-    if (args.count("push") && args["push"].as<bool>())
+    if (aliased_flag(args, {"push-network", "push"}))
     {
       infinit::NetworkDescriptor desc(
         network.name,
@@ -246,7 +248,7 @@ invite(variables_map const& args)
     user.public_key,
     network.name,
     self.private_key.get());
-  bool push = args.count("push") && args["push"].as<bool>();
+  bool push = aliased_flag(args, {"push-passport", "push"});
   if (push)
     beyond_push(
       elle::sprintf("networks/%s/passports/%s", network.name, user_name),
@@ -267,7 +269,7 @@ static
 void
 join(variables_map const& args)
 {
-  auto owner = self_user(ifnt, args);
+  auto user = self_user(ifnt, args);
   auto input = get_input(args);
   auto network_name = mandatory(args, "name", "network name");
   auto storage_name = optional(args, "storage");
@@ -275,27 +277,35 @@ join(variables_map const& args)
   if (storage_name)
     storage = ifnt.storage_get(*storage_name);
   {
-    auto desc = ifnt.network_descriptor_get(network_name, owner);
+    auto desc = ifnt.network_descriptor_get(network_name, user);
     auto passport = [&] () -> infinit::model::doughnut::Passport
     {
-      bool fetch = args.count("fetch") && args["fetch"].as<bool>();
+      bool fetch = aliased_flag(args, {"fetch-passport", "fetch"});
       if (fetch)
+      {
         return beyond_fetch<infinit::model::doughnut::Passport>(
-            elle::sprintf("networks/%s/passports/%s", network_name, owner.name),
-            "passport for",
-            network_name);
-      if (!args.count("input") && owner.public_key == desc.owner)
+          elle::sprintf("networks/%s/passports/%s", network_name, user.name),
+          "passport for",
+          network_name);
+      }
+      if (!args.count("input") && user.public_key == desc.owner)
       {
         return infinit::model::doughnut::Passport(
-            owner.public_key,
-            desc.name,
-            owner.private_key.get());
+          user.public_key,
+          desc.name,
+          user.private_key.get());
       }
-      else
+      else if (args.count("input"))
       {
         auto input = get_input(args);
         return elle::serialization::json::deserialize
           <infinit::model::doughnut::Passport>(*input, false);
+      }
+      else
+      {
+        throw CommandLineError(elle::sprintf(
+          "no passport, use --fetch to fetch one from %s or --input to use a "
+          "previously exported one", beyond()));
       }
     }();
 
@@ -307,10 +317,10 @@ join(variables_map const& args)
     network.model =
       elle::make_unique<infinit::model::doughnut::Configuration>(
         std::move(desc.overlay),
-        owner.keypair(),
+        user.keypair(),
         std::move(desc.owner),
         std::move(passport),
-        owner.name,
+        user.name,
         desc.replicas);
     network.storage = std::move(storage);
     network.name = desc.name;
@@ -471,21 +481,21 @@ int main(int argc, char** argv)
 
   options_description overlay_types_options("Overlay types");
   overlay_types_options.add_options()
-    ("kalimero", "use a kalimero overlay network")
-    ("kelips", "use a kelips overlay network")
-    ("stonehenge", "use a stonehenge overlay network")
+    ("kalimero", "use a Kalimero overlay network")
+    ("kelips", "use a Kelips overlay network")
+    ("stonehenge", "use a Stonehenge overlay network")
     ("kademlia", "use a Kademlia overlay network")
     ;
   options_description stonehenge_options("Stonehenge options");
   stonehenge_options.add_options()
     ("peer", value<std::vector<std::string>>()->multitoken(),
-     "hosts to connect to")
+     "hosts to connect to (host:port)")
     ;
   options_description kelips_options("Kelips options");
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups")
-    ("encrypt", value<std::string>(), "no, lazy or yes")
+    ("encrypt", value<std::string>(), "Use encryption: no,lazy,yes")
     ("protocol", value<std::string>(), "RPC protocol to use: tcp,utp,all")
     ;
   options_description options("Infinit network utility");
@@ -498,14 +508,18 @@ int main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage,s", value<std::vector<std::string>>()->multitoken(),
-            "optional storage to contribute" },
-        { "port,p", value<int>(), "port to listen on (random by default)" },
-        { "replication-factor,r", value<int>(), "data replication factor" },
-        { "async", bool_switch(), "use asynchronious operations" },
-        { "replicator", bool_switch(), "Use replicator overlay instead of default paxos"},
-        { "stdout", bool_switch(), "output configuration to stdout" },
-        { "push", bool_switch(),
+          "storage to contribute (optional)" },
+        { "port", value<int>(), "port to listen on (defaults to random)" },
+        { "replication-factor,r", value<int>(),
+          "data replication factor (defaults to 1)" },
+        { "async", bool_switch(), "use asynchronous operations" },
+        { "replicator", bool_switch(),
+          "use replicator overlay instead of Paxos" },
+        { "output,o", value<std::string>(),
+          "file to write exported network to (defaults to stdout)" },
+        { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond()).c_str() },
+        { "push,p", bool_switch(), "alias for --push-network" },
         option_owner,
       },
       {
@@ -530,9 +544,9 @@ int main(int argc, char** argv)
       "fetch",
       "Fetch a network",
       &fetch,
-      "--name NETWORK",
+      "",
       {
-        { "name,n", value<std::string>(), "network to fetch" },
+        { "name,n", value<std::string>(), "network to fetch (optional)" },
         option_owner,
       },
     },
@@ -553,11 +567,12 @@ int main(int argc, char** argv)
       "--name NETWORK --user USER",
       {
         { "name,n", value<std::string>(), "network to create the passport to" },
-        { "output,o", value<std::string>(),
-            "file to write the passport to (defaults to stdout)" },
-        { "push,p", bool_switch(),
-            elle::sprintf("push the passport to %s", beyond()).c_str() },
         { "user,u", value<std::string>(), "user to create the passport for" },
+        { "output,o", value<std::string>(),
+          "file to write the passport to (defaults to stdout)" },
+        { "push-passport", bool_switch(),
+          elle::sprintf("push the passport to %s", beyond()).c_str() },
+        { "push,p", bool_switch(), "alias for --push-passport" },
         option_owner,
       },
     },
@@ -567,13 +582,15 @@ int main(int argc, char** argv)
       &join,
       "--name NETWORK",
       {
+        { "name,n", value<std::string>(), "network to join" },
+        { "fetch-passport", bool_switch(),
+          elle::sprintf("fetch the passport from %s", beyond()).c_str() },
+        { "fetch,f", bool_switch(), "alias for --fetch-passport" },
         { "input,i", value<std::string>(),
           "file to read passport from (defaults to stdin)" },
-        { "name,n", value<std::string>(), "network to join" },
-        { "fetch,f", bool_switch(),
-          elle::sprintf("fetch the passport from %s", beyond()).c_str() },
         { "port", value<int>(), "port to listen on (random by default)" },
-        { "storage", value<std::string>(), "optional storage to contribute" },
+        { "storage,s", value<std::string>(),
+          "storage to contribute (optional)" },
         option_owner,
       },
     },
@@ -609,7 +626,7 @@ int main(int argc, char** argv)
       &pull,
       "--name NETWORK",
       {
-        { "name,n", value<std::string>(), "volume to remove" },
+        { "name,n", value<std::string>(), "network to remove" },
         option_owner,
       },
     },
@@ -619,19 +636,19 @@ int main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
-        { "name,n", value<std::string>(), "created network name" },
-        { "fetch-endpoints", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
-        { "fetch", bool_switch(), "alias for --fetch-endpoints" },
+        { "name,n", value<std::string>(), "network to run" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
+        { "async", bool_switch(), "use asynchronous operations" },
+        { "cache-model", bool_switch(), "enable model caching" },
+        { "fetch-endpoints", bool_switch(),
+          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+        { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
         { "push-endpoints", bool_switch(),
           elle::sprintf("push endpoints to %s", beyond()).c_str() },
-        { "push", bool_switch(), "alias for --push-endpoints" },
+        { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
-        { "async", bool_switch(), "use asynchronious operations" },
-        { "cache-model", bool_switch(), "enable model caching" },
         option_owner,
       },
     },

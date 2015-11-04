@@ -59,15 +59,16 @@ create(variables_map const& args)
   }
   if (!config)
     throw CommandLineError("storage type unspecified");
-  if (!args.count("stdout") || !args["stdout"].as<bool>())
+  if (args.count("output"))
   {
-    ifnt.storage_save(name, *config);
-    report_created("storage", name);
+    auto output = get_output(args);
+    elle::serialization::json::SerializerOut s(*output, false);
+    s.serialize_forward(config);
   }
   else
   {
-    elle::serialization::json::SerializerOut s(std::cout, false);
-    s.serialize_forward(config);
+    ifnt.storage_save(name, *config);
+    report_created("storage", name);
   }
 }
 
@@ -105,8 +106,8 @@ main(int argc, char** argv)
 {
   options_description storage_types("Storage types");
   storage_types.add_options()
-    ("dropbox", "store data in a Dropbox account")
-    ("google", "store data in a Google Drive account")
+    ("dropbox", "store data in a Dropbox")
+    ("google", "store data in a Google Drive")
     ("filesystem", "store files on a local filesystem")
     ;
   options_description fs_storage_options("Filesystem storage options");
@@ -115,27 +116,28 @@ main(int argc, char** argv)
     ;
   options_description dropbox_storage_options("Dropbox storage options");
   dropbox_storage_options.add_options()
-    ("account", value<std::string>(), "dropbox account to use")
+    ("account", value<std::string>(), "Dropbox account to use")
     ("root", value<std::string>(),
-     "where to store blocks in dropbox (defaults to .infinit)")
+     "where to store blocks in Dropbox (defaults to .infinit)")
     ("token", value<std::string>(), "authentication token")
     ;
   program = argv[0];
   Modes modes {
     {
       "create",
-        "Create a storage",
-        &create,
-        "STORAGE-TYPE [STORAGE-OPTIONS...]",
-        {
-          { "name", value<std::string>(), "storage name" },
-          { "stdout", bool_switch(), "output configuration to stdout" },
-        },
-        {
-          storage_types,
-          fs_storage_options,
-          dropbox_storage_options,
-        },
+      "Create a storage",
+      &create,
+      "STORAGE-TYPE [STORAGE-OPTIONS...]",
+      {
+        { "name,n", value<std::string>(), "created storage name" },
+        { "output,o", value<std::string>(),
+          "file to write storage to (stdout by default)" },
+      },
+      {
+        storage_types,
+        fs_storage_options,
+        dropbox_storage_options,
+      },
     },
     {
       "list",
@@ -146,9 +148,9 @@ main(int argc, char** argv)
     },
     {
       "export",
-      "Export a storage informations",
+      "Export storage information",
       &export_,
-      "--name STORAGE_NAME",
+      "--name STORAGE",
       {
         { "name,n", value<std::string>(), "storage to export" },
         { "output,o", value<std::string>(),
