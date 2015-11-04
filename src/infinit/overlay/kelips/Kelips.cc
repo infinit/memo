@@ -920,12 +920,12 @@ namespace infinit
               ++count;
               ++its.first;
             }
-            if (responsible && count < doughnut()->replicas())
+            if (responsible && count < doughnut()->replication_factor())
             {
               if (prev_run.find(it->first) != prev_run.end())
               {
                 ELLE_DEBUG("re-duplicating %s (%s < %s)",
-                  it->first, count, doughnut()->replicas());
+                  it->first, count, doughnut()->replication_factor());
                 auto block = _local->fetch(it->first);
                 // Note: to be on the safe side, rereplicate by 1 at most
                 // we can't call overlay::store, no way to set the replication count
@@ -964,10 +964,10 @@ namespace infinit
               ++count;
               ++its.first;
             }
-            if (count > doughnut()->replicas())
+            if (count > doughnut()->replication_factor())
             {
               ELLE_LOG("Removing over-duplicated block %s (%s > %s)",
-                         it->first, count, doughnut()->replicas());
+                         it->first, count, doughnut()->replication_factor());
               // dont reorder, local->remove will call our hook remove()
               auto address = it->first;
               it = _state.files.erase(it);

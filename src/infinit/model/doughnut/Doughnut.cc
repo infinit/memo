@@ -123,30 +123,29 @@ namespace infinit
       }
 
       static
-      std::unique_ptr<Consensus>
+      std::unique_ptr<consensus::Consensus>
       make_consensus(Doughnut& self,
-                int replicas,
+                int replication_factor,
                 boost::filesystem::path const& dir,
                 bool async,
                 bool cache,
                 bool paxos)
       {
-        std::unique_ptr<Consensus> consensus;
+        std::unique_ptr<consensus::Consensus> consensus;
         if (paxos)
           consensus =
-            elle::make_unique<consensus::Paxos>(self, replicas);
-        else if (replicas == 1)
-          consensus = elle::make_unique<Consensus>(self);
+            elle::make_unique<consensus::Paxos>(self, replication_factor);
+        else if (replication_factor == 1)
+          consensus = elle::make_unique<consensus::Consensus>(self);
         else
-          consensus = elle::make_unique<Replicator>(
-            self, replicas, dir / "replicator", false);
+          consensus = elle::make_unique<consensus::Replicator>(
+            self, replication_factor, dir / "replicator", false);
         if (async)
-          consensus = elle::make_unique<Async>(
+          consensus = elle::make_unique<consensus::Async>(
             self, std::move(consensus), dir / "async");
         if (cache)
-          consensus = elle::make_unique<Cache>(self,
-                                               std::move(consensus),
-                                               std::chrono::seconds(5));
+          consensus = elle::make_unique<consensus::Cache>(
+            self, std::move(consensus), std::chrono::seconds(5));
         return consensus;
       }
 
@@ -156,7 +155,7 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
-                         int replicas,
+                         int replication_factor,
                          bool async,
                          bool cache,
                          bool paxos)
@@ -167,9 +166,9 @@ namespace infinit
                    std::move(local),
                    [&] (Doughnut& dht)
                    {
-                     this->_replicas = replicas;
+                     this->_replication_factor = replication_factor;
                      return make_consensus(
-                       dht, replicas, dir, async, cache, paxos);
+                       dht, replication_factor, dir, async, cache, paxos);
                    })
       {}
 
@@ -180,7 +179,7 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::filesystem::path const& dir,
                          std::shared_ptr<Local> local,
-                         int replicas,
+                         int replication_factor,
                          bool async,
                          bool cache,
                          bool paxos)
@@ -192,9 +191,9 @@ namespace infinit
                    std::move(local),
                    [&] (Doughnut& dht)
                    {
-                     this->_replicas = replicas;
+                     this->_replication_factor = replication_factor;
                      return make_consensus(
-                       dht, replicas, dir, async, cache, paxos);
+                       dht, replication_factor, dir, async, cache, paxos);
                    })
       {}
 
@@ -307,14 +306,14 @@ namespace infinit
         cryptography::rsa::PublicKey owner_,
         Passport passport_,
         boost::optional<std::string> name_,
-        int replicas_,
+        int replication_factor_,
         bool paxos_)
         : overlay(std::move(overlay_))
         , keys(std::move(keys_))
         , owner(std::move(owner_))
         , passport(std::move(passport_))
         , name(std::move(name_))
-        , replicas(std::move(replicas_))
+        , replication_factor(std::move(replication_factor_))
         , paxos(std::move(paxos_))
       {}
 
@@ -326,7 +325,7 @@ namespace infinit
         , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
-        , replicas(s.deserialize<int>("replicas"))
+        , replication_factor(s.deserialize<int>("replication_factor"))
         , paxos(s.deserialize<bool>("paxos"))
       {}
 
@@ -338,7 +337,7 @@ namespace infinit
         s.serialize("owner", this->owner);
         s.serialize("passport", this->passport);
         s.serialize("name", this->name);
-        s.serialize("replicas", this->replicas);
+        s.serialize("replication_factor", this->replication_factor);
         s.serialize("paxos", this->paxos);
       }
 
@@ -359,7 +358,7 @@ namespace infinit
             }),
             dir,
             nullptr,
-            this->replicas,
+            this->replication_factor,
             false,
             false,
             this->paxos);
@@ -375,7 +374,7 @@ namespace infinit
             }),
             dir,
             nullptr,
-            this->replicas,
+            this->replication_factor,
             false,
             false,
             this->paxos);
@@ -401,7 +400,7 @@ namespace infinit
               }),
             dir,
             local,
-            replicas,
+            replication_factor,
             async,
             cache,
             this->paxos);
@@ -417,7 +416,7 @@ namespace infinit
               }),
             dir,
             local,
-            replicas,
+            replication_factor,
             async,
             cache,
             this->paxos);

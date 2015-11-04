@@ -8,7 +8,7 @@
 #include <reactor/scheduler.hh>
 #include <reactor/network/exception.hh>
 
-ELLE_LOG_COMPONENT("infinit.model.doughnut.Consensus");
+ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Consensus");
 
 namespace infinit
 {
@@ -16,198 +16,223 @@ namespace infinit
   {
     namespace doughnut
     {
-      Consensus::Consensus(Doughnut& doughnut)
-        : _doughnut(doughnut)
-      {}
-
-      void
-      Consensus::store(overlay::Overlay& overlay,
-                       std::unique_ptr<blocks::Block> block,
-                       StoreMode mode,
-                       std::unique_ptr<ConflictResolver> resolver)
+      namespace consensus
       {
-        ELLE_TRACE_SCOPE("%s: store %s", *this, block);
-        this->_store(overlay, std::move(block), mode, std::move(resolver));
-      }
+        Consensus::Consensus(Doughnut& doughnut)
+          : _doughnut(doughnut)
+        {}
 
-      void
-      Consensus::_store(overlay::Overlay& overlay,
-                       std::unique_ptr<blocks::Block> block,
-                       StoreMode mode,
-                       std::unique_ptr<ConflictResolver> resolver)
-      {
-        overlay::Operation op;
-        switch (mode)
+        void
+        Consensus::store(overlay::Overlay& overlay,
+                         std::unique_ptr<blocks::Block> block,
+                         StoreMode mode,
+                         std::unique_ptr<ConflictResolver> resolver)
         {
-          case STORE_ANY:
-            op = overlay::OP_INSERT_OR_UPDATE;
-            break;
-          case STORE_INSERT:
-            op = overlay::OP_INSERT;
-            break;
-          case STORE_UPDATE:
-            op = overlay::OP_UPDATE;
-            break;
-          default:
-            elle::unreachable();
+          ELLE_TRACE_SCOPE("%s: store %s", *this, block);
+          this->_store(overlay, std::move(block), mode, std::move(resolver));
         }
-        auto owner =  this->_owner(overlay, block->address(), op);
-        std::unique_ptr<blocks::Block> nb;
-        while (true)
+
+        void
+        Consensus::_store(overlay::Overlay& overlay,
+                         std::unique_ptr<blocks::Block> block,
+                         StoreMode mode,
+                         std::unique_ptr<ConflictResolver> resolver)
         {
-          try
+          overlay::Operation op;
+          switch (mode)
           {
-            owner->store(nb ? *nb : *block, mode);
-            break;
+            case STORE_ANY:
+              op = overlay::OP_INSERT_OR_UPDATE;
+              break;
+            case STORE_INSERT:
+              op = overlay::OP_INSERT;
+              break;
+            case STORE_UPDATE:
+              op = overlay::OP_UPDATE;
+              break;
+            default:
+              elle::unreachable();
           }
-          catch (Conflict const& c)
+          auto owner =  this->_owner(overlay, block->address(), op);
+          std::unique_ptr<blocks::Block> nb;
+          while (true)
           {
-            if (!resolver)
-              throw;
-            nb = (*resolver)(*block, mode);
-            if (!nb)
-              throw;
-            nb->seal();
+            try
+            {
+              owner->store(nb ? *nb : *block, mode);
+              break;
+            }
+            catch (Conflict const& c)
+            {
+              if (!resolver)
+                throw;
+              nb = (*resolver)(*block, mode);
+              if (!nb)
+                throw;
+              nb->seal();
+            }
           }
         }
-      }
 
-      std::unique_ptr<blocks::Block>
-      Consensus::fetch(overlay::Overlay& overlay, Address address)
-      {
-        return this->_fetch(overlay, address);
-      }
-
-      std::unique_ptr<blocks::Block>
-      Consensus::_fetch(overlay::Overlay& overlay, Address address)
-      {
-        return
-          this->_owner(overlay, address, overlay::OP_FETCH)->fetch(address);
-      }
-
-      void
-      Consensus::remove(overlay::Overlay& overlay, Address address)
-      {
-        return this->_remove(overlay, address);
-      }
-
-      void
-      Consensus::_remove(overlay::Overlay& overlay, Address address)
-      {
-        this->_owner(overlay, address, overlay::OP_REMOVE)->remove(address);
-      }
-
-      std::shared_ptr<Peer>
-      Consensus::_owner(overlay::Overlay& overlay,
-                        Address const& address,
-                        overlay::Operation op) const
-      {
-        return overlay.lookup(address, op);
-      }
-
-      void
-      Consensus::remove_many(overlay::Overlay& overlay, Address address, int factor)
-      {
-        auto peers = overlay.lookup(address, factor, overlay::OP_REMOVE);
-        int count = 0;
-        elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+        std::unique_ptr<blocks::Block>
+        Consensus::fetch(overlay::Overlay& overlay, Address address)
         {
-          for (auto const& p: peers)
-          {
-            s.run_background("remove", [this, p, address,&count]
-            {
-              for (int i=0; i<5; ++i)
-              {
-                try
-                {
-                  if (i!=0)
-                    p->reconnect();
-                  p->remove(address);
-                  ++count;
-                  return;
-                }
-                catch (reactor::network::Exception const& e)
-                {
-                  ELLE_TRACE("%s: network exception %s", *this, e);
-                  reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
-                }
-              }
-            });
-          }
-          reactor::wait(s);
-        };
-        if (!count)
-          throw MissingBlock(address);
-      }
+          return this->_fetch(overlay, address);
+        }
 
-      std::unique_ptr<blocks::Block>
-      Consensus::fetch_from_members(reactor::Generator<overlay::Overlay::Member>& peers,
-                                    Address address)
-      {
-        std::unique_ptr<blocks::Block> result;
-        reactor::Channel<overlay::Overlay::Member> connected;
-        typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
-        bool hit = false;
-        // try connecting to all peers in parallel
-        auto connected_peers = PeerGenerator([&](PeerGenerator::yielder yield) {
-            elle::With<reactor::Scope>() <<  [&peers,&yield,&hit] (reactor::Scope& s)
+        std::unique_ptr<blocks::Block>
+        Consensus::_fetch(overlay::Overlay& overlay, Address address)
+        {
+          return
+            this->_owner(overlay, address, overlay::OP_FETCH)->fetch(address);
+        }
+
+        void
+        Consensus::remove(overlay::Overlay& overlay, Address address)
+        {
+          return this->_remove(overlay, address);
+        }
+
+        void
+        Consensus::_remove(overlay::Overlay& overlay, Address address)
+        {
+          this->_owner(overlay, address, overlay::OP_REMOVE)->remove(address);
+        }
+
+        std::shared_ptr<Peer>
+        Consensus::_owner(overlay::Overlay& overlay,
+                          Address const& address,
+                          overlay::Operation op) const
+        {
+          return overlay.lookup(address, op);
+        }
+
+        void
+        Consensus::remove_many(overlay::Overlay& overlay,
+                               Address address,
+                               int factor)
+        {
+          auto peers = overlay.lookup(address, factor, overlay::OP_REMOVE);
+          int count = 0;
+          elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
+          {
+            for (auto const& p: peers)
             {
-              for (auto p: peers)
+              s.run_background("remove", [this, p, address,&count]
               {
-                hit = true;
-                s.run_background(elle::sprintf("connect to %s", *p),
-                [p,&yield]
+                for (int i=0; i<5; ++i)
                 {
-                  for (int i=0; i<5; ++i)
+                  try
                   {
-                    ELLE_DEBUG_SCOPE("connect to %s", *p);
-                    try
-                    {
-                      if (i!=0)
-                        p->reconnect();
-                      else
-                        p->connect();
-                      yield(p);
-                      return;
-                    }
-                    catch (reactor::network::Exception const& e)
-                    {
-                      ELLE_TRACE("network exception %s", e);
-                      reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
-                    }
+                    if (i!=0)
+                      p->reconnect();
+                    p->remove(address);
+                    ++count;
+                    return;
                   }
-                });
-              }
-              reactor::wait(s);
-            };
-        });
-        // try to get on all connected peers sequentially to avoid wasting bandwidth
-        for (auto peer: connected_peers)
-        {
-          try
-          {
-            ELLE_TRACE_SCOPE("fetch from %s", *peer);
-            return peer->fetch(address);
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_TRACE("attempt fetching %s from %s failed: %s",
-                       address, *peer, e.what());
-          }
+                  catch (reactor::network::Exception const& e)
+                  {
+                    ELLE_TRACE("%s: network exception %s", *this, e);
+                    reactor::sleep(
+                      boost::posix_time::milliseconds(20 * pow(2, i)));
+                  }
+                }
+              });
+            }
+            reactor::wait(s);
+          };
+          if (!count)
+            throw MissingBlock(address);
         }
-        // Some overlays may return peers even if they don't have the block,
-        // so we have to return MissingBlock here.
-        throw MissingBlock(address);
-      }
 
-      /*----------.
-      | Printable |
-      `----------*/
+        std::unique_ptr<blocks::Block>
+        Consensus::fetch_from_members(
+          reactor::Generator<overlay::Overlay::Member>& peers, Address address)
+        {
+          std::unique_ptr<blocks::Block> result;
+          reactor::Channel<overlay::Overlay::Member> connected;
+          typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
+          bool hit = false;
+          // try connecting to all peers in parallel
+          auto connected_peers = PeerGenerator(
+            [&](PeerGenerator::yielder yield)
+            {
+              elle::With<reactor::Scope>() <<
+              [&peers,&yield,&hit] (reactor::Scope& s)
+              {
+                for (auto p: peers)
+                {
+                  hit = true;
+                  s.run_background(elle::sprintf("connect to %s", *p),
+                  [p,&yield]
+                  {
+                    for (int i=0; i<5; ++i)
+                    {
+                      ELLE_DEBUG_SCOPE("connect to %s", *p);
+                      try
+                      {
+                        if (i!=0)
+                          p->reconnect();
+                        else
+                          p->connect();
+                        yield(p);
+                        return;
+                      }
+                      catch (reactor::network::Exception const& e)
+                      {
+                        ELLE_TRACE("network exception %s", e);
+                        reactor::sleep(
+                          boost::posix_time::milliseconds(20 * pow(2, i)));
+                      }
+                    }
+                  });
+                }
+                reactor::wait(s);
+              };
+          });
+          // try to get on all connected peers sequentially to avoid wasting
+          // bandwidth
+          for (auto peer: connected_peers)
+          {
+            try
+            {
+              ELLE_TRACE_SCOPE("fetch from %s", *peer);
+              return peer->fetch(address);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("attempt fetching %s from %s failed: %s",
+                         address, *peer, e.what());
+            }
+          }
+          // Some overlays may return peers even if they don't have the block,
+          // so we have to return MissingBlock here.
+          throw MissingBlock(address);
+        }
 
-      void
-      Consensus::print(std::ostream& output) const
-      {
-        elle::fprintf(output, "%s(%x)", elle::type_info(*this), this);
+        /*----------.
+        | Printable |
+        `----------*/
+
+        void
+        Consensus::print(std::ostream& output) const
+        {
+          elle::fprintf(output, "%s(%x)", elle::type_info(*this), this);
+        }
+
+        /*--------------.
+        | Configuration |
+        `--------------*/
+
+        std::unique_ptr<Consensus>
+        Configuration::make(model::doughnut::Doughnut& dht)
+        {
+          return elle::make_unique<Consensus>(dht);
+        }
+
+        void
+        Configuration::serialize(elle::serialization::Serializer&)
+        {}
       }
     }
   }

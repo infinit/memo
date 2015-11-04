@@ -19,6 +19,14 @@ using namespace boost::program_options;
 infinit::Infinit ifnt;
 
 static
+bool
+bool_opt(variables_map const& args, std::string const& name)
+{
+  return args.count(name.c_str()) && args[name.c_str()].as<bool>();
+}
+
+
+static
 void
 create(variables_map const& args)
 {
@@ -117,10 +125,14 @@ create(variables_map const& args)
         new infinit::storage::StripStorageConfig(std::move(backends)));
     }
   }
-  int replicas = 1;
+  int replication_factor = 1;
   if (args.count("replication-factor"))
-    replicas = args["replication-factor"].as<int>();
-  bool paxos = !(args.count("replicator") && args["replicator"].as<bool>());
+    replication_factor = args["replication-factor"].as<int>();
+  bool no_consensus = bool_opt(args, "no-consensus");
+  bool paxos = bool_opt(args, "paxos");
+  bool replicator = bool_opt(args, "replicator");
+  if (!no_consensus && !replicator)
+    paxos = true;
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       std::move(overlay_config),
@@ -131,7 +143,7 @@ create(variables_map const& args)
         ifnt.qualified_name(name, owner),
         owner.private_key.get()),
       owner.name,
-      replicas,
+      replication_factor,
       paxos);
   {
     infinit::Network network;
@@ -156,7 +168,7 @@ create(variables_map const& args)
         network.name,
         std::move(network.dht()->overlay),
         std::move(network.dht()->owner),
-        network.dht()->replicas);
+        network.dht()->replication_factor);
       beyond_push("network", desc.name, desc, owner);
     }
   }
@@ -174,7 +186,7 @@ export_(variables_map const& args)
     auto& dht = static_cast<infinit::model::doughnut::Configuration&>
       (*network.model);
     infinit::NetworkDescriptor desc(
-      network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replicas));
+      network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replication_factor));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network.name);
@@ -322,7 +334,7 @@ join(variables_map const& args)
         std::move(desc.owner),
         std::move(passport),
         user.name,
-        desc.replicas);
+        desc.replication_factor);
     network.storage = std::move(storage);
     network.name = desc.name;
     if (args.count("port"))
@@ -353,7 +365,7 @@ push(variables_map const& args)
     infinit::NetworkDescriptor desc(network.name,
                                     std::move(dht.overlay),
                                     std::move(dht.owner),
-                                    std::move(dht.replicas));
+                                    std::move(dht.replication_factor));
     beyond_push("network", desc.name, desc, self);
   }
 }
@@ -487,6 +499,12 @@ int main(int argc, char** argv)
     ("stonehenge", "use a Stonehenge overlay network")
     ("kademlia", "use a Kademlia overlay network")
     ;
+  options_description consensus_types_options("Consensus types");
+  consensus_types_options.add_options()
+    ("paxos", "use Paxos consensus algorithm (default)")
+    ("replicator", "use Replicator consensus algorithm")
+    ("no-consensus", "use no consensus algorithm")
+    ;
   options_description stonehenge_options("Stonehenge options");
   stonehenge_options.add_options()
     ("peer", value<std::vector<std::string>>()->multitoken(),
@@ -505,10 +523,13 @@ int main(int argc, char** argv)
       "create",
       "Create a network",
       &create,
-      "--name NAME [OVERLAY-TYPE OVERLAY-OPTIONS...] [STORAGE...]",
+      "--name NAME "
+        "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
+        "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
+        "[STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
-        { "storage,s", value<std::vector<std::string>>()->multitoken()},
+        { "storage,s", value<std::vector<std::string>>()->multitoken() },
         { "port", value<int>(), "port to listen on (random by default)" },
         { "replication-factor,r", value<int>(),
           "data replication factor (1 by default)" },

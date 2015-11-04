@@ -147,7 +147,7 @@ private:
     else
     {
       consensus = [&] (dht::Doughnut& dht)
-        { return elle::make_unique<dht::Consensus>(dht); };
+        { return elle::make_unique<dht::consensus::Consensus>(dht); };
       this->local_a = std::make_shared<dht::Local>(id_a, std::move(storage_a));
       this->local_b = std::make_shared<dht::Local>(id_b, std::move(storage_b));
       this->local_c = std::make_shared<dht::Local>(id_c, std::move(storage_c));

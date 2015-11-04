@@ -11,59 +11,89 @@ namespace infinit
   {
     namespace doughnut
     {
-      class Consensus
-        : public elle::Printable
+      namespace consensus
       {
-      public:
-        Consensus(Doughnut& doughnut);
-        virtual ~Consensus() {}
-      protected:
-        Doughnut& _doughnut;
+        class Consensus
+          : public elle::Printable
+        {
+        public:
+          Consensus(Doughnut& doughnut);
+          virtual ~Consensus() {}
+        protected:
+          Doughnut& _doughnut;
 
-      /*-------.
-      | Blocks |
-      `-------*/
-      public:
-        void
-        store(overlay::Overlay& overlay,
-              std::unique_ptr<blocks::Block> block,
-              StoreMode mode,
-              std::unique_ptr<ConflictResolver> resolver);
-        std::unique_ptr<blocks::Block>
-        fetch(overlay::Overlay& overlay, Address address);
-        void
-        remove(overlay::Overlay& overlay, Address address);
-        static
-        std::unique_ptr<blocks::Block>
-        fetch_from_members(reactor::Generator<overlay::Overlay::Member>& peers,
-                           Address address);
-        void
-        remove_many(overlay::Overlay& overlay, Address address, int factor);
-      protected:
-        virtual
-        void
-        _store(overlay::Overlay& overlay,
-               std::unique_ptr<blocks::Block> block,
-               StoreMode mode,
-               std::unique_ptr<ConflictResolver> resolver);
-        virtual
-        std::unique_ptr<blocks::Block>
-        _fetch(overlay::Overlay& overlay, Address address);
-        virtual
-        void
-        _remove(overlay::Overlay& overlay, Address address);
-        std::shared_ptr<Peer>
-        _owner(overlay::Overlay& overlay,
-               Address const& address,
-               overlay::Operation op) const;
+        /*-------.
+        | Blocks |
+        `-------*/
+        public:
+          void
+          store(overlay::Overlay& overlay,
+                std::unique_ptr<blocks::Block> block,
+                StoreMode mode,
+                std::unique_ptr<ConflictResolver> resolver);
+          std::unique_ptr<blocks::Block>
+          fetch(overlay::Overlay& overlay, Address address);
+          void
+          remove(overlay::Overlay& overlay, Address address);
+          static
+          std::unique_ptr<blocks::Block>
+          fetch_from_members(reactor::Generator<overlay::Overlay::Member>& peers,
+                             Address address);
+          void
+          remove_many(overlay::Overlay& overlay, Address address, int factor);
+        protected:
+          virtual
+          void
+          _store(overlay::Overlay& overlay,
+                 std::unique_ptr<blocks::Block> block,
+                 StoreMode mode,
+                 std::unique_ptr<ConflictResolver> resolver);
+          virtual
+          std::unique_ptr<blocks::Block>
+          _fetch(overlay::Overlay& overlay, Address address);
+          virtual
+          void
+          _remove(overlay::Overlay& overlay, Address address);
+          std::shared_ptr<Peer>
+          _owner(overlay::Overlay& overlay,
+                 Address const& address,
+                 overlay::Operation op) const;
 
-      /*----------.
-      | Printable |
-      `----------*/
-      public:
-        void
-        print(std::ostream&) const override;
-      };
+        /*----------.
+        | Printable |
+        `----------*/
+        public:
+          void
+          print(std::ostream&) const override;
+        };
+
+        /*--------------.
+        | Configuration |
+        `--------------*/
+
+        class Configuration
+          : public elle::serialization::VirtuallySerializable
+        {
+        /*--------.
+        | Factory |
+        `--------*/
+        public:
+          virtual
+          std::unique_ptr<Consensus>
+          make(model::doughnut::Doughnut& dht);
+
+        /*--------------.
+        | Serialization |
+        `--------------*/
+        public:
+          Configuration(elle::serialization::SerializerIn& s);
+          static constexpr char const* virtually_serializable_key = "type";
+          virtual
+          void
+          serialize(elle::serialization::Serializer& s) override;
+          typedef infinit::serialization_tag serialization_tag;
+        };
+      }
     }
   }
 }

@@ -203,14 +203,14 @@ static void make_nodes(std::string store, int node_count,
       infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner.k());
       infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
         [paxos] (infinit::model::doughnut::Doughnut& dht)
-          -> std::unique_ptr<infinit::model::doughnut::Consensus>
+        -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
         {
           if (paxos)
             return elle::make_unique<
               infinit::model::doughnut::consensus::Paxos>(dht, 3);
           else
             return elle::make_unique<
-              infinit::model::doughnut::Consensus>(dht);
+              infinit::model::doughnut::consensus::Consensus>(dht);
         };
       auto model =
         new infinit::model::doughnut::Doughnut(
@@ -280,14 +280,14 @@ run_filesystem_dht(std::string const& store,
         ELLE_TRACE("instantiating dougnut...");
         infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
         [paxos] (infinit::model::doughnut::Doughnut& dht)
-          -> std::unique_ptr<infinit::model::doughnut::Consensus>
+          -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
         {
           if (paxos)
             return elle::make_unique<
               infinit::model::doughnut::consensus::Paxos>(dht, 3);
           else
             return elle::make_unique<
-              infinit::model::doughnut::Consensus>(dht);
+              infinit::model::doughnut::consensus::Consensus>(dht);
         };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -359,7 +359,7 @@ run_filesystem_dht(std::string const& store,
         }
         overlay["peers"] = v;
         model["overlay"] = overlay;
-        model["replicas"] = paxos ? 3 : 1;
+        model["replication_factor"] = paxos ? 3 : 1;
         model["paxos"] = paxos;
         r["model"] = model;
         std::string kps;

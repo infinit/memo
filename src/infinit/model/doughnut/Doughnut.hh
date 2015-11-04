@@ -17,7 +17,6 @@ namespace infinit
   {
     namespace doughnut
     {
-
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
         , public std::enable_shared_from_this<Doughnut>
@@ -29,7 +28,7 @@ namespace infinit
         typedef std::function<
           std::unique_ptr<infinit::overlay::Overlay>(Doughnut*)> OverlayBuilder;
         typedef std::function<
-          std::unique_ptr<Consensus>(Doughnut&)> ConsensusBuilder;
+          std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
@@ -50,7 +49,7 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
-                 int replicas = 1,
+                 int replication_factor = 1,
                  bool async = false,
                  bool cache = false,
                  bool paxos = false);
@@ -60,14 +59,13 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  boost::filesystem::path const& path,
                  std::shared_ptr<Local> local = nullptr,
-                 int replicas = 1,
+                 int replication_factor = 1,
                  bool async = false,
                  bool cache = false,
                  bool paxos = false);
         ~Doughnut();
-
-        ELLE_ATTRIBUTE_R(int, replicas);
-        ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, consensus)
+        ELLE_ATTRIBUTE_R(int, replication_factor);
+        ELLE_ATTRIBUTE(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
@@ -110,7 +108,7 @@ namespace infinit
         cryptography::rsa::PublicKey owner;
         Passport passport;
         boost::optional<std::string> name;
-        int replicas;
+        int replication_factor;
         bool paxos;
 
         Configuration(
@@ -119,7 +117,7 @@ namespace infinit
           cryptography::rsa::PublicKey owner,
           Passport passport,
           boost::optional<std::string> name,
-          int replicas,
+          int replication_factor,
           bool paxos = true);
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();

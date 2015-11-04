@@ -367,11 +367,11 @@ namespace infinit
     NetworkDescriptor(std::string name_,
                       std::unique_ptr<infinit::overlay::Configuration> overlay_,
                       infinit::cryptography::rsa::PublicKey owner_,
-                      int replicas_)
+                      int replication_factor_)
       : name(std::move(name_))
       , overlay(std::move(overlay_))
       , owner(std::move(owner_))
-      , replicas(std::move(replicas_))
+      , replication_factor(std::move(replication_factor_))
     {}
 
     NetworkDescriptor(elle::serialization::SerializerIn& s)
@@ -379,7 +379,7 @@ namespace infinit
       , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-      , replicas(s.deserialize<int>("replicas"))
+      , replication_factor(s.deserialize<int>("replication_factor"))
     {}
 
     void
@@ -388,13 +388,13 @@ namespace infinit
       s.serialize("name", this->name);
       s.serialize("overlay", this->overlay);
       s.serialize("owner", this->owner);
-      s.serialize("replicas", this->replicas);
+      s.serialize("replication_factor", this->replication_factor);
     }
 
     std::string name;
     std::unique_ptr<infinit::overlay::Configuration> overlay;
     infinit::cryptography::rsa::PublicKey owner;
-    int replicas;
+    int replication_factor;
   };
 
   struct Network
@@ -451,7 +451,7 @@ namespace infinit
           storage.reset(new storage::Cache(std::move(storage), cache_size));
         auto id = dht()->overlay->node_id();
         auto local = std::make_shared<infinit::model::doughnut::consensus::Paxos::LocalPeer>(
-          dht()->replicas,
+          dht()->replication_factor,
           id,
           std::move(storage), this->port ? this->port.get() : 0);
         //auto local = std::make_shared<infinit::model::doughnut::Local>
@@ -614,7 +614,7 @@ namespace infinit
             network.name,
             std::move(network.dht()->overlay),
             std::move(network.dht()->owner),
-            network.dht()->replicas
+            network.dht()->replication_factor,
           };
         }
         catch (elle::Error const&)
