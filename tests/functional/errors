@@ -7,7 +7,7 @@ with Infinit() as infinit:
     'name' : 'clouds',
     'overlay' : {
       'type' : 'kalimero',
-      'node_id': '1624d7d5-c4f2-4985-8bdb-a76f551fdf7e',
+      'node_id': 'YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=',
     },
     'owner' : {
       'rsa' : 'MIIBCgKCAQEAp0uoRP+SKv6ryQo8TLapW8SFVZfmc0clf2HxBSx+uK'
@@ -17,7 +17,7 @@ with Infinit() as infinit:
       'ofFltmkbaqynimzvQ6rKnz4lKx2wl8X59YUDXT7UWb6yIPBMMhOnDxdOgojgQx'
       'bbkzp6ilGh+wS14KR6sp948jURYD7qDtdiluI78mlajzhEADuyTQIDAQAB'
     },
-    'replicas': 1,
+    'replication_factor': 1,
   }
   infinit.run(['infinit-user', '--create', '--name', 'user'])
   infinit.run(['infinit-network', '--import'], input = descriptor)
