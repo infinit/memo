@@ -20,9 +20,9 @@ namespace infinit
                           boost::filesystem::path p,
                           infinit::model::Model const& m)
     {
-      ELLE_LOG("Conflict: the file %s was modified since last read. Your"
-        " changes will overwrite the previous modifications",
-        p);
+      ELLE_LOG_SCOPE(
+        "conflict: the file \"%s\" was modified since last read. Your"
+        " changes will overwrite previous modifications", p);
       auto block = elle::cast<MutableBlock>::runtime(m.fetch(b.address()));
       block->data(b.data());
       return elle::cast<Block>::runtime(block);

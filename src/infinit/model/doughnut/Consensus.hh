@@ -33,6 +33,12 @@ namespace infinit
         fetch(overlay::Overlay& overlay, Address address);
         void
         remove(overlay::Overlay& overlay, Address address);
+        static
+        std::unique_ptr<blocks::Block>
+        fetch_from_members(reactor::Generator<overlay::Overlay::Member>& peers,
+                           Address address);
+        void
+        remove_many(overlay::Overlay& overlay, Address address, int factor);
       protected:
         virtual
         void

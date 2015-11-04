@@ -180,7 +180,7 @@ run(variables_map const& args)
   {
     hosts = args["peer"].as<std::vector<std::string>>();
     for (auto const& h: hosts)
-      eps[elle::UUID()].push_back(h);
+      eps[infinit::model::Address::null].push_back(h);
   }
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);

@@ -171,7 +171,7 @@ namespace infinit
       public:
         Node(Configuration const& config,
              bool observer,
-             elle::UUID node_id,
+             model::Address node_id,
              infinit::model::doughnut::Doughnut* doughnut);
         virtual ~Node();
         void

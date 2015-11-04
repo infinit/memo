@@ -249,7 +249,7 @@ namespace infinit
       void
       Local::print(std::ostream& stream) const
       {
-        elle::fprintf(stream, "%s()", elle::type_info(*this));
+        elle::fprintf(stream, "%s(%s)", elle::type_info(*this), this->id());
       }
     }
   }

@@ -670,18 +670,9 @@ namespace infinit
         return res;
       }
 
-      Address
-      address_of_uuid(elle::UUID const& id)
-      {
-        auto hash = infinit::cryptography::hash(
-          elle::ConstWeakBuffer(id.data, id.static_size()),
-          infinit::cryptography::Oneway::sha256);
-        return Address(hash.contents());
-      }
-
       Node::Node(Configuration const& config,
                  bool observer,
-                 elle::UUID node_id,
+                 model::Address node_id,
                  infinit::model::doughnut::Doughnut* doughnut)
         : Overlay(std::move(node_id))
         , _config(config)
@@ -691,7 +682,7 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
-        _self = address_of_uuid(this->node_id());
+        _self = Address(this->node_id());
         if (observer)
           ELLE_LOG("Running in observer mode");
         this->doughnut(doughnut);
@@ -969,8 +960,6 @@ namespace infinit
       {
         ELLE_TRACE("bootstraping");
         bootstrap(true);
-        ELLE_TRACE("deoverdeplicating");
-        deoverduplicate();
         ELLE_TRACE("joining");
         _gossip.socket()->close();
         if (!_local)
@@ -1018,8 +1007,9 @@ namespace infinit
         {
           _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
             std::bind(&Node::pinger, this));
-          _rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
-            std::bind(&Node::rereplicator, this));
+          // Rereplication will be handled by the overlay
+          //_rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
+          //  std::bind(&Node::rereplicator, this));
           _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
             std::bind(&Node::gossipEmitter, this));
         }
@@ -2854,8 +2844,8 @@ namespace infinit
             this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
               boost::asio::ip::address::from_string(itf.second.ipv4_address),
               _port), now()));
-            ELLE_LOG("Setting endpoint to %s:%s",
-                     itf.second.ipv4_address, this->_port);
+            ELLE_LOG("%s: listening on %s:%s",
+                     *this, itf.second.ipv4_address, _port);
           }
         if (!this->_rdv_host.empty())
           _rdv_connect_thread_local = elle::make_unique<reactor::Thread>("rdv_connect",
@@ -3152,6 +3142,8 @@ namespace infinit
       Overlay::Member
       Node::_lookup_node(Address address)
       {
+        if (address == _self)
+          return _local;
         boost::optional<PeerLocation> result;
         kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
           {
@@ -3427,10 +3419,10 @@ namespace infinit
           if (host.first == this->node_id())
             continue;
           PeerLocation pl;
-          if (host.first == elle::UUID())
+          if (host.first == model::Address())
             pl.first = Address::null;
           else
-            pl.first = address_of_uuid(host.first);
+            pl.first = Address(host.first);
           for (auto const& ep: host.second)
           {
             try

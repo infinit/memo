@@ -19,7 +19,7 @@ void run(variables_map const& args)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
-  std::unordered_map<elle::UUID, std::vector<std::string>> hosts;
+  std::unordered_map<infinit::model::Address, std::vector<std::string>> hosts;
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch"});
   if (fetch)
     beyond_fetch_endpoints(network, hosts);

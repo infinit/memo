@@ -211,6 +211,8 @@ namespace infinit
       elle::Buffer
       BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
+        if (this->doughnut()->keys().K() != this->owner_key())
+          throw elle::Error("attempting to decrypt an unowned OKB");
         return this->doughnut()->keys().k().open(data);
       }
 

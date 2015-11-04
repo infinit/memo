@@ -193,7 +193,7 @@ namespace kademlia
   {
     dst = E2(src.address(), src.port());
   }
-  Kademlia::Kademlia(elle::UUID node_id,
+  Kademlia::Kademlia(infinit::model::Address node_id,
                      Configuration const& config, bool server,
                      infinit::model::doughnut::Doughnut* doughnut)
     : Overlay(std::move(node_id))

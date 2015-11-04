@@ -1,7 +1,8 @@
 #ifndef INFINIT_OVERLAY_OVERLAY_HH
 # define INFINIT_OVERLAY_OVERLAY_HH
 
-# include <elle/UUID.hh>
+# include <unordered_map>
+
 # include <elle/json/json.hh>
 
 # include <reactor/network/tcp-socket.hh>
@@ -15,7 +16,8 @@ namespace infinit
 {
   namespace overlay
   {
-    typedef std::unordered_map<elle::UUID, std::vector<std::string>> NodeEndpoints;
+    typedef std::unordered_map<model::Address, std::vector<std::string>>
+      NodeEndpoints;
 
     enum Operation
     {
@@ -39,13 +41,13 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      Overlay(elle::UUID node_id);
+      Overlay(model::Address node_id);
       virtual
       ~Overlay() {}
       virtual
       void
       register_local(std::shared_ptr<model::doughnut::Local> local);
-      ELLE_ATTRIBUTE_R(elle::UUID, node_id);
+      ELLE_ATTRIBUTE_R(model::Address, node_id);
       ELLE_ATTRIBUTE_RWX(model::doughnut::Doughnut*, doughnut);
 
     /*-------.
@@ -61,6 +63,9 @@ namespace infinit
       /// Lookup a node from its uid
       Member
       lookup_node(model::Address address);
+      /// Lookup nodes from uids
+      reactor::Generator<Overlay::Member>
+      lookup_nodes(std::unordered_set<model::Address> address);
     protected:
       virtual
       reactor::Generator<Member>
@@ -96,7 +101,7 @@ namespace infinit
       std::unique_ptr<infinit::overlay::Overlay>
       make(NodeEndpoints const&, bool server,
         model::doughnut::Doughnut* doughnut) = 0;
-      ELLE_ATTRIBUTE_R(elle::UUID, node_id);
+      ELLE_ATTRIBUTE_R(model::Address, node_id);
     };
   }
 }

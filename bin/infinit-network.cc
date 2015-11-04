@@ -29,9 +29,10 @@ create(variables_map const& args)
   {
     auto stonehenge =
       elle::make_unique<infinit::overlay::StonehengeConfiguration>();
-    stonehenge->hosts =
-      mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
-    overlay_config = std::move(stonehenge);
+    ELLE_ABORT("FIXME: stonehenge CLI peer parsing not implemented");
+    // stonehenge->peers =
+    //   mandatory<std::vector<std::string>>(args, "peer", "stonehenge hosts");
+    // overlay_config = std::move(stonehenge);
   }
   if (args.count("kademlia"))
   {
@@ -390,7 +391,7 @@ run(variables_map const& args)
   {
     auto hosts = args["peer"].as<std::vector<std::string>>();
     for (auto const& h: hosts)
-      eps[elle::UUID()].push_back(h);
+      eps[infinit::model::Address()].push_back(h);
   }
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"});
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
@@ -508,18 +509,16 @@ int main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage,s", value<std::vector<std::string>>()->multitoken(),
-          "storage to contribute (optional)" },
-        { "port", value<int>(), "port to listen on (defaults to random)" },
+        { "port", value<int>(), "port to listen on (random by default)" },
         { "replication-factor,r", value<int>(),
-          "data replication factor (defaults to 1)" },
+          "data replication factor (1 by default)" },
         { "async", bool_switch(), "use asynchronous operations" },
-        { "replicator", bool_switch(),
-          "use replicator overlay instead of Paxos" },
         { "output,o", value<std::string>(),
-          "file to write exported network to (defaults to stdout)" },
+          "file to write exported network to (stdout by default)" },
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond()).c_str() },
-        { "push,p", bool_switch(), "alias for --push-network" },
+        { "push,p", bool_switch(),
+          elle::sprintf("push the network to %s", beyond()).c_str() },
         option_owner,
       },
       {
@@ -643,7 +642,8 @@ int main(int argc, char** argv)
         { "cache-model", bool_switch(), "enable model caching" },
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
-        { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
+        { "fetch,f", bool_switch(),
+          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "push-endpoints", bool_switch(),
           elle::sprintf("push endpoints to %s", beyond()).c_str() },
         { "push,p", bool_switch(), "alias for --push-endpoints" },
