@@ -99,7 +99,7 @@ namespace infinit
     StonehengeConfiguration::serialize(elle::serialization::Serializer& s)
     {
       Configuration::serialize(s);
-      s.serialize("peers", this->hosts);
+      s.serialize("peers", this->peers);
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
