@@ -346,6 +346,7 @@ class Bottle(bottle.Bottle):
   def network_delete(self, owner, name):
     user = self.user_from_name(name = owner)
     self.authenticate(user)
+    self.network_from_name(owner = owner, name = name)
     self.__beyond.network_delete(owner, name)
 
   def network_users_get(self, owner, name):
