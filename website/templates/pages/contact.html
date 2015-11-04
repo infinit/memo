@@ -3,17 +3,20 @@
 <%block name="content">
 
   <section class="doc">
-    <h1>Contact us</h1>
-    <p>Please fill the form below to get in touch with a representative of Infinit International Inc.</p>
+    <h1>Ask us anything</h1>
+    <p>Should it be a technical issue, a partnership proposal or commercial inquiry, please fill out the form below and we will get back to you as soon as possible.</p>
 
-    <form action="" id="contact_form" method="POST">
+    <form action="${route('contact')}" id="contact_form" method="POST">
 
-      <input type="text" name="first_name" placeholder="First Name" required>
-      <input type="text" name="last_name" placeholder="Last Name" required>
+      <input type="text" name="first_name" placeholder="First Name*" required>
+      <input type="text" name="last_name" placeholder="Last Name*" required>
+      <input class="email" type="email" name="email" placeholder="Email*" required>
+      <input type="text" name="phone" placeholder="Phone">
+
       <input type="text" name="company_name" placeholder="Company Name">
-      <input type="text" name="country" placeholder="Country">
-      <input class="email" type="email" name="email" placeholder="Email" required>
+      <input type="text" name="company_url" placeholder="Company URL">
 
+      <input type="text" name="country" placeholder="Country">
       <br><br>
 
       <textarea name="message" required></textarea>

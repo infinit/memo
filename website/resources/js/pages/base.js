@@ -29,7 +29,8 @@ $(document).ready(function() {
       method: 'post',
     })
     .done(function(response) {
-      $('#slack form button').text('Invitation Sent!');
+      $.magnificPopup.close();
+      displayBannerMessage("Invitation Sent!");
     })
     .fail(function(response) {
       $.magnificPopup.close();

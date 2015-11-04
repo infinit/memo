@@ -393,7 +393,8 @@ body.home {
 | Documentation   |
 `----------------*/
 
-body.documentation, body.legal, body.contact, body.opensource, body.solutions {
+body.documentation, body.legal, body.contact, body.opensource, body.solutions,
+body.pricing {
 
   // header { position: fixed; width: 100%;}
   // .content { padding-top: 80px; }
@@ -470,7 +471,7 @@ body.documentation, body.legal, body.contact, body.opensource, body.solutions {
       padding-bottom: 10px;
     }
 
-    table tr td:nth-child(1) {
+    table.features tr td:nth-child(1) {
       font-weight: bold; text-align: left;
       padding: 10px 5px;
       border-right: 3px solid #E6E6E6;
@@ -780,6 +781,12 @@ body.pricing {
   .plan:last-child { border-right: 0}
   .plan:last-child h2 img {  margin-top: -13px; }
 
+  section.estimation {
+    text-align: center; min-height: 400px;
+
+    h2 { font-size: 2em; margin-bottom: 0;}
+  }
+
 }
 
 
@@ -790,11 +797,15 @@ body.pricing {
 body.contact, body.solutions {
   section form { margin-top: 40px; }
 
-  section.doc { padding-left: 20%; width: 60%;}
+  section.doc { padding-left: 20%; width: 60%; padding-right: 20%; }
+
   input[type="text"], input[type="email"] { height: 25px; width: 40%;}
   input[type="text"] { width: 40%; margin-bottom: 10px; }
+  form input[type="text"], form input[type="email"] {
+    width: 44%; margin-right: 2%;
+  }
 
-  textarea { width: 100%; min-height: 200px; border-radius: 5px; padding: 17px;}
+  textarea { width: 92%; min-height: 200px; border-radius: 5px; padding: 17px;}
   section.doc .button { padding: 10px 25px; margin-top: 15px;}
 }
 
@@ -840,7 +851,7 @@ body.solutions {
     .cloud_solutions { clear: both; margin: 50px auto 0 auto; width: 80%; }
     .cloud_solutions > img { float: left; margin-right: 50px; margin-top: 20px; }
     .cloud_solutions h2 { padding-top: 148px; font-size: 23px; }
-    .cloud_solutions p { font-size: 18px; line-height: 28px; }
+    .cloud_solutions p { font-size: 17px; line-height: 28px; }
     .cloud_solutions:after { content: ''; display: table; clear: both; }
 
     .cloud_system { padding-right: 5%; clear: both; }
@@ -865,10 +876,6 @@ body.solutions {
   section {
     form { clear:both; margin: 0; padding: 0 23% 80px 27%;}
     form h2 { text-align: center;  margin: 30px 0; padding-top: 50px; }
-    textarea { width: 92%;}
-    form input[type="text"], form input[type="email"] {
-      width: 44%; margin-right: 2%;
-    }
     button { margin-top: 20px;}
   }
 
@@ -889,6 +896,64 @@ body.solutions {
 
 
 
+/*--------------.
+| Libraries     |
+`--------------*/
+
+.slider {
+  width: 200px;
+}
+
+.slider > .dragger {
+  background: #8DCA09;
+  background: -webkit-linear-gradient(top, #8DCA09, #72A307);
+  background: -moz-linear-gradient(top, #8DCA09, #72A307);
+  background: linear-gradient(top, #8DCA09, #72A307);
+
+  -webkit-box-shadow: inset 0 2px 2px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.2);
+  -moz-box-shadow: inset 0 2px 2px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.2);
+  box-shadow: inset 0 2px 2px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.2);
+
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  border-radius: 10px;
+
+  border: 1px solid #496805;
+  width: 16px;
+  height: 16px;
+}
+
+.slider > .dragger:hover {
+  background: -webkit-linear-gradient(top, #8DCA09, #8DCA09);
+}
+
+
+.slider > .track, .slider > .highlight-track {
+  background: #ccc;
+  background: -webkit-linear-gradient(top, #bbb, #ddd);
+  background: -moz-linear-gradient(top, #bbb, #ddd);
+  background: linear-gradient(top, #bbb, #ddd);
+
+  -webkit-box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  -moz-box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 8px;
+  border-radius: 8px;
+
+  border: 1px solid #aaa;
+  height: 4px;
+}
+
+.slider > .highlight-track {
+  background-color: #8DCA09;
+  background: -webkit-linear-gradient(top, #8DCA09, #72A307);
+  background: -moz-linear-gradient(top, #8DCA09, #72A307);
+  background: linear-gradient(top, #8DCA09, #72A307);
+
+  border-color: #496805;
+}
 
 
 
