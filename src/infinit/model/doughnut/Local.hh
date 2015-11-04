@@ -51,10 +51,10 @@ namespace infinit
       public:
         virtual
         void
-        connect() override;
+        connect(elle::DurationOpt timeout) override;
         virtual
         void
-        reconnect() override;
+        reconnect(elle::DurationOpt timeout) override;
       /*-------.
       | Blocks |
       `-------*/

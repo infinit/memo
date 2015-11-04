@@ -72,11 +72,11 @@ namespace infinit
       `-----------*/
 
       void
-      Local::connect()
+      Local::connect(elle::DurationOpt)
       {}
 
       void
-      Local::reconnect()
+      Local::reconnect(elle::DurationOpt)
       {}
 
       /*-------.

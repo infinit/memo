@@ -140,17 +140,18 @@ namespace infinit
       }
 
       void
-      Remote::connect()
+      Remote::connect(elle::DurationOpt timeout)
       {
-        reactor::wait(*this->_connection_thread);
+        if (!reactor::wait(*this->_connection_thread, timeout))
+          throw reactor::network::TimeOut();
       }
 
       void
-      Remote::reconnect()
+      Remote::reconnect(elle::DurationOpt timeout)
       {
         this->_credentials = {};
         _connect(this->_endpoint, this->_connector);
-        connect();
+        connect(timeout);
       }
 
       /*-------.

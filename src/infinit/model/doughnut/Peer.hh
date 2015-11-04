@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_PEER_HH
 # define INFINIT_MODEL_DOUGHNUT_PEER_HH
 
+# include <elle/Duration.hh>
+
 # include <infinit/model/blocks/Block.hh>
 # include <infinit/model/Model.hh>
 
@@ -28,10 +30,10 @@ namespace infinit
       public:
         virtual
         void
-        connect() = 0;
+        connect(elle::DurationOpt timeout = elle::DurationOpt()) = 0;
         virtual
         void
-        reconnect() = 0;
+        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) = 0;
 
       /*-------.
       | Blocks |

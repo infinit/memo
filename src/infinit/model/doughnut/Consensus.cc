@@ -1,4 +1,7 @@
 #include <infinit/model/doughnut/Consensus.hh>
+
+#include <elle/os/environ.hh>
+
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/MissingBlock.hh>
@@ -149,6 +152,11 @@ namespace infinit
         Consensus::fetch_from_members(
           reactor::Generator<overlay::Overlay::Member>& peers, Address address)
         {
+          static const int timeout_sec =
+            std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "0"));
+          elle::DurationOpt timeout;
+          if (timeout_sec)
+            timeout = boost::posix_time::seconds(timeout_sec);
           std::unique_ptr<blocks::Block> result;
           reactor::Channel<overlay::Overlay::Member> connected;
           typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
@@ -158,13 +166,13 @@ namespace infinit
             [&](PeerGenerator::yielder yield)
             {
               elle::With<reactor::Scope>() <<
-              [&peers,&yield,&hit] (reactor::Scope& s)
+              [&peers,&yield,&hit,&timeout] (reactor::Scope& s)
               {
                 for (auto p: peers)
                 {
                   hit = true;
                   s.run_background(elle::sprintf("connect to %s", *p),
-                  [p,&yield]
+                  [p,&yield,&timeout]
                   {
                     for (int i=0; i<5; ++i)
                     {
@@ -172,9 +180,9 @@ namespace infinit
                       try
                       {
                         if (i!=0)
-                          p->reconnect();
+                          p->reconnect(timeout);
                         else
-                          p->connect();
+                          p->connect(timeout);
                         yield(p);
                         return;
                       }

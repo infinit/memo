@@ -58,10 +58,10 @@ namespace infinit
       public:
         virtual
         void
-        connect() override;
+        connect(elle::DurationOpt timeout = elle::DurationOpt()) override;
         virtual
         void
-        reconnect() override;
+        reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override;
       private:
         void
         _connect(std::string endpoint,
