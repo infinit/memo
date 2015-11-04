@@ -342,6 +342,9 @@ run_filesystem_dht(std::string const& store,
         model["owner"] = "@OWNER@"; // placeholder, lolilol
         elle::json::Object overlay;
         overlay["type"] = "stonehenge";
+        overlay["node_id"] = elle::format::base64::encode(
+            elle::ConstWeakBuffer(infinit::model::Address::random().value(),
+                                  sizeof(infinit::model::Address::Value))).string();
         elle::json::Array v;
         for (auto const& p: peers)
         {
