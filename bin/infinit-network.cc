@@ -508,7 +508,7 @@ int main(int argc, char** argv)
       "--name NAME [OVERLAY-TYPE OVERLAY-OPTIONS...] [STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
-        { "storage,s", value<std::vector<std::string>>()->multitoken(),
+        { "storage,s", value<std::vector<std::string>>()->multitoken()},
         { "port", value<int>(), "port to listen on (random by default)" },
         { "replication-factor,r", value<int>(),
           "data replication factor (1 by default)" },
