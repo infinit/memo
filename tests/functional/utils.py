@@ -57,3 +57,7 @@ class Infinit(TemporaryDirectory):
       return json.loads(out.decode('utf-8'))
     except:
       return None
+
+def assertEq(a, b):
+  if a != b:
+    raise Exception('%r != %r' % (a, b))

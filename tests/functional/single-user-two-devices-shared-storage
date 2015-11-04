@@ -60,4 +60,4 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     '--as', 'user',
   ],
   input = {'operation': 'list_directory', 'path': '/'})
-  assert response['entries'] == ['beacon']
+  assertEq(response['entries'], ['beacon'])
