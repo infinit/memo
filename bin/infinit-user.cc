@@ -214,7 +214,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user name (defaults to system user)" },
+          "user name (default: system user)" },
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key "
           "(generated if unspecified)" },
@@ -227,12 +227,11 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user to export (defaults to system user)" },
+          "user to export (default: system user)" },
         { "full", bool_switch(),
           "include private information "
           "(do not use this unless you understand the implications)" },
-        { "output,o", value<std::string>(),
-          "file to write user to (defaults to stdout)" },
+        option_output("user"),
       },
     },
     {
@@ -251,8 +250,7 @@ main(int argc, char** argv)
       &import,
       {},
       {
-        { "input,i", value<std::string>(),
-          "file to read user from (defaults to stdin)" },
+        option_input("user"),
       },
     },
     {
@@ -262,7 +260,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user to push (defaults to system user)" },
+          "user to push (default: system user)" },
       },
     },
     {
@@ -272,7 +270,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user to delete (defaults to system user)" },
+          "user to delete (default: system user)" },
       },
     },
     {
@@ -282,7 +280,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user to push (defaults to system user)" },
+          "user to push (default: system user)" },
       },
     },
     {
@@ -292,7 +290,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user to register (defaults to system user)" },
+          "user to register (default: system user)" },
       },
     },
     {
@@ -302,7 +300,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user name (defaults to system user)" },
+          "user name (default: system user)" },
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key"
             " (generated if unspecified)" },

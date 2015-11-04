@@ -118,7 +118,7 @@ main(int argc, char** argv)
   dropbox_storage_options.add_options()
     ("account", value<std::string>(), "Dropbox account to use")
     ("root", value<std::string>(),
-     "where to store blocks in Dropbox (defaults to .infinit)")
+     "where to store blocks in Dropbox (default: .infinit)")
     ("token", value<std::string>(), "authentication token")
     ;
   program = argv[0];
@@ -130,8 +130,7 @@ main(int argc, char** argv)
       "STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
-        { "output,o", value<std::string>(),
-          "file to write storage to (stdout by default)" },
+        option_output("storage"),
       },
       {
         storage_types,
@@ -153,8 +152,7 @@ main(int argc, char** argv)
       "--name STORAGE",
       {
         { "name,n", value<std::string>(), "storage to export" },
-        { "output,o", value<std::string>(),
-          "file to write storage to (stdout by default)" },
+        option_output("storage"),
         option_owner,
       }
     },

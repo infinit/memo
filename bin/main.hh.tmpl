@@ -146,11 +146,12 @@ typedef std::vector<Mode> Modes;
 
 boost::program_options::variables_map
 parse_args(boost::program_options::options_description const& options,
-           std::vector<std::string> const& args)
+           std::vector<std::string> const& args,
+           std::string const& positional_arg)
 {
   auto parser = boost::program_options::command_line_parser(args);
   boost::program_options::positional_options_description p;
-  p.add("name", -1);
+  p.add(positional_arg.c_str(), -1);
   parser.options(options).positional(p);
   boost::program_options::variables_map res;
   auto parsed = parser.run();
@@ -167,7 +168,8 @@ namespace infinit
   main(std::string desc,
        Modes const& modes,
        int argc,
-       char** argv)
+       char** argv,
+       boost::optional<std::string> positional_arg = {})
   {
     try
     {
@@ -175,7 +177,7 @@ namespace infinit
       reactor::Thread main_thread(
         sched,
         "main",
-        [&sched, &modes, &desc, argc, argv]
+        [&sched, &modes, &desc, argc, argv, &positional_arg]
         {
           ELLE_TRACE("parse command line")
           {
@@ -247,7 +249,8 @@ namespace infinit
               }
               try
               {
-                mode->action(parse_args(mode->options, args));
+                mode->action(parse_args(mode->options, args,
+                             (positional_arg ? positional_arg.get() : "name")));
               }
               catch (CommandLineError const&)
               {
@@ -1113,6 +1116,28 @@ mandatory(boost::program_options::variables_map const& vm,
   return mandatory<T>(vm, name, name);
 }
 
+template <>
+std::vector<std::string>
+mandatory<std::vector<std::string>>(
+  boost::program_options::variables_map const& vm,
+  std::string const& name,
+  std::string const& desc)
+{
+  if (!vm.count(name))
+  {
+    throw CommandLineError(
+      elle::sprintf("%s unspecified (use --%s [value ...])", desc, name));
+  }
+  return vm[name].as<std::vector<std::string>>();
+}
+
+bool
+flag(boost::program_options::variables_map const& vm,
+     std::string const& name)
+{
+  return vm.count(name) && vm[name].as<bool>();
+}
+
 bool
 aliased_flag(boost::program_options::variables_map const& vm,
              std::vector<std::string> aliases)
@@ -1123,6 +1148,14 @@ aliased_flag(boost::program_options::variables_map const& vm,
       return true;
   }
   return false;
+}
+
+boost::program_options::option_description
+option_output(std::string const& item)
+{
+  return boost::program_options::option_description(
+    "output,o", boost::program_options::value<std::string>(),
+    elle::sprintf("file to write the %s to (default: stdout)", item).c_str());
 }
 
 std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
@@ -1145,6 +1178,14 @@ get_output(boost::program_options::variables_map const& args)
   }
   return std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
     (&std::cout, [] (std::ostream*) {});
+}
+
+boost::program_options::option_description
+option_input(std::string const& item)
+{
+  return boost::program_options::option_description(
+    "input,i", boost::program_options::value<std::string>(),
+    elle::sprintf("file to read the %s from (default: stdin)", item).c_str());
 }
 
 std::unique_ptr<std::istream, std::function<void (std::istream*)>>
@@ -1444,7 +1485,7 @@ beyond_delete(std::string const& type, std::string const& name,
 
 boost::program_options::option_description option_owner(
   "as,a", boost::program_options::value<std::string>(),
-  "user to run commands as (defaults to system user)");
+  "user to run commands as (default: system user)");
 
 inline
 static

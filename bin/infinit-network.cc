@@ -317,8 +317,8 @@ join(variables_map const& args)
       else
       {
         throw CommandLineError(elle::sprintf(
-          "no passport, use --fetch to fetch one from %s or --input to use a "
-          "previously exported one", beyond()));
+          "no passport for %s, use --fetch to fetch one from %s or --input to "
+          "use a previously exported one", user.name, beyond()));
       }
     }();
 
@@ -373,8 +373,9 @@ push(variables_map const& args)
 static void
 pull(variables_map const& args)
 {
-  auto network_name = mandatory(args, "name", "network name");
+  auto name_ = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
+  auto network_name = ifnt.qualified_name(name_, owner);
   beyond_delete("network", network_name, owner);
 }
 
@@ -488,7 +489,8 @@ users(variables_map const& args)
     std::cout << user << std::endl;
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
   program = argv[0];
 
@@ -529,13 +531,15 @@ int main(int argc, char** argv)
         "[STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
-        { "storage,s", value<std::vector<std::string>>()->multitoken() },
-        { "port", value<int>(), "port to listen on (random by default)" },
+        { "storage", value<std::vector<std::string>>()->multitoken(),
+          "storage to contribute (optional)" },
+        { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
-          "data replication factor (1 by default)" },
+          "data replication factor (default: 1)" },
         { "async", bool_switch(), "use asynchronous operations" },
-        { "output,o", value<std::string>(),
-          "file to write exported network to (stdout by default)" },
+        { "replicator", bool_switch(),
+          "use replicator overlay instead of Paxos" },
+        option_output("network"),
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond()).c_str() },
         { "push,p", bool_switch(),
@@ -555,8 +559,7 @@ int main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to export" },
-        { "output,o", value<std::string>(),
-          "file to write exported network to (defaults to stdout)" },
+        option_output("network"),
         option_owner,
       },
     },
@@ -576,8 +579,7 @@ int main(int argc, char** argv)
       &import,
       "",
       {
-        { "input,i", value<std::string>(),
-          "file to read network from (defaults to stdin)" },
+        option_input("network"),
       },
     },
     {
@@ -588,8 +590,7 @@ int main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to create the passport to" },
         { "user,u", value<std::string>(), "user to create the passport for" },
-        { "output,o", value<std::string>(),
-          "file to write the passport to (defaults to stdout)" },
+        option_output("passport"),
         { "push-passport", bool_switch(),
           elle::sprintf("push the passport to %s", beyond()).c_str() },
         { "push,p", bool_switch(), "alias for --push-passport" },
@@ -606,11 +607,9 @@ int main(int argc, char** argv)
         { "fetch-passport", bool_switch(),
           elle::sprintf("fetch the passport from %s", beyond()).c_str() },
         { "fetch,f", bool_switch(), "alias for --fetch-passport" },
-        { "input,i", value<std::string>(),
-          "file to read passport from (defaults to stdin)" },
-        { "port", value<int>(), "port to listen on (random by default)" },
-        { "storage,s", value<std::string>(),
-          "storage to contribute (optional)" },
+        option_input("passport"),
+        { "port", value<int>(), "port to listen on (default: random)" },
+        { "storage", value<std::string>(), "storage to contribute (optional)" },
         option_owner,
       },
     },
