@@ -29,6 +29,21 @@ namespace infinit
     {
       namespace consensus
       {
+
+        template<typename F>
+        auto network_exception_to_unavailable(F f) -> decltype(f())
+        {
+          try
+          {
+            return f();
+          }
+          catch(reactor::network::Exception const& e)
+          {
+            ELLE_TRACE("network exception in paxos: %s", e);
+            throw Paxos::PaxosClient::Peer::Unavailable();
+          }
+        }
+
         static
         Address
         uid(cryptography::rsa::PublicKey const& key)
@@ -111,7 +126,9 @@ namespace infinit
                   Paxos::PaxosClient::Proposal const& p)
           {
             auto& member = this->member();
-            member.connect();
+            network_exception_to_unavailable([&] {
+                member.connect();
+            });
             if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
               return local->propose(
                 q, this->_address, p);
@@ -128,14 +145,16 @@ namespace infinit
                  std::shared_ptr<blocks::Block> const& value)
           {
             auto& member = this->member();
-            member.connect();
-            if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
-              return local->accept(
-                q, this->_address, p, value);
-            else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
-              return remote->accept(
-                q, this->_address, p, value);
-            ELLE_ABORT("invalid paxos peer: %s", member);
+            return network_exception_to_unavailable([&] {
+              member.connect();
+              if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
+                return local->accept(
+                  q, this->_address, p, value);
+              else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
+                return remote->accept(
+                  q, this->_address, p, value);
+              ELLE_ABORT("invalid paxos peer: %s", member);
+            });
           }
 
           infinit::model::doughnut::Peer&
@@ -170,15 +189,17 @@ namespace infinit
                                    Address address,
                                    PaxosClient::Proposal const& p)
         {
-          this->connect();
-          RPC<boost::optional<PaxosClient::Accepted>(
-            PaxosServer::Quorum,
-            Address,
-            PaxosClient::Proposal const&)>
-            propose("propose", *this->_channels,
-              &this->_doughnut, &this->_credentials);
-          propose.set_context<Doughnut*>(&this->_doughnut);
-          return propose(peers, address, p);
+          return network_exception_to_unavailable([&] {
+            this->connect();
+            RPC<boost::optional<PaxosClient::Accepted>(
+              PaxosServer::Quorum,
+              Address,
+              PaxosClient::Proposal const&)>
+              propose("propose", *this->_channels,
+                &this->_doughnut, &this->_credentials);
+            propose.set_context<Doughnut*>(&this->_doughnut);
+            return propose(peers, address, p);
+          });
         }
 
         Paxos::PaxosClient::Proposal
@@ -187,16 +208,18 @@ namespace infinit
                                   Paxos::PaxosClient::Proposal const& p,
                                   std::shared_ptr<blocks::Block> const& value)
         {
-          this->connect();
-          RPC<Paxos::PaxosClient::Proposal (
-            PaxosServer::Quorum peers,
-            Address,
-            Paxos::PaxosClient::Proposal const&,
-            std::shared_ptr<blocks::Block> const&)>
-            accept("accept", *this->_channels,
-              &this->_doughnut, &this->_credentials);
-          accept.set_context<Doughnut*>(&this->_doughnut);
-          return accept(peers, address, p, value);
+          return network_exception_to_unavailable([&] {
+            this->connect();
+            RPC<Paxos::PaxosClient::Proposal (
+              PaxosServer::Quorum peers,
+              Address,
+              Paxos::PaxosClient::Proposal const&,
+              std::shared_ptr<blocks::Block> const&)>
+              accept("accept", *this->_channels,
+                &this->_doughnut, &this->_credentials);
+            accept.set_context<Doughnut*>(&this->_doughnut);
+            return accept(peers, address, p, value);
+          });
         }
 
         /*----------.
