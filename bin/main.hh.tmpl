@@ -1315,9 +1315,9 @@ beyond_push(std::string const& where,
   std::stringstream payload;
   elle::serialization::json::serialize(o, payload, false);
   auto headers = signature_headers(reactor::http::Method::PUT,
-                                  where,
-                                  self,
-                                  payload);
+                                   where,
+                                   self,
+                                   payload);
   for (auto const& header: headers)
     c.header_add(header.first, header.second);
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
@@ -1331,8 +1331,8 @@ beyond_push(std::string const& where,
     report_action("Already pushed", type, name);
   else if (r.status() == reactor::http::StatusCode::Conflict)
   {
-    throw elle::Error(
-      elle::sprintf("%s \"%s\" already exists with a different key", type, name));
+    throw elle::Error(elle::sprintf(
+      "%s \"%s\" already exists with a different key", type, name));
   }
   else
   {
@@ -1516,7 +1516,8 @@ private:
 
 void
 beyond_fetch_endpoints(infinit::Network const& network,
-                       std::unordered_map<elle::UUID, std::vector<std::string>>& hosts)
+                       std::unordered_map<elle::UUID,
+                                          std::vector<std::string>>& hosts)
 {
   reactor::http::Request r(
     elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
