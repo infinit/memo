@@ -1,7 +1,7 @@
 $(document).ready(function() {
 
   $('body.home #commands').t(
-    '<ins>1 </ins><mark>$></mark> infinit-storage --create --aws-s3 --name s3 --contribution 10TB' +
+    '<ins>1 </ins><mark>$></mark> infinit-storage --create --aws-s3 --name s3 --capacity 10TB' +
     '<ins>0.5</ins><ins>\nCreated storage "s3". \n\n</ins>' +
     '<mark>$></mark> <ins>2</ins>'+
 
@@ -15,7 +15,7 @@ $(document).ready(function() {
     '\nCreated volume "company". \n\n</ins>' +
     '<mark>$></mark> <ins>2</ins>'+
 
-    'infinit-volume --mount /mnt/company/ --name company' +
+    'infinit-volume --mount --name company --mountpoint /mnt/company/' +
     '<ins>0.5</ins><ins>\nMounting volume "company". \n\n</ins>'+
 
     '<mark>$></mark> ',

@@ -17,7 +17,7 @@
       <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
     </div>
 <pre><code id="commands">
-$> infinit-storage --create --aws-s3 --name s3 --contribution 10TB
+$> infinit-storage --create --aws-s3 --name s3 --capacity 10TB
 Created storage "s3".
 
 $> infinit-network --create --storage s3 --storage local --name hybrid-cloud
@@ -28,7 +28,7 @@ Starting network "hybrid-cloud".
 Creating volume root blocks.
 Created volume "company".
 
-$> infinit-volume --mount /mnt/company/ --name company
+$> infinit-volume --mount --name company --ountpoint /mnt/company/
 Mounting volume "company".
 
 $> ​▎
@@ -48,8 +48,8 @@ $> ​▎
 
       <div class="storage">
         <img src="${url('images/icons/storage.png')}">
-        <h3>Attach Storages</h3>
-        <p>Attach one or more storages to a machine, being a local disk, a cloud provider or else.</p>
+        <h3>Attach Storage</h3>
+        <p>Attach storage resources to a machine, being a local disk, a cloud provider or else.</p>
       </div>
 
       <span class="arrow"><img src="${url('images/icons/arrow-right.png')}"></span>
@@ -76,7 +76,7 @@ $> ​▎
       <div>
         <img src="${url('images/icons/scalable.png')}">
         <h3>Scalable</h3>
-        <p>Scales on demand according to your business requirements, from 3GB to petabytes and beyond.</p>
+        <p>Scales on demand according to your business requirements, from 1GB to petabytes and beyond.</p>
       </div>
 
       <div>
