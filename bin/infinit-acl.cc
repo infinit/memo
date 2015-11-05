@@ -24,6 +24,7 @@ ELLE_LOG_COMPONENT("infinit-acl");
 #endif
 
 using namespace boost::program_options;
+options_description mode_options("Modes");
 
 template<typename F, typename... ARGS>
 void
@@ -230,7 +231,7 @@ main(int argc, char** argv)
       "set",
       "Set ACL",
       &set,
-      "--path PATH [OPTIONS]",
+      "--path PATH [OPTIONS...]",
       {
         { "path,p", value<std::vector<std::string>>(), "path" },
         { "user", value<std::vector<std::string>>(), "user" },
