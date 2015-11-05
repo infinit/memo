@@ -273,6 +273,7 @@ namespace infinit
     }
     catch (elle::Exception const& e)
     {
+      ELLE_TRACE("fatal error: %s\n%s", e.what(), e.backtrace());
       if (!elle::os::getenv("INFINIT_BACKTRACE", "").empty())
       {
         elle::fprintf(std::cerr, "%s: fatal error: %s\n%s\n", argv[0],
@@ -286,6 +287,7 @@ namespace infinit
     }
     catch (std::exception const& e)
     {
+      ELLE_TRACE("fatal error: %s", e.what());
       elle::fprintf(std::cerr, "%s: fatal error: %s\n", argv[0], e.what());
       return 1;
     }
