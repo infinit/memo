@@ -997,6 +997,15 @@ namespace infinit
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(drive);
     }
+
+    Drive
+    drive_get(std::string const& name)
+    {
+      boost::filesystem::ifstream f;
+      this->_open(f, this->_drive_path(name), name, "drive");
+      elle::serialization::json::SerializerIn s(f, false);
+      return s.deserialize<Drive>();
+    }
   };
 }
 

@@ -47,6 +47,15 @@ COMMAND(invite)
   std::cout << "Not implemented yet." << std::endl;
 }
 
+COMMAND(push)
+{
+  auto owner = self_user(ifnt, args);
+  auto name = drive_name(args, owner);
+  auto drive = ifnt.drive_get(name);
+  auto url = elle::sprintf("drives/%s", drive.name);
+  beyond_push(url, "drive", drive.name, drive, owner);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -62,7 +71,7 @@ main(int argc, char** argv)
         { "network,N", value<std::string>(), "associated network name" },
         { "volume,v", value<std::string>(), "associated volume name" },
         { "description,d", value<std::string>(), "created drive description" },
-        { "push,p", bool_switch(), "push drive to the hub" },
+        { "push,p", bool_switch(), "push the created drive on the hub" },
         option_owner,
       },
     },
@@ -78,6 +87,16 @@ main(int argc, char** argv)
         option_owner,
       },
     },
+    {
+      "push",
+      "Push a drive on the hub",
+      &push,
+      "--name NAME",
+      {
+        { "name,n", value<std::string>(), "drive name to push on the hub" },
+        option_owner,
+      }
+    }
   };
   return infinit::main("Infinit drive management utility", modes, argc, argv);
 }
