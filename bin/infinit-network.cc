@@ -590,8 +590,6 @@ main(int argc, char** argv)
         { "replication-factor,r", value<int>(),
           "data replication factor (default: 1)" },
         { "async", bool_switch(), "use asynchronous operations" },
-        { "replicator", bool_switch(),
-          "use replicator overlay instead of Paxos" },
         option_output("network"),
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond()).c_str() },
