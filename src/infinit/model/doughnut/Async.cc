@@ -82,6 +82,8 @@ namespace infinit
             sin.serialize("block", op.block);
             sin.serialize("mode", op.mode);
             sin.serialize("resolver", op.resolver);
+            if (op.block)
+              op.block->seal();
             op.index = id;
             if (op.mode)
               _last[op.addr] = op.block.get();
