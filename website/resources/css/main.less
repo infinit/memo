@@ -798,8 +798,9 @@ body.pricing {
     table tr.price td {
       font-family: @helvetica; font-size: 25px; font-weight: 300;
     }
-    table tr td.disabled, table tr th.disabled { opacity: 0.4; .transition() }
-    table tr th.disabled img {
+    table tr td.users_disabled, table tr th.users_disabled,
+    table tr td.capacity_disabled, table tr th.capacity_disabled {
+      opacity: 0.4; .transition();
       filter: grayscale(100%);  -webkit-filter: grayscale(1);
     }
   }

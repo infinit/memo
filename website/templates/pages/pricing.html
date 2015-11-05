@@ -110,43 +110,43 @@
     <p class="subtitle">Choose the number of users and the storage capacity you need.</p>
 
     <div class="controls">
-      <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 100" data-slider-step="1">
-      <label for="usersInput" id="usersLabel"><span>1</span> users</label>
+      <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 100" data-slider-step="1" value="20">
+      <label for="usersInput" id="usersLabel"><span>20</span> users</label>
 
-      <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="100, 20000" data-slider-step="100">
-      <label for="capacityInput" id="capacityLabel"><span>100</span> GB</label>
+      <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="100, 20000" data-slider-step="100" value="1000">
+      <label for="capacityInput" id="capacityLabel"><span>1000</span> GB</label>
     </div>
 
     <table>
       <tr>
         <th data-service="infinit"><img src="${url('images/logo.png')}" alt="Logo Infinit"></th>
-        <th data-service="dropbox" data-max="1000"><img src="${url('images/logos/dropbox-logotype.png')}" alt="Logo Dropbox"></th>
-        <th data-service="box"><img src="${url('images/logos/box.png')}" alt="Logo Box"></th>
-        <th data-service="egnyte" data-max="10000"><img src="${url('images/logos/egnyte.png')}" alt="Logo Egnyte"></th>
+        <th data-service="dropbox" data-max-capacity="1000"><img src="${url('images/logos/dropbox-logotype.png')}" alt="Logo Dropbox"></th>
+        <th data-service="aerofs"><img src="${url('images/logos/aerofs.png')}" alt="Logo AeroFS"></th>
+        <th data-service="egnyte" data-max-capacity="10000" data-start-at="8"><img src="${url('images/logos/egnyte.png')}" alt="Logo Egnyte"></th>
       </tr>
       <tr>
         <td data-service="infinit"><strong>No</strong> file size limit</td>
         <td data-service="dropbox">10 GB file size limit</td>
-        <td data-service="box">5 GB file size limit</td>
+        <td data-service="aerofs">5 GB file size limit</td>
         <td data-service="egnyte">10 GB file size limit</td>
       </tr>
       <tr>
         <td data-service="infinit">Public/Private/Hybrid Cloud</td>
         <td data-service="dropbox">Public Cloud</td>
-        <td data-service="box">Public Cloud</td>
+        <td data-service="aerofs">Public Cloud</td>
         <td data-service="egnyte">Public/Private Cloud</td>
       </tr>
       <tr>
         <td data-service="infinit">In-transit and at-rest encryption</td>
         <td data-service="dropbox">In-transit encryption</td>
-        <td data-service="box">In-transit encryption</td>
+        <td data-service="aerofs">In-transit encryption</td>
         <td data-service="egnyte">In-transit and at-rest encryption</td>
       </tr>
       <tr class="price">
-        <td data-service="infinit">$<span data-price="9"></span>/year</td>
+        <td data-service="infinit">$<span data-price="9" data-free-until="20" data-price-gb="0.005"></span>/year</td>
         <td data-service="dropbox">$<span data-price="12"></span>/year</td>
-        <td data-service="box">$<span data-price="12"></span>/year</td>
-        <td data-service="egnyte">$<span data-price="15"></span>/year</td>
+        <td data-service="aerofs">$<span data-price="12" data-price-gb="0.13" data-free-until="30"></span>/year</td>
+        <td data-service="egnyte">$<span data-price="8" data-price-max="15"></span>/year</td>
       </tr>
     </table>
   </section>
