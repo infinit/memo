@@ -173,13 +173,18 @@ namespace infinit
               Address addr = op.addr;
               boost::optional<StoreMode> mode = op.mode;
               std::unique_ptr<ConflictResolver>& resolver = op.resolver;
-
+              auto ptr = op.block.get();
               elle::SafeFinally delete_entry([&] {
                   if (!_journal_dir.empty())
                   {
                     auto path = boost::filesystem::path(_journal_dir) / std::to_string(op.index);
                     ELLE_DEBUG("deleting %s", path);
                     boost::filesystem::remove(path);
+                  }
+                  if (mode && ptr == _last[addr])
+                  {
+                    _last.erase(addr);
+                    ELLE_DUMP("store: %.7s removed from cache", addr);
                   }
               });
 
@@ -190,18 +195,10 @@ namespace infinit
               }
               else // store
               {
-                auto ptr = op.block.get();
                 this->_backend->store(overlay,
                                       std::move(op.block),
                                       *mode,
                                       std::move(resolver));
-                if (ptr == _last[addr])
-                {
-                  _last.erase(addr);
-                  ELLE_DUMP("store: %.7s removed from cache", addr);
-                  for (auto const& i: _last)
-                    ELLE_DUMP("store: _last[%.7s] = %p", i.first, i.second);
-                }
               }
             }
             catch (reactor::Terminate const&)
