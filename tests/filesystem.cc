@@ -1036,6 +1036,7 @@ void
 test_acl(bool paxos)
 {
   namespace bfs = boost::filesystem;
+  boost::system::error_code erc;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
   auto mount = bfs::temp_directory_path() / bfs::unique_path();
   bfs::create_directories(mount);
@@ -1086,6 +1087,10 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(directory_count(m1), 1);
   // but the file is still not readable
   BOOST_CHECK(!can_access(m1/"test"));
+  boost::filesystem::remove(m1 / "test", erc);
+  BOOST_CHECK(erc);
+  BOOST_CHECK_EQUAL(directory_count(m1), 1);
+  BOOST_CHECK_EQUAL(directory_count(m0), 1);
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   usleep(2100000);

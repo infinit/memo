@@ -307,8 +307,11 @@ namespace infinit
       bool multi = umbrella([&] { return _multi();});
       if (_parent)
       {
+        auto info = _parent->_files.at(_name);
+        elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
         _parent->_files.erase(_name);
         _parent->_commit({OperationType::remove, _name}, true);
+        revert.abort();
         _parent = nullptr;
         _remove_from_cache(_full_path);
       }
