@@ -26,9 +26,9 @@ $(document).ready(function() {
 
       if (free_until) {
         if (current_users >= free_until) {
-          new_price = new_price + ($(capacityLabel).text() * price_per_gb * 2);
+          new_price = new_price + ($(capacityLabel).text() * 1000 * price_per_gb * 12);
         } else {
-          new_price = $(capacityLabel).text() * price_per_gb * 2;
+          new_price = $(capacityLabel).text() * 1000 * price_per_gb * 12;
         }
       }
 
