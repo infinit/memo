@@ -288,7 +288,7 @@ def fields(*args, **kwargs):
 class Network(metaclass = Entity,
               insert = 'network_insert',
               update = 'network_update',
-              fields = fields('name', 'owner', 'overlay', 'replicas',
+              fields = fields('name', 'owner', 'overlay', 'replication_factor',
                               passports = {},
                               endpoints = {})):
 
