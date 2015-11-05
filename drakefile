@@ -320,6 +320,7 @@ def configure(
     'infinit-user',
     'infinit-volume',
     'infinit-acl',
+    'infinit-drive',
   ]
 
   binaries = [
