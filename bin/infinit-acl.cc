@@ -184,6 +184,8 @@ set(variables_map const& args)
   }
   if (!inherit && !disinherit && mode.empty())
     throw CommandLineError("no operation specified");
+  std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
+  mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
   // Don't do any operations before checking paths.
