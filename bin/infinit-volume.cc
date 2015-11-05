@@ -32,8 +32,6 @@ create(variables_map const& args)
   auto name = volume_name(args, owner);
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
-  ELLE_TRACE("start network");
-  report_action("starting", "network", network.name, std::string("locally"));
   std::vector<std::string> hosts;
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
@@ -42,9 +40,6 @@ create(variables_map const& args)
     for (auto const& h: hosts)
       eps[elle::UUID()].push_back(h);
   }
-  auto model = network.run(eps);
-  ELLE_TRACE("create volume");
-  auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
   infinit::Volume volume(name, mountpoint, network.name);
   if (args.count("output"))
   {
