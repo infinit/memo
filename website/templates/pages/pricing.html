@@ -113,7 +113,7 @@
     <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 100" data-slider-step="1">
 
     <label for="capacityInput" id="capacityLabel"><span>100</span> GB</label>
-    <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="100, 2000" data-slider-step="100">
+    <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="100, 20000" data-slider-step="100">
 
     <table>
       <tr>
@@ -123,16 +123,16 @@
         <th>Egnyte</th>
       </tr>
       <tr class="users">
-        <td><span>1</span> users</td>
-        <td><span>1</span> users</td>
-        <td><span>1</span> users</td>
-        <td><span>1</span> users</td>
+        <td class="infinit"><span>1</span> users</td>
+        <td class="dropbox"><span>1</span> users</td>
+        <td class="box"><span>1</span> users</td>
+        <td class="egnyte"><span>1</span> users</td>
       </tr>
       <tr class="capacity">
-        <td><span></span> GB</td>
-        <td><span></span> GB</td>
-        <td><span></span> GB</td>
-        <td><span></span> GB</td>
+        <td class="infinit"><span>100</span> GB</td>
+        <td><span data-max="1000">100</span> GB</td>
+        <td><span>100</span> GB</td>
+        <td><span data-max="10000">100</span> GB</td>
       </tr>
       <tr>
         <td>No file size limit</td>
@@ -153,10 +153,10 @@
         <td>In-transit and at-rest encryption</td>
       </tr>
       <tr class="price">
-        <td>$<span></span>/year</td>
-        <td>$<span></span>/year</td>
-        <td>$<span></span>/year</td>
-        <td>$<span></span>/year</td>
+        <td class="infinit">$<span data-price="9"></span> / year</td>
+        <td class="dropbox">$<span data-price="12"></span> / year</td>
+        <td class="box">$<span data-price="12"></span> / year</td>
+        <td class="egnyte">$<span data-price="15"></span> / year</td>
       </tr>
     </table>
   </section>
