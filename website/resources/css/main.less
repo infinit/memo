@@ -784,7 +784,24 @@ body.pricing {
   section.estimation {
     text-align: center; min-height: 400px;
 
+    .controls { width: 670px; margin: auto; margin-top: 90px; }
+    .controls label { font-size: 20px; font-weight: bold; }
+    .controls label#usersLabel { margin-right: 80px;}
+    input, label, .slider { float: left; }
+
     h2 { font-size: 2em; margin-bottom: 0;}
+    table tr:nth-child(1) th { padding-top: 40px; clear: both; border-bottom: none; }
+
+    table tr td { width: 19%; padding: 10px 3%; border-right: 1px solid #E6E6E6; }
+    table tr td:last-child { border-right: none;}
+    table tr.capacity td span { font-weight: bold; }
+    table tr.price td {
+      font-family: @helvetica; font-size: 25px; font-weight: 300;
+    }
+    table tr td.disabled, table tr th.disabled { opacity: 0.4; .transition() }
+    table tr th.disabled img {
+      filter: grayscale(100%);  -webkit-filter: grayscale(1);
+    }
   }
 
 }
@@ -901,57 +918,32 @@ body.solutions {
 `--------------*/
 
 .slider {
-  width: 200px;
+  width: 180px;
 }
 
 .slider > .dragger {
-  background: #8DCA09;
-  background: -webkit-linear-gradient(top, #8DCA09, #72A307);
-  background: -moz-linear-gradient(top, #8DCA09, #72A307);
-  background: linear-gradient(top, #8DCA09, #72A307);
-
-  -webkit-box-shadow: inset 0 2px 2px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.2);
-  -moz-box-shadow: inset 0 2px 2px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.2);
-  box-shadow: inset 0 2px 2px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.2);
-
-  -webkit-border-radius: 10px;
-  -moz-border-radius: 10px;
-  border-radius: 10px;
-
-  border: 1px solid #496805;
-  width: 16px;
-  height: 16px;
+  background: @infinitblack;
+  -webkit-border-radius: 24px;
+  -moz-border-radius: 24px;
+  border-radius: 24px;
+  width: 24px;
+  height: 24px;
 }
 
 .slider > .dragger:hover {
-  background: -webkit-linear-gradient(top, #8DCA09, #8DCA09);
+  background: lighten(@infinitblack, 10%);
 }
-
 
 .slider > .track, .slider > .highlight-track {
   background: #ccc;
-  background: -webkit-linear-gradient(top, #bbb, #ddd);
-  background: -moz-linear-gradient(top, #bbb, #ddd);
-  background: linear-gradient(top, #bbb, #ddd);
-
-  -webkit-box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-  -moz-box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-
   -webkit-border-radius: 8px;
   -moz-border-radius: 8px;
   border-radius: 8px;
-
-  border: 1px solid #aaa;
-  height: 4px;
+  height: 7px;
 }
 
 .slider > .highlight-track {
   background-color: #8DCA09;
-  background: -webkit-linear-gradient(top, #8DCA09, #72A307);
-  background: -moz-linear-gradient(top, #8DCA09, #72A307);
-  background: linear-gradient(top, #8DCA09, #72A307);
-
   border-color: #496805;
 }
 

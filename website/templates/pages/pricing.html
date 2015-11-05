@@ -109,54 +109,44 @@
     <h2>Estimate and compare</h2>
     <p class="subtitle">Choose the number of users and the storage capacity you need.</p>
 
-    <label for="usersInput" id="usersLabel"><span>1</span> users</label>
-    <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 100" data-slider-step="1">
+    <div class="controls">
+      <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 100" data-slider-step="1">
+      <label for="usersInput" id="usersLabel"><span>1</span> users</label>
 
-    <label for="capacityInput" id="capacityLabel"><span>100</span> GB</label>
-    <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="100, 20000" data-slider-step="100">
+      <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="100, 20000" data-slider-step="100">
+      <label for="capacityInput" id="capacityLabel"><span>100</span> GB</label>
+    </div>
 
     <table>
       <tr>
-        <th>Infinit</th>
-        <th>Dropbox</th>
-        <th>Box</th>
-        <th>Egnyte</th>
-      </tr>
-      <tr class="users">
-        <td class="infinit"><span>1</span> users</td>
-        <td class="dropbox"><span>1</span> users</td>
-        <td class="box"><span>1</span> users</td>
-        <td class="egnyte"><span>1</span> users</td>
-      </tr>
-      <tr class="capacity">
-        <td class="infinit"><span>100</span> GB</td>
-        <td><span data-max="1000">100</span> GB</td>
-        <td><span>100</span> GB</td>
-        <td><span data-max="10000">100</span> GB</td>
+        <th data-service="infinit"><img src="${url('images/logo.png')}" alt="Logo Infinit"></th>
+        <th data-service="dropbox" data-max="1000"><img src="${url('images/logos/dropbox-logotype.png')}" alt="Logo Dropbox"></th>
+        <th data-service="box"><img src="${url('images/logos/box.png')}" alt="Logo Box"></th>
+        <th data-service="egnyte" data-max="10000"><img src="${url('images/logos/egnyte.png')}" alt="Logo Egnyte"></th>
       </tr>
       <tr>
-        <td>No file size limit</td>
-        <td>10 GB file size limit</td>
-        <td>5 GB file size limit</td>
-        <td>10 GB file size limit</td>
+        <td data-service="infinit"><strong>No</strong> file size limit</td>
+        <td data-service="dropbox">10 GB file size limit</td>
+        <td data-service="box">5 GB file size limit</td>
+        <td data-service="egnyte">10 GB file size limit</td>
       </tr>
       <tr>
-        <td>Public/Private/Hybrid Cloud</td>
-        <td>Public Cloud</td>
-        <td>Public Cloud</td>
-        <td>Public/Private Cloud</td>
+        <td data-service="infinit">Public/Private/Hybrid Cloud</td>
+        <td data-service="dropbox">Public Cloud</td>
+        <td data-service="box">Public Cloud</td>
+        <td data-service="egnyte">Public/Private Cloud</td>
       </tr>
       <tr>
-        <td>In-transit and at-rest encryption</td>
-        <td>In-transit encryption</td>
-        <td>In-transit encryption</td>
-        <td>In-transit and at-rest encryption</td>
+        <td data-service="infinit">In-transit and at-rest encryption</td>
+        <td data-service="dropbox">In-transit encryption</td>
+        <td data-service="box">In-transit encryption</td>
+        <td data-service="egnyte">In-transit and at-rest encryption</td>
       </tr>
       <tr class="price">
-        <td class="infinit">$<span data-price="9"></span> / year</td>
-        <td class="dropbox">$<span data-price="12"></span> / year</td>
-        <td class="box">$<span data-price="12"></span> / year</td>
-        <td class="egnyte">$<span data-price="15"></span> / year</td>
+        <td data-service="infinit">$<span data-price="9"></span>/year</td>
+        <td data-service="dropbox">$<span data-price="12"></span>/year</td>
+        <td data-service="box">$<span data-price="12"></span>/year</td>
+        <td data-service="egnyte">$<span data-price="15"></span>/year</td>
       </tr>
     </table>
   </section>
