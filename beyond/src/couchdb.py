@@ -107,6 +107,7 @@ class CouchDBDatastore:
     create('networks')
     create('users')
     create('volumes')
+    create('drives')
     import inspect
     try:
       design = self.__couchdb['users']['_design/beyond']
@@ -180,6 +181,22 @@ class CouchDBDatastore:
         }
       })
     self.__couchdb['volumes'].save(design)
+    try:
+      design = self.__couchdb['drives']['_design/beyond']
+    except couchdb.http.ResourceNotFound:
+      design = couchdb.client.Document()
+    design.update(
+      {
+        '_id': '_design/beyond',
+        'language': 'python',
+        'updates': {
+          name: getsource(update)
+          for name, update in [
+              ('update', self.__drive_update),
+          ]
+        }
+      })
+    self.__couchdb['drives'].save(design)
 
   ## ---- ##
   ## User ##
@@ -392,3 +409,32 @@ class CouchDBDatastore:
 
   def __volumes_per_network_id_map(volume):
     yield volume['network'], volume
+
+  ## ----- ##
+  ## Drive ##
+  ## ----- ##
+
+  def drive_insert(self, drive):
+    json = drive.json()
+    json['_id'] = drive.id
+    try:
+      self.__couchdb['drives'].save(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.Drive.Duplicate()
+
+  def __drive_update(drive, req):
+    if drive is None:
+      return [
+        None,
+        {
+          'code': 404,
+        }
+      ]
+    import json
+    update = {
+      name: json.loads(value)
+      for name, value in req['query'].items()
+    }
+    return [drive, {'json': json.dumps(update)}]
+
+

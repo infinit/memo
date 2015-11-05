@@ -147,6 +147,10 @@ class Bottle(bottle.Bottle):
     self.route('/volumes/<owner>/<name>',
                method = 'DELETE')(self.volume_delete)
 
+    # Drive
+    self.route('/drives/<owner>/<name>',
+               method = 'PUT')(self.drive_put)
+
   def __not_found(self, type, name):
     return Response(404, {
       'error': '%s/not_found' % type,
@@ -394,6 +398,24 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     self.volume_from_name(owner = owner, name = name)
     self.__beyond.volume_delete(owner = owner, name = name)
+
+  ## ----- ##
+  ## DRIVE ##
+  ## ----- ##
+
+  def drive_put(self, owner, name):
+    user = self.user_from_name(name = owner)
+    self.authenticate(user)
+    try:
+      json = bottle.request.json
+      drive = Drive(self.__beyond, **json)
+      drive.create()
+      raise Response(201, {})
+    except Drive.Duplicate:
+      raise Response(409, {
+        'error': 'drive/conflict',
+        'reason': 'drive %r already exists' % name,
+      })
 
   ## --- ##
   ## GCS ##

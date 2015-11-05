@@ -33,6 +33,13 @@ COMMAND(create)
 
   infinit::Drive drive{name, volume.name, network.name, desc ? *desc : ""};
   ifnt.drive_save(drive);
+
+  auto push = flag(args, "push");
+  if (push)
+  {
+    auto url = elle::sprintf("drives/%s", drive.name);
+    beyond_push(url, "drive", drive.name, drive, owner);
+  }
 }
 
 COMMAND(invite)
@@ -55,6 +62,7 @@ main(int argc, char** argv)
         { "network,N", value<std::string>(), "associated network name" },
         { "volume,v", value<std::string>(), "associated volume name" },
         { "description,d", value<std::string>(), "created drive description" },
+        { "push,p", bool_switch(), "push drive to the hub" },
         option_owner,
       },
     },

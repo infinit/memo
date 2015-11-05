@@ -993,9 +993,7 @@ namespace infinit
     drive_save(Drive const& drive)
     {
       boost::filesystem::ofstream f;
-      ELLE_DEBUG("drive_save: %s", this->_drive_path(drive.name));
       this->_open(f, this->_drive_path(drive.name), drive.name, "drive");
-      ELLE_DEBUG("file openned !");
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(drive);
     }

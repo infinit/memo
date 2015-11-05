@@ -303,3 +303,11 @@ class Volume(metaclass = Entity,
   @property
   def id(self):
     return self.name
+
+class Drive(metaclass = Entity,
+            insert = 'drive_insert',
+            fields = fields('name', 'network', 'volume', 'description')):
+
+  @property
+  def id(self):
+    return self.name
