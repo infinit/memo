@@ -1576,7 +1576,8 @@ beyond_fetch_endpoints(infinit::Network const& network,
     {
       for (auto const& node: boost::any_cast<elle::json::Object>(user.second))
       {
-        infinit::model::Address uuid(node.first);
+        infinit::model::Address uuid =
+          infinit::model::Address::from_string(node.first.substr(2));
         elle::serialization::json::SerializerIn s(node.second, false);
         auto endpoints = s.deserialize<Endpoints>();
         std::vector<std::string> addresses;
