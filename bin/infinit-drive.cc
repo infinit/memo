@@ -10,9 +10,29 @@ infinit::Infinit ifnt;
 
 #define COMMAND(name) static void name(variables_map const& args)
 
+static
+std::string
+drive_name(variables_map const& args, infinit::User const& owner)
+{
+  return ifnt.qualified_name(mandatory(args, "name"), owner);
+}
+
 COMMAND(create)
 {
-  std::cout << "Not implemented yet." << std::endl;
+  auto owner = self_user(ifnt, args);
+  auto name = drive_name(args, owner);
+  auto desc = optional(args, "description");
+
+  auto network = ifnt.network_get(mandatory(args, "network"), owner);
+
+  infinit::Volume volume;
+  {
+    auto name = ifnt.qualified_name(mandatory(args, "volume"), owner);
+    volume = ifnt.volume_get(name);
+  }
+
+  infinit::Drive drive{name, volume.name, network.name, desc ? *desc : ""};
+  ifnt.drive_save(drive);
 }
 
 COMMAND(invite)

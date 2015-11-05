@@ -485,6 +485,8 @@ namespace infinit
 
   struct Volume
   {
+    Volume() {};
+
     Volume(std::string name,
            boost::optional<std::string> mountpoint_,
            std::string network_)
@@ -538,6 +540,23 @@ namespace infinit
     boost::optional<std::string> mountpoint;
     infinit::model::Address root_address;
     std::string network;
+  };
+
+  struct Drive
+  {
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("name", this->name);
+      s.serialize("volume", this->volume);
+      s.serialize("network", this->network);
+      s.serialize("description", this->desc);
+    }
+
+    std::string name;
+    std::string volume;
+    std::string network;
+    std::string desc;
   };
 
   class Infinit
@@ -960,6 +979,25 @@ namespace infinit
         throw elle::Error(
           elle::sprintf("unable to open '%s' for writing", path));
       }
+    }
+
+    boost::filesystem::path
+    _drive_path(std::string const& name) const
+    {
+      auto root = root_dir() / "drives";
+      create_directories(root);
+      return root / name;
+    }
+
+    void
+    drive_save(Drive const& drive)
+    {
+      boost::filesystem::ofstream f;
+      ELLE_DEBUG("drive_save: %s", this->_drive_path(drive.name));
+      this->_open(f, this->_drive_path(drive.name), drive.name, "drive");
+      ELLE_DEBUG("file openned !");
+      elle::serialization::json::SerializerOut s(f, false, true);
+      s.serialize_forward(drive);
     }
   };
 }
