@@ -103,8 +103,8 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    StonehengeConfiguration::make(NodeEndpoints const&, bool,
-     model::doughnut::Doughnut* doughnut)
+    StonehengeConfiguration::make(
+      NodeEndpoints const&, bool, model::doughnut::Doughnut* dht)
     {
       Stonehenge::Peers peers;
       for (auto const& peer: this->peers)
@@ -115,7 +115,7 @@ namespace infinit
           peer.id);
       }
       return elle::make_unique<infinit::overlay::Stonehenge>(
-        this->node_id(), peers, doughnut);
+        this->node_id(), peers, dht);
     }
 
     static const elle::serialization::Hierarchy<Configuration>::

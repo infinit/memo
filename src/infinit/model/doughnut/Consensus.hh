@@ -78,6 +78,7 @@ namespace infinit
         | Factory |
         `--------*/
         public:
+          Configuration() = default;
           virtual
           std::unique_ptr<Consensus>
           make(model::doughnut::Doughnut& dht);

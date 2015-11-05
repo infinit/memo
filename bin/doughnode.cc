@@ -114,8 +114,8 @@ main(int argc, char** argv)
         boost::filesystem::path p;
         parse_options(argc, argv, cfg, p);
         ELLE_ASSERT(cfg.model.get());
-        auto model = cfg.model->make(infinit::overlay::NodeEndpoints(),
-                                     false, true, p);
+        auto model = cfg.model->make(
+          infinit::overlay::NodeEndpoints(), false, p);
         if (cfg.storage)
         {
           auto storage = cfg.storage->make();

@@ -585,6 +585,37 @@ namespace infinit
           s.serialize("chosen", this->chosen);
           s.serialize("paxos", this->paxos);
         }
+
+        /*--------------.
+        | Configuration |
+        `--------------*/
+
+        Paxos::Configuration::Configuration(int replication_factor)
+          : consensus::Configuration()
+          , _replication_factor(replication_factor)
+        {}
+
+        std::unique_ptr<Consensus>
+        Paxos::Configuration::make(model::doughnut::Doughnut& dht)
+        {
+          return elle::make_unique<Paxos>(dht, this->_replication_factor);
+        }
+
+        Paxos::Configuration::Configuration(
+          elle::serialization::SerializerIn& s)
+        {
+          this->serialize(s);
+        }
+
+        void
+        Paxos::Configuration::serialize(elle::serialization::Serializer& s)
+        {
+          consensus::Configuration::serialize(s);
+          s.serialize("replication-factor", this->_replication_factor);
+        }
+
+        static const elle::serialization::Hierarchy<Configuration>::
+        Register<Paxos::Configuration> _register_Configuration("paxos");
       }
     }
   }

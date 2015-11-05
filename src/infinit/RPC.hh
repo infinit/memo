@@ -219,7 +219,7 @@ namespace infinit
     }
 
     RPCServer(Doughnut* doughnut = nullptr)
-    : _doughnut(doughnut)
+      : _doughnut(doughnut)
     {
       add("auth_syn", std::function<Passport*(Passport const&)>(
         [this] (Passport const& p) -> Passport*

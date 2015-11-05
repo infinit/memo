@@ -232,6 +232,9 @@ namespace infinit
         | Configuration |
         `--------------*/
 
+        Configuration::Configuration(elle::serialization::SerializerIn&)
+        {}
+
         std::unique_ptr<Consensus>
         Configuration::make(model::doughnut::Doughnut& dht)
         {
@@ -241,6 +244,9 @@ namespace infinit
         void
         Configuration::serialize(elle::serialization::Serializer&)
         {}
+
+        static const elle::serialization::Hierarchy<Configuration>::
+        Register<Configuration> _register_Configuration("single");
       }
     }
   }

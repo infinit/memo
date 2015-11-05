@@ -207,7 +207,7 @@ run(variables_map const& args)
   {
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto fs = volume.run(model.second, optional(args, "mountpoint"));
+    auto fs = volume.run(std::move(model), optional(args, "mountpoint"));
     elle::SafeFinally unmount([&]
     {
       ELLE_TRACE("unmounting")
@@ -267,11 +267,11 @@ run(variables_map const& args)
       reactor::wait(*fs);
     }
   };
-  if (push && model.first)
+  if (push && model->local())
   {
     elle::With<InterfacePublisher>(
-      network, self, model.second->overlay()->node_id(),
-      model.first->server_endpoint().port()) << [&]
+      network, self, model->overlay()->node_id(),
+      model->local()->server_endpoint().port()) << [&]
     {
       run();
     };

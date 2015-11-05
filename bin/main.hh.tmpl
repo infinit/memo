@@ -369,36 +369,39 @@ namespace infinit
 
   struct NetworkDescriptor
   {
-    NetworkDescriptor(std::string name_,
-                      std::unique_ptr<infinit::overlay::Configuration> overlay_,
-                      infinit::cryptography::rsa::PublicKey owner_,
-                      int replication_factor_)
+    NetworkDescriptor(
+      std::string name_,
+      std::unique_ptr<model::doughnut::consensus::Configuration> consensus_,
+      std::unique_ptr<overlay::Configuration> overlay_,
+      cryptography::rsa::PublicKey owner_)
       : name(std::move(name_))
+      , consensus(std::move(consensus_))
       , overlay(std::move(overlay_))
       , owner(std::move(owner_))
-      , replication_factor(std::move(replication_factor_))
     {}
 
     NetworkDescriptor(elle::serialization::SerializerIn& s)
       : name(s.deserialize<std::string>("name"))
+      , consensus(s.deserialize<std::unique_ptr<
+                  model::doughnut::consensus::Configuration>>("consensus"))
       , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-      , replication_factor(s.deserialize<int>("replication_factor"))
     {}
 
     void
     serialize(elle::serialization::Serializer& s)
     {
       s.serialize("name", this->name);
+      s.serialize("consensus", this->consensus);
       s.serialize("overlay", this->overlay);
       s.serialize("owner", this->owner);
-      s.serialize("replication_factor", this->replication_factor);
     }
 
     std::string name;
-    std::unique_ptr<infinit::overlay::Configuration> overlay;
-    infinit::cryptography::rsa::PublicKey owner;
+    std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
+    std::unique_ptr<overlay::Configuration> overlay;
+    cryptography::rsa::PublicKey owner;
     int replication_factor;
   };
 
@@ -406,9 +409,7 @@ namespace infinit
   {
     Network()
       : name()
-      , storage()
       , model()
-      , port()
     {}
 
     Network(elle::serialization::SerializerIn& s)
@@ -420,9 +421,7 @@ namespace infinit
     serialize(elle::serialization::Serializer& s)
     {
       s.serialize("name", this->name);
-      s.serialize("storage", this->storage);
       s.serialize("model", this->model);
-      s.serialize("port", this->port);
     }
 
     model::doughnut::Configuration*
@@ -431,10 +430,8 @@ namespace infinit
       return static_cast<model::doughnut::Configuration*>(this->model.get());
     }
 
-    std::pair<std::shared_ptr<infinit::model::doughnut::Local>,
-              std::shared_ptr<infinit::model::doughnut::Doughnut>>
-    run(infinit::overlay::NodeEndpoints const& hosts
-          = infinit::overlay::NodeEndpoints(),
+    std::unique_ptr<model::doughnut::Doughnut>
+    run(overlay::NodeEndpoints const& hosts = overlay::NodeEndpoints(),
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
@@ -443,44 +440,12 @@ namespace infinit
         bool cache_consensus = false)
     {
       boost::filesystem::path p = root_dir() / "cache" / name;
-      if (this->storage)
-      {
-        auto storage = this->storage->make();
-        if (async_writes)
-        {
-          boost::filesystem::path journal = p / "async";
-          storage.reset(new storage::Async(std::move(storage), 10000, -1,
-                                           true, journal.string()));
-        }
-        if (cache)
-          storage.reset(new storage::Cache(std::move(storage), cache_size));
-        auto id = dht()->overlay->node_id();
-        auto local = std::make_shared<infinit::model::doughnut::consensus::Paxos::LocalPeer>(
-          dht()->replication_factor,
-          id,
-          std::move(storage), this->port ? this->port.get() : 0);
-        //auto local = std::make_shared<infinit::model::doughnut::Local>
-        //  (std::move(storage), this->port ? this->port.get() : 0);
-        local->serve();
-        auto res = std::make_pair(
-          std::move(local), this->dht()->make(hosts, client, local, p,
-          async_consensus, cache_consensus));
-        return res;
-      }
-      else
-      {
-        std::shared_ptr<infinit::model::doughnut::Local> local;
-        return
-          std::make_pair(local,
-                         this->dht()->make(hosts, client, local, p,
-                         async_consensus, cache_consensus));
-      }
+      return this->dht()->make(
+        hosts, client, p, async_consensus, cache_consensus);
     }
 
     std::string name;
-    std::unique_ptr<infinit::storage::StorageConfig> storage;
-    std::unique_ptr<infinit::model::ModelConfig> model;
-    boost::optional<int> port;
+    std::unique_ptr<model::ModelConfig> model;
   };
 
   struct Volume
@@ -508,12 +473,11 @@ namespace infinit
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
-    run(std::shared_ptr<infinit::model::doughnut::Doughnut> dht,
+    run(std::shared_ptr<model::doughnut::Doughnut> dht,
         boost::optional<std::string> mountpoint_ = {},
         boost::optional<std::string> volname_ = {})
     {
-      auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-        this->name, dht);
+      auto fs = elle::make_unique<filesystem::FileSystem>(this->name, dht);
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       boost::optional<boost::filesystem::path> mountpoint;
@@ -536,7 +500,7 @@ namespace infinit
 
     std::string name;
     boost::optional<std::string> mountpoint;
-    infinit::model::Address root_address;
+    model::Address root_address;
     std::string network;
   };
 
@@ -617,9 +581,9 @@ namespace infinit
           auto network = this->network_get(name_, owner);
           return NetworkDescriptor{
             network.name,
+            std::move(network.dht()->consensus),
             std::move(network.dht()->overlay),
-            std::move(network.dht()->owner),
-            network.dht()->replication_factor,
+            std::move(network.dht()->owner)
           };
         }
         catch (elle::Error const&)
@@ -687,13 +651,13 @@ namespace infinit
       return res;
     }
 
-    std::unique_ptr<infinit::storage::StorageConfig>
+    std::unique_ptr<storage::StorageConfig>
     storage_get(std::string const& name)
     {
       boost::filesystem::ifstream f;
       this->_open(f, this->_storage_path(name), name, "storage");
       elle::serialization::json::SerializerIn s(f, false);
-      return s.deserialize<std::unique_ptr<infinit::storage::StorageConfig>>();
+      return s.deserialize<std::unique_ptr<storage::StorageConfig>>();
     }
 
     std::vector<std::string>
@@ -714,8 +678,7 @@ namespace infinit
     }
 
     void
-    storage_save(std::string const& name,
-                 infinit::storage::StorageConfig const& storage)
+    storage_save(std::string const& name, storage::StorageConfig const& storage)
     {
       boost::filesystem::ofstream f;
       this->_open(f, this->_storage_path(name), name, "storage");

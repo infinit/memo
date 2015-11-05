@@ -21,11 +21,16 @@ namespace elle
     template<> struct Serialize<infinit::model::StoreMode>
     {
       typedef int Type;
-      static inline Type convert(infinit::model::StoreMode mode)
+      static inline
+      Type
+      convert(infinit::model::StoreMode mode)
       {
         return mode;
       }
-      static inline infinit::model::StoreMode convert(int repr)
+
+      static inline
+      infinit::model::StoreMode
+      convert(int repr)
       {
         return (infinit::model::StoreMode) repr;
       }

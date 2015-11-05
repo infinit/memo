@@ -6,7 +6,6 @@
 # include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/Model.hh>
-# include <infinit/storage/Storage.hh>
 
 namespace infinit
 {

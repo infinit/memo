@@ -25,6 +25,32 @@ bool_opt(variables_map const& args, std::string const& name)
   return args.count(name.c_str()) && args[name.c_str()].as<bool>();
 }
 
+static
+bool
+_one(bool seen)
+{
+  return seen;
+}
+
+template <typename First, typename ... Args>
+static
+bool
+_one(bool seen, First&& first, Args&& ... args)
+{
+  auto b = bool(first);
+  if (seen && b)
+    return false;
+  return _one(seen || b, std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+static
+bool
+one(Args&& ... args)
+{
+  return _one(false, std::forward<Args>(args)...);
+}
+
 
 static
 void
@@ -125,17 +151,44 @@ create(variables_map const& args)
         new infinit::storage::StripStorageConfig(std::move(backends)));
     }
   }
-  int replication_factor = 1;
-  if (args.count("replication-factor"))
-    replication_factor = args["replication-factor"].as<int>();
-  bool no_consensus = bool_opt(args, "no-consensus");
-  bool paxos = bool_opt(args, "paxos");
-  bool replicator = bool_opt(args, "replicator");
-  if (!no_consensus && !replicator)
-    paxos = true;
+  // Consensus
+  std::unique_ptr<
+    infinit::model::doughnut::consensus::Configuration> consensus_config;
+  {
+    int replication_factor = 1;
+    if (args.count("replication-factor"))
+      replication_factor = args["replication-factor"].as<int>();
+    if (replication_factor < 1)
+      throw elle::Error("replication factor must be greater than 0");
+    bool no_consensus = args.count("no-consensus");
+    bool paxos = args.count("paxos");
+    bool replicator = args.count("replicator");
+    if (!no_consensus && !replicator)
+      paxos = true;
+    if (!one(no_consensus, paxos, replicator))
+      throw elle::Error("several consensus specified");
+    if (paxos)
+      consensus_config = elle::make_unique<
+        infinit::model::doughnut::consensus::Paxos::Configuration>(
+          replication_factor);
+    else if (replicator)
+      ELLE_ABORT("FORGIVE ME BEARCLAW");
+    else
+    {
+      if (replication_factor != 1)
+        throw elle::Error("without consensus, replication factor must be 1");
+      consensus_config = elle::make_unique<
+        infinit::model::doughnut::consensus::Configuration>();
+    }
+  }
+  boost::optional<int> port;
+  if (args.count("port"))
+    port = args["port"].as<int>();
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
+      std::move(consensus_config),
       std::move(overlay_config),
+      std::move(storage),
       owner.keypair(),
       owner.public_key,
       infinit::model::doughnut::Passport(
@@ -143,15 +196,11 @@ create(variables_map const& args)
         ifnt.qualified_name(name, owner),
         owner.private_key.get()),
       owner.name,
-      replication_factor,
-      paxos);
+      std::move(port));
   {
     infinit::Network network;
-    network.storage = std::move(storage);
     network.model = std::move(dht);
     network.name = ifnt.qualified_name(name, owner);
-    if (args.count("port"))
-      network.port = args["port"].as<int>();
     if (args.count("output"))
     {
       auto output = get_output(args);
@@ -166,9 +215,9 @@ create(variables_map const& args)
     {
       infinit::NetworkDescriptor desc(
         network.name,
+        std::move(network.dht()->consensus),
         std::move(network.dht()->overlay),
-        std::move(network.dht()->owner),
-        network.dht()->replication_factor);
+        std::move(network.dht()->owner));
       beyond_push("network", desc.name, desc, owner);
     }
   }
@@ -186,7 +235,8 @@ export_(variables_map const& args)
     auto& dht = static_cast<infinit::model::doughnut::Configuration&>
       (*network.model);
     infinit::NetworkDescriptor desc(
-      network.name, std::move(dht.overlay), std::move(dht.owner), std::move(dht.replication_factor));
+      network.name, std::move(dht.consensus),
+      std::move(dht.overlay), std::move(dht.owner));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network.name);
@@ -327,18 +377,20 @@ join(variables_map const& args)
       throw elle::Error("passport signature is invalid");
     infinit::Network network;
     desc.overlay->join();
+    boost::optional<int> port;
+    if (args.count("port"))
+      port = args["port"].as<int>();
     network.model =
       elle::make_unique<infinit::model::doughnut::Configuration>(
+        std::move(desc.consensus),
         std::move(desc.overlay),
+        std::move(storage),
         user.keypair(),
         std::move(desc.owner),
         std::move(passport),
         user.name,
-        desc.replication_factor);
-    network.storage = std::move(storage);
+        std::move(port));
     network.name = desc.name;
-    if (args.count("port"))
-      network.port = args["port"].as<int>();
     ifnt.network_save(network, true);
     report_action("joined", "network", network.name, std::string("locally"));
   }
@@ -363,9 +415,9 @@ push(variables_map const& args)
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(dht.owner);
     infinit::NetworkDescriptor desc(network.name,
+                                    std::move(dht.consensus),
                                     std::move(dht.overlay),
-                                    std::move(dht.owner),
-                                    std::move(dht.replication_factor));
+                                    std::move(dht.owner));
     beyond_push("network", desc.name, desc, self);
   }
 }
@@ -410,10 +462,11 @@ run(variables_map const& args)
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);
-  auto local = network.run(eps, false, false, {}, false,
-                           args.count("async") && args["async"].as<bool>(),
-                           args.count("cache-model") && args["cache-model"].as<bool>());
-  if (!local.first)
+  auto dht =
+    network.run(eps, false, false, {}, false,
+                args.count("async") && args["async"].as<bool>(),
+                args.count("cache-model") && args["cache-model"].as<bool>());
+  if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
   reactor::scheduler().signal_handle(
     SIGINT,
@@ -424,14 +477,14 @@ run(variables_map const& args)
     });
   auto run = [&]
     {
-      report_action("running", "network", network.name, std::string("locally"));
+      report_action("running", "network", network.name);
       reactor::sleep();
     };
   if (push)
   {
     elle::With<InterfacePublisher>(
-      network, self, local.second->overlay()->node_id(),
-      local.first->server_endpoint().port()) << [&]
+      network, self, dht->overlay()->node_id(),
+      dht->local()->server_endpoint().port()) << [&]
     {
       run();
     };
@@ -547,6 +600,7 @@ main(int argc, char** argv)
         option_owner,
       },
       {
+        consensus_types_options,
         overlay_types_options,
         stonehenge_options,
         kelips_options,

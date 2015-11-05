@@ -4,7 +4,6 @@
 # include <memory>
 
 # include <infinit/model/Model.hh>
-# include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
