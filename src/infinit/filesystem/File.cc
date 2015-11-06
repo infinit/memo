@@ -806,6 +806,18 @@ namespace infinit
           return elle::sprintf("%x", elem.address);
         }
       }
+      else if (key == "user.infinit.fat")
+      {
+        auto h = _header();
+        std::stringstream res;
+        res <<  "total_size: "  << h.total_size  << "\n";
+        Address* start = (Address*)(_first_block->data().mutable_contents());
+        for (int i=1; i*sizeof(Address) <= _first_block->data().size(); ++i)
+        {
+          res << (i-1) <<  ": " << start[i] <<  "\n";
+        }
+        return res.str();
+      }
       else if (key == "user.infinit.auth")
       {
         Address addr = _parent->_files.at(_name).address;
