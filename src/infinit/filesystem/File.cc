@@ -108,7 +108,8 @@ namespace infinit
       : Node(owner, parent, name)
       , _first_block(std::move(block))
       , _first_block_new(false)
-      , _handle_count(0)
+      , _r_handle_count(0)
+      , _rw_handle_count(0)
       , _full_path(full_path())
     {}
 
@@ -120,7 +121,7 @@ namespace infinit
     bool
     File::allow_cache()
     {
-      return _owner.single_mount() ||  _handle_count > 0;
+      return _owner.single_mount() ||  _rw_handle_count > 0;
     }
 
     void
@@ -274,7 +275,8 @@ namespace infinit
     void
     File::unlink()
     {
-      ELLE_TRACE_SCOPE("%s: unlink, handle_count %s", *this, _handle_count);
+      ELLE_TRACE_SCOPE("%s: unlink, handle_count %s,%s", *this,
+        _r_handle_count, _rw_handle_count);
       static bool no_unlink = !elle::os::getenv("INHIBIT_UNLINK", "").empty();
       if (no_unlink)
       { // DEBUG: link the file in root directory
@@ -315,7 +317,7 @@ namespace infinit
         _parent = nullptr;
         _remove_from_cache(_full_path);
       }
-      if (_handle_count)
+      if (_rw_handle_count || _r_handle_count)
         return;
       if (!multi)
       {
@@ -375,8 +377,8 @@ namespace infinit
       st->st_mode &= ~0777;
       try
       {
-        ELLE_DEBUG( (!!_handle_count) ? "block from cache" : "feching block");
-        if (!_handle_count && _parent)
+        ELLE_DEBUG( (!!_rw_handle_count) ? "block from cache" : "feching block");
+        if (!_rw_handle_count && _parent)
         {
           _first_block = elle::cast<MutableBlock>::runtime
             (_owner.fetch_or_die(_parent->_files.at(_name).address));
@@ -432,7 +434,7 @@ namespace infinit
     void
     File::truncate(off_t new_size)
     {
-      if (!_handle_count)
+      if (!_rw_handle_count)
       {
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
@@ -535,18 +537,17 @@ namespace infinit
     File::open(int flags, mode_t mode)
     {
       ELLE_TRACE_SCOPE("%s: open", *this);
+      bool needw = (flags & O_ACCMODE) != O_RDONLY;
+      bool needr = (flags & O_ACCMODE) != O_WRONLY;
       if (flags & O_TRUNC)
         truncate(0);
       else
       { // preemptive  permissions check
-        bool needw = (flags & O_ACCMODE) != O_RDONLY;
-        bool needr = (flags & O_ACCMODE) != O_WRONLY;
-
         auto dn =
           std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
         auto keys = dn->keys();
         Address addr = _parent->_files.at(_name).address;
-        if (!_handle_count)
+        if (!_rw_handle_count)
         {
           ELLE_DEBUG("fetch first block")
             this->_first_block = elle::cast<MutableBlock>::runtime(
@@ -575,7 +576,7 @@ namespace infinit
       _owner.filesystem()->set(full_path().string(), shared_from_this());
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(new FileHandle(
-          std::dynamic_pointer_cast<File>(shared_from_this())));
+          std::dynamic_pointer_cast<File>(shared_from_this()), needw));
       });
     }
 
@@ -588,7 +589,7 @@ namespace infinit
       if (!_owner.single_mount())
         _owner.filesystem()->set(full_path().string(), shared_from_this());
       return std::unique_ptr<rfs::Handle>(new FileHandle(
-        std::dynamic_pointer_cast<File>(shared_from_this())));
+        std::dynamic_pointer_cast<File>(shared_from_this()), true));
     }
 
     void
@@ -724,7 +725,7 @@ namespace infinit
         if (old_size != signed(default_block_size + header_size))
           b.block.zero(old_size, default_block_size + header_size - old_size);
       }
-      if (!_handle_count)
+      if (!_rw_handle_count)
         this->_commit();
     }
 

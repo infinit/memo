@@ -13,15 +13,26 @@ namespace infinit
   namespace filesystem
   {
     FileHandle::FileHandle(std::shared_ptr<File> owner,
+        bool writable,
         bool push_mtime,
         bool no_fetch,
         bool dirty)
       : _owner(owner)
       , _dirty(dirty)
+      , _writable(writable)
     {
-      ELLE_TRACE_SCOPE("%s: create (previous handle count = %s)",
-          *this, _owner->_handle_count);
-      _owner->_handle_count++;
+      ELLE_TRACE_SCOPE("%s: create (previous handle count = %s,%s)",
+          *this, _owner->_r_handle_count, _owner->_rw_handle_count);
+      if (_writable)
+        _owner->_rw_handle_count++;
+      else
+        _owner->_r_handle_count++;
+      elle::SafeFinally reset_handle([&] {
+          if (_writable)
+            _owner->_rw_handle_count--;
+          else
+            _owner->_r_handle_count--;
+      });
       _owner->_parent->_fetch();
       _owner->_parent->_files.at(_owner->_name).atime = time(nullptr);
       // This atime implementation does not honor noatime option
@@ -38,7 +49,7 @@ namespace infinit
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
-      if (!no_fetch && _owner->_handle_count == 1)
+      if (!no_fetch && _owner->_r_handle_count + _owner->_rw_handle_count == 1)
       {
         try
         {
@@ -56,20 +67,17 @@ namespace infinit
           // been pushed yet.
           if (!_owner->_first_block)
           {
-            _owner->_handle_count--;
             ELLE_WARN("%s: block missing in model and not in cache", *this);
             throw;
           }
         }
         catch (infinit::model::doughnut::ValidationFailed const& e)
         {
-          _owner->_handle_count--;
           ELLE_TRACE("%s: validation failed: %s", *this, e);
           THROW_ACCES;
         }
         catch (elle::Error const& e)
         {
-          _owner->_handle_count--;
           ELLE_WARN("%s: unexpected elle exception while fetching: %s",
               *this, e.what());
           _owner->_first_block.reset();
@@ -78,24 +86,28 @@ namespace infinit
         // FIXME: I *really* don't like those.
         catch (std::exception const& e)
         {
-          _owner->_handle_count--;
           ELLE_ERR("%s: unexpected exception while fetching: %s",
               *this, e.what());
           throw rfs::Error(EIO, e.what());
         }
         catch (...)
         {
-          _owner->_handle_count--;
           ELLE_ERR("%s: unkown while fetching", *this);
           throw rfs::Error(EIO, "unkown error");
         }
       }
+      reset_handle.abort();
     }
 
     FileHandle::~FileHandle()
     {
-      ELLE_TRACE_SCOPE("%s: close, %s remain", *this, this->_owner->_handle_count-1);
-      if (--this->_owner->_handle_count == 0)
+      if (_writable)
+        --this->_owner->_rw_handle_count;
+      else
+        --this->_owner->_r_handle_count;
+      ELLE_TRACE_SCOPE("%s: close, %s,%s remain", *this,
+        this->_owner->_r_handle_count, this->_owner->_rw_handle_count);
+      if (this->_owner->_r_handle_count + this->_owner->_rw_handle_count == 0)
       {
         ELLE_TRACE("last handle closed, clear cache");
         //unlink first, so that it can use cached info to delete the blocks
@@ -191,7 +203,7 @@ namespace infinit
             if (block == nullptr)
             { // block would have been allocated: sparse file?
               memset(buffer.mutable_contents(), 0, size);
-              ELLE_DEBUG("read %s 0-bytes", size);
+              ELLE_DEBUG("read %s 0-bytes, missing block %s", size, start_block);
               return size;
             }
             ELLE_DEBUG("fetched block %x of size %s", block->address(), block->data().size());
@@ -347,6 +359,7 @@ namespace infinit
             this->_owner->_header(h);
           }
         }
+
         return size;
       }
 
@@ -382,10 +395,10 @@ namespace infinit
           this->_owner->_first_block->data([&](elle::Buffer& data)
               {
               if (data.size() < offset + sizeof(Address::Value))
-              data.size(offset + sizeof(Address::Value));
+                  data.size(offset + sizeof(Address::Value));
               memcpy(data.mutable_contents() + offset, cur.value(),
                   sizeof(Address::Value));
-              });
+            });
           if (!ent.new_block)
             this->_owner->_owner.block_store()->remove(prev);
         }
@@ -393,9 +406,9 @@ namespace infinit
         ent.new_block = false;
         auto cpy = this->_owner->_first_block->clone();
         this->_owner->_owner.store_or_die(std::move(cpy),
-                                          this->_owner->_first_block_new
-                                          ? model::STORE_INSERT
-                                          : model::STORE_ANY);
+          this->_owner->_first_block_new
+          ? model::STORE_INSERT
+          : model::STORE_ANY);
         this->_owner->_first_block_new = false;
         return r1 + r2;
       }

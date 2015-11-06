@@ -93,7 +93,8 @@ namespace infinit
       std::unordered_map<int, CacheEntry> _blocks;
       std::unique_ptr<MutableBlock> _first_block;
       bool _first_block_new;
-      int _handle_count;
+      int _r_handle_count;
+      int _rw_handle_count;
       boost::filesystem::path _full_path;
       std::unique_ptr<model::blocks::MutableBlock::Cache> _block_cache;
     };
