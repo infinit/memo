@@ -500,17 +500,20 @@ list_storage(variables_map const& args)
   auto owner = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, owner);
-  if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
-      network.model->storage.get()))
+  if (network.model->storage)
   {
-    for (auto const& s: strip->storage)
-      std::cout << s->name << "\n";
+    if (auto strip = dynamic_cast<infinit::storage::StripStorageConfig*>(
+        network.model->storage.get()))
+    {
+      for (auto const& s: strip->storage)
+        std::cout << s->name << "\n";
+    }
+    else
+    {
+      std::cout << network.model->storage->name;
+    }
+    std::cout << std::endl;
   }
-  else
-  {
-    std::cout << network.model->storage->name;
-  }
-  std::cout << std::endl;
 }
 
 static
