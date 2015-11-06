@@ -126,6 +126,7 @@ namespace infinit
                   new protocol::Serializer(socket(), false));
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
+                _key_exchange();
               }
               catch (reactor::network::Exception const&)
               { // Upper layers may retry on network::Exception
@@ -188,13 +189,43 @@ namespace infinit
       }
 
       void
+      Remote::_key_exchange()
+      {
+        ELLE_TRACE("starting key exchange");
+        RPC<std::unique_ptr<Passport>(Passport const&)>
+        auth_syn("auth_syn", *this->_channels, nullptr);
+        auto remote_passport = auth_syn(this->_doughnut.passport());
+        ELLE_ASSERT(remote_passport);
+        // validate res
+        bool check = remote_passport->verify(this->_doughnut.owner());
+        ELLE_TRACE("got remote passport, check=%s", check);
+        if (!check)
+          throw elle::Error("Passport validation failed");
+        // generate, seal
+        // dont set _key yet so that our 2 rpcs are in cleartext
+        auto key = infinit::cryptography::secretkey::generate(256);
+        ELLE_TRACE("passwording...");
+        elle::Buffer password = key.password();
+        ELLE_TRACE("sealing...");
+        auto sealed_key = remote_passport->user().seal(password,
+          infinit::cryptography::Cipher::aes256,
+          infinit::cryptography::Mode::cbc);
+        ELLE_TRACE("Invoking auth_ack...");
+        RPC<bool(elle::Buffer const&)> auth_ack("auth_ack", *this->_channels,
+          nullptr);
+        auth_ack(sealed_key);
+        ELLE_TRACE("...done");
+        _credentials = std::move(password);
+      }
+
+      void
       Remote::store(blocks::Block const& block, StoreMode mode)
       {
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         this->connect_retry();
         RPC<void (blocks::Block const&, StoreMode)> store
-        ("store", *this->_channels, &this->_doughnut, &this->_credentials);
+        ("store", *this->_channels, &this->_credentials);
         store(block, mode);
       }
 
@@ -205,7 +236,7 @@ namespace infinit
         elle::unconst(this)->connect_retry();
         RPC<std::unique_ptr<blocks::Block> (Address)> fetch(
           "fetch", *const_cast<Remote*>(this)->_channels,
-          &this->_doughnut, &const_cast<Remote*>(this)->_credentials);
+          &const_cast<Remote*>(this)->_credentials);
         fetch.set_context<Doughnut*>(&this->_doughnut);
         return fetch(address);
       }
@@ -216,7 +247,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
         this->connect_retry();
         RPC<void (Address)> remove("remove", *this->_channels,
-          &this->_doughnut, &this->_credentials);
+          &this->_credentials);
         remove(address);
       }
 

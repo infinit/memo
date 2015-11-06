@@ -847,7 +847,7 @@ namespace infinit
               elle::unconst(this)->_remotes_server);
             peer.connect();
             ELLE_DEBUG("utp connected");
-            RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
+            auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
           }
           catch (elle::Error const& e)
@@ -866,7 +866,7 @@ namespace infinit
                 pl.first,
                 pl.second.front());
               peer.connect();
-              RPC<SerState()> rpc("kelips_fetch_state", *peer.channels());
+              auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
               return rpc();
             }
             catch (elle::Error const& e)

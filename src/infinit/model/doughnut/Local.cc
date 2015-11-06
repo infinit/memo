@@ -200,6 +200,29 @@ namespace infinit
                   {
                     this->remove(address);
                   }));
+        rpcs.add("auth_syn", std::function<Passport*(Passport const&)>(
+          [this] (Passport const& p) -> Passport*
+          {
+            ELLE_TRACE("entering auth_syn, dn=%s", this->_doughnut);
+            bool verify = const_cast<Passport&>(p).verify(this->_doughnut->owner());
+            ELLE_TRACE("auth_syn verify = %s", verify);
+            if (!verify)
+              throw elle::Error("Passport validation failed");
+            return const_cast<Passport*>(&_doughnut->passport());
+          }));
+        rpcs.add("auth_ack", std::function<bool(elle::Buffer const&)>(
+          [this](elle::Buffer const& enc_key) -> bool
+          {
+            ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+            elle::Buffer password = this->_doughnut->keys().k().open(
+              enc_key,
+              infinit::cryptography::Cipher::aes256,
+              infinit::cryptography::Mode::cbc);
+            _rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
+              std::move(password)));
+            ELLE_TRACE("auth_ack exiting");
+            return true;
+          }));
       }
 
       void

@@ -207,12 +207,10 @@ namespace infinit
         {
           return network_exception_to_unavailable([&] {
             this->connect();
-            RPC<boost::optional<PaxosClient::Accepted>(
+            auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
               PaxosServer::Quorum,
               Address,
-              PaxosClient::Proposal const&)>
-              propose("propose", *this->_channels,
-                &this->_doughnut, &this->_credentials);
+              PaxosClient::Proposal const&)>("propose");
             propose.set_context<Doughnut*>(&this->_doughnut);
             return propose(peers, address, p);
           });
@@ -226,13 +224,11 @@ namespace infinit
         {
           return network_exception_to_unavailable([&] {
             this->connect();
-            RPC<Paxos::PaxosClient::Proposal (
+            auto accept = make_rpc<Paxos::PaxosClient::Proposal (
               PaxosServer::Quorum peers,
               Address,
               Paxos::PaxosClient::Proposal const&,
-              std::shared_ptr<blocks::Block> const&)>
-              accept("accept", *this->_channels,
-                &this->_doughnut, &this->_credentials);
+              std::shared_ptr<blocks::Block> const&)>("accept");
             accept.set_context<Doughnut*>(&this->_doughnut);
             return accept(peers, address, p, value);
           });

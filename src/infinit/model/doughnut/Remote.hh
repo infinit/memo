@@ -11,6 +11,8 @@
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Peer.hh>
 
+# include <infinit/RPC.hh>
+
 namespace infinit
 {
   namespace model
@@ -62,10 +64,15 @@ namespace infinit
         virtual
         void
         reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override;
+        template<typename F>
+        RPC<F>
+        make_rpc(std::string const& name);
       private:
         void
         _connect(std::string endpoint,
                  std::function <std::iostream& ()> const& socket);
+        void
+        _key_exchange();
         ELLE_ATTRIBUTE(std::function <std::iostream& ()>, connector);
         ELLE_ATTRIBUTE(std::string, endpoint);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
@@ -93,6 +100,13 @@ namespace infinit
         void
         print(std::ostream& stream) const override;
       };
+
+      template<typename F>
+      RPC<F>
+      Remote::make_rpc(std::string const& name)
+      {
+        return RPC<F>(name, *this->_channels, &this->_credentials);
+      }
     }
   }
 }
