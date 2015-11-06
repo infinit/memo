@@ -33,6 +33,7 @@ COMMAND(create)
 
   infinit::Drive drive{name, volume.name, network.name, desc ? *desc : ""};
   ifnt.drive_save(drive);
+  report_action("created", "drive", drive.name, std::string("locally"));
 
   auto push = flag(args, "push");
   if (push)
@@ -54,6 +55,25 @@ COMMAND(push)
   auto drive = ifnt.drive_get(name);
   auto url = elle::sprintf("drives/%s", drive.name);
   beyond_push(url, "drive", drive.name, drive, owner);
+}
+
+COMMAND(delete_)
+{
+  auto owner = self_user(ifnt, args);
+  auto name = drive_name(args, owner);
+  auto path = ifnt._drive_path(name);
+  if (boost::filesystem::remove(path))
+    report_action("deleted", "drive", name, std::string("locally"));
+  else
+    throw MissingLocalResource(
+      elle::sprintf("File for drive could not be deleted: %s", path));
+}
+
+COMMAND(pull)
+{
+  auto owner = self_user(ifnt, args);
+  auto name = drive_name(args, owner);
+  beyond_delete("drive", name, owner);
 }
 
 int
@@ -94,6 +114,26 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "drive name to push on the hub" },
+        option_owner,
+      }
+    },
+    {
+      "delete",
+      "Delete a drive locally",
+      &delete_,
+      "--name NAME",
+      {
+        { "name,n", value<std::string>(), "drive name to delete locally" },
+        option_owner,
+      }
+    },
+    {
+      "pull",
+      "Delete a drive remotly on the hub",
+      &pull,
+      "--name NAME",
+      {
+        { "name,n", value<std::string>(), "drive name to delete remotely" },
         option_owner,
       }
     }

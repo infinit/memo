@@ -86,6 +86,18 @@ class Beyond:
     return self.__datastore.volume_delete(
       owner = owner, name = name)
 
+  ## ----- ##
+  ## DRIVE ##
+  ## ----- ##
+
+  def drive_get(self, owner, name):
+    return self.__datastore.drive_fetch(
+      owner = owner, name = name)
+
+  def drive_delete(self, owner, name):
+    return self.__datastore.drive_delete(
+        owner = owner, name = name)
+
 class User:
 
   class Duplicate(Exception):

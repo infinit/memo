@@ -1515,6 +1515,10 @@ beyond_delete(std::string const& where,
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
     report_action("deleted", type, name, std::string("remotely"));
+  else if (r.status() == reactor::http::StatusCode::Not_Found)
+    throw MissingResource(elle::sprintf("%s %s does not exists on Hub",
+                                        type,
+                                        name));
   else
   {
     throw elle::Error(
