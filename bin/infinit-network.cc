@@ -20,13 +20,6 @@ infinit::Infinit ifnt;
 
 static
 bool
-bool_opt(variables_map const& args, std::string const& name)
-{
-  return args.count(name.c_str()) && args[name.c_str()].as<bool>();
-}
-
-static
-bool
 _one(bool seen)
 {
   return seen;
@@ -464,8 +457,7 @@ run(variables_map const& args)
     beyond_fetch_endpoints(network, eps);
   auto dht =
     network.run(eps, false, false, {}, false,
-                args.count("async") && args["async"].as<bool>(),
-                args.count("cache-model") && args["cache-model"].as<bool>());
+                flag(args, "async"), flag(args, "cache-model"));
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
   reactor::scheduler().signal_handle(
@@ -560,7 +552,7 @@ main(int argc, char** argv)
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups")
-    ("encrypt", value<std::string>(), "Use encryption: no,lazy,yes")
+    ("encrypt", value<std::string>(), "use encryption: no,lazy,yes")
     ("protocol", value<std::string>(), "RPC protocol to use: tcp,utp,all")
     ;
   options_description options("Infinit network utility");
