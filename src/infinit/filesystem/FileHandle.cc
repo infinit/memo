@@ -201,10 +201,21 @@ namespace infinit
           {
             block = _owner->_block_at(start_block, false);
             if (block == nullptr)
-            { // block would have been allocated: sparse file?
-              memset(buffer.mutable_contents(), 0, size);
-              ELLE_DEBUG("read %s 0-bytes, missing block %s", size, start_block);
-              return size;
+            {
+              if (_owner->_rw_handle_count == 0)
+              { // attempt a fetch
+                auto address = _owner->_parent->_files.at(_owner->_name).address;
+                _owner->_first_block = elle::cast<MutableBlock>::runtime
+                (_owner->_owner.fetch_or_die(address));
+                block = _owner->_block_at(start_block, false);
+              }
+              if (block == nullptr)
+              {
+                // block would have been allocated: sparse file?
+                memset(buffer.mutable_contents(), 0, size);
+                ELLE_TRACE("read %s 0-bytes, missing block %s", size, start_block);
+                return size;
+              }
             }
             ELLE_DEBUG("fetched block %x of size %s", block->address(), block->data().size());
             _owner->check_cache();
@@ -383,6 +394,7 @@ namespace infinit
           return r2;
         // Assuming linear writes, this is a good time to flush start block since
         // it just got filled.
+        ELLE_TRACE("flush block %s", start_block);
         File::CacheEntry& ent = this->_owner->_blocks.at(start_block);
         Address prev = ent.block.address();
         Address cur = ent.block.store(*this->_owner->_owner.block_store(),
