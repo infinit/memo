@@ -84,6 +84,23 @@ namespace infinit
       return std::move(backend);
     }
 
+    /*---------------.
+    | Storage Config |
+    `---------------*/
 
+    StorageConfig::StorageConfig(std::string name_)
+      : name(std::move(name_))
+    {}
+
+    StorageConfig::StorageConfig(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    StorageConfig::serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("name", this->name);
+    }
   }
 }

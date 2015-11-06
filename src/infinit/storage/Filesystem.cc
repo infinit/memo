@@ -97,8 +97,9 @@ namespace infinit
       return elle::make_unique<infinit::storage::Filesystem>(args[0]);
     }
 
-    FilesystemStorageConfig::FilesystemStorageConfig(std::string path_)
-      : StorageConfig()
+    FilesystemStorageConfig::FilesystemStorageConfig(std::string name,
+                                                     std::string path_)
+      : StorageConfig(std::move(name))
       , path(std::move(path_))
     {}
 
@@ -112,6 +113,7 @@ namespace infinit
     void
     FilesystemStorageConfig::serialize(elle::serialization::Serializer& s)
     {
+      StorageConfig::serialize(s);
       s.serialize("path", this->path);
     }
 

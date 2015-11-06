@@ -37,7 +37,7 @@ namespace infinit
     struct FilesystemStorageConfig
       : public StorageConfig
     {
-      FilesystemStorageConfig(std::string path);
+      FilesystemStorageConfig(std::string name, std::string path);
       FilesystemStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

@@ -78,6 +78,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
+        StorageConfig::serialize(s);
         s.serialize("password", this->password);
         s.serialize("salt", this->salt);
         s.serialize("backend", this->storage);

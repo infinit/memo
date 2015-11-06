@@ -76,11 +76,19 @@ namespace infinit
     struct StorageConfig
       : public elle::serialization::VirtuallySerializable
     {
+      StorageConfig() = default;
+      StorageConfig(std::string name);
+      StorageConfig(elle::serialization::SerializerIn& input);
+      virtual
+      void
+      serialize(elle::serialization::Serializer& s);
       typedef infinit::serialization_tag serialization_tag;
       static constexpr char const* virtually_serializable_key = "type";
       virtual
       std::unique_ptr<infinit::storage::Storage>
       make() = 0;
+
+      std::string name;
     };
   }
 }

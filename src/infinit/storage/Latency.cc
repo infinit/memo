@@ -102,6 +102,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
+        StorageConfig::serialize(s);
         s.serialize("backend", this->storage);
         s.serialize("latency_get", this->latency_get);
         s.serialize("latency_set", this->latency_set);

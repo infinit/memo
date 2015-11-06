@@ -606,6 +606,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
+        StorageConfig::serialize(s);
         s.serialize("host", this->host);
         s.serialize("path", this->path);
       }

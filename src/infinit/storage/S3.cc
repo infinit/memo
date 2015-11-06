@@ -69,7 +69,7 @@ namespace infinit
     public:
       std::string configuration;
       S3StorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
+        : StorageConfig()
       {
         this->serialize(input);
       }
@@ -77,6 +77,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
+        StorageConfig::serialize(s);
         s.serialize("configuration", this->configuration);
       }
 

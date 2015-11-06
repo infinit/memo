@@ -114,6 +114,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
+        StorageConfig::serialize(s);
         s.serialize("parallel", this->parallel);
         s.serialize("balance", this->balance);
         s.serialize("backend", this->storage);
