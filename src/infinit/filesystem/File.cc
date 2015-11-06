@@ -348,9 +348,9 @@ namespace infinit
           {
             if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
               continue; // unallocated block
-            _owner.block_store()->remove(addr[i]);
+            _owner.unchecked_remove(addr[i]);
           }
-          _owner.block_store()->remove(_first_block->address());
+          _owner.unchecked_remove(_first_block->address());
         }
       }
       _remove_from_cache(_full_path);
@@ -471,7 +471,7 @@ namespace infinit
         {
            if (!memcmp(addr[i].value(), zero, sizeof(Address::Value)))
             continue; // unallocated block
-          _owner.block_store()->remove(addr[i]);
+          _owner.unchecked_remove(addr[i]);
           _blocks.erase(i-1);
         }
         _first_block->data(
@@ -519,7 +519,7 @@ namespace infinit
             _blocks[0] = {AnyBlock(std::move(bl)), false, {}, false};
             data_block = &_blocks[0].block;
           }
-          _owner.block_store()->remove(addr[1]);
+          _owner.unchecked_remove(addr[1]);
           _first_block->data
             ([&] (elle::Buffer& data) {
               data.size(header_size);
