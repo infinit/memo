@@ -138,6 +138,12 @@ namespace infinit
             _owner->_first_block = elle::cast<MutableBlock>::runtime
               (_owner->_owner.fetch_or_die(address));
           }
+          if (offset >= signed(block->data().size()) - header_size)
+          {
+            ELLE_DEBUG("read past end: offset=%s, size=%s", offset,
+                       block->data().size() - header_size);
+            return 0;
+          }
           if (offset + size > block->data().size() - header_size)
           {
             ELLE_DEBUG("read past buffer end, reducing size from %s to %s", size,
