@@ -417,6 +417,7 @@ class CouchDBDatastore:
   def drive_insert(self, drive):
     json = drive.json()
     json['_id'] = drive.id
+    json['users'] = {}
     try:
       self.__couchdb['drives'].save(json)
     except couchdb.ResourceConflict:
@@ -425,7 +426,23 @@ class CouchDBDatastore:
   def drive_fetch(self, owner, name):
     try:
       json = self.__couchdb['drives']['%s/%s' % (owner, name)]
-      return infinit.beyond.Drive.from_json(self.beyond, json)
+      drive = infinit.beyond.Drive.from_json(self.beyond, json)
+      return drive
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.Drive.NotFound()
+
+  def drive_update(self, id, diff):
+    args = {
+      name: json.dumps(value)
+      for name, value in diff.items()
+      if value is not None
+    }
+    try:
+      self.__couchdb['drives'].update_doc(
+        'beyond/update',
+        id,
+        **args
+      )
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Drive.NotFound()
 
@@ -437,15 +454,14 @@ class CouchDBDatastore:
           'code': 404,
         }
       ]
-    def check_exists(name, drive):
-      drive = dict(drive)
-      print('network', drive["network"])
-      print('volume', drive["volume"])
     import json
     update = {
       name: json.loads(value)
       for name, value in req['query'].items()
     }
+    for user, value in update.get('users', {}).items():
+      drive.setdefault('users', {})[user] = value
+
     return [drive, {'json': json.dumps(update)}]
 
   def drive_delete(self, owner, name):
@@ -454,6 +470,4 @@ class CouchDBDatastore:
       self.__couchdb['drives'].delete(json)
     except couchdb.ResourceConflict:
       raise infinit.beyond.Drive.Duplicate()
-
-
 

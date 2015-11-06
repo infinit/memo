@@ -45,7 +45,26 @@ COMMAND(create)
 
 COMMAND(invite)
 {
-  std::cout << "Not implemented yet." << std::endl;
+  auto owner = self_user(ifnt, args);
+  auto drive_name_ = drive_name(args, owner);
+  auto user = mandatory(args, "user");
+  auto home = flag(args, "home");
+  // FIXME: for now the permissions option is a flag yet should be
+  // DEFAULT,R,W,X,RW,RX,WX,RWX (and/or octal notation ?)
+  std::string permissions{""};
+  {
+    auto o = optional(args, "permissions");
+    if (o)
+      permissions = *o;
+  }
+
+  infinit::Invitation invitation{user,
+                                 permissions,
+                                 "pending",
+                                 home};
+
+  auto url = elle::sprintf("drives/%s/invite/%s", drive_name_, user);
+  beyond_push(url, "invitation", drive_name_, invitation, owner);
 }
 
 COMMAND(push)
@@ -97,13 +116,14 @@ main(int argc, char** argv)
     },
     {
       "invite",
-      "Invite a user to join the drive",
+      "Invite a user to join the drive (Hub operation)",
       &invite,
       "--name DRIVE --user USER [--permissions]",
       {
         { "name,n", value<std::string>(), "drive to invite the user on" },
         { "user,u", value<std::string>(), "user to invite to the drive" },
         { "permissions,p", value<std::string>(), "set default user permissions to XXX" },
+        { "home,h", bool_switch(), "creates a home directory for the invited user" },
         option_owner,
       },
     },

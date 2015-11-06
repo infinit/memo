@@ -318,7 +318,9 @@ class Volume(metaclass = Entity,
 
 class Drive(metaclass = Entity,
             insert = 'drive_insert',
-            fields = fields('name', 'network', 'volume', 'description')):
+            update = 'drive_update',
+            fields = fields('name', 'network', 'volume', 'description',
+                            users = {})):
 
   @property
   def id(self):

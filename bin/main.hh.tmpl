@@ -542,6 +542,25 @@ namespace infinit
     std::string network;
   };
 
+  struct Invitation
+  {
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("user", this->user);
+      s.serialize("permissions", this->permissions);
+      s.serialize("status", this->status);
+      s.serialize("create_home", this->create_home);
+    }
+
+    std::string user;
+    // Values: "default", "r", "w", "x" and any combination of the 3.
+    std::string permissions;
+    // Values: "pending", "accepted" or "rejected".
+    std::string status;
+    bool create_home;
+  };
+
   struct Drive
   {
     void
@@ -1006,6 +1025,9 @@ namespace infinit
       elle::serialization::json::SerializerIn s(f, false);
       return s.deserialize<Drive>();
     }
+
+    Drive
+    drive_fetch(std::string const& name);
   };
 }
 
@@ -1638,5 +1660,14 @@ beyond_fetch_endpoints(infinit::Network const& network,
     {
       ELLE_WARN("Exception parsing peer endpoints: %s", e);
     }
+  }
+}
+
+namespace infinit
+{
+  Drive
+  Infinit::drive_fetch(std::string const& name)
+  {
+    return beyond_fetch<Drive>("drive", name);
   }
 }

@@ -149,9 +149,13 @@ class Bottle(bottle.Bottle):
 
     # Drive
     self.route('/drives/<owner>/<name>',
+               method = 'GET')(self.drive_get)
+    self.route('/drives/<owner>/<name>',
                method = 'PUT')(self.drive_put)
     self.route('/drives/<owner>/<name>',
                method = 'DELETE')(self.drive_delete)
+    self.route('/drives/<owner>/<name>/invite/<user>',
+               method = 'PUT')(self.drive_invite_put)
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -430,6 +434,20 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     self.drive_from_name(owner = owner, name = name)
     self.__beyond.drive_delete(owner = owner, name = name)
+
+  def drive_get(self, owner, name):
+    return self.drive_from_name(owner, name).json()
+
+  def drive_invite_put(self, owner, name, user):
+    user = self.user_from_name(name = user)
+    owner_user = self.user_from_name(name = owner)
+    self.authenticate(owner_user)
+    drive = self.drive_from_name(owner = owner, name = name)
+    json = bottle.request.json
+    drive.users[user.name] = json
+    drive.save()
+    raise Response(201, {}) # FIXME: 200 if existed
+
 
   ## --- ##
   ## GCS ##
