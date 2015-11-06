@@ -44,11 +44,21 @@ namespace infinit
          d._files[op.target] = fd;
          break;
        case OperationType::update:
-         if (d._files.find(op.target) == d._files.end())
+         if (op.target == "/inherit")
          {
-           ELLE_LOG("Conflict: the object %s was removed remotely,"
+           d._inherit_auth = true;
+           break;
+         }
+         else if (op.target == "/disinherit")
+         {
+           d._inherit_auth = false;
+           break;
+         }
+         else if (d._files.find(op.target) == d._files.end())
+         {
+           ELLE_LOG("Conflict: the object %s (%s / %s) was removed remotely,"
              " your changes will be dropped.",
-             p / op.target);
+             p / op.target, p, op.target);
            if (!wd.expired())
            {
              auto sd = wd.lock();
@@ -504,7 +514,7 @@ namespace infinit
       {
         bool on = !(value == "0" || value == "false" || value=="");
         _inherit_auth = on;
-        _commit({OperationType::update, ""});
+        _commit({OperationType::update, on ? "/inherit" : "/disinherit"});
       }
       else if (name.find("user.infinit.auth.") == 0)
       {
