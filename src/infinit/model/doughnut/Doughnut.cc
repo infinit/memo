@@ -326,7 +326,7 @@ namespace infinit
             passport,
             std::move(consensus),
             std::move(overlay),
-            std::move(local));
+            local);
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->name.get(),
