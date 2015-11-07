@@ -339,6 +339,7 @@ namespace infinit
         std::string _rdv_id;
         std::string _rdv_host;
         std::unordered_map<std::string, elle::Buffer> _challenges;
+        std::unordered_map<Address, Node::Member> _peer_cache;
       };
     }
   }

@@ -2856,7 +2856,7 @@ namespace infinit
       Node::Member
       Node::make_peer(PeerLocation hosts)
       {
-        static std::unordered_map<Address, Node::Member> cache;
+        static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
         ELLE_TRACE("connecting to %s", hosts);
         if (hosts.first == _self || hosts.first == Address::null)
         {
@@ -2872,9 +2872,12 @@ namespace infinit
               return this->local();
             }
         }
-        /*auto it = cache.find(hosts.first);
-        if (it != cache.end())
-          return it->second;*/
+        if (!disable_cache)
+        {
+          auto it = _peer_cache.find(hosts.first);
+          if (it != _peer_cache.end())
+            return it->second;
+        }
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: hosts.second)
           endpoints.push_back(GossipEndpoint(ep.address(), ep.port()));
@@ -2899,7 +2902,8 @@ namespace infinit
                 std::bind(&Node::remote_retry_connect,
                           this, std::placeholders::_1,
                           uid)));
-            //cache[hosts.first] = res;
+            if (!disable_cache)
+              _peer_cache[hosts.first] = res;
             return res;
           }
           catch (elle::Error const& e)
