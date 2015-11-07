@@ -5,14 +5,14 @@ set -e
 rootdir=$1
 nodes=$2
 k=$3
-replicas=1
+replicas=2
 observers=2
 user=test
 port_base=5050
 nports=5 # allocate fixed port port_base+i to the first nports nodes
 
-#network_args="--kelips  --k $k --replication-factor $replicas"
-network_args="--kademlia"
+network_args="--kelips  --k $k --replication-factor $replicas"
+#network_args="--kademlia"
 
 # port(id, port_base, nports
 function port {
@@ -50,7 +50,7 @@ user_hash=$( cd conf0/networks && ls)
 for i in $(seq 1 $nodes); do
   echo $exported_network | INFINIT_HOME=$rootdir/conf$i infinit-network --import
   INFINIT_HOME=$rootdir/conf0 infinit-network --invite --as $user --name $user_hash/kelips --user $user$i \
-  | INFINIT_HOME=$rootdir/conf$i infinit-network --join --as $user$i --name $user_hash/kelips --storage storage $(port $i $port_base $nports)
+  | INFINIT_HOME=$rootdir/conf$i infinit-network --join --as $user$i --name $user_hash/kelips --storage storage $(port $i $port_base $nports) --input -
 done
 
 #observers
@@ -62,23 +62,23 @@ for i in $(seq 0 $observers); do
   INFINIT_HOME=$rootdir/observer_conf_$i infinit-user --export --name obs$i | INFINIT_HOME=$rootdir/conf0 infinit-user --import
   echo $exported_network | INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --import
   INFINIT_HOME=$rootdir/conf0 infinit-network --invite --as $user --name $user_hash/kelips --user obs$i \
-  | INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --join --as obs$i --name $user_hash/kelips
+  | INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --join --as obs$i --name $user_hash/kelips --input -
 done
 
 # create volume, requires running nodes
-INFINIT_HOME=$rootdir/conf0 infinit-network --run --as $user --name $user_hash/kelips &
-pid1=$!
-sleep 3
-INFINIT_HOME=$rootdir/conf1 infinit-network --run --as ${user}1 --name $user_hash/kelips --host 127.0.0.1:$port_base &
-pid2=$!
-sleep 3
+#INFINIT_HOME=$rootdir/conf0 infinit-network --run --as $user --name $user_hash/kelips &
+#pid1=$!
+#sleep 3
+#INFINIT_HOME=$rootdir/conf1 infinit-network --run --as ${user}1 --name $user_hash/kelips --peer 127.0.0.1:$port_base &
+#pid2=$!
+#sleep 3
 INFINIT_HOME=$rootdir/observer_conf_0 infinit-volume --create \
   --mountpoint observer_mount_0 \
   --as obs0 --network $user_hash/kelips \
-  --name kelips --host 127.0.0.1:$port_base
+  --name kelips --peer 127.0.0.1:$port_base
 
-kill $pid1
-kill $pid2
+#kill $pid1
+#kill $pid2
 obs_user_hash=$( cd observer_conf_0/volumes && ls)
 exported_volume=$(INFINIT_HOME=$rootdir/observer_conf_0 infinit-volume --export --as obs0 --name kelips)
 for i in $(seq 1 $observers); do
@@ -94,6 +94,6 @@ for i in $(seq 1 $nodes); do
 done
 
 for i in $(seq 0 $observers); do
-  echo "INFINIT_HOME=$rootdir/observer_conf_$i infinit-volume --run --as obs$i --name $obs_user_hash/kelips --host 127.0.0.1:$port_base" > $rootdir/run-volume-$i.sh
+  echo "INFINIT_HOME=$rootdir/observer_conf_$i infinit-volume --run --as obs$i --name $obs_user_hash/kelips --peer 127.0.0.1:$port_base" > $rootdir/run-volume-$i.sh
   chmod a+x $rootdir/run-volume-$i.sh
 done
