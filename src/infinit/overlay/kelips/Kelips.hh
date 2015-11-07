@@ -88,6 +88,7 @@ namespace infinit
         struct GetFileReply;
         struct PutFileRequest;
         struct PutFileReply;
+        struct RequestKey;
       }
       struct PendingRequest;
 
@@ -296,6 +297,7 @@ namespace infinit
           std::vector<GossipEndpoint> endponits);
         Node::Member
         make_peer(PeerLocation pl);
+        packet::RequestKey make_key_request();
         Address _self;
         Address _ping_target;
         Time _ping_time;
@@ -333,6 +335,7 @@ namespace infinit
         std::unordered_map<Address, int> _under_duplicated;
         std::string _rdv_id;
         std::string _rdv_host;
+        std::unordered_map<std::string, elle::Buffer> _challenges;
       };
     }
   }

@@ -23,6 +23,7 @@
 #include <cryptography/SecretKey.hh>
 #include <cryptography/Error.hh>
 #include <cryptography/hash.hh>
+#include <cryptography/random.hh>
 
 #include <reactor/Barrier.hh>
 #include <reactor/Scope.hh>
@@ -374,6 +375,8 @@ namespace infinit
           {
             input.serialize("sender", sender);
             input.serialize("observer", observer);
+            input.serialize("token", token);
+            input.serialize("challenge", challenge);
           }
 
           void
@@ -382,9 +385,13 @@ namespace infinit
             passport.serialize(s);
             s.serialize("sender", sender);
             s.serialize("observer", observer);
+            s.serialize("token", token);
+            s.serialize("challenge", challenge);
           }
 
           infinit::model::doughnut::Passport passport;
+          elle::Buffer token;
+          elle::Buffer challenge;
         };
         REGISTER(RequestKey, "reqk");
 
@@ -400,6 +407,8 @@ namespace infinit
             input.serialize("sender", sender);
             input.serialize("observer", observer);
             input.serialize("encrypted_key", encrypted_key);
+            input.serialize("token", token);
+            input.serialize("signed_challenge", signed_challenge);
           }
 
           void
@@ -409,10 +418,14 @@ namespace infinit
             s.serialize("sender", sender);
             s.serialize("observer", observer);
             s.serialize("encrypted_key", encrypted_key);
+            s.serialize("token", token);
+            s.serialize("signed_challenge", signed_challenge);
           }
 
           elle::Buffer encrypted_key;
           infinit::model::doughnut::Passport passport;
+          elle::Buffer token;
+          elle::Buffer signed_challenge;
         };
         REGISTER(KeyReply, "repk");
 
@@ -1011,8 +1024,7 @@ namespace infinit
               send(req, c);
             else
             {
-              packet::RequestKey req(doughnut()->passport());
-              req.sender = _self;
+              packet::RequestKey req(make_key_request());
               send(req, c);
               _pending_bootstrap_address.push_back(l.first);
             }
@@ -1026,8 +1038,7 @@ namespace infinit
             }
             else
             {
-              packet::RequestKey req(doughnut()->passport());
-              req.sender = _self;
+              packet::RequestKey req(make_key_request());
               for (auto const& ep: l.second)
                 send(req, e2e(ep), Address::null);
             }
@@ -1146,7 +1157,7 @@ namespace infinit
         }
         if (send_key_request)
         {
-          packet::RequestKey req(doughnut()->passport());
+          packet::RequestKey req(make_key_request());
           req.sender = _self;
           req.observer = this->_observer;
           send(req, c, ep, addr);
@@ -1269,8 +1280,7 @@ namespace infinit
           if (failure)
           { // send a key request
             ELLE_DEBUG("%s: sending key request to %s", *this, source);
-            packet::RequestKey rk(doughnut()->passport());
-            rk.sender = _self;
+            packet::RequestKey rk(make_key_request());
             elle::Buffer s = packet::serialize(rk);
             send(rk, source, p->sender);
             return;
@@ -1287,6 +1297,12 @@ namespace infinit
               *this, source, p->sender);
             return;
           }
+          // sign the challenge with our passport
+          auto signed_challenge = doughnut()->keys().k().sign(
+            p->challenge,
+            infinit::cryptography::rsa::Padding::pss,
+            infinit::cryptography::Oneway::sha256);
+          // generate key
           auto sk = infinit::cryptography::secretkey::generate(256);
           elle::Buffer password = sk.password();
           setKey(p->sender, std::move(sk));
@@ -1296,6 +1312,8 @@ namespace infinit
             password,
             infinit::cryptography::Cipher::aes256,
             infinit::cryptography::Mode::cbc);
+          kr.token = std::move(p->token);
+          kr.signed_challenge = std::move(signed_challenge);
           send(kr, source, p->sender);
           return;
         } // requestkey
@@ -1310,6 +1328,29 @@ namespace infinit
               *this, source, p->sender);
             return;
           }
+          // validate challenge
+          auto it = this->_challenges.find(p->token.string());
+          if (it == this->_challenges.end())
+          {
+            ELLE_LOG("%s at %s: challenge token %x does not exist.",
+                     p->sender, source, p->token);
+            return;
+          }
+          auto& stored_challenge = it->second;
+
+          ok = p->passport.user().verify(
+            p->signed_challenge,
+            stored_challenge,
+            infinit::cryptography::rsa::Padding::pss,
+            infinit::cryptography::Oneway::sha256);
+          this->_challenges.erase(it);
+          if (!ok)
+          {
+            ELLE_LOG("%s at %s: Challenge verification failed",
+                     p->sender, source);
+            return;
+          }
+          // extract the key cyphered with our passport
           elle::Buffer password = doughnut()->keys().k().open(
             p->encrypted_key,
             infinit::cryptography::Cipher::aes256,
@@ -3073,6 +3114,18 @@ namespace infinit
         if (!result)
           throw elle::Error(elle::sprintf("Node %s not found", address));
         return make_peer(*result);
+      }
+
+      packet::RequestKey
+      Node::make_key_request()
+      {
+        packet::RequestKey req(doughnut()->passport());
+        req.sender = _self;
+        req.token = infinit::cryptography::random::generate<elle::Buffer>(128);
+        req.challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+        _challenges.insert(std::make_pair(req.token.string(), req.challenge));
+        ELLE_DEBUG("Storing challenge %x", req.token);
+        return req;
       }
 
       elle::json::Json
