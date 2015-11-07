@@ -49,6 +49,12 @@ namespace infinit
         , _channels()
         , _connection_thread()
       {
+        this->initiate_connect(endpoint);
+      }
+
+      void
+      Remote::initiate_connect(boost::asio::ip::tcp::endpoint endpoint)
+      {
         this->_connect(
           elle::sprintf("%s", endpoint),
           [endpoint, this] () -> std::iostream&
@@ -91,6 +97,14 @@ namespace infinit
         , _channels()
         , _connection_thread()
       {
+        this->initiate_connect(endpoints, peer_id, server);
+      }
+
+      void
+      Remote::initiate_connect(std::vector<boost::asio::ip::udp::endpoint> endpoints,
+                               std::string const& peer_id,
+                               reactor::network::UTPServer& server)
+      {
         this->_connect(
           elle::sprintf("%s", endpoints),
           [this, endpoints, peer_id, &server] () -> std::iostream&
@@ -115,6 +129,8 @@ namespace infinit
       {
         this->_connector = socket;
         this->_endpoint = endpoint;
+        if (this->_connection_thread)
+          this->_connection_thread->terminate_now();
         this->_connection_thread.reset(
           new reactor::Thread(
             elle::sprintf("%s connection", *this),
@@ -169,33 +185,6 @@ namespace infinit
       | Blocks |
       `-------*/
 
-      void Peer::connect_retry()
-      {
-        static const int timeout_sec =
-        std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "0"));
-        elle::DurationOpt timeout;
-        if (timeout_sec)
-          timeout = boost::posix_time::seconds(timeout_sec);
-        for (int i=0; i<5; ++i)
-        {
-          try
-          {
-            if (i == 0)
-              this->connect(timeout);
-            else
-              this->reconnect(timeout);
-            return;
-          }
-          catch(reactor::network::Exception const& e)
-          {
-            ELLE_TRACE("attempt %s: remote network exception %s", i, e);
-            if (i == 4)
-              throw;
-            reactor::sleep(boost::posix_time::milliseconds(20*pow(2,i)));
-          }
-        }
-      }
-
       void
       Remote::_key_exchange()
       {
@@ -242,9 +231,7 @@ namespace infinit
       {
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
-        this->connect_retry();
-        RPC<void (blocks::Block const&, StoreMode)> store
-        ("store", *this->_channels, &this->_credentials);
+        auto store = make_rpc<void (blocks::Block const&, StoreMode)>("store");
         store(block, mode);
       }
 
@@ -252,10 +239,8 @@ namespace infinit
       Remote::fetch(Address address) const
       {
         ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
-        elle::unconst(this)->connect_retry();
-        RPC<std::unique_ptr<blocks::Block> (Address)> fetch(
-          "fetch", *const_cast<Remote*>(this)->_channels,
-          &const_cast<Remote*>(this)->_credentials);
+        auto fetch = elle::unconst(this)->make_rpc<std::unique_ptr<blocks::Block>
+          (Address)>("fetch");
         fetch.set_context<Doughnut*>(&this->_doughnut);
         return fetch(address);
       }
@@ -264,9 +249,7 @@ namespace infinit
       Remote::remove(Address address)
       {
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
-        this->connect_retry();
-        RPC<void (Address)> remove("remove", *this->_channels,
-          &this->_credentials);
+        auto remove = make_rpc<void (Address)>("remove");
         remove(address);
       }
 

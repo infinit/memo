@@ -212,6 +212,7 @@ def configure(
     'src/infinit/model/doughnut/Peer.hh',
     'src/infinit/model/doughnut/Remote.cc',
     'src/infinit/model/doughnut/Remote.hh',
+    'src/infinit/model/doughnut/Remote.hxx',
     'src/infinit/model/doughnut/Replicator.cc',
     'src/infinit/model/doughnut/Replicator.hh',
     'src/infinit/model/doughnut/UB.cc',

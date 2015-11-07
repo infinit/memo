@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_REMOTE_HH
 # define INFINIT_MODEL_DOUGHNUT_REMOTE_HH
 
+# include <elle/utils.hh>
+
 # include <reactor/network/tcp-socket.hh>
 # include <reactor/network/utp-socket.hh>
 # include <reactor/thread.hh>
@@ -19,6 +21,9 @@ namespace infinit
   {
     namespace doughnut
     {
+      template<typename F>
+      class RemoteRPC;
+
       class Remote
         : public Peer
       {
@@ -64,8 +69,14 @@ namespace infinit
         virtual
         void
         reconnect(elle::DurationOpt timeout = elle::DurationOpt()) override;
+        void
+        initiate_connect(std::vector<boost::asio::ip::udp::endpoint> endpoints,
+                         std::string const& peer_id,
+                         reactor::network::UTPServer& server);
+        void
+        initiate_connect(boost::asio::ip::tcp::endpoint endpoint);
         template<typename F>
-        RPC<F>
+        RemoteRPC<F>
         make_rpc(std::string const& name);
       private:
         void
@@ -77,6 +88,11 @@ namespace infinit
         ELLE_ATTRIBUTE(std::string, endpoint);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
+        /* Callback is expected to retry an async connection, with
+           potentially updated endpoints. Should return false if it
+           did nothing.
+        */
+        ELLE_ATTRIBUTE_RW(std::function<bool (Remote&)>, retry_connect);
       /*-------.
       | Blocks |
       `-------*/
@@ -102,13 +118,31 @@ namespace infinit
       };
 
       template<typename F>
-      RPC<F>
+      class RemoteRPC
+      : public RPC<F>
+      {
+      public:
+        typedef RPC<F> Super;
+        RemoteRPC(std::string name, Remote* remote)
+          : Super(name, *remote->channels(),
+                  elle::unconst(&remote->credentials()))
+          , _remote(remote)
+          {}
+        template<typename ...Args>
+        typename Super::result_type
+        operator()(Args const& ... args);
+        Remote* _remote;
+      };
+      template<typename F>
+      RemoteRPC<F>
       Remote::make_rpc(std::string const& name)
       {
-        return RPC<F>(name, *this->_channels, &this->_credentials);
+        return RemoteRPC<F>(name, this);
       }
     }
   }
 }
+
+#include <infinit/model/doughnut/Remote.hxx>
 
 #endif

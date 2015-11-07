@@ -143,7 +143,6 @@ namespace infinit
           {
             auto& member = this->member();
             return network_exception_to_unavailable([&] {
-              member.connect_retry();
               if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
                 return local->propose(
                   q, this->_address, p);
@@ -162,7 +161,6 @@ namespace infinit
           {
             auto& member = this->member();
             return network_exception_to_unavailable([&] {
-              member.connect_retry();
               if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
                 return local->accept(
                   q, this->_address, p, value);
@@ -206,7 +204,6 @@ namespace infinit
                                    PaxosClient::Proposal const& p)
         {
           return network_exception_to_unavailable([&] {
-            this->connect();
             auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
               PaxosServer::Quorum,
               Address,
@@ -223,7 +220,6 @@ namespace infinit
                                   std::shared_ptr<blocks::Block> const& value)
         {
           return network_exception_to_unavailable([&] {
-            this->connect();
             auto accept = make_rpc<Paxos::PaxosClient::Proposal (
               PaxosServer::Quorum peers,
               Address,

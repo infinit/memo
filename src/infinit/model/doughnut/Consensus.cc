@@ -125,7 +125,6 @@ namespace infinit
             {
               s.run_background("remove", [this, p, address,&count]
               {
-                p->connect_retry();
                 p->remove(address);
                 ++count;
               });

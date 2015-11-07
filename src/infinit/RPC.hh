@@ -345,7 +345,7 @@ namespace infinit
 
     elle::serialization::Context _context;
     ELLE_ATTRIBUTE_R(std::string, name);
-    ELLE_ATTRIBUTE_R(protocol::ChanneledStream&, channels);
+    ELLE_ATTRIBUTE_R(protocol::ChanneledStream*, channels, protected);
     std::unique_ptr<infinit::cryptography::SecretKey> _key;
   };
 
@@ -365,6 +365,7 @@ namespace infinit
 
     void
     operator ()(Args const& ... args);
+    typedef void result_type;
   };
 
   template <typename R, typename ... Args>
@@ -379,6 +380,7 @@ namespace infinit
 
     R
     operator ()(Args const& ... args);
+    typedef R result_type;
   };
 
   template <typename T>
@@ -451,7 +453,7 @@ namespace infinit
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       ELLE_TRACE_SCOPE("%s: call", self);
-      protocol::Channel channel(self.channels());
+      protocol::Channel channel(*self.channels());
       {
         elle::Buffer call;
         elle::IOStream outs(call.ostreambuf());
@@ -507,7 +509,7 @@ namespace infinit
                           elle::Buffer* credentials
     )
     : _name(std::move(name))
-    , _channels(channels)
+    , _channels(&channels)
     {
       if (credentials && !credentials->empty())
       {

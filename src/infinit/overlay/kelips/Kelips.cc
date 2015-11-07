@@ -2894,6 +2894,11 @@ namespace infinit
                 endpoints,
                 uid,
                 elle::unconst(this)->_remotes_server));
+            std::dynamic_pointer_cast<model::doughnut::Remote>(res)
+              ->retry_connect(std::function<bool(model::doughnut::Remote&)>(
+                std::bind(&Node::remote_retry_connect,
+                          this, std::placeholders::_1,
+                          uid)));
             //cache[hosts.first] = res;
             return res;
           }
@@ -2922,6 +2927,27 @@ namespace infinit
           }
         }
         throw elle::Error(elle::sprintf("Failed to connect to %s", hosts));
+      }
+
+      bool
+      Node::remote_retry_connect(model::doughnut::Remote& remote, std::string const& id)
+      {
+        if (id.empty())
+          return false;
+        // Perform a lookup for the node
+        boost::optional<PeerLocation> result;
+        auto address = Address::from_string(id.substr(2));
+        kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
+          {
+            result = p;
+          });
+        if (!result)
+          return false;
+        std::vector<GossipEndpoint> ge;
+        for (auto const& e: result->second)
+          ge.push_back(e2e(e));
+        remote.initiate_connect(ge, id, _remotes_server);
+        return true;
       }
 
       reactor::Generator<Node::Member>

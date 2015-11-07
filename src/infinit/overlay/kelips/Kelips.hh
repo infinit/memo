@@ -8,6 +8,7 @@
 # include <elle/serialization/Serializer.hh>
 
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/storage/Storage.hh>
 
 #include <cryptography/SecretKey.hh>
@@ -298,6 +299,8 @@ namespace infinit
         Node::Member
         make_peer(PeerLocation pl);
         packet::RequestKey make_key_request();
+        bool remote_retry_connect(model::doughnut::Remote& remote,
+                                  std::string const& uid);
         Address _self;
         Address _ping_target;
         Time _ping_time;
