@@ -87,6 +87,8 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
         ELLE_ATTRIBUTE_RX(RPCServer, rpcs);
+        std::unordered_map<std::string, std::pair<elle::Buffer, Passport>>
+          _challenges;
       protected:
         virtual
         void

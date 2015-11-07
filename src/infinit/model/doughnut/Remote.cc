@@ -122,11 +122,19 @@ namespace infinit
             {
               try
               {
+                ELLE_TRACE("Connecting socket");
                 this->_serializer.reset(
                   new protocol::Serializer(socket(), false));
+                ELLE_TRACE("Establishing channel");
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
-                _key_exchange();
+                static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
+                if (disable_key)
+                {
+                  ELLE_TRACE("Exchanging keys");
+                  _key_exchange();
+                }
+                ELLE_TRACE("Connected");
               }
               catch (reactor::network::Exception const&)
               { // Upper layers may retry on network::Exception
@@ -191,16 +199,27 @@ namespace infinit
       void
       Remote::_key_exchange()
       {
+        // challenge, token
+        typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
         ELLE_TRACE("starting key exchange");
-        RPC<std::unique_ptr<Passport>(Passport const&)>
-        auth_syn("auth_syn", *this->_channels, nullptr);
-        auto remote_passport = auth_syn(this->_doughnut.passport());
+        RPC<std::pair<Challenge, std::unique_ptr<Passport>>(Passport const&)>
+          auth_syn("auth_syn", *this->_channels, nullptr);
+        auto challenge_passport = auth_syn(this->_doughnut.passport());
+        auto& remote_passport = challenge_passport.second;
         ELLE_ASSERT(remote_passport);
         // validate res
         bool check = remote_passport->verify(this->_doughnut.owner());
         ELLE_TRACE("got remote passport, check=%s", check);
         if (!check)
+        {
+          ELLE_LOG("Passport validation failed.");
           throw elle::Error("Passport validation failed");
+        }
+        // sign the challenge
+        auto signed_challenge = this->_doughnut.keys().k().sign(
+          challenge_passport.first.first,
+          infinit::cryptography::rsa::Padding::pss,
+          infinit::cryptography::Oneway::sha256);
         // generate, seal
         // dont set _key yet so that our 2 rpcs are in cleartext
         auto key = infinit::cryptography::secretkey::generate(256);
@@ -211,11 +230,11 @@ namespace infinit
           infinit::cryptography::Cipher::aes256,
           infinit::cryptography::Mode::cbc);
         ELLE_TRACE("Invoking auth_ack...");
-        RPC<bool(elle::Buffer const&)> auth_ack("auth_ack", *this->_channels,
-          nullptr);
-        auth_ack(sealed_key);
-        ELLE_TRACE("...done");
+        RPC<bool(elle::Buffer const&, elle::Buffer const&, elle::Buffer const&)>
+        auth_ack("auth_ack", *this->_channels, nullptr);
+        auth_ack(sealed_key, challenge_passport.first.second, signed_challenge);
         _credentials = std::move(password);
+        ELLE_TRACE("...done");
       }
 
       void

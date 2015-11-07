@@ -487,7 +487,8 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: get result", self);
           auto res = get_result<R>(input);
-          ELLE_DUMP("%s: result: %s", self, res);
+          // not everything is printable
+          // ELLE_DUMP("%s: result: %s", self, res);
           return std::move(res);
         }
         else

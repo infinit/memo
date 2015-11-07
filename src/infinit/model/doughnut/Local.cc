@@ -3,6 +3,10 @@
 #include <elle/log.hh>
 #include <elle/utility/Move.hh>
 
+#include <cryptography/random.hh>
+#include <cryptography/rsa/PublicKey.hh>
+#include <cryptography/rsa/Padding.hh>
+
 #include <reactor/Scope.hh>
 
 #include <infinit/model/doughnut/ACB.hh>
@@ -200,21 +204,60 @@ namespace infinit
                   {
                     this->remove(address);
                   }));
-        rpcs.add("auth_syn", std::function<Passport*(Passport const&)>(
-          [this] (Passport const& p) -> Passport*
+        rpcs.add("ping",
+                std::function<int(int)>(
+                  [this] (int i)
+                  {
+                    return i;
+                  }));
+        typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
+        rpcs.add("auth_syn", std::function<std::pair<Challenge,Passport*>(Passport const&)>(
+          [this] (Passport const& p) -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("entering auth_syn, dn=%s", this->_doughnut);
-            bool verify = const_cast<Passport&>(p).verify(this->_doughnut->owner());
+            bool verify = const_cast<Passport&>(p).verify(this->_doughnut.owner());
             ELLE_TRACE("auth_syn verify = %s", verify);
             if (!verify)
+            {
+              ELLE_LOG("Passport validation failed");
               throw elle::Error("Passport validation failed");
-            return const_cast<Passport*>(&_doughnut->passport());
+            }
+            // generate and store a challenge to ensure remote owns the passport
+            auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+            auto token = infinit::cryptography::random::generate<elle::Buffer>(128);
+            this->_challenges.insert(std::make_pair(token.string(),
+              std::make_pair(challenge, std::move(p))));
+            return std::make_pair(
+              std::make_pair(challenge, token),
+              const_cast<Passport*>(&_doughnut.passport()));
           }));
-        rpcs.add("auth_ack", std::function<bool(elle::Buffer const&)>(
-          [this](elle::Buffer const& enc_key) -> bool
+        rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
+          elle::Buffer const&, elle::Buffer const&)>(
+          [this](elle::Buffer const& enc_key,
+                 elle::Buffer const& token,
+                 elle::Buffer const& signed_challenge) -> bool
           {
             ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
-            elle::Buffer password = this->_doughnut->keys().k().open(
+            auto it = this->_challenges.find(token.string());
+            if (it == this->_challenges.end())
+            {
+              ELLE_LOG("Challenge token does not exist.");
+              throw elle::Error("challenge token does not exist");
+            }
+            auto& stored_challenge = it->second.first;
+            auto& peer_passport = it->second.second;
+            bool ok = peer_passport.user().verify(
+              signed_challenge,
+              stored_challenge,
+              infinit::cryptography::rsa::Padding::pss,
+              infinit::cryptography::Oneway::sha256);
+            this->_challenges.erase(it);
+            if (!ok)
+            {
+              ELLE_LOG("Challenge verification failed");
+              throw elle::Error("Challenge verification failed");
+            }
+            elle::Buffer password = this->_doughnut.keys().k().open(
               enc_key,
               infinit::cryptography::Cipher::aes256,
               infinit::cryptography::Mode::cbc);
