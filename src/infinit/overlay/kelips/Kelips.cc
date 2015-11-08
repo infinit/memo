@@ -148,7 +148,7 @@ static void retry_forever(elle::Duration start_delay, elle::Duration max_delay,
     }
     catch (elle::Exception const& e)
     {
-      ELLE_WARN("%s: execption %s", action_name, e);
+      ELLE_WARN("%s: execption %s", action_name, e.what());
       delay = std::min(delay * 2, max_delay);
       reactor::sleep(delay);
     }
@@ -1210,7 +1210,15 @@ namespace infinit
             );
         }
         else
-          sock.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
+        {
+          try
+          {
+            sock.send_to(reactor::network::Buffer(b.contents(), b.size()), e);
+          }
+          catch (reactor::network::Exception const&)
+          { // FIXME: do something
+          }
+        }
       }
 
       void
@@ -3110,7 +3118,13 @@ namespace infinit
           memcpy(b.mutable_contents(), "KELIPSGS", 8);
           auto& sock =
             this->local() ? *this->local()->utp_server()->socket() : _gossip;
-          sock.send_to(reactor::network::Buffer(b.contents(), b.size()), res);
+          try
+          {
+            sock.send_to(reactor::network::Buffer(b.contents(), b.size()), res);
+          }
+          catch (reactor::network::Exception const&)
+          { // FIXME: do something
+          }
         }
       }
 
