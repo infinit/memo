@@ -493,7 +493,13 @@ namespace infinit
         }
         catch (boost::filesystem::filesystem_error const&)
         {}
-        driver->mount(mountpoint.get(), {"infinit-volume", "-o", "noatime", "-o", "hard_remove"});
+        driver->mount(mountpoint.get(), {"infinit-volume",
+            "-o", "noatime",
+            "-o", "hard_remove",
+#ifdef INFINIT_MACOSX
+            "-o", "daemon_timeout=600",
+#endif
+        });
       }
       return driver;
     }
