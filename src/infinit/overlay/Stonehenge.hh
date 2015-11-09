@@ -14,8 +14,20 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
+      struct Peer
+      {
+        model::Address id;
+        struct Endpoint
+        {
+          std::string host;
+          int port;
+        };
+        boost::optional<Endpoint> endpoint;
+        Peer(model::Address id);
+        Peer(model::Address id, Endpoint e);
+      };
       typedef boost::asio::ip::tcp::endpoint Host;
-      typedef std::vector<std::pair<Host, model::Address>> Peers;
+      typedef std::vector<Peer> Peers;
       Stonehenge(model::Address node_id,
                  Peers hosts, model::doughnut::Doughnut* doughnut);
       ELLE_ATTRIBUTE_R(Peers, peers);
@@ -32,6 +44,10 @@ namespace infinit
       virtual
       Overlay::Member
       _lookup_node(model::Address address) override;
+
+    private:
+      Overlay::Member
+      _make_member(Peer const& p) const;
     };
 
     struct StonehengeConfiguration

@@ -38,12 +38,14 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Local(Address id,
-              std::unique_ptr<storage::Storage> storage, int port = 0,
+        Local(Doughnut& dht,
+              Address id,
+              std::unique_ptr<storage::Storage> storage,
+              int port = 0,
               Protocol p = Protocol::all);
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
-        ELLE_ATTRIBUTE_RX(Doughnut*, doughnut);
+        ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 
       /*-----------.
       | Networking |

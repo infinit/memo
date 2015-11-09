@@ -19,8 +19,7 @@ namespace infinit
         public:
           Consensus(Doughnut& doughnut);
           virtual ~Consensus() {}
-        protected:
-          Doughnut& _doughnut;
+          ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 
         /*-------.
         | Blocks |
@@ -58,6 +57,15 @@ namespace infinit
           _owner(overlay::Overlay& overlay,
                  Address const& address,
                  overlay::Operation op) const;
+
+        /*--------.
+        | Factory |
+        `--------*/
+        public:
+          virtual
+          std::unique_ptr<Local>
+          make_local(boost::optional<int> port,
+                     std::unique_ptr<storage::Storage> storage);
 
         /*----------.
         | Printable |

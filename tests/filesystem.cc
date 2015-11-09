@@ -1,17 +1,14 @@
 
 #include <boost/filesystem/fstream.hpp>
 
-#include <elle/os/environ.hh>
-
-#include <elle/test.hh>
-
+#include <elle/UUID.hh>
 #include <elle/format/base64.hh>
-
+#include <elle/os/environ.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
-
 #include <elle/system/Process.hh>
-#include <elle/UUID.hh>
+#include <elle/test.hh>
+#include <elle/utils.hh>
 
 #include <reactor/scheduler.hh>
 
@@ -56,7 +53,7 @@ reactor::Scheduler* sched;
 
 std::vector<std::string> mount_points;
 std::vector<infinit::cryptography::rsa::PublicKey> keys;
-std::vector<std::unique_ptr<infinit::model::doughnut::Local>> nodes;
+std::vector<std::unique_ptr<infinit::model::doughnut::Doughnut>> nodes;
 std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
@@ -165,7 +162,10 @@ static void make_nodes(std::string store, int node_count,
   nodes_sched = &s;
   reactor::Thread t(s, "nodes", [&] {
     for (int i = 0; i < node_count; ++i)
+      peers.emplace_back(infinit::model::Address::random());
+    for (int i = 0; i < node_count; ++i)
     {
+      // Create storage
       std::unique_ptr<infinit::storage::Storage> s;
       if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
         s.reset(new infinit::storage::Memory());
@@ -176,29 +176,6 @@ static void make_nodes(std::string store, int node_count,
         boost::filesystem::create_directories(tmp);
         s.reset(new infinit::storage::Filesystem(tmp));
       }
-      infinit::model::doughnut::Local* l = nullptr;
-      if (paxos)
-        l = new infinit::model::doughnut::consensus::Paxos::LocalPeer(
-          3, infinit::model::Address::random(), std::move(s));
-      else
-        l = new infinit::model::doughnut::Local(
-          infinit::model::Address::random(), std::move(s));
-      auto ep = l->server_endpoint();
-      endpoints.emplace_back(boost::asio::ip::address::from_string("127.0.0.1"),
-                             ep.port());
-      nodes.emplace_back(l);
-    }
-    // attribute ids
-    peers.clear();
-    for (int i = 0; i < node_count; ++i)
-      peers.push_back(std::make_pair(
-        endpoints[i],
-        nodes[i]->id()
-        ));
-
-    // now give each a model
-    for (int i = 0; i < node_count; ++i)
-    {
       auto kp = infinit::cryptography::rsa::keypair::generate(2048);
       infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner.k());
       infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
@@ -212,22 +189,28 @@ static void make_nodes(std::string store, int node_count,
             return elle::make_unique<
               infinit::model::doughnut::consensus::Consensus>(dht);
         };
-      auto model =
-        new infinit::model::doughnut::Doughnut(
-          std::move(kp),
-          owner.K(),
-          passport,
-          consensus,
-          infinit::model::doughnut::Doughnut::OverlayBuilder(
-            [=] (infinit::model::doughnut::Doughnut& dht, bool)
-            {
-              return elle::make_unique<infinit::overlay::Stonehenge>(
-                peers[i].second, peers, &dht);
-            }),
-          nullptr);
-      nodes[i]->doughnut() = model;
-      nodes[i]->serve();
+      infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
+        [=] (infinit::model::doughnut::Doughnut& dht, bool)
+        {
+          return elle::make_unique<infinit::overlay::Stonehenge>(
+            peers[i].id, peers, &dht);
+        };
+      nodes.emplace_back(new infinit::model::doughnut::Doughnut(
+                           std::move(kp),
+                           owner.K(),
+                           passport,
+                           consensus,
+                           overlay,
+                           boost::optional<int>(),
+                           std::move(s)));
     }
+    for (int i = 0; i < node_count; ++i)
+      peers[i].endpoint = infinit::overlay::Stonehenge::Peer::Endpoint{
+        "127.0.0.1", nodes[i]->local()->server_endpoint().port()};
+    for (auto const& node: nodes)
+      elle::unconst(static_cast<infinit::overlay::Stonehenge*>(
+                      node->overlay().get())->peers()) = peers;
+
   });
   ELLE_LOG("Running node scheduler");
   s.run();
@@ -270,7 +253,6 @@ run_filesystem_dht(std::string const& store,
       }
       mount_points.push_back(mp);
       boost::filesystem::create_directories(mp);
-
       if (nmount == 1)
       {
         ELLE_TRACE("configuring mounter...");
@@ -280,16 +262,22 @@ run_filesystem_dht(std::string const& store,
         infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys.k());
         ELLE_TRACE("instantiating dougnut...");
         infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
-        [paxos] (infinit::model::doughnut::Doughnut& dht)
+          [paxos] (infinit::model::doughnut::Doughnut& dht)
           -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
-        {
-          if (paxos)
-            return elle::make_unique<
-              infinit::model::doughnut::consensus::Paxos>(dht, 3);
-          else
-            return elle::make_unique<
-              infinit::model::doughnut::consensus::Consensus>(dht);
-        };
+          {
+            if (paxos)
+              return elle::make_unique<
+            infinit::model::doughnut::consensus::Paxos>(dht, 3);
+            else
+              return elle::make_unique<
+            infinit::model::doughnut::consensus::Consensus>(dht);
+          };
+        infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
+          [=] (infinit::model::doughnut::Doughnut& dht, bool)
+          {
+            return elle::make_unique<infinit::overlay::Stonehenge>(
+              infinit::model::Address::random(), peers, &dht);
+          };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
           "testnet",
@@ -297,12 +285,8 @@ run_filesystem_dht(std::string const& store,
           owner_keys.K(),
           passport,
           consensus,
-          infinit::model::doughnut::Doughnut::OverlayBuilder(
-            [=] (infinit::model::doughnut::Doughnut& dht, bool)
-            {
-              return elle::make_unique<infinit::overlay::Stonehenge>(
-                infinit::model::Address::random(), peers, &dht);
-            }),
+          overlay,
+          boost::optional<int>(),
           nullptr);
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
@@ -323,7 +307,6 @@ run_filesystem_dht(std::string const& store,
             processes.clear();
             reactor::scheduler().terminate();
 #endif
-
             });
       }
       else
@@ -365,11 +348,11 @@ run_filesystem_dht(std::string const& store,
           for (auto const& p: peers)
           {
             elle::json::Object po;
-            po["host"] = p.first.address().to_string();
-            po["port"] = p.first.port();
+            po["host"] = p.endpoint->host;
+            po["port"] = p.endpoint->port;
             po["id"] = elle::format::base64::encode(
               elle::ConstWeakBuffer(
-                p.second.value(),
+                p.id.value(),
                 sizeof(infinit::model::Address::Value))).string();
             v.push_back(po);
           }

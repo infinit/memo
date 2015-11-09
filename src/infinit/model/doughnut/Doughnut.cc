@@ -43,18 +43,24 @@ namespace infinit
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
-                         std::shared_ptr<Local> local)
+                         boost::optional<int> port,
+                         std::unique_ptr<storage::Storage> storage)
         : _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _consensus(consensus(*this))
-        , _overlay(overlay_builder(*this, bool(local)))
-        , _local(std::move(local))
+          // FIXME: initialize overlay with bool(this->_local) instead when the
+          // id is in doughnut
+        , _overlay(overlay_builder(*this, bool(storage)))
+        , _local(nullptr)
       {
+        if (storage)
+          this->_local =
+            this->_consensus->make_local(std::move(port), std::move(storage));
         if (this->_local)
         {
-          this->_local->doughnut() = this;
           this->overlay()->register_local(this->_local);
+          this->_local->serve();
         }
       }
 
@@ -64,13 +70,15 @@ namespace infinit
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
-                         std::shared_ptr<Local> local)
+                         boost::optional<int> port,
+                         std::unique_ptr<storage::Storage> storage)
         : Doughnut(std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(consensus),
                    std::move(overlay_builder),
-                   std::move(local))
+                   std::move(port),
+                   std::move(storage))
       {
         auto check_user_blocks = [name, this]
           {
@@ -302,22 +310,10 @@ namespace infinit
           {
             return this->overlay->make(hosts, server, &dht);
           };
-        std::shared_ptr<Local> local;
+        auto port = this->port ? this->port.get() : 0;
+        std::unique_ptr<storage::Storage> storage;
         if (this->storage)
-        {
-          auto storage = this->storage->make();
-          auto port = this->port ? this->port.get() : 0;
-          auto id = this->overlay->node_id();
-          // FIXME: let the consensus instantiate peers
-          if (auto* paxos = dynamic_cast<consensus::Paxos::Configuration*>(
-                this->consensus.get()))
-            local = std::make_shared<
-              infinit::model::doughnut::consensus::Paxos::LocalPeer>(
-                paxos->replication_factor(), id, std::move(storage), port);
-          else
-            local = std::make_shared<infinit::model::doughnut::Local>(
-              id, std::move(storage), port);
-        }
+          storage = this->storage->make();
         std::unique_ptr<Doughnut> dht;
         if (!client || !this->name)
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -326,7 +322,8 @@ namespace infinit
             passport,
             std::move(consensus),
             std::move(overlay),
-            local);
+            std::move(port),
+            std::move(storage));
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->name.get(),
@@ -335,9 +332,8 @@ namespace infinit
             passport,
             std::move(consensus),
             std::move(overlay),
-            local);
-        if (local)
-          local->serve(); // FIXME: get rid of serve ?
+            std::move(port),
+            std::move(storage));
         return dht;
       }
 

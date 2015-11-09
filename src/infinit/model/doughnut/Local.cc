@@ -29,13 +29,15 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Local::Local(Address id,
+      Local::Local(Doughnut& dht,
+                   Address id,
                    std::unique_ptr<storage::Storage> storage,
                    int port,
                    Protocol p)
         : Super(std::move(id))
         , _storage(std::move(storage))
-        , _doughnut(nullptr)
+        , _doughnut(dht)
+        , _rpcs(&dht)
       {
         if (p == Protocol::tcp || p == Protocol::all)
         {
@@ -97,7 +99,7 @@ namespace infinit
             auto previous_buffer = this->_storage->get(block.address());
             elle::IOStream s(previous_buffer.istreambuf());
             typename elle::serialization::binary::SerializerIn input(s);
-            input.set_context<Doughnut*>(this->_doughnut);
+            input.set_context<Doughnut*>(&this->_doughnut);
             auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
             auto mprevious =
               dynamic_cast<blocks::MutableBlock const*>(previous.get());
@@ -138,7 +140,7 @@ namespace infinit
         }
         ELLE_DUMP("data: %s", data.string());
         elle::serialization::Context ctx;
-        ctx.set<Doughnut*>(this->_doughnut);
+        ctx.set<Doughnut*>(&this->_doughnut);
         auto res = elle::serialization::binary::deserialize<
           std::unique_ptr<blocks::Block>>(data, true, ctx);
         on_fetch(address, res);
@@ -220,8 +222,7 @@ namespace infinit
               name,
               [this, socket]
               {
-                _rpcs.set_context<Doughnut*>(this->_doughnut);
-                _rpcs._doughnut = this->_doughnut;
+                _rpcs.set_context<Doughnut*>(&this->_doughnut);
                 _rpcs.serve(**socket);
               });
           }

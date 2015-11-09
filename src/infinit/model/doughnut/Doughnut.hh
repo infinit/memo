@@ -36,14 +36,16 @@ namespace infinit
                  Passport passport,
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
-                 std::shared_ptr<Local> local);
+                 boost::optional<int> port,
+                 std::unique_ptr<storage::Storage> local);
         Doughnut(std::string const& name,
                  infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
-                 std::shared_ptr<Local> local);
+                 boost::optional<int> port,
+                 std::unique_ptr<storage::Storage> local);
         ~Doughnut();
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
