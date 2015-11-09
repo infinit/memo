@@ -58,13 +58,23 @@ COMMAND(invite)
       permissions = *o;
   }
 
-  infinit::Invitation invitation{user,
-                                 permissions,
+  infinit::Invitation invitation{permissions,
                                  "pending",
                                  home};
 
   auto url = elle::sprintf("drives/%s/invite/%s", drive_name_, user);
-  beyond_push(url, "invitation", drive_name_, invitation, owner);
+
+  try
+  {
+    beyond_push(url, "invitation", drive_name_, invitation, owner);
+  }
+  catch (MissingResource const& e)
+  {
+    if (e.what() == std::string("user/not_found"))
+      not_found(user, "User");
+    else if (e.what() == std::string("drive/not_found"))
+      not_found(drive_name_, "Drive");
+  }
 }
 
 COMMAND(push)

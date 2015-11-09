@@ -13,6 +13,7 @@
 #include <elle/os/environ.hh>
 #include <elle/system/home_directory.hh>
 #include <elle/system/username.hh>
+#include <elle/json/exceptions.hh>
 
 #include <das/model.hh>
 #include <das/serializer.hh>
@@ -84,6 +85,14 @@ public:
     : elle::Error(std::forward<Args>(args)...)
   {}
 };
+
+void
+not_found(std::string const& name,
+          std::string const& type)
+{
+  std::cerr <<
+    elle::sprintf("%s %s not found on the Hub", type, name) << std::endl;
+}
 
 DAS_MODEL(Credentials,
           (uid, display_name, token, refresh_token),
@@ -547,13 +556,11 @@ namespace infinit
     void
     serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("user", this->user);
       s.serialize("permissions", this->permissions);
       s.serialize("status", this->status);
       s.serialize("create_home", this->create_home);
     }
 
-    std::string user;
     // Values: "default", "r", "w", "x" and any combination of the 3.
     std::string permissions;
     // Values: "pending", "accepted" or "rejected".
@@ -1439,6 +1446,21 @@ beyond_push(std::string const& where,
   {
     throw elle::Error(elle::sprintf(
       "%s \"%s\" already exists with a different key", type, name));
+  }
+  else if (r.status() == reactor::http::StatusCode::Not_Found)
+  {
+    try
+    {
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+      auto error = boost::any_cast<std::string>(json["error"]);
+      throw MissingResource(error);
+    }
+    catch(elle::json::ParseError const&)
+    {
+      throw elle::Error(
+        elle::sprintf("unexpected HTTP error %s pushing %s",
+                      r.status(), type));
+    }
   }
   else
   {

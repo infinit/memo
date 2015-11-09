@@ -439,12 +439,26 @@ class Bottle(bottle.Bottle):
     return self.drive_from_name(owner, name).json()
 
   def drive_invite_put(self, owner, name, user):
-    user = self.user_from_name(name = user)
+    try:
+      self.user_from_name(name = user)
+    except:
+      raise Response(404, {
+        'error': 'user/not_found',
+        'reason': 'User %s not found' % user
+      })
+
     owner_user = self.user_from_name(name = owner)
     self.authenticate(owner_user)
-    drive = self.drive_from_name(owner = owner, name = name)
+    drive = None
+    try:
+      drive = self.drive_from_name(owner = owner, name = name)
+    except:
+      raise Response(404, {
+        'error': 'drive/not_found',
+        'reason': 'Drive %s not found' % drive
+      })
     json = bottle.request.json
-    drive.users[user.name] = json
+    drive.users[user] = json
     drive.save()
     raise Response(201, {}) # FIXME: 200 if existed
 
