@@ -359,7 +359,7 @@ body.home {
     padding: 30px 17% 50px 17%; text-align: center;
 
     div.usecase {
-      padding: 20px 3% 20px 3%; display: block;
+      padding: 30px 3% 30px 3%; margin: 0 10%; display: block;
       border-bottom: 1px solid #E4E4E4; text-align: left;
     }
 
@@ -367,9 +367,9 @@ body.home {
     div.usecase.dht img { margin: 0 75px 0 10px; }
     div.usecase.fs img { margin-right: 55px; margin-top: 7px; }
     div.usecase.fs { border: none; }
-    img { float: left; margin-right: 70px; .transition(); max-height: 90px; }
-    div h2 { font-size: 17px; font-weight: bold; margin-bottom: 0;}
-    div p { font-size: 15px; color: #939393;}
+    img { float: left; margin-right: 70px; .transition(); max-height: 110px; }
+    div h2 { font-size: 19px; font-weight: bold; margin-bottom: 0;}
+    div p { font-size: 17px; color: #939393;}
     a.more { color: @infinitblue; font-weight: bold; font-size: 16px;}
     a.button { margin: 30px 0 50px 0;}
   }
@@ -389,14 +389,22 @@ body.home {
   }
 
   section.download {
-    background: #F9F9F9;
+    background: #F9F9F9; padding-top: 40px;
+    p.title { text-align: center;}
     &:after { display: table; clear: both; content: ''; }
 
-    div { width: 25%; float: left; padding: 90px 4%; text-align: center; }
+    div:last-child img { margin-bottom: 8px;}
+
+    div { width: 25%; float: left; padding: 30px 4% 120px 4%; text-align: center; }
     div img { max-width: 250px; }
     div h4 { margin-bottom: 0; font-size: 18px; }
-    div p { font-size: 15px; color: @infinitgray; margin-top: 5px; }
+    div p { font-size: 15px; color: darken(@infinitgray, 10%); margin-top: 5px; }
     div .button { margin-top: 15px; }
+    div span {
+      background: lighten(@infinitgray, 20%); border-radius: 4px; padding: 2px 6px;
+      color: lighten(#333, 35%);
+      font-size: 12px; display: inline-block; margin: 5px 0;
+    }
   }
 }
 

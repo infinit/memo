@@ -118,6 +118,8 @@ def configure(
     'resources/images/terminal-mini@2x.png',
     'resources/images/branded-apps.png',
     'resources/images/branded-apps@2x.png',
+    'resources/images/desktop-client-mini.png',
+    'resources/images/desktop-client-mini@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
