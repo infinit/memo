@@ -113,26 +113,35 @@ read_passphrase()
 }
 
 static
+infinit::User
+create_(std::string const& name,
+        boost::optional<std::string> const& keys_file)
+{
+  auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
+  {
+    if (keys_file)
+    {
+      auto passphrase = read_passphrase();
+      return infinit::cryptography::rsa::pem::import_keypair(
+          keys_file.get(), passphrase);
+    }
+    else
+    {
+      report("generating RSA keypair");
+      return infinit::cryptography::rsa::keypair::generate(2048);
+    }
+  }();
+
+  return infinit::User{name, keys};
+}
+
+static
 void
 create(variables_map const& args)
 {
   auto name = get_name(args);
   auto keys_file = optional(args, "key");
-  auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
-    {
-      if (keys_file)
-      {
-        auto passphrase = read_passphrase();
-        return infinit::cryptography::rsa::pem::import_keypair(
-          keys_file.get(), passphrase);
-      }
-      else
-      {
-        report("generating RSA keypair");
-        return infinit::cryptography::rsa::keypair::generate(2048);
-      }
-    }();
-  infinit::User user(name, keys);
+  infinit::User user = create_(name, keys_file);
   ifnt.user_save(user);
   report_action("generated", "user", name, std::string("locally"));
 }
@@ -156,7 +165,7 @@ push(variables_map const& args)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
-  das::Serializer<infinit::DasPublicUser> view(user);
+  das::Serializer<infinit::DasPublicUser> view{user};
   beyond_push("user", user.name, view, user);
 }
 
@@ -190,8 +199,22 @@ static
 void
 signup_(variables_map const& args)
 {
-  create(args);
-  push(args);
+  auto name = get_name(args);
+  auto keys_file = optional(args, "key");
+  infinit::User user = create_(name, keys_file);
+  das::Serializer<infinit::DasPublicUser> view{user};
+  try
+  {
+    ifnt.user_get(name);
+  }
+  catch (elle::Error const&)
+  {
+    beyond_push("user", user.name, view, user);
+    ifnt.user_save(user);
+    report_action("saved", "user", name, std::string("locally"));
+    return;
+  }
+  throw elle::Error(elle::sprintf("User %s already exists locally", name));
 }
 
 static
