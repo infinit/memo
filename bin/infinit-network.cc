@@ -361,7 +361,7 @@ join(variables_map const& args)
       {
         throw CommandLineError(elle::sprintf(
           "no passport for %s, use --fetch to fetch one from %s or --input to "
-          "use a previously exported one", user.name, beyond()));
+          "use a previously exported one", user.name, beyond(true)));
       }
     }();
 
@@ -575,9 +575,9 @@ main(int argc, char** argv)
         { "async", bool_switch(), "use asynchronous operations" },
         option_output("network"),
         { "push-network", bool_switch(),
-          elle::sprintf("push the network to %s", beyond()).c_str() },
+          elle::sprintf("push the network to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(),
-          elle::sprintf("push the network to %s", beyond()).c_str() },
+          elle::sprintf("push the network to %s", beyond(true)).c_str() },
         option_owner,
       },
       {
@@ -627,7 +627,7 @@ main(int argc, char** argv)
         { "user,u", value<std::string>(), "user to create the passport for" },
         option_output("passport"),
         { "push-passport", bool_switch(),
-          elle::sprintf("push the passport to %s", beyond()).c_str() },
+          elle::sprintf("push the passport to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-passport" },
         option_owner,
       },
@@ -640,7 +640,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to join" },
         { "fetch-passport", bool_switch(),
-          elle::sprintf("fetch the passport from %s", beyond()).c_str() },
+          elle::sprintf("fetch the passport from %s", beyond(true)).c_str() },
         { "fetch,f", bool_switch(), "alias for --fetch-passport" },
         option_input("passport"),
         { "port", value<int>(), "port to listen on (default: random)" },
@@ -656,7 +656,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a network to %s", beyond()).c_str(),
+      elle::sprintf("Push a network to %s", beyond(true)).c_str(),
       &push,
       "--name NETWORK",
       {
@@ -676,7 +676,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a network from %s", beyond()).c_str(),
+      elle::sprintf("Remove a network from %s", beyond(true)).c_str(),
       &pull,
       "--name NETWORK",
       {
@@ -696,11 +696,11 @@ main(int argc, char** argv)
         { "async", bool_switch(), "use asynchronous operations" },
         { "cache-model", bool_switch(), "enable model caching" },
         { "fetch-endpoints", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+          elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
         { "fetch,f", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+          elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
         { "push-endpoints", bool_switch(),
-          elle::sprintf("push endpoints to %s", beyond()).c_str() },
+          elle::sprintf("push endpoints to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },

@@ -278,7 +278,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a user from %s", beyond()).c_str(),
+      elle::sprintf("Remove a user from %s", beyond(true)).c_str(),
       &pull,
       {},
       {
@@ -298,7 +298,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a user to %s", beyond()).c_str(),
+      elle::sprintf("Push a user to %s", beyond(true)).c_str(),
       &push,
       {},
       {
@@ -308,7 +308,7 @@ main(int argc, char** argv)
     },
     {
       "register",
-      elle::sprintf("Push user to %s (alias for --push)", beyond()).c_str(),
+      elle::sprintf("Push user to %s (alias for --push)", beyond(true)).c_str(),
       &push,
       {},
       {

@@ -1250,11 +1250,11 @@ report_exported(std::ostream& output,
 }
 
 std::string
-beyond();
-
-std::string
-beyond()
+beyond(bool help = false)
 {
+  if (help && !elle::os::inenv("INFINIT_BEYOND"))
+    return "the Hub";
+
   auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
   return res;
 }
