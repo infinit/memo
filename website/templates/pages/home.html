@@ -16,8 +16,7 @@
     <div class="header">
       <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
     </div>
-<pre><code id="commands">
-$> infinit-storage --create --aws-s3 --name s3 --capacity 10TB
+<pre><code id="commands">$> infinit-storage --create --aws-s3 --name s3 --capacity 10TB
 Created storage "s3".
 
 $> infinit-network --create --storage s3 --storage local --name hybrid-cloud
@@ -31,9 +30,7 @@ Created volume "company".
 $> infinit-volume --mount --name company --ountpoint /mnt/company/
 Mounting volume "company".
 
-$> ls /mnt/company/
-Design/     Engineering/      Guidelines.pdf     Human Resources/     Introduction.pdf
-Management/     Marketing/     Product/     Sales/     Support/     User Experience/
+$> cp -R Engineering /mnt/company/
 
 $> ​▎
 </code></pre>
@@ -155,6 +152,28 @@ $> ​▎
     </div>
 
     <!-- <a class="button border black" href="${route('doc_technology')}">More about our technology</a> -->
+  </section>
+
+
+  <section class="download" id="download">
+    <div>
+      <img src="${url('images/terminal-mini.png')}">
+      <h4>Command Line Tools</h4>
+      <p>Build your own storage infratructure in a few minutes.</p>
+      <a href="#" class="button">Download</a>
+    </div>
+    <div>
+      <img src="${url('images/desktop-client.png')}">
+      <h4>Desktop Client</h4>
+      <p>Use a secure cloud file storage with your coworkers or friends.</p>
+      <a href="#" class="button">Download</a>
+    </div>
+    <div>
+      <img src="${url('images/branded-apps.png')}">
+      <h4>Whitelabel Drive</h4>
+      <p>Browse our solutions and build on top of Infinit’s technology.</p>
+      <a href="#" class="button">Browse</a>
+    </div>
   </section>
 
   <section class="estimation">

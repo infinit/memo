@@ -40,11 +40,14 @@
       <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"></a>
 
       <ul>
+        ## <li>
+        ##   <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
+        ## </li>
+        ## <li>
+        ##   <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
+        ## </li>
         <li>
-          ## <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
-        </li>
-        <li>
-          ## <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
+          <a href="${route('home')}#download">Download</a>
         </li>
       </ul>
     </header>
