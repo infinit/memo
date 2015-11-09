@@ -244,6 +244,66 @@ run(variables_map const& args)
           {
             path->mkdir(0777);
           }
+          else if (op == "setxattr")
+          {
+            auto name = command.deserialize<std::string>("name");
+            auto value = command.deserialize<std::string>("value");
+            path->setxattr(name, value, 0);
+          }
+          else if (op == "getxattr")
+          {
+            auto name = command.deserialize<std::string>("name");
+            auto value = path->getxattr(name);
+            elle::serialization::json::SerializerOut response(std::cout);
+            response.serialize("value", value);
+            response.serialize("success", true);
+            continue;
+          }
+          else if (op == "listxattr")
+          {
+            auto attrs = path->listxattr();
+            elle::serialization::json::SerializerOut response(std::cout);
+            response.serialize("entries", attrs);
+            response.serialize("success", true);
+            continue;
+          }
+          else if (op == "removexattr")
+          {
+            auto name = command.deserialize<std::string>("name");
+            path->removexattr(name);
+          }
+          else if (op == "write_file")
+          {
+            auto content = command.deserialize<std::string>("content");
+            auto handle = path->create(O_TRUNC|O_CREAT, 0100666);
+            handle->write(elle::WeakBuffer(elle::unconst(content.data()),
+                                           content.size()),
+                          content.size(), 0);
+            handle->close();
+          }
+          else if (op == "read_file")
+          {
+            struct stat st;
+            path->stat(&st);
+            auto handle = path->open(O_RDONLY, 0666);
+            std::string content(st.st_size, char(0));
+            handle->read(elle::WeakBuffer(elle::unconst(content.data()),
+                                          content.size()),
+                         st.st_size, 0);
+            handle->close();
+            elle::serialization::json::SerializerOut response(std::cout);
+            response.serialize("content", content);
+            response.serialize("success", true);
+            continue;
+          }
+          else if (op == "unlink")
+          {
+            path->unlink();
+          }
+          else if (op == "rmdir")
+          {
+            path->rmdir();
+          }
           else
             throw elle::Error(elle::sprintf("operation %s does not exist", op));
           elle::serialization::json::SerializerOut response(std::cout);

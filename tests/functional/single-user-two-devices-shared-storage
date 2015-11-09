@@ -61,3 +61,39 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   ],
   input = {'operation': 'list_directory', 'path': '/'})
   assertEq(response['entries'], ['beacon'])
+  # XATTRS
+  response = infinit_1.run_script(user = 'user', operation = 'setxattr',
+                                  path = '/beacon',
+                                  name = 'foo', value = 'bar')
+  assertEq(response['success'], True)
+  response = infinit_1.run_script(user = 'user', operation = 'getxattr',
+                                  path = '/beacon',
+                                  name = 'foo')
+  assertEq(response['success'], True)
+  assertEq(response['value'], 'bar')
+  response = infinit_1.run_script(user = 'user', operation = 'listxattr',
+                                  path = '/beacon')
+  assertEq(response['entries'], ['foo'])
+  response = infinit_1.run_script(user = 'user', operation = 'removexattr',
+                                  path = '/beacon',
+                                  name = 'foo')
+  assertEq(response['success'], True)
+  response = infinit_1.run_script(user = 'user', operation = 'getxattr',
+                                  path = '/beacon',
+                                  name = 'foo')
+  assertEq(response['success'], False)
+  # READ/WRITE FILES
+  response = infinit_1.run_script(user = 'user', operation = 'write_file',
+                                  path = '/beacon/readme.txt',
+                                  content = 'foo')
+  assertEq(response['success'], True)
+  response = infinit_1.run_script(user = 'user', operation = 'read_file',
+                                  path = '/beacon/readme.txt')
+  assertEq(response['success'], True)
+  assertEq(response['content'], 'foo')
+  response = infinit_1.run_script(user = 'user', operation = 'unlink',
+                                  path = '/beacon/readme.txt')
+  assertEq(response['success'], True)
+  response = infinit_1.run_script(user = 'user', operation = 'rmdir',
+                                  path = '/beacon')
+  assertEq(response['success'], True)

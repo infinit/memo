@@ -64,6 +64,12 @@ class Infinit(TemporaryDirectory):
       return json.loads(out.decode('utf-8'))
     except:
       return None
+  def run_script(self, user = None, volume='volume', **kvargs):
+    cmd = ['infinit-volume', '--run', volume]
+    if user is not None:
+      cmd += ['--as', user]
+    response = self.run(cmd, input = kvargs)
+    return response
 
 def assertEq(a, b):
   if a != b:
