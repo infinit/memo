@@ -166,12 +166,6 @@ namespace infinit
       | Server |
       `-------*/
 
-      void
-      Local::serve()
-      {
-        this->_server_barrier.open();
-      }
-
       reactor::network::TCPServer::EndPoint
       Local::server_endpoint()
       {
@@ -232,14 +226,12 @@ namespace infinit
       void
       Local::_serve_tcp()
       {
-        reactor::wait(this->_server_barrier);
         this->_serve([this] { return this->_server->accept(); });
       }
 
       void
       Local::_serve_utp()
       {
-        reactor::wait(this->_server_barrier);
         this->_serve([this] { return this->_utp_server->accept(); });
       }
 

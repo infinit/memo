@@ -79,8 +79,6 @@ namespace infinit
       | Server |
       `-------*/
       public:
-        void
-        serve();
         reactor::network::TCPServer::EndPoint
         server_endpoint();
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);

@@ -56,10 +56,7 @@ namespace infinit
           this->_consensus->make_local(std::move(port), std::move(storage)) :
           nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
-      {
-        if (this->_local)
-          this->_local->serve();
-      }
+      {}
 
       Doughnut::Doughnut(Address id,
                          std::string const& name,
