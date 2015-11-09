@@ -1490,7 +1490,7 @@ private:
                      infinit::User const& self,
                      infinit::model::Address const& node_id,
                      int port)
-    : _url(elle::sprintf("networks/%s/endpoints/%s/%s",
+    : _url(elle::sprintf("networks/%s/endpoints/%s/%x",
                          network.name, self.name, node_id))
     , _network(network)
     , _self(self)
@@ -1551,7 +1551,7 @@ beyond_fetch_endpoints(infinit::Network const& network,
     }
     catch (std::exception const& e)
     {
-      ELLE_WARN("Exception parsing peer endpoints: %s", e);
+      ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
     }
   }
 }
