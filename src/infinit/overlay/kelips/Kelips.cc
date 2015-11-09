@@ -2359,7 +2359,6 @@ namespace infinit
             if (it == _state.contacts[_group].end())
             {
               ELLE_TRACE("No contact to forward GET to");
-              reactor::sleep(500_ms);
               continue;
             }
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
