@@ -220,7 +220,7 @@ private:
 
 ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto& dht = *dhts.dht_a;
   {
     elle::Buffer data("\\_o<", 4);
@@ -236,7 +236,7 @@ ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto& dht = *dhts.dht_a;
   {
     auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
@@ -260,7 +260,7 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(async, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto& dht = *dhts.dht_c;
   {
     elle::Buffer data("\\_o<", 4);
@@ -306,7 +306,7 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto block = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
   elle::Buffer data("\\_o<", 4);
   block->data(elle::Buffer(data));
@@ -356,7 +356,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto block = elle::make_unique<dht::NB>(
     dhts.dht_a.get(), dhts.keys_a->K(), "blockname",
     elle::Buffer("blockdata", 9));
@@ -374,7 +374,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   std::unique_ptr<infinit::model::blocks::ACLBlock> block_alice;
   ELLE_LOG("alice: create block")
   {
@@ -424,16 +424,16 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   ELLE_LOG("store blocks")
   {
     DHTs dhts(
-      ::paxos = paxos,
-      ::keys_a = keys_a,
-      ::keys_b = keys_b,
-      ::keys_c = keys_c,
-      ::id_a = id_a,
-      ::id_b = id_b,
-      ::id_c = id_c,
-      ::storage_a = elle::make_unique<storage::Memory>(storage_a),
-      ::storage_b = elle::make_unique<storage::Memory>(storage_b),
-      ::storage_c = elle::make_unique<storage::Memory>(storage_c)
+      paxos,
+      keys_a,
+      keys_b,
+      keys_c,
+      id_a,
+      id_b,
+      id_c,
+      elle::make_unique<storage::Memory>(storage_a),
+      elle::make_unique<storage::Memory>(storage_b),
+      elle::make_unique<storage::Memory>(storage_c)
       );
     // iblock =
     //   dhts.dht_a->make_block<infinit::model::blocks::ImmutableBlock>(
@@ -447,16 +447,16 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   ELLE_LOG("load blocks")
   {
     DHTs dhts(
-      ::paxos = paxos,
-      ::keys_a = keys_a,
-      ::keys_b = keys_b,
-      ::keys_c = keys_c,
-      ::id_a = id_a,
-      ::id_b = id_b,
-      ::id_c = id_c,
-      ::storage_a = elle::make_unique<storage::Memory>(storage_a),
-      ::storage_b = elle::make_unique<storage::Memory>(storage_b),
-      ::storage_c = elle::make_unique<storage::Memory>(storage_c)
+      paxos,
+      keys_a,
+      keys_b,
+      keys_c,
+      id_a,
+      id_b,
+      id_c,
+      elle::make_unique<storage::Memory>(storage_a),
+      elle::make_unique<storage::Memory>(storage_b),
+      elle::make_unique<storage::Memory>(storage_c)
       );
     // auto ifetched = dhts.dht_a->fetch(iblock->address());
     // BOOST_CHECK_EQUAL(iblock->data(), ifetched->data());
