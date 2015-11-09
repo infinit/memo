@@ -84,15 +84,7 @@ namespace infinit
     }
 
     void
-    Configuration::join()
-    {
-      this->_node_id = model::Address::random();
-    }
-
-    void
     Configuration::serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("node_id", this->_node_id);
-    }
+    {}
   }
 }

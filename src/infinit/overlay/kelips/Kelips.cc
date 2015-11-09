@@ -3331,13 +3331,15 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(
-        NodeEndpoints const& hosts, bool server, model::doughnut::Doughnut* dht)
+      Configuration::make(Address id,
+                          NodeEndpoints const& hosts,
+                          bool server,
+                          model::doughnut::Doughnut* dht)
       {
         for (auto const& host: hosts)
         {
           ELLE_LOG("processing %s", host);
-          if (host.first == this->node_id())
+          if (host.first == id)
             continue;
           PeerLocation pl;
           if (host.first == model::Address())
@@ -3364,7 +3366,7 @@ namespace infinit
           this->bootstrap_nodes.push_back(pl);
         }
         return elle::make_unique<Node>(
-          *this, !server, this->node_id(), dht);
+          *this, !server, std::move(id), dht);
       }
 
       static const

@@ -163,38 +163,47 @@ private:
         return res;
       };
     this->dht_a = std::make_shared<dht::Doughnut>(
+      id_a,
       *this->keys_a,
       this->keys_a->K(),
       passport_a,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        [=] (infinit::model::doughnut::Doughnut& d,
+             infinit::model::Address id,
+             bool server)
         {
-          return make_overlay(0, id_a, members, d, server);
+          return make_overlay(0, id, members, d, server);
         }),
       boost::optional<int>(),
       std::move(storage_a));
     this->dht_b = std::make_shared<dht::Doughnut>(
+      id_b,
       *this->keys_b,
       this->keys_a->K(),
       passport_b,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        [=] (infinit::model::doughnut::Doughnut& d,
+             infinit::model::Address id,
+             bool server)
         {
-          return make_overlay(1, id_b, members, d, server);
+          return make_overlay(1, id, members, d, server);
         }),
       boost::optional<int>(),
       std::move(storage_b));
     this->dht_c = std::make_shared<dht::Doughnut>(
+      id_c,
       *this->keys_c,
       this->keys_a->K(),
       passport_c,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        [=] (infinit::model::doughnut::Doughnut& d,
+             infinit::model::Address id,
+             bool server)
         {
-          return make_overlay(2, id_b, members, d, server);
+          return make_overlay(2, id, members, d, server);
         }),
       boost::optional<int>(),
       std::move(storage_c));

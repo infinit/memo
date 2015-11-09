@@ -972,11 +972,7 @@ namespace infinit
       {
         this->serialize(input);
       }
-      void
-      Configuration::join()
-      {
-        this->config.node_id = infinit::model::Address::random();
-      }
+
       void
       Configuration::serialize(elle::serialization::Serializer& s)
       {
@@ -984,8 +980,9 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(NodeEndpoints const& hosts, bool server,
-        model::doughnut::Doughnut* doughnut)
+      Configuration::make(model::Address id,
+                          NodeEndpoints const& hosts, bool server,
+                          model::doughnut::Doughnut* doughnut)
       {
         for (auto const& host: hosts)
           for (auto const& ep: host.second)
@@ -993,7 +990,7 @@ namespace infinit
           elle::serialization::Serialize< ::kademlia::PrettyEndpoint>
           ::convert(ep));
         return elle::make_unique< ::kademlia::Kademlia>(
-          this->node_id(), config, server, doughnut);
+          id, config, server, doughnut);
       }
       static const elle::serialization::Hierarchy<overlay::Configuration>::
       Register<Configuration> _registerKademliaOverlayConfig("kademlia");

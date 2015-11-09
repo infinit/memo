@@ -155,7 +155,7 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(NodeEndpoints const& hosts, bool server,
+        make(Address id, NodeEndpoints const& hosts, bool server,
              model::doughnut::Doughnut* doughnut) override;
       };
 

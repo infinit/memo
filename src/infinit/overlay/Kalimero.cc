@@ -61,13 +61,14 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    KalimeroConfiguration::make(NodeEndpoints const& hosts, bool,
+    KalimeroConfiguration::make(model::Address id,
+                                NodeEndpoints const& hosts, bool,
       model::doughnut::Doughnut*)
     {
       if (!hosts.empty())
         throw elle::Error(
           elle::sprintf("kalimero cannot access other nodes (%s)", hosts));
-      return elle::make_unique<Kalimero>(this->node_id());
+      return elle::make_unique<Kalimero>(id);
     }
 
     static const

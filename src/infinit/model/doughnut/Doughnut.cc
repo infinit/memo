@@ -38,20 +38,22 @@ namespace infinit
   {
     namespace doughnut
     {
-      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
+      Doughnut::Doughnut(Address id,
+                         cryptography::rsa::KeyPair keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage)
-        : _keys(std::move(keys))
+        : _id(std::move(id))
+        , _keys(std::move(keys))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _consensus(consensus(*this))
           // FIXME: initialize overlay with bool(this->_local) instead when the
           // id is in doughnut
-        , _overlay(overlay_builder(*this, bool(storage)))
+        , _overlay(overlay_builder(*this, id, bool(storage)))
         , _local(nullptr)
       {
         if (storage)
@@ -64,7 +66,8 @@ namespace infinit
         }
       }
 
-      Doughnut::Doughnut(std::string const& name,
+      Doughnut::Doughnut(Address id,
+                         std::string const& name,
                          cryptography::rsa::KeyPair keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
@@ -72,7 +75,8 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage)
-        : Doughnut(std::move(keys),
+        : Doughnut(std::move(id),
+                   std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(consensus),
@@ -254,6 +258,7 @@ namespace infinit
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
         : ModelConfig(s)
+        , id(s.deserialize<Address>("id"))
         , consensus(s.deserialize<std::unique_ptr<consensus::Configuration>>(
                       "consensus"))
         , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>(
@@ -269,6 +274,7 @@ namespace infinit
       Configuration::serialize(elle::serialization::Serializer& s)
       {
         ModelConfig::serialize(s);
+        s.serialize("id", this->id);
         s.serialize("consensus", this->consensus);
         s.serialize("overlay", this->overlay);
         s.serialize("keys", this->keys);
@@ -306,9 +312,9 @@ namespace infinit
             return std::move(consensus);
           };
         Doughnut::OverlayBuilder overlay =
-          [&] (Doughnut& dht, bool server)
+          [&] (Doughnut& dht, Address id, bool server)
           {
-            return this->overlay->make(hosts, server, &dht);
+            return this->overlay->make(std::move(id), hosts, server, &dht);
           };
         auto port = this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;
@@ -317,6 +323,7 @@ namespace infinit
         std::unique_ptr<Doughnut> dht;
         if (!client || !this->name)
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
+            this->id,
             keys,
             owner,
             passport,
@@ -326,6 +333,7 @@ namespace infinit
             std::move(storage));
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
+            this->id,
             this->name.get(),
             keys,
             owner,

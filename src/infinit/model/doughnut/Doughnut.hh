@@ -27,18 +27,20 @@ namespace infinit
       public:
         typedef std::function<
           std::unique_ptr<infinit::overlay::Overlay>(
-            Doughnut& dht, bool server)>
+            Doughnut& dht, Address id, bool server)>
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
-        Doughnut(infinit::cryptography::rsa::KeyPair keys,
+        Doughnut(Address id,
+                 infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local);
-        Doughnut(std::string const& name,
+        Doughnut(Address id,
+                 std::string const& name,
                  infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
@@ -47,6 +49,7 @@ namespace infinit
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local);
         ~Doughnut();
+        ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
@@ -86,6 +89,7 @@ namespace infinit
         public ModelConfig
       {
       public:
+        Address id;
         std::unique_ptr<consensus::Configuration> consensus;
         std::unique_ptr<overlay::Configuration> overlay;
         cryptography::rsa::KeyPair keys;

@@ -190,12 +190,14 @@ static void make_nodes(std::string store, int node_count,
               infinit::model::doughnut::consensus::Consensus>(dht);
         };
       infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
-        [=] (infinit::model::doughnut::Doughnut& dht, bool)
+        [=] (infinit::model::doughnut::Doughnut& dht,
+             infinit::model::Address id, bool)
         {
           return elle::make_unique<infinit::overlay::Stonehenge>(
-            peers[i].id, peers, &dht);
+            id, peers, &dht);
         };
       nodes.emplace_back(new infinit::model::doughnut::Doughnut(
+                           peers[i].id,
                            std::move(kp),
                            owner.K(),
                            passport,
@@ -273,13 +275,15 @@ run_filesystem_dht(std::string const& store,
             infinit::model::doughnut::consensus::Consensus>(dht);
           };
         infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
-          [=] (infinit::model::doughnut::Doughnut& dht, bool)
+          [=] (infinit::model::doughnut::Doughnut& dht,
+               infinit::model::Address id, bool)
           {
             return elle::make_unique<infinit::overlay::Stonehenge>(
-              infinit::model::Address::random(), peers, &dht);
+              std::move(id), peers, &dht);
           };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
+          infinit::model::Address::random(),
           "testnet",
           owner_keys,
           owner_keys.K(),
@@ -321,6 +325,10 @@ run_filesystem_dht(std::string const& store,
         model["name"] = "user" + std::to_string(i);
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         keys.push_back(kp.K());
+        model["id"] = elle::format::base64::encode(
+          elle::ConstWeakBuffer(
+            infinit::model::Address::random().value(),
+            sizeof(infinit::model::Address::Value))).string();
         model["keys"] = "@KEYS@"; // placeholder, lolilol
         model["passport"] = "@PASSPORT@"; // placeholder, lolilol
         model["owner"] = "@OWNER@"; // placeholder, lolilol
@@ -340,10 +348,6 @@ run_filesystem_dht(std::string const& store,
         {
           elle::json::Object overlay;
           overlay["type"] = "stonehenge";
-          overlay["node_id"] = elle::format::base64::encode(
-            elle::ConstWeakBuffer(
-              infinit::model::Address::random().value(),
-              sizeof(infinit::model::Address::Value))).string();
           elle::json::Array v;
           for (auto const& p: peers)
           {

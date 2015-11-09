@@ -127,7 +127,6 @@ create(variables_map const& args)
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
-  overlay_config->join();
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   auto storage_count = args.count("storage");
   if (storage_count > 0)
@@ -369,7 +368,6 @@ join(variables_map const& args)
     if (!ok)
       throw elle::Error("passport signature is invalid");
     infinit::Network network;
-    desc.overlay->join();
     boost::optional<int> port;
     if (args.count("port"))
       port = args["port"].as<int>();

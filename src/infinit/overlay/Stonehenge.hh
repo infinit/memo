@@ -67,7 +67,8 @@ namespace infinit
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(NodeEndpoints const& hosts, bool server,
+      make(model::Address id,
+           NodeEndpoints const& hosts, bool server,
            model::doughnut::Doughnut* doughnut) override;
     };
   }
