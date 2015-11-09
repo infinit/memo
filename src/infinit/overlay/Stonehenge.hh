@@ -29,7 +29,9 @@ namespace infinit
       typedef boost::asio::ip::tcp::endpoint Host;
       typedef std::vector<Peer> Peers;
       Stonehenge(model::Address node_id,
-                 Peers hosts, model::doughnut::Doughnut* doughnut);
+                 Peers hosts,
+                 std::shared_ptr<model::doughnut::Local> local,
+                 model::doughnut::Doughnut* doughnut);
       ELLE_ATTRIBUTE_R(Peers, peers);
 
     /*-------.
@@ -68,7 +70,8 @@ namespace infinit
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(model::Address id,
-           NodeEndpoints const& hosts, bool server,
+           NodeEndpoints const& hosts,
+           std::shared_ptr<model::doughnut::Local> local,
            model::doughnut::Doughnut* doughnut) override;
     };
   }

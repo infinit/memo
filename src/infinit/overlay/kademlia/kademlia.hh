@@ -54,16 +54,15 @@ namespace kademlia
     , public elle::Printable
   {
   public:
-    Kademlia(infinit::model::Address node_id, Configuration const& config, bool server,
-      infinit::model::doughnut::Doughnut* doughnut);
+    Kademlia(infinit::model::Address node_id,
+             Configuration const& config,
+             std::shared_ptr<infinit::model::doughnut::Local> server,
+             infinit::model::doughnut::Doughnut* doughnut);
     virtual ~Kademlia();
     void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);
     void remove(Address address);
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;
-    void
-    register_local(
-      std::shared_ptr<infinit::model::doughnut::Local> local) override;
   protected:
     virtual reactor::Generator<Member> _lookup(infinit::model::Address address,
                                      int n, infinit::overlay::Operation op)
@@ -160,7 +159,8 @@ namespace infinit
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
         make(model::Address id,
-             NodeEndpoints const& hosts, bool server,
+             NodeEndpoints const& hosts,
+             std::shared_ptr<infinit::model::doughnut::Local> local,
              model::doughnut::Doughnut* doughnut) override;
         ::kademlia::Configuration config;
       };

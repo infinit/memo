@@ -191,10 +191,11 @@ static void make_nodes(std::string store, int node_count,
         };
       infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
         [=] (infinit::model::doughnut::Doughnut& dht,
-             infinit::model::Address id, bool)
+             infinit::model::Address id,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
         {
           return elle::make_unique<infinit::overlay::Stonehenge>(
-            id, peers, &dht);
+            id, peers, std::move(local), &dht);
         };
       nodes.emplace_back(new infinit::model::doughnut::Doughnut(
                            peers[i].id,
@@ -276,10 +277,11 @@ run_filesystem_dht(std::string const& store,
           };
         infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
           [=] (infinit::model::doughnut::Doughnut& dht,
-               infinit::model::Address id, bool)
+               infinit::model::Address id,
+               std::shared_ptr<infinit::model::doughnut::Local> local)
           {
             return elle::make_unique<infinit::overlay::Stonehenge>(
-              std::move(id), peers, &dht);
+              std::move(id), peers, std::move(local), &dht);
           };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
@@ -329,6 +331,7 @@ run_filesystem_dht(std::string const& store,
           elle::ConstWeakBuffer(
             infinit::model::Address::random().value(),
             sizeof(infinit::model::Address::Value))).string();
+
         model["keys"] = "@KEYS@"; // placeholder, lolilol
         model["passport"] = "@PASSPORT@"; // placeholder, lolilol
         model["owner"] = "@OWNER@"; // placeholder, lolilol

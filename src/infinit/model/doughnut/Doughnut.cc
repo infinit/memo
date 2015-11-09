@@ -51,19 +51,14 @@ namespace infinit
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _consensus(consensus(*this))
-          // FIXME: initialize overlay with bool(this->_local) instead when the
-          // id is in doughnut
-        , _overlay(overlay_builder(*this, id, bool(storage)))
-        , _local(nullptr)
+        , _local(
+          storage ?
+          this->_consensus->make_local(std::move(port), std::move(storage)) :
+          nullptr)
+        , _overlay(overlay_builder(*this, id, this->_local))
       {
-        if (storage)
-          this->_local =
-            this->_consensus->make_local(std::move(port), std::move(storage));
         if (this->_local)
-        {
-          this->overlay()->register_local(this->_local);
           this->_local->serve();
-        }
       }
 
       Doughnut::Doughnut(Address id,
@@ -312,9 +307,10 @@ namespace infinit
             return std::move(consensus);
           };
         Doughnut::OverlayBuilder overlay =
-          [&] (Doughnut& dht, Address id, bool server)
+          [&] (Doughnut& dht, Address id, std::shared_ptr<Local> local)
           {
-            return this->overlay->make(std::move(id), hosts, server, &dht);
+            return this->overlay->make(
+              std::move(id), hosts, std::move(local), &dht);
           };
         auto port = this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;

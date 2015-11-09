@@ -27,7 +27,7 @@ namespace infinit
       public:
         typedef std::function<
           std::unique_ptr<infinit::overlay::Overlay>(
-            Doughnut& dht, Address id, bool server)>
+            Doughnut& dht, Address id, std::shared_ptr<Local> server)>
           OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
@@ -54,8 +54,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
-        ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
+        ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
 
       protected:

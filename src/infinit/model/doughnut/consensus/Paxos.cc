@@ -109,7 +109,7 @@ namespace infinit
           return elle::make_unique<consensus::Paxos::LocalPeer>(
             this->factor(),
             this->doughnut(),
-            this->doughnut().overlay()->node_id(),
+            this->doughnut().id(),
             std::move(storage),
             port ? port.get() : 0);
         }

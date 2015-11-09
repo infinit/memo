@@ -215,7 +215,7 @@ namespace infinit
                               std::unique_ptr<storage::Storage> storage)
         {
           return elle::make_unique<Local>(this->doughnut(),
-                                          this->doughnut().overlay()->node_id(),
+                                          this->doughnut().id(),
                                           std::move(storage),
                                           port ? port.get() : 0);
         }

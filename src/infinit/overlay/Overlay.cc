@@ -15,9 +15,12 @@ namespace infinit
     | Construction |
     `-------------*/
 
-    Overlay::Overlay(model::Address node_id)
+    Overlay::Overlay(model::doughnut::Doughnut* dht,
+                     std::shared_ptr<infinit::model::doughnut::Local> local,
+                     model::Address node_id)
       : _node_id(std::move(node_id))
-      , _doughnut(nullptr)
+      , _doughnut(dht)
+      , _local(local)
     {}
 
     elle::json::Json
@@ -29,10 +32,6 @@ namespace infinit
     /*-------.
     | Lookup |
     `-------*/
-
-    void
-    Overlay::register_local(std::shared_ptr<model::doughnut::Local> local)
-    {}
 
     reactor::Generator<Overlay::Member>
     Overlay::lookup(model::Address address, int n, Operation op) const

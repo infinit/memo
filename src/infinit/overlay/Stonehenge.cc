@@ -37,14 +37,15 @@ namespace infinit
       , endpoint(std::move(e))
     {}
 
-    Stonehenge::Stonehenge(model::Address node_id, Peers peers,
+    Stonehenge::Stonehenge(model::Address node_id,
+                           Peers peers,
+                           std::shared_ptr<model::doughnut::Local> local,
                            model::doughnut::Doughnut* doughnut)
-      : Overlay(std::move(node_id))
+      : Overlay(doughnut, std::move(local), std::move(node_id))
       , _peers(std::move(peers))
     {
       if (this->_peers.empty())
         throw elle::Error("empty peer list");
-      this->doughnut(doughnut);
     }
 
     /*-------.
@@ -118,7 +119,8 @@ namespace infinit
 
     std::unique_ptr<infinit::overlay::Overlay>
     StonehengeConfiguration::make(model::Address id,
-                                  NodeEndpoints const&, bool,
+                                  NodeEndpoints const&,
+                                  std::shared_ptr<model::doughnut::Local> local,
                                   model::doughnut::Doughnut* dht)
     {
       Stonehenge::Peers peers;
@@ -129,7 +131,7 @@ namespace infinit
           Stonehenge::Peer::Endpoint{peer.host, peer.port});
       }
       return elle::make_unique<infinit::overlay::Stonehenge>(
-        id, peers, dht);
+        id, peers, std::move(local), dht);
     }
 
     static const elle::serialization::Hierarchy<Configuration>::
