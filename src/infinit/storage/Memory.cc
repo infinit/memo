@@ -91,8 +91,10 @@ namespace infinit
       }
 
       void
-      serialize(elle::serialization::Serializer& s)
-      {}
+      serialize(elle::serialization::Serializer& s) override
+      {
+        StorageConfig::serialize(s);
+      }
 
       virtual
       std::unique_ptr<infinit::storage::Storage>

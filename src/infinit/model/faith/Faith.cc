@@ -80,10 +80,8 @@ namespace infinit
         public ModelConfig
       {
       public:
-        std::unique_ptr<infinit::storage::StorageConfig> storage;
-
         FaithModelConfig(elle::serialization::SerializerIn& input)
-          : ModelConfig()
+          : ModelConfig(nullptr)
         {
           this->serialize(input);
         }
@@ -91,12 +89,12 @@ namespace infinit
         void
         serialize(elle::serialization::Serializer& s) override
         {
-          s.serialize("storage", this->storage);
+          ModelConfig::serialize(s);
         }
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const&, bool, bool,
+        make(overlay::NodeEndpoints const&, bool,
              boost::filesystem::path const&) override
         {
           return elle::make_unique<infinit::model::faith::Faith>

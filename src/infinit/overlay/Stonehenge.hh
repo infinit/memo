@@ -52,7 +52,7 @@ namespace infinit
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
       make(NodeEndpoints const& hosts, bool server,
-        model::doughnut::Doughnut* doughnut) override;
+           model::doughnut::Doughnut* doughnut) override;
     };
   }
 }

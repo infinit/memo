@@ -117,5 +117,20 @@ namespace infinit
     {
       this->_remove(address);
     }
+
+    ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_)
+      : storage(std::move(storage_))
+    {}
+
+    ModelConfig::ModelConfig(elle::serialization::SerializerIn& s)
+    {
+      this->serialize(s);
+    }
+
+    void
+    ModelConfig::serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("storage", this->storage);
+    }
   }
 }

@@ -116,10 +116,9 @@ namespace infinit
         // boost::optional does not support in-place construction, use a
         // std::unique_ptr instead since KeyPair is not copiable.
         std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
-        std::unique_ptr<infinit::storage::StorageConfig> storage;
 
         ParanoidModelConfig(elle::serialization::SerializerIn& input)
-          : ModelConfig()
+          : ModelConfig(nullptr)
         {
           this->serialize(input);
         }
@@ -127,13 +126,13 @@ namespace infinit
         void
         serialize(elle::serialization::Serializer& s)
         {
+          ModelConfig::serialize(s);
           s.serialize("keys", this->keys);
-          s.serialize("storage", this->storage);
         }
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const&, bool, bool,
+        make(overlay::NodeEndpoints const&, bool,
           boost::filesystem::path const&)
         {
           if (!this->keys)

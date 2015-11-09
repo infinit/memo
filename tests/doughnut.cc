@@ -59,9 +59,10 @@ public:
       [] (int,
           infinit::model::Address id,
           infinit::overlay::Stonehenge::Peers peers,
-          infinit::model::doughnut::Doughnut* d)
+          infinit::model::doughnut::Doughnut& d,
+          bool server)
       {
-        return elle::make_unique<infinit::overlay::Stonehenge>(id, peers, d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(id, peers, &d);
       }).call([this] (bool paxos,
                       infinit::cryptography::rsa::KeyPair keys_a,
                       infinit::cryptography::rsa::KeyPair keys_b,
@@ -77,7 +78,8 @@ public:
                         int,
                         infinit::model::Address id,
                         infinit::overlay::Stonehenge::Peers peers,
-                        infinit::model::doughnut::Doughnut* d)> make_overlay)
+                        infinit::model::doughnut::Doughnut& d,
+                        bool server)> make_overlay)
               {
                 this-> init(paxos,
                             std::move(keys_a),
@@ -118,7 +120,8 @@ private:
            int,
            infinit::model::Address id,
            infinit::overlay::Stonehenge::Peers peers,
-           infinit::model::doughnut::Doughnut* d)> make_overlay)
+           infinit::model::doughnut::Doughnut& d,
+           bool server)> make_overlay)
   {
     this->keys_a =
       elle::make_unique<infinit::cryptography::rsa::KeyPair>(std::move(keys_a));
@@ -166,43 +169,37 @@ private:
       *this->keys_a,
       this->keys_a->K(),
       passport_a,
-      static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
-        [=](infinit::model::doughnut::Doughnut* d) {
-          return make_overlay(0, this->local_a->id(), members, d);
+      consensus,
+      infinit::model::doughnut::Doughnut::OverlayBuilder(
+        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        {
+          return make_overlay(0, this->local_a->id(), members, d, server);
         }),
-      nullptr,
-      consensus
-      );
+      this->local_a);
     this->dht_b = std::make_shared<dht::Doughnut>(
       *this->keys_b,
       this->keys_a->K(),
       passport_b,
-      static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
-        [=](infinit::model::doughnut::Doughnut* d) {
-          return make_overlay(1, this->local_a->id(), members, d);
+      consensus,
+      infinit::model::doughnut::Doughnut::OverlayBuilder(
+        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        {
+          return make_overlay(1, this->local_a->id(), members, d, server);
         }),
-      nullptr,
-      consensus
-      );
+      this->local_b);
     this->dht_c = std::make_shared<dht::Doughnut>(
       *this->keys_c,
       this->keys_a->K(),
       passport_c,
-      static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
-        [=](infinit::model::doughnut::Doughnut* d) {
-          return make_overlay(2, this->local_a->id(), members, d);
+      consensus,
+      infinit::model::doughnut::Doughnut::OverlayBuilder(
+        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        {
+          return make_overlay(2, this->local_a->id(), members, d, server);
         }),
-      nullptr,
-      consensus
-      );
-    local_a->doughnut() = dht_a.get();
-    dht_a->overlay()->register_local(local_a);
+      this->local_c);
     local_a->serve();
-    local_b->doughnut() = dht_b.get();
-    dht_b->overlay()->register_local(local_b);
     local_b->serve();
-    local_c->doughnut() = dht_c.get();
-    dht_c->overlay()->register_local(local_c);
     local_c->serve();
   }
 };
@@ -492,17 +489,18 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
   DHTs dhts(
     make_overlay =
     [&stonehenge] (int dht,
-        infinit::model::Address id,
-        infinit::overlay::Stonehenge::Peers peers,
-        infinit::model::doughnut::Doughnut* d)
+                   infinit::model::Address id,
+                   infinit::overlay::Stonehenge::Peers peers,
+                   infinit::model::doughnut::Doughnut& d,
+                   bool)
     {
       if (dht == 0)
       {
-        stonehenge = new WrongQuorumStonehenge(id, peers, d);
+        stonehenge = new WrongQuorumStonehenge(id, peers, &d);
         return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
       }
       else
-        return elle::make_unique<infinit::overlay::Stonehenge>(id, peers, d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(id, peers, &d);
     });
   auto block = dhts.dht_a->make_block<infinit::model::blocks::MutableBlock>();
   {

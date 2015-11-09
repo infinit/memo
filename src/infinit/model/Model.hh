@@ -9,6 +9,7 @@
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/fwd.hh>
 # include <infinit/serialization.hh>
+# include <infinit/storage/Storage.hh>
 
 namespace infinit
 {
@@ -93,10 +94,14 @@ namespace infinit
       public elle::serialization::VirtuallySerializable
     {
       static constexpr char const* virtually_serializable_key = "type";
-
+      std::unique_ptr<infinit::storage::StorageConfig> storage;
+      ModelConfig(std::unique_ptr<storage::StorageConfig> storage);
+      ModelConfig(elle::serialization::SerializerIn& s);
+      void
+      serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(overlay::NodeEndpoints const& hosts, bool client, bool server,
+      make(overlay::NodeEndpoints const& hosts, bool client,
            boost::filesystem::path const& dir) = 0;
       typedef infinit::serialization_tag serialization_tag;
     };

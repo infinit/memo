@@ -24,6 +24,7 @@ ELLE_LOG_COMPONENT("infinit-acl");
 #endif
 
 using namespace boost::program_options;
+options_description mode_options("Modes");
 
 template<typename F, typename... ARGS>
 void
@@ -184,6 +185,8 @@ set(variables_map const& args)
   }
   if (!inherit && !disinherit && mode.empty())
     throw CommandLineError("no operation specified");
+  std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
+  mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
   // Don't do any operations before checking paths.
@@ -228,7 +231,7 @@ main(int argc, char** argv)
       "set",
       "Set ACL",
       &set,
-      "--path PATH [OPTIONS]",
+      "--path PATH [OPTIONS...]",
       {
         { "path,p", value<std::vector<std::string>>(), "path" },
         { "user", value<std::vector<std::string>>(), "user" },

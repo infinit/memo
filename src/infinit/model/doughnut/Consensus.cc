@@ -123,23 +123,9 @@ namespace infinit
             {
               s.run_background("remove", [this, p, address,&count]
               {
-                for (int i=0; i<5; ++i)
-                {
-                  try
-                  {
-                    if (i!=0)
-                      p->reconnect();
-                    p->remove(address);
-                    ++count;
-                    return;
-                  }
-                  catch (reactor::network::Exception const& e)
-                  {
-                    ELLE_TRACE("%s: network exception %s", *this, e);
-                    reactor::sleep(
-                      boost::posix_time::milliseconds(20 * pow(2, i)));
-                  }
-                }
+                p->connect_retry();
+                p->remove(address);
+                ++count;
               });
             }
             reactor::wait(s);
@@ -232,6 +218,9 @@ namespace infinit
         | Configuration |
         `--------------*/
 
+        Configuration::Configuration(elle::serialization::SerializerIn&)
+        {}
+
         std::unique_ptr<Consensus>
         Configuration::make(model::doughnut::Doughnut& dht)
         {
@@ -241,6 +230,9 @@ namespace infinit
         void
         Configuration::serialize(elle::serialization::Serializer&)
         {}
+
+        static const elle::serialization::Hierarchy<Configuration>::
+        Register<Configuration> _register_Configuration("single");
       }
     }
   }

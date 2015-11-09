@@ -18,7 +18,7 @@ ELLE_LOG_COMPONENT("infinit.storage.GoogleDrive");
 struct Parent
 {
   std::string id;
-}; 
+};
 
 DAS_MODEL(Parent, (id), DasParent);
 DAS_MODEL_DEFAULT(Parent, DasParent);
@@ -269,7 +269,7 @@ namespace infinit
                   "application/json",
                   conf);
 
-        elle::serialization::json::serialize(dir, r, false); 
+        elle::serialization::json::serialize(dir, r, false);
         r.finalize();
 
         if (r.status() == StatusCode::OK)
@@ -284,7 +284,7 @@ namespace infinit
         reactor::sleep(delay(attempt++));
       }
     }
-   
+
     reactor::http::Request
     GoogleDrive::_insert(Key key, elle::Buffer const& value) const
     {
@@ -302,16 +302,16 @@ namespace infinit
 
       Request::QueryDict query;
       query["uploadType"] = "multipart";
-      
+
       std::string delim_value = "galibobro";
       std::string delim = "--" + delim_value;
       std::string mime_meta = "Content-Type: application/json; charset=UTF-8";
       std::string mime = "Content-Type: application/octet-stream";
-      
+
       conf.header_add("Content-Type",
                       elle::sprintf("multipart/related; boundary=\"%s\"",
                                     delim_value));
-   
+
 
       Metadata metadata{elle::sprintf("%x", key), {Parent{this->_dir_id}}};
 
@@ -458,13 +458,14 @@ namespace infinit
      */
 
     GoogleDriveStorageConfig::GoogleDriveStorageConfig(
+        std::string name,
         boost::optional<std::string> root_,
         std::string refresh_token_,
-        std::string name_)
-      : StorageConfig()
+        std::string user_name_)
+      : StorageConfig(std::move(name))
       , root{std::move(root_)}
       , refresh_token{std::move(refresh_token_)}
-      , name{std::move(name_)}
+      , user_name{std::move(user_name_)}
     {}
 
     GoogleDriveStorageConfig::GoogleDriveStorageConfig(
@@ -477,9 +478,10 @@ namespace infinit
     void
     GoogleDriveStorageConfig::serialize(elle::serialization::Serializer& s)
     {
+      StorageConfig::serialize(s);
       s.serialize("root", this->root);
       s.serialize("refresh_token", this->refresh_token);
-      s.serialize("name", this->name);
+      s.serialize("user_name", this->user_name);
     }
 
     std::unique_ptr<infinit::storage::Storage>
@@ -487,10 +489,10 @@ namespace infinit
     {
       if (this->root)
         return elle::make_unique<infinit::storage::GoogleDrive>(
-            this->root.get(), this->refresh_token, this->name);
+            this->root.get(), this->refresh_token, this->user_name);
       else
         return elle::make_unique<infinit::storage::GoogleDrive>(
-            this->refresh_token, this->name);
+            this->refresh_token, this->user_name);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

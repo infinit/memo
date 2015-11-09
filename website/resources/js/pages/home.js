@@ -16,7 +16,12 @@ $(document).ready(function() {
     '<mark>$></mark> <ins>2</ins>'+
 
     'infinit-volume --mount --name company --mountpoint /mnt/company/' +
-    '<ins>0.5</ins><ins>\nMounting volume "company". \n\n</ins>'+
+    '<ins>0.5</ins><ins>\nMounting volume "company". \n\n</ins>' +
+    '<mark>$></mark> <ins>2</ins>'+
+
+    'ls /mnt/company/' +
+    'Design/     Engineering/      Guidelines.pdf     Human Resources/     Introduction.pdf' +
+    'Management/     Marketing/     Product/     Sales/     Support/     User Experience/' +
 
     '<mark>$></mark> ',
     {

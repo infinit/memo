@@ -33,7 +33,7 @@ create(variables_map const& args)
     auto account = ifnt.credentials_dropbox(account_name);
     config =
       elle::make_unique<infinit::storage::DropboxStorageConfig>
-      (account.token, std::move(root));
+      (name, account.token, std::move(root));
   }
   if (args.count("filesystem"))
   {
@@ -42,7 +42,7 @@ create(variables_map const& args)
       path = (infinit::root_dir() / "blocks" / name).string();
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
-      (std::move(*path));
+      (name, std::move(*path));
   }
   if (args.count("google"))
   {
@@ -53,7 +53,8 @@ create(variables_map const& args)
     auto account = ifnt.credentials_google(account_name);
     config =
       elle::make_unique<infinit::storage::GoogleDriveStorageConfig>
-      (std::move(root),
+      (name,
+       std::move(root),
        account.refresh_token,
        self_user(ifnt, {}).name);
   }

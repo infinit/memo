@@ -156,15 +156,12 @@ main(int argc, char** argv)
         boost::filesystem::path p;
         parse_options(argc, argv, cfg, model_cfg, p);
         if (model_cfg)
-        {
-          model = model_cfg->make(infinit::overlay::NodeEndpoints(),
-                                  true, true, p);
-        }
+          model = model_cfg->make(infinit::overlay::NodeEndpoints(), true, p);
         else
         {
           if (!cfg.model)
             throw elle::Error("missing mandatory \"model\" configuration key");
-          model = cfg.model->make(infinit::overlay::NodeEndpoints(), true, true, p);
+          model = cfg.model->make(infinit::overlay::NodeEndpoints(), true, p);
           std::unique_ptr<infinit::filesystem::FileSystem> fs;
           ELLE_TRACE("initialize filesystem")
             {
@@ -177,7 +174,8 @@ main(int argc, char** argv)
           {
             reactor::filesystem::FileSystem filesystem(std::move(fs), true);
             filesystem.mount(cfg.mountpoint, {});
-            reactor::scheduler().signal_handle(SIGINT, [&] { filesystem.unmount();});
+            reactor::scheduler().signal_handle(SIGINT,
+                                               [&] { filesystem.unmount();});
             ELLE_TRACE("Waiting on filesystem");
             reactor::wait(filesystem);
             ELLE_TRACE("Filesystem finished.");

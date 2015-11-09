@@ -14,6 +14,7 @@ namespace infinit
     {
     public:
       FileHandle(std::shared_ptr<File> owner,
+                 bool writable,
                  bool update_folder_mtime=false,
                  bool no_prefetch = false,
                  bool mark_dirty = false);
@@ -49,6 +50,7 @@ namespace infinit
                          int start_block, int end_block);
       ELLE_ATTRIBUTE(std::shared_ptr<File>, owner);
       ELLE_ATTRIBUTE(bool, dirty);
+      ELLE_ATTRIBUTE(bool, writable);
     };
 
   }

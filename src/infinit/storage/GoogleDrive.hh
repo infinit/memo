@@ -85,16 +85,17 @@ namespace infinit
     struct GoogleDriveStorageConfig
       : public StorageConfig
     {
-      GoogleDriveStorageConfig(boost::optional<std::string> root,
+      GoogleDriveStorageConfig(std::string name,
+                               boost::optional<std::string> root,
                                std::string refresh_token,
-                               std::string name);
+                               std::string user_name);
       GoogleDriveStorageConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
       virtual std::unique_ptr<infinit::storage::Storage> make() override;
 
       boost::optional<std::string> root;
       std::string refresh_token;
-      std::string name;
+      std::string user_name;
     };
   }
 }

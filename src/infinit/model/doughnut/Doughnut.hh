@@ -26,50 +26,31 @@ namespace infinit
       `-------------*/
       public:
         typedef std::function<
-          std::unique_ptr<infinit::overlay::Overlay>(Doughnut*)> OverlayBuilder;
+          std::unique_ptr<infinit::overlay::Overlay>(
+            Doughnut& dht, bool server)>
+          OverlayBuilder;
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
         Doughnut(infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
+                 ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
-                 std::shared_ptr<Local> local,
-                 ConsensusBuilder consensus);
+                 std::shared_ptr<Local> local);
         Doughnut(std::string const& name,
                  infinit::cryptography::rsa::KeyPair keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
+                 ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
-                 std::shared_ptr<Local> local,
-                 ConsensusBuilder consensus);
-        Doughnut(std::string name,
-                 infinit::cryptography::rsa::KeyPair keys,
-                 infinit::cryptography::rsa::PublicKey owner,
-                 Passport passport,
-                 OverlayBuilder overlay_builder,
-                 boost::filesystem::path const& path,
-                 std::shared_ptr<Local> local = nullptr,
-                 int replication_factor = 1,
-                 bool async = false,
-                 bool cache = false,
-                 bool paxos = false);
-        Doughnut(infinit::cryptography::rsa::KeyPair keys,
-                 infinit::cryptography::rsa::PublicKey owner,
-                 Passport passport,
-                 OverlayBuilder overlay_builder,
-                 boost::filesystem::path const& path,
-                 std::shared_ptr<Local> local = nullptr,
-                 int replication_factor = 1,
-                 bool async = false,
-                 bool cache = false,
-                 bool paxos = false);
+                 std::shared_ptr<Local> local);
         ~Doughnut();
-        ELLE_ATTRIBUTE_R(int, replication_factor);
-        ELLE_ATTRIBUTE(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
+        ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
+        ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
 
       protected:
@@ -103,38 +84,38 @@ namespace infinit
         public ModelConfig
       {
       public:
+        std::unique_ptr<consensus::Configuration> consensus;
         std::unique_ptr<overlay::Configuration> overlay;
         cryptography::rsa::KeyPair keys;
         cryptography::rsa::PublicKey owner;
         Passport passport;
         boost::optional<std::string> name;
-        int replication_factor;
-        bool paxos;
+        boost::optional<int> port;
 
         Configuration(
+          std::unique_ptr<consensus::Configuration> consensus,
           std::unique_ptr<overlay::Configuration> overlay,
+          std::unique_ptr<storage::StorageConfig> storage,
           cryptography::rsa::KeyPair keys,
           cryptography::rsa::PublicKey owner,
           Passport passport,
           boost::optional<std::string> name,
-          int replication_factor,
-          bool paxos = true);
+          boost::optional<int> port = {});
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void
         serialize(elle::serialization::Serializer& s);
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const& hosts, bool client, bool server,
-             boost::filesystem::path const& p);
-        std::shared_ptr<Doughnut>
         make(overlay::NodeEndpoints const& hosts,
              bool client,
-             std::shared_ptr<Local> local,
+             boost::filesystem::path const& p);
+        std::unique_ptr<Doughnut>
+        make(overlay::NodeEndpoints const& hosts,
+             bool client,
              boost::filesystem::path const& p,
              bool async = false,
-             bool cache = false
-             );
+             bool cache = false);
       };
     }
   }

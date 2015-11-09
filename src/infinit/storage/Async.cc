@@ -373,6 +373,7 @@ namespace infinit
       void
       serialize(elle::serialization::Serializer& s) override
       {
+        StorageConfig::serialize(s);
         s.serialize("max_blocks", this->max_blocks);
         s.serialize("max_size", this->max_size);
         s.serialize("merge", this->merge);
@@ -393,8 +394,6 @@ namespace infinit
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<AsyncStorageConfig>
     _register_AsyncStorageConfig("async");
-
-
   }
 }
 

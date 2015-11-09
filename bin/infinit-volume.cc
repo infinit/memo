@@ -32,8 +32,6 @@ create(variables_map const& args)
   auto name = volume_name(args, owner);
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
-  ELLE_TRACE("start network");
-  report_action("starting", "network", network.name, std::string("locally"));
   std::vector<std::string> hosts;
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
@@ -42,9 +40,6 @@ create(variables_map const& args)
     for (auto const& h: hosts)
       eps[elle::UUID()].push_back(h);
   }
-  auto model = network.run(eps);
-  ELLE_TRACE("create volume");
-  auto fs = elle::make_unique<infinit::filesystem::FileSystem>(name, model.second);
   infinit::Volume volume(name, mountpoint, network.name);
   if (args.count("output"))
   {
@@ -212,7 +207,7 @@ run(variables_map const& args)
   {
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto fs = volume.run(model.second, optional(args, "mountpoint"));
+    auto fs = volume.run(std::move(model), optional(args, "mountpoint"));
     elle::SafeFinally unmount([&]
     {
       ELLE_TRACE("unmounting")
@@ -272,11 +267,11 @@ run(variables_map const& args)
       reactor::wait(*fs);
     }
   };
-  if (push && model.first)
+  if (push && model->local())
   {
     elle::With<InterfacePublisher>(
-      network, self, model.second->overlay()->node_id(),
-      model.first->server_endpoint().port()) << [&]
+      network, self, model->overlay()->node_id(),
+      model->local()->server_endpoint().port()) << [&]
     {
       run();
     };

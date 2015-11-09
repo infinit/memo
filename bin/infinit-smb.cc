@@ -36,8 +36,8 @@ void run(variables_map const& args)
     args.count("async") && args["async"].as<bool>(),
     args.count("cache-model") && args["cache-model"].as<bool>());
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-    args["volume"].as<std::string>(), model.second);
-  auto smb = new infinit::smb::SMBServer(std::move(fs));
+    args["volume"].as<std::string>(), std::move(model));
+  new infinit::smb::SMBServer(std::move(fs));
   reactor::sleep();
 }
 

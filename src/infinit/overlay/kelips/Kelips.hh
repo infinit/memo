@@ -289,12 +289,6 @@ namespace infinit
         SerState
         get_serstate(PeerLocation peer);
         void
-        deoverduplicate();
-        void
-        rereplicate();
-        void
-        rereplicator();
-        void
         contact(Address address); // establish contact with peer and flush buffer
         void onPacket(reactor::network::Buffer buf, GossipEndpoint source);
         void process(elle::Buffer const& buf, GossipEndpoint source);

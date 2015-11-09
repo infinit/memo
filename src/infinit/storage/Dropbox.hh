@@ -46,7 +46,8 @@ namespace infinit
     struct DropboxStorageConfig
       : public StorageConfig
     {
-      DropboxStorageConfig(std::string token,
+      DropboxStorageConfig(std::string name,
+                           std::string token,
                            boost::optional<std::string> root);
       DropboxStorageConfig(elle::serialization::SerializerIn& input);
       void

@@ -23,6 +23,8 @@ for f in sys.argv[3:]:
     content = json.load(fj)
     node = content
     for k in key[0:-1]:
+      if k not in node:
+        node[k] = dict()
       node = node[k]
     node[key[-1]] = val
     with open(f, "w") as fj:

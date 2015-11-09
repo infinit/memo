@@ -137,6 +137,29 @@ namespace infinit
             typedef elle::unordered_map<Address, Decision> Addresses;
             ELLE_ATTRIBUTE(Addresses, addresses);
           };
+
+          class Configuration
+            : public consensus::Configuration
+          {
+          /*--------.
+          | Factory |
+          `--------*/
+          public:
+            Configuration(int replication_factor);
+            virtual
+            std::unique_ptr<Consensus>
+            make(model::doughnut::Doughnut& dht) override;
+            ELLE_ATTRIBUTE_R(int, replication_factor);
+
+          /*--------------.
+          | Serialization |
+          `--------------*/
+          public:
+            Configuration(elle::serialization::SerializerIn& s);
+            virtual
+            void
+            serialize(elle::serialization::Serializer& s) override;
+          };
         };
       }
     }

@@ -755,8 +755,6 @@ namespace infinit
           _listener_thread->terminate_now();
         if (_pinger_thread)
           _pinger_thread->terminate_now();
-        if (_rereplicator_thread)
-          _rereplicator_thread->terminate_now();
         if (_rdv_connect_thread)
           _rdv_connect_thread->terminate_now();
         if (_rdv_connect_thread_local)
@@ -876,110 +874,6 @@ namespace infinit
       }
 
       void
-      Node::rereplicator()
-      {
-        while (true)
-        {
-          reactor::sleep(600_sec); // FINME awfully short for testing
-          try
-          {
-            rereplicate();
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_WARN("Error running rereplicate: %s", e);
-          }
-        }
-      }
-
-      void
-      Node::rereplicate()
-      {
-        /* Rereplicate blocks:
-        - for which we are responsible (we store it and have the lowest address)
-        - that have been seen under-replicated for two runs
-        */
-        bootstrap(false);
-        std::unordered_map<Address, int> prev_run;
-        std::swap(prev_run, _under_duplicated);
-        auto it = _state.files.begin();
-        for (;it != _state.files.end(); ++it)
-        {
-          if (it->second.home_node == _self)
-          {
-            bool responsible = true;
-            auto its = _state.files.equal_range(it->first);
-            int count = 0;
-            while (its.first != its.second)
-            {
-              if (its.first->second.home_node < _self)
-              {
-                responsible = false;
-                break;
-              }
-              ++count;
-              ++its.first;
-            }
-            if (responsible && count < doughnut()->replication_factor())
-            {
-              if (prev_run.find(it->first) != prev_run.end())
-              {
-                ELLE_DEBUG("re-duplicating %s (%s < %s)",
-                  it->first, count, doughnut()->replication_factor());
-                auto block = _local->fetch(it->first);
-                // Note: to be on the safe side, rereplicate by 1 at most
-                // we can't call overlay::store, no way to set the replication count
-                auto members = _lookup(block->address(), 1,
-                  infinit::overlay::Operation::OP_INSERT);
-                Overlay::Member m;
-                for (auto i: members)
-                {
-                  m = i;
-                  break;
-                }
-                if (m)
-                {
-                  m->store(*block, model::STORE_INSERT);
-                }
-              }
-              else
-                _under_duplicated.insert(std::make_pair(it->first, count));
-            }
-          }
-        }
-      }
-
-      void
-      Node::deoverduplicate()
-      {
-        auto it = _state.files.begin();
-        while (it != _state.files.end())
-        {
-          if (it->second.home_node == _self)
-          {
-            auto its = _state.files.equal_range(it->first);
-            int count = 0;
-            while (its.first != its.second)
-            {
-              ++count;
-              ++its.first;
-            }
-            if (count > doughnut()->replication_factor())
-            {
-              ELLE_LOG("Removing over-duplicated block %s (%s > %s)",
-                         it->first, count, doughnut()->replication_factor());
-              // dont reorder, local->remove will call our hook remove()
-              auto address = it->first;
-              it = _state.files.erase(it);
-              _local->remove(address);
-              continue;
-            }
-          }
-          ++it;
-        }
-      }
-
-      void
       Node::engage()
       {
         ELLE_TRACE("bootstraping");
@@ -1034,9 +928,6 @@ namespace infinit
         {
           _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
             std::bind(&Node::pinger, this));
-          // Rereplication will be handled by the overlay
-          //_rereplicator_thread = elle::make_unique<reactor::Thread>("rereplicator",
-          //  std::bind(&Node::rereplicator, this));
           _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
             std::bind(&Node::gossipEmitter, this));
         }
@@ -3440,8 +3331,8 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(NodeEndpoints const& hosts, bool server,
-                          infinit::model::doughnut::Doughnut* doughnut)
+      Configuration::make(
+        NodeEndpoints const& hosts, bool server, model::doughnut::Doughnut* dht)
       {
         for (auto const& host: hosts)
         {
@@ -3473,7 +3364,7 @@ namespace infinit
           this->bootstrap_nodes.push_back(pl);
         }
         return elle::make_unique<Node>(
-          *this, !server, this->node_id(), doughnut);
+          *this, !server, this->node_id(), dht);
       }
 
       static const

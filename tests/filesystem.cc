@@ -217,13 +217,14 @@ static void make_nodes(std::string store, int node_count,
           std::move(kp),
           owner.K(),
           passport,
-          static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
-            [=](infinit::model::doughnut::Doughnut* doughnut) {
+          consensus,
+          infinit::model::doughnut::Doughnut::OverlayBuilder(
+            [=] (infinit::model::doughnut::Doughnut& dht, bool)
+            {
               return elle::make_unique<infinit::overlay::Stonehenge>(
-                peers[i].second, peers, doughnut);
+                peers[i].second, peers, &dht);
             }),
-          nullptr,
-          consensus);
+          nullptr);
       nodes[i]->doughnut() = model;
       nodes[i]->serve();
     }
@@ -295,14 +296,14 @@ run_filesystem_dht(std::string const& store,
           owner_keys,
           owner_keys.K(),
           passport,
-          static_cast<infinit::model::doughnut::Doughnut::OverlayBuilder>(
-            [=](infinit::model::doughnut::Doughnut* doughnut) {
+          consensus,
+          infinit::model::doughnut::Doughnut::OverlayBuilder(
+            [=] (infinit::model::doughnut::Doughnut& dht, bool)
+            {
               return elle::make_unique<infinit::overlay::Stonehenge>(
-                infinit::model::Address::random(), peers, doughnut);
+                infinit::model::Address::random(), peers, &dht);
             }),
-          nullptr,
-          consensus
-          );
+          nullptr);
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
         ops = elle::make_unique<ifs::FileSystem>("default-volume", std::move(model));
@@ -340,27 +341,41 @@ run_filesystem_dht(std::string const& store,
         model["keys"] = "@KEYS@"; // placeholder, lolilol
         model["passport"] = "@PASSPORT@"; // placeholder, lolilol
         model["owner"] = "@OWNER@"; // placeholder, lolilol
-        elle::json::Object overlay;
-        overlay["type"] = "stonehenge";
-        overlay["node_id"] = elle::format::base64::encode(
-            elle::ConstWeakBuffer(infinit::model::Address::random().value(),
-                                  sizeof(infinit::model::Address::Value))).string();
-        elle::json::Array v;
-        for (auto const& p: peers)
         {
-          elle::json::Object po;
-          po["host"] = p.first.address().to_string();
-          po["port"] = p.first.port();
-          po["id"] = elle::format::base64::encode(
-            elle::ConstWeakBuffer(p.second.value(),
-                                  sizeof(infinit::model::Address::Value))
-            ).string();
-          v.push_back(po);
+          elle::json::Object consensus;
+          if (paxos)
+          {
+            consensus["type"] = "paxos";
+            consensus["replication-factor"] = 3;
+          }
+          else
+          {
+            consensus["type"] = "single";
+          }
+          model["consensus"] = std::move(consensus);
         }
-        overlay["peers"] = v;
-        model["overlay"] = overlay;
-        model["replication_factor"] = paxos ? 3 : 1;
-        model["paxos"] = paxos;
+        {
+          elle::json::Object overlay;
+          overlay["type"] = "stonehenge";
+          overlay["node_id"] = elle::format::base64::encode(
+            elle::ConstWeakBuffer(
+              infinit::model::Address::random().value(),
+              sizeof(infinit::model::Address::Value))).string();
+          elle::json::Array v;
+          for (auto const& p: peers)
+          {
+            elle::json::Object po;
+            po["host"] = p.first.address().to_string();
+            po["port"] = p.first.port();
+            po["id"] = elle::format::base64::encode(
+              elle::ConstWeakBuffer(
+                p.second.value(),
+                sizeof(infinit::model::Address::Value))).string();
+            v.push_back(po);
+          }
+          overlay["peers"] = v;
+          model["overlay"] = std::move(overlay);
+        }
         r["model"] = model;
         std::string kps;
         if (i == 0)
@@ -1021,6 +1036,7 @@ void
 test_acl(bool paxos)
 {
   namespace bfs = boost::filesystem;
+  boost::system::error_code erc;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
   auto mount = bfs::temp_directory_path() / bfs::unique_path();
   bfs::create_directories(mount);
@@ -1071,6 +1087,10 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(directory_count(m1), 1);
   // but the file is still not readable
   BOOST_CHECK(!can_access(m1/"test"));
+  boost::filesystem::remove(m1 / "test", erc);
+  BOOST_CHECK(erc);
+  BOOST_CHECK_EQUAL(directory_count(m1), 1);
+  BOOST_CHECK_EQUAL(directory_count(m0), 1);
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   usleep(2100000);

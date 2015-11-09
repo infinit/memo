@@ -83,6 +83,7 @@ namespace infinit
     void
     StripStorageConfig::serialize(elle::serialization::Serializer& s)
     {
+      StorageConfig::serialize(s);
       s.serialize("backend", this->storage);
     }
 

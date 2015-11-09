@@ -191,8 +191,8 @@ def configure(
     'resources/images/logos/dropbox-logotype@2x.png',
     'resources/images/logos/egnyte.png',
     'resources/images/logos/egnyte@2x.png',
-    'resources/images/logos/box.png',
-    'resources/images/logos/box@2x.png',
+    'resources/images/logos/aerofs.png',
+    'resources/images/logos/aerofs@2x.png',
 
     'resources/fonts/icons.eot',
     'resources/fonts/icons.svg',
