@@ -422,12 +422,12 @@ class Bottle(bottle.Bottle):
       json = bottle.request.json
       drive = Drive(self.__beyond, **json)
       drive.create()
-      raise Response(201, {})
     except Drive.Duplicate:
       raise Response(409, {
         'error': 'drive/conflict',
-        'reason': 'drive %r already exists' % name,
+        'reason': 'drive %s already exists' % name,
       })
+    raise Response(201, {})
 
   def drive_delete(self, owner, name):
     user = self.user_from_name(name = owner)
