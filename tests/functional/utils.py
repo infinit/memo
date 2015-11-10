@@ -32,6 +32,9 @@ class TemporaryDirectory:
 
 class Infinit(TemporaryDirectory):
 
+  def __init__(self, beyond = None):
+    self.__beyond = beyond
+
   def run(self, args, input = None, return_code = 0, env = {}):
     self.env = {
       'PATH': 'bin:backend/bin:/bin:/usr/sbin',
@@ -39,8 +42,9 @@ class Infinit(TemporaryDirectory):
       'INFINIT_BEYOND': '127.0.0.1:4242',
       'INFINIT_RDV': ''
     }
+    if self.__beyond is not None:
+      self.env['INFINIT_BEYOND'] = self.__beyond.domain
     self.env.update(env)
-
     pretty = '%s %s' % (
       ' '.join('%s=%s' % (k, v) for k, v in self.env.items()),
       ' '.join(pipes.quote(arg) for arg in args))
@@ -73,7 +77,8 @@ class Infinit(TemporaryDirectory):
         out = '[' + out.replace('\n', ',')[0:-1] + ']'
       return json.loads(out)
     except:
-      return None
+      return out.decode('utf-8')
+
   def run_script(self, user = None, volume='volume', seq = None, **kvargs):
     cmd = ['infinit-volume', '--run', volume]
     if user is not None:
@@ -85,34 +90,15 @@ def assertEq(a, b):
   if a != b:
     raise Exception('%r != %r' % (a, b))
 
-import threading
 import bottle
-from functools import partial
-
-def __enter__(self):
-  thread = threading.Thread(
-    target = partial(bottle.run, app = self, port = 4242))
-  thread.daemon = True
-  thread.start()
-  while not hasattr(self, 'port'):
-    import time
-    time.sleep(.1)
-  return self
-
-@property
-def host(self):
-  return 'http://127.0.0.1:%s' % self.port
-
-infinit.beyond.bottle.Bottle.__enter__ = __enter__
-infinit.beyond.bottle.Bottle.host = host
 
 class Beyond():
 
   def __init__(self):
     super().__init__()
+    self.__server = bottle.WSGIRefServer(port = 0)
     self.__app = None
     self.__beyond = None
-    self.__bottle = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
 
@@ -120,16 +106,37 @@ class Beyond():
     couchdb = self.__couchdb.__enter__()
     self.__datastore = \
       infinit.beyond.couchdb.CouchDBDatastore(couchdb)
-    self.__beyond = infinit.beyond.Beyond(
-      datastore = self.__datastore,
-      dropbox_app_key = 'db_key',
-      dropbox_app_secret = 'db_secret',
-      google_app_key = 'google_key',
-      google_app_secret = 'google_secret',
-    )
-    self.__app = infinit.beyond.bottle.Bottle(self.__beyond)
-    self.__app.__enter__()
+    def run():
+      self.__beyond = infinit.beyond.Beyond(
+        datastore = self.__datastore,
+        dropbox_app_key = 'db_key',
+        dropbox_app_secret = 'db_secret',
+        google_app_key = 'google_key',
+        google_app_secret = 'google_secret',
+      )
+      self.__app = infinit.beyond.bottle.Bottle(beyond = self.__beyond)
+      try:
+        bottle.run(app = self.__app,
+                   quiet = True,
+                   server = self.__server)
+      except Exception as e:
+        raise e
+
+    import threading
+    from functools import partial
+    thread = threading.Thread(target = run)
+    thread.daemon = True
+    thread.start()
+    while self.__server.port == 0 and thread.is_alive():
+      import time
+      time.sleep(.1)
+    if not thread.is_alive():
+      raise Exception("Server is already dead")
     return self
+
+  @property
+  def domain(self):
+    return "http://localhost:%s" % self.__server.port
 
   def __exit__(self, *args, **kwargs):
     pass
