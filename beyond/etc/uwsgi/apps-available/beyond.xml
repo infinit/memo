@@ -1,0 +1,19 @@
+<uwsgi>
+  <plugin>python3</plugin>
+  <plugin>syslog</plugin>
+  <pythonpath>/opt/infinit/beyond/lib/python3.4</pythonpath>
+  <module>infinit.beyond.wsgi</module>
+  <master/>
+  <processes>4</processes>
+  <harakiri>15</harakiri>
+  <reload-mercy>8</reload-mercy>
+  <cpu-affinity>1</cpu-affinity>
+  <stats>/tmp/stats.socket</stats>
+  <max-requests>2000</max-requests>
+  <limit-as>512</limit-as>
+  <reload-on-as>1024</reload-on-as>
+  <reload-on-rss>512</reload-on-rss>
+  <no-orphans/>
+  <vacuum/>
+  <logger>syslog:uwsgi-beyond</logger>
+</uwsgi>
