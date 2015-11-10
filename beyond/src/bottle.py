@@ -16,7 +16,6 @@ from requests import Request, Session
 from infinit.beyond import *
 from infinit.beyond.gcs import GCS
 
-
 ## -------- ##
 ## Response ##
 ## -------- ##
@@ -46,11 +45,24 @@ class ResponsePlugin(object):
     def wrapper(*args, **kwargs):
       try:
         return f(*args, **kwargs)
+      except exceptions.MissingField as exception:
+        bottle.response.status = 400
+        return {
+          'error': '%s/missing_field/%s' % (
+            exception.field.type, exception.field.name),
+          'reason': 'missing field %s' % exception.field.name
+        }
+      except exceptions.InvalidFormat as exception:
+        bottle.response.status = 422
+        return {
+          'error': '%s/invalid_format/%s' % (
+            exception.field.type, exception.field.name),
+          'reason': '%s has an invalid format' % exception.field.name
+        }
       except Response as response:
         bottle.response.status = response.status
         return response.body
     return wrapper
-
 
 ## ------ ##
 ## Bottle ##
@@ -175,6 +187,15 @@ class Bottle(bottle.Bottle):
   def __user_not_found(self, name):
     return self.__not_found('user', name)
 
+  def __ensure_names_match(self, type, name, entity):
+    if 'name' not in entity:
+      raise exceptions.MissingField(type, 'name')
+    if entity['name'] != name:
+      raise Response(409, {
+        'error': '%s/names_do_not_match' % type,
+        'reason': 'entity name and route must match',
+      })
+
   def authenticate(self, user):
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
@@ -238,6 +259,7 @@ class Bottle(bottle.Bottle):
   def user_put(self, name):
     try:
       json = bottle.request.json
+      self.__ensure_names_match('user', name, json)
       user = User.from_json(self.__beyond, json)
       user.create()
       raise Response(201, {})

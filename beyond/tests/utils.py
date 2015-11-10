@@ -62,7 +62,7 @@ class Beyond:
     self.__app.__enter__()
     return self
 
-  def request(self, url, json = None, auth = None, **kwargs):
+  def request(self, url, throws = True, json = {}, auth = None, **kwargs):
     # Older requests don't have json parameter
     if json is not None:
       j = json
@@ -81,15 +81,23 @@ class Beyond:
         sig = base64.b64encode(raw_sig)
         kwargs['headers']['infinit-signature'] = sig
         kwargs['headers']['infinit-time'] = t
-    return requests.request(url = '%s/%s' % (self.host, url),
-                            allow_redirects = False,
-                            **kwargs)
+        import sys
+    response = requests.request(url = '%s/%s' % (self.host, url),
+                                allow_redirects = False,
+                                **kwargs)
+    if throws:
+      if int(response.status_code / 100) != 2:
+        response.raise_for_status()
+    return response
 
   def get(self, url, **kwargs):
     return self.request(url = url, method = 'GET', **kwargs)
 
   def put(self, url, **kwargs):
     return self.request(url = url, method = 'PUT', **kwargs)
+
+  def delete(self, url, **kwargs):
+    return self.request(url = url, method = 'DELETE', **kwargs)
 
   def __exit__(self, *args):
     self.__app.__exit__()
@@ -102,10 +110,143 @@ class Beyond:
   def host(self):
     return 'http://127.0.0.1:%s' % self.__app.port
 
+def throws(function, expected = None, json = True):
+  try:
+    function()
+    assert False
+  except requests.exceptions.HTTPError as e:
+    if expected:
+      assert e.response.status_code == expected
+    if not json:
+      return e.response
+    response = e.response.json()
+    assert 'reason' in response
+    assert 'error' in response
+    return response
+
+class User(dict):
+
+  def __init__(self, name = None, email = None):
+    if name is None:
+      from random import SystemRandom
+      import string
+      name = ''.join(SystemRandom().choice(
+        string.ascii_uppercase + string.digits) for _ in range(10))
+    if email is None:
+      email = name + '@infinit.io'
+    from Crypto.PublicKey import RSA
+    key = RSA.generate(2048, e=65537)
+    self['name'] = name
+    self['email'] = email
+    def cleanup(key):
+      import re
+      r = re.compile('-+(BEGIN)?(END)? (RSA )?(PUBLIC)?(PRIVATE)? KEY-+')
+      key = key.decode('ascii').replace('\n', '')
+      import sys
+      res = r.sub('', key)
+      return res
+    self['public_key'] = {'rsa': cleanup(key.publickey().exportKey("PEM"))}
+    self.__private_key = cleanup(key.exportKey("PEM"));
+
+  @property
+  def private_key(self):
+    import sys
+    return self.__private_key
+
+  def put(self, hub):
+    return hub.put('users/%s' % self['name'], json = self)
+
+class Network(dict):
+  kelips = {
+    'type': 'kelips',
+    'config': {
+      'query_get_retries': 30,
+      'file_timeout_ms': 120000,
+      'k': 1,
+      'ping_interval_ms': 1000,
+      'query_put_insert_ttl': 3,
+      'query_get_ttl': 10,
+      'gossip': {
+        'other_target': 3,
+        'interval_ms': 2000,
+        'group_target': 3,
+        'bootstrap_group_target': 12,
+        'old_threshold_ms': 40000,
+        'contacts_other': 3,
+        'files': 6,
+        'bootstrap_other_target': 12,
+        'new_threshold': 5,
+        'contacts_group': 3
+      }
+    }
+  }
+  paxos = {
+    'type': 'paxos',
+    'replication-factor': 3,
+  }
+
+  def __init__(self, name, owner):
+    self.__owner = owner
+    self['overlay'] = Network.kelips
+    self['consensus'] = Network.paxos
+    self['owner'] = self.__owner['public_key']
+    self.__short_name = name
+    self['name'] = owner['name'] + '/' + self.__short_name
+
+  @property
+  def shortname(self):
+    return self.__short_name
+
+  @property
+  def owner(self):
+    return self.__owner
+
+  def put(self, hub, owner = None):
+    if owner is None:
+      owner = self.owner
+    return hub.put('networks/%s' % self['name'], json = self,
+                   auth = owner.private_key)
+
+class Volume(dict):
+
+  def __init__(self, name, network):
+    self.__short_name = name
+    self.__network = network
+    self['name'] = self.__network['name'] + '/' + name
+    self['network'] = self.__network['name']
+
+  @property
+  def network(self):
+    return self.__network
+
+  def put(self, hub, owner = None):
+    if owner is None:
+      owner = self.network.owner
+    return hub.put('volumes/%s' % self['name'], json = self,
+                   auth = owner.private_key)
+
+class Drives(dict):
+
+  def __init__(self, name, volume, description = "Lorem ipsum", members = {}):
+    self.__short_name = name
+    self.__volume = volume
+    self['name'] == volume.network.owner['name'] / self.__short_name
+
+  @property
+  def volume(self):
+    return self.__volume
+
+  def put(self, hub, owner = None):
+    if owner is None:
+      owner = self.volume.network.owner
+    return hub.put('drives/%s' % self['name'], json = self,
+                   auth = owner.private_key)
+
 mefyl_priv = 'MIIEpAIBAAKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQABAoIBAADxmSB5tVRWrGGL6q4kOIWxTGb5hU8llApZgKEhdLFjSsvFZIzFYYjrab9iLRroQgw/tMENLdBy7AWtcZWZ6J8SAP/QJ7KQJ9XdR34hG5xViIRG1VS19W3Ve+RROcynZwkyYMkG4Gp+/z5MhsVk1IdAbO5b1IhrQbc8CLB/dpdqwcicWqiR6t3mc5HkQ4mDOBSjrU11voiv8dIc0G6aOWEpqzoTYw7ewxoXugezmJnkOsObRWno2OZO83IVFXEmAjMe73+jhPKPbMD7WcT7ktKynPfFYh2kTrkhDDaTTs4I2UBCP6UlUaAt3IPFIZEJXCGplRTOldL3W+VEuTcXpZECgYEA58zLVUhgqFkpvxI7unu6ijjvLipgsBefbDseKfuHTHx9T7Unb2ESHW551e5lF5yuRmCjE2vJXFCQidyq0mwbhAaQK4PWuea5+RrPmYDpOQP3kQQAfsOrwauQR6sX2HxxIWwYcet4bO2dDEOOgN8d7fS6DpWw8yYSqiiUrXMAdPkCgYEA13rzCpXGzFU6H2pBmfamXFR56q0J+bmNanXMZ044UPyNdVYhJ8hFqs0bRjjR9QiHxg9/94Cfer7VKQePlxVh3JTduZQUcANXXowyFi6wLzmVABaM55jEDE0WkZcOIYMZIJWka92AsHP7ODp8QR752zC3Qwn48RlN3clzC7dfPScCgYEA5r0oZqNefBYNhUKMLCy/2pmkFStgBcnuCxmqBBZ6bvu47aAhOjDBjISNSRQ+k0uG+010538y+O7FgkYj0MSGe1zhJD/ffjwbQcmbf20gO34kcLkwGP+EOIwkWgMJAJmXL7Lffn7r6Fp7K1sQPl5a96TVlHETrGZoy/MLVMEWYlkCgYAqYZpP6KmTIugtqZ6Bg8uwuUTJbYNaxK4V1FmBsBbPhvzjqS8YPgHF2FWW+DIDecwKnp3Stk+nusT+LuiFFMWMtxLtHzzt0xpqFDT9u+0XPMIbpFPOcXON39Oiiw1SdhCJIiWWuZhIHGe65XXu8QK/o9NHsjxuX0W7a5XfJg/rXQKBgQDEo+kYUAW6JM2tod+4OxF8+s7q1E7fzZ7jgACoNzJ0RJVW9hGAlUhuXRkHIjnnhd2mDqYry7KNA5kvIS+oSH+wKjIpB6ZiBOhvgjww16LE6+aDoSLqmgwfHh2T2LpNfsc2UupCDp5W7jI4LPGbStiAeMLTtXU/XQ35Ov1BMWXN8g=='
 
 mefyl = {
   'name': 'mefyl',
+  'email': 'mefyl@infinit.io',
   'public_key': {'rsa': 'MIIBCgKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQAB'},
 }
 
@@ -113,6 +254,7 @@ mefyl2_priv = 'MIIEpAIBAAKCAQEAzonW3m0tPEkMfVfIRHIh7YEIMjSgewwTHcLlL47S/tXjkZ4fF
 
 mefyl2 = {
   'name': 'mefyl',
+  'email': 'mefyl@infinit.io',
   'public_key':
   {'rsa': 'MIIBCgKCAQEAzonW3m0tPEkMfVfIRHIh7YEIMjSgewwTHcLlL47S/tXjkZ4fFXGIZPnvuqnva+NtBLhSv9roz/lxpYyqNikjdCPUjVZem14Xkj5imEi3ACCX03cdFKmfGmGFCi7gF1zZYtH2S3yql823yXudFDjp1iVqxky5gnkFyEYhImsanrpuhs2EIHfkV5mNFToB6U4+VkJgbeugURQXeTmlJ8BPKl+rPWABigPd+U1KCB/UO0EQO7eDdLqC2WBGQp2afTaX/j5KrMivt6sfI0eQft8WlNsUtbcunpRP+ak+tRoTL81edHMNmDVWU95vQTGw+iSeIE5o8ao/F7BT6IWC7Sw3XQIDAQAB'},
 }

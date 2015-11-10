@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+user = User()
+user2 = User()
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_invalid_routes(self):
+      def not_found(route):
+        throws(lambda: beyond.put(route, json = user),
+               404,
+               json = False)
+      not_found('users')
+      not_found('users/')
+      not_found('users//')
+      not_found('users/unknown/')
+      not_found('users/unknown/again')
+      # Conflict.
+      def conflict(route):
+        throws(lambda: beyond.put(route, json = user),
+               409,
+               json = False)
+      # User name (unknown) doesn't match user['name'].
+      conflict('users/unknown')
+
+    def test_missing_field(self):
+      def missing_field(fields):
+        r = throws(lambda: beyond.put('users/%s' % user['name'], json =
+                                      {
+                                        name: user[name] for name in fields
+                                      }),
+                   400)
+        assert 'missing_field' in r['error']
+
+      missing_field([])
+      missing_field(['name'])
+      missing_field(['name', 'email'])
+      missing_field(['email', 'public_key'])
+
+    def test_invalid_field(self):
+      def invalid_field(fields):
+        u = deepcopy(user)
+        u.update(fields)
+        r = throws(lambda: beyond.put('users/%s' % u['name'], json = u),
+                   422)
+        assert 'invalid_format' in r['error']
+        assert list(fields.keys())[0] in r['error']
+
+      invalid_field({'email': 'castor'})
+      invalid_field({'email': 'castor@raton'})
+      invalid_field({'email': '@raton.fr'})
+      invalid_field({'email': 'castor@raton.'})
+
+    def test_duplicates(self):
+      def copy(update):
+        u = deepcopy(user)
+        u.update(update)
+        return u
+
+      def duplicate(u, should_fail):
+        def run(action, _):
+          return action().json()
+        action = throws if should_fail else run
+        r = action(lambda: beyond.put('users/%s' % u['name'], json = u),
+                   409)
+      beyond.put('users/%s' % user['name'], json = user)
+      duplicate(user, should_fail = False)
+      # Put a user with a different key.
+      u = copy({'public_key': user2['public_key']})
+      duplicate(u, should_fail = True)
+
+      # XXX: Right now, PUT does not update the resource.
+      u = copy({'email': 'castor@infinit.io'})
+      duplicate(u, should_fail = False)
+      res = beyond.get('users/%s' % u['name']).json()
+      assert res['email'] != u['email']
+      assert res['email'] == user['email']
+
+  if __name__ == '__main__':
+    unittest.main()

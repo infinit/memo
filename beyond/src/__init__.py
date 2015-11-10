@@ -4,8 +4,11 @@ import requests
 
 import infinit.beyond.version
 
+from infinit.beyond import validation
+
 from copy import deepcopy
 from itertools import chain
+
 
 class Beyond:
 
@@ -99,7 +102,17 @@ class Beyond:
         owner = owner, name = name)
 
 class User:
-
+  fields = {
+    'mandatory': [
+      ('name', validation.Name('user', 'name')),
+      ('email', validation.Email('user')),
+      ('public_key', None)
+    ],
+    'optional': [
+      ('dropbox_accounts', None),
+      ('google_accounts', None)
+    ]
+  }
   class Duplicate(Exception):
     pass
 
@@ -109,6 +122,7 @@ class User:
   def __init__(self,
                beyond,
                name = None,
+               email = None,
                public_key = None,
                dropbox_accounts = None,
                google_accounts = None,
@@ -116,6 +130,7 @@ class User:
     self.__beyond = beyond
     self.__id = id
     self.__name = name
+    self.__email = email
     self.__public_key = public_key
     self.__dropbox_accounts = dropbox_accounts or {}
     self.__dropbox_accounts_original = deepcopy(self.dropbox_accounts)
@@ -124,8 +139,13 @@ class User:
 
   @classmethod
   def from_json(self, beyond, json):
+    import sys
+    for (key, validator) in User.fields['mandatory']:
+      if key not in json: raise exceptions.MissingField('user', key)
+      validator and validator(json[key])
     return User(beyond,
                 name = json['name'],
+                email = json['email'],
                 public_key = json['public_key'],
                 dropbox_accounts = json.get('dropbox_accounts', []),
                 google_accounts = json.get('google_accounts', []),
@@ -135,6 +155,7 @@ class User:
     res = {
       'id': self.id,
       'name': self.name,
+      'email': self.email,
       'public_key': self.public_key,
     }
     if private and self.dropbox_accounts is not None:
@@ -169,6 +190,10 @@ class User:
     return self.__name
 
   @property
+  def email(self):
+    return self.__email
+
+  @property
   def public_key(self):
     return self.__public_key
 
@@ -179,19 +204,6 @@ class User:
   @property
   def google_accounts(self):
     return self.__google_accounts
-
-class MissingField(Exception):
-
-  def __init__(self, field):
-    self.__field = field
-
-  def __str__(self):
-    return 'missing field: %r' % self.field
-
-  @property
-  def field(self):
-    return self.__field
-
 
 class Entity(type):
 
