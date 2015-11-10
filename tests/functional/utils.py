@@ -43,7 +43,11 @@ class Infinit(TemporaryDirectory):
       ' '.join(pipes.quote(arg) for arg in args))
     print(pretty)
     if input is not None:
-      input = (json.dumps(input) + '\n').encode('utf-8')
+      if isinstance(input, list):
+        input = '\n'.join(map(json.dumps, input)) + '\n'
+      else:
+        input = json.dumps(input) + '\n'
+      input = input.encode('utf-8')
     process = subprocess.Popen(
       args + ['-s'],
       env = env,
@@ -61,14 +65,17 @@ class Infinit(TemporaryDirectory):
       raise Exception('command failed with code %s: %s' % \
                       (process.returncode, pretty))
     try:
-      return json.loads(out.decode('utf-8'))
+      out = out.decode('utf-8')
+      if len(out.split('\n')) > 2:
+        out = '[' + out.replace('\n', ',')[0:-1] + ']'
+      return json.loads(out)
     except:
       return None
-  def run_script(self, user = None, volume='volume', **kvargs):
+  def run_script(self, user = None, volume='volume', seq = None, **kvargs):
     cmd = ['infinit-volume', '--run', volume]
     if user is not None:
       cmd += ['--as', user]
-    response = self.run(cmd, input = kvargs)
+    response = self.run(cmd, input = seq or kvargs)
     return response
 
 def assertEq(a, b):

@@ -97,3 +97,40 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   response = infinit_1.run_script(user = 'user', operation = 'rmdir',
                                   path = '/beacon')
   assertEq(response['success'], True)
+  # READ/WRITE files with handle API
+  response = infinit_1.run_script(user = 'user', seq =
+    [
+      { 'operation': 'create', 'path': '/file', 'handle': 'h1',
+        'flags': 0x0202, 'mode': 33206
+      },
+      {
+        'operation': 'write', 'handle': 'h1', 'content': 'Zm9v',
+        'size': 3, 'offset': 0
+      },
+      {
+        'operation': 'close', 'handle': 'h1'
+      },
+      {
+        'operation': 'dispose', 'handle': 'h1'
+      },
+    ]);
+  assertEq(4, len(response))
+  assertEq(response[3]['success'], True)
+  response = infinit_1.run_script(user = 'user', seq =
+    [
+      { 'operation': 'open', 'path': '/file', 'handle': 'h1',
+        'flags': 0x2, 'mode': 0
+      },
+      {
+        'operation': 'read', 'handle': 'h1',
+        'size': 3, 'offset': 0
+      },
+      {
+        'operation': 'close', 'handle': 'h1'
+      },
+      {
+        'operation': 'dispose', 'handle': 'h1'
+      },
+    ])
+  assertEq(4, len(response))
+  assertEq('Zm9v', response[1]['content'])
