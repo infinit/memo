@@ -802,7 +802,6 @@ namespace infinit
       uint16_t flags;
       Reader(*hin).skip(2).r16(flags).skip(4).skip(8).r64(guid);
       ELLE_LOG("close %s  flags %s", guid, flags);
-      bool ok = false;
       // FIXME: stat in reply
       // FIXME: error check
       if (guid >= _directory_start)
@@ -821,7 +820,6 @@ namespace infinit
           }
         }
         _dir_handles.erase(guid);
-        ok = true;
       }
       else
       {
@@ -830,7 +828,6 @@ namespace infinit
         if (e.deleteOnClose)
           e.file->unlink();
         _file_handles.erase(guid);
-        ok = true;
       }
       elle::Buffer buf = make_reply(*hin, [&](Writer& w) {
           w.w16(60).w16(flags).w32(0)
