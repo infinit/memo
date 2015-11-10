@@ -256,19 +256,19 @@ run(variables_map const& args)
             path->stat(&st);
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("success", true);
-            response.serialize("st_dev"    ,st.st_dev    );
-            response.serialize("st_ino"    ,st.st_ino    );
-            response.serialize("st_mode"   ,st.st_mode   );
-            response.serialize("st_nlink"  ,st.st_nlink  );
-            response.serialize("st_uid"    ,st.st_uid    );
-            response.serialize("st_gid"    ,st.st_gid    );
-            response.serialize("st_rdev"   ,st.st_rdev   );
-            response.serialize("st_size"   ,st.st_size   );
-            response.serialize("st_blksize",st.st_blksize);
-            response.serialize("st_blocks" ,st.st_blocks );
-            response.serialize("st_atime"  ,st.st_atime  );
-            response.serialize("st_mtime"  ,st.st_mtime  );
-            response.serialize("st_ctime"  ,st.st_ctime  );
+            response.serialize("st_dev"    , st.st_dev            );
+            response.serialize("st_ino"    , st.st_ino            );
+            response.serialize("st_mode"   , st.st_mode           );
+            response.serialize("st_nlink"  , st.st_nlink          );
+            response.serialize("st_uid"    , st.st_uid            );
+            response.serialize("st_gid"    , st.st_gid            );
+            response.serialize("st_rdev"   , st.st_rdev           );
+            response.serialize("st_size"   , st.st_size           );
+            response.serialize("st_blksize", st.st_blksize        );
+            response.serialize("st_blocks" , st.st_blocks         );
+            response.serialize("st_atime"  , uint64_t(st.st_atime));
+            response.serialize("st_mtime"  , uint64_t(st.st_mtime));
+            response.serialize("st_ctime"  , uint64_t(st.st_ctime));
             continue;
           }
           else if (op == "setxattr")
