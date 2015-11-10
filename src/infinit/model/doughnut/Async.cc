@@ -1,5 +1,6 @@
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -73,8 +74,8 @@ namespace infinit
             _next_index = std::max(id, _next_index);
             boost::filesystem::ifstream is(p);
             elle::serialization::binary::SerializerIn sin(is, false);
-            sin.set_context<Model*>((Model*)&this->_doughnut);
-            sin.set_context<Doughnut*>(&this->_doughnut);
+            sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
+            sin.set_context<Doughnut*>(&this->doughnut());
             Op op(overlay);
             sin.set_context(ACBDontWaitForSignature{});
             sin.set_context(OKBDontWaitForSignature{});

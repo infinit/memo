@@ -692,21 +692,20 @@ namespace infinit
       }
 
       Node::Node(Configuration const& config,
-                 bool observer,
                  model::Address node_id,
+                 std::shared_ptr<Local> local,
                  infinit::model::doughnut::Doughnut* doughnut)
-        : Overlay(std::move(node_id))
+        : Overlay(doughnut, local, std::move(node_id))
         , _config(config)
         , _next_id(1)
-        , _observer(observer)
+        , _observer(!local)
         , _dropped_puts(0)
         , _dropped_gets(0)
         , _failed_puts(0)
       {
         _self = Address(this->node_id());
-        if (observer)
+        if (!local)
           ELLE_LOG("Running in observer mode");
-        this->doughnut(doughnut);
         _remotes_server.listen(0);
         ELLE_DEBUG("remotes server listening on %s", _remotes_server.local_endpoint());
         _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.io:7890");
@@ -733,6 +732,68 @@ namespace infinit
           _bootstraping.close();
         }
         start();
+        if (auto l = local)
+        {
+          l->on_fetch.connect(std::bind(&Node::fetch, this,
+                                        std::placeholders::_1,
+                                        std::placeholders::_2));
+          l->on_store.connect(std::bind(&Node::store, this,
+                                          std::placeholders::_1,
+                                        std::placeholders::_2));
+          l->on_remove.connect(std::bind(&Node::remove, this,
+                                         std::placeholders::_1));
+
+          l->rpcs().add("kelips_fetch_state",
+                        std::function<SerState ()>(
+                          [this] ()
+                          {
+                            SerState res;
+                            std::vector<GossipEndpoint> eps;
+                            for (auto const& e: _local_endpoints)
+                              eps.push_back(e.first);
+                            res.first.insert(std::make_pair(_self, eps));
+                            for (auto const& contacts: this->_state.contacts)
+                              for (auto const& c: contacts)
+                              {
+                                std::vector<GossipEndpoint> eps;
+                                for (auto const& e: c.second.endpoints)
+                                  eps.push_back(e.first);
+                                res.first.insert(std::make_pair(c.second.address, eps));
+                              }
+                            for (auto const& f: this->_state.files)
+                              res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
+                            // OH THE UGLY HACK, we need a place to store our own address
+                            res.second.push_back(std::make_pair(Address::null, _self));
+                            return res;
+                          }));
+          this->_port = l->server_endpoint().port();
+          for (auto const& itf: elle::network::Interface::get_map(
+                 elle::network::Interface::Filter::only_up |
+                 elle::network::Interface::Filter::no_loopback |
+                 elle::network::Interface::Filter::no_autoip))
+            if (itf.second.ipv4_address.size() > 0)
+            {
+              this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
+                                                               boost::asio::ip::address::from_string(itf.second.ipv4_address),
+                                                               _port), now()));
+              ELLE_LOG("%s: listening on %s:%s",
+                       *this, itf.second.ipv4_address, _port);
+            }
+          if (!this->_rdv_host.empty())
+            _rdv_connect_thread_local = elle::make_unique<reactor::Thread>(
+              "rdv_connect",
+              [this,l] {
+                retry_forever(10_sec, 120_sec, "RDV connect",
+                              [&] {
+                                l->utp_server()->rdv_connect(
+                                  this->_rdv_id, this->_rdv_host, 120_sec);
+                              });
+              });
+          else
+            l->utp_server()->set_local_id(this->_rdv_id);
+          reload_state(*l);
+          this->engage();
+        }
       }
 
       int
@@ -880,7 +941,7 @@ namespace infinit
         bootstrap(true);
         ELLE_TRACE("joining");
         _gossip.socket()->close();
-        if (!_local)
+        if (!this->local())
         {
           _gossip.bind(GossipEndpoint({}, _port));
           if (!_rdv_host.empty())
@@ -909,7 +970,7 @@ namespace infinit
 
         ELLE_TRACE("%s: bound to udp, member of group %s", *this, _group);
 
-        if (!_local)
+        if (!this->local())
         {
           _listener_thread = elle::make_unique<reactor::Thread>("listener",
             std::bind(&Node::gossipListener, this));
@@ -918,11 +979,11 @@ namespace infinit
         }
         else
         {
-          _local->utp_server()->socket()->register_reader(
+          this->local()->utp_server()->socket()->register_reader(
             "KELIPSGS", std::bind(&Node::onPacket, this, std::placeholders::_1,
               std::placeholders::_2));
           ELLE_LOG("%s: listening on %s",
-            *this, _local->utp_server()->local_endpoint());
+            *this, this->local()->utp_server()->local_endpoint());
         }
         if (!_observer)
         {
@@ -1124,7 +1185,7 @@ namespace infinit
         b.size(b.size()+8);
         memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
         memcpy(b.mutable_contents(), "KELIPSGS", 8);
-        auto& sock = _local ? *_local->utp_server()->socket()
+        auto& sock = this->local() ? *this->local()->utp_server()->socket()
           : _gossip;
         static bool async = getenv("INFINIT_KELIPS_ASYNC_SEND");
         if (async)
@@ -2715,71 +2776,6 @@ namespace infinit
       }
 
       void
-      Node::register_local(std::shared_ptr<infinit::model::doughnut::Local> l)
-      {
-        ELLE_ASSERT(!this->_observer);
-        this->_local = l;
-        l->on_fetch.connect(std::bind(&Node::fetch, this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2));
-        l->on_store.connect(std::bind(&Node::store, this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2));
-        l->on_remove.connect(std::bind(&Node::remove, this,
-                                           std::placeholders::_1));
-
-        l->rpcs().add("kelips_fetch_state",
-          std::function<SerState ()>(
-            [this] ()
-            {
-              SerState res;
-              std::vector<GossipEndpoint> eps;
-              for (auto const& e: _local_endpoints)
-                eps.push_back(e.first);
-              res.first.insert(std::make_pair(_self, eps));
-              for (auto const& contacts: this->_state.contacts)
-                for (auto const& c: contacts)
-                {
-                  std::vector<GossipEndpoint> eps;
-                  for (auto const& e: c.second.endpoints)
-                    eps.push_back(e.first);
-                  res.first.insert(std::make_pair(c.second.address, eps));
-                }
-              for (auto const& f: this->_state.files)
-                res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
-              // OH THE UGLY HACK, we need a place to store our own address
-              res.second.push_back(std::make_pair(Address::null, _self));
-              return res;
-            }));
-        this->_port = l->server_endpoint().port();
-        for (auto const& itf: elle::network::Interface::get_map(
-           elle::network::Interface::Filter::only_up |
-           elle::network::Interface::Filter::no_loopback |
-           elle::network::Interface::Filter::no_autoip))
-          if (itf.second.ipv4_address.size() > 0)
-          {
-            this->_local_endpoints.push_back(TimedEndpoint(GossipEndpoint(
-              boost::asio::ip::address::from_string(itf.second.ipv4_address),
-              _port), now()));
-            ELLE_LOG("%s: listening on %s:%s",
-                     *this, itf.second.ipv4_address, _port);
-          }
-        if (!this->_rdv_host.empty())
-          _rdv_connect_thread_local = elle::make_unique<reactor::Thread>("rdv_connect",
-            [this,l] {
-              retry_forever(10_sec, 120_sec, "RDV connect",
-                [&] {
-                  l->utp_server()->rdv_connect(
-                    this->_rdv_id, this->_rdv_host, 120_sec);
-                });
-          });
-        else
-          l->utp_server()->set_local_id(this->_rdv_id);
-        reload_state(*l);
-        this->engage();
-      }
-
-      void
       Node::fetch(Address address,
                   std::unique_ptr<infinit::model::blocks::Block> & b)
       {}
@@ -2824,7 +2820,7 @@ namespace infinit
         if (hosts.first == _self || hosts.first == Address::null)
         {
           ELLE_TRACE("target is local");
-          return _local;
+          return this->local();
         }
         for (auto const& ep: hosts.second)
         {
@@ -2832,7 +2828,7 @@ namespace infinit
             if (ep == e2e(l.first))
             {
               ELLE_TRACE("target is local");
-              return _local;
+              return this->local();
             }
         }
         /*auto it = cache.find(hosts.first);
@@ -2958,7 +2954,8 @@ namespace infinit
           auto it = target.find(c.first);
           if (it == target.end())
           {
-            if (g == _group || signed(target.size()) < _config.max_other_contacts)
+            if (g == this->_group ||
+                signed(target.size()) < this->_config.max_other_contacts)
             {
               Contact contact{{}, {}, c.first, Duration(0), Time(), 0};
               for (auto const& ep: c.second)
@@ -2985,8 +2982,10 @@ namespace infinit
             return i.second.home_node == f.second;});
           if (it == its.second)
           {
-            _state.files.insert(std::make_pair(f.first,
-                File{f.first, f.second, now(), now(), _config.gossip.new_threshold+1}));
+            _state.files.insert(std::make_pair(
+                                  f.first,
+                                  File{f.first, f.second, now(), now(),
+                                      this->_config.gossip.new_threshold + 1}));
           }
         }
       }
@@ -3018,7 +3017,8 @@ namespace infinit
         auto peers = endpoints_extract(it->second.endpoints);
         // !! this yield, thus invalidating it
         ELLE_DEBUG("contacting %s on %s", id, peers);
-        auto& rsock = _local ? *_local->utp_server()->socket() : _gossip;
+        auto& rsock =
+          this->local() ? *this->local()->utp_server()->socket() : _gossip;
         auto res = rsock.contact(id, peers);
         it = contacts->find(address);
         if (it == contacts->end())
@@ -3037,7 +3037,8 @@ namespace infinit
           b.size(b.size()+8);
           memmove(b.mutable_contents()+8, b.contents(), b.size()-8);
           memcpy(b.mutable_contents(), "KELIPSGS", 8);
-          auto& sock = _local ? *_local->utp_server()->socket() : _gossip;
+          auto& sock =
+            this->local() ? *this->local()->utp_server()->socket() : _gossip;
           sock.send_to(reactor::network::Buffer(b.contents(), b.size()), res);
         }
       }
@@ -3063,7 +3064,7 @@ namespace infinit
       Node::_lookup_node(Address address)
       {
         if (address == _self)
-          return _local;
+          return this->local();
         boost::optional<PeerLocation> result;
         kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
           {
@@ -3330,13 +3331,15 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(
-        NodeEndpoints const& hosts, bool server, model::doughnut::Doughnut* dht)
+      Configuration::make(Address id,
+                          NodeEndpoints const& hosts,
+                          std::shared_ptr<model::doughnut::Local> local,
+                          model::doughnut::Doughnut* dht)
       {
         for (auto const& host: hosts)
         {
           ELLE_LOG("processing %s", host);
-          if (host.first == this->node_id())
+          if (host.first == id)
             continue;
           PeerLocation pl;
           if (host.first == model::Address())
@@ -3363,7 +3366,7 @@ namespace infinit
           this->bootstrap_nodes.push_back(pl);
         }
         return elle::make_unique<Node>(
-          *this, !server, this->node_id(), dht);
+          *this, std::move(id), std::move(local), dht);
       }
 
       static const

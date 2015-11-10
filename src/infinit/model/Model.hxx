@@ -18,7 +18,8 @@ namespace elle
 {
   namespace serialization
   {
-    template<> struct Serialize<infinit::model::StoreMode>
+    template <>
+    struct Serialize<infinit::model::StoreMode>
     {
       typedef int Type;
       static inline

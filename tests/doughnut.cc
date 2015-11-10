@@ -4,6 +4,7 @@
 #include <elle/log.hh>
 #include <elle/named.hh>
 #include <elle/test.hh>
+#include <elle/utils.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
@@ -59,10 +60,11 @@ public:
       [] (int,
           infinit::model::Address id,
           infinit::overlay::Stonehenge::Peers peers,
-          infinit::model::doughnut::Doughnut& d,
-          bool server)
+          std::shared_ptr<infinit::model::doughnut::Local> local,
+          infinit::model::doughnut::Doughnut& d)
       {
-        return elle::make_unique<infinit::overlay::Stonehenge>(id, peers, &d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(
+          id, peers, std::move(local), &d);
       }).call([this] (bool paxos,
                       infinit::cryptography::rsa::KeyPair keys_a,
                       infinit::cryptography::rsa::KeyPair keys_b,
@@ -74,12 +76,12 @@ public:
                       std::unique_ptr<storage::Storage> storage_b,
                       std::unique_ptr<storage::Storage> storage_c,
                       std::function<
-                      std::unique_ptr<infinit::overlay::Overlay>(
+                      std::unique_ptr<infinit::overlay::Stonehenge>(
                         int,
                         infinit::model::Address id,
                         infinit::overlay::Stonehenge::Peers peers,
-                        infinit::model::doughnut::Doughnut& d,
-                        bool server)> make_overlay)
+                        std::shared_ptr<infinit::model::doughnut::Local> local,
+                        infinit::model::doughnut::Doughnut& d)> make_overlay)
               {
                 this-> init(paxos,
                             std::move(keys_a),
@@ -96,9 +98,6 @@ public:
   std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys_a;
   std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys_b;
   std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys_c;
-  std::shared_ptr<dht::Local> local_a;
-  std::shared_ptr<dht::Local> local_b;
-  std::shared_ptr<dht::Local> local_c;
   std::shared_ptr<dht::Doughnut> dht_a;
   std::shared_ptr<dht::Doughnut> dht_b;
   std::shared_ptr<dht::Doughnut> dht_c;
@@ -116,12 +115,12 @@ private:
        std::unique_ptr<storage::Storage> storage_b,
        std::unique_ptr<storage::Storage> storage_c,
        std::function<
-         std::unique_ptr<infinit::overlay::Overlay>(
+         std::unique_ptr<infinit::overlay::Stonehenge>(
            int,
            infinit::model::Address id,
            infinit::overlay::Stonehenge::Peers peers,
-           infinit::model::doughnut::Doughnut& d,
-           bool server)> make_overlay)
+           std::shared_ptr<infinit::model::doughnut::Local> local,
+           infinit::model::doughnut::Doughnut& d)> make_overlay)
   {
     this->keys_a =
       elle::make_unique<infinit::cryptography::rsa::KeyPair>(std::move(keys_a));
@@ -137,24 +136,11 @@ private:
       storage_c = elle::make_unique<storage::Memory>();
     dht::Doughnut::ConsensusBuilder consensus;
     if (paxos)
-    {
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::consensus::Paxos>(dht, 3); };
-      this->local_a = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, id_a, std::move(storage_a));
-      this->local_b = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, id_b, std::move(storage_b));
-      this->local_c = std::make_shared<dht::consensus::Paxos::LocalPeer>(
-        3, id_c, std::move(storage_c));
-    }
     else
-    {
       consensus = [&] (dht::Doughnut& dht)
         { return elle::make_unique<dht::consensus::Consensus>(dht); };
-      this->local_a = std::make_shared<dht::Local>(id_a, std::move(storage_a));
-      this->local_b = std::make_shared<dht::Local>(id_b, std::move(storage_b));
-      this->local_c = std::make_shared<dht::Local>(id_c, std::move(storage_c));
-    }
     dht::Passport passport_a(
       this->keys_a->K(), "network-name", this->keys_a->k());
     dht::Passport passport_b(
@@ -162,51 +148,91 @@ private:
     dht::Passport passport_c(
       this->keys_c->K(), "network-name", this->keys_a->k());
     infinit::overlay::Stonehenge::Peers members;
-    members.emplace_back(local_a->server_endpoint(), local_a->id());
-    members.emplace_back(local_b->server_endpoint(), local_b->id());
-    members.emplace_back(local_c->server_endpoint(), local_c->id());
+    members.emplace_back(id_a);
+    members.emplace_back(id_b);
+    members.emplace_back(id_c);
+    std::vector<infinit::overlay::Stonehenge*> stonehenges;
+    make_overlay =
+      [make_overlay, &stonehenges] (
+        int n,
+        infinit::model::Address id,
+        infinit::overlay::Stonehenge::Peers peers,
+        std::shared_ptr<infinit::model::doughnut::Local> local,
+        infinit::model::doughnut::Doughnut& d)
+      {
+        auto res = make_overlay(
+          n, std::move(id), std::move(peers), std::move(local), d);
+        stonehenges.emplace_back(res.get());
+        return res;
+      };
     this->dht_a = std::make_shared<dht::Doughnut>(
+      id_a,
       *this->keys_a,
       this->keys_a->K(),
       passport_a,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        [=] (infinit::model::doughnut::Doughnut& d,
+             infinit::model::Address id,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(0, this->local_a->id(), members, d, server);
+          return make_overlay(0, id, members, std::move(local), d);
         }),
-      this->local_a);
+      boost::optional<int>(),
+      std::move(storage_a));
     this->dht_b = std::make_shared<dht::Doughnut>(
+      id_b,
       *this->keys_b,
       this->keys_a->K(),
       passport_b,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        [=] (infinit::model::doughnut::Doughnut& d,
+             infinit::model::Address id,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(1, this->local_a->id(), members, d, server);
+          return make_overlay(1, id, members, std::move(local), d);
         }),
-      this->local_b);
+      boost::optional<int>(),
+      std::move(storage_b));
     this->dht_c = std::make_shared<dht::Doughnut>(
+      id_c,
       *this->keys_c,
       this->keys_a->K(),
       passport_c,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
-        [=] (infinit::model::doughnut::Doughnut& d, bool server)
+        [=] (infinit::model::doughnut::Doughnut& d,
+             infinit::model::Address id,
+             std::shared_ptr<infinit::model::doughnut::Local> local)
         {
-          return make_overlay(2, this->local_a->id(), members, d, server);
+          return make_overlay(2, id, members, std::move(local), d);
         }),
-      this->local_c);
-    local_a->serve();
-    local_b->serve();
-    local_c->serve();
+      boost::optional<int>(),
+      std::move(storage_c));
+    for (auto* stonehenge: stonehenges)
+      for (auto& peer: stonehenge->peers())
+      {
+        elle::unconst(peer).endpoint =
+          infinit::overlay::Stonehenge::Peer::Endpoint{"127.0.0.1", 0};
+        if (peer.id == id_a)
+          elle::unconst(peer).endpoint->port =
+            this->dht_a->local()->server_endpoint().port();
+        else if (peer.id == id_b)
+          elle::unconst(peer).endpoint->port =
+            this->dht_b->local()->server_endpoint().port();
+        else if (peer.id == id_c)
+          elle::unconst(peer).endpoint->port =
+            this->dht_c->local()->server_endpoint().port();
+        else
+          ELLE_ABORT("unknown doughnut id: %s", peer.id);
+      }
   }
 };
 
 ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto& dht = *dhts.dht_a;
   {
     elle::Buffer data("\\_o<", 4);
@@ -222,7 +248,7 @@ ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto& dht = *dhts.dht_a;
   {
     auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
@@ -246,7 +272,7 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(async, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto& dht = *dhts.dht_c;
   {
     elle::Buffer data("\\_o<", 4);
@@ -292,7 +318,7 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto block = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
   elle::Buffer data("\\_o<", 4);
   block->data(elle::Buffer(data));
@@ -342,7 +368,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   auto block = elle::make_unique<dht::NB>(
     dhts.dht_a.get(), dhts.keys_a->K(), "blockname",
     elle::Buffer("blockdata", 9));
@@ -360,7 +386,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 
 ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
 {
-  DHTs dhts(::paxos = paxos);
+  DHTs dhts(paxos);
   std::unique_ptr<infinit::model::blocks::ACLBlock> block_alice;
   ELLE_LOG("alice: create block")
   {
@@ -410,16 +436,16 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   ELLE_LOG("store blocks")
   {
     DHTs dhts(
-      ::paxos = paxos,
-      ::keys_a = keys_a,
-      ::keys_b = keys_b,
-      ::keys_c = keys_c,
-      ::id_a = id_a,
-      ::id_b = id_b,
-      ::id_c = id_c,
-      ::storage_a = elle::make_unique<storage::Memory>(storage_a),
-      ::storage_b = elle::make_unique<storage::Memory>(storage_b),
-      ::storage_c = elle::make_unique<storage::Memory>(storage_c)
+      paxos,
+      keys_a,
+      keys_b,
+      keys_c,
+      id_a,
+      id_b,
+      id_c,
+      elle::make_unique<storage::Memory>(storage_a),
+      elle::make_unique<storage::Memory>(storage_b),
+      elle::make_unique<storage::Memory>(storage_c)
       );
     // iblock =
     //   dhts.dht_a->make_block<infinit::model::blocks::ImmutableBlock>(
@@ -433,16 +459,16 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   ELLE_LOG("load blocks")
   {
     DHTs dhts(
-      ::paxos = paxos,
-      ::keys_a = keys_a,
-      ::keys_b = keys_b,
-      ::keys_c = keys_c,
-      ::id_a = id_a,
-      ::id_b = id_b,
-      ::id_c = id_c,
-      ::storage_a = elle::make_unique<storage::Memory>(storage_a),
-      ::storage_b = elle::make_unique<storage::Memory>(storage_b),
-      ::storage_c = elle::make_unique<storage::Memory>(storage_c)
+      paxos,
+      keys_a,
+      keys_b,
+      keys_c,
+      id_a,
+      id_b,
+      id_c,
+      elle::make_unique<storage::Memory>(storage_a),
+      elle::make_unique<storage::Memory>(storage_b),
+      elle::make_unique<storage::Memory>(storage_c)
       );
     // auto ifetched = dhts.dht_a->fetch(iblock->address());
     // BOOST_CHECK_EQUAL(iblock->data(), ifetched->data());
@@ -491,16 +517,17 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
     [&stonehenge] (int dht,
                    infinit::model::Address id,
                    infinit::overlay::Stonehenge::Peers peers,
-                   infinit::model::doughnut::Doughnut& d,
-                   bool)
+                   std::shared_ptr<infinit::model::doughnut::Local> local,
+                   infinit::model::doughnut::Doughnut& d)
     {
       if (dht == 0)
       {
-        stonehenge = new WrongQuorumStonehenge(id, peers, &d);
+        stonehenge = new WrongQuorumStonehenge(id, peers, std::move(local), &d);
         return std::unique_ptr<infinit::overlay::Stonehenge>(stonehenge);
       }
       else
-        return elle::make_unique<infinit::overlay::Stonehenge>(id, peers, &d);
+        return elle::make_unique<infinit::overlay::Stonehenge>(
+          id, peers, std::move(local), &d);
     });
   auto block = dhts.dht_a->make_block<infinit::model::blocks::MutableBlock>();
   {

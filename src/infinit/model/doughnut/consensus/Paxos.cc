@@ -98,6 +98,22 @@ namespace infinit
           , _factor(factor)
         {}
 
+        /*--------.
+        | Factory |
+        `--------*/
+
+        std::unique_ptr<Local>
+        Paxos::make_local(boost::optional<int> port,
+                          std::unique_ptr<storage::Storage> storage)
+        {
+          return elle::make_unique<consensus::Paxos::LocalPeer>(
+            this->factor(),
+            this->doughnut(),
+            this->doughnut().id(),
+            std::move(storage),
+            port ? port.get() : 0);
+        }
+
         /*-----.
         | Peer |
         `-----*/
@@ -239,7 +255,7 @@ namespace infinit
             {
               auto buffer = this->storage()->get(address);
               elle::serialization::Context context;
-              context.set<Doughnut*>(this->doughnut());
+              context.set<Doughnut*>(&this->doughnut());
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
@@ -345,7 +361,7 @@ namespace infinit
             try
             {
               elle::serialization::Context context;
-              context.set<Doughnut*>(this->doughnut());
+              context.set<Doughnut*>(&this->doughnut());
               auto data =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   this->storage()->get(address), true, context);
@@ -384,8 +400,8 @@ namespace infinit
               auto block = highest->value;
               Paxos::PaxosClient::Peers peers =
                 lookup_nodes(
-                  *this->doughnut(), paxos.quorum(), block->address());
-              Paxos::PaxosClient client(uid(this->doughnut()->keys().K()),
+                  this->doughnut(), paxos.quorum(), block->address());
+              Paxos::PaxosClient client(uid(this->doughnut().keys().K()),
                                         std::move(peers));
               auto chosen = client.choose(paxos.quorum(), version, block);
               // FIXME: factor with the end of doughnut::Local::store
@@ -478,7 +494,7 @@ namespace infinit
                 try
                 {
                   Paxos::PaxosClient client(
-                    uid(this->_doughnut.keys().K()), std::move(peers));
+                    uid(this->doughnut().keys().K()), std::move(peers));
                   while (true)
                   {
                     auto version =
@@ -522,7 +538,7 @@ namespace infinit
                   ELLE_TRACE("%s: %s instead of %s",
                              e.what(), e.effective(), e.expected());
                   peers = lookup_nodes(
-                    this->_doughnut, e.expected(), b->address());
+                    this->doughnut(), e.expected(), b->address());
                   peers_id.clear();
                   for (auto const& peer: peers)
                     peers_id.insert(static_cast<Peer&>(*peer).member().id());

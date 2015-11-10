@@ -155,7 +155,9 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(NodeEndpoints const& hosts, bool server,
+        make(Address id, NodeEndpoints
+             const& hosts,
+             std::shared_ptr<model::doughnut::Local> server,
              model::doughnut::Doughnut* doughnut) override;
       };
 
@@ -170,17 +172,14 @@ namespace infinit
       {
       public:
         Node(Configuration const& config,
-             bool observer,
              model::Address node_id,
+             std::shared_ptr<model::doughnut::Local> local,
              infinit::model::doughnut::Doughnut* doughnut);
         virtual ~Node();
         void
         start();
         void
         engage();
-        void
-        register_local(
-          std::shared_ptr<infinit::model::doughnut::Local> local) override;
         void
         address(Address file,
                 infinit::overlay::Operation op,
@@ -323,7 +322,6 @@ namespace infinit
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
-        std::shared_ptr<infinit::model::doughnut::Local> _local;
         /// Whether we've seen someone from our group.
         reactor::Barrier _bootstraping;
         int _next_id;

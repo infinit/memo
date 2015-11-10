@@ -58,6 +58,14 @@ namespace infinit
                   Address const& address,
                   overlay::Operation op) const;
 
+        /*--------.
+        | Factory |
+        `--------*/
+        public:
+          std::unique_ptr<Local>
+          make_local(boost::optional<int> port,
+                     std::unique_ptr<storage::Storage> storage) override;
+
         /*-----.
         | Peer |
         `-----*/

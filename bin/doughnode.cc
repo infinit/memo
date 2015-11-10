@@ -116,20 +116,7 @@ main(int argc, char** argv)
         ELLE_ASSERT(cfg.model.get());
         auto model = cfg.model->make(
           infinit::overlay::NodeEndpoints(), false, p);
-        if (cfg.storage)
-        {
-          auto storage = cfg.storage->make();
-          auto local = std::make_shared<infinit::model::doughnut::Local>(
-            /* FIXME BEARCLAW */ infinit::model::Address(),
-            std::move(storage), cfg.port ? *cfg.port : 0);
-          auto doughnut = elle::cast<infinit::model::doughnut::Doughnut>::runtime(model);
-          doughnut->overlay()->register_local(local);
-          local->doughnut() = doughnut.get();
-          reactor::sleep();
-        }
-        else
-          reactor::sleep();
-
+        reactor::sleep();
       });
     sched.run();
   }
