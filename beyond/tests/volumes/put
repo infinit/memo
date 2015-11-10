@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      user = User()
+      user.put(beyond)
+      network = Network('server1,server2', owner = user)
+      network.put(beyond)
+      volume = Volume('business', network = network)
+      throws(lambda: beyond.get('volumes/%s' % volume['name']),
+             404,
+             json = False)
+      volume.put(beyond)
+      res = beyond.get('volumes/%s' % volume['name']).json()
+      assert res['name'] == volume['name']
+      assert res['network'] == network['name']
+
+  if __name__ == '__main__':
+    unittest.main()

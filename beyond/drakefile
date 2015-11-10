@@ -181,6 +181,9 @@ def configure(
       'users/get',
       'users/delete',
       'networks/put',
+      'volumes/put',
+      'volumes/get',
+      'volumes/delete',
   ]:
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)

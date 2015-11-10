@@ -81,13 +81,13 @@ class Beyond:
   ## Volume ##
   ## ------ ##
 
-  def volume_get(self, owner, name):
+  def volume_get(self, owner, network, name):
     return self.__datastore.volume_fetch(
-      owner = owner, name = name)
+      owner = owner, network = network, name = name)
 
-  def volume_delete(self, owner, name):
+  def volume_delete(self, owner, network, name):
     return self.__datastore.volume_delete(
-      owner = owner, name = name)
+      owner = owner, network = network, name = name)
 
   ## ----- ##
   ## DRIVE ##
@@ -304,10 +304,8 @@ class Entity(type):
       content[f] = property(lambda self: getattr(self, '_%s__%s' % (name, f)))
     type.__init__(self, name, superclasses, content)
 
-
 def fields(*args, **kwargs):
   return dict(chain(((k, None) for k in args), kwargs.items()))
-
 
 class Network(metaclass = Entity,
               insert = 'network_insert',
