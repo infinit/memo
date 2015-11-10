@@ -377,9 +377,9 @@ static
 void
 delete_(variables_map const& args)
 {
-  auto owner = self_user(ifnt, args);
+  auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
-  auto path = ifnt._network_path(network_name);
+  auto path = ifnt.network_path_get(network_name, self);
   if (boost::filesystem::remove(path))
     report_action("deleted", "network", network_name, std::string("locally"));
   else
