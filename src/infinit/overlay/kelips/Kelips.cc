@@ -2519,7 +2519,8 @@ namespace infinit
         p.fileAddress = file;
         p.ttl = _config.query_put_ttl;
         p.count = n;
-        p.insert_ttl = _config.query_put_insert_ttl;
+        // If there is only two nodes, inserting is deterministic without the rand
+        p.insert_ttl = _config.query_put_insert_ttl + (rand()%2);
         std::vector<PeerLocation> results;
         for (int i = 0; i < _config.query_put_retries; ++i)
         {
