@@ -422,10 +422,13 @@ def configure(
   for test_name in [
       'errors',
       'single-user-two-devices-shared-storage',
+      'flow',
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
-    runner = drake.Runner(exe = test)
+    runner = drake.Runner(exe = test,
+                          env = { 'PYTHONPATH':
+                                  drake.path_build('beyond/lib/python3.4') })
     rule_check << runner.status
 
   ## --- ##
