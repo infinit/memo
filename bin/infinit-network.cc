@@ -178,6 +178,7 @@ create(variables_map const& args)
     port = args["port"].as<int>();
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
+      infinit::model::Address::random(),
       std::move(consensus_config),
       std::move(overlay_config),
       std::move(storage),
@@ -373,6 +374,7 @@ join(variables_map const& args)
       port = args["port"].as<int>();
     network.model =
       elle::make_unique<infinit::model::doughnut::Configuration>(
+        infinit::model::Address::random(),
         std::move(desc.consensus),
         std::move(desc.overlay),
         std::move(storage),

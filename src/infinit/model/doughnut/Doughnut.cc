@@ -230,6 +230,7 @@ namespace infinit
       {}
 
       Configuration::Configuration(
+        Address id_,
         std::unique_ptr<consensus::Configuration> consensus_,
         std::unique_ptr<overlay::Configuration> overlay_,
         std::unique_ptr<storage::StorageConfig> storage,
@@ -239,6 +240,7 @@ namespace infinit
         boost::optional<std::string> name_,
         boost::optional<int> port_)
         : ModelConfig(std::move(storage))
+        , id(std::move(id_))
         , consensus(std::move(consensus_))
         , overlay(std::move(overlay_))
         , keys(std::move(keys_))

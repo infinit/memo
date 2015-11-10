@@ -99,6 +99,7 @@ namespace infinit
         boost::optional<int> port;
 
         Configuration(
+          Address id,
           std::unique_ptr<consensus::Configuration> consensus,
           std::unique_ptr<overlay::Configuration> overlay,
           std::unique_ptr<storage::StorageConfig> storage,
