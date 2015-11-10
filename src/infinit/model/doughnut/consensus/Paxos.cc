@@ -134,7 +134,9 @@ namespace infinit
             : _members(nullptr)
             , _member(std::move(member))
             , _address(address)
-          {}
+          {
+            ELLE_ASSERT(this->_member);
+          }
 
           virtual
           boost::optional<Paxos::PaxosClient::Accepted>
