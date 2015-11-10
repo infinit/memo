@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+
+from utils import *
+import json
+
+# Creating and deleting networks.
+with TemporaryDirectory() as tmp, Infinit() as bob, Infinit() as alice:
+  bob.run(['infinit-user', '--create',  'bob'])
+  bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob'])
+  bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'network', '--as', 'bob'])
+  bob.run(['infinit-volume', '--export', '--name', 'bob/volume'])

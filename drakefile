@@ -427,7 +427,9 @@ def configure(
       'errors',
       'single-user-two-devices-shared-storage',
       'flow',
+      # Test clis.
       'network_cli',
+      'volume_cli',
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
