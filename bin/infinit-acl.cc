@@ -39,9 +39,9 @@ public:
   }
 };
 
-template<typename F, typename... ARGS>
+template<typename F, typename ... Args>
 void
-check(F func, ARGS... args)
+check(F func, Args ... args)
 {
   int res = func(args...);
   if (res < 0)
@@ -55,9 +55,9 @@ check(F func, ARGS... args)
   }
 }
 
-template<typename A, typename... ARGS>
+template<typename A, typename ... Args>
 void
-recursive_action(A action, std::string const& path, ARGS... args)
+recursive_action(A action, std::string const& path, Args ... args)
 {
   namespace bfs = boost::filesystem;
   boost::system::error_code erc;
