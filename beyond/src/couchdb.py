@@ -324,7 +324,10 @@ class CouchDBDatastore:
       for name, value in req['query'].items()
     }
     for user, passport in update.get('passports', {}).items():
-      network.setdefault('passports', {})[user] = passport
+      if passport is None:
+        network.setdefault('passports', {}).pop(user)
+      else:
+        network.setdefault('passports', {})[user] = passport
     for user, node in update.get('endpoints', {}).items():
       for node, endpoints in node.items():
         n = network.setdefault('endpoints', {})
