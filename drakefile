@@ -315,12 +315,13 @@ def configure(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
   global installed_binaries
   to_install = [
+    'infinit-acl',
     'infinit-credentials',
     'infinit-network',
+    'infinit-passport',
     'infinit-storage',
     'infinit-user',
     'infinit-volume',
-    'infinit-acl',
   ]
 
   binaries = [
