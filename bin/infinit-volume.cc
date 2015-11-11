@@ -220,19 +220,28 @@ run(variables_map const& args)
         std::unique_ptr<reactor::filesystem::Handle>> handles;
       while (true)
       {
+        std::string op;
+        std::string pathname;
+        std::string handlename;
         try
         {
+          op = pathname = handlename = "";
           auto json =
             boost::any_cast<elle::json::Object>(elle::json::read(stdin));
           ELLE_TRACE("got command: %s", json);
           elle::serialization::json::SerializerIn command(json, false);
-          auto op = command.deserialize<std::string>("operation");
+          op = command.deserialize<std::string>("operation");
           std::shared_ptr<reactor::filesystem::Path> path;
           try
           {
-            path = fs->path(command.deserialize<std::string>("path"));
+            pathname = command.deserialize<std::string>("path");
+            path = fs->path(pathname);
           }
           catch(...) {}
+          try
+          {
+            handlename = command.deserialize<std::string>("handle");
+          } catch(...) {}
           if (op == "list_directory")
           {
             std::vector<std::string> entries;
@@ -244,6 +253,8 @@ run(variables_map const& args)
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("entries", entries);
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("path", pathname);
             continue;
           }
           else if (op == "mkdir")
@@ -256,6 +267,8 @@ run(variables_map const& args)
             path->stat(&st);
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("path", pathname);
             response.serialize("st_dev"    , st.st_dev            );
             response.serialize("st_ino"    , st.st_ino            );
             response.serialize("st_mode"   , st.st_mode           );
@@ -284,6 +297,8 @@ run(variables_map const& args)
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("value", value);
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("path", pathname);
             continue;
           }
           else if (op == "listxattr")
@@ -292,6 +307,8 @@ run(variables_map const& args)
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("entries", attrs);
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("path", pathname);
             continue;
           }
           else if (op == "removexattr")
@@ -315,6 +332,8 @@ run(variables_map const& args)
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("target", res.string());
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("path", pathname);
             continue;
           }
           else if (op == "rename")
@@ -344,6 +363,8 @@ run(variables_map const& args)
             path->statfs(&sv);
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("path", pathname);
             response.serialize("f_bsize"  , uint64_t(sv.f_bsize));
             response.serialize("f_frsize" , uint64_t(sv.f_frsize));
             response.serialize("f_blocks" , sv.f_blocks);
@@ -390,6 +411,8 @@ run(variables_map const& args)
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("content", content);
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("path", pathname);
             continue;
           }
           else if (op == "unlink")
@@ -404,87 +427,104 @@ run(variables_map const& args)
           {
             int flags = command.deserialize<int>("flags");
             int mode = command.deserialize<int>("mode");
-            std::string name = command.deserialize<std::string>("handle");
             auto handle = path->create(flags, mode);
-            handles[name] = std::move(handle);
+            handles[handlename] = std::move(handle);
+            handlename = "";
           }
           else if (op == "open")
           {
             int flags = command.deserialize<int>("flags");
             int mode = command.deserialize<int>("mode");
-            std::string name = command.deserialize<std::string>("handle");
             auto handle = path->open(flags, mode);
-            handles[name] = std::move(handle);
+            handles[handlename] = std::move(handle);
+            handlename = "";
           }
           else if (op == "close")
           {
-            std::string name = command.deserialize<std::string>("handle");
-            handles.at(name)->close();
+            handles.at(handlename)->close();
           }
           else if (op == "dispose")
           {
-            std::string name = command.deserialize<std::string>("handle");
-            handles.erase(name);
+            handles.erase(handlename);
           }
           else if (op == "read")
           {
             uint64_t offset = command.deserialize<uint64_t>("offset");
             uint64_t size = command.deserialize<uint64_t>("size");
-            std::string name = command.deserialize<std::string>("handle");
             elle::Buffer buf;
             buf.size(size);
-            int nread = handles.at(name)->read(
+            int nread = handles.at(handlename)->read(
               elle::WeakBuffer(buf.contents(), buf.size()),
               size, offset);
             buf.size(nread);
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("content", buf);
             response.serialize("success", true);
+            response.serialize("operation", op);
+            response.serialize("handle", handlename);
             continue;
           }
           else if (op == "write")
           {
             uint64_t offset = command.deserialize<uint64_t>("offset");
             uint64_t size = command.deserialize<uint64_t>("size");
-            std::string name = command.deserialize<std::string>("handle");
             elle::Buffer content = command.deserialize<elle::Buffer>("content");
-            handles.at(name)->write(
+            handles.at(handlename)->write(
               elle::WeakBuffer(content.mutable_contents(), content.size()),
               size, offset);
           }
           else if (op == "ftruncate")
           {
-            std::string name = command.deserialize<std::string>("handle");
             uint64_t size = command.deserialize<uint64_t>("size");
-            handles.at(name)->ftruncate(size);
+            handles.at(handlename)->ftruncate(size);
           }
           else if (op == "fsync")
           {
-            std::string name = command.deserialize<std::string>("handle");
             auto datasync = command.deserialize<int>("datasync");
-            handles.at(name)->fsync(datasync);
+            handles.at(handlename)->fsync(datasync);
           }
           else if (op == "fsyncdir")
           {
-            std::string name = command.deserialize<std::string>("handle");
             auto datasync = command.deserialize<int>("datasync");
-            handles.at(name)->fsyncdir(datasync);
+            handles.at(handlename)->fsyncdir(datasync);
           }
           else
             throw elle::Error(elle::sprintf("operation %s does not exist", op));
           elle::serialization::json::SerializerOut response(std::cout);
           response.serialize("success", true);
+          response.serialize("operation", op);
+          if (!handlename.empty())
+            response.serialize("handle", handlename);
+          if (!pathname.empty())
+            response.serialize("path", pathname);
         }
         catch (reactor::FDStream::EOF const&)
         {
           return;
         }
-        catch (elle::Error const& e)
+        catch (reactor::filesystem::Error const& e)
         {
-          ELLE_LOG("bronk %s", e);
           elle::serialization::json::SerializerOut response(std::cout);
           response.serialize("success", false);
           response.serialize("message", e.what());
+          response.serialize("code", e.error_code());
+          response.serialize("operation", op);
+          if (!handlename.empty())
+            response.serialize("handle", handlename);
+          if (!pathname.empty())
+            response.serialize("path", pathname);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_LOG("bronk on op %s: %s", op, e);
+          elle::serialization::json::SerializerOut response(std::cout);
+          response.serialize("success", false);
+          response.serialize("message", e.what());
+          response.serialize("operation", op);
+          if (!handlename.empty())
+            response.serialize("handle", handlename);
+          if (!pathname.empty())
+            response.serialize("path", pathname);
         }
       }
     }
