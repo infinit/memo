@@ -344,17 +344,17 @@ run(variables_map const& args)
             path->statfs(&sv);
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("success", true);
-            response.serialize("f_bsize"  ,sv.f_bsize);
-            response.serialize("f_frsize" ,sv.f_frsize);
-            response.serialize("f_blocks" ,sv.f_blocks);
-            response.serialize("f_bfree"  ,sv.f_bfree);
-            response.serialize("f_bavail" ,sv.f_bavail);
-            response.serialize("f_files"  ,sv.f_files);
-            response.serialize("f_ffree"  ,sv.f_ffree);
-            response.serialize("f_favail" ,sv.f_favail);
-            response.serialize("f_fsid"   ,sv.f_fsid);
-            response.serialize("f_flag"   ,sv.f_flag);
-            response.serialize("f_namemax",sv.f_namemax);
+            response.serialize("f_bsize"  , uint64_t(sv.f_bsize));
+            response.serialize("f_frsize" , uint64_t(sv.f_frsize));
+            response.serialize("f_blocks" , sv.f_blocks);
+            response.serialize("f_bfree"  , sv.f_bfree);
+            response.serialize("f_bavail" , sv.f_bavail);
+            response.serialize("f_files"  , sv.f_files);
+            response.serialize("f_ffree"  , sv.f_ffree);
+            response.serialize("f_favail" , sv.f_favail);
+            response.serialize("f_fsid"   , uint64_t(sv.f_fsid));
+            response.serialize("f_flag"   , uint64_t(sv.f_flag));
+            response.serialize("f_namemax", uint64_t(sv.f_namemax));
             continue;
           }
           else if (op == "chown")
