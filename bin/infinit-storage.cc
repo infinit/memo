@@ -113,13 +113,15 @@ main(int argc, char** argv)
     ;
   options_description fs_storage_options("Filesystem storage options");
   fs_storage_options.add_options()
-    ("path", value<std::string>(), "where to store blocks")
+    ("path", value<std::string>(), elle::sprintf(
+      "where to store blocks (default: %s)",
+      (infinit::root_dir() / "blocks/<name>")).c_str())
     ;
   options_description dropbox_storage_options("Dropbox storage options");
   dropbox_storage_options.add_options()
     ("account", value<std::string>(), "Dropbox account to use")
     ("root", value<std::string>(),
-     "where to store blocks in Dropbox (default: .infinit)")
+      "where to store blocks in Dropbox (default: .infinit)")
     ("token", value<std::string>(), "authentication token")
     ;
   program = argv[0];
