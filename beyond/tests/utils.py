@@ -124,20 +124,29 @@ def throws(function, expected = None, json = True):
     assert 'error' in response
     return response
 
+def random_sequence(count = 10):
+  from random import SystemRandom
+  import string
+  return ''.join(SystemRandom().choice(
+    string.ascii_uppercase + string.digits) for _ in range(count))
+
+def password_hash(password):
+  salt = 'z^$P;:`a~F'
+  from hashlib import pbkdf2_hmac
+  import binascii
+  dk = pbkdf2_hmac('sha256', bytes(password, encoding = 'ascii'), bytes(salt, encoding = 'ascii'), 100000)
+  return str(binascii.hexlify(dk), encoding = 'ascii')
+
 class User(dict):
 
-  def __init__(self, name = None, email = None):
-    if name is None:
-      from random import SystemRandom
-      import string
-      name = ''.join(SystemRandom().choice(
-        string.ascii_uppercase + string.digits) for _ in range(10))
-    if email is None:
-      email = name + '@infinit.io'
+  def __init__(self, name = None, password = None, email = None):
+    self['name'] = random_sequence(10) if name is None else name
+    self['email'] = self['name'] + '@infinit.io' if email is None else email
+    self.__password = random_sequence(50) if password is None else password
+    self.__password_hash = password_hash(self.__password)
+    # Keys.
     from Crypto.PublicKey import RSA
     key = RSA.generate(2048, e=65537)
-    self['name'] = name
-    self['email'] = email
     def cleanup(key):
       import re
       r = re.compile('-+(BEGIN)?(END)? (RSA )?(PUBLIC)?(PRIVATE)? KEY-+')
@@ -146,15 +155,23 @@ class User(dict):
       res = r.sub('', key)
       return res
     self['public_key'] = {'rsa': cleanup(key.publickey().exportKey("PEM"))}
-    self.__private_key = cleanup(key.exportKey("PEM"));
+    self.__private_key = cleanup(key.exportKey("PEM"))
 
   @property
   def private_key(self):
-    import sys
     return self.__private_key
 
-  def put(self, hub):
-    return hub.put('users/%s' % self['name'], json = self)
+  @property
+  def password_hash(self):
+    return self.__password_hash
+
+  def put(self, hub, opt_out = True):
+    from copy import deepcopy
+    user = deepcopy(self)
+    if opt_out is False:
+      user['private_key'] = self.__private_key
+      user['password_hash'] = self.__password_hash
+    return hub.put('users/%s' % self['name'], json = user)
 
 class Network(dict):
   kelips = {
