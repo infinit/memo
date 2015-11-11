@@ -47,6 +47,15 @@ class Beyond:
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
 
+    setattr(self, 'get',
+            lambda url, **kw: self.request(url = url, method = 'GET', **kw))
+    setattr(self, 'put',
+            lambda url, **kw: self.request(url = url, method = 'PUT', **kw))
+    setattr(self, 'delete',
+            lambda url, **kw: self.request(url = url, method = 'DELETE', **kw))
+    setattr(self, 'post',
+            lambda url, **kw: self.request(url = url, method = 'POST', **kw))
+
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
     self.__datastore = \
@@ -89,15 +98,6 @@ class Beyond:
       if int(response.status_code / 100) != 2:
         response.raise_for_status()
     return response
-
-  def get(self, url, **kwargs):
-    return self.request(url = url, method = 'GET', **kwargs)
-
-  def put(self, url, **kwargs):
-    return self.request(url = url, method = 'PUT', **kwargs)
-
-  def delete(self, url, **kwargs):
-    return self.request(url = url, method = 'DELETE', **kwargs)
 
   def __exit__(self, *args):
     self.__app.__exit__()
