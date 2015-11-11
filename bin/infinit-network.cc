@@ -296,33 +296,43 @@ join(variables_map const& args)
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   if (storage_name)
     storage = ifnt.storage_get(storage_name.get());
-  std::unique_ptr<infinit::NetworkDescriptor> desc;
-  try
+  auto desc = [&] () -> infinit::NetworkDescriptor
   {
-    desc = elle::make_unique<infinit::NetworkDescriptor>(ifnt.network_descriptor_get(network_name, self, false));
-  }
-  catch (elle::serialization::Error const&)
+    try
+    {
+      return ifnt.network_descriptor_get(network_name, self, false);
+    }
+    catch (elle::serialization::Error const&)
+    {
+      throw elle::Error(
+        elle::sprintf("this device has already joined %s", network_name));
+    }
+  }();
+  auto passport = [&] () -> infinit::Passport
   {
-    throw elle::Error(
-      elle::sprintf("this device has already joined %s", network_name));
-  }
-  auto passport = ifnt.passport_get(desc->name, self.name);
-  bool ok = passport.verify(desc->owner);
+    if (self.public_key == desc.owner)
+    {
+      return infinit::Passport(
+        self.public_key, desc.name, self.private_key.get());
+    }
+    return ifnt.passport_get(desc.name, self.name);
+  }();
+  bool ok = passport.verify(desc.owner);
   if (!ok)
     throw elle::Error("passport signature is invalid");
   infinit::Network network;
   network.model =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(),
-      std::move(desc->consensus),
-      std::move(desc->overlay),
+      std::move(desc.consensus),
+      std::move(desc.overlay),
       std::move(storage),
       self.keypair(),
-      std::move(desc->owner),
+      std::move(desc.owner),
       std::move(passport),
       self.name,
       std::move(port));
-  network.name = desc->name;
+  network.name = desc.name;
   ifnt.network_save(network, true);
   report_action("Joined", "network", network.name, std::string("locally"));
 }
