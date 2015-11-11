@@ -116,8 +116,12 @@ class Bottle(bottle.Bottle):
       self.user_avatar_put)
     self.route('/users/<name>/avatar', method = 'DELETE')(
       self.user_avatar_delete)
-    self.route('/users/<name>/networks', method = 'GET')(self.user_networks_get)
-    self.route('/users/<name>/volumes', method = 'GET')(self.user_volumes_get)
+    self.route('/users/<name>/networks',
+               method = 'GET')(self.user_networks_get)
+    self.route('/users/<name>/passports',
+               method = 'GET')(self.user_passports_get)
+    self.route('/users/<name>/volumes',
+               method = 'GET')(self.user_volumes_get)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -125,16 +129,20 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.network_put)
     self.route('/networks/<owner>/<name>',
                method = 'DELETE')(self.network_delete)
+    self.route('/networks/<owner>/<name>/passports',
+               method = 'GET')(self.network_passports_get)
     self.route('/networks/<owner>/<name>/passports/<invitee>',
                method = 'GET')(self.network_passport_get)
     self.route('/networks/<owner>/<name>/passports/<invitee>',
                method = 'PUT')(self.network_passport_put)
-    self.route('/networks/<owner>/<name>/endpoints/<user>/<node_id>',
-               method = 'DELETE')(self.network_endpoint_delete)
+    self.route('/networks/<owner>/<name>/passports/<invitee>',
+               method = 'DELETE')(self.network_passport_delete)
     self.route('/networks/<owner>/<name>/endpoints',
                method = 'GET')(self.network_endpoints_get)
     self.route('/networks/<owner>/<name>/endpoints/<user>/<node_id>',
                method = 'PUT')(self.network_endpoint_put)
+    self.route('/networks/<owner>/<name>/endpoints/<user>/<node_id>',
+               method = 'DELETE')(self.network_endpoint_delete)
     self.route('/networks/<owner>/<name>/users',
                method = 'GET')(self.network_users_get)
     self.route('/networks/<owner>/<name>/volumes',
@@ -225,14 +233,13 @@ class Bottle(bottle.Bottle):
       raise Response(201, {})
     except User.Duplicate:
       if user.public_key == self.user_from_name(user.name).public_key:
-          bottle.response.status = 200
+        return {}
       else:
-        bottle.response.status = 409
-        return {
+        raise Response(409, {
           'error': 'user/conflict',
           'reason': 'user %r already exists' % name,
           'id': name,
-        }
+        })
 
   def user_get(self, name):
     return self.user_from_name(name = name).json()
@@ -262,6 +269,12 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     networks = self.__beyond.user_networks_get(user = user)
     return {'networks': list(map(lambda n: n.json(), networks))}
+
+  def user_passports_get(self, name):
+    user = self.user_from_name(name = name)
+    self.authenticate(user)
+    networks = self.__beyond.user_networks_get(user = user)
+    return {'passports': list(map(lambda n: n.passports[name], networks))}
 
   def user_volumes_get(self, name):
     user = self.user_from_name(name = name)
@@ -298,6 +311,12 @@ class Bottle(bottle.Bottle):
         'reason': 'network %r already exists' % name,
       })
 
+  def network_passports_get(self, owner, name):
+    user = self.user_from_name(name = owner)
+    self.authenticate(user)
+    network = self.network_from_name(owner = owner, name = name)
+    return network.passports
+
   def network_passport_get(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
     network = self.network_from_name(owner = owner, name = name)
@@ -319,6 +338,14 @@ class Bottle(bottle.Bottle):
     network.passports[invitee] = bottle.request.json
     network.save()
     raise Response(201, {})
+
+  def network_passport_delete(self, owner, name, invitee):
+    user = self.user_from_name(name = owner)
+    self.authenticate(user)
+    network = self.network_from_name(owner = owner, name = name)
+    network.passports[invitee] = None
+    network.save()
+    return {}
 
   def network_endpoints_get(self, owner, name):
     network = self.network_from_name(owner = owner, name = name)
