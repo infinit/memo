@@ -42,6 +42,14 @@ class Website(bottle.Bottle):
       'description': 'Discover the benefits of the Infinit file system through its innovative technology.',
     }
 
+  @route('/drive', name = 'drive')
+  @view('pages/drive')
+  def root(self):
+    return {
+      'title': 'Infinit Drive',
+      'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
+    }
+
   @route('/get-started', name = 'doc_get_started')
   @view('pages/doc/get_started.html')
   def root(self):
