@@ -16,12 +16,21 @@ create(variables_map const& args)
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
   auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_descriptor_get(network_name, self);
+  auto network = ifnt.network_get(network_name, self);
   auto user = ifnt.user_get(user_name);
-  if (self.public_key != network.owner)
+  if (auto conf = dynamic_cast<
+        infinit::model::doughnut::Configuration*>(network.model.get()))
   {
-    throw elle::Error(
-      elle::sprintf("not owner of network \"%s\"", network_name));
+    if (self.public_key != conf->owner)
+    {
+      throw elle::Error(
+        elle::sprintf("not owner of network \"%s\"", network_name));
+    }
+  }
+  else
+  {
+    throw elle::Error(elle::sprintf(
+      "unknown model configuration: %s", typeid(network.model.get()).name()));
   }
   infinit::model::doughnut::Passport passport(
     user.public_key,
@@ -154,14 +163,14 @@ push(variables_map const& args)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
+  network_name = ifnt.qualified_name(network_name, self);
   auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_descriptor_get(network_name, self);
-  auto passport = ifnt.passport_get(network.name, user_name);
+  auto passport = ifnt.passport_get(network_name, user_name);
   {
     beyond_push(
-      elle::sprintf("networks/%s/passports/%s", network.name, user_name),
+      elle::sprintf("networks/%s/passports/%s", network_name, user_name),
       "passport",
-      elle::sprintf("%s: %s", network.name, user_name),
+      elle::sprintf("%s: %s", network_name, user_name),
       passport,
       self);
   }
@@ -173,11 +182,11 @@ pull(variables_map const& args)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
+  network_name = ifnt.qualified_name(network_name, self);
   auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_descriptor_get(network_name, self);
   {
     beyond_delete(
-      elle::sprintf("networks/%s/passports/%s", network.name, user_name),
+      elle::sprintf("networks/%s/passports/%s", network_name, user_name),
       "passport for",
       user_name,
       self);
@@ -250,9 +259,9 @@ main(int argc, char** argv)
       &create,
       "--network NETWORK --user USER",
       {
-        { "network", value<std::string>(),
+        { "network,n", value<std::string>(),
           "network to create the passport to." },
-        { "user", value<std::string>(), "user to create the passport for" },
+        { "user,u", value<std::string>(), "user to create the passport for" },
         { "push-passport", bool_switch(),
           elle::sprintf("push the passport to %s", beyond()).c_str() },
         { "push,p", bool_switch(), "alias for --push-passport" },
@@ -266,8 +275,8 @@ main(int argc, char** argv)
       &export_,
       "--network NETWORK --user USER",
       {
-        { "network", value<std::string>(), "network to export passport for" },
-        { "user", value<std::string>(), "user to export passport for" },
+        { "network,n", value<std::string>(), "network to export passport for" },
+        { "user,u", value<std::string>(), "user to export passport for" },
         option_output("passport"),
         option_owner,
       },
@@ -278,9 +287,9 @@ main(int argc, char** argv)
       &fetch,
       "[--network NETWORK --user USER]",
       {
-        { "network", value<std::string>(),
+        { "network,n", value<std::string>(),
           "network to fetch the passport for" },
-        { "user", value<std::string>(), "user to fetch passports for" },
+        { "user,u", value<std::string>(), "user to fetch passports for" },
         option_owner,
       },
     },
@@ -299,8 +308,8 @@ main(int argc, char** argv)
       &push,
       "--network NETWORK --user USER",
       {
-        { "network", value<std::string>(), "network name" },
-        { "user", value<std::string>(), "user name" },
+        { "network,n", value<std::string>(), "network name" },
+        { "user,u", value<std::string>(), "user name" },
       },
     },
     {
@@ -309,8 +318,8 @@ main(int argc, char** argv)
       &pull,
       "--network NETWORK --user USER",
       {
-        { "network", value<std::string>(), "network name" },
-        { "user", value<std::string>(), "user name" },
+        { "network,n", value<std::string>(), "network name" },
+        { "user,u", value<std::string>(), "user name" },
         option_owner,
       },
     },
@@ -320,7 +329,7 @@ main(int argc, char** argv)
       &list,
       "[--network NETWORK]",
       {
-        { "network", value<std::string>(),
+        { "network,n", value<std::string>(),
           "network to list passports for (optional)" },
         option_owner,
       },
@@ -331,8 +340,8 @@ main(int argc, char** argv)
       &delete_,
       "--network NETWORK --user USER",
       {
-        { "network", value<std::string>(), "network name" },
-        { "user", value<std::string>(), "user name" },
+        { "network,n", value<std::string>(), "network name" },
+        { "user,u", value<std::string>(), "user name" },
         option_owner,
       },
     },
