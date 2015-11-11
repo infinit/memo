@@ -428,9 +428,12 @@ def configure(
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
-    runner = drake.Runner(exe = test,
-                          env = { 'PYTHONPATH':
-                                  drake.path_build('beyond/lib/python3.4') })
+    runner = drake.Runner(
+      exe = test,
+      env = {
+        'PYTHONPATH':
+          drake.path_build('beyond/lib/python%s' % elle.python3.version)
+      })
     rule_check << runner.status
 
   ## --- ##
