@@ -287,7 +287,7 @@ import(variables_map const& args)
 
 static
 void
-attach(variables_map const& args)
+join(variables_map const& args)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
@@ -296,26 +296,35 @@ attach(variables_map const& args)
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   if (storage_name)
     storage = ifnt.storage_get(storage_name.get());
-  auto desc = ifnt.network_descriptor_get(network_name, self);
-  auto passport = ifnt.passport_get(desc.name, self.name);
-  bool ok = passport.verify(desc.owner);
+  std::unique_ptr<infinit::NetworkDescriptor> desc;
+  try
+  {
+    desc = elle::make_unique<infinit::NetworkDescriptor>(ifnt.network_descriptor_get(network_name, self, false));
+  }
+  catch (elle::serialization::Error const&)
+  {
+    throw elle::Error(
+      elle::sprintf("this device has already joined %s", network_name));
+  }
+  auto passport = ifnt.passport_get(desc->name, self.name);
+  bool ok = passport.verify(desc->owner);
   if (!ok)
     throw elle::Error("passport signature is invalid");
   infinit::Network network;
   network.model =
     elle::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(),
-      std::move(desc.consensus),
-      std::move(desc.overlay),
+      std::move(desc->consensus),
+      std::move(desc->overlay),
       std::move(storage),
       self.keypair(),
-      std::move(desc.owner),
+      std::move(desc->owner),
       std::move(passport),
       self.name,
       std::move(port));
-  network.name = desc.name;
+  network.name = desc->name;
   ifnt.network_save(network, true);
-  report_action("attached", "network", network.name, std::string("locally"));
+  report_action("Joined", "network", network.name, std::string("locally"));
 }
 
 static
@@ -549,12 +558,12 @@ main(int argc, char** argv)
       },
     },
     {
-      "attach",
-      "Attach device to a network",
-      &attach,
+      "join",
+      "Join a network with this device",
+      &join,
       "--name NETWORK",
       {
-        { "name,n", value<std::string>(), "network to attach device to" },
+        { "name,n", value<std::string>(), "network to join" },
         { "storage", value<std::string>(), "storage to contribute (optional)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         option_owner,
