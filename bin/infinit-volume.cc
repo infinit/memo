@@ -648,9 +648,9 @@ main(int argc, char** argv)
         { "async", bool_switch(), "use asynchronous operations" },
         { "async-writes", bool_switch(),
           "do not wait for writes on the backend" },
-        { "cache", value<int>()->implicit_value(0),
+        { "cache", value<int>(),
           "enable storage caching, "
-          "optional argument specifies maximum size in bytes" },
+          "optional argument specifies maximum size in bytes (default: 0)" },
         { "cache-model", bool_switch(), "enable model caching" },
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
