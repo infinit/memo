@@ -268,8 +268,7 @@ fetch(variables_map const& args)
         ifnt.network_save(std::move(desc));
       }
       catch (ResourceAlreadyFetched const& error)
-      {
-      }
+      {}
     }
   }
 }
@@ -288,105 +287,35 @@ import(variables_map const& args)
 
 static
 void
-invite(variables_map const& args)
+attach(variables_map const& args)
 {
-  auto self = ifnt.user_get(optional(args, option_owner.long_name()));
-  auto network_name = mandatory(args, "name", "network name");
-  auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_descriptor_get(network_name, self);
-  auto user = ifnt.user_get(user_name);
-  if (self.public_key != network.owner)
-  {
-    throw elle::Error(
-      elle::sprintf("not owner of network \"%s\"", network_name));
-  }
-  infinit::model::doughnut::Passport passport(
-    user.public_key,
-    network.name,
-    self.private_key.get());
-  bool push = aliased_flag(args, {"push-passport", "push"});
-  if (push)
-    beyond_push(
-      elle::sprintf("networks/%s/passports/%s", network.name, user_name),
-      "passport for",
-      user_name,
-      passport,
-      self);
-  if (!push || args.count("output"))
-  {
-    auto output = get_output(args);
-    elle::serialization::json::serialize(passport, *output, false);
-    report_action_output(
-      *output, "wrote", "passport for", network.name);
-  }
-}
-
-static
-void
-join(variables_map const& args)
-{
-  auto user = self_user(ifnt, args);
-  auto input = get_input(args);
+  auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto storage_name = optional(args, "storage");
+  auto port = optional<int>(args, "port");
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   if (storage_name)
-    storage = ifnt.storage_get(*storage_name);
-  {
-    auto desc = ifnt.network_descriptor_get(network_name, user);
-    auto passport = [&] () -> infinit::model::doughnut::Passport
-    {
-      bool fetch = aliased_flag(args, {"fetch-passport", "fetch"});
-      if (fetch)
-      {
-        return beyond_fetch<infinit::model::doughnut::Passport>(
-          elle::sprintf("networks/%s/passports/%s", network_name, user.name),
-          "passport for",
-          network_name);
-      }
-      if (!args.count("input") && user.public_key == desc.owner)
-      {
-        return infinit::model::doughnut::Passport(
-          user.public_key,
-          desc.name,
-          user.private_key.get());
-      }
-      else if (args.count("input"))
-      {
-        auto input = get_input(args);
-        return elle::serialization::json::deserialize
-          <infinit::model::doughnut::Passport>(*input, false);
-      }
-      else
-      {
-        throw CommandLineError(elle::sprintf(
-          "no passport for %s, use --fetch to fetch one from %s or --input to "
-          "use a previously exported one", user.name, beyond(true)));
-      }
-    }();
-
-    bool ok = passport.verify(desc.owner);
-    if (!ok)
-      throw elle::Error("passport signature is invalid");
-    infinit::Network network;
-    boost::optional<int> port;
-    if (args.count("port"))
-      port = args["port"].as<int>();
-    network.model =
-      elle::make_unique<infinit::model::doughnut::Configuration>(
-        infinit::model::Address::random(),
-        std::move(desc.consensus),
-        std::move(desc.overlay),
-        std::move(storage),
-        user.keypair(),
-        std::move(desc.owner),
-        std::move(passport),
-        user.name,
-        std::move(port));
-    network.name = desc.name;
-    ifnt.network_save(network, true);
-    report_action("joined", "network", network.name, std::string("locally"));
-  }
+    storage = ifnt.storage_get(storage_name.get());
+  auto desc = ifnt.network_descriptor_get(network_name, self);
+  auto passport = ifnt.passport_get(desc.name, self.name);
+  bool ok = passport.verify(desc.owner);
+  if (!ok)
+    throw elle::Error("passport signature is invalid");
+  infinit::Network network;
+  network.model =
+    elle::make_unique<infinit::model::doughnut::Configuration>(
+      infinit::model::Address::random(),
+      std::move(desc.consensus),
+      std::move(desc.overlay),
+      std::move(storage),
+      self.keypair(),
+      std::move(desc.owner),
+      std::move(passport),
+      self.name,
+      std::move(port));
+  network.name = desc.name;
+  ifnt.network_save(network, true);
+  report_action("attached", "network", network.name, std::string("locally"));
 }
 
 static
@@ -415,7 +344,8 @@ push(variables_map const& args)
   }
 }
 
-static void
+static
+void
 pull(variables_map const& args)
 {
   auto name_ = mandatory(args, "name", "network name");
@@ -424,7 +354,8 @@ pull(variables_map const& args)
   beyond_delete("network", network_name, owner);
 }
 
-static void
+static
+void
 delete_(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
@@ -618,33 +549,14 @@ main(int argc, char** argv)
       },
     },
     {
-      "invite",
-      "Create a passport to a network for a user",
-      &invite,
-      "--name NETWORK --user USER",
-      {
-        { "name,n", value<std::string>(), "network to create the passport to" },
-        { "user,u", value<std::string>(), "user to create the passport for" },
-        option_output("passport"),
-        { "push-passport", bool_switch(),
-          elle::sprintf("push the passport to %s", beyond(true)).c_str() },
-        { "push,p", bool_switch(), "alias for --push-passport" },
-        option_owner,
-      },
-    },
-    {
-      "join",
-      "Join a network",
-      &join,
+      "attach",
+      "Attach device to a network",
+      &attach,
       "--name NETWORK",
       {
-        { "name,n", value<std::string>(), "network to join" },
-        { "fetch-passport", bool_switch(),
-          elle::sprintf("fetch the passport from %s", beyond(true)).c_str() },
-        { "fetch,f", bool_switch(), "alias for --fetch-passport" },
-        option_input("passport"),
-        { "port", value<int>(), "port to listen on (default: random)" },
+        { "name,n", value<std::string>(), "network to attach device to" },
         { "storage", value<std::string>(), "storage to contribute (optional)" },
+        { "port", value<int>(), "port to listen on (default: random)" },
         option_owner,
       },
     },
