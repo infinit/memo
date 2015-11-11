@@ -1247,14 +1247,8 @@ get_username(boost::program_options::variables_map const& args,
              std::string const& name)
 {
   auto opt = optional(args, name);
-  return opt ? opt.get() : elle::system::username();
-}
-
-inline
-std::string
-get_name(boost::program_options::variables_map const& args)
-{
-  return get_username(args, "name");
+  std::string env = elle::os::getenv("INFINIT_USER", "");
+  return opt ? opt.get() : (env.empty() ? elle::system::username() : env);
 }
 
 DAS_MODEL_FIELDS(infinit::User, (name, public_key, private_key));
