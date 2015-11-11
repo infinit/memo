@@ -572,7 +572,9 @@ namespace infinit
     }
 
     NetworkDescriptor
-    network_descriptor_get(std::string const& name_, User const& owner)
+    network_descriptor_get(std::string const& name_,
+                           User const& owner,
+                           bool or_network = true)
     {
       auto name = qualified_name(name_, owner);
       try
@@ -584,18 +586,21 @@ namespace infinit
       }
       catch (elle::serialization::Error const&)
       {
-        try
+        if (or_network)
         {
-          auto network = this->network_get(name_, owner);
-          return NetworkDescriptor{
-            network.name,
-            std::move(network.dht()->consensus),
-            std::move(network.dht()->overlay),
-            std::move(network.dht()->owner)
-          };
+          try
+          {
+            auto network = this->network_get(name_, owner);
+            return NetworkDescriptor{
+              network.name,
+              std::move(network.dht()->consensus),
+              std::move(network.dht()->overlay),
+              std::move(network.dht()->owner)
+            };
+          }
+          catch (elle::Error const&)
+          {}
         }
-        catch (elle::Error const&)
-        {}
         throw;
       }
     }
