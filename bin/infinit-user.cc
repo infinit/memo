@@ -33,6 +33,12 @@ struct UserView
   }
 };
 
+inline
+std::string
+get_name(boost::program_options::variables_map const& args)
+{
+  return get_username(args, "name");
+}
 
 static
 void
