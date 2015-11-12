@@ -153,19 +153,6 @@ class User():
   def run_split(self, args, **kargs):
     self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
 
-  def exec(self, args, return_code = 0):
-    process = subprocess.Popen(
-      args,
-      stdin =  subprocess.PIPE,
-      stdout =  subprocess.PIPE,
-      stderr =  subprocess.PIPE,
-    )
-    out, err = process.communicate(input)
-    if process.returncode != return_code:
-      print(err.decode('utf-8'), file = sys.stderr)
-      raise Exception('command failed with code %s: %s' % \
-                      (process.returncode, pretty))
-
   def async(self, cli, **kargs):
     thread = threading.Thread(
       target = partial(self.run, cli = cli, **kargs))
