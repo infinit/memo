@@ -1019,7 +1019,7 @@ namespace infinit
                 boost::filesystem::path const& path,
                 std::string const& name,
                 std::string const& type,
-                bool overwrite)
+                bool overwrite = false)
     {
       create_directories(path.parent_path());
       if (!overwrite && exists(path))
@@ -1047,7 +1047,7 @@ namespace infinit
     drive_save(Drive const& drive)
     {
       boost::filesystem::ofstream f;
-      this->_open(f, this->_drive_path(drive.name), drive.name, "drive");
+      this->_open_write(f, this->_drive_path(drive.name), drive.name, "drive");
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(drive);
     }
@@ -1056,7 +1056,7 @@ namespace infinit
     drive_get(std::string const& name)
     {
       boost::filesystem::ifstream f;
-      this->_open(f, this->_drive_path(name), name, "drive");
+      this->_open_read(f, this->_drive_path(name), name, "drive");
       elle::serialization::json::SerializerIn s(f, false);
       return s.deserialize<Drive>();
     }
