@@ -35,8 +35,7 @@ class InvalidArgument
 public:
   InvalidArgument(std::string const& error)
     : elle::Error(error)
-  {
-  }
+  {}
 };
 
 template<typename F, typename ... Args>
@@ -132,7 +131,7 @@ list_action(std::string const& path, bool verbose)
 static
 void
 set_action(std::string const& path,
-           std::vector<infinit::User> users,
+           std::vector<std::string> users,
            std::string const& mode,
            bool inherit,
            bool disinherit,
@@ -165,7 +164,7 @@ set_action(std::string const& path,
   }
   if (!mode.empty())
   {
-    for (auto& u: users)
+    for (auto& username: users)
     {
       auto set = [path, mode] (std::string const& value) {
         check(setxattr,
@@ -177,7 +176,7 @@ set_action(std::string const& path,
       };
       try
       {
-        set(u.name);
+        set(username);
       }
       catch (InvalidArgument const&)
       {
@@ -185,11 +184,12 @@ set_action(std::string const& path,
           throw;
         try
         {
+          auto user = ifnt.user_get(username);
           elle::Buffer buf;
           {
             elle::IOStream ios(buf.ostreambuf());
             elle::serialization::json::SerializerOut so(ios, false);
-            so.serialize_forward(u.public_key);
+            so.serialize_forward(user.public_key);
           }
           set(buf.string());
         }
@@ -228,10 +228,7 @@ set(variables_map const& args)
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
     throw CommandLineError("missing path argument");
-  auto _users = mandatory<std::vector<std::string>>(args, "user", "user");
-  std::vector<infinit::User> users;
-  for (auto const& user: _users)
-    users.emplace_back(ifnt.user_get(user));
+  auto users = mandatory<std::vector<std::string>>(args, "user", "user");
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto mode = mandatory(args, "mode");
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
