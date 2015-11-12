@@ -334,7 +334,7 @@ join(variables_map const& args)
       std::move(port));
   network.name = desc.name;
   ifnt.network_save(network, true);
-  report_action("Joined", "network", network.name, std::string("locally"));
+  report_action("joined", "network", network.name, std::string("locally"));
 }
 
 static
@@ -407,7 +407,7 @@ run(variables_map const& args)
     beyond_fetch_endpoints(network, eps);
   auto dht =
     network.run(eps, false, false, {}, false,
-                flag(args, "async"), flag(args, "cache-model"));
+                flag(args, "async-write"), flag(args, "cache-model"));
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
   reactor::scheduler().signal_handle(
@@ -460,7 +460,7 @@ list_storage(variables_map const& args)
 
 static
 void
-users(variables_map const& args)
+members(variables_map const& args)
 {
   std::string network_name = mandatory(args, "name", "network_name");
   auto res =
@@ -522,7 +522,7 @@ main(int argc, char** argv)
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
           "data replication factor (default: 1)" },
-        { "async", bool_switch(), "use asynchronous operations" },
+        { "async-write", bool_switch(), "use asynchronous write operations" },
         option_output("network"),
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond(true)).c_str() },
@@ -624,7 +624,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network to run" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
-        { "async", bool_switch(), "use asynchronous operations" },
+        { "async-write", bool_switch(), "use asynchronous write operations" },
         { "cache-model", bool_switch(), "enable model caching" },
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
@@ -640,7 +640,7 @@ main(int argc, char** argv)
     },
     {
       "list-storage",
-      "List all contributed storage of a network",
+      "List all storage contributed by this device to a network",
       &list_storage,
       "--name NETWORK",
       {
@@ -650,8 +650,9 @@ main(int argc, char** argv)
     },
     {
       "members",
-      "List all users in a network",
-      &users,
+      elle::sprintf(
+        "List all members of a network on %s", beyond(true)).c_str(),
+      &members,
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network name" },
