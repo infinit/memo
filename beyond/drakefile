@@ -184,6 +184,9 @@ def configure(
       'volumes/put',
       'volumes/get',
       'volumes/delete',
+
+      # Higher level.
+      'users/register_login',
   ]:
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)

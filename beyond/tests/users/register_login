@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      bob = User()
+      bob.put(beyond, opt_out = False)
+      b = beyond.get('users/%s' % bob['name']).json()
+      assert 'public_key' in b
+      assert 'private_key' not in b
+
+      b = beyond.post('users/%s/login' % bob['name'], json = {
+        'password_hash': bob.password_hash
+      }).json()
+      assert 'public_key' in b
+      assert 'private_key' in b
+
+    def test_opt_out(self):
+      bob = User()
+      bob.put(beyond, opt_out = True)
+      b = beyond.get('users/%s' % bob['name']).json()
+      assert 'public_key' in b
+      assert 'private_key' not in b
+      # No password provided.
+      throws(
+        lambda: beyond.post('users/%s/login' % bob['name'], json = {}),
+        400,
+        json = False)
+      # No password provided.
+      throws(
+        lambda: beyond.post('users/%s/login' % bob['name'],
+                            json = {'password_hash': bob.password_hash}),
+        404)
+
+    def test_passwords_mismatch(self):
+      bob = User()
+      bob.put(beyond, opt_out = False)
+      b = beyond.get('users/%s' % bob['name']).json()
+      throws(lambda: beyond.post('users/%s/login' % bob['name'],
+                                 json = {'password_hash': 'bof'}),
+             403)
+
+  if __name__ == '__main__':
+    unittest.main()

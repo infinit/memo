@@ -134,6 +134,7 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.user_passports_get)
     self.route('/users/<name>/volumes',
                method = 'GET')(self.user_volumes_get)
+    self.route('/users/<name>/login', method = 'POST')(self.login)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -313,6 +314,28 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     volumes = self.__beyond.user_volumes_get(user = user)
     return {'volumes': list(map(lambda v: v.json(), volumes))}
+
+  def login(self, name):
+    json = bottle.request.json
+    if 'password_hash' not in json:
+      raise Response(400, 'Missing password_hash')
+    try:
+      return self.__beyond.user_login(name, json['password_hash']).json(
+        private = True)
+    except exceptions.Mismatch as e:
+      raise Response(403,
+                     {
+                       'error': 'users/invalid_password',
+                       'reason': e.args[0]
+                     })
+    except exceptions.NotOptIn as e:
+      raise Response(404,
+                     {
+                       'error': 'users/...',
+                       'reason': e.args[0],
+                     })
+    except User.NotFound as e:
+      raise self.__user_not_found(name)
 
   ## ------- ##
   ## Network ##
