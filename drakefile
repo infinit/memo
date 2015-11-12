@@ -212,6 +212,7 @@ def configure(
     'src/infinit/model/doughnut/Peer.hh',
     'src/infinit/model/doughnut/Remote.cc',
     'src/infinit/model/doughnut/Remote.hh',
+    'src/infinit/model/doughnut/Remote.hxx',
     'src/infinit/model/doughnut/Replicator.cc',
     'src/infinit/model/doughnut/Replicator.hh',
     'src/infinit/model/doughnut/UB.cc',
@@ -314,8 +315,10 @@ def configure(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
   global installed_binaries
   to_install = [
+    'infinit-acl',
     'infinit-credentials',
     'infinit-network',
+    'infinit-passport',
     'infinit-storage',
     'infinit-user',
     'infinit-volume',
@@ -423,10 +426,16 @@ def configure(
   for test_name in [
       'errors',
       'single-user-two-devices-shared-storage',
+      'flow',
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
-    runner = drake.Runner(exe = test)
+    runner = drake.Runner(
+      exe = test,
+      env = {
+        'PYTHONPATH':
+          drake.path_build('beyond/lib/python%s' % elle.python3.version)
+      })
     rule_check << runner.status
 
   ## --- ##

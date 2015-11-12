@@ -127,7 +127,6 @@ create(variables_map const& args)
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
-  overlay_config->join();
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   auto storage_count = args.count("storage");
   if (storage_count > 0)
@@ -179,6 +178,7 @@ create(variables_map const& args)
     port = args["port"].as<int>();
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
+      infinit::model::Address::random(),
       std::move(consensus_config),
       std::move(overlay_config),
       std::move(storage),
@@ -268,8 +268,7 @@ fetch(variables_map const& args)
         ifnt.network_save(std::move(desc));
       }
       catch (ResourceAlreadyFetched const& error)
-      {
-      }
+      {}
     }
   }
 }
@@ -288,105 +287,54 @@ import(variables_map const& args)
 
 static
 void
-invite(variables_map const& args)
-{
-  auto self = ifnt.user_get(optional(args, option_owner.long_name()));
-  auto network_name = mandatory(args, "name", "network name");
-  auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_descriptor_get(network_name, self);
-  auto user = ifnt.user_get(user_name);
-  if (self.public_key != network.owner)
-  {
-    throw elle::Error(
-      elle::sprintf("not owner of network \"%s\"", network_name));
-  }
-  infinit::model::doughnut::Passport passport(
-    user.public_key,
-    network.name,
-    self.private_key.get());
-  bool push = aliased_flag(args, {"push-passport", "push"});
-  if (push)
-    beyond_push(
-      elle::sprintf("networks/%s/passports/%s", network.name, user_name),
-      "passport for",
-      user_name,
-      passport,
-      self);
-  if (!push || args.count("output"))
-  {
-    auto output = get_output(args);
-    elle::serialization::json::serialize(passport, *output, false);
-    report_action_output(
-      *output, "wrote", "passport for", network.name);
-  }
-}
-
-static
-void
 join(variables_map const& args)
 {
-  auto user = self_user(ifnt, args);
-  auto input = get_input(args);
+  auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto storage_name = optional(args, "storage");
+  auto port = optional<int>(args, "port");
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   if (storage_name)
-    storage = ifnt.storage_get(*storage_name);
+    storage = ifnt.storage_get(storage_name.get());
+  auto desc = [&] () -> infinit::NetworkDescriptor
   {
-    auto desc = ifnt.network_descriptor_get(network_name, user);
-    auto passport = [&] () -> infinit::model::doughnut::Passport
+    try
     {
-      bool fetch = aliased_flag(args, {"fetch-passport", "fetch"});
-      if (fetch)
-      {
-        return beyond_fetch<infinit::model::doughnut::Passport>(
-          elle::sprintf("networks/%s/passports/%s", network_name, user.name),
-          "passport for",
-          network_name);
-      }
-      if (!args.count("input") && user.public_key == desc.owner)
-      {
-        return infinit::model::doughnut::Passport(
-          user.public_key,
-          desc.name,
-          user.private_key.get());
-      }
-      else if (args.count("input"))
-      {
-        auto input = get_input(args);
-        return elle::serialization::json::deserialize
-          <infinit::model::doughnut::Passport>(*input, false);
-      }
-      else
-      {
-        throw CommandLineError(elle::sprintf(
-          "no passport for %s, use --fetch to fetch one from %s or --input to "
-          "use a previously exported one", user.name, beyond()));
-      }
-    }();
-
-    bool ok = passport.verify(desc.owner);
-    if (!ok)
-      throw elle::Error("passport signature is invalid");
-    infinit::Network network;
-    desc.overlay->join();
-    boost::optional<int> port;
-    if (args.count("port"))
-      port = args["port"].as<int>();
-    network.model =
-      elle::make_unique<infinit::model::doughnut::Configuration>(
-        std::move(desc.consensus),
-        std::move(desc.overlay),
-        std::move(storage),
-        user.keypair(),
-        std::move(desc.owner),
-        std::move(passport),
-        user.name,
-        std::move(port));
-    network.name = desc.name;
-    ifnt.network_save(network, true);
-    report_action("joined", "network", network.name, std::string("locally"));
-  }
+      return ifnt.network_descriptor_get(network_name, self, false);
+    }
+    catch (elle::serialization::Error const&)
+    {
+      throw elle::Error(
+        elle::sprintf("this device has already joined %s", network_name));
+    }
+  }();
+  auto passport = [&] () -> infinit::Passport
+  {
+    if (self.public_key == desc.owner)
+    {
+      return infinit::Passport(
+        self.public_key, desc.name, self.private_key.get());
+    }
+    return ifnt.passport_get(desc.name, self.name);
+  }();
+  bool ok = passport.verify(desc.owner);
+  if (!ok)
+    throw elle::Error("passport signature is invalid");
+  infinit::Network network;
+  network.model =
+    elle::make_unique<infinit::model::doughnut::Configuration>(
+      infinit::model::Address::random(),
+      std::move(desc.consensus),
+      std::move(desc.overlay),
+      std::move(storage),
+      self.keypair(),
+      std::move(desc.owner),
+      std::move(passport),
+      self.name,
+      std::move(port));
+  network.name = desc.name;
+  ifnt.network_save(network, true);
+  report_action("Joined", "network", network.name, std::string("locally"));
 }
 
 static
@@ -415,7 +363,8 @@ push(variables_map const& args)
   }
 }
 
-static void
+static
+void
 pull(variables_map const& args)
 {
   auto name_ = mandatory(args, "name", "network name");
@@ -424,7 +373,8 @@ pull(variables_map const& args)
   beyond_delete("network", network_name, owner);
 }
 
-static void
+static
+void
 delete_(variables_map const& args)
 {
   auto owner = self_user(ifnt, args);
@@ -575,9 +525,9 @@ main(int argc, char** argv)
         { "async", bool_switch(), "use asynchronous operations" },
         option_output("network"),
         { "push-network", bool_switch(),
-          elle::sprintf("push the network to %s", beyond()).c_str() },
+          elle::sprintf("push the network to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(),
-          elle::sprintf("push the network to %s", beyond()).c_str() },
+          elle::sprintf("push the network to %s", beyond(true)).c_str() },
         option_owner,
       },
       {
@@ -618,33 +568,14 @@ main(int argc, char** argv)
       },
     },
     {
-      "invite",
-      "Create a passport to a network for a user",
-      &invite,
-      "--name NETWORK --user USER",
-      {
-        { "name,n", value<std::string>(), "network to create the passport to" },
-        { "user,u", value<std::string>(), "user to create the passport for" },
-        option_output("passport"),
-        { "push-passport", bool_switch(),
-          elle::sprintf("push the passport to %s", beyond()).c_str() },
-        { "push,p", bool_switch(), "alias for --push-passport" },
-        option_owner,
-      },
-    },
-    {
       "join",
-      "Join a network",
+      "Join a network with this device",
       &join,
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to join" },
-        { "fetch-passport", bool_switch(),
-          elle::sprintf("fetch the passport from %s", beyond()).c_str() },
-        { "fetch,f", bool_switch(), "alias for --fetch-passport" },
-        option_input("passport"),
-        { "port", value<int>(), "port to listen on (default: random)" },
         { "storage", value<std::string>(), "storage to contribute (optional)" },
+        { "port", value<int>(), "port to listen on (default: random)" },
         option_owner,
       },
     },
@@ -656,7 +587,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a network to %s", beyond()).c_str(),
+      elle::sprintf("Push a network to %s", beyond(true)).c_str(),
       &push,
       "--name NETWORK",
       {
@@ -676,7 +607,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a network from %s", beyond()).c_str(),
+      elle::sprintf("Remove a network from %s", beyond(true)).c_str(),
       &pull,
       "--name NETWORK",
       {
@@ -696,11 +627,11 @@ main(int argc, char** argv)
         { "async", bool_switch(), "use asynchronous operations" },
         { "cache-model", bool_switch(), "enable model caching" },
         { "fetch-endpoints", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+          elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
         { "fetch,f", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
+          elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
         { "push-endpoints", bool_switch(),
-          elle::sprintf("push endpoints to %s", beyond()).c_str() },
+          elle::sprintf("push endpoints to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },

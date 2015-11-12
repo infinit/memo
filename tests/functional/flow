@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+from utils import *
+
+
+with Infinit() as handle1, Infinit() as handle2, Infinit() as handle, Beyond() as beyond:
+
+    handle1_name = 'bob'
+    handle2_name = 'alice'
+
+    handle1.run(['infinit-user', '--create', '--name', handle1_name])
+    handle2.run(['infinit-user', '--create', '--name', handle2_name])
+
+    handle1.run(['infinit-user', '--push', '--name', handle1_name])
+    handle2.run(['infinit-user', '--push', '--name', handle2_name])
+
+    handle1.run(['infinit-user', '--fetch', '--name', handle2_name,
+                 '--as', handle1_name])
+    handle2.run(['infinit-user', '--fetch', '--name', handle1_name,
+                 '--as', handle2_name])

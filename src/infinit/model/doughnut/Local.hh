@@ -38,12 +38,14 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        Local(Address id,
-              std::unique_ptr<storage::Storage> storage, int port = 0,
+        Local(Doughnut& dht,
+              Address id,
+              std::unique_ptr<storage::Storage> storage,
+              int port = 0,
               Protocol p = Protocol::all);
         ~Local();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
-        ELLE_ATTRIBUTE_RX(Doughnut*, doughnut);
+        ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 
       /*-----------.
       | Networking |
@@ -77,8 +79,6 @@ namespace infinit
       | Server |
       `-------*/
       public:
-        void
-        serve();
         reactor::network::TCPServer::EndPoint
         server_endpoint();
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);
@@ -87,6 +87,8 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
         ELLE_ATTRIBUTE_RX(RPCServer, rpcs);
+        std::unordered_map<std::string, std::pair<elle::Buffer, Passport>>
+          _challenges;
       protected:
         virtual
         void

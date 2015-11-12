@@ -19,9 +19,8 @@ $(document).ready(function() {
     '<ins>0.5</ins><ins>\nMounting volume "company". \n\n</ins>' +
     '<mark>$></mark> <ins>2</ins>'+
 
-    'ls /mnt/company/' +
-    'Design/     Engineering/      Guidelines.pdf     Human Resources/     Introduction.pdf' +
-    'Management/     Marketing/     Product/     Sales/     Support/     User Experience/' +
+    'cp -R Engineering /mnt/company/'+
+    '<ins>0.5</ins><ins>\n\n' +
 
     '<mark>$></mark> ',
     {

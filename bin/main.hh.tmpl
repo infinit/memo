@@ -173,6 +173,8 @@ bool script_mode = false;
 
 namespace infinit
 {
+  typedef infinit::model::doughnut::Passport Passport;
+
   int
   main(std::string desc,
        Modes const& modes,
@@ -504,14 +506,19 @@ namespace infinit
         }
         catch (boost::filesystem::filesystem_error const&)
         {}
-        driver->mount(mountpoint.get(), {"infinit-volume", "-o", "noatime", "-o", "hard_remove"});
+        driver->mount(mountpoint.get(), {"infinit-volume",
+            "-o", "noatime",
+            "-o", "hard_remove",
+#ifdef INFINIT_MACOSX
+            "-o", "daemon_timeout=600",
+#endif
+        });
       }
       return driver;
     }
 
     std::string name;
     boost::optional<std::string> mountpoint;
-    model::Address root_address;
     std::string network;
   };
 
@@ -577,7 +584,7 @@ namespace infinit
     {
       auto name = qualified_name(name_, owner);
       boost::filesystem::ifstream f;
-      this->_open(f, this->_network_path(name), name, "network");
+      this->_open_read(f, this->_network_path(name), name, "network");
       auto res = elle::serialization::json::deserialize<Network>(f, false);
       if (!res.model)
       {
@@ -600,7 +607,8 @@ namespace infinit
         if (is_regular_file(it->status()))
         {
           boost_fs::ifstream f;
-          this->_open(f, it->path(), "network", it->path().filename().string());
+          this->_open_read(
+            f, it->path(), "network", it->path().filename().string());
           res.push_back(
             elle::serialization::json::deserialize<Network>(f, false));
         }
@@ -609,59 +617,99 @@ namespace infinit
     }
 
     NetworkDescriptor
-    network_descriptor_get(std::string const& name_, User const& owner)
+    network_descriptor_get(std::string const& name_,
+                           User const& owner,
+                           bool or_network = true)
     {
       auto name = qualified_name(name_, owner);
       try
       {
         boost::filesystem::ifstream f;
-        this->_open(f, this->_network_path(name), name, "network");
+        this->_open_read(f, this->_network_path(name), name, "network");
         elle::serialization::json::SerializerIn s(f, false);
         return s.deserialize<NetworkDescriptor>();
       }
       catch (elle::serialization::Error const&)
       {
-        try
+        if (or_network)
         {
-          auto network = this->network_get(name_, owner);
-          return NetworkDescriptor{
-            network.name,
-            std::move(network.dht()->consensus),
-            std::move(network.dht()->overlay),
-            std::move(network.dht()->owner)
-          };
+          try
+          {
+            auto network = this->network_get(name_, owner);
+            return NetworkDescriptor{
+              network.name,
+              std::move(network.dht()->consensus),
+              std::move(network.dht()->overlay),
+              std::move(network.dht()->owner)
+            };
+          }
+          catch (elle::Error const&)
+          {}
         }
-        catch (elle::Error const&)
-        {}
         throw;
       }
-    }
-
-    void
-    network_save(Network const& network, bool overwrite = false)
-    {
-      boost::filesystem::ofstream f;
-      this->_open(f, this->_network_path(network.name),
-                  network.name, "network", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(network);
     }
 
     void
     network_save(NetworkDescriptor const& network)
     {
       boost::filesystem::ofstream f;
-      this->_open(f, this->_network_path(network.name),
-                  network.name, "network");
+      this->_open_write(f, this->_network_path(network.name),
+                        network.name, "network", false);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
+     }
+
+    void
+    network_save(Network const& network, bool overwrite = false)
+    {
+      boost::filesystem::ofstream f;
+      this->_open_write(f, this->_network_path(network.name),
+                        network.name, "network", overwrite);
+      elle::serialization::json::SerializerOut s(f, false, true);
+      s.serialize_forward(network);
+    }
+
+    Passport
+    passport_get(std::string const& network, std::string const& user)
+    {
+      boost::filesystem::ifstream f;
+      this->_open_read(f, this->_passport_path(network, user),
+                       elle::sprintf("%s: %s", network, user), "passport");
+      elle::serialization::json::SerializerIn s(f, false);
+      return s.deserialize<Passport>();
+    }
+
+    void
+    passport_save(Passport const& passport)
+    {
+      boost::filesystem::ofstream f;
+      auto users = this->users_get();
+      for (auto const& user: users)
+      {
+        if (user.public_key == passport.user())
+        {
+          this->_open_write(f,
+                            this->_passport_path(passport.network(), user.name),
+                            elle::sprintf("%s: %s", passport.network(),
+                                          user.name),
+                            "passport", false);
+          elle::serialization::json::SerializerOut s(f, false, true);
+          s.serialize_forward(passport);
+          return;
+        }
+      }
+      throw elle::Error(elle::sprintf(
+        "unable to save passport, user not found locally: %s",
+        passport.user()));
     }
 
     void
     user_save(User const& user)
     {
       boost::filesystem::ofstream f;
-      this->_open(f, this->_user_path(user.name), user.name, "user");
+      this->_open_write(
+        f, this->_user_path(user.name), user.name, "user", false);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(user);
     }
@@ -672,7 +720,7 @@ namespace infinit
       if (!user)
         user = elle::system::username();
       boost::filesystem::ifstream f;
-      this->_open(f, this->_user_path(user.get()), user.get(), "user");
+      this->_open_read(f, this->_user_path(user.get()), user.get(), "user");
       elle::serialization::json::SerializerIn s(f, false);
       return s.deserialize<User>();
     }
@@ -689,7 +737,8 @@ namespace infinit
         if (is_regular_file(it->status()))
         {
           boost_fs::ifstream f;
-          this->_open(f, it->path(), "user", it->path().filename().string());
+          this->_open_read(
+            f, it->path(), "user", it->path().filename().string());
           res.push_back(elle::serialization::json::deserialize<User>(f, false));
         }
       }
@@ -700,7 +749,7 @@ namespace infinit
     storage_get(std::string const& name)
     {
       boost::filesystem::ifstream f;
-      this->_open(f, this->_storage_path(name), name, "storage");
+      this->_open_read(f, this->_storage_path(name), name, "storage");
       elle::serialization::json::SerializerIn s(f, false);
       return s.deserialize<std::unique_ptr<storage::StorageConfig>>();
     }
@@ -726,7 +775,7 @@ namespace infinit
     storage_save(std::string const& name, storage::StorageConfig const& storage)
     {
       boost::filesystem::ofstream f;
-      this->_open(f, this->_storage_path(name), name, "storage");
+      this->_open_write(f, this->_storage_path(name), name, "storage", false);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(storage);
     }
@@ -746,7 +795,7 @@ namespace infinit
     volume_get(std::string const& name)
     {
       boost::filesystem::ifstream f;
-      this->_open(f, this->_volume_path(name), name, "volume");
+      this->_open_read(f, this->_volume_path(name), name, "volume");
       elle::serialization::json::SerializerIn s(f, false);
       return s.deserialize<Volume>();
     }
@@ -755,7 +804,8 @@ namespace infinit
     volume_save(Volume const& volume)
     {
       boost::filesystem::ofstream f;
-      this->_open(f, this->_volume_path(volume.name), volume.name, "volume");
+      this->_open_write(
+        f, this->_volume_path(volume.name), volume.name, "volume", false);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(volume);
     }
@@ -772,7 +822,8 @@ namespace infinit
         if (is_regular_file(it->status()))
         {
           boost_fs::ifstream f;
-          this->_open(f, it->path(), "volume", it->path().filename().string());
+          this->_open_read(
+            f, it->path(), "volume", it->path().filename().string());
           res.push_back(
             elle::serialization::json::deserialize<Volume>(f, false));
         }
@@ -894,6 +945,20 @@ namespace infinit
     }
 
     boost::filesystem::path
+    _passport_path() const
+    {
+      auto root = root_dir() / "passports";
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _passport_path(std::string const& network, std::string const& user) const
+    {
+      return this->_passport_path() / network / user;
+    }
+
+    boost::filesystem::path
     _storage_path() const
     {
       auto root = root_dir() / "storage";
@@ -936,10 +1001,10 @@ namespace infinit
     }
 
     void
-    _open(boost::filesystem::ifstream& f,
-          boost::filesystem::path const& path,
-          std::string const& name,
-          std::string const& type) const
+    _open_read(boost::filesystem::ifstream& f,
+               boost::filesystem::path const& path,
+               std::string const& name,
+               std::string const& type) const
     {
       f.open(path);
       if (!f.good())
@@ -950,11 +1015,11 @@ namespace infinit
     }
 
     void
-    _open(boost::filesystem::ofstream& f,
-          boost::filesystem::path const& path,
-          std::string const& name,
-          std::string const& type,
-          bool overwrite = false)
+    _open_write(boost::filesystem::ofstream& f,
+                boost::filesystem::path const& path,
+                std::string const& name,
+                std::string const& type,
+                bool overwrite)
     {
       create_directories(path.parent_path());
       if (!overwrite && exists(path))
@@ -1123,12 +1188,13 @@ private:
   }
 };
 
-boost::optional<std::string>
+template <typename T = std::string>
+boost::optional<T>
 optional(boost::program_options::variables_map const& vm,
          std::string const& name)
 {
   if (vm.count(name))
-    return vm[name].as<std::string>();
+    return vm[name].as<T>();
   else
     return {};
 }
@@ -1255,14 +1321,8 @@ get_username(boost::program_options::variables_map const& args,
              std::string const& name)
 {
   auto opt = optional(args, name);
-  return opt ? opt.get() : elle::system::username();
-}
-
-inline
-std::string
-get_name(boost::program_options::variables_map const& args)
-{
-  return get_username(args, "name");
+  std::string env = elle::os::getenv("INFINIT_USER", "");
+  return opt ? opt.get() : (env.empty() ? elle::system::username() : env);
 }
 
 DAS_MODEL_FIELDS(infinit::User, (name, public_key, private_key));
@@ -1324,11 +1384,11 @@ report_exported(std::ostream& output,
 }
 
 std::string
-beyond();
-
-std::string
-beyond()
+beyond(bool help = false)
 {
+  if (help && !elle::os::inenv("INFINIT_BEYOND"))
+    return "the Hub";
+
   auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
   return res;
 }
@@ -1506,7 +1566,8 @@ beyond_fetch(std::string const& type,
 
 void
 beyond_delete(std::string const& where,
-              std::string const& type, std::string const& name,
+              std::string const& type,
+              std::string const& name,
               infinit::User const& self)
 {
   reactor::http::Request::Configuration c;
@@ -1535,7 +1596,8 @@ beyond_delete(std::string const& where,
 }
 
 void
-beyond_delete(std::string const& type, std::string const& name,
+beyond_delete(std::string const& type,
+              std::string const& name,
               infinit::User const& self)
 {
   beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self);
@@ -1583,7 +1645,7 @@ private:
                      infinit::User const& self,
                      infinit::model::Address const& node_id,
                      int port)
-    : _url(elle::sprintf("networks/%s/endpoints/%s/%s",
+    : _url(elle::sprintf("networks/%s/endpoints/%s/%x",
                          network.name, self.name, node_id))
     , _network(network)
     , _self(self)
@@ -1644,7 +1706,7 @@ beyond_fetch_endpoints(infinit::Network const& network,
     }
     catch (std::exception const& e)
     {
-      ELLE_WARN("Exception parsing peer endpoints: %s", e);
+      ELLE_WARN("Exception parsing peer endpoints: %s", e.what());
     }
   }
 }

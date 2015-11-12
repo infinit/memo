@@ -148,8 +148,19 @@ def configure(
       'python_version_minor': python.version.minor,
   }):
     drake.node('control.tmpl')
-  package = chain(package,
-                  drake.copy(drake.nodes('control'), 'debian/DEBIAN'))
+  package = chain(
+    package,
+    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
+    drake.copy(
+      drake.nodes('etc/nginx/sites-available/beyond',
+                  'etc/rsyslog.d/10-infinit.conf',
+                  'etc/ssl/beyond.crt',
+                  'etc/ssl/private/beyond.key',
+                  'etc/uwsgi/apps-available/beyond.xml',
+                  'usr/share/ca-certificates/extra/infinit.crt'),
+      'debian',
+    ),
+  )
   debian = drake.Rule('debian')
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),

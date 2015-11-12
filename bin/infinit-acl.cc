@@ -10,6 +10,7 @@
 #include <boost/filesystem.hpp>
 
 #include <elle/Exit.hh>
+#include <elle/Error.hh>
 #include <elle/log.hh>
 #include <elle/json/json.hh>
 
@@ -23,21 +24,40 @@ ELLE_LOG_COMPONENT("infinit-acl");
 # define SXA_EXTRA
 #endif
 
+infinit::Infinit ifnt;
+
 using namespace boost::program_options;
 options_description mode_options("Modes");
 
-template<typename F, typename... ARGS>
+class InvalidArgument
+  : public elle::Error
+{
+public:
+  InvalidArgument(std::string const& error)
+    : elle::Error(error)
+  {
+  }
+};
+
+template<typename F, typename ... Args>
 void
-check(F func, std::string const& file, ARGS... args)
+check(F func, Args ... args)
 {
   int res = func(args...);
   if (res < 0)
-    perror(file.c_str());
+  {
+    int error_number = errno;
+    auto* e = std::strerror(error_number);
+    if (error_number == EINVAL)
+      throw InvalidArgument(std::string(e));
+    else
+      throw elle::Error(std::string(e));
+  }
 }
 
-template<typename A, typename... ARGS>
+template<typename A, typename ... Args>
 void
-recursive_action(A action, std::string const& path, ARGS... args)
+recursive_action(A action, std::string const& path, Args ... args)
 {
   namespace bfs = boost::filesystem;
   boost::system::error_code erc;
@@ -112,11 +132,12 @@ list_action(std::string const& path, bool verbose)
 static
 void
 set_action(std::string const& path,
-           std::vector<std::string> users,
+           std::vector<infinit::User> users,
            std::string const& mode,
            bool inherit,
            bool disinherit,
-           bool verbose)
+           bool verbose,
+           bool try_with_public_key)
 {
   if (verbose)
     std::cout << "processing " << path << std::endl;
@@ -126,17 +147,59 @@ set_action(std::string const& path,
   {
     if (dir)
     {
-      check(setxattr, path, path.c_str(), "user.infinit.auth.inherit",
-            inherit ? "true" : "false",
-            strlen("true") + (inherit ? 0 : 1), 0 SXA_EXTRA);
+      try
+      {
+        check(setxattr,
+              path.c_str(),
+              "user.infinit.auth.inherit",
+              inherit ? "true" : "false",
+              strlen("true") + (inherit ? 0 : 1),
+              0 SXA_EXTRA);
+      }
+      catch (elle::Error const& error)
+      {
+        ELLE_ERR("setattr (inherit) on %s failed: %s", path,
+                 elle::exception_string());
+      }
     }
   }
   if (!mode.empty())
   {
     for (auto& u: users)
     {
-      check(setxattr, path, path.c_str(), ("user.infinit.auth." + mode).c_str(),
-        u.c_str(), u.size(), 0 SXA_EXTRA);
+      auto set = [path, mode] (std::string const& value) {
+        check(setxattr,
+              path.c_str(),
+              ("user.infinit.auth." + mode).c_str(),
+              value.c_str(),
+              value.size(),
+              0 SXA_EXTRA);
+      };
+      try
+      {
+        set(u.name);
+      }
+      catch (InvalidArgument const&)
+      {
+        if (!try_with_public_key)
+          throw;
+        try
+        {
+          elle::Buffer buf;
+          {
+            elle::IOStream ios(buf.ostreambuf());
+            elle::serialization::json::SerializerOut so(ios, false);
+            so.serialize_forward(u.public_key);
+          }
+          set(buf.string());
+        }
+        catch (InvalidArgument const&)
+        {
+          ELLE_ERR("setattr (mode: %s) on %s failed: %s", mode, path,
+                   elle::exception_string());
+          throw;
+        }
+      }
     }
   }
 }
@@ -165,7 +228,10 @@ set(variables_map const& args)
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
     throw CommandLineError("missing path argument");
-  auto users = mandatory<std::vector<std::string>>(args, "user", "user");
+  auto _users = mandatory<std::vector<std::string>>(args, "user", "user");
+  std::vector<infinit::User> users;
+  for (auto const& user: _users)
+    users.emplace_back(ifnt.user_get(user));
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto mode = mandatory(args, "mode");
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
@@ -189,6 +255,7 @@ set(variables_map const& args)
   mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
+  bool try_with_public_key = flag(args, "try-with-public-key");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
@@ -202,11 +269,13 @@ set(variables_map const& args)
   }
   for (auto const& path: paths)
   {
-    set_action(path, users, mode, inherit, disinherit, verbose);
+    set_action(path, users, mode, inherit, disinherit, verbose,
+               try_with_public_key);
     if (recursive)
     {
       recursive_action(
-        set_action, path, users, mode, inherit, disinherit, verbose);
+        set_action, path, users, mode, inherit, disinherit, verbose,
+        try_with_public_key);
     }
   }
 }
@@ -241,6 +310,7 @@ main(int argc, char** argv)
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "list recursively" },
+        { "try-with-public-key", bool_switch(), "try with the user public key" },
         { "verbose", bool_switch(), "verbose output" },
       },
     },

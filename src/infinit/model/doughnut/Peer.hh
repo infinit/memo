@@ -35,9 +35,6 @@ namespace infinit
         void
         reconnect(elle::DurationOpt timeout = elle::DurationOpt()) = 0;
 
-        /// Make multiple connection attempts before giving up
-        void
-        connect_retry();
       /*-------.
       | Blocks |
       `-------*/

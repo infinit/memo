@@ -1,0 +1,26 @@
+server
+{
+    listen      443;
+    server_name beyond.infinit.io;
+
+    access_log  /var/log/nginx/beyond/access-ssl.log;
+    error_log   /var/log/nginx/beyond/error-ssl.log;
+    client_max_body_size 15M;
+
+    ssl on;
+
+    ssl_certificate "/etc/ssl/beyond.crt";
+    ssl_certificate_key "/etc/ssl/private/beyond.key";
+    ssl_client_certificate "/usr/share/ca-certificates/extra/infinit.crt";
+    ssl_verify_client optional;
+
+    location /
+    {
+        uwsgi_pass      unix:///run/uwsgi/app/beyond/socket;
+        include         uwsgi_params;
+        uwsgi_param     UWSGI_SCHEME $scheme;
+        uwsgi_param     SERVER_SOFTWARE nginx/$nginx_version;
+        uwsgi_param     SSL_CLIENT_VERIFIED $ssl_client_verify;
+        uwsgi_param     SSL_CLIENT_DN $ssl_client_s_dn;
+    }
+}

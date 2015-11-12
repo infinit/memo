@@ -193,13 +193,14 @@ namespace kademlia
   {
     dst = E2(src.address(), src.port());
   }
+
   Kademlia::Kademlia(infinit::model::Address node_id,
-                     Configuration const& config, bool server,
+                     Configuration const& config,
+                     std::shared_ptr<Local> local,
                      infinit::model::doughnut::Doughnut* doughnut)
-    : Overlay(std::move(node_id))
+    : Overlay(doughnut, std::move(local), std::move(node_id))
     , _config(config)
   {
-    this->doughnut(doughnut);
     srand(time(nullptr) + getpid());
     _self = _config.node_id;
     _routes.resize(_config.address_size);
@@ -217,8 +218,22 @@ namespace kademlia
     }
   done:
     _mask = Address(v);
-    if (!server)
-      _bootstrap();
+    if (local)
+    {
+      local->on_fetch.connect(std::bind(&Kademlia::fetch, this,
+                                        std::placeholders::_1,
+                                        std::placeholders::_2));
+      local->on_store.connect(std::bind(&Kademlia::store, this,
+                                        std::placeholders::_1,
+                                        std::placeholders::_2));
+      local->on_remove.connect(std::bind(&Kademlia::remove, this,
+                                         std::placeholders::_1));
+      this->_port = local->server_endpoint().port();
+      this->_config.port = this->_port;
+    }
+    this->_bootstrap();
+    if (local)
+      this->_reload(*local);
   }
 
   Kademlia::~Kademlia()
@@ -274,24 +289,6 @@ namespace kademlia
     }
     reactor::sleep(boost::posix_time::milliseconds(_config.wait_ms));
     ELLE_LOG("%s: exiting ctor", *this);
-  }
-
-  void
-  Kademlia::register_local(std::shared_ptr<infinit::model::doughnut::Local> local)
-  {
-    ELLE_DEBUG("Registering local");
-    local->on_fetch.connect(std::bind(&Kademlia::fetch, this,
-                                      std::placeholders::_1,
-                                      std::placeholders::_2));
-    local->on_store.connect(std::bind(&Kademlia::store, this,
-                                      std::placeholders::_1,
-                                      std::placeholders::_2));
-    local->on_remove.connect(std::bind(&Kademlia::remove, this,
-                                       std::placeholders::_1));
-    this->_port = local->server_endpoint().port();
-    this->_config.port = this->_port;
-    _bootstrap();
-    _reload(*local);
   }
 
   void Kademlia::_loop()
@@ -972,11 +969,7 @@ namespace infinit
       {
         this->serialize(input);
       }
-      void
-      Configuration::join()
-      {
-        this->config.node_id = infinit::model::Address::random();
-      }
+
       void
       Configuration::serialize(elle::serialization::Serializer& s)
       {
@@ -984,7 +977,10 @@ namespace infinit
       }
 
       std::unique_ptr<infinit::overlay::Overlay>
-      Configuration::make(NodeEndpoints const& hosts, bool server,
+      Configuration::make(
+        model::Address id,
+        NodeEndpoints const& hosts,
+        std::shared_ptr<infinit::model::doughnut::Local> local,
         model::doughnut::Doughnut* doughnut)
       {
         for (auto const& host: hosts)
@@ -993,7 +989,7 @@ namespace infinit
           elle::serialization::Serialize< ::kademlia::PrettyEndpoint>
           ::convert(ep));
         return elle::make_unique< ::kademlia::Kademlia>(
-          this->node_id(), config, server, doughnut);
+          id, config, std::move(local), doughnut);
       }
       static const elle::serialization::Hierarchy<overlay::Configuration>::
       Register<Configuration> _registerKademliaOverlayConfig("kademlia");

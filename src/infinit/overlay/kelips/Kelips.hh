@@ -8,6 +8,7 @@
 # include <elle/serialization/Serializer.hh>
 
 #include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/storage/Storage.hh>
 
 #include <cryptography/SecretKey.hh>
@@ -88,6 +89,7 @@ namespace infinit
         struct GetFileReply;
         struct PutFileRequest;
         struct PutFileReply;
+        struct RequestKey;
       }
       struct PendingRequest;
 
@@ -155,7 +157,9 @@ namespace infinit
         GossipConfiguration gossip;
         virtual
         std::unique_ptr<infinit::overlay::Overlay>
-        make(NodeEndpoints const& hosts, bool server,
+        make(Address id, NodeEndpoints
+             const& hosts,
+             std::shared_ptr<model::doughnut::Local> server,
              model::doughnut::Doughnut* doughnut) override;
       };
 
@@ -170,17 +174,14 @@ namespace infinit
       {
       public:
         Node(Configuration const& config,
-             bool observer,
              model::Address node_id,
+             std::shared_ptr<model::doughnut::Local> local,
              infinit::model::doughnut::Doughnut* doughnut);
         virtual ~Node();
         void
         start();
         void
         engage();
-        void
-        register_local(
-          std::shared_ptr<infinit::model::doughnut::Local> local) override;
         void
         address(Address file,
                 infinit::overlay::Operation op,
@@ -297,6 +298,9 @@ namespace infinit
           std::vector<GossipEndpoint> endponits);
         Node::Member
         make_peer(PeerLocation pl);
+        packet::RequestKey make_key_request();
+        bool remote_retry_connect(model::doughnut::Remote& remote,
+                                  std::string const& uid);
         Address _self;
         Address _ping_target;
         Time _ping_time;
@@ -323,7 +327,6 @@ namespace infinit
         std::vector<Address> _pending_bootstrap_address;
         std::vector<Address> _bootstrap_requests_sent;
         reactor::network::UTPServer _remotes_server;
-        std::shared_ptr<infinit::model::doughnut::Local> _local;
         /// Whether we've seen someone from our group.
         reactor::Barrier _bootstraping;
         int _next_id;
@@ -335,6 +338,8 @@ namespace infinit
         std::unordered_map<Address, int> _under_duplicated;
         std::string _rdv_id;
         std::string _rdv_host;
+        std::unordered_map<std::string, elle::Buffer> _challenges;
+        std::unordered_map<Address, Node::Member> _peer_cache;
       };
     }
   }

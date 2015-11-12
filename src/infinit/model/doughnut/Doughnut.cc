@@ -38,39 +38,43 @@ namespace infinit
   {
     namespace doughnut
     {
-      Doughnut::Doughnut(cryptography::rsa::KeyPair keys,
-                         cryptography::rsa::PublicKey owner,
-                         Passport passport,
-                         ConsensusBuilder consensus,
-                         OverlayBuilder overlay_builder,
-                         std::shared_ptr<Local> local)
-        : _keys(std::move(keys))
-        , _owner(std::move(owner))
-        , _passport(std::move(passport))
-        , _consensus(consensus(*this))
-        , _overlay(overlay_builder(*this, bool(local)))
-        , _local(std::move(local))
-      {
-        if (this->_local)
-        {
-          this->_local->doughnut() = this;
-          this->overlay()->register_local(this->_local);
-        }
-      }
-
-      Doughnut::Doughnut(std::string const& name,
+      Doughnut::Doughnut(Address id,
                          cryptography::rsa::KeyPair keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
-                         std::shared_ptr<Local> local)
-        : Doughnut(std::move(keys),
+                         boost::optional<int> port,
+                         std::unique_ptr<storage::Storage> storage)
+        : _id(std::move(id))
+        , _keys(std::move(keys))
+        , _owner(std::move(owner))
+        , _passport(std::move(passport))
+        , _consensus(consensus(*this))
+        , _local(
+          storage ?
+          this->_consensus->make_local(std::move(port), std::move(storage)) :
+          nullptr)
+        , _overlay(overlay_builder(*this, id, this->_local))
+      {}
+
+      Doughnut::Doughnut(Address id,
+                         std::string const& name,
+                         cryptography::rsa::KeyPair keys,
+                         cryptography::rsa::PublicKey owner,
+                         Passport passport,
+                         ConsensusBuilder consensus,
+                         OverlayBuilder overlay_builder,
+                         boost::optional<int> port,
+                         std::unique_ptr<storage::Storage> storage)
+        : Doughnut(std::move(id),
+                   std::move(keys),
                    std::move(owner),
                    std::move(passport),
                    std::move(consensus),
                    std::move(overlay_builder),
-                   std::move(local))
+                   std::move(port),
+                   std::move(storage))
       {
         auto check_user_blocks = [name, this]
           {
@@ -226,6 +230,7 @@ namespace infinit
       {}
 
       Configuration::Configuration(
+        Address id_,
         std::unique_ptr<consensus::Configuration> consensus_,
         std::unique_ptr<overlay::Configuration> overlay_,
         std::unique_ptr<storage::StorageConfig> storage,
@@ -235,6 +240,7 @@ namespace infinit
         boost::optional<std::string> name_,
         boost::optional<int> port_)
         : ModelConfig(std::move(storage))
+        , id(std::move(id_))
         , consensus(std::move(consensus_))
         , overlay(std::move(overlay_))
         , keys(std::move(keys_))
@@ -246,6 +252,7 @@ namespace infinit
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
         : ModelConfig(s)
+        , id(s.deserialize<Address>("id"))
         , consensus(s.deserialize<std::unique_ptr<consensus::Configuration>>(
                       "consensus"))
         , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>(
@@ -261,6 +268,7 @@ namespace infinit
       Configuration::serialize(elle::serialization::Serializer& s)
       {
         ModelConfig::serialize(s);
+        s.serialize("id", this->id);
         s.serialize("consensus", this->consensus);
         s.serialize("overlay", this->overlay);
         s.serialize("keys", this->keys);
@@ -298,46 +306,37 @@ namespace infinit
             return std::move(consensus);
           };
         Doughnut::OverlayBuilder overlay =
-          [&] (Doughnut& dht, bool server)
+          [&] (Doughnut& dht, Address id, std::shared_ptr<Local> local)
           {
-            return this->overlay->make(hosts, server, &dht);
+            return this->overlay->make(
+              std::move(id), hosts, std::move(local), &dht);
           };
-        std::shared_ptr<Local> local;
+        auto port = this->port ? this->port.get() : 0;
+        std::unique_ptr<storage::Storage> storage;
         if (this->storage)
-        {
-          auto storage = this->storage->make();
-          auto port = this->port ? this->port.get() : 0;
-          auto id = this->overlay->node_id();
-          // FIXME: let the consensus instantiate peers
-          if (auto* paxos = dynamic_cast<consensus::Paxos::Configuration*>(
-                this->consensus.get()))
-            local = std::make_shared<
-              infinit::model::doughnut::consensus::Paxos::LocalPeer>(
-                paxos->replication_factor(), id, std::move(storage), port);
-          else
-            local = std::make_shared<infinit::model::doughnut::Local>(
-              id, std::move(storage), port);
-        }
+          storage = this->storage->make();
         std::unique_ptr<Doughnut> dht;
         if (!client || !this->name)
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
+            this->id,
             keys,
             owner,
             passport,
             std::move(consensus),
             std::move(overlay),
-            local);
+            std::move(port),
+            std::move(storage));
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
+            this->id,
             this->name.get(),
             keys,
             owner,
             passport,
             std::move(consensus),
             std::move(overlay),
-            local);
-        if (local)
-          local->serve(); // FIXME: get rid of serve ?
+            std::move(port),
+            std::move(storage));
         return dht;
       }
 

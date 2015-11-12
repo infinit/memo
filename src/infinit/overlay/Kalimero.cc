@@ -10,9 +10,10 @@ namespace infinit
 {
   namespace overlay
   {
-    Kalimero::Kalimero(model::Address node_id)
-      : Overlay(std::move(node_id))
-      , _local()
+    Kalimero::Kalimero(model::doughnut::Doughnut* dht,
+                       model::Address node_id,
+                       std::shared_ptr<model::doughnut::Local> local)
+      : Overlay(dht, std::move(local), std::move(node_id))
     {}
 
     reactor::Generator<Kalimero::Member>
@@ -23,27 +24,19 @@ namespace infinit
         throw elle::Error(
           elle::sprintf("kalimero cannot fetch several (%s) nodes", n));
       }
-      auto local = this->_local.lock();
-      if (!local)
+      if (!this->local())
         throw elle::Error("kalimero can only be a server");
       return reactor::generator<Kalimero::Member>(
-        [local] (std::function<void (Kalimero::Member)> yield)
+        [this] (std::function<void (Kalimero::Member)> yield)
         {
-          yield(local);
+          yield(this->local());
         });
     }
 
     Overlay::Member
     Kalimero::_lookup_node(model::Address address)
     {
-      return this->_local.lock();
-    }
-
-    void
-    Kalimero::register_local(std::shared_ptr<model::doughnut::Local> local)
-    {
-      ELLE_TRACE("%s: register local: %s", *this, *local);
-      this->_local = local;
+      return this->local();
     }
 
     KalimeroConfiguration::KalimeroConfiguration()
@@ -61,13 +54,15 @@ namespace infinit
     }
 
     std::unique_ptr<infinit::overlay::Overlay>
-    KalimeroConfiguration::make(NodeEndpoints const& hosts, bool,
-      model::doughnut::Doughnut*)
+    KalimeroConfiguration::make(model::Address id,
+                                NodeEndpoints const& hosts,
+                                std::shared_ptr<model::doughnut::Local> local,
+                                model::doughnut::Doughnut* dht)
     {
       if (!hosts.empty())
         throw elle::Error(
           elle::sprintf("kalimero cannot access other nodes (%s)", hosts));
-      return elle::make_unique<Kalimero>(this->node_id());
+      return elle::make_unique<Kalimero>(dht, id, std::move(local));
     }
 
     static const

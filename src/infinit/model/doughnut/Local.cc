@@ -3,6 +3,10 @@
 #include <elle/log.hh>
 #include <elle/utility/Move.hh>
 
+#include <cryptography/random.hh>
+#include <cryptography/rsa/PublicKey.hh>
+#include <cryptography/rsa/Padding.hh>
+
 #include <reactor/Scope.hh>
 
 #include <infinit/model/doughnut/ACB.hh>
@@ -29,13 +33,15 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      Local::Local(Address id,
+      Local::Local(Doughnut& dht,
+                   Address id,
                    std::unique_ptr<storage::Storage> storage,
                    int port,
                    Protocol p)
         : Super(std::move(id))
         , _storage(std::move(storage))
-        , _doughnut(nullptr)
+        , _doughnut(dht)
+        , _rpcs(&dht)
       {
         if (p == Protocol::tcp || p == Protocol::all)
         {
@@ -97,7 +103,7 @@ namespace infinit
             auto previous_buffer = this->_storage->get(block.address());
             elle::IOStream s(previous_buffer.istreambuf());
             typename elle::serialization::binary::SerializerIn input(s);
-            input.set_context<Doughnut*>(this->_doughnut);
+            input.set_context<Doughnut*>(&this->_doughnut);
             auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
             auto mprevious =
               dynamic_cast<blocks::MutableBlock const*>(previous.get());
@@ -138,7 +144,7 @@ namespace infinit
         }
         ELLE_DUMP("data: %s", data.string());
         elle::serialization::Context ctx;
-        ctx.set<Doughnut*>(this->_doughnut);
+        ctx.set<Doughnut*>(&this->_doughnut);
         auto res = elle::serialization::binary::deserialize<
           std::unique_ptr<blocks::Block>>(data, true, ctx);
         on_fetch(address, res);
@@ -163,12 +169,6 @@ namespace infinit
       /*-------.
       | Server |
       `-------*/
-
-      void
-      Local::serve()
-      {
-        this->_server_barrier.open();
-      }
 
       reactor::network::TCPServer::EndPoint
       Local::server_endpoint()
@@ -204,6 +204,68 @@ namespace infinit
                   {
                     this->remove(address);
                   }));
+        rpcs.add("ping",
+                std::function<int(int)>(
+                  [this] (int i)
+                  {
+                    return i;
+                  }));
+        typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
+        rpcs.add("auth_syn", std::function<std::pair<Challenge,Passport*>(Passport const&)>(
+          [this] (Passport const& p) -> std::pair<Challenge, Passport*>
+          {
+            ELLE_TRACE("entering auth_syn, dn=%s", this->_doughnut);
+            bool verify = const_cast<Passport&>(p).verify(this->_doughnut.owner());
+            ELLE_TRACE("auth_syn verify = %s", verify);
+            if (!verify)
+            {
+              ELLE_LOG("Passport validation failed");
+              throw elle::Error("Passport validation failed");
+            }
+            // generate and store a challenge to ensure remote owns the passport
+            auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+            auto token = infinit::cryptography::random::generate<elle::Buffer>(128);
+            this->_challenges.insert(std::make_pair(token.string(),
+              std::make_pair(challenge, std::move(p))));
+            return std::make_pair(
+              std::make_pair(challenge, token),
+              const_cast<Passport*>(&_doughnut.passport()));
+          }));
+        rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
+          elle::Buffer const&, elle::Buffer const&)>(
+          [this](elle::Buffer const& enc_key,
+                 elle::Buffer const& token,
+                 elle::Buffer const& signed_challenge) -> bool
+          {
+            ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+            auto it = this->_challenges.find(token.string());
+            if (it == this->_challenges.end())
+            {
+              ELLE_LOG("Challenge token does not exist.");
+              throw elle::Error("challenge token does not exist");
+            }
+            auto& stored_challenge = it->second.first;
+            auto& peer_passport = it->second.second;
+            bool ok = peer_passport.user().verify(
+              signed_challenge,
+              stored_challenge,
+              infinit::cryptography::rsa::Padding::pss,
+              infinit::cryptography::Oneway::sha256);
+            this->_challenges.erase(it);
+            if (!ok)
+            {
+              ELLE_LOG("Challenge verification failed");
+              throw elle::Error("Challenge verification failed");
+            }
+            elle::Buffer password = this->_doughnut.keys().k().open(
+              enc_key,
+              infinit::cryptography::Cipher::aes256,
+              infinit::cryptography::Mode::cbc);
+            _rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
+              std::move(password)));
+            ELLE_TRACE("auth_ack exiting");
+            return true;
+          }));
       }
 
       void
@@ -220,8 +282,7 @@ namespace infinit
               name,
               [this, socket]
               {
-                _rpcs.set_context<Doughnut*>(this->_doughnut);
-                _rpcs._doughnut = this->_doughnut;
+                _rpcs.set_context<Doughnut*>(&this->_doughnut);
                 _rpcs.serve(**socket);
               });
           }
@@ -231,14 +292,12 @@ namespace infinit
       void
       Local::_serve_tcp()
       {
-        reactor::wait(this->_server_barrier);
         this->_serve([this] { return this->_server->accept(); });
       }
 
       void
       Local::_serve_utp()
       {
-        reactor::wait(this->_server_barrier);
         this->_serve([this] { return this->_utp_server->accept(); });
       }
 

@@ -41,14 +41,14 @@ namespace infinit
     | Construction |
     `-------------*/
     public:
-      Overlay(model::Address node_id);
+      Overlay(model::doughnut::Doughnut* dht,
+              std::shared_ptr<infinit::model::doughnut::Local> local,
+              model::Address node_id);
       virtual
       ~Overlay() {}
-      virtual
-      void
-      register_local(std::shared_ptr<model::doughnut::Local> local);
       ELLE_ATTRIBUTE_R(model::Address, node_id);
-      ELLE_ATTRIBUTE_RWX(model::doughnut::Doughnut*, doughnut);
+      ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
+      ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
     /*-------.
     | Lookup |
@@ -90,18 +90,19 @@ namespace infinit
       Configuration(elle::serialization::SerializerIn& input);
       static constexpr char const* virtually_serializable_key = "type";
       /// Perform any initialization required at join time.
-      virtual
-      void
-      join();
+      // virtual
+      // void
+      // join();
       virtual
       void
       serialize(elle::serialization::Serializer& s) override;
       typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<infinit::overlay::Overlay>
-      make(NodeEndpoints const&, bool server,
-        model::doughnut::Doughnut* doughnut) = 0;
-      ELLE_ATTRIBUTE_R(model::Address, node_id);
+      make(model::Address id,
+           NodeEndpoints const&,
+           std::shared_ptr<model::doughnut::Local> local,
+           model::doughnut::Doughnut* doughnut) = 0;
     };
   }
 }

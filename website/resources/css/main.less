@@ -359,16 +359,17 @@ body.home {
     padding: 30px 17% 50px 17%; text-align: center;
 
     div.usecase {
-      padding: 50px 3% 50px 3%; display: block;
+      padding: 30px 3% 30px 3%; margin: 0 10%; display: block;
       border-bottom: 1px solid #E4E4E4; text-align: left;
     }
 
-    div.usecase.infrastructure img { margin-top: -20px; }
-    div.usecase.dht img { margin: -7px 95px 0 30px; }
+    div.usecase.infrastructure img { margin: 7px 70px 0 10px;}
+    div.usecase.dht img { margin: 0 75px 0 10px; }
+    div.usecase.fs img { margin-right: 55px; margin-top: 7px; }
     div.usecase.fs { border: none; }
-    img { float: left; margin-right: 70px; .transition(); }
-    div h2 { font-size: 22px; font-weight: bold; margin-bottom: 0;}
-    div p { font-size: 16px; color: #939393;}
+    img { float: left; margin-right: 70px; .transition(); max-height: 110px; }
+    div h2 { font-size: 19px; font-weight: bold; margin-bottom: 0;}
+    div p { font-size: 17px; color: #939393;}
     a.more { color: @infinitblue; font-weight: bold; font-size: 16px;}
     a.button { margin: 30px 0 50px 0;}
   }
@@ -386,7 +387,81 @@ body.home {
     p.title { font-size: 26px; color: @infinitblack; line-height: 36px; }
     .button { margin-top: 20px; }
   }
+
+  section.download {
+    background: #F9F9F9; padding-top: 40px;
+    p.title { text-align: center;}
+    &:after { display: table; clear: both; content: ''; }
+
+    div:last-child img { margin-bottom: 8px;}
+
+    div { width: 25%; float: left; padding: 30px 4% 120px 4%; text-align: center; }
+    div img { max-width: 250px; }
+    div h4 { margin-bottom: 0; font-size: 18px; }
+    div p { font-size: 15px; color: darken(@infinitgray, 10%); margin-top: 5px; }
+    div .button { margin-top: 15px; }
+    div span {
+      background: lighten(@infinitgray, 20%); border-radius: 4px; padding: 2px 6px;
+      color: lighten(#333, 35%);
+      font-size: 12px; display: inline-block; margin: 5px 0;
+    }
+  }
 }
+
+/*------------.
+| Drive       |
+`------------*/
+
+body.drive {
+  .content {
+    h2 { font-size: 29px; line-height: 37px; }
+    p { font-size: 16px; line-height: 26px; color: #4A4A4A; }
+    p.note { color: lighten(#4A4A4A, 25%); font-style: italic; }
+  }
+
+  section.intro {
+    text-align: center; margin: 0 7%;
+
+    h2 { text-transform: uppercase; font-size: 14px; margin-top: 30px;}
+    h1 { font-size: 29px;  margin-top: 7px; }
+    p.subtitle {
+      font-size: 16px; color: #7A7A7A; line-height: 26px; font-family: @sourcesans;
+      font-weight: normal; margin: 0 20%;
+    }
+    a.button { margin-top: 50px; }
+    p img { vertical-align: text-bottom; margin-left: 3px;}
+    .client {
+      .at2x('../images/desktop-client.png', 737px, auto);
+      width: 737px; height: 365px; margin: 50px auto 0 auto;
+      background-position: center top;
+    }
+  }
+
+  section.location {
+    border-top: 1px solid #D8D8D8; padding: 120px 10%;
+
+    img { float: right; width: 540px; margin-left: 50px;}
+  }
+
+  section.access {
+    clear:both; text-align: center; margin-top: 20px;
+    h2 { margin-bottom: 10px;}
+    p { margin: 0 30%; }
+    img { margin: 40px 0 30px 0;}
+  }
+
+  section.integrations {
+    clear:both; margin: 130px 15%;
+    img { float: right; margin-left: 40px; }
+    p { max-width: 55%;}
+  }
+
+  section.cta {
+    text-align: center; margin-bottom: 100px;
+    img { vertical-align: text-bottom; margin-left: 3px; }
+  }
+}
+
 
 
 /*----------------.
@@ -463,8 +538,6 @@ body.pricing {
 
     table { width: 100%; margin: 30px 0;}
     table tr td { text-align: center; padding: 5px; }
-
-    table tr:nth-child(1) {  }
 
     table tr:nth-child(1) td, table tr:nth-child(1) th {
       font-weight: bold; border-bottom: 3px solid #E6E6E6;

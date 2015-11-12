@@ -98,6 +98,22 @@ namespace infinit
           , _factor(factor)
         {}
 
+        /*--------.
+        | Factory |
+        `--------*/
+
+        std::unique_ptr<Local>
+        Paxos::make_local(boost::optional<int> port,
+                          std::unique_ptr<storage::Storage> storage)
+        {
+          return elle::make_unique<consensus::Paxos::LocalPeer>(
+            this->factor(),
+            this->doughnut(),
+            this->doughnut().id(),
+            std::move(storage),
+            port ? port.get() : 0);
+        }
+
         /*-----.
         | Peer |
         `-----*/
@@ -118,7 +134,9 @@ namespace infinit
             : _members(nullptr)
             , _member(std::move(member))
             , _address(address)
-          {}
+          {
+            ELLE_ASSERT(this->_member);
+          }
 
           virtual
           boost::optional<Paxos::PaxosClient::Accepted>
@@ -127,7 +145,6 @@ namespace infinit
           {
             auto& member = this->member();
             return network_exception_to_unavailable([&] {
-              member.connect_retry();
               if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
                 return local->propose(
                   q, this->_address, p);
@@ -146,7 +163,6 @@ namespace infinit
           {
             auto& member = this->member();
             return network_exception_to_unavailable([&] {
-              member.connect_retry();
               if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
                 return local->accept(
                   q, this->_address, p, value);
@@ -190,13 +206,10 @@ namespace infinit
                                    PaxosClient::Proposal const& p)
         {
           return network_exception_to_unavailable([&] {
-            this->connect();
-            RPC<boost::optional<PaxosClient::Accepted>(
+            auto propose = make_rpc<boost::optional<PaxosClient::Accepted>(
               PaxosServer::Quorum,
               Address,
-              PaxosClient::Proposal const&)>
-              propose("propose", *this->_channels,
-                &this->_doughnut, &this->_credentials);
+              PaxosClient::Proposal const&)>("propose");
             propose.set_context<Doughnut*>(&this->_doughnut);
             return propose(peers, address, p);
           });
@@ -209,14 +222,11 @@ namespace infinit
                                   std::shared_ptr<blocks::Block> const& value)
         {
           return network_exception_to_unavailable([&] {
-            this->connect();
-            RPC<Paxos::PaxosClient::Proposal (
+            auto accept = make_rpc<Paxos::PaxosClient::Proposal (
               PaxosServer::Quorum peers,
               Address,
               Paxos::PaxosClient::Proposal const&,
-              std::shared_ptr<blocks::Block> const&)>
-              accept("accept", *this->_channels,
-                &this->_doughnut, &this->_credentials);
+              std::shared_ptr<blocks::Block> const&)>("accept");
             accept.set_context<Doughnut*>(&this->_doughnut);
             return accept(peers, address, p, value);
           });
@@ -239,7 +249,7 @@ namespace infinit
             {
               auto buffer = this->storage()->get(address);
               elle::serialization::Context context;
-              context.set<Doughnut*>(this->doughnut());
+              context.set<Doughnut*>(&this->doughnut());
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
@@ -345,7 +355,7 @@ namespace infinit
             try
             {
               elle::serialization::Context context;
-              context.set<Doughnut*>(this->doughnut());
+              context.set<Doughnut*>(&this->doughnut());
               auto data =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   this->storage()->get(address), true, context);
@@ -384,8 +394,8 @@ namespace infinit
               auto block = highest->value;
               Paxos::PaxosClient::Peers peers =
                 lookup_nodes(
-                  *this->doughnut(), paxos.quorum(), block->address());
-              Paxos::PaxosClient client(uid(this->doughnut()->keys().K()),
+                  this->doughnut(), paxos.quorum(), block->address());
+              Paxos::PaxosClient client(uid(this->doughnut().keys().K()),
                                         std::move(peers));
               auto chosen = client.choose(paxos.quorum(), version, block);
               // FIXME: factor with the end of doughnut::Local::store
@@ -478,7 +488,7 @@ namespace infinit
                 try
                 {
                   Paxos::PaxosClient client(
-                    uid(this->_doughnut.keys().K()), std::move(peers));
+                    uid(this->doughnut().keys().K()), std::move(peers));
                   while (true)
                   {
                     auto version =
@@ -522,7 +532,7 @@ namespace infinit
                   ELLE_TRACE("%s: %s instead of %s",
                              e.what(), e.effective(), e.expected());
                   peers = lookup_nodes(
-                    this->_doughnut, e.expected(), b->address());
+                    this->doughnut(), e.expected(), b->address());
                   peers_id.clear();
                   for (auto const& peer: peers)
                     peers_id.insert(static_cast<Peer&>(*peer).member().id());

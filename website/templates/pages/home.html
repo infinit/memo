@@ -16,8 +16,7 @@
     <div class="header">
       <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
     </div>
-<pre><code id="commands">
-$> infinit-storage --create --aws-s3 --name s3 --capacity 10TB
+<pre><code id="commands">$> infinit-storage --create --aws-s3 --name s3 --capacity 10TB
 Created storage "s3".
 
 $> infinit-network --create --storage s3 --storage local --name hybrid-cloud
@@ -31,9 +30,7 @@ Created volume "company".
 $> infinit-volume --mount --name company --ountpoint /mnt/company/
 Mounting volume "company".
 
-$> ls /mnt/company/
-Design/     Engineering/      Guidelines.pdf     Human Resources/     Introduction.pdf
-Management/     Marketing/     Product/     Sales/     Support/     User Experience/
+$> cp -R Engineering /mnt/company/
 
 $> ​▎
 </code></pre>
@@ -155,6 +152,33 @@ $> ​▎
     </div>
 
     <!-- <a class="button border black" href="${route('doc_technology')}">More about our technology</a> -->
+  </section>
+
+
+  <section class="download" id="download">
+    <p class="title">Start using Infinit now</p>
+
+    <div>
+      <img src="${url('images/terminal-mini.png')}">
+      <h4>File System</h4>
+      <span>for sysadmins and devops</span>
+      <p>Build sophisticated and efficient software-based storage infrastructure by relying on public, private or hybrid cloud environments.</p>
+      <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
+    </div>
+    <div>
+      <img src="${url('images/desktop-client-mini.png')}">
+      <h4>Drive</h4>
+      <span>for small and medium businesses</span>
+      <p>Benefit from a easy-to-use and secure cloud file synchronization solution while controlling in which country/provider your data is stored.</p>
+      <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
+    </div>
+    <div>
+      <img src="${url('images/branded-apps.png')}">
+      <h4>Cloud Solutions</h4>
+      <span>for network operators and device manufacturers</span>
+      <p>Integrate a pre-build branded cloud file storage service that will increase engagement and create a new revenue stream.</p>
+      <a href="${route('solutions')}" class="button">Browse Solutions</a>
+    </div>
   </section>
 
   <section class="estimation">

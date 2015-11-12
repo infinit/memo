@@ -2,8 +2,10 @@
 
 #include <elle/os/environ.hh>
 
-#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/Conflict.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/MissingBlock.hh>
 
 #include <reactor/Channel.hh>
@@ -123,7 +125,6 @@ namespace infinit
             {
               s.run_background("remove", [this, p, address,&count]
               {
-                p->connect_retry();
                 p->remove(address);
                 ++count;
               });
@@ -202,6 +203,20 @@ namespace infinit
           // Some overlays may return peers even if they don't have the block,
           // so we have to return MissingBlock here.
           throw MissingBlock(address);
+        }
+
+        /*--------.
+        | Factory |
+        `--------*/
+
+        std::unique_ptr<Local>
+        Consensus::make_local(boost::optional<int> port,
+                              std::unique_ptr<storage::Storage> storage)
+        {
+          return elle::make_unique<Local>(this->doughnut(),
+                                          this->doughnut().id(),
+                                          std::move(storage),
+                                          port ? port.get() : 0);
         }
 
         /*----------.
