@@ -320,20 +320,20 @@ class Bottle(bottle.Bottle):
     if 'password_hash' not in json:
       raise Response(400, 'Missing password_hash')
     try:
-      return self.__beyond.user_login(name, json['password_hash']).json(
-        private = True)
-    except exceptions.Mismatch as e:
-      raise Response(403,
+      user = self.__beyond.user_get(name)
+      if user.password_hash is None:
+        raise Response(404,
                      {
-                       'error': 'users/invalid_password',
-                       'reason': e.args[0]
+                       'error': 'users/not_in', # Better name.
+                       'reason': 'User doesn\'t use the hub to login',
                      })
-    except exceptions.NotOptIn as e:
-      raise Response(404,
-                     {
-                       'error': 'users/...',
-                       'reason': e.args[0],
-                     })
+      if json['password_hash'] != user.password_hash:
+        raise Response(403,
+                       {
+                         'error': 'users/invalid_password',
+                         'reason': 'password do not match',
+                       })
+      return user.json(private = True)
     except User.NotFound as e:
       raise self.__user_not_found(name)
 

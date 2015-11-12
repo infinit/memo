@@ -65,14 +65,6 @@ class Beyond:
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)
 
-  def user_login(self, name, password_hash):
-    user = self.user_get(name)
-    if user.password_hash is None:
-      raise exceptions.NotOptIn('login')
-    if password_hash != user.password_hash:
-      raise exceptions.Mismatch('password_hash')
-    return user
-
   def user_delete(self, name):
     return self.__datastore.user_delete(name = name)
 
