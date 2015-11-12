@@ -105,6 +105,12 @@ COMMAND(pull)
   beyond_delete("drive", name, owner);
 }
 
+COMMAND(list)
+{
+  for (auto const& drive: ifnt.drives_get())
+    std::cout << drive.name << std::endl;
+}
+
 int
 main(int argc, char** argv)
 {
@@ -146,6 +152,12 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "drive name to push on the hub" },
         option_owner,
       }
+    },
+    {
+      "list",
+      "List drives",
+      &list,
+      {},
     },
     {
       "delete",

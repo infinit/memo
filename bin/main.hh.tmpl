@@ -616,6 +616,27 @@ namespace infinit
       return res;
     }
 
+    std::vector<Drive>
+    drives_get() const
+    {
+      namespace boost_fs = boost::filesystem;
+      std::vector<Drive> res;
+      for (boost_fs::recursive_directory_iterator it(this->_drive_path());
+           it != boost_fs::recursive_directory_iterator();
+           ++it)
+      {
+        if (is_regular_file(it->status()))
+        {
+          boost_fs::ifstream f;
+          this->_open_read(
+            f, it->path(), "drive", it->path().filename().string());
+          res.push_back(
+            elle::serialization::json::deserialize<Drive>(f, false));
+        }
+      }
+      return res;
+    }
+
     NetworkDescriptor
     network_descriptor_get(std::string const& name_,
                            User const& owner,
@@ -1033,6 +1054,14 @@ namespace infinit
         throw elle::Error(
           elle::sprintf("unable to open '%s' for writing", path));
       }
+    }
+
+    boost::filesystem::path
+    _drive_path() const
+    {
+      auto root = root_dir() / "drives";
+      create_directories(root);
+      return root;
     }
 
     boost::filesystem::path
