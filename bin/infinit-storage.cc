@@ -109,7 +109,7 @@ main(int argc, char** argv)
   storage_types.add_options()
     ("dropbox", "store data in a Dropbox")
     ("google", "store data in a Google Drive")
-    ("filesystem", "store files on a local filesystem")
+    ("filesystem", "store data on a local filesystem")
     ;
   options_description fs_storage_options("Filesystem storage options");
   fs_storage_options.add_options()

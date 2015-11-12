@@ -306,7 +306,7 @@ main(int argc, char** argv)
           "new files/folders inherit from their parent directory" },
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
-        { "recursive,R", bool_switch(), "list recursively" },
+        { "recursive,R", bool_switch(), "apply recursively" },
         { "try-with-public-key", bool_switch(), "try with the user public key" },
         { "verbose", bool_switch(), "verbose output" },
       },
