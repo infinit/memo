@@ -2378,7 +2378,7 @@ namespace infinit
           });
           if (!hit)
           {
-            ELLE_ERR("%s: get failed on %x, trying put", *this, file);
+            ELLE_TRACE("%s: get failed on %x, trying put", *this, file);
             std::vector<PeerLocation> res = kelipsPut(file, n);
             for (auto e: res)
               yield(e);
