@@ -142,7 +142,7 @@ namespace infinit
       }
       catch(std::exception const& e)
       {
-        ELLE_WARN("unexpected exception on fetching %x: %s", address, e);
+        ELLE_WARN("unexpected exception on fetching %x: %s", address, e.what());
         throw rfs::Error(EIO, e.what());
       }
     }

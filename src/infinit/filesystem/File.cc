@@ -413,9 +413,11 @@ namespace infinit
       {
         ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
       }
-      catch (rfs::Error const&)
+      catch (rfs::Error const& e)
       {
-        throw;
+        ELLE_DEBUG("%s: filesystem exception: %s", *this, e.what());
+        if (e.error_code() != EACCES)
+          throw;
       }
       catch (elle::Error const& e)
       {
