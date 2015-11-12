@@ -1,0 +1,49 @@
+@media (max-width:950px) {
+  body.home {
+    section.presentation {
+      .headline, .terminal {  width: 90%; float: none;}
+      .headline { text-align: center; padding: 0 5%; }
+      .terminal { max-width: 600px; margin: auto;}
+      hr { float: none; margin: 30px auto; width: 60% }
+    }
+
+    section.client {
+      .users { width: 90%; padding: 0 5%; float: none; text-align: center; }
+      .app { width: 90%; padding: 0 5%; float: none; text-align: center; }
+      .app img { float: none; width: 100%; max-width: 737px;  height: auto; }
+    }
+
+    section.usecases {
+      padding-left: 5%; padding-right: 5%;
+    }
+
+    section.download {
+      div { width: 92%; padding: 30px 4% 60px 4%; float: none; }
+    }
+  }
+}
+
+@media (max-width:600px) {
+  body.home {
+    section.features {
+      span.arrow { display: none; }
+    }
+
+    section.usecases {
+      padding-left: 5%; padding-right: 5%;
+      div.usecase { text-align:center; }
+      img { float: none; }
+      div.usecase.dht img, div.usecase.fs img, div.usecase.infrastructure img {
+        margin: 0;
+      }
+    }
+  }
+}
+
+@media (max-width:500px) {
+  body.home {
+    section.features, section.features.benefits {
+      div { width: 100%; float: none; padding: 10px 0;}
+    }
+  }
+}

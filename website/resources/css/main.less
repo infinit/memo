@@ -318,7 +318,7 @@ body.home {
 
   section.description {
     text-align: center; background: #F9F9F9; padding-top: 40px;
-    img { margin: 40px 0;}
+    img { margin: 40px auto; max-width: 686px; width: 90%; height: auto; }
   }
 
   section.cta {
@@ -364,8 +364,8 @@ body.home {
     }
 
     div.usecase.infrastructure img { margin: 7px 70px 0 10px;}
-    div.usecase.dht img { margin: 0 75px 0 10px; }
-    div.usecase.fs img { margin-right: 55px; margin-top: 7px; }
+    div.usecase.dht img { margin: 0 75px 0 15px; }
+    div.usecase.fs img { margin-right: 55px; margin-top: 7px; margin-left: -7px }
     div.usecase.fs { border: none; }
     img { float: left; margin-right: 70px; .transition(); max-height: 110px; }
     div h2 { font-size: 19px; font-weight: bold; margin-bottom: 0;}
@@ -413,6 +413,8 @@ body.home {
 `------------*/
 
 body.drive {
+  header ul li { display: none; }
+
   .content {
     h2 { font-size: 29px; line-height: 37px; }
     p { font-size: 16px; line-height: 26px; color: #4A4A4A; }
@@ -426,7 +428,7 @@ body.drive {
     h1 { font-size: 29px;  margin-top: 7px; }
     p.subtitle {
       font-size: 16px; color: #7A7A7A; line-height: 26px; font-family: @sourcesans;
-      font-weight: normal; margin: 0 20%;
+      font-weight: normal; margin: 0 25%;
     }
     a.button { margin-top: 50px; }
     p img { vertical-align: text-bottom; margin-left: 3px;}
@@ -439,20 +441,19 @@ body.drive {
 
   section.location {
     border-top: 1px solid #D8D8D8; padding: 120px 10%;
-
     img { float: right; width: 540px; margin-left: 50px;}
   }
 
   section.access {
     clear:both; text-align: center; margin-top: 20px;
-    h2 { margin-bottom: 10px;}
+    h2 { margin-bottom: 10px; margin-top: 60px;}
     p { margin: 0 30%; }
     img { margin: 40px 0 30px 0;}
   }
 
   section.integrations {
     clear:both; margin: 130px 15%;
-    img { float: right; margin-left: 40px; }
+    img { float: right; margin-left: 40px; margin-top: 40px; }
     p { max-width: 55%;}
   }
 
@@ -1021,6 +1022,4 @@ body.solutions {
   border-color: #496805;
 }
 
-
-
-
+@import "responsive";
