@@ -245,6 +245,15 @@ class Bottle(bottle.Bottle):
     else:
       return super().debug()
 
+  ## -------------- ##
+  ## Key encryption ##
+  ## -------------- ##
+  def encrypt_key(self, key):
+    return key
+
+  def decrypt_key(self, key):
+    return key
+
   ## ---- ##
   ## User ##
   ## ---- ##
@@ -261,6 +270,8 @@ class Bottle(bottle.Bottle):
     try:
       json = bottle.request.json
       self.__ensure_names_match('user', name, json)
+      if 'private_key' in json:
+        json['private_key'] = self.encrypt_key(json['private_key'])
       user = User.from_json(self.__beyond, json)
       user.create()
       raise Response(201, {})
@@ -333,7 +344,10 @@ class Bottle(bottle.Bottle):
                          'error': 'users/invalid_password',
                          'reason': 'password do not match',
                        })
-      return user.json(private = True)
+      user = user.json(private = True)
+      if 'private_key' in user:
+        user['private_key'] = self.decrypt_key(user['private_key'])
+      return user
     except User.NotFound as e:
       raise self.__user_not_found(name)
 
