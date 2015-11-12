@@ -140,7 +140,7 @@ namespace infinit
           reactor::Generator<overlay::Overlay::Member>& peers, Address address)
         {
           static const int timeout_sec =
-            std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "0"));
+            std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "15"));
           elle::DurationOpt timeout;
           if (timeout_sec)
             timeout = boost::posix_time::seconds(timeout_sec);
@@ -202,6 +202,7 @@ namespace infinit
           }
           // Some overlays may return peers even if they don't have the block,
           // so we have to return MissingBlock here.
+          ELLE_TRACE("Peers exhausted, throwing missingblock(%x)", address);
           throw MissingBlock(address);
         }
 
