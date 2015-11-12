@@ -3,7 +3,7 @@
 from utils import *
 import json
 
-# Creating and deleting networks.
+# Creating and deleting networks locally.
 with TemporaryDirectory() as tmp, Infinit() as bob, Infinit() as alice:
   bob.run(['infinit-user', '--create',  'bob'])
   alice.run(['infinit-user', '--create',  'alice'])
@@ -31,3 +31,35 @@ with TemporaryDirectory() as tmp, Infinit() as bob, Infinit() as alice:
   except Exception as e:
     pass
   alice.run(['infinit-network', '--delete', '--name', 'bob/osef', '--as', 'alice'])
+
+# Fetch & list.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+
+  def number_of_entries(output):
+    return len(output.split('\n')) - 1
+
+  bob.run(['infinit-user', '--signup', '--name', 'bob'])
+  alice.run(['infinit-user', '--signup', '--name', 'alice'])
+  bob.run(['infinit-user', '--fetch', '--name', 'alice', '--as', 'bob'])
+  alice.run(['infinit-user', '--fetch', '--name', 'bob', '--as', 'alice'])
+
+  # Create.
+  l = bob.run(['infinit-network', '--list'])
+  assertEq(number_of_entries(l), 0)
+  bob.run(['infinit-network', '--create', '--name', 'A', '--as', 'bob', '--push'])
+  l = bob.run(['infinit-network', '--list'])
+  assertEq(number_of_entries(l), 1)
+  bob.run(['infinit-network', '--create', '--name', 'B', '--as', 'bob', '--push'])
+  l = bob.run(['infinit-network', '--list'])
+  assertEq(number_of_entries(l), 2)
+
+  l = alice.run(['infinit-network', '--list'])
+  assertEq(number_of_entries(l), 0)
+  alice.run(['infinit-network', '--fetch', '--name', 'bob/A', '--as', 'alice'])
+  l = alice.run(['infinit-network', '--list'])
+  assertEq(number_of_entries(l), 1)
+  alice.run(['infinit-network', '--fetch', '--as', 'alice'])
+  # Still one, alice hasn't been invited to the 2nd network.
+  l = alice.run(['infinit-network', '--list'])
+  assertEq(number_of_entries(l), 1)
