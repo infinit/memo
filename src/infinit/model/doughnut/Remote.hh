@@ -78,6 +78,9 @@ namespace infinit
         template<typename F>
         RemoteRPC<F>
         make_rpc(std::string const& name);
+        template<typename R>
+        R
+        safe_perform(std::string const& name, std::function<R()> op);
       private:
         void
         _connect(std::string endpoint,

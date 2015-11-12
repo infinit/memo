@@ -139,11 +139,6 @@ namespace infinit
         Consensus::fetch_from_members(
           reactor::Generator<overlay::Overlay::Member>& peers, Address address)
         {
-          static const int timeout_sec =
-            std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "15"));
-          elle::DurationOpt timeout;
-          if (timeout_sec)
-            timeout = boost::posix_time::seconds(timeout_sec);
           std::unique_ptr<blocks::Block> result;
           reactor::Channel<overlay::Overlay::Member> connected;
           typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
@@ -153,33 +148,19 @@ namespace infinit
             [&](PeerGenerator::yielder yield)
             {
               elle::With<reactor::Scope>() <<
-              [&peers,&yield,&hit,&timeout] (reactor::Scope& s)
+              [&peers,&yield,&hit] (reactor::Scope& s)
               {
                 for (auto p: peers)
                 {
                   hit = true;
                   s.run_background(elle::sprintf("connect to %s", *p),
-                  [p,&yield,&timeout]
+                  [p,&yield]
                   {
-                    for (int i=0; i<5; ++i)
-                    {
-                      ELLE_DEBUG_SCOPE("connect to %s", *p);
-                      try
-                      {
-                        if (i!=0)
-                          p->reconnect(timeout);
-                        else
-                          p->connect(timeout);
-                        yield(p);
-                        return;
-                      }
-                      catch (reactor::network::Exception const& e)
-                      {
-                        ELLE_TRACE("network exception %s", e);
-                        reactor::sleep(
-                          boost::posix_time::milliseconds(20 * pow(2, i)));
-                      }
-                    }
+                    auto remote = std::dynamic_pointer_cast<Remote>(p);
+                    if (remote)
+                      remote->safe_perform<void>("connect", [&] { yield(p);});
+                    else
+                      yield(p);
                   });
                 }
                 reactor::wait(s);

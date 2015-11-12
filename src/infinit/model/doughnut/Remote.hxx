@@ -1,15 +1,56 @@
+#include <elle/os/environ.hh>
+
 namespace infinit
 {
   namespace model
   {
     namespace doughnut
     {
+
+      template<typename F, typename ...Args>
+      typename RPC<F>::result_type
+      remote_call_next(RemoteRPC<F>* ptr, Args const& ... args)
+      {
+        return ptr->RPC<F>::operator()(args...);
+      }
+
       template<typename F>
       template<typename ...Args>
       typename RPC<F>::result_type
       RemoteRPC<F>::operator()(Args const& ... args)
       {
-        ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote.rpc");
+        // GCC bug, argument packs dont work in lambdas
+        auto helper = std::bind(&remote_call_next<F, Args...>,
+          this, std::ref(args)...);
+        return _remote->safe_perform<typename RPC<F>::result_type>("RPC",
+          [&] {
+            this->_channels = _remote->channels().get();
+            return helper();
+        });
+      }
+
+      template<typename R>
+      R
+      Remote::safe_perform(std::string const& name,
+                           std::function<R()> op)
+      {
+        ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote");
+        // We use one timeout for each connect attempt (in order to maybe
+        // refresh endpoints), and a second timeout for the overall operation
+        // setting INFINIT_SOFTFAIL_TIMEOUT to 0 will retry forever
+        static const int connect_timeout_sec =
+          std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "10"));
+        static const int softfail_timeout_sec =
+          std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "50"));
+        elle::DurationOpt connect_timeout;
+        if (connect_timeout_sec)
+          connect_timeout = boost::posix_time::seconds(connect_timeout_sec);
+        int max_attempts = 0;
+        if (softfail_timeout_sec && connect_timeout_sec)
+        {
+          int sts = std::max(softfail_timeout_sec, connect_timeout_sec);
+          max_attempts = sts / connect_timeout_sec;
+        }
         int attempt = 0;
         bool need_reconnect = false;
         while (true)
@@ -17,26 +58,27 @@ namespace infinit
           try
           {
             if (need_reconnect)
-              _remote->reconnect(15_sec);
+              reconnect(connect_timeout);
             else
-              _remote->connect(15_sec);
-            this->_channels = _remote->channels().get();
-            return RPC<F>::operator()(args...);
+              connect(connect_timeout);
+            return op();
           }
           catch(reactor::network::Exception const& e)
           {
             ELLE_TRACE("network exception when invoking %s: %s",
-                       this->name(), e);
+                       name, e);
           }
-          if (++attempt >= 10)
+          if (max_attempts && ++attempt >= max_attempts)
           {
-            throw elle::Error(elle::sprintf("could not establish channel for RPC '%s'",
-                                            this->name()));
+            throw elle::Error(elle::sprintf("could not establish channel for operation '%s'",
+                                            name));
           }
-          reactor::sleep(boost::posix_time::milliseconds(200 * attempt));
+          reactor::sleep(boost::posix_time::milliseconds(
+            200 * std::min(10, attempt)));
           need_reconnect = true;
         }
       }
+
     }
   }
 }
