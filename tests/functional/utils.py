@@ -35,11 +35,10 @@ class Infinit(TemporaryDirectory):
   def __init__(self, beyond = None):
     self.__beyond = beyond
 
-  def run(self, args, input = None, return_code = 0, env = {}):
+  def run(self, args, input = None, return_code = 0, env = {}, input_as_it_is = False):
     self.env = {
       'PATH': 'bin:backend/bin:/bin:/usr/sbin',
       'INFINIT_HOME': self.dir,
-      'INFINIT_BEYOND': '127.0.0.1:4242',
       'INFINIT_RDV': ''
     }
     if self.__beyond is not None:
@@ -48,8 +47,8 @@ class Infinit(TemporaryDirectory):
     pretty = '%s %s' % (
       ' '.join('%s=%s' % (k, v) for k, v in self.env.items()),
       ' '.join(pipes.quote(arg) for arg in args))
-    # print(pretty)
-    if input is not None:
+    print(pretty)
+    if input is not None and not input_as_it_is:
       if isinstance(input, list):
         input = '\n'.join(map(json.dumps, input)) + '\n'
       else:
@@ -67,17 +66,19 @@ class Infinit(TemporaryDirectory):
       # over, you get a broken pipe.
       time.sleep(0.5)
     out, err = process.communicate(input)
+    process.wait()
     if process.returncode != return_code:
-      print(err.decode('utf-8'), file = sys.stderr)
-      raise Exception('command failed with code %s: %s' % \
-                      (process.returncode, pretty))
+      reason = err.decode('utf-8')
+      print(reason, file = sys.stderr)
+      raise Exception('command failed with code %s: %s (reason: %s)' % \
+                      (process.returncode, pretty, reason))
+    out = out.decode('utf-8')
     try:
-      out = out.decode('utf-8')
-      if len(out.split('\n')) > 2:
-        out = '[' + out.replace('\n', ',')[0:-1] + ']'
+    if len(out.split('\n')) > 2:
+      out = '[' + out.replace('\n', ',')[0:-1] + ']'
       return json.loads(out)
     except:
-      return out.decode('utf-8')
+      return out
 
   def run_script(self, user = None, volume='volume', seq = None, **kvargs):
     cmd = ['infinit-volume', '--run', volume]
