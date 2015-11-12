@@ -1,19 +1,47 @@
 #!/usr/bin/env python3
 from utils import *
+import time
 
+with Infinit() as infinit1, Infinit() as infinit2, Beyond() as beyond:
 
-with Infinit() as handle1, Infinit() as handle2, Infinit() as handle, Beyond() as beyond:
+  bob = User('bob', infinit1)
+  alice = User('alice', infinit2)
 
-    handle1_name = 'bob'
-    handle2_name = 'alice'
+  # Bob and Alice signup, then fetch other.
+  bob.run('infinit-user --signup --name %s' % bob.name)
+  alice.run('infinit-user --signup --name %s' % alice.name)
+  bob.run('infinit-user --fetch --name %s' % alice.name)
+  alice.run('infinit-user --fetch --name %s' % bob.name)
 
-    handle1.run(['infinit-user', '--create', '--name', handle1_name])
-    handle2.run(['infinit-user', '--create', '--name', handle2_name])
+  # Bob create a local storage and a kelips network.
+  bob.run('infinit-storage --create --name %s --filesystem' % bob.storage)
+  bob.run('infinit-network --create --name %s --storage %s --kelips --k 1'
+          ' --replication-factor 1 --push' % (bob.network, bob.storage))
 
-    handle1.run(['infinit-user', '--push', '--name', handle1_name])
-    handle2.run(['infinit-user', '--push', '--name', handle2_name])
+  # Bob create a volume on the previous network, invite alice and run it.
+  bob.run('infinit-volume --create --name %s --network %s --push' %
+          (bob.volume, bob.network))
+  bob.run('infinit-network --as %s --invite --name %s --user %s --push' %
+          (bob.name, bob.network, alice.name))
 
-    handle1.run(['infinit-user', '--fetch', '--name', handle2_name,
-                 '--as', handle1_name])
-    handle2.run(['infinit-user', '--fetch', '--name', handle1_name,
-                 '--as', handle2_name])
+  # Alice fetches bob's network, join it and run it.
+  alice.run('infinit-network --fetch --name %s' % (bob.network))
+  alice.run('infinit-network --join --name %s --fetch' % (bob.network))
+  alice.run('infinit-volume --create --name %s --network %s --push' %
+            (alice.volume, bob.network))
+
+  bob_volume = bob.async('infinit-volume --run --name %s --mountpoint %s --push --fetch' %
+                         (bob.volume, bob.mountpoint))
+
+  time.sleep(5)
+  alice_volume = alice.async('infinit-volume --run --name %s --mountpoint %s --push --fetch' %
+              (alice.volume, alice.mountpoint))
+
+  time.sleep(5)
+
+  print('creating 10 folders')
+  for i in range(0, 10):
+    os.mkdir('%s/%s' % (bob.mountpoint, i))
+  print('done')
+
+  time.sleep(10)

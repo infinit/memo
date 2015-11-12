@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import os
 
 import infinit.beyond
 import infinit.beyond.bottle
@@ -31,17 +32,19 @@ class TemporaryDirectory:
 
 class Infinit(TemporaryDirectory):
 
-  def run(self, args, input = None, return_code = 0):
-    env = {
-      # Add bin path for when being built by the frontend.
-      'PATH': 'bin:backend/bin',
+  def run(self, args, input = None, return_code = 0, env = {}):
+    self.env = {
+      'PATH': 'bin:backend/bin:/bin',
       'INFINIT_HOME': self.dir,
       'INFINIT_BEYOND': '127.0.0.1:4242',
+      'INFINIT_RDV': ''
     }
+    self.env.update(env)
+
     pretty = '%s %s' % (
-      ' '.join('%s=%s' % (k, v) for k, v in env.items()),
+      ' '.join('%s=%s' % (k, v) for k, v in self.env.items()),
       ' '.join(pipes.quote(arg) for arg in args))
-    print(pretty)
+    # print(pretty)
     if input is not None:
       if isinstance(input, list):
         input = '\n'.join(map(json.dumps, input)) + '\n'
@@ -50,7 +53,7 @@ class Infinit(TemporaryDirectory):
       input = input.encode('utf-8')
     process = subprocess.Popen(
       args + ['-s'],
-      env = env,
+      env = self.env,
       stdin =  subprocess.PIPE,
       stdout =  subprocess.PIPE,
       stderr =  subprocess.PIPE,
@@ -130,3 +133,45 @@ class Beyond():
 
   def __exit__(self, *args, **kwargs):
     pass
+
+class User():
+
+  def __init__(self, name, infinit):
+    self.name = name
+    self.storage = '%s/%s-storage' % (name, name)
+    self.network = '%s/%s-network' % (name, name)
+    self.volume = '%s/%s-volume' % (name, name)
+    self.mountpoint = '%s/mountpoint' % infinit.dir
+    os.mkdir(self.mountpoint)
+
+    self.infinit = infinit
+
+  def run(self, cli, **kargs):
+    print('run as %s:\t' % self.name, cli)
+    self.infinit.run(cli.split(' '), env = { 'INFINIT_USER': self.name }, **kargs)
+
+  def run_split(self, args, **kargs):
+    self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
+
+  def exec(self, args, return_code = 0):
+    process = subprocess.Popen(
+      args,
+      stdin =  subprocess.PIPE,
+      stdout =  subprocess.PIPE,
+      stderr =  subprocess.PIPE,
+    )
+    out, err = process.communicate(input)
+    if process.returncode != return_code:
+      print(err.decode('utf-8'), file = sys.stderr)
+      raise Exception('command failed with code %s: %s' % \
+                      (process.returncode, pretty))
+
+  def async(self, cli, **kargs):
+    thread = threading.Thread(
+      target = partial(self.run, cli = cli, **kargs))
+    thread.daemon = True
+    thread.start()
+    return thread
+
+  def fail(self, cli, **kargs):
+    self.infinit.run(cli.split(' '), return_code = 1, **kargs)
