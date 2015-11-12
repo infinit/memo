@@ -118,6 +118,23 @@ read_passphrase()
   return res;
 }
 
+std::string
+hub_password(variables_map const& args)
+{
+  auto hash_password = [] (std::string const& password)
+    {
+      // XXX: Implent that.
+      return password;
+    };
+  auto password = optional(args, "password");
+  if (!password)
+  {
+    password = read_passphrase();
+  }
+  ELLE_ASSERT(password);
+  return hash_password(password.get());
+}
+
 static
 infinit::User
 create_(std::string const& name,
@@ -174,12 +191,7 @@ _push(variables_map const& args,
   user.email = email;
   if (args.count("full") && args["full"].as<bool>())
   {
-    auto password = optional(args, "password");
-    if (!password)
-    {
-      password = read_passphrase();
-    }
-    user.password_hash = password;
+    user.password_hash = hub_password(args);
     das::Serializer<infinit::DasPrivateUserPublish> view{user};
     beyond_push("user", user.name, view, user);
   }
@@ -306,8 +318,7 @@ void
 login(variables_map const& args)
 {
   auto name = get_name(args);
-  auto password = mandatory(args, "password");
-  LoginCredentials c{name, password};
+  LoginCredentials c{name, hub_password(args)};
   das::Serializer<DasLoginCredentials> credentials{c};
   auto json = beyond_login(name, credentials);
   elle::serialization::json::SerializerIn input(json, false);
@@ -451,8 +462,8 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
-        { "password,n", value<std::string>(),
-          "valid email address" },
+        { "password", value<std::string>(),
+          "password to authenticate to the hub" },
       },
     },
     {
