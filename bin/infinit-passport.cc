@@ -95,19 +95,33 @@ fetch(variables_map const& args)
       network_name.get());
     ifnt.passport_save(passport);
   }
-  // Fetch all passports for network. Only network owner can do this.
+  // Fetch all network passports if owner else fetch just the user's passport.
   else if (network_name)
   {
-    auto res = beyond_fetch_json(
-      elle::sprintf("networks/%s/passports", network_name.get()),
-      "passports for",
-      network_name.get(),
-      self);
-    auto json = boost::any_cast<elle::json::Object>(res);
-    for (auto const& user_passport: json)
+    auto owner_name =
+      network_name.get().substr(0, network_name.get().find("/"));
+    if (owner_name == self.name)
     {
-      elle::serialization::json::SerializerIn s(user_passport.second, false);
-      auto passport = s.deserialize<infinit::Passport>();
+      auto res = beyond_fetch_json(
+        elle::sprintf("networks/%s/passports", network_name.get()),
+        "passports for",
+        network_name.get(),
+        self);
+      auto json = boost::any_cast<elle::json::Object>(res);
+      for (auto const& user_passport: json)
+      {
+        elle::serialization::json::SerializerIn s(user_passport.second, false);
+        auto passport = s.deserialize<infinit::Passport>();
+        ifnt.passport_save(passport);
+      }
+    }
+    else
+    {
+      auto passport = beyond_fetch<infinit::Passport>(elle::sprintf(
+        "networks/%s/passports/%s", network_name.get(), self.name),
+        "passport for",
+        network_name.get(),
+        self);
       ifnt.passport_save(passport);
     }
   }
