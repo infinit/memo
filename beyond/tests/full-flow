@@ -24,9 +24,9 @@ with Beyond() as beyond:
       self.assertEqual(
         beyond.put('users/mefyl', json = mefyl).status_code, 200)
       self.assertEqual(
-        beyond.put('users/mefyl', json = mefyl2).status_code, 409)
+        beyond.put('users/mefyl', json = mefyl2, throws = False).status_code, 409)
       r = beyond.put('users/mefyl', json = mefyl)
-      self.assertEqual(beyond.get('users/none').status_code, 404)
+      self.assertEqual(beyond.get('users/none', throws = False).status_code, 404)
       # Network
       r = beyond.put('networks/mefyl/infinit', json = network, auth = mefyl_priv)
       self.assertEqual(r.status_code, 201)
@@ -35,7 +35,7 @@ with Beyond() as beyond:
       json = r.json()
       for k, v in network.items():
         self.assertEqual(json[k], v)
-      r = beyond.get('networks/none/infinit')
+      r = beyond.get('networks/none/infinit', throws = False)
       self.assertEqual(r.status_code, 404)
       # Passport
       passport = {
