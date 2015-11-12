@@ -428,6 +428,7 @@ def configure(
       'single-user-two-devices-shared-storage',
       'flow',
       # Test clis.
+      'user_cli',
       'network_cli',
       'volume_cli',
   ]:
