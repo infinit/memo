@@ -34,7 +34,7 @@ class Infinit(TemporaryDirectory):
 
   def run(self, args, input = None, return_code = 0, env = {}):
     self.env = {
-      'PATH': 'bin:backend/bin:/bin',
+      'PATH': 'bin:backend/bin:/bin:/usr/sbin',
       'INFINIT_HOME': self.dir,
       'INFINIT_BEYOND': '127.0.0.1:4242',
       'INFINIT_RDV': ''
