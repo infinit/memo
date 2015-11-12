@@ -21,23 +21,25 @@ with Infinit() as infinit1, Infinit() as infinit2, Beyond() as beyond:
   # Bob create a volume on the previous network, invite alice and run it.
   bob.run('infinit-volume --create --name %s --network %s --push' %
           (bob.volume, bob.network))
-  bob.run('infinit-network --as %s --invite --name %s --user %s --push' %
-          (bob.name, bob.network, alice.name))
+  bob.run('infinit-passport --create --as %s --user %s --network %s --push' %
+          (bob.name, alice.name, bob.network))
 
   # Alice fetches bob's network, join it and run it.
-  alice.run('infinit-network --fetch --name %s' % (bob.network))
-  alice.run('infinit-network --join --name %s --fetch' % (bob.network))
-  alice.run('infinit-volume --create --name %s --network %s --push' %
-            (alice.volume, bob.network))
+  alice.run('infinit-network --fetch --name %s --as %s' %
+            (bob.network, alice.name))
+  alice.run('infinit-passport --fetch --as %s' % alice.name)
+  alice.run('infinit-network --join --name %s' % bob.network)
+  alice.run('infinit-volume --fetch --as %s' % alice.name)
 
   bob_volume = bob.async('infinit-volume --run --name %s --mountpoint %s --push --fetch' %
                          (bob.volume, bob.mountpoint))
+  time.sleep(10)
+  bob.run('infinit-acl --set --user %s --mode rw --enable-inherit --path %s' % (alice.name, bob.mountpoint))
 
-  time.sleep(5)
-  alice_volume = alice.async('infinit-volume --run --name %s --mountpoint %s --push --fetch' %
-              (alice.volume, alice.mountpoint))
+  alice_volume = alice.async('infinit-volume --run --name %s --mountpoint %s --fetch' %
+              (bob.volume, alice.mountpoint))
 
-  time.sleep(5)
+  time.sleep(10)
 
   print('creating 10 folders')
   for i in range(0, 10):
