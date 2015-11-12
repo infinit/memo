@@ -17,15 +17,7 @@ namespace infinit
           try
           {
             if (need_reconnect)
-            { // Try asking for new endpoints
-              if (_remote->retry_connect()
-                && _remote->retry_connect()(*_remote))
-              {
-                _remote->connect(15_sec);
-              }
-              else
-                _remote->reconnect(15_sec);
-            }
+              _remote->reconnect(15_sec);
             else
               _remote->connect(15_sec);
             this->_channels = _remote->channels().get();
@@ -37,7 +29,10 @@ namespace infinit
                        this->name(), e);
           }
           if (++attempt >= 10)
-            throw reactor::network::SocketClosed();
+          {
+            throw elle::Error(elle::sprintf("could not establish channel for RPC '%s'",
+                                            this->name()));
+          }
           reactor::sleep(boost::posix_time::milliseconds(200 * attempt));
           need_reconnect = true;
         }

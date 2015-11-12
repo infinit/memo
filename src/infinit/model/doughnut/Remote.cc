@@ -177,7 +177,8 @@ namespace infinit
       Remote::reconnect(elle::DurationOpt timeout)
       {
         this->_credentials = {};
-        _connect(this->_endpoint, this->_connector);
+        if (!retry_connect() || !retry_connect()(*this))
+          _connect(this->_endpoint, this->_connector);
         connect(timeout);
       }
 
