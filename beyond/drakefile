@@ -184,7 +184,7 @@ def configure(
       'volumes/put',
       'volumes/get',
       'volumes/delete',
-
+      'passports/put',
       # Higher level.
       'users/register_login',
   ]:

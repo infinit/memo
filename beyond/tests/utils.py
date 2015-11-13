@@ -224,6 +224,28 @@ class Network(dict):
     return hub.put('networks/%s' % self['name'], json = self,
                    auth = owner.private_key)
 
+class Passport(dict):
+
+  def __init__(self, network, invitee):
+    self.__network = network
+    self['network'] = self.__network['name']
+    self['invitee'] = {
+      'public_key': invitee['public_key'],
+      'name': invitee['name']
+    }
+
+  @property
+  def network(self):
+    return self.__network
+
+  def put(self, hub, owner = None):
+    if owner is None:
+      owner = self.network.owner
+    return hub.put('networks/%s/passports/%s' % (self.__network['name'],
+                                                 self['invitee']['name']),
+                   json = self,
+                   auth = owner.private_key)
+
 class Volume(dict):
 
   def __init__(self, name, network):

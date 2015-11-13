@@ -388,6 +388,10 @@ class Bottle(bottle.Bottle):
 
   def network_passport_get(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
+    try:
+      self.authenticate(owner)
+    except Exception:
+      self.authenticate(self.user_from_name(name = invitee))
     network = self.network_from_name(owner = owner, name = name)
     passport = network.passports.get(invitee)
     if passport is None:
