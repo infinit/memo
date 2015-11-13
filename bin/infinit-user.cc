@@ -228,7 +228,14 @@ void
 list(variables_map const& args)
 {
   for (auto const& user: ifnt.users_get())
-    std::cout << user.name << std::endl;
+  {
+    std::cout << user.name << ": public";
+    if (user.private_key)
+      std::cout << "/private keys";
+    else
+      std::cout << " key only";
+    std::cout << std::endl;
+  }
 }
 
 int
