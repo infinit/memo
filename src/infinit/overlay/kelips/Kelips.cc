@@ -858,7 +858,7 @@ namespace infinit
               endpoints,
               uid,
               elle::unconst(this)->_remotes_server);
-            peer.connect();
+            peer.connect(5_sec);
             ELLE_DEBUG("utp connected");
             auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
             return rpc();
@@ -878,7 +878,7 @@ namespace infinit
                 elle::unconst(*this->doughnut()),
                 pl.first,
                 pl.second.front());
-              peer.connect();
+              peer.connect(5_sec);
               auto rpc = peer.make_rpc<SerState()>("kelips_fetch_state");
               return rpc();
             }
