@@ -161,11 +161,11 @@ class Bottle(bottle.Bottle):
     self.route('/networks/<owner>/<name>/volumes',
                method = 'GET')(self.network_volumes_get)
     # Volume
-    self.route('/volumes/<owner>/<network>/<name>',
+    self.route('/volumes/<owner>/<name>',
                method = 'GET')(self.volume_get)
-    self.route('/volumes/<owner>/<network>/<name>',
+    self.route('/volumes/<owner>/<name>',
                method = 'PUT')(self.volume_put)
-    self.route('/volumes/<owner>/<network>/<name>',
+    self.route('/volumes/<owner>/<name>',
                method = 'DELETE')(self.volume_delete)
 
     # Drive
@@ -462,19 +462,19 @@ class Bottle(bottle.Bottle):
   ## Volume ##
   ## ------ ##
 
-  def volume_from_name(self, owner, network, name, throws = True):
+  def volume_from_name(self, owner, name, throws = True):
     try:
-      return self.__beyond.volume_get(owner = owner, network = network, name = name)
+      return self.__beyond.volume_get(owner = owner, name = name)
     except Volume.NotFound:
-      raise self.__not_found('volume', '%s/%s/%s' % (owner, network, name))
+      raise self.__not_found('volume', '%s/%s' % (owner, name))
 
-  def volume_get(self, owner, network, name):
-    return self.volume_from_name(owner = owner, network = network, name = name).json()
+  def volume_get(self, owner, name):
+    return self.volume_from_name(owner = owner, name = name).json()
 
-  def volume_put(self, owner, network, name):
+  def volume_put(self, owner, name):
     user = self.user_from_name(name = owner)
     self.authenticate(user)
-    network = self.network_from_name(owner = owner, name = network)
+    # network = self.network_from_name(owner = owner, name = network)
     try:
       json = bottle.request.json
       volume = Volume(self.__beyond, **json)
@@ -486,12 +486,12 @@ class Bottle(bottle.Bottle):
         'reason': 'volume %r already exists' % name,
       })
 
-  def volume_delete(self, owner, network, name):
+  def volume_delete(self, owner, name):
     import sys
     user = self.user_from_name(name = owner)
     self.authenticate(user)
-    self.volume_from_name(owner = owner, network = network, name = name)
-    self.__beyond.volume_delete(owner = owner, network = network, name = name)
+    self.volume_from_name(owner = owner, name = name)
+    self.__beyond.volume_delete(owner = owner, name = name)
 
   ## ----- ##
   ## DRIVE ##

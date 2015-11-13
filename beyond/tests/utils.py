@@ -229,7 +229,7 @@ class Volume(dict):
   def __init__(self, name, network):
     self.__short_name = name
     self.__network = network
-    self['name'] = self.__network['name'] + '/' + name
+    self['name'] = self.__network.owner['name'] + '/' + name
     self['network'] = self.__network['name']
 
   @property

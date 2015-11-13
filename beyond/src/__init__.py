@@ -81,13 +81,13 @@ class Beyond:
   ## Volume ##
   ## ------ ##
 
-  def volume_get(self, owner, network, name):
+  def volume_get(self, owner, name):
     return self.__datastore.volume_fetch(
-      owner = owner, network = network, name = name)
+      owner = owner, name = name)
 
-  def volume_delete(self, owner, network, name):
+  def volume_delete(self, owner, name):
     return self.__datastore.volume_delete(
-      owner = owner, network = network, name = name)
+      owner = owner, name = name)
 
   ## ----- ##
   ## DRIVE ##
