@@ -152,15 +152,21 @@ namespace infinit
         }, EINVAL);
         return;
       }
-      auto& xattrs = _parent ?
-         _parent->_files.at(_name).xattrs
-         : static_cast<Directory*>(this)->_files[""].xattrs;
-      ELLE_DEBUG("got xattrs with %s entries", xattrs.size());
-      xattrs[k] = elle::Buffer(v.data(), v.size());
       if (_parent)
+      {
+        auto& filedata = _parent->_files.at(_name);
+        filedata.ctime = time(nullptr);
+        filedata.xattrs[k] = elle::Buffer(v.data(), v.size());
         _parent->_commit({OperationType::update, _name}, false);
+      }
       else
-        static_cast<Directory*>(this)->_commit({OperationType::update, ""},false);
+      {
+        auto dir = static_cast<Directory*>(this);
+        auto& filedata = dir->_files[""];
+        filedata.xattrs[k] = elle::Buffer(v.data(), v.size());
+        filedata.ctime = time(nullptr);
+        dir->_commit({OperationType::update, ""},false);
+      }
     }
 
     std::string
