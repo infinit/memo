@@ -113,28 +113,39 @@ namespace infinit
     void
     Node::removexattr(std::string const& k)
     {
+      ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
+      ELLE_TRACE_SCOPE("%s: remove attribute \"%s\"", *this, k);
       auto& xattrs = _parent ?
          _parent->_files.at(_name).xattrs
          : static_cast<Directory*>(this)->_files[""].xattrs;
-      ELLE_DEBUG("got xattrs with %s entries", xattrs.size());
-      xattrs.erase(k);
-      if (_parent)
-        _parent->_commit({OperationType::update, _name},false);
+      if (xattrs.erase(k))
+      {
+        if (_parent)
+          _parent->_commit({OperationType::update, _name}, false);
+        else
+          static_cast<Directory*>(this)->_commit(
+            {OperationType::update, ""},  false);
+      }
       else
-        static_cast<Directory*>(this)->_commit({OperationType::update, ""},  false);
+        ELLE_TRACE_SCOPE("no such attribute");
     }
+
+    static auto const overlay_info = "user.infinit.overlay.";
 
     void
     Node::setxattr(std::string const& k, std::string const& v, int flags)
     {
+      ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
+      ELLE_TRACE_SCOPE("%s: set attribute \"%s\"", *this, k);
+      ELLE_DUMP("value: %s", elle::ConstWeakBuffer(v));
       /* Drop quarantine flags, preventing the files from being opened.
       * https://github.com/osxfuse/osxfuse/issues/162
       */
       if (k == "com.apple.quarantine")
         return;
-      if (k.substr(0, strlen("user.infinit.overlay.")) == "user.infinit.overlay.")
+      if (k.substr(0, strlen(overlay_info)) == overlay_info)
       {
-        std::string okey = k.substr(strlen("user.infinit.overlay."));
+        std::string okey = k.substr(strlen(overlay_info));
         umbrella([&] {
           dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())
             ->overlay()->query(okey, v);
@@ -155,10 +166,11 @@ namespace infinit
     std::string
     Node::getxattr(std::string const& k)
     {
+      ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: get attribute \"%s\"", *this, k);
-      if (k.substr(0, strlen("user.infinit.overlay.")) == "user.infinit.overlay.")
+      if (k.substr(0, strlen(overlay_info)) == overlay_info)
       {
-        std::string okey = k.substr(strlen("user.infinit.overlay."));
+        std::string okey = k.substr(strlen(overlay_info));
         elle::json::Json v = umbrella([&] {
           return dynamic_cast<model::doughnut::Doughnut*>(_owner.block_store().get())
             ->overlay()->query(okey, {});
@@ -178,7 +190,7 @@ namespace infinit
         THROW_NOATTR;
       }
       std::string value = it->second.string();
-      ELLE_DUMP("value: \"%s\"", it, value);
+      ELLE_DUMP("value: %s", elle::ConstWeakBuffer(value));
       return value;
     }
 
