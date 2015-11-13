@@ -307,8 +307,8 @@ main(int argc, char** argv)
       "--path PATH [OPTIONS...]",
       {
         { "path,p", value<std::vector<std::string>>(), "path" },
-        { "user", value<std::vector<std::string>>(), "user" },
-        { "mode", value<std::string>(), "mode: r,w,rw,none" },
+        { "user,u", value<std::vector<std::string>>(), "user" },
+        { "mode,m", value<std::string>(), "mode: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
           "new files/folders inherit from their parent directory" },
         { "disable-inherit", bool_switch(),
