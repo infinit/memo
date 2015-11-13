@@ -366,7 +366,7 @@ class CouchDBDatastore:
 
   def __networks_per_user_key_map(network):
     for _, elem in network['passports'].iteritems():
-      yield elem["user"], network
+      yield elem['user'], network
     yield network['owner'], network
 
   ## ------ ##
