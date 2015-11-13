@@ -74,11 +74,17 @@ class Infinit(TemporaryDirectory):
                       (process.returncode, pretty, reason))
     out = out.decode('utf-8')
     try:
-    if len(out.split('\n')) > 2:
-      out = '[' + out.replace('\n', ',')[0:-1] + ']'
       return json.loads(out)
     except:
-      return out
+      _out = []
+      for line in out.split('\n'):
+        if len(line) == 0:
+          continue
+        try:
+          _out.append(json.loads(line))
+        except:
+          _out.append('"%s"' % line);
+      return _out
 
   def run_script(self, user = None, volume='volume', seq = None, **kvargs):
     cmd = ['infinit-volume', '--run', volume]

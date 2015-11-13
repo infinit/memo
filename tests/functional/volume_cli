@@ -8,4 +8,11 @@ with TemporaryDirectory() as tmp, Infinit() as bob, Infinit() as alice:
   bob.run(['infinit-user', '--create',  'bob'])
   bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob'])
   bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'network', '--as', 'bob'])
-  bob.run(['infinit-volume', '--export', '--name', 'bob/volume'])
+  bob.run(['infinit-volume', '--export', '--name', 'bob/volume', '--as', 'bob'])
+
+# Push to the hub.
+with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+  bob.run(['infinit-user', '--signup',  '--name', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob', '--push'])
+  bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'bob/network', '--as', 'bob', '--push'])
+  bob.run(['infinit-volume', '--export', '--name', 'bob/volume', '--as', 'bob'])

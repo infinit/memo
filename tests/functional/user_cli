@@ -59,10 +59,10 @@ with Beyond() as beyond, TemporaryDirectory() as tmp, \
              '--email', 'alice@infinit.io'])
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
   try:
-    alice.run(['infinit-user', '--login', '--name', 'alice', '--pasword', 'password'])
+    alice.run(['infinit-user', '--login', '--name', 'alice', '--password', 'password'])
     assert False
-  except Exception:
-    pass
+  except Exception as e:
+    assert 'doesn\'t use the hub to login' in e.args[0]
 
 # Read password from stdin (signup).
 with Beyond() as beyond, TemporaryDirectory() as tmp,  \
