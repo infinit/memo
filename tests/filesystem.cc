@@ -588,7 +588,8 @@ test_filesystem(bool dht,
     bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
     ofs << "coinA";
   }
-  usleep(500000);
+  // XXX [@Matthieu]: Should be 500000.
+  usleep(750000);
   stat((mount / "test").string().c_str(), &st);
   BOOST_CHECK_EQUAL(st.st_size, 14);
   stat((mount / "test2").string().c_str(), &st);
