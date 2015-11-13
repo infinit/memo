@@ -156,11 +156,18 @@ namespace infinit
                   s.run_background(elle::sprintf("connect to %s", *p),
                   [p,&yield]
                   {
-                    auto remote = std::dynamic_pointer_cast<Remote>(p);
-                    if (remote)
-                      remote->safe_perform<void>("connect", [&] { yield(p);});
-                    else
-                      yield(p);
+                    try
+                    {
+                      auto remote = std::dynamic_pointer_cast<Remote>(p);
+                      if (remote)
+                        remote->safe_perform<void>("connect", [&] { yield(p);});
+                      else
+                        yield(p);
+                    }
+                    catch (elle::Error const& e)
+                    {
+                      ELLE_TRACE("connect to peer %s failed: %s", p, e.what());
+                    }
                   });
                 }
                 reactor::wait(s);
