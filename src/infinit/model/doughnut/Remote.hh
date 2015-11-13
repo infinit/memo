@@ -96,6 +96,7 @@ namespace infinit
            did nothing.
         */
         ELLE_ATTRIBUTE_RW(std::function<bool (Remote&)>, retry_connect);
+        ELLE_ATTRIBUTE_R(bool, fast_fail);
       /*-------.
       | Blocks |
       `-------*/

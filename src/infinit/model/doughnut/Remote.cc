@@ -29,6 +29,7 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connection_thread()
+        , _fast_fail(false)
       {
         this->_connect(
           elle::sprintf("%s:%s", host, port),
@@ -48,6 +49,7 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connection_thread()
+        , _fast_fail(false)
       {
         this->initiate_connect(endpoint);
       }
@@ -74,6 +76,7 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connection_thread()
+        , _fast_fail(false)
       {
         this->_connect(
           elle::sprintf("%s", endpoint),
@@ -96,6 +99,7 @@ namespace infinit
         , _serializer()
         , _channels()
         , _connection_thread()
+        , _fast_fail(false)
       {
         this->initiate_connect(endpoints, peer_id, server);
       }

@@ -42,6 +42,8 @@ namespace infinit
           std::stoi(elle::os::getenv("INFINIT_CONNECT_TIMEOUT", "10"));
         static const int softfail_timeout_sec =
           std::stoi(elle::os::getenv("INFINIT_SOFTFAIL_TIMEOUT", "50"));
+        static const bool enable_fast_fail =
+          !elle::os::getenv("INFINIT_SOFTFAIL_FAST", "true").empty();
         elle::DurationOpt connect_timeout;
         if (connect_timeout_sec)
           connect_timeout = boost::posix_time::seconds(connect_timeout_sec);
@@ -53,6 +55,36 @@ namespace infinit
         }
         int attempt = 0;
         bool need_reconnect = false;
+        /* Fast-fail mode: The idea is that the first failed operation
+        * will retry for the full INFINIT_SOFTFAIL_TIMEOUT, but subsequent
+        * operations will fail 'instantly', while trying to reconnect in
+        * the background.
+        */
+        if (_fast_fail && enable_fast_fail)
+        {
+          try
+          {
+            if (!reactor::wait(*this->_connection_thread, 0_sec))
+            { // still connecting
+              ELLE_DEBUG("still connecting");
+              throw elle::Error("Connection pending");
+            }
+            // if we reach here, connection thread finished without exception,
+            // go on
+            _fast_fail = false;
+          }
+          catch (reactor::network::Exception const& e)
+          {
+            ELLE_DEBUG("connection attempt failed, restarting");
+            try
+            {
+              reconnect(0_sec);
+            }
+            catch (reactor::network::Exception const& e)
+            {}
+            throw elle::Error("Connection attempt restarted");
+          }
+        }
         while (true)
         {
           try
@@ -70,6 +102,7 @@ namespace infinit
           }
           if (max_attempts && ++attempt >= max_attempts)
           {
+            _fast_fail = true;
             throw elle::Error(elle::sprintf("could not establish channel for operation '%s'",
                                             name));
           }
