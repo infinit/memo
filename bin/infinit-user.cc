@@ -150,6 +150,11 @@ create(variables_map const& args)
   infinit::User user = create_(name, keys_file);
   ifnt.user_save(user);
   report_action("generated", "user", name, std::string("locally"));
+  if (aliased_flag(args, {"push-user", "push"}))
+  {
+    das::Serializer<infinit::DasPublicUser> view{user};
+    beyond_push("user", user.name, view, user);
+  }
 }
 
 static
@@ -254,6 +259,9 @@ main(int argc, char** argv)
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key "
           "(generated if unspecified)" },
+        { "push-user", bool_switch(),
+          elle::sprintf("push the user to %s", beyond(true)).c_str() },
+        { "push,p", bool_switch(), "alias for --push-user" },
       },
     },
     {
@@ -317,16 +325,6 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to push (default: system user)" },
-      },
-    },
-    {
-      "register",
-      elle::sprintf("Push user to %s (alias for --push)", beyond(true)).c_str(),
-      &push,
-      {},
-      {
-        { "name,n", value<std::string>(),
-          "user to register (default: system user)" },
       },
     },
     {
