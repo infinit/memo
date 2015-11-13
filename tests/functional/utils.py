@@ -162,6 +162,8 @@ class User():
     self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
 
   def async(self, cli, **kargs):
+    import threading
+    from functools import partial
     thread = threading.Thread(
       target = partial(self.run, cli = cli, **kargs))
     thread.daemon = True
