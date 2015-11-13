@@ -216,20 +216,6 @@ namespace infinit
         std::swap(local, _files);
         throw rfs::Error(EIO, e.what());
       }
-      // File writes update the file size in _files for reads to work,
-      // but they do not commit them to store (that would be far too expensive)
-      // So, keep local version of entries with bigger ctime than remote.
-      for (auto const& itl: local)
-      {
-        auto itr = _files.find(itl.first);
-        if (itr != _files.end()
-            && (itr->second.ctime < itl.second.ctime
-              || itr->second.mtime < itl.second.mtime))
-        {
-          ELLE_DEBUG("Using local data for %s", itl.first);
-          itr->second = itl.second;
-        }
-      }
       _last_fetch = now;
     }
 
