@@ -365,7 +365,7 @@ class CouchDBDatastore:
     yield network['owner'], network
 
   def __networks_per_user_key_map(network):
-    for _, elem in network['passports'].iteritems():
+    for elem in network['passports'].values():
       yield elem['user'], network
     yield network['owner'], network
 
@@ -473,4 +473,3 @@ class CouchDBDatastore:
       self.__couchdb['drives'].delete(json)
     except couchdb.ResourceConflict:
       raise infinit.beyond.Drive.Duplicate()
-
