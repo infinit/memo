@@ -239,24 +239,24 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 
-  def __rows_to_network(self, rows):
+  def __rows_to_networks(self, rows):
     network_from_db = infinit.beyond.Network.from_json
     return list(map(lambda r: network_from_db(self.beyond, r.value), rows))
 
   def invitee_networks_fetch(self, invitee):
     rows = self.__couchdb['networks'].view('beyond/per_invitee_name',
                                            key = invitee.name)
-    return self.__rows_to_network(rows)
+    return self.__rows_to_networks(rows)
 
   def owner_networks_fetch(self, owner):
     rows = self.__couchdb['networks'].view('beyond/per_owner_key',
                                            key = owner.public_key)
-    return self.__rows_to_network(rows)
+    return self.__rows_to_networks(rows)
 
   def user_networks_fetch(self, user):
     rows = self.__couchdb['networks'].view('beyond/per_user_key',
                                            key = user.public_key)
-    return self.__rows_to_network(rows)
+    return self.__rows_to_networks(rows)
 
   def __user_per_name(user):
     yield user['name'], user
