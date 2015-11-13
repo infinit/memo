@@ -398,11 +398,7 @@ class Bottle(bottle.Bottle):
 
   def network_passport_put(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
-    try:
-      self.authenticate(user)
-    except Exception:
-      u_invitee = self.user_from_name(name = invitee)
-      self.authenticate(u_invitee)
+    self.authenticate(user)
     network = self.network_from_name(owner = owner, name = name)
     network.passports[invitee] = bottle.request.json
     network.save()
