@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/format/hexadecimal.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 
@@ -123,7 +124,10 @@ hub_password(variables_map const& args)
 {
   auto hash_password = [] (std::string const& password)
     {
-      // XXX: Implent that.
+      return elle::format::hexadecimal::encode(
+        infinit::cryptography::hash(
+          password, infinit::cryptography::Oneway::sha256).string()
+        );
       return password;
     };
   auto password = optional(args, "password");
