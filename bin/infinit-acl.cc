@@ -166,7 +166,7 @@ set_action(std::string const& path,
   {
     for (auto& username: users)
     {
-      auto set = [path, mode] (std::string const& value) {
+      auto set_attribute = [path, mode] (std::string const& value) {
         check(setxattr,
               path.c_str(),
               ("user.infinit.auth." + mode).c_str(),
@@ -176,12 +176,19 @@ set_action(std::string const& path,
       };
       try
       {
-        set(username);
+        set_attribute(username);
       }
+      // XXX: Invalid argument could be something else... Find a way to
+      // distinguish the different errors.
       catch (InvalidArgument const&)
       {
         if (!try_with_public_key)
+        {
+          ELLE_ERR("setattr (mode: %s) on %s failed: %s", mode, path,
+                   elle::exception_string());
           throw;
+        }
+
         try
         {
           auto user = ifnt.user_get(username);
@@ -191,7 +198,7 @@ set_action(std::string const& path,
             elle::serialization::json::SerializerOut so(ios, false);
             so.serialize_forward(user.public_key);
           }
-          set(buf.string());
+          set_attribute(buf.string());
         }
         catch (InvalidArgument const&)
         {

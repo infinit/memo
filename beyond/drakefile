@@ -75,6 +75,8 @@ def configure(
     'src/couchdb.py',
     'src/gcs.py',
     'src/wsgi.py',
+    'src/validation.py',
+    'src/exceptions.py',
   ) + [bottle, version]
   couchdb_sources = drake.nodes(
     'couchdb-python/couchdb/view.py',
@@ -171,15 +173,29 @@ def configure(
   ## ----- ##
 
   rule_check = drake.Rule('check')
+  test_utils = drake.Node('tests/utils.py')
   for test_name in [
       'full-flow',
       'oauth-dropbox',
+      'users/put',
+      'users/get',
+      'users/delete',
+      'networks/put',
+      'volumes/put',
+      'volumes/get',
+      'volumes/delete',
+      'passports/put',
+      # Higher level.
+      'users/register_login',
   ]:
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)
+    path = ':'.join(
+      map(lambda x: str(x),
+          [drake.path_build(python_prefix), test_utils.path().dirname()]))
     runner = drake.Runner(
       exe = test,
       env = {
-        'PYTHONPATH': drake.path_build(python_prefix),
+        'PYTHONPATH': path,
       })
     rule_check << runner.status

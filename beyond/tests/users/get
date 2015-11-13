@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_do_not_exist(self):
+      throws(lambda: beyond.get('users/castor'),
+             404,
+             json = False)
+
+    def test_works(self):
+      user = User()
+      throws(lambda: beyond.get('users/%s' % user['name']),
+             404,
+             json = False)
+      beyond.put('users/%s' % user['name'], json = user)
+      res = beyond.get('users/%s' % user['name']).json()
+      assert res["name"] == user["name"]
+      assert res["email"] == user["email"]
+      assert res["public_key"] == user["public_key"]
+
+  if __name__ == '__main__':
+    unittest.main()

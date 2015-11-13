@@ -24,9 +24,9 @@ with Beyond() as beyond:
       self.assertEqual(
         beyond.put('users/mefyl', json = mefyl).status_code, 200)
       self.assertEqual(
-        beyond.put('users/mefyl', json = mefyl2).status_code, 409)
+        beyond.put('users/mefyl', json = mefyl2, throws = False).status_code, 409)
       r = beyond.put('users/mefyl', json = mefyl)
-      self.assertEqual(beyond.get('users/none').status_code, 404)
+      self.assertEqual(beyond.get('users/none', throws = False).status_code, 404)
       # Network
       r = beyond.put('networks/mefyl/infinit', json = network, auth = mefyl_priv)
       self.assertEqual(r.status_code, 201)
@@ -35,7 +35,7 @@ with Beyond() as beyond:
       json = r.json()
       for k, v in network.items():
         self.assertEqual(json[k], v)
-      r = beyond.get('networks/none/infinit')
+      r = beyond.get('networks/none/infinit', throws = False)
       self.assertEqual(r.status_code, 404)
       # Passport
       passport = {
@@ -43,13 +43,16 @@ with Beyond() as beyond:
         'signature':'BUNiO620HwGlA9YtqqPEwszkLapLbAvJPRnzQY8H5imdOrQQxSjFT5fJ4W8eQQZJCXmVY53gQwEoaj+4C3sbpqq0XvhnbrEozpTxj+vjAp4m5IKXt08YukL3eWLEQp23HIaoNWWpbbu7sVmlryKmiwXKRIGK+xqZ3DBkx92rMljiNPhdUInt3cMR+kWe0rLbi2jVf7m8wZOiBIwE1eov2+tKPukUkE3RZMInFezGbc2b7BT7BW1/dJ8u+z0O0a+XjWcGHluR+zkALIcgiVq48SyuuW98Kicx8bFaJNaUnZXWLrdOj6B4TFk1Jguo2jx0eZronGzrGtjPS+R5ioS6rA==',
         'user': {'rsa':'MIIBCgKCAQEAr8UUcxZ2ujNWzQPA9J5FjClZxzXRjRQrb+xCP6Z+iG4/TJ5E0v4+wbXDHQC4hp3asXOJeQXEEOCG+eHIStKw0xAlZq1aF8Vtvhjrqk8BZxLUx+tovnE0G5oiFQRk19SLUcHpcdCIPWUhsmULLyrDfOE9yxcH7r3FCsz2MSSee9hffxzBF6AOsYPJLbui/PPhaSuWlwcRQ76s3iTiB6WKi+Rw77lTlyFMt/XpgyxHCb2IT0GYbshwZ3p1bEHdiqise1c/81/t9SdROjwSnL+aHp6Kf4pFe4lUNSSyX8Jc81k8YpJhR+qs2gSKhkdl4i7WpLjVaPhSpdut9GYC3ujHzwIDAQAB'}
       }
+      bearclaw = User(name = 'bearclaw')
+      bearclaw.put(beyond)
       r = beyond.put(
         'networks/mefyl/infinit/passports/bearclaw',
         json = passport,
         auth = mefyl_priv)
       self.assertEqual(r.status_code, 201)
       r = beyond.get(
-        'networks/mefyl/infinit/passports/bearclaw')
+        'networks/mefyl/infinit/passports/bearclaw',
+        auth = bearclaw.private_key)
       self.assertEqual(r.status_code, 200)
       self.assertEqual(r.json(), passport)
 

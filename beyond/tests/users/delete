@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+user = User()
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_delete_unknown(self):
+      throws(lambda: beyond.delete('users/castor'),
+             404,
+             json = False)
+
+    def test_works(self):
+      user = User()
+      throws(lambda: beyond.get('users/%s' % user['name']),
+             404,
+             json = False)
+      beyond.put('users/%s' % user['name'], json = user)
+      beyond.get('users/%s' % user['name'])
+      throws(lambda: beyond.delete('users/%s' % user['name']),
+             401,
+             json = False)
+      beyond.get('users/%s' % user['name'])
+      beyond.delete('users/%s' % user['name'],
+                    auth = user.private_key)
+      throws(lambda: beyond.get('users/%s' % user['name']),
+             404,
+             json = False)
+
+    def test_deleting_another_user(self):
+      alice = User()
+      bob = User()
+      beyond.put('users/%s' % alice['name'], json = alice)
+      beyond.put('users/%s' % bob['name'], json = bob)
+      throws(lambda: beyond.delete('users/%s' % bob['name'],
+                                   auth = alice.private_key),
+             403,
+             json = False)
+
+  if __name__ == '__main__':
+    unittest.main()

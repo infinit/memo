@@ -2,14 +2,15 @@
 from utils import *
 import time
 
-with Infinit() as infinit1, Infinit() as infinit2, Beyond() as beyond:
-
-  bob = User('bob', infinit1)
-  alice = User('alice', infinit2)
-
+with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
+     Infinit(beyond = beyond) as alice:
+  bob = User('bob', bob)
+  alice = User('alice', alice)
   # Bob and Alice signup, then fetch other.
-  bob.run('infinit-user --signup --name %s' % bob.name)
-  alice.run('infinit-user --signup --name %s' % alice.name)
+  bob.run('infinit-user --signup --name %s --email %s' % (
+    bob.name, bob.name + '@infinit.io'))
+  alice.run('infinit-user --signup --name %s --email %s' % (
+    alice.name, alice.name + '@infinit.io'))
   bob.run('infinit-user --fetch --name %s' % alice.name)
   alice.run('infinit-user --fetch --name %s' % bob.name)
 

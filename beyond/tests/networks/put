@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      user = User()
+      user.put(beyond)
+      network = Network('infinit', owner = user)
+      throws(lambda: beyond.get('networks/%s' % network['name']),
+             404,
+             json = False)
+      network.put(beyond, owner = user)
+      res = beyond.get('networks/%s' % network['name']).json()
+      assert res['name'] == network['name']
+      assert res['owner'] == network['owner']
+
+    def test_invalid_format(self):
+      user = User()
+      def infinit_name(name):
+        network = Network(name, owner = user)
+        res = throws(lambda: network.put(beyond, user),
+                     422)
+        assert 'invalid_format' in r['error']
+      pass
+
+  if __name__ == '__main__':
+    unittest.main()

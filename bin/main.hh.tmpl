@@ -56,6 +56,33 @@ public:
   {}
 };
 
+struct BeyondError
+  : public elle::Printable
+{
+  BeyondError(std::string const& error,
+              std::string const& reason)
+    : error(error)
+    , reason(reason)
+  {
+  }
+
+  BeyondError(elle::serialization::SerializerIn& s)
+    : error(s.deserialize<std::string>("error"))
+    , reason(s.deserialize<std::string>("reason"))
+  {
+    ELLE_LOG("error: %s", *this);
+  }
+
+  void
+  print(std::ostream& out) const override
+  {
+    out << this->reason;
+  }
+
+  std::string error;
+  std::string reason;
+};
+
 class MissingResource
   : public elle::Error
 {
@@ -327,10 +354,13 @@ namespace infinit
 
   struct User
   {
-    User(std::string name_, cryptography::rsa::KeyPair keys_)
-      : name(std::move(name_))
-      , public_key(std::move(keys_.K()))
-      , private_key(std::move(keys_.k()))
+    User(std::string const& name,
+         cryptography::rsa::KeyPair const& keys)
+      : name(name)
+      , public_key(keys.K())
+      , private_key(keys.k())
+      , email()
+      , password_hash()
     {}
 
     User(elle::serialization::SerializerIn& s)
@@ -338,6 +368,8 @@ namespace infinit
       , public_key(s.deserialize<cryptography::rsa::PublicKey>("public_key"))
       , private_key(s.deserialize<boost::optional<
                       cryptography::rsa::PrivateKey>>("private_key"))
+      , email()
+      , password_hash()
     {}
 
     infinit::cryptography::rsa::KeyPair
@@ -358,6 +390,8 @@ namespace infinit
       s.serialize("name", this->name);
       s.serialize("public_key", this->public_key);
       s.serialize("private_key", this->private_key);
+      s.serialize("email", this->email);
+      s.serialize("password_hash", this->password_hash);
     }
 
     static
@@ -385,6 +419,9 @@ namespace infinit
     std::string name;
     cryptography::rsa::PublicKey public_key;
     boost::optional<cryptography::rsa::PrivateKey> private_key;
+    // Hub.
+    boost::optional<std::string> email;
+    boost::optional<std::string> password_hash;
   };
 
   struct NetworkDescriptor
@@ -1363,12 +1400,17 @@ get_username(boost::program_options::variables_map const& args,
   return opt ? opt.get() : (env.empty() ? elle::system::username() : env);
 }
 
-DAS_MODEL_FIELDS(infinit::User, (name, public_key, private_key));
+DAS_MODEL_FIELDS(infinit::User,
+                 (name, email, public_key, private_key, password_hash));
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, public_key, private_key), DasUser);
   DAS_MODEL_DEFINE(User, (name, public_key), DasPublicUser);
+  DAS_MODEL_DEFINE(User, (name, public_key, private_key), DasUser);
+  // Publication to the hub.
+  DAS_MODEL_DEFINE(User, (name, email, public_key), DasPublicUserPublish);
+  DAS_MODEL_DEFINE(User, (name, email, public_key, private_key, password_hash),
+                   DasPrivateUserPublish);
 }
 
 void

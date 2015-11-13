@@ -4,8 +4,11 @@ import requests
 
 import infinit.beyond.version
 
+from infinit.beyond import validation
+
 from copy import deepcopy
 from itertools import chain
+
 
 class Beyond:
 
@@ -99,7 +102,19 @@ class Beyond:
         owner = owner, name = name)
 
 class User:
-
+  fields = {
+    'mandatory': [
+      ('name', validation.Name('user', 'name')),
+      ('email', validation.Email('user')),
+      ('public_key', None),
+    ],
+    'optional': [
+      ('dropbox_accounts', None),
+      ('google_accounts', None),
+      ('password_hash', None),
+      ('private_key', None),
+    ]
+  }
   class Duplicate(Exception):
     pass
 
@@ -109,14 +124,20 @@ class User:
   def __init__(self,
                beyond,
                name = None,
+               email = None,
                public_key = None,
+               password_hash = None,
+               private_key = None,
                dropbox_accounts = None,
                google_accounts = None,
   ):
     self.__beyond = beyond
     self.__id = id
     self.__name = name
+    self.__email = email
     self.__public_key = public_key
+    self.__password_hash = password_hash
+    self.__private_key = private_key
     self.__dropbox_accounts = dropbox_accounts or {}
     self.__dropbox_accounts_original = deepcopy(self.dropbox_accounts)
     self.__google_accounts = google_accounts or {}
@@ -124,8 +145,14 @@ class User:
 
   @classmethod
   def from_json(self, beyond, json):
+    for (key, validator) in User.fields['mandatory']:
+      if key not in json: raise exceptions.MissingField('user', key)
+      validator and validator(json[key])
     return User(beyond,
                 name = json['name'],
+                email = json['email'],
+                password_hash = json.get('password_hash', None),
+                private_key = json.get('private_key', None),
                 public_key = json['public_key'],
                 dropbox_accounts = json.get('dropbox_accounts', []),
                 google_accounts = json.get('google_accounts', []),
@@ -133,14 +160,19 @@ class User:
 
   def json(self, private = False):
     res = {
-      'id': self.id,
       'name': self.name,
+      'email': self.email,
       'public_key': self.public_key,
     }
-    if private and self.dropbox_accounts is not None:
-      res['dropbox_accounts'] = self.dropbox_accounts
-    if private and self.google_accounts is not None:
-      res['google_accounts'] = self.google_accounts
+    if private:
+      if self.dropbox_accounts is not None:
+        res['dropbox_accounts'] = self.dropbox_accounts
+      if self.google_accounts is not None:
+        res['google_accounts'] = self.google_accounts
+      if self.private_key is not None:
+        res['private_key'] = self.private_key
+      if self.private_key is not None:
+        res['password_hash'] = self.password_hash
     return res
 
   def create(self):
@@ -169,8 +201,20 @@ class User:
     return self.__name
 
   @property
+  def email(self):
+    return self.__email
+
+  @property
   def public_key(self):
     return self.__public_key
+
+  @property
+  def private_key(self):
+    return self.__private_key
+
+  @property
+  def password_hash(self):
+    return self.__password_hash
 
   @property
   def dropbox_accounts(self):
@@ -179,19 +223,6 @@ class User:
   @property
   def google_accounts(self):
     return self.__google_accounts
-
-class MissingField(Exception):
-
-  def __init__(self, field):
-    self.__field = field
-
-  def __str__(self):
-    return 'missing field: %r' % self.field
-
-  @property
-  def field(self):
-    return self.__field
-
 
 class Entity(type):
 
@@ -292,10 +323,8 @@ class Entity(type):
       content[f] = property(lambda self: getattr(self, '_%s__%s' % (name, f)))
     type.__init__(self, name, superclasses, content)
 
-
 def fields(*args, **kwargs):
   return dict(chain(((k, None) for k in args), kwargs.items()))
-
 
 class Network(metaclass = Entity,
               insert = 'network_insert',

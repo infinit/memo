@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/format/hexadecimal.hh>
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 
@@ -118,6 +119,26 @@ read_passphrase()
   return res;
 }
 
+std::string
+hub_password(variables_map const& args)
+{
+  auto hash_password = [] (std::string const& password)
+    {
+      return elle::format::hexadecimal::encode(
+        infinit::cryptography::hash(
+          password, infinit::cryptography::Oneway::sha256).string()
+        );
+      return password;
+    };
+  auto password = optional(args, "password");
+  if (!password)
+  {
+    password = read_passphrase();
+  }
+  ELLE_ASSERT(password);
+  return hash_password(password.get());
+}
+
 static
 infinit::User
 create_(std::string const& name,
@@ -172,12 +193,31 @@ import(variables_map const& args)
 
 static
 void
+_push(variables_map const& args,
+      infinit::User& user)
+{
+  auto email = mandatory(args, "email");
+  user.email = email;
+  if (args.count("full") && args["full"].as<bool>())
+  {
+    user.password_hash = hub_password(args);
+    das::Serializer<infinit::DasPrivateUserPublish> view{user};
+    beyond_push("user", user.name, view, user);
+  }
+  else
+  {
+    das::Serializer<infinit::DasPublicUserPublish> view{user};
+    beyond_push("user", user.name, view, user);
+  }
+}
+
+static
+void
 push(variables_map const& args)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
-  das::Serializer<infinit::DasPublicUser> view{user};
-  beyond_push("user", user.name, view, user);
+  _push(args, user);
 }
 
 static
@@ -211,21 +251,89 @@ void
 signup_(variables_map const& args)
 {
   auto name = get_name(args);
+  auto email = mandatory(args, "email");
   auto keys_file = optional(args, "key");
   infinit::User user = create_(name, keys_file);
-  das::Serializer<infinit::DasPublicUser> view{user};
   try
   {
     ifnt.user_get(name);
   }
   catch (elle::Error const&)
   {
-    beyond_push("user", user.name, view, user);
+    _push(args, user);
     ifnt.user_save(user);
-    report_action("saved", "user", name, std::string("locally"));
     return;
   }
   throw elle::Error(elle::sprintf("User %s already exists locally", name));
+}
+
+struct LoginCredentials
+{
+  LoginCredentials(std::string const& name,
+                   std::string const& password)
+    : name(name)
+    , password_hash(password)
+  {
+  }
+
+  LoginCredentials(elle::serialization::SerializerIn& s)
+    : name(s.deserialize<std::string>("name"))
+    , password_hash(s.deserialize<std::string>("password_hash"))
+  {
+  }
+
+  std::string name;
+  std::string password_hash;
+};
+
+DAS_MODEL(LoginCredentials, (name, password_hash), DasLoginCredentials)
+
+template <typename T>
+elle::json::Json
+beyond_login(std::string const& name,
+             T const& o)
+{
+  reactor::http::Request::Configuration c;
+  c.header_add("Content-Type", "application/json");
+  std::stringstream payload;
+  elle::serialization::json::serialize(o, payload, false);
+  reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
+                           reactor::http::Method::POST, std::move(c));
+  r << payload.str();
+  r.finalize();
+  reactor::wait(r);
+  if (r.status() == reactor::http::StatusCode::OK)
+  {
+  }
+  else
+  {
+    elle::serialization::json::SerializerIn s(r, false);
+    auto error = s.deserialize<BeyondError>();
+    if (r.status() == reactor::http::StatusCode::Not_Found)
+    {
+      throw elle::Error(elle::sprintf("%s", error));
+    }
+    else if (r.status() == reactor::http::StatusCode::Forbidden)
+    {
+      throw elle::Error(elle::sprintf("%s", error));
+    }
+    throw;
+  }
+  return elle::json::read(r);
+}
+
+static
+void
+login(variables_map const& args)
+{
+  auto name = get_name(args);
+  LoginCredentials c{name, hub_password(args)};
+  das::Serializer<DasLoginCredentials> credentials{c};
+  auto json = beyond_login(name, credentials);
+  elle::serialization::json::SerializerIn input(json, false);
+  auto user = input.deserialize<infinit::User>();
+  ifnt.user_save(user);
+  report_action("saved", "user", name, std::string("locally"));
 }
 
 static
@@ -325,6 +433,14 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to push (default: system user)" },
+        { "email,n", value<std::string>(),
+          "valid email address" },
+        { "password", value<std::string>(),
+          "password to authenticate to the hub" },
+        {
+          "full", bool_switch(),
+          "push the whole user, including private information in order to "
+          "facilitate device pairing. This information will be encrypted."}
       },
     },
     {
@@ -335,9 +451,28 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
+        { "email,n", value<std::string>(),
+          "valid email address" },
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key"
             " (generated if unspecified)" },
+        { "password", value<std::string>(),
+          "password to authenticate to the hub" },
+        { "full", bool_switch(),
+          "push the whole user, including private information in order to "
+          "facilitate device pairing. This information will be encrypted." },
+      },
+    },
+    {
+      "login",
+      "Log the user to the hub",
+      &login,
+      {},
+      {
+        { "name,n", value<std::string>(),
+          "user name (default: system user)" },
+        { "password", value<std::string>(),
+          "password to authenticate to the hub" },
       },
     },
     {

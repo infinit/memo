@@ -16,7 +16,6 @@ from requests import Request, Session
 from infinit.beyond import *
 from infinit.beyond.gcs import GCS
 
-
 ## -------- ##
 ## Response ##
 ## -------- ##
@@ -46,11 +45,24 @@ class ResponsePlugin(object):
     def wrapper(*args, **kwargs):
       try:
         return f(*args, **kwargs)
+      except exceptions.MissingField as exception:
+        bottle.response.status = 400
+        return {
+          'error': '%s/missing_field/%s' % (
+            exception.field.type, exception.field.name),
+          'reason': 'missing field %s' % exception.field.name
+        }
+      except exceptions.InvalidFormat as exception:
+        bottle.response.status = 422
+        return {
+          'error': '%s/invalid_format/%s' % (
+            exception.field.type, exception.field.name),
+          'reason': '%s has an invalid format' % exception.field.name
+        }
       except Response as response:
         bottle.response.status = response.status
         return response.body
     return wrapper
-
 
 ## ------ ##
 ## Bottle ##
@@ -122,6 +134,7 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.user_passports_get)
     self.route('/users/<name>/volumes',
                method = 'GET')(self.user_volumes_get)
+    self.route('/users/<name>/login', method = 'POST')(self.login)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -175,6 +188,15 @@ class Bottle(bottle.Bottle):
   def __user_not_found(self, name):
     return self.__not_found('user', name)
 
+  def __ensure_names_match(self, type, name, entity):
+    if 'name' not in entity:
+      raise exceptions.MissingField(type, 'name')
+    if entity['name'] != name:
+      raise Response(409, {
+        'error': '%s/names_do_not_match' % type,
+        'reason': 'entity name and route must match',
+      })
+
   def authenticate(self, user):
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
@@ -223,6 +245,15 @@ class Bottle(bottle.Bottle):
     else:
       return super().debug()
 
+  ## -------------- ##
+  ## Key encryption ##
+  ## -------------- ##
+  def encrypt_key(self, key):
+    return key
+
+  def decrypt_key(self, key):
+    return key
+
   ## ---- ##
   ## User ##
   ## ---- ##
@@ -238,6 +269,9 @@ class Bottle(bottle.Bottle):
   def user_put(self, name):
     try:
       json = bottle.request.json
+      self.__ensure_names_match('user', name, json)
+      if 'private_key' in json:
+        json['private_key'] = self.encrypt_key(json['private_key'])
       user = User.from_json(self.__beyond, json)
       user.create()
       raise Response(201, {})
@@ -292,6 +326,31 @@ class Bottle(bottle.Bottle):
     volumes = self.__beyond.user_volumes_get(user = user)
     return {'volumes': list(map(lambda v: v.json(), volumes))}
 
+  def login(self, name):
+    json = bottle.request.json
+    if 'password_hash' not in json:
+      raise Response(400, 'Missing password_hash')
+    try:
+      user = self.__beyond.user_get(name)
+      if user.password_hash is None:
+        raise Response(404,
+                     {
+                       'error': 'users/not_in', # Better name.
+                       'reason': 'User doesn\'t use the hub to login',
+                     })
+      if json['password_hash'] != user.password_hash:
+        raise Response(403,
+                       {
+                         'error': 'users/invalid_password',
+                         'reason': 'password do not match',
+                       })
+      user = user.json(private = True)
+      if 'private_key' in user:
+        user['private_key'] = self.decrypt_key(user['private_key'])
+      return user
+    except User.NotFound as e:
+      raise self.__user_not_found(name)
+
   ## ------- ##
   ## Network ##
   ## ------- ##
@@ -329,6 +388,10 @@ class Bottle(bottle.Bottle):
 
   def network_passport_get(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
+    try:
+      self.authenticate(owner)
+    except Exception:
+      self.authenticate(self.user_from_name(name = invitee))
     network = self.network_from_name(owner = owner, name = name)
     passport = network.passports.get(invitee)
     if passport is None:
@@ -339,11 +402,7 @@ class Bottle(bottle.Bottle):
 
   def network_passport_put(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
-    try:
-      self.authenticate(user)
-    except Exception:
-      u_invitee = self.user_from_name(name = invitee)
-      self.authenticate(u_invitee)
+    self.authenticate(user)
     network = self.network_from_name(owner = owner, name = name)
     network.passports[invitee] = bottle.request.json
     network.save()
@@ -415,6 +474,7 @@ class Bottle(bottle.Bottle):
   def volume_put(self, owner, name):
     user = self.user_from_name(name = owner)
     self.authenticate(user)
+    # network = self.network_from_name(owner = owner, name = network)
     try:
       json = bottle.request.json
       volume = Volume(self.__beyond, **json)
@@ -427,6 +487,7 @@ class Bottle(bottle.Bottle):
       })
 
   def volume_delete(self, owner, name):
+    import sys
     user = self.user_from_name(name = owner)
     self.authenticate(user)
     self.volume_from_name(owner = owner, name = name)

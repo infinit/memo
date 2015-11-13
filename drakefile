@@ -325,8 +325,7 @@ def configure(
     'infinit-acl',
     'infinit-drive',
   ]
-
-  binaries = [
+  _binaries = [
     ('doughnode', []),
     ('generatekeys', []),
     ('infinit', []),
@@ -334,10 +333,11 @@ def configure(
     ('sshfs', []),
     ('infinit-smb', []),
   ]
-  binaries += [
+  _binaries += [
     (x, []) for x in to_install
   ]
-  for bin_name, libs in binaries:
+  binaries = []
+  for bin_name, libs in _binaries:
     source = drake.node('bin/%s.cc' % bin_name)
     bin = drake.cxx.Executable(
       'bin/%s' % bin_name, [
@@ -350,6 +350,7 @@ def configure(
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
+    binaries.append(bin)
     if bin_name in to_install:
       installed_binaries.append(bin)
   steg = drake.cxx.Executable(
@@ -361,6 +362,7 @@ def configure(
     cxx_toolkit,
     bin_cxx_config,
   )
+  # binaries.append(steg)
 
   ## ------- ##
   ## Install ##
@@ -414,7 +416,8 @@ def configure(
       ],
       cxx_toolkit,
       cxx_config_tests)
-
+    # filesystem requires 'infinit'.
+    test.dependencies_add(binaries)
     rule_tests << test
     if valgrind_tests:
       runner = drake.valgrind.ValgrindRunner(
@@ -427,6 +430,10 @@ def configure(
       'errors',
       'single-user-two-devices-shared-storage',
       #FIXME: 'flow',
+      # Test clis.
+      'user_cli',
+      'network_cli',
+      'volume_cli',
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
