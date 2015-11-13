@@ -67,7 +67,7 @@ namespace infinit
             if (!reactor::wait(*this->_connection_thread, 0_sec))
             { // still connecting
               ELLE_DEBUG("still connecting");
-              throw elle::Error("Connection pending");
+              throw reactor::network::ConnectionClosed("Connection pending");
             }
             // if we reach here, connection thread finished without exception,
             // go on
@@ -82,7 +82,7 @@ namespace infinit
             }
             catch (reactor::network::Exception const& e)
             {}
-            throw elle::Error("Connection attempt restarted");
+            throw reactor::network::ConnectionClosed("Connection attempt restarted");
           }
         }
         while (true)
@@ -103,7 +103,7 @@ namespace infinit
           if (max_attempts && ++attempt >= max_attempts)
           {
             _fast_fail = true;
-            throw elle::Error(elle::sprintf("could not establish channel for operation '%s'",
+            throw reactor::network::ConnectionClosed(elle::sprintf("could not establish channel for operation '%s'",
                                             name));
           }
           reactor::sleep(boost::posix_time::milliseconds(
