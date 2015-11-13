@@ -171,6 +171,15 @@ parse_args(boost::program_options::options_description const& options,
 
 bool script_mode = false;
 
+static
+bool
+is_hidden_file(boost::filesystem::path const& path)
+{
+  if (path.filename().string()[0] == '.')
+    return true;
+  return false;
+}
+
 namespace infinit
 {
   typedef infinit::model::doughnut::Passport Passport;
@@ -604,7 +613,7 @@ namespace infinit
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
-        if (is_regular_file(it->status()))
+        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
           boost_fs::ifstream f;
           this->_open_read(
@@ -625,7 +634,7 @@ namespace infinit
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
-        if (is_regular_file(it->status()))
+        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
           boost_fs::ifstream f;
           this->_open_read(
@@ -755,7 +764,7 @@ namespace infinit
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
-        if (is_regular_file(it->status()))
+        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
           boost_fs::ifstream f;
           this->_open_read(
@@ -784,7 +793,7 @@ namespace infinit
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
-        if (is_regular_file(it->status()))
+        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
           res.push_back(it->path().filename().string());
         }
@@ -840,7 +849,7 @@ namespace infinit
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
-        if (is_regular_file(it->status()))
+        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
           boost_fs::ifstream f;
           this->_open_read(

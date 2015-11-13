@@ -228,7 +228,7 @@ list(variables_map const& args)
        it != boost_fs::recursive_directory_iterator();
        ++it)
   {
-    if (is_regular_file(it->status()))
+    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
     {
       auto user_name = it->path().filename().string();
       boost_fs::ifstream f;
