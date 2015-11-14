@@ -833,6 +833,20 @@ test_filesystem(bool dht,
     BOOST_CHECK_EQUAL(sz, -1);
     bfs::remove(mount / "file");
   }
+  ELLE_LOG("simultaneus read/write");
+  {
+    bfs::ofstream ofs(mount / "test");
+    char buf[1024];
+    // write enough data so that the read will cause a cache eviction
+    for (int i=0; i< 22 * 1024; ++i)
+      ofs.write(buf, 1024);
+    bfs::ifstream ifs(mount / "test");
+    ifs.read(buf, 1024);
+    ofs.write(buf, 1024);
+    ifs.close();
+    ofs.close();
+    bfs::remove(mount / "test");
+  }
 }
 
 void test_basic()

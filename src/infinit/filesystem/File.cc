@@ -772,7 +772,7 @@ namespace infinit
       }
       if (fat_change)
       {
-        _owner.store_or_die(std::move(_first_block),
+        _owner.store_or_die(*_first_block,
                             _first_block_new ? model::STORE_INSERT : model::STORE_ANY);
         _first_block_new = false;
       }
