@@ -267,21 +267,14 @@ namespace infinit
       BaseOKB<Block>::_seal_okb()
       {
         ++this->_version; // FIXME: idempotence in case the write fails ?
-        auto sign = this->_sign();
-        bool disabled = getenv("INFINIT_OKB_DISABLE_ASYNC_SIGN");
+        auto sign = elle::utility::move_on_copy(this->_sign());
         ELLE_DUMP("%s: sign %s with %s: %f",
-                  *this, sign, this->_doughnut->keys().k(), this->_signature);
-        if (disabled)
-          this->_signature = this->_doughnut->keys().k().sign(sign);
-        else
-        {
-          auto sign_moved = elle::utility::move_on_copy(sign);
-          this->_signature =
-            [sign_moved, this]
-            {
-              return this->_doughnut->keys().k().sign(*sign_moved);
-            };
-        }
+                  *this, *sign, this->_doughnut->keys().k(), this->_signature);
+        this->_signature =
+          [sign, this]
+          {
+            return this->_doughnut->keys().k().sign(*sign);
+          };
       }
 
       template <typename Block>

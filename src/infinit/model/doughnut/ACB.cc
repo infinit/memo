@@ -544,21 +544,12 @@ namespace infinit
         {
           static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
           elle::Bench::BenchScope scope(bench);
-          static bool const disabled = getenv("INFINIT_ACB_DISABLE_ASYNC_SIGN");
-          auto to_sign = this->_data_sign();
-          if (disabled)
-          {
-            this->_data_signature = this->doughnut()->keys().k().sign(to_sign);
-          }
-          else
-          {
-            auto to_sign_moved = elle::utility::move_on_copy(to_sign);
-            this->_data_signature =
-              [this, to_sign_moved]
-              {
-                return this->doughnut()->keys().k().sign(*to_sign_moved);
-              };
-          }
+          auto to_sign = elle::utility::move_on_copy(this->_data_sign());
+          this->_data_signature =
+            [this, to_sign]
+            {
+              return this->doughnut()->keys().k().sign(*to_sign);
+            };
         }
       }
 
