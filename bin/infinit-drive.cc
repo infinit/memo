@@ -77,6 +77,17 @@ COMMAND(invite)
   }
 }
 
+COMMAND(export_)
+{
+  auto owner = self_user(ifnt, args);
+  auto output = get_output(args);
+  auto name = drive_name(args, owner);
+  auto drive = ifnt.drive_get(name);
+  elle::serialization::json::serialize(drive, *output, false);
+  report_exported(*output, "drive", drive.name);
+}
+
+
 COMMAND(push)
 {
   auto owner = self_user(ifnt, args);
@@ -140,6 +151,16 @@ main(int argc, char** argv)
         { "user,u", value<std::string>(), "user to invite to the drive" },
         { "permissions,p", value<std::string>(), "set default user permissions to XXX" },
         { "home,h", bool_switch(), "creates a home directory for the invited user" },
+        option_owner,
+      },
+    },
+    {
+      "export",
+      "Export a drive",
+      &export_,
+      "--name DRIVE",
+      {
+        { "name,n", value<std::string>(), "drive to export" },
         option_owner,
       },
     },
