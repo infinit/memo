@@ -131,6 +131,7 @@ namespace infinit
         std::string endpoint,
         std::function <std::iostream& ()> const& socket)
       {
+        ELLE_TRACE_SCOPE("%s: connect", *this);
         this->_connector = socket;
         this->_endpoint = endpoint;
         if (this->_connection_thread)
@@ -142,19 +143,17 @@ namespace infinit
             {
               try
               {
-                ELLE_TRACE("Connecting socket");
                 this->_serializer.reset(
                   new protocol::Serializer(socket(), false));
-                ELLE_TRACE("Establishing channel");
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
                 static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
                 if (disable_key)
                 {
-                  ELLE_TRACE("Exchanging keys");
-                  _key_exchange();
+                  ELLE_TRACE_SCOPE("exchanging keys");
+                  this->_key_exchange();
                 }
-                ELLE_TRACE("Connected");
+                ELLE_TRACE("connected");
               }
               catch (reactor::network::Exception const&)
               { // Upper layers may retry on network::Exception
