@@ -2,12 +2,12 @@
 
 #include <boost/iterator/zip_iterator.hpp>
 
+#include <elle/bench.hh>
+#include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
-#include <elle/cast.hh>
-#include <elle/bench.hh>
+#include <elle/utility/Move.hh>
 
-#include <reactor/exception.hh>
 #include <das/model.hh>
 #include <das/serializer.hh>
 
@@ -15,6 +15,8 @@
 #include <cryptography/rsa/PublicKey.hh>
 #include <cryptography/SecretKey.hh>
 #include <cryptography/hash.hh>
+
+#include <reactor/exception.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -110,7 +112,6 @@ namespace infinit
         , _acl_entries(other._acl_entries)
         , _data_version(other._data_version)
         , _data_signature(other._data_signature)
-        , _signer(other._signer)
       {
 
       }
@@ -543,44 +544,31 @@ namespace infinit
         {
           static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
           elle::Bench::BenchScope scope(bench);
-          auto const key = &this->doughnut()->keys().k();
-          bool disabled = getenv("INFINIT_ACB_DISABLE_ASYNC_SIGN");
+          static bool const disabled = getenv("INFINIT_ACB_DISABLE_ASYNC_SIGN");
+          auto to_sign = this->_data_sign();
           if (disabled)
           {
-            auto to_sign = this->_data_sign();
-            this->_data_signature = key->sign(to_sign);
+            this->_data_signature = this->doughnut()->keys().k().sign(to_sign);
           }
           else
           {
-
-            _signer.reset(new Signer);
-            _signer->to_sign = this->_data_sign();
-            auto signer = _signer;
-            _signer->thread.reset(new std::thread([signer, key] {
-                signer->signature = key->sign(signer->to_sign);
-            }));
+            auto to_sign_moved = elle::utility::move_on_copy(to_sign);
+            this->_data_signature =
+              [this, to_sign_moved]
+              {
+                return this->doughnut()->keys().k().sign(*to_sign_moved);
+              };
           }
         }
       }
 
       ACB::~ACB()
-      {
-      }
+      {}
 
       elle::Buffer const&
       ACB::data_signature() const
       {
-        if (_signer)
-        {
-          if (_signer->thread)
-          {
-            _signer->thread->join();
-            _signer->thread.reset();
-          }
-          const_cast<ACB&>(*this)._data_signature = elle::Buffer(_signer->signature);
-          _signer.reset();
-        }
-        return _data_signature;
+        return this->_data_signature.value();
       }
 
       elle::Buffer
@@ -669,7 +657,7 @@ namespace infinit
           return false;
         if (this->_data_version != other_acb->_data_version)
           return false;
-        if (this->_data_signature != other_acb->_data_signature)
+        if (this->_data_signature.value() != other_acb->_data_signature.value())
           return false;
         return this->Super::operator ==(rhs);
       }
@@ -722,19 +710,22 @@ namespace infinit
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl);
         s.serialize("data_version", this->_data_version);
-        bool need_signature = ! s.context().has<ACBDontWaitForSignature>();
+        bool need_signature = !s.context().has<ACBDontWaitForSignature>();
         if (need_signature)
-          this->data_signature();
-        s.serialize("data_signature", this->_data_signature);
-        if (s.in() && !need_signature)
+          s.serialize("data_signature", this->_data_signature.value());
+        else
         {
-          auto const key = &this->doughnut()->keys().k();
-          _signer.reset(new Signer);
-          _signer->to_sign = this->_data_sign();
-          auto signer = _signer;
-          _signer->thread.reset(new std::thread([signer, key] {
-              signer->signature = key->sign(signer->to_sign);
-          }));
+          elle::Buffer signature;
+          s.serialize("data_signature", signature);
+          if (s.in())
+          {
+            auto sign = elle::utility::move_on_copy(this->_data_sign());
+            this->_data_signature =
+              [sign, this]
+              {
+                return this->doughnut()->keys().k().sign(*sign);
+              };
+          }
         }
       }
 

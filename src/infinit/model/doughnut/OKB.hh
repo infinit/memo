@@ -1,9 +1,9 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_OKB_HH
 # define INFINIT_MODEL_DOUGHNUT_OKB_HH
 
-# include <thread>
-
 # include <elle/serialization/fwd.hh>
+
+# include <reactor/BackgroundFuture.hh>
 
 # include <cryptography/rsa/KeyPair.hh>
 
@@ -78,7 +78,7 @@ namespace infinit
         BaseOKB(Doughnut* owner);
         BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE(int, version);
-        ELLE_ATTRIBUTE(elle::Buffer, signature);
+        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
 
@@ -138,16 +138,6 @@ namespace infinit
           blocks::Block const& other_,
           int T::*member,
           int version) const;
-
-        class Signer
-        {
-        public:
-          ~Signer();
-          std::unique_ptr<std::thread> thread;
-          elle::Buffer to_sign;
-          elle::Buffer signature;
-        };
-        mutable std::shared_ptr<Signer> _signer;
         elle::Buffer const& signature() const;
 
       private:

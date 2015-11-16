@@ -4,6 +4,7 @@
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
+#include <elle/utility/Move.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPool.hh>
@@ -125,7 +126,6 @@ namespace infinit
         , _doughnut{other._doughnut}
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
-        , _signer{other._signer}
       {}
 
       /*-------.
@@ -153,7 +153,7 @@ namespace infinit
           return false;
         if (this->_owner_key != other_okb->_owner_key)
           return false;
-        if (this->_signature != other_okb->_signature)
+        if (this->_signature.value() != other_okb->_signature.value())
           return false;
         return this->Super::operator ==(other);
       }
@@ -269,21 +269,18 @@ namespace infinit
         ++this->_version; // FIXME: idempotence in case the write fails ?
         auto sign = this->_sign();
         bool disabled = getenv("INFINIT_OKB_DISABLE_ASYNC_SIGN");
+        ELLE_DUMP("%s: sign %s with %s: %f",
+                  *this, sign, this->_doughnut->keys().k(), this->_signature);
         if (disabled)
-        {
           this->_signature = this->_doughnut->keys().k().sign(sign);
-          ELLE_DUMP("%s: sign %s with %s: %f",
-                    *this, sign, this->_doughnut->keys().k(), this->_signature);
-        }
         else
         {
-          _signer.reset(new Signer);
-          _signer->to_sign = std::move(sign);
-          auto signer = _signer;
-          auto key = &this->_doughnut->keys().k();
-          _signer->thread.reset(new std::thread([signer, key] {
-              signer->signature = key->sign(signer->to_sign);
-          }));
+          auto sign_moved = elle::utility::move_on_copy(sign);
+          this->_signature =
+            [sign_moved, this]
+            {
+              return this->_doughnut->keys().k().sign(*sign_moved);
+            };
         }
       }
 
@@ -291,17 +288,7 @@ namespace infinit
       elle::Buffer const&
       BaseOKB<Block>::signature() const
       {
-        if (_signer)
-        {
-          if (_signer->thread)
-          {
-            _signer->thread->join();
-            _signer->thread.reset();
-          }
-          const_cast<BaseOKB<Block>*>(this)->_signature = elle::Buffer(_signer->signature);
-          _signer.reset();
-        }
-        return _signature;
+        return this->_signature.value();
       }
 
       template <typename Block>
@@ -420,24 +407,13 @@ namespace infinit
         s.serialize("key", this->_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
-        s.serialize("signature", this->_signature);
+        s.serialize("signature", this->_signature.value());
         if (s.in() && !need_signature)
         {
-          auto const key = &this->doughnut()->keys().k();
-          _signer.reset(new Signer);
-          _signer->to_sign = this->_sign();
-          auto signer = _signer;
-          _signer->thread.reset(new std::thread([signer, key] {
-              signer->signature = key->sign(signer->to_sign);
-          }));
+          auto sign = elle::utility::move_on_copy(this->_sign());
+          this->_signature = [sign, this]
+            { return this->_doughnut->keys().k().sign(*sign); };
         }
-      }
-
-      template <typename Block>
-      BaseOKB<Block>::Signer::~Signer()
-      {
-        if (thread)
-          thread->detach();
       }
 
       template

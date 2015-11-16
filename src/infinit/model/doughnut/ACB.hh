@@ -58,10 +58,9 @@ namespace infinit
         ELLE_ATTRIBUTE(bool, acl_changed);
         ELLE_ATTRIBUTE(boost::optional<std::vector<ACLEntry>>, acl_entries);
         ELLE_ATTRIBUTE_R(int, data_version);
-        ELLE_ATTRIBUTE(elle::Buffer, data_signature);
+        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
         ELLE_ATTRIBUTE(Address, prev_acl);
       protected:
-        mutable std::shared_ptr<Signer> _signer;
         elle::Buffer const& data_signature() const;
 
       /*-------.
