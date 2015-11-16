@@ -220,11 +220,11 @@ class Bottle(bottle.Bottle):
     try:
       if not verifier.verify(local_hash, remote_signature_crypted):
         raise Response(403, 'Authentication error')
-    # XXX: Sometimes, verify fails if the key is different raising:
-    # > 'Plaintext to large'
-    # This happens ONLY if the keys are differents so we can consider it as a
+    # XXX: Sometimes, verify fails if the keys used differ, raising:
+    # > ValueError('Plaintext to large')
+    # This happens ONLY if the keys are different so we can consider it as an
     # AuthenticationError.
-    # To reproduce, remove catch block and run 'tests/auth'.
+    # To reproduce, remove this try block and run 'tests/auth'.
     except ValueError as e:
       if e.args[0] == 'Plaintext too large':
         raise Response(403, 'Authentication error')
