@@ -312,7 +312,7 @@ namespace infinit
         State _state;
         reactor::network::RDVSocket _gossip;
         reactor::Mutex _udp_send_mutex;
-        std::unique_ptr<reactor::Thread>
+        reactor::Thread::unique_ptr
           _emitter_thread, _listener_thread, _pinger_thread,
           _rereplicator_thread, _rdv_connect_thread, _rdv_connect_thread_local,
           _rdv_connect_gossip_thread;

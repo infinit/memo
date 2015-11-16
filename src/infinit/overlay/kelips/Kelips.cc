@@ -724,16 +724,19 @@ namespace infinit
         _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.io:7890");
         _rdv_id = elle::sprintf("%x", this->_self);
         if (!_rdv_host.empty())
-          _rdv_connect_thread = elle::make_unique<reactor::Thread>("rdv_connect",
-            [this] {
-              // The remotes_server does not accept incoming connections,
-              // it is used to connect Remotes
-              retry_forever(10_sec, 120_sec, "Remote RDV connect",
-                [&] {
-                  this->_remotes_server.rdv_connect(
-                    this->_rdv_id + "_", this->_rdv_host, 120_sec);
-                });
-          });
+          this->_rdv_connect_thread.reset(
+            new reactor::Thread(
+              "rdv_connect",
+              [this]
+              {
+                // The remotes_server does not accept incoming connections,
+                // it is used to connect Remotes
+                retry_forever(10_sec, 120_sec, "Remote RDV connect",
+                              [&] {
+                                this->_remotes_server.rdv_connect(
+                                  this->_rdv_id + "_", this->_rdv_host, 120_sec);
+                              });
+              }));
         if (_config.bootstrap_nodes.empty())
         {
           ELLE_LOG("Filesystem running in bootstrap read/write mode.");
@@ -793,17 +796,18 @@ namespace infinit
                        *this, itf.second.ipv4_address, _port);
             }
           if (!this->_rdv_host.empty())
-            _rdv_connect_thread_local = elle::make_unique<reactor::Thread>(
-              "rdv_connect",
-              [this,l] {
-                retry_forever(10_sec, 120_sec, "RDV connect",
-                              [&] {
-                                l->utp_server()->rdv_connect(
-                                  this->_rdv_id, this->_rdv_host, 120_sec);
-                              });
-              });
-          else
-            l->utp_server()->set_local_id(this->_rdv_id);
+            this->_rdv_connect_thread_local.reset(
+              new reactor::Thread(
+                "rdv_connect",
+                [this,l] {
+                  retry_forever(10_sec, 120_sec, "RDV connect",
+                                [&] {
+                                  l->utp_server()->rdv_connect(
+                                    this->_rdv_id, this->_rdv_host, 120_sec);
+                                });
+                }));
+            else
+              l->utp_server()->set_local_id(this->_rdv_id);
           reload_state(*l);
           this->engage();
         }
@@ -823,19 +827,13 @@ namespace infinit
       Node::~Node()
       {
         ELLE_TRACE_SCOPE("%s: destroy", *this);
-        if (_emitter_thread)
-          _emitter_thread->terminate_now();
-        if (_listener_thread)
-          _listener_thread->terminate_now();
-        if (_pinger_thread)
-          _pinger_thread->terminate_now();
-        if (_rdv_connect_thread)
-          _rdv_connect_thread->terminate_now();
-        if (_rdv_connect_thread_local)
-          _rdv_connect_thread_local->terminate_now();
-        if (_rdv_connect_gossip_thread)
-          _rdv_connect_gossip_thread->terminate_now();
-        // Terminate rdv threadsc
+        _emitter_thread.reset();
+        _listener_thread.reset();
+        _pinger_thread.reset();
+        _rdv_connect_thread.reset();
+        _rdv_connect_thread_local.reset();
+        _rdv_connect_gossip_thread.reset();
+        // Terminate rdv threads
         this->_state.contacts.clear();
       }
 
@@ -961,22 +959,24 @@ namespace infinit
         {
           _gossip.bind(GossipEndpoint({}, _port));
           if (!_rdv_host.empty())
-          _rdv_connect_gossip_thread = elle::make_unique<reactor::Thread>(
-            "rdv gossip connect", [this] {
-              std::string id = elle::sprintf("%x", _self);
-              std::string host = _rdv_host;
-              int port = 7890;
-              auto p = host.find_first_of(':');
-              if ( p!= host.npos)
-              {
-                port = std::stoi(host.substr(p+1));
-                host = host.substr(0, p);
-              }
-              retry_forever(10_sec, 120_sec, "RDV connect",
-                [&] {
-                  _gossip.rdv_connect(id, host, port, 120_sec);
+            _rdv_connect_gossip_thread.reset(
+              new reactor::Thread(
+                "rdv gossip connect", [this]
+                {
+                  std::string id = elle::sprintf("%x", _self);
+                  std::string host = _rdv_host;
+                  int port = 7890;
+                  auto p = host.find_first_of(':');
+                  if ( p!= host.npos)
+                  {
+                    port = std::stoi(host.substr(p+1));
+                    host = host.substr(0, p);
+                  }
+                  retry_forever(10_sec, 120_sec, "RDV connect",
+                                [&] {
+                                  _gossip.rdv_connect(id, host, port, 120_sec);
                 });
-            });
+                }));
           else
           {
             std::string id = elle::sprintf("%x", _self);
@@ -988,8 +988,9 @@ namespace infinit
 
         if (!this->local())
         {
-          _listener_thread = elle::make_unique<reactor::Thread>("listener",
-            std::bind(&Node::gossipListener, this));
+          _listener_thread.reset(new reactor::Thread(
+                                   "listener",
+                                   std::bind(&Node::gossipListener, this)));
           ELLE_LOG("%s: listening on port %s",
             *this, _gossip.local_endpoint().port());
         }
@@ -1003,10 +1004,12 @@ namespace infinit
         }
         if (!_observer)
         {
-          _pinger_thread = elle::make_unique<reactor::Thread>("pinger",
-            std::bind(&Node::pinger, this));
-          _emitter_thread = elle::make_unique<reactor::Thread>("emitter",
-            std::bind(&Node::gossipEmitter, this));
+          this->_pinger_thread.reset(
+            new reactor::Thread(
+              "pinger", std::bind(&Node::pinger, this)));
+          this->_emitter_thread.reset(
+            new reactor::Thread(
+              "emitter", std::bind(&Node::gossipEmitter, this)));
         }
 
         // Send a bootstrap request to bootstrap nodes and all
