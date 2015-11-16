@@ -27,6 +27,8 @@
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
+#include <reactor/network/upnp.hh>
+
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -1732,6 +1734,22 @@ private:
     , _self(self)
   {
     Endpoints endpoints;
+    ELLE_TRACE("Establishing UPNP mapping");
+    try
+    {
+      _upnp = reactor::network::UPNP::make();
+      _upnp->initialize();
+      _port_map_udp = _upnp->setup_redirect(reactor::network::Protocol::udt, port);
+      _port_map_tcp = _upnp->setup_redirect(reactor::network::Protocol::tcp, port);
+      ELLE_TRACE("got mappings: %s, %s", _port_map_udp, _port_map_tcp);
+      endpoints.addresses.push_back(_port_map_udp.external_host);
+    }
+    catch (std::exception const& e)
+    {
+      ELLE_TRACE("UPNP eror: %s", e.what());
+    }
+    ELLE_TRACE("Pushing endpoints");
+
     for (auto const& itf: elle::network::Interface::get_map(
            elle::network::Interface::Filter::only_up |
            elle::network::Interface::Filter::no_loopback |
@@ -1750,6 +1768,9 @@ private:
   ELLE_ATTRIBUTE(std::string, url);
   ELLE_ATTRIBUTE(infinit::Network const&, network);
   ELLE_ATTRIBUTE(infinit::User, self);
+  ELLE_ATTRIBUTE(std::shared_ptr<reactor::network::UPNP>, upnp);
+  ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_tcp);
+  ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_udp);
 };
 
 void
