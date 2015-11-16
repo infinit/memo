@@ -67,5 +67,29 @@ namespace infinit
     {
       Node::chown(uid, gid);
     }
+
+    std::string
+    Symlink::getxattr(std::string const& key)
+    {
+      return Node::getxattr(key);
+    }
+    std::vector<std::string>
+    Symlink::listxattr()
+    {
+      std::vector<std::string> res;
+      for (auto const& a: _parent->_files.at(_name).xattrs)
+        res.push_back(a.first);
+      return res;
+    }
+    void
+    Symlink::setxattr(std::string const& name, std::string const& value, int flags)
+    {
+      Node::setxattr(name, value, flags);
+    }
+    void
+    Symlink::removexattr(std::string const& name)
+    {
+      Node::removexattr(name);
+    }
   }
 }

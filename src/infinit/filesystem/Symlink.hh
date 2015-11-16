@@ -36,6 +36,10 @@ namespace infinit
         void utimens(const struct timespec tv[2]) override THROW_NOSYS;
         void truncate(off_t new_size) override THROW_NOSYS;
         std::shared_ptr<Path> child(std::string const& name) override THROW_NOTDIR;
+        std::string getxattr(std::string const& key) override;
+        std::vector<std::string> listxattr() override;
+        void setxattr(std::string const& name, std::string const& value, int flags) override;
+        void removexattr(std::string const& name) override;
         bool allow_cache() override { return false;}
         virtual
           void
