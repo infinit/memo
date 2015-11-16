@@ -11,6 +11,10 @@ infinit::Infinit ifnt;
 #define COMMAND(name) static void name(variables_map const& args)
 
 static
+void
+fetch_(std::string const& drive_name);
+
+static
 std::string
 drive_name(variables_map const& args, infinit::User const& owner)
 {
@@ -31,7 +35,7 @@ COMMAND(create)
     volume = ifnt.volume_get(name);
   }
 
-  infinit::Drive drive{name, volume.name, network.name, desc ? *desc : ""};
+  infinit::Drive drive{name, volume.name, network.name, desc ? *desc : "", {}};
   ifnt.drive_save(drive);
   report_action("created", "drive", drive.name, std::string("locally"));
 
@@ -51,14 +55,14 @@ COMMAND(invite)
   auto home = flag(args, "home");
   // FIXME: for now the permissions option is a flag yet should be
   // DEFAULT,R,W,X,RW,RX,WX,RWX (and/or octal notation ?)
-  std::string permissions{""};
+  std::string permissions{"rw"};
   {
     auto o = optional(args, "permissions");
     if (o)
       permissions = *o;
   }
 
-  infinit::Invitation invitation{permissions,
+  infinit::DriveUsers invitation{permissions,
                                  "pending",
                                  home};
 
@@ -74,7 +78,10 @@ COMMAND(invite)
       not_found(user, "User");
     else if (e.what() == std::string("drive/not_found"))
       not_found(drive_name_, "Drive");
+    return;
   }
+  if (flag(args, "fetch"))
+    fetch_(drive_name_);
 }
 
 COMMAND(push)
@@ -111,6 +118,22 @@ COMMAND(list)
     std::cout << drive.name << std::endl;
 }
 
+static
+void
+fetch_(std::string const& drive_name)
+{
+  auto remote_drive = ifnt.drive_fetch(drive_name);
+  ifnt.drive_delete(drive_name);
+  ifnt.drive_save(remote_drive);
+}
+
+COMMAND(fetch)
+{
+  auto self = self_user(ifnt, args);
+  auto drive_name = ifnt.qualified_name(mandatory(args, "name"), self);
+  fetch_(drive_name);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -140,6 +163,7 @@ main(int argc, char** argv)
         { "user,u", value<std::string>(), "user to invite to the drive" },
         { "permissions,p", value<std::string>(), "set default user permissions to XXX" },
         { "home,h", bool_switch(), "creates a home directory for the invited user" },
+        { "fetch,f", bool_switch(), "update local drive descriptor" },
         option_owner,
       },
     },
@@ -152,6 +176,16 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "drive name to push on the hub" },
         option_owner,
       }
+    },
+    {
+      "fetch",
+      "Fetch a drive",
+      &fetch,
+      "",
+      {
+        { "name,n", value<std::string>(), "drive to fetch" },
+        option_owner,
+      },
     },
     {
       "list",

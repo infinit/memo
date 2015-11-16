@@ -568,8 +568,18 @@ namespace infinit
     std::string network;
   };
 
-  struct Invitation
+  struct DriveUsers
   {
+    DriveUsers() = default;
+
+    DriveUsers(std::string permissions_,
+               std::string status_,
+               bool create_home_)
+      : permissions{permissions_}
+      , status{status_}
+      , create_home{create_home_}
+    {}
+
     void
     serialize(elle::serialization::Serializer& s)
     {
@@ -578,9 +588,7 @@ namespace infinit
       s.serialize("create_home", this->create_home);
     }
 
-    // Values: "default", "r", "w", "x" and any combination of the 3.
-    std::string permissions;
-    // Values: "pending", "accepted" or "rejected".
+    std::string permissions = "rw";
     std::string status;
     bool create_home;
   };
@@ -594,12 +602,14 @@ namespace infinit
       s.serialize("volume", this->volume);
       s.serialize("network", this->network);
       s.serialize("description", this->desc);
+      s.serialize("users", this->users);
     }
 
     std::string name;
     std::string volume;
     std::string network;
     std::string desc;
+    std::unordered_map<std::string, DriveUsers> users;
   };
 
   class Infinit
@@ -725,7 +735,7 @@ namespace infinit
                         network.name, "network", false);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
-     }
+    }
 
     void
     network_save(Network const& network, bool overwrite = false)
@@ -1134,6 +1144,15 @@ namespace infinit
       this->_open_read(f, this->_drive_path(name), name, "drive");
       elle::serialization::json::SerializerIn s(f, false);
       return s.deserialize<Drive>();
+    }
+
+    bool
+    drive_delete(std::string const& name)
+    {
+      boost::filesystem::path drive_path = this->_drive_path(name);
+      if (boost::filesystem::exists(drive_path))
+        return boost::filesystem::remove(drive_path);
+      return false;
     }
 
     Drive
