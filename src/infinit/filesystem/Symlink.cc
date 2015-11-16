@@ -51,9 +51,21 @@ namespace infinit
       }
 
     void
-      Symlink::print(std::ostream& stream) const
-      {
-        elle::fprintf(stream, "Symlink(\"%s\")", this->_name);
-      }
+    Symlink::print(std::ostream& stream) const
+    {
+      elle::fprintf(stream, "Symlink(\"%s\")", this->_name);
+    }
+
+    void
+    Symlink::chmod(mode_t mode)
+    {
+      Node::chmod(mode);
+    }
+
+    void
+    Symlink::chown(int uid, int gid)
+    {
+      Node::chown(uid, gid);
+    }
   }
 }

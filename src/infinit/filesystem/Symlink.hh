@@ -30,8 +30,8 @@ namespace infinit
         boost::filesystem::path readlink() override;
         void symlink(boost::filesystem::path const& where) override THROW_EXIST;
         void link(boost::filesystem::path const& where) override; //copied symlink
-        void chmod(mode_t mode) override THROW_NOSYS; // target
-        void chown(int uid, int gid) override THROW_NOSYS; // target
+        void chmod(mode_t mode) override;
+        void chown(int uid, int gid) override;
         void statfs(struct statvfs *) override THROW_NOSYS;
         void utimens(const struct timespec tv[2]) override THROW_NOSYS;
         void truncate(off_t new_size) override THROW_NOSYS;
