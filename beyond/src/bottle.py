@@ -668,7 +668,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       user.save()
       return info
     except User.NotFound:
-      raise self.__user_not_found(username)
+      raise self._Bottle__user_not_found(username)
   oauth.__name__ = 'oauth_%s' % name
   setattr(Bottle, oauth.__name__, oauth)
   def user_credentials_get(self, username, name = name):
@@ -681,7 +681,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
           list(getattr(user, '%s_accounts' % name).values()),
       }
     except User.NotFound:
-      raise self.__user_not_found(username)
+      raise self._Bottle__user_not_found(username)
   user_credentials_get.__name__ = 'user_%s_credentials_get' % name
   setattr(Bottle, user_credentials_get.__name__, user_credentials_get)
 
@@ -716,7 +716,7 @@ def user_credentials_google_refresh(self, username):
           user.save()
           return token
   except User.NotFound:
-    raise self.__user_not_found(username)
+    raise self._Bottle__user_not_found(username)
 
 setattr(Bottle,
         user_credentials_google_refresh.__name__,
