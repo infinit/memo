@@ -299,7 +299,7 @@ beyond_login(std::string const& name,
   r.finalize();
   if (r.status() != reactor::http::StatusCode::OK)
   {
-    auto error = elle::serialization::json::deserialize<BeyondError>(r);
+    auto error = elle::serialization::json::deserialize<BeyondError>(r, false);
     throw elle::Error(elle::sprintf("%s", error));
   }
   else
