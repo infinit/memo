@@ -71,9 +71,7 @@ struct BeyondError
   BeyondError(elle::serialization::SerializerIn& s)
     : error(s.deserialize<std::string>("error"))
     , reason(s.deserialize<std::string>("reason"))
-  {
-    ELLE_LOG("error: %s", *this);
-  }
+  {}
 
   void
   print(std::ostream& out) const override
