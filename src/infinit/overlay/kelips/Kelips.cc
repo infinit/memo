@@ -822,7 +822,7 @@ namespace infinit
 
       Node::~Node()
       {
-        ELLE_TRACE("~Kelips");
+        ELLE_TRACE_SCOPE("%s: destroy", *this);
         if (_emitter_thread)
           _emitter_thread->terminate_now();
         if (_listener_thread)
@@ -835,6 +835,8 @@ namespace infinit
           _rdv_connect_thread_local->terminate_now();
         if (_rdv_connect_gossip_thread)
           _rdv_connect_gossip_thread->terminate_now();
+        // Terminate rdv threadsc
+        this->_state.contacts.clear();
       }
 
       SerState Node::get_serstate(PeerLocation pl)
@@ -1178,8 +1180,10 @@ namespace infinit
             if (!c->contacter)
             {
               ELLE_DEBUG("Running contacter on %s", address);
-              c->contacter = new reactor::Thread("contacter",
-                [this, address] { this->contact(address);}, true);
+              c->contacter.reset(
+                new reactor::Thread(
+                  "contacter",
+                  [this, address] { this->contact(address);}));
             }
             else
               ELLE_DEBUG("Contacter already running on %s", address);

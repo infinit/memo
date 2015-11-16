@@ -50,7 +50,7 @@ namespace infinit
         Time last_gossip;
         int gossip_count;
         // thread performing a contact() call on this node
-        reactor::Thread* contacter;
+        reactor::Thread::unique_ptr contacter;
         std::vector<elle::Buffer> pending;
       };
 
