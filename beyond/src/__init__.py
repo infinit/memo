@@ -286,7 +286,7 @@ class Entity(type):
                         if getattr(self, f) is None and d is None),
                        None)
         if missing is not None:
-          raise MissingField(f)
+          raise exceptions.MissingField(type(self).__name__.lower(), missing)
         getattr(self.__beyond._Beyond__datastore, insert)(self)
       content['create'] = create
     # Save
