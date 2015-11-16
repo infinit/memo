@@ -273,14 +273,12 @@ struct LoginCredentials
                    std::string const& password)
     : name(name)
     , password_hash(password)
-  {
-  }
+  {}
 
   LoginCredentials(elle::serialization::SerializerIn& s)
     : name(s.deserialize<std::string>("name"))
     , password_hash(s.deserialize<std::string>("password_hash"))
-  {
-  }
+  {}
 
   std::string name;
   std::string password_hash;
@@ -295,31 +293,17 @@ beyond_login(std::string const& name,
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", "application/json");
-  std::stringstream payload;
-  elle::serialization::json::serialize(o, payload, false);
   reactor::http::Request r(elle::sprintf("%s/users/%s/login", beyond(), name),
                            reactor::http::Method::POST, std::move(c));
-  r << payload.str();
+  elle::serialization::json::serialize(o, r, false);
   r.finalize();
-  reactor::wait(r);
-  if (r.status() == reactor::http::StatusCode::OK)
+  if (r.status() != reactor::http::StatusCode::OK)
   {
+    auto error = elle::serialization::json::deserialize<BeyondError>(r);
+    throw elle::Error(elle::sprintf("%s", error));
   }
   else
-  {
-    elle::serialization::json::SerializerIn s(r, false);
-    auto error = s.deserialize<BeyondError>();
-    if (r.status() == reactor::http::StatusCode::Not_Found)
-    {
-      throw elle::Error(elle::sprintf("%s", error));
-    }
-    else if (r.status() == reactor::http::StatusCode::Forbidden)
-    {
-      throw elle::Error(elle::sprintf("%s", error));
-    }
-    throw;
-  }
-  return elle::json::read(r);
+    return elle::json::read(r);
 }
 
 static
