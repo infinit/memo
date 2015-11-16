@@ -32,6 +32,9 @@ def configure(
     codesign = False,
 ):
 
+  rule_tests = drake.Rule('tests')
+  rule_check = drake.Rule('check')
+
   class PatchAndInstall(drake.Install):
     def execute(self):
       if not super().execute():
@@ -377,12 +380,46 @@ def configure(
   # )
   # rule_install << drake.install(man, prefix)
 
+  ## ------ ##
+  ## Beyond ##
+  ## ------ ##
+
+  bottle = drake.node('bottle/bottle.py')
+  sendwithus = drake.python.Package(
+    'sendwithus',
+    'sendwithus_python',
+    drake.nodes(
+      'sendwithus_python/sendwithus/__init__.py',
+      'sendwithus_python/sendwithus/encoder.py',
+      'sendwithus_python/sendwithus/version.py',
+    ),
+  )
+
+  if elle.python3 is not None:
+    beyond = drake.include(
+      'beyond',
+      python = elle.python3,
+      cryptography_python_module = elle.cryptography.python_module,
+      prefix = prefix,
+      git = git,
+      bottle = bottle,
+      PatchAndInstall = PatchAndInstall,
+    )
+    rule_check << beyond.rule_check
+
+  website = drake.include(
+    'website',
+    python = elle.python3,
+    prefix = prefix,
+    git = git,
+    bottle = bottle,
+    sendwithus = sendwithus,
+    PatchAndInstall = PatchAndInstall,
+  )
+
   ## ----- ##
   ## Tests ##
   ## ----- ##
-
-  rule_tests = drake.Rule('tests')
-  rule_check = drake.Rule('check')
 
   cxx_config_tests = drake.cxx.Config(cxx_config)
   cxx_config_tests += elle.das.config
@@ -437,6 +474,7 @@ def configure(
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
+    test.dependencies_add(beyond.package.nodes)
     runner = drake.Runner(
       exe = test,
       env = {
@@ -444,40 +482,3 @@ def configure(
           drake.path_build('beyond/lib/python%s' % elle.python3.version)
       })
     rule_check << runner.status
-
-  ## --- ##
-  ## Web ##
-  ## --- ##
-
-  bottle = drake.node('bottle/bottle.py')
-  sendwithus = drake.python.Package(
-    'sendwithus',
-    'sendwithus_python',
-    drake.nodes(
-      'sendwithus_python/sendwithus/__init__.py',
-      'sendwithus_python/sendwithus/encoder.py',
-      'sendwithus_python/sendwithus/version.py',
-    ),
-  )
-
-  if elle.python3 is not None:
-    beyond = drake.include(
-      'beyond',
-      python = elle.python3,
-      cryptography_python_module = elle.cryptography.python_module,
-      prefix = prefix,
-      git = git,
-      bottle = bottle,
-      PatchAndInstall = PatchAndInstall,
-    )
-    rule_check << beyond.rule_check
-
-  website = drake.include(
-    'website',
-    python = elle.python3,
-    prefix = prefix,
-    git = git,
-    bottle = bottle,
-    sendwithus = sendwithus,
-    PatchAndInstall = PatchAndInstall,
-  )

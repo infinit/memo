@@ -9,6 +9,7 @@ build = None
 rule_check = None
 install = None
 tests = None
+package = None
 
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -26,7 +27,7 @@ def configure(
     google_app_secret = 'ufwn6w0hAT2MDuwOzfWxh4Sx',
 ):
 
-  global build, rule_check, install, tests
+  global build, install, package, rule_check, tests
 
   class PythonCopy(drake.Copy):
 
@@ -128,6 +129,7 @@ def configure(
     yield drake.touch(where / python_prefix / 'infinit/__init__.py')
   build = drake.Rule('build')
   built = list(install_nodes(where = '.', how = copy_python))
+  package = drake.python.Package('beyond', python_prefix, built)
   build << built
 
   install = drake.Rule('install')
@@ -139,7 +141,7 @@ def configure(
   ## Debian ##
   ## ------ ##
 
-  package = install_nodes('debian/opt/infinit/beyond',
+  debian_nodes = install_nodes('debian/opt/infinit/beyond',
                           how = drake.copy)
   git = drake.git.Git()
   with drake.templating.Context(content = {
@@ -150,8 +152,8 @@ def configure(
       'python_version_minor': python.version.minor,
   }):
     drake.node('control.tmpl')
-  package = chain(
-    package,
+  debian_nodes = chain(
+    debian_nodes,
     drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
     drake.copy(
       drake.nodes('etc/nginx/sites-available/beyond',
@@ -166,7 +168,7 @@ def configure(
   debian = drake.Rule('debian')
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),
-    package, 'debian').package
+    debian_nodes, 'debian').package
 
   ## ----- ##
   ## Check ##
