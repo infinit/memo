@@ -175,6 +175,7 @@ def configure(
   rule_check = drake.Rule('check')
   test_utils = drake.Node('tests/utils.py')
   for test_name in [
+      'auth',
       'full-flow',
       'oauth-dropbox',
       'users/put',
@@ -190,6 +191,7 @@ def configure(
   ]:
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)
+    test.dependencies_add([test_utils])
     path = ':'.join(
       map(lambda x: str(x),
           [drake.path_build(python_prefix), test_utils.path().dirname()]))

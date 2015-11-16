@@ -95,6 +95,7 @@ class Beyond:
                                 allow_redirects = False,
                                 **kwargs)
     if throws:
+      assert response.status_code != 500
       if int(response.status_code / 100) != 2:
         response.raise_for_status()
     return response
@@ -134,7 +135,8 @@ def password_hash(password):
   salt = 'z^$P;:`a~F'
   from hashlib import pbkdf2_hmac
   import binascii
-  dk = pbkdf2_hmac('sha256', bytes(password, encoding = 'ascii'), bytes(salt, encoding = 'ascii'), 100000)
+  dk = pbkdf2_hmac('sha256', bytes(password, encoding = 'ascii'),
+                   bytes(salt, encoding = 'ascii'), 100000)
   return str(binascii.hexlify(dk), encoding = 'ascii')
 
 class User(dict):
@@ -285,7 +287,6 @@ mefyl_priv = 'MIIEpAIBAAKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhg
 
 mefyl = {
   'name': 'mefyl',
-  'email': 'mefyl@infinit.io',
   'public_key': {'rsa': 'MIIBCgKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQAB'},
 }
 
@@ -293,7 +294,6 @@ mefyl2_priv = 'MIIEpAIBAAKCAQEAzonW3m0tPEkMfVfIRHIh7YEIMjSgewwTHcLlL47S/tXjkZ4fF
 
 mefyl2 = {
   'name': 'mefyl',
-  'email': 'mefyl@infinit.io',
   'public_key':
   {'rsa': 'MIIBCgKCAQEAzonW3m0tPEkMfVfIRHIh7YEIMjSgewwTHcLlL47S/tXjkZ4fFXGIZPnvuqnva+NtBLhSv9roz/lxpYyqNikjdCPUjVZem14Xkj5imEi3ACCX03cdFKmfGmGFCi7gF1zZYtH2S3yql823yXudFDjp1iVqxky5gnkFyEYhImsanrpuhs2EIHfkV5mNFToB6U4+VkJgbeugURQXeTmlJ8BPKl+rPWABigPd+U1KCB/UO0EQO7eDdLqC2WBGQp2afTaX/j5KrMivt6sfI0eQft8WlNsUtbcunpRP+ak+tRoTL81edHMNmDVWU95vQTGw+iSeIE5o8ao/F7BT6IWC7Sw3XQIDAQAB'},
 }

@@ -26,8 +26,9 @@ with Beyond() as beyond:
       beyond.put('users/%s' % user['name'], json = user)
       res = beyond.get('users/%s' % user['name']).json()
       assert res["name"] == user["name"]
-      assert res["email"] == user["email"]
       assert res["public_key"] == user["public_key"]
+      assert "email" not in res
+
 
   if __name__ == '__main__':
     unittest.main()

@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+user = User()
+
+import requests
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_authentication(self):
+      for i in range(0, 10):
+        u = User()
+        u.put(beyond)
+        beyond.delete('users/%s' % u['name'],
+                      auth = u.private_key)
+
+    def test_bad_authentication(self):
+      for i in range(0, 10):
+        u = User()
+        u.put(beyond)
+        evil = User()
+        evil.put(beyond)
+        try:
+          beyond.delete('users/%s' % u['name'],
+                        auth = evil.private_key)
+          assert False
+        except requests.exceptions.HTTPError:
+          pass
+
+  if __name__ == '__main__':
+    unittest.main()

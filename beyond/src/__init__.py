@@ -105,12 +105,12 @@ class User:
   fields = {
     'mandatory': [
       ('name', validation.Name('user', 'name')),
-      ('email', validation.Email('user')),
       ('public_key', None),
     ],
     'optional': [
       ('dropbox_accounts', None),
       ('google_accounts', None),
+      ('email', validation.Email('user')),
       ('password_hash', None),
       ('private_key', None),
     ]
@@ -147,13 +147,15 @@ class User:
   def from_json(self, beyond, json):
     for (key, validator) in User.fields['mandatory']:
       if key not in json: raise exceptions.MissingField('user', key)
-      validator and validator(json[key])
+    for (key, validator) in User.fields['optional']:
+      if key in json and validator is not None:
+        validator(json[key])
     return User(beyond,
                 name = json['name'],
-                email = json['email'],
+                public_key = json['public_key'],
+                email = json.get('email', None),
                 password_hash = json.get('password_hash', None),
                 private_key = json.get('private_key', None),
-                public_key = json['public_key'],
                 dropbox_accounts = json.get('dropbox_accounts', []),
                 google_accounts = json.get('google_accounts', []),
     )
@@ -161,10 +163,11 @@ class User:
   def json(self, private = False):
     res = {
       'name': self.name,
-      'email': self.email,
       'public_key': self.public_key,
     }
     if private:
+      if self.email is not None:
+        res['email'] = self.email
       if self.dropbox_accounts is not None:
         res['dropbox_accounts'] = self.dropbox_accounts
       if self.google_accounts is not None:
