@@ -2393,13 +2393,13 @@ namespace infinit
 
       void
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
-        bool query_node,
-        std::function <void(PeerLocation)> yield)
+                      bool query_node,
+                      std::function <void(PeerLocation)> yield)
       {
+        ELLE_TRACE_SCOPE("%s: get %s", *this, file);
         if (attempts == -1)
           attempts = _config.query_get_retries;
         auto f = [this,file,n,local_override, attempts, yield, query_node]() {
-          ELLE_DEBUG("Driver starting");
           std::set<Address> result_set;
           packet::GetFileRequest r;
           r.sender = _self;
@@ -2424,7 +2424,7 @@ namespace infinit
               });
             if (it_us != its.second && (n == 1 || local_override))
             {
-              ELLE_DEBUG("Satisfied get lookup locally.");
+              ELLE_DEBUG("get satifsfied locally");
               yield(PeerLocation(Address::null,
                 {RpcEndpoint(boost::asio::ip::address::from_string("127.0.0.1"),
                             this->_port)}));
@@ -2452,7 +2452,7 @@ namespace infinit
               return;
             }
           }
-          ELLE_TRACE("%s: request did not complete locally(%s)", *this, result_set.size());
+          ELLE_TRACE("git did not complete locally (%s)", result_set.size());
           for (int i = 0; i < attempts; ++i)
           {
             packet::GetFileRequest req(r);
@@ -2469,7 +2469,7 @@ namespace infinit
               it = random_from(_state.contacts[_group], _gen);
             if (it == _state.contacts[_group].end())
             {
-              ELLE_TRACE("No contact to forward GET to");
+              ELLE_TRACE("no contact to forward GET to");
               continue;
             }
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
@@ -2481,8 +2481,8 @@ namespace infinit
                         *this, file, i);
             else
             {
-              ELLE_DEBUG("%s: request %s(%s) gave %s results", *this, i, req.request_id,
-                r->result.size());
+              ELLE_DEBUG("request %s (%s) gave %s results",
+                         i, req.request_id, r->result.size());
               for (auto const& e: r->result)
               {
                 if (fg == _group && !query_node)
