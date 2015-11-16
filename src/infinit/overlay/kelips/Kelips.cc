@@ -951,7 +951,8 @@ namespace infinit
       Node::engage()
       {
         ELLE_TRACE("bootstraping");
-        bootstrap(true);
+        if (!_observer)
+          bootstrap(true);
         ELLE_TRACE("joining");
         _gossip.socket()->close();
         if (!this->local())
