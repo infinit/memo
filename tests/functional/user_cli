@@ -105,7 +105,27 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
              input = 'password'.encode('utf-8'),
              input_as_it_is = True)
 
-# Password missmatch
+# Missing and invalid email.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+  try:
+    alice.run(['infinit-user', '--signup', '--name', 'alice'])
+    assert False
+  except Exception as e:
+    assert '(use --email)' in  e.args[0]
+  try:
+    alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'foo@'])
+    assert False
+  except Exception as e:
+    assert 'email address is invalid' in  e.args[0]
+  # Create is not atomic, so 'alice' will be created after that.
+  try:
+    alice.run(['infinit-user', '--create', '--name', 'alice', '--push'])
+    assert False
+  except Exception as e:
+    assert '(use --email)' in  e.args[0]
+
+# Password missmatch.
 with Beyond() as beyond, TemporaryDirectory() as tmp,  \
      Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
   alice.run(['infinit-user', '--signup', '--full',

@@ -66,12 +66,14 @@ struct BeyondError
     : error(error)
     , reason(reason)
   {
+    ELLE_TRACE("error: %s", *this);
   }
 
   BeyondError(elle::serialization::SerializerIn& s)
-    : error(s.deserialize<std::string>("error"))
-    , reason(s.deserialize<std::string>("reason"))
-  {}
+    : BeyondError(s.deserialize<std::string>("error"),
+                  s.deserialize<std::string>("reason"))
+  {
+  }
 
   void
   print(std::ostream& out) const override
@@ -1572,13 +1574,17 @@ beyond_push(std::string const& where,
       try
       {
         auto s = elle::serialization::json::SerializerIn{r, false};
-        return elle::sprintf("%s", s.deserialize<BeyondError>());
+        return s.deserialize<BeyondError>();
       }
       catch (elle::serialization::Error const&)
       {
       }
-      return std::string();
+      return BeyondError("unknown", "Unknown error");
     }();
+    if (error.error == "user/missing_field/email")
+      throw elle::Error{"email unspecified (use --email)"};
+    if (error.error == "user/invalid_format/email")
+      throw elle::Error{"email address is invalid"};
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s pushing %s:\n%s",
                     r.status(), type, error));
