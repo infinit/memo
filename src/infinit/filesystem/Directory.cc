@@ -394,37 +394,30 @@ namespace infinit
     void
       Directory::stat(struct stat* st)
       {
-        _fetch();
         ELLE_TRACE_SCOPE("%s: stat", *this);
-        Node::stat(st);
-        if (_parent)
+        bool can_access = false;
+        try
         {
-          try
-          {
-            mode_t mode = st->st_mode;
-            st->st_mode &= ~0777;
-            _block = elle::cast<ACLBlock>::runtime
-              (_owner.fetch_or_die(_parent->_files.at(_name).address));
-            umbrella([&] {
-                this->_block_cache = _block->cache_update(std::move(this->_block_cache));
-            });
-            _block->data();
-            st->st_mode = mode;
-          }
-          catch (infinit::model::doughnut::ValidationFailed const& e)
-          {
-            ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
-          }
-          catch (rfs::Error const&)
-          {
-            throw;
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_WARN("unexpected exception on stat: %s", e);
-            throw rfs::Error(EIO, elle::sprintf("%s", e));
-          }
+          _fetch();
+          can_access = true;
         }
+        catch (infinit::model::doughnut::ValidationFailed const& e)
+        {
+          ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
+        }
+        catch (rfs::Error const& e)
+        {
+          if (e.error_code() != EACCES)
+            throw;
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("unexpected exception on stat: %s", e);
+          throw rfs::Error(EIO, elle::sprintf("%s", e));
+        }
+        Node::stat(st);
+        if (!can_access)
+          st->st_mode &= ~0777;
       }
 
     void
