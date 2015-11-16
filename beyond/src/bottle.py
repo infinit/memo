@@ -49,14 +49,14 @@ class ResponsePlugin(object):
         bottle.response.status = 400
         return {
           'error': '%s/missing_field/%s' % (
-            exception.field.type, exception.field.name),
+            exception.field.object, exception.field.name),
           'reason': 'missing field %s' % exception.field.name
         }
       except exceptions.InvalidFormat as exception:
         bottle.response.status = 422
         return {
           'error': '%s/invalid_format/%s' % (
-            exception.field.type, exception.field.name),
+            exception.field.object, exception.field.name),
           'reason': '%s has an invalid format' % exception.field.name
         }
       except Response as response:

@@ -5,23 +5,23 @@ from infinit.beyond.exceptions import *
 ## ------------------ ##
 class Validator:
 
-  def __init__(self, type, field):
-    self.field = Field(type, field)
+  def __init__(self, object, field):
+    self.field = Field(object, field)
 
 class Name(Validator):
 
   def __call__(self, name):
     import re
     if len(name) == 0 or re.compile('^[^\/]+$').match(name) is None:
-      raise InvalidFormat(self.field.type, self.field.name)
+      raise InvalidFormat(self.field.object, self.field.name)
 
 class Email(Validator):
 
-  def __init__(self, type):
-    super().__init__(type, 'email')
+  def __init__(self, object):
+    super().__init__(object, 'email')
 
   def __call__(self, email):
     import re
     validator = re.compile('^[^@]+@[^@]+\.[^@]+$')
     if validator.match(email) is None:
-      raise InvalidFormat(self.field.type, self.field.name)
+      raise InvalidFormat(self.field.object, self.field.name)
