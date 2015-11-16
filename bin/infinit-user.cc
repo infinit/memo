@@ -332,7 +332,7 @@ login(variables_map const& args)
   auto json = beyond_login(name, credentials);
   elle::serialization::json::SerializerIn input(json, false);
   auto user = input.deserialize<infinit::User>();
-  ifnt.user_save(user);
+  ifnt.user_save(user, true);
   report_action("saved", "user", name, std::string("locally"));
 }
 

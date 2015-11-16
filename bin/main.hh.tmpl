@@ -772,11 +772,12 @@ namespace infinit
     }
 
     void
-    user_save(User const& user)
+    user_save(User const& user,
+              bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(
-        f, this->_user_path(user.name), user.name, "user", false);
+        f, this->_user_path(user.name), user.name, "user", overwrite);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(user);
     }
