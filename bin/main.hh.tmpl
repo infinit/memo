@@ -1568,9 +1568,20 @@ beyond_push(std::string const& where,
   }
   else
   {
+    auto error = [&] {
+      try
+      {
+        auto s = elle::serialization::json::SerializerIn{r, false};
+        return elle::sprintf("%s", s.deserialize<BeyondError>());
+      }
+      catch (elle::serialization::Error const&)
+      {
+      }
+      return std::string();
+    }();
     throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s pushing %s",
-                    r.status(), type));
+      elle::sprintf("unexpected HTTP error %s pushing %s:\n%s",
+                    r.status(), type, error));
   }
 }
 
