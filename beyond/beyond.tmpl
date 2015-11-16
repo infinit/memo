@@ -65,6 +65,10 @@ def parse_options():
                       type = int,
                       help = 'CouchDB port',
                       default = 0)
+  parser.add_argument('--email-validation',
+                      type = bool,
+                      default = True,
+                      help = 'Enable email validation (activated by default)')
   return parser.parse_args()
 
 try:
@@ -105,6 +109,7 @@ e9FGZj7sEHpPuDE=
       dropbox_app_secret = args.dropbox_app_secret,
       google_app_key = args.google_app_key,
       google_app_secret = args.google_app_secret,
+      validate_email_address = args.email_validation
     )
     app = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
     import bottle

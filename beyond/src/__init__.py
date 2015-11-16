@@ -19,6 +19,7 @@ class Beyond:
       dropbox_app_secret,
       google_app_key,
       google_app_secret,
+      validate_email_address = True,
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
@@ -26,6 +27,7 @@ class Beyond:
     self.__dropbox_app_secret = dropbox_app_secret
     self.__google_app_key    = google_app_key
     self.__google_app_secret = google_app_secret
+    self.__validate_email_address = validate_email_address
 
   @property
   def dropbox_app_key(self):
@@ -42,6 +44,10 @@ class Beyond:
   @property
   def google_app_secret(self):
     return self.__google_app_secret
+
+  @property
+  def validate_email_address(self):
+    return self.__validate_email_address
 
   ## ------- ##
   ## Network ##
@@ -105,12 +111,12 @@ class User:
   fields = {
     'mandatory': [
       ('name', validation.Name('user', 'name')),
+      ('email', validation.Email('user')),
       ('public_key', None),
     ],
     'optional': [
       ('dropbox_accounts', None),
       ('google_accounts', None),
-      ('email', validation.Email('user')),
       ('password_hash', None),
       ('private_key', None),
     ]
@@ -146,7 +152,11 @@ class User:
   @classmethod
   def from_json(self, beyond, json):
     for (key, validator) in User.fields['mandatory']:
-      if key not in json: raise exceptions.MissingField('user', key)
+      if key == 'email' and not beyond.validate_email_address:
+        continue
+      if key not in json:
+        raise exceptions.MissingField('user', key)
+      validator and validator(json[key])
     for (key, validator) in User.fields['optional']:
       if key in json and validator is not None:
         validator(json[key])

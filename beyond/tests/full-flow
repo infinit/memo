@@ -20,7 +20,8 @@ with Beyond() as beyond:
       self.assertEqual(r.status_code, 200)
       json = r.json()
       for k, v in mefyl.items():
-        self.assertEqual(json[k], v)
+        if k != 'email': # Email is not sent.
+          self.assertEqual(json[k], v)
       self.assertEqual(
         beyond.put('users/mefyl', json = mefyl).status_code, 200)
       self.assertEqual(

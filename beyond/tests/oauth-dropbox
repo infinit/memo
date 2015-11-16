@@ -62,8 +62,9 @@ with Beyond() as beyond, DummyDropbox(beyond.host) as db:
     def test_credentials_post(self):
       r = beyond.put('users/%s' % mefyl2['name'], json = mefyl2)
       self.assertEqual(r.status_code, 201)
-      r = beyond.get('oauth/dropbox', params = {'code': 'secret_code',
-                                                'state': 'mefyl'})
+      r = beyond.get('oauth/dropbox', params = {
+        'code': 'secret_code',
+        'state': mefyl2['name']})
       self.assertEqual(r.status_code, 200)
       self.assertEqual(
         r.json(),
