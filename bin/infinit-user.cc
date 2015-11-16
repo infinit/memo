@@ -140,6 +140,26 @@ hub_password(variables_map const& args)
 }
 
 static
+void
+_push(variables_map const& args,
+      infinit::User& user)
+{
+  auto email = optional(args, "email");
+  user.email = email;
+  if (args.count("full") && args["full"].as<bool>())
+  {
+    user.password_hash = hub_password(args);
+    das::Serializer<infinit::DasPrivateUserPublish> view{user};
+    beyond_push("user", user.name, view, user);
+  }
+  else
+  {
+    das::Serializer<infinit::DasPublicUserPublish> view{user};
+    beyond_push("user", user.name, view, user);
+  }
+}
+
+static
 infinit::User
 create_(std::string const& name,
         boost::optional<std::string> const& keys_file)
@@ -173,8 +193,7 @@ create(variables_map const& args)
   report_action("generated", "user", name, std::string("locally"));
   if (aliased_flag(args, {"push-user", "push"}))
   {
-    das::Serializer<infinit::DasPublicUser> view{user};
-    beyond_push("user", user.name, view, user);
+    _push(args, user);
   }
 }
 
@@ -188,26 +207,6 @@ import(variables_map const& args)
       elle::serialization::json::deserialize<infinit::User>(*input, false);
     ifnt.user_save(user);
     report_imported("user", user.name);
-  }
-}
-
-static
-void
-_push(variables_map const& args,
-      infinit::User& user)
-{
-  auto email = mandatory(args, "email");
-  user.email = email;
-  if (args.count("full") && args["full"].as<bool>())
-  {
-    user.password_hash = hub_password(args);
-    das::Serializer<infinit::DasPrivateUserPublish> view{user};
-    beyond_push("user", user.name, view, user);
-  }
-  else
-  {
-    das::Serializer<infinit::DasPublicUserPublish> view{user};
-    beyond_push("user", user.name, view, user);
   }
 }
 
@@ -354,6 +353,11 @@ main(int argc, char** argv)
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-user" },
+        { "email", value<std::string>(),
+            "valid email address (mandatory if you use --push(-user))" },
+        { "full", bool_switch(),
+          "push the whole user, including private information in order to "
+          "facilitate device pairing. This information will be encrypted." }
       },
     },
     {
@@ -417,7 +421,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to push (default: system user)" },
-        { "email,n", value<std::string>(),
+        { "email", value<std::string>(),
           "valid email address" },
         { "password", value<std::string>(),
           "password to authenticate to the hub" },
