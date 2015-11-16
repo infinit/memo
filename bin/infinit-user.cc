@@ -455,7 +455,7 @@ main(int argc, char** argv)
           "valid email address" },
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key"
-            " (generated if unspecified)" },
+          " (generated if unspecified)" },
         { "password", value<std::string>(),
           "password to authenticate to the hub" },
         { "full", bool_switch(),
