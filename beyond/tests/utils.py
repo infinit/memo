@@ -85,12 +85,10 @@ class Beyond:
         t = str(int(time.time()))
         string_to_sign = kwargs['method'] + ';' + url + ';'
         string_to_sign += h.decode('latin-1') + ';' + t
-
         raw_sig = PKCS1_v1_5.new(k).sign(SHA256.new(string_to_sign.encode('latin-1')))
         sig = base64.b64encode(raw_sig)
         kwargs['headers']['infinit-signature'] = sig
         kwargs['headers']['infinit-time'] = t
-        import sys
     response = requests.request(url = '%s/%s' % (self.host, url),
                                 allow_redirects = False,
                                 **kwargs)
@@ -153,7 +151,6 @@ class User(dict):
       import re
       r = re.compile('-+(BEGIN)?(END)? (RSA )?(PUBLIC)?(PRIVATE)? KEY-+')
       key = key.decode('ascii').replace('\n', '')
-      import sys
       res = r.sub('', key)
       return res
     self['public_key'] = {'rsa': cleanup(key.publickey().exportKey("PEM"))}

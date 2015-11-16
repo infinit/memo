@@ -24,18 +24,18 @@ with Beyond() as beyond:
         beyond.delete('users/%s' % u['name'],
                       auth = u.private_key)
 
-    def test_bad_authentication(self):
+    def test_authentication_error(self):
+      evil = User()
+      evil.put(beyond)
       for i in range(0, 10):
         u = User()
         u.put(beyond)
-        evil = User()
-        evil.put(beyond)
         try:
           beyond.delete('users/%s' % u['name'],
                         auth = evil.private_key)
           assert False
-        except requests.exceptions.HTTPError:
-          pass
+        except requests.exceptions.HTTPError as e:
+          assert e.response.status_code == 403
 
   if __name__ == '__main__':
     unittest.main()

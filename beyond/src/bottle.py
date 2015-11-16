@@ -217,8 +217,18 @@ class Bottle(bottle.Bottle):
     local_hash = Crypto.Hash.SHA256.new(to_sign.encode('utf-8'))
     remote_signature_crypted = base64.b64decode(remote_signature_raw.encode('utf-8'))
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
-    if not verifier.verify(local_hash, remote_signature_crypted):
-      raise Response(403, 'Authentication error')
+    try:
+      if not verifier.verify(local_hash, remote_signature_crypted):
+        raise Response(403, 'Authentication error')
+    # XXX: Sometimes, verify fails if the key is different raising:
+    # > 'Plaintext to large'
+    # This happens ONLY if the keys are differents so we can consider it as a
+    # AuthenticationError.
+    # To reproduce, remove catch block and run 'tests/auth'.
+    except ValueError as e:
+      if e.args[0] == 'Plaintext too large':
+        raise Response(403, 'Authentication error')
+      raise
     pass
 
   def root(self):
