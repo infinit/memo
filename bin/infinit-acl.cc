@@ -148,11 +148,12 @@ set_action(std::string const& path,
     {
       try
       {
+        std::string value = inherit ? "true" : "false";
         check(setxattr,
               path.c_str(),
               "user.infinit.auth.inherit",
-              inherit ? "true" : "false",
-              strlen("true") + (inherit ? 0 : 1),
+              value.c_str(),
+              value.length(),
               0 SXA_EXTRA);
       }
       catch (elle::Error const& error)
@@ -237,7 +238,8 @@ set(variables_map const& args)
     throw CommandLineError("missing path argument");
   auto users = mandatory<std::vector<std::string>>(args, "user", "user");
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
-  auto mode = mandatory(args, "mode");
+  auto mode_ = optional(args, "mode");
+  auto mode = mode_ ? mode_.get() : "";
   auto it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
   if (it == allowed_modes.end())
   {
