@@ -21,7 +21,7 @@ namespace infinit
         Symlink(DirectoryPtr parent, FileSystem& owner, std::string const& name);
         void stat(struct stat*) override;
         void list_directory(rfs::OnDirectoryEntry cb) override THROW_NOTDIR;
-        std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_NOSYS;
+        std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;
         std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override THROW_NOSYS;
         void unlink() override;
         void mkdir(mode_t mode) override THROW_EXIST;

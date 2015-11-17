@@ -1,6 +1,7 @@
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/Unknown.hh>
 
+#include <fcntl.h>
 ELLE_LOG_COMPONENT("infinit.filesystem.Symlink");
 
 namespace infinit
@@ -90,6 +91,16 @@ namespace infinit
     Symlink::removexattr(std::string const& name)
     {
       Node::removexattr(name);
+    }
+    std::unique_ptr<rfs::Handle>
+    Symlink::open(int flags, mode_t mode)
+    {
+#ifdef INFINIT_MACOSX
+  #define O_PATH O_SYMLINK
+#endif
+      if (! (flags & O_PATH))
+        THROW_NOSYS;
+      return {};
     }
   }
 }
