@@ -414,7 +414,9 @@ class Bottle(bottle.Bottle):
     user = self.user_from_name(name = owner)
     self.authenticate(user)
     network = self.network_from_name(owner = owner, name = name)
-    network.passports[invitee] = bottle.request.json
+    json = bottle.request.json
+    passport = Passport(self.__beyond, **json)
+    network.passports[invitee] = passport.json()
     network.save()
     raise Response(201, {})
 

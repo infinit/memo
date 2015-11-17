@@ -123,6 +123,10 @@ def throws(function, expected = None, json = True):
     assert 'error' in response
     return response
 
+def assertEq(a, b):
+  if a != b:
+    raise AssertionError('%r != %r' % (a, b))
+
 def random_sequence(count = 10):
   from random import SystemRandom
   import string
@@ -225,23 +229,26 @@ class Network(dict):
 
 class Passport(dict):
 
-  def __init__(self, network, invitee):
+  def __init__(self, network, invitee, signature = 'signature'):
     self.__network = network
     self['network'] = self.__network['name']
-    self['invitee'] = {
-      'public_key': invitee['public_key'],
-      'name': invitee['name']
-    }
+    self.__invitee = invitee
+    self['user'] = invitee['public_key']
+    self['signature'] = signature
 
   @property
   def network(self):
     return self.__network
 
+  @property
+  def invitee(self):
+    return self.__invitee
+
   def put(self, hub, owner = None):
     if owner is None:
       owner = self.network.owner
-    return hub.put('networks/%s/passports/%s' % (self.__network['name'],
-                                                 self['invitee']['name']),
+    return hub.put('networks/%s/passports/%s' % (self.network['name'],
+                                                 self.invitee['name']),
                    json = self,
                    auth = owner.private_key)
 

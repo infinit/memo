@@ -350,6 +350,10 @@ class Network(metaclass = Entity,
   def id(self):
     return self.name
 
+class Passport(metaclass = Entity,
+               fields = fields('user', 'network', 'signature')):
+  pass
+
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
              fields = fields('name', 'network')):

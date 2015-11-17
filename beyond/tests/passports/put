@@ -26,6 +26,21 @@ with Beyond() as beyond:
         network['name'], invitee['name']),
                  auth = invitee.private_key)
 
+    def test_all_your_passports(self):
+      count = 10
+      user = User()
+      user.put(beyond)
+      invitee = User()
+      invitee.put(beyond)
+      for i in range(0, count):
+        network = Network('infinit-%r' % i, owner = user)
+        network.put(beyond, owner = user)
+        passport = Passport(network, invitee)
+        passport.put(beyond)
+      l = beyond.get('users/%s/passports' % invitee['name'],
+                     auth = invitee.private_key).json()
+      assertEq(len(l['passports']), count)
+
     def test_authorisation_put(self):
       user, invitee, evil = User(), User(), User()
       user.put(beyond)
