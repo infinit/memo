@@ -9,6 +9,12 @@
 
 #include <memory>
 
+#include <sys/stat.h> // S_IMFT...
+
+#ifdef INFINIT_WINDOWS
+#undef stat
+#endif
+
 ELLE_LOG_COMPONENT("infinit.filesystem.Node");
 
 namespace infinit
@@ -32,7 +38,7 @@ namespace infinit
         auto target = _owner.filesystem()->path(where.string());
         struct stat st;
         target->stat(&st);
-        if (signed(st.st_mode & S_IFMT) == DIRECTORY_MASK)
+        if (S_ISDIR(st.st_mode))
         {
           try
           {
@@ -207,14 +213,16 @@ namespace infinit
       if (_parent)
       {
         auto fd = _parent->_files.at(_name);
+        #ifndef INFINIT_WINDOWS
         st->st_blksize = 16384;
+        #endif
         st->st_mode = fd.mode;
         st->st_size = fd.size;
         st->st_atime = fd.atime;
         st->st_mtime = fd.mtime;
         st->st_ctime = fd.ctime;
         st->st_dev = 1;
-        st->st_ino = (long)this;
+        st->st_ino = (unsigned short)(uint64_t)(void*)this;
         st->st_nlink = 1;
       }
       else
@@ -222,8 +230,12 @@ namespace infinit
         st->st_mode = DIRECTORY_MASK | 0777;
         st->st_size = 0;
       }
+#ifndef INFINIT_WINDOWS
       st->st_uid = ::getuid();
       st->st_gid = ::getgid();
+#else
+      st->st_uid = st->st_gid = 0;
+#endif
     }
 
     void

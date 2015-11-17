@@ -28,7 +28,7 @@ namespace infinit
     Filesystem::_get(Key key) const
     {
       ELLE_TRACE("get %x", key);
-      boost::filesystem::ifstream input(this->_path(key));
+      boost::filesystem::ifstream input(this->_path(key), std::ios::binary);
       if (!input.good())
         throw MissingKey(key);
       elle::Buffer res;
@@ -49,7 +49,7 @@ namespace infinit
         throw MissingKey(key);
       if (exists && !update)
         throw Collision(key);
-      boost::filesystem::ofstream output(path);
+      boost::filesystem::ofstream output(path, std::ios::binary);
       if (!output.good())
         throw elle::Error(
           elle::sprintf("unable to open for writing: %s", path));

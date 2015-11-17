@@ -9,6 +9,10 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
 
+#ifdef INFINIT_WINDOWS
+#include <fcntl.h>
+#endif
+
 ELLE_LOG_COMPONENT("infinit.filesystem.File");
 
 namespace infinit
@@ -371,7 +375,9 @@ namespace infinit
       Node::stat(st);
       if (_parent)
         st->st_size = _parent->_files.at(_name).size;
+#ifndef INFINIT_WINDOWS
       st->st_blocks = st->st_size / 512;
+#endif
       st->st_nlink = 1;
       mode_t mode = st->st_mode;
       st->st_mode &= ~0777;
@@ -405,7 +411,9 @@ namespace infinit
             st->st_size = sz;
           }
         }
+#ifndef INFINIT_WINDOWS
         st->st_blocks = st->st_size / 512;
+#endif
         st->st_nlink = h.links;
         st->st_mode = mode;
       }

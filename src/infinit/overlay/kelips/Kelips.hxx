@@ -3,6 +3,7 @@
 
 namespace std
 {
+  inline
   size_t
   hash<boost::asio::ip::udp::endpoint>::operator ()
     (boost::asio::ip::udp::endpoint const& e) const

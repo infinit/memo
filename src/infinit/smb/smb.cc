@@ -7,6 +7,15 @@
 #include <cstdint>
 
 ELLE_LOG_COMPONENT("infinit.smb");
+#include <sys/stat.h>
+
+#ifdef INFINIT_WINDOWS
+#include <fcntl.h>
+#include <ntstatus.h>
+#undef stat
+#endif
+
+
 
 namespace infinit
 {
@@ -84,6 +93,7 @@ namespace infinit
       SMB2_SET_INFO = 0x0011,
       SMB2_OPLOCK_BREAK = 0x0012
     };
+#ifndef INFINIT_WINDOWS
     enum CreateOptions
     {
       FILE_DIRECTORY_FILE = 1,
@@ -99,6 +109,7 @@ namespace infinit
       FILE_OVERWRITE = 4,
       FILE_OVERWRITE_IF = 5,
     };
+
     enum NTStatus
     {
       STATUS_FILE_IS_A_DIRECTORY = 0xC00000BA,
@@ -116,6 +127,7 @@ namespace infinit
       STATUS_FS_DRIVER_REQUIRED = 0xC000019c,
       STATUS_DIRECTORY_NOT_EMPTY = 0xC0000101,
     };
+#endif
     enum FileInformationClass
     {
       FileDirectoryInformation = 0x1,

@@ -13,6 +13,10 @@
   #include <attr/xattr.h>
 #endif
 
+#ifdef INFINIT_WINDOWS
+  #define ENOATTR ENODATA
+#endif
+
 namespace infinit
 {
   namespace filesystem

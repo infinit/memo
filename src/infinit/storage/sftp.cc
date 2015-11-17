@@ -1,6 +1,8 @@
 #include <unistd.h>
+#ifndef INFINIT_WINDOWS
 #include <arpa/inet.h>
 #include <sys/wait.h>
+#endif
 
 #include <boost/asio.hpp>
 

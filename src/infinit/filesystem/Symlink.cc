@@ -98,7 +98,9 @@ namespace infinit
 #ifdef INFINIT_MACOSX
   #define O_PATH O_SYMLINK
 #endif
+#ifndef INFINIT_WINDOWS
       if (! (flags & O_PATH))
+#endif
         THROW_NOSYS;
       return {};
     }

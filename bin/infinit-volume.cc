@@ -12,6 +12,10 @@ ELLE_LOG_COMPONENT("infinit-volume");
 
 #include <main.hh>
 
+#ifdef INFINIT_WINDOWS
+#include <fcntl.h>
+#endif
+
 using namespace boost::program_options;
 options_description mode_options("Modes");
 
@@ -221,7 +225,7 @@ run(variables_map const& args)
     });
     if (script_mode)
     {
-      reactor::FDStream stdin(0);
+      reactor::FDStream stdin_stream(0);
       std::unordered_map<std::string,
         std::unique_ptr<reactor::filesystem::Handle>> handles;
       while (true)
@@ -233,7 +237,7 @@ run(variables_map const& args)
         {
           op = pathname = handlename = "";
           auto json =
-            boost::any_cast<elle::json::Object>(elle::json::read(stdin));
+            boost::any_cast<elle::json::Object>(elle::json::read(stdin_stream));
           ELLE_TRACE("got command: %s", json);
           elle::serialization::json::SerializerIn command(json, false);
           op = command.deserialize<std::string>("operation");
@@ -282,9 +286,11 @@ run(variables_map const& args)
             response.serialize("st_uid"    , st.st_uid            );
             response.serialize("st_gid"    , st.st_gid            );
             response.serialize("st_rdev"   , st.st_rdev           );
-            response.serialize("st_size"   , st.st_size           );
+            response.serialize("st_size"   , uint64_t(st.st_size) );
+#ifndef INFINIT_WINDOWS
             response.serialize("st_blksize", st.st_blksize        );
             response.serialize("st_blocks" , st.st_blocks         );
+#endif
             response.serialize("st_atime"  , uint64_t(st.st_atime));
             response.serialize("st_mtime"  , uint64_t(st.st_mtime));
             response.serialize("st_ctime"  , uint64_t(st.st_ctime));
@@ -373,12 +379,12 @@ run(variables_map const& args)
             response.serialize("path", pathname);
             response.serialize("f_bsize"  , uint64_t(sv.f_bsize)  );
             response.serialize("f_frsize" , uint64_t(sv.f_frsize) );
-            response.serialize("f_blocks" , sv.f_blocks           );
-            response.serialize("f_bfree"  , sv.f_bfree            );
-            response.serialize("f_bavail" , sv.f_bavail           );
-            response.serialize("f_files"  , sv.f_files            );
-            response.serialize("f_ffree"  , sv.f_ffree            );
-            response.serialize("f_favail" , sv.f_favail           );
+            response.serialize("f_blocks" , uint64_t(sv.f_blocks) );
+            response.serialize("f_bfree"  , uint64_t(sv.f_bfree)  );
+            response.serialize("f_bavail" , uint64_t(sv.f_bavail) );
+            response.serialize("f_files"  , uint64_t(sv.f_files)  );
+            response.serialize("f_ffree"  , uint64_t(sv.f_ffree)  );
+            response.serialize("f_favail" , uint64_t(sv.f_favail) );
             response.serialize("f_fsid"   , uint64_t(sv.f_fsid)   );
             response.serialize("f_flag"   , uint64_t(sv.f_flag)   );
             response.serialize("f_namemax", uint64_t(sv.f_namemax));

@@ -51,8 +51,10 @@ namespace infinit
       , _single_mount(false)
       , _volume_name(volume_name)
     {
+#ifndef INFINIT_WINDOWS
       reactor::scheduler().signal_handle
         (SIGUSR1, [this] { this->print_cache_stats();});
+#endif
     }
 
     void

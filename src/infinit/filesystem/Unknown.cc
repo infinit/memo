@@ -9,6 +9,9 @@
 #ifdef INFINIT_LINUX
   #include <attr/xattr.h>
 #endif
+#ifdef INFINIT_WINDOWS
+  #undef stat
+#endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Unknown");
 

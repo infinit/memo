@@ -2,7 +2,7 @@
 
 #ifdef INFINIT_LINUX
 #include <attr/xattr.h>
-#else
+#elif defined(INFINIT_MACOSX)
 #include <sys/xattr.h>
 #endif
 

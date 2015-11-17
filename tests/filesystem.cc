@@ -27,11 +27,13 @@
 #include <random>
 
 #include <sys/types.h>
+#ifndef INFINIT_WINDOWS
 #include <sys/statvfs.h>
+#endif
 
 #ifdef INFINIT_LINUX
 #include <attr/xattr.h>
-#else
+#elif defined(INFINIT_MACOSX)
 #include <sys/xattr.h>
 #endif
 

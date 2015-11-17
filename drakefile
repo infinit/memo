@@ -102,20 +102,32 @@ def configure(
                        valgrind = valgrind,
                        prefix = False,
                        codesign = codesign)
-  elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
-                        strip_prefix = True)
-  aws_lib = drake.copy(elle.aws.library, 'lib',
-                        strip_prefix = True)
-  reactor_lib = drake.copy(elle.reactor.lib_dynamic, 'lib',
-                        strip_prefix = True)
-  dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, 'lib',
-                           strip_prefix = True)
-  cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
-                                strip_prefix = True)
-  protocol_lib = drake.copy(elle.protocol.lib_dynamic, 'lib',
-                            strip_prefix = True)
+  windows = elle.cxx_toolkit.os is drake.os.windows
+
+  if not windows:
+    dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, 'lib',
+                             strip_prefix = True)
+    cryptography_lib = drake.copy(elle.cryptography.lib_dynamic, 'lib',
+                                  strip_prefix = True)
+    protocol_lib = drake.copy(elle.protocol.lib_dynamic, 'lib',
+                              strip_prefix = True)
+    reactor_lib = drake.copy(elle.reactor.lib_dynamic, 'lib',
+                             strip_prefix = True)
+    aws_lib = drake.copy(elle.aws.library, 'lib',
+                         strip_prefix = True)
+    elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
+                          strip_prefix = True)
+  else:
+    dropbox_lib = elle.dropbox.lib_static
+    cryptography_lib = elle.cryptography.lib_static
+    protocol_lib = elle.protocol.lib_static
+    reactor_lib = elle.reactor.lib_static
+    aws_lib = elle.aws.library
+    elle_lib = elle.elle.lib_static
+
   athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
                           strip_prefix = True)
+
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
   cxx_config += elle.dropbox.config
@@ -134,12 +146,15 @@ def configure(
   ## --------------- ##
 
   cxx_config_infinit = drake.cxx.Config(cxx_config)
+
   cxx_config_infinit += elle.boost.config_system(link = False)
-  cxx_config_infinit.library_add(
-    drake.copy(elle.boost.system_dynamic, 'lib', True))
+  if not windows:
+    cxx_config_infinit.library_add(
+      drake.copy(elle.boost.system_dynamic, 'lib', True))
   cxx_config_infinit += elle.boost.config_filesystem(link = False)
-  cxx_config_infinit.library_add(
-    drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+  if not windows:
+    cxx_config_infinit.library_add(
+      drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
   cxx_config_infinit += elle.das.config
 
   class CxxVersionGenerator(VersionGenerator):
@@ -275,24 +290,41 @@ def configure(
     'src/infinit/storage/Strip.cc',
     'src/infinit/storage/Strip.hh',
     'src/infinit/storage/fwd.hh',
-    'src/infinit/storage/sftp.cc',
-    'src/infinit/storage/sftp.hh',
+
     'src/infinit/version.hh',
   )
+  if not windows:
+    infinit_sources += drake.nodes(
+      'src/infinit/storage/sftp.cc',
+      'src/infinit/storage/sftp.hh',
+      )
   outguess_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/outguess.a')
   jpeg_lib = drake.cxx.StaticLib('src/infinit/model/steg/outguess-0.2/jpeg-6b-steg/libjpeg.a')
 
   outguess_configure = drake.node('src/infinit/model/steg/outguess-0.2/configure')
   outguess_makefile = drake.node('src/infinit/model/steg/outguess-0.2/Makefile')
 
-  infinit_lib = drake.cxx.DynLib(
+  if windows:
+    cxx_config_infinit.lib('shlwapi')
+    cxx_config_infinit.lib('ws2_32')
+    cxx_config_infinit.lib('gdi32')
+    cxx_config_infinit.lib('mswsock')
+    cxx_config_infinit.lib('dbghelp')
+    cxx_config_infinit.lib('iphlpapi')
+    cxx_config_infinit.lib('crypt32')
+    libtype = drake.cxx.StaticLib
+  else:
+    libtype = drake.cxx.DynLib
+  infinit_lib = libtype(
     'lib/infinit',
     infinit_sources + [athena_lib,
-                       elle_lib,
                        cryptography_lib,
                        aws_lib,
                        protocol_lib,
-                       dropbox_lib],
+                       dropbox_lib,
+                       reactor_lib,
+                       elle_lib
+                       ],
     cxx_toolkit,
     cxx_config_infinit)
   rule_build << infinit_lib
@@ -310,32 +342,45 @@ def configure(
   bin_cxx_config += elle.das.config
   bin_cxx_config.add_local_include_path('bin')
   bin_cxx_config.lib_path_runtime('../lib')
-  bin_cxx_config.library_add(
-      drake.copy(elle.boost.program_options_dynamic, 'lib', True))
-  bin_cxx_config.library_add(
-      drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
-  bin_cxx_config.library_add(
-      drake.copy(elle.boost.system_dynamic, 'lib', True))
+  if not windows:
+    bin_cxx_config.library_add(
+        drake.copy(elle.boost.program_options_dynamic, 'lib', True))
+    bin_cxx_config.library_add(
+        drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+    bin_cxx_config.library_add(
+        drake.copy(elle.boost.system_dynamic, 'lib', True))
+  else:
+    bin_cxx_config.lib('shlwapi')
+    bin_cxx_config.lib('ws2_32')
+    bin_cxx_config.lib('gdi32')
+    bin_cxx_config.lib('mswsock')
+    bin_cxx_config.lib('dbghelp')
+    bin_cxx_config.lib('iphlpapi')
+    bin_cxx_config.lib('crypt32')
+    bin_cxx_config.library_add(elle.boost.program_options_static)
+    bin_cxx_config.use_whole_archive()
+
   global installed_binaries
   to_install = [
-    'infinit-acl',
     'infinit-credentials',
     'infinit-network',
     'infinit-passport',
     'infinit-storage',
     'infinit-user',
     'infinit-volume',
-    'infinit-acl',
     'infinit-drive',
   ]
+  if not windows:
+    to_install += ['infinit-acl']
   _binaries = [
     ('doughnode', []),
     ('generatekeys', []),
     ('infinit', []),
     ('s3fs', [aws_lib]),
-    ('sshfs', []),
     ('infinit-smb', []),
   ]
+  if not windows:
+      _binaries += [('sshfs', [])]
   _binaries += [
     (x, []) for x in to_install
   ]
@@ -407,15 +452,15 @@ def configure(
     )
     rule_check << beyond.rule_check
 
-  website = drake.include(
-    'website',
-    python = elle.python3,
-    prefix = prefix,
-    git = git,
-    bottle = bottle,
-    sendwithus = sendwithus,
-    PatchAndInstall = PatchAndInstall,
-  )
+    website = drake.include(
+      'website',
+      python = elle.python3,
+      prefix = prefix,
+      git = git,
+      bottle = bottle,
+      sendwithus = sendwithus,
+      PatchAndInstall = PatchAndInstall,
+    )
 
   ## ----- ##
   ## Tests ##
@@ -425,22 +470,35 @@ def configure(
   cxx_config_tests += elle.das.config
   cxx_config_tests.lib_path_runtime('../lib')
   cxx_config_tests += elle.boost.config_test(link = False)
-  cxx_config_tests.library_add(
-    drake.copy(elle.boost.test_dynamic, 'lib', True))
-  cxx_config_tests += elle.boost.config_system(link = False)
-  cxx_config_tests.library_add(
-    drake.copy(elle.boost.system_dynamic, 'lib', True))
-  cxx_config_tests += elle.boost.config_filesystem(link = False)
-  cxx_config_tests.library_add(
-    drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
-
-  for test_name in [
+  if not windows:
+    cxx_config_tests.library_add(
+      drake.copy(elle.boost.test_dynamic, 'lib', True))
+    cxx_config_tests += elle.boost.config_system(link = False)
+    cxx_config_tests.library_add(
+      drake.copy(elle.boost.system_dynamic, 'lib', True))
+    cxx_config_tests += elle.boost.config_filesystem(link = False)
+    cxx_config_tests.library_add(
+      drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+  else:
+    cxx_config_tests.lib('shlwapi')
+    cxx_config_tests.lib('ws2_32')
+    cxx_config_tests.lib('gdi32')
+    cxx_config_tests.lib('mswsock')
+    cxx_config_tests.lib('dbghelp')
+    cxx_config_tests.lib('iphlpapi')
+    cxx_config_tests.lib('crypt32')
+    cxx_config_tests.library_add(elle.boost.program_options_static)
+    cxx_config_tests.library_add(elle.boost.test_static)
+    cxx_config_tests.use_whole_archive()
+  tests_names = [
       'doughnut',
       'faith',
-      'filesystem',
       'rpc',
       'storage',
-  ]:
+  ]
+  if not windows:
+      tests_names += ['filesystem']
+  for test_name in tests_names:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
@@ -463,23 +521,24 @@ def configure(
       runner = drake.Runner(exe = test)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
-  for test_name in [
-      'errors',
-      'single-user-two-devices-shared-storage',
-      #FIXME: 'flow',
-      # Test clis.
-      'user_cli',
-      'network_cli',
-      'passport_cli',
-      'volume_cli',
-  ]:
-    test = drake.node('tests/functional/%s' % test_name)
-    test.dependencies_add(installed_binaries)
-    test.dependencies_add(beyond.package.nodes)
-    runner = drake.Runner(
-      exe = test,
-      env = {
-        'PYTHONPATH':
-          drake.path_build('beyond/lib/python%s' % elle.python3.version)
-      })
-    rule_check << runner.status
+  if python:
+    for test_name in [
+        'errors',
+        'single-user-two-devices-shared-storage',
+        #FIXME: 'flow',
+        # Test clis.
+        'user_cli',
+        'network_cli',
+        'passport_cli',
+        'volume_cli',
+    ]:
+      test = drake.node('tests/functional/%s' % test_name)
+      test.dependencies_add(installed_binaries)
+      test.dependencies_add(beyond.package.nodes)
+      runner = drake.Runner(
+        exe = test,
+        env = {
+          'PYTHONPATH':
+            drake.path_build('beyond/lib/python%s' % elle.python3.version)
+        })
+      rule_check << runner.status
