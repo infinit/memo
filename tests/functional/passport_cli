@@ -4,8 +4,7 @@ from utils import *
 import json
 
 # Using hub to retreive passports.
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
   bob.run(['infinit-user', '--signup',
            '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['infinit-user', '--signup',
