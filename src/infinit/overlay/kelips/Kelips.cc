@@ -3097,13 +3097,8 @@ namespace infinit
           }
           contacts = &_state.observers;
         }
-        elle::SafeFinally remove_thread([this, address, contacts] {
-            auto it = contacts->find(address);
-            if (it != contacts->end())
-              it->second.contacter = nullptr;
-        });
         auto peers = endpoints_extract(it->second.endpoints);
-        // !! this yield, thus invalidating it
+        // this yields, thus invalidating the iterator
         ELLE_DEBUG("contacting %s on %s", id, peers);
         auto& rsock =
           this->local() ? *this->local()->utp_server()->socket() : _gossip;
