@@ -106,8 +106,10 @@ list_action(std::string const& path, bool verbose)
       std::stringstream output;
       output << path << ":" << std::endl;
       if (dir_inherit)
+      {
         output << "  inherit: "
                << (dir_inherit.get() ? "yes" : "no") << std::endl;
+      }
       Json j = elle::json::read(ss);
       auto a = boost::any_cast<Array>(j);
       for (auto& li: a)
