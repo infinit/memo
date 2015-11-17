@@ -535,8 +535,12 @@ namespace infinit
 
     std::unique_ptr<reactor::filesystem::FileSystem>
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
-        boost::optional<std::string> mountpoint_ = {},
-        boost::optional<std::string> volname_ = {})
+        boost::optional<std::string> mountpoint_ = {}
+#ifdef INFINIT_MACOSX
+        , boost::optional<std::string> volname_ = {}
+        , boost::optional<std::string> volicon_ = {}
+#endif
+    )
     {
       auto fs = elle::make_unique<filesystem::FileSystem>(this->name, dht);
       auto driver =
@@ -554,13 +558,31 @@ namespace infinit
         }
         catch (boost::filesystem::filesystem_error const&)
         {}
-        driver->mount(mountpoint.get(), {"infinit-volume",
-            "-o", "noatime",
-            "-o", "hard_remove",
+        std::vector<std::string> mount_options = {
+          "infinit-volume",
+          "-o", "noatime",
+          "-o", "hard_remove",
+        };
 #ifdef INFINIT_MACOSX
-            "-o", "daemon_timeout=600",
+        auto add_option = [] (std::string const& opt_name,
+                              std::string const& opt_val,
+                              std::vector<std::string>& options)
+          {
+            options.push_back("-o");
+            options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
+          };
+        std::vector<std::string> mac_mount_options = {
+          "-o", "daemon_timeout=600",
+        };
+        if (volname_)
+          add_option("volname", volname_.get(), mac_mount_options);
+        if (volicon_)
+          add_option("volicon", volicon_.get(), mac_mount_options);
+        mount_options.insert(mount_options.end(),
+                             mac_mount_options.begin(),
+                             mac_mount_options.end());
 #endif
-        });
+        driver->mount(mountpoint.get(), mount_options);
       }
       return driver;
     }
