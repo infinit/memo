@@ -83,7 +83,7 @@ class Infinit(TemporaryDirectory):
         try:
           _out.append(json.loads(line))
         except:
-          _out.append('"%s"' % line);
+          _out.append('%s' % line);
       return _out
 
   def run_script(self, user = None, volume='volume', seq = None, **kvargs):

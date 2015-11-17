@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+
+from utils import *
+import json
+
+# Using hub to retreive passports.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+  bob.run(['infinit-user', '--signup',
+           '--name', 'bob', '--email', 'bob@infinit.io'])
+  alice.run(['infinit-user', '--signup',
+             '--name', 'alice', '--email', 'alice@infinit.io',
+           ])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+  bob.run(['infinit-user', '--fetch',
+           '--name', 'alice',
+           '--as', 'bob'])
+  networks = []
+  for i in range(10):
+    network = 'network%r' % i
+    networks.append('bob/' + network)
+    bob.run(['infinit-network', '--create', '--push',
+             '--name', network,
+             '--as', 'bob'])
+    bob.run(['infinit-passport', '--create', '--push',
+             '--network', network,
+             '--user', 'alice',
+             '--as', 'bob'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+  l = map(lambda x: x.split(':')[0],
+          alice.run(['infinit-passport', '--list', '--as', 'alice']))
+  assertEq(set(l), set(networks))
+  for network in networks:
+    alice.run(['infinit-network', '--fetch',
+               '--name', network,
+               '--as', 'alice'])
+  for network in networks:
+    try:
+      alice.run(['infinit-network', '--run',
+                 '--name', network,
+                 '--as', 'alice'])
+      assert False
+    except Exception as e:
+      assert "join it first" in e.args[0]
+  for network in networks:
+    alice.run(['infinit-network', '--join',
+               '--name', network,
+               '--as', 'alice'])

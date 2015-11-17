@@ -470,6 +470,7 @@ def configure(
       # Test clis.
       'user_cli',
       'network_cli',
+      'passport_cli',
       'volume_cli',
   ]:
     test = drake.node('tests/functional/%s' % test_name)
