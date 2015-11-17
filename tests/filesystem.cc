@@ -956,6 +956,10 @@ test_conflicts(bool paxos)
     int fd0, fd1;
     setxattr(m0.c_str(), "user.infinit.auth.inherit",
              "false", strlen("false"), 0 SXA_EXTRA);
+    // Force caching of '/' in second mount, otherwise if it fetches,
+    // it will see the new 'file2' and fail the create.
+    struct stat st;
+    stat(m1.string().c_str(), &st);
     fd0 = open((m0 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
     BOOST_CHECK(fd0 != -1);
     fd1 = open((m1 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
