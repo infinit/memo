@@ -72,13 +72,16 @@ namespace infinit
     Filesystem::_list()
     {
       std::vector<Key> res;
-      boost::filesystem::directory_iterator it(this->root());
-      boost::filesystem::directory_iterator iend;
+      boost::filesystem::recursive_directory_iterator it(this->root());
+      boost::filesystem::recursive_directory_iterator iend;
       while (it != iend)
       {
         std::string s = it->path().filename().string();
         if (s.substr(0, 2) != "0x" || s.length()!=66)
+        {
+          ++it;
           continue;
+        }
         Key k = Key::from_string(s.substr(2));
         res.push_back(k);
         ++it;
@@ -89,7 +92,12 @@ namespace infinit
     boost::filesystem::path
     Filesystem::_path(Key const& key) const
     {
-      return this->root() / elle::sprintf("%x", key);
+      auto dirname = elle::sprintf("%x", elle::ConstWeakBuffer(
+        key.value(), 1)).substr(2);
+      auto dir = this->root() / dirname;
+      if (! boost::filesystem::exists(dir))
+        boost::filesystem::create_directory(dir);
+      return dir / elle::sprintf("%x", key);
     }
 
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
