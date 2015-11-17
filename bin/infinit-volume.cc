@@ -207,7 +207,13 @@ run(variables_map const& args)
   {
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto fs = volume.run(std::move(model), optional(args, "mountpoint"));
+    auto fs = volume.run(std::move(model),
+                         optional(args, "mountpoint")
+#ifdef INFINIT_MACOSX
+                         , optional(args, "mount-name")
+                         , optional(args, "mount-icon")
+#endif
+                         );
     elle::SafeFinally unmount([&]
     {
       ELLE_TRACE("unmounting")
@@ -587,6 +593,10 @@ main(int argc, char** argv)
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(),
       "where to mount the filesystem" },
+#ifdef INFINIT_MACOSX
+    { "mount-name", value<std::string>(), "name of mounted volume" },
+    { "mount-icon", value<std::string>(), "icon for mounted volume" },
+#endif
     { "async", bool_switch(), "use asynchronous operations" },
     { "async-writes", bool_switch(),
       "do not wait for writes on the backend" },
