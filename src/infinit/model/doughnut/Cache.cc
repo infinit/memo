@@ -20,14 +20,18 @@ namespace infinit
           return Cache::Clock::now();
         }
 
-        Cache::Cache(Doughnut& doughnut, std::unique_ptr<Consensus> backend,
-                     Duration mut_cache_ttl,
-                     long const_cache_size)
+        Cache::Cache(Doughnut& doughnut,
+                     std::unique_ptr<Consensus> backend,
+                     boost::optional<int> cache_size,
+                     boost::optional<std::chrono::seconds> cache_ttl)
           : Consensus(doughnut)
           , _backend(std::move(backend))
-          , _mut_cache_ttl(mut_cache_ttl)
-          , _const_cache_size(const_cache_size)
-        {}
+          , _cache_ttl(cache_ttl ? cache_ttl.get() : std::chrono::seconds(8))
+          , _cache_size(cache_size ? cache_size.get() : 64000000)
+        {
+          ELLE_TRACE_SCOPE("%s: create with size %s and TTL %ss",
+                           *this, this->_cache_size, this->_cache_ttl.count());
+        }
 
         Cache::~Cache()
         {}
@@ -35,56 +39,62 @@ namespace infinit
         void
         Cache::_remove(overlay::Overlay& overlay, Address address)
         {
-          _cleanup();
-          auto hit = _cache.find(address);
-          if (hit != _cache.end())
+          this->_cleanup();
+          auto hit = this->_cache.find(address);
+          if (hit != this->_cache.end())
           {
             auto t = hit->second.first;
             if (dynamic_cast<blocks::ImmutableBlock*>(hit->second.second.get()))
-              _const_cache_time.erase(t);
+              this->_const_cache_time.erase(t);
             else
-              _mut_cache_time.erase(t);
-            _cache.erase(hit);
+              this->_mut_cache_time.erase(t);
+            this->_cache.erase(hit);
           }
-          _backend->remove(overlay, address);
+          this->_backend->remove(overlay, address);
         }
 
         std::unique_ptr<blocks::Block>
         Cache::_fetch(overlay::Overlay& overlay, Address address)
         {
+          ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
           static elle::Bench bench_hit("cache.hit", 10_sec);
-          _cleanup();
-          auto hit = _cache.find(address);
-          if (hit != _cache.end())
+          this->_cleanup();
+          auto hit = this->_cache.find(address);
+          if (hit != this->_cache.end())
           {
+            ELLE_DEBUG("cache hit");
             if (dynamic_cast<blocks::ImmutableBlock*>(hit->second.second.get()))
             {
-              auto it = _const_cache_time.find(hit->second.first);
-              ELLE_ASSERT(it != _const_cache_time.end());
+              auto it = this->_const_cache_time.find(hit->second.first);
+              ELLE_ASSERT(it != this->_const_cache_time.end());
               ELLE_ASSERT_EQ(address, it->second);
-              _const_cache_time.erase(it);
+              this->_const_cache_time.erase(it);
               auto t = now();
-              _const_cache_time.insert(std::make_pair(t, address));
+              this->_const_cache_time.insert(std::make_pair(t, address));
               hit->second.first = t;
             }
             bench_hit.add(1);
             return hit->second.second->clone();
           }
-          bench_hit.add(0);
-          auto res = _backend->fetch(overlay, address);
-          auto t = now();
-          _cache.insert(std::make_pair(address, std::make_pair(t, res->clone())));
-          if (dynamic_cast<blocks::ImmutableBlock*>(res.get()))
-          {
-            auto ir = _const_cache_time.insert(std::make_pair(t, address));
-            ELLE_ASSERT(ir.second);
-          }
           else
           {
-            auto ir = _mut_cache_time.insert(std::make_pair(t, address));
-            ELLE_ASSERT(ir.second);
+            ELLE_DEBUG("cache miss");
+            bench_hit.add(0);
+            auto res = _backend->fetch(overlay, address);
+            auto t = now();
+            this->_cache.emplace(address, std::make_pair(t, res->clone()));
+            if (dynamic_cast<blocks::ImmutableBlock*>(res.get()))
+            {
+              auto ir = _const_cache_time.insert(std::make_pair(t, address));
+              ELLE_ASSERT(ir.second);
+            }
+            else
+            {
+              auto ir = _mut_cache_time.insert(std::make_pair(t, address));
+              ELLE_ASSERT(ir.second);
+            }
+            return res;
           }
-          return res;
         }
 
         void
@@ -93,18 +103,18 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          _cleanup();
+          ELLE_TRACE_SCOPE("%s: store %s", *this, block->address());
+          this->_cleanup();
           auto hit = _cache.find(block->address());
           if (hit != _cache.end())
           {
             TimePoint t = hit->second.first;
-            if (dynamic_cast<blocks::ImmutableBlock*>(block.get()))
-              ; // nothing to do, this does not count as a use
-            else
-            { // but counts as a refresh
-              _mut_cache_time.erase(t);
+            if (!dynamic_cast<blocks::ImmutableBlock*>(block.get()))
+            {
+              // Refresh.
+              this->_mut_cache_time.erase(t);
               t = now();
-              _mut_cache_time.insert(std::make_pair(t, block->address()));
+              this->_mut_cache_time.insert(std::make_pair(t, block->address()));
               hit->second.first = t;
             }
             hit->second.second = block->clone();
@@ -116,10 +126,11 @@ namespace infinit
               _const_cache_time.insert(std::make_pair(t, block->address()));
             else
               _mut_cache_time.insert(std::make_pair(t, block->address()));
-            _cache.insert(std::make_pair(block->address(),
-              std::make_pair(t, block->clone())));
+            this->_cache.emplace(block->address(),
+                                 std::make_pair(t, block->clone()));
           }
-          _backend->store(overlay, std::move(block), mode, std::move(resolver));
+          this->_backend->store(
+            overlay, std::move(block), mode, std::move(resolver));
         }
 
         void
@@ -129,7 +140,7 @@ namespace infinit
           while (!_mut_cache_time.empty())
           {
             auto b = _mut_cache_time.begin();
-            if (!(t - b->first < _mut_cache_ttl))
+            if (!(t - b->first < this->_cache_ttl))
             {
               _cache.erase(b->second);
               _mut_cache_time.erase(b);
@@ -137,14 +148,15 @@ namespace infinit
             else
               break;
           }
-          while (signed(_const_cache_time.size()) > _const_cache_size)
+          while (signed(_const_cache_time.size()) > this->_cache_size)
           {
             auto b = _const_cache_time.begin();
             _cache.erase(b->second);
             _const_cache_time.erase(b);
           }
-          ELLE_ASSERT_EQ(_cache.size(), _const_cache_time.size() + _mut_cache_time.size());
-          ELLE_DEBUG("cache: mut %s  const %s", _mut_cache_time.size(), _const_cache_time.size());
+          ELLE_ASSERT_EQ(
+            this->_cache.size(),
+            this->_const_cache_time.size() + this->_mut_cache_time.size());
         }
       }
     }

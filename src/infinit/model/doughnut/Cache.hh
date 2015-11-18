@@ -20,9 +20,10 @@ namespace infinit
           using Clock = std::chrono::high_resolution_clock;
           typedef Clock::time_point TimePoint;
           typedef Clock::duration Duration;
-          Cache(Doughnut& doughnut, std::unique_ptr<Consensus> backend,
-                Duration mut_cache_ttl = std::chrono::seconds(1),
-                long const_cache_size = 50);
+          Cache(Doughnut& doughnut,
+                std::unique_ptr<Consensus> backend,
+                boost::optional<int> cache_size = {},
+                boost::optional<std::chrono::seconds> cache_ttl = {});
           ~Cache();
 
         protected:
