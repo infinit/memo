@@ -65,7 +65,7 @@ namespace infinit
       std::string val = _file->getxattr(_name);
       if (offset >= signed(val.size()))
         return 0;
-      size = std::min(size, val.size() - offset);
+      size = std::min(uint64_t(size), uint64_t(val.size() - offset));
       memcpy(buffer.mutable_contents(), val.data() + offset, size);
       return size;
     }
