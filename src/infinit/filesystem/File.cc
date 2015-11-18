@@ -151,14 +151,11 @@ namespace infinit
     void
     File::_ensure_first_block()
     {
-      if (_first_block)
+      if (this->_first_block)
         return;
       Address addr = _parent->_files.at(_name).address;
       _first_block = elle::cast<MutableBlock>::runtime(
         _owner.fetch_or_die(addr));
-      umbrella([&] {
-          this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
-      });
     }
 
     File::Header
@@ -260,9 +257,6 @@ namespace infinit
       {
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
-        umbrella([&] {
-            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
-        });
       }
       bool multi = _multi();
       if (!multi)
@@ -307,9 +301,6 @@ namespace infinit
         }
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
-        umbrella([&] {
-            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
-        });
       }
       bool multi = umbrella([&] { return _multi();});
       if (_parent)
@@ -389,9 +380,6 @@ namespace infinit
         {
           _first_block = elle::cast<MutableBlock>::runtime
             (_owner.fetch_or_die(_parent->_files.at(_name).address));
-          umbrella([&] {
-              this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
-          });
         }
         if (!_first_block)
         {
@@ -449,9 +437,6 @@ namespace infinit
       {
         _first_block = elle::cast<MutableBlock>::runtime
           (_owner.fetch_or_die(_parent->_files.at(_name).address));
-        umbrella([&] {
-            this->_block_cache = _first_block->cache_update(std::move(this->_block_cache));
-        });
       }
       if (!_multi() && new_size > signed(default_block_size))
         _switch_to_multi(true);
@@ -563,12 +548,6 @@ namespace infinit
           ELLE_DEBUG("fetch first block")
             this->_first_block = elle::cast<MutableBlock>::runtime(
               this->_owner.fetch_or_die(addr));
-          umbrella(
-            [&]
-            {
-              this->_block_cache =
-                this->_first_block->cache_update(std::move(this->_block_cache));
-            });
         }
         auto acl = dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
         ELLE_ASSERT(acl);

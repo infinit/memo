@@ -129,50 +129,6 @@ namespace infinit
       | Content |
       `--------*/
 
-      class ACBCache: public blocks::MutableBlock::Cache
-      {
-      public:
-        ACBCache() {}
-        ACBCache(elle::Buffer m, elle::Buffer c)
-        : md5(std::move(m))
-        , cleartext(std::move(c))
-        {}
-        elle::Buffer md5;
-        elle::Buffer cleartext;
-      };
-
-      std::unique_ptr<blocks::MutableBlock::Cache>
-      ACB::cache_update(std::unique_ptr<blocks::MutableBlock::Cache> prev)
-      {
-        static bool disable = getenv("INFINIT_ACB_NO_CACHE");
-        if (disable)
-          return std::move(prev);
-        elle::Buffer md5;
-        {
-          static elle::Bench bench("bench.md5", 10000_sec);
-          elle::Bench::BenchScope scope(bench);
-          md5 = infinit::cryptography::hash(Block::data(),
-                                            infinit::cryptography::Oneway::md5);
-        }
-        if (prev)
-        {
-          ACBCache& cache = dynamic_cast<ACBCache&>(*prev);
-          static elle::Bench bench("bench.cache", 1000_sec);
-
-          if (md5 == cache.md5)
-          {
-            bench.add(1);
-            this->_data_plain = elle::Buffer(cache.cleartext);
-            this->_data_decrypted = true;
-            return std::move(prev);
-          }
-          else
-            bench.add(0);
-        }
-        elle::Buffer decrypted = this->data();
-        return elle::make_unique<ACBCache>(std::move(md5), std::move(decrypted));
-      }
-
       int
       ACB::version() const
       {

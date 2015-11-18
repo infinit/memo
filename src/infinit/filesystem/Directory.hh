@@ -37,7 +37,7 @@ namespace infinit
     };
 
     static const int DIRECTORY_MASK = 0040000;
-    static const int SYMLINK_MASK = 0120000; 
+    static const int SYMLINK_MASK = 0120000;
     static const boost::posix_time::time_duration directory_cache_time
       = boost::posix_time::seconds(2);
 
@@ -98,8 +98,6 @@ namespace infinit
         std::unique_ptr<ACLBlock> _block;
         elle::unordered_map<std::string, FileData> _files;
         bool _inherit_auth; //child nodes inherit this dir's permissions
-        boost::posix_time::ptime _last_fetch;
-        std::unique_ptr<model::blocks::MutableBlock::Cache> _block_cache;
         friend class FileSystem;
     };
 
