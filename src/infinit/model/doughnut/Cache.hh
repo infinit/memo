@@ -45,8 +45,8 @@ namespace infinit
           void _cleanup();
           std::unique_ptr<blocks::Block> _copy(blocks::Block& block);
           std::unique_ptr<Consensus> _backend;
-          Duration _mut_cache_ttl;
-          int _const_cache_size;
+          std::chrono::seconds _cache_ttl;
+          int _cache_size;
           // Use a LRU cache for ImmutableBlock, and a TTL cache for
           // MutableBlock
           std::map<TimePoint, Address> _mut_cache_time;

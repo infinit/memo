@@ -494,13 +494,14 @@ namespace infinit
         bool client = false,
         bool cache = false,
         boost::optional<int> cache_size = {},
-        bool async_writes = false,
-        bool async_consensus = false,
-        bool cache_consensus = false)
+        boost::optional<int> cache_ttl = {},
+        bool async_writes = false)
     {
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
-        hosts, client, p, async_consensus, cache_consensus);
+        hosts, client, p, async_writes, cache, cache_size,
+        cache_ttl ? std::chrono::seconds(cache_ttl.get()) :
+        boost::optional<std::chrono::seconds>());
     }
 
     std::string name;
@@ -1343,6 +1344,17 @@ flag(boost::program_options::variables_map const& vm,
   return vm.count(name) && vm[name].as<bool>();
 }
 
+template <typename T>
+boost::optional<T>
+option_opt(boost::program_options::variables_map const& vm,
+           std::string const& name)
+{
+  if (vm.count(name))
+    return vm[name].as<T>();
+  else
+    return {};
+}
+
 bool
 aliased_flag(boost::program_options::variables_map const& vm,
              std::vector<std::string> aliases)
@@ -1858,3 +1870,12 @@ namespace infinit
     return beyond_fetch<Drive>("drive", name);
   }
 }
+
+boost::program_options::option_description option_cache(
+  "cache", boost::program_options::bool_switch(), "enable block cache");
+boost::program_options::option_description option_cache_size(
+  "cache-size", boost::program_options::value<int>(),
+  "maximum block cache size in bytes (64MB by default)");
+boost::program_options::option_description option_cache_ttl(
+  "cache-ttl", boost::program_options::value<int>(),
+  "block cache time-to-live in seconds (8s by default)");

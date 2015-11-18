@@ -406,9 +406,14 @@ run(variables_map const& args)
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);
+  bool cache = flag(args, option_cache.long_name());
+  boost::optional<int> cache_size =
+    option_opt<int>(args, option_cache_size.long_name());
+  boost::optional<int> cache_ttl =
+    option_opt<int>(args, option_cache_ttl.long_name());
   auto dht =
-    network.run(eps, false, false, {}, false,
-                flag(args, "async-write"), flag(args, "cache-model"));
+    network.run(eps, false, cache, cache_size, cache_ttl,
+                flag(args, "async"));
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
   reactor::scheduler().signal_handle(
@@ -625,8 +630,10 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network to run" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
-        { "async-write", bool_switch(), "use asynchronous write operations" },
-        { "cache-model", bool_switch(), "enable model caching" },
+        { "async", bool_switch(), "use asynchronous operations" },
+        option_cache,
+        option_cache_size,
+        option_cache_ttl,
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
         { "fetch,f", bool_switch(),

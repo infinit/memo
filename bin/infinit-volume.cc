@@ -184,14 +184,13 @@ run(variables_map const& args)
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
-  bool cache = args.count("cache");
-  boost::optional<int> cache_size(0); // Not initializing warns on GCC 4.9
-  if (args.count("cache") && args["cache"].as<int>() != 0)
-    cache_size = args["cache"].as<int>();
-  else
-    cache_size.reset();
-  bool async_writes =
-    args.count("async-writes") && args["async-writes"].as<bool>();
+  bool cache = flag(args, option_cache.long_name());
+  boost::optional<int> cache_size =
+    option_opt<int>(args, option_cache_size.long_name());
+  boost::optional<int> cache_ttl =
+    option_opt<int>(args, option_cache_ttl.long_name());
+  if (cache_size || cache_ttl)
+    cache = true;
   reactor::scheduler().signal_handle(
     SIGINT,
     [&]
@@ -204,9 +203,8 @@ run(variables_map const& args)
   if (fetch)
     beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
-  auto model = network.run(eps, true, cache, cache_size, async_writes,
-      args.count("async") && args["async"].as<bool>(),
-      args.count("cache-model") && args["cache-model"].as<bool>());
+  auto model = network.run(eps, true, cache, cache_size, cache_ttl,
+                           flag(args, "async"));
   auto run = [&]
   {
     ELLE_TRACE_SCOPE("run volume");
@@ -604,12 +602,9 @@ main(int argc, char** argv)
     { "mount-icon", value<std::string>(), "icon for mounted volume" },
 #endif
     { "async", bool_switch(), "use asynchronous operations" },
-    { "async-writes", bool_switch(),
-      "do not wait for writes on the backend" },
-    { "cache", value<int>()->implicit_value(0),
-      "enable storage caching, "
-      "optional argument specifies maximum size in bytes" },
-    { "cache-model", bool_switch(), "enable model caching" },
+    option_cache,
+    option_cache_size,
+    option_cache_ttl,
     { "fetch-endpoints", bool_switch(),
       elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
     { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },

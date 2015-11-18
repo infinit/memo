@@ -289,9 +289,11 @@ namespace infinit
       std::unique_ptr<Doughnut>
       Configuration::make(overlay::NodeEndpoints const& hosts,
                           bool client,
-                          boost::filesystem::path const& dir,
+                          boost::filesystem::path const& p,
                           bool async,
-                          bool cache)
+                          bool cache,
+                          boost::optional<int> cache_size,
+                          boost::optional<std::chrono::seconds> cache_ttl)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -299,10 +301,11 @@ namespace infinit
             auto consensus = this->consensus->make(dht);
             if (async)
               consensus = elle::make_unique<consensus::Async>(
-                dht, std::move(consensus), dir / "async");
+                dht, std::move(consensus), p / "async");
             if (cache)
               consensus = elle::make_unique<consensus::Cache>(
-                dht, std::move(consensus), std::chrono::seconds(5));
+                dht, std::move(consensus),
+                std::move(cache_size), std::move(cache_ttl));
             return std::move(consensus);
           };
         Doughnut::OverlayBuilder overlay =
