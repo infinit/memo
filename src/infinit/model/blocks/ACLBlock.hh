@@ -61,7 +61,7 @@ namespace infinit
         };
 
         std::vector<Entry>
-        list_permissions();
+        list_permissions(bool ommit_names=false);
 
       protected:
         virtual
@@ -75,7 +75,7 @@ namespace infinit
 
         virtual
         std::vector<Entry>
-        _list_permissions();
+        _list_permissions(bool ommit_names);
 
       /*--------------.
       | Serialization |

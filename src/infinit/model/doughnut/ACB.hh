@@ -110,7 +110,7 @@ namespace infinit
         _copy_permissions(ACLBlock& to) override;
         virtual
         std::vector<Entry>
-        _list_permissions() override;
+        _list_permissions(bool ommit_names) override;
         std::vector<ACLEntry>&
         acl_entries();
         std::vector<ACLEntry> const&

@@ -573,7 +573,7 @@ namespace infinit
         auto acl = dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
         ELLE_ASSERT(acl);
         umbrella([&] {
-            for (auto const& e: acl->list_permissions())
+            for (auto const& e: acl->list_permissions(true))
             {
               auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
               if (!u)

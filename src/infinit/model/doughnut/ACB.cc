@@ -23,6 +23,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/UB.hh>
 #include <infinit/serialization.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
@@ -308,15 +309,19 @@ namespace infinit
 
 
       std::vector<ACB::Entry>
-      ACB::_list_permissions()
+      ACB::_list_permissions(bool ommit_names)
       {
         std::vector<ACB::Entry> res;
         try
         {
-          auto user = this->doughnut()->make_user(
-            elle::serialization::serialize
-              <cryptography::rsa::PublicKey, elle::serialization::Json>(
-                this->owner_key()));
+          std::unique_ptr<model::User> user;
+          if (ommit_names)
+            user.reset(new doughnut::User(this->owner_key(), ""));
+          else
+            user = this->doughnut()->make_user(
+              elle::serialization::serialize
+                <cryptography::rsa::PublicKey, elle::serialization::Json>(
+                  this->owner_key()));
           res.emplace_back(std::move(user), true, true);
         }
         catch (reactor::Terminate const& e)
@@ -339,10 +344,14 @@ namespace infinit
         {
           try
           {
-            auto user = this->doughnut()->make_user(
-              elle::serialization::serialize
-              <cryptography::rsa::PublicKey, elle::serialization::Json>(
-                ent.key));
+            std::unique_ptr<model::User> user;
+            if (ommit_names)
+              user.reset(new doughnut::User(ent.key, ""));
+            else
+              user = this->doughnut()->make_user(
+                elle::serialization::serialize
+                <cryptography::rsa::PublicKey, elle::serialization::Json>(
+                  ent.key));
             res.emplace_back(std::move(user), ent.read, ent.write);
           }
           catch(reactor::Terminate const& e)
