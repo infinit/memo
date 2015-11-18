@@ -282,7 +282,7 @@ class Bottle(bottle.Bottle):
       self.__ensure_names_match('user', name, json)
       if 'private_key' in json:
         json['private_key'] = self.encrypt_key(json['private_key'])
-      user = User.from_json(self.__beyond, json)
+      user = User.from_json(self.__beyond, json, check_integrity = True)
       user.create()
       raise Response(201, {})
     except User.Duplicate:

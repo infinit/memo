@@ -150,16 +150,17 @@ class User:
     self.__google_accounts_original = deepcopy(self.google_accounts)
 
   @classmethod
-  def from_json(self, beyond, json):
-    for (key, validator) in User.fields['mandatory']:
-      if key == 'email' and not beyond.validate_email_address:
-        continue
-      if key not in json:
-        raise exceptions.MissingField('user', key)
-      validator and validator(json[key])
-    for (key, validator) in User.fields['optional']:
-      if key in json and validator is not None:
-        validator(json[key])
+  def from_json(self, beyond, json, check_integrity = False):
+    if check_integrity:
+      for (key, validator) in User.fields['mandatory']:
+        if key == 'email' and not beyond.validate_email_address:
+          continue
+        if key not in json:
+          raise exceptions.MissingField('user', key)
+        validator and validator(json[key])
+      for (key, validator) in User.fields['optional']:
+        if key in json and validator is not None:
+          validator(json[key])
     return User(beyond,
                 name = json['name'],
                 public_key = json['public_key'],
