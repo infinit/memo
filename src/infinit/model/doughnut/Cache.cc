@@ -5,6 +5,8 @@
 #include <elle/serialization/binary.hh>
 #include <elle/bench.hh>
 
+#include <infinit/model/doughnut/OKB.hh>
+
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Cache");
 
 namespace infinit
@@ -54,7 +56,9 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Cache::_fetch(overlay::Overlay& overlay, Address address)
+        Cache::_fetch(overlay::Overlay& overlay,
+                      Address address,
+                      boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
           static elle::Bench bench_hit("cache.hit", 10_sec);
@@ -63,7 +67,8 @@ namespace infinit
           if (hit != this->_cache.end())
           {
             ELLE_DEBUG("cache hit");
-            if (dynamic_cast<blocks::ImmutableBlock*>(hit->second.second.get()))
+            auto& block = hit->second.second;
+            if (dynamic_cast<blocks::ImmutableBlock*>(block.get()))
             {
               auto it = this->_const_cache_time.find(hit->second.first);
               ELLE_ASSERT(it != this->_const_cache_time.end());
@@ -74,13 +79,17 @@ namespace infinit
               hit->second.first = t;
             }
             bench_hit.add(1);
-            return hit->second.second->clone();
+            if (local_version)
+              if (auto mb = dynamic_cast<blocks::MutableBlock*>(block.get()))
+                if (mb->version() == local_version.get())
+                  return nullptr;
+            return block->clone();
           }
           else
           {
             ELLE_DEBUG("cache miss");
             bench_hit.add(0);
-            auto res = _backend->fetch(overlay, address);
+            auto res = _backend->fetch(overlay, address, local_version);
             auto t = now();
             this->_cache.emplace(address, std::make_pair(t, res->clone()));
             if (dynamic_cast<blocks::ImmutableBlock*>(res.get()))

@@ -56,8 +56,19 @@ namespace infinit
       store(blocks::Block& block,
             StoreMode mode = STORE_ANY,
             std::unique_ptr<ConflictResolver> = {});
+      /** Fetch block at \param address
+       *
+       *  Use \param local_version to avoid refetching the block if it did
+       *  not change.
+       *
+       *  \param address Address of the block to fetch.
+       *  \param local_version Optional version already owned by the caller.
+       *  \return The block at \param address, or null if its version is
+       *          still local_version.
+       *  \throws MissingBlock if the block does not exist.
+       */
       std::unique_ptr<blocks::Block>
-      fetch(Address address) const;
+      fetch(Address address, boost::optional<int> local_version = {}) const;
       void
       remove(Address address);
     protected:
@@ -84,7 +95,7 @@ namespace infinit
              std::unique_ptr<ConflictResolver> resolver) = 0;
       virtual
       std::unique_ptr<blocks::Block>
-      _fetch(Address address) const = 0;
+      _fetch(Address address, boost::optional<int> local_version) const = 0;
       virtual
       void
       _remove(Address address) = 0;

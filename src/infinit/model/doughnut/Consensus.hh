@@ -31,7 +31,8 @@ namespace infinit
                 StoreMode mode,
                 std::unique_ptr<ConflictResolver> resolver);
           std::unique_ptr<blocks::Block>
-          fetch(overlay::Overlay& overlay, Address address);
+          fetch(overlay::Overlay& overlay, Address address,
+                boost::optional<int> local_version = {});
           void
           remove(overlay::Overlay& overlay, Address address);
           static
@@ -49,7 +50,8 @@ namespace infinit
                  std::unique_ptr<ConflictResolver> resolver);
           virtual
           std::unique_ptr<blocks::Block>
-          _fetch(overlay::Overlay& overlay, Address address);
+          _fetch(overlay::Overlay& overlay, Address address,
+                 boost::optional<int> local_version);
           virtual
           void
           _remove(overlay::Overlay& overlay, Address address);

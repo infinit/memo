@@ -187,8 +187,17 @@ namespace infinit
     void Directory::_fetch()
     {
       ELLE_TRACE_SCOPE("%s: fetch block", *this);
-      this->_block = elle::cast<ACLBlock>::runtime(
-        this->_owner.fetch_or_die(this->_address));
+      if (this->_block)
+      {
+        auto block =
+          elle::cast<ACLBlock>::runtime(
+            this->_owner.fetch_or_die(this->_address, this->_block->version()));
+        if (block)
+          this->_block = std::move(block);
+      }
+      else
+        this->_block = elle::cast<ACLBlock>::runtime(
+          this->_owner.fetch_or_die(this->_address));
       ELLE_DUMP("block: %s", *this->_block);
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);

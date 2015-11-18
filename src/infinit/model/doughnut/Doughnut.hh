@@ -78,7 +78,8 @@ namespace infinit
                std::unique_ptr<ConflictResolver> resolver) override;
         virtual
         std::unique_ptr<blocks::Block>
-        _fetch(Address address) const override;
+        _fetch(Address address,
+               boost::optional<int> local_version) const override;
         virtual
         void
         _remove(Address address) override;

@@ -80,13 +80,15 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Consensus::fetch(overlay::Overlay& overlay, Address address)
+        Consensus::fetch(overlay::Overlay& overlay, Address address,
+                         boost::optional<int> local_version)
         {
-          return this->_fetch(overlay, address);
+          return this->_fetch(overlay, address, std::move(local_version));
         }
 
         std::unique_ptr<blocks::Block>
-        Consensus::_fetch(overlay::Overlay& overlay, Address address)
+        Consensus::_fetch(overlay::Overlay& overlay, Address address,
+                          boost::optional<int>)
         {
           return
             this->_owner(overlay, address, overlay::OP_FETCH)->fetch(address);

@@ -97,9 +97,9 @@ namespace infinit
     }
 
     std::unique_ptr<blocks::Block>
-    Model::fetch(Address address) const
+    Model::fetch(Address address, boost::optional<int> local_version) const
     {
-      if (auto res = this->_fetch(address))
+      if (auto res = this->_fetch(address, std::move(local_version)))
       {
         if (!res->validate())
         {
@@ -108,6 +108,9 @@ namespace infinit
         }
         return res;
       }
+      else if (local_version)
+        // FIXME: could we mask missing blocks with local cache ?
+        return nullptr;
       else
         throw MissingBlock(address);
     }

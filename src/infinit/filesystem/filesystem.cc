@@ -112,11 +112,12 @@ namespace infinit
     }
 
     std::unique_ptr<model::blocks::Block>
-    FileSystem::fetch_or_die(model::Address address)
+    FileSystem::fetch_or_die(model::Address address,
+                             boost::optional<int> local_version)
     {
       try
       {
-        return _block_store->fetch(address);
+        return this->_block_store->fetch(address, std::move(local_version));
       }
       catch(reactor::Terminate const& e)
       {

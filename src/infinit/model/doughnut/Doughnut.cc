@@ -207,12 +207,14 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::Block>
-      Doughnut::_fetch(Address address) const
+      Doughnut::_fetch(Address address,
+                       boost::optional<int> local_version) const
       {
         std::unique_ptr<blocks::Block> res;
         try
         {
-          return this->_consensus->fetch(*this->_overlay, address);
+          return this->_consensus->fetch(*this->_overlay, address,
+                                         std::move(local_version));
         }
         catch (infinit::storage::MissingKey const&)
         {

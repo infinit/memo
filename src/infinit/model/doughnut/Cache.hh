@@ -36,7 +36,8 @@ namespace infinit
           virtual
           std::unique_ptr<blocks::Block>
           _fetch(overlay::Overlay& overlay,
-                 Address address) override;
+                 Address address,
+                 boost::optional<int> local_version) override;
           virtual
           void
           _remove(overlay::Overlay& overlay,

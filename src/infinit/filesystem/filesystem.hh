@@ -29,7 +29,8 @@ namespace infinit
       unchecked_fetch(model::Address address);
 
       std::unique_ptr<model::blocks::Block>
-      fetch_or_die(model::Address address);
+      fetch_or_die(model::Address address,
+                   boost::optional<int> local_version = {});
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,
