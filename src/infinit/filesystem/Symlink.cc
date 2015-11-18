@@ -104,5 +104,9 @@ namespace infinit
         THROW_NOSYS;
       return {};
     }
+    void Symlink::utimens(const struct timespec tv[2])
+    {
+      Node::utimens(tv);
+    }
   }
 }
