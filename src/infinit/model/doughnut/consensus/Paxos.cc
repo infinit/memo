@@ -564,7 +564,8 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Paxos::_fetch(overlay::Overlay& overlay, Address address)
+        Paxos::_fetch(overlay::Overlay& overlay, Address address,
+                      boost::optional<int>)
         {
           auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH);
           return fetch_from_members(peers, address);

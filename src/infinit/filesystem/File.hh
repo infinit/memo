@@ -96,7 +96,6 @@ namespace infinit
       int _r_handle_count;
       int _rw_handle_count;
       boost::filesystem::path _full_path;
-      std::unique_ptr<model::blocks::MutableBlock::Cache> _block_cache;
     };
   }
 }

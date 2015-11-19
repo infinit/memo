@@ -70,7 +70,8 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::Block>
-      Paranoid::_fetch(Address address) const
+      Paranoid::_fetch(Address address,
+                       boost::optional<int>) const
       {
         ELLE_TRACE_SCOPE("%s: fetch block at %x", *this, address);
         elle::Buffer raw;

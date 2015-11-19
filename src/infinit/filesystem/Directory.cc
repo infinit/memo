@@ -101,7 +101,7 @@ namespace infinit
        return std::move(d._block);
     }
 
-     class DirectoryConflictResolver: public model::ConflictResolver
+    class DirectoryConflictResolver: public model::ConflictResolver
     {
     public:
       DirectoryConflictResolver(elle::serialization::SerializerIn& s)
@@ -116,14 +116,14 @@ namespace infinit
                                 Operation op,
                                 FileData fd,
                                 std::weak_ptr<Directory> wd)
-      : _path(p)
-      , _owner(owner)
-      , _owner_allocated(false)
-      , _op(op)
-      , _fd(fd)
-      , _wptr(wd)
-      {
-      }
+        : _path(p)
+        , _owner(owner)
+        , _owner_allocated(false)
+        , _op(op)
+        , _fd(fd)
+        , _wptr(wd)
+      {}
+
       ~DirectoryConflictResolver()
       {
         if (_owner_allocated)
@@ -133,12 +133,14 @@ namespace infinit
           delete _owner;
         }
       }
+
       std::unique_ptr<Block>
       operator() (Block& block, model::StoreMode mode) override
       {
         return resolve_directory_conflict(block, mode, _path, *_owner, _op, _fd,
                                           _wptr);
       }
+
       void serialize(elle::serialization::Serializer& s) override
       {
         std::string spath = _path.string();
@@ -156,6 +158,7 @@ namespace infinit
           _owner = new FileSystem("", std::shared_ptr<model::Model>(model));
         }
       }
+
       boost::filesystem::path _path;
       FileSystem* _owner;
       bool _owner_allocated;
@@ -174,42 +177,40 @@ namespace infinit
     }
 
     Directory::Directory(DirectoryPtr parent, FileSystem& owner,
-        std::string const& name,
-        Address address)
+                         std::string const& name,
+                         Address address)
       : Node(owner, parent, name)
-        , _address(address)
-        , _inherit_auth(_parent?_parent->_inherit_auth : false)
-        , _last_fetch(boost::posix_time::not_a_date_time)
-        {}
+      , _address(address)
+      , _inherit_auth(_parent?_parent->_inherit_auth : false)
+    {}
 
     void Directory::_fetch()
     {
-      auto now = boost::posix_time::microsec_clock::universal_time();
-      if (_block && _last_fetch != boost::posix_time::not_a_date_time
-          && now - _last_fetch < directory_cache_time)
+      ELLE_TRACE_SCOPE("%s: fetch block", *this);
+      if (this->_block)
       {
-        ELLE_DUMP("using directory cache");
-        return;
+        auto block =
+          elle::cast<ACLBlock>::runtime(
+            this->_owner.fetch_or_die(this->_address, this->_block->version()));
+        if (block)
+          this->_block = std::move(block);
       }
-      _block = elle::cast<ACLBlock>::runtime
-        (_owner.fetch_or_die(_address));
-      umbrella([&] {
-          this->_block_cache = _block->cache_update(std::move(this->_block_cache));
-      });
+      else
+        this->_block = elle::cast<ACLBlock>::runtime(
+          this->_owner.fetch_or_die(this->_address));
+      ELLE_DUMP("block: %s", *this->_block);
       std::unordered_map<std::string, FileData> local;
       std::swap(local, _files);
       bool empty = false;
-      elle::IOStream is(umbrella([&] {
+      elle::IOStream is(
+        umbrella([&] {
             auto& d = _block->data();
+            ELLE_DUMP("block data: %s", d);
             empty = d.empty();
             return d.istreambuf();
-            }
-            , EACCES));
+          }, EACCES));
       if (empty)
-      {
-        _last_fetch = now;
         return;
-      }
       elle::serialization::json::SerializerIn input(is);
       try
       {
@@ -221,7 +222,6 @@ namespace infinit
         std::swap(local, _files);
         throw rfs::Error(EIO, e.what());
       }
-      _last_fetch = now;
     }
 
     void
@@ -412,34 +412,35 @@ namespace infinit
         // We might have children that pointed to us, we need to move them
         this->move_recurse(current, where);
       }
+
     void
-      Directory::stat(struct stat* st)
+    Directory::stat(struct stat* st)
+    {
+      ELLE_TRACE_SCOPE("%s: stat", *this);
+      bool can_access = false;
+      try
       {
-        ELLE_TRACE_SCOPE("%s: stat", *this);
-        bool can_access = false;
-        try
-        {
-          _fetch();
-          can_access = true;
-        }
-        catch (infinit::model::doughnut::ValidationFailed const& e)
-        {
-          ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
-        }
-        catch (rfs::Error const& e)
-        {
-          if (e.error_code() != EACCES)
-            throw;
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("unexpected exception on stat: %s", e);
-          throw rfs::Error(EIO, elle::sprintf("%s", e));
-        }
-        Node::stat(st);
-        if (!can_access)
-          st->st_mode &= ~0777;
+        this->_fetch();
+        can_access = true;
       }
+      catch (infinit::model::doughnut::ValidationFailed const& e)
+      {
+        ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
+      }
+      catch (rfs::Error const& e)
+      {
+        if (e.error_code() != EACCES)
+          throw;
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("unexpected exception on stat: %s", e);
+        throw rfs::Error(EIO, elle::sprintf("%s", e));
+      }
+      Node::stat(st);
+      if (!can_access)
+        st->st_mode &= ~0777;
+    }
 
     void
     Directory::cache_stats(CacheStats& cs)

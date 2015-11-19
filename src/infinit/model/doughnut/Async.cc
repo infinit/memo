@@ -146,7 +146,8 @@ namespace infinit
         // preserved.
         std::unique_ptr<blocks::Block>
         Async::_fetch(overlay::Overlay& overlay,
-                      Address address)
+                      Address address,
+                      boost::optional<int>)
         {
           if (!_restored_journal)
             _restore_journal(overlay);

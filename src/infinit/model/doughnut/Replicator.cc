@@ -193,7 +193,8 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Replicator::_fetch(overlay::Overlay& overlay, Address address)
+        Replicator::_fetch(overlay::Overlay& overlay, Address address,
+                           boost::optional<int>)
         {
           ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
           this->_overlay = &overlay;

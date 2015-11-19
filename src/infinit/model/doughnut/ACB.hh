@@ -99,9 +99,6 @@ namespace infinit
         set_permissions(cryptography::rsa::PublicKey const& key,
                         bool read,
                         bool write);
-        virtual
-        std::unique_ptr<Cache>
-        cache_update(std::unique_ptr<Cache> prev) override;
       protected:
         virtual
         void

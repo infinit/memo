@@ -20,9 +20,10 @@ namespace infinit
           using Clock = std::chrono::high_resolution_clock;
           typedef Clock::time_point TimePoint;
           typedef Clock::duration Duration;
-          Cache(Doughnut& doughnut, std::unique_ptr<Consensus> backend,
-                Duration mut_cache_ttl = std::chrono::seconds(1),
-                long const_cache_size = 50);
+          Cache(Doughnut& doughnut,
+                std::unique_ptr<Consensus> backend,
+                boost::optional<int> cache_size = {},
+                boost::optional<std::chrono::seconds> cache_ttl = {});
           ~Cache();
 
         protected:
@@ -35,7 +36,8 @@ namespace infinit
           virtual
           std::unique_ptr<blocks::Block>
           _fetch(overlay::Overlay& overlay,
-                 Address address) override;
+                 Address address,
+                 boost::optional<int> local_version) override;
           virtual
           void
           _remove(overlay::Overlay& overlay,
@@ -45,8 +47,8 @@ namespace infinit
           void _cleanup();
           std::unique_ptr<blocks::Block> _copy(blocks::Block& block);
           std::unique_ptr<Consensus> _backend;
-          Duration _mut_cache_ttl;
-          int _const_cache_size;
+          std::chrono::seconds _cache_ttl;
+          int _cache_size;
           // Use a LRU cache for ImmutableBlock, and a TTL cache for
           // MutableBlock
           std::map<TimePoint, Address> _mut_cache_time;

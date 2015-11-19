@@ -45,7 +45,7 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::Block>
-      Faith::_fetch(Address address) const
+      Faith::_fetch(Address address, boost::optional<int> local_version) const
       {
         ELLE_TRACE_SCOPE("%s: fetch block at %x", *this, address);
         try
