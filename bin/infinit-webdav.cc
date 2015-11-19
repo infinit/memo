@@ -523,18 +523,14 @@ void run(variables_map const& args)
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
-  bool cache = args.count("cache");
-  boost::optional<int> cache_size(0); // Not initializing warns on GCC 4.9
-  if (args.count("cache") && args["cache"].as<int>() != 0)
-    cache_size = args["cache"].as<int>();
-  else
-    cache_size.reset();
-  bool async_writes =
-    args.count("async-writes") && args["async-writes"].as<bool>();
+  bool cache = flag(args, option_cache.long_name());
+  boost::optional<int> cache_size =
+    option_opt<int>(args, option_cache_size.long_name());
+  boost::optional<int> cache_ttl =
+    option_opt<int>(args, option_cache_ttl.long_name());
   report_action("running", "network", network.name);
-  auto model = network.run(hosts, true, cache, cache_size, async_writes,
-      args.count("async") && args["async"].as<bool>(),
-      args.count("cache-model") && args["cache-model"].as<bool>());
+  auto model = network.run(
+    hosts, true, cache, cache_size, cache_ttl, flag(args, "async"));
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(), std::move(model));
   reactor::filesystem::FileSystem rfs(std::move(fs), true);
@@ -560,7 +556,9 @@ int main(int argc, char** argv)
         { "name", value<std::string>(), "created network name" },
         { "volume", value<std::string>(), "created volume name" },
         { "async", bool_switch(), "Use asynchronious operations" },
-        { "cache-model", bool_switch(), "Enable model caching"},
+        option_cache,
+        option_cache_size,
+        option_cache_ttl,
       },
     },
   };
