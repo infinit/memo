@@ -1,9 +1,9 @@
 #include <sys/types.h>
 
 #ifdef INFINIT_LINUX
-#include <attr/xattr.h>
+# include <attr/xattr.h>
 #elif defined(INFINIT_MACOSX)
-#include <sys/xattr.h>
+# include <sys/xattr.h>
 #endif
 
 #include <boost/program_options.hpp>
@@ -29,44 +29,49 @@ infinit::Infinit ifnt;
 using namespace boost::program_options;
 options_description mode_options("Modes");
 
-int port_getxattr(std::string const& file, std::string const& key,
-                   char* val, int val_size)
+static
+boost::filesystem::path
+file_xattrs_dir(std::string const& file)
+{
+  boost::filesystem::path p(file);
+  auto filename = p.filename();
+  auto dir = p.parent_path();
+  auto attr_dir = dir / ("$xattrs." + filename.string());
+  boost::system::error_code erc;
+  boost::filesystem::create_directory(attr_dir, erc);
+  return attr_dir;
+}
+
+static
+int
+port_getxattr(
+  std::string const& file, std::string const& key, char* val, int val_size)
 {
 #ifndef INFINIT_WINDOWS
   int res = -1;
   res = getxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
-  if (res >=0)
+  if (res >= 0)
     return res;
 #endif
-
-  boost::filesystem::path p(file);
-  auto filename = p.filename();
-  auto dir = p.parent_path();
-  auto attrdir = dir / ("$xattrs." + filename.string());
-  boost::system::error_code erc;
-  boost::filesystem::create_directory(attrdir, erc);
-  boost::filesystem::ifstream ifs(attrdir / key);
+  auto attr_dir = file_xattrs_dir(file);
+  boost::filesystem::ifstream ifs(attr_dir / key);
   ifs.read(val, val_size);
   return ifs.gcount();
 }
 
-int port_setxattr(std::string const& file, std::string const& key,
-                  std::string const& value)
+static
+int
+port_setxattr(
+  std::string const& file, std::string const& key, std::string const& value)
 {
 #ifndef INFINIT_WINDOWS
-  int res = setxattr(file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
+  int res = setxattr(
+    file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
   if (res >= 0)
-  {
     return res;
-  }
 #endif
-  boost::filesystem::path p(file);
-  auto filename = p.filename();
-  auto dir = p.parent_path();
-  auto attrdir = dir / ("$xattrs." + filename.string());
-  boost::system::error_code erc;
-  boost::filesystem::create_directory(attrdir, erc);
-  boost::filesystem::ofstream ofs(attrdir / key);
+  auto attr_dir = file_xattrs_dir(file);
+  boost::filesystem::ofstream ofs(attr_dir / key);
   ofs.write(value.data(), value.size());
   return 0;
 }
@@ -129,10 +134,8 @@ list_action(std::string const& path, bool verbose)
     boost::optional<bool> dir_inherit;
     if (dir)
     {
-      int sz = port_getxattr(path.c_str(),
-                        "user.infinit.auth.inherit",
-                        buf,
-                        4095);
+      int sz = port_getxattr(
+        path.c_str(), "user.infinit.auth.inherit", buf, 4095);
       if (sz < 0)
         perror(path.c_str());
       else
@@ -193,10 +196,8 @@ set_action(std::string const& path,
       try
       {
         std::string value = inherit ? "true" : "false";
-        check(port_setxattr,
-              path,
-              "user.infinit.auth.inherit",
-              value);
+        check(
+          port_setxattr, path, "user.infinit.auth.inherit", value);
       }
       catch (elle::Error const& error)
       {
@@ -210,10 +211,8 @@ set_action(std::string const& path,
     for (auto& username: users)
     {
       auto set_attribute = [path, mode] (std::string const& value) {
-        check(port_setxattr,
-              path,
-              ("user.infinit.auth." + mode),
-              value);
+        check(
+          port_setxattr, path, ("user.infinit.auth." + mode), value);
       };
       try
       {
