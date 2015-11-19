@@ -1,3 +1,17 @@
+#include <dirent.h>
+#include <errno.h>
+#include <random>
+
+#include <sys/types.h>
+#ifndef INFINIT_WINDOWS
+#include <sys/statvfs.h>
+#endif
+
+#ifdef INFINIT_LINUX
+#include <attr/xattr.h>
+#elif defined(INFINIT_MACOSX)
+#include <sys/xattr.h>
+#endif
 
 #include <boost/filesystem/fstream.hpp>
 
@@ -13,7 +27,6 @@
 #include <reactor/scheduler.hh>
 
 #include <infinit/filesystem/filesystem.hh>
-
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -24,23 +37,10 @@
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
 
-#include <random>
-
-#include <sys/types.h>
-#ifndef INFINIT_WINDOWS
-#include <sys/statvfs.h>
-#endif
-
-#ifdef INFINIT_LINUX
-#include <attr/xattr.h>
-#elif defined(INFINIT_MACOSX)
-#include <sys/xattr.h>
-#endif
-
 #ifdef INFINIT_MACOSX
-  #define SXA_EXTRA ,0
+# define SXA_EXTRA ,0
 #else
-  #define SXA_EXTRA
+# define SXA_EXTRA
 #endif
 
 ELLE_LOG_COMPONENT("test");
@@ -120,16 +120,37 @@ static int directory_count(boost::filesystem::path const& p)
   }
 }
 
-static bool can_access(boost::filesystem::path const& p)
+static
+bool
+can_access(boost::filesystem::path const& p)
 {
-  int fd = open(p.string().c_str(), O_RDONLY);
-  bool res = (fd >= 0);
-  if (res)
+  struct stat st;
+  if (stat(p.string().c_str(), &st) == -1)
   {
-    close(fd);
+    BOOST_CHECK_EQUAL(errno, EACCES);
+    return false;
   }
-  ELLE_DEBUG("can_access %s: %s", p, res);
-  return res;
+  if (S_ISDIR(st.st_mode))
+  {
+    auto dir = opendir(p.string().c_str());
+    if (!dir)
+      return false;
+    else
+    {
+      auto ent = readdir(dir);
+      auto e = errno;
+      closedir(dir);
+      return ent || e != EACCES;
+    }
+  }
+  else
+  {
+    int fd = open(p.string().c_str(), O_RDONLY);
+    if (fd < 0)
+      return false;
+    close(fd);
+    return true;
+  }
 }
 
 static bool touch(boost::filesystem::path const& p)
