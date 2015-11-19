@@ -60,9 +60,9 @@ namespace infinit
       `---------*/
 
       ACB::ACLEntry::ACLEntry(infinit::cryptography::rsa::PublicKey key_,
-                              bool read_,
-                              bool write_,
-                              elle::Buffer token_)
+                         bool read_,
+                         bool write_,
+                         elle::Buffer token_)
         : key(std::move(key_))
         , read(read_)
         , write(write_)
@@ -233,22 +233,14 @@ namespace infinit
                            bool write)
       {
         ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
-                         *this, key, read, write);
-        if (key == this->owner_key())
-          throw elle::Error("Cannot set permissions ofr owner");
-        std::vector<ACB::ACLEntry>& acl_entries = this->acl_entries();
+                   *this, key, read, write);
+        auto& acl_entries = this->acl_entries();
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
-        std::vector<ACB::ACLEntry>::iterator it = std::find_if
+        auto it = std::find_if
           (acl_entries.begin(), acl_entries.end(),
            [&] (ACLEntry const& e) { return e.key == key; });
         if (it == acl_entries.end())
         {
-          if (!read && !write)
-          {
-            ELLE_DUMP("%s: new user with no read or write permissions, "
-                      "do nothing", *this);
-            return;
-          }
           ELLE_DEBUG_SCOPE("%s: new user, insert ACL entry", *this);
           // If the owner token is empty, this block was never pushed and
           // sealing will generate a new secret and update the token.
@@ -263,14 +255,6 @@ namespace infinit
         }
         else
         {
-          if (!read && !write)
-          {
-            ELLE_DEBUG_SCOPE("%s: user (%s) no longer has read or write "
-                             "permissions, remove ACL entry", *this, key);
-            acl_entries.erase(it);
-            this->_acl_changed = true;
-            return;
-          }
           ELLE_DEBUG_SCOPE("%s: edit ACL entry", *this);
           if (it->read != read)
           {

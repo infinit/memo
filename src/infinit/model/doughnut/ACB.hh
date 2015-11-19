@@ -35,14 +35,11 @@ namespace infinit
           elle::Buffer token;
 
           ACLEntry(infinit::cryptography::rsa::PublicKey key_,
-                   bool read_,
+           bool read_,
                    bool write_,
                    elle::Buffer token_);
           ACLEntry(ACLEntry const& other);
           ACLEntry(elle::serialization::SerializerIn& s);
-
-          ACLEntry&
-          operator =(ACLEntry&& other) = default;
 
           typedef infinit::serialization_tag serialization_tag;
           static ACLEntry deserialize(elle::serialization::SerializerIn& s);
