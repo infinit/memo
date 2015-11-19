@@ -412,34 +412,35 @@ namespace infinit
         // We might have children that pointed to us, we need to move them
         this->move_recurse(current, where);
       }
+
     void
-      Directory::stat(struct stat* st)
+    Directory::stat(struct stat* st)
+    {
+      ELLE_TRACE_SCOPE("%s: stat", *this);
+      bool can_access = false;
+      try
       {
-        ELLE_TRACE_SCOPE("%s: stat", *this);
-        bool can_access = false;
-        try
-        {
-          _fetch();
-          can_access = true;
-        }
-        catch (infinit::model::doughnut::ValidationFailed const& e)
-        {
-          ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
-        }
-        catch (rfs::Error const& e)
-        {
-          if (e.error_code() != EACCES)
-            throw;
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("unexpected exception on stat: %s", e);
-          throw rfs::Error(EIO, elle::sprintf("%s", e));
-        }
-        Node::stat(st);
-        if (!can_access)
-          st->st_mode &= ~0777;
+        this->_fetch();
+        can_access = true;
       }
+      catch (infinit::model::doughnut::ValidationFailed const& e)
+      {
+        ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
+      }
+      catch (rfs::Error const& e)
+      {
+        if (e.error_code() != EACCES)
+          throw;
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("unexpected exception on stat: %s", e);
+        throw rfs::Error(EIO, elle::sprintf("%s", e));
+      }
+      Node::stat(st);
+      if (!can_access)
+        st->st_mode &= ~0777;
+    }
 
     void
     Directory::cache_stats(CacheStats& cs)
