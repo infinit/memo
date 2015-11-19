@@ -275,7 +275,8 @@ set(variables_map const& args)
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
     throw CommandLineError("missing path argument");
-  auto users = mandatory<std::vector<std::string>>(args, "user", "user");
+  auto users_ = optional<std::vector<std::string>>(args, "user");
+  auto users = users_ ? users_.get() : std::vector<std::string>();
   std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto mode_ = optional(args, "mode");
   auto mode = mode_ ? mode_.get() : "";
