@@ -974,25 +974,27 @@ test_conflicts(bool paxos)
     BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
     BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
   }
-  ELLE_LOG("file create/write without acl inheritance")
-  {
-    int fd0, fd1;
-    setxattr(m0.c_str(), "user.infinit.auth.inherit",
-             "false", strlen("false"), 0 SXA_EXTRA);
-    // Force caching of '/' in second mount, otherwise if it fetches,
-    // it will see the new 'file2' and fail the create.
-    struct stat st;
-    stat(m1.string().c_str(), &st);
-    fd0 = open((m0 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
-    BOOST_CHECK(fd0 != -1);
-    fd1 = open((m1 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
-    BOOST_CHECK(fd1 != -1);
-    BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
-    BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
-    BOOST_CHECK_EQUAL(close(fd0), 0);
-    BOOST_CHECK_EQUAL(close(fd1), 0);
-    BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
-  }
+  // FIXME: This needs cache to be enabled ; restore when cache is moved up to
+  // Model instead of the consensus and the 'infinit' binary accepts --cache.
+  // ELLE_LOG("file create/write without acl inheritance")
+  // {
+  //   int fd0, fd1;
+  //   setxattr(m0.c_str(), "user.infinit.auth.inherit",
+  //            "false", strlen("false"), 0 SXA_EXTRA);
+  //   // Force caching of '/' in second mount, otherwise if it fetches,
+  //   // it will see the new 'file2' and fail the create.
+  //   struct stat st;
+  //   stat(m1.string().c_str(), &st);
+  //   fd0 = open((m0 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
+  //   BOOST_CHECK(fd0 != -1);
+  //   fd1 = open((m1 / "file2").string().c_str(), O_CREAT|O_RDWR, 0644);
+  //   BOOST_CHECK(fd1 != -1);
+  //   BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
+  //   BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
+  //   BOOST_CHECK_EQUAL(close(fd0), 0);
+  //   BOOST_CHECK_EQUAL(close(fd1), 0);
+  //   BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
+  // }
   struct stat st;
   ELLE_LOG("directory conflict")
   {
