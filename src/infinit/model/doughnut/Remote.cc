@@ -148,7 +148,7 @@ namespace infinit
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
                 static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
-                if (disable_key)
+                if (!disable_key)
                 {
                   ELLE_TRACE_SCOPE("exchanging keys");
                   this->_key_exchange();
