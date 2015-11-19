@@ -72,7 +72,7 @@ namespace infinit
           {
             int id = std::stoi(p.filename().string());
             _next_index = std::max(id, _next_index);
-            boost::filesystem::ifstream is(p);
+            boost::filesystem::ifstream is(p, std::ios::binary);
             elle::serialization::binary::SerializerIn sin(is, false);
             sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
             sin.set_context<Doughnut*>(&this->doughnut());
@@ -101,7 +101,7 @@ namespace infinit
           {
             auto path = boost::filesystem::path(_journal_dir) / std::to_string(op.index);
             ELLE_DEBUG("creating %s", path);
-            boost::filesystem::ofstream os(path);
+            boost::filesystem::ofstream os(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(os, false);
             sout.set_context(ACBDontWaitForSignature{});
             sout.set_context(OKBDontWaitForSignature{});
