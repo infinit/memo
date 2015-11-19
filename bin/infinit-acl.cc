@@ -44,15 +44,19 @@ file_xattrs_dir(std::string const& file)
 
 static
 int
-port_getxattr(
-  std::string const& file, std::string const& key, char* val, int val_size)
+port_getxattr(std::string const& file,
+              std::string const& key,
+              char* val, int val_size,
+              bool fallback_xattrs)
 {
 #ifndef INFINIT_WINDOWS
   int res = -1;
   res = getxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
-  if (res >= 0)
+  if (res >= 0 || !fallback_xattrs)
     return res;
 #endif
+  if (!fallback_xattrs)
+    elle::unreachable();
   auto attr_dir = file_xattrs_dir(file);
   boost::filesystem::ifstream ifs(attr_dir / key);
   ifs.read(val, val_size);
@@ -61,15 +65,19 @@ port_getxattr(
 
 static
 int
-port_setxattr(
-  std::string const& file, std::string const& key, std::string const& value)
+port_setxattr(std::string const& file,
+              std::string const& key,
+              std::string const& value,
+              bool fallback_xattrs)
 {
 #ifndef INFINIT_WINDOWS
   int res = setxattr(
     file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
-  if (res >= 0)
+  if (res >= 0 || !fallback_xattrs)
     return res;
 #endif
+  if (!fallback_xattrs)
+    elle::unreachable();
   auto attr_dir = file_xattrs_dir(file);
   boost::filesystem::ofstream ofs(attr_dir / key);
   ofs.write(value.data(), value.size());
@@ -116,14 +124,14 @@ recursive_action(A action, std::string const& path, Args ... args)
 
 static
 void
-list_action(std::string const& path, bool verbose)
+list_action(std::string const& path, bool verbose, bool fallback_xattrs)
 {
   if (verbose)
     std::cout << "processing " << path << std::endl;
   bool dir = boost::filesystem::is_directory(path);
   char buf[4096];
   int sz = port_getxattr(
-    path.c_str(), "user.infinit.auth", buf, 4095);
+    path.c_str(), "user.infinit.auth", buf, 4095, fallback_xattrs);
   if (sz < 0)
     perror(path.c_str());
   else
@@ -135,7 +143,7 @@ list_action(std::string const& path, bool verbose)
     if (dir)
     {
       int sz = port_getxattr(
-        path.c_str(), "user.infinit.auth.inherit", buf, 4095);
+        path.c_str(), "user.infinit.auth.inherit", buf, 4095, fallback_xattrs);
       if (sz < 0)
         perror(path.c_str());
       else
@@ -183,7 +191,8 @@ set_action(std::string const& path,
            bool inherit,
            bool disinherit,
            bool verbose,
-           bool try_with_public_key)
+           bool try_with_public_key,
+           bool fallback_xattrs)
 {
   if (verbose)
     std::cout << "processing " << path << std::endl;
@@ -196,8 +205,8 @@ set_action(std::string const& path,
       try
       {
         std::string value = inherit ? "true" : "false";
-        check(
-          port_setxattr, path, "user.infinit.auth.inherit", value);
+        check(port_setxattr, path, "user.infinit.auth.inherit", value,
+              fallback_xattrs);
       }
       catch (elle::Error const& error)
       {
@@ -210,10 +219,12 @@ set_action(std::string const& path,
   {
     for (auto& username: users)
     {
-      auto set_attribute = [path, mode] (std::string const& value) {
-        check(
-          port_setxattr, path, ("user.infinit.auth." + mode), value);
-      };
+      auto set_attribute =
+        [path, mode, fallback_xattrs] (std::string const& value)
+        {
+          check(port_setxattr, path, ("user.infinit.auth." + mode), value,
+                fallback_xattrs);
+        };
       try
       {
         set_attribute(username);
@@ -260,11 +271,12 @@ list(variables_map const& args)
     throw CommandLineError("missing path argument");
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
+  bool fallback = flag(args, "fallback-xattrs");
   for (auto const& path: paths)
   {
-    list_action(path, verbose);
+    list_action(path, verbose, fallback);
     if (recursive)
-      recursive_action(list_action, path, verbose);
+      recursive_action(list_action, path, verbose, fallback);
   }
 }
 
@@ -302,6 +314,7 @@ set(variables_map const& args)
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
   bool try_with_public_key = flag(args, "try-with-public-key");
+  bool fallback = flag(args, "fallback-xattrs");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
@@ -316,12 +329,12 @@ set(variables_map const& args)
   for (auto const& path: paths)
   {
     set_action(path, users, mode, inherit, disinherit, verbose,
-               try_with_public_key);
+               try_with_public_key, fallback);
     if (recursive)
     {
       recursive_action(
         set_action, path, users, mode, inherit, disinherit, verbose,
-        try_with_public_key);
+        try_with_public_key, fallback);
     }
   }
 }
@@ -359,6 +372,8 @@ main(int argc, char** argv)
         { "try-with-public-key", bool_switch(),
           "try with the user public key" },
         { "verbose", bool_switch(), "verbose output" },
+        { "fallback-xattrs", bool_switch(), "fallback to creating xattrs folder"
+          " if system xattrs are not suppported" },
       },
     },
   };
