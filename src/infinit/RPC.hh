@@ -346,7 +346,7 @@ namespace infinit
     elle::serialization::Context _context;
     ELLE_ATTRIBUTE_R(std::string, name);
     ELLE_ATTRIBUTE_R(protocol::ChanneledStream*, channels, protected);
-    std::unique_ptr<infinit::cryptography::SecretKey> _key;
+    ELLE_ATTRIBUTE_RX(std::unique_ptr<infinit::cryptography::SecretKey>, key, protected);
   };
 
   template <typename Proto>
@@ -464,9 +464,9 @@ namespace infinit
           call_arguments(0, output, args...);
         }
         outs.flush();
-        if (self._key)
+        if (self.key())
         {
-          call = self._key->encipher(
+          call = self.key()->encipher(
             elle::ConstWeakBuffer(call.contents(), call.size()));
         }
         ELLE_DEBUG("%s: send request", self)
@@ -475,9 +475,9 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
-        if (self._key)
+        if (self.key())
         {
-          response = self._key->decipher(
+          response = self.key()->decipher(
             elle::ConstWeakBuffer(response.contents(), response.size()));
         }
         elle::IOStream ins(response.istreambuf());

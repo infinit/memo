@@ -25,6 +25,12 @@ namespace infinit
         return _remote->safe_perform<typename RPC<F>::result_type>("RPC",
           [&] {
             this->_channels = _remote->channels().get();
+            auto creds = _remote->credentials();
+            if (!creds.empty())
+            {
+              elle::Buffer c(creds);
+              this->key() = elle::make_unique<cryptography::SecretKey>(std::move(c));
+            }
             return helper();
         });
       }
