@@ -3,6 +3,7 @@
 #include <functional>
 
 #include <elle/memory.hh>
+#include <elle/bench.hh>
 
 #include <cryptography/rsa/PublicKey.hh>
 #include <cryptography/hash.hh>
@@ -20,6 +21,10 @@
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Paxos");
+
+#define BENCH(name)                                      \
+  static elle::Bench bench("bench.paxos." name, 10000_sec); \
+  elle::Bench::BenchScope bs(bench)
 
 namespace infinit
 {
@@ -143,6 +148,7 @@ namespace infinit
           propose(Paxos::PaxosClient::Quorum const& q,
                   Paxos::PaxosClient::Proposal const& p)
           {
+            BENCH("propose");
             auto& member = this->member();
             return network_exception_to_unavailable([&] {
               if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
@@ -161,6 +167,7 @@ namespace infinit
                  Paxos::PaxosClient::Proposal const& p,
                  std::shared_ptr<blocks::Block> const& value)
           {
+            BENCH("accept");
             auto& member = this->member();
             return network_exception_to_unavailable([&] {
               if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))

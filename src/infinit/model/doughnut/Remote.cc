@@ -3,6 +3,7 @@
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/utils.hh>
+#include <elle/bench.hh>
 
 #include <reactor/thread.hh>
 #include <reactor/scheduler.hh>
@@ -10,6 +11,10 @@
 #include <infinit/RPC.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote")
+
+#define BENCH(name)                                      \
+  static elle::Bench bench("bench.remote." name, 10000_sec); \
+  elle::Bench::BenchScope bs(bench)
 
 namespace infinit
 {
@@ -233,6 +238,7 @@ namespace infinit
       void
       Remote::store(blocks::Block const& block, StoreMode mode)
       {
+        BENCH("store");
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         auto store = make_rpc<void (blocks::Block const&, StoreMode)>("store");
@@ -242,6 +248,7 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Remote::fetch(Address address) const
       {
+        BENCH("fetch");
         ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
         auto fetch = elle::unconst(this)->make_rpc<std::unique_ptr<blocks::Block>
           (Address)>("fetch");
@@ -252,6 +259,7 @@ namespace infinit
       void
       Remote::remove(Address address)
       {
+        BENCH("remove");
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
         auto remove = make_rpc<void (Address)>("remove");
         remove(address);
