@@ -191,11 +191,7 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
                          *this, key, read, write);
         if (key == this->owner_key())
-        {
-          ELLE_DEBUG("%s: cannot set permissions for owner, doing nothing",
-                     *this);
-          return;
-        }
+          throw elle::Error("Cannot set permissions for owner");
         auto& acl_entries = this->acl_entries();
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
         auto it = std::find_if
@@ -265,8 +261,6 @@ namespace infinit
         ACB* other = dynamic_cast<ACB*>(&to);
         if (!other)
           throw elle::Error("Other block is not an ACB");
-        // also add owner in case it's not the same
-        other->set_permissions(this->owner_key(), true, true);
         if (this->_acl == Address::null)
           return; // nothing to do
         auto acl = this->_fetch_acl();
@@ -278,7 +272,8 @@ namespace infinit
         // FIXME: better implementation
         for (auto const& e: entries)
         {
-          other->set_permissions(e.key, e.read, e.write);
+          if (e.key != this->owner_key())
+            other->set_permissions(e.key, e.read, e.write);
         }
       }
 
