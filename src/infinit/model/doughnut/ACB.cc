@@ -90,6 +90,13 @@ namespace infinit
                         std::move(content.token.get()));
       }
 
+      bool
+      ACB::ACLEntry::operator == (ACB::ACLEntry const& b) const
+      {
+        return key == b.key && read == b.read && write && b.write
+          && token == b.token;
+      }
+
       /*-------------.
       | Construction |
       `-------------*/
@@ -98,7 +105,6 @@ namespace infinit
         : Super(owner)
         , _editor(-1)
         , _owner_token()
-        , _acl()
         , _acl_changed(true)
         , _data_version(-1)
         , _data_signature()
@@ -108,7 +114,6 @@ namespace infinit
         : Super(other)
         , _editor(other._editor)
         , _owner_token(other._owner_token)
-        , _acl(other._acl)
         , _acl_changed(other._acl_changed)
         , _acl_entries(other._acl_entries)
         , _data_version(other._data_version)
@@ -147,18 +152,13 @@ namespace infinit
           ELLE_DEBUG("%s: we are owner", *this);
           encrypted_secret = &this->_owner_token;
         }
-        else if (this->_acl != Address::null)
+        else if (!this->_acl_entries.empty())
         {
           // FIXME: factor searching the token
-          auto acl = this->_fetch_acl();
-          entries =
-            elle::serialization::deserialize
-              <std::vector<ACLEntry>, elle::serialization::Json>
-            (acl->data(), "entries");
           auto it = std::find_if
-            (entries.begin(), entries.end(),
+            (this->_acl_entries.begin(), this->_acl_entries.end(),
              [&] (ACLEntry const& e) { return e.key == mine; });
-          if (it != entries.end() && it->read)
+          if (it != this->_acl_entries.end() && it->read)
           {
             ELLE_DEBUG("%s: we are an editor", *this);
             encrypted_secret = &it->token;
@@ -192,7 +192,7 @@ namespace infinit
                          *this, key, read, write);
         if (key == this->owner_key())
           throw elle::Error("Cannot set permissions for owner");
-        auto& acl_entries = this->acl_entries();
+        auto& acl_entries = this->_acl_entries;
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
         auto it = std::find_if
           (acl_entries.begin(), acl_entries.end(),
@@ -261,16 +261,8 @@ namespace infinit
         ACB* other = dynamic_cast<ACB*>(&to);
         if (!other)
           throw elle::Error("Other block is not an ACB");
-        if (this->_acl == Address::null)
-          return; // nothing to do
-        auto acl = this->_fetch_acl();
-        std::vector<ACLEntry> entries;
-        entries =
-          elle::serialization::deserialize
-          <std::vector<ACLEntry>, elle::serialization::Json>
-          (acl->data(), "entries");
         // FIXME: better implementation
-        for (auto const& e: entries)
+        for (auto const& e: this->_acl_entries)
         {
           if (e.key != this->owner_key())
             other->set_permissions(e.key, e.read, e.write);
@@ -303,15 +295,7 @@ namespace infinit
         {
           ELLE_TRACE("Exception making owner: %s", e);
         }
-        if (this->_acl == Address::null)
-          return std::move(res);
-        auto acl = this->_fetch_acl();
-        std::vector<ACLEntry> entries;
-        entries =
-          elle::serialization::deserialize
-          <std::vector<ACLEntry>, elle::serialization::Json>
-          (acl->data(), "entries");
-        for (auto const& ent: entries)
+        for (auto const& ent: this->_acl_entries)
         {
           try
           {
@@ -338,31 +322,6 @@ namespace infinit
         return res;
       }
 
-      std::vector<ACB::ACLEntry>&
-      ACB::acl_entries()
-      {
-        if (!this->_acl_entries)
-          if (this->_acl != Address::null)
-          {
-            ELLE_DEBUG_SCOPE("%s: fetch old ACL at %s", *this, this->_acl);
-            auto acl = this->_fetch_acl();
-            ELLE_DUMP("%s: ACL content: %s", *this, acl->data());
-            this->_acl_entries =
-              elle::serialization::deserialize
-              <std::vector<ACLEntry>, elle::serialization::Json>
-              (acl->data(), "entries");
-          }
-          else
-            this->_acl_entries.emplace();
-        return *this->_acl_entries;
-      }
-
-      std::vector<ACB::ACLEntry> const&
-      ACB::acl_entries() const
-      {
-        return const_cast<Self*>(this)->acl_entries();
-      }
-
       /*-----------.
       | Validation |
       `-----------*/
@@ -377,26 +336,21 @@ namespace infinit
             return res;
         ELLE_DEBUG_SCOPE("%s: validate author part", *this);
         ACLEntry* entry = nullptr;
-        std::vector<ACLEntry> entries;
         if (this->_editor != -1)
         {
           ELLE_DEBUG_SCOPE("%s: check author has write permissions", *this);
-          if (this->_acl == Address::null || this->_editor < 0)
+          if (this->_editor < 0)
           {
             ELLE_DEBUG("%s: no ACL or no editor", *this);
             return blocks::ValidationResult::failure("no ACL or no editor");
           }
-          auto acl = this->_fetch_acl();
-          elle::IOStream input(acl->data().istreambuf());
-          elle::serialization::json::SerializerIn s(input);
-          s.serialize("entries", entries);
-          if (this->_editor >= signed(entries.size()))
+          if (this->_editor >= signed(this->_acl_entries.size()))
           {
             ELLE_DEBUG("%s: editor index out of bounds", *this);
             return blocks::ValidationResult::failure
               ("editor index out of bounds");
           }
-          entry = &entries[this->_editor];
+          entry = elle::unconst(&this->_acl_entries[this->_editor]);
           if (!entry->write)
           {
             ELLE_DEBUG("%s: no write permissions", *this);
@@ -429,23 +383,6 @@ namespace infinit
           static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
-          if (this->_acl_entries)
-          {
-            auto const& entries = *this->_acl_entries;
-            ELLE_DEBUG_SCOPE("%s: push new ACL block", *this);
-            {
-              auto new_acl = this->doughnut()->make_block<blocks::ImmutableBlock>(
-                elle::serialization::serialize
-                <std::vector<ACLEntry>, elle::serialization::Json>
-                (entries, "entries"));
-              auto new_acl_address = new_acl->address();
-              this->doughnut()->store(std::move(new_acl), STORE_INSERT);
-              this->_prev_acl = this->_acl;
-              this->_acl = new_acl_address;
-              this->_acl_changed = true;
-              ELLE_DUMP("%s: new ACL address: %s", *this, this->_acl);
-            }
-          }
           this->_acl_changed = false;
           Super::_seal_okb();
           if (!data_changed)
@@ -469,24 +406,12 @@ namespace infinit
             elle::serialization::serialize
             <cryptography::SecretKey, elle::serialization::Json>(secret);
           this->_owner_token = this->owner_key().seal(secret_buffer);
-          std::vector<ACLEntry> entries;
-          auto acl_address = this->_acl;
-          if (acl_address != Address::null)
-          {
-            auto acl = this->_fetch_acl();
-            ELLE_DUMP("%s: previous ACL: %s", *this, *acl);
-            elle::IOStream input(acl->data().istreambuf());
-            elle::serialization::json::SerializerIn s(input);
-            s.serialize("entries", entries);
-          }
-          bool changed = false;
           bool found = false;
           int idx = 0;
-          for (auto& e: entries)
+          for (auto& e: this->_acl_entries)
           {
             if (e.read)
             {
-              changed = true;
               e.token = e.key.seal(secret_buffer);
             }
             if (e.key == this->doughnut()->keys().K())
@@ -498,21 +423,6 @@ namespace infinit
           }
           if (!owner && !found)
             throw ValidationFailed("not owner and no write permissions");
-          if (changed)
-          {
-            ELLE_TRACE_SCOPE("%s: store new ACL", *this);
-            elle::Buffer new_acl;
-            {
-              elle::IOStream output(new_acl.ostreambuf());
-              elle::serialization::json::SerializerOut s(output);
-              s.serialize("entries", entries);
-            }
-            auto new_acl_block =
-              this->doughnut()->make_block<blocks::ImmutableBlock>(new_acl);
-            this->_prev_acl = this->_acl;
-            this->_acl = new_acl_block->address();
-            this->doughnut()->store(std::move(new_acl_block), STORE_INSERT);
-          }
           this->MutableBlock::data(secret.encipher(this->data_plain()));
           this->_data_changed = false;
         }
@@ -553,7 +463,7 @@ namespace infinit
           s.serialize("version", this->_data_version);
           s.serialize("data", this->Block::data());
           s.serialize("owner_token", this->_owner_token);
-          s.serialize("acl", this->_acl);
+          s.serialize("acl", this->_acl_entries);
         }
         return res;
       }
@@ -561,26 +471,8 @@ namespace infinit
       void
       ACB::_sign(elle::serialization::SerializerOut& s) const
       {
-        std::vector<ACLEntry> entries;
-        if (this->_acl != Address::null)
-        {
-          ELLE_ASSERT(this->doughnut());
-          try
-          {
-            auto acl = this->_fetch_acl();
-            entries = elle::serialization::deserialize
-              <std::vector<ACLEntry>, elle::serialization::Json>
-              (acl->data(), "entries");
-          }
-          catch (elle::Error const& e)
-          {
-            elle::throw_with_nested(
-              elle::Error(
-                elle::sprintf("unable to fetch ACL block %s", this->_acl)));
-          }
-        }
         s.serialize(
-          "acls", entries,
+          "acls", elle::unconst(this)->_acl_entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
       }
 
@@ -607,11 +499,6 @@ namespace infinit
       void
       ACB::_stored()
       {
-        if (this->_prev_acl != Address::null)
-        {
-          this->doughnut()->remove(this->_prev_acl);
-          this->_prev_acl = Address();
-        }
       }
 
       bool
@@ -624,31 +511,13 @@ namespace infinit
           return false;
         if (this->_owner_token != other_acb->_owner_token)
           return false;
-        if (this->_acl != other_acb->_acl)
+        if (this->_acl_entries != other_acb->_acl_entries)
           return false;
         if (this->_data_version != other_acb->_data_version)
           return false;
         if (this->_data_signature.value() != other_acb->_data_signature.value())
           return false;
         return this->Super::operator ==(rhs);
-      }
-
-      std::unique_ptr<blocks::Block>
-      ACB::_fetch_acl() const
-      {
-        try
-        {
-          return this->doughnut()->fetch(this->_acl);
-        }
-        catch (MissingBlock const& mb)
-        { // assuming the block got updated
-          auto new_self = this->doughnut()->fetch(this->address());
-          auto acb = elle::cast<ACB>::runtime(new_self);
-          if (acb->_acl == _acl)
-            throw;
-          const_cast<ACB*>(this)->_acl = acb->_acl;
-          return this->doughnut()->fetch(this->_acl);
-        }
       }
 
       /*--------------.
@@ -659,7 +528,6 @@ namespace infinit
         : Super(input)
         , _editor(-2)
         , _owner_token()
-        , _acl()
         , _acl_changed(false)
         , _data_version(-1)
         , _data_signature()
@@ -679,7 +547,17 @@ namespace infinit
       {
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
-        s.serialize("acl", this->_acl);
+        elle::Buffer buf;
+        if (s.out())
+        {
+          buf = elle::serialization::json::serialize(this->_acl_entries);
+        }
+        s.serialize("acl", buf);
+        if (s.in())
+        {
+          this->_acl_entries = elle::serialization::json::deserialize
+            <decltype(this->_acl_entries)>(buf);
+        }
         s.serialize("data_version", this->_data_version);
         bool need_signature = !s.context().has<ACBDontWaitForSignature>();
         if (need_signature)

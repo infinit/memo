@@ -44,6 +44,8 @@ namespace infinit
           ACLEntry&
           operator =(ACLEntry&& other) = default;
 
+          bool operator == (ACLEntry const& b) const;
+
           typedef infinit::serialization_tag serialization_tag;
           static ACLEntry deserialize(elle::serialization::SerializerIn& s);
         };
@@ -57,12 +59,10 @@ namespace infinit
         ~ACB();
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
-        ELLE_ATTRIBUTE_R(Address, acl);
         ELLE_ATTRIBUTE(bool, acl_changed);
-        ELLE_ATTRIBUTE(boost::optional<std::vector<ACLEntry>>, acl_entries);
+        ELLE_ATTRIBUTE(std::vector<ACLEntry>, acl_entries);
         ELLE_ATTRIBUTE_R(int, data_version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
-        ELLE_ATTRIBUTE(Address, prev_acl);
       protected:
         elle::Buffer const& data_signature() const;
 
@@ -111,10 +111,6 @@ namespace infinit
         virtual
         std::vector<Entry>
         _list_permissions(bool ommit_names) override;
-        std::vector<ACLEntry>&
-        acl_entries();
-        std::vector<ACLEntry> const&
-        acl_entries() const;
 
       /*-----------.
       | Validation |
@@ -144,8 +140,6 @@ namespace infinit
       private:
         void
         _serialize(elle::serialization::Serializer& input);
-        std::unique_ptr<blocks::Block>
-        _fetch_acl() const;
       };
     }
   }
