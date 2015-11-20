@@ -528,9 +528,12 @@ void run(variables_map const& args)
     option_opt<int>(args, option_cache_size.long_name());
   boost::optional<int> cache_ttl =
     option_opt<int>(args, option_cache_ttl.long_name());
+  boost::optional<int> cache_invalidation =
+    option_opt<int>(args, option_cache_invalidation.long_name());
   report_action("running", "network", network.name);
   auto model = network.run(
-    hosts, true, cache, cache_size, cache_ttl, flag(args, "async"));
+    hosts, true, cache, cache_size, cache_ttl, cache_invalidation,
+    flag(args, "async"));
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(), std::move(model));
   reactor::filesystem::FileSystem rfs(std::move(fs), true);
@@ -559,6 +562,7 @@ int main(int argc, char** argv)
         option_cache,
         option_cache_size,
         option_cache_ttl,
+        option_cache_invalidation,
       },
     },
   };

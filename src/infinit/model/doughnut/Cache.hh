@@ -66,6 +66,7 @@ namespace infinit
             address() const;
             ELLE_ATTRIBUTE_RX(std::unique_ptr<blocks::Block>, block);
             ELLE_ATTRIBUTE_RW(clock::time_point, last_used);
+            ELLE_ATTRIBUTE_RW(clock::time_point, last_fetched);
           };
           typedef bmi::multi_index_container<
             CachedBlock,
@@ -77,7 +78,11 @@ namespace infinit
               bmi::ordered_non_unique<
                 bmi::const_mem_fun<
                   CachedBlock,
-                  clock::time_point const&, &CachedBlock::last_used> >
+                  clock::time_point const&, &CachedBlock::last_used> >,
+              bmi::ordered_non_unique<
+                bmi::const_mem_fun<
+                  CachedBlock,
+                  clock::time_point const&, &CachedBlock::last_fetched> >
             > > BlockCache;
           ELLE_ATTRIBUTE(BlockCache, cache);
         };

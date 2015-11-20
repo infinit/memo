@@ -125,7 +125,8 @@ namespace infinit
              bool async = false,
              bool cache = false,
              boost::optional<int> cach_size = {},
-             boost::optional<std::chrono::seconds> cache_ttl = {});
+             boost::optional<std::chrono::seconds> cache_ttl = {},
+             boost::optional<std::chrono::seconds> cache_invalidation = {});
       };
     }
   }

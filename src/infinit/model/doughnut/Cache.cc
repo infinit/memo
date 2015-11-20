@@ -5,6 +5,8 @@
 #include <elle/serialization/binary.hh>
 #include <elle/bench.hh>
 
+#include <infinit/model/MissingBlock.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/OKB.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Cache");
@@ -39,8 +41,10 @@ namespace infinit
             cache_ttl.get() : std::chrono::seconds(60 * 5))
           , _cache_size(cache_size ? cache_size.get() : 64000000)
         {
-          ELLE_TRACE_SCOPE("%s: create with size %s and TTL %ss",
-                           *this, this->_cache_size, this->_cache_ttl.count());
+          ELLE_TRACE_SCOPE(
+            "%s: create with size %s, TTL %ss and invalidation %ss",
+            *this, this->_cache_size,
+            this->_cache_ttl.count(), this->_cache_invalidation.count());
         }
 
         Cache::~Cache()
@@ -106,6 +110,7 @@ namespace infinit
               hit, [&] (CachedBlock& b) {
                 b.block() = std::move(block);
                 b.last_used(now());
+                b.last_fetched(now());
               });
           else
             this->_cache.emplace(std::move(block));
@@ -115,21 +120,60 @@ namespace infinit
         Cache::_cleanup()
         {
           ELLE_TRACE_SCOPE("%s: cleanup cache", *this);
-          auto& order = this->_cache.get<1>();
-          auto deadline = now() - this->_cache_ttl;
-          auto it = order.begin();
-          while (it != order.end() &&
-                 it->last_used() < deadline)
+          ELLE_DEBUG("evict unused blocks")
           {
-            ELLE_DUMP("evict %s from cache", it->block()->address());
-            it = order.erase(it);
+            auto& order = this->_cache.get<1>();
+            auto deadline = now() - this->_cache_ttl;
+            auto it = order.begin();
+            while (it != order.end() && it->last_used() < deadline)
+            {
+              ELLE_DUMP("evict %s", it->block()->address());
+              it = order.erase(it);
+            }
           }
           // FIXME: take cache_size in account too
+          ELLE_DEBUG("refresh obsolete blocks")
+          {
+            auto& order = this->_cache.get<2>();
+            auto deadline = now() - this->_cache_invalidation;
+            auto it = order.begin();
+            while (it != order.end() && it->last_fetched() < deadline)
+            {
+              if (auto mb =
+                  dynamic_cast<blocks::MutableBlock*>(it->block().get()))
+              {
+                ELLE_DUMP("refresh %s", it->block()->address());
+                try
+                {
+                  auto block = this->_backend->fetch(
+                    *this->doughnut().overlay(),
+                    it->block()->address(), mb->version());
+                  order.modify(
+                    it,
+                    [&] (CachedBlock& cache)
+                    {
+                      if (block)
+                        cache.block() = std::move(block);
+                      cache.last_fetched(now());
+                    });
+                  it = order.begin();
+                }
+                catch (MissingBlock const&)
+                {
+                  ELLE_DUMP("drop removed block");
+                  it = order.erase(it);
+                }
+              }
+              else
+                ++it;
+            }
+          }
         }
 
         Cache::CachedBlock::CachedBlock(std::unique_ptr<blocks::Block> block)
           : _block(std::move(block))
           , _last_used(now())
+          , _last_fetched(now())
         {}
 
         Address

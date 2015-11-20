@@ -495,13 +495,16 @@ namespace infinit
         bool cache = false,
         boost::optional<int> cache_size = {},
         boost::optional<int> cache_ttl = {},
+        boost::optional<int> cache_invalidation = {},
         bool async_writes = false)
     {
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
         hosts, client, p, async_writes, cache, cache_size,
         cache_ttl ? std::chrono::seconds(cache_ttl.get()) :
-        boost::optional<std::chrono::seconds>());
+          boost::optional<std::chrono::seconds>(),
+        cache_invalidation ? std::chrono::seconds(cache_invalidation.get()) :
+          boost::optional<std::chrono::seconds>());
     }
 
     std::string name;
@@ -1878,4 +1881,7 @@ boost::program_options::option_description option_cache_size(
   "maximum block cache size in bytes (64MB by default)");
 boost::program_options::option_description option_cache_ttl(
   "cache-ttl", boost::program_options::value<int>(),
-  "block cache time-to-live in seconds (8s by default)");
+  "block cache time-to-live in seconds (5 minutes by default)");
+boost::program_options::option_description option_cache_invalidation(
+  "cache-invalidation", boost::program_options::value<int>(),
+  "block cache invalidation time in seconds (15 seconds by default)");

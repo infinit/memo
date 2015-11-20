@@ -411,8 +411,12 @@ run(variables_map const& args)
     option_opt<int>(args, option_cache_size.long_name());
   boost::optional<int> cache_ttl =
     option_opt<int>(args, option_cache_ttl.long_name());
+  boost::optional<int> cache_invalidation =
+    option_opt<int>(args, option_cache_invalidation.long_name());
+  if (cache_size || cache_ttl || cache_invalidation)
+    cache = true;
   auto dht =
-    network.run(eps, false, cache, cache_size, cache_ttl,
+    network.run(eps, false, cache, cache_size, cache_ttl, cache_invalidation,
                 flag(args, "async"));
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
@@ -634,6 +638,7 @@ main(int argc, char** argv)
         option_cache,
         option_cache_size,
         option_cache_ttl,
+        option_cache_invalidation,
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
         { "fetch,f", bool_switch(),
