@@ -286,7 +286,7 @@ class Bottle(bottle.Bottle):
       user.create()
       raise Response(201, {})
     except User.Duplicate:
-      if user.public_key == self.user_from_name(user.name).public_key:
+      if user == self.user_from_name(name = name):
         return {}
       else:
         raise Response(409, {
@@ -385,6 +385,8 @@ class Bottle(bottle.Bottle):
       network.create()
       raise Response(201, {})
     except Network.Duplicate:
+      if network == self.network_from_name(owner = owner, name = name):
+        return {}
       raise Response(409, {
         'error': 'network/conflict',
         'reason': 'network %r already exists' % name,
@@ -493,6 +495,8 @@ class Bottle(bottle.Bottle):
       volume.create()
       raise Response(201, {})
     except Volume.Duplicate:
+      if volume == self.volume_from_name(owner = owner, name = name):
+        return {}
       raise Response(409, {
         'error': 'volume/conflict',
         'reason': 'volume %r already exists' % name,
@@ -523,6 +527,8 @@ class Bottle(bottle.Bottle):
       drive = Drive(self.__beyond, **json)
       drive.create()
     except Drive.Duplicate:
+      if drive == self.drive_from_name(owner = owner, name = name):
+        return {}
       raise Response(409, {
         'error': 'drive/conflict',
         'reason': 'drive %s already exists' % name,
