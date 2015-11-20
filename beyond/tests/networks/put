@@ -45,5 +45,20 @@ with Beyond() as beyond:
         assert 'invalid_format' in r['error']
       pass
 
+    def test_already_pushed(self):
+      # Test same already pushed
+      user = User()
+      user.put(beyond)
+      network = Network('infinit', owner = user)
+      res = network.put(beyond, owner = user)
+      assertEq(res.status_code, 201)
+      res = network.put(beyond, owner = user)
+      assertEq(res.status_code, 200)
+      # Test conflict
+      network['owner'] = {
+         "rsa": "MIIBCgKCAQEAxzshG5cp+ky04RtzkjAHXHhBs1sPuNqotxL8rl0MH/jy/dMMkR38+0FAr8M/7bnquj9zHmEpKm3qczcd1kDqnKMbY5w8wgjanzhyLry4SRRQkMlRlEuT+Rgb88EAbXBPBpRGJ5dndkgQrCNALTzJOkt/7S8dJ4EiAMeAJOFEwwSb8nKeb1ciOGoACKOcbzQKjrtCZLK7xaHYvEcD7ztQlIWk8r8COPci2wGi92OYJdGXqNVDSBYS4MMzB8odTKZs25WaGvas8RQ0XlFYNZDP1Aj2vyWKGIjp/KMVjrXwhuJgtEzqbXdJFGf+10FcCJbYav63Hr4Z+9K76rGejFv6nQIDAQAB"
+      }
+      throws(lambda: network.put(beyond, owner = user), 409)
+
   if __name__ == '__main__':
     unittest.main()

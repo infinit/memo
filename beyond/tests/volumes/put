@@ -27,5 +27,20 @@ with Beyond() as beyond:
       assert res['name'] == volume['name']
       assert res['network'] == network['name']
 
+  def test_already_pushed(self):
+    # Test same already pushed
+    user = User()
+    user.put(beyond)
+    network = Network('infinit', owner = user)
+    network.put(beyond)
+    volume = Volume('stuff', network = network)
+    res = volume.put(beyond)
+    asserEq(res.status_code, 201)
+    res = volume.put(beyond)
+    asserEq(res.status_code, 200)
+    # Test conflict
+    volume['network'] = 'foo/bar'
+    throws(lambda: volume.put(beyond), 409)
+
   if __name__ == '__main__':
     unittest.main()
