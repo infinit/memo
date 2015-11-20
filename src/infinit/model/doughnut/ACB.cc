@@ -264,9 +264,11 @@ namespace infinit
         // FIXME: better implementation
         for (auto const& e: this->_acl_entries)
         {
-          if (e.key != this->owner_key())
+          if (e.key != other->owner_key())
             other->set_permissions(e.key, e.read, e.write);
         }
+        if (other->owner_key() != this->owner_key())
+         other->set_permissions(this->owner_key(), true, true);
       }
 
 
