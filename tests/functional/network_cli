@@ -46,6 +46,11 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   l = bob.run(['infinit-network', '--list'])
   assertEq(len(l), 0)
   bob.run(['infinit-network', '--create', '--name', 'A', '--as', 'bob', '--push'])
+  try:
+    bob.run(['infinit-network', '--push', '--name', 'A'])
+    assert False
+  except Exception as e:
+    pass
   l = bob.run(['infinit-network', '--list'])
   assertEq(len(l), 1)
   bob.run(['infinit-network', '--create', '--name', 'B', '--as', 'bob', '--push'])
