@@ -3,6 +3,12 @@
 
 # include <unordered_map>
 # include <chrono>
+
+# include <boost/multi_index_container.hpp>
+# include <boost/multi_index/hashed_index.hpp>
+# include <boost/multi_index/ordered_index.hpp>
+# include <boost/multi_index/sequenced_index.hpp>
+
 # include <infinit/model/doughnut/Consensus.hh>
 
 namespace infinit
@@ -13,16 +19,16 @@ namespace infinit
     {
       namespace consensus
       {
+        namespace bmi = boost::multi_index;
         class Cache
           : public Consensus
         {
         public:
-          using Clock = std::chrono::high_resolution_clock;
-          typedef Clock::time_point TimePoint;
-          typedef Clock::duration Duration;
+          using clock = std::chrono::high_resolution_clock;
           Cache(Doughnut& doughnut,
                 std::unique_ptr<Consensus> backend,
                 boost::optional<int> cache_size = {},
+                boost::optional<std::chrono::seconds> cache_invalidation = {},
                 boost::optional<std::chrono::seconds> cache_ttl = {});
           ~Cache();
 
@@ -47,15 +53,33 @@ namespace infinit
           void _cleanup();
           std::unique_ptr<blocks::Block> _copy(blocks::Block& block);
           std::unique_ptr<Consensus> _backend;
-          std::chrono::seconds _cache_ttl;
-          int _cache_size;
+          ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
+          ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);
+          ELLE_ATTRIBUTE_R(int, cache_size);
           // Use a LRU cache for ImmutableBlock, and a TTL cache for
           // MutableBlock
-          std::map<TimePoint, Address> _mut_cache_time;
-          std::map<TimePoint, Address> _const_cache_time;
-          std::unordered_map<Address,
-                             std::pair<TimePoint,
-                                       std::unique_ptr<blocks::Block>>> _cache;
+          class CachedBlock
+          {
+          public:
+            CachedBlock(std::unique_ptr<blocks::Block> block);
+            Address
+            address() const;
+            ELLE_ATTRIBUTE_RX(std::unique_ptr<blocks::Block>, block);
+            ELLE_ATTRIBUTE_RW(clock::time_point, last_used);
+          };
+          typedef bmi::multi_index_container<
+            CachedBlock,
+            bmi::indexed_by<
+              bmi::hashed_unique<
+                bmi::const_mem_fun<
+                  CachedBlock,
+                  Address, &CachedBlock::address> >,
+              bmi::ordered_non_unique<
+                bmi::const_mem_fun<
+                  CachedBlock,
+                  clock::time_point const&, &CachedBlock::last_used> >
+            > > BlockCache;
+          ELLE_ATTRIBUTE(BlockCache, cache);
         };
       }
     }
