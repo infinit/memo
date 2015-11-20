@@ -83,6 +83,12 @@ namespace infinit
     }
 
     Address const Address::null;
+
+    std::size_t
+    hash_value(Address const& address)
+    {
+      return std::hash<Address>()(address);
+    }
   }
 }
 

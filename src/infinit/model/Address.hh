@@ -47,6 +47,9 @@ namespace infinit
 
     std::ostream&
     operator << (std::ostream& out, Address const& k);
+
+    std::size_t
+    hash_value(Address const& address);
   }
 }
 
