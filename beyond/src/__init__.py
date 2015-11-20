@@ -238,6 +238,11 @@ class User:
   def google_accounts(self):
     return self.__google_accounts
 
+  def __eq__(self, other):
+    if self.name != other.name or self.public_key != other.public_key:
+      return False
+    return True
+
 class Entity(type):
 
   def __new__(self, name, superclasses, content,
@@ -351,6 +356,12 @@ class Network(metaclass = Entity,
   def id(self):
     return self.name
 
+  def __eq__(self, other):
+    if self.name != other.name or self.owner != other.owner or \
+        self.consensus != other.consensus or self.overlay != other.overlay:
+      return False
+    return True
+
 class Passport(metaclass = Entity,
                fields = fields('user', 'network', 'signature')):
   pass
@@ -363,6 +374,11 @@ class Volume(metaclass = Entity,
   def id(self):
     return self.name
 
+  def __eq__(self, other):
+    if self.name != other.name or self.network != other.network:
+      return False
+    return True
+
 class Drive(metaclass = Entity,
             insert = 'drive_insert',
             update = 'drive_update',
@@ -372,3 +388,9 @@ class Drive(metaclass = Entity,
   @property
   def id(self):
     return self.name
+
+  def __eq__(self, other):
+    if self.name != other.name or self.network != other.network or \
+        self.volume != other.volume or self.description != other.description:
+      return False
+    return True
