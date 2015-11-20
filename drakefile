@@ -39,44 +39,47 @@ def configure(
     def execute(self):
       if not super().execute():
         return False
-      if cxx_toolkit.os == drake.os.macos and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.gcc:
-        target_path =  str(self.target().path())
-        output = subprocess.check_output(
-          ['otool', '-L',  target_path])
-        lines = output.decode('utf-8').strip().split('\n')
-        lines = [
-          x.replace('\t', '').split(' ')[0]
-          for x in lines if 'libstdc++' in x or 'libgcc_s' in x
-        ]
-        for l in lines:
-          os.chmod(target_path, 0o755)
-          self.cmd(
-            'Localize libstdc++ of %s' % self.target(),
-            ['install_name_tool', '-change',
-             l, '@rpath/%s' % (os.path.basename(l)), target_path],
-            throw = True)
-          os.chmod(target_path, 0o555)
-          tgtdir = os.path.join(os.path.dirname(target_path), '..', 'lib')
-          tgtfile = os.path.join(tgtdir, os.path.basename(l))
-          if not os.path.exists(tgtdir):
-            os.makedirs(tgtdir)
-          if not os.path.exists(tgtfile):
-            shutil.copy(l, tgtdir)
-            output = subprocess.check_output(
-              ['otool', '-L',  tgtfile])
-            lines = output.decode('utf-8').strip().split('\n')
-            lines = [
-              x.replace('\t', '').split(' ')[0]
-              for x in lines if 'libstdc++' in x or 'libgcc_s' in x
-            ]
-            for l in lines:
-              os.chmod(tgtfile, 0o755)
-              self.cmd(
-                'Localize libstdc++ of %s' % tgtfile,
-                ['install_name_tool', '-change',
-                l, '@rpath/%s' % (os.path.basename(l)), tgtfile],
-                throw = True)
-              os.chmod(tgtfile, 0o555)
+      if cxx_toolkit.os == drake.os.macos and \
+          cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.gcc:
+        def set_lib_id(path):
+          subprocess.check_output([
+            'install_name_tool',
+            '-id',
+            '@rpath/%s' % os.path.basename(str(path)),
+            str(path)])
+
+        def get_deps_fix_rpaths(path):
+          os.chmod(str(path), 0o755)
+          if 'dylib' in str(path):
+            set_lib_id(path)
+          otool_out = subprocess.check_output(['otool', '-L',  str(path)])
+          otool_lines = otool_out.decode('utf-8').strip().split('\n')
+          otool_lines = [
+            x.replace('\t', '').split(' ')[0]
+            for x in otool_lines[1:] if 'libstdc++' in x or 'libgcc_s' in x
+          ]
+          for l in otool_lines:
+            drake.command([
+              'install_name_tool', '-change',
+              l, '@rpath/%s' % (os.path.basename(l)), str(path)
+            ])
+            dep_dir = os.path.normpath(
+              os.path.join(os.path.dirname(str(path)), '..', 'lib'))
+            dep_file = \
+              os.path.normpath(os.path.join(dep_dir, os.path.basename(l)))
+            if not os.path.exists(dep_dir):
+              os.makedirs(dep_dir)
+            if not os.path.exists(dep_file):
+              import shutil
+              shutil.copy(l, dep_dir)
+              get_deps_fix_rpaths(drake.Path(dep_file))
+              os.chmod(dep_file, 0o755)
+              set_lib_id(dep_file)
+              os.chmod(dep_file, 0o555)
+          os.chmod(str(path), 0o555)
+
+        path = self.target().path()
+        get_deps_fix_rpaths(path)
       return True
 
   prefix = drake.Path(prefix)
