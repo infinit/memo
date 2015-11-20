@@ -30,10 +30,19 @@ namespace infinit
       remove
     };
 
+    enum class EntryType
+    {
+      file,
+      directory,
+      symlink
+    };
+
     struct Operation
     {
       OperationType type;
       std::string target;
+      EntryType entry_type;
+      Address address;
     };
 
     static const int DIRECTORY_MASK = 0040000;
@@ -77,7 +86,8 @@ namespace infinit
           print(std::ostream& stream) const override;
 
       private:
-        void _fetch();
+        void _fetch() override;
+        void _commit() override;
         void move_recurse(boost::filesystem::path const& current,
             boost::filesystem::path const& where);
         friend class Unknown;
@@ -90,13 +100,12 @@ namespace infinit
           boost::filesystem::path p,
           FileSystem& owner,
           Operation op,
-          FileData fd,
           std::weak_ptr<Directory> wd);
         void _commit(Operation op, bool set_mtime = false);
         void _push_changes(Operation op, bool first_write = false);
         Address _address;
         std::unique_ptr<ACLBlock> _block;
-        elle::unordered_map<std::string, FileData> _files;
+        elle::unordered_map<std::string, std::pair<EntryType, Address>> _files;
         bool _inherit_auth; //child nodes inherit this dir's permissions
         friend class FileSystem;
     };
@@ -106,7 +115,6 @@ namespace infinit
                                boost::filesystem::path p,
                                FileSystem& owner,
                                Operation op,
-                               FileData fd,
                                std::weak_ptr<Directory> wd);
   }
 }

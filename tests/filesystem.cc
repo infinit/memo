@@ -716,21 +716,46 @@ test_filesystem(bool dht,
 
   ELLE_LOG("test cross-block")
   {
-    fd = open((mount / "foo").string().c_str(), O_RDWR|O_CREAT, 0644);
+    fd = open((mount / "babar").string().c_str(), O_RDWR|O_CREAT, 0644);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 - 10, SEEK_SET);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
     int res = write(fd, data, strlen(data));
     BOOST_CHECK_EQUAL(res, strlen(data));
     close(fd);
-    stat((mount / "foo").string().c_str(), &st);
+    stat((mount / "babar").string().c_str(), &st);
     BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 - 10 + 26);
     char output[36];
-    fd = open((mount / "foo").string().c_str(), O_RDONLY);
+    fd = open((mount / "babar").string().c_str(), O_RDONLY);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 - 15, SEEK_SET);
     res = read(fd, output, 36);
     BOOST_CHECK_EQUAL(31, res);
+    BOOST_CHECK_EQUAL(std::string(output+5, output+31),
+                      data);
+    BOOST_CHECK_EQUAL(std::string(output, output+31),
+                      std::string(5, 0) + data);
+    close(fd);
+  }
+  ELLE_LOG("test cross-block 2")
+  {
+    fd = open((mount / "bibar").string().c_str(), O_RDWR|O_CREAT, 0644);
+    BOOST_CHECK_GE(fd, 0);
+    lseek(fd, 1024*1024 + 16384 - 10, SEEK_SET);
+    const char* data = "abcdefghijklmnopqrstuvwxyz";
+    int res = write(fd, data, strlen(data));
+    BOOST_CHECK_EQUAL(res, strlen(data));
+    close(fd);
+    stat((mount / "bibar").string().c_str(), &st);
+    BOOST_CHECK_EQUAL(st.st_size, 1024 * 1024 +16384 - 10 + 26);
+    char output[36];
+    fd = open((mount / "bibar").string().c_str(), O_RDONLY);
+    BOOST_CHECK_GE(fd, 0);
+    lseek(fd, 1024*1024 +16384 - 15, SEEK_SET);
+    res = read(fd, output, 36);
+    BOOST_CHECK_EQUAL(31, res);
+    BOOST_CHECK_EQUAL(std::string(output+5, output+31),
+                      data);
     BOOST_CHECK_EQUAL(std::string(output, output+31),
                       std::string(5, 0) + data);
     close(fd);

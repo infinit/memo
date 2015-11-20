@@ -31,6 +31,7 @@ namespace infinit
         throw rfs::Error(EINVAL, "Cannot delete root node");
       auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
+      dir->_fetch();
       if (dir->_files.find(newname) != dir->_files.end())
       {
         ELLE_TRACE_SCOPE("%s: remove existing destination", *this);
@@ -56,7 +57,6 @@ namespace infinit
       auto data = _parent->_files.at(_name);
       _parent->_files.erase(_name);
       _parent->_commit({OperationType::remove, _name});
-      data.name = newname;
       dir->_files.insert(std::make_pair(newname, data));
       dir->_commit({OperationType::insert, newname});
       _name = newname;
@@ -96,24 +96,19 @@ namespace infinit
     void
     Node::chmod(mode_t mode)
     {
-      if (!_parent)
-        return;
-      auto & f = _parent->_files.at(_name);
-      f.mode = (f.mode & ~07777) | (mode & 07777);
-      f.ctime = time(nullptr);
-      _parent->_commit({OperationType::update, _name});
+      _fetch();
+      _header.mode = mode;
+      _commit();
     }
 
     void
     Node::chown(int uid, int gid)
     {
-      if (!_parent)
-        return;
-      auto & f = _parent->_files.at(_name);
-      f.uid = uid;
-      f.gid = gid;
-      f.ctime = time(nullptr);
-      _parent->_commit({OperationType::update, _name});
+      _fetch();
+      _header.uid = uid;
+      _header.gid = gid;
+      _header.ctime = time(nullptr);
+      _commit();
     }
 
     void
@@ -121,16 +116,10 @@ namespace infinit
     {
       ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: remove attribute \"%s\"", *this, k);
-      auto& xattrs = _parent ?
-         _parent->_files.at(_name).xattrs
-         : static_cast<Directory*>(this)->_files[""].xattrs;
-      if (xattrs.erase(k))
+      _fetch();
+      if (_header.xattrs.erase(k))
       {
-        if (_parent)
-          _parent->_commit({OperationType::update, _name}, false);
-        else
-          static_cast<Directory*>(this)->_commit(
-            {OperationType::update, ""},  false);
+        _commit();
       }
       else
         ELLE_TRACE_SCOPE("no such attribute");
@@ -158,21 +147,9 @@ namespace infinit
         }, EINVAL);
         return;
       }
-      if (_parent)
-      {
-        auto& filedata = _parent->_files.at(_name);
-        filedata.ctime = time(nullptr);
-        filedata.xattrs[k] = elle::Buffer(v.data(), v.size());
-        _parent->_commit({OperationType::update, _name}, false);
-      }
-      else
-      {
-        auto dir = static_cast<Directory*>(this);
-        auto& filedata = dir->_files[""];
-        filedata.xattrs[k] = elle::Buffer(v.data(), v.size());
-        filedata.ctime = time(nullptr);
-        dir->_commit({OperationType::update, ""},false);
-      }
+      _fetch();
+      _header.xattrs[k] = elle::Buffer(v.data(), v.size());
+      _commit();
     }
 
     std::string
@@ -192,11 +169,9 @@ namespace infinit
         else
           return elle::json::pretty_print(v);
       }
-      auto& xattrs = this->_parent
-        ? this->_parent->_files.at(this->_name).xattrs
-        : static_cast<Directory*>(this)->_files[""].xattrs;
-      auto it = xattrs.find(k);
-      if (it == xattrs.end())
+      _fetch();
+      auto it = _header.xattrs.find(k);
+      if (it == _header.xattrs.end())
       {
         ELLE_DEBUG("no such attribute");
         THROW_NOATTR;
@@ -210,44 +185,30 @@ namespace infinit
     Node::stat(struct stat* st)
     {
       memset(st, 0, sizeof(struct stat));
-      if (_parent)
-      {
-        auto fd = _parent->_files.at(_name);
-        #ifndef INFINIT_WINDOWS
-        st->st_blksize = 16384;
-        #endif
-        st->st_mode = fd.mode;
-        st->st_size = fd.size;
-        st->st_atime = fd.atime;
-        st->st_mtime = fd.mtime;
-        st->st_ctime = fd.ctime;
-        st->st_dev = 1;
-        st->st_ino = (unsigned short)(uint64_t)(void*)this;
-        st->st_nlink = 1;
-      }
-      else
-      { // Root directory permissions
-        st->st_mode = DIRECTORY_MASK | 0777;
-        st->st_size = 0;
-      }
-#ifndef INFINIT_WINDOWS
-      st->st_uid = ::getuid();
-      st->st_gid = ::getgid();
-#else
-      st->st_uid = st->st_gid = 0;
-#endif
+      #ifndef INFINIT_WINDOWS
+      st->st_blksize = 16384;
+      st->st_blocks = _header.size / 512;
+      #endif
+      st->st_mode  = _header.mode;
+      st->st_size  = _header.size;
+      st->st_atime = _header.atime;
+      st->st_mtime = _header.mtime;
+      st->st_ctime = _header.ctime;
+      st->st_nlink = _header.links;
+      st->st_uid   = _header.uid;
+      st->st_gid   = _header.gid;
+      st->st_dev = 1;
+      st->st_ino = (unsigned short)(uint64_t)(void*)this;
     }
 
     void
     Node::utimens(const struct timespec tv[2])
     {
       ELLE_TRACE_SCOPE("%s: utimens: %s", *this, tv);
-      if (!_parent)
-        return;
-      auto & f = _parent->_files.at(_name);
-      f.atime = tv[0].tv_sec;
-      f.mtime = tv[1].tv_sec;
-      _parent->_commit({OperationType::update, _name});
+      _fetch();
+      _header.atime = tv[0].tv_sec;
+      _header.mtime = tv[1].tv_sec;
+      _commit();
     }
 
     std::unique_ptr<infinit::model::User>

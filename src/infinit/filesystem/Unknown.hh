@@ -35,6 +35,8 @@ namespace infinit
       std::shared_ptr<Path> child(std::string const& name) override THROW_NOENT;
       bool allow_cache() override { return false;}
       std::string getxattr(std::string const& k) override {THROW_NODATA;}
+      void _fetch() override {}
+      void _commit() override {}
       virtual
       void
       print(std::ostream& stream) const override;

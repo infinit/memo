@@ -46,12 +46,7 @@ namespace infinit
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
       _parent->_files.insert(
         std::make_pair(_name,
-                       FileData{_name, 0, static_cast<uint32_t>(mode | DIRECTORY_MASK),
-                                uint64_t(time(nullptr)),
-                                uint64_t(time(nullptr)),
-                                uint64_t(time(nullptr)),
-                                address,
-                                std::unordered_map<std::string, elle::Buffer>{}}));
+                       std::make_pair(EntryType::directory, address)));
       _parent->_commit({OperationType::insert, _name});
       _remove_from_cache();
     }
@@ -73,13 +68,8 @@ namespace infinit
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_DEBUG("Adding file to parent %x", _parent.get());
       _parent->_files.insert(
-        std::make_pair(_name, FileData{_name, 0, mode,
-                                       uint64_t(time(nullptr)),
-                                       uint64_t(time(nullptr)),
-                                       uint64_t(time(nullptr)),
-                                       b->address(),
-                                       std::unordered_map<std::string, elle::Buffer>{}}));
-
+        std::make_pair(_name, 
+          std::make_pair(EntryType::file, b->address())));
       _parent->_commit({OperationType::insert, _name}, true);
       elle::SafeFinally remove_from_parent( [&] {
           _parent->_files.erase(_name);
@@ -99,21 +89,17 @@ namespace infinit
         ELLE_ERR("Expected valid pointer from %s(%s), got nullptr",
                  raw.get(), typeid(*raw).name());
       f->_first_block = std::move(b);
-      File::Header h;
-      h.version = File::Header::current_version;
-      h.is_bare = true;
-      h.block_size = File::default_block_size;
-      h.links = 1;
-      h.total_size = 0;
-      f->_header(h);
+      f->_first_block_new = true;
+      f->_header = FileHeader(0, 1, S_IFREG | 0666,
+                              time(nullptr), time(nullptr), time(nullptr),
+                              File::default_block_size, {});
       if (_parent->_inherit_auth)
       {
         umbrella([&] { _parent->_block->copy_permissions(
           dynamic_cast<ACLBlock&>(*f->_first_block));
         });
       }
-      _owner.store_or_die(*f->_first_block, model::STORE_INSERT);
-      f->_first_block_new = false;
+      f->_commit();
       _owner.filesystem()->set(f->full_path().string(), f);
       std::unique_ptr<rfs::Handle> handle(new FileHandle(f, true, true, true));
       remove_from_parent.abort();
@@ -124,15 +110,17 @@ namespace infinit
     Unknown::symlink(boost::filesystem::path const& where)
     {
       ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
-      Address::Value v {0};
+      auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
+      FileHeader fh(0, 1, S_IFLNK | 0666,
+                    time(nullptr), time(nullptr), time(nullptr),
+                    0, {});
+      fh.symlink_target = where.string();
+      auto serdata = elle::serialization::binary::serialize(fh);
+      b->data(serdata);
+      auto addr = b->address();
+      _owner.store_or_die(std::move(b));
       auto it =_parent->_files.insert(
-        std::make_pair(_name, FileData{_name, 0, 0777 | SYMLINK_MASK,
-                                       uint64_t(time(nullptr)),
-                                       uint64_t(time(nullptr)),
-                                       uint64_t(time(nullptr)),
-                                       Address(v),
-                                       std::unordered_map<std::string, elle::Buffer>{}}));
-      it.first->second.symlink_target = where.string();
+        std::make_pair(_name, std::make_pair(EntryType::symlink, addr)));
       _parent->_commit({OperationType::insert, _name}, true);
       _remove_from_cache();
     }

@@ -59,30 +59,17 @@ namespace infinit
         friend class Directory;
         friend class Unknown;
         friend class Node;
-        // A packed network-byte-ordered version of Header sits at the
-        // beginning of each file's first block in index mode.
-        struct Header
-        { // max size we can grow is sizeof(Address)
-          static const uint32_t current_version = 1;
-          bool     is_bare; // true if bare data below, false if block address table
-          uint32_t version;
-          uint32_t block_size;
-          uint32_t links;
-          uint64_t total_size;
-        };
+        
         /* Get address for given block index.
          * @param create: if true, allow creation of a new block as needed
          *                else returns nullptr if creation was required
          */
-      AnyBlock*
-        _block_at(int index, bool create);
-      // Switch from direct to indexed mode
-      void _switch_to_multi(bool alloc_first_block);
+      AnyBlock* _block_at(int index, bool create);
+
       void _ensure_first_block();
-      void _commit();
-      Header _header(); // Get header, must be in multi mode
-      void _header(Header const&);
-      bool _multi(); // True if mode is index
+      void _fetch() override;
+      void _commit() override;
+      void _commit_all();
       struct CacheEntry
       {
         AnyBlock block;
@@ -96,6 +83,9 @@ namespace infinit
       int _r_handle_count;
       int _rw_handle_count;
       boost::filesystem::path _full_path;
+      std::vector<Address> _fat;
+      elle::Buffer _data; // first block data
+      static const uint64_t first_block_size = 16384;
     };
   }
 }

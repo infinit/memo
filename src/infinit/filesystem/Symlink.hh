@@ -41,9 +41,10 @@ namespace infinit
         void setxattr(std::string const& name, std::string const& value, int flags) override;
         void removexattr(std::string const& name) override;
         bool allow_cache() override { return false;}
-        virtual
-          void
-          print(std::ostream& stream) const override;
+        void _fetch() override;
+        void _commit() override;
+        virtual void print(std::ostream& stream) const override;
+        std::unique_ptr<MutableBlock> _block;
     };
   }
 }

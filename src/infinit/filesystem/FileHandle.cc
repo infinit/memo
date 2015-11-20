@@ -33,19 +33,8 @@ namespace infinit
           else
             _owner->_r_handle_count--;
       });
-      _owner->_parent->_fetch();
-      _owner->_parent->_files.at(_owner->_name).atime = time(nullptr);
-      // This atime implementation does not honor noatime option
-#if false
-      try
-      {
-        _owner->_parent->_commit(push_mtime);
-      }
-      catch (std::exception const& e)
-      {
-        ELLE_TRACE("Error writing atime %s: %s", _owner->full_path(), e.what());
-      }
-#endif
+      _owner->_header.atime = time(nullptr);
+
       // FIXME: the only thing that can invalidate _owner is hard links
       // keep tracks of open handle to know if we should refetch
       // or a backend stat call?
@@ -53,7 +42,7 @@ namespace infinit
       {
         try
         {
-          auto address = _owner->_parent->_files.at(_owner->_name).address;
+          auto address = _owner->_parent->_files.at(_owner->_name).second;
           ELLE_TRACE_SCOPE("fetch first block %x", address);
           _owner->_first_block = elle::cast<MutableBlock>::runtime
             (_owner->_owner.block_store()->fetch(address));
@@ -127,7 +116,7 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: flush", *this);
           elle::SafeFinally cleanup([&] {this->_dirty = false;});
-          this->_owner->_commit();
+          this->_owner->_commit_all();
         }
         else
           ELLE_DEBUG("%s: skip non-dirty flush", *this);
@@ -136,42 +125,30 @@ namespace infinit
     int
       FileHandle::read(elle::WeakBuffer buffer, size_t size, off_t offset)
       {
+        _owner->_ensure_first_block();
         ELLE_TRACE_SCOPE("%s: read %s at %s", *this, size, offset);
+        ELLE_TRACE("%s: have %s bytes and %s fat entries totalling %s", *this,
+          _owner->_data.size(), _owner->_fat.size(), _owner->_header.size);
         ELLE_ASSERT_EQ(buffer.size(), size);
         int64_t total_size;
         int32_t block_size;
-        if (!_owner->_multi())
+        if (offset < signed(_owner->_data.size()))
         {
-          auto& block = _owner->_first_block;
-          if (!block)
-          {
-            ELLE_DEBUG("read on uncached block, fetching");
-            auto address = _owner->_parent->_files.at(_owner->_name).address;
-            _owner->_first_block = elle::cast<MutableBlock>::runtime
-              (_owner->_owner.fetch_or_die(address));
-          }
-          if (offset >= signed(block->data().size()) - header_size)
-          {
-            ELLE_DEBUG("read past end: offset=%s, size=%s", offset,
-                       block->data().size() - header_size);
-            return 0;
-          }
-          if (offset + size > block->data().size() - header_size)
-          {
-            ELLE_DEBUG("read past buffer end, reducing size from %s to %s", size,
-                block->data().size() - offset - header_size);
-            size = block->data().size() - offset - header_size;
-          }
+          size_t size1 = std::min(size, _owner->_data.size() - offset);
           memcpy(buffer.mutable_contents(),
-              block->data().mutable_contents() + offset + header_size,
-              size);
-          ELLE_DEBUG("read %s bytes", size);
-          return size;
+                 this->_owner->_data.contents() + offset,
+                 size1);
+          if (size1 == size || _owner->_fat.empty())
+            return size;
+          return size1 + read(
+            elle::WeakBuffer(buffer.mutable_contents() + size1, size - size1),
+            size - size1, offset + size1);
         }
+        // scroll offset so that offset 0 is first fat block
+        offset -= File::first_block_size;
         // multi case
-        File::Header h = _owner->_header();
-        total_size = h.total_size;
-        block_size = h.block_size;
+        total_size = _owner->_header.size;
+        block_size = _owner->_header.block_size;
         if (offset >= total_size)
         {
           ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
@@ -193,7 +170,9 @@ namespace infinit
           AnyBlock* block = nullptr;
           if (it != _owner->_blocks.end())
           {
-            ELLE_DEBUG("obtained block %s : %x from cache", start_block, it->second.block.address());
+            ELLE_DEBUG("obtained block %s : %x from cache, with %s bytes",
+                       start_block, it->second.block.address(),
+                       it->second.block.data().size());
             block = &it->second.block;
             it->second.last_use = std::chrono::system_clock::now();
           }
@@ -204,9 +183,7 @@ namespace infinit
             {
               if (_owner->_rw_handle_count == 0)
               { // attempt a fetch
-                auto address = _owner->_parent->_files.at(_owner->_name).address;
-                _owner->_first_block = elle::cast<MutableBlock>::runtime
-                (_owner->_owner.fetch_or_die(address));
+                _owner->_fetch();
                 block = _owner->_block_at(start_block, false);
               }
               if (block == nullptr)
@@ -254,11 +231,11 @@ namespace infinit
           ELLE_DEBUG("split %s %s into %s %s and %s %s",
               size, offset, first_size, offset, second_size, second_offset);
           int r1 = read(elle::WeakBuffer(buffer.mutable_contents(), first_size),
-              first_size, offset);
+                        first_size, offset + File::first_block_size);
           if (r1 <= 0)
             return r1;
           int r2 = read(elle::WeakBuffer(buffer.mutable_contents() + first_size, second_size),
-              second_size, second_offset);
+                        second_size, second_offset + File::first_block_size);
           if (r2 < 0)
             return r2;
           ELLE_DEBUG("read %s+%s=%s bytes", r1, r2, r1+r2);
@@ -274,55 +251,45 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: write %s at %s", *this, size, offset);
         ELLE_ASSERT_EQ(buffer.size(), size);
         this->_dirty = true;
-        if (!this->_owner->_multi() &&
-            size + offset > this->_owner->default_block_size)
-          this->_owner->_switch_to_multi(true);
-        if (this->_owner->_multi())
-        {
-          uint64_t const block_size = this->_owner->_header().block_size;
-          int const start_block = offset / block_size;
-          int const end_block = (offset + size - 1) / block_size;
-          if (start_block == end_block)
-            return this->_write_multi_single(
-                std::move(buffer), offset, start_block);
-          else
-            return this->_write_multi_multi(
-                std::move(buffer), offset, start_block, end_block);
+        if (offset < signed(File::first_block_size))
+        { // write on first block
+          auto wend = std::min(size + offset, File::first_block_size);
+          if (_owner->_data.size() < wend)
+          {
+            auto oldsz = _owner->_data.size();
+            _owner->_data.size(wend);
+            memset(_owner->_data.mutable_contents() + oldsz,
+                   0,
+                   offset - oldsz);
+          }
+          auto to_write = wend - offset;
+          memcpy(_owner->_data.mutable_contents() + offset,
+                 buffer.contents(),
+                 to_write);
+          _owner->_header.size = std::max(_owner->_header.size, offset + size);
+          return to_write + write(
+            elle::WeakBuffer(buffer.mutable_contents() + to_write, size - to_write),
+            size - to_write, offset + to_write);
         }
-        else
-          return this->_write_single(std::move(buffer), offset);
-      }
+        _owner->_header.size = std::max(_owner->_header.size, offset + size);
+        offset -= File::first_block_size;
 
-    int
-      FileHandle::_write_single(elle::WeakBuffer buffer, off_t offset)
-      {
-        auto& block = this->_owner->_first_block;
-        if (offset + buffer.size() > block->data().size() - header_size)
-        {
-          int64_t old_size = block->data().size() - header_size;
-          block->data (
-              [&] (elle::Buffer& data)
-              {
-              data.size(offset + buffer.size() + header_size);
-              if (old_size < offset)
-              memset(data.mutable_contents() + old_size + header_size, 0,
-                  offset - old_size);
-              });
-        }
-        block->data(
-            [&] (elle::Buffer& data)
-            {
-            memcpy(data.mutable_contents() + offset + header_size,
-                buffer.contents(), buffer.size());
-            });
-        return buffer.size();
+        uint64_t const block_size = this->_owner->_header.block_size;
+        int const start_block = offset / block_size;
+        int const end_block = (offset + size - 1) / block_size;
+        if (start_block == end_block)
+          return this->_write_multi_single(
+              std::move(buffer), offset, start_block);
+        else
+          return this->_write_multi_multi(
+              std::move(buffer), offset, start_block, end_block);
       }
 
     int
       FileHandle::_write_multi_single(
           elle::WeakBuffer buffer, off_t offset, int block_idx)
       {
-        auto const block_size = this->_owner->_header().block_size;
+        auto const block_size = this->_owner->_header.block_size;
         auto const size = buffer.size();
         AnyBlock* block;
         auto const it = this->_owner->_blocks.find(block_idx);
@@ -343,10 +310,8 @@ namespace infinit
           it->second.last_use = std::chrono::system_clock::now();
         }
         off_t block_offset = offset % block_size;
-        bool growth = false;
         if (block->data().size() < block_offset + size)
         {
-          growth = true;
           int64_t old_size = block->data().size();
           block->data(
               [block_offset, size] (elle::Buffer& data)
@@ -359,17 +324,6 @@ namespace infinit
             block->zero(old_size, block_offset - old_size);
         }
         block->write(block_offset, buffer.contents(), size);
-        if (growth)
-        {
-          // Check if file size was increased
-          File::Header h = this->_owner->_header();
-          if (unsigned(h.total_size) < offset + size)
-          {
-            h.total_size = offset + size;
-            ELLE_DEBUG("new file size: %s", h.total_size);
-            this->_owner->_header(h);
-          }
-        }
 
         return size;
       }
@@ -378,7 +332,7 @@ namespace infinit
       FileHandle::_write_multi_multi(
           elle::WeakBuffer buffer, off_t offset, int start_block, int end_block)
       {
-        uint64_t const block_size = this->_owner->_header().block_size;
+        uint64_t const block_size = this->_owner->_header.block_size;
         ELLE_ASSERT(start_block == end_block - 1);
         auto const size = buffer.size();
         int64_t second_size = (offset + size) % block_size;

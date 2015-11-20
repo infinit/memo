@@ -5,6 +5,7 @@
 
 # include <infinit/serialization.hh>
 # include <infinit/filesystem/filesystem.hh>
+# include <infinit/filesystem/FileData.hh>
 # include <infinit/model/blocks/Block.hh>
 
 namespace infinit
@@ -38,11 +39,14 @@ namespace infinit
       void set_permissions(std::string const& flags,
         std::string const& userkey, Address self_address);
       void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
+      virtual void _fetch() = 0;
+      virtual void _commit() = 0;
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       boost::filesystem::path full_path();
       FileSystem& _owner;
       std::shared_ptr<Directory> _parent;
       std::string _name;
+      FileHeader _header;
     };
   }
 }

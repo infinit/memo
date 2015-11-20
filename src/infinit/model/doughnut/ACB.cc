@@ -268,7 +268,7 @@ namespace infinit
             other->set_permissions(e.key, e.read, e.write);
         }
         if (other->owner_key() != this->owner_key())
-         other->set_permissions(this->owner_key(), true, true);
+          other->set_permissions(this->owner_key(), true, true);
       }
 
 

@@ -1,6 +1,9 @@
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/Unknown.hh>
 
+#include <elle/serialization/binary.hh>
+#include <elle/cast.hh>
+
 #include <fcntl.h>
 ELLE_LOG_COMPONENT("infinit.filesystem.Symlink");
 
@@ -15,9 +18,26 @@ namespace infinit
     {}
 
     void
+    Symlink::_fetch()
+    {
+      auto addr = _parent->_files.at(_name).second;
+      _block = elle::cast<MutableBlock>::runtime(_owner.fetch_or_die(addr));
+      _header = elle::serialization::binary::deserialize<FileHeader>(_block->data());
+    }
+
+    void
+    Symlink::_commit()
+    {
+      auto data = elle::serialization::binary::serialize(_header);
+      _block->data(data);
+      _owner.store_or_die(std::move(_block));
+    }
+
+    void
       Symlink::stat(struct stat* s)
       {
         ELLE_TRACE_SCOPE("%s: stat", *this);
+        _fetch();
         Node::stat(s);
       }
 
@@ -38,7 +58,8 @@ namespace infinit
     boost::filesystem::path
       Symlink::readlink()
       {
-        return *_parent->_files.at(_name).symlink_target;
+        _fetch();
+        return *_header.symlink_target;
       }
 
     void
@@ -77,8 +98,9 @@ namespace infinit
     std::vector<std::string>
     Symlink::listxattr()
     {
+      _fetch();
       std::vector<std::string> res;
-      for (auto const& a: _parent->_files.at(_name).xattrs)
+      for (auto const& a: _header.xattrs)
         res.push_back(a.first);
       return res;
     }
