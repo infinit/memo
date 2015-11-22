@@ -111,7 +111,7 @@ namespace infinit
        elle::Buffer data;
        {
          elle::IOStream os(data.ostreambuf());
-         elle::serialization::json::SerializerOut output(os);
+         elle::serialization::binary::SerializerOut output(os);
          output.serialize_forward(d);
        }
        d._block->data(data);
@@ -234,7 +234,7 @@ namespace infinit
                              File::default_block_size, {});
         return;
       }
-      elle::serialization::json::SerializerIn input(is);
+      elle::serialization::binary::SerializerIn input(is);
       try
       {
         input.serialize_forward(*this);
@@ -275,7 +275,7 @@ namespace infinit
         elle::Buffer data;
         {
           elle::IOStream os(data.ostreambuf());
-          elle::serialization::json::SerializerOut output(os);
+          elle::serialization::binary::SerializerOut output(os);
           output.serialize_forward(*this);
         }
         ELLE_DUMP("content: %s", data);
