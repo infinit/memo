@@ -90,6 +90,8 @@ namespace infinit
             ELLE_DEBUG("cache miss");
             bench_hit.add(0);
             auto res = _backend->fetch(overlay, address, local_version);
+            if (!res)
+              throw MissingBlock(address);
             this->_cache.emplace(res->clone());
             return res;
           }
