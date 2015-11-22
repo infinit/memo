@@ -28,8 +28,7 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        OKBHeader(cryptography::rsa::KeyPair const& keys,
-                  cryptography::rsa::KeyPair const& block_keys);
+        OKBHeader(cryptography::rsa::KeyPair const& keys);
         OKBHeader(OKBHeader const& other);
 
       /*---------.
@@ -38,7 +37,7 @@ namespace infinit
       public:
         blocks::ValidationResult
         validate(Address const& address) const;
-        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
+        ELLE_ATTRIBUTE_R(elle::Buffer, salt);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner_key);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
       protected:
@@ -52,7 +51,7 @@ namespace infinit
       `--------------*/
       public:
         OKBHeader(cryptography::rsa::PublicKey keys,
-                  cryptography::rsa::PublicKey block_keys,
+                  elle::Buffer salt,
                   elle::Buffer signature);
         void
         serialize(elle::serialization::Serializer& s);

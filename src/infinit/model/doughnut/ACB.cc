@@ -461,7 +461,8 @@ namespace infinit
         {
           elle::IOStream output(res.ostreambuf());
           elle::serialization::binary::SerializerOut s(output);
-          s.serialize("block_key", this->key());
+          s.serialize("salt", this->salt());
+          s.serialize("key", this->owner_key());
           s.serialize("version", this->_data_version);
           s.serialize("data", this->Block::data());
           s.serialize("owner_token", this->_owner_token);
