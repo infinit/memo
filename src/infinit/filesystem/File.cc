@@ -466,7 +466,7 @@ namespace infinit
       _owner.filesystem()->set(full_path().string(), shared_from_this());
       return umbrella([&] {
         return std::unique_ptr<rfs::Handle>(new FileHandle(
-          std::dynamic_pointer_cast<File>(shared_from_this()), needw));
+          std::dynamic_pointer_cast<File>(shared_from_this()), needw, false, true));
       });
     }
 
