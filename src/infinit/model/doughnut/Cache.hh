@@ -31,6 +31,9 @@ namespace infinit
                 boost::optional<std::chrono::seconds> cache_invalidation = {},
                 boost::optional<std::chrono::seconds> cache_ttl = {});
           ~Cache();
+          std::unique_ptr<Local>
+          make_local(boost::optional<int> port,
+                     std::unique_ptr<storage::Storage> storage) override;
 
         protected:
           virtual
