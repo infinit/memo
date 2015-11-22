@@ -25,6 +25,9 @@ namespace infinit
                   boost::filesystem::path journal_dir,
                   int max_size = 100);
             virtual ~Async();
+            std::unique_ptr<Local>
+            make_local(boost::optional<int> port,
+                     std::unique_ptr<storage::Storage> storage) override;
 
           protected:
             virtual

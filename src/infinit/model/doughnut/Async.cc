@@ -1,4 +1,5 @@
 #include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 
@@ -49,6 +50,13 @@ namespace infinit
           ELLE_TRACE("~Async");
           _process_thread.terminate_now();
           ELLE_TRACE("~~Async");
+        }
+
+        std::unique_ptr<Local>
+        Async::make_local(boost::optional<int> port,
+                          std::unique_ptr<storage::Storage> storage)
+        {
+          return this->_backend->make_local(port, std::move(storage));
         }
 
         void
