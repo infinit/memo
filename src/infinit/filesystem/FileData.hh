@@ -69,7 +69,7 @@ namespace infinit
 
       FileHeader(elle::serialization::SerializerIn& s)
       {
-        s.serialize_forward(*this);
+        serialize(s);
       }
 
       void serialize(elle::serialization::Serializer& s)
