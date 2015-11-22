@@ -190,6 +190,16 @@ namespace infinit
     void
     File::_commit()
     {
+      if (_rw_handle_count)
+      {
+        return;
+      }
+      _commit_first();
+    }
+
+    void
+    File::_commit_first()
+    {
       elle::Buffer serdata;
       {
         elle::IOStream os(serdata.ostreambuf());
@@ -317,7 +327,7 @@ namespace infinit
       {
         ELLE_DEBUG("%s remaining links", links - 1);
         _header.links--;
-        _commit();
+        _commit_first();
       }
       else
       {
@@ -508,7 +518,7 @@ namespace infinit
       ELLE_DEBUG("store first block: %f with payload %s, fat %s, total_size %s", *this->_first_block,
         this->_data.size(), this->_fat, _header.size)
       {
-        _commit();
+        _commit_first();
       }
     }
 
@@ -547,7 +557,7 @@ namespace infinit
       }
       if (fat_change)
       {
-        _commit();
+        _commit_first();
         _first_block_new = false;
       }
     }

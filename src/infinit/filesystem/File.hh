@@ -69,6 +69,7 @@ namespace infinit
       void _ensure_first_block();
       void _fetch() override;
       void _commit() override;
+      void _commit_first();
       void _commit_all();
       struct CacheEntry
       {
