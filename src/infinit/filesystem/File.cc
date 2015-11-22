@@ -146,8 +146,18 @@ namespace infinit
       if (_rw_handle_count)
         return;
       Address addr = _parent->_files.at(_name).second;
-      _first_block = elle::cast<MutableBlock>::runtime(
-        _owner.fetch_or_die(addr));
+      if (!_first_block)
+        _first_block = elle::cast<MutableBlock>::runtime(
+          _owner.fetch_or_die(addr));
+      else
+      {
+        auto res = elle::cast<MutableBlock>::runtime(
+          _owner.fetch_or_die(addr, _first_block->version()));
+        if (res)
+          _first_block = std::move(res);
+        else
+          return;
+      }
       bool empty = false;
       elle::IOStream is(
         umbrella([&] {
