@@ -1,4 +1,8 @@
 #include <infinit/filesystem/File.hh>
+
+#include <cryptography/random.hh>
+#include <cryptography/SecretKey.hh>
+
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/umbrella.hh>
@@ -252,18 +256,18 @@ namespace infinit
         {
           return nullptr;
         }
-        _fat.resize(index+1, Address::null);
+        _fat.resize(index+1, FatEntry(Address::null, {}));
       }
       AnyBlock b;
       bool is_new = false;
-      if (_fat[index] == Address::null)
+      if (_fat[index].first == Address::null)
       {
         b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>());
         is_new = true;
       }
       else
       {
-        b = AnyBlock(_owner.fetch_or_die(_fat[index]));
+        b = AnyBlock(_owner.fetch_or_die(_fat[index].first), _fat[index].second);
         is_new = false;
       }
 
@@ -334,7 +338,7 @@ namespace infinit
         ELLE_DEBUG("No remaining links");
         for (unsigned i=0; i<_fat.size(); ++i)
         {
-          _owner.unchecked_remove(_fat[i]);
+          _owner.unchecked_remove(_fat[i].first);
         }
         _owner.unchecked_remove(_first_block->address());
       }
@@ -407,21 +411,23 @@ namespace infinit
         auto offset = first_block_size + i * _header.block_size;
         if (signed(offset) >= new_size)
         { // kick the block
-          _owner.unchecked_remove(_fat[i]);
+          _owner.unchecked_remove(_fat[i].first);
           _fat.pop_back();
         }
         else if (signed(offset + _header.block_size) >= new_size)
         { // maybe truncate the block
+          cryptography::SecretKey sk(_fat[i].second);
           auto targetsize = new_size - offset;
-          auto block = _owner.fetch_or_die(_fat[i]);
-          elle::Buffer buf(block->data());
+          auto block = _owner.fetch_or_die(_fat[i].first);
+          elle::Buffer buf(sk.decipher(block->data()));
           if (buf.size() > targetsize)
           {
             buf.size(targetsize);
           }
-          auto newblock = _owner.block_store()->make_block<ImmutableBlock>(std::move(buf));
-          _owner.unchecked_remove(_fat[i]);
-          _fat[i] = newblock->address();
+          auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
+            sk.encipher(buf));
+          _owner.unchecked_remove(_fat[i].first);
+          _fat[i].first = newblock->address();
           _owner.store_or_die(std::move(newblock));
         }
       }
@@ -487,47 +493,24 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: commit", *this);
       ELLE_DEBUG_SCOPE("%s: push blocks", *this);
-      std::unordered_map<int, CacheEntry> blocks;
-      std::swap(blocks, this->_blocks);
-      for (auto& b: blocks)
+      if (!check_cache(0))
       {
-        // FIXME: incremental size compute
-        ELLE_DEBUG("Checking data block %s :%x, size %s",
-          b.first, b.second.block.address(), b.second.block.data().size());
-        if (b.second.dirty)
+        ELLE_DEBUG("store first block: %f with payload %s, fat %s, total_size %s", *this->_first_block,
+                   this->_data.size(), this->_fat, _header.size)
         {
-          ELLE_DEBUG("Writing data block %s", b.first);
-          b.second.dirty = false;
-          Address prev = b.second.block.address();
-          Address addr = b.second.block.store(
-            *this->_owner.block_store(),
-            b.second.new_block ? model::STORE_INSERT : model::STORE_ANY);
-          if (addr != prev)
-          {
-            ELLE_DEBUG("Changing address of block %s: %s -> %s", b.first,
-                       prev, addr);
-            _fat[b.first] = addr;
-            if (!b.second.new_block)
-              this->_owner.unchecked_remove(prev);
-          }
-          b.second.new_block = false;
-          b.second.dirty = false;
+          _commit_first();
         }
-      }
-      
-      ELLE_DEBUG("store first block: %f with payload %s, fat %s, total_size %s", *this->_first_block,
-        this->_data.size(), this->_fat, _header.size)
-      {
-        _commit_first();
       }
     }
 
-    void
-    File::check_cache()
+    bool
+    File::check_cache(int cache_size)
     {
+      if (cache_size < 0)
+        cache_size = max_cache_size;
       typedef std::pair<const int, CacheEntry> Elem;
       bool fat_change = false;
-      while (_blocks.size() > max_cache_size)
+      while (_blocks.size() > unsigned(cache_size))
       {
         auto it = std::min_element(_blocks.begin(), _blocks.end(),
           [](Elem const& a, Elem const& b) -> bool
@@ -538,14 +521,16 @@ namespace infinit
         if (it->second.dirty)
         {
           Address prev = it->second.block.address();
-          Address addr = it->second.block.store(*_owner.block_store(),
-                                                it->second.new_block? model::STORE_INSERT : model::STORE_ANY);
+          auto key = cryptography::random::generate<elle::Buffer>(32).string();
+          Address addr = it->second.block.crypt_store(*_owner.block_store(),
+            it->second.new_block? model::STORE_INSERT : model::STORE_ANY,
+            key);
           if (addr != prev)
           {
             ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
               prev, addr);
             fat_change = true;
-            _fat[it->first] = addr;
+            _fat[it->first] = FatEntry(addr, key);
             if (!it->second.new_block)
             {
               _owner.unchecked_remove(prev);
@@ -560,6 +545,7 @@ namespace infinit
         _commit_first();
         _first_block_new = false;
       }
+      return fat_change;
     }
 
     std::vector<std::string> File::listxattr()
@@ -592,7 +578,7 @@ namespace infinit
         res <<  "total_size: "  << _header.size  << "\n";
         for (int i=0; i < signed(_fat.size()); ++i)
         {
-          res << i << ": " << _fat[i] << "\n";
+          res << i << ": " << _fat[i].first << "\n";
         }
         return res.str();
       }

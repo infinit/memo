@@ -1,4 +1,6 @@
 #include <infinit/filesystem/AnyBlock.hh>
+#include <elle/bench.hh>
+#include <cryptography/SecretKey.hh>
 #include <infinit/filesystem/umbrella.hh>
 
 ELLE_LOG_COMPONENT("infinit.filesystem.AnyBlock");
@@ -9,7 +11,8 @@ namespace infinit
   {
     AnyBlock::AnyBlock()
     {}
-    AnyBlock::AnyBlock(std::unique_ptr<Block> block)
+    AnyBlock::AnyBlock(std::unique_ptr<Block> block,
+                       std::string const& secret)
     : _backend(std::move(block))
     , _is_mutable(dynamic_cast<MutableBlock*>(_backend.get()))
     {
@@ -19,6 +22,14 @@ namespace infinit
       {
         _buf = _backend->take_data();
         ELLE_DEBUG("Nonmutable, stole %s bytes", _buf.size());
+        if (!_buf.empty() && !secret.empty())
+        {
+          static elle::Bench bench("bench.anyblock.decipher", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
+          cryptography::SecretKey sk(secret);
+          auto res = sk.decipher(_buf);
+          _buf = std::move(res);
+        }
       }
     }
 
@@ -84,6 +95,21 @@ namespace infinit
         return std::move(_backend);
       else
         return model.make_block<ImmutableBlock>(std::move(_buf));
+    }
+
+    Address AnyBlock::crypt_store(infinit::model::Model& model,
+                            infinit::model::StoreMode mode,
+                            std::string const& secret)
+    {
+      ELLE_ASSERT(!_is_mutable);
+      {
+        static elle::Bench bench("bench.anyblock.encipher", 10000_sec);
+        elle::Bench::BenchScope bs(bench);
+        cryptography::SecretKey sk(secret);
+        auto res = sk.encipher(_buf);
+        _buf = std::move(res);
+      }
+      return store(model, mode);
     }
 
     Address AnyBlock::store(infinit::model::Model& model,

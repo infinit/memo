@@ -21,7 +21,7 @@ namespace infinit
     {
       public:
         AnyBlock();
-        AnyBlock(std::unique_ptr<Block> block);
+        AnyBlock(std::unique_ptr<Block> block, std::string const& secret = {});
         AnyBlock(AnyBlock && b);
 
         AnyBlock(AnyBlock const& b) = delete;
@@ -34,6 +34,9 @@ namespace infinit
         const elle::Buffer& data();
         // Output a block of same type, address might change
         std::unique_ptr<Block> take(infinit::model::Model& model);
+        Address crypt_store(infinit::model::Model& model,
+                            infinit::model::StoreMode mode,
+                            std::string const& secret);
         Address store(infinit::model::Model& model, infinit::model::StoreMode mode);
 
         void zero(int offset, int count);

@@ -47,7 +47,7 @@ namespace infinit
         std::shared_ptr<Path> child(std::string const& name) override;
         bool allow_cache() override;
         // check cached data size, remove entries if needed
-        void check_cache();
+        bool check_cache(int cache_size = -1);
         virtual
           void
           print(std::ostream& output) const override;
@@ -84,7 +84,8 @@ namespace infinit
       int _r_handle_count;
       int _rw_handle_count;
       boost::filesystem::path _full_path;
-      std::vector<Address> _fat;
+      typedef std::pair<Address, std::string> FatEntry; // (address, key)
+      std::vector<FatEntry> _fat;
       elle::Buffer _data; // first block data
       static const uint64_t first_block_size = 16384;
     };
