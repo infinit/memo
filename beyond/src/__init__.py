@@ -77,6 +77,9 @@ class Beyond:
     networks = self.__datastore.user_networks_fetch(user = user)
     return self.__datastore.networks_volumes_fetch(networks = networks)
 
+  def user_drives_get(self, user):
+    return self.__datastore.user_drives_fetch(user)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
@@ -90,7 +93,7 @@ class Beyond:
       owner = owner, name = name)
 
   ## ----- ##
-  ## DRIVE ##
+  ## Drive ##
   ## ----- ##
 
   def drive_get(self, owner, name):
@@ -348,9 +351,18 @@ class Volume(metaclass = Entity,
 class Drive(metaclass = Entity,
             insert = 'drive_insert',
             update = 'drive_update',
-            fields = fields('name', 'network', 'volume', 'description',
+            fields = fields('name', 'owner', 'network', 'volume', 'description',
                             users = {})):
 
   @property
   def id(self):
     return self.name
+
+  class Invitation(metaclass = Entity,
+                   fields = fields('permissions', 'status', 'create_home')):
+    statuses = ["pending", "accepted"]
+    def from_json(beyond, json):
+      self_ = Entity.from_json(beyond, json)
+      if self_["status"] not in statuses:
+        raise exceptions.InvalidFormat('invitation', status)
+      return self_
