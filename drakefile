@@ -33,7 +33,9 @@ def configure(
 ):
 
   rule_tests = drake.Rule('tests')
+  rule_functional_tests = drake.Rule('functional/tests')
   rule_check = drake.Rule('check')
+  rule_functional_check = drake.Rule('functional/check')
 
   class PatchAndInstall(drake.Install):
     def execute(self):
@@ -539,6 +541,7 @@ def configure(
         'volume_cli',
     ]:
       test = drake.node('tests/functional/%s' % test_name)
+      rule_functional_tests << test
       test.dependencies_add(installed_binaries)
       test.dependencies_add(beyond.package.nodes)
       runner = drake.Runner(
@@ -547,4 +550,6 @@ def configure(
           'PYTHONPATH':
             drake.path_build('beyond/lib/python%s' % elle.python3.version)
         })
-      rule_check << runner.status
+      rule_functional_check << runner.status
+    rule_tests << rule_functional_tests
+    rule_check << rule_functional_check
