@@ -324,6 +324,7 @@ main(int argc, char** argv)
       {
         { "network,n", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
+        option_owner,
       },
     },
     {
