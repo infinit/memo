@@ -131,13 +131,15 @@ main(int argc, char** argv)
       "create",
       "Create a drive (a network and volume pair)",
       &create,
-      "--name NAME --network NETWORK --volume VOLUME [--description DESCRIPTION]",
+      "--name NAME --network NETWORK --volume VOLUME "
+      "[--description DESCRIPTION]",
       {
         { "name,n", value<std::string>(), "created drive name" },
         { "network,N", value<std::string>(), "associated network name" },
         { "volume,v", value<std::string>(), "associated volume name" },
         { "description,d", value<std::string>(), "created drive description" },
-        { "push,p", bool_switch(), "push the created drive on the hub" },
+        { "push,p", bool_switch(),
+          elle::sprintf("push the created drive to %s", beyond(true)).c_str() },
         option_owner,
       },
     },
@@ -149,8 +151,10 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "drive to invite the user on" },
         { "user,u", value<std::string>(), "user to invite to the drive" },
-        { "permissions,p", value<std::string>(), "set default user permissions to XXX" },
-        { "home,h", bool_switch(), "creates a home directory for the invited user" },
+        { "permissions,p", value<std::string>(),
+          "set default user permissions to XXX" },
+        { "home,h", bool_switch(),
+          "creates a home directory for the invited user" },
         option_owner,
       },
     },
@@ -166,11 +170,12 @@ main(int argc, char** argv)
     },
     {
       "push",
-      "Push a drive on the hub",
+      elle::sprintf("Push a drive to %s", beyond(true)).c_str(),
       &push,
       "--name NAME",
       {
-        { "name,n", value<std::string>(), "drive name to push on the hub" },
+        { "name,n", value<std::string>(),
+          elle::sprintf("drive name to push to %s", beyond(true)).c_str() },
         option_owner,
       }
     },
@@ -192,7 +197,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      "Delete a drive remotly on the hub",
+      elle::sprintf("Delete a drive remotely from %s", beyond(true)).c_str(),
       &pull,
       "--name NAME",
       {
