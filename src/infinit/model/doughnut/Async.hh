@@ -21,7 +21,7 @@ namespace infinit
           : public Consensus
         {
           public:
-            Async(Doughnut& doughnut, std::unique_ptr<Consensus> backend,
+            Async(std::unique_ptr<Consensus> backend,
                   boost::filesystem::path journal_dir,
                   int max_size = 100);
             virtual ~Async();

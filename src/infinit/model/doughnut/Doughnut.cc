@@ -305,10 +305,10 @@ namespace infinit
             auto consensus = this->consensus->make(dht);
             if (async)
               consensus = elle::make_unique<consensus::Async>(
-                dht, std::move(consensus), p / "async");
+                std::move(consensus), p / "async");
             if (cache)
               consensus = elle::make_unique<consensus::Cache>(
-                dht, std::move(consensus),
+                std::move(consensus),
                 std::move(cache_size),
                 std::move(cache_invalidation),
                 std::move(cache_ttl));

@@ -26,11 +26,10 @@ namespace infinit
     {
       namespace consensus
       {
-        Async::Async(Doughnut& doughnut,
-                     std::unique_ptr<Consensus> backend,
+        Async::Async(std::unique_ptr<Consensus> backend,
                      boost::filesystem::path journal_dir,
                      int max_size)
-          : Consensus(doughnut)
+          : Consensus(backend->doughnut())
           , _backend(std::move(backend))
           , _process_thread("async consensus", [&] { _process_loop();})
           , _next_index(1)

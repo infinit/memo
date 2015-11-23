@@ -25,8 +25,7 @@ namespace infinit
         {
         public:
           using clock = std::chrono::high_resolution_clock;
-          Cache(Doughnut& doughnut,
-                std::unique_ptr<Consensus> backend,
+          Cache(std::unique_ptr<Consensus> backend,
                 boost::optional<int> cache_size = {},
                 boost::optional<std::chrono::seconds> cache_invalidation = {},
                 boost::optional<std::chrono::seconds> cache_ttl = {});

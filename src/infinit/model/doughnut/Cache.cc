@@ -27,12 +27,11 @@ namespace infinit
           return Cache::clock::now();
         }
 
-        Cache::Cache(Doughnut& doughnut,
-                     std::unique_ptr<Consensus> backend,
+        Cache::Cache(std::unique_ptr<Consensus> backend,
                      boost::optional<int> cache_size,
                      boost::optional<std::chrono::seconds> cache_invalidation,
                      boost::optional<std::chrono::seconds> cache_ttl)
-          : Consensus(doughnut)
+          : Consensus(backend->doughnut())
           , _backend(std::move(backend))
           , _cache_invalidation(
             cache_invalidation ?
