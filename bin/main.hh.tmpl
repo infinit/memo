@@ -357,11 +357,12 @@ namespace infinit
   struct User
   {
     User(std::string const& name,
-         cryptography::rsa::KeyPair const& keys)
+         cryptography::rsa::KeyPair const& keys,
+         std::string const& email = "")
       : name(name)
       , public_key(keys.K())
       , private_key(keys.k())
-      , email()
+      , email(email)
       , password_hash()
     {}
 
@@ -370,7 +371,7 @@ namespace infinit
       , public_key(s.deserialize<cryptography::rsa::PublicKey>("public_key"))
       , private_key(s.deserialize<boost::optional<
                       cryptography::rsa::PrivateKey>>("private_key"))
-      , email()
+      , email(s.deserialize<boost::optional<std::string>>("email"))
       , password_hash()
     {}
 
@@ -1446,7 +1447,7 @@ DAS_MODEL_FIELDS(infinit::User,
 namespace infinit
 {
   DAS_MODEL_DEFINE(User, (name, public_key), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, public_key, private_key), DasUser);
+  DAS_MODEL_DEFINE(User, (name, email, public_key, private_key), DasUser);
   // Publication to the hub.
   DAS_MODEL_DEFINE(User, (name, email, public_key), DasPublicUserPublish);
   DAS_MODEL_DEFINE(User, (name, email, public_key, private_key, password_hash),
