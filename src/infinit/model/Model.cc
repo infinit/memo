@@ -108,11 +108,11 @@ namespace infinit
         }
         return res;
       }
-      else if (local_version)
-        // FIXME: could we mask missing blocks with local cache ?
-        return nullptr;
       else
-        throw MissingBlock(address);
+      {
+        ELLE_ASSERT(local_version);
+        return nullptr;
+      }
     }
 
     void

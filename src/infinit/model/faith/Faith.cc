@@ -45,7 +45,7 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::Block>
-      Faith::_fetch(Address address, boost::optional<int> local_version) const
+      Faith::_fetch(Address address, boost::optional<int>) const
       {
         ELLE_TRACE_SCOPE("%s: fetch block at %x", *this, address);
         try
@@ -58,7 +58,7 @@ namespace infinit
         }
         catch (infinit::storage::MissingKey const&)
         {
-          return nullptr;
+          throw MissingBlock(address);
         }
       }
 

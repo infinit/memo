@@ -106,9 +106,9 @@ namespace infinit
             ELLE_DEBUG("cache miss");
             bench_hit.add(0);
             auto res = _backend->fetch(overlay, address, local_version);
-            if (!res)
-              throw MissingBlock(address);
-            this->_cache.emplace(res->clone());
+            // FIXME: pass the whole block to fetch() so we can cache it there ?
+            if (res)
+              this->_cache.emplace(res->clone());
             return res;
           }
         }

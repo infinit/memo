@@ -82,7 +82,7 @@ namespace infinit
         }
         catch (infinit::storage::MissingKey const&)
         {
-          return nullptr;
+          throw MissingBlock(address);
         }
         elle::IOStream input(raw.istreambuf());
         elle::serialization::json::SerializerIn serializer(input);
