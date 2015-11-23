@@ -495,7 +495,6 @@ class Bottle(bottle.Bottle):
       })
 
   def volume_delete(self, owner, name):
-    import sys
     user = self.user_from_name(name = owner)
     self.authenticate(user)
     self.volume_from_name(owner = owner, name = name)

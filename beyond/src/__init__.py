@@ -284,7 +284,6 @@ class Entity(type):
       def save(self):
         diff = {}
         for field in fields:
-          import sys
           v = getattr(self, field)
           if isinstance(v, dict):
             original_field = \
@@ -295,8 +294,6 @@ class Entity(type):
                 diff.setdefault(field, {})[k] = v
             setattr(self, original_field, deepcopy(v))
         updater = getattr(self.__beyond._Beyond__datastore, update)
-        import sys
-        sys.stdout = sys.stderr
         updater(self.id, diff)
       content['save'] = save
     # Properties
