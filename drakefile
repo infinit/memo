@@ -529,7 +529,7 @@ def configure(
       runner = drake.Runner(exe = test)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
-  if python:
+  if elle.python3:
     for test_name in [
         'errors',
         'single-user-two-devices-shared-storage',
