@@ -35,8 +35,8 @@ COMMAND(create)
     auto name = ifnt.qualified_name(mandatory(args, "volume"), owner);
     volume = ifnt.volume_get(name);
   }
-
-  infinit::Drive drive{name, owner, volume, network, desc ? *desc : "", {}};
+  infinit::Drive::Users users;
+  infinit::Drive drive{name, owner, volume, network, desc ? *desc : "", users};
   ifnt.drive_save(drive);
   report_action("created", "drive", drive.name, std::string("locally"));
 
