@@ -40,6 +40,47 @@ with Beyond() as beyond:
       except Exception:
         pass
 
+    def test_multiple_networks(self):
+      user, invitee = User(), User()
+      user.put(beyond), invitee.put(beyond)
+      networks = {}
+      for i in range(10):
+        network = Network('infinit%r' % i, owner = user)
+        network.put(beyond, owner = user)
+        networks[i] = network
+      for i in range(0, 10, 2):
+        passport = Passport(networks[i], invitee)
+        passport.put(beyond, owner = user)
+      beyond.get('users/%s/passports' % invitee['name'],
+                 auth = invitee.private_key)
+
+    def test_multiple_users(self):
+      def populate(invite):
+        user, invitee = User(), User()
+        user.put(beyond), invitee.put(beyond)
+        network = Network('infinit', owner = user)
+        network.put(beyond, owner = user)
+        if invite:
+          passport = Passport(network, invitee)
+          passport.put(beyond, owner = user)
+        return user, invitee, network
+      for i in range(10):
+        populate(i % 2)
+      user, invitee, network = populate(True)
+      beyond.get('users/%s/passports' % invitee['name'], auth = invitee.private_key)
+
+    def test_owning_a_network_and_being_invited_to_another(self):
+      A, B = User(), User()
+      A.put(beyond), B.put(beyond)
+      network_a = Network('infinit', owner = A)
+      network_a.put(beyond)
+      network_b = Network('infinit', owner = B)
+      network_b.put(beyond)
+      Passport(network_a, B).put(beyond)
+      Passport(network_b, A).put(beyond)
+      beyond.get('users/%s/passports' % B['name'], auth = B.private_key)
+      beyond.get('users/%s/passports' % A['name'], auth = A.private_key)
+
     def test_authorisation_get(self):
       user = User()
       user.put(beyond)

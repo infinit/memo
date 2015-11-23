@@ -320,7 +320,10 @@ class Bottle(bottle.Bottle):
     user = self.user_from_name(name = name)
     self.authenticate(user)
     networks = self.__beyond.user_networks_get(user = user)
-    return {'passports': list(map(lambda n: n.passports[name], networks))}
+    return {'passports': list(
+      map(lambda n: n.passports[name],
+          filter(lambda x: name in x.passports,
+                 networks)))}
 
   def user_volumes_get(self, name):
     user = self.user_from_name(name = name)
@@ -397,7 +400,7 @@ class Bottle(bottle.Bottle):
   def network_passport_get(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
     try:
-      self.authenticate(owner)
+      self.authenticate(user)
     except Exception:
       self.authenticate(self.user_from_name(name = invitee))
     network = self.network_from_name(owner = owner, name = name)
