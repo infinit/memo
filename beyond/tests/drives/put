@@ -22,7 +22,7 @@ with Beyond() as beyond:
       volume.put(beyond)
       drive = Drive('business',
                     volume = volume,
-                    description = "Hyperdrive!");
+                    description = "Hyperdrive!")
       assertEq(drive['volume'], volume['name'])
       assertEq(drive['network'], network['name'])
       drive.put(beyond);
@@ -38,6 +38,7 @@ with Beyond() as beyond:
       import functools
       create_user = functools.partial(create, User)
       create_network = functools.partial(create, Network)
+      create_passport = functools.partial(create, Passport)
       create_volume = functools.partial(create, Volume)
       create_drive = functools.partial(create, Drive)
 
@@ -50,6 +51,12 @@ with Beyond() as beyond:
       # Network -> Volume -> Drive.
       network1 = create_network('network1', owner = eve)
       network2 = create_network('network2', owner = eve)
+      create_passport(network1, alice)
+      create_passport(network1, bob)
+      create_passport(network1, serge)
+      create_passport(network2, alice)
+      create_passport(network2, bob)
+      create_passport(network2, serge)
       volume1 = create_volume('volume1', network = network1)
       volume2 = create_volume('volume2', network = network1)
       volume3 = create_volume('volume3', network = network2)
@@ -73,9 +80,11 @@ with Beyond() as beyond:
       assertEq(len(beyond.get('users/%s/drives' % serge['name'],
                               auth = serge.private_key).json()['drives']),
                1)
+      alice_network = create_network('network', owner = alice)
       drive = create_drive('drive',
                            create_volume('volume',
-                                         create_network('network', owner = alice)))
+                                         alice_network))
+      create_passport(alice_network, eve)
       drive.invite(beyond, eve)
       assertEq(len(beyond.get('users/%s/drives' % eve['name'],
                               auth = eve.private_key).json()['drives']),

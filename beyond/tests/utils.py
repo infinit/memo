@@ -124,6 +124,10 @@ def throws(function, expected = None, json = True):
     assert 'error' in response
     return response
 
+def assertEq(a, b):
+  if a != b:
+    raise AssertionError('%r != %r' % (a, b))
+
 def random_sequence(count = 10):
   from random import SystemRandom
   import string
