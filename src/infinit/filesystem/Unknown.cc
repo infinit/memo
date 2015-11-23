@@ -92,7 +92,7 @@ namespace infinit
       f->_first_block_new = true;
       f->_header = FileHeader(0, 1, S_IFREG | 0666,
                               time(nullptr), time(nullptr), time(nullptr),
-                              File::default_block_size, {});
+                              File::default_block_size);
       if (_parent->_inherit_auth)
       {
         umbrella([&] { _parent->_block->copy_permissions(
@@ -113,7 +113,7 @@ namespace infinit
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
       FileHeader fh(0, 1, S_IFLNK | 0666,
                     time(nullptr), time(nullptr), time(nullptr),
-                    0, {});
+                    0);
       fh.symlink_target = where.string();
       auto serdata = elle::serialization::binary::serialize(fh);
       b->data(serdata);

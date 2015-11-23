@@ -134,7 +134,7 @@ namespace infinit
         int32_t block_size;
         if (offset < signed(_owner->_data.size()))
         {
-          size_t size1 = std::min(size, _owner->_data.size() - offset);
+          size_t size1 = std::min(size, size_t(_owner->_data.size() - offset));
           memcpy(buffer.mutable_contents(),
                  this->_owner->_data.contents() + offset,
                  size1);

@@ -33,7 +33,8 @@ namespace infinit
 
       FileHeader(uint64_t size, uint64_t links, uint32_t mode, uint64_t atime,
         uint64_t mtime, uint64_t ctime, uint64_t block_size,
-        std::unordered_map<std::string, elle::Buffer> xattrs)
+        std::unordered_map<std::string, elle::Buffer> xattrs
+          = std::unordered_map<std::string, elle::Buffer>())
         : size(size)
         , links(links)
         , mode(mode)

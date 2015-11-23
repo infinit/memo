@@ -231,7 +231,7 @@ namespace infinit
         ELLE_DEBUG("block is empty");
         _header = FileHeader(0, 1, S_IFDIR | 0666,
                              time(nullptr), time(nullptr), time(nullptr),
-                             File::default_block_size, {});
+                             File::default_block_size);
         return;
       }
       elle::serialization::binary::SerializerIn input(is);
