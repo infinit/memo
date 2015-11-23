@@ -211,13 +211,6 @@ namespace infinit
         {
           return this->_block->address();
         }
-
-        std::unique_ptr<Local>
-        Cache::make_local(boost::optional<int> port,
-                          std::unique_ptr<storage::Storage> storage)
-        {
-          return this->_backend->make_local(port, std::move(storage));
-        }
       }
     }
   }
