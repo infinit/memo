@@ -63,6 +63,13 @@ namespace infinit
           _remove(overlay::Overlay& overlay,
                   Address address) override;
 
+        /*------.
+        | Cache |
+        `------*/
+        public:
+          /// Clear all cached blocks.
+          void
+          clear();
         private:
           void _cleanup();
           std::unique_ptr<blocks::Block> _copy(blocks::Block& block);
@@ -70,8 +77,6 @@ namespace infinit
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);
           ELLE_ATTRIBUTE_R(int, cache_size);
-          // Use a LRU cache for ImmutableBlock, and a TTL cache for
-          // MutableBlock
           class CachedBlock
           {
           public:

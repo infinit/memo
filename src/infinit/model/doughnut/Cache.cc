@@ -135,6 +135,17 @@ namespace infinit
             this->_cache.emplace(std::move(block));
         }
 
+        /*------.
+        | Cache |
+        `------*/
+
+        void
+        Cache::clear()
+        {
+          ELLE_TRACE_SCOPE("%s: clear", *this);
+          this->_cache.clear();
+        }
+
         void
         Cache::_cleanup()
         {
