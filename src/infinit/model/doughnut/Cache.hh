@@ -6,9 +6,11 @@
 
 # include <boost/multi_index_container.hpp>
 # include <boost/multi_index/hashed_index.hpp>
+# include <boost/multi_index/identity.hpp>
 # include <boost/multi_index/ordered_index.hpp>
 # include <boost/multi_index/sequenced_index.hpp>
 
+# include <infinit/model/blocks/MutableBlock.hh>
 # include <infinit/model/doughnut/Consensus.hh>
 
 namespace infinit
@@ -84,6 +86,12 @@ namespace infinit
             ELLE_ATTRIBUTE_RW(clock::time_point, last_used);
             ELLE_ATTRIBUTE_RW(clock::time_point, last_fetched);
           };
+          /// Sort mutable blocks first, ordered by last_fetched
+          struct LastFetch
+          {
+            bool
+            operator ()(CachedBlock const& lhs, CachedBlock const& rhs) const;
+          };
           typedef bmi::multi_index_container<
             CachedBlock,
             bmi::indexed_by<
@@ -96,11 +104,11 @@ namespace infinit
                   CachedBlock,
                   clock::time_point const&, &CachedBlock::last_used> >,
               bmi::ordered_non_unique<
-                bmi::const_mem_fun<
-                  CachedBlock,
-                  clock::time_point const&, &CachedBlock::last_fetched> >
+                bmi::identity<CachedBlock>,
+                LastFetch>
             > > BlockCache;
           ELLE_ATTRIBUTE(BlockCache, cache);
+          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, cleanup_thread);
         };
       }
     }

@@ -41,6 +41,9 @@ namespace infinit
             cache_ttl ?
             cache_ttl.get() : std::chrono::seconds(60 * 5))
           , _cache_size(cache_size ? cache_size.get() : 64000000)
+          , _cleanup_thread(
+            new reactor::Thread(elle::sprintf("%s cleanup", *this),
+                                [this] { this->_cleanup();}))
         {
           ELLE_TRACE_SCOPE(
             "%s: create with size %s, TTL %ss and invalidation %ss",
@@ -71,7 +74,6 @@ namespace infinit
         Cache::_remove(overlay::Overlay& overlay, Address address)
         {
           ELLE_TRACE_SCOPE("%s: remove %s", *this, address);
-          this->_cleanup();
           if (this->_cache.erase(address) > 0)
             ELLE_DEBUG("drop block from cache");
           else
@@ -86,7 +88,6 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
           static elle::Bench bench_hit("cache.hit", 10_sec);
-          this->_cleanup();
           auto hit = this->_cache.find(address);
           if (hit != this->_cache.end())
           {
@@ -120,7 +121,6 @@ namespace infinit
                       std::unique_ptr<ConflictResolver> resolver)
         {
           ELLE_TRACE_SCOPE("%s: store %s", *this, block->address());
-          this->_cleanup();
           this->_backend->store(
             overlay, block->clone(), mode, std::move(resolver));
           auto hit = this->_cache.find(block->address());
@@ -149,54 +149,66 @@ namespace infinit
         void
         Cache::_cleanup()
         {
-          ELLE_TRACE_SCOPE("%s: cleanup cache", *this);
-          ELLE_DEBUG("evict unused blocks")
+          while (true)
           {
-            auto& order = this->_cache.get<1>();
-            auto deadline = now() - this->_cache_ttl;
-            auto it = order.begin();
-            while (it != order.end() && it->last_used() < deadline)
+            auto const now = consensus::now();
+            ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
+            ELLE_DEBUG("evict unused blocks")
             {
-              ELLE_DUMP("evict %s", it->block()->address());
-              it = order.erase(it);
-            }
-          }
-          // FIXME: take cache_size in account too
-          ELLE_DEBUG("refresh obsolete blocks")
-          {
-            auto& order = this->_cache.get<2>();
-            auto deadline = now() - this->_cache_invalidation;
-            auto it = order.begin();
-            while (it != order.end() && it->last_fetched() < deadline)
-            {
-              if (auto mb =
-                  dynamic_cast<blocks::MutableBlock*>(it->block().get()))
+              auto& order = this->_cache.get<1>();
+              auto deadline = now - this->_cache_ttl;
+              auto it = order.begin();
+              while (it != order.end() && it->last_used() < deadline)
               {
-                ELLE_DUMP("refresh %s", it->block()->address());
-                try
-                {
-                  auto block = this->_backend->fetch(
-                    *this->doughnut().overlay(),
-                    it->block()->address(), mb->version());
-                  order.modify(
-                    it,
-                    [&] (CachedBlock& cache)
-                    {
-                      if (block)
-                        cache.block() = std::move(block);
-                      cache.last_fetched(now());
-                    });
-                  it = order.begin();
-                }
-                catch (MissingBlock const&)
-                {
-                  ELLE_DUMP("drop removed block");
-                  it = order.erase(it);
-                }
+                ELLE_DUMP("evict %s", it->block()->address());
+                it = order.erase(it);
               }
-              else
-                ++it;
             }
+            // FIXME: take cache_size in account too
+            ELLE_DEBUG("refresh obsolete blocks")
+            {
+              auto& order = this->_cache.get<2>();
+              auto deadline = now - this->_cache_invalidation;
+              while (!order.empty())
+              {
+                auto& cached = *order.begin();
+                if (!(cached.last_fetched() < deadline))
+                  break;
+                auto const address = cached.block()->address();
+                if (auto mb =
+                    dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
+                {
+                  ELLE_DUMP("refresh %s", address);
+                  try
+                  {
+                    auto block = this->_backend->fetch(
+                      *this->doughnut().overlay(), address, mb->version());
+                    // Beware: everything is invalidated past there we probably
+                    // yielded.
+                    auto it = this->_cache.find(address);
+                    if (it != this->_cache.end())
+                      this->_cache.modify(
+                        it,
+                        [&] (CachedBlock& cache)
+                        {
+                          if (block)
+                            cache.block() = std::move(block);
+                          cache.last_fetched(now);
+                        });
+                  }
+                  catch (MissingBlock const&)
+                  {
+                    ELLE_DUMP("drop removed block");
+                    this->_cache.erase(address);
+                  }
+                }
+                else
+                  break;
+              }
+            }
+            reactor::sleep(
+              boost::posix_time::seconds(
+                this->_cache_invalidation.count()) / 10);
           }
         }
 
@@ -210,6 +222,17 @@ namespace infinit
         Cache::CachedBlock::address() const
         {
           return this->_block->address();
+        }
+
+        bool
+        Cache::LastFetch::operator ()(
+          CachedBlock const& lhs, CachedBlock const& rhs) const
+        {
+          if (dynamic_cast<blocks::MutableBlock const*>(lhs.block().get()) &&
+              !dynamic_cast<blocks::MutableBlock const*>(rhs.block().get()))
+            return true;
+          else
+            return lhs.last_fetched() < rhs.last_fetched();
         }
       }
     }
