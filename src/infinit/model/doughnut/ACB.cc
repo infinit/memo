@@ -47,7 +47,8 @@ namespace infinit
 
 DAS_MODEL_DEFAULT(infinit::model::doughnut::ACB::ACLEntry,
                   infinit::model::doughnut::DasACLEntry);
-DAS_MODEL_SERIALIZE(infinit::model::doughnut::ACB::ACLEntry);
+// FAILS in binary mode
+// DAS_MODEL_SERIALIZE(infinit::model::doughnut::ACB::ACLEntry);
 
 namespace infinit
 {
@@ -83,11 +84,30 @@ namespace infinit
       ACB::ACLEntry
       ACB::ACLEntry::deserialize(elle::serialization::SerializerIn& s)
       {
+
+        auto key = s.deserialize<cryptography::rsa::PublicKey>("key");
+        auto read = s.deserialize<bool>("read");
+        auto write = s.deserialize<bool>("write");
+        auto token = s.deserialize<elle::Buffer>("token");
+        return ACLEntry(std::move(key), read, write, std::move(token));
+
+        /*
         DasACLEntry::Update content(s);
         return ACLEntry(std::move(content.key.get()),
                         content.read.get(),
                         content.write.get(),
-                        std::move(content.token.get()));
+                        std::move(content.token.get()));*/
+
+      }
+
+
+      void
+      ACB::ACLEntry::serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("key", key);
+        s.serialize("read", read);
+        s.serialize("write", write);
+        s.serialize("token", token);
       }
 
       bool
@@ -550,17 +570,7 @@ namespace infinit
       {
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
-        elle::Buffer buf;
-        if (s.out())
-        {
-          buf = elle::serialization::json::serialize(this->_acl_entries);
-        }
-        s.serialize("acl", buf);
-        if (s.in())
-        {
-          this->_acl_entries = elle::serialization::json::deserialize
-            <decltype(this->_acl_entries)>(buf);
-        }
+        s.serialize("acl", this->_acl_entries);
         s.serialize("data_version", this->_data_version);
         bool need_signature = !s.context().has<ACBDontWaitForSignature>();
         if (need_signature)

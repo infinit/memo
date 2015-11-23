@@ -40,7 +40,7 @@ namespace infinit
                    elle::Buffer token_);
           ACLEntry(ACLEntry const& other);
           ACLEntry(elle::serialization::SerializerIn& s);
-
+          void serialize(elle::serialization::Serializer& s);
           ACLEntry&
           operator =(ACLEntry&& other) = default;
 
