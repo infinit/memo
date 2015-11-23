@@ -459,8 +459,8 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
-        { "password", value<std::string>(), elle::sprintf(
-          "password to authenticate to %s", beyond(true)).c_str() },
+        { "hub-password-inline", value<std::string>(), elle::sprintf(
+          "password to authenticate with %s.", beyond(true)).c_str() },
       },
     },
     {
