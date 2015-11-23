@@ -8,6 +8,7 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/OKB.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Cache");
@@ -49,6 +50,22 @@ namespace infinit
 
         Cache::~Cache()
         {}
+
+        /*--------.
+        | Factory |
+        `--------*/
+
+        std::unique_ptr<Local>
+        Cache::make_local(boost::optional<int> port,
+                          std::unique_ptr<storage::Storage> storage)
+        {
+          return
+            this->_backend->make_local(std::move(port), std::move(storage));
+        }
+
+        /*----------.
+        | Consensus |
+        `----------*/
 
         void
         Cache::_remove(overlay::Overlay& overlay, Address address)

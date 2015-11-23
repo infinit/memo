@@ -34,6 +34,18 @@ namespace infinit
           make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
 
+        /*--------.
+        | Factory |
+        `--------*/
+        public:
+          virtual
+          std::unique_ptr<Local>
+          make_local(boost::optional<int> port,
+                     std::unique_ptr<storage::Storage> storage) override;
+
+        /*----------.
+        | Consensus |
+        `----------*/
         protected:
           virtual
           void
