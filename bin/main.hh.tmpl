@@ -568,48 +568,89 @@ namespace infinit
     std::string network;
   };
 
-  struct DriveUsers
-  {
-    DriveUsers() = default;
-
-    DriveUsers(std::string permissions_,
-               std::string status_,
-               bool create_home_)
-      : permissions{permissions_}
-      , status{status_}
-      , create_home{create_home_}
-    {}
-
-    void
-    serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("permissions", this->permissions);
-      s.serialize("status", this->status);
-      s.serialize("create_home", this->create_home);
-    }
-
-    std::string permissions = "rw";
-    std::string status;
-    bool create_home;
-  };
-
   struct Drive
   {
+    struct User
+    {
+      User() = default;
+
+      User(std::string permissions_,
+           std::string status_,
+           bool create_home_)
+        : permissions{permissions_}
+        , status{status_}
+        , create_home{create_home_}
+      {}
+
+      void
+      serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("permissions", this->permissions);
+        s.serialize("status", this->status);
+        s.serialize("create_home", this->create_home);
+      }
+
+      std::string permissions = "rw";
+      std::string status;
+      bool create_home;
+    };
+
+    typedef std::unordered_map<std::string, User> Users;
+  private:
+    Drive(std::string const& name,
+          std::string const& owner,
+          std::string const& volume,
+          std::string const& network,
+          std::string const& description,
+          Users const& users)
+      : name(name)
+      , owner(owner)
+      , volume(volume)
+      , network(network)
+      , description(description)
+      , users(users)
+    {}
+
+  public:
+    Drive(std::string const& name,
+          infinit::User const& owner,
+          Volume const& volume,
+          Network const& network,
+          std::string const& description,
+          Users const& users)
+      : Drive(name, owner.name, volume.name, network.name, description, users)
+    {
+      if (this->users.find(owner.name) == this->users.end())
+        this->users[owner.name] = User{"rw", "ok", false};
+    }
+
+    Drive(elle::serialization::SerializerIn& s)
+      : Drive(s.deserialize<std::string>("name"),
+              s.deserialize<std::string>("owner"),
+              s.deserialize<std::string>("volume"),
+              s.deserialize<std::string>("network"),
+              s.deserialize<std::string>("description"),
+              s.deserialize<Users>("users"))
+    {
+    }
+
     void
     serialize(elle::serialization::Serializer& s)
     {
       s.serialize("name", this->name);
+      s.serialize("owner", this->owner);
       s.serialize("volume", this->volume);
       s.serialize("network", this->network);
-      s.serialize("description", this->desc);
+      s.serialize("description", this->description);
       s.serialize("users", this->users);
     }
 
     std::string name;
+    std::string owner;
     std::string volume;
     std::string network;
-    std::string desc;
-    std::unordered_map<std::string, DriveUsers> users;
+    std::string description;
+    Users users;
   };
 
   class Infinit
@@ -1129,10 +1170,13 @@ namespace infinit
     }
 
     void
-    drive_save(Drive const& drive)
+    drive_save(Drive const& drive,
+               bool overwrite = true)
+
     {
       boost::filesystem::ofstream f;
-      this->_open_write(f, this->_drive_path(drive.name), drive.name, "drive");
+      this->_open_write(f, this->_drive_path(drive.name), drive.name, "drive",
+                        overwrite);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(drive);
     }

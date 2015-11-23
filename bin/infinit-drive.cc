@@ -23,6 +23,7 @@ drive_name(variables_map const& args, infinit::User const& owner)
 
 COMMAND(create)
 {
+  ELLE_TRACE_SCOPE("create");
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto desc = optional(args, "description");
@@ -35,7 +36,7 @@ COMMAND(create)
     volume = ifnt.volume_get(name);
   }
 
-  infinit::Drive drive{name, volume.name, network.name, desc ? *desc : "", {}};
+  infinit::Drive drive{name, owner, volume, network, desc ? *desc : "", {}};
   ifnt.drive_save(drive);
   report_action("created", "drive", drive.name, std::string("locally"));
 
@@ -49,6 +50,7 @@ COMMAND(create)
 
 COMMAND(invite)
 {
+  ELLE_TRACE_SCOPE("invite");
   auto owner = self_user(ifnt, args);
   auto drive_name_ = drive_name(args, owner);
   auto user = mandatory(args, "user");
@@ -62,11 +64,9 @@ COMMAND(invite)
       permissions = *o;
   }
 
-  infinit::DriveUsers invitation{permissions,
-                                 "pending",
-                                 home};
+  infinit::Drive::User invitation{permissions, "pending", home};
 
-  auto url = elle::sprintf("drives/%s/invite/%s", drive_name_, user);
+  auto url = elle::sprintf("drives/%s/invitations/%s", drive_name_, user);
 
   try
   {
@@ -78,14 +78,46 @@ COMMAND(invite)
       not_found(user, "User");
     else if (e.what() == std::string("drive/not_found"))
       not_found(drive_name_, "Drive");
-    return;
+    else if (e.what() == std::string("passport/not_found"))
+      not_found(user, "Passport");
+    throw;
   }
   if (flag(args, "fetch"))
     fetch_(drive_name_);
 }
 
+COMMAND(join)
+{
+  ELLE_TRACE_SCOPE("join");
+  auto self = self_user(ifnt, args);
+  auto drive = ifnt.drive_get(drive_name(args, self));
+  auto it = drive.users.find(self.name);
+  if (it == drive.users.end())
+    throw elle::Error(
+      elle::sprintf("You haven't been invited to join %s", drive.name));
+  auto invitation = it->second;
+  invitation.status = "ok";
+  auto url = elle::sprintf("drives/%s/invitations/%s", drive.name, self.name);
+  try
+  {
+    beyond_push(url, "invitation", drive.name, invitation, self);
+  }
+  catch (MissingResource const& e)
+  {
+    if (e.what() == std::string("user/not_found"))
+      not_found(self.name, "User"); // XXX: It might be the owner or you.
+    else if (e.what() == std::string("drive/not_found"))
+      not_found(drive.name, "Drive");
+    throw;
+  }
+  drive.users[self.name] = invitation;
+  ELLE_DEBUG("save drive %s", drive)
+    ifnt.drive_save(drive);
+}
+
 COMMAND(export_)
 {
+  ELLE_TRACE_SCOPE("export");
   auto owner = self_user(ifnt, args);
   auto output = get_output(args);
   auto name = drive_name(args, owner);
@@ -97,6 +129,7 @@ COMMAND(export_)
 
 COMMAND(push)
 {
+  ELLE_TRACE_SCOPE("push");
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto drive = ifnt.drive_get(name);
@@ -106,6 +139,7 @@ COMMAND(push)
 
 COMMAND(delete_)
 {
+  ELLE_TRACE_SCOPE("delete");
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto path = ifnt._drive_path(name);
@@ -118,6 +152,7 @@ COMMAND(delete_)
 
 COMMAND(pull)
 {
+  ELLE_TRACE_SCOPE("pull");
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   beyond_delete("drive", name, owner);
@@ -125,6 +160,7 @@ COMMAND(pull)
 
 COMMAND(list)
 {
+  ELLE_TRACE_SCOPE("list");
   for (auto const& drive: ifnt.drives_get())
     std::cout << drive.name << std::endl;
 }
@@ -133,16 +169,36 @@ static
 void
 fetch_(std::string const& drive_name)
 {
+  ELLE_TRACE_SCOPE("fetch %s", drive_name);
   auto remote_drive = ifnt.drive_fetch(drive_name);
-  ifnt.drive_delete(drive_name);
-  ifnt.drive_save(remote_drive);
+  ELLE_DEBUG("save drive %s", remote_drive)
+    ifnt.drive_save(remote_drive);
 }
 
 COMMAND(fetch)
 {
+  ELLE_TRACE_SCOPE("fetch");
   auto self = self_user(ifnt, args);
-  auto drive_name = ifnt.qualified_name(mandatory(args, "name"), self);
-  fetch_(drive_name);
+  if (optional(args, "name"))
+  {
+    ELLE_DEBUG("fetch specific drive");
+    auto name = drive_name(args, self);
+    fetch_(name);
+  }
+  else
+  {
+    ELLE_DEBUG("fetch all drives");
+    auto res = beyond_fetch<
+      std::unordered_map<std::string, std::vector<infinit::Drive>>>(
+        elle::sprintf("users/%s/drives", self.name),
+        "drive for user",
+        self.name,
+        self);
+    for (auto const& drive: res["drives"])
+    {
+      ifnt.drive_save(drive);
+    }
+  }
 }
 
 int
@@ -179,6 +235,16 @@ main(int argc, char** argv)
       },
     },
     {
+      "join",
+      "Join a drive you were invited to (Hub operation)",
+      &join,
+      "--name DRIVE",
+      {
+        { "name,n", value<std::string>(), "drive to invite the user on" },
+        option_owner,
+      },
+    },
+    {
       "export",
       "Export a drive",
       &export_,
@@ -200,11 +266,11 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      "Fetch a drive",
+      elle::sprintf("fetch drive from %s", beyond(true)).c_str(),
       &fetch,
       "",
       {
-        { "name,n", value<std::string>(), "drive to fetch" },
+        { "name,n", value<std::string>(), "drive to fetch (optional)" },
         option_owner,
       },
     },

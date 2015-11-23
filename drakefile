@@ -434,6 +434,7 @@ def configure(
       'user_cli',
       'network_cli',
       'volume_cli',
+      'drive_cli',
   ]:
     test = drake.node('tests/functional/%s' % test_name)
     test.dependencies_add(installed_binaries)
