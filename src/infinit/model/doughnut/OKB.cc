@@ -234,9 +234,8 @@ namespace infinit
       {
         elle::Buffer res;
         {
-          // FIXME: use binary to sign
           elle::IOStream output(res.ostreambuf());
-          elle::serialization::json::SerializerOut s(output, false);
+          elle::serialization::binary::SerializerOut s(output, false);
           s.serialize("salt", this->_salt);
           s.serialize("owner_key", this->_owner_key);
           s.serialize("version", this->_version);
