@@ -529,6 +529,7 @@ def configure(
       runner = drake.Runner(exe = test)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
+
   if elle.python3:
     for test_name in [
         'errors',
@@ -539,6 +540,7 @@ def configure(
         'network_cli',
         'passport_cli',
         'volume_cli',
+        'drive_cli',
     ]:
       test = drake.node('tests/functional/%s' % test_name)
       rule_functional_tests << test

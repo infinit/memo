@@ -9,6 +9,8 @@ import subprocess
 import tempfile
 import time
 
+from functools import partial
+
 import infinit.beyond
 
 class CouchDB:
@@ -194,7 +196,16 @@ class CouchDBDatastore:
           for name, update in [
               ('update', self.__drive_update),
           ]
+        },
+        'views' : {
+          name : {
+            'map': getsource(view_map)
+          }
+          for name, view_map in [
+            ('per_member_name', self.__drives_per_member_map),
+          ]
         }
+
       })
     self.__couchdb['drives'].save(design)
 
@@ -420,7 +431,6 @@ class CouchDBDatastore:
   def drive_insert(self, drive):
     json = drive.json()
     json['_id'] = drive.id
-    json['users'] = {}
     try:
       self.__couchdb['drives'].save(json)
     except couchdb.ResourceConflict:
@@ -473,3 +483,14 @@ class CouchDBDatastore:
       self.__couchdb['drives'].delete(json)
     except couchdb.ResourceConflict:
       raise infinit.beyond.Drive.Duplicate()
+
+  def user_drives_fetch(self, user):
+    drive_from_db = partial(infinit.beyond.Drive.from_json, self.beyond)
+    rows = self.__couchdb['drives'].view('beyond/per_member_name',
+                                         key = user.name)
+    return list(map(lambda x: drive_from_db(x.value), rows))
+
+  def __drives_per_member_map(drive):
+    for elem in drive['users'].keys():
+      yield elem, drive
+    yield drive['owner'], drive

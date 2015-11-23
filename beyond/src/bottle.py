@@ -134,6 +134,8 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.user_passports_get)
     self.route('/users/<name>/volumes',
                method = 'GET')(self.user_volumes_get)
+    self.route('/users/<name>/drives',
+               method = 'GET')(self.user_drives_get)
     self.route('/users/<name>/login', method = 'POST')(self.login)
     # Network
     self.route('/networks/<owner>/<name>',
@@ -175,8 +177,8 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.drive_put)
     self.route('/drives/<owner>/<name>',
                method = 'DELETE')(self.drive_delete)
-    self.route('/drives/<owner>/<name>/invite/<user>',
-               method = 'PUT')(self.drive_invite_put)
+    self.route('/drives/<owner>/<name>/invitations/<user>',
+               method = 'PUT')(self.drive_invitation_put)
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -338,6 +340,12 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     volumes = self.__beyond.user_volumes_get(user = user)
     return {'volumes': list(map(lambda v: v.json(), volumes))}
+
+  def user_drives_get(self, name):
+    user = self.user_from_name(name = name)
+    self.authenticate(user)
+    drives = self.__beyond.user_drives_get(user = user)
+    return {'drives': list(map(lambda v: v.json(), drives))}
 
   def login(self, name):
     json = bottle.request.json
@@ -506,7 +514,6 @@ class Bottle(bottle.Bottle):
       })
 
   def volume_delete(self, owner, name):
-    import sys
     user = self.user_from_name(name = owner)
     self.authenticate(user)
     self.volume_from_name(owner = owner, name = name)
@@ -515,12 +522,33 @@ class Bottle(bottle.Bottle):
   ## ----- ##
   ## DRIVE ##
   ## ----- ##
+  def __drive_integrity(self, drive, passport = None):
+    drive = drive.json()
+    try:
+      # Make sure network exists.
+      network_owner =  drive['network'].split('/')[0]
+      network_name =  drive['network'].split('/')[1]
+      network = self.network_from_name(owner = network_owner,
+                                       name = network_name)
+    except IndexError:
+      raise Response(400, 'Invalid network name')
+    try:
+      # Make sure volume exists.
+      self.volume_from_name(owner = drive['volume'].split('/')[0],
+                            name = drive['volume'].split('/')[1])
+    except IndexError:
+      raise Response(400, 'Invalid volume name')
+    if passport is not None:
+      self.network_passport_get(owner = network_owner,
+                                name = network_name,
+                                invitee = passport)
 
   def drive_from_name(self, owner, name, throws = True):
     try:
       return self.__beyond.drive_get(owner = owner, name = name)
     except Drive.NotFound:
-      raise self.__not_found('drive', '%s/%s' % (owner, name))
+      if throws:
+        raise self.__not_found('drive', '%s/%s' % (owner, name))
 
   def drive_put(self, owner, name):
     user = self.user_from_name(name = owner)
@@ -528,6 +556,7 @@ class Bottle(bottle.Bottle):
     try:
       json = bottle.request.json
       drive = Drive(self.__beyond, **json)
+      self.__drive_integrity(drive)
       drive.create()
     except Drive.Duplicate:
       if drive == self.drive_from_name(owner = owner, name = name):
@@ -547,30 +576,21 @@ class Bottle(bottle.Bottle):
   def drive_get(self, owner, name):
     return self.drive_from_name(owner, name).json()
 
-  def drive_invite_put(self, owner, name, user):
+  def drive_invitation_put(self, owner, name, user):
+    invitee = self.user_from_name(name = user)
+    owner = self.user_from_name(name = owner)
+    as_owner = True
     try:
-      self.user_from_name(name = user)
-    except:
-      raise Response(404, {
-        'error': 'user/not_found',
-        'reason': 'User %s not found' % user
-      })
-
-    owner_user = self.user_from_name(name = owner)
-    self.authenticate(owner_user)
-    drive = None
-    try:
-      drive = self.drive_from_name(owner = owner, name = name)
-    except:
-      raise Response(404, {
-        'error': 'drive/not_found',
-        'reason': 'Drive %s not found' % drive
-      })
+      self.authenticate(owner)
+    except Exception:
+      as_owner = False
+      self.authenticate(invitee)
+    drive = self.drive_from_name(owner = owner.name, name = name)
+    self.__drive_integrity(drive, passport = invitee.name)
     json = bottle.request.json
-    drive.users[user] = json
+    drive.users[invitee.name] = Drive.Invitation(self.__beyond, **json).json()
     drive.save()
     raise Response(201, {}) # FIXME: 200 if existed
-
 
   ## --- ##
   ## GCS ##

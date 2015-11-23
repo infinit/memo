@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+
+from utils import *
+import json
+
+# Creating and inviting.
+with Beyond() as beyond, Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+  # Create bob.
+  bob.run(['infinit-user', '--signup',  'bob', '--email',  'bob@infinit.io'])
+
+  # Create alice.
+  alice.run(['infinit-user', '--signup',  '--name', 'alice', '--email',  'alice@infinit.io'])
+  a = alice.run(['infinit-user', '--export', 'alice'])
+
+  # Import alice as bob.
+  bob.run(['infinit-user', '--import'], input = a)
+
+  # Create network & volume.
+  bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob', '--push'])
+  n = bob.run(['infinit-network', '--export', '--name', 'network', '--as', 'bob'])
+  bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'network', '--as', 'bob', '--push'])
+  v = bob.run(['infinit-volume', '--export', '--name', 'volume', '--as', 'bob'])
+
+  # Create drive.
+  description = 'a really long description: ' + 'x' * 1024
+  bob.run([
+    'infinit-drive', '--create',
+    '--name', 'employees',
+    '--network', 'network',
+    '--volume', 'volume',
+    '--description', description,
+    '--as', 'bob',
+    '--push',
+  ])
+  d = bob.run([
+    'infinit-drive', '--export', '--name', 'employees', '--as', 'bob'])
+
+  # Check integrity.
+  assertEq(d['name'], 'bob/employees')
+  assertEq(d['network'], n['name'])
+  assertEq(d['volume'], v['name'])
+  assertEq(d['description'], description)
+
+  # Invite alice to the network.
+  bob.run(['infinit-passport', '--create',
+           '--network', d['network'],
+           '--user', 'alice',
+           '--as', 'bob',
+           '--push'])
+
+  # Invite alice.
+  bob.run(['infinit-drive', '--invite',
+           '--name', 'employees',
+           '--user', 'alice',
+           '--as', 'bob',
+           '--fetch'])
+
+  # Make sure alice doesn't have it.
+  l = alice.run(['infinit-drive', '--list'])
+  assertEq(len(l), 0)
+
+  # Fetch invitations.
+  alice.run(['infinit-drive', '--fetch', '--as', 'alice'])
+
+  # Make sure alice has it.
+  l = alice.run(['infinit-drive', '--list'])
+  assertEq(len(l), 1)
+
+  # Check that invitation is present.
+  drive = alice.run(['infinit-drive', '--export', '--name', l[0], '--as', 'alice'])
+  assert 'alice' in drive['users'].keys()
+  assert drive['users']['alice']['status'] == 'pending'
+
+  # Join it.
+  alice.run(['infinit-drive', '--join', '--name', l[0], '--as', 'alice'])
+  drive = alice.run(['infinit-drive', '--export', '--name', l[0], '--as', 'alice'])
+  assert drive['users']['alice']['status'] == 'ok'
+
+  # Make sure it's replicated to other users.
+  drive = bob.run(['infinit-drive', '--export', '--name', l[0], '--as', 'bob'])
+  assert drive['users']['alice']['status'] == 'pending'
+  bob.run(['infinit-drive', '--fetch', '--as', 'bob'])
+  drive = bob.run(['infinit-drive', '--export', '--name', l[0], '--as', 'bob'])
+  assert drive['users']['alice']['status'] == 'ok'

@@ -83,6 +83,9 @@ class Beyond:
     networks = self.__datastore.user_networks_fetch(user = user)
     return self.__datastore.networks_volumes_fetch(networks = networks)
 
+  def user_drives_get(self, user):
+    return self.__datastore.user_drives_fetch(user)
+
   ## ------ ##
   ## Volume ##
   ## ------ ##
@@ -96,7 +99,7 @@ class Beyond:
       owner = owner, name = name)
 
   ## ----- ##
-  ## DRIVE ##
+  ## Drive ##
   ## ----- ##
 
   def drive_get(self, owner, name):
@@ -300,7 +303,6 @@ class Entity(type):
       def save(self):
         diff = {}
         for field in fields:
-          import sys
           v = getattr(self, field)
           if isinstance(v, dict):
             original_field = \
@@ -311,8 +313,6 @@ class Entity(type):
                 diff.setdefault(field, {})[k] = v
             setattr(self, original_field, deepcopy(v))
         updater = getattr(self.__beyond._Beyond__datastore, update)
-        import sys
-        sys.stdout = sys.stderr
         updater(self.id, diff)
       content['save'] = save
     # Properties
@@ -382,7 +382,7 @@ class Volume(metaclass = Entity,
 class Drive(metaclass = Entity,
             insert = 'drive_insert',
             update = 'drive_update',
-            fields = fields('name', 'network', 'volume', 'description',
+            fields = fields('name', 'owner', 'network', 'volume', 'description',
                             users = {})):
 
   @property
@@ -394,3 +394,12 @@ class Drive(metaclass = Entity,
         self.volume != other.volume or self.description != other.description:
       return False
     return True
+
+  class Invitation(metaclass = Entity,
+                   fields = fields('permissions', 'status', 'create_home')):
+    statuses = ["pending", "accepted"]
+    def from_json(beyond, json):
+      self_ = Entity.from_json(beyond, json)
+      if self_["status"] not in statuses:
+        raise exceptions.InvalidFormat('invitation', status)
+      return self_
