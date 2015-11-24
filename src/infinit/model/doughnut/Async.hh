@@ -50,20 +50,12 @@ namespace infinit
 
             struct Op
             {
-              Op(overlay::Overlay& overlay_)
-                : overlay(overlay_)
-              {}
+              Op(overlay::Overlay& overlay_);
               Op(overlay::Overlay& overlay_,
                  Address addr_,
                  std::unique_ptr<blocks::Block>&& block_,
                  boost::optional<StoreMode> mode_ = {},
-                 std::unique_ptr<ConflictResolver> resolver_ = {})
-                : overlay(overlay_)
-                , addr{addr_}
-                , block{std::move(block_)}
-                , mode{std::move(mode_)}
-                , resolver{std::move(resolver_)}
-              {}
+                 std::unique_ptr<ConflictResolver> resolver_ = {});
 
               overlay::Overlay& overlay;
               Address addr;
