@@ -212,14 +212,9 @@ namespace infinit
                                       std::move(resolver));
               }
             }
-            catch (reactor::Terminate const&)
+            catch (elle::Error const& e)
             {
-              ELLE_TRACE("Terminating thread");
-              throw;
-            }
-            catch (std::exception const& e)
-            {
-              ELLE_WARN("Exception escaped Async loop: %s", e.what());
+              ELLE_ABORT("%s: async loop killed: %s", *this, e);
             }
           }
         }
