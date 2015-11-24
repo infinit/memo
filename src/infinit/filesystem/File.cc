@@ -482,6 +482,7 @@ namespace infinit
         ELLE_DEBUG("store first block: %f with payload %s, fat %s, total_size %s", *this->_first_block,
                    this->_data.size(), this->_fat, _header.size)
         {
+          _header.mtime = time(nullptr);
           _commit_first();
         }
       }

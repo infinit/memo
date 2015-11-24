@@ -98,6 +98,7 @@ namespace infinit
     {
       _fetch();
       _header.mode = mode;
+      _header.ctime = time(nullptr);
       _commit();
     }
 
@@ -119,6 +120,7 @@ namespace infinit
       _fetch();
       if (_header.xattrs.erase(k))
       {
+         _header.ctime = time(nullptr);
         _commit();
       }
       else
@@ -149,6 +151,7 @@ namespace infinit
       }
       _fetch();
       _header.xattrs[k] = elle::Buffer(v.data(), v.size());
+      _header.ctime = time(nullptr);
       _commit();
     }
 
@@ -208,6 +211,7 @@ namespace infinit
       _fetch();
       _header.atime = tv[0].tv_sec;
       _header.mtime = tv[1].tv_sec;
+      _header.ctime = time(nullptr);
       _commit();
     }
 

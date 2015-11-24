@@ -271,6 +271,12 @@ namespace infinit
       Directory::_commit(Operation op, bool set_mtime)
       {
         ELLE_TRACE_SCOPE("%s: commit %s entries", *this, _files.size());
+        if (set_mtime)
+        {
+          ELLE_DEBUG_SCOPE("set mtime");
+          _header.mtime = time(nullptr);
+          _header.ctime = time(nullptr);
+        }
         elle::SafeFinally clean_cache([&] { _block.reset();});
         elle::Buffer data;
         {
@@ -283,12 +289,6 @@ namespace infinit
           ELLE_DEBUG("fetch root block")
             _block = elle::cast<ACLBlock>::runtime(_owner.fetch_or_die(_address));
         _block->data(data);
-        if (set_mtime)
-        {
-          ELLE_DEBUG_SCOPE("set mtime");
-          _header.mtime = time(nullptr);
-          _header.ctime = time(nullptr);
-        }
         this->_push_changes(op);
         clean_cache.abort();
       }
