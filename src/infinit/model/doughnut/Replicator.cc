@@ -194,12 +194,12 @@ namespace infinit
 
         std::unique_ptr<blocks::Block>
         Replicator::_fetch(overlay::Overlay& overlay, Address address,
-                           boost::optional<int>)
+                           boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
           this->_overlay = &overlay;
           auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH);
-          return fetch_from_members(peers, address);
+          return fetch_from_members(peers, address, local_version);
         }
 
         void
@@ -214,7 +214,7 @@ namespace infinit
         {
           std::vector<std::unique_ptr<blocks::Block>> blocks;
           for (auto& peer: peers)
-            blocks.push_back(peer->fetch(address));
+            blocks.push_back(peer->fetch(address, {}));
           std::vector<std::unique_ptr<blocks::Block>> voted_blocks;
           std::vector<int> votes;
           for (auto& b: blocks)

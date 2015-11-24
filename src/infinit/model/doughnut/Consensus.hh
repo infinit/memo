@@ -37,8 +37,10 @@ namespace infinit
           remove(overlay::Overlay& overlay, Address address);
           static
           std::unique_ptr<blocks::Block>
-          fetch_from_members(reactor::Generator<overlay::Overlay::Member>& peers,
-                             Address address);
+          fetch_from_members(
+            reactor::Generator<overlay::Overlay::Member>& peers,
+            Address address,
+            boost::optional<int> local_version);
           void
           remove_many(overlay::Overlay& overlay, Address address, int factor);
         protected:

@@ -4,8 +4,6 @@
 
 #include <infinit/model/doughnut/Local.hh>
 
-ELLE_LOG_COMPONENT("infinit.overlay.Kalimero");
-
 namespace infinit
 {
   namespace overlay

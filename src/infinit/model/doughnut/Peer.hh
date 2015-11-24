@@ -42,12 +42,17 @@ namespace infinit
         virtual
         void
         store(blocks::Block const& block, StoreMode mode) = 0;
-        virtual
         std::unique_ptr<blocks::Block>
-        fetch(Address address) const = 0;
+        fetch(Address address,
+              boost::optional<int> local_version) const;
         virtual
         void
         remove(Address address) = 0;
+      protected:
+        virtual
+        std::unique_ptr<blocks::Block>
+        _fetch(Address address,
+               boost::optional<int> local_version) const = 0;
       };
     }
   }

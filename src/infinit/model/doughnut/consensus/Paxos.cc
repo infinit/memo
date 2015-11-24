@@ -354,7 +354,8 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Paxos::LocalPeer::fetch(Address address) const
+        Paxos::LocalPeer::_fetch(Address address,
+                                 boost::optional<int> local_version) const
         {
           ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
           auto decision = this->_addresses.find(address);
@@ -565,10 +566,11 @@ namespace infinit
 
         std::unique_ptr<blocks::Block>
         Paxos::_fetch(overlay::Overlay& overlay, Address address,
-                      boost::optional<int>)
+                      boost::optional<int> local_version)
         {
+          // FIXME: consult the quorum
           auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH);
-          return fetch_from_members(peers, address);
+          return fetch_from_members(peers, address, std::move(local_version));
         }
 
         void

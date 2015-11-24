@@ -126,9 +126,6 @@ namespace infinit
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
-            virtual
-            std::unique_ptr<blocks::Block>
-            fetch(Address address) const override;
             struct Decision
             {
               Decision(PaxosServer paxos);
@@ -140,6 +137,10 @@ namespace infinit
               PaxosServer paxos;
             };
           protected:
+            virtual
+            std::unique_ptr<blocks::Block>
+            _fetch(Address address,
+                  boost::optional<int> local_version) const override;
             virtual
             void
             _register_rpcs(RPCServer& rpcs) override;

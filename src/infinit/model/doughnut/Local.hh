@@ -57,6 +57,7 @@ namespace infinit
         virtual
         void
         reconnect(elle::DurationOpt timeout) override;
+
       /*-------.
       | Blocks |
       `-------*/
@@ -65,15 +66,19 @@ namespace infinit
         void
         store(blocks::Block const& block, StoreMode mode) override;
         virtual
-        std::unique_ptr<blocks::Block>
-        fetch(Address address) const override;
-        virtual
         void
         remove(Address address) override;
-
-        boost::signals2::signal<void (blocks::Block const& block, StoreMode mode)> on_store;
-        boost::signals2::signal<void (Address, std::unique_ptr<blocks::Block>&)> on_fetch;
-        boost::signals2::signal<void (Address)> on_remove;
+        boost::signals2::signal<
+          void (blocks::Block const& block, StoreMode mode)> on_store;
+        boost::signals2::signal<
+          void (Address, std::unique_ptr<blocks::Block>&)> on_fetch;
+        boost::signals2::signal<
+          void (Address)> on_remove;
+      protected:
+        virtual
+        std::unique_ptr<blocks::Block>
+        _fetch(Address address,
+               boost::optional<int> local_version) const override;
 
       /*-------.
       | Server |

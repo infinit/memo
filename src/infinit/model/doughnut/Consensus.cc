@@ -88,10 +88,10 @@ namespace infinit
 
         std::unique_ptr<blocks::Block>
         Consensus::_fetch(overlay::Overlay& overlay, Address address,
-                          boost::optional<int>)
+                          boost::optional<int> last_version)
         {
-          return
-            this->_owner(overlay, address, overlay::OP_FETCH)->fetch(address);
+          return this->_owner(overlay, address, overlay::OP_FETCH)->fetch(
+            address, std::move(last_version));
         }
 
         void
@@ -139,7 +139,9 @@ namespace infinit
 
         std::unique_ptr<blocks::Block>
         Consensus::fetch_from_members(
-          reactor::Generator<overlay::Overlay::Member>& peers, Address address)
+          reactor::Generator<overlay::Overlay::Member>& peers,
+          Address address,
+          boost::optional<int> local_version)
         {
           std::unique_ptr<blocks::Block> result;
           reactor::Channel<overlay::Overlay::Member> connected;
@@ -182,7 +184,7 @@ namespace infinit
             try
             {
               ELLE_TRACE_SCOPE("fetch from %s", *peer);
-              return peer->fetch(address);
+              return peer->fetch(address, local_version);
             }
             catch (elle::Error const& e)
             {

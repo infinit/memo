@@ -105,11 +105,13 @@ namespace infinit
         void
         store(blocks::Block const& block, StoreMode mode) override;
         virtual
-        std::unique_ptr<blocks::Block>
-        fetch(Address address) const override;
-        virtual
         void
         remove(Address address) override;
+      protected:
+        virtual
+        std::unique_ptr<blocks::Block>
+        _fetch(Address address,
+              boost::optional<int> local_version) const override;
 
       /*----------.
       | Printable |
@@ -123,7 +125,7 @@ namespace infinit
 
       template<typename F>
       class RemoteRPC
-      : public RPC<F>
+        : public RPC<F>
       {
       public:
         typedef RPC<F> Super;
@@ -131,12 +133,13 @@ namespace infinit
           : Super(name, *remote->channels(),
                   elle::unconst(&remote->credentials()))
           , _remote(remote)
-          {}
+        {}
         template<typename ...Args>
         typename Super::result_type
         operator()(Args const& ... args);
         Remote* _remote;
       };
+
       template<typename F>
       RemoteRPC<F>
       Remote::make_rpc(std::string const& name)

@@ -246,14 +246,15 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::Block>
-      Remote::fetch(Address address) const
+      Remote::_fetch(Address address,
+                    boost::optional<int> local_version) const
       {
         BENCH("fetch");
-        ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
-        auto fetch = elle::unconst(this)->make_rpc<std::unique_ptr<blocks::Block>
-          (Address)>("fetch");
+        auto fetch = elle::unconst(this)->make_rpc<
+          std::unique_ptr<blocks::Block>(Address,
+                                         boost::optional<int>)>("fetch");
         fetch.set_context<Doughnut*>(&this->_doughnut);
-        return fetch(address);
+        return fetch(std::move(address), std::move(local_version));
       }
 
       void

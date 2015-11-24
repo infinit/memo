@@ -130,7 +130,7 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::Block>
-      Local::fetch(Address address) const
+      Local::_fetch(Address address, boost::optional<int> local_version) const
       {
         ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
         elle::Buffer data;
@@ -193,10 +193,12 @@ namespace infinit
                      return this->store(block, mode);
                    }));
         rpcs.add("fetch",
-                std::function<std::unique_ptr<blocks::Block> (Address address)>(
-                  [this] (Address address)
+                 std::function<
+                   std::unique_ptr<blocks::Block> (Address,
+                                                   boost::optional<int>)>(
+                  [this] (Address address, boost::optional<int> local_version)
                   {
-                    return this->fetch(address);
+                    return this->fetch(address, local_version);
                   }));
         rpcs.add("remove",
                 std::function<void (Address address)>(
