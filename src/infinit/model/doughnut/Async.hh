@@ -24,7 +24,8 @@ namespace infinit
             Async(std::unique_ptr<Consensus> backend,
                   boost::filesystem::path journal_dir,
                   int max_size = 100);
-            virtual ~Async();
+            virtual
+            ~Async();
             std::unique_ptr<Local>
             make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
@@ -50,14 +51,12 @@ namespace infinit
 
             struct Op
             {
-              Op(overlay::Overlay& overlay_);
-              Op(overlay::Overlay& overlay_,
-                 Address addr_,
+              Op() = default;
+              Op(Address addr_,
                  std::unique_ptr<blocks::Block>&& block_,
                  boost::optional<StoreMode> mode_ = {},
                  std::unique_ptr<ConflictResolver> resolver_ = {});
 
-              overlay::Overlay& overlay;
               Address addr;
               std::unique_ptr<blocks::Block> block;
               boost::optional<StoreMode> mode;

@@ -83,7 +83,7 @@ namespace infinit
             elle::serialization::binary::SerializerIn sin(is, false);
             sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
             sin.set_context<Doughnut*>(&this->doughnut());
-            Op op(overlay);
+            Op op;
             sin.set_context(ACBDontWaitForSignature{});
             sin.set_context(OKBDontWaitForSignature{});
             sin.serialize("address", op.addr);
@@ -130,13 +130,9 @@ namespace infinit
             _restore_journal(overlay);
           ELLE_TRACE("_store: %.7s", block->address());
 
-          _last[block->address()] = block.get();
-          _push_op(Op{overlay,
-                      block->address(),
-                      std::move(block),
-                      mode,
-                      std::move(resolver)
-          });
+          this->_last[block->address()] = block.get();
+          this->_push_op(
+            Op(block->address(), std::move(block), mode, std::move(resolver)));
         }
 
         void
@@ -146,10 +142,10 @@ namespace infinit
           if (!_restored_journal)
             _restore_journal(overlay);
           ELLE_TRACE("_remove: %.7s", address);
-          _push_op({overlay, address, nullptr, {}});
+          _push_op(Op(address, nullptr, {}));
         }
 
-        // Fetch operation must be synchronious, else the consistency is not
+        // Fetch operation must be synchronous, else the consistency is not
         // preserved.
         std::unique_ptr<blocks::Block>
         Async::_fetch(overlay::Overlay& overlay,
@@ -166,7 +162,6 @@ namespace infinit
             ELLE_DUMP("_fetch: cpy'd block data(%.7s): %s", cpy->address(), cpy->data());
             return cpy;
           }
-
           ELLE_DUMP("_fetch: network");
           return this->_backend->fetch(overlay, address);
         }
@@ -179,8 +174,7 @@ namespace infinit
             try
             {
               Op op = _ops.get();
-
-              overlay::Overlay& overlay = op.overlay;
+              overlay::Overlay& overlay = *this->doughnut().overlay();
               Address addr = op.addr;
               boost::optional<StoreMode> mode = op.mode;
               std::unique_ptr<ConflictResolver>& resolver = op.resolver;
@@ -223,17 +217,11 @@ namespace infinit
         | Operation |
         `----------*/
 
-        Async::Op::Op(overlay::Overlay& overlay_)
-          : overlay(overlay_)
-        {}
-
-        Async::Op::Op(overlay::Overlay& overlay_,
-                      Address addr_,
+        Async::Op::Op(Address addr_,
                       std::unique_ptr<blocks::Block>&& block_,
                       boost::optional<StoreMode> mode_,
                       std::unique_ptr<ConflictResolver> resolver_)
-          : overlay(overlay_)
-          , addr(addr_)
+          : addr(addr_)
           , block(std::move(block_))
           , mode(std::move(mode_))
           , resolver(std::move(resolver_))
