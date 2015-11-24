@@ -66,18 +66,21 @@ namespace infinit
           };
 
         private:
-          void _process_loop();
-          void _push_op(Op op);
-          void _restore_journal(overlay::Overlay& overlay);
-          std::unique_ptr<Consensus> _backend;
-          reactor::Thread _process_thread;
-          reactor::Channel<Op> _ops;
-          int _next_index;
+          void
+          _process_loop();
+          void
+          _push_op(Op op);
+          void
+          _restore_journal(overlay::Overlay& overlay);
+          ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
+          ELLE_ATTRIBUTE(reactor::Thread, process_thread);
+          ELLE_ATTRIBUTE(reactor::Channel<Op>, ops);
+          ELLE_ATTRIBUTE(int, next_index);
           // This map contains for a given address the last version of each
           // block.
-          std::unordered_map<Address, blocks::Block*> _last;
-          boost::filesystem::path _journal_dir;
-          bool _restored_journal;
+          ELLE_ATTRIBUTE((std::unordered_map<Address, blocks::Block*>), last);
+          ELLE_ATTRIBUTE(boost::filesystem::path, journal_dir);
+          ELLE_ATTRIBUTE(bool, restored_journal);
         };
       }
     }
