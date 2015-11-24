@@ -194,9 +194,7 @@ create(variables_map const& args)
   ifnt.user_save(user);
   report_action("generated", "user", name, std::string("locally"));
   if (aliased_flag(args, {"push-user", "push"}))
-  {
     _push(args, user);
-  }
 }
 
 static
@@ -340,6 +338,14 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
+  boost::program_options::option_description option_push_full =
+    { "full", bool_switch(), elle::sprintf("include private key in order "
+      "to facilitate device pairing and fetching lost keys. "
+      "Keys are encrypted on %s", beyond(true)).c_str() };
+  boost::program_options::option_description option_push_password =
+    { "hub-password-inline", value<std::string>(), elle::sprintf(
+      "password to authenticate with %s. Use this option with --full "
+      " to avoid password prompt", beyond(true)).c_str() };
   Modes modes {
     {
       "create",
@@ -351,15 +357,14 @@ main(int argc, char** argv)
           "user name (default: system user)" },
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key "
-          "(generated if unspecified)" },
+          "(default: generate key pair)" },
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-user" },
         { "email", value<std::string>(),
-            "valid email address (mandatory if you use --push-user)" },
-        { "full", bool_switch(),
-          "push the whole user, including private information in order to "
-          "facilitate device pairing. This information will be encrypted." }
+          "valid email address (mandatory if you use --push-user)" },
+        option_push_full,
+        option_push_password,
       },
     },
     {
@@ -424,12 +429,8 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(),
           "user to push (default: system user)" },
         { "email", value<std::string>(), "valid email address" },
-        { "full", bool_switch(), elle::sprintf("include private key in order "
-          "to facilitate device pairing and fetching lost keys. "
-          "Keys are encrypted on %s", beyond(true)).c_str() },
-        { "hub-password-inline", value<std::string>(), elle::sprintf(
-          "password to authenticate with %s. Use this option with --full "
-          " to avoid password prompt", beyond(true)).c_str() },
+        option_push_full,
+        option_push_password,
       },
     },
     {
@@ -443,12 +444,8 @@ main(int argc, char** argv)
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key"
           " (generated if unspecified)" },
-        { "full", bool_switch(), elle::sprintf("include private key in order "
-          "to facilitate device pairing and fetching lost keys. "
-          "Keys are encrypted on %s", beyond(true)).c_str() },
-        { "hub-password-inline", value<std::string>(), elle::sprintf(
-          "password to authenticate with %s. Use this option with --full "
-          " to avoid password prompt", beyond(true)).c_str() },
+        option_push_full,
+        option_push_password,
       },
     },
     {
@@ -460,7 +457,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
         { "hub-password-inline", value<std::string>(), elle::sprintf(
-          "password to authenticate with %s.", beyond(true)).c_str() },
+          "password to authenticate with %s", beyond(true)).c_str() },
       },
     },
     {
