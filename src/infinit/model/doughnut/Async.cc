@@ -35,17 +35,27 @@ namespace infinit
     {
       namespace consensus
       {
+        std::ostream&
+        operator <<(std::ostream& o, Async::Op const& op)
+        {
+          if (op.mode)
+            elle::fprintf(o, "Op::store(%s, %s)", op.index, *op.block);
+          else
+            elle::fprintf(o, "Op::remove(%s)", op.index);
+          return o;
+        }
+
         Async::Async(std::unique_ptr<Consensus> backend,
                      boost::filesystem::path journal_dir,
                      int max_size)
           : Consensus(backend->doughnut())
           , _backend(std::move(backend))
+          , _next_index(1)
+          , _journal_dir(journal_dir)
+          , _started()
           , _process_thread(
             new reactor::Thread("async consensus",
                                 [this] { this->_process_loop();}))
-          , _next_index(1)
-          , _journal_dir(journal_dir)
-          , _restored_journal(false)
         {
           if (!this->_journal_dir.empty())
             boost::filesystem::create_directories(this->_journal_dir);
@@ -63,6 +73,8 @@ namespace infinit
         void
         Async::_restore_journal(overlay::Overlay& overlay)
         {
+          if (this->_journal_dir.empty())
+            return;
           ELLE_TRACE_SCOPE("%s: restore journal from %s", *this, _journal_dir);
           boost::filesystem::path p(_journal_dir);
           boost::filesystem::directory_iterator it(p);
@@ -82,7 +94,16 @@ namespace infinit
           for (auto const& p: files)
           {
             int id = std::stoi(p.filename().string());
-            _next_index = std::max(id, _next_index);
+            if (this->_first_disk_index && id < *this->_first_disk_index)
+              continue;
+            if (this->_ops.size() >= this->_ops.max_size())
+            {
+              ELLE_TRACE("in-memory asynchronous queue at capacity at index %s",
+                         id);
+              this->_first_disk_index = id;
+              return;
+            }
+            this->_next_index = std::max(id, this->_next_index);
             boost::filesystem::ifstream is(p, std::ios::binary);
             elle::serialization::binary::SerializerIn sin(is, false);
             sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
@@ -93,16 +114,18 @@ namespace infinit
             if (op.block)
               op.block->seal();
             op.index = id;
+            ELLE_DEBUG("restored %s", op);
             if (op.mode)
-              _last[op.address] = op.block.get();
-            _ops.put(std::move(op));
+              this->_last[op.address] = op.block.get();
+            this->_ops.put(std::move(op));
           }
-          _restored_journal = true;
+          this->_first_disk_index.reset();
         }
 
         void
         Async::_push_op(Op op)
         {
+          ELLE_TRACE_SCOPE("%s: push %s", *this, op);
           op.index = ++_next_index;
           if (!this->_journal_dir.empty())
           {
@@ -114,7 +137,22 @@ namespace infinit
             sout.set_context(OKBDontWaitForSignature{});
             sout.serialize_forward(op);
           }
-          this->_ops.put(std::move(op));
+          if (!this->_first_disk_index)
+          {
+            if (!this->_journal_dir.empty() &&
+                this->_ops.size() >= this->_ops.max_size())
+            {
+              ELLE_TRACE("in-memory asynchronous queue at capacity at index %s",
+                         op.index);
+              this->_first_disk_index = op.index;
+            }
+            else
+            {
+              if (op.mode)
+                this->_last[op.address] = op.block.get();
+              this->_ops.put(std::move(op));
+            }
+          }
         }
 
         void
@@ -123,11 +161,7 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          if (!this->_restored_journal)
-            this->_restore_journal(overlay);
-          this->_last[block->address()] = block.get();
-          ELLE_TRACE("%s: push asynchronous store operation on %s",
-                     *this, block->address());
+          this->_started.open();
           this->_push_op(
             Op(block->address(), std::move(block), mode, std::move(resolver)));
         }
@@ -136,10 +170,7 @@ namespace infinit
         Async::_remove(overlay::Overlay& overlay,
                 Address address)
         {
-          if (!_restored_journal)
-            this->_restore_journal(overlay);
-          ELLE_TRACE("%s: push asynchronous store operation on %s",
-                     *this, address);
+          this->_started.open();
           this->_push_op(Op(address, nullptr, {}));
         }
 
@@ -150,8 +181,7 @@ namespace infinit
                       Address address,
                       boost::optional<int>)
         {
-          if (!this->_restored_journal)
-            this->_restore_journal(overlay);
+          this->_started.open();
           if (this->_last.find(address) != _last.end())
           {
             ELLE_TRACE("%s: fetch %s from journal", *this, address);
@@ -163,15 +193,22 @@ namespace infinit
         void
         Async::_process_loop()
         {
+          reactor::wait(this->_started);
+          overlay::Overlay& overlay = *this->doughnut().overlay();
+          this->_restore_journal(overlay);
           while (true)
           {
             try
             {
-              Op op = _ops.get();
-              overlay::Overlay& overlay = *this->doughnut().overlay();
+              if (this->_ops.size() <= this->_ops.max_size() / 2 &&
+                  this->_first_disk_index)
+                ELLE_TRACE(
+                  "%s: restore additional operations from disk at index %s",
+                  *this, *this->_first_disk_index)
+                    this->_restore_journal(overlay);
+              Op op = this->_ops.get();
               Address addr = op.address;
-              ELLE_TRACE_SCOPE("%s: process asynchronous operation on %s",
-                               *this, addr);
+              ELLE_TRACE_SCOPE("%s: process %s", *this, op);
               boost::optional<StoreMode> mode = op.mode;
               std::unique_ptr<ConflictResolver>& resolver = op.resolver;
               auto ptr = op.block.get();
@@ -184,13 +221,18 @@ namespace infinit
                       std::to_string(op.index);
                     boost::filesystem::remove(path);
                   }
-                  if (mode && ptr == _last[addr])
-                  {
-                    _last.erase(addr);
-                  }
+                  if (mode && ptr == this->_last[addr])
+                    this->_last.erase(addr);
               });
               if (!mode)
-                this->_backend->remove(overlay, addr);
+                try
+                {
+                  this->_backend->remove(overlay, addr);
+                }
+                catch (MissingBlock const&)
+                {
+                  // Nothing: block was already removed.
+                }
               else
                 this->_backend->store(overlay,
                                       std::move(op.block),
@@ -199,7 +241,7 @@ namespace infinit
             }
             catch (elle::Error const& e)
             {
-              ELLE_ABORT("%s: async loop killed: %s", *this, e);
+              ELLE_ABORT("%s: async loop killed: %s", *this, e.what());
             }
           }
         }

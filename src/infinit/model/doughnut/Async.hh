@@ -71,14 +71,18 @@ namespace infinit
           void
           _restore_journal(overlay::Overlay& overlay);
           ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
-          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, process_thread);
           ELLE_ATTRIBUTE(reactor::Channel<Op>, ops);
           ELLE_ATTRIBUTE(int, next_index);
           // This map contains for a given address the last version of each
           // block.
           ELLE_ATTRIBUTE((std::unordered_map<Address, blocks::Block*>), last);
           ELLE_ATTRIBUTE(boost::filesystem::path, journal_dir);
-          ELLE_ATTRIBUTE(bool, restored_journal);
+          ELLE_ATTRIBUTE(reactor::Barrier, started);
+          /// Index of the first operation stored on disk because memory is at
+          /// capacity.
+          ELLE_ATTRIBUTE(boost::optional<int>, first_disk_index);
+          /// Background loop processing asynchronous operations.
+          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, process_thread);
         };
       }
     }
