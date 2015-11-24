@@ -193,13 +193,13 @@ namespace infinit
       st->st_blocks = _header.size / 512;
       #endif
       st->st_mode  = 0600;
-      st->st_size  = _header.size;
-      st->st_atime = _header.atime;
-      st->st_mtime = _header.mtime;
-      st->st_ctime = _header.ctime;
-      st->st_nlink = _header.links;
-      st->st_uid   = _header.uid;
-      st->st_gid   = _header.gid;
+      st->st_size  = this->_header.size;
+      st->st_atime = this->_header.atime;
+      st->st_mtime = this->_header.mtime;
+      st->st_ctime = this->_header.ctime;
+      st->st_nlink = this->_header.links;
+      st->st_uid   = getuid();
+      st->st_gid   = getgid();
       st->st_dev = 1;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
     }
