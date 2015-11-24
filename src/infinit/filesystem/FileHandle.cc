@@ -346,36 +346,6 @@ namespace infinit
             second_offset, end_block);
         if (r2 < 0)
           return r2;
-        // Assuming linear writes, this is a good time to flush start block since
-        // it just got filled.
-        ELLE_TRACE("flush block %s", start_block);
-        File::CacheEntry& ent = this->_owner->_blocks.at(start_block);
-        Address prev = ent.block.address();
-        Address cur = ent.block.store(*this->_owner->_owner.block_store(),
-            ent.new_block? model::STORE_INSERT : model::STORE_ANY);
-        if (cur != prev)
-        {
-          ELLE_DEBUG("Changing address of block %s: %s -> %s", start_block,
-              prev, cur);
-          int offset = (start_block+1) * sizeof(Address);
-          this->_owner->_first_block->data([&](elle::Buffer& data)
-              {
-              if (data.size() < offset + sizeof(Address::Value))
-                  data.size(offset + sizeof(Address::Value));
-              memcpy(data.mutable_contents() + offset, cur.value(),
-                  sizeof(Address::Value));
-            });
-          if (!ent.new_block)
-            this->_owner->_owner.block_store()->remove(prev);
-        }
-        ent.dirty = false;
-        ent.new_block = false;
-        auto cpy = this->_owner->_first_block->clone();
-        this->_owner->_owner.store_or_die(std::move(cpy),
-          this->_owner->_first_block_new
-          ? model::STORE_INSERT
-          : model::STORE_ANY);
-        this->_owner->_first_block_new = false;
         return r1 + r2;
       }
 
