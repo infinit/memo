@@ -48,6 +48,16 @@ struct Credentials
   std::string refresh_token;
 };
 
+std::string
+beyond(bool help = false)
+{
+  if (help && !elle::os::inenv("INFINIT_BEYOND"))
+    return "the Hub";
+
+  auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
+  return res;
+}
+
 class CommandLineError
   : public elle::Error
 {
@@ -119,8 +129,8 @@ void
 not_found(std::string const& name,
           std::string const& type)
 {
-  std::cerr <<
-    elle::sprintf("%s %s not found on the Hub", type, name) << std::endl;
+  std::cerr << elle::sprintf("%s %s not found on %s", type, name, beyond(true))
+            << std::endl;
 }
 
 DAS_MODEL(Credentials,
@@ -358,11 +368,13 @@ namespace infinit
   {
     User(std::string const& name,
          cryptography::rsa::KeyPair const& keys,
-         std::string const& email = "")
+         boost::optional<std::string> email = {},
+         boost::optional<std::string> fullname = {})
       : name(name)
       , public_key(keys.K())
       , private_key(keys.k())
       , email(email)
+      , fullname(fullname)
       , password_hash()
     {}
 
@@ -372,6 +384,7 @@ namespace infinit
       , private_key(s.deserialize<boost::optional<
                       cryptography::rsa::PrivateKey>>("private_key"))
       , email(s.deserialize<boost::optional<std::string>>("email"))
+      , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
       , password_hash()
     {}
 
@@ -390,11 +403,12 @@ namespace infinit
     void
     serialize(elle::serialization::Serializer& s)
     {
-      s.serialize("name", this->name);
-      s.serialize("public_key", this->public_key);
-      s.serialize("private_key", this->private_key);
       s.serialize("email", this->email);
+      s.serialize("fullname", this->fullname);
+      s.serialize("name", this->name);
       s.serialize("password_hash", this->password_hash);
+      s.serialize("private_key", this->private_key);
+      s.serialize("public_key", this->public_key);
     }
 
     static
@@ -424,6 +438,7 @@ namespace infinit
     boost::optional<cryptography::rsa::PrivateKey> private_key;
     // Hub.
     boost::optional<std::string> email;
+    boost::optional<std::string> fullname;
     boost::optional<std::string> password_hash;
   };
 
@@ -1504,17 +1519,21 @@ get_username(boost::program_options::variables_map const& args,
   return opt ? opt.get() : (env.empty() ? elle::system::username() : env);
 }
 
-DAS_MODEL_FIELDS(infinit::User,
-                 (name, email, public_key, private_key, password_hash));
+DAS_MODEL_FIELDS(
+  infinit::User,
+  (name, email, fullname, public_key, private_key, password_hash));
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, public_key), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, email, public_key, private_key), DasUser);
+  DAS_MODEL_DEFINE(User, (name, fullname, public_key), DasPublicUser);
+  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key, private_key),
+                   DasUser);
   // Publication to the hub.
-  DAS_MODEL_DEFINE(User, (name, email, public_key), DasPublicUserPublish);
-  DAS_MODEL_DEFINE(User, (name, email, public_key, private_key, password_hash),
-                   DasPrivateUserPublish);
+  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key),
+                   DasPublicUserPublish);
+  DAS_MODEL_DEFINE(
+    User, (name, email, fullname, public_key, private_key, password_hash),
+    DasPrivateUserPublish);
 }
 
 void
@@ -1565,16 +1584,6 @@ report_exported(std::ostream& output,
                 std::string const& name)
 {
   report_action_output(output, "exported", type, name);
-}
-
-std::string
-beyond(bool help = false)
-{
-  if (help && !elle::os::inenv("INFINIT_BEYOND"))
-    return "the Hub";
-
-  auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
-  return res;
 }
 
 static
