@@ -447,27 +447,11 @@ namespace infinit
         truncate(0);
       else
       { // preemptive  permissions check
-        auto dn =
-          std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
-        auto keys = dn->keys();
-        Address addr = _parent->_files.at(_name).second;
         if (!_rw_handle_count)
         {
           _fetch();
         }
-        auto acl = dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
-        ELLE_ASSERT(acl);
-        umbrella([&] {
-            for (auto const& e: acl->list_permissions(true))
-            {
-              auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
-              if (!u)
-                continue;
-              if (e.write >= needw && e.read >= needr && u->key() == keys.K())
-                return;
-            }
-            throw rfs::Error(EACCES, "No write permissions.");
-        });
+        _owner.ensure_permissions(*_first_block.get(), needr, needw);
       }
       _owner.filesystem()->set(full_path().string(), shared_from_this());
       return umbrella([&] {

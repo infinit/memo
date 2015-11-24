@@ -38,6 +38,9 @@ namespace infinit
       void
       store_or_die(model::blocks::Block& block,
                    model::StoreMode mode = model::STORE_ANY);
+      // Check permissions and throws on access failure
+      void
+      ensure_permissions(model::blocks::Block const& block, bool r, bool w);
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);

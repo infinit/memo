@@ -64,6 +64,7 @@ namespace infinit
         auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
         return f->open(flags, mode);
       }
+      _owner.ensure_permissions(*_parent->_block, true, true);
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_DEBUG("Adding file to parent %x", _parent.get());
