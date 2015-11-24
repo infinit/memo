@@ -260,7 +260,7 @@ delete_(variables_map const& args)
   else
   {
     throw elle::Error(
-        elle::sprintf("File for user could not be deleted: %s", path));
+      elle::sprintf("File for user could not be deleted: %s", path));
   }
 }
 
@@ -280,7 +280,7 @@ signup_(variables_map const& args)
   catch (elle::Error const&)
   {
     _push(args, user);
-    ifnt.user_save(user);
+    ifnt.user_save(user, true);
     return;
   }
   throw elle::Error(elle::sprintf("User %s already exists locally", name));
