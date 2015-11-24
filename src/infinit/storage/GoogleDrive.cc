@@ -101,7 +101,8 @@ namespace infinit
       this->_dir_id = id;
     }
 
-    elle::Buffer GoogleDrive::_get(Key key) const
+    elle::Buffer
+    GoogleDrive::_get(Key key) const
     {
       ELLE_DEBUG("get %x", key);
 
@@ -132,7 +133,8 @@ namespace infinit
       elle::unreachable();
     }
 
-    void GoogleDrive::_set(Key key,
+    int
+    GoogleDrive::_set(Key key,
                       elle::Buffer const& value,
                       bool insert,
                       bool update)
@@ -161,9 +163,13 @@ namespace infinit
       }
       else
         throw elle::Error("neither inserting, nor updating");
+
+      // FIXME: impl.
+      return 0;
     }
 
-    void GoogleDrive::_erase(Key k)
+    int
+    GoogleDrive::_erase(Key k)
     {
       ELLE_DUMP("_erase");
       using Request = reactor::http::Request;
@@ -187,15 +193,20 @@ namespace infinit
 
       if (r.status() == StatusCode::Not_Found)
         throw elle::Error(elle::sprintf("File %s not found", id));
+
+      // FIXME: impl.
+      return 0;
     }
 
-    std::vector<Key> GoogleDrive::_list()
+    std::vector<Key>
+    GoogleDrive::_list()
     {
       ELLE_DUMP("_list (Not used)");
       throw elle::Error("Not implemented yet.");
     }
 
-    BlockStatus GoogleDrive::_status(Key k)
+    BlockStatus
+    GoogleDrive::_status(Key k)
     {
       std::string id = this->_exists(elle::sprintf("%x", k));
 
@@ -461,8 +472,9 @@ namespace infinit
         std::string name,
         boost::optional<std::string> root_,
         std::string refresh_token_,
-        std::string user_name_)
-      : StorageConfig(std::move(name))
+        std::string user_name_,
+        int capacity)
+      : StorageConfig(std::move(name), std::move(capacity))
       , root{std::move(root_)}
       , refresh_token{std::move(refresh_token_)}
       , user_name{std::move(user_name_)}

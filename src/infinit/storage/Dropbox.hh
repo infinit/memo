@@ -24,10 +24,10 @@ namespace infinit
       elle::Buffer
       _get(Key k) const override;
       virtual
-      void
+      int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
-      void
+      int
       _erase(Key k) override;
       virtual
       std::vector<Key>
@@ -48,7 +48,8 @@ namespace infinit
     {
       DropboxStorageConfig(std::string name,
                            std::string token,
-                           boost::optional<std::string> root);
+                           boost::optional<std::string> root,
+                           int capacity = 0);
       DropboxStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

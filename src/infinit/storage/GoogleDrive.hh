@@ -18,10 +18,6 @@ namespace infinit
 {
   namespace storage
   {
-    /*
-     *  GoogleDrive
-     */
-
     class GoogleDrive
       : public Storage
     {
@@ -35,14 +31,29 @@ namespace infinit
         ~GoogleDrive() = default;
 
       protected:
-        virtual elle::Buffer _get(Key k) const override;
-        virtual void _set(Key k,
-                          elle::Buffer const& value,
-                          bool insert,
-                          bool update) override;
-        virtual void _erase(Key k) override;
-        virtual std::vector<Key> _list() override;
-        virtual BlockStatus _status(Key k) override;
+
+        virtual
+        elle::Buffer
+        _get(Key k) const override;
+
+        virtual
+        int
+        _set(Key k,
+             elle::Buffer const& value,
+             bool insert,
+             bool update) override;
+
+        virtual
+        int
+        _erase(Key k) override;
+
+        virtual
+        std::vector<Key>
+        _list() override;
+
+        virtual
+        BlockStatus
+        _status(Key k) override;
 
       private:
         ELLE_ATTRIBUTE_R(std::string, token);
@@ -88,7 +99,8 @@ namespace infinit
       GoogleDriveStorageConfig(std::string name,
                                boost::optional<std::string> root,
                                std::string refresh_token,
-                               std::string user_name);
+                               std::string user_name,
+                               int capacity = 0);
       GoogleDriveStorageConfig(elle::serialization::SerializerIn& input);
       void serialize(elle::serialization::Serializer& s) override;
       virtual std::unique_ptr<infinit::storage::Storage> make() override;

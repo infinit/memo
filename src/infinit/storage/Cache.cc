@@ -46,7 +46,7 @@ namespace infinit
       }
     }
 
-    void
+    int
     Cache::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_TRACE_SCOPE("%s _set %s", *this, k);
@@ -68,9 +68,11 @@ namespace infinit
           this->_keys->insert(k);
       }
       ELLE_TRACE("%s _set done %s", *this, k);
+      // FIXME: impl.
+      return 0;
     }
 
-    void
+    int
     Cache::_erase(Key k)
     {
       _init();
@@ -79,6 +81,8 @@ namespace infinit
       this->_storage->erase(k);
       if (_use_list)
         this->_keys->erase(k);
+      // FIXME: impl.
+      return 0;
     }
 
     void

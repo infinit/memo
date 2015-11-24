@@ -7,7 +7,8 @@
 
 #include <elle/factory.hh>
 
-ELLE_LOG_COMPONENT("infinit.fs.mirror");
+ELLE_LOG_COMPONENT("infinit.storage.Mirror");
+
 namespace infinit
 {
   namespace storage
@@ -17,8 +18,8 @@ namespace infinit
       , _backend(std::move(backend))
       , _read_counter(0)
       , _parallel(parallel)
-    {
-    }
+    {}
+
     elle::Buffer
     Mirror::_get(Key k) const
     {
@@ -26,7 +27,8 @@ namespace infinit
       int target = _balance_reads? _read_counter % _backend.size() : 0;
       return _backend[target]->get(k);
     }
-    void
+
+    int
     Mirror::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       if (_parallel)
@@ -48,8 +50,11 @@ namespace infinit
           e->set(k, value, insert, update);
         }
       }
+
+      return 0;
     }
-    void
+
+    int
     Mirror::_erase(Key k)
     {
       if (_parallel)
@@ -71,7 +76,10 @@ namespace infinit
           e->erase(k);
         }
       }
+
+      return 0;
     }
+
     std::vector<Key>
     Mirror::_list()
     {
@@ -98,13 +106,17 @@ namespace infinit
       return elle::make_unique<Mirror>(std::move(backends), balance_reads, parallel);
     }
 
-    struct MirrorStorageConfig:
-    public StorageConfig
+    struct MirrorStorageConfig
+      : public StorageConfig
     {
-    public:
       bool parallel;
       bool balance;
       std::vector<std::unique_ptr<StorageConfig>> storage;
+
+      MirrorStorageConfig(std::string name, int capacity = 0)
+        : StorageConfig(std::move(name), std::move(capacity))
+      {}
+
       MirrorStorageConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
       {

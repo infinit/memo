@@ -44,6 +44,7 @@ namespace infinit
     , _latency_set(latency_set)
     , _latency_erase(latency_erase)
     {}
+
     elle::Buffer
     Latency::_get(Key k) const
     {
@@ -51,25 +52,33 @@ namespace infinit
         reactor::sleep(*_latency_get);
       return _backend->get(k);
     }
-    void
+
+    int
     Latency::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       if (_latency_set)
         reactor::sleep(*_latency_set);
       _backend->set(k, value, insert, update);
+
+      return 0;
     }
-    void
+
+    int
     Latency::_erase(Key k)
     {
       if (_latency_erase)
         reactor::sleep(*_latency_erase);
       _backend->erase(k);
+
+      return 0;
     }
+
     std::vector<Key>
     Latency::_list()
     {
       return _backend->list();
     }
+
     static std::unique_ptr<infinit::storage::Storage>
     make(std::vector<std::string> const& args)
     {
@@ -93,6 +102,11 @@ namespace infinit
       reactor::DurationOpt latency_set;
       reactor::DurationOpt latency_erase;
       std::shared_ptr<StorageConfig> storage;
+
+      LatencyStorageConfig(std::string name, int capacity = 0)
+        : StorageConfig(std::move(name), std::move(capacity))
+      {}
+
       LatencyStorageConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
       {

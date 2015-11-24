@@ -18,10 +18,10 @@ namespace infinit
       elle::Buffer
       _get(Key k) const override;
       virtual
-      void
+      int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
-      void
+      int
       _erase(Key k) override;
       virtual
       std::vector<Key>
@@ -35,7 +35,7 @@ namespace infinit
     {
     public:
       typedef std::vector<std::unique_ptr<StorageConfig>> Storages;
-      StripStorageConfig(Storages storages_);
+      StripStorageConfig(Storages storages_, int capacity = 0);
       StripStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

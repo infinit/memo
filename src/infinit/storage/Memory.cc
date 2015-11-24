@@ -30,7 +30,7 @@ namespace infinit
       return elle::Buffer(buffer.contents(), buffer.size());
     }
 
-    void
+    int
     Memory::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       if (insert)
@@ -57,13 +57,18 @@ namespace infinit
           search->second = elle::Buffer(value.contents(), value.size());
         }
       }
+      // FIXME: impl.
+      return 0;
     }
 
-    void
+    int
     Memory::_erase(Key key)
     {
       if (this->_blocks->erase(key) == 0)
         throw MissingKey(key);
+
+      // FIXME: impl.
+      return 0;
     }
 
     std::vector<Key>
@@ -80,29 +85,28 @@ namespace infinit
       return elle::make_unique<infinit::storage::Memory>();
     }
 
-    struct MemoryStorageConfig
-      : public StorageConfig
+    MemoryStorageConfig::MemoryStorageConfig(std::string name, int capacity)
+      : StorageConfig(std::move(name), std::move(capacity))
+    {}
+
+    MemoryStorageConfig::MemoryStorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
     {
-    public:
-      MemoryStorageConfig(elle::serialization::SerializerIn& input)
-        : StorageConfig()
-      {
-        this->serialize(input);
-      }
+      this->serialize(input);
+    }
 
-      void
-      serialize(elle::serialization::Serializer& s) override
-      {
-        StorageConfig::serialize(s);
-      }
+    void
+    MemoryStorageConfig::serialize(elle::serialization::Serializer& s)
+    {
+      StorageConfig::serialize(s);
+    }
 
-      virtual
-      std::unique_ptr<infinit::storage::Storage>
-      make() override
-      {
-        return elle::make_unique<infinit::storage::Memory>();
-      }
-    };
+    std::unique_ptr<infinit::storage::Storage>
+    MemoryStorageConfig::make()
+    {
+      return elle::make_unique<infinit::storage::Memory>();
+    }
+
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<MemoryStorageConfig> _register_MemoryStorageConfig("memory");
   }

@@ -21,10 +21,10 @@ namespace infinit
       elle::Buffer
       _get(Key k) const override;
       virtual
-      void
+      int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
-      void
+      int
       _erase(Key k) override;
       virtual
       std::vector<Key>
@@ -32,7 +32,22 @@ namespace infinit
       ELLE_ATTRIBUTE((std::unique_ptr<Blocks, std::function<void (Blocks*)>>),
                      blocks);
     };
+
+    struct MemoryStorageConfig
+      : public StorageConfig
+    {
+      MemoryStorageConfig(std::string name, int capacity = 0);
+      MemoryStorageConfig(elle::serialization::SerializerIn& input);
+
+      void
+      serialize(elle::serialization::Serializer& s) override;
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override;
+    };
   }
 }
 
 #endif
+

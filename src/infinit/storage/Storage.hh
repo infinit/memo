@@ -27,14 +27,15 @@ namespace infinit
       : public elle::Printable
     {
     public:
+      Storage(int capacity = 0);
       virtual
       ~Storage();
       elle::Buffer
       get(Key k) const;
-      void
+      int
       set(Key k, elle::Buffer const& value,
           bool insert = true, bool update = false);
-      void
+      int
       erase(Key k);
       std::vector<Key>
       list();
@@ -45,10 +46,10 @@ namespace infinit
       elle::Buffer
       _get(Key k) const = 0;
       virtual
-      void
+      int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) = 0;
       virtual
-      void
+      int
       _erase(Key k) = 0;
       virtual
       std::vector<Key>
@@ -59,6 +60,10 @@ namespace infinit
       virtual
       BlockStatus
       _status(Key k);
+
+      ELLE_ATTRIBUTE_R(int, capacity, protected);
+      ELLE_ATTRIBUTE_R(int, usage, protected);
+      ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache, mutable);
 
     /*----------.
     | Printable |
@@ -77,7 +82,7 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable
     {
       StorageConfig() = default;
-      StorageConfig(std::string name);
+      StorageConfig(std::string name, int capacity = 0);
       StorageConfig(elle::serialization::SerializerIn& input);
       virtual
       void
@@ -89,6 +94,7 @@ namespace infinit
       make() = 0;
 
       std::string name;
+      int capacity;
     };
   }
 }

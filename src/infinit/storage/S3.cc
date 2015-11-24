@@ -37,21 +37,31 @@ namespace infinit
         throw MissingKey(key);
       }
     }
-    void
+
+    int
     S3::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       _storage->put_object(value, elle::sprintf("%x", key));
+
+      //FIXME: impl.
+      return 0;
     }
-    void
+
+    int
     S3::_erase(Key key)
     {
       _storage->delete_object(elle::sprintf("%x", key));
+
+      //FIXME: impl.
+      return 0;
     }
+
     std::vector<Key>
     S3::_list()
     {
       throw std::runtime_error("Not implemented");
     }
+
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
       std::ifstream is(args[0]);
@@ -68,6 +78,11 @@ namespace infinit
     {
     public:
       std::string configuration;
+
+      S3StorageConfig(std::string name, int capacity = 0)
+        : StorageConfig(std::move(name), std::move(capacity))
+      {}
+
       S3StorageConfig(elle::serialization::SerializerIn& input)
         : StorageConfig()
       {

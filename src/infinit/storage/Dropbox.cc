@@ -13,7 +13,8 @@ namespace infinit
   {
     Dropbox::Dropbox(std::string token)
       : Dropbox(std::move(token), ".infinit")
-    {}
+    {
+    }
 
     Dropbox::Dropbox(std::string token,
                      boost::filesystem::path root)
@@ -45,8 +46,11 @@ namespace infinit
       }
     }
 
-    void
-    Dropbox::_set(Key key, elle::Buffer const& value, bool insert, bool update)
+    int
+    Dropbox::_set(Key key,
+                  elle::Buffer const& value,
+                  bool insert,
+                  bool update)
     {
       ELLE_DEBUG("set %x", key);
       if (insert)
@@ -62,20 +66,26 @@ namespace infinit
       }
       else
         throw elle::Error("neither inserting neither updating");
+
+      // FIXME: impl.
+      return 0;
     }
 
-    void
+    int
     Dropbox::_erase(Key key)
     {
       ELLE_DEBUG("erase %x", key);
       try
       {
-        return this->_dropbox.delete_(this->_path(key));
+        this->_dropbox.delete_(this->_path(key));
       }
       catch (dropbox::NoSuchFile const&)
       {
         throw MissingKey(key);
       }
+
+      // FIXME: impl.
+      return 0;
     }
 
     std::vector<Key>
@@ -117,8 +127,9 @@ namespace infinit
     DropboxStorageConfig::DropboxStorageConfig(
       std::string name,
       std::string token_,
-      boost::optional<std::string> root_)
-      : StorageConfig(std::move(name))
+      boost::optional<std::string> root_,
+      int capacity)
+      : StorageConfig(std::move(name), std::move(capacity))
       , token(std::move(token_))
       , root(std::move(root_))
     {}

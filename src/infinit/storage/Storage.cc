@@ -14,6 +14,13 @@ namespace infinit
 {
   namespace storage
   {
+    Storage::Storage(int capacity)
+      : _capacity{capacity}
+      , _usage{0} // _usage is recovered in the child ctor.
+    {
+      // _size_cache too has to be recovered in the child ctor.
+    }
+
     Storage::~Storage()
     {}
 
@@ -21,23 +28,31 @@ namespace infinit
     Storage::get(Key key) const
     {
       ELLE_TRACE_SCOPE("%s: get %x", *this, key);
+      // FIXME: use _size_cache to check block existance ?
       return this->_get(key);
     }
 
-    void
+    int
     Storage::set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_ASSERT(insert || update);
       ELLE_TRACE_SCOPE("%s: %s at %x", *this,
                        insert ? update ? "upsert" : "insert" : "update", key);
-      return this->_set(key, value, insert, update);
+      int delta = this->_set(key, value, insert, update);
+      _usage += delta;
+      this->_size_cache[key] += delta;
+      return delta;
     }
 
-    void
+    int
     Storage::erase(Key key)
     {
       ELLE_TRACE_SCOPE("%s: erase %x", *this, key);
-      return this->_erase(key);
+      int delta = this->_erase(key);
+      _usage += delta;
+      if (this->_size_cache.find(key) != this->_size_cache.end())
+        this->_size_cache.erase(key);
+      return delta;
     }
 
     std::vector<Key>
@@ -88,8 +103,10 @@ namespace infinit
     | Storage Config |
     `---------------*/
 
-    StorageConfig::StorageConfig(std::string name_)
+    StorageConfig::StorageConfig(std::string name_,
+                                 int capacity_)
       : name(std::move(name_))
+      , capacity(std::move(capacity))
     {}
 
     StorageConfig::StorageConfig(elle::serialization::SerializerIn& s)
@@ -101,6 +118,7 @@ namespace infinit
     StorageConfig::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("name", this->name);
+      s.serialize("capacity", this->capacity);
     }
   }
 }

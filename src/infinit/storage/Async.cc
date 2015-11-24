@@ -203,20 +203,26 @@ namespace infinit
       }
    }
 
-    void
+    int
     Async::_erase(Key k)
     {
       ELLE_DEBUG("queueing erase on %x", k);
       _wait();
       _push_op(k, elle::Buffer(), Operation::erase);
+
+      // FIXME: impl.
+      return 0;
     }
 
-    void
+    int
     Async::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       _wait();
       ELLE_DEBUG("queueing set on %x . Cache blocks=%s  bytes=%s", k, _blocks, _bytes);
       _push_op(k, value, Operation::set);
+
+      //FIXME: impl.
+      return 0;
     }
 
     std::vector<Key>

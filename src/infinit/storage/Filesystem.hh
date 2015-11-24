@@ -20,10 +20,10 @@ namespace infinit
       elle::Buffer
       _get(Key k) const override;
       virtual
-      void
+      int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
-      void
+      int
       _erase(Key k) override;
       virtual
       std::vector<Key>
@@ -37,7 +37,9 @@ namespace infinit
     struct FilesystemStorageConfig
       : public StorageConfig
     {
-      FilesystemStorageConfig(std::string name, std::string path);
+      FilesystemStorageConfig(std::string name,
+                              std::string path,
+                              int capacity = 0);
       FilesystemStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

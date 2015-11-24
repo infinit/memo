@@ -19,10 +19,10 @@ namespace infinit
       elle::Buffer
       _get(Key k) const override;
       virtual
-      void
+      int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
-      void
+      int
       _erase(Key k) override;
       virtual
       std::vector<Key>
@@ -37,6 +37,24 @@ namespace infinit
       int _child;
       mutable reactor::Semaphore _sem;
       mutable int _req;
+    };
+
+    struct SFTPStorageConfig
+      : public StorageConfig
+    {
+      SFTPStorageConfig(std::string name, int capacity = 0);
+      SFTPStorageConfig(elle::serialization::SerializerIn& in);
+
+      virtual
+      void
+      serialize(elle::serialization::Serializer& s) override;
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override;
+
+      std::string host;
+      std::string path;
     };
   }
 }

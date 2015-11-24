@@ -37,7 +37,8 @@ namespace infinit
       return res;
     }
 
-    void Adb::_set(Key key, elle::Buffer const& value, bool insert, bool update)
+    int
+    Adb::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       std::string remote = elle::sprintf("%s/%x", _root, key);
       std::ofstream ofs(tmpOut);
@@ -52,9 +53,12 @@ namespace infinit
       elle::system::Process p(args);
       p.wait();
       unlink(tmpOut);
+
+      return 0;
     }
 
-    void Adb::_erase(Key key)
+    int
+    Adb::_erase(Key key)
     {
       std::string remote = elle::sprintf("%s/%x", _root, key);
       std::vector<std::string> args = {
@@ -65,6 +69,8 @@ namespace infinit
       };
       elle::system::Process p(args);
       p.wait();
+
+      return 0;
     }
 
     std::vector<Key> Adb::_list()
@@ -92,32 +98,24 @@ namespace infinit
       return res;
     }
 
-    struct AdbStorageConfig:
-    public StorageConfig
+    AdbStorageConfig::AdbStorageConfig(elle::serialization::SerializerIn& input)
+    : StorageConfig()
     {
-    public:
-      std::string root;
-      std::shared_ptr<StorageConfig> storage;
-      AdbStorageConfig(elle::serialization::SerializerIn& input)
-      : StorageConfig()
-      {
-        this->serialize(input);
-      }
+      this->serialize(input);
+    }
 
-      void
-      serialize(elle::serialization::Serializer& s) override
-      {
-        StorageConfig::serialize(s);
-        s.serialize("root", this->root);
-      }
+    void
+    AdbStorageConfig::serialize(elle::serialization::Serializer& s)
+    {
+      StorageConfig::serialize(s);
+      s.serialize("root", this->root);
+    }
 
-      virtual
-      std::unique_ptr<infinit::storage::Storage>
-      make() override
-      {
-        return elle::make_unique<infinit::storage::Adb>(root);
-      }
-    };
+    std::unique_ptr<infinit::storage::Storage>
+    AdbStorageConfig::make()
+    {
+      return elle::make_unique<infinit::storage::Adb>(root);
+    }
 
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<AdbStorageConfig>

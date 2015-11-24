@@ -14,21 +14,29 @@ namespace infinit
       : _backend(std::move(backend))
     {
     }
+
     elle::Buffer
     Strip::_get(Key k) const
     {
       return _backend[_disk_of(k)]->get(k);
     }
-    void
+
+    int
     Strip::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       _backend[_disk_of(k)]->set(k, value, insert, update);
+      // FIXME: impl.
+      return 0;
     }
-    void
+
+    int
     Strip::_erase(Key k)
     {
       _backend[_disk_of(k)]->erase(k);
+      // FIXME: impl.
+      return 0;
     }
+
     int
     Strip::_disk_of(Key k) const
     {
@@ -38,6 +46,7 @@ namespace infinit
         res += value[i];
       return res % _backend.size();
     }
+
     std::vector<Key>
     Strip::_list()
     {
@@ -49,6 +58,7 @@ namespace infinit
       }
       return res;
     }
+
     static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
     {
       std::vector<std::unique_ptr<Storage>> backends;
@@ -67,8 +77,9 @@ namespace infinit
     }
 
 
-    StripStorageConfig::StripStorageConfig(Storages storages_)
-      : StorageConfig()
+    StripStorageConfig::StripStorageConfig(Storages storages_,
+                                           int capacity)
+      : StorageConfig("Multiple Storage", capacity)
       , storage(std::move(storages_))
     {}
 

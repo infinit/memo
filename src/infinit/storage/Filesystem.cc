@@ -39,7 +39,7 @@ namespace infinit
       return res;
     }
 
-    void
+    int
     Filesystem::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_TRACE("set %x", key);
@@ -56,9 +56,12 @@ namespace infinit
       output.write(reinterpret_cast<const char*>(value.contents()), value.size());
       if (insert && update)
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
+
+      // FIXME: impl.
+      return 0;
     }
 
-    void
+    int
     Filesystem::_erase(Key key)
     {
       ELLE_TRACE("erase %x", key);
@@ -66,6 +69,9 @@ namespace infinit
       if (!exists(path))
         throw MissingKey(key);
       remove(path);
+
+      // FIXME: impl.
+      return 0;
     }
 
     std::vector<Key>
@@ -106,8 +112,9 @@ namespace infinit
     }
 
     FilesystemStorageConfig::FilesystemStorageConfig(std::string name,
-                                                     std::string path_)
-      : StorageConfig(std::move(name))
+                                                     std::string path_,
+                                                     int capacity)
+      : StorageConfig(std::move(name), std::move(capacity))
       , path(std::move(path_))
     {}
 

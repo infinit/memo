@@ -42,18 +42,21 @@ namespace infinit
       return enc.decipher(e);
     }
 
-    void
+    int
     Crypt::_set(Key k, elle::Buffer const& value, bool insert, bool update)
     {
       SecretKey enc(
         _salt ? _password + elle::sprintf("%x", k) : this->_password);
       this->_backend->set(k, enc.encipher(value), insert, update);
+
+      return 0;
     }
 
-    void
+    int
     Crypt::_erase(Key k)
     {
       this->_backend->erase(k);
+      return 0;
     }
 
     std::vector<Key>
@@ -62,36 +65,33 @@ namespace infinit
       return this->_backend->list();
     }
 
-    struct CryptStorageConfig:
-    public StorageConfig
-    {
-    public:
-      std::string password;
-      bool salt;
-      std::shared_ptr<StorageConfig> storage;
+    CryptStorageConfig::
+      CryptStorageConfig(std::string name, int capacity)
+      : StorageConfig(name, capacity)
+      {}
+    CryptStorageConfig::
       CryptStorageConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
-      {
-        this->serialize(input);
-      }
+    {
+      this->serialize(input);
+    }
 
-      void
-      serialize(elle::serialization::Serializer& s) override
-      {
-        StorageConfig::serialize(s);
-        s.serialize("password", this->password);
-        s.serialize("salt", this->salt);
-        s.serialize("backend", this->storage);
-      }
+    void
+    CryptStorageConfig::serialize(elle::serialization::Serializer& s)
+    {
+      StorageConfig::serialize(s);
+      s.serialize("password", this->password);
+      s.serialize("salt", this->salt);
+      s.serialize("backend", this->storage);
+    }
 
-      virtual
-      std::unique_ptr<infinit::storage::Storage>
-      make() override
-      {
-        return elle::make_unique<infinit::storage::Crypt>(
-          std::move(storage->make()), password, salt);
-      }
-    };
+    std::unique_ptr<infinit::storage::Storage>
+    CryptStorageConfig::make()
+    {
+      return elle::make_unique<infinit::storage::Crypt>(
+        std::move(storage->make()), password, salt);
+    }
+
 
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<CryptStorageConfig>

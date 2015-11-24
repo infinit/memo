@@ -9,7 +9,8 @@ namespace infinit
 {
   namespace storage
   {
-    class Crypt: public Storage
+    class Crypt
+      : public Storage
     {
     public:
       Crypt(std::unique_ptr<Storage> backend,
@@ -22,10 +23,10 @@ namespace infinit
       elle::Buffer
       _get(Key k) const override;
       virtual
-      void
+      int
       _set(Key k, elle::Buffer const& value, bool insert, bool update) override;
       virtual
-      void
+      int
       _erase(Key k) override;
       virtual
       std::vector<Key>
@@ -34,6 +35,24 @@ namespace infinit
       std::unique_ptr<Storage> _backend;
       std::string _password;
       bool _salt;
+    };
+
+    struct CryptStorageConfig
+      : public StorageConfig
+    {
+      CryptStorageConfig(std::string name, int capacity = 0);
+      CryptStorageConfig(elle::serialization::SerializerIn& in);
+
+      void
+      serialize(elle::serialization::Serializer& s) override;
+
+      virtual
+      std::unique_ptr<infinit::storage::Storage>
+      make() override;
+
+      std::string password;
+      bool salt;
+      std::shared_ptr<StorageConfig> storage;
     };
   }
 }

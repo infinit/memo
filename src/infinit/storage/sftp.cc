@@ -471,7 +471,8 @@ namespace infinit
       }
       return res;
     }
-    void
+
+    int
     SFTP::_erase(Key k)
     {
       /*reactor::Lock lock(_sem);*/
@@ -488,8 +489,11 @@ namespace infinit
         int id = p.readInt();
         ELLE_ASSERT_EQ(id, req);
       }
+
+      return 0;
     }
-    void
+
+    int
     SFTP::_set(Key k, elle::Buffer const& value_, bool insert, bool update)
     {
       elle::Buffer value(value_.contents(), value_.size());
@@ -542,7 +546,10 @@ namespace infinit
       p.readByte();
       id = p.readInt();
       ELLE_ASSERT_EQ(id, req);
+
+      return 0;
     }
+
     std::vector<Key>
     SFTP::_list()
     {
@@ -593,33 +600,32 @@ namespace infinit
       return res;
     }
 
-    struct SFTPStorageConfig:
-    public StorageConfig
-    {
-    public:
-      std::string host;
-      std::string path;
+    SFTPStorageConfig::
+      SFTPStorageConfig(std::string name, int capacity)
+      : StorageConfig(std::move(name), std::move(capacity))
+    {}
+
+    SFTPStorageConfig::
       SFTPStorageConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
-      {
-        this->serialize(input);
-      }
+    {
+      this->serialize(input);
+    }
 
-      void
-      serialize(elle::serialization::Serializer& s) override
-      {
-        StorageConfig::serialize(s);
-        s.serialize("host", this->host);
-        s.serialize("path", this->path);
-      }
+    void
+    SFTPStorageConfig::serialize(elle::serialization::Serializer& s)
+    {
+      StorageConfig::serialize(s);
+      s.serialize("host", this->host);
+      s.serialize("path", this->path);
+    }
 
-      virtual
-      std::unique_ptr<infinit::storage::Storage>
-      make() override
-      {
-        return elle::make_unique<infinit::storage::SFTP>(host, path);
-      }
-    };
+    std::unique_ptr<infinit::storage::Storage>
+    SFTPStorageConfig::make()
+    {
+      return elle::make_unique<infinit::storage::SFTP>(host, path);
+    }
+
 
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<SFTPStorageConfig>
