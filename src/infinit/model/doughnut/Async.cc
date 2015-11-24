@@ -48,7 +48,7 @@ namespace infinit
           , _restored_journal(false)
         {
           if (!this->_journal_dir.empty())
-            boost::filesystem::create_directories(_journal_dir);
+            boost::filesystem::create_directories(this->_journal_dir);
           if (max_size)
             this->_ops.max_size(max_size);
         }
@@ -63,7 +63,7 @@ namespace infinit
         void
         Async::_restore_journal(overlay::Overlay& overlay)
         {
-          ELLE_TRACE("Restoring journal from %s", _journal_dir);
+          ELLE_TRACE_SCOPE("%s: restore journal from %s", *this, _journal_dir);
           boost::filesystem::path p(_journal_dir);
           boost::filesystem::directory_iterator it(p);
           std::vector<boost::filesystem::path> files;
@@ -73,9 +73,11 @@ namespace infinit
             ++it;
           }
           std::sort(files.begin(), files.end(),
-            [](boost::filesystem::path const&a, boost::filesystem::path const& b) -> bool
+            [] (boost::filesystem::path const&a,
+                boost::filesystem::path const& b) -> bool
             {
-              return std::stoi(a.filename().string()) < std::stoi(b.filename().string());
+              return std::stoi(a.filename().string()) <
+                std::stoi(b.filename().string());
             });
           for (auto const& p: files)
           {
@@ -102,10 +104,10 @@ namespace infinit
         Async::_push_op(Op op)
         {
           op.index = ++_next_index;
-          if (!_journal_dir.empty())
+          if (!this->_journal_dir.empty())
           {
-            auto path = boost::filesystem::path(_journal_dir) / std::to_string(op.index);
-            ELLE_DEBUG("creating %s", path);
+            auto path =
+              boost::filesystem::path(_journal_dir) / std::to_string(op.index);
             boost::filesystem::ofstream os(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(os, false);
             sout.set_context(ACBDontWaitForSignature{});
@@ -121,11 +123,11 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          if (!_restored_journal)
-            _restore_journal(overlay);
-          ELLE_TRACE("_store: %.7s", block->address());
-
+          if (!this->_restored_journal)
+            this->_restore_journal(overlay);
           this->_last[block->address()] = block.get();
+          ELLE_TRACE("%s: push asynchronous store operation on %s",
+                     *this, block->address());
           this->_push_op(
             Op(block->address(), std::move(block), mode, std::move(resolver)));
         }
@@ -135,9 +137,10 @@ namespace infinit
                 Address address)
         {
           if (!_restored_journal)
-            _restore_journal(overlay);
-          ELLE_TRACE("_remove: %.7s", address);
-          _push_op(Op(address, nullptr, {}));
+            this->_restore_journal(overlay);
+          ELLE_TRACE("%s: push asynchronous store operation on %s",
+                     *this, address);
+          this->_push_op(Op(address, nullptr, {}));
         }
 
         // Fetch operation must be synchronous, else the consistency is not
@@ -147,17 +150,13 @@ namespace infinit
                       Address address,
                       boost::optional<int>)
         {
-          if (!_restored_journal)
-            _restore_journal(overlay);
-          ELLE_TRACE("_fetch: %.7s", address);
-          if (_last.find(address) != _last.end())
+          if (!this->_restored_journal)
+            this->_restore_journal(overlay);
+          if (this->_last.find(address) != _last.end())
           {
-            ELLE_DUMP("_fetch: cache");
-            auto cpy = _last[address]->clone();
-            ELLE_DUMP("_fetch: cpy'd block data(%.7s): %s", cpy->address(), cpy->data());
-            return cpy;
+            ELLE_TRACE("%s: fetch %s from journal", *this, address);
+            return this->_last[address]->clone();
           }
-          ELLE_DUMP("_fetch: network");
           return this->_backend->fetch(overlay, address);
         }
 
@@ -171,35 +170,32 @@ namespace infinit
               Op op = _ops.get();
               overlay::Overlay& overlay = *this->doughnut().overlay();
               Address addr = op.address;
+              ELLE_TRACE_SCOPE("%s: process asynchronous operation on %s",
+                               *this, addr);
               boost::optional<StoreMode> mode = op.mode;
               std::unique_ptr<ConflictResolver>& resolver = op.resolver;
               auto ptr = op.block.get();
-              elle::SafeFinally delete_entry([&] {
-                  if (!_journal_dir.empty())
+              elle::SafeFinally delete_entry(
+                [&]
+                {
+                  if (!this->_journal_dir.empty())
                   {
-                    auto path = boost::filesystem::path(_journal_dir) / std::to_string(op.index);
-                    ELLE_DEBUG("deleting %s", path);
+                    auto path = boost::filesystem::path(this->_journal_dir) /
+                      std::to_string(op.index);
                     boost::filesystem::remove(path);
                   }
                   if (mode && ptr == _last[addr])
                   {
                     _last.erase(addr);
-                    ELLE_DUMP("store: %.7s removed from cache", addr);
                   }
               });
-
               if (!mode)
-              {
-                ELLE_TRACE("remove: %.7s", addr);
                 this->_backend->remove(overlay, addr);
-              }
-              else // store
-              {
+              else
                 this->_backend->store(overlay,
                                       std::move(op.block),
                                       *mode,
                                       std::move(resolver));
-              }
             }
             catch (elle::Error const& e)
             {
