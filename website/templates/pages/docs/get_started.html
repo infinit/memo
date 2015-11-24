@@ -1,0 +1,25 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <progress value="0"></progress>
+
+  <nav id="sidebar">
+    <div id="menu-anchor"></div>
+    <ul class="menu">
+      <li><a href="#1-installation">1. Installation</a></li>
+      <li><a href="#2-basic-test">2. Basic Test</a></li>
+      <li><a href="#3-create-a-user">3. Create a user</a></li>
+      <li><a href="#4-create-a-storage-resource">4. Create a storage</a></li>
+      <li><a href="#5-create-a-network">5. Create a network</a></li>
+      <li><a href="#6-create-a-volume">6. Create a volume</a></li>
+      <li><a href="#7-mount-the-volume">7. Mount the volume</a></li>
+      <li><a href="#8-access-from-another-machine">8. Access it</a></li>
+    </ul>
+  </nav>
+
+  <section class="doc">
+    <%include file='src/html/get_started.html'/>
+  </section>
+
+</%block>

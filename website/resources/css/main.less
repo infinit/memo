@@ -23,14 +23,17 @@ body {
 a { text-decoration: none; color: @infinitblack; }
 ul { list-style-type: none; }
 
-a.button, button.button, input.button {
+a.button, button.button, input.button, body.documentation section.doc p a.button {
   background: @infinitred; border-radius: 3px; font-size: 15px; font-weight: 600;
   box-shadow: 0px 3px 0px 0px darken(#C73F3C, 10%); padding: 6px 10px;
   color: white; text-transform: uppercase; border: none; outline: none;
   display: inline-block; overflow: hidden; .transition();
   font-family: @sourcesans;
 
-  &:hover, &:active { background: darken(@infinitred, 10%); }
+  &:hover, &:active {
+    background: darken(@infinitred, 10%); color: white;
+    border-bottom: 0;
+  }
 
   &:focus { outline: none; }
 
@@ -96,12 +99,6 @@ header {
       }
     }
   }
-}
-
-pre code {
-  display: block; font-family: @monospace;
-  padding: 15px 20px; border-radius: 5px;
-  margin-left: 0; line-height: 17px;
 }
 
 section.blue {
@@ -513,7 +510,7 @@ body.pricing {
     }
 
     p { line-height: 20px; }
-    p.note { font-style: italic; color: #8C8C8C; }
+    p.note, em { font-style: italic; color: #8C8C8C; }
     p a { color: @infinitblue; .transition() }
     p.title {
       font-family: @helvetica; font-weight: 300;font-size: 26px; line-height: 39px;
@@ -525,14 +522,19 @@ body.pricing {
       border-bottom: 2px solid darken(@infinitblue, 10%);
     }
 
-    h2 { margin-top: 50px;}
-    .button { font-size: 14px; padding: 6px 11px;}
+    h2 { margin-top: 70px; font-size: 1.9em;}
+    h3 { font-size: 1.4em; margin-top: 30px; margin-bottom: 7px; }
+    .button { font-size: 14px; padding: 6px 11px; margin-bottom: 20px;}
 
-    pre code { padding: 15px 20px; }
-
-    span.code, .tags span {
+    code {
       background: #E9F2F5; border-radius: 3px; padding: 3px;
       color: #5A6878; font-family: @monospace; font-size: 13px;
+    }
+
+    pre code {
+      display: block; font-family: @monospace; background: #23241f;
+      padding: 15px 20px; border-radius: 5px; color: #f8f8f2;
+      margin-left: 0; line-height: 17px; font-size: 14px;
     }
 
     img { max-width: 100%; }
@@ -560,6 +562,7 @@ body.doc_overview {
 
   section.doc {
     .features {
+      &:after { display: table; content: ''; clear: both; }
       div {
         float: left; width: 31%; margin-right: 3%;
 
@@ -569,6 +572,18 @@ body.doc_overview {
 
       div:nth-child(3n) { margin-right: 0; }
       div:nth-child(3n+1) { clear: both; }
+    }
+    .button { clear:both; margin-top: 30px; }
+  }
+}
+
+body.doc_technology {
+  section.doc {
+    h2 { margin-bottom: 0px; }
+    h2 + p { margin-top: 5px; }
+    h2 + p em {
+      background: #E9F2F5; border-radius: 3px; padding: 3px; font-style: normal;
+      color: #5A6878; font-family: @monospace; font-size: 13px;
     }
   }
 }

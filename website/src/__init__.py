@@ -35,7 +35,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/overview', name = 'doc_overview')
-  @view('pages/doc/overview.html')
+  @view('pages/docs/overview.html')
   def root(self):
     return {
       'title': 'An Overview of the Infinit File System',
@@ -51,7 +51,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/get-started', name = 'doc_get_started')
-  @view('pages/doc/get_started.html')
+  @view('pages/docs/get_started.html')
   def root(self):
     return {
       'title': 'Get Started with Infinit',
@@ -59,7 +59,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/documentation/technology', name = 'doc_technology')
-  @view('pages/doc/technology.html')
+  @view('pages/docs/technology.html')
   def root(self):
     return {
       'title': 'Technology Behind Infinit',
@@ -67,7 +67,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/documentation/comparisons', name = 'doc_comparisons')
-  @view('pages/doc/comparisons.html')
+  @view('pages/docs/comparisons.html')
   def root(self):
     return {
       'title': 'Comparison Between Infinit and Other File Systems',
@@ -75,7 +75,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
-  @view('pages/doc/deployments/personal_cloud.html')
+  @view('pages/docs/personal_cloud.html')
   def root(self):
     return {
       'title': 'Unlimited Personal Drive with Infinit',
@@ -83,7 +83,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/deployments/decentralized-collaborative-file-system', name = 'doc_deployment_file_system')
-  @view('pages/doc/deployments/decentralized_fs.html')
+  @view('pages/docs/decentralized_fs.html')
   def root(self):
     return {
       'title': 'Decentralized Collaborative File System with Infinit',
@@ -91,7 +91,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/documentation/reference', name = 'doc_reference')
-  @view('pages/doc/reference.html')
+  @view('pages/docs/reference.html')
   def root(self):
     return {
       'title': 'Reference Documentation',
@@ -99,7 +99,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/roadmap', name = 'doc_roadmap')
-  @view('pages/doc/roadmap.html')
+  @view('pages/docs/roadmap.html')
   def root(self):
     return {
       'title': 'Roadmap',
