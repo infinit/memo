@@ -260,7 +260,7 @@ namespace infinit
             _owner->_data.size(wend);
             memset(_owner->_data.mutable_contents() + oldsz,
                    0,
-                   offset - oldsz);
+                   wend - oldsz);
           }
           auto to_write = wend - offset;
           memcpy(_owner->_data.mutable_contents() + offset,
