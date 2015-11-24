@@ -21,6 +21,8 @@ infinit::Infinit ifnt;
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
+  int capacity = args.count("capacity") ? args["capacity"].as<int>() : 0;
+  std::cerr << capacity << std::endl;
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("dropbox"))
   {
@@ -31,7 +33,7 @@ COMMAND(create)
     auto account = ifnt.credentials_dropbox(account_name);
     config =
       elle::make_unique<infinit::storage::DropboxStorageConfig>
-      (name, account.token, std::move(root));
+      (name, account.token, std::move(root), std::move(capacity));
   }
   if (args.count("filesystem"))
   {
@@ -40,7 +42,7 @@ COMMAND(create)
       path = (infinit::root_dir() / "blocks" / name).string();
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
-      (name, std::move(*path));
+      (name, std::move(*path), std::move(capacity));
   }
   if (args.count("google"))
   {
@@ -54,7 +56,8 @@ COMMAND(create)
       (name,
        std::move(root),
        account.refresh_token,
-       self_user(ifnt, {}).name);
+       self_user(ifnt, {}).name,
+       std::move(capacity));
   }
   if (!config)
     throw CommandLineError("storage type unspecified");
@@ -155,6 +158,7 @@ main(int argc, char** argv)
       "STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
+        { "capacity,c", value<int>(), "limit the storage capacity" },
         option_output("storage"),
       },
       {

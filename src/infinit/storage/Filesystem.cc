@@ -1,6 +1,7 @@
 #include <infinit/storage/Filesystem.hh>
 
 #include <iterator>
+#include <cstring>
 
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
@@ -17,11 +18,36 @@ namespace infinit
 {
   namespace storage
   {
-    Filesystem::Filesystem(boost::filesystem::path root)
-      : Storage()
+    Filesystem::Filesystem(boost::filesystem::path root,
+                           int capacity)
+      : Storage(std::move(capacity))
       , _root(std::move(root))
     {
+      using namespace boost;
+      using namespace boost::filesystem;
       create_directories(this->_root);
+      auto dirs = make_iterator_range(
+        directory_iterator(this->_root), {});
+      for (auto const& dir: dirs)
+      {
+        auto blocks_path = dir.path();
+        auto blocks = make_iterator_range(
+          directory_iterator(blocks_path), {});
+        for (auto const& block: blocks)
+        {
+          auto path = block.path();
+          auto _file_size = file_size(path);
+          auto name = path.filename().string();
+          std::cerr << "block name = " << name << std::endl;
+          auto addr = infinit::model::Address::from_string(name.substr(2));
+          std::cerr << "valid address !" << std::endl;
+          this->_size_cache[addr] = _file_size;
+          this->_usage += _file_size;
+        }
+      }
+
+      ELLE_DEBUG("Recovering _usage (%s) and _size_cache (%s)", this->_usage
+                                                              , this->_size_cache.size());
     }
 
     elle::Buffer
@@ -135,7 +161,8 @@ namespace infinit
     std::unique_ptr<infinit::storage::Storage>
     FilesystemStorageConfig::make()
     {
-      return elle::make_unique<infinit::storage::Filesystem>(this->path);
+      return elle::make_unique<infinit::storage::Filesystem>(this->path,
+                                                             this->capacity);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::

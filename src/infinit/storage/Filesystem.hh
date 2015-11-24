@@ -14,7 +14,8 @@ namespace infinit
       : public Storage
     {
     public:
-      Filesystem(boost::filesystem::path root);
+      Filesystem(boost::filesystem::path root,
+                 int capacity = 0);
     protected:
       virtual
       elle::Buffer

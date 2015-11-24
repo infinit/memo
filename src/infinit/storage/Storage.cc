@@ -106,7 +106,7 @@ namespace infinit
     StorageConfig::StorageConfig(std::string name_,
                                  int capacity_)
       : name(std::move(name_))
-      , capacity(std::move(capacity))
+      , capacity(std::move(capacity_))
     {}
 
     StorageConfig::StorageConfig(elle::serialization::SerializerIn& s)
