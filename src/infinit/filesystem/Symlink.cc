@@ -34,11 +34,13 @@ namespace infinit
     }
 
     void
-      Symlink::stat(struct stat* s)
+      Symlink::stat(struct stat* st)
       {
         ELLE_TRACE_SCOPE("%s: stat", *this);
-        _fetch();
-        Node::stat(s);
+        this->_fetch();
+        this->Node::stat(st);
+        st->st_mode |= S_IFLNK;
+        st->st_mode |= 0777; // Set rxwrwxrwx, to mimic Posix behavior.
       }
 
     void

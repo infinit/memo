@@ -144,7 +144,7 @@ namespace infinit
       st->f_fsid = 1;
     }
 
-    void 
+    void
     File::_fetch()
     {
       if (_rw_handle_count)
@@ -361,8 +361,9 @@ namespace infinit
       st->st_mode = S_IFREG;
       try
       {
-        _fetch();
+        this->_fetch();
         Node::stat(st);
+        st->st_mode |= S_IFREG;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {

@@ -458,7 +458,9 @@ namespace infinit
       try
       {
         this->_fetch();
-        Node::stat(st);
+        this->Node::stat(st);
+        st->st_mode |= S_IFDIR;
+        st->st_mode |= 0100; // Set x.
         can_access = true;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)

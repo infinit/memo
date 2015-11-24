@@ -192,7 +192,7 @@ namespace infinit
       st->st_blksize = 16384;
       st->st_blocks = _header.size / 512;
       #endif
-      st->st_mode  = _header.mode;
+      st->st_mode  = 0600;
       st->st_size  = _header.size;
       st->st_atime = _header.atime;
       st->st_mtime = _header.mtime;
