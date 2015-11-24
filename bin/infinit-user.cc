@@ -142,7 +142,22 @@ void
 _push(variables_map const& args, infinit::User& user)
 {
   auto email = optional(args, "email");
-  user.email = email;
+  if (!user.email && !email)
+  {
+    throw CommandLineError(elle::sprintf(
+      "users pushed to %s must have an email address", beyond(true)));
+  }
+  if (email) // Overwrite existing email.
+  {
+    user.email = email;
+    ifnt.user_save(user, true);
+  }
+  auto fullname = optional(args, "fullname");
+  if (fullname) // Overwrite existing fullname.
+  {
+    user.fullname = fullname;
+    ifnt.user_save(user, true);
+  }
   if (flag(args, "full"))
   {
     user.password_hash = hub_password(args);
@@ -164,7 +179,9 @@ _push(variables_map const& args, infinit::User& user)
 static
 infinit::User
 create_(std::string const& name,
-        boost::optional<std::string> const& keys_file)
+        boost::optional<std::string> keys_file,
+        boost::optional<std::string> email,
+        boost::optional<std::string> fullname)
 {
   auto keys = [&] // -> infinit::cryptography::rsa::KeyPair
   {
@@ -181,7 +198,7 @@ create_(std::string const& name,
     }
   }();
 
-  return infinit::User{name, keys};
+  return infinit::User{name, keys, email, fullname};
 }
 
 static
@@ -189,8 +206,10 @@ void
 create(variables_map const& args)
 {
   auto name = get_name(args);
-  auto keys_file = optional(args, "key");
-  infinit::User user = create_(name, keys_file);
+  infinit::User user = create_(name,
+                               optional(args, "key"),
+                               optional(args, "email"),
+                               optional(args, "fullname"));
   ifnt.user_save(user);
   report_action("generated", "user", name, std::string("locally"));
   if (aliased_flag(args, {"push-user", "push"}))
@@ -250,9 +269,10 @@ void
 signup_(variables_map const& args)
 {
   auto name = get_name(args);
-  auto email = mandatory(args, "email");
-  auto keys_file = optional(args, "key");
-  infinit::User user = create_(name, keys_file);
+  infinit::User user = create_(name,
+                               optional(args, "key"),
+                               mandatory(args, "email"),
+                               optional(args, "fullname"));
   try
   {
     ifnt.user_get(name);
@@ -362,7 +382,8 @@ main(int argc, char** argv)
           elle::sprintf("push the user to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-user" },
         { "email", value<std::string>(),
-          "valid email address (mandatory if you use --push-user)" },
+          "valid email address (mandatory when using --push-user)" },
+        { "fullname", value<std::string>(), "user's fullname (optional)" },
         option_push_full,
         option_push_password,
       },
@@ -441,9 +462,10 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
         { "email,n", value<std::string>(), "valid email address" },
+        { "fullname", value<std::string>(), "user's fullname (optional)" },
         { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key"
-          " (generated if unspecified)" },
+          "RSA key pair in PEM format - e.g. your SSH key "
+          "(default: generate key pair)" },
         option_push_full,
         option_push_password,
       },
