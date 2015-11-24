@@ -453,6 +453,7 @@ def configure(
       'beyond',
       python = elle.python3,
       cryptography_python_module = elle.cryptography.python_module,
+      sendwithus = sendwithus,
       prefix = prefix,
       git = git,
       bottle = bottle,

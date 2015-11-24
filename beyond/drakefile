@@ -19,6 +19,7 @@ def configure(
     cryptography_python_module,
     git,
     bottle,
+    sendwithus,
     PatchAndInstall,
     prefix = drake.Path('/usr'),
     dropbox_app_key = 'ldsi5nojwpfqcqg',
@@ -78,6 +79,7 @@ def configure(
     'src/wsgi.py',
     'src/validation.py',
     'src/exceptions.py',
+    'src/emailer.py',
   ) + [bottle, version]
   couchdb_sources = drake.nodes(
     'couchdb-python/couchdb/view.py',
@@ -119,6 +121,10 @@ def configure(
     for node in  how(couchdb_sources,
                      where / python_prefix,
                      strip_prefix = 'couchdb-python'):
+      yield node
+    for node in how(sendwithus.nodes,
+                    where / python_prefix,
+                    strip_prefix = '../%s' % sendwithus.root):
       yield node
     yield how(bottle,
               where / python_prefix, strip_prefix = True)
