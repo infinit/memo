@@ -1,22 +1,31 @@
-#include <infinit/model/doughnut/Async.hh>
-#include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/ACB.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
+#include <fstream>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
 
-#include <elle/serialization/binary.hh>
+#include <das/model.hh>
+#include <das/serializer.hh>
 
 #include <reactor/exception.hh>
 #include <reactor/scheduler.hh>
-#include <infinit/model/MissingBlock.hh>
 
-#include <iostream>
+#include <infinit/model/MissingBlock.hh>
+#include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Local.hh>
+
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async");
+
+DAS_MODEL(infinit::model::doughnut::consensus::Async::Op,
+          (address, block, mode, resolver),
+          DasOp);
+DAS_MODEL_DEFAULT(infinit::model::doughnut::consensus::Async::Op, DasOp)
+DAS_MODEL_SERIALIZE(infinit::model::doughnut::consensus::Async::Op);
 
 namespace infinit
 {
@@ -83,18 +92,14 @@ namespace infinit
             elle::serialization::binary::SerializerIn sin(is, false);
             sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
             sin.set_context<Doughnut*>(&this->doughnut());
-            Op op;
             sin.set_context(ACBDontWaitForSignature{});
             sin.set_context(OKBDontWaitForSignature{});
-            sin.serialize("address", op.addr);
-            sin.serialize("block", op.block);
-            sin.serialize("mode", op.mode);
-            sin.serialize("resolver", op.resolver);
+            auto op = sin.deserialize<Op>();
             if (op.block)
               op.block->seal();
             op.index = id;
             if (op.mode)
-              _last[op.addr] = op.block.get();
+              _last[op.address] = op.block.get();
             _ops.put(std::move(op));
           }
           _restored_journal = true;
@@ -112,12 +117,9 @@ namespace infinit
             elle::serialization::binary::SerializerOut sout(os, false);
             sout.set_context(ACBDontWaitForSignature{});
             sout.set_context(OKBDontWaitForSignature{});
-            sout.serialize("address", op.addr);
-            sout.serialize("block", op.block);
-            sout.serialize("mode", op.mode);
-            sout.serialize("resolver", op.resolver);
+            sout.serialize_forward(op);
           }
-          _ops.put(std::move(op));
+          this->_ops.put(std::move(op));
         }
 
         void
@@ -175,7 +177,7 @@ namespace infinit
             {
               Op op = _ops.get();
               overlay::Overlay& overlay = *this->doughnut().overlay();
-              Address addr = op.addr;
+              Address addr = op.address;
               boost::optional<StoreMode> mode = op.mode;
               std::unique_ptr<ConflictResolver>& resolver = op.resolver;
               auto ptr = op.block.get();
@@ -217,11 +219,11 @@ namespace infinit
         | Operation |
         `----------*/
 
-        Async::Op::Op(Address addr_,
+        Async::Op::Op(Address address_,
                       std::unique_ptr<blocks::Block>&& block_,
                       boost::optional<StoreMode> mode_,
                       std::unique_ptr<ConflictResolver> resolver_)
-          : addr(addr_)
+          : address(address_)
           , block(std::move(block_))
           , mode(std::move(mode_))
           , resolver(std::move(resolver_))
