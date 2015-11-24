@@ -29,7 +29,9 @@ namespace infinit
     {
       auto addr = _parent->_files.at(_name).second;
       _block = elle::cast<MutableBlock>::runtime(_owner.fetch_or_die(addr));
-      _header = elle::serialization::binary::deserialize<FileHeader>(_block->data());
+      umbrella([&] {
+          _header = elle::serialization::binary::deserialize<FileHeader>(_block->data());
+      });
     }
 
     void
@@ -44,8 +46,21 @@ namespace infinit
       Symlink::stat(struct stat* st)
       {
         ELLE_TRACE_SCOPE("%s: stat", *this);
-        this->_fetch();
-        this->Node::stat(st);
+        try
+        {
+          this->_fetch();
+          this->Node::stat(st);
+        }
+        catch (infinit::model::doughnut::ValidationFailed const& e)
+        {
+          ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
+        }
+        catch (rfs::Error const& e)
+        {
+          ELLE_DEBUG("%s: filesystem exception: %s", *this, e.what());
+          if (e.error_code() != EACCES)
+            throw;
+        }
         st->st_mode |= S_IFLNK;
         st->st_mode |= 0777; // Set rxwrwxrwx, to mimic Posix behavior.
       }
