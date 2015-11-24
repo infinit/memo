@@ -81,11 +81,13 @@ class Beyond:
       if auth is not None:
         der = base64.b64decode(auth.encode('utf-8'))
         k = RSA.importKey(der)
-        h = base64.b64encode(hashlib.sha256(kwargs['data'].encode('latin-1')).digest())
+        h = base64.b64encode(
+          hashlib.sha256(kwargs['data'].encode('latin-1')).digest())
         t = str(int(time.time()))
         string_to_sign = kwargs['method'] + ';' + url + ';'
         string_to_sign += h.decode('latin-1') + ';' + t
-        raw_sig = PKCS1_v1_5.new(k).sign(SHA256.new(string_to_sign.encode('latin-1')))
+        raw_sig = PKCS1_v1_5.new(k).sign(
+          SHA256.new(string_to_sign.encode('latin-1')))
         sig = base64.b64encode(raw_sig)
         kwargs['headers']['infinit-signature'] = sig
         kwargs['headers']['infinit-time'] = t
