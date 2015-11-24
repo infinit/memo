@@ -55,6 +55,10 @@ def parse_options():
                       help = 'Enable GCS resources uploading',
                       action = 'store_true',
                       default = False)
+  parser.add_argument('--sendwithus-app-key',
+                      type = str,
+                      help = 'SendWithUs api key',
+                      default = 'test_b71aa18fba1a03a9c314ca1d50eb8a8ceb37825c')
   parser.add_argument(
     '--couchdb-directory',
     metavar = 'PATH',
@@ -109,8 +113,8 @@ e9FGZj7sEHpPuDE=
       dropbox_app_secret = args.dropbox_app_secret,
       google_app_key = args.google_app_key,
       google_app_secret = args.google_app_secret,
-      validate_email_address = args.email_validation
-    )
+      validate_email_address = args.email_validation,
+      sendwithus_api_key = args.sendwithus_app_key)
     app = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
     import bottle
     kwargs = {}

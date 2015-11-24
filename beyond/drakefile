@@ -186,6 +186,7 @@ def configure(
       'auth',
       'full-flow',
       'oauth-dropbox',
+      'emails',
       'users/put',
       'users/get',
       'users/delete',

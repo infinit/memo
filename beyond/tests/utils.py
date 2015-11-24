@@ -39,13 +39,14 @@ bottle.Bottle.host = host
 
 class Beyond:
 
-  def __init__(self):
+  def __init__(self, beyond_args = {}):
     super().__init__()
     self.__app = None
     self.__beyond = None
     self.__bottle = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
+    self.__beyond_args = beyond_args
 
     setattr(self, 'get',
             lambda url, **kw: self.request(url = url, method = 'GET', **kw))
@@ -56,16 +57,32 @@ class Beyond:
     setattr(self, 'post',
             lambda url, **kw: self.request(url = url, method = 'POST', **kw))
 
+  @property
+  def emailer(self):
+    return self.__beyond.emailer
+
+  @emailer.setter
+  def emailer(self, emailer):
+    setattr(self.__beyond, '_Beyond__emailer', emailer)
+
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
-    self.__datastore = \
-      infinit.beyond.couchdb.CouchDBDatastore(couchdb)
+    self.__datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
+    default_args = {
+      'dropbox_app_key': 'db_key',
+      'dropbox_app_secret': 'db_secret',
+      'google_app_key': 'google_key',
+      'google_app_secret': 'google_secret',
+      'sendwithus_api_key': None,
+    }
+    from copy import deepcopy
+    args = deepcopy(self.__beyond_args)
+    for arg in default_args:
+      if arg not in args:
+        args[arg] = default_args[arg]
     self.__beyond = infinit.beyond.Beyond(
       datastore = self.__datastore,
-      dropbox_app_key = 'db_key',
-      dropbox_app_secret = 'db_secret',
-      google_app_key = 'google_key',
-      google_app_secret = 'google_secret',
+      **args
     )
     self.__app = infinit.beyond.bottle.Bottle(self.__beyond)
     self.__app.__enter__()

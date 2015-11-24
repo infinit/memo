@@ -588,8 +588,12 @@ class Bottle(bottle.Bottle):
     drive = self.drive_from_name(owner = owner.name, name = name)
     self.__drive_integrity(drive, passport = invitee.name)
     json = bottle.request.json
-    drive.users[invitee.name] = Drive.Invitation(self.__beyond, **json).json()
-    drive.save()
+    invitation = Drive.Invitation(self.__beyond, **json)
+    invitation.save(beyond = self._Bottle__beyond,
+                    drive = drive,
+                    owner = owner,
+                    invitee = invitee,
+                    invitation = as_owner)
     raise Response(201, {}) # FIXME: 200 if existed
 
   ## --- ##
