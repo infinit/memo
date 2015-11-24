@@ -119,6 +119,7 @@ class User:
     ],
     'optional': [
       ('dropbox_accounts', None),
+      ('fullname', None),
       ('google_accounts', None),
       ('password_hash', None),
       ('private_key', None),
@@ -134,6 +135,7 @@ class User:
                beyond,
                name = None,
                email = None,
+               fullname = None,
                public_key = None,
                password_hash = None,
                private_key = None,
@@ -144,6 +146,7 @@ class User:
     self.__id = id
     self.__name = name
     self.__email = email
+    self.__fullname = fullname
     self.__public_key = public_key
     self.__password_hash = password_hash
     self.__private_key = private_key
@@ -168,6 +171,7 @@ class User:
                 name = json['name'],
                 public_key = json['public_key'],
                 email = json.get('email', None),
+                fullname = json.get('fullname', None),
                 password_hash = json.get('password_hash', None),
                 private_key = json.get('private_key', None),
                 dropbox_accounts = json.get('dropbox_accounts', []),
@@ -182,6 +186,8 @@ class User:
     if private:
       if self.email is not None:
         res['email'] = self.email
+      if self.fullname is not None:
+        res['fullname'] = self.fullname
       if self.dropbox_accounts is not None:
         res['dropbox_accounts'] = self.dropbox_accounts
       if self.google_accounts is not None:
@@ -220,6 +226,10 @@ class User:
   @property
   def email(self):
     return self.__email
+
+  @property
+  def fullname(self):
+    return self.__fullname
 
   @property
   def public_key(self):
