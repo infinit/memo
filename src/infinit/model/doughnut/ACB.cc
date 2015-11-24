@@ -406,6 +406,9 @@ namespace infinit
           elle::Bench::BenchScope scope(bench);
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
           this->_acl_changed = false;
+          bool owner = this->doughnut()->keys().K() == this->owner_key();
+          if (owner)
+            this->_editor = -1;
           Super::_seal_okb();
           if (!data_changed)
             // FIXME: idempotence in case the write fails ?
@@ -454,12 +457,12 @@ namespace infinit
         // address is part of the signature.
         if (acl_changed || data_changed)
         {
-          static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
-          elle::Bench::BenchScope scope(bench);
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
             [this, to_sign]
             {
+              static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
+              elle::Bench::BenchScope scope(bench);
               return this->doughnut()->keys().k().sign(*to_sign);
             };
         }
