@@ -5,6 +5,13 @@
 #include <elle/cast.hh>
 
 #include <fcntl.h>
+
+#include <sys/stat.h> // S_IMFT...
+
+#ifdef INFINIT_WINDOWS
+#undef stat
+#endif
+
 ELLE_LOG_COMPONENT("infinit.filesystem.Symlink");
 
 namespace infinit
