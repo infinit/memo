@@ -505,7 +505,7 @@ def configure(
       'storage',
   ]
   if not windows:
-      tests_names += ['filesystem']
+    tests_names += ['filesystem']
   for test_name in tests_names:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
