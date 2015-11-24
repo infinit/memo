@@ -24,8 +24,6 @@ namespace infinit
           Async(std::unique_ptr<Consensus> backend,
                 boost::filesystem::path journal_dir,
                 int max_size = 100);
-          virtual
-          ~Async();
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
@@ -73,7 +71,7 @@ namespace infinit
           void
           _restore_journal(overlay::Overlay& overlay);
           ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
-          ELLE_ATTRIBUTE(reactor::Thread, process_thread);
+          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, process_thread);
           ELLE_ATTRIBUTE(reactor::Channel<Op>, ops);
           ELLE_ATTRIBUTE(int, next_index);
           // This map contains for a given address the last version of each

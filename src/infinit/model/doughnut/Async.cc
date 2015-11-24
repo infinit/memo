@@ -40,24 +40,17 @@ namespace infinit
                      int max_size)
           : Consensus(backend->doughnut())
           , _backend(std::move(backend))
-          , _process_thread("async consensus", [&] { _process_loop();})
+          , _process_thread(
+            new reactor::Thread("async consensus",
+                                [this] { this->_process_loop();}))
           , _next_index(1)
           , _journal_dir(journal_dir)
           , _restored_journal(false)
         {
-          if (!_journal_dir.empty())
-          {
+          if (!this->_journal_dir.empty())
             boost::filesystem::create_directories(_journal_dir);
-          }
           if (max_size)
-            _ops.max_size(max_size);
-        }
-
-        Async::~Async()
-        {
-          ELLE_TRACE("~Async");
-          _process_thread.terminate_now();
-          ELLE_TRACE("~~Async");
+            this->_ops.max_size(max_size);
         }
 
         std::unique_ptr<Local>
