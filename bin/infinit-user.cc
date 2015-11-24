@@ -139,24 +139,26 @@ hub_password(variables_map const& args)
 
 static
 void
-_push(variables_map const& args, infinit::User& user)
+_push(variables_map const& args, infinit::User& user, bool atomic)
 {
   auto email = optional(args, "email");
+  bool user_updated = false;
   if (!user.email && !email)
   {
     throw CommandLineError(elle::sprintf(
-      "users pushed to %s must have an email address", beyond(true)));
+      "users pushed to %s must have an email address (use --email)",
+      beyond(true)));
   }
   if (email) // Overwrite existing email.
   {
     user.email = email;
-    ifnt.user_save(user, true);
+    user_updated = true;
   }
   auto fullname = optional(args, "fullname");
   if (fullname) // Overwrite existing fullname.
   {
     user.fullname = fullname;
-    ifnt.user_save(user, true);
+    user_updated = true;
   }
   if (flag(args, "full"))
   {
@@ -174,6 +176,8 @@ _push(variables_map const& args, infinit::User& user)
     das::Serializer<infinit::DasPublicUserPublish> view{user};
     beyond_push("user", user.name, view, user);
   }
+  if (user_updated && !atomic)
+    ifnt.user_save(user, true);
 }
 
 static
@@ -213,7 +217,7 @@ create(variables_map const& args)
   ifnt.user_save(user);
   report_action("generated", "user", name, std::string("locally"));
   if (aliased_flag(args, {"push-user", "push"}))
-    _push(args, user);
+    _push(args, user, false);
 }
 
 static
@@ -235,7 +239,7 @@ push(variables_map const& args)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
-  _push(args, user);
+  _push(args, user, false);
 }
 
 static
@@ -279,7 +283,7 @@ signup_(variables_map const& args)
   }
   catch (elle::Error const&)
   {
-    _push(args, user);
+    _push(args, user, true);
     ifnt.user_save(user, true);
     return;
   }
@@ -365,7 +369,7 @@ main(int argc, char** argv)
   boost::program_options::option_description option_push_password =
     { "hub-password-inline", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Use this option with --full "
-      " to avoid password prompt", beyond(true)).c_str() };
+      "to avoid password prompt", beyond(true)).c_str() };
   Modes modes {
     {
       "create",
