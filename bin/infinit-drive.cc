@@ -38,8 +38,7 @@ COMMAND(create)
   ifnt.drive_save(drive);
   report_action("created", "drive", drive.name, std::string("locally"));
 
-  auto push = flag(args, "push");
-  if (push)
+  if (aliased_flag(args, {"push-drive", "push"}))
   {
     auto url = elle::sprintf("drives/%s", drive.name);
     beyond_push(url, "drive", drive.name, drive, owner);
@@ -80,7 +79,7 @@ COMMAND(invite)
       not_found(user, "Passport");
     throw;
   }
-  if (flag(args, "fetch"))
+  if (aliased_flag(args, {"fetch-drive", "fetch"}))
     fetch_(drive_name_);
 }
 
@@ -215,8 +214,9 @@ main(int argc, char** argv)
         { "network,N", value<std::string>(), "associated network name" },
         { "volume,v", value<std::string>(), "associated volume name" },
         { "description,d", value<std::string>(), "created drive description" },
-        { "push,p", bool_switch(),
+        { "push-drive", bool_switch(),
           elle::sprintf("push the created drive to %s", beyond(true)).c_str() },
+        { "push,p", bool_switch(), "alias for --push-drive" },
         option_owner,
       },
     },
@@ -226,11 +226,14 @@ main(int argc, char** argv)
       &invite,
       "--name DRIVE --user USER [--permissions]",
       {
-        { "name,n", value<std::string>(), "drive to invite the user on" },
+        { "name,n", value<std::string>(), "drive to invite the user to" },
         { "user,u", value<std::string>(), "user to invite to the drive" },
-        { "permissions,p", value<std::string>(), "set default user permissions to XXX" },
-        { "home,h", bool_switch(), "creates a home directory for the invited user" },
-        { "fetch,f", bool_switch(), "update local drive descriptor" },
+        { "permissions,p", value<std::string>(),
+          "set default user permissions to XXX" },
+        { "home,h", bool_switch(),
+          "creates a home directory for the invited user" },
+        { "fetch-drive", bool_switch(), "update local drive descriptor" },
+        { "fetch,f", bool_switch(), "alias for --fetch-drive" },
         option_owner,
       },
     },
@@ -261,7 +264,7 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(),
-          elle::sprintf("drive name to push to %s", beyond(true)).c_str() },
+          elle::sprintf("drive to push to %s", beyond(true)).c_str() },
         option_owner,
       }
     },
@@ -287,17 +290,17 @@ main(int argc, char** argv)
       &delete_,
       "--name NAME",
       {
-        { "name,n", value<std::string>(), "drive name to delete locally" },
+        { "name,n", value<std::string>(), "drive to delete" },
         option_owner,
       }
     },
     {
       "pull",
-      elle::sprintf("Delete a drive remotely from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a drive from %s", beyond(true)).c_str(),
       &pull,
       "--name NAME",
       {
-        { "name,n", value<std::string>(), "drive name to delete remotely" },
+        { "name,n", value<std::string>(), "drive to remove" },
         option_owner,
       }
     }
