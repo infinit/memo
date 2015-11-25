@@ -141,6 +141,16 @@ DAS_MODEL(Credentials,
 DAS_MODEL_DEFAULT(Credentials, DasCredentials);
 DAS_MODEL_SERIALIZE(Credentials);
 
+struct Storages
+{
+  int usage;
+  int capacity;
+};
+
+DAS_MODEL(Storages, (usage, capacity), DasStorages);
+DAS_MODEL_DEFAULT(Storages, DasStorages);
+DAS_MODEL_SERIALIZE(Storages);
+
 struct Mode
 {
   typedef
@@ -481,7 +491,18 @@ namespace infinit
     cryptography::rsa::PublicKey owner;
     int replication_factor;
   };
+}
 
+template <typename T>
+void
+beyond_push(std::string const& where,
+            std::string const& type,
+            std::string const& name,
+            T const& o,
+            infinit::User const& self);
+
+namespace infinit
+{
   struct Network
   {
     Network()
@@ -523,6 +544,23 @@ namespace infinit
           boost::optional<std::chrono::seconds>(),
         cache_invalidation ? std::chrono::seconds(cache_invalidation.get()) :
           boost::optional<std::chrono::seconds>());
+    }
+
+    void
+    notify_storage(infinit::storage::Storage const& storage,
+                   infinit::User const& user,
+                   infinit::model::Address const& node_id)
+    {
+      auto url = elle::sprintf("networks/%s/stat/%s/%s", name,
+                                                         user.name,
+                                                         node_id);
+
+      beyond_push(url,
+                  "storages",
+                  name,
+                  Storages{storage.usage(),
+                           storage.capacity()},
+                  user);
     }
 
     std::string name;
@@ -1883,7 +1921,8 @@ private:
       if (itf.second.ipv4_address.size() > 0)
         endpoints.addresses.push_back(itf.second.ipv4_address);
     endpoints.port = port;
-    beyond_push(this->_url, "endpoints for", network.name, endpoints, self);
+    beyond_push(this->_url, std::string("endpoints for"),
+                network.name, endpoints, self);
   }
 
   ~InterfacePublisher()

@@ -92,6 +92,7 @@ namespace infinit
 
       int new_size = boost::filesystem::file_size(path);
       this->_size_cache[key] = new_size;
+
       return new_size - size;
     }
 

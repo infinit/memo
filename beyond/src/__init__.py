@@ -63,6 +63,9 @@ class Beyond:
   def network_volumes_get(self, network):
     return self.__datastore.networks_volumes_fetch(networks = [network])
 
+  def network_stats_get(self, network):
+    return self.__datastore.network_stats_fetch(network = network)
+
   ## ---- ##
   ## User ##
   ## ---- ##
@@ -360,7 +363,8 @@ class Network(metaclass = Entity,
               update = 'network_update',
               fields = fields('name', 'owner', 'consensus', 'overlay',
                               passports = {},
-                              endpoints = {})):
+                              endpoints = {},
+                              storages = {})):
 
   @property
   def id(self):

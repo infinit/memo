@@ -550,8 +550,15 @@ run(variables_map const& args)
   };
   if (push && model->local())
   {
+    auto node_id = model->overlay()->node_id();
+    if (model->local()->storage())
+    {
+      network.notify_storage(*model->local()->storage().get(),
+                             self,
+                             node_id);
+    }
     elle::With<InterfacePublisher>(
-      network, self, model->overlay()->node_id(),
+      network, self, node_id,
       model->local()->server_endpoint().port()) << [&]
     {
       run();

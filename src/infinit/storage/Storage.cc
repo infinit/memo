@@ -42,6 +42,10 @@ namespace infinit
 
       _usage += delta;
       this->_size_cache[key] += delta;
+
+      ELLE_DEBUG("%s: usage/capacity = %s/%s", *this,
+                                               this->_usage,
+                                               this->_capacity);
       return delta;
     }
 

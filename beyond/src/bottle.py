@@ -162,6 +162,10 @@ class Bottle(bottle.Bottle):
                method = 'GET')(self.network_users_get)
     self.route('/networks/<owner>/<name>/volumes',
                method = 'GET')(self.network_volumes_get)
+    self.route('/networks/<owner>/<name>/stat',
+               method = 'GET')(self.network_stats_get)
+    self.route('/networks/<owner>/<name>/stat/<user>/<node_id>',
+               method = 'PUT')(self.network_stats_put)
     # Volume
     self.route('/volumes/<owner>/<name>',
                method = 'GET')(self.volume_get)
@@ -482,6 +486,29 @@ class Bottle(bottle.Bottle):
     network = self.network_from_name(owner = owner, name = name)
     volumes = self.__beyond.network_volumes_get(network = network)
     return {'volumes': list(map(lambda v: v.json(), volumes))}
+
+  def network_stats_get(self, owner, name):
+    try:
+      network = self.__beyond.network_get(owner = owner, name = name)
+    except Network.NotFound:
+      raise self.__not_found('network', '%s/%s' % (owner, name))
+
+    ret = self.__beyond.network_stats_get(network)
+    return ret
+
+  def network_stats_put(self, owner, name, user, node_id):
+    try:
+      user = self.__beyond.user_get(name = user)
+      self.authenticate(user)
+      network = self.__beyond.network_get(owner = owner, name = name)
+      json = bottle.request.json
+      network.storages.setdefault(user.name, {})[node_id] = json
+      network.save()
+      raise Response(201, {}) # FIXME: 200 if existed
+    except Network.NotFound:
+      raise self.__not_found('network', '%s/%s' % (owner, name))
+
+
 
   ## ------ ##
   ## Volume ##

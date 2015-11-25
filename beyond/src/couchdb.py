@@ -137,6 +137,26 @@ class CouchDBDatastore:
       design = self.__couchdb['networks']['_design/beyond']
     except couchdb.http.ResourceNotFound:
       design = couchdb.client.Document()
+    views = {
+      name : {
+        'map': getsource(view_map),
+      }
+      for name, view_map in [
+        ('per_invitee_name', self.__networks_per_invitee_name_map),
+        ('per_owner_key', self.__networks_per_owner_key_map),
+        ('per_user_key', self.__networks_per_user_key_map),
+      ]
+    }
+    views_with_reduce = {
+      name : {
+        'map': getsource(view_map),
+        'reduce': getsource(view_reduce)
+      }
+      for name, view_map, view_reduce in [
+        ('stat_view', self.__network_stat_map, self.__network_stat_reduce)
+      ]
+    }
+    views.update(views_with_reduce)
     design.update(
       {
         '_id': '_design/beyond',
@@ -147,16 +167,7 @@ class CouchDBDatastore:
               ('update', self.__network_update),
           ]
         },
-        'views' : {
-          name : {
-            'map': getsource(view_map)
-          }
-          for name, view_map in [
-            ('per_invitee_name', self.__networks_per_invitee_name_map),
-            ('per_owner_key', self.__networks_per_owner_key_map),
-            ('per_user_key', self.__networks_per_user_key_map),
-          ]
-        }
+        'views' : views
       })
     self.__couchdb['networks'].save(design)
     try:
@@ -269,6 +280,18 @@ class CouchDBDatastore:
                                            key = user.public_key)
     return self.__rows_to_networks(rows)
 
+  def network_stats_fetch(self, network):
+    rows = self.__couchdb['networks'].view('beyond/stat_view',
+                                           key = network.name)
+    used = list(rows)[0].value[0]
+    capacity = list(rows)[0].value[1]
+    return { 'stats' :
+             { 'storages' :
+               { 'used' : used, 'capacity' : capacity }
+             }
+           }
+
+
   def __user_per_name(user):
     yield user['name'], user
 
@@ -366,6 +389,8 @@ class CouchDBDatastore:
             n.pop(user)
         else:
           u[node] = endpoints
+    for user, node in update.get('storages', {}).items():
+        network.setdefault('storages', {})[user] = node
     return [network, {'json': json.dumps(update)}]
 
   def __networks_per_invitee_name_map(network):
@@ -379,6 +404,19 @@ class CouchDBDatastore:
     for elem in network['passports'].values():
       yield elem['user'], network
     yield network['owner'], network
+
+  def __network_stat_map(network):
+    for user in list(network['storages']):
+      for node in network['storages'][user]:
+        n = network['storages'][user][node]
+        yield network['_id'], (n['used'], n['limit'])
+
+  def __network_stat_reduce(keys, values, rereduce):
+    res = [0, 0]
+    for v in values:
+      res[0] += v[0]
+      res[1] += v[1]
+    return res
 
   ## ------ ##
   ## Volume ##
