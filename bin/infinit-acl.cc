@@ -348,7 +348,7 @@ main(int argc, char** argv)
       "list",
       "List current ACL",
       &list,
-      "--path PATH",
+      "--path PATHS",
       {
         { "path,p", value<std::vector<std::string>>(), "path" },
         { "recursive,R", bool_switch(), "list recursively" },
@@ -359,21 +359,22 @@ main(int argc, char** argv)
       "set",
       "Set ACL",
       &set,
-      "--path PATH [OPTIONS...]",
+      "--path PATHS [--user USERS] [OPTIONS...]",
       {
         { "path,p", value<std::vector<std::string>>(), "path" },
         { "user,u", value<std::vector<std::string>>(), "user" },
-        { "mode,m", value<std::string>(), "mode: r,w,rw,none" },
+        { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
           "new files/folders inherit from their parent directory" },
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "apply recursively" },
         { "try-with-public-key", bool_switch(),
-          "try with the user public key" },
+          "if a corresponding user block is not found, fallback to the user's "
+          "public key" },
         { "verbose", bool_switch(), "verbose output" },
-        { "fallback-xattrs", bool_switch(), "fallback to creating xattrs folder"
-          " if system xattrs are not suppported" },
+        { "fallback-xattrs", bool_switch(), "fallback to creating xattrs "
+          "folder if system xattrs are not suppported" },
       },
     },
   };
