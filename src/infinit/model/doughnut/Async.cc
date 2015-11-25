@@ -156,8 +156,7 @@ namespace infinit
         }
 
         void
-        Async::_store(overlay::Overlay& overlay,
-                      std::unique_ptr<blocks::Block> block,
+        Async::_store(std::unique_ptr<blocks::Block> block,
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
@@ -167,8 +166,7 @@ namespace infinit
         }
 
         void
-        Async::_remove(overlay::Overlay& overlay,
-                Address address)
+        Async::_remove(Address address)
         {
           this->_started.open();
           this->_push_op(Op(address, nullptr, {}));
@@ -177,9 +175,7 @@ namespace infinit
         // Fetch operation must be synchronous, else the consistency is not
         // preserved.
         std::unique_ptr<blocks::Block>
-        Async::_fetch(overlay::Overlay& overlay,
-                      Address address,
-                      boost::optional<int>)
+        Async::_fetch(Address address, boost::optional<int>)
         {
           this->_started.open();
           if (this->_last.find(address) != _last.end())
@@ -187,7 +183,7 @@ namespace infinit
             ELLE_TRACE("%s: fetch %s from journal", *this, address);
             return this->_last[address]->clone();
           }
-          return this->_backend->fetch(overlay, address);
+          return this->_backend->fetch(address);
         }
 
         void
@@ -227,17 +223,15 @@ namespace infinit
               if (!mode)
                 try
                 {
-                  this->_backend->remove(overlay, addr);
+                  this->_backend->remove(addr);
                 }
                 catch (MissingBlock const&)
                 {
                   // Nothing: block was already removed.
                 }
               else
-                this->_backend->store(overlay,
-                                      std::move(op.block),
-                                      *mode,
-                                      std::move(resolver));
+                this->_backend->store(
+                  std::move(op.block), *mode, std::move(resolver));
             }
             catch (elle::Error const& e)
             {

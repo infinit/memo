@@ -42,22 +42,15 @@ namespace infinit
         protected:
           virtual
           void
-          _store(overlay::Overlay& overlay,
-                 std::unique_ptr<blocks::Block> block,
+          _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver) override;
           virtual
           std::unique_ptr<blocks::Block>
-          _fetch(overlay::Overlay& overlay, Address address,
-                 boost::optional<int> local_version) override;
+          _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
-          _remove(overlay::Overlay& overlay, Address address) override;
-        private:
-          reactor::Generator<overlay::Overlay::Member>
-          _owners(overlay::Overlay& overlay,
-                  Address const& address,
-                  overlay::Operation op) const;
+          _remove(Address address) override;
 
         /*--------.
         | Factory |

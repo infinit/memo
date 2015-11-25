@@ -28,20 +28,18 @@ namespace infinit
         {}
 
         void
-        Consensus::store(overlay::Overlay& overlay,
-                         std::unique_ptr<blocks::Block> block,
+        Consensus::store(std::unique_ptr<blocks::Block> block,
                          StoreMode mode,
                          std::unique_ptr<ConflictResolver> resolver)
         {
           ELLE_TRACE_SCOPE("%s: store %s", *this, block);
-          this->_store(overlay, std::move(block), mode, std::move(resolver));
+          this->_store(std::move(block), mode, std::move(resolver));
         }
 
         void
-        Consensus::_store(overlay::Overlay& overlay,
-                         std::unique_ptr<blocks::Block> block,
-                         StoreMode mode,
-                         std::unique_ptr<ConflictResolver> resolver)
+        Consensus::_store(std::unique_ptr<blocks::Block> block,
+                          StoreMode mode,
+                          std::unique_ptr<ConflictResolver> resolver)
         {
           overlay::Operation op;
           switch (mode)
@@ -58,7 +56,7 @@ namespace infinit
             default:
               elle::unreachable();
           }
-          auto owner =  this->_owner(overlay, block->address(), op);
+          auto owner =  this->_owner(block->address(), op);
           std::unique_ptr<blocks::Block> nb;
           while (true)
           {
@@ -80,46 +78,49 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Consensus::fetch(overlay::Overlay& overlay, Address address,
-                         boost::optional<int> local_version)
+        Consensus::fetch(Address address, boost::optional<int> local_version)
         {
-          return this->_fetch(overlay, address, std::move(local_version));
+          return this->_fetch(address, std::move(local_version));
         }
 
         std::unique_ptr<blocks::Block>
-        Consensus::_fetch(overlay::Overlay& overlay, Address address,
-                          boost::optional<int> last_version)
+        Consensus::_fetch(Address address, boost::optional<int> last_version)
         {
-          return this->_owner(overlay, address, overlay::OP_FETCH)->fetch(
+          return this->_owner(address, overlay::OP_FETCH)->fetch(
             address, std::move(last_version));
         }
 
         void
-        Consensus::remove(overlay::Overlay& overlay, Address address)
+        Consensus::remove(Address address)
         {
-          return this->_remove(overlay, address);
+          return this->_remove(address);
         }
 
         void
-        Consensus::_remove(overlay::Overlay& overlay, Address address)
+        Consensus::_remove(Address address)
         {
-          this->_owner(overlay, address, overlay::OP_REMOVE)->remove(address);
+          this->_owner(address, overlay::OP_REMOVE)->remove(address);
         }
 
         std::shared_ptr<Peer>
-        Consensus::_owner(overlay::Overlay& overlay,
-                          Address const& address,
+        Consensus::_owner(Address const& address,
                           overlay::Operation op) const
         {
-          return overlay.lookup(address, op);
+          return this->doughnut().overlay()->lookup(address, op);
+        }
+
+        reactor::Generator<overlay::Overlay::Member>
+        Consensus::_owners(Address const& address,
+                           int factor,
+                           overlay::Operation op) const
+        {
+          return this->doughnut().overlay()->lookup(address, factor, op);
         }
 
         void
-        Consensus::remove_many(overlay::Overlay& overlay,
-                               Address address,
-                               int factor)
+        Consensus::remove_many(Address address, int factor)
         {
-          auto peers = overlay.lookup(address, factor, overlay::OP_REMOVE);
+          auto peers = this->_owners(address, factor, overlay::OP_REMOVE);
           int count = 0;
           elle::With<reactor::Scope>() <<  [&] (reactor::Scope& s)
           {

@@ -54,7 +54,6 @@ namespace infinit
                                bool rereplicate)
         : Consensus(doughnut)
         , _factor(factor)
-        , _overlay(nullptr)
         , _journal_dir(journal_dir)
         , _process_thread("replicator",
                           [&] { if (this->_rereplicate) _process_loop();})
@@ -95,13 +94,11 @@ namespace infinit
         }
 
         void
-        Replicator::_store(overlay::Overlay& overlay,
-                           std::unique_ptr<blocks::Block> block,
+        Replicator::_store(std::unique_ptr<blocks::Block> block,
                            StoreMode mode,
                            std::unique_ptr<ConflictResolver> resolver)
         {
           ELLE_TRACE_SCOPE("%s: store %s", *this, *block);
-          _overlay = &overlay;
           overlay::Operation op;
           switch (mode)
           {
@@ -119,7 +116,7 @@ namespace infinit
           }
           // Only allow create through if _factor nodes are reached.
           // Let other operations through with degraded node count.
-          auto ipeers = overlay.lookup(block->address(), _factor, op);
+          auto ipeers = this->_owners(block->address(), this->_factor, op);
           std::vector<overlay::Overlay::Member> peers;
           for (auto p: ipeers)
           {
@@ -129,7 +126,7 @@ namespace infinit
           }
           ELLE_DEBUG("overlay returned %s peers", peers.size());
           if (peers.empty() ||
-               (op == overlay::OP_INSERT && signed(peers.size()) < _factor))
+              (op == overlay::OP_INSERT && signed(peers.size()) < _factor))
           {
             throw elle::Error(elle::sprintf("Got only %s of %s required peers",
                                             peers.size(), _factor));
@@ -193,20 +190,18 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Replicator::_fetch(overlay::Overlay& overlay, Address address,
+        Replicator::_fetch(Address address,
                            boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
-          this->_overlay = &overlay;
-          auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH);
+          auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
           return fetch_from_members(peers, address, local_version);
         }
 
         void
-        Replicator::_remove(overlay::Overlay& overlay, Address address)
+        Replicator::_remove(Address address)
         {
-          this->_overlay = &overlay;
-          this->remove_many(overlay, address, _factor);
+          this->remove_many(address, _factor);
         }
 
         std::unique_ptr<blocks::Block>
@@ -242,8 +237,6 @@ namespace infinit
 
         void Replicator::_process_cache()
         {
-          if (!_overlay)
-            return;
           ELLE_TRACE("checking cache");
           ++_frame;
           boost::filesystem::directory_iterator it(_journal_dir);
@@ -263,8 +256,8 @@ namespace infinit
             overlay::Overlay::Members peers;
             try
             {
-              for (auto p: _overlay->lookup(
-                     address, _factor, overlay::OP_FETCH))
+              for (auto p:
+                     this->_owners(address, this->_factor, overlay::OP_FETCH))
               peers.push_back(p);
             }
             catch (MissingBlock const&)

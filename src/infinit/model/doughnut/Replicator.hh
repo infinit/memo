@@ -28,24 +28,21 @@ namespace infinit
         protected:
           virtual
           void
-          _store(overlay::Overlay& overlay,
-                 std::unique_ptr<blocks::Block> block,
+          _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver) override;
           virtual
           std::unique_ptr<blocks::Block>
-          _fetch(overlay::Overlay& overlay, Address address,
-                 boost::optional<int>) override;
+          _fetch(Address address, boost::optional<int>) override;
           virtual
           void
-          _remove(overlay::Overlay& overlay, Address address) override;
+          _remove(Address address) override;
           void
           _process_cache();
           void
           _process_loop();
           std::unique_ptr<blocks::Block>
           _vote(overlay::Overlay::Members peers, Address address);
-          overlay::Overlay* _overlay;
           boost::filesystem::path _journal_dir;
           reactor::Thread _process_thread;
           std::unordered_map<Address, int> _retries;

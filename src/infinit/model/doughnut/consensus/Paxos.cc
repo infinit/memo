@@ -449,8 +449,7 @@ namespace infinit
         }
 
         void
-        Paxos::_store(overlay::Overlay& overlay,
-                      std::unique_ptr<blocks::Block> inblock,
+        Paxos::_store(std::unique_ptr<blocks::Block> inblock,
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
@@ -474,7 +473,7 @@ namespace infinit
               default:
                 elle::unreachable();
             }
-            auto owners = this->_owners(overlay, b->address(), op);
+            auto owners = this->_owners(b->address(), this->_factor, op);
             if (dynamic_cast<blocks::MutableBlock*>(b.get()))
             {
               // FIXME: this voids the whole "query on the fly" optimisation
@@ -565,26 +564,17 @@ namespace infinit
         }
 
         std::unique_ptr<blocks::Block>
-        Paxos::_fetch(overlay::Overlay& overlay, Address address,
-                      boost::optional<int> local_version)
+        Paxos::_fetch(Address address, boost::optional<int> local_version)
         {
           // FIXME: consult the quorum
-          auto peers = overlay.lookup(address, _factor, overlay::OP_FETCH);
+          auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
           return fetch_from_members(peers, address, std::move(local_version));
         }
 
         void
-        Paxos::_remove(overlay::Overlay& overlay, Address address)
+        Paxos::_remove(Address address)
         {
-          this->remove_many(overlay, address, _factor);
-        }
-
-        reactor::Generator<overlay::Overlay::Member>
-        Paxos::_owners(overlay::Overlay& overlay,
-                       Address const& address,
-                       overlay::Operation op) const
-        {
-          return overlay.lookup(address, this->_factor, op);
+          this->remove_many(address, _factor);
         }
 
         Paxos::LocalPeer::Decision::Decision(PaxosServer paxos)

@@ -71,20 +71,18 @@ namespace infinit
         `----------*/
 
         void
-        Cache::_remove(overlay::Overlay& overlay, Address address)
+        Cache::_remove(Address address)
         {
           ELLE_TRACE_SCOPE("%s: remove %s", *this, address);
           if (this->_cache.erase(address) > 0)
             ELLE_DEBUG("drop block from cache");
           else
             ELLE_DEBUG("block was not in cache");
-          this->_backend->remove(overlay, address);
+          this->_backend->remove(address);
         }
 
         std::unique_ptr<blocks::Block>
-        Cache::_fetch(overlay::Overlay& overlay,
-                      Address address,
-                      boost::optional<int> local_version)
+        Cache::_fetch(Address address, boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
           static elle::Bench bench_hit("cache.hit", 10_sec);
@@ -106,7 +104,7 @@ namespace infinit
           {
             ELLE_DEBUG("cache miss");
             bench_hit.add(0);
-            auto res = _backend->fetch(overlay, address, local_version);
+            auto res = _backend->fetch(address, local_version);
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
               this->_cache.emplace(res->clone());
@@ -115,14 +113,13 @@ namespace infinit
         }
 
         void
-        Cache::_store(overlay::Overlay& overlay,
-                      std::unique_ptr<blocks::Block> block,
+        Cache::_store(std::unique_ptr<blocks::Block> block,
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
           ELLE_TRACE_SCOPE("%s: store %s", *this, block->address());
           this->_backend->store(
-            overlay, block->clone(), mode, std::move(resolver));
+            block->clone(), mode, std::move(resolver));
           auto hit = this->_cache.find(block->address());
           if (hit != this->_cache.end())
             this->_cache.modify(
@@ -181,8 +178,7 @@ namespace infinit
                   ELLE_DEBUG_SCOPE("refresh %s", address);
                   try
                   {
-                    auto block = this->_backend->fetch(
-                      *this->doughnut().overlay(), address, mb->version());
+                    auto block = this->_backend->fetch(address, mb->version());
                     // Beware: everything is invalidated past there we probably
                     // yielded.
                     auto it = this->_cache.find(address);

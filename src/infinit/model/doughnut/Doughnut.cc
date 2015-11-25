@@ -200,8 +200,7 @@ namespace infinit
                        StoreMode mode,
                        std::unique_ptr<ConflictResolver> resolver)
       {
-        this->_consensus->store(*this->_overlay,
-                                std::move(block),
+        this->_consensus->store(std::move(block),
                                 mode,
                                 std::move(resolver));
       }
@@ -213,8 +212,7 @@ namespace infinit
         std::unique_ptr<blocks::Block> res;
         try
         {
-          return this->_consensus->fetch(*this->_overlay, address,
-                                         std::move(local_version));
+          return this->_consensus->fetch(address, std::move(local_version));
         }
         catch (infinit::storage::MissingKey const&)
         {
@@ -225,7 +223,7 @@ namespace infinit
       void
       Doughnut::_remove(Address address)
       {
-        this->_consensus->remove(*this->_overlay, address);
+        this->_consensus->remove(address);
       }
 
       Configuration::~Configuration()

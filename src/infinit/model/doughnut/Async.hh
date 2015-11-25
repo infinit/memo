@@ -31,19 +31,15 @@ namespace infinit
         protected:
           virtual
           void
-          _store(overlay::Overlay& overlay,
-                 std::unique_ptr<blocks::Block> block,
+          _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver) override;
           virtual
           std::unique_ptr<blocks::Block>
-          _fetch(overlay::Overlay& overlay,
-                 Address address,
-                 boost::optional<int>) override;
+          _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
-          _remove(overlay::Overlay& overlay,
-                  Address address) override;
+          _remove(Address address) override;
 
           /*----------.
           | Operation |

@@ -26,15 +26,13 @@ namespace infinit
         `-------*/
         public:
           void
-          store(overlay::Overlay& overlay,
-                std::unique_ptr<blocks::Block> block,
+          store(std::unique_ptr<blocks::Block> block,
                 StoreMode mode,
                 std::unique_ptr<ConflictResolver> resolver);
           std::unique_ptr<blocks::Block>
-          fetch(overlay::Overlay& overlay, Address address,
-                boost::optional<int> local_version = {});
+          fetch(Address address, boost::optional<int> local_version = {});
           void
-          remove(overlay::Overlay& overlay, Address address);
+          remove(Address address);
           static
           std::unique_ptr<blocks::Block>
           fetch_from_members(
@@ -42,25 +40,26 @@ namespace infinit
             Address address,
             boost::optional<int> local_version);
           void
-          remove_many(overlay::Overlay& overlay, Address address, int factor);
+          remove_many(Address address, int factor);
         protected:
           virtual
           void
-          _store(overlay::Overlay& overlay,
-                 std::unique_ptr<blocks::Block> block,
+          _store(std::unique_ptr<blocks::Block> block,
                  StoreMode mode,
                  std::unique_ptr<ConflictResolver> resolver);
           virtual
           std::unique_ptr<blocks::Block>
-          _fetch(overlay::Overlay& overlay, Address address,
-                 boost::optional<int> local_version);
+          _fetch(Address address, boost::optional<int> local_version);
           virtual
           void
-          _remove(overlay::Overlay& overlay, Address address);
+          _remove(Address address);
           std::shared_ptr<Peer>
-          _owner(overlay::Overlay& overlay,
-                 Address const& address,
+          _owner(Address const& address,
                  overlay::Operation op) const;
+          reactor::Generator<overlay::Overlay::Member>
+          _owners(Address const& address,
+                  int factor,
+                  overlay::Operation op) const;
 
         /*--------.
         | Factory |
