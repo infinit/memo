@@ -10,7 +10,7 @@ namespace infinit
   namespace storage
   {
     class InsufficientSpace
-      : elle::Error
+      : public elle::Error
     {
       public:
         using Super = elle::Error;

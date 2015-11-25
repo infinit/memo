@@ -8,6 +8,7 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/storage/InsufficientSpace.hh>
 
 #ifdef INFINIT_LINUX
   #include <attr/xattr.h>
@@ -46,6 +47,11 @@ namespace infinit
         ELLE_TRACE("perm exception %s", e);
         throw rfs::Error(EACCES, elle::sprintf("%s", e));
       }
+      catch (infinit::storage::InsufficientSpace const& e)
+      {
+        ELLE_TRACE("umbrella: %s", e);
+        throw rfs::Error(ENOSPC, "No space left on device.");
+      }
       catch (rfs::Error const& e)
       {
         ELLE_TRACE("rethrowing rfs exception: %s", e);
@@ -72,6 +78,7 @@ namespace infinit
     #define THROW_NOATTR { throw rfs::Error(ENOATTR, "No attribute");}
     #define THROW_INVAL { throw rfs::Error(EINVAL, "Invalid argument");}
     #define THROW_ACCES { throw rfs::Error(EACCES, "Access denied");}
+    #define THROW_ENOSPC { throw rfs::Error(ENOSPC, "No space left on device");}
   }
 }
 #endif

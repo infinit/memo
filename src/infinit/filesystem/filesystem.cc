@@ -103,6 +103,12 @@ namespace infinit
         ELLE_TRACE("permission exception: %s", e.what());
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
+      catch (infinit::storage::InsufficientSpace const& e)
+      {
+
+        ELLE_TRACE("store_or_die: %s", e.what());
+        THROW_ENOSPC;
+      }
       catch(elle::Error const& e)
       {
         ELLE_WARN("unexpected exception storing %x: %s",
