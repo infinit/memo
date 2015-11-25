@@ -18,9 +18,7 @@ using namespace boost::program_options;
 
 infinit::Infinit ifnt;
 
-static
-void
-create(variables_map const& args)
+COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
   std::unique_ptr<infinit::storage::StorageConfig> config;
@@ -73,9 +71,7 @@ create(variables_map const& args)
   }
 }
 
-static
-void
-list(variables_map const& args)
+COMMAND(list)
 {
   auto s = ifnt.storages_get();
   for (auto const& name: s)
@@ -84,9 +80,7 @@ list(variables_map const& args)
   }
 }
 
-static
-void
-export_(variables_map const& args)
+COMMAND(export_)
 {
   auto name = mandatory(args, "name", "storage name");
   std::unique_ptr<infinit::storage::StorageConfig> storage = nullptr;
@@ -100,6 +94,34 @@ export_(variables_map const& args)
   }
   elle::serialization::json::SerializerOut out(*get_output(args), false);
   out.serialize_forward(storage);
+}
+
+COMMAND(import)
+{
+  auto input = get_input(args);
+  {
+    auto storage = elle::serialization::json::deserialize<
+      std::unique_ptr<infinit::storage::StorageConfig>>(*input, false);
+    if (!storage->name.size())
+      throw elle::Error("storage does not have a name");
+    ifnt.storage_save(storage->name, *storage);
+    report_imported("storage", storage->name);
+  }
+}
+
+COMMAND(delete_)
+{
+  auto name = mandatory(args, "name", "storage name");
+  auto storage = ifnt.storage_get(name);
+  auto path = ifnt._storage_path(name);
+  bool ok = boost::filesystem::remove(path);
+  if (ok)
+    report_action("deleted", "storage", storage->name, std::string("locally"));
+  else
+  {
+    throw elle::Error(
+      elle::sprintf("File for storage could not be deleted: %s", path));
+  }
 }
 
 int
@@ -156,8 +178,25 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "storage to export" },
         option_output("storage"),
-        option_owner,
       }
+    },
+    {
+      "import",
+      "Import storage information",
+      &import,
+      "--name STORAGE",
+      {
+        option_input("storage"),
+      }
+    },
+    {
+      "delete",
+      "Delete a storage locally",
+      &delete_,
+      {},
+      {
+        { "name,n", value<std::string>(), "storage to delete" },
+      },
     },
   };
   return infinit::main("Infinit storage management utility", modes, argc, argv);
