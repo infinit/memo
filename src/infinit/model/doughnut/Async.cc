@@ -55,13 +55,14 @@ namespace infinit
           , _journal_dir(journal_dir)
           , _started()
           , _process_thread(
-            new reactor::Thread("async consensus",
+            new reactor::Thread(elle::sprintf("%s loop", *this),
                                 [this] { this->_process_loop();}))
         {
           if (!this->_journal_dir.empty())
             boost::filesystem::create_directories(this->_journal_dir);
           if (max_size)
             this->_ops.max_size(max_size);
+          this->_restore_journal(true);
         }
 
         std::unique_ptr<Local>
@@ -72,11 +73,12 @@ namespace infinit
         }
 
         void
-        Async::_restore_journal()
+        Async::_restore_journal(bool first)
         {
           if (this->_journal_dir.empty())
             return;
-          ELLE_TRACE_SCOPE("%s: restore journal from %s", *this, _journal_dir);
+          ELLE_TRACE_SCOPE("%s: %s journal from %s",
+                           *this, first ? "restore" : "load more",_journal_dir);
           boost::filesystem::path p(_journal_dir);
           boost::filesystem::directory_iterator it(p);
           std::vector<boost::filesystem::path> files;
@@ -92,35 +94,57 @@ namespace infinit
               return std::stoi(a.filename().string()) <
                 std::stoi(b.filename().string());
             });
+          auto start_index = this->_first_disk_index;
+          this->_first_disk_index.reset();
           for (auto const& p: files)
           {
             int id = std::stoi(p.filename().string());
-            if (this->_first_disk_index && id < *this->_first_disk_index)
+            if (start_index && id < *start_index)
               continue;
             if (this->_ops.size() >= this->_ops.max_size())
             {
-              ELLE_TRACE("in-memory asynchronous queue at capacity at index %s",
-                         id);
-              this->_first_disk_index = id;
-              return;
+              if (!this->_first_disk_index)
+              {
+                ELLE_TRACE("in-memory asynchronous queue at capacity at index %s",
+                           id);
+                this->_first_disk_index = id;
+              }
+              if (first)
+              {
+                this->_next_index = std::max(id, this->_next_index);
+                auto op = this->_load_op(id);
+                ELLE_DEBUG("register %s", op);
+                this->_last[op.address] = std::make_pair(id, nullptr);
+                continue;
+              }
+              else
+                return;
             }
             this->_next_index = std::max(id, this->_next_index);
-            boost::filesystem::ifstream is(p, std::ios::binary);
-            elle::serialization::binary::SerializerIn sin(is, false);
-            sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
-            sin.set_context<Doughnut*>(&this->doughnut());
-            sin.set_context(ACBDontWaitForSignature{});
-            sin.set_context(OKBDontWaitForSignature{});
-            auto op = sin.deserialize<Op>();
+            auto op = this->_load_op(id);
             if (op.block)
               op.block->seal();
-            op.index = id;
-            ELLE_DEBUG("restored %s", op);
+            ELLE_DEBUG("restore %s", op);
             if (op.mode)
-              this->_last[op.address] = op.block.get();
+              this->_last[op.address] =
+                std::make_pair(op.index, op.block.get());
             this->_ops.put(std::move(op));
           }
-          this->_first_disk_index.reset();
+        }
+
+        Async::Op
+        Async::_load_op(int id)
+        {
+          auto p = this->_journal_dir / std::to_string(id);
+          boost::filesystem::ifstream is(p, std::ios::binary);
+          elle::serialization::binary::SerializerIn sin(is, false);
+          sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
+          sin.set_context<Doughnut*>(&this->doughnut());
+          sin.set_context(ACBDontWaitForSignature{});
+          sin.set_context(OKBDontWaitForSignature{});
+          auto op = sin.deserialize<Op>();
+          op.index = id;
+          return op;
         }
 
         void
@@ -152,10 +176,15 @@ namespace infinit
             else
             {
               if (op.mode)
-                this->_last[op.address] = op.block.get();
+                this->_last[op.address] =
+                  std::make_pair(op.index, op.block.get());
               this->_ops.put(std::move(op));
+              return;
             }
           }
+          // This null indicates the block is cached on disk
+          if (op.mode)
+            this->_last[op.address] = std::make_pair(op.index, nullptr);
         }
 
         void
@@ -178,13 +207,27 @@ namespace infinit
         // Fetch operation must be synchronous, else the consistency is not
         // preserved.
         std::unique_ptr<blocks::Block>
-        Async::_fetch(Address address, boost::optional<int>)
+        Async::_fetch(Address address, boost::optional<int> local_version)
         {
           this->_started.open();
-          if (this->_last.find(address) != _last.end())
+          auto it = this->_last.find(address);
+          if (it != this->_last.end())
           {
-            ELLE_TRACE("%s: fetch %s from journal", *this, address);
-            return this->_last[address]->clone();
+            if (it->second.second)
+            {
+              ELLE_TRACE("%s: fetch %s from memory queue", *this, address);
+              if (local_version)
+                if (auto m = dynamic_cast<blocks::MutableBlock*>(
+                      it->second.second))
+                  if (m->version() == *local_version)
+                    return nullptr;
+              return it->second.second->clone();
+            }
+            else
+            {
+              ELLE_TRACE("%s: fetch %s from disk journal", *this, address);
+              return std::move(this->_load_op(it->second.first).block);
+            }
           }
           return this->_backend->fetch(address);
         }
@@ -193,7 +236,6 @@ namespace infinit
         Async::_process_loop()
         {
           reactor::wait(this->_started);
-          this->_restore_journal();
           while (true)
           {
             try
@@ -209,7 +251,6 @@ namespace infinit
               ELLE_TRACE_SCOPE("%s: process %s", *this, op);
               boost::optional<StoreMode> mode = op.mode;
               std::unique_ptr<ConflictResolver>& resolver = op.resolver;
-              auto ptr = op.block.get();
               elle::SafeFinally delete_entry(
                 [&]
                 {
@@ -219,8 +260,10 @@ namespace infinit
                       std::to_string(op.index);
                     boost::filesystem::remove(path);
                   }
-                  if (mode && ptr == this->_last[addr])
-                    this->_last.erase(addr);
+                  auto it = this->_last.find(addr);
+                  ELLE_ASSERT(it != this->_last.end());
+                  if (mode && op.index == it->second.first)
+                    this->_last.erase(it);
               });
               if (!mode)
                 try

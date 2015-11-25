@@ -64,14 +64,18 @@ namespace infinit
           _process_loop();
           void
           _push_op(Op op);
+          Async::Op
+          _load_op(int id);
           void
-          _restore_journal();
+          _restore_journal(bool first = false);
           ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
           ELLE_ATTRIBUTE(reactor::Channel<Op>, ops);
           ELLE_ATTRIBUTE(int, next_index);
           // This map contains for a given address the last version of each
           // block.
-          ELLE_ATTRIBUTE((std::unordered_map<Address, blocks::Block*>), last);
+          typedef
+          std::unordered_map<Address, std::pair<int, blocks::Block*>> Last;
+          ELLE_ATTRIBUTE(Last, last);
           ELLE_ATTRIBUTE(boost::filesystem::path, journal_dir);
           ELLE_ATTRIBUTE(reactor::Barrier, started);
           /// Index of the first operation stored on disk because memory is at

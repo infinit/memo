@@ -502,6 +502,7 @@ def configure(
     cxx_config_tests.library_add(elle.boost.test_static)
     cxx_config_tests.use_whole_archive()
   tests_names = [
+      'consensus/async',
       'doughnut',
       'faith',
       'rpc',

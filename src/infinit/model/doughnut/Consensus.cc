@@ -80,6 +80,8 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::fetch(Address address, boost::optional<int> local_version)
         {
+          ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
+                           *this, address, local_version);
           return this->_fetch(address, std::move(local_version));
         }
 
