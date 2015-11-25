@@ -26,29 +26,30 @@ namespace infinit
     void
     Unknown::mkdir(mode_t mode)
     {
-      ELLE_DEBUG("mkdir %s", _name);
-      auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
+      ELLE_TRACE_SCOPE("%s: make directory", *this);
+      auto b = this->_owner.block_store()->
+        make_block<infinit::model::blocks::ACLBlock>();
       auto address = b->address();
-      if (_parent->_inherit_auth)
+      if (this->_parent->_inherit_auth)
       {
-        ELLE_DEBUG("Inheriting auth");
+        ELLE_DEBUG_SCOPE("inheriting auth");
         ELLE_ASSERT(!!_parent->_block);
         // We must store first to ready ACL layer
-        _owner.store_or_die(*b, model::STORE_INSERT);
-        umbrella([&] { _parent->_block->copy_permissions(*b);});
-        Directory d(_parent, _owner, _name, address);
+        this->_owner.store_or_die(*b, model::STORE_INSERT);
+        umbrella([&] { this->_parent->_block->copy_permissions(*b);});
+        Directory d(this->_parent, this->_owner, this->_name, address);
         d._block = std::move(b);
         d._inherit_auth = true;
         d._push_changes({OperationType::insert, ""});
       }
       else
-        _owner.store_or_die(std::move(b), model::STORE_INSERT);
-      ELLE_ASSERT(_parent->_files.find(_name) == _parent->_files.end());
-      _parent->_files.insert(
-        std::make_pair(_name,
-                       std::make_pair(EntryType::directory, address)));
-      _parent->_commit({OperationType::insert, _name});
-      _remove_from_cache();
+        this->_owner.store_or_die(std::move(b), model::STORE_INSERT);
+      ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
+                     this->_parent->_files.end());
+      this->_parent->_files.emplace(
+        this->_name, std::make_pair(EntryType::directory, address));
+      this->_parent->_commit({OperationType::insert, this->_name});
+      this->_remove_from_cache();
     }
 
     std::unique_ptr<rfs::Handle>
@@ -69,7 +70,7 @@ namespace infinit
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_DEBUG("Adding file to parent %x", _parent.get());
       _parent->_files.insert(
-        std::make_pair(_name, 
+        std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
       _parent->_commit({OperationType::insert, _name}, true);
       elle::SafeFinally remove_from_parent( [&] {
@@ -120,8 +121,8 @@ namespace infinit
       b->data(serdata);
       auto addr = b->address();
       _owner.store_or_die(std::move(b));
-      auto it =_parent->_files.insert(
-        std::make_pair(_name, std::make_pair(EntryType::symlink, addr)));
+      this->_parent->_files.emplace(
+        this->_name, std::make_pair(EntryType::symlink, addr));
       _parent->_commit({OperationType::insert, _name}, true);
       _remove_from_cache();
     }
