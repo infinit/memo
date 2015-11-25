@@ -532,7 +532,6 @@ main(int argc, char** argv)
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
           "data replication factor (default: 1)" },
-        { "async-write", bool_switch(), "use asynchronous write operations" },
         option_output("network"),
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond(true)).c_str() },
