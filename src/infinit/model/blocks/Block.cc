@@ -29,17 +29,15 @@ namespace infinit
         , _data(other._data)
       {}
 
-      Block::~Block()
-      {}
+      /*---------.
+      | Clonable |
+      `---------*/
 
-      void
-      Block::stored()
+      std::unique_ptr<Block>
+      Block::clone() const
       {
-        _stored();
+        return elle::make_unique<Block>(this->address(), this->data());
       }
-      void
-      Block::_stored()
-      {}
 
       /*--------.
       | Content |
@@ -91,6 +89,15 @@ namespace infinit
         return ValidationResult::success();
       }
 
+      void
+      Block::stored()
+      {
+        _stored();
+      }
+      void
+      Block::_stored()
+      {}
+
       /*--------------.
       | Serialization |
       `--------------*/
@@ -106,6 +113,9 @@ namespace infinit
         s.serialize("address", this->_address);
         s.serialize("data", this->_data);
       }
+
+      static const elle::serialization::Hierarchy<Block>::
+      Register<Block> _register_serialization("block");
 
       /*----------.
       | Printable |

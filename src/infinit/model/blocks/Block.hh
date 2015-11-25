@@ -24,14 +24,21 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
-      protected:
+      public:
         Block(Address address);
         Block(Address address, elle::Buffer data);
         Block(Block const& other);
         friend class infinit::model::Model;
+        virtual
+        ~Block() = default;
+
+      /*---------.
+      | Clonable |
+      `---------*/
       public:
         virtual
-        ~Block() = 0;
+        std::unique_ptr<Block>
+        clone() const override;
 
       /*--------.
       | Content |
