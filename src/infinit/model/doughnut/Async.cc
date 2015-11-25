@@ -5,6 +5,7 @@
 
 #include <elle/serialization/binary.hh>
 #include <elle/serialization/json.hh>
+#include <elle/bench.hh>
 
 #include <das/model.hh>
 #include <das/serializer.hh>
@@ -127,6 +128,8 @@ namespace infinit
         {
           op.index = ++this->_next_index;
           ELLE_TRACE_SCOPE("%s: push %s", *this, op);
+          static elle::Bench bench("bench.async.pushop", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
           if (!this->_journal_dir.empty())
           {
             auto path =

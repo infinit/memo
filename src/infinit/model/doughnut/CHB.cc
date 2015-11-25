@@ -1,4 +1,5 @@
 #include <cryptography/hash.hh>
+#include <elle/bench.hh>
 
 namespace infinit
 {
@@ -94,9 +95,16 @@ namespace infinit
         Address
         _hash_address(elle::Buffer const& content, elle::Buffer const& salt)
         {
+          static elle::Bench bench("bench.chb.hash", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
           elle::IOStream stream(salt.istreambuf_combine(content));
-          auto hash = cryptography::hash
-            (stream, cryptography::Oneway::sha256);
+          elle::Buffer hash;
+          if (content.size() > 262144)
+            reactor::background([&] {
+              hash = cryptography::hash(stream, cryptography::Oneway::sha256);
+            });
+          else
+            hash = cryptography::hash(stream, cryptography::Oneway::sha256);
           return Address(hash.contents());
         }
         elle::Buffer _salt;

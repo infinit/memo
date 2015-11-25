@@ -2,6 +2,7 @@
 #include <elle/bench.hh>
 #include <cryptography/SecretKey.hh>
 #include <infinit/filesystem/umbrella.hh>
+#include <reactor/scheduler.hh>
 
 ELLE_LOG_COMPONENT("infinit.filesystem.AnyBlock");
 
@@ -106,8 +107,12 @@ namespace infinit
         static elle::Bench bench("bench.anyblock.encipher", 10000_sec);
         elle::Bench::BenchScope bs(bench);
         cryptography::SecretKey sk(secret);
-        auto res = sk.encipher(_buf);
-        _buf = std::move(res);
+        if (_buf.size() >= 262144)
+          reactor::background([&] {
+              _buf = sk.encipher(_buf);
+          });
+        else
+          _buf = sk.encipher(_buf);
       }
       return store(model, mode);
     }

@@ -4,6 +4,7 @@
 # include <elle/serialization/json.hh>
 # include <elle/serialization/binary.hh>
 # include <elle/log.hh>
+# include <elle/bench.hh>
 
 # include <cryptography/SecretKey.hh>
 
@@ -247,7 +248,17 @@ namespace infinit
           {
             try
             {
-              request = this->_key.Get()->decipher(request);
+              static elle::Bench bench("bench.rpcserve.decipher", 10000_sec);
+              elle::Bench::BenchScope bs(bench);
+              if (request.size() > 262144)
+              {
+                auto key = this->_key.Get().get();
+                reactor::background([&] {
+                    request = key->decipher(request);
+                });
+              }
+              else
+                request = this->_key.Get()->decipher(request);
               ELLE_DEBUG("Wrote %s plain bytes", request.size());
             }
             catch(std::exception const& e)
@@ -288,8 +299,19 @@ namespace infinit
           outs.flush();
           if (had_key)
           {
-            response = _key.Get()->encipher(
-              elle::ConstWeakBuffer(response.contents(), response.size()));
+            static elle::Bench bench("bench.rpcserve.encipher", 10000_sec);
+            elle::Bench::BenchScope bs(bench);
+            if (response.size() >= 262144)
+            {
+              auto key = this->_key.Get().get();
+              reactor::background([&] {
+                  response = key->encipher(
+                    elle::ConstWeakBuffer(response.contents(), response.size()));
+              });
+            }
+            else
+              response = _key.Get()->encipher(
+                elle::ConstWeakBuffer(response.contents(), response.size()));
           }
           channel.write(response);
         }
@@ -466,8 +488,18 @@ namespace infinit
         outs.flush();
         if (self.key())
         {
-          call = self.key()->encipher(
-            elle::ConstWeakBuffer(call.contents(), call.size()));
+          static elle::Bench bench("bench.rpcclient.encipher", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
+          if (call.size() > 262144)
+          {
+            reactor::background([&] {
+                call = self.key()->encipher(
+                  elle::ConstWeakBuffer(call.contents(), call.size()));
+            });
+          }
+          else
+            call = self.key()->encipher(
+              elle::ConstWeakBuffer(call.contents(), call.size()));
         }
         ELLE_DEBUG("%s: send request", self)
           channel.write(call);
@@ -477,8 +509,18 @@ namespace infinit
         auto response = channel.read();
         if (self.key())
         {
-          response = self.key()->decipher(
-            elle::ConstWeakBuffer(response.contents(), response.size()));
+          static elle::Bench bench("bench.rpcclient.decipher", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
+          if (response.size() > 262144)
+          {
+            reactor::background([&] {
+              response = self.key()->decipher(
+                elle::ConstWeakBuffer(response.contents(), response.size()));
+            });
+          }
+          else
+            response = self.key()->decipher(
+              elle::ConstWeakBuffer(response.contents(), response.size()));
         }
         elle::IOStream ins(response.istreambuf());
         elle::serialization::binary::SerializerIn input(ins, false);
