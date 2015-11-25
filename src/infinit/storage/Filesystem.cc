@@ -39,9 +39,7 @@ namespace infinit
           auto path = block.path();
           auto _file_size = file_size(path);
           auto name = path.filename().string();
-          std::cerr << "block name = " << name << std::endl;
           auto addr = infinit::model::Address::from_string(name.substr(2));
-          std::cerr << "valid address !" << std::endl;
           this->_size_cache[addr] = _file_size;
           this->_usage += _file_size;
         }

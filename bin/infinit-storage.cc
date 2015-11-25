@@ -22,7 +22,6 @@ COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
   int capacity = args.count("capacity") ? args["capacity"].as<int>() : 0;
-  std::cerr << capacity << std::endl;
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("dropbox"))
   {

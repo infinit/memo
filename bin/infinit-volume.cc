@@ -209,8 +209,30 @@ run(variables_map const& args)
     eps, true,
     cache, cache_size, cache_ttl, cache_invalidation,
     flag(args, "async"));
+  auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    if (push && model->local()->storage())
+    {
+      ELLE_DEBUG("Connect callback to log storage stat");
+      model->local()->storage()->register_notifier([&] {
+        network.notify_storage(self,
+                               node_id);
+      });
+
+      {
+        static reactor::Thread updater("periodic_stat_updater", [&] {
+            while (true)
+            {
+              ELLE_LOG_COMPONENT("infinit-volume");
+              ELLE_DEBUG("Hourly notification to beyond with storage usage (periodic)");
+                network.notify_storage(self,
+                                       node_id);
+                reactor::wait(updater, 60_min);
+            }
+        });
+      }
+    }
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
@@ -550,13 +572,7 @@ run(variables_map const& args)
   };
   if (push && model->local())
   {
-    auto node_id = model->overlay()->node_id();
-    if (model->local()->storage())
-    {
-      network.notify_storage(*model->local()->storage().get(),
-                             self,
-                             node_id);
-    }
+
     elle::With<InterfacePublisher>(
       network, self, node_id,
       model->local()->server_endpoint().port()) << [&]

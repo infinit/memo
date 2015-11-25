@@ -14,9 +14,16 @@ namespace infinit
 {
   namespace storage
   {
+    namespace
+    {
+      static int step = 1048576; // 1 Mio
+    }
+
     Storage::Storage(int capacity)
       : _capacity{capacity}
       , _usage{0} // _usage is recovered in the child ctor.
+      , _base_usage{0}
+      , _step{capacity != 0 ? (capacity / 10) : step} // 1 Mio
     {
       // _size_cache too has to be recovered in the child ctor.
     }
@@ -41,6 +48,14 @@ namespace infinit
       int delta = this->_set(key, value, insert, update);
 
       _usage += delta;
+      if (_usage >= _base_usage + _step)
+      {
+        ELLE_DEBUG("Notify beyond of storage usage since it has overflow of\
+%s Bytes since last update.", this->_step);
+        this->_on_storage_size_change();
+        _base_usage = _usage;
+      }
+
       this->_size_cache[key] += delta;
 
       ELLE_DEBUG("%s: usage/capacity = %s/%s", *this,
@@ -78,6 +93,12 @@ namespace infinit
     Storage::_status(Key k)
     {
       return BlockStatus::unknown;
+    }
+
+    void
+    Storage::register_notifier(std::function<void ()> f)
+    {
+      _on_storage_size_change.connect(f);
     }
 
     /*----------.

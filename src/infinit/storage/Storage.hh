@@ -4,6 +4,8 @@
 # include <iosfwd>
 # include <cstdint>
 
+# include <boost/signals2.hpp>
+
 # include <elle/Buffer.hh>
 # include <elle/attribute.hh>
 # include <elle/serialization/Serializer.hh>
@@ -41,6 +43,9 @@ namespace infinit
       list();
       BlockStatus
       status(Key k);
+
+      void
+      register_notifier(std::function<void ()> f);
     protected:
       virtual
       elle::Buffer
@@ -63,7 +68,10 @@ namespace infinit
 
       ELLE_ATTRIBUTE_R(int, capacity, protected);
       ELLE_ATTRIBUTE_R(int, usage, protected);
+      ELLE_ATTRIBUTE(int, base_usage);
+      ELLE_ATTRIBUTE(int, step);
       ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache, mutable);
+      ELLE_ATTRIBUTE(boost::signals2::signal<void ()>, on_storage_size_change);
 
     /*----------.
     | Printable |

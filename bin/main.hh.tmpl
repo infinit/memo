@@ -546,20 +546,21 @@ namespace infinit
           boost::optional<std::chrono::seconds>());
     }
 
+    inline
     void
-    notify_storage(infinit::storage::Storage const& storage,
-                   infinit::User const& user,
+    notify_storage(infinit::User const& user,
                    infinit::model::Address const& node_id)
     {
       auto url = elle::sprintf("networks/%s/stat/%s/%s", name,
                                                          user.name,
                                                          node_id);
+      auto storage = this->dht()->storage->make();
+      Storages s = {storage->usage(), storage->capacity()};
 
       beyond_push(url,
                   "storages",
                   name,
-                  Storages{storage.usage(),
-                           storage.capacity()},
+                  std::move(s),
                   user);
     }
 
