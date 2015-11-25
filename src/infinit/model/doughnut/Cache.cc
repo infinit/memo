@@ -178,7 +178,7 @@ namespace infinit
                 if (auto mb =
                     dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
                 {
-                  ELLE_DUMP("refresh %s", address);
+                  ELLE_DEBUG_SCOPE("refresh %s", address);
                   try
                   {
                     auto block = this->_backend->fetch(
