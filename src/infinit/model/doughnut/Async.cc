@@ -53,7 +53,6 @@ namespace infinit
           , _backend(std::move(backend))
           , _next_index(1)
           , _journal_dir(journal_dir)
-          , _started()
           , _process_thread(
             new reactor::Thread(elle::sprintf("%s loop", *this),
                                 [this] { this->_process_loop();}))
@@ -62,6 +61,7 @@ namespace infinit
             boost::filesystem::create_directories(this->_journal_dir);
           if (max_size)
             this->_ops.max_size(max_size);
+          this->_ops.close();
           this->_restore_journal(true);
         }
 
@@ -192,7 +192,7 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
-          this->_started.open();
+          this->_ops.open();
           this->_push_op(
             Op(block->address(), std::move(block), mode, std::move(resolver)));
         }
@@ -200,7 +200,7 @@ namespace infinit
         void
         Async::_remove(Address address)
         {
-          this->_started.open();
+          this->_ops.open();
           this->_push_op(Op(address, nullptr, {}));
         }
 
@@ -209,7 +209,7 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Async::_fetch(Address address, boost::optional<int> local_version)
         {
-          this->_started.open();
+          this->_ops.open();
           auto it = this->_last.find(address);
           if (it != this->_last.end())
           {
@@ -235,7 +235,6 @@ namespace infinit
         void
         Async::_process_loop()
         {
-          reactor::wait(this->_started);
           while (true)
           {
             try

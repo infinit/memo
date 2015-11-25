@@ -77,7 +77,6 @@ namespace infinit
           std::unordered_map<Address, std::pair<int, blocks::Block*>> Last;
           ELLE_ATTRIBUTE(Last, last);
           ELLE_ATTRIBUTE(boost::filesystem::path, journal_dir);
-          ELLE_ATTRIBUTE(reactor::Barrier, started);
           /// Index of the first operation stored on disk because memory is at
           /// capacity.
           ELLE_ATTRIBUTE(boost::optional<int>, first_disk_index);
