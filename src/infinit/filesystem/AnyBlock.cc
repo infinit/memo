@@ -98,6 +98,19 @@ namespace infinit
         return model.make_block<ImmutableBlock>(std::move(_buf));
     }
 
+    std::unique_ptr<Block> AnyBlock::make(infinit::model::Model& model,
+                                          std::string const& secret)
+    {
+      cryptography::SecretKey sk(secret);
+      if (_buf.size() >= 262144)
+        reactor::background([&] {
+            _buf = sk.encipher(_buf);
+      });
+      else
+        _buf = sk.encipher(_buf);
+      return model.make_block<ImmutableBlock>(_buf);
+    }
+
     Address AnyBlock::crypt_store(infinit::model::Model& model,
                             infinit::model::StoreMode mode,
                             std::string const& secret)

@@ -2,6 +2,7 @@
 # define INFINIT_FILESYSTEM_FILE_HH
 
 # include <reactor/filesystem.hh>
+# include <reactor/thread.hh>
 # include <infinit/filesystem/Node.hh>
 # include <infinit/filesystem/AnyBlock.hh>
 # include <infinit/filesystem/umbrella.hh>
@@ -59,7 +60,7 @@ namespace infinit
         friend class Directory;
         friend class Unknown;
         friend class Node;
-        
+
         /* Get address for given block index.
          * @param create: if true, allow creation of a new block as needed
          *                else returns nullptr if creation was required
@@ -71,6 +72,7 @@ namespace infinit
       void _commit() override;
       void _commit_first();
       void _commit_all();
+      bool _flush_block(int id);
       struct CacheEntry
       {
         AnyBlock block;
@@ -78,6 +80,26 @@ namespace infinit
         std::chrono::system_clock::time_point last_use;
         bool new_block;
       };
+      struct PreparedPush
+      {
+        PreparedPush() {}
+        PreparedPush(Address oa, std::unique_ptr<Block> b,
+                     std::string const& k, int i, model::StoreMode m)
+        : old_address(oa)
+        , block(std::move(b))
+        , key(k)
+        , index(i)
+        , mode(m)
+        {}
+
+        Address old_address;
+        std::unique_ptr<Block> block;
+        std::string key;
+        int index;
+        model::StoreMode mode;
+      };
+      std::vector<PreparedPush> _pushes;
+      std::vector<reactor::Thread::unique_ptr> _flushers;
       std::unordered_map<int, CacheEntry> _blocks;
       std::unique_ptr<MutableBlock> _first_block;
       bool _first_block_new;

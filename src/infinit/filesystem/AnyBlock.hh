@@ -37,6 +37,8 @@ namespace infinit
         Address crypt_store(infinit::model::Model& model,
                             infinit::model::StoreMode mode,
                             std::string const& secret);
+        std::unique_ptr<Block> make(infinit::model::Model& model,
+                                    std::string const& secret);
         Address store(infinit::model::Model& model, infinit::model::StoreMode mode);
 
         void zero(int offset, int count);

@@ -496,12 +496,57 @@ namespace infinit
     }
 
     bool
+    File::_flush_block(int id)
+    {
+      bool fat_change = false;
+      auto it = _blocks.find(id);
+      Address prev = it->second.block.address();
+      auto key = cryptography::random::generate<elle::Buffer>(32).string();
+      Address addr = it->second.block.crypt_store(*_owner.block_store(),
+        it->second.new_block? model::STORE_INSERT : model::STORE_ANY,
+        key);
+      if (addr != prev)
+      {
+        ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
+          prev, addr);
+        fat_change = true;
+        _fat[id] = FatEntry(addr, key);
+        if (!it->second.new_block)
+        {
+          _owner.unchecked_remove(prev);
+        }
+      }
+      it->second.new_block = false;
+      it->second.dirty = false;
+      return fat_change;
+    }
+
+    bool
     File::check_cache(int cache_size)
     {
       if (cache_size < 0)
         cache_size = max_cache_size;
       typedef std::pair<const int, CacheEntry> Elem;
       bool fat_change = false;
+      while (!_pushes.empty())
+      {
+        fat_change = true;
+        auto& p = _pushes.back();
+        auto addr = p.block->address();
+        _owner.store_or_die(std::move(p.block), p.mode);
+        _fat[p.index] = FatEntry(addr, p.key);
+        if (p.old_address != Address::null)
+          _owner.unchecked_remove(p.old_address);
+        _pushes.pop_back();
+      }
+      if (cache_size == 0)
+      {
+        while (!_flushers.empty())
+        {
+          reactor::wait(*_flushers.back());
+          _flushers.pop_back();
+        }
+      }
       while (_blocks.size() > unsigned(cache_size))
       {
         auto it = std::min_element(_blocks.begin(), _blocks.end(),
@@ -509,28 +554,35 @@ namespace infinit
           {
             return a.second.last_use < b.second.last_use;
           });
-        ELLE_DEBUG("Removing block %s from cache", it->first);
-        if (it->second.dirty)
-        {
-          Address prev = it->second.block.address();
-          auto key = cryptography::random::generate<elle::Buffer>(32).string();
-          Address addr = it->second.block.crypt_store(*_owner.block_store(),
-            it->second.new_block? model::STORE_INSERT : model::STORE_ANY,
-            key);
-          if (addr != prev)
+        ELLE_TRACE("Removing block %s from cache", it->first);
+        if (cache_size == 0)
+        { // final flush, sync
+          if (it->second.dirty)
           {
-            ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
-              prev, addr);
-            fat_change = true;
-            _fat[it->first] = FatEntry(addr, key);
-            if (!it->second.new_block)
-            {
-              _owner.unchecked_remove(prev);
-            }
+            fat_change = _flush_block(it->first);
           }
-          it->second.new_block = false;
+          _blocks.erase(it);
         }
-        _blocks.erase(it);
+        else
+        {
+          if (it->second.dirty)
+          {
+            int id = it->first;
+            ELLE_TRACE("starting async flusher for %s", id);
+            auto ab = std::make_shared<AnyBlock>(std::move(it->second.block));
+            bool new_block = it->second.new_block;
+            _flushers.emplace_back(
+              new reactor::Thread("flusher", [this, id, ab, new_block] {
+                auto key = cryptography::random::generate<elle::Buffer>(32).string();
+                auto old_addr = ab->address();
+                auto block = ab->make(*_owner.block_store(), key);
+                _pushes.emplace_back(new_block? Address::null : old_addr,
+                                     std::move(block), key, id,
+                  new_block? model::STORE_INSERT : model::STORE_ANY);
+            }, reactor::Thread::managed = true));
+          }
+          _blocks.erase(it);
+        }
       }
       if (fat_change)
       {
