@@ -98,21 +98,43 @@ class CouchDBDatastore:
 
   def __init__(self, db):
     self.__couchdb = db
-    def create(name):
-      try:
-        self.__couchdb.create(name)
-      except couchdb.http.PreconditionFailed as e:
-        if e.args[0][0] == 'file_exists':
-          pass
-        else:
-          raise
-    create('networks')
-    create('users')
-    create('volumes')
-    create('drives')
-    import inspect
+    self.__design('users',
+                  updates = [('update', self.__user_update)],
+                  views = [('per_name', self.__user_per_name)])
+    self.__design('networks',
+                  updates = [('update', self.__network_update)],
+                  views = [
+                    ('per_invitee_name', self.__networks_per_invitee_name_map),
+                    ('per_owner_key', self.__networks_per_owner_key_map),
+                    ('per_user_key', self.__networks_per_user_key_map)
+                  ])
+    self.__design('volumes',
+                  updates = [('update', self.__volume_update)],
+                  views = [
+                    ('per_network_id', self.__volumes_per_network_id_map),
+                  ])
+    self.__design('drives',
+                  updates = [('update', self.__drive_update)],
+                  views = [
+                    ('per_member_name', self.__drives_per_member_map),
+                  ])
+
+  def __create(self, name):
     try:
-      design = self.__couchdb['users']['_design/beyond']
+      self.__couchdb.create(name)
+    except couchdb.http.PreconditionFailed as e:
+      if e.args[0][0] == 'file_exists':
+        pass
+      else:
+        raise
+
+  def __design(self,
+               category,
+               updates,
+               views):
+    self.__create(category)
+    try:
+      design = self.__couchdb[category]['_design/beyond']
     except couchdb.http.ResourceNotFound:
       design = couchdb.client.Document()
     design.update(
@@ -120,94 +142,13 @@ class CouchDBDatastore:
         '_id': '_design/beyond',
         'language': 'python',
         'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__user_update),
-          ]
+          name: getsource(update) for name, update in updates
         },
         'views': {
-          name: {
-            'map': getsource(view),
-          }
-          for name, view in [('per_name', self.__user_per_name)]
+          name: {'map': getsource(view)} for name, view in views
         }
       })
-    self.__couchdb['users'].save(design)
-    try:
-      design = self.__couchdb['networks']['_design/beyond']
-    except couchdb.http.ResourceNotFound:
-      design = couchdb.client.Document()
-    design.update(
-      {
-        '_id': '_design/beyond',
-        'language': 'python',
-        'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__network_update),
-          ]
-        },
-        'views' : {
-          name : {
-            'map': getsource(view_map)
-          }
-          for name, view_map in [
-            ('per_invitee_name', self.__networks_per_invitee_name_map),
-            ('per_owner_key', self.__networks_per_owner_key_map),
-            ('per_user_key', self.__networks_per_user_key_map),
-          ]
-        }
-      })
-    self.__couchdb['networks'].save(design)
-    try:
-      design = self.__couchdb['volumes']['_design/beyond']
-    except couchdb.http.ResourceNotFound:
-      design = couchdb.client.Document()
-    design.update(
-      {
-        '_id': '_design/beyond',
-        'language': 'python',
-        'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__volume_update),
-          ]
-        },
-        'views' : {
-          name : {
-            'map': getsource(view_map)
-          }
-          for name, view_map in [
-            ('per_network_id', self.__volumes_per_network_id_map),
-          ]
-        }
-      })
-    self.__couchdb['volumes'].save(design)
-    try:
-      design = self.__couchdb['drives']['_design/beyond']
-    except couchdb.http.ResourceNotFound:
-      design = couchdb.client.Document()
-    design.update(
-      {
-        '_id': '_design/beyond',
-        'language': 'python',
-        'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__drive_update),
-          ]
-        },
-        'views' : {
-          name : {
-            'map': getsource(view_map)
-          }
-          for name, view_map in [
-            ('per_member_name', self.__drives_per_member_map),
-          ]
-        }
-
-      })
-    self.__couchdb['drives'].save(design)
+    self.__couchdb[category].save(design)
 
   ## ---- ##
   ## User ##
