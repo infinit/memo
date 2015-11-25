@@ -12,20 +12,26 @@
 
 ### Download and install Infinit’s dependencies
 
-Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. If not already, you will need **install the OSXFUSE module** by following the instructions:
+<img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="OSX Fuse">
+
+Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. If not already, you will need install the OSXFUSE module by following the instructions:
 
 <a href="https://osxfuse.github.io/" class="button">Download OS X Fuse</a>
 
 ### Download and install the Infinit command-line tools
 
-Please follow the link below to **download the Infinit command-line tools**:
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+
+Please follow the link below to download the Infinit command-line tools:
 
 <a href="#" class="button">Download</a>
 
-Next, open your terminal and **extract the Infinit tarball**:
+<br>
+
+Next, open your terminal and extract the Infinit tarball:
 
 ```
-$> tar xjvf infinit-0.2.0.tbz
+$ tar xjvf infinit-0.2.0.tbz
 infinit-0.2.0/
 infinit-0.2.0/bin/
 infinit-0.2.0/lib
@@ -33,8 +39,7 @@ infinit-0.2.0/lib
 infinit-0.2.0/bin/infinit-storage
 infinit-0.2.0/bin/infinit-user
 infinit-0.2.0/bin/infinit-volume
-[...]
-$>
+...
 ```
 
 All the configuration files the Infinit command-line tools create and use are located in the `$INFINIT_HOME` directory which, by default, is set to `$HOME/.infinit/filesystem/`. You can edit your shell configuration to set `INFINIT_HOME` to another location if you would like.
@@ -46,10 +51,9 @@ Now that you’ve extracted the tarball, take a look. The extracted directory co
 * The `test/` subdirectory is provided for you to quickly test those command-line tools, see below.
 
 ```
-$> cd infinit-0.2.0/
-$> ls
+$ cd infinit-0.2.0/
+$ ls
 bin/    lib/    test/
-$>
 ```
 
 2. Basic Test
@@ -62,9 +66,7 @@ For you to quickly (through a single command) try Infinit out, the following is 
 Run the infinit-volume command by prefixing it with the environment variable `INFINIT_HOME=$PWD/../test/home` to tell the command where to look for the configuration files required for this test.
 
 ```
-$> INFINIT_HOME=$PWD/test/home/ ./bin/infinit-volume --mount --as alice --name test --mountpoint $PWD/test/mountpoint/
-… XXX ...
-$>
+$ INFINIT_HOME=$PWD/test/home/ ./bin/infinit-volume --mount --as alice --name test --mountpoint $PWD/test/mountpoint/
 ```
 
 
@@ -73,9 +75,7 @@ This command mounts the volume named ‘test’ on behalf of the user ‘alice�
 That’s it, you can now access the files in the ‘test’ volume by browsing the mount point as with any other POSIX-compliant file system.
 
 ```
-$> ls test/mountpoint/
-… XXX …
-$>
+$ ls test/mountpoint/
 ```
 
 Noteworthy is that volume “test” contains several gigabytes of data. However, unlike cloud storage services like Dropbox, you were able to browse the volume’s content without having to wait hours for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand.
@@ -93,8 +93,7 @@ _**NOTE**: For more information to learn how to set up a completely decentralize
 First, add the `bin/` directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:
 
 ```
-$> export PATH=$PWD/bin/:$PATH
-$>
+$ export PATH=$PWD/bin/:$PATH
 ```
 
 3. Create a user
@@ -103,9 +102,9 @@ $>
 The first step consists of creating a user on the hub. All the commands that follow take as example the user name ‘bob’ but you are welcome to pick your own unique one:
 
 ```
-$[device A]> infinit-user --signup --name bob --email bob@company.com --fullname “Bob”
+$[device A]> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
 Generating RSA keypair.
-Generated user "bob".
+Generated user "Bob".
 … XXX ...
 $[device A]>
 ```
@@ -221,7 +220,7 @@ Fetched volume ".../personal".
 $[device B]>
 ```
 
-Let’s connect this device to the ‘mine’ network you created on the device A, contributing the storage you just created.
+Let’s connect this device to the ‘mine’ network you created on device A.
 
 ```
 $[device B]> infinit-network --join --as bob --name mine --storage local

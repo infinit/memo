@@ -59,7 +59,6 @@ module.exports = function(grunt) {
         options: {
           template: 'templates/pages/docs/src/layout.jst',
           markdownOptions: {
-            smartypants: false
           }
         }
       }

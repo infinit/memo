@@ -63,14 +63,31 @@ $(document).ready(function() {
     var winHeight = $(window).height(),
         docHeight = $(document).height(),
         progressBar = $('progress'),
-        max, value;
+        tooltip = $('#progressTooltip'),
+        max, value, porcent;
 
     max = docHeight - winHeight - $("footer").height();
     progressBar.attr('max', max);
 
     $(document).on('scroll', function(){
        value = $(window).scrollTop();
-       progressBar.attr('value', value);
+       porcent = value / max * 100;
+
+      if (porcent > 1 && porcent < 96) {
+        tooltip.text(Math.round(porcent) + '%');
+        tooltip.css('left', (porcent - 1) + '%');
+        tooltip.show();
+      }
+
+      if (porcent > 96) {
+        tooltip.text('👍');
+      } else {
+        progressBar.attr('value', value);
+      }
+
+      if (porcent < 1) {
+        tooltip.hide();
+      }
     });
   }
 
