@@ -8,8 +8,6 @@ using namespace boost::program_options;
 
 infinit::Infinit ifnt;
 
-#define COMMAND(name) static void name(variables_map const& args)
-
 static
 void
 fetch_(std::string const& drive_name);
