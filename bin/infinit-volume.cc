@@ -655,13 +655,13 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("fetch volume from %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch a volume from %s", beyond(true)).c_str(),
       &fetch,
       "",
       {
         { "name,n", value<std::string>(), "volume to fetch (optional)" },
         { "network", value<std::string>(),
-          "network to fetch volumes for (optional)" },
+          "network to fetch all volumes for (optional)" },
         option_owner,
       },
     },
@@ -702,7 +702,7 @@ main(int argc, char** argv)
     },
     {
       "delete",
-      "Delete a volume",
+      "Delete a volume locally",
       &delete_,
       "--name VOLUME",
       {

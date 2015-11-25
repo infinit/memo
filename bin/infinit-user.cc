@@ -41,9 +41,7 @@ get_name(boost::program_options::variables_map const& args)
   return get_username(args, "name");
 }
 
-static
-void
-export_(variables_map const& args)
+COMMAND(export_)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
@@ -70,9 +68,7 @@ export_(variables_map const& args)
   report_exported(*output, "user", user.name);
 }
 
-static
-void
-fetch(variables_map const& args)
+COMMAND(fetch)
 {
   auto owner = self_user(ifnt, args);
   auto user_name = mandatory(args, "name", "user name");
@@ -205,9 +201,7 @@ create_(std::string const& name,
   return infinit::User{name, keys, email, fullname};
 }
 
-static
-void
-create(variables_map const& args)
+COMMAND(create)
 {
   auto name = get_name(args);
   infinit::User user = create_(name,
@@ -220,9 +214,7 @@ create(variables_map const& args)
     _push(args, user, false);
 }
 
-static
-void
-import(variables_map const& args)
+COMMAND(import)
 {
   auto input = get_input(args);
   {
@@ -233,27 +225,21 @@ import(variables_map const& args)
   }
 }
 
-static
-void
-push(variables_map const& args)
+COMMAND(push)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   _push(args, user, false);
 }
 
-static
-void
-pull(variables_map const& args)
+COMMAND(pull)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   beyond_delete("user", user.name, user);
 }
 
-static
-void
-delete_(variables_map const& args)
+COMMAND(delete_)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
@@ -268,9 +254,7 @@ delete_(variables_map const& args)
   }
 }
 
-static
-void
-signup_(variables_map const& args)
+COMMAND(signup_)
 {
   auto name = get_name(args);
   infinit::User user = create_(name,
@@ -329,9 +313,7 @@ beyond_login(std::string const& name,
     return elle::json::read(r);
 }
 
-static
-void
-login(variables_map const& args)
+COMMAND(login)
 {
   auto name = get_name(args);
   LoginCredentials c{name, hub_password(args)};
@@ -343,9 +325,7 @@ login(variables_map const& args)
   report_action("saved", "user", name, std::string("locally"));
 }
 
-static
-void
-list(variables_map const& args)
+COMMAND(list)
 {
   for (auto const& user: ifnt.users_get())
   {
@@ -377,8 +357,7 @@ main(int argc, char** argv)
       &create,
       {},
       {
-        { "name,n", value<std::string>(),
-          "user name (default: system user)" },
+        { "name,n", value<std::string>(), "user name (default: system user)" },
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key "
           "(default: generate key pair)" },
@@ -408,7 +387,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      "Fetch a user",
+      elle::sprintf("Fetch a user from %s", beyond(true)).c_str(),
       &fetch,
       "--name USER",
       {
@@ -432,12 +411,12 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(),
-          "user to push (default: system user)" },
+          "user to remove (default: system user)" },
       },
     },
     {
       "delete",
-      "Delete a user",
+      "Delete a user locally",
       &delete_,
       {},
       {

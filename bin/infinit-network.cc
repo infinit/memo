@@ -101,7 +101,7 @@ create(variables_map const& args)
         kelips->accept_plain = false;
       }
       else
-        throw elle::Error("'encrypt' must be 'no', 'lazy' or 'yes'");
+        throw CommandLineError("'encrypt' must be 'no', 'lazy' or 'yes'");
     }
     else
     {
@@ -114,11 +114,12 @@ create(variables_map const& args)
       try
       {
         kelips->rpc_protocol =
-          elle::serialization::Serialize<infinit::model::doughnut::Local::Protocol>::convert(proto);
+          elle::serialization::Serialize<
+            infinit::model::doughnut::Local::Protocol>::convert(proto);
       }
       catch (elle::serialization::Error const& e)
       {
-        throw elle::Error("protocol must be one of: utp, tcp, all");
+        throw CommandLineError("protocol must be one of: utp, tcp, all");
       }
     }
     overlay_config = std::move(kelips);
@@ -151,14 +152,14 @@ create(variables_map const& args)
     if (args.count("replication-factor"))
       replication_factor = args["replication-factor"].as<int>();
     if (replication_factor < 1)
-      throw elle::Error("replication factor must be greater than 0");
+      throw CommandLineError("replication factor must be greater than 0");
     bool no_consensus = args.count("no-consensus");
     bool paxos = args.count("paxos");
     bool replicator = args.count("replicator");
     if (!no_consensus && !replicator)
       paxos = true;
     if (!one(no_consensus, paxos, replicator))
-      throw elle::Error("several consensus specified");
+      throw CommandLineError("more than one consensus specified");
     if (paxos)
       consensus_config = elle::make_unique<
         infinit::model::doughnut::consensus::Paxos::Configuration>(
@@ -168,7 +169,10 @@ create(variables_map const& args)
     else
     {
       if (replication_factor != 1)
-        throw elle::Error("without consensus, replication factor must be 1");
+      {
+        throw CommandLineError(
+          "without consensus, replication factor must be 1");
+      }
       consensus_config = elle::make_unique<
         infinit::model::doughnut::consensus::Configuration>();
     }
@@ -492,7 +496,7 @@ main(int argc, char** argv)
 
   options_description overlay_types_options("Overlay types");
   overlay_types_options.add_options()
-    ("kalimero", "use a Kalimero overlay network")
+    ("kalimero", "use a Kalimero overlay network (default)")
     ("kelips", "use a Kelips overlay network")
     ("stonehenge", "use a Stonehenge overlay network")
     ("kademlia", "use a Kademlia overlay network")
@@ -535,8 +539,7 @@ main(int argc, char** argv)
         option_output("network"),
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond(true)).c_str() },
-        { "push,p", bool_switch(),
-          elle::sprintf("push the network to %s", beyond(true)).c_str() },
+        { "push,p", bool_switch(), "alias for --push-network" },
         option_owner,
       },
       {
@@ -559,7 +562,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      "Fetch a network",
+      elle::sprintf("Fetch a network from %s", beyond(true)).c_str(),
       &fetch,
       "",
       {
@@ -606,7 +609,7 @@ main(int argc, char** argv)
     },
     {
       "delete",
-      "Delete a network",
+      "Delete a network locally",
       &delete_,
       "--name NETWORK",
       {
@@ -640,8 +643,7 @@ main(int argc, char** argv)
         option_cache_invalidation,
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
-        { "fetch,f", bool_switch(),
-          elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
+        { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
         { "push-endpoints", bool_switch(),
           elle::sprintf("push endpoints to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-endpoints" },
