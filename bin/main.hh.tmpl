@@ -867,8 +867,7 @@ namespace infinit
     }
 
     void
-    user_save(User const& user,
-              bool overwrite = false)
+    user_save(User const& user, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(
@@ -1124,7 +1123,7 @@ namespace infinit
     boost::filesystem::path
     _storage_path() const
     {
-      auto root = root_dir() / "storage";
+      auto root = root_dir() / "storages";
       create_directories(root);
       return root;
     }
