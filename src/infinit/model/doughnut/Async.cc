@@ -71,7 +71,7 @@ namespace infinit
         }
 
         void
-        Async::_restore_journal(overlay::Overlay& overlay)
+        Async::_restore_journal()
         {
           if (this->_journal_dir.empty())
             return;
@@ -125,8 +125,8 @@ namespace infinit
         void
         Async::_push_op(Op op)
         {
+          op.index = ++this->_next_index;
           ELLE_TRACE_SCOPE("%s: push %s", *this, op);
-          op.index = ++_next_index;
           if (!this->_journal_dir.empty())
           {
             auto path =
@@ -190,8 +190,7 @@ namespace infinit
         Async::_process_loop()
         {
           reactor::wait(this->_started);
-          overlay::Overlay& overlay = *this->doughnut().overlay();
-          this->_restore_journal(overlay);
+          this->_restore_journal();
           while (true)
           {
             try
@@ -201,7 +200,7 @@ namespace infinit
                 ELLE_TRACE(
                   "%s: restore additional operations from disk at index %s",
                   *this, *this->_first_disk_index)
-                    this->_restore_journal(overlay);
+                    this->_restore_journal();
               Op op = this->_ops.get();
               Address addr = op.address;
               ELLE_TRACE_SCOPE("%s: process %s", *this, op);

@@ -65,7 +65,7 @@ namespace infinit
           void
           _push_op(Op op);
           void
-          _restore_journal(overlay::Overlay& overlay);
+          _restore_journal();
           ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
           ELLE_ATTRIBUTE(reactor::Channel<Op>, ops);
           ELLE_ATTRIBUTE(int, next_index);
