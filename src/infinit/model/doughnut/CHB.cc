@@ -8,7 +8,7 @@ namespace infinit
     namespace doughnut
     {
       class CHB
-        : public blocks::ImmutableBlock
+        : public elle::Buffer, public blocks::ImmutableBlock
       {
       // Types
       public:
@@ -19,8 +19,9 @@ namespace infinit
       // Construction
       public:
         CHB(elle::Buffer data)
-          : Super(CHB::_hash_address(data, _make_salt()), data)
-          , _salt(_last_salt())
+          : elle::Buffer(_make_salt())
+          , Super(CHB::_hash_address(data, *this), data)
+          , _salt(*this)
         {}
 
         CHB(CHB const& other)
@@ -74,21 +75,12 @@ namespace infinit
         }
       // Details
       private:
-        static elle::Buffer _last_salt_value;
         static
         elle::Buffer
         _make_salt()
         {
-          _last_salt_value = elle::Buffer(Address::random().value(),
+          return elle::Buffer(Address::random().value(),
                                           sizeof(Address::Value));
-          return _last_salt_value;
-        }
-
-        static
-        elle::Buffer
-        _last_salt()
-        {
-          return _last_salt_value;
         }
 
         static
@@ -100,9 +92,11 @@ namespace infinit
           elle::IOStream stream(salt.istreambuf_combine(content));
           elle::Buffer hash;
           if (content.size() > 262144)
+          {
             reactor::background([&] {
               hash = cryptography::hash(stream, cryptography::Oneway::sha256);
             });
+          }
           else
             hash = cryptography::hash(stream, cryptography::Oneway::sha256);
           return Address(hash.contents());
@@ -112,8 +106,6 @@ namespace infinit
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<CHB> _register_chb_serialization("CHB");
-
-      elle::Buffer CHB::_last_salt_value;
     }
   }
 }
