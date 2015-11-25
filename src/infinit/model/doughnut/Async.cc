@@ -259,10 +259,13 @@ namespace infinit
                       std::to_string(op.index);
                     boost::filesystem::remove(path);
                   }
-                  auto it = this->_last.find(addr);
-                  ELLE_ASSERT(it != this->_last.end());
-                  if (mode && op.index == it->second.first)
-                    this->_last.erase(it);
+                  if (mode)
+                  {
+                    auto it = this->_last.find(addr);
+                    ELLE_ASSERT(it != this->_last.end());
+                    if (op.index == it->second.first)
+                      this->_last.erase(it);
+                  }
               });
               if (!mode)
                 try
