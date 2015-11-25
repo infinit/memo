@@ -11,6 +11,7 @@
 
 #include <infinit/storage/Collision.hh>
 #include <infinit/storage/MissingKey.hh>
+#include <infinit/storage/InsufficientSpace.hh>
 
 ELLE_LOG_COMPONENT("infinit.storage.Filesystem");
 
@@ -71,6 +72,12 @@ namespace infinit
       ELLE_TRACE("set %x", key);
       auto path = this->_path(key);
       bool exists = boost::filesystem::exists(path);
+      int size = 0;
+      if (exists)
+        size = boost::filesystem::file_size(path);
+      int delta = value.size() - size;
+      if (this->_capacity != 0 && this->_usage + delta >= this->_capacity)
+        throw InsufficientSpace(delta, this->_usage, this->_capacity);
       if (!exists && !insert)
         throw MissingKey(key);
       if (exists && !update)
@@ -83,8 +90,9 @@ namespace infinit
       if (insert && update)
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
 
-      // FIXME: impl.
-      return 0;
+      int new_size = boost::filesystem::file_size(path);
+      this->_size_cache[key] = new_size;
+      return new_size - size;
     }
 
     int
@@ -96,8 +104,9 @@ namespace infinit
         throw MissingKey(key);
       remove(path);
 
-      // FIXME: impl.
-      return 0;
+      int delta = this->_size_cache[key];
+      this->_size_cache.erase(key);
+      return -delta;
     }
 
     std::vector<Key>

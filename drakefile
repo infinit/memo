@@ -281,6 +281,8 @@ def configure(
     'src/infinit/storage/Filesystem.hh',
     'src/infinit/storage/GoogleDrive.cc',
     'src/infinit/storage/GoogleDrive.hh',
+    'src/infinit/storage/InsufficientSpace.cc',
+    'src/infinit/storage/InsufficientSpace.hh',
     'src/infinit/storage/Key.hh',
     'src/infinit/storage/Latency.cc',
     'src/infinit/storage/Latency.hh',

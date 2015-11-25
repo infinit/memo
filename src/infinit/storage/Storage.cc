@@ -39,6 +39,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: %s at %x", *this,
                        insert ? update ? "upsert" : "insert" : "update", key);
       int delta = this->_set(key, value, insert, update);
+
       _usage += delta;
       this->_size_cache[key] += delta;
       return delta;
