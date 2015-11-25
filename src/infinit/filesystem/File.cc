@@ -125,6 +125,7 @@ namespace infinit
       , _first_block_new(false)
       , _r_handle_count(0)
       , _rw_handle_count(0)
+      , _fat_changed(false)
       , _full_path(full_path())
     {}
 
@@ -527,24 +528,27 @@ namespace infinit
       if (cache_size < 0)
         cache_size = max_cache_size;
       typedef std::pair<const int, CacheEntry> Elem;
-      bool fat_change = false;
-      while (!_pushes.empty())
-      {
-        fat_change = true;
-        auto& p = _pushes.back();
-        auto addr = p.block->address();
-        _owner.store_or_die(std::move(p.block), p.mode);
-        _fat[p.index] = FatEntry(addr, p.key);
-        if (p.old_address != Address::null)
-          _owner.unchecked_remove(p.old_address);
-        _pushes.pop_back();
-      }
       if (cache_size == 0)
       {
+        // Final flush, wait on all async ops
         while (!_flushers.empty())
         {
           reactor::wait(*_flushers.back());
           _flushers.pop_back();
+        }
+      }
+      else
+      {
+        // Just wait on finished ops to get exceptions
+        for (int i=0; i<signed(_flushers.size()); ++i)
+        {
+          if (_flushers[i]->done())
+          {
+            reactor::wait(*_flushers[i]);
+            std::swap(_flushers[i], _flushers[_flushers.size()-1]);
+            _flushers.pop_back();
+            --i;
+          }
         }
       }
       while (_blocks.size() > unsigned(cache_size))
@@ -559,7 +563,7 @@ namespace infinit
         { // final flush, sync
           if (it->second.dirty)
           {
-            fat_change = _flush_block(it->first);
+            _fat_changed = _flush_block(it->first) || _fat_changed;
           }
           _blocks.erase(it);
         }
@@ -575,21 +579,33 @@ namespace infinit
               new reactor::Thread("flusher", [this, id, ab, new_block] {
                 auto key = cryptography::random::generate<elle::Buffer>(32).string();
                 auto old_addr = ab->address();
-                auto block = ab->make(*_owner.block_store(), key);
-                _pushes.emplace_back(new_block? Address::null : old_addr,
-                                     std::move(block), key, id,
-                  new_block? model::STORE_INSERT : model::STORE_ANY);
+                Address addr = ab->crypt_store(*_owner.block_store(),
+                  new_block? model::STORE_INSERT : model::STORE_ANY,
+                  key);
+                if (addr != old_addr)
+                {
+                  ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
+                    old_addr, addr);
+                  _fat_changed = true;
+                  _fat[id] = FatEntry(addr, key);
+                  if (!new_block)
+                  {
+                    _owner.unchecked_remove(old_addr);
+                  }
+                }
             }, reactor::Thread::managed = true));
           }
           _blocks.erase(it);
         }
       }
-      if (fat_change)
+      bool prev = _fat_changed;
+      if (_fat_changed)
       {
         _commit_first();
         _first_block_new = false;
+        _fat_changed = false;
       }
-      return fat_change;
+      return prev;
     }
 
     std::vector<std::string> File::listxattr()

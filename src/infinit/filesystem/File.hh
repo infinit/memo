@@ -80,31 +80,14 @@ namespace infinit
         std::chrono::system_clock::time_point last_use;
         bool new_block;
       };
-      struct PreparedPush
-      {
-        PreparedPush() {}
-        PreparedPush(Address oa, std::unique_ptr<Block> b,
-                     std::string const& k, int i, model::StoreMode m)
-        : old_address(oa)
-        , block(std::move(b))
-        , key(k)
-        , index(i)
-        , mode(m)
-        {}
 
-        Address old_address;
-        std::unique_ptr<Block> block;
-        std::string key;
-        int index;
-        model::StoreMode mode;
-      };
-      std::vector<PreparedPush> _pushes;
       std::vector<reactor::Thread::unique_ptr> _flushers;
       std::unordered_map<int, CacheEntry> _blocks;
       std::unique_ptr<MutableBlock> _first_block;
       bool _first_block_new;
       int _r_handle_count;
       int _rw_handle_count;
+      bool _fat_changed;
       boost::filesystem::path _full_path;
       typedef std::pair<Address, std::string> FatEntry; // (address, key)
       std::vector<FatEntry> _fat;
