@@ -40,6 +40,8 @@
 
 std::string program;
 
+#define COMMAND(name) static void name(variables_map const& args)
+
 struct Credentials
 {
   std::string uid;
