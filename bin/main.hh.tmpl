@@ -1808,7 +1808,7 @@ beyond_fetch_json(std::string const& where,
                   std::string const& type,
                   std::string const& name,
                   boost::optional<infinit::User const&> self = boost::none,
-                  Headers const& extra_headers = {},
+                  Headers const& extra_headers = Headers{},
                   bool output_report_action = true)
 {
   reactor::http::Request::Configuration c;
