@@ -101,6 +101,9 @@ class CouchDBDatastore:
     self.__design('users',
                   updates = [('update', self.__user_update)],
                   views = [('per_name', self.__user_per_name)])
+    self.__design('pairing',
+                  updates = [],
+                  views = [])
     self.__design('networks',
                   updates = [('update', self.__network_update)],
                   views = [
@@ -231,6 +234,38 @@ class CouchDBDatastore:
     for id, account in update.get('google_accounts', {}).items():
       user.setdefault('google_accounts', {})[id] = account
     return [user, {'json': json.dumps(user)}]
+
+  ## ------- ##
+  ## Pairing ##
+  ## ------- ##
+
+  def pairing_insert(self, pairing_information):
+    try:
+      json = pairing_information.json()
+      # XXX: Remove name.
+      json['_id'] = pairing_information.name
+      from datetime import datetime
+      json['expiration'] = time.mktime(json['expiration'].timetuple())
+      self.__couchdb['pairing'].save(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.PairingInformation.Duplicate()
+
+  def pairing_fetch(self, owner):
+    try:
+      json = self.__couchdb['pairing'][owner]
+      del json['_id']
+      from datetime import datetime
+      json['expiration'] = datetime.fromtimestamp(json['expiration'])
+      return json
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.PairingInformation.NotFound()
+
+  def pairing_delete(self, owner):
+    try:
+      json = self.__couchdb['pairing'][owner]
+      self.__couchdb['pairing'].delete(json)
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.PairingInformation.NotFound()
 
   ## ------- ##
   ## Network ##
