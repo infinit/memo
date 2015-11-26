@@ -454,6 +454,7 @@ namespace infinit
       // check first block data
       if (new_size < signed(_data.size()))
         _data.size(new_size);
+      this->_header.size = new_size;
       this->_commit();
     }
 
