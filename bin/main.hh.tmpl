@@ -1623,8 +1623,10 @@ report_exported(std::ostream& output,
   report_action_output(output, "exported", type, name);
 }
 
+typedef std::unordered_map<std::string, std::string> Headers;
+
 static
-std::unordered_map<std::string, std::string>
+Headers
 signature_headers(
   reactor::http::Method method,
   std::string const& where,
@@ -1765,7 +1767,8 @@ elle::json::Json
 beyond_fetch_json(std::string const& where,
                   std::string const& type,
                   std::string const& name,
-                  boost::optional<infinit::User const&> self = {},
+                  boost::optional<infinit::User const&> self = boost::none,
+                  Headers const& extra_headers = {},
                   bool output_report_action = true)
 {
   reactor::http::Request::Configuration c;
@@ -1777,6 +1780,8 @@ beyond_fetch_json(std::string const& where,
     for (auto const& header: headers)
       c.header_add(header.first, header.second);
   }
+  for (auto const& header: extra_headers)
+    c.header_add(header.first, header.second);
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::GET,
                            std::move(c));
@@ -1812,10 +1817,12 @@ T
 beyond_fetch(std::string const& where,
              std::string const& type,
              std::string const& name,
-             boost::optional<infinit::User const&> self = {},
+             boost::optional<infinit::User const&> self = boost::none,
+             Headers const& extra_headers = Headers{},
              bool output_report_action = true)
 {
-  auto json = beyond_fetch_json(where, type, name, self, output_report_action);
+  auto json = beyond_fetch_json(
+    where, type, name, self, extra_headers, output_report_action);
   elle::serialization::json::SerializerIn input(json, false);
   return input.deserialize<T>();
 }
