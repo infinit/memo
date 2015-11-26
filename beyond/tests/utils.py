@@ -92,6 +92,7 @@ class Beyond:
       import json
       kwargs['data'] = json.dumps(j)
       kwargs['headers'] = {'Content-Type': 'application/json'}
+      kwargs['headers'].update(extra_headers)
       if auth is not None:
         der = base64.b64decode(auth.encode('utf-8'))
         k = RSA.importKey(der)

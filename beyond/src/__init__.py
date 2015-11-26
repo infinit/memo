@@ -58,6 +58,25 @@ class Beyond:
     return self.__validate_email_address
 
   ## ------- ##
+  ## Pairing ##
+  ## ------- ##
+
+  def pairing_information_get(self, owner, password_hash):
+    json = self.__datastore.pairing_fetch(owner)
+    pairing = PairingInformation.from_json(self, json)
+    import sys
+    print(file = sys.stderr)
+    if password_hash != pairing.password_hash:
+      raise ValueError("password_hash")
+    self.pairing_information_delete(owner)
+    if self.now > pairing.expiration:
+      raise exceptions.NoLongerAvailable("%s pairing information" % owner)
+    return pairing
+
+  def pairing_information_delete(self, owner):
+    self.__datastore.pairing_delete(owner)
+
+  ## ------- ##
   ## Network ##
   ## ------- ##
 
@@ -362,6 +381,20 @@ class Entity(type):
 
 def fields(*args, **kwargs):
   return dict(chain(((k, None) for k in args), kwargs.items()))
+
+class PairingInformation(metaclass = Entity,
+                         insert = 'pairing_insert',
+                         fields = fields('name', 'password_hash', 'data', 'expiration')):
+
+  def create(self):
+    assert False
+    if self.expiration < self.now + datetime.timedelta(seconds = 60 * 5):
+      raise Exception("Lifespan too long")
+    self.create()
+
+  @property
+  def id(self):
+    return self.name
 
 class Network(metaclass = Entity,
               insert = 'network_insert',

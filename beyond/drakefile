@@ -186,6 +186,7 @@ def configure(
       'oauth-dropbox',
       'users/put',
       'users/get',
+      'users/pairing',
       'users/delete',
       'networks/put',
       'volumes/put',

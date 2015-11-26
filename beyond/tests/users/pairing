@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+class PairData(dict):
+
+  def __init__(self, user, password = None):
+    self.__name = user['name']
+    self.__password = random_sequence(20) if password is None else password
+    self.__user = user
+    self['password_hash'] = password_hash(self.__password)
+    cipher = PairData.cipher(self.__password)
+    import base64, json
+    # Copy private key.
+    user_ = deepcopy(user)
+    user_['private_key'] = user.private_key
+    dump = json.dumps(user_)
+    # Adjust size to be a multiple of 16.
+    dump = dump.rjust(len(dump) + (16 - len(dump) % 16), ' ')
+    # Encrypt.
+    encoded = base64.b64encode(cipher.encrypt(dump))
+    self['data'] = encoded.decode('utf-8')
+    self['lifespan'] = 5
+
+  @staticmethod
+  def cipher(password):
+    password = password.rjust(32)
+    from Crypto.Cipher import AES
+    return AES.new(password, AES.MODE_ECB)
+
+  def put(self, hub, owner):
+    return hub.put('users/%s/pairing' % self.__user['name'], json = self,
+                   auth = owner.private_key)
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def decrypt(data, password):
+      cipher = PairData.cipher(password)
+      decoded = cipher.decrypt(base64.b64decode(data)).decode().strip()
+      import json
+      return json.loads(decoded)
+
+    def compare(user, data):
+      for field in ['name', 'email', 'public_key']:
+        assertEq(data[field], user[field])
+      assertEq(data['private_key'], user.private_key)
+
+    def test_logic(self):
+      user = User()
+      password = 'this is my password'
+      pairing = PairData(user, password)
+      data = Test.decrypt(pairing['data'], password)
+      Test.compare(user, data)
+
+    def test_normal(self):
+      user = User()
+      user.put(beyond)
+      password = 'Cannot imagine a strong password'
+      pairing = PairData(user, password)
+      pairing.put(beyond, user)
+      # Retrieve.
+      res = beyond.get(
+        'users/%s/pairing' % user['name'],
+        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+      ).json()
+      data = Test.decrypt(res['data'], password)
+      Test.compare(user, data)
+      # Should be gone.
+      throws(lambda: beyond.get(
+        'users/%s/pairing' % user['name'],
+        json = {
+          'password_hash': password_hash(password)
+        }),
+             404)
+
+    def test_not_found(self):
+      user = User()
+      user.put(beyond)
+      beyond.advance(seconds = 0, set = True)
+      password = 'Cannot imagine a strong password'
+      throws(lambda: beyond.get(
+        'users/%s/pairing' % user['name'],
+        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+      ),
+             404)
+
+    def test_expired(self):
+      user = User()
+      user.put(beyond)
+      beyond.advance(seconds = 0, set = True)
+      password = 'Cannot imagine a strong password'
+      pairing = PairData(user, password)
+      pairing.put(beyond, user)
+      beyond.advance(seconds = pairing['lifespan'] * 60 + 1)
+      throws(lambda: beyond.get(
+        'users/%s/pairing' % user['name'],
+        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+      ),
+             410)
+
+    def test_invalid_password(self):
+      user = User()
+      user.put(beyond)
+      beyond.advance(seconds = 0, set = True)
+      password = 'Cannot imagine a strong password'
+      pairing = PairData(user, password)
+      pairing.put(beyond, user)
+      throws(lambda: beyond.get(
+        'users/%s/pairing' % user['name'],
+        extra_headers = {'infinit-pairing-password-hash': 'evil_password'}
+      ),
+             403)
+
+  if __name__ == '__main__':
+    unittest.main()
