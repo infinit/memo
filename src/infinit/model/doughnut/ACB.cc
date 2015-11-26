@@ -421,7 +421,8 @@ namespace infinit
           static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
-          ELLE_TRACE_SCOPE("%s: data changed, seal", *this);
+          ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
+                           *this, this->_data_version);
           bool owner = this->doughnut()->keys().K() == this->owner_key();
           if (owner)
             this->_editor = -1;
@@ -457,13 +458,14 @@ namespace infinit
         // address is part of the signature.
         if (acl_changed || data_changed)
         {
+          auto keys = elle::utility::move_on_copy(this->doughnut()->keys());
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
-            [this, to_sign]
+            [keys, to_sign]
             {
               static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
               elle::Bench::BenchScope scope(bench);
-              return this->doughnut()->keys().k().sign(*to_sign);
+              return (*keys).k().sign(*to_sign);
             };
         }
       }
@@ -584,11 +586,12 @@ namespace infinit
           s.serialize("data_signature", signature);
           if (s.in())
           {
+            auto keys = elle::utility::move_on_copy(this->doughnut()->keys());
             auto sign = elle::utility::move_on_copy(this->_data_sign());
             this->_data_signature =
-              [sign, this]
+              [keys, sign]
               {
-                return this->doughnut()->keys().k().sign(*sign);
+                return (*keys).k().sign(*sign);
               };
           }
         }
