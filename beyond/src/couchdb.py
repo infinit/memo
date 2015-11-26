@@ -110,6 +110,9 @@ class CouchDBDatastore:
                     ('per_invitee_name', self.__networks_per_invitee_name_map),
                     ('per_owner_key', self.__networks_per_owner_key_map),
                     ('per_user_key', self.__networks_per_user_key_map)
+                  ],
+                  views_with_reduce = [
+                    ('stat_view', self.__network_stat_map, self.__network_stat_reduce)
                   ])
     self.__design('volumes',
                   updates = [('update', self.__volume_update)],
