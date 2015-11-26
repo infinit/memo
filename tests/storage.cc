@@ -100,7 +100,7 @@ filesystem_small_capacity()
 {
   ELLE_TRACE("starting filesystem_small_capacity");
   elle::filesystem::TemporaryDirectory d;
-  int64_t size = 7;
+  int64_t size = 2 << 16;
   infinit::storage::Filesystem storage(d.path(), size);
   tests_capacity(storage, size);
 }
@@ -111,7 +111,7 @@ filesystem_large_capacity()
 {
   ELLE_TRACE("starting filesystem_large_capacity");
   elle::filesystem::TemporaryDirectory d;
-  int64_t size = 42;
+  int64_t size = 2 << 18;
   infinit::storage::Filesystem storage(d.path(), size);
   tests_capacity(storage, size);
 }

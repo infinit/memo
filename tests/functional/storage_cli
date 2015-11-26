@@ -1,0 +1,23 @@
+#! /usr/bin/env python3
+
+from utils import *
+
+def static_vars(**kwargs):
+  def decorate(func):
+    for k in kwargs:
+      setattr(func, k, kwargs[k])
+    return func
+  return decorate
+
+@static_vars(name = -1)
+def cmd(size):
+  cmd.name += 1
+  return ['infinit-storage', '--create', '--filesystem', str(cmd.name),
+          '--capacity', size]
+
+with Infinit() as bob:
+  bob.run(cmd('0'))
+  bob.run(cmd('1'))
+  bob.run(cmd('123123'))
+  bob.run(cmd('123123123'))
+  bob.run(cmd('9223372036854775807'))

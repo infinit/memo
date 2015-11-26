@@ -544,6 +544,7 @@ def configure(
         'passport_cli',
         'volume_cli',
         'drive_cli',
+        'storage_cli',
     ]:
       test = drake.node('tests/functional/%s' % test_name)
       rule_functional_tests << test

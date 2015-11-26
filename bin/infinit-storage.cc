@@ -21,7 +21,8 @@ infinit::Infinit ifnt;
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
-  int capacity = args.count("capacity") ? args["capacity"].as<int>() : 0;
+  int64_t capacity = args.count("capacity")
+    ? args["capacity"].as<int64_t>() : 0;
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("dropbox"))
   {
@@ -157,7 +158,7 @@ main(int argc, char** argv)
       "STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
-        { "capacity,c", value<int>(), "limit the storage capacity" },
+        { "capacity,c", value<int64_t>(), "limit the storage capacity" },
         option_output("storage"),
       },
       {
