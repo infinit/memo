@@ -117,6 +117,26 @@ public:
   {}
 };
 
+class ResourceGone
+  : public MissingResource
+{
+public:
+  template <typename ... Args>
+  ResourceGone(Args&& ... args)
+    : MissingResource(std::forward<Args>(args)...)
+  {}
+};
+
+class ResourceProtected
+  : public elle::Error
+{
+public:
+  template <typename ... Args>
+  ResourceProtected(Args&& ... args)
+    : elle::Error(std::forward<Args>(args)...)
+  {}
+};
+
 class ResourceAlreadyFetched
   : public elle::Error
 {
@@ -132,6 +152,23 @@ not_found(std::string const& name,
           std::string const& type)
 {
   std::cerr << elle::sprintf("%s %s not found on %s", type, name, beyond(true))
+            << std::endl;
+}
+
+void
+forbidden(std::string const& name,
+          std::string const& type)
+{
+  std::cerr << elle::sprintf("access to %s %s forbidden on %s", type,
+                             name, beyond(true))
+            << std::endl;
+}
+
+void
+gone(std::string const& type)
+{
+  std::cerr << elle::sprintf("%s is not longer available on %s", type,
+                             beyond(true))
             << std::endl;
 }
 
@@ -1626,8 +1663,10 @@ report_exported(std::ostream& output,
   report_action_output(output, "exported", type, name);
 }
 
+typedef std::unordered_map<std::string, std::string> Headers;
+
 static
-std::unordered_map<std::string, std::string>
+Headers
 signature_headers(
   reactor::http::Method method,
   std::string const& where,
@@ -1670,6 +1709,25 @@ signature_headers(
   return res;
 }
 
+template <typename Exception>
+void
+read_error(reactor::http::Request& r,
+           std::string const& type)
+{
+  try
+  {
+    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
+    auto error = boost::any_cast<std::string>(json["error"]);
+    throw Exception(error);
+  }
+  catch(elle::json::ParseError const&)
+  {
+    throw elle::Error(
+      elle::sprintf("unexpected HTTP error %s pushing %s",
+                    r.status(), type));
+  }
+}
+
 template <typename T>
 void
 beyond_push(std::string const& where,
@@ -1705,18 +1763,11 @@ beyond_push(std::string const& where,
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    try
-    {
-      auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-      auto error = boost::any_cast<std::string>(json["error"]);
-      throw MissingResource(error);
-    }
-    catch(elle::json::ParseError const&)
-    {
-      throw elle::Error(
-        elle::sprintf("unexpected HTTP error %s pushing %s",
-                      r.status(), type));
-    }
+    read_error<MissingResource>(r, type);
+  }
+  else if (r.status() == reactor::http::StatusCode::Gone)
+  {
+    read_error<ResourceGone>(r, type);
   }
   else
   {
@@ -1756,7 +1807,8 @@ elle::json::Json
 beyond_fetch_json(std::string const& where,
                   std::string const& type,
                   std::string const& name,
-                  boost::optional<infinit::User const&> self = {},
+                  boost::optional<infinit::User const&> self = boost::none,
+                  Headers const& extra_headers = {},
                   bool output_report_action = true)
 {
   reactor::http::Request::Configuration c;
@@ -1768,6 +1820,8 @@ beyond_fetch_json(std::string const& where,
     for (auto const& header: headers)
       c.header_add(header.first, header.second);
   }
+  for (auto const& header: extra_headers)
+    c.header_add(header.first, header.second);
   reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
                            reactor::http::Method::GET,
                            std::move(c));
@@ -1779,8 +1833,15 @@ beyond_fetch_json(std::string const& where,
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    throw elle::Error(
-      elle::sprintf("%s \"%s\" not found", type, name));
+    read_error<MissingResource>(r, type);
+  }
+  else if (r.status() == reactor::http::StatusCode::Gone)
+  {
+    read_error<ResourceGone>(r, type);
+  }
+  else if (r.status() == reactor::http::StatusCode::Forbidden)
+  {
+    read_error<ResourceProtected>(r, type);
   }
   else
   {
@@ -1796,10 +1857,12 @@ T
 beyond_fetch(std::string const& where,
              std::string const& type,
              std::string const& name,
-             boost::optional<infinit::User const&> self = {},
+             boost::optional<infinit::User const&> self = boost::none,
+             Headers const& extra_headers = Headers{},
              bool output_report_action = true)
 {
-  auto json = beyond_fetch_json(where, type, name, self, output_report_action);
+  auto json = beyond_fetch_json(
+    where, type, name, self, extra_headers, output_report_action);
   elle::serialization::json::SerializerIn input(json, false);
   return input.deserialize<T>();
 }
@@ -1832,9 +1895,9 @@ beyond_delete(std::string const& where,
   if (r.status() == reactor::http::StatusCode::OK)
     report_action("deleted", type, name, std::string("remotely"));
   else if (r.status() == reactor::http::StatusCode::Not_Found)
-    throw MissingResource(elle::sprintf("%s %s does not exists on Hub",
-                                        type,
-                                        name));
+  {
+    read_error<MissingResource>(r, type);
+  }
   else
   {
     throw elle::Error(
@@ -1859,14 +1922,15 @@ inline
 static
 infinit::User
 self_user(infinit::Infinit const& ifnt,
-          boost::program_options::variables_map const& args)
+          boost::program_options::variables_map const& args,
+          bool private_mandatory = true)
 {
   static auto const env  = elle::os::getenv("INFINIT_USER", "");
   auto as = optional(args, option_owner.long_name());
   if (!as && !env.empty())
     as = env;
   auto res = ifnt.user_get(as);
-  if (!res.private_key)
+  if (private_mandatory && !res.private_key)
   {
     throw elle::Error(
       elle::sprintf("user \"%s\" has no private key", res.name));

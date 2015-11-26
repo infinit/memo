@@ -79,6 +79,10 @@ def configure(
     'src/validation.py',
     'src/exceptions.py',
   ) + [bottle, version]
+  plugins = drake.nodes(
+    'src/plugins/jsongo.py',
+  )
+  sources += plugins
   couchdb_sources = drake.nodes(
     'couchdb-python/couchdb/view.py',
     'couchdb-python/couchdb/mapping.py',
@@ -182,6 +186,7 @@ def configure(
       'oauth-dropbox',
       'users/put',
       'users/get',
+      'users/pairing',
       'users/delete',
       'networks/put',
       'volumes/put',

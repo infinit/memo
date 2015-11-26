@@ -98,127 +98,66 @@ class CouchDBDatastore:
 
   def __init__(self, db):
     self.__couchdb = db
-    def create(name):
-      try:
-        self.__couchdb.create(name)
-      except couchdb.http.PreconditionFailed as e:
-        if e.args[0][0] == 'file_exists':
-          pass
-        else:
-          raise
-    create('networks')
-    create('users')
-    create('volumes')
-    create('drives')
-    import inspect
-    try:
-      design = self.__couchdb['users']['_design/beyond']
-    except couchdb.http.ResourceNotFound:
-      design = couchdb.client.Document()
-    design.update(
-      {
-        '_id': '_design/beyond',
-        'language': 'python',
-        'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__user_update),
-          ]
-        },
-        'views': {
-          name: {
-            'map': getsource(view),
-          }
-          for name, view in [('per_name', self.__user_per_name)]
-        }
-      })
-    self.__couchdb['users'].save(design)
-    try:
-      design = self.__couchdb['networks']['_design/beyond']
-    except couchdb.http.ResourceNotFound:
-      design = couchdb.client.Document()
-    views = {
-      name : {
-        'map': getsource(view_map),
-      }
-      for name, view_map in [
-        ('per_invitee_name', self.__networks_per_invitee_name_map),
-        ('per_owner_key', self.__networks_per_owner_key_map),
-        ('per_user_key', self.__networks_per_user_key_map),
-      ]
-    }
-    views_with_reduce = {
-      name : {
-        'map': getsource(view_map),
-        'reduce': getsource(view_reduce)
-      }
-      for name, view_map, view_reduce in [
-        ('stat_view', self.__network_stat_map, self.__network_stat_reduce)
-      ]
-    }
-    views.update(views_with_reduce)
-    design.update(
-      {
-        '_id': '_design/beyond',
-        'language': 'python',
-        'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__network_update),
-          ]
-        },
-        'views' : views
-      })
-    self.__couchdb['networks'].save(design)
-    try:
-      design = self.__couchdb['volumes']['_design/beyond']
-    except couchdb.http.ResourceNotFound:
-      design = couchdb.client.Document()
-    design.update(
-      {
-        '_id': '_design/beyond',
-        'language': 'python',
-        'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__volume_update),
-          ]
-        },
-        'views' : {
-          name : {
-            'map': getsource(view_map)
-          }
-          for name, view_map in [
-            ('per_network_id', self.__volumes_per_network_id_map),
-          ]
-        }
-      })
-    self.__couchdb['volumes'].save(design)
-    try:
-      design = self.__couchdb['drives']['_design/beyond']
-    except couchdb.http.ResourceNotFound:
-      design = couchdb.client.Document()
-    design.update(
-      {
-        '_id': '_design/beyond',
-        'language': 'python',
-        'updates': {
-          name: getsource(update)
-          for name, update in [
-              ('update', self.__drive_update),
-          ]
-        },
-        'views' : {
-          name : {
-            'map': getsource(view_map)
-          }
-          for name, view_map in [
-            ('per_member_name', self.__drives_per_member_map),
-          ]
-        }
+    self.__design('users',
+                  updates = [('update', self.__user_update)],
+                  views = [('per_name', self.__user_per_name)])
+    self.__design('pairing',
+                  updates = [],
+                  views = [])
+    self.__design('networks',
+                  updates = [('update', self.__network_update)],
+                  views = [
+                    ('per_invitee_name', self.__networks_per_invitee_name_map),
+                    ('per_owner_key', self.__networks_per_owner_key_map),
+                    ('per_user_key', self.__networks_per_user_key_map)
+                  ])
+    self.__design('volumes',
+                  updates = [('update', self.__volume_update)],
+                  views = [
+                    ('per_network_id', self.__volumes_per_network_id_map),
+                  ])
+    self.__design('drives',
+                  updates = [('update', self.__drive_update)],
+                  views = [
+                    ('per_member_name', self.__drives_per_member_map),
+                  ])
 
+  def __create(self, name):
+    try:
+      self.__couchdb.create(name)
+    except couchdb.http.PreconditionFailed as e:
+      if e.args[0][0] == 'file_exists':
+        pass
+      else:
+        raise
+
+  def __design(self,
+               category,
+               updates,
+               views,
+               views_with_reduce = []):
+    self.__create(category)
+    try:
+      design = self.__couchdb[category]['_design/beyond']
+    except couchdb.http.ResourceNotFound:
+      design = couchdb.client.Document()
+      views = {
+        name : {'map': getsource(view_map)} for name, view_map in views
+      }
+      views.update({
+        name : {'map': getsource(view), 'reduce': getsource(reducer)}
+        for name, view, reducer in views_with_reduce
       })
-    self.__couchdb['drives'].save(design)
+    design.update(
+      {
+        '_id': '_design/beyond',
+        'language': 'python',
+        'updates': {
+          name: getsource(update) for name, update in updates
+        },
+        'views': views,
+      })
+    self.__couchdb[category].save(design)
 
   ## ---- ##
   ## User ##
@@ -313,6 +252,38 @@ class CouchDBDatastore:
     for id, account in update.get('google_accounts', {}).items():
       user.setdefault('google_accounts', {})[id] = account
     return [user, {'json': json.dumps(user)}]
+
+  ## ------- ##
+  ## Pairing ##
+  ## ------- ##
+
+  def pairing_insert(self, pairing_information):
+    try:
+      json = pairing_information.json()
+      # XXX: Remove name.
+      json['_id'] = pairing_information.name
+      from datetime import datetime
+      json['expiration'] = time.mktime(json['expiration'].timetuple())
+      self.__couchdb['pairing'].save(json)
+    except couchdb.ResourceConflict:
+      raise infinit.beyond.PairingInformation.Duplicate()
+
+  def pairing_fetch(self, owner):
+    try:
+      json = self.__couchdb['pairing'][owner]
+      del json['_id']
+      from datetime import datetime
+      json['expiration'] = datetime.fromtimestamp(json['expiration'])
+      return json
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.PairingInformation.NotFound()
+
+  def pairing_delete(self, owner):
+    try:
+      json = self.__couchdb['pairing'][owner]
+      self.__couchdb['pairing'].delete(json)
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.PairingInformation.NotFound()
 
   ## ------- ##
   ## Network ##

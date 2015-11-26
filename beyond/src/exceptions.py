@@ -23,3 +23,8 @@ class InvalidFormat(Exception):
   def __init__(self, object, field_name):
     self.field = Field(object, field_name)
     super().__init__('Invalid format for %s (object %s)' % (field_name, object))
+
+class NoLongerAvailable(Exception):
+
+  def __init__(self, object):
+    super().__init__('Resource %s is not longer available' % object)

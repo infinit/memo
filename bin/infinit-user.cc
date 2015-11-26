@@ -36,9 +36,10 @@ struct UserView
 
 inline
 std::string
-get_name(boost::program_options::variables_map const& args)
+get_name(boost::program_options::variables_map const& args,
+         std::string const& name = "name")
 {
-  return get_username(args, "name");
+  return get_username(args, name);
 }
 
 COMMAND(export_)
@@ -115,22 +116,43 @@ read_passphrase()
   return res;
 }
 
+static
 std::string
-hub_password(variables_map const& args)
+_password(variables_map const& args,
+          std::string const& argument)
 {
-  auto hash_password = [] (std::string const& password)
-    {
-      return elle::format::hexadecimal::encode(
-        infinit::cryptography::hash(
-          password, infinit::cryptography::Oneway::sha256).string()
-        );
-      return password;
-    };
-  auto password = optional(args, "hub-password-inline");
+  auto password = optional(args, argument);
   if (!password)
     password = read_passphrase();
   ELLE_ASSERT(password);
-  return hash_password(password.get());
+  return password.get();
+};
+
+static
+std::string
+hash_password(std::string const& password_,
+              std::string salt)
+{
+  auto password = password_ + salt;
+  return elle::format::hexadecimal::encode(
+    infinit::cryptography::hash(
+      password, infinit::cryptography::Oneway::sha256).string()
+    );
+  return password;
+};
+
+
+std::string
+hub_password_hash(variables_map const& args)
+{
+  return hash_password(_password(args, "hub-password-inline"),
+                       "@a.Fl$4'x!");
+}
+
+std::string
+pairing_password(variables_map const& args)
+{
+  return _password(args, "pairing-password-inline");
 }
 
 static
@@ -158,7 +180,7 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   }
   if (flag(args, "full"))
   {
-    user.password_hash = hub_password(args);
+    user.password_hash = hub_password_hash(args);
     das::Serializer<infinit::DasPrivateUserPublish> view{user};
     beyond_push("user", user.name, view, user);
   }
@@ -316,13 +338,113 @@ beyond_login(std::string const& name,
 COMMAND(login)
 {
   auto name = get_name(args);
-  LoginCredentials c{name, hub_password(args)};
+  LoginCredentials c{name, hub_password_hash(args)};
   das::Serializer<DasLoginCredentials> credentials{c};
   auto json = beyond_login(name, credentials);
   elle::serialization::json::SerializerIn input(json, false);
   auto user = input.deserialize<infinit::User>();
   ifnt.user_save(user, true);
   report_action("saved", "user", name, std::string("locally"));
+}
+
+struct PairingInformation
+{
+public:
+  // Generating.
+  PairingInformation(elle::Buffer const& encrypted_user,
+                     std::string const& password)
+    : data(encrypted_user)
+    , password_hash(password)
+  {}
+  // Receiving.
+  PairingInformation(elle::serialization::SerializerIn& s)
+    : data(s.deserialize<elle::Buffer>("data"))
+    , password_hash(s.deserialize<std::string>("password_hash"))
+  {}
+
+  void
+  serialize(elle::serialization::Serializer& s)
+  {
+    s.serialize("data", this->data);
+    s.serialize("password_hash", this->password_hash);
+  }
+
+  boost::optional<elle::Buffer> data;
+  boost::optional<std::string> password_hash;
+};
+
+DAS_MODEL(PairingInformation, (data, password_hash), DasPairingInformation)
+
+COMMAND(_pairing_generate)
+{
+  auto user = self_user(ifnt, args);
+  auto password = pairing_password(args);
+  std::stringstream serialized_user;
+  {
+    das::Serializer<infinit::DasUser> view{user};
+    elle::serialization::json::serialize(view, serialized_user, false);
+  }
+  infinit::cryptography::SecretKey key{password};
+  PairingInformation p(
+    key.encipher(serialized_user.str(),
+                 infinit::cryptography::Cipher::aes256),
+    hash_password(password, "5_C+m$:1Ex"));
+  das::Serializer<DasPairingInformation> view{p};
+  beyond_push(
+    elle::sprintf("users/%s/pairing", user.name),
+    "pairing", "information", view, user);
+}
+
+COMMAND(_pairing_accept)
+{
+  auto name = get_name(args, "as");
+  auto password = pairing_password(args);
+  auto hashed_password = hash_password(password, "5_C+m$:1Ex");
+  {
+    try
+    {
+      auto pairing = beyond_fetch<PairingInformation>(
+        elle::sprintf("users/%s/pairing", name), "pairing",
+        name, boost::none,
+        {{"infinit-pairing-password-hash", hashed_password}},
+        false);
+      infinit::cryptography::SecretKey key{password};
+      auto data = key.decipher(*pairing.data,
+                               infinit::cryptography::Cipher::aes256);
+      std::stringstream stream;
+      stream << data.string();
+      elle::serialization::json::SerializerIn input(stream, false);
+      auto user = input.deserialize<infinit::User>();
+      ifnt.user_save(user, true);
+    }
+    catch (ResourceGone const& e)
+    {
+      gone("pairing");
+    }
+    catch (MissingResource const& e)
+    {
+      if (e.what() == std::string("user/not_found"))
+        not_found(name, "User");
+      if (e.what() == std::string("pairing/not_found"))
+        not_found(name, "Pairing");
+      throw;
+    }
+  }
+  report_action("saved", "user", name, std::string("locally"));
+}
+
+COMMAND(pair)
+{
+  auto generate = flag(args, "generate");
+  auto accept = flag(args, "accept");
+  if (!(generate ^ accept))
+    throw elle::Error(
+      "you must provide one and only one of '--generate' or '--accept'");
+  if (generate)
+    _pairing_generate(args);
+  else
+    _pairing_accept(args);
+
 }
 
 COMMAND(list)
@@ -463,6 +585,23 @@ main(int argc, char** argv)
           "user name (default: system user)" },
         { "hub-password-inline", value<std::string>(), elle::sprintf(
           "password to authenticate with %s", beyond(true)).c_str() },
+      },
+    },
+    {
+      "pair",
+      elle::sprintf("XXX %s", beyond(true)).c_str(),
+      &pair,
+      {},
+      {
+        { "generate", bool_switch(), elle::sprintf(
+            "Temporary store your private information encrypted to %s",
+            beyond(true)).c_str() },
+        { "accept", bool_switch(), elle::sprintf(
+            "Get your private information from %s",
+            beyond(true)).c_str() },
+        { "pairing-password-inline", value<std::string>(), elle::sprintf(
+            "password to secure information").c_str()},
+        option_owner,
       },
     },
     {

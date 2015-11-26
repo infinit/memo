@@ -9,6 +9,7 @@ import threading
 
 from functools import partial
 from itertools import chain
+from datetime import timedelta
 
 import base64
 from Crypto.Signature import PKCS1_v1_5
@@ -42,6 +43,7 @@ class Beyond:
   def __init__(self):
     super().__init__()
     self.__app = None
+    self.__advance = timedelta()
     self.__beyond = None
     self.__bottle = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
@@ -67,17 +69,30 @@ class Beyond:
       google_app_key = 'google_key',
       google_app_secret = 'google_secret',
     )
+
+    setattr(self.__beyond, '_Beyond__now', self.now)
     self.__app = infinit.beyond.bottle.Bottle(self.__beyond)
     self.__app.__enter__()
     return self
 
-  def request(self, url, throws = True, json = {}, auth = None, **kwargs):
+  def now(self):
+    import datetime
+    return datetime.datetime.utcnow() + self.__advance
+
+  def advance(self, seconds, set = False):
+    if set:
+      self.__advance = timedelta(seconds = seconds)
+    else:
+      self.__advance += timedelta(seconds = seconds)
+
+  def request(self, url, throws = True, json = {}, auth = None, extra_headers = {}, **kwargs):
     # Older requests don't have json parameter
     if json is not None:
       j = json
       import json
       kwargs['data'] = json.dumps(j)
       kwargs['headers'] = {'Content-Type': 'application/json'}
+      kwargs['headers'].update(extra_headers)
       if auth is not None:
         der = base64.b64decode(auth.encode('utf-8'))
         k = RSA.importKey(der)

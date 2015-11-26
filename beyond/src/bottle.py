@@ -15,6 +15,7 @@ from requests import Request, Session
 
 from infinit.beyond import *
 from infinit.beyond.gcs import GCS
+from infinit.beyond.plugins.jsongo import Plugin as JsongoPlugin
 
 ## -------- ##
 ## Response ##
@@ -104,6 +105,7 @@ class Bottle(bottle.Bottle):
     self.__beyond = beyond
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
+    self.install(JsongoPlugin())
     self.route('/')(self.root)
     # GCS
     self.__gcs = gcs
@@ -137,6 +139,8 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>/drives',
                method = 'GET')(self.user_drives_get)
     self.route('/users/<name>/login', method = 'POST')(self.login)
+    self.route('/users/<name>/pairing', method = 'PUT')(self.store_pairing_information)
+    self.route('/users/<name>/pairing', method = 'GET')(self.get_pairing_information)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -375,6 +379,44 @@ class Bottle(bottle.Bottle):
       return user
     except User.NotFound as e:
       raise self.__user_not_found(name)
+
+  def store_pairing_information(self, name):
+    user = self.user_from_name(name = name)
+    self.authenticate(user)
+    json = bottle.request.json
+    # XXX: This should be in __init__.py but metaclasses make it difficult to
+    # extend with specific behaviour.
+    json['expiration'] = self.__beyond.now + datetime.timedelta(
+      seconds = json.get('lifespan', 5) * 60)
+    if 'lifespan' in json:
+      del json['lifespan']
+    json['name'] = user.name
+    pairing = PairingInformation(self.__beyond, **json)
+    pairing.create()
+    raise Response(201, {})
+
+  def get_pairing_information(self, name):
+    user = self.user_from_name(name = name)
+    paring_password_hash = bottle.request.headers.get('infinit-pairing-password-hash', '')
+    try:
+      pairing = self.__beyond.pairing_information_get(user.name, paring_password_hash)
+    except PairingInformation.NotFound:
+      raise self.__not_found('pairing_information', user.name)
+    except ValueError as e:
+      if e.args[0] == 'password_hash':
+        raise Response(403,
+                       {
+                         'error': 'pairing/invalid_password',
+                         'reason': 'password do not match',
+                      })
+      raise e
+    except exceptions.NoLongerAvailable as e:
+      raise Response(410,
+                      {
+                        'error': 'pairing/gone',
+                        'reason': e.args[0],
+                      })
+    return pairing.json()
 
   ## ------- ##
   ## Network ##
