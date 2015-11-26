@@ -79,7 +79,7 @@ namespace infinit
     public:
       std::string configuration;
 
-      S3StorageConfig(std::string name, int capacity = 0)
+      S3StorageConfig(std::string name, int64_t capacity = 0)
         : StorageConfig(std::move(name), std::move(capacity))
       {}
 

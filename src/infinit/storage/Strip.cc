@@ -78,7 +78,7 @@ namespace infinit
 
 
     StripStorageConfig::StripStorageConfig(Storages storages_,
-                                           int capacity)
+                                           int64_t capacity)
       : StorageConfig("Multiple Storage", capacity)
       , storage(std::move(storages_))
     {}

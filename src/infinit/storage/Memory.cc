@@ -85,7 +85,7 @@ namespace infinit
       return elle::make_unique<infinit::storage::Memory>();
     }
 
-    MemoryStorageConfig::MemoryStorageConfig(std::string name, int capacity)
+    MemoryStorageConfig::MemoryStorageConfig(std::string name, int64_t capacity)
       : StorageConfig(std::move(name), std::move(capacity))
     {}
 

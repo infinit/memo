@@ -35,7 +35,7 @@ namespace infinit
     {
     public:
       typedef std::vector<std::unique_ptr<StorageConfig>> Storages;
-      StripStorageConfig(Storages storages_, int capacity = 0);
+      StripStorageConfig(Storages storages_, int64_t capacity = 0);
       StripStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

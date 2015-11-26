@@ -15,7 +15,7 @@ namespace infinit
     {
     public:
       Filesystem(boost::filesystem::path root,
-                 int capacity = 0);
+                 int64_t capacity = 0);
     protected:
       virtual
       elle::Buffer
@@ -40,7 +40,7 @@ namespace infinit
     {
       FilesystemStorageConfig(std::string name,
                               std::string path,
-                              int capacity = 0);
+                              int64_t capacity = 0);
       FilesystemStorageConfig(elle::serialization::SerializerIn& input);
       void
       serialize(elle::serialization::Serializer& s) override;

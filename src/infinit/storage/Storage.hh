@@ -29,7 +29,7 @@ namespace infinit
       : public elle::Printable
     {
     public:
-      Storage(int capacity = 0);
+      Storage(int64_t capacity = 0);
       virtual
       ~Storage();
       elle::Buffer
@@ -90,7 +90,7 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable
     {
       StorageConfig() = default;
-      StorageConfig(std::string name, int capacity = 0);
+      StorageConfig(std::string name, int64_t capacity = 0);
       StorageConfig(elle::serialization::SerializerIn& input);
       virtual
       void
@@ -102,7 +102,7 @@ namespace infinit
       make() = 0;
 
       std::string name;
-      int capacity;
+      int64_t capacity;
     };
   }
 }

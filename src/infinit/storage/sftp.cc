@@ -601,7 +601,7 @@ namespace infinit
     }
 
     SFTPStorageConfig::
-      SFTPStorageConfig(std::string name, int capacity)
+      SFTPStorageConfig(std::string name, int64_t capacity)
       : StorageConfig(std::move(name), std::move(capacity))
     {}
 

@@ -473,7 +473,7 @@ namespace infinit
         boost::optional<std::string> root_,
         std::string refresh_token_,
         std::string user_name_,
-        int capacity)
+        int64_t capacity)
       : StorageConfig(std::move(name), std::move(capacity))
       , root{std::move(root_)}
       , refresh_token{std::move(refresh_token_)}

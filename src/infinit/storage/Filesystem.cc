@@ -20,7 +20,7 @@ namespace infinit
   namespace storage
   {
     Filesystem::Filesystem(boost::filesystem::path root,
-                           int capacity)
+                           int64_t capacity)
       : Storage(std::move(capacity))
       , _root(std::move(root))
     {
@@ -74,7 +74,7 @@ namespace infinit
       if (exists)
         size = boost::filesystem::file_size(path);
       int delta = value.size() - size;
-      if (this->_capacity != 0 && this->_usage + delta >= this->_capacity)
+      if (_capacity != 0 && _usage + delta > _capacity)
         throw InsufficientSpace(delta, this->_usage, this->_capacity);
       if (!exists && !insert)
         throw MissingKey(key);
@@ -88,10 +88,9 @@ namespace infinit
       if (insert && update)
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
 
-      int new_size = boost::filesystem::file_size(path);
-      this->_size_cache[key] = new_size;
+      _size_cache[key] = value.size();
 
-      return new_size - size;
+      return update ? value.size() - size : value.size();
     }
 
     int
@@ -105,6 +104,7 @@ namespace infinit
 
       int delta = this->_size_cache[key];
       this->_size_cache.erase(key);
+      ELLE_DEBUG("_erase: -delta = %s", -delta);
       return -delta;
     }
 
@@ -147,7 +147,7 @@ namespace infinit
 
     FilesystemStorageConfig::FilesystemStorageConfig(std::string name,
                                                      std::string path_,
-                                                     int capacity)
+                                                     int64_t capacity)
       : StorageConfig(std::move(name), std::move(capacity))
       , path(std::move(path_))
     {}

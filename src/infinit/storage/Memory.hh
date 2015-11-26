@@ -36,7 +36,7 @@ namespace infinit
     struct MemoryStorageConfig
       : public StorageConfig
     {
-      MemoryStorageConfig(std::string name, int capacity = 0);
+      MemoryStorageConfig(std::string name, int64_t capacity = 0);
       MemoryStorageConfig(elle::serialization::SerializerIn& input);
 
       void

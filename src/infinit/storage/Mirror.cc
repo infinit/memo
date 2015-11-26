@@ -113,7 +113,7 @@ namespace infinit
       bool balance;
       std::vector<std::unique_ptr<StorageConfig>> storage;
 
-      MirrorStorageConfig(std::string name, int capacity = 0)
+      MirrorStorageConfig(std::string name, int64_t capacity = 0)
         : StorageConfig(std::move(name), std::move(capacity))
       {}
 

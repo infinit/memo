@@ -13,8 +13,8 @@ namespace infinit
     }
 
     InsufficientSpace::InsufficientSpace(int delta,
-                                         int usage,
-                                         int capacity)
+                                         int64_t usage,
+                                         int64_t capacity)
       : Super(elle::sprintf(__error_format,
                             "STORAGE_NAME",
                             usage,

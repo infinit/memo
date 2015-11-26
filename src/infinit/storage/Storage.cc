@@ -19,7 +19,7 @@ namespace infinit
       static int step = 104857600; // 100 Mio
     }
 
-    Storage::Storage(int capacity)
+    Storage::Storage(int64_t capacity)
       : _capacity{capacity}
       , _usage{0} // _usage is recovered in the child ctor.
       , _base_usage{0}
@@ -48,15 +48,13 @@ namespace infinit
       int delta = this->_set(key, value, insert, update);
 
       _usage += delta;
-      if (_usage >= _base_usage + _step)
+      if (_capacity != 0 && _usage > _base_usage + _step)
       {
         ELLE_DEBUG("Notify beyond of storage usage since it has overflow of\
 %s Bytes since last update.", this->_step);
         this->_on_storage_size_change();
         _base_usage = _usage;
       }
-
-      this->_size_cache[key] += delta;
 
       ELLE_DEBUG("%s: usage/capacity = %s/%s", *this,
                                                this->_usage,
@@ -69,9 +67,9 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: erase %x", *this, key);
       int delta = this->_erase(key);
+      ELLE_DEBUG("usage %s and delta %s", _usage, delta);
       _usage += delta;
-      if (this->_size_cache.find(key) != this->_size_cache.end())
-        this->_size_cache.erase(key);
+      this->_size_cache.erase(key);
       return delta;
     }
 
@@ -130,7 +128,7 @@ namespace infinit
     `---------------*/
 
     StorageConfig::StorageConfig(std::string name_,
-                                 int capacity_)
+                                 int64_t capacity_)
       : name(std::move(name_))
       , capacity(std::move(capacity_))
     {}

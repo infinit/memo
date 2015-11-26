@@ -103,7 +103,7 @@ namespace infinit
       reactor::DurationOpt latency_erase;
       std::shared_ptr<StorageConfig> storage;
 
-      LatencyStorageConfig(std::string name, int capacity = 0)
+      LatencyStorageConfig(std::string name, int64_t capacity = 0)
         : StorageConfig(std::move(name), std::move(capacity))
       {}
 

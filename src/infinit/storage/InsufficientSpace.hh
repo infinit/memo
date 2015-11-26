@@ -14,14 +14,14 @@ namespace infinit
     {
       public:
         using Super = elle::Error;
-        InsufficientSpace(int delta, int usage, int capacity);
+        InsufficientSpace(int delta, int64_t usage, int64_t capacity);
         InsufficientSpace(elle::serialization::SerializerIn& in);
         void
         serialize(elle::serialization::Serializer& s) override;
 
         ELLE_ATTRIBUTE_R(int, delta);
-        ELLE_ATTRIBUTE_R(int, usage);
-        ELLE_ATTRIBUTE_R(int, capacity);
+        ELLE_ATTRIBUTE_R(int64_t, usage);
+        ELLE_ATTRIBUTE_R(int64_t, capacity);
     };
   }
 }

@@ -66,7 +66,7 @@ namespace infinit
     }
 
     CryptStorageConfig::
-      CryptStorageConfig(std::string name, int capacity)
+      CryptStorageConfig(std::string name, int64_t capacity)
       : StorageConfig(name, capacity)
       {}
     CryptStorageConfig::
