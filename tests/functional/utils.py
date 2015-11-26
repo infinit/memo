@@ -13,6 +13,8 @@ import infinit.beyond
 import infinit.beyond.bottle
 import infinit.beyond.couchdb
 
+from datetime import timedelta
+
 class TemporaryDirectory:
 
   def __init__(self):

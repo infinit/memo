@@ -1882,14 +1882,15 @@ inline
 static
 infinit::User
 self_user(infinit::Infinit const& ifnt,
-          boost::program_options::variables_map const& args)
+          boost::program_options::variables_map const& args,
+          bool private_mandatory = true)
 {
   static auto const env  = elle::os::getenv("INFINIT_USER", "");
   auto as = optional(args, option_owner.long_name());
   if (!as && !env.empty())
     as = env;
   auto res = ifnt.user_get(as);
-  if (!res.private_key)
+  if (private_mandatory && !res.private_key)
   {
     throw elle::Error(
       elle::sprintf("user \"%s\" has no private key", res.name));
