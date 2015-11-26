@@ -103,6 +103,7 @@ class Beyond():
 
   def __init__(self):
     super().__init__()
+    self.__advance = timedelta()
     self.__server = bottle.WSGIRefServer(port = 0)
     self.__app = None
     self.__beyond = None
@@ -121,6 +122,7 @@ class Beyond():
         google_app_key = 'google_key',
         google_app_secret = 'google_secret',
       )
+      setattr(self.__beyond, '_Beyond__now', self.now)
       self.__app = infinit.beyond.bottle.Bottle(beyond = self.__beyond)
       try:
         bottle.run(app = self.__app,
@@ -141,12 +143,23 @@ class Beyond():
       raise Exception("Server is already dead")
     return self
 
+  def __exit__(self, *args, **kwargs):
+    pass
+
   @property
   def domain(self):
     return "http://localhost:%s" % self.__server.port
 
-  def __exit__(self, *args, **kwargs):
-    pass
+  # XXX: Duplicated from beyond/tests/utils.py, could be merged someday.
+  def now(self):
+    import datetime
+    return datetime.datetime.utcnow() + self.__advance
+
+  def advance(self, seconds, set = False):
+    if set:
+      self.__advance = timedelta(seconds = seconds)
+    else:
+      self.__advance += timedelta(seconds = seconds)
 
 class User():
 

@@ -30,6 +30,14 @@ class Beyond:
     self.__validate_email_address = validate_email_address
 
   @property
+  def now(self):
+    return self.__now()
+
+  def __now(self):
+    import datetime
+    return datetime.datetime.utcnow()
+
+  @property
   def dropbox_app_key(self):
     return self.__dropbox_app_key
 
