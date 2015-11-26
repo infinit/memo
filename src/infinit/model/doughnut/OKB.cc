@@ -265,12 +265,12 @@ namespace infinit
       BaseOKB<Block>::_seal_okb()
       {
         ++this->_version; // FIXME: idempotence in case the write fails ?
-        auto keys = this->_doughnut->keys();
+        auto keys = this->_doughnut->keys_shared();
         auto sign = elle::utility::move_on_copy(this->_sign());
         this->_signature =
           [keys, sign]
           {
-            return keys.k().sign(*sign);
+            return keys->k().sign(*sign);
           };
       }
 
@@ -400,10 +400,9 @@ namespace infinit
         s.serialize("signature", this->_signature.value());
         if (s.in() && !need_signature)
         {
-          auto keys = this->_doughnut->keys();
+          auto keys = this->_doughnut->keys_shared();
           auto sign = elle::utility::move_on_copy(this->_sign());
-          this->_signature = [keys, sign]
-            { return keys.k().sign(*sign); };
+          this->_signature = [keys, sign] {return keys->k().sign(*sign);};
         }
       }
 

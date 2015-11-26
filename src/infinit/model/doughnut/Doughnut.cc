@@ -46,7 +46,7 @@ namespace infinit
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage)
         : _id(std::move(id))
-        , _keys(std::move(keys))
+        , _keys(std::make_shared<cryptography::rsa::KeyPair>(std::move(keys)))
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _consensus(consensus(*this))
@@ -130,6 +130,18 @@ namespace infinit
         if (_user_init)
           _user_init->terminate_now();
         ELLE_TRACE("~Doughnut");
+      }
+
+      cryptography::rsa::KeyPair const&
+      Doughnut::keys() const
+      {
+        return *this->_keys;
+      }
+
+      std::shared_ptr<cryptography::rsa::KeyPair const>
+      Doughnut::keys_shared() const
+      {
+        return this->_keys;
       }
 
       std::unique_ptr<blocks::MutableBlock>

@@ -458,14 +458,14 @@ namespace infinit
         // address is part of the signature.
         if (acl_changed || data_changed)
         {
-          auto keys = elle::utility::move_on_copy(this->doughnut()->keys());
+          auto keys = this->doughnut()->keys_shared();
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
             [keys, to_sign]
             {
               static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
               elle::Bench::BenchScope scope(bench);
-              return (*keys).k().sign(*to_sign);
+              return keys->k().sign(*to_sign);
             };
         }
       }
@@ -586,13 +586,10 @@ namespace infinit
           s.serialize("data_signature", signature);
           if (s.in())
           {
-            auto keys = elle::utility::move_on_copy(this->doughnut()->keys());
+            auto keys = this->doughnut()->keys_shared();
             auto sign = elle::utility::move_on_copy(this->_data_sign());
             this->_data_signature =
-              [keys, sign]
-              {
-                return (*keys).k().sign(*sign);
-              };
+              [keys, sign] { return keys->k().sign(*sign); };
           }
         }
       }

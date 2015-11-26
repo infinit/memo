@@ -49,8 +49,12 @@ namespace infinit
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local);
         ~Doughnut();
+        cryptography::rsa::KeyPair const&
+        keys() const;
+        std::shared_ptr<cryptography::rsa::KeyPair const>
+        keys_shared() const;
         ELLE_ATTRIBUTE_R(Address, id);
-        ELLE_ATTRIBUTE_R(cryptography::rsa::KeyPair, keys);
+        ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
