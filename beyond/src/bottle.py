@@ -15,6 +15,7 @@ from requests import Request, Session
 
 from infinit.beyond import *
 from infinit.beyond.gcs import GCS
+from infinit.beyond.plugins.jsongo import Plugin as JsongoPlugin
 
 ## -------- ##
 ## Response ##
@@ -104,6 +105,7 @@ class Bottle(bottle.Bottle):
     self.__beyond = beyond
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
+    self.install(JsongoPlugin())
     self.route('/')(self.root)
     # GCS
     self.__gcs = gcs
