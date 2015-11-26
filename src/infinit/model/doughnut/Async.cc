@@ -250,23 +250,6 @@ namespace infinit
               ELLE_TRACE_SCOPE("%s: process %s", *this, op);
               boost::optional<StoreMode> mode = op.mode;
               std::unique_ptr<ConflictResolver>& resolver = op.resolver;
-              elle::SafeFinally delete_entry(
-                [&]
-                {
-                  if (!this->_journal_dir.empty())
-                  {
-                    auto path = boost::filesystem::path(this->_journal_dir) /
-                      std::to_string(op.index);
-                    boost::filesystem::remove(path);
-                  }
-                  if (mode)
-                  {
-                    auto it = this->_last.find(addr);
-                    ELLE_ASSERT(it != this->_last.end());
-                    if (op.index == it->second.first)
-                      this->_last.erase(it);
-                  }
-              });
               if (!mode)
                 try
                 {
@@ -277,8 +260,20 @@ namespace infinit
                   // Nothing: block was already removed.
                 }
               else
+              {
                 this->_backend->store(
                   std::move(op.block), *mode, std::move(resolver));
+                auto it = this->_last.find(addr);
+                ELLE_ASSERT(it != this->_last.end());
+                if (op.index == it->second.first)
+                  this->_last.erase(it);
+              }
+              if (!this->_journal_dir.empty())
+              {
+                auto path = boost::filesystem::path(this->_journal_dir) /
+                  std::to_string(op.index);
+                boost::filesystem::remove(path);
+              }
             }
             catch (elle::Error const& e)
             {
