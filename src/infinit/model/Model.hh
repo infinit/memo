@@ -34,9 +34,14 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable
     {
     public:
-      virtual std::unique_ptr<blocks::Block>
-      operator () (blocks::Block& block, StoreMode mode) = 0;
-      virtual void serialize(elle::serialization::Serializer& s) override = 0;
+      virtual
+      std::unique_ptr<blocks::Block>
+      operator () (blocks::Block& old,
+                   blocks::Block& current,
+                   StoreMode mode) = 0;
+      virtual
+      void
+      serialize(elle::serialization::Serializer& s) override = 0;
     };
 
     class Model

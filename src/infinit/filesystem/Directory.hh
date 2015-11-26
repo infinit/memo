@@ -54,64 +54,72 @@ namespace infinit
       : public rfs::Path
       , public Node
     {
-      public:
-        Directory(DirectoryPtr parent, FileSystem& owner, std::string const& name,
-            Address address);
-        void stat(struct stat*) override;
-        void list_directory(rfs::OnDirectoryEntry cb) override;
-        std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_ISDIR;
-        std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override THROW_ISDIR;
-        void unlink() override THROW_ISDIR;
-        void mkdir(mode_t mode) override THROW_EXIST;
-        void rmdir() override;
-        void rename(boost::filesystem::path const& where) override;
-        boost::filesystem::path readlink() override  THROW_ISDIR;
-        void symlink(boost::filesystem::path const& where) override THROW_EXIST;
-        void link(boost::filesystem::path const& where) override THROW_EXIST;
-        void chmod(mode_t mode) override;
-        void chown(int uid, int gid) override;
-        void statfs(struct statvfs *) override;
-        void utimens(const struct timespec tv[2]) override;
-        void truncate(off_t new_size) override THROW_ISDIR;
-        std::shared_ptr<rfs::Path> child(std::string const& name) override;
-        std::string getxattr(std::string const& key) override;
-        std::vector<std::string> listxattr() override;
-        void setxattr(std::string const& name, std::string const& value, int flags) override;
-        void removexattr(std::string const& name) override;
-        void cache_stats(CacheStats& append);
-        void serialize(elle::serialization::Serializer&);
-        bool allow_cache() override { return true;}
-        virtual
-          void
-          print(std::ostream& stream) const override;
+    public:
+      Directory(DirectoryPtr parent,
+                FileSystem& owner,
+                std::string const& name,
+                Address address);
+      void stat(struct stat*) override;
+      void list_directory(rfs::OnDirectoryEntry cb) override;
+      std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_ISDIR;
+      std::unique_ptr<rfs::Handle> create(int flags, mode_t mode) override THROW_ISDIR;
+      void unlink() override THROW_ISDIR;
+      void mkdir(mode_t mode) override THROW_EXIST;
+      void rmdir() override;
+      void rename(boost::filesystem::path const& where) override;
+      boost::filesystem::path readlink() override  THROW_ISDIR;
+      void symlink(boost::filesystem::path const& where) override THROW_EXIST;
+      void link(boost::filesystem::path const& where) override THROW_EXIST;
+      void chmod(mode_t mode) override;
+      void chown(int uid, int gid) override;
+      void statfs(struct statvfs *) override;
+      void utimens(const struct timespec tv[2]) override;
+      void truncate(off_t new_size) override THROW_ISDIR;
+      std::shared_ptr<rfs::Path> child(std::string const& name) override;
+      std::string getxattr(std::string const& key) override;
+      std::vector<std::string> listxattr() override;
+      void setxattr(std::string const& name, std::string const& value, int flags) override;
+      void removexattr(std::string const& name) override;
+      void cache_stats(CacheStats& append);
+      void serialize(elle::serialization::Serializer&);
+      bool allow_cache() override { return true;}
+      virtual
+        void
+        print(std::ostream& stream) const override;
 
-      private:
-        void _fetch() override;
-        void _commit() override;
-        void move_recurse(boost::filesystem::path const& current,
-            boost::filesystem::path const& where);
-        friend class Unknown;
-        friend class File;
-        friend class Symlink;
-        friend class Node;
-        friend class FileHandle;
-        friend std::unique_ptr<Block>
-        resolve_directory_conflict(Block& b, model::StoreMode store_mode,
-          boost::filesystem::path p,
-          FileSystem& owner,
-          Operation op,
-          std::weak_ptr<Directory> wd);
-        void _commit(Operation op, bool set_mtime = false);
-        void _push_changes(Operation op, bool first_write = false);
-        Address _address;
-        std::unique_ptr<ACLBlock> _block;
-        elle::unordered_map<std::string, std::pair<EntryType, Address>> _files;
-        bool _inherit_auth; //child nodes inherit this dir's permissions
-        friend class FileSystem;
+    private:
+      void _fetch() override;
+      void _fetch(std::unique_ptr<ACLBlock> block);
+      void _commit() override;
+      void move_recurse(boost::filesystem::path const& current,
+          boost::filesystem::path const& where);
+      friend class Unknown;
+      friend class File;
+      friend class Symlink;
+      friend class Node;
+      friend class FileHandle;
+      friend std::unique_ptr<Block>
+      resolve_directory_conflict(
+        Block& b,
+        Block& current,
+        model::StoreMode store_mode,
+        boost::filesystem::path p,
+        FileSystem& owner,
+        Operation op,
+        std::weak_ptr<Directory> wd);
+      void _commit(Operation op, bool set_mtime = false);
+      void _push_changes(Operation op, bool first_write = false);
+      Address _address;
+      std::unique_ptr<ACLBlock> _block;
+      elle::unordered_map<std::string, std::pair<EntryType, Address>> _files;
+      bool _inherit_auth; //child nodes inherit this dir's permissions
+      friend class FileSystem;
     };
 
     std::unique_ptr<Block>
-    resolve_directory_conflict(Block& b, model::StoreMode store_mode,
+    resolve_directory_conflict(Block& b,
+                               Block& current,
+                               model::StoreMode store_mode,
                                boost::filesystem::path p,
                                FileSystem& owner,
                                Operation op,

@@ -43,7 +43,9 @@ namespace infinit
   namespace filesystem
   {
     std::unique_ptr<Block>
-    resolve_directory_conflict(Block& b, model::StoreMode store_mode,
+    resolve_directory_conflict(Block& b,
+                               Block& current,
+                               model::StoreMode store_mode,
                                boost::filesystem::path p,
                                FileSystem& owner,
                                Operation op,
@@ -52,7 +54,7 @@ namespace infinit
        ELLE_TRACE("edit conflict on %s (%s %s)",
                   b.address(), op.type, op.target);
        Directory d({}, owner, "", b.address());
-       d._fetch();
+       d._fetch(elle::cast<ACLBlock>::runtime(current.clone()));
        switch(op.type)
        {
        case OperationType::insert:
@@ -150,10 +152,13 @@ namespace infinit
       }
 
       std::unique_ptr<Block>
-      operator() (Block& block, model::StoreMode mode) override
+      operator() (Block& block,
+                  Block& current,
+                  model::StoreMode mode) override
       {
-        return resolve_directory_conflict(block, mode, _path, *_owner, _op,
-                                          _wptr);
+        return resolve_directory_conflict(
+          block, current, mode,
+          this->_path, *this->_owner, this->_op, this->_wptr);
       }
 
       void serialize(elle::serialization::Serializer& s) override
@@ -200,10 +205,19 @@ namespace infinit
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
     {}
 
-    void Directory::_fetch()
+    void
+    Directory::_fetch()
+    {
+      this->_fetch(nullptr);
+    }
+
+    void
+    Directory::_fetch(std::unique_ptr<ACLBlock> block)
     {
       ELLE_TRACE_SCOPE("%s: fetch block", *this);
-      if (this->_block)
+      if (block)
+        this->_block = std::move(block);
+      else if (this->_block)
       {
         auto block =
           elle::cast<ACLBlock>::runtime(

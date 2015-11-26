@@ -69,10 +69,12 @@ namespace infinit
             {
               if (!resolver)
                 throw;
-              nb = (*resolver)(*block, mode);
-              if (!nb)
-                throw;
-              nb->seal();
+              ELLE_ABORT("FIXME: pass new block to base Consensus "
+                         "conflict resolution");
+              // nb = (*resolver)(*block, mode);
+              // if (!nb)
+              //   throw;
+              // nb->seal();
             }
           }
         }

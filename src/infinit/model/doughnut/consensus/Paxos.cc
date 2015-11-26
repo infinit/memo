@@ -509,7 +509,7 @@ namespace infinit
                       {
                         ELLE_TRACE_SCOPE(
                           "chosen block differs, run conflict resolution");
-                        auto block = (*resolver)(*b, mode);
+                        auto block = (*resolver)(*b, *chosen.get(), mode);
                         if (block)
                         {
                           ELLE_DEBUG_SCOPE("seal resolved block");

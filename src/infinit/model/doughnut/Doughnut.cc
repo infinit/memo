@@ -23,7 +23,6 @@
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Async.hh>
-#include <infinit/model/doughnut/Replicator.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/storage/MissingKey.hh>

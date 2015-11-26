@@ -30,19 +30,6 @@ namespace infinit
 {
   namespace filesystem
   {
-    static std::unique_ptr<Block>
-    resolve_file_conflict(Block& b, model::StoreMode store_mode,
-                          boost::filesystem::path p,
-                          infinit::model::Model const& m)
-    {
-      ELLE_LOG_SCOPE(
-        "conflict: the file \"%s\" was modified since last read. Your"
-        " changes will overwrite previous modifications", p);
-      auto block = elle::cast<MutableBlock>::runtime(m.fetch(b.address()));
-      block->data(b.data());
-      return elle::cast<Block>::runtime(block);
-    }
-
     class FileConflictResolver
       : public model::ConflictResolver
     {
@@ -51,35 +38,49 @@ namespace infinit
       {
         serialize(s);
       }
+
       FileConflictResolver()
-      : _model(nullptr)
-      {
-      }
-      FileConflictResolver(boost::filesystem::path path, model::Model* model)
-      : _path(path)
-      , _model(model)
+        : _model(nullptr)
       {}
-      std::unique_ptr<Block> operator()(Block& b, model::StoreMode store_mode) override
+
+      FileConflictResolver(boost::filesystem::path path, model::Model* model)
+        : _path(path)
+        , _model(model)
+      {}
+
+      std::unique_ptr<Block>
+      operator()(Block& b,
+                 Block& current,
+                 model::StoreMode store_mode) override
       {
-        return resolve_file_conflict(b, store_mode, _path, *_model);
+        ELLE_LOG_SCOPE(
+          "conflict: the file \"%s\" was modified since last read. Your"
+          " changes will overwrite previous modifications", this->_path);
+        auto block = elle::cast<MutableBlock>::runtime(current.clone());
+        block->data(b.data());
+        return elle::cast<Block>::runtime(block);
       }
-      void serialize(elle::serialization::Serializer& s) override
+
+      void
+      serialize(elle::serialization::Serializer& s) override
       {
-        std::string spath = _path.string();
+        std::string spath = this->_path.string();
         s.serialize("path", spath);
-        _path = spath;
+        this->_path = spath;
         if (s.in())
         {
           infinit::model::Model* model = nullptr;
           const_cast<elle::serialization::Context&>(s.context()).get(model);
           ELLE_ASSERT(model);
-          _model = model;
+          this->_model = model;
         }
       }
+
       boost::filesystem::path _path;
       model::Model* _model;
       typedef infinit::serialization_tag serialization_tag;
     };
+
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");
 
