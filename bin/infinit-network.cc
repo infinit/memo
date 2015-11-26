@@ -465,6 +465,24 @@ COMMAND(members)
     std::cout << user << std::endl;
 }
 
+static
+void
+stats(variables_map const& args)
+{
+  auto owner = self_user(ifnt, args);
+  std::string network_name = mandatory(args, "name", "network_name");
+  std::string name = ifnt.qualified_name(network_name, owner);
+  auto res =
+    beyond_fetch<std::unordered_map<std::string,
+                   std::unordered_map<std::string, Storages>>>(
+      elle::sprintf("networks/%s/stat/", name),
+      "stat",
+      "stat",
+      boost::none,
+      Headers{},
+      false);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -643,6 +661,16 @@ main(int argc, char** argv)
       elle::sprintf(
         "List all members of a network on %s", beyond(true)).c_str(),
       &members,
+      "--name NETWORK",
+      {
+        { "name,n", value<std::string>(), "network name" },
+      },
+    },
+    {
+      "stat",
+      elle::sprintf(
+        "Fetch stats of a network on %s", beyond(true)).c_str(),
+      &stats,
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network name" },

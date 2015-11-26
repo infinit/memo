@@ -229,7 +229,7 @@ class CouchDBDatastore:
     capacity = list(rows)[0].value[1]
     return { 'stats' :
              { 'storages' :
-               { 'used' : used, 'capacity' : capacity }
+               { 'usage' : used, 'capacity' : capacity }
              }
            }
 
@@ -388,7 +388,7 @@ class CouchDBDatastore:
     for user in list(network['storages']):
       for node in network['storages'][user]:
         n = network['storages'][user][node]
-        yield network['_id'], (n['used'], n['limit'])
+        yield network['_id'], (n['usage'], n['capacity'])
 
   def __network_stat_reduce(keys, values, rereduce):
     res = [0, 0]
