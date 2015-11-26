@@ -82,6 +82,21 @@ with Beyond() as beyond:
         }),
              404)
 
+    def test_uploading_twice(self):
+      user = User()
+      user.put(beyond)
+      password = 'Cannot imagine a strong password'
+      pairing = PairData(user, password)
+      pairing.put(beyond, user)
+      beyond.advance(seconds = pairing['lifespan'] * 60 - 30)
+      pairing.put(beyond, user)
+      # Exceed the initial lifespan
+      beyond.advance(seconds = 100)
+      beyond.get(
+        'users/%s/pairing' % user['name'],
+        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+      )
+
     def test_not_found(self):
       user = User()
       user.put(beyond)

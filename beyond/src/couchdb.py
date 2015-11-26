@@ -260,16 +260,21 @@ class CouchDBDatastore:
   ## Pairing ##
   ## ------- ##
 
+  def __format_pairing_information(self, pairing_information):
+    json = pairing_information.json()
+    # XXX: Remove name.
+    json['_id'] = pairing_information.name
+    from datetime import datetime
+    json['expiration'] = time.mktime(json['expiration'].timetuple())
+    return json
+
   def pairing_insert(self, pairing_information):
+    json = self.__format_pairing_information(pairing_information)
     try:
-      json = pairing_information.json()
-      # XXX: Remove name.
-      json['_id'] = pairing_information.name
-      from datetime import datetime
-      json['expiration'] = time.mktime(json['expiration'].timetuple())
       self.__couchdb['pairing'].save(json)
     except couchdb.ResourceConflict:
-      raise infinit.beyond.PairingInformation.Duplicate()
+      self.pairing_delete(pairing_information.name)
+      self.pairing_insert(pairing_information)
 
   def pairing_fetch(self, owner):
     try:
