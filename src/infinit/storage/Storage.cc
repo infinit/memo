@@ -16,7 +16,7 @@ namespace infinit
   {
     namespace
     {
-      static int step = 1048576; // 1 Mio
+      static int step = 104857600; // 100 Mio
     }
 
     Storage::Storage(int capacity)
