@@ -180,8 +180,8 @@ DAS_MODEL_SERIALIZE(Credentials);
 
 struct Storages
 {
-  int usage;
-  int capacity;
+  int64_t usage;
+  int64_t capacity;
 };
 
 DAS_MODEL(Storages, (usage, capacity), DasStorages);

@@ -66,10 +66,10 @@ namespace infinit
       BlockStatus
       _status(Key k);
 
-      ELLE_ATTRIBUTE_R(int, capacity, protected);
-      ELLE_ATTRIBUTE_R(int, usage, protected);
-      ELLE_ATTRIBUTE(int, base_usage);
-      ELLE_ATTRIBUTE(int, step);
+      ELLE_ATTRIBUTE_R(int64_t, capacity, protected);
+      ELLE_ATTRIBUTE_R(int64_t, usage, protected);
+      ELLE_ATTRIBUTE(int64_t, base_usage);
+      ELLE_ATTRIBUTE(int64_t, step);
       ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache, mutable);
       ELLE_ATTRIBUTE(boost::signals2::signal<void ()>, on_storage_size_change);
 
