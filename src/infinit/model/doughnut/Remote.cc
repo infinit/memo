@@ -139,8 +139,6 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: connect", *this);
         this->_connector = socket;
         this->_endpoint = endpoint;
-        if (this->_connection_thread)
-          this->_connection_thread->terminate_now();
         this->_connection_thread.reset(
           new reactor::Thread(
             elle::sprintf("%s connection", *this),
@@ -148,6 +146,7 @@ namespace infinit
             {
               try
               {
+                _connected = false;
                 this->_serializer.reset(
                   new protocol::Serializer(socket(), false));
                 this->_channels.reset(
@@ -159,6 +158,7 @@ namespace infinit
                   this->_key_exchange();
                 }
                 ELLE_TRACE("connected");
+                _connected = true;
               }
               catch (reactor::network::Exception const&)
               { // Upper layers may retry on network::Exception
@@ -177,8 +177,21 @@ namespace infinit
       void
       Remote::connect(elle::DurationOpt timeout)
       {
-        if (!reactor::wait(*this->_connection_thread, timeout))
-          throw reactor::network::TimeOut();
+        do
+        {
+          auto start = boost::posix_time::microsec_clock::universal_time();
+          if (!reactor::wait(*this->_connection_thread, timeout))
+            throw reactor::network::TimeOut();
+          // Either connect succeeded, or it was restarted
+          if (timeout)
+          {
+            timeout = *timeout -
+              (boost::posix_time::microsec_clock::universal_time() - start);
+            if (timeout->is_negative() && !_connected)
+              throw reactor::network::TimeOut();
+          }
+        }
+        while (!_connected);
       }
 
       void

@@ -97,6 +97,8 @@ namespace infinit
         */
         ELLE_ATTRIBUTE_RW(std::function<bool (Remote&)>, retry_connect);
         ELLE_ATTRIBUTE_R(bool, fast_fail);
+        // Do *not* use, call connect() instead.
+        ELLE_ATTRIBUTE(bool, connected);
       /*-------.
       | Blocks |
       `-------*/
