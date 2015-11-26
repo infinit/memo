@@ -2,7 +2,6 @@
 <html>
   <head>
     <meta charset="utf-8" />
-
     <%
     title = context.get('title', 'Infinit File Storage Platform')
     description = context.get('description', 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.')
@@ -40,15 +39,15 @@
       <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"></a>
 
       <ul>
-        ## <li>
-        ##   <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
-        ## </li>
+        <li>
+          <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
+        </li>
         ## <li>
         ##   <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
         ## </li>
-        <li>
-          <a href="${route('home')}#download">Download</a>
-        </li>
+        ## <li>
+        ##   <a href="${route('home')}#download">Download</a>
+        ## </li>
       </ul>
     </header>
 

@@ -1,0 +1,22 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <progress value="0"></progress>
+  <div id="progressTooltip" class="tooltip">Test</div>
+
+  <nav id="sidebar">
+    <div id="menu-anchor"></div>
+
+    <ul class="menu">
+    </ul>
+  </nav>
+
+  <section class="doc">
+    <h1>Get Started on Windows</h1>
+    <p>This guide is not yet available for Windows. Please refer to the <a href="${route('doc_get_started')}">Mac / Linux</a> guide.</p>
+    <p>You can also sign up to our newsletter to know when it will be released.</p>
+    <a class="button" target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee">Get an invitation</a>
+  </section>
+
+</%block>

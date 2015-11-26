@@ -52,12 +52,17 @@ def configure(
     'src/wsgi.py',
   )
 
+  dependencies = drake.nodes(
+    'src/httpagentparser.py',
+  )
+
   templates = drake.nodes(
     'templates/base.html',
     'templates/pages/home.html',
     'templates/pages/drive.html',
     'templates/pages/docs/menu.html',
     'templates/pages/docs/get_started.html',
+    'templates/pages/docs/get_started_windows.html',
     'templates/pages/docs/overview.html',
     'templates/pages/docs/technology.html',
     'templates/pages/docs/comparisons.html',
@@ -212,6 +217,9 @@ def configure(
     where = drake.Path(where) / python_prefix
     for node in how(sources,
                     where / 'infinit/website', strip_prefix = 'src'):
+      yield node
+    for node in how(dependencies,
+                    where, strip_prefix = 'src'):
       yield node
     yield how([bottle], where, strip_prefix = True)[0]
     for n in how(sendwithus.nodes,

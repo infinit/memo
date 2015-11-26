@@ -1,5 +1,6 @@
 import bottle
 import functools
+import httpagentparser
 import os
 import os.path
 import sys
@@ -22,6 +23,15 @@ def find_route(name, **params):
     if route.name == name:
       return route.rule
 
+def detect_os():
+  agent = bottle.request.environ.get('HTTP_USER_AGENT')
+  os = httpagentparser.detect(agent)
+  if not os:
+    os = agent.split('/')[0]
+  else:
+    os = os['os']['name']
+  return os
+
 def view(name):
   def res(f):
     lookup = '%s/share/infinit/website/templates' % PREFIX
@@ -31,6 +41,7 @@ def view(name):
       request = bottle.request,
       route = find_route,
       url = url,
+      os = detect_os,
     )(f)
   return res
 

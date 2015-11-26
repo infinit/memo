@@ -58,8 +58,11 @@ module.exports = function(grunt) {
         }],
         options: {
           template: 'templates/pages/docs/src/layout.jst',
-          markdownOptions: {
-          }
+          postCompile: function(src, context) {
+            // don't escape quotes for Mako templates
+            src = src.replace(/&quot;/gi, '\"');
+            return src;
+          },
         }
       }
     },

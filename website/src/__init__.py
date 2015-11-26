@@ -58,6 +58,14 @@ class Website(bottle.Bottle):
       'description': 'A step by step guide to getting started with the Infinit file system platform.',
     }
 
+  @route('/get-started/windows', name = 'doc_get_started_windows')
+  @view('pages/docs/get_started_windows.html')
+  def root(self):
+    return {
+      'title': 'Get Started with Infinit - Windows Guide',
+      'description': 'A step by step guide for Windows to getting started with the Infinit file system platform.',
+    }
+
   @route('/documentation/technology', name = 'doc_technology')
   @view('pages/docs/technology.html')
   def root(self):
