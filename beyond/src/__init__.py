@@ -4,11 +4,26 @@ import requests
 
 import infinit.beyond.version
 
-from infinit.beyond import validation
+from infinit.beyond import validation, emailer
 
 from copy import deepcopy
 from itertools import chain
 
+# Email templates.
+templates = {
+  'Drive/Joined': {
+    'noop': 'Drive/Joined',
+    'swu': 'tem_RFSDrp7nzCbsBRSUts7MsU',
+  },
+  'Drive/Invitation': {
+    'noop': 'Drive/Invitation',
+    'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
+  },
+  'User/Welcome': {
+    'noop': 'User/Welcome',
+    'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
+  }
+}
 
 class Beyond:
 
@@ -19,6 +34,7 @@ class Beyond:
       dropbox_app_secret,
       google_app_key,
       google_app_secret,
+      sendwithus_api_key = None,
       validate_email_address = True,
   ):
     self.__datastore = datastore
@@ -28,6 +44,10 @@ class Beyond:
     self.__google_app_key    = google_app_key
     self.__google_app_secret = google_app_secret
     self.__validate_email_address = validate_email_address
+    if sendwithus_api_key is not None:
+      self.__emailer = emailer.SendWithUs(sendwithus_api_key)
+    else:
+      self.__emailer = emailer.NoOp()
 
   @property
   def now(self):
@@ -40,6 +60,16 @@ class Beyond:
   @property
   def dropbox_app_key(self):
     return self.__dropbox_app_key
+
+  @property
+  def emailer(self):
+    return self.__emailer
+
+  def template(self, name):
+    if isinstance(self.__emailer, emailer.SendWithUs):
+      return templates[name]['swu']
+    else:
+      return templates[name]['noop']
 
   @property
   def dropbox_app_secret(self):
@@ -230,6 +260,16 @@ class User:
 
   def create(self):
     self.__beyond._Beyond__datastore.user_insert(self)
+    if self.email is not None:
+      self.__beyond.emailer.send_one(
+        template = self.__beyond.template("User/Welcome"),
+        recipient_email = self.email,
+        recipient_name = self.name,
+        variables = {
+          'email': self.email,
+          'name': self.name,
+        }
+    )
 
   def save(self):
     diff = {}
@@ -452,9 +492,44 @@ class Drive(metaclass = Entity,
 
   class Invitation(metaclass = Entity,
                    fields = fields('permissions', 'status', 'create_home')):
-    statuses = ["pending", "accepted"]
-    def from_json(beyond, json):
-      self_ = Entity.from_json(beyond, json)
-      if self_["status"] not in statuses:
+    statuses = ['pending', 'ok']
+
+    # XXX: Shouldn't work.
+    def __init__(self, beyond, **json):
+      super().__init__(beyond, **json)
+      if self['status'] not in statuses:
         raise exceptions.InvalidFormat('invitation', status)
-      return self_
+
+    def save(self, beyond, drive, owner, invitee, invitation):
+      confirm = not invitation
+      if invitation:
+        if invitee.name in drive.users and drive.users[invitee.name] == 'pending':
+          return
+        elif drive.users.get(invitee.name, None) == 'ok':
+          raise Exception("ALREADY CONFIRMED")
+      if confirm:
+        if invitee.name not in drive.users:
+          raise Exception("NOT INVITED")
+        elif drive.users.get(invitee.name, None) == 'ok':
+          return
+      drive.users[invitee.name] = self.json()
+      drive.save()
+      variables = {
+        'owner': { x: getattr(owner, x) for x in ['name', 'email'] },
+        'invitee': { x: getattr(invitee, x) for x in ['name', 'email'] },
+        'drive': { x: getattr(drive, x) for x in ['name', 'description'] },
+      }
+      if invitation and invitee.email is not None:
+        beyond.emailer.send_one(
+          template = beyond.template("Drive/Invitation"),
+          recipient_email = invitee.email,
+          recipient_name = invitee.name,
+          variables = variables
+        )
+      if confirm and owner.email is not None:
+        beyond.emailer.send_one(
+          template = beyond.template("Drive/Joined"),
+          recipient_email = owner.email,
+          recipient_name = owner.name,
+          variables = variables
+        )

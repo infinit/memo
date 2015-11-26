@@ -90,5 +90,11 @@ with Beyond() as beyond:
                               auth = eve.private_key).json()['drives']),
                4)
 
+      # Validate.
+      drive1.accept_many(beyond, [alice, bob, serge])
+      drive2.accept_many(beyond, [alice, bob])
+      drive2.accept_many(beyond, [alice])
+      drive.accept(beyond, eve)
+
   if __name__ == '__main__':
     unittest.main()

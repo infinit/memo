@@ -40,7 +40,7 @@ bottle.Bottle.host = host
 
 class Beyond:
 
-  def __init__(self):
+  def __init__(self, beyond_args = {}):
     super().__init__()
     self.__app = None
     self.__advance = timedelta()
@@ -48,6 +48,7 @@ class Beyond:
     self.__bottle = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
+    self.__beyond_args = beyond_args
 
     setattr(self, 'get',
             lambda url, **kw: self.request(url = url, method = 'GET', **kw))
@@ -58,16 +59,32 @@ class Beyond:
     setattr(self, 'post',
             lambda url, **kw: self.request(url = url, method = 'POST', **kw))
 
+  @property
+  def emailer(self):
+    return self.__beyond.emailer
+
+  @emailer.setter
+  def emailer(self, emailer):
+    setattr(self.__beyond, '_Beyond__emailer', emailer)
+
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
-    self.__datastore = \
-      infinit.beyond.couchdb.CouchDBDatastore(couchdb)
+    self.__datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb)
+    default_args = {
+      'dropbox_app_key': 'db_key',
+      'dropbox_app_secret': 'db_secret',
+      'google_app_key': 'google_key',
+      'google_app_secret': 'google_secret',
+      'sendwithus_api_key': None,
+    }
+    from copy import deepcopy
+    args = deepcopy(self.__beyond_args)
+    for arg in default_args:
+      if arg not in args:
+        args[arg] = default_args[arg]
     self.__beyond = infinit.beyond.Beyond(
       datastore = self.__datastore,
-      dropbox_app_key = 'db_key',
-      dropbox_app_secret = 'db_secret',
-      google_app_key = 'google_key',
-      google_app_secret = 'google_secret',
+      **args
     )
 
     setattr(self.__beyond, '_Beyond__now', self.now)
@@ -96,11 +113,13 @@ class Beyond:
       if auth is not None:
         der = base64.b64decode(auth.encode('utf-8'))
         k = RSA.importKey(der)
-        h = base64.b64encode(hashlib.sha256(kwargs['data'].encode('latin-1')).digest())
+        h = base64.b64encode(
+          hashlib.sha256(kwargs['data'].encode('latin-1')).digest())
         t = str(int(time.time()))
         string_to_sign = kwargs['method'] + ';' + url + ';'
         string_to_sign += h.decode('latin-1') + ';' + t
-        raw_sig = PKCS1_v1_5.new(k).sign(SHA256.new(string_to_sign.encode('latin-1')))
+        raw_sig = PKCS1_v1_5.new(k).sign(
+          SHA256.new(string_to_sign.encode('latin-1')))
         sig = base64.b64encode(raw_sig)
         kwargs['headers']['infinit-signature'] = sig
         kwargs['headers']['infinit-time'] = t
@@ -326,6 +345,19 @@ class Drive(dict):
   def invite_many(self, hub, invitees, **kwargs):
     for invitee in invitees:
       self.invite(hub, invitee, **kwargs)
+
+  def accept(self, hub, invitee, **kwargs):
+    if 'status' not in kwargs:
+      kwargs['status'] = 'ok'
+    invitation = Drive.Invitation(**kwargs)
+    owner = self.volume.network.owner
+    return hub.put('drives/%s/invitations/%s' % (self['name'], invitee['name']),
+                   json = invitation,
+                   auth = invitee.private_key)
+
+  def accept_many(self, hub, invitees, **kwargs):
+    for invitee in invitees:
+      self.accept(hub, invitee, **kwargs)
 
 mefyl_priv = 'MIIEpAIBAAKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQABAoIBAADxmSB5tVRWrGGL6q4kOIWxTGb5hU8llApZgKEhdLFjSsvFZIzFYYjrab9iLRroQgw/tMENLdBy7AWtcZWZ6J8SAP/QJ7KQJ9XdR34hG5xViIRG1VS19W3Ve+RROcynZwkyYMkG4Gp+/z5MhsVk1IdAbO5b1IhrQbc8CLB/dpdqwcicWqiR6t3mc5HkQ4mDOBSjrU11voiv8dIc0G6aOWEpqzoTYw7ewxoXugezmJnkOsObRWno2OZO83IVFXEmAjMe73+jhPKPbMD7WcT7ktKynPfFYh2kTrkhDDaTTs4I2UBCP6UlUaAt3IPFIZEJXCGplRTOldL3W+VEuTcXpZECgYEA58zLVUhgqFkpvxI7unu6ijjvLipgsBefbDseKfuHTHx9T7Unb2ESHW551e5lF5yuRmCjE2vJXFCQidyq0mwbhAaQK4PWuea5+RrPmYDpOQP3kQQAfsOrwauQR6sX2HxxIWwYcet4bO2dDEOOgN8d7fS6DpWw8yYSqiiUrXMAdPkCgYEA13rzCpXGzFU6H2pBmfamXFR56q0J+bmNanXMZ044UPyNdVYhJ8hFqs0bRjjR9QiHxg9/94Cfer7VKQePlxVh3JTduZQUcANXXowyFi6wLzmVABaM55jEDE0WkZcOIYMZIJWka92AsHP7ODp8QR752zC3Qwn48RlN3clzC7dfPScCgYEA5r0oZqNefBYNhUKMLCy/2pmkFStgBcnuCxmqBBZ6bvu47aAhOjDBjISNSRQ+k0uG+010538y+O7FgkYj0MSGe1zhJD/ffjwbQcmbf20gO34kcLkwGP+EOIwkWgMJAJmXL7Lffn7r6Fp7K1sQPl5a96TVlHETrGZoy/MLVMEWYlkCgYAqYZpP6KmTIugtqZ6Bg8uwuUTJbYNaxK4V1FmBsBbPhvzjqS8YPgHF2FWW+DIDecwKnp3Stk+nusT+LuiFFMWMtxLtHzzt0xpqFDT9u+0XPMIbpFPOcXON39Oiiw1SdhCJIiWWuZhIHGe65XXu8QK/o9NHsjxuX0W7a5XfJg/rXQKBgQDEo+kYUAW6JM2tod+4OxF8+s7q1E7fzZ7jgACoNzJ0RJVW9hGAlUhuXRkHIjnnhd2mDqYry7KNA5kvIS+oSH+wKjIpB6ZiBOhvgjww16LE6+aDoSLqmgwfHh2T2LpNfsc2UupCDp5W7jI4LPGbStiAeMLTtXU/XQ35Ov1BMWXN8g=='
 

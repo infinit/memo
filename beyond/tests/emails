@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+_print = print
+def print(*args, **kwargs):
+  import sys
+  kwargs['file'] = sys.stderr
+  _print(*args, **kwargs)
+
+class Emailer:
+
+  def __init__(self):
+    self.emails = {}
+
+  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
+    self.__store(template, recipient_email, variables)
+
+  def __store(self, template, recipient_email, variables):
+    self.get_specifics(recipient_email, template).append(variables)
+
+  def get(self, email):
+    return self.emails.setdefault(email, {})
+
+  def get_specifics(self, email, template):
+    return self.get(email).setdefault(template, [])
+
+# XXX: Test the right send with us template is called.
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_welcome(self):
+      emailer = Emailer()
+      beyond.emailer = emailer
+      user = User()
+      user.put(beyond)
+      assert 'User/Welcome' in emailer.get(user['email'])
+      email = emailer.get_specifics(user['email'], 'User/Welcome')[0]
+      for key in ['email', 'name']:
+        assert key in email
+
+    def create_drive(user):
+      n = Network('network', owner = user)
+      n.put(beyond)
+      v = Volume('volume', network = n)
+      v.put(beyond)
+      d = Drive('Coucou', volume = v, description = "Lorem")
+      d.put(beyond)
+      return n, v, d
+
+    def test_drive_invite(self):
+      emailer = Emailer()
+      beyond.emailer = emailer
+      alice, bob = User(), User()
+      alice.put(beyond), bob.put(beyond)
+      assert 'User/Welcome' in emailer.get(alice['email'])
+      assert 'User/Welcome' in emailer.get(bob['email'])
+      n, v, d = Test.create_drive(bob)
+      # Invite alice.
+      p = Passport(n, invitee = alice)
+      p.put(beyond)
+      d.invite(hub = beyond, invitee = alice)
+      assert 'Drive/Invitation' in emailer.get(alice['email'])
+      email = emailer.get_specifics(alice['email'], 'Drive/Invitation')[0]
+      for key in ['owner', 'invitee']:
+        assert key in email
+      email['owner']['name'] = bob['name']
+      email['invitee']['name'] = alice['name']
+      assertEq(len(emailer.get_specifics(bob['email'], 'Drive/Invitation')), 0)
+      # Accept as alice.
+      d.accept(hub = beyond, invitee = alice)
+      email = emailer.get_specifics(bob['email'], 'Drive/Joined')[0]
+      for key in ['owner', 'invitee']:
+        assert key in email
+      email['owner']['name'] = bob['name']
+      email['invitee']['name'] = alice['name']
+      assertEq(len(emailer.get_specifics(alice['email'], 'Drive/Joined')), 0)
+
+  if __name__ == '__main__':
+    unittest.main()

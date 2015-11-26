@@ -23,6 +23,7 @@ cun1SplfUKZQZywA8ueUU/ZuGj/XXwopPR5LgWW7sgkwdCklQUPjcecWEZFy/ODl
 e9FGZj7sEHpPuDE=
 -----END PRIVATE KEY-----
 ''', 'UTF-8')
+sendwithus_api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d'
 gcs = infinit.beyond.gcs.GCS(login = gcs_login, key = gcs_key)
 
 beyond = infinit.beyond.Beyond(
@@ -32,5 +33,6 @@ beyond = infinit.beyond.Beyond(
   google_app_key = ${repr(google_app_key)},
   google_app_secret = ${repr(google_app_secret)},
   validate_email_address = False,
+  sendwithus_api_key = sendwithus_api_key,
 )
 application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
