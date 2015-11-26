@@ -137,7 +137,7 @@ namespace infinit
     bool
     File::allow_cache()
     {
-      return _owner.single_mount() ||  _rw_handle_count > 0;
+      return true;
     }
 
     void
@@ -156,7 +156,13 @@ namespace infinit
     {
       if (_rw_handle_count)
         return;
-      Address addr = _parent->_files.at(_name).second;
+      _parent->_fetch();
+      auto it = _parent->_files.find(_name);
+      if (it == _parent->_files.end())
+      {
+        THROW_NOENT;
+      }
+      Address addr = it->second.second;
       if (!_first_block)
         _first_block = elle::cast<MutableBlock>::runtime(
           _owner.fetch_or_die(addr));
@@ -170,6 +176,9 @@ namespace infinit
           return;
       }
       bool empty = false;
+      elle::SafeFinally remove_undecoded_first_block([&] {
+          _first_block.reset();
+      });
       elle::IOStream is(
         umbrella([&] {
             auto& d = _first_block->data();
@@ -196,6 +205,7 @@ namespace infinit
         ELLE_WARN("File deserialization error: %s", e);
         throw rfs::Error(EIO, e.what());
       }
+      remove_undecoded_first_block.abort();
     }
 
     void
@@ -310,6 +320,9 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: unlink, handle_count %s,%s", *this,
         _r_handle_count, _rw_handle_count);
 
+      if (_parent)
+        _fetch();
+
       // multi method can't be called after deletion from parent
       if (!_first_block)
       {
@@ -319,7 +332,6 @@ namespace infinit
           _remove_from_cache(_full_path);
           return;
         }
-        _fetch();
       }
       if (_parent)
       {
