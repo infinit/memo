@@ -18,7 +18,8 @@ namespace infinit
         {
         public:
           Consensus(Doughnut& doughnut);
-          virtual ~Consensus() {}
+          virtual
+          ~Consensus() = default;
           ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 
         /*-------.
