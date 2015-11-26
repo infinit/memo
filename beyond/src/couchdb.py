@@ -144,13 +144,13 @@ class CouchDBDatastore:
       design = self.__couchdb[category]['_design/beyond']
     except couchdb.http.ResourceNotFound:
       design = couchdb.client.Document()
-      views = {
-        name : {'map': getsource(view_map)} for name, view_map in views
-      }
-      views.update({
-        name : {'map': getsource(view), 'reduce': getsource(reducer)}
-        for name, view, reducer in views_with_reduce
-      })
+    views = {
+      name : {'map': getsource(view_map)} for name, view_map in views
+    }
+    views.update({
+      name : {'map': getsource(view), 'reduce': getsource(reducer)}
+      for name, view, reducer in views_with_reduce
+    })
     design.update(
       {
         '_id': '_design/beyond',
