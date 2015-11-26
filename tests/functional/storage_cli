@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 from utils import *
+from math import *
 
 def static_vars(**kwargs):
   def decorate(func):
@@ -9,15 +10,61 @@ def static_vars(**kwargs):
     return func
   return decorate
 
+quals = ['kb', 'kib', 'Kib', 'KiB',
+         'mb', 'mib', 'Mib', 'MiB',
+         'gb', 'gib', 'Gib', 'GiB',
+         'tb', 'tib', 'Tib', 'TiB',
+         'b', 'B']
+
+kb = pow(2, 10)
+mb = pow(2, 20)
+gb = pow(2, 30)
+tb = pow(2, 40)
+
+quals_to = [1000, 1024, 1024, 1024,
+            1000000, mb, mb, mb,
+            1000000000, gb, gb, gb,
+            1000000000000, tb, tb, tb,
+            1, 1]
+
+def convert(size):
+  global quals
+  for qual in quals:
+    index = size.find(qual)
+    if index != -1:
+      return (int(size[:index]), size[index:])
+  return (int(size),'')
+
+def unformat(size):
+  global quals
+  global quals_to
+  size, qual = convert(size)
+  if qual == '':
+    return size
+  return size * quals_to[quals.index(qual)]
+
+
 @static_vars(name = -1)
-def cmd(size):
-  cmd.name += 1
-  return ['infinit-storage', '--create', '--filesystem', str(cmd.name),
-          '--capacity', size]
+def test(infinit, size):
+  global quals
+  import json
+  for qual in quals:
+    test.name += 1
+    hsize = "%s%s" % (size, qual)
+    infinit.run(['infinit-storage', '--create', '--filesystem',
+                str(test.name),
+                '--capacity', hsize])
+    with open("%s/%s/%s" % (infinit.dir,
+                            'storages',
+                            str(test.name)), 'r') as conf:
+        j = json.loads(''.join(conf.readlines()))
+        assertEq(j['capacity'], unformat(hsize))
 
 with Infinit() as bob:
-  bob.run(cmd('0'))
-  bob.run(cmd('1'))
-  bob.run(cmd('123123'))
-  bob.run(cmd('123123123'))
-  bob.run(cmd('9223372036854775807'))
+  test(bob, '0')
+  test(bob, '1')
+  test(bob, '42')
+  test(bob, '408')
+  test(bob, '1024')
+  test(bob, '101010')
+  test(bob, '1010101')

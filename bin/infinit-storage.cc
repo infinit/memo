@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <cstring>
+#include <cctype>
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
@@ -18,11 +22,69 @@ using namespace boost::program_options;
 
 infinit::Infinit ifnt;
 
+
+static
+int64_t
+convert_capacity(int64_t value, std::string quantifier)
+{
+  std::cerr << value << "\n" << quantifier << std::endl;
+  if (quantifier == "b" || quantifier == "")
+    return value;
+
+  if (quantifier == "kb")
+    return value * 1000;
+  if (quantifier == "kib")
+    return value << 10;
+
+  if (quantifier == "mb")
+    return value * 1000000;
+  if (quantifier == "mib")
+    return value << 20;
+
+  if (quantifier == "gb")
+    return value * 1000000000;
+  if (quantifier == "gib")
+    return value << 30;
+
+  if (quantifier == "tb")
+    return value * 1000000000000;
+  if (quantifier == "tib")
+    return value << 40;
+
+  throw elle::Error(
+    elle::sprintf("This format is not supported: %s", quantifier));
+}
+
+static
+int64_t
+convert_capacity(std::string value)
+{
+  std::string quantifier = [&] {
+    std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+    std::vector<std::string> to_find = {
+      // "b" MUST be the last element.
+      "kb", "mb", "gb", "tb", "kib", "mib", "gib", "tib", "b"
+    };
+    const char* res = nullptr;
+    for (auto const& t: to_find)
+    {
+      res = std::strstr(value.c_str(), t.c_str());
+      if (res != nullptr)
+        break;
+    }
+
+    return res != nullptr ? std::string(res) : std::string("");
+  }();
+  auto intval = std::stoll(value.substr(0, value.size() - quantifier.size()));
+  return convert_capacity(intval, quantifier);
+}
+
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
   int64_t capacity = args.count("capacity")
-    ? args["capacity"].as<int64_t>() : 0;
+    ? convert_capacity(args["capacity"].as<std::string>())
+    : 0;
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("dropbox"))
   {
@@ -158,7 +220,7 @@ main(int argc, char** argv)
       "STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
-        { "capacity,c", value<int64_t>(), "limit the storage capacity" },
+        { "capacity,c", value<std::string>(), "limit the storage capacityi (default is byte)" },
         option_output("storage"),
       },
       {
