@@ -161,7 +161,8 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
       if (dir_inherit)
       {
         output << "  inherit: "
-               << (dir_inherit.get() ? "yes" : "no") << std::endl;
+               << (dir_inherit.get() ? "yes" : "no")
+               << std::endl;
       }
       Json j = elle::json::read(ss);
       auto a = boost::any_cast<Array>(j);
@@ -262,9 +263,7 @@ set_action(std::string const& path,
   }
 }
 
-static
-void
-list(variables_map const& args)
+COMMAND(list)
 {
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
@@ -280,9 +279,7 @@ list(variables_map const& args)
   }
 }
 
-static
-void
-set(variables_map const& args)
+COMMAND(set)
 {
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
@@ -350,7 +347,7 @@ main(int argc, char** argv)
       &list,
       "--path PATHS",
       {
-        { "path,p", value<std::vector<std::string>>(), "path" },
+        { "path,p", value<std::vector<std::string>>(), "paths" },
         { "recursive,R", bool_switch(), "list recursively" },
         { "verbose", bool_switch(), "verbose output" },
       },
@@ -361,7 +358,7 @@ main(int argc, char** argv)
       &set,
       "--path PATHS [--user USERS] [OPTIONS...]",
       {
-        { "path,p", value<std::vector<std::string>>(), "path" },
+        { "path,p", value<std::vector<std::string>>(), "paths" },
         { "user,u", value<std::vector<std::string>>(), "user" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
@@ -370,14 +367,15 @@ main(int argc, char** argv)
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "apply recursively" },
         { "try-with-public-key", bool_switch(),
-          "if a corresponding user block is not found, fallback to the user's "
-          "public key" },
-        { "verbose", bool_switch(), "verbose output" },
+          "if a corresponding user block is not found, fallback to the local "
+          "copy of the user's public key" },
         { "fallback-xattrs", bool_switch(), "fallback to creating xattrs "
           "folder if system xattrs are not suppported" },
+        { "verbose", bool_switch(), "verbose output" },
       },
     },
   };
-  return infinit::main("Infinit ACL utility", modes, argc, argv,
+  return infinit::main("Infinit access control list utility", modes, argc, argv,
                        std::string("path"));
+
 }

@@ -28,9 +28,7 @@ volume_name(variables_map const& args, infinit::User const& owner)
   return ifnt.qualified_name(mandatory(args, "name", "volume name"), owner);
 }
 
-static
-void
-create(variables_map const& args)
+COMMAND(create)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
@@ -60,9 +58,7 @@ create(variables_map const& args)
     beyond_push("volume", name, volume, owner);
 }
 
-static
-void
-export_(variables_map const& args)
+COMMAND(export_)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
@@ -76,9 +72,7 @@ export_(variables_map const& args)
   report_exported(*output, "volume", volume.name);
 }
 
-static
-void
-import(variables_map const& args)
+COMMAND(import)
 {
   auto input = get_input(args);
   elle::serialization::json::SerializerIn s(*input, false);
@@ -88,9 +82,7 @@ import(variables_map const& args)
   report_imported("volume", volume.name);
 }
 
-static
-void
-push(variables_map const& args)
+COMMAND(push)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
@@ -123,9 +115,7 @@ delete_(variables_map const& args)
       elle::sprintf("File for volume could not be deleted: %s", path));
 }
 
-static
-void
-fetch(variables_map const& args)
+COMMAND(fetch)
 {
   auto owner = self_user(ifnt, args);
   auto network_name_ = optional(args, "network");
@@ -167,9 +157,7 @@ fetch(variables_map const& args)
   }
 }
 
-static
-void
-run(variables_map const& args)
+COMMAND(run)
 {
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
@@ -584,9 +572,7 @@ run(variables_map const& args)
     run();
 }
 
-static
-void
-mount(variables_map const& args)
+COMMAND(mount)
 {
   auto mountpoint = optional(args, "mountpoint");
   if (!mountpoint)
@@ -603,9 +589,7 @@ mount(variables_map const& args)
   run(args);
 }
 
-static
-void
-list(variables_map const& args)
+COMMAND(list)
 {
   for (auto const& volume: ifnt.volumes_get())
   {

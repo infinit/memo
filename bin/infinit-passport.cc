@@ -9,9 +9,7 @@ options_description mode_options("Modes");
 
 infinit::Infinit ifnt;
 
-static
-void
-create(variables_map const& args)
+COMMAND(create)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
@@ -60,9 +58,7 @@ create(variables_map const& args)
   }
 }
 
-static
-void
-export_(variables_map const& args)
+COMMAND(export_)
 {
   auto self = self_user(ifnt, args);
   auto output = get_output(args);
@@ -77,9 +73,7 @@ export_(variables_map const& args)
                   elle::sprintf("%s: %s", network_name, user_name));
 }
 
-static
-void
-fetch(variables_map const& args)
+COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
   auto network_name = optional(args, "network");
@@ -150,9 +144,7 @@ fetch(variables_map const& args)
   }
 }
 
-static
-void
-import(variables_map const& args)
+COMMAND(import)
 {
   auto input = get_input(args);
   auto passport = elle::serialization::json::deserialize<infinit::Passport>
@@ -171,9 +163,7 @@ import(variables_map const& args)
                   elle::sprintf("%s: %s", passport.network(), user_name));
 }
 
-static
-void
-push(variables_map const& args)
+COMMAND(push)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
@@ -190,9 +180,7 @@ push(variables_map const& args)
   }
 }
 
-static
-void
-pull(variables_map const& args)
+COMMAND(pull)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
@@ -207,9 +195,7 @@ pull(variables_map const& args)
   }
 }
 
-static
-void
-list(variables_map const& args)
+COMMAND(list)
 {
   namespace boost_fs = boost::filesystem;
   auto self = self_user(ifnt, args);
@@ -240,9 +226,7 @@ list(variables_map const& args)
   }
 }
 
-static
-void
-delete_(variables_map const& args)
+COMMAND(delete_)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
@@ -277,7 +261,7 @@ main(int argc, char** argv)
           "network to create the passport to." },
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "push-passport", bool_switch(),
-          elle::sprintf("push the passport to %s", beyond()).c_str() },
+          elle::sprintf("push the passport to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-passport" },
         option_output("passport"),
         option_owner,
@@ -285,7 +269,7 @@ main(int argc, char** argv)
     },
     {
       "export",
-      "Export a network",
+      "Export a user's network passport",
       &export_,
       "--network NETWORK --user USER",
       {
@@ -297,13 +281,15 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      "Fetch a passport for a user to a network",
+      elle::sprintf("Fetch a user's network passport from %s",
+                    beyond(true)).c_str(),
       &fetch,
       "[--network NETWORK --user USER]",
       {
         { "network,n", value<std::string>(),
-          "network to fetch the passport for" },
-        { "user,u", value<std::string>(), "user to fetch passports for" },
+          "network to fetch the passport for (optional)" },
+        { "user,u", value<std::string>(),
+          "user to fetch passports for (optional)" },
         option_owner,
       },
     },
@@ -318,7 +304,8 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a user's passport to %s", beyond()).c_str(),
+      elle::sprintf("Push a user's network passport to %s",
+                    beyond(true)).c_str(),
       &push,
       "--network NETWORK --user USER",
       {
@@ -329,7 +316,8 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a user's passport from %s", beyond()).c_str(),
+      elle::sprintf("Remove a user's network passport from %s",
+                    beyond(true)).c_str(),
       &pull,
       "--network NETWORK --user USER",
       {

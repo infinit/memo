@@ -44,10 +44,7 @@ one(Args&& ... args)
   return _one(false, std::forward<Args>(args)...);
 }
 
-
-static
-void
-create(variables_map const& args)
+COMMAND(create)
 {
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
@@ -220,9 +217,7 @@ create(variables_map const& args)
   }
 }
 
-static
-void
-export_(variables_map const& args)
+COMMAND(export_)
 {
   auto owner = self_user(ifnt, args);
   auto output = get_output(args);
@@ -239,9 +234,7 @@ export_(variables_map const& args)
   report_exported(*output, "network", network.name);
 }
 
-static
-void
-fetch(variables_map const& args)
+COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
   auto network_name_ = optional(args, "name");
@@ -277,9 +270,7 @@ fetch(variables_map const& args)
   }
 }
 
-static
-void
-import(variables_map const& args)
+COMMAND(import)
 {
   auto input = get_input(args);
   auto desc =
@@ -289,9 +280,7 @@ import(variables_map const& args)
   report_imported("network", desc.name);
 }
 
-static
-void
-join(variables_map const& args)
+COMMAND(join)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
@@ -341,17 +330,13 @@ join(variables_map const& args)
   report_action("joined", "network", network.name, std::string("locally"));
 }
 
-static
-void
-list(variables_map const& args)
+COMMAND(list)
 {
   for (auto const& network: ifnt.networks_get())
     std::cout << network.name << std::endl;
 }
 
-static
-void
-push(variables_map const& args)
+COMMAND(push)
 {
   auto network_name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
@@ -367,9 +352,7 @@ push(variables_map const& args)
   }
 }
 
-static
-void
-pull(variables_map const& args)
+COMMAND(pull)
 {
   auto name_ = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
@@ -377,9 +360,7 @@ pull(variables_map const& args)
   beyond_delete("network", network_name, owner);
 }
 
-static
-void
-delete_(variables_map const& args)
+COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
@@ -392,9 +373,7 @@ delete_(variables_map const& args)
       elle::sprintf("File for network could not be deleted: %s", path));
 }
 
-static
-void
-run(variables_map const& args)
+COMMAND(run)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
@@ -449,9 +428,7 @@ run(variables_map const& args)
     run();
 }
 
-static
-void
-list_storage(variables_map const& args)
+COMMAND(list_storage)
 {
   auto owner = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
@@ -472,9 +449,7 @@ list_storage(variables_map const& args)
   }
 }
 
-static
-void
-members(variables_map const& args)
+COMMAND(members)
 {
   std::string network_name = mandatory(args, "name", "network_name");
   auto res =
@@ -565,7 +540,7 @@ main(int argc, char** argv)
       "fetch",
       elle::sprintf("Fetch a network from %s", beyond(true)).c_str(),
       &fetch,
-      "",
+      {},
       {
         { "name,n", value<std::string>(), "network to fetch (optional)" },
         option_owner,
@@ -575,7 +550,7 @@ main(int argc, char** argv)
       "import",
       "Import a network",
       &import,
-      "",
+      {},
       {
         option_input("network"),
       },

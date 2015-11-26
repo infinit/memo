@@ -9,9 +9,7 @@ using namespace boost::program_options;
 
 infinit::Infinit ifnt;
 
-static
-void
-add(variables_map const& args)
+COMMAND(add)
 {
   if (args.count("dropbox"))
   {
@@ -97,9 +95,7 @@ fetch_credentials(infinit::User const& user,
   }
 }
 
-static
-void
-fetch(variables_map const& args)
+COMMAND(fetch)
 {
   auto e = enabled(args);
   auto user = self_user(ifnt, args);
@@ -163,9 +159,7 @@ list_(Enabled const& e, Service service, Fetch fetch)
   }
 }
 
-static
-void
-list(variables_map const& args)
+COMMAND(list)
 {
   auto e = enabled(args);
   list_(e, s::dropbox, s::credentials_dropbox);
@@ -194,7 +188,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      "Synchronize credentials locally",
+      elle::sprintf("Fetch credentials from %s", beyond(true)),
       &fetch,
       "[SERVICE]",
       {
