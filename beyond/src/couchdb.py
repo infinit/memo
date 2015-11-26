@@ -225,13 +225,12 @@ class CouchDBDatastore:
   def network_stats_fetch(self, network):
     rows = self.__couchdb['networks'].view('beyond/stat_view',
                                            key = network.name)
+    if list(rows) == []:
+        return { 'usage': 0, 'capacity': 0 }
+
     used = list(rows)[0].value[0]
     capacity = list(rows)[0].value[1]
-    return { 'stats' :
-             { 'storages' :
-               { 'usage' : used, 'capacity' : capacity }
-             }
-           }
+    return { 'usage' : used, 'capacity' : capacity }
 
 
   def __user_per_name(user):

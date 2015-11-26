@@ -472,15 +472,21 @@ stats(variables_map const& args)
   auto owner = self_user(ifnt, args);
   std::string network_name = mandatory(args, "name", "network_name");
   std::string name = ifnt.qualified_name(network_name, owner);
-  auto res =
-    beyond_fetch<std::unordered_map<std::string,
-                   std::unordered_map<std::string, Storages>>>(
-      elle::sprintf("networks/%s/stat/", name),
+  Storages res =
+    beyond_fetch<Storages>(
+      elle::sprintf("networks/%s/stat", name),
       "stat",
       "stat",
       boost::none,
       Headers{},
       false);
+
+  // FIXME: write Storages::operator(std::ostream&)
+  std::cout << "{ usage: " << res.usage
+         << " capacity: " << res.capacity
+         << " }" << std::endl;
+
+
 }
 
 int

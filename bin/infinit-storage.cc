@@ -27,7 +27,6 @@ static
 int64_t
 convert_capacity(int64_t value, std::string quantifier)
 {
-  std::cerr << value << "\n" << quantifier << std::endl;
   if (quantifier == "b" || quantifier == "")
     return value;
 
