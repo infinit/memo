@@ -483,7 +483,7 @@ members(variables_map const& args)
       "users of",
       network_name,
       boost::none,
-      {},
+      Headers{},
       false
     );
   for (std::string const& user: res["users"])
