@@ -36,7 +36,7 @@ $ sudo apt-get install fuse
 
 Please follow the link below to download the Infinit command-line tools:
 
-<a href="#" class="button">Download</a>
+<a href="#" class="button">Download Command Line Tools</a>
 
 <br>
 
@@ -76,12 +76,12 @@ For you to quickly (through a single command) try Infinit out, the following is 
 Run the `infinit-volume` command by prefixing it with the environment variable `INFINIT_HOME=$PWD/test/home` to tell the command where to look for the configuration files required for this test.
 
 ```
-$ INFINIT_HOME=$PWD/test/home/ ./bin/infinit-volume --mount --as demo-user --name infinit/demo-volume --mountpoint $PWD/test/mountpoint/ --fetch --cache
+$ INFINIT_HOME=$PWD/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint $PWD/test/mountpoint/ --fetch-endpoints --cache
 ```
 
-This command mounts the volume named ‘infinit/demo-volume’ on behalf of the user ‘demo-user’ and makes it accessible through the mount point `test/mountpoint/`.
+This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `test/mountpoint/`.
 
-That’s it, you can now access the files in the ‘demo-volume’ by browsing the mount point as you would any other POSIX-compliant filesystem.
+That’s it, you can now access the files in the ‘demo’ by browsing the mount point as you would any other POSIX-compliant filesystem.
 
 ```
 $ ls test/mountpoint/
@@ -124,11 +124,11 @@ A storage resource behaves like a hard disk, storing data blocks without underst
 
 Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as `/var/storage/infinit/`) on the local filesystem.
 
-The binary `infinit-storage` is used for this purpose. The option `--filesystem` is used to indicate that the storage will be local while the --path option specifies in which folder to put the blocks of data:
+The binary `infinit-storage` is used for this purpose. The option `--filesystem` is used to indicate that the storage will be on the local filesystem while the --path option specifies in which folder to put the blocks of data:
 
 ```
-$[device A]> infinit-storage --create --filesystem --path --name local --capacity 1GB
-Created storage "local".
+$[device A]> infinit-storage --create --filesystem --name local --capacity 1GB
+Locally created storage "local".
 $[device A]>
 ```
 
@@ -136,15 +136,16 @@ $[device A]>
 
 Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.
 
-The `infinit-network` command is used to create the network, specifying a name for the network and the list of local device storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:
+The `infinit-network` command is used to create the network, specifying a name for the network and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:
 
 ```
 $[device A]> infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
-Created network "mine".
+Locally created network "mine".
+Remotely pushed network “bobby/mine”.
 $[device A]>
 ```
 
-_**NOTE**: The `--push` option is used to publish the created network (likewise for volumes) onto the Hub for it to be easily fetched on another device or shared with another user._
+_**NOTE**: The `--push` option is used to publish the created network (likewise for volumes) onto the Hub for it to be easily fetched on another device or shared with other users._
 
 ### Create a volume
 
@@ -152,9 +153,8 @@ The last step on this device consists of creating a logical volume to store and 
 
 ```
 $[device A]> infinit-volume --create --as bob --network mine --name personal --push
-Starting network ".../mine".
-Creating volume root blocks.
-Created volume ".../personal".
+Locally created volume “bobby/personal”.
+Remotely pushed volume “bobby/personal”.
 $[device A]>
 ```
 That’s it, you’ve created a ‘personal’ volume i.e. a filesystem. The blocks that the files are composed of are stored through the ‘personal’ volume and will be distributed across the network named ‘mine’, currently composed of a single computer.
@@ -166,21 +166,21 @@ Let’s access this volume by mounting it as simply as any other filesystem:
 ```
 $[device A]> mkdir mnt/
 $[device A]> infinit-volume --mount --as bob --name personal --mountpoint mnt/  --async --cache --publish
-Running network ".../mine".
-Running volume ".../personal".
-[…]
+Fetched endpoints for "bobby/mine".
+Running network "bobby/mine".
+...
 ```
 
 That’s it! You can now create, list and access files from the mount point `mnt/`. Try creating a file right now:
 
 ```
-$[device A]> echo “everything is” > mnt/awesome.txt
-$[device A]> ls mnt/
+$[device A]> echo "everything is" > mnt/awesome.txt
+$[device A]> cat mnt/awesome.txt
 awesome.txt
 $[device A]>
 ```
 
-_**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process._
+_**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait the end of the guide to stop this process though._
 
 ### Access from another machine
 

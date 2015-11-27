@@ -22,7 +22,7 @@
 <h3 id="download-and-install-the-infinit-command-line-tools">Download and install the Infinit command-line tools</h3>
 <p><img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools"></p>
 <p>Please follow the link below to download the Infinit command-line tools:</p>
-<p><a href="#" class="button">Download</a></p>
+<p><a href="#" class="button">Download Command Line Tools</a></p>
 <p><br></p>
 <p>Next, open your terminal and extract the Infinit tarball:</p>
 <pre><code>$ tar xjvf infinit-0.2.0.tbz
@@ -47,9 +47,9 @@ bin/    lib/    test/
 </code></pre><h2 id="2-basic-test">2. Basic Test</h2>
 <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this volume only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
 <p>Run the <code>infinit-volume</code> command by prefixing it with the environment variable <code>INFINIT_HOME=$PWD/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
-<pre><code>$ INFINIT_HOME=$PWD/test/home/ ./bin/infinit-volume --mount --as demo-user --name infinit/demo-volume --mountpoint $PWD/test/mountpoint/ --fetch --cache
-</code></pre><p>This command mounts the volume named ‘infinit/demo-volume’ on behalf of the user ‘demo-user’ and makes it accessible through the mount point <code>test/mountpoint/</code>.</p>
-<p>That’s it, you can now access the files in the ‘demo-volume’ by browsing the mount point as you would any other POSIX-compliant filesystem.</p>
+<pre><code>$ INFINIT_HOME=$PWD/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint $PWD/test/mountpoint/ --fetch-endpoints --cache
+</code></pre><p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>test/mountpoint/</code>.</p>
+<p>That’s it, you can now access the files in the ‘demo’ by browsing the mount point as you would any other POSIX-compliant filesystem.</p>
 <pre><code>$ ls test/mountpoint/
 XXX
 </code></pre><p>Noteworthy is that the volume contains several hundred megabytes of data. However, unlike cloud storage services like Dropbox, you were able to browse the volume’s content without having to wait hours for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand.</p>
@@ -69,38 +69,38 @@ $[device A]&gt;
 </code></pre><h3 id="create-a-storage-resource">Create a storage resource</h3>
 <p>A storage resource behaves like a hard disk, storing data blocks without understanding the data’s meaning. The beauty of Infinit is that it is completely agnostic of the nature of such storage resources.</p>
 <p>Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as <code>/var/storage/infinit/</code>) on the local filesystem.</p>
-<p>The binary <code>infinit-storage</code> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be local while the --path option specifies in which folder to put the blocks of data:</p>
-<pre><code>$[device A]&gt; infinit-storage --create --filesystem --path --name local --capacity 1GB
-Created storage "local".
+<p>The binary <code>infinit-storage</code> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem while the --path option specifies in which folder to put the blocks of data:</p>
+<pre><code>$[device A]&gt; infinit-storage --create --filesystem --name local --capacity 1GB
+Locally created storage "local".
 $[device A]&gt;
 </code></pre><h3 id="create-a-network">Create a network</h3>
 <p>Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.</p>
-<p>The <code>infinit-network</code> command is used to create the network, specifying a name for the network and the list of local device storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:</p>
+<p>The <code>infinit-network</code> command is used to create the network, specifying a name for the network and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:</p>
 <pre><code>$[device A]&gt; infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
-Created network "mine".
+Locally created network "mine".
+Remotely pushed network “bobby/mine”.
 $[device A]&gt;
-</code></pre><p><em><strong>NOTE</strong>: The <code>--push</code> option is used to publish the created network (likewise for volumes) onto the Hub for it to be easily fetched on another device or shared with another user.</em></p>
+</code></pre><p><em><strong>NOTE</strong>: The <code>--push</code> option is used to publish the created network (likewise for volumes) onto the Hub for it to be easily fetched on another device or shared with other users.</em></p>
 <h3 id="create-a-volume">Create a volume</h3>
 <p>The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the <code>infinit-volume</code> binary as shown next:</p>
 <pre><code>$[device A]&gt; infinit-volume --create --as bob --network mine --name personal --push
-Starting network ".../mine".
-Creating volume root blocks.
-Created volume ".../personal".
+Locally created volume “bobby/personal”.
+Remotely pushed volume “bobby/personal”.
 $[device A]&gt;
 </code></pre><p>That’s it, you’ve created a ‘personal’ volume i.e. a filesystem. The blocks that the files are composed of are stored through the ‘personal’ volume and will be distributed across the network named ‘mine’, currently composed of a single computer.</p>
 <h3 id="mount-the-volume">Mount the volume</h3>
 <p>Let’s access this volume by mounting it as simply as any other filesystem:</p>
 <pre><code>$[device A]&gt; mkdir mnt/
 $[device A]&gt; infinit-volume --mount --as bob --name personal --mountpoint mnt/  --async --cache --publish
-Running network ".../mine".
-Running volume ".../personal".
-[…]
+Fetched endpoints for "bobby/mine".
+Running network "bobby/mine".
+...
 </code></pre><p>That’s it! You can now create, list and access files from the mount point <code>mnt/</code>. Try creating a file right now:</p>
-<pre><code>$[device A]&gt; echo “everything is” &gt; mnt/awesome.txt
-$[device A]&gt; ls mnt/
+<pre><code>$[device A]&gt; echo "everything is" &gt; mnt/awesome.txt
+$[device A]&gt; cat mnt/awesome.txt
 awesome.txt
 $[device A]&gt;
-</code></pre><p><em><strong>NOTE</strong>: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process.</em></p>
+</code></pre><p><em><strong>NOTE</strong>: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait the end of the guide to stop this process though.</em></p>
 <h3 id="access-from-another-machine">Access from another machine</h3>
 <p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. In this guide we’ll show you how to connect your other devices. In the case you don’t have another device, you can can skip to the end of the guide.</p>
 <p>In order to access your volume from another device, you will need to transfer your user’s identity to the device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like networks and volumes are. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
