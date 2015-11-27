@@ -42,7 +42,7 @@ namespace infinit
       s.serialize("capacity", _capacity);
     }
 
-    // static const elle::serialization::Hierarchy<elle::Exception>::
-    // Register<InsufficientSpace> _register_serialization;
+    static const elle::serialization::Hierarchy<elle::Exception>::
+    Register<InsufficientSpace> _register_serialization;
   }
 }
