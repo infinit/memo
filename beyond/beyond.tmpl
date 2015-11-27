@@ -115,7 +115,8 @@ e9FGZj7sEHpPuDE=
       google_app_secret = args.google_app_secret,
       validate_email_address = args.email_validation,
       sendwithus_api_key = args.sendwithus_app_key)
-    app = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
+    app = infinit.beyond.bottle.Bottle(
+      beyond, gcs = gcs, production = False)
     import bottle
     kwargs = {}
     if args.host is not None:

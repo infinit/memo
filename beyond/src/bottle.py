@@ -100,8 +100,9 @@ class Bottle(bottle.Bottle):
       self,
       beyond,
       gcs = None,
+      production = True,
   ):
-    super().__init__()
+    super().__init__(catchall = not production)
     self.__beyond = beyond
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
