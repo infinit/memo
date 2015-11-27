@@ -584,7 +584,9 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to join" },
+#ifndef INFINIT_PRODUCTION_BUILD
         { "storage", value<std::string>(), "storage to contribute (optional)" },
+#endif
         { "port", value<int>(), "port to listen on (default: random)" },
         option_owner,
       },
