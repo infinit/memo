@@ -16,14 +16,14 @@ namespace infinit
   {
     namespace
     {
-      static int step = 104857600; // 100 Mio
+      static int const step = 104857600; // 100 Mio
     }
 
-    Storage::Storage(int64_t capacity)
-      : _capacity{capacity}
-      , _usage{0} // _usage is recovered in the child ctor.
-      , _base_usage{0}
-      , _step{capacity != 0 ? (capacity / 10) : step}
+    Storage::Storage(boost::optional<int64_t> capacity)
+      : _capacity(std::move(capacity))
+      , _usage(0) // _usage is recovered in the child ctor.
+      , _base_usage(0)
+      , _step(this->capacity() ? (this->capacity().get() / 10) : step)
     {
       // _size_cache too has to be recovered in the child ctor.
     }
@@ -130,7 +130,7 @@ namespace infinit
     `---------------*/
 
     StorageConfig::StorageConfig(std::string name_,
-                                 int64_t capacity_)
+                                 boost::optional<int64_t> capacity_)
       : name(std::move(name_))
       , capacity(std::move(capacity_))
     {}

@@ -20,7 +20,7 @@ namespace infinit
   namespace storage
   {
     Filesystem::Filesystem(boost::filesystem::path root,
-                           int64_t capacity)
+                           boost::optional<int64_t> capacity)
       : Storage(std::move(capacity))
       , _root(std::move(root))
     {
@@ -44,9 +44,8 @@ namespace infinit
           this->_usage += _file_size;
         }
       }
-
-      ELLE_DEBUG("Recovering _usage (%s) and _size_cache (%s)", this->_usage
-                                                              , this->_size_cache.size());
+      ELLE_DEBUG("Recovering _usage (%s) and _size_cache (%s)",
+                 this->_usage , this->_size_cache.size());
     }
 
     elle::Buffer
@@ -65,7 +64,8 @@ namespace infinit
     }
 
     int
-    Filesystem::_set(Key key, elle::Buffer const& value, bool insert, bool update)
+    Filesystem::_set(
+      Key key, elle::Buffer const& value, bool insert, bool update)
     {
       ELLE_TRACE("set %x", key);
       auto path = this->_path(key);
@@ -74,8 +74,8 @@ namespace infinit
       if (exists)
         size = boost::filesystem::file_size(path);
       int delta = value.size() - size;
-      if (_capacity != 0 && _usage + delta > _capacity)
-        throw InsufficientSpace(delta, this->_usage, this->_capacity);
+      if (this->capacity() && this->usage() + delta > this->capacity())
+        throw InsufficientSpace(delta, this->usage(), this->capacity().get());
       if (!exists && !insert)
         throw MissingKey(key);
       if (exists && !update)
@@ -84,7 +84,8 @@ namespace infinit
       if (!output.good())
         throw elle::Error(
           elle::sprintf("unable to open for writing: %s", path));
-      output.write(reinterpret_cast<const char*>(value.contents()), value.size());
+      output.write(
+        reinterpret_cast<const char*>(value.contents()), value.size());
       if (insert && update)
         ELLE_DEBUG("%s: block %s", *this, exists ? "updated" : "inserted");
 

@@ -15,7 +15,7 @@ namespace infinit
     {
     public:
       Filesystem(boost::filesystem::path root,
-                 int64_t capacity = 0);
+                 boost::optional<int64_t> capacity = {});
     protected:
       virtual
       elle::Buffer

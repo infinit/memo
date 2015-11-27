@@ -8,6 +8,7 @@
 
 # include <elle/Buffer.hh>
 # include <elle/attribute.hh>
+# include <elle/optional.hh>
 # include <elle/serialization/Serializer.hh>
 
 # include <infinit/model/Address.hh>
@@ -29,7 +30,7 @@ namespace infinit
       : public elle::Printable
     {
     public:
-      Storage(int64_t capacity = 0);
+      Storage(boost::optional<int64_t> capacity = {});
       virtual
       ~Storage();
       elle::Buffer
@@ -66,7 +67,7 @@ namespace infinit
       BlockStatus
       _status(Key k);
 
-      ELLE_ATTRIBUTE_R(int64_t, capacity, protected);
+      ELLE_ATTRIBUTE_R(boost::optional<int64_t>, capacity, protected);
       ELLE_ATTRIBUTE_R(int64_t, usage, protected);
       ELLE_ATTRIBUTE(int64_t, base_usage);
       ELLE_ATTRIBUTE(int64_t, step);
@@ -90,7 +91,7 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable
     {
       StorageConfig() = default;
-      StorageConfig(std::string name, int64_t capacity = 0);
+      StorageConfig(std::string name, boost::optional<int64_t> capacity = {});
       StorageConfig(elle::serialization::SerializerIn& input);
       virtual
       void
@@ -102,7 +103,7 @@ namespace infinit
       make() = 0;
 
       std::string name;
-      int64_t capacity;
+      boost::optional<int64_t> capacity;
     };
   }
 }
