@@ -126,8 +126,13 @@ namespace infinit
               op.block->seal();
             ELLE_DEBUG("restore %s", op);
             if (op.mode)
-              this->_last[op.address] =
-                std::make_pair(op.index, op.block.get());
+            {
+              auto it = this->_last.find(op.address);
+              if (it == this->_last.end()
+                || it->second.first <= op.index)
+                this->_last[op.address] =
+                  std::make_pair(op.index, op.block.get());
+            }
             this->_ops.put(std::move(op));
           }
         }

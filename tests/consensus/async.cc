@@ -4,6 +4,7 @@
 #include <elle/test.hh>
 
 #include <reactor/scheduler.hh>
+#include <reactor/semaphore.hh>
 
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Consensus.hh>
@@ -11,6 +12,43 @@
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async.test");
 
 namespace dht = infinit::model::doughnut;
+
+class SyncedConsensus
+  : public dht::consensus::Consensus
+{
+public:
+  reactor::Semaphore sem;
+  int nstore, nremove;
+  SyncedConsensus()
+    : dht::consensus::Consensus(*(dht::Doughnut*)(nullptr))
+    , nstore(0)
+    , nremove(0)
+  {}
+  virtual
+  void
+  _store(std::unique_ptr<infinit::model::blocks::Block>,
+         infinit::model::StoreMode,
+         std::unique_ptr<infinit::model::ConflictResolver>) override
+  {
+    reactor::wait(sem);
+    ++nstore;
+  }
+
+  virtual
+  std::unique_ptr<infinit::model::blocks::Block>
+  _fetch(infinit::model::Address, boost::optional<int>) override
+  {
+    elle::unreachable();
+  }
+
+  virtual
+  void
+  _remove(infinit::model::Address) override
+  {
+    reactor::wait(sem);
+    ++nremove;
+  }
+};
 
 class BlockingConsensus
   : public dht::consensus::Consensus
@@ -74,8 +112,37 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued)
   }
 }
 
+ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto a1 = infinit::model::Address::random();
+  {
+    auto scu = elle::make_unique<SyncedConsensus>();
+    auto& sc = *scu;
+    dht::consensus::Async async(
+      std::move(scu), d.path(), 1);
+    async.store(elle::make_unique<infinit::model::blocks::Block>(
+                  a1, elle::Buffer("a1", 2)),
+                infinit::model::STORE_INSERT, nullptr);
+    async.store(elle::make_unique<infinit::model::blocks::Block>(
+                  a1, elle::Buffer("a2", 2)),
+                infinit::model::STORE_UPDATE, nullptr);
+    async.store(elle::make_unique<infinit::model::blocks::Block>(
+                  a1, elle::Buffer("a3", 2)),
+                infinit::model::STORE_UPDATE, nullptr);
+    BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
+    sc.sem.release();
+    reactor::sleep(100_ms);
+    BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
+    sc.sem.release();
+    reactor::sleep(100_ms);
+    BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(fetch_disk_queued), 0, 5);
+  suite.add(BOOST_TEST_CASE(fetch_disk_queued_multiple), 0, 5);
 }
