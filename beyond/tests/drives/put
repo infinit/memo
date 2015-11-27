@@ -30,6 +30,20 @@ with Beyond() as beyond:
       for field in ['name', 'description', 'volume', 'network']:
         assertEq(drive[field], _drive[field])
 
+    def test_remove(self):
+      user = User()
+      user.put(beyond)
+      network = Network('network', owner = user)
+      network.put(beyond)
+      volume = Volume('business', network = network)
+      volume.put(beyond)
+      drive = Drive('business',
+                    volume = volume,
+                    description = "Hyperdrive!")
+      drive.put(beyond);
+      beyond.delete('drives/%s' % drive['name'],
+                    auth = user.private_key)
+
     def test_multiple_drives(self):
       def create(Entity, *args, **kwargs):
         entity = Entity(*args, **kwargs)
