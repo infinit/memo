@@ -256,7 +256,7 @@ COMMAND(fetch)
 std::string
 hub_password_hash(variables_map const& args)
 {
-  return hash_password(_password(args, "hub-password-inline"),
+  return hash_password(_password(args, "login-password-inline"),
                        "@a.Fl$4'x!");
 }
 
@@ -291,10 +291,10 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   }
   else
   {
-    if (args.count("hub-password-inline"))
+    if (args.count("login-password-inline"))
     {
       throw CommandLineError(
-        "Hub password is only used when pushing a full user");
+        "Login password is only used when pushing a full user");
     }
     das::Serializer<infinit::DasPublicUserPublish> view{user};
     beyond_push("user", user.name, view, user);
@@ -491,7 +491,7 @@ main(int argc, char** argv)
       "to facilitate device pairing and fetching lost keys. "
       "Keys are encrypted on %s", beyond(true)).c_str() };
   boost::program_options::option_description option_push_password =
-    { "hub-password-inline", value<std::string>(), elle::sprintf(
+    { "login-password-inline", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Use this option with --full "
       "to avoid password prompt", beyond(true)).c_str() };
   Modes modes {
@@ -616,7 +616,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
-        { "hub-password-inline", value<std::string>(), elle::sprintf(
+        { "login-password-inline", value<std::string>(), elle::sprintf(
           "password to authenticate with %s", beyond(true)).c_str() },
       },
     },
