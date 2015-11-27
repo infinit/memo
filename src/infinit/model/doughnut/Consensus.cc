@@ -132,8 +132,16 @@ namespace infinit
             {
               s.run_background("remove", [this, p, address,&count]
               {
-                p->remove(address);
-                ++count;
+                try
+                {
+                  p->remove(address);
+                  ++count;
+                }
+                catch (reactor::network::Exception const& e)
+                {
+                  ELLE_TRACE("Network exception removing %s: %s",
+                             address, e.what());
+                }
               });
             }
             reactor::wait(s);
