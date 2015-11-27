@@ -40,7 +40,7 @@ namespace infinit
         Directory d(this->_parent, this->_owner, this->_name, address);
         d._block = std::move(b);
         d._inherit_auth = true;
-        d._push_changes({OperationType::insert, ""});
+        d._push_changes({OperationType::update, "/inherit"});
       }
       else
         this->_owner.store_or_die(std::move(b), model::STORE_INSERT);
@@ -48,7 +48,8 @@ namespace infinit
                      this->_parent->_files.end());
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::directory, address));
-      this->_parent->_commit({OperationType::insert, this->_name});
+      this->_parent->_commit(
+        {OperationType::insert, this->_name, EntryType::directory, address});
       this->_remove_from_cache();
     }
 
@@ -72,7 +73,7 @@ namespace infinit
       _parent->_files.insert(
         std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
-      _parent->_commit({OperationType::insert, _name}, true);
+      _parent->_commit({OperationType::insert, _name, EntryType::file, b->address()}, true);
       elle::SafeFinally remove_from_parent( [&] {
           _parent->_files.erase(_name);
           try
@@ -123,7 +124,7 @@ namespace infinit
       _owner.store_or_die(std::move(b));
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));
-      _parent->_commit({OperationType::insert, _name}, true);
+      _parent->_commit({OperationType::insert, _name, EntryType::symlink, addr}, true);
       _remove_from_cache();
     }
 

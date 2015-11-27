@@ -68,7 +68,12 @@ namespace infinit
          d._files[op.target] = std::make_pair(op.entry_type, op.address);
          break;
        case OperationType::update:
-         if (op.target == "/inherit")
+         if (op.target == "")
+         {
+           ELLE_LOG("Conflict: the directory %s was updated remotely, your"
+                    " changes will be dropped.");
+         }
+         else if (op.target == "/inherit")
          {
            d._inherit_auth = true;
            break;

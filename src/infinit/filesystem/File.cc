@@ -310,7 +310,10 @@ namespace infinit
       _ensure_first_block();
       _header.links++;
       dir->_files.insert(std::make_pair(newname, _parent->_files.at(_name)));
-      dir->_commit({OperationType::insert, newname}, true);
+      dir->_commit(
+        {OperationType::insert, newname, EntryType::file,
+           _parent->_files.at(_name).second},
+         true);
       _owner.filesystem()->extract(where.string());
       _commit();
     }
