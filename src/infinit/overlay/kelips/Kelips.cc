@@ -721,7 +721,7 @@ namespace infinit
           ELLE_LOG("Running in observer mode");
         _remotes_server.listen(0);
         ELLE_DEBUG("remotes server listening on %s", _remotes_server.local_endpoint());
-        _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.io:7890");
+        _rdv_host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
         _rdv_id = elle::sprintf("%x", this->_self);
         if (!_rdv_host.empty())
           this->_rdv_connect_thread.reset(
