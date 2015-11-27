@@ -93,6 +93,7 @@ def configure(
   cxx_config.warnings.sign_compare = drake.cxx.Config.Warnings.Error;
   if production_build:
     cxx_config.enable_optimization()
+    cxx_config.define('INFINIT_PRODUCTION_BUILD')
 
   global git
   git = drake.git.Git()
@@ -370,7 +371,6 @@ def configure(
   global installed_binaries
   to_install = [
     'infinit-acl',
-    'infinit-credentials',
     'infinit-network',
     'infinit-passport',
     'infinit-storage',
@@ -378,6 +378,10 @@ def configure(
     'infinit-volume',
     'infinit-drive',
   ]
+  if not production_build:
+    to_install += [
+      'infinit-credentials',
+    ]
 
   _binaries = [
     ('doughnode', []),
