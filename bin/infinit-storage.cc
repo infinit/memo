@@ -193,8 +193,10 @@ main(int argc, char** argv)
 {
   options_description storage_types("Storage types");
   storage_types.add_options()
+#ifndef INFINIT_PRODUCTION_BUILD
     ("dropbox", "store data in a Dropbox")
     ("google", "store data in a Google Drive")
+#endif
     ("filesystem", "store data on a local filesystem")
     ;
   options_description fs_storage_options("Filesystem storage options");
@@ -225,7 +227,9 @@ main(int argc, char** argv)
       {
         storage_types,
         fs_storage_options,
+#ifndef INFINIT_PRODUCTION_BUILD
         dropbox_storage_options,
+#endif
       },
     },
     {
