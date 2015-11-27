@@ -680,6 +680,7 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network name" },
+        option_owner,
       },
     },
   };
