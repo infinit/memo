@@ -23,7 +23,7 @@ namespace infinit
       : _capacity{capacity}
       , _usage{0} // _usage is recovered in the child ctor.
       , _base_usage{0}
-      , _step{capacity != 0 ? (capacity / 10) : step} // 1 Mio
+      , _step{capacity != 0 ? (capacity / 10) : step}
     {
       // _size_cache too has to be recovered in the child ctor.
     }
@@ -48,10 +48,12 @@ namespace infinit
       int delta = this->_set(key, value, insert, update);
 
       _usage += delta;
-      if (_capacity != 0 && _usage > _base_usage + _step)
+      if (std::abs(_base_usage - _usage) >= _step)
       {
-        ELLE_DEBUG("Notify beyond of storage usage since it has overflow of\
-%s Bytes since last update.", this->_step);
+        ELLE_DUMP("%s: _base_usage - _usage = %s (_step = %s)", *this,
+          _base_usage -_usage, _step);
+        ELLE_DEBUG("%s: update Beyond (if --push provided) with usage = %s",
+          *this, _usage);
         this->_on_storage_size_change();
         _base_usage = _usage;
       }
