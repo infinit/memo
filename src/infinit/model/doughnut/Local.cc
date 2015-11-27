@@ -97,7 +97,7 @@ namespace infinit
         ELLE_DEBUG("%s: validate block", *this)
           if (auto res = block.validate()); else
             throw ValidationFailed(res.reason());
-        if (auto *mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
+        if (auto* mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
           try
           {
             auto previous_buffer = this->_storage->get(block.address());
@@ -112,7 +112,8 @@ namespace infinit
             if (mblock->version() <= mprevious->version())
               throw Conflict(
                 elle::sprintf("version %s is not superior to current version %s",
-                              mblock->version(), mprevious->version()));
+                              mblock->version(), mprevious->version()),
+                std::move(previous));
           }
           catch (storage::MissingKey const&)
           {}

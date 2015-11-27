@@ -62,6 +62,7 @@ namespace infinit
           {
             try
             {
+              // FIXME: give ownership of block
               owner->store(nb ? *nb : *block, mode);
               break;
             }
@@ -69,12 +70,10 @@ namespace infinit
             {
               if (!resolver)
                 throw;
-              ELLE_ABORT("FIXME: pass new block to base Consensus "
-                         "conflict resolution");
-              // nb = (*resolver)(*block, mode);
-              // if (!nb)
-              //   throw;
-              // nb->seal();
+              nb = (*resolver)(*block, *c.current(), mode);
+              if (!nb)
+                throw;
+              nb->seal();
             }
           }
         }

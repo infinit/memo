@@ -519,15 +519,19 @@ namespace infinit
                         else
                         {
                           ELLE_TRACE("resolution failed");
+                          // FIXME: useless clone, find a way to steal ownership
                           throw infinit::model::doughnut::Conflict(
-                            "Paxos chose a different value");
+                            "Paxos chose a different value",
+                            chosen.get()->clone());
                         }
                       }
                       else
                       {
                         ELLE_TRACE("chosen block differs, signal conflict");
+                        // FIXME: useless clone, find a way to steal ownership
                         throw infinit::model::doughnut::Conflict(
-                          "Paxos chose a different value");
+                          "Paxos chose a different value",
+                          chosen.get()->clone());
                       }
                     }
                     else
