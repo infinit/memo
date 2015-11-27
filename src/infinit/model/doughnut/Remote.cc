@@ -255,6 +255,7 @@ namespace infinit
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         auto store = make_rpc<void (blocks::Block const&, StoreMode)>("store");
+        store.set_context<Doughnut*>(&this->_doughnut);
         store(block, mode);
       }
 
