@@ -372,19 +372,19 @@ class CouchDBDatastore:
     return [network, {'json': json.dumps(update)}]
 
   def __networks_per_invitee_name_map(network):
-    for p in network['passports']:
+    for p in network.get('passports', {}):
       yield p, network
 
   def __networks_per_owner_key_map(network):
     yield network['owner'], network
 
   def __networks_per_user_key_map(network):
-    for elem in network['passports'].values():
+    for elem in network.get('passports', {}).values():
       yield elem['user'], network
     yield network['owner'], network
 
   def __network_stat_map(network):
-    for _, nodes in network['storages'].items():
+    for _, nodes in network.get('storages', {}).items():
       for _, stat in nodes.items():
         yield network['name'], stat
 
