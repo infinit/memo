@@ -22,7 +22,7 @@ def configure(
     cxx_toolkit = None,
     cxx_config = drake.cxx.Config(),
     production_build = False,
-    beyond_host = 'https://beyond.infinit.io',
+    beyond_host = 'https://beyond.infinit.sh',
     boost = None,
     prefix = '/usr',
     valgrind = None,
