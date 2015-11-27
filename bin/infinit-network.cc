@@ -482,11 +482,9 @@ stats(variables_map const& args)
       false);
 
   // FIXME: write Storages::operator(std::ostream&)
-  std::cout << "{ usage: " << res.usage
-         << " capacity: " << res.capacity
-         << " }" << std::endl;
-
-
+  std::cout << "{\"usage\": " << res.usage
+         << ", \"capacity\": " << res.capacity
+         << "}" << std::endl;
 }
 
 int
