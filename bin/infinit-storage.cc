@@ -131,7 +131,8 @@ COMMAND(create)
   else
   {
     ifnt.storage_save(name, *config);
-    report_created("storage", name);
+    // Custom message as storage can only be created locally.
+    report_action("created", "storage", name);
   }
 }
 
@@ -180,7 +181,7 @@ COMMAND(delete_)
   auto path = ifnt._storage_path(name);
   bool ok = boost::filesystem::remove(path);
   if (ok)
-    report_action("deleted", "storage", storage->name, std::string("locally"));
+    report_action("deleted", "storage", storage->name);
   else
   {
     throw elle::Error(
@@ -260,7 +261,7 @@ main(int argc, char** argv)
     },
     {
       "delete",
-      "Delete a storage locally",
+      "Delete a storage",
       &delete_,
       {},
       {
