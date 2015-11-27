@@ -203,7 +203,7 @@ COMMAND(create)
     else
     {
       ifnt.network_save(network);
-      report_created("network", name);
+      report_created("network", network.name);
     }
     if (aliased_flag(args, {"push-network", "push"}))
     {
@@ -250,7 +250,7 @@ COMMAND(fetch)
     // FIXME: Workaround for NetworkDescriptor's copy constructor being deleted.
     // Remove when serialization does not require copy.
     auto res = beyond_fetch_json(elle::sprintf("users/%s/networks", self.name),
-                                 "networks for",
+                                 "networks for user",
                                  self.name,
                                  self);
     auto root = boost::any_cast<elle::json::Object>(res);
