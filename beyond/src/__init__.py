@@ -94,8 +94,6 @@ class Beyond:
   def pairing_information_get(self, owner, password_hash):
     json = self.__datastore.pairing_fetch(owner)
     pairing = PairingInformation.from_json(self, json)
-    import sys
-    print(file = sys.stderr)
     if password_hash != pairing.password_hash:
       raise ValueError("password_hash")
     self.pairing_information_delete(owner)
