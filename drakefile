@@ -478,6 +478,7 @@ def configure(
   cxx_config_tests = drake.cxx.Config(cxx_config)
   cxx_config_tests += elle.das.config
   cxx_config_tests.lib_path_runtime('../lib')
+  cxx_config_tests.lib_path_runtime('../../lib') # For consensus/async test.
   cxx_config_tests += elle.boost.config_test(link = False)
   if not windows:
     cxx_config_tests.library_add(
