@@ -403,6 +403,9 @@ namespace infinit
               Paxos::PaxosClient::Peers peers =
                 lookup_nodes(
                   this->doughnut(), paxos.quorum(), block->address());
+              if (peers.empty())
+                throw elle::Error(
+                  elle::sprintf("No peer available for fetch %x", block->address()));
               Paxos::PaxosClient client(uid(this->doughnut().keys().K()),
                                         std::move(peers));
               auto chosen = client.choose(paxos.quorum(), version, block);
@@ -488,6 +491,9 @@ namespace infinit
                 peers.push_back(
                   elle::make_unique<Peer>(peer, b->address()));
               }
+              if (peers.empty())
+                throw elle::Error(
+                  elle::sprintf("No peer available for store %x", b->address()));
               // FIXME: client is persisted on conflict resolution, hence the
               // round number is kept and won't start at 0.
               while (true)
