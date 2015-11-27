@@ -24,6 +24,7 @@ namespace infinit
           Async(std::unique_ptr<Consensus> backend,
                 boost::filesystem::path journal_dir,
                 int max_size = 100);
+          ~Async();
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
@@ -81,6 +82,7 @@ namespace infinit
           /// capacity.
           ELLE_ATTRIBUTE(boost::optional<int>, first_disk_index);
           /// Background loop processing asynchronous operations.
+          ELLE_ATTRIBUTE(bool, exit_requested);
           ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, process_thread);
         };
       }

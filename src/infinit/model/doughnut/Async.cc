@@ -53,6 +53,7 @@ namespace infinit
           , _backend(std::move(backend))
           , _next_index(1)
           , _journal_dir(journal_dir)
+          , _exit_requested(false)
           , _process_thread(
             new reactor::Thread(elle::sprintf("%s loop", *this),
                                 [this] { this->_process_loop();}))
@@ -63,6 +64,16 @@ namespace infinit
             this->_ops.max_size(max_size);
           this->_ops.close();
           this->_restore_journal(true);
+        }
+
+        Async::~Async()
+        {
+          ELLE_TRACE_SCOPE("Attempting clean exit...");
+          this->_exit_requested = true;
+          if (this->_ops.size() < this->_ops.max_size())
+            this->_ops.put(Op(Address::null, {}, {}, nullptr));
+          bool ok = reactor::wait(*this->_process_thread, 10_sec);
+          ELLE_TRACE(ok ? "exiting" : "killing");
         }
 
         std::unique_ptr<Local>
@@ -240,7 +251,7 @@ namespace infinit
         void
         Async::_process_loop()
         {
-          while (true)
+          while (!_exit_requested)
           {
             try
             {
@@ -251,6 +262,8 @@ namespace infinit
                   *this, *this->_first_disk_index)
                     this->_restore_journal();
               Op op = this->_ops.get();
+              if (_exit_requested)
+                return;
               Address addr = op.address;
               ELLE_TRACE_SCOPE("%s: process %s", *this, op);
               boost::optional<StoreMode> mode = op.mode;
