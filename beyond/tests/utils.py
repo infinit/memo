@@ -286,6 +286,23 @@ class Passport(dict):
                    json = self,
                    auth = owner.private_key)
 
+class Statistics(dict):
+
+  def __init__(self, network, capacity, usage):
+    self.__network = network
+    self['capacity'] = capacity
+    self['usage'] = usage
+    import uuid
+    self.__node_id = str(uuid.uuid4())
+
+  def put(self, hub, user):
+    if user is None:
+      user = self.__network.owner
+    return hub.put('networks/%s/stat/%s/%s' % (
+      self.__network['name'], user['name'], self.__node_id),
+                   json = self,
+                   auth = user.private_key)
+
 class Volume(dict):
 
   def __init__(self, name, network):

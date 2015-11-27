@@ -177,7 +177,6 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.volume_put)
     self.route('/volumes/<owner>/<name>',
                method = 'DELETE')(self.volume_delete)
-
     # Drive
     self.route('/drives/<owner>/<name>',
                method = 'GET')(self.drive_get)
@@ -534,7 +533,6 @@ class Bottle(bottle.Bottle):
       network = self.__beyond.network_get(owner = owner, name = name)
     except Network.NotFound:
       raise self.__not_found('network', '%s/%s' % (owner, name))
-
     ret = self.__beyond.network_stats_get(network)
     return ret
 
@@ -544,7 +542,8 @@ class Bottle(bottle.Bottle):
       self.authenticate(user)
       network = self.__beyond.network_get(owner = owner, name = name)
       json = bottle.request.json
-      network.storages.setdefault(user.name, {})[node_id] = json
+      stats = Network.Statistics(self.__beyond, **json)
+      network.storages.setdefault(user.name, {})[node_id] = stats.json()
       network.save()
       raise Response(201, {}) # FIXME: 200 if existed
     except Network.NotFound:

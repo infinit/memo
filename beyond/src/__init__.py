@@ -457,6 +457,10 @@ class Network(metaclass = Entity,
       return False
     return True
 
+  class Statistics(metaclass = Entity,
+                   fields = fields('usage', 'capacity')):
+    pass
+
 class Passport(metaclass = Entity,
                fields = fields('user', 'network', 'signature')):
   pass

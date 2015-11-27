@@ -225,13 +225,13 @@ class CouchDBDatastore:
   def network_stats_fetch(self, network):
     rows = self.__couchdb['networks'].view('beyond/stat_view',
                                            key = network.name)
-    if list(rows) == []:
-        return { 'usage': 0, 'capacity': 0 }
-
-    used = list(rows)[0].value[0]
-    capacity = list(rows)[0].value[1]
-    return { 'usage' : used, 'capacity' : capacity }
-
+    rows = list(rows)
+    res = {'capacity': 0, 'usage': 0}
+    if len(rows) > 0:
+      value  = rows[0].value
+      res['capacity'] = value[0]
+      res['usage'] = value[1]
+    return res
 
   def __user_per_name(user):
     yield user['name'], user
@@ -368,7 +368,7 @@ class CouchDBDatastore:
         else:
           u[node] = endpoints
     for user, node in update.get('storages', {}).items():
-        network.setdefault('storages', {})[user] = node
+      network.setdefault('storages', {})[user] = node
     return [network, {'json': json.dumps(update)}]
 
   def __networks_per_invitee_name_map(network):
@@ -384,16 +384,15 @@ class CouchDBDatastore:
     yield network['owner'], network
 
   def __network_stat_map(network):
-    for user in list(network['storages']):
-      for node in network['storages'][user]:
-        n = network['storages'][user][node]
-        yield network['_id'], (n['usage'], n['capacity'])
+    for _, nodes in network['storages'].items():
+      for _, stat in nodes.items():
+        yield network['name'], stat
 
   def __network_stat_reduce(keys, values, rereduce):
     res = [0, 0]
     for v in values:
-      res[0] += v[0]
-      res[1] += v[1]
+      res[0] += v['capacity']
+      res[1] += v['usage']
     return res
 
   ## ------ ##

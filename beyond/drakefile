@@ -196,6 +196,7 @@ def configure(
       'users/pairing',
       'users/delete',
       'networks/put',
+      'networks/storage',
       'volumes/put',
       'volumes/get',
       'volumes/delete',

@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      alice = User()
+      alice.put(beyond)
+      network = Network('infinit', owner = alice)
+      network.put(beyond, owner = alice)
+      stat = Statistics(
+        network, capacity = 3000000, usage = 10000)
+      stat.put(beyond, alice)
+      res = beyond.get('networks/%s/stat' % network['name']).json()
+      assertEq(res, stat)
+
+    def test_overwrite(self):
+      alice = User()
+      alice.put(beyond)
+      network = Network('infinit', owner = alice)
+      network.put(beyond, owner = alice)
+      stat = Statistics(network, capacity = 3000000, usage = 10000)
+      stat.put(beyond, alice)
+      res = beyond.get('networks/%s/stat' % network['name']).json()
+      assertEq(res, stat)
+      stat['usage'] = 1000000
+      stat.put(beyond, alice)
+      res = beyond.get('networks/%s/stat' % network['name']).json()
+      assertEq(res, stat)
+
+    def test_one_user_multiple_devices(self):
+      alice = User()
+      alice.put(beyond)
+      network = Network('infinit', owner = alice)
+      network.put(beyond, owner = alice)
+      stat1 = Statistics(network, capacity = 3000000, usage = 10000)
+      stat1.put(beyond, alice)
+      stat2 = Statistics(network, capacity = 500000, usage = 10500)
+      stat2.put(beyond, alice)
+      res = beyond.get('networks/%s/stat' % network['name']).json()
+      stats = {
+        'capacity': stat1['capacity'] + stat2['capacity'],
+        'usage': stat1['usage'] + stat2['usage']
+      }
+      assertEq(res, stats)
+
+    def test_two_users_multiple_devices(self):
+      alice, bob = User(), User()
+      alice.put(beyond), bob.put(beyond)
+      network = Network('infinit', owner = alice)
+      network.put(beyond, owner = alice)
+      passport = Passport(network, bob)
+      passport.put(beyond)
+      stats = [
+        Statistics(network, capacity = 3000000, usage = 10000),
+        Statistics(network, capacity = 9299000, usage = 10000),
+        Statistics(network, capacity = 300020, usage = 10000),
+        Statistics(network, capacity = 929100, usage = 10000),
+      ]
+      for i in range(0, len(stats)):
+        stats[i].put(beyond, alice if i % 2 else bob)
+      res = beyond.get('networks/%s/stat' % network['name']).json()
+      stats = {
+        'capacity': sum([s['capacity'] for s in stats]),
+        'usage': sum([s['usage'] for s in stats]),
+      }
+      assertEq(res, stats)
+
+  if __name__ == '__main__':
+    unittest.main()
