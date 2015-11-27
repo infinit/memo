@@ -126,6 +126,10 @@ def configure(
     'resources/images/desktop-client-mini@2x.png',
     'resources/images/virtual-disk-mac.png',
     'resources/images/virtual-disk-mac@2x.png',
+    'resources/images/schema-nfs-like.png',
+    'resources/images/schema-nfs-like@2x.png',
+    'resources/images/schema-two-clients.png',
+    'resources/images/schema-two-clients@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',

@@ -515,9 +515,10 @@ body.pricing {
       border-bottom: 1px solid #DFDFDF; display: block; margin-top: 0;
     }
 
-    p { line-height: 20px; }
+    p, li, p.note { line-height: 23px; font-size: 15px; }
     p.note, em { font-style: italic; color: #8C8C8C; }
     p a { color: @infinitblue; .transition() }
+
     p.title {
       font-family: @helvetica; font-weight: 300;font-size: 26px; line-height: 39px;
       width: 90%;
@@ -572,9 +573,10 @@ body.doc_get_started {
     img.fuse, img.infinitcli {
       max-width: 100px; float: left; margin-right: 25px; margin-left: 12px;
     }
-    img.fuse { margin-right: 29px; margin-left: 17px; margin-top: 5px;  }
-    h3#download-and-install-infinit-s-dependencies + p,
-    h3#download-and-install-the-infinit-command-line-tools + p { margin-top: 20px; }
+    img.infinitcli { margin-top: 6px;}
+    img.fuse { margin-right: 29px; margin-left: 17px; margin-top: 20px; }
+    h3#download-and-install-infinit-s-dependencies + p { margin-top: 5px; }
+    h3#download-and-install-the-infinit-command-line-tools + p { margin-top: 18px; }
   }
 }
 
