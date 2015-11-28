@@ -346,6 +346,8 @@ def configure(
   }):
     drake.node('bin/main.hh.tmpl')
 
+  drake.node('bin/password.hh')
+
   bin_cxx_config = drake.cxx.Config(cxx_config)
   bin_cxx_config += elle.das.config
   bin_cxx_config.add_local_include_path('bin')
@@ -371,6 +373,7 @@ def configure(
   global installed_binaries
   to_install = [
     'infinit-acl',
+    'infinit-device',
     'infinit-network',
     'infinit-passport',
     'infinit-storage',
@@ -543,6 +546,7 @@ def configure(
         'single-user-two-devices-shared-storage',
         #FIXME: 'flow',
         # Test clis.
+        'device_cli',
         'user_cli',
         'network_cli',
         'passport_cli',

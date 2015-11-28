@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+
+from utils import *
+import json
+
+## --------------- ##
+## Use hub to pair ##
+##---------------- ##
+# Normal case.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+  # Signup without sending private key.
+  alice.run(['infinit-user', '--signup',
+             '--name', 'alice',
+             '--email', 'alice@infinit.io'])
+  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice.run(['infinit-device', '--transmit-identity', '--as', 'alice',
+             '--password-inline', 'the_password'])
+  alice2.run(['infinit-device', '--receive-identity', '--name', 'alice',
+              '--password-inline', 'the_password'])
+
+  alice2_json = alice2.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  assertEq(alice_json['private_key'], alice2_json['private_key'])
+
+# Password from input.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+  password = 'super_password'.encode('utf-8')
+  # Signup without sending private key.
+  alice.run(['infinit-user', '--signup',
+             '--name', 'alice',
+             '--email', 'alice@infinit.io'])
+  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice.run(['infinit-device', '--transmit-identity', '--as', 'alice'],
+             input = password, input_as_it_is = True)
+  alice2.run(['infinit-device', '--receive-identity', '--name', 'alice'],
+             input = password, input_as_it_is = True)
+  alice2_json = alice2.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  assertEq(alice_json['private_key'], alice2_json['private_key'])
+
+# Expired.
+# with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+#      Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+#   password = 'super_password'.encode('utf-8')
+#   # Signup without sending private key.
+#   alice.run(['infinit-user', '--signup',
+#              '--name', 'alice',
+#              '--email', 'alice@infinit.io'])
+#   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+#   alice.run(['infinit-device', '--transmit-identity', '--as', 'alice'],
+#             input = password, input_as_it_is = True)
+#   beyond.advance(5 * 6000 + 1)
+#   try:
+#     alice2.run(['infinit-device', '--receive-identity', '--name', 'alice'],
+#                input = password, input_as_it_is = True)
+#     assert False
+#   except Exception as e:
+#     print(e.args[0])
+#     assert 'Pairing expired' in e.args[0]
+
+# Invalid password.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+  password = 'super_password'.encode('utf-8')
+  # Signup without sending private key.
+  alice.run(['infinit-user', '--signup',
+             '--name', 'alice',
+             '--email', 'alice@infinit.io'])
+  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice.run(['infinit-device', '--transmit-identity', '--as', 'alice'],
+            input = password, input_as_it_is = True)
+  try:
+    alice2.run(['infinit-device', '--receive-identity', '--name', 'alice'],
+               input = 'not_the_password'.encode('utf-8'), input_as_it_is = True)
+    assert False
+  except Exception as e:
+    # Should just be 'invalid password'.
+    assert 'pairing/invalid_password' in e.args[0]
+
+# No pairing information.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+  password = 'super_password'.encode('utf-8')
+  # Signup without sending private key.
+  alice.run(['infinit-user', '--signup',
+             '--name', 'alice',
+             '--email', 'alice@infinit.io'])
+  try:
+    alice.run(['infinit-device', '--receive-identity', '--name', 'alice'],
+              input = password, input_as_it_is = True)
+    assert False
+  except Exception as e:
+    # Should just be 'No pairing information'.
+    assert 'pairing_information/not_found' in e.args[0]
+
+# Pairing information usable once.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+  password = 'super_password'.encode('utf-8')
+  alice.run(['infinit-user', '--signup',
+             '--name', 'alice',
+             '--email', 'alice@infinit.io'])
+  alice.run(['infinit-device', '--transmit-identity', '--as', 'alice'],
+             input = password, input_as_it_is = True)
+  alice2.run(['infinit-device', '--receive-identity', '--name', 'alice'],
+             input = password, input_as_it_is = True)
+  try:
+    alice2.run(['infinit-device', '--receive-identity', '--name', 'alice'],
+               input = password, input_as_it_is = True)
+    assert False
+  except Exception as e:
+    # Should just be 'No pairing information'.
+    assert 'pairing_information/not_found' in e.args[0]

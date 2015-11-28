@@ -1,7 +1,6 @@
 #include <elle/log.hh>
-#include <elle/format/hexadecimal.hh>
-#include <elle/serialization/Serializer.hh>
-#include <elle/serialization/json.hh>
+// #include <elle/serialization/Serializer.hh>
+// #include <elle/serialization/json.hh>
 
 #include <das/serializer.hh>
 
@@ -11,12 +10,13 @@
 ELLE_LOG_COMPONENT("infinit-user");
 
 #include <main.hh>
-
-static std::string _pair_salt = "5_C+m$:1Ex";
-
-using namespace boost::program_options;
+#include <password.hh>
 
 infinit::Infinit ifnt;
+
+static std::string _hub_salt = "@a.Fl$4'x!";
+
+using namespace boost::program_options;
 
 template <typename Super>
 struct UserView
@@ -38,187 +38,13 @@ struct UserView
 
 inline
 std::string
-get_name(boost::program_options::variables_map const& args,
-         std::string const& name = "name")
+get_name(variables_map const& args, std::string const& name = "name")
 {
   return get_username(args, name);
 }
 
-struct PairingInformation
-{
-public:
-  // Generating.
-  PairingInformation(elle::Buffer const& encrypted_user,
-                     std::string const& password)
-    : data(encrypted_user)
-    , password_hash(password)
-  {}
-  // Receiving.
-  PairingInformation(elle::serialization::SerializerIn& s)
-    : data(s.deserialize<elle::Buffer>("data"))
-    , password_hash(s.deserialize<std::string>("password_hash"))
-  {}
-
-  void
-  serialize(elle::serialization::Serializer& s)
-  {
-    s.serialize("data", this->data);
-    s.serialize("password_hash", this->password_hash);
-  }
-
-  boost::optional<elle::Buffer> data;
-  boost::optional<std::string> password_hash;
-};
-
-DAS_MODEL(PairingInformation, (data, password_hash), DasPairingInformation)
-
-void
-echo_mode(bool enable)
-{
-#if defined(INFINIT_WINDOWS)
-  HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-  DWORD mode;
-  GetConsoleMode(hStdin, &mode);
-  if (!enable)
-    mode &= ~ENABLE_ECHO_INPUT;
-  else
-    mode |= ENABLE_ECHO_INPUT;
-  SetConsoleMode(hStdin, mode );
-#else
-  struct termios tty;
-  tcgetattr(STDIN_FILENO, &tty);
-  if(!enable)
-    tty.c_lflag &= ~ECHO;
-  else
-    tty.c_lflag |= ECHO;
-  (void)tcsetattr(STDIN_FILENO, TCSANOW, &tty);
-#endif
-}
-
-std::string
-read_passphrase()
-{
-  std::string res;
-  {
-    elle::SafeFinally restore_echo([] { echo_mode(true); });
-    echo_mode(false);
-    std::cout << "Passphrase: ";
-    std::cout.flush();
-    std::getline(std::cin, res);
-  }
-  std::cout << std::endl;
-  return res;
-}
-
-static
-std::string
-_password(variables_map const& args,
-          std::string const& argument)
-{
-  auto password = optional(args, argument);
-  if (!password)
-    password = read_passphrase();
-  ELLE_ASSERT(password);
-  return password.get();
-};
-
-static
-std::string
-hash_password(std::string const& password_,
-              std::string salt)
-{
-  auto password = password_ + salt;
-  return elle::format::hexadecimal::encode(
-    infinit::cryptography::hash(
-      password, infinit::cryptography::Oneway::sha256).string()
-    );
-  return password;
-};
-
-std::string
-pairing_password(variables_map const& args)
-{
-  return _password(args, "pairing-password-inline");
-}
-
-COMMAND(_pairing_generate)
-{
-  auto user = self_user(ifnt, args);
-  auto password = pairing_password(args);
-  std::stringstream serialized_user;
-  {
-    das::Serializer<infinit::DasUser> view{user};
-    elle::serialization::json::serialize(view, serialized_user, false);
-  }
-  infinit::cryptography::SecretKey key{password};
-  PairingInformation p(
-    key.encipher(serialized_user.str(),
-                 infinit::cryptography::Cipher::aes256),
-    hash_password(password, _pair_salt));
-  das::Serializer<DasPairingInformation> view{p};
-  beyond_push(
-    elle::sprintf("users/%s/pairing", user.name),
-    "pairing", "information", view, user);
-}
-
-COMMAND(_pairing_accept)
-{
-  auto name = get_name(args);
-  auto password = pairing_password(args);
-  auto hashed_password = hash_password(password, _pair_salt);
-  {
-    try
-    {
-      auto pairing = beyond_fetch<PairingInformation>(
-        elle::sprintf("users/%s/pairing", name), "pairing",
-        name, boost::none,
-        {{"infinit-pairing-password-hash", hashed_password}},
-        false);
-      infinit::cryptography::SecretKey key{password};
-      auto data = key.decipher(*pairing.data,
-                               infinit::cryptography::Cipher::aes256);
-      std::stringstream stream;
-      stream << data.string();
-      elle::serialization::json::SerializerIn input(stream, false);
-      auto user = input.deserialize<infinit::User>();
-      ifnt.user_save(user, true);
-    }
-    catch (ResourceGone const& e)
-    {
-      std::cerr << elle::sprintf("user identity fetched and removed from %s",
-                                 beyond(true))
-                << std::endl;
-    }
-    catch (MissingResource const& e)
-    {
-      if (e.what() == std::string("user/not_found"))
-        not_found(name, "User");
-      if (e.what() == std::string("pairing/not_found"))
-        not_found(name, "Pairing");
-      throw;
-    }
-  }
-  report_action("saved", "user", name, std::string("locally"));
-}
-
 COMMAND(export_)
 {
-  if (flag(args, "with-hub"))
-  {
-    if (!flag(args, "full"))
-    {
-      throw CommandLineError(
-        "You must export the full user using the --full flag");
-    }
-    _pairing_generate(args);
-    return;
-  }
-  if (args.count("pairing-password-inline"))
-  {
-    throw CommandLineError(
-      elle::sprintf("The pairing password is only used when importing from %s",
-                    beyond(true)));
-  }
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   auto output = get_output(args);
@@ -256,8 +82,8 @@ COMMAND(fetch)
 std::string
 hub_password_hash(variables_map const& args)
 {
-  return hash_password(_password(args, "login-password-inline"),
-                       "@a.Fl$4'x!");
+  return hash_password(_password(args, "password-inline"),
+                       _hub_salt);
 }
 
 static
@@ -291,10 +117,10 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   }
   else
   {
-    if (args.count("login-password-inline"))
+    if (args.count("password-inline"))
     {
       throw CommandLineError(
-        "Login password is only used when pushing a full user");
+        "Password is only used when pushing a full user");
     }
     das::Serializer<infinit::DasPublicUserPublish> view{user};
     beyond_push("user", user.name, view, user);
@@ -330,6 +156,16 @@ create_(std::string const& name,
 
 COMMAND(create)
 {
+  bool push = aliased_flag(args, {"push-user", "push"});
+  if (!push)
+  {
+    if (flag(args, "full") || flag(args, "password-inline"))
+    {
+      throw CommandLineError(
+        elle::sprintf("--full and --password-inline are only used when pushing "
+                      "a user to %s", beyond(true)));
+    }
+  }
   auto name = get_name(args);
   infinit::User user = create_(name,
                                optional(args, "key"),
@@ -337,29 +173,12 @@ COMMAND(create)
                                optional(args, "fullname"));
   ifnt.user_save(user);
   report_action("generated", "user", name, std::string("locally"));
-  if (aliased_flag(args, {"push-user", "push"}))
+  if (push)
     _push(args, user, false);
 }
 
 COMMAND(import)
 {
-  if (flag(args, "with-hub"))
-  {
-    _pairing_accept(args);
-    return;
-  }
-  if (args.count("pairing-password-inline"))
-  {
-    throw CommandLineError(
-      elle::sprintf("The pairing password is only used when importing from %s",
-                    beyond(true)));
-  }
-  if (args.count("name"))
-  {
-    throw CommandLineError(
-      elle::sprintf("The name is only used when importing from %s",
-                    beyond(true)));
-  }
   auto input = get_input(args);
   {
     auto user =
@@ -487,13 +306,12 @@ main(int argc, char** argv)
 {
   program = argv[0];
   boost::program_options::option_description option_push_full =
-    { "full", bool_switch(), elle::sprintf("include private key in order "
-      "to facilitate device pairing and fetching lost keys. "
-      "Keys are encrypted on %s", beyond(true)).c_str() };
+    { "full", bool_switch(), "include private key in order "
+      "to facilitate device pairing and fetching lost keys." };
   boost::program_options::option_description option_push_password =
-    { "login-password-inline", value<std::string>(), elle::sprintf(
-      "password to authenticate with %s. Use this option with --full "
-      "to avoid password prompt", beyond(true)).c_str() };
+    { "password-inline", value<std::string>(), elle::sprintf(
+      "password to authenticate with %s. Used with --full "
+      "(default: prompt for password)", beyond(true)).c_str() };
   Modes modes {
     {
       "create",
@@ -523,13 +341,8 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to export (default: system user)" },
-        { "full", bool_switch(), "include private information "
+        { "full", bool_switch(), "include private key "
           "(do not use this unless you understand the implications)" },
-        { "with-hub", bool_switch(), elle::sprintf("temporarily store encrypted "
-          "copy of full user on %s to facilitate adding a new device "
-          "(requires --full)", beyond(true)).c_str() },
-        { "pairing-password-inline", value<std::string>(),
-          "password to secure information (only used with --with-hub)" },
         option_output("user"),
         option_owner,
       },
@@ -550,12 +363,6 @@ main(int argc, char** argv)
       &import,
       {},
       {
-        { "with-hub", bool_switch(),
-          elle::sprintf("fetch user from %s", beyond(true)).c_str() },
-        { "pairing-password-inline", value<std::string>(),
-          "password to secure information (only used with --with-hub)" },
-        { "name,n", value<std::string>(),
-          "user to import (only used with --with-hub)" },
         option_input("user"),
       },
     },
@@ -616,7 +423,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
-        { "login-password-inline", value<std::string>(), elle::sprintf(
+        { "password-inline", value<std::string>(), elle::sprintf(
           "password to authenticate with %s", beyond(true)).c_str() },
       },
     },
