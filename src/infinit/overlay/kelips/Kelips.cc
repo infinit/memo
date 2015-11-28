@@ -287,6 +287,28 @@ namespace infinit
         return hkhex.substr(0,3) + hkhex.substr(hkhex.length()-3);
       }
 
+      static
+      void
+      merge_peerlocations(std::vector<PeerLocation>& dst,
+                          std::vector<PeerLocation>const& src)
+      {
+        for (auto const& r: src)
+        {
+          auto it = std::find_if(dst.begin(), dst.end(),
+            [&](PeerLocation const& a)
+            {
+              return a.first == r.first;
+            });
+          if (it == dst.end())
+            dst.push_back(r);
+          else
+          {
+            for (auto const& ep: r.second)
+              if (std::find(it->second.begin(), it->second.end(), ep) == it->second.end())
+                it->second.push_back(ep);
+          }
+        }
+      }
       namespace packet
       {
         template<typename T>
@@ -610,8 +632,12 @@ namespace infinit
           {
             GetFileRequest::serialize(s);
             s.serialize("insert_ttl", insert_ttl);
+            s.serialize("insert_result", insert_result);
           }
 
+          // Nodes already having the block go in GetFileRequest::result,
+          // insert_result is for new peers accepting it
+          std::vector<PeerLocation> insert_result;
           /// insert when this reaches 0
           int insert_ttl;
         };
@@ -636,6 +662,7 @@ namespace infinit
             s.serialize("origin", origin);
             s.serialize("address", fileAddress);
             s.serialize("results", results);
+            s.serialize("insert_results", insert_results);
             s.serialize("ttl", ttl);
           }
 
@@ -645,6 +672,7 @@ namespace infinit
           Address fileAddress;
           int ttl;
           std::vector<PeerLocation> results;
+          std::vector<PeerLocation> insert_results;
         };
         REGISTER(PutFileReply, "putReply");
 
@@ -654,6 +682,7 @@ namespace infinit
       struct PendingRequest
       {
         std::vector<PeerLocation> result;
+        std::vector<PeerLocation> insert_result;
         reactor::Barrier barrier;
         Time startTime;
       };
@@ -2261,6 +2290,14 @@ namespace infinit
         _pending_requests.erase(it);
       }
 
+      static bool in_peerlocation(std::vector<PeerLocation> const& pl,
+                                  Address addr)
+      {
+        return std::find_if(pl.begin(), pl.end(),
+            [&] (PeerLocation const& r) {
+              return r.first == addr;
+            }) != pl.end();
+      }
       void
       Node::onPutFileRequest(packet::PutFileRequest* p)
       {
@@ -2269,17 +2306,16 @@ namespace infinit
         int fg = group_of(p->fileAddress);
         if (p->originEndpoints.empty())
           p->originEndpoints = {p->endpoint};
+        addLocalResults(p, nullptr);
         // don't accept put requests until we know our endpoint
         // Accept the put locally if we know no other node
         if (fg == _group
           &&  ((p->insert_ttl == 0 && !_local_endpoints.empty())
               || _state.contacts[_group].empty()))
         {
+          if (!in_peerlocation(p->result, _self)
+            && !in_peerlocation(p->insert_result, _self))
           // check if we didn't already accept this file
-          if (std::find_if(p->result.begin(), p->result.end(),
-            [&] (PeerLocation const& r) {
-              return r.first == _self;
-            }) == p->result.end())
           {
             // Check if we already have the block
             auto its = _state.files.equal_range(p->fileAddress);
@@ -2291,13 +2327,15 @@ namespace infinit
             { // Nope, insert here
               // That makes us a home node for this address, but
               // wait until we get the RPC to store anything
-              ELLE_DEBUG("%s: inserting", *this);
-              p->result.push_back(std::make_pair(_self,
+              ELLE_DEBUG("%s: inserting in insert_result", *this);
+              p->insert_result.push_back(std::make_pair(_self,
                 endpoints_extract_convert(_local_endpoints)));
               _promised_files.push_back(p->fileAddress);
             }
             else
-              ELLE_DEBUG("%s: not inserting %x: already present", *this, p->fileAddress);
+            {
+              ELLE_ASSERT(!"Should have been handled by addLocalResults");
+            }
           }
           else
             ELLE_DEBUG("%s: not inserting %x: already inserted", *this, p->fileAddress);
@@ -2314,6 +2352,7 @@ namespace infinit
           res.request_id = p->request_id;
           res.origin = p->originAddress;
           res.results = p->result;
+          res.insert_results = p->insert_result;
           res.ttl = p->ttl;
           if (p->originAddress == _self)
             onPutFileReply(&res);
@@ -2361,6 +2400,7 @@ namespace infinit
         shops.add(p->ttl);
         ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id, p->results);
         it->second->result = p->results;
+        it->second->insert_result = p->insert_results;
         it->second->barrier.open();
         _pending_requests.erase(it);
       }
@@ -2530,6 +2570,7 @@ namespace infinit
         // If there is only two nodes, inserting is deterministic without the rand
         p.insert_ttl = _config.query_put_insert_ttl + (rand()%2);
         std::vector<PeerLocation> results;
+        std::vector<PeerLocation> insert_results;
         for (int i = 0; i < _config.query_put_retries; ++i)
         {
           packet::PutFileRequest req = p;
@@ -2547,24 +2588,17 @@ namespace infinit
           {
             if (fg != _group || _observer)
               throw std::runtime_error("No contacts in self/target groups");
-            // Bootstraping only: Store locally if not already there
-            bool have_file = std::find_if(_state.files.begin(), _state.files.end(),
-              [&] (Files::value_type const& v)
-              {
-                return v.second.address == file
-                && v.second.home_node == _self;
-              }) != _state.files.end();
-              if (_config.bootstrap_nodes.empty() && !have_file && std::find(_promised_files.begin(), _promised_files.end(), p.fileAddress)
-                == _promised_files.end())
-              {
-                _promised_files.push_back(p.fileAddress);
-                results.push_back(PeerLocation(Address::null, {RpcEndpoint(
-                  boost::asio::ip::address::from_string("127.0.0.1"),
-                this->_port)}));
-                return results;
-              }
-              else
-                return results;
+            // Bootstraping only: Store locally.
+            if (_config.bootstrap_nodes.empty())
+            {
+              _promised_files.push_back(p.fileAddress);
+              results.push_back(PeerLocation(Address::null, {RpcEndpoint(
+                boost::asio::ip::address::from_string("127.0.0.1"),
+              this->_port)}));
+              return results;
+            }
+            else
+              return results;
           }
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
           send(req, it->second);
@@ -2576,37 +2610,30 @@ namespace infinit
           }
           else
           {
-            for (auto const& rp: r->result)
-            {
-              if (std::find(results.begin(), results.end(), rp) == results.end())
-                results.push_back(rp);
-            }
-            if (signed(results.size()) >= n)
+            merge_peerlocations(results, r->result);
+            merge_peerlocations(insert_results, r->insert_result);
+            if (signed(results.size()) + signed(insert_results.size())  >= n)
             {
               // If we got a partial reply first, then a full reply, we
               // can have more results than asked for.
-              results.resize(n);
               break;
             }
           }
           ELLE_TRACE("%s: put failed, retry %s", *this, i);
           ++_failed_puts;
         }
-        // ILLEGAL HACK: assume success and add info to our file table
-        /*
-        for (auto const& r: results)
+        ELLE_TRACE("%s: got %s results and %s insert", *this, results.size(),
+                   insert_results.size());
+        while (signed(results.size()) < n && !insert_results.empty())
         {
-          GossipEndpoint ge;
-          endpoint_to_endpoint(r, ge);
-          auto & cs = _state.contacts[_group];
-          auto it = std::find_if(cs.begin(), cs.end(),
-            [&] (Contacts::value_type const& v) {
-              return v.second.endpoint == ge;
-            });
-          if (it != cs.end())
-            _state.files.insert(std::make_pair(file,
-              File {file, it->first, now(), Time(), 0}));
-        }*/
+          results.push_back(insert_results.back());
+          insert_results.pop_back();
+        }
+        if (signed(results.size()) > n)
+        {
+          ELLE_WARN("Requested %s peers for %x, got %s", n, file, results.size());
+          results.resize(n);
+        }
         return results;
       }
       /* For node selection, the paper [5] in kelips recommand:
