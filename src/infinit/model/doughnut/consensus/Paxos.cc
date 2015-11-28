@@ -565,7 +565,7 @@ namespace infinit
                 for (auto owner: owners)
                   scope.run_background(
                     "store block",
-                    [&, owner] { owner->store(*b, mode); });
+                    [&, owner] { owner->store(*b, STORE_ANY); });
                 reactor::wait(scope);
               };
             }
