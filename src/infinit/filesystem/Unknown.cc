@@ -19,6 +19,31 @@ namespace infinit
 {
   namespace filesystem
   {
+    class DummyConflictResolver: public model::ConflictResolver
+    {
+    public:
+      DummyConflictResolver() {}
+      DummyConflictResolver(elle::serialization::SerializerIn& s) {}
+      void serialize(elle::serialization::Serializer& s) override
+      {
+      }
+      std::unique_ptr<Block>
+      operator() (Block& block,
+                  Block& current,
+                  model::StoreMode mode)
+      {
+        return current.clone();
+      }
+    };
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<DummyConflictResolver> _register_dcr("dummy");
+
+    static
+    std::unique_ptr<model::ConflictResolver> dummy_conflict_resolver()
+    {
+      return elle::make_unique<DummyConflictResolver>();
+    }
+
     Unknown::Unknown(DirectoryPtr parent, FileSystem& owner, std::string const& name)
       : Node(owner, parent, name)
     {}
@@ -35,7 +60,8 @@ namespace infinit
         ELLE_DEBUG_SCOPE("inheriting auth");
         ELLE_ASSERT(!!_parent->_block);
         // We must store first to ready ACL layer
-        this->_owner.store_or_die(*b, model::STORE_INSERT);
+        this->_owner.store_or_die(*b, model::STORE_INSERT,
+          dummy_conflict_resolver());
         umbrella([&] { this->_parent->_block->copy_permissions(*b);});
         Directory d(this->_parent, this->_owner, this->_name, address);
         d._block = std::move(b);
@@ -43,7 +69,8 @@ namespace infinit
         d._push_changes({OperationType::update, "/inherit"});
       }
       else
-        this->_owner.store_or_die(std::move(b), model::STORE_INSERT);
+        this->_owner.store_or_die(std::move(b), model::STORE_INSERT,
+                                  dummy_conflict_resolver());
       ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
                      this->_parent->_files.end());
       this->_parent->_files.emplace(

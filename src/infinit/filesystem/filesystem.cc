@@ -82,21 +82,23 @@ namespace infinit
 
     void
     FileSystem::store_or_die(model::blocks::Block& block,
-                             model::StoreMode mode)
+                             model::StoreMode mode,
+                             std::unique_ptr<model::ConflictResolver> resolver)
     {
       block.seal();
       auto copy = block.clone();
-      store_or_die(std::move(copy), mode);
+      store_or_die(std::move(copy), mode, std::move(resolver));
     }
 
     void
     FileSystem::store_or_die(std::unique_ptr<model::blocks::Block> block,
-                             model::StoreMode mode)
+                             model::StoreMode mode,
+                             std::unique_ptr<model::ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store or die: %s", *this, *block);
       try
       {
-        this->_block_store->store(std::move(block), mode);
+        this->_block_store->store(std::move(block), mode, std::move(resolver));
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
