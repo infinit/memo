@@ -5,7 +5,7 @@ set -e
 rootdir=$1
 nodes=$2
 k=$3
-replicas=2
+replicas=3
 observers=2
 user=test
 port_base=5050
@@ -37,7 +37,7 @@ done
 
 # Generate storages
 for i in $(seq 0 $nodes); do
-  INFINIT_HOME=$rootdir/conf$i infinit-storage --create --name storage --filesystem --path $rootdir/store$i
+  INFINIT_HOME=$rootdir/conf$i infinit-storage --create --capacity 2000000000 --name storage --filesystem --path $rootdir/store$i
 done
 
 # Generate overlay network and export structure
@@ -49,8 +49,9 @@ user_hash=$( cd conf0/networks && ls)
 # import and join network
 for i in $(seq 1 $nodes); do
   echo $exported_network | INFINIT_HOME=$rootdir/conf$i infinit-network --import
-  INFINIT_HOME=$rootdir/conf0 infinit-network --invite --as $user --name $user_hash/kelips --user $user$i \
-  | INFINIT_HOME=$rootdir/conf$i infinit-network --join --as $user$i --name $user_hash/kelips --storage storage $(port $i $port_base $nports) --input -
+  INFINIT_HOME=$rootdir/conf0 infinit-passport --create --as $user --network kelips --user $user$i --output - \
+  | INFINIT_HOME=$rootdir/conf$i infinit-passport --import
+  INFINIT_HOME=$rootdir/conf$i infinit-network --join --as $user$i --name $user_hash/kelips --storage storage $(port $i $port_base $nports)
 done
 
 #observers
@@ -61,39 +62,31 @@ for i in $(seq 0 $observers); do
   echo $exported_user | INFINIT_HOME=$rootdir/observer_conf_$i infinit-user --import
   INFINIT_HOME=$rootdir/observer_conf_$i infinit-user --export --name obs$i | INFINIT_HOME=$rootdir/conf0 infinit-user --import
   echo $exported_network | INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --import
-  INFINIT_HOME=$rootdir/conf0 infinit-network --invite --as $user --name $user_hash/kelips --user obs$i \
-  | INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --join --as obs$i --name $user_hash/kelips --input -
+
+  INFINIT_HOME=$rootdir/conf0 infinit-passport --create --as $user --network kelips --user obs$i --output - \
+  | INFINIT_HOME=$rootdir/observer_conf_$i infinit-passport --import
+  INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --join --as obs$i --name $user_hash/kelips
 done
 
-# create volume, requires running nodes
-#INFINIT_HOME=$rootdir/conf0 infinit-network --run --as $user --name $user_hash/kelips &
-#pid1=$!
-#sleep 3
-#INFINIT_HOME=$rootdir/conf1 infinit-network --run --as ${user}1 --name $user_hash/kelips --peer 127.0.0.1:$port_base &
-#pid2=$!
-#sleep 3
-INFINIT_HOME=$rootdir/observer_conf_0 infinit-volume --create \
-  --mountpoint observer_mount_0 \
-  --as obs0 --network $user_hash/kelips \
-  --name kelips --peer 127.0.0.1:$port_base
+# create volume
+INFINIT_HOME=$rootdir/conf0 infinit-volume --create --name kelips \
+  --as $user --network kelips
 
-#kill $pid1
-#kill $pid2
-obs_user_hash=$( cd observer_conf_0/volumes && ls)
-exported_volume=$(INFINIT_HOME=$rootdir/observer_conf_0 infinit-volume --export --as obs0 --name kelips)
-for i in $(seq 1 $observers); do
+
+exported_volume=$(INFINIT_HOME=$rootdir/conf0 infinit-volume --export --as $user --name kelips)
+for i in $(seq 0 $observers); do
   echo $exported_volume | INFINIT_HOME=$rootdir/observer_conf_$i infinit-volume --import --mountpoint observer_mount_$i
 done
 
 echo '#!/bin/bash' > $rootdir/run-nodes.sh
 chmod a+x $rootdir/run-nodes.sh
-echo "INFINIT_HOME=$rootdir/conf0 infinit-network --run --as $user --name $user_hash/kelips &" >> $rootdir/run-nodes.sh
+echo "INFINIT_HOME=$rootdir/conf0 infinit-volume --run --as $user --name $user_hash/kelips --mountpoint mount_0 --async --cache &" >> $rootdir/run-nodes.sh
 echo 'sleep 2' >> $rootdir/run-nodes.sh
 for i in $(seq 1 $nodes); do
   echo "INFINIT_HOME=$rootdir/conf$i infinit-network --run --as $user$i --name $user_hash/kelips --peer 127.0.0.1:$port_base &" >> $rootdir/run-nodes.sh
 done
 
 for i in $(seq 0 $observers); do
-  echo "INFINIT_HOME=$rootdir/observer_conf_$i infinit-volume --run --as obs$i --name $obs_user_hash/kelips --peer 127.0.0.1:$port_base" > $rootdir/run-volume-$i.sh
+  echo "INFINIT_HOME=$rootdir/observer_conf_$i infinit-volume --run --mountpoint observer_mount_$i --as obs$i --name $user/kelips --peer 127.0.0.1:$port_base --cache --async" > $rootdir/run-volume-$i.sh
   chmod a+x $rootdir/run-volume-$i.sh
 done
