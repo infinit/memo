@@ -222,7 +222,8 @@ main(int argc, char** argv)
       "STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
-        { "capacity,c", value<std::string>(), "limit the storage capacityi (default is byte)" },
+        { "capacity,c", value<std::string>(), "limit the storage capacity, "
+          "use: B,kB,kiB,GB,GiB,TB,TiB (optional)" },
         option_output("storage"),
       },
       {
