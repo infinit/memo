@@ -3284,6 +3284,45 @@ namespace infinit
             ares.push_back(c);
           res["counts"] = ares;
         }
+        if (k.substr(0, strlen("cachecheck.")) == "cachecheck.")
+        {
+          Address addr = Address::from_string(k.substr(strlen("cachecheck.")));
+          int g = group_of(addr);
+          std::vector<int> hits;
+          hits.resize(1);
+          for (auto& c: this->_state.contacts[g])
+          {
+            packet::GetFileRequest gf;
+            gf.sender = _self;
+            gf.request_id = ++ _next_id;
+            gf.query_node = false;
+            gf.originAddress = _self;
+            for (auto const& te: _local_endpoints)
+              gf.originEndpoints.push_back(te.first);
+            gf.fileAddress = addr;
+            gf.ttl = 0;
+            gf.count = 10;
+            auto r = std::make_shared<PendingRequest>();
+            r->startTime = now();
+            r->barrier.close();
+            auto ir =
+              this->_pending_requests.insert(std::make_pair(gf.request_id, r));
+            send(gf, c.second);
+            if (!reactor::wait(r->barrier, 100_ms))
+              ++hits[0];
+            else
+            {
+              int nh = r->result.size();
+              if (signed(hits.size()) <= nh)
+                hits.resize(nh+1);
+              hits[nh]++;
+            }
+          }
+          elle::json::Array ares;
+          for (auto c: hits)
+            ares.push_back(c);
+          res["counts"] = ares;
+        }
         if (k.substr(0, strlen("scan.")) == "scan.")
         {
           int factor = std::stoi(k.substr(strlen("scan.")));
