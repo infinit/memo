@@ -24,6 +24,7 @@ public:
     , nstore(0)
     , nremove(0)
   {}
+
   virtual
   void
   _store(std::unique_ptr<infinit::model::blocks::Block>,
@@ -119,8 +120,7 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
   {
     auto scu = elle::make_unique<SyncedConsensus>();
     auto& sc = *scu;
-    dht::consensus::Async async(
-      std::move(scu), d.path(), 1);
+    dht::consensus::Async async(std::move(scu), d.path(), 1);
     async.store(elle::make_unique<infinit::model::blocks::Block>(
                   a1, elle::Buffer("a1", 2)),
                 infinit::model::STORE_INSERT, nullptr);
@@ -132,10 +132,10 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
                 infinit::model::STORE_UPDATE, nullptr);
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
-    reactor::sleep(100_ms);
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
-    reactor::sleep(100_ms);
+    BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
+    sc.sem.release();
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
   }
 }

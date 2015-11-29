@@ -68,12 +68,13 @@ namespace infinit
 
         Async::~Async()
         {
-          ELLE_TRACE_SCOPE("Attempting clean exit...");
+          ELLE_TRACE_SCOPE("%s: destroy", *this);
           this->_exit_requested = true;
-          if (this->_ops.size() < this->_ops.max_size())
+          // Wake up the thread if needed.
+          if (this->_ops.size() == 0)
             this->_ops.put(Op(Address::null, {}, {}, nullptr));
-          bool ok = reactor::wait(*this->_process_thread, 10_sec);
-          ELLE_TRACE(ok ? "exiting" : "killing");
+          if (!reactor::wait(*this->_process_thread, 10_sec))
+            ELLE_WARN("forcefully kiling async process loop");
         }
 
         std::unique_ptr<Local>
