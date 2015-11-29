@@ -188,7 +188,6 @@ COMMAND(run)
       ELLE_TRACE("terminating");
       reactor::scheduler().terminate();
     });
-  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"});
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);
@@ -197,10 +196,16 @@ COMMAND(run)
     eps, true,
     cache, cache_size, cache_ttl, cache_invalidation,
     flag(args, "async"));
+  // Only push if we have are contributing storage.
+  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
+            && model->local();
+  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint = {};
+  if (push)
+    local_endpoint = model->local()->server_endpoint();
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
-    if (push && model->local()->storage())
+    if (push)
     {
       ELLE_DEBUG("Connect callback to log storage stat");
       model->local()->storage()->register_notifier([&] {
@@ -558,12 +563,10 @@ COMMAND(run)
       reactor::wait(*fs);
     }
   };
-  if (push && model->local())
+  if (push)
   {
-
     elle::With<InterfacePublisher>(
-      network, self, node_id,
-      model->local()->server_endpoint().port()) << [&]
+      network, self, node_id, local_endpoint.get().port()) << [&]
     {
       run();
     };

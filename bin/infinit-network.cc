@@ -385,7 +385,6 @@ COMMAND(run)
     for (auto const& h: hosts)
       eps[infinit::model::Address()].push_back(h);
   }
-  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"});
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);
@@ -401,6 +400,9 @@ COMMAND(run)
   auto dht =
     network.run(eps, false, cache, cache_size, cache_ttl, cache_invalidation,
                 flag(args, "async"));
+  // Only push if we have are contributing storage.
+  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
+            && dht->local()->storage();
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
   reactor::scheduler().signal_handle(
