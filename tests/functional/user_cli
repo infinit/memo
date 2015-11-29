@@ -10,7 +10,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
            '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['infinit-user', '--signup', '--full',
              '--name', 'alice', '--email', 'alice@infinit.io',
-             '--password-inline', 'password'])
+             '--password', 'password'])
   try:
     bob.run(['infinit-user', '--export', '--name', 'alice'])
     assert False
@@ -28,11 +28,11 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   alice.run(['infinit-user', '--signup', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
-             '--password-inline', 'password'])
+             '--password', 'password'])
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
   alice2.run(['infinit-user', '--login',
               '--name', 'alice',
-              '--password-inline', 'password'])
+              '--password', 'password'])
   alice2_json = alice2.run(['infinit-user', '--export', '--full',
                             '--name', 'alice'])
   # XXX: Fix missing email.
@@ -47,11 +47,11 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   alice.run(['infinit-user', '--push', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
-             '--password-inline', 'password'])
+             '--password', 'password'])
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
   alice2.run(['infinit-user', '--login',
               '--name', 'alice',
-              '--password-inline', 'password'])
+              '--password', 'password'])
   alice2_json = alice2.run(['infinit-user', '--export', '--full',
                             '--name', 'alice'])
   # XXX: Fix missing email.
@@ -68,7 +68,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp, \
              '--email', 'alice@infinit.io'])
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
   try:
-    alice.run(['infinit-user', '--login', '--name', 'alice', '--password-inline', 'password'])
+    alice.run(['infinit-user', '--login', '--name', 'alice', '--password', 'password'])
     assert False
   except Exception as e:
     assert 'doesn\'t use the hub to login' in e.args[0]
@@ -85,7 +85,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
             input_as_it_is = True)
   alice2.run(['infinit-user', '--login',
               '--name', 'alice',
-              '--password-inline', 'password'])
+              '--password', 'password'])
 
 # Read password from stdin (login).
 with Beyond() as beyond, TemporaryDirectory() as tmp,  \
@@ -95,7 +95,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
              '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
-             '--password-inline', 'password'])
+             '--password', 'password'])
   alice2.run(['infinit-user', '--login', '--name', 'alice'],
              input = 'password'.encode('utf-8'),
              input_as_it_is = True)
@@ -140,11 +140,11 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   alice.run(['infinit-user', '--signup', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
-             '--password-inline', 'password'])
+             '--password', 'password'])
   try:
     alice2.run(['infinit-user', '--login',
                 '--name', 'alice',
-                '--password-inline', 'not_password'])
+                '--password', 'not_password'])
     assert False
   except Exception as e:
     assert 'password do not match' in e.args[0]

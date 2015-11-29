@@ -15,9 +15,9 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
              '--email', 'alice@infinit.io'])
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
   alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice',
-             '--password-inline', 'the_password'])
+             '--password', 'the_password'])
   alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice',
-              '--password-inline', 'the_password'])
+              '--password', 'the_password'])
 
   alice2_json = alice2.run(['infinit-user', '--export', '--name', 'alice', '--full'])
   assertEq(alice_json['private_key'], alice2_json['private_key'])
