@@ -454,8 +454,8 @@ def configure(
   ## ------ ##
 
   if elle.python3:
+    bottle = drake.node('bottle/bottle.py')
     if beyond:
-      bottle = drake.node('bottle/bottle.py')
       sendwithus = drake.python.Package(
         'sendwithus',
         'sendwithus_python',
