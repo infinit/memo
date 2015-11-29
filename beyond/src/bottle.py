@@ -163,8 +163,6 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.network_endpoint_put)
     self.route('/networks/<owner>/<name>/endpoints/<user>/<node_id>',
                method = 'DELETE')(self.network_endpoint_delete)
-    self.route('/networks/<owner>/<name>/users',
-               method = 'GET')(self.network_users_get)
     self.route('/networks/<owner>/<name>/volumes',
                method = 'GET')(self.network_volumes_get)
     self.route('/networks/<owner>/<name>/stat',
@@ -515,14 +513,6 @@ class Bottle(bottle.Bottle):
     self.authenticate(user)
     self.network_from_name(owner = owner, name = name)
     self.__beyond.network_delete(owner, name)
-
-  def network_users_get(self, owner, name):
-    network = self.network_from_name(owner = owner, name = name)
-    res = [owner]
-    res.extend(network.passports.keys())
-    return {
-      'users': res,
-    }
 
   def network_volumes_get(self, owner, name):
     network = self.network_from_name(owner = owner, name = name)
