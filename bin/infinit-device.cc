@@ -71,7 +71,8 @@ COMMAND(transmit_user)
   das::Serializer<DasPairingInformation> view{p};
   beyond_push(
     elle::sprintf("users/%s/pairing", user.name),
-    "transmitting", "user identity", view, user);
+    "user identity for", user.name, view, user, false);
+  report_action("transmitted", "user identity for", user.name);
 }
 
 COMMAND(transmit)
@@ -121,7 +122,7 @@ COMMAND(receive_user)
       throw;
     }
   }
-  report_action("saved", "user", name, std::string("locally"));
+  report_action("received", "user identity for", name);
 }
 
 COMMAND(receive)
