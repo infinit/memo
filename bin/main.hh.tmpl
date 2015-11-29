@@ -536,7 +536,8 @@ beyond_push(std::string const& where,
             std::string const& type,
             std::string const& name,
             T const& o,
-            infinit::User const& self);
+            infinit::User const& self,
+            bool report = true);
 
 namespace infinit
 {
@@ -1733,7 +1734,8 @@ beyond_push(std::string const& where,
             std::string const& type,
             std::string const& name,
             T const& o,
-            infinit::User const& self)
+            infinit::User const& self,
+            bool report = true)
 {
   using namespace infinit::cryptography;
   reactor::http::Request::Configuration c;
@@ -1752,9 +1754,15 @@ beyond_push(std::string const& where,
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::Created)
-    report_action("pushed", type, name, std::string("remotely"));
+  {
+    if (report)
+      report_action("pushed", type, name, std::string("remotely"));
+  }
   else if (r.status() == reactor::http::StatusCode::OK)
-    report_action("Already pushed", type, name);
+  {
+    if (report)
+      report_action("Already pushed", type, name);
+  }
   else if (r.status() == reactor::http::StatusCode::Conflict)
   {
     throw elle::Error(elle::sprintf(
@@ -1794,9 +1802,9 @@ beyond_push(std::string const& where,
 template <typename T>
 void
 beyond_push(std::string const& type, std::string const& name, T const& o,
-  infinit::User const& self)
+  infinit::User const& self, bool report = true)
 {
-  beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self);
+  beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self, report);
 }
 
 // FIXME: Workaround used to handle objects that have had their copy
