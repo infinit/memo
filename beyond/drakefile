@@ -116,6 +116,12 @@ def configure(
       'six-1.10.0.dist-info',
     ])
   sources += oauth2client.targets()
+  crypto = drake.PythonModule(
+    'pycrypto',
+    python_prefix,
+    dependencies = [],
+    module_name = 'Crypto')
+  sources += crypto.targets()
   def install_nodes(where, how):
     where = drake.Path(where)
     for node in how(sources,
