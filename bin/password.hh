@@ -28,13 +28,13 @@ echo_mode(bool enable)
 }
 
 std::string
-read_passphrase()
+read_passphrase(std::string const& prompt_text = "Passphrase")
 {
   std::string res;
   {
     elle::SafeFinally restore_echo([] { echo_mode(true); });
     echo_mode(false);
-    std::cout << "Passphrase: ";
+    std::cout << prompt_text;
     std::cout.flush();
     std::getline(std::cin, res);
   }
