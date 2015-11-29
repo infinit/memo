@@ -2019,7 +2019,7 @@ beyond_fetch_endpoints(infinit::Network const& network,
     elle::sprintf("%s/networks/%s/endpoints", beyond(), network.name));
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    report_action("fetched", "enpoints for", network.name);
+    report_action("fetched", "endpoints for", network.name);
   else
   {
     throw elle::Error(
