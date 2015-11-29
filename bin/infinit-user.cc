@@ -307,11 +307,14 @@ main(int argc, char** argv)
   program = argv[0];
   boost::program_options::option_description option_push_full =
     { "full", bool_switch(), "include private key in order "
-      "to facilitate device pairing and fetching lost keys." };
+      "to facilitate device pairing and fetching lost keys" };
   boost::program_options::option_description option_push_password =
     { "password-inline", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Used with --full "
       "(default: prompt for password)", beyond(true)).c_str() };
+  boost::program_options::option_description option_fullname =
+    { "fullname", value<std::string>(), "user's fullname (optional)" };
+
   Modes modes {
     {
       "create",
@@ -328,7 +331,7 @@ main(int argc, char** argv)
         { "push,p", bool_switch(), "alias for --push-user" },
         { "email", value<std::string>(),
           "valid email address (mandatory when using --push-user)" },
-        { "fullname", value<std::string>(), "user's fullname (optional)" },
+        option_fullname,
         option_push_full,
         option_push_password,
       },
@@ -395,6 +398,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(),
           "user to push (default: system user)" },
         { "email", value<std::string>(), "valid email address" },
+        option_fullname,
         option_push_full,
         option_push_password,
       },
@@ -407,7 +411,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
         { "email,n", value<std::string>(), "valid email address" },
-        { "fullname", value<std::string>(), "user's fullname (optional)" },
+        option_fullname,
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key "
           "(default: generate key pair)" },
