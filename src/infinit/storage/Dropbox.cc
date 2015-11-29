@@ -13,8 +13,7 @@ namespace infinit
   {
     Dropbox::Dropbox(std::string token)
       : Dropbox(std::move(token), ".infinit")
-    {
-    }
+    {}
 
     Dropbox::Dropbox(std::string token,
                      boost::filesystem::path root)
@@ -128,7 +127,7 @@ namespace infinit
       std::string name,
       std::string token_,
       boost::optional<std::string> root_,
-      int64_t capacity)
+      boost::optional<int64_t> capacity)
       : StorageConfig(std::move(name), std::move(capacity))
       , token(std::move(token_))
       , root(std::move(root_))

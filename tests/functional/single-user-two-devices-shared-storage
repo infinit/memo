@@ -35,7 +35,7 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   ])
   response = infinit_1.run([
     'infinit-volume', '--run',
-     'volume',
+    'volume',
     '--as', 'user',
   ],
   input = {'operation': 'mkdir', 'path': '/beacon'})

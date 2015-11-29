@@ -146,9 +146,8 @@ namespace infinit
       return elle::make_unique<infinit::storage::Filesystem>(args[0]);
     }
 
-    FilesystemStorageConfig::FilesystemStorageConfig(std::string name,
-                                                     std::string path_,
-                                                     int64_t capacity)
+    FilesystemStorageConfig::FilesystemStorageConfig(
+      std::string name, std::string path_, boost::optional<int64_t> capacity)
       : StorageConfig(std::move(name), std::move(capacity))
       , path(std::move(path_))
     {}

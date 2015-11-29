@@ -81,9 +81,10 @@ convert_capacity(std::string value)
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
-  int64_t capacity = args.count("capacity")
-    ? convert_capacity(args["capacity"].as<std::string>())
-    : 0;
+  auto capacity_repr = option_opt<std::string>(args, "capacity");
+  boost::optional<int64_t> capacity;
+  if (capacity_repr)
+    capacity = convert_capacity(*capacity_repr);
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("dropbox"))
   {
