@@ -140,9 +140,9 @@ create_(std::string const& name,
   {
     if (keys_file)
     {
-      auto passphrase = read_passphrase("Key passphrase");
+      auto password = read_password("Key password");
       return infinit::cryptography::rsa::pem::import_keypair(
-          keys_file.get(), passphrase);
+          keys_file.get(), password);
     }
     else
     {

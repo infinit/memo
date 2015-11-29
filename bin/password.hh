@@ -28,7 +28,7 @@ echo_mode(bool enable)
 }
 
 std::string
-read_passphrase(std::string const& prompt_text = "Passphrase")
+read_password(std::string const& prompt_text = "Password")
 {
   std::string res;
   {
@@ -49,7 +49,7 @@ _password(variables_map const& args,
 {
   auto password = optional(args, argument);
   if (!password)
-    password = read_passphrase();
+    password = read_password();
   ELLE_ASSERT(password);
   return password.get();
 };
