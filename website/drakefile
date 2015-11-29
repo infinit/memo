@@ -1,5 +1,6 @@
 import drake
 import drake.cxx
+import drake.debian
 import sys
 
 from itertools import chain
