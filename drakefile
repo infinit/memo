@@ -455,16 +455,16 @@ def configure(
 
   if elle.python3:
     bottle = drake.node('bottle/bottle.py')
+    sendwithus = drake.python.Package(
+      'sendwithus',
+      'sendwithus_python',
+      drake.nodes(
+        'sendwithus_python/sendwithus/__init__.py',
+        'sendwithus_python/sendwithus/encoder.py',
+        'sendwithus_python/sendwithus/version.py',
+      ),
+    )
     if beyond:
-      sendwithus = drake.python.Package(
-        'sendwithus',
-        'sendwithus_python',
-        drake.nodes(
-          'sendwithus_python/sendwithus/__init__.py',
-          'sendwithus_python/sendwithus/encoder.py',
-          'sendwithus_python/sendwithus/version.py',
-        ),
-      )
       beyond = drake.include(
         'beyond',
         python = elle.python3,
