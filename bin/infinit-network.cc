@@ -285,7 +285,6 @@ COMMAND(join)
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto storage_name = optional(args, "storage");
-  auto port = optional<int>(args, "port");
   std::unique_ptr<infinit::storage::StorageConfig> storage;
   if (storage_name)
     storage = ifnt.storage_get(storage_name.get());
@@ -323,8 +322,7 @@ COMMAND(join)
       self.keypair(),
       std::move(desc.owner),
       std::move(passport),
-      self.name,
-      std::move(port));
+      self.name);
   network.name = desc.name;
   ifnt.network_save(network, true);
   report_action("joined", "network", network.name, std::string("locally"));
@@ -589,7 +587,6 @@ main(int argc, char** argv)
 #ifndef INFINIT_PRODUCTION_BUILD
         { "storage", value<std::string>(), "storage to contribute (optional)" },
 #endif
-        { "port", value<int>(), "port to listen on (default: random)" },
         option_owner,
       },
     },
