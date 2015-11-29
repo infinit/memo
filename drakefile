@@ -453,29 +453,55 @@ def configure(
   ## Beyond ##
   ## ------ ##
 
-  if beyond and elle.python3 is not None:
-    bottle = drake.node('bottle/bottle.py')
-    sendwithus = drake.python.Package(
-      'sendwithus',
-      'sendwithus_python',
-      drake.nodes(
-        'sendwithus_python/sendwithus/__init__.py',
-        'sendwithus_python/sendwithus/encoder.py',
-        'sendwithus_python/sendwithus/version.py',
-      ),
-    )
-    beyond = drake.include(
-      'beyond',
-      python = elle.python3,
-      cryptography_python_module = elle.cryptography.python_module,
-      sendwithus = sendwithus,
-      prefix = prefix,
-      git = git,
-      bottle = bottle,
-      PatchAndInstall = PatchAndInstall,
-    )
-    rule_check << beyond.rule_check
-
+  if elle.python3:
+    if beyond:
+      bottle = drake.node('bottle/bottle.py')
+      sendwithus = drake.python.Package(
+        'sendwithus',
+        'sendwithus_python',
+        drake.nodes(
+          'sendwithus_python/sendwithus/__init__.py',
+          'sendwithus_python/sendwithus/encoder.py',
+          'sendwithus_python/sendwithus/version.py',
+        ),
+      )
+      beyond = drake.include(
+        'beyond',
+        python = elle.python3,
+        cryptography_python_module = elle.cryptography.python_module,
+        sendwithus = sendwithus,
+        prefix = prefix,
+        git = git,
+        bottle = bottle,
+        PatchAndInstall = PatchAndInstall,
+      )
+      rule_check << beyond.rule_check
+      for test_name in [
+          'errors',
+          'single-user-two-devices-shared-storage',
+          #FIXME: 'flow',
+          # Test clis.
+          'device_cli',
+          'user_cli',
+          'network_cli',
+          'passport_cli',
+          'volume_cli',
+          'drive_cli',
+          'storage_cli',
+      ]:
+        test = drake.node('tests/functional/%s' % test_name)
+        rule_functional_tests << test
+        test.dependencies_add(installed_binaries)
+        test.dependencies_add(beyond.package.nodes)
+        runner = drake.Runner(
+          exe = test,
+          env = {
+            'PYTHONPATH':
+              drake.path_build('beyond/lib/python%s' % elle.python3.version)
+          })
+        rule_functional_check << runner.status
+      rule_tests << rule_functional_tests
+      rule_check << rule_functional_check
     website = drake.include(
       'website',
       python = elle.python3,
@@ -547,31 +573,3 @@ def configure(
       runner = drake.Runner(exe = test)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
-
-  if elle.python3:
-    for test_name in [
-        'errors',
-        'single-user-two-devices-shared-storage',
-        #FIXME: 'flow',
-        # Test clis.
-        'device_cli',
-        'user_cli',
-        'network_cli',
-        'passport_cli',
-        'volume_cli',
-        'drive_cli',
-        'storage_cli',
-    ]:
-      test = drake.node('tests/functional/%s' % test_name)
-      rule_functional_tests << test
-      test.dependencies_add(installed_binaries)
-      test.dependencies_add(beyond.package.nodes)
-      runner = drake.Runner(
-        exe = test,
-        env = {
-          'PYTHONPATH':
-            drake.path_build('beyond/lib/python%s' % elle.python3.version)
-        })
-      rule_functional_check << runner.status
-    rule_tests << rule_functional_tests
-    rule_check << rule_functional_check
