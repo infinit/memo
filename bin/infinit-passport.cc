@@ -258,7 +258,7 @@ main(int argc, char** argv)
       "--network NETWORK --user USER",
       {
         { "network,n", value<std::string>(),
-          "network to create the passport to." },
+          "network to create the passport to" },
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "push-passport", bool_switch(),
           elle::sprintf("push the passport to %s", beyond(true)).c_str() },
