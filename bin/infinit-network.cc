@@ -449,25 +449,7 @@ COMMAND(list_storage)
   }
 }
 
-COMMAND(members)
-{
-  std::string network_name = mandatory(args, "name", "network_name");
-  auto res =
-    beyond_fetch<std::unordered_map<std::string, std::vector<std::string>>>(
-      elle::sprintf("networks/%s/users", network_name),
-      "users of",
-      network_name,
-      boost::none,
-      Headers{},
-      false
-    );
-  for (std::string const& user: res["users"])
-    std::cout << user << std::endl;
-}
-
-static
-void
-stats(variables_map const& args)
+COMMAND(stats)
 {
   auto owner = self_user(ifnt, args);
   std::string network_name = mandatory(args, "name", "network_name");
@@ -662,17 +644,7 @@ main(int argc, char** argv)
       },
     },
     {
-      "members",
-      elle::sprintf(
-        "List all members of a network on %s", beyond(true)).c_str(),
-      &members,
-      "--name NETWORK",
-      {
-        { "name,n", value<std::string>(), "network name" },
-      },
-    },
-    {
-      "stat",
+      "stats",
       elle::sprintf(
         "Fetch stats of a network on %s", beyond(true)).c_str(),
       &stats,
