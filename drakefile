@@ -434,6 +434,14 @@ def configure(
   rule_install = drake.Rule('install')
   rule_install << drake.copy(installed_binaries, prefix, None,
                              builder = PatchAndInstall)
+  demo_home = drake.nodes(
+    'demo-home/networks/infinit/demo',
+    'demo-home/passports/infinit/demo/demo',
+    'demo-home/users/demo',
+    'demo-home/volumes/infinit/demo',
+  )
+  rule_install << drake.copy(demo_home, '%s/test' % prefix, 'demo-home')
+
   # man = drake.nodes(
   #   'share/man/man1/infinit.1',
   #   'share/man/man5/infinit.5',
