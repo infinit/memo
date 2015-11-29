@@ -11,12 +11,13 @@ from copy import deepcopy
 
 class PairData(dict):
 
-  def __init__(self, user, password = None):
+  def __init__(self, user, passphrase = None):
     self.__name = user['name']
-    self.__password = random_sequence(20) if password is None else password
+    self.__passphrase = random_sequence(20) if passphrase is None else passphrase
+    assert len(self.__passphrase) <= 32
     self.__user = user
-    self['password_hash'] = password_hash(self.__password)
-    cipher = PairData.cipher(self.__password)
+    self['passphrase_hash'] = password_hash(self.__passphrase)
+    cipher = PairData.cipher(self.__passphrase)
     import base64, json
     # Copy private key.
     user_ = deepcopy(user)
@@ -30,10 +31,10 @@ class PairData(dict):
     self['lifespan'] = 5
 
   @staticmethod
-  def cipher(password):
-    password = password.rjust(32)
+  def cipher(passphrase):
+    passphrase = passphrase.rjust(32)
     from Crypto.Cipher import AES
-    return AES.new(password, AES.MODE_ECB)
+    return AES.new(passphrase, AES.MODE_ECB)
 
   def put(self, hub, owner):
     return hub.put('users/%s/pairing' % self.__user['name'], json = self,
@@ -43,8 +44,8 @@ with Beyond() as beyond:
 
   class Test(unittest.TestCase):
 
-    def decrypt(data, password):
-      cipher = PairData.cipher(password)
+    def decrypt(data, passphrase):
+      cipher = PairData.cipher(passphrase)
       decoded = cipher.decrypt(base64.b64decode(data)).decode().strip()
       import json
       return json.loads(decoded)
@@ -56,37 +57,37 @@ with Beyond() as beyond:
 
     def test_logic(self):
       user = User()
-      password = 'this is my password'
-      pairing = PairData(user, password)
-      data = Test.decrypt(pairing['data'], password)
+      passphrase = 'this is my passphrase'
+      pairing = PairData(user, passphrase)
+      data = Test.decrypt(pairing['data'], passphrase)
       Test.compare(user, data)
 
     def test_normal(self):
       user = User()
       user.put(beyond)
-      password = 'Cannot imagine a strong password'
-      pairing = PairData(user, password)
+      passphrase = 'A strong passphrase'
+      pairing = PairData(user, passphrase)
       pairing.put(beyond, user)
       # Retrieve.
       res = beyond.get(
         'users/%s/pairing' % user['name'],
-        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+        extra_headers = {'infinit-pairing-passphrase-hash': password_hash(passphrase)}
       ).json()
-      data = Test.decrypt(res['data'], password)
+      data = Test.decrypt(res['data'], passphrase)
       Test.compare(user, data)
       # Should be gone.
       throws(lambda: beyond.get(
         'users/%s/pairing' % user['name'],
         json = {
-          'password_hash': password_hash(password)
+          'passphrase_hash': password_hash(passphrase)
         }),
              404)
 
     def test_uploading_twice(self):
       user = User()
       user.put(beyond)
-      password = 'Cannot imagine a strong password'
-      pairing = PairData(user, password)
+      passphrase = 'A strong passphrase'
+      pairing = PairData(user, passphrase)
       pairing.put(beyond, user)
       beyond.advance(seconds = pairing['lifespan'] * 60 - 30)
       pairing.put(beyond, user)
@@ -94,17 +95,17 @@ with Beyond() as beyond:
       beyond.advance(seconds = 100)
       beyond.get(
         'users/%s/pairing' % user['name'],
-        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+        extra_headers = {'infinit-pairing-passphrase-hash': password_hash(passphrase)}
       )
 
     def test_not_found(self):
       user = User()
       user.put(beyond)
       beyond.advance(seconds = 0, set = True)
-      password = 'Cannot imagine a strong password'
+      passphrase = 'A strong passphrase'
       throws(lambda: beyond.get(
         'users/%s/pairing' % user['name'],
-        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+        extra_headers = {'infinit-pairing-passphrase-hash': password_hash(passphrase)}
       ),
              404)
 
@@ -112,26 +113,26 @@ with Beyond() as beyond:
       user = User()
       user.put(beyond)
       beyond.advance(seconds = 0, set = True)
-      password = 'Cannot imagine a strong password'
-      pairing = PairData(user, password)
+      passphrase = 'A strong passphrase'
+      pairing = PairData(user, passphrase)
       pairing.put(beyond, user)
       beyond.advance(seconds = pairing['lifespan'] * 60 + 1)
       throws(lambda: beyond.get(
         'users/%s/pairing' % user['name'],
-        extra_headers = {'infinit-pairing-password-hash': password_hash(password)}
+        extra_headers = {'infinit-pairing-passphrase-hash': password_hash(passphrase)}
       ),
              410)
 
-    def test_invalid_password(self):
+    def test_invalid_passphrase(self):
       user = User()
       user.put(beyond)
       beyond.advance(seconds = 0, set = True)
-      password = 'Cannot imagine a strong password'
-      pairing = PairData(user, password)
+      passphrase = 'A strong passphrase'
+      pairing = PairData(user, passphrase)
       pairing.put(beyond, user)
       throws(lambda: beyond.get(
         'users/%s/pairing' % user['name'],
-        extra_headers = {'infinit-pairing-password-hash': 'evil_password'}
+        extra_headers = {'infinit-pairing-passphrase-hash': 'evil_passphrase'}
       ),
              403)
 

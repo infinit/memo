@@ -91,11 +91,11 @@ class Beyond:
   ## Pairing ##
   ## ------- ##
 
-  def pairing_information_get(self, owner, password_hash):
+  def pairing_information_get(self, owner, passphrase_hash):
     json = self.__datastore.pairing_fetch(owner)
     pairing = PairingInformation.from_json(self, json)
-    if password_hash != pairing.password_hash:
-      raise ValueError("password_hash")
+    if passphrase_hash != pairing.passphrase_hash:
+      raise ValueError("passphrase_hash")
     self.pairing_information_delete(owner)
     if self.now > pairing.expiration:
       raise exceptions.NoLongerAvailable("%s pairing information" % owner)
@@ -425,13 +425,7 @@ def fields(*args, **kwargs):
 
 class PairingInformation(metaclass = Entity,
                          insert = 'pairing_insert',
-                         fields = fields('name', 'password_hash', 'data', 'expiration')):
-
-  def create(self):
-    assert False
-    if self.expiration < self.now + datetime.timedelta(seconds = 60 * 5):
-      raise Exception("Lifespan too long")
-    self.create()
+                         fields = fields('name', 'passphrase_hash', 'data', 'expiration')):
 
   @property
   def id(self):

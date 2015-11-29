@@ -14,9 +14,9 @@ static std::string _pair_salt = "5_C+m$:1Ex";
 using namespace boost::program_options;
 
 std::string
-pairing_password(variables_map const& args)
+pairing_passphrase(variables_map const& args)
 {
-  return _password(args, "password");
+  return _password(args, "passphrase");
 }
 
 inline
@@ -31,43 +31,43 @@ struct PairingInformation
 public:
   // Generating.
   PairingInformation(elle::Buffer const& encrypted_user,
-                     std::string const& password)
+                     std::string const& passphrase)
     : data(encrypted_user)
-    , password_hash(password)
+    , passphrase_hash(passphrase)
   {}
   // Receiving.
   PairingInformation(elle::serialization::SerializerIn& s)
     : data(s.deserialize<elle::Buffer>("data"))
-    , password_hash(s.deserialize<std::string>("password_hash"))
+    , passphrase_hash(s.deserialize<std::string>("passphrase_hash"))
   {}
 
   void
   serialize(elle::serialization::Serializer& s)
   {
     s.serialize("data", this->data);
-    s.serialize("password_hash", this->password_hash);
+    s.serialize("passphrase_hash", this->passphrase_hash);
   }
 
   boost::optional<elle::Buffer> data;
-  boost::optional<std::string> password_hash;
+  boost::optional<std::string> passphrase_hash;
 };
 
-DAS_MODEL(PairingInformation, (data, password_hash), DasPairingInformation)
+DAS_MODEL(PairingInformation, (data, passphrase_hash), DasPairingInformation)
 
 COMMAND(transmit_user)
 {
   auto user = self_user(ifnt, args);
-  auto password = pairing_password(args);
+  auto passphrase = pairing_passphrase(args);
   std::stringstream serialized_user;
   {
     das::Serializer<infinit::DasUser> view{user};
     elle::serialization::json::serialize(view, serialized_user, false);
   }
-  infinit::cryptography::SecretKey key{password};
+  infinit::cryptography::SecretKey key{passphrase};
   PairingInformation p(
     key.encipher(serialized_user.str(),
                  infinit::cryptography::Cipher::aes256),
-    hash_password(password, _pair_salt));
+    hash_password(passphrase, _pair_salt));
   das::Serializer<DasPairingInformation> view{p};
   beyond_push(
     elle::sprintf("users/%s/pairing", user.name),
@@ -86,17 +86,17 @@ COMMAND(transmit)
 COMMAND(receive_user)
 {
   auto name = get_name(args);
-  auto password = pairing_password(args);
-  auto hashed_password = hash_password(password, _pair_salt);
+  auto passphrase = pairing_passphrase(args);
+  auto hashed_passphrase = hash_password(passphrase, _pair_salt);
   {
     try
     {
       auto pairing = beyond_fetch<PairingInformation>(
         elle::sprintf("users/%s/pairing", name), "pairing",
         name, boost::none,
-        {{"infinit-pairing-password-hash", hashed_password}},
+        {{"infinit-pairing-passphrase-hash", hashed_passphrase}},
         false);
-      infinit::cryptography::SecretKey key{password};
+      infinit::cryptography::SecretKey key{passphrase};
       auto data = key.decipher(*pairing.data,
                                infinit::cryptography::Cipher::aes256);
       std::stringstream stream;
@@ -137,9 +137,9 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  boost::program_options::option_description option_password = {
-    "password", value<std::string>(),
-    "password to secure identity (default: prompt for password)"
+  boost::program_options::option_description option_passphrase = {
+    "passphrase", value<std::string>(),
+    "passphrase to secure identity (default: prompt for passphrase)"
   };
   Modes modes {
     {
@@ -152,7 +152,7 @@ main(int argc, char** argv)
         { "user,u", bool_switch(),
           elle::sprintf("Transmit the user identity to another device using %s",
                         beyond(true)).c_str(), },
-        option_password,
+        option_passphrase,
         option_owner,
       },
     },
@@ -167,7 +167,7 @@ main(int argc, char** argv)
         { "user,u", bool_switch(),
           elle::sprintf("Receive a user identity from another device using %s",
                         beyond(true)).c_str() },
-        option_password,
+        option_passphrase,
       }
     }
   };

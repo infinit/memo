@@ -186,6 +186,23 @@ class Bottle(bottle.Bottle):
     self.route('/drives/<owner>/<name>/invitations/<user>',
                method = 'PUT')(self.drive_invitation_put)
 
+    # Update.
+    self.route('/updates/package.json', method = 'GET')(
+      lambda: bottle.static_file('package.json',
+                                 root='/home/dimrok/updates/',
+                                 mimetype = 'application/json'))
+    # Linux.
+    self.route('/updates/linux/InfinitDrive.run', method = 'GET')(
+      lambda: bottle.static_file('InfinitDriveSetup.run',
+                                 root='/home/dimrok/updates/linux'))
+    # OSX.
+    self.route('/updates/mac/Infinit Drive.dmg', method = 'GET')(
+      lambda: bottle.static_file('InfinitDrive.dmg',
+                                 root='/home/dimrok/updates/mac',
+                                 download = 'Infinit Drive.dmg'
+                               ))
+
+
   def __not_found(self, type, name):
     return Response(404, {
       'error': '%s/not_found' % type,
@@ -395,17 +412,17 @@ class Bottle(bottle.Bottle):
 
   def get_pairing_information(self, name):
     user = self.user_from_name(name = name)
-    paring_password_hash = bottle.request.headers.get('infinit-pairing-password-hash', '')
+    paring_passphrase_hash = bottle.request.headers.get('infinit-pairing-passphrase-hash', '')
     try:
-      pairing = self.__beyond.pairing_information_get(user.name, paring_password_hash)
+      pairing = self.__beyond.pairing_information_get(user.name, paring_passphrase_hash)
     except PairingInformation.NotFound:
       raise self.__not_found('pairing_information', user.name)
     except ValueError as e:
-      if e.args[0] == 'password_hash':
+      if e.args[0] == 'passphrase_hash':
         raise Response(403,
                        {
-                         'error': 'pairing/invalid_password',
-                         'reason': 'password do not match',
+                         'error': 'pairing/invalid_passphrase',
+                         'reason': 'passphrases do not match',
                       })
       raise e
     except exceptions.NoLongerAvailable as e:

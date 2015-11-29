@@ -49,7 +49,7 @@ _password(variables_map const& args,
 {
   auto password = optional(args, argument);
   if (!password)
-    password = read_passphrase();
+    password = read_passphrase("Password");
   ELLE_ASSERT(password);
   return password.get();
 };
