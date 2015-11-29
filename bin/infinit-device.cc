@@ -54,7 +54,7 @@ public:
 
 DAS_MODEL(PairingInformation, (data, password_hash), DasPairingInformation)
 
-COMMAND(transmit)
+COMMAND(transmit_user)
 {
   auto user = self_user(ifnt, args);
   auto password = pairing_password(args);
@@ -74,7 +74,15 @@ COMMAND(transmit)
     "transmitting", "user identity", view, user);
 }
 
-COMMAND(receive)
+COMMAND(transmit)
+{
+  if (flag(args, "user"))
+    transmit_user(args);
+  else
+    throw CommandLineError("Must specify type of object to transmit");
+}
+
+COMMAND(receive_user)
 {
   auto name = get_name(args);
   auto password = pairing_password(args);
@@ -114,6 +122,14 @@ COMMAND(receive)
   report_action("saved", "user", name, std::string("locally"));
 }
 
+COMMAND(receive)
+{
+  if (flag(args, "user"))
+    receive_user(args);
+  else
+    throw CommandLineError("Must specify type of object to receive");
+}
+
 int
 main(int argc, char** argv)
 {
@@ -124,24 +140,29 @@ main(int argc, char** argv)
   };
   Modes modes {
     {
-      "transmit-identity",
-      elle::sprintf("Transmit the user identity to another device using %s",
-                    beyond(true)).c_str(),
+      "transmit",
+      elle::sprintf("Transmit object to another device using %s", beyond(true)).c_str(),
       &transmit,
       {},
       {
+        { "user,u", bool_switch(),
+          elle::sprintf("Transmit the user identity to another device using %s",
+                        beyond(true)).c_str(), },
         option_password,
         option_owner,
       },
     },
     {
-      "receive-identity",
-      elle::sprintf("Receive a user identity from another device using %s",
+      "receive",
+      elle::sprintf("Receive an object from another device using %s",
                     beyond(true)).c_str(),
       &receive,
       {},
       {
-        { "name,n", value<std::string>(), "user to receive" },
+        { "name,n", value<std::string>(), "name of object to receive" },
+        { "user,u", bool_switch(),
+          elle::sprintf("Receive a user identity from another device using %s",
+                        beyond(true)).c_str() },
         option_password,
       }
     }
