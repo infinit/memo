@@ -347,7 +347,6 @@ main(int argc, char** argv)
         { "full", bool_switch(), "include private key "
           "(do not use this unless you understand the implications)" },
         option_output("user"),
-        option_owner,
       },
     },
     {
