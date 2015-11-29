@@ -16,7 +16,7 @@ using namespace boost::program_options;
 std::string
 pairing_password(variables_map const& args)
 {
-  return _password(args, "password-inline");
+  return _password(args, "password");
 }
 
 inline
@@ -106,9 +106,11 @@ COMMAND(receive_user)
     }
     catch (ResourceGone const& e)
     {
-      std::cerr << elle::sprintf("User identity fetched and removed from %s",
+      std::cerr << elle::sprintf("User identity no longer available on %s, "
+                                 "retransmit from the original device",
                                  beyond(true))
                 << std::endl;
+      throw;
     }
     catch (MissingResource const& e)
     {
@@ -135,13 +137,14 @@ main(int argc, char** argv)
 {
   program = argv[0];
   boost::program_options::option_description option_password = {
-    "password-inline", value<std::string>(),
+    "password", value<std::string>(),
     "password to secure identity (default: prompt for password)"
   };
   Modes modes {
     {
       "transmit",
-      elle::sprintf("Transmit object to another device using %s", beyond(true)).c_str(),
+      elle::sprintf("Transmit object to another device using %s",
+                    beyond(true)).c_str(),
       &transmit,
       {},
       {
