@@ -82,7 +82,7 @@ COMMAND(fetch)
 std::string
 hub_password_hash(variables_map const& args)
 {
-  return hash_password(_password(args, "password-inline"),
+  return hash_password(_password(args, "password"),
                        _hub_salt);
 }
 
@@ -117,7 +117,7 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   }
   else
   {
-    if (args.count("password-inline"))
+    if (args.count("password"))
     {
       throw CommandLineError(
         "Password is only used when pushing a full user");
@@ -140,7 +140,7 @@ create_(std::string const& name,
   {
     if (keys_file)
     {
-      auto passphrase = read_passphrase();
+      auto passphrase = read_passphrase("Key passphrase");
       return infinit::cryptography::rsa::pem::import_keypair(
           keys_file.get(), passphrase);
     }
@@ -159,10 +159,10 @@ COMMAND(create)
   bool push = aliased_flag(args, {"push-user", "push"});
   if (!push)
   {
-    if (flag(args, "full") || flag(args, "password-inline"))
+    if (flag(args, "full") || flag(args, "password"))
     {
       throw CommandLineError(
-        elle::sprintf("--full and --password-inline are only used when pushing "
+        elle::sprintf("--full and --password are only used when pushing "
                       "a user to %s", beyond(true)));
     }
   }
@@ -309,7 +309,7 @@ main(int argc, char** argv)
     { "full", bool_switch(), "include private key in order "
       "to facilitate device pairing and fetching lost keys" };
   boost::program_options::option_description option_push_password =
-    { "password-inline", value<std::string>(), elle::sprintf(
+    { "password", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Used with --full "
       "(default: prompt for password)", beyond(true)).c_str() };
   boost::program_options::option_description option_fullname =
@@ -426,8 +426,9 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
-        { "password-inline", value<std::string>(), elle::sprintf(
-          "password to authenticate with %s", beyond(true)).c_str() },
+        { "password", value<std::string>(), elle::sprintf(
+          "password to authenticate with %s (default: prompt) for password",
+          beyond(true)).c_str() },
       },
     },
     {
