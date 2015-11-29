@@ -37,7 +37,7 @@ with drake.Drake(%(dir_source)r) as d:
         fuse = %(fuse)r,
         python = %(python)r,
         valgrind = %(valgrind)r,
-        beyond = $(beyond)r)
+        beyond = %(beyond)r)
 '''
 
 parameters = {
