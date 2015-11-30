@@ -419,6 +419,7 @@ def configure(
   if not windows:
     binaries_config.append(('sshfs', [], False))
   binaries = []
+  global installed_binaries
   installed_binaries = []
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
