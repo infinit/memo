@@ -1,0 +1,21 @@
+# Change Log
+
+## [0.3.1] - 2015-11-30
+
+Release adjustments.
+
+### Added
+- Magic number on stored binary blocks to enable transparent future format changes, e.g. JSON.
+
+### Changed
+- Store configuration and data files according to XDG convention.
+- Improve infinit-user --signup help.
+- Prevent infinit-drive from joining own network.
+- Hide unstable features for now: Dropbox and Google Drive storage, multiple storage nodes.
+
+### Fixed
+- Ship compiler-specific dynamic libraries for portability.
+
+## [0.3.0] - 2015-11-29
+
+First public release candidate.
