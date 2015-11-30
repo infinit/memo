@@ -10,7 +10,6 @@ import shutil
 git = None
 
 elle = None
-installed_binaries = []
 
 rule_build = None
 rule_install = None
@@ -371,40 +370,31 @@ def configure(
     bin_cxx_config.library_add(elle.boost.program_options_static)
     bin_cxx_config.use_whole_archive()
 
-  global installed_binaries
-  to_install = [
-    'infinit-acl',
-    'infinit-device',
-    'infinit-network',
-    'infinit-passport',
-    'infinit-storage',
-    'infinit-user',
-    'infinit-volume',
-    'infinit-drive',
-  ]
-  if not production_build:
-    to_install += [
-      'infinit-credentials',
-    ]
-
-  _binaries = [
-    ('doughnode', []),
-    ('generatekeys', []),
-    ('infinit', []),
-    ('s3fs', [aws_lib]),
-    ('infinit-smb', []),
-    ('infinit-webdav', []),
+  binaries_config = [
+    ('doughnode', [], False),
+    ('generatekeys', [], False),
+    ('infinit', [], False),
+    ('infinit-acl', [], True),
+    ('infinit-credentials', [], not production_build),
+    ('infinit-device', [], True),
+    ('infinit-drive', [], True),
+    ('infinit-network', [], True),
+    ('infinit-passport', [], True),
+    ('infinit-smb', [], False),
+    ('infinit-storage', [], True),
+    ('infinit-user', [], True),
+    ('infinit-volume', [], True),
+    ('infinit-webdav', [], False),
+    ('s3fs', [aws_lib], False),
   ]
   if not windows:
-      _binaries += [('sshfs', [])]
-  _binaries += [
-    (x, []) for x in to_install
-  ]
+    binaries_config.append(('sshfs', [], False))
   binaries = []
-  for bin_name, libs in _binaries:
-    source = drake.node('bin/%s.cc' % bin_name)
+  installed_binaries = []
+  for name, libs, install in binaries_config:
+    source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
-      'bin/%s' % bin_name, [
+      'bin/%s' % name, [
         source,
         infinit_lib,
         elle_lib,
@@ -415,22 +405,13 @@ def configure(
       bin_cxx_config)
     rule_build << bin
     binaries.append(bin)
-    if bin_name in to_install:
+    if install:
       installed_binaries.append(bin)
-  steg = drake.cxx.Executable(
-    'bin/steg',
-    drake.nodes('src/infinit/model/steg/Steg.hh',
-    'src/infinit/model/steg/Steg.cc',
-    'bin/steg.cc'
-    ) + [outguess_lib, jpeg_lib, infinit_lib],
-    cxx_toolkit,
-    bin_cxx_config,
-  )
-  # binaries.append(steg)
 
   ## ------- ##
   ## Install ##
   ## ------- ##
+
   global rule_install
   rule_install = drake.Rule('install')
   rule_install << drake.copy(installed_binaries, prefix, None,
