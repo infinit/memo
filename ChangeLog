@@ -15,6 +15,7 @@ Release adjustments.
 
 ### Fixed
 - Ship compiler-specific dynamic libraries for portability.
+- Fix unmounting on OSX.
 
 ## [0.3.0] - 2015-11-29
 
