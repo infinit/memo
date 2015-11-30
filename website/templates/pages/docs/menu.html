@@ -10,9 +10,9 @@
       <a href="${route('doc_technology')}">Technology</a>
     </li>
 
-    <li ${'class="active"' if request.route.name == 'doc_comparisons' else ''}>
-      <a href="${route('doc_comparisons')}">Comparisons</a>
-    </li>
+    ## <li ${'class="active"' if request.route.name == 'doc_comparisons' else ''}>
+    ##   <a href="${route('doc_comparisons')}">Comparisons</a>
+    ## </li>
 
     ## <li ${'class="active"' if request.route.name == 'doc_deployments' else ''}>
     ##   <a href="${route('doc_deployment_personal_cloud')}">Deployments</a>
@@ -33,11 +33,13 @@
         <li><a href="${route('doc_reference')}#introduction">Introduction</a></li>
         <li><a href="${route('doc_reference')}#user">User</a></li>
         <li><a href="${route('doc_reference')}#credentials">Credentials</a></li>
-        <li><a href="${route('doc_reference')}#device">Device</a></li>
         <li><a href="${route('doc_reference')}#storage">Storage</a></li>
         <li><a href="${route('doc_reference')}#network">Network</a></li>
         <li><a href="${route('doc_reference')}#passport">Passport</a></li>
         <li><a href="${route('doc_reference')}#volume">Volume</a></li>
+        <li><a href="${route('doc_reference')}#access-control-list">ACL</a></li>
+        <li><a href="${route('doc_reference')}#device">Device</a></li>
+        <li><a href="${route('doc_reference')}#drive">Drive</a></li>
       </ul>
     </li>
 

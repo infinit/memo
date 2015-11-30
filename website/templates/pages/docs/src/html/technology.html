@@ -1,5 +1,5 @@
 <h1 id="technology">Technology</h1>
-<p>At the <a href="${route('overview')}">highest-level</a>, Infinit is a file system platform that allows for creating storage infrastructures that are flexible, controlled, secure and natural to use.</p>
+<p>At the <a href="${route('doc_overview')}">highest-level</a>, Infinit is a file system platform that allows for creating storage infrastructures that are flexible, controlled, secure and natural to use.</p>
 <p>However, at the technology level, Infinit is a set of independent layers that can be used to develop powerful applications, create block-level data stores and more.</p>
 <p><img src="${url('images/schema-technology.png')}" alt="Infinit Technology"><br></p>
 <h2 id="reactor">Reactor</h2>
@@ -13,7 +13,7 @@
 <p>The <a href="https://en.wikipedia.org/wiki/Overlay_network">overlay network</a> layer connects the devices (desktop computer, server, mobile etc.) in a peer-to-peer manner i.e without a central server. The main purpose of this layer is to map identifiers (more precisely ranges of identifiers) onto nodes and to provide an algorithm to locate the node responsible for a given identifier.</p>
 <p>Such a layer can be used for many different purposes from distributing jobs between computers (a node being responsible as many identifiers as it has computing resources) to distributing data to archive, and many more.</p>
 <p>There exists a large variety of overlay networks, some supporting very small networks but being extremely fast, others scaling to several million of nodes and other relying on more complicated algorithms to tolerate malicious nodes.</p>
-<p><em>Caption: An illustration of the <a href="https://en.wikipedia.org/wiki/Chord_(peer-to-peer">Chord</a>) overlay network</em>.</p>
+<!-- *Caption: An illustration of the [Chord](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) overlay network*. -->
 <p>The decentralized nature of the overlay network ensures scalability and performance while removing any bottleneck and single point of failure. In addition, such systems no longer need to rely on a complicated infrastructure composed of specific server hardware, appliances and ancient client software. The overlay naturally distribute the load between the nodes while tolerating faults.</p>
 <p>Finally, by creating the overlay network according to your needs (data location for instance), you control the flow of information. Also, the flexibility to add and remove nodes dynamically generally make such systems extremely affordable.</p>
 <h2 id="distributed-hash-table">Distributed Hash Table</h2>
@@ -33,5 +33,5 @@
 <p>Thanks to the on-demand property of the Infinit file system, developers and system administrators can create storage infrastructure of extremely large size that will be accessible on any device, no matter how much storage capacity they have left.</p>
 <p>Note that one can configure a device to use some local storage capacity to act as a cache, hence speeding up accesses. Likewise, one could want to keep some files or part of the file system hierarchy local at any time for offline access.</p>
 <p>Another problem with most cloud storage providers, including Dropbox, is that the files are not encrypted leaving the user with no choice but to trust the cloud storage provider. Infinit has been conceived with the assumption that no storage provider can be trusted. In addition to relying on fault-tolerant algorithms, Infinit makes use of strong encryption. Whenever a document is edited for instance, the file is cut into chunks, every chunk is encrypted and then distributed and replicated throughout the distributed hash table. Every key used for encrypting a block is unique and known to the file owner only (along with the users who have been granted access).</p>
-<p><em>[GIF(better) or static: 1) file saved 2) cut into chunks 3) every block is encrypted 4) every block is replicated and distributed in the Infinit network … 5) every encrypted block is fetch from the network 6) the blocks are decrypted 8) and the file is reconstructed]</em></p>
+<!-- *[GIF(better) or static: 1) file saved 2) cut into chunks 3) every block is encrypted 4) every block is replicated and distributed in the Infinit network … 5) every encrypted block is fetch from the network 6) the blocks are decrypted 8) and the file is reconstructed]* -->
 <p>Finally, the file system layer also provides access control (without the use of a centralized server), versioning and other file-system-related features.</p>

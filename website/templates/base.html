@@ -40,12 +40,15 @@
       <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"></a>
 
       <ul>
-        % if request.route.name[:4] == 'doc_':
+        % if request.route.name[:4] == 'doc_' or request.route.name == 'drive':
           <li>
             <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
           </li>
           <li>
             <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
+          </li>
+          <li>
+            <a ${'class="active"' if request.route.name == 'drive' else ''} href="${route('drive')}">Drive</a>
           </li>
         % endif
       </ul>
@@ -121,7 +124,7 @@
                 <li><a class="icon-twitter" href="http://twitter.com/infinit_sh" target="_blank">Twitter</a></li>
                 <li><a class="icon-github" href="http://github.com/infinit" target="_blank">Github</a></li>
                 <li><a class="icon-slack" href="#slack">Slack</a></li>
-                ## <li><a class="icon-infinit" href="#" target="_blank">IRC</a></li>
+                <li><a class="icon-infinit" href="http://webchat.freenode.net/?channels=infinit" target="_blank">IRC</a></li>
               </ul>
             </li>
           </ul>

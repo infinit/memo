@@ -44,7 +44,7 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
   }
   &.border.black:hover { background: lighten(@black, 20%); color: white;}
 
-  &.big { font-size: 25px; padding: 7px 11px;}
+  &.big { font-size: 25px; padding: 7px 11px; }
 }
 
 .spacer { clear: both; }
@@ -412,8 +412,6 @@ body.home {
 `------------*/
 
 body.drive {
-  header ul li { display: none; }
-
   .content {
     h2 { font-size: 29px; line-height: 37px; }
     p { font-size: 16px; line-height: 26px; color: #4A4A4A; }
@@ -423,7 +421,10 @@ body.drive {
   section.intro {
     text-align: center; margin: 0 7%;
 
-    h2 { text-transform: uppercase; font-size: 14px; margin-top: 30px;}
+    h2 {
+      font-family: @helvetica; font-weight: 300; font-size: 23px; margin-top: 30px;
+      img { margin-right: 7px; vertical-align: middle; margin-top: -3px; }
+    }
     h1 { font-size: 29px;  margin-top: 7px; }
     p.subtitle {
       font-size: 16px; color: #7A7A7A; line-height: 26px; font-family: @sourcesans;
@@ -541,6 +542,14 @@ body.pricing {
     ul { list-style-type: circle; }
     ul li { margin: 10px 20px;}
 
+    blockquote {
+      background: #F1F1F1; margin: 0; padding: 25px; border-radius: 5px;
+      font-size: 16px; line-height: 25px; font-weight: 300;
+      font-family: @helvetica;
+    }
+
+    blockquote.warning { background: #FFFAD4; color: #737129}
+
     pre {
       position: relative;
       code {
@@ -550,7 +559,6 @@ body.pricing {
       }
       &.alternate code { background: #2B3F63}
     }
-
 
     pre > div {
       position: absolute; right: -5px; top: 11px; z-index: 1; overflow: hidden;

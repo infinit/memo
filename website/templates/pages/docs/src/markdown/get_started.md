@@ -1,7 +1,16 @@
 ﻿Get Started
 =========
 
-*The following is written for users of Mac OS X and Linux. If you are not using it, please refer to the <a href="${route('doc_get_started_windows')}">Windows</a> guide.*
+<div>
+% if os() == "Windows":
+<blockquote class="warning">
+<strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it will be available on <strong>Windows</strong>.
+</blockquote>
+
+% else:
+<p><em>The following is written for users of Mac OS X and Linux. If you are not using it, please refer to the <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+% endif
+</div>
 
 *Before proceeding, make sure you understand that this guide uses the Infinit command-line tools with a terminal window. You can otherwise download the <a href="${route('drive')}">Infinit Drive desktop client</a>.*
 
@@ -18,7 +27,8 @@
 % if os() == "Macintosh":
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. If not already, you will need install the OSXFUSE core module by following the instructions:</p>
 
-<p><a href="https://osxfuse.github.io/" class="button">Download OSXFUSE core</a></p>
+<p><a href="https://storage.googleapis.com/sh_infinit_releases/osx/osxfuse-core.dmg
+" class="button">Download OSXFUSE core</a></p>
 
 _**NOTE**: Infinit requires a version of OSXFUSE core that is newer than available on https://osxfuse.github.io/._
 % else:
@@ -27,7 +37,7 @@ _**NOTE**: Infinit requires a version of OSXFUSE core that is newer than availab
 ```
 $ sudo apt-get install fuse
 ```
-%endif
+% endif
 </div>
 
 ### Download and install the Infinit command-line tools
@@ -36,7 +46,15 @@ $ sudo apt-get install fuse
 
 Please follow the link below to download the Infinit command-line tools:
 
-<a href="#" class="button">Download Command Line Tools</a>
+<div>
+% if os() == "Macintosh":
+<a href="https://storage.googleapis.com/sh_infinit_releases/osx/infinit-cli.tbz
+" class="button">Download Command Line Tools</a>
+% else:
+<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-cli.tar.tbz
+" class="button">Download Command Line Tools</a>
+% endif
+</div>
 
 <br>
 
@@ -172,7 +190,7 @@ Let’s access this volume by mounting it as simply as any other filesystem:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --mount --as bob --name personal --mountpoint mnt/  --async --cache --publish
+<code>$> infinit-volume --mount --as bob --name personal --mountpoint mnt/  --async --cache &#8211;&#8211;publish
 Fetched endpoints for "bob/mine".
 Running network "bob/mine".
 </code></pre>

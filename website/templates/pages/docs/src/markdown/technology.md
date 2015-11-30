@@ -1,7 +1,7 @@
 Technology
 =========
 
-At the <a href="${route('overview')}">highest-level</a>, Infinit is a file system platform that allows for creating storage infrastructures that are flexible, controlled, secure and natural to use.
+At the <a href="${route('doc_overview')}">highest-level</a>, Infinit is a file system platform that allows for creating storage infrastructures that are flexible, controlled, secure and natural to use.
 
 However, at the technology level, Infinit is a set of independent layers that can be used to develop powerful applications, create block-level data stores and more.
 
@@ -30,7 +30,7 @@ Such a layer can be used for many different purposes from distributing jobs betw
 There exists a large variety of overlay networks, some supporting very small networks but being extremely fast, others scaling to several million of nodes and other relying on more complicated algorithms to tolerate malicious nodes.
 
 
-*Caption: An illustration of the [Chord](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) overlay network*.
+<!-- *Caption: An illustration of the [Chord](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) overlay network*. -->
 
 The decentralized nature of the overlay network ensures scalability and performance while removing any bottleneck and single point of failure. In addition, such systems no longer need to rely on a complicated infrastructure composed of specific server hardware, appliances and ancient client software. The overlay naturally distribute the load between the nodes while tolerating faults.
 
@@ -73,6 +73,6 @@ Note that one can configure a device to use some local storage capacity to act a
 Another problem with most cloud storage providers, including Dropbox, is that the files are not encrypted leaving the user with no choice but to trust the cloud storage provider. Infinit has been conceived with the assumption that no storage provider can be trusted. In addition to relying on fault-tolerant algorithms, Infinit makes use of strong encryption. Whenever a document is edited for instance, the file is cut into chunks, every chunk is encrypted and then distributed and replicated throughout the distributed hash table. Every key used for encrypting a block is unique and known to the file owner only (along with the users who have been granted access).
 
 
-*[GIF(better) or static: 1) file saved 2) cut into chunks 3) every block is encrypted 4) every block is replicated and distributed in the Infinit network … 5) every encrypted block is fetch from the network 6) the blocks are decrypted 8) and the file is reconstructed]*
+<!-- *[GIF(better) or static: 1) file saved 2) cut into chunks 3) every block is encrypted 4) every block is replicated and distributed in the Infinit network … 5) every encrypted block is fetch from the network 6) the blocks are decrypted 8) and the file is reconstructed]* -->
 
 Finally, the file system layer also provides access control (without the use of a centralized server), versioning and other file-system-related features.

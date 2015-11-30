@@ -3,12 +3,22 @@
 <%block name="content">
 
   <section class="intro">
-    <h2>Infinit Drive</h2>
+    <h2>
+      <img src="${url('images/icons/infinit-cloud-apps.png')}" alt="Logo Infinit Cloud Apps">
+      Infinit Drive
+    </h2>
     <h1>Simple and secure file synchronization for professionals</h1>
     <p class="subtitle">Infinit Drive benefits from the simplicity of a consumer product, the security and scalability of enterprise-class technologies while allowing one to choose where the files will eventually be located.</p>
 
-    <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
-    <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac, Windows and Linux"></p>
+    % if os() == "Macintosh":
+      <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit%20Drive.dmg" class="button">Download</a>
+    % elif os() == "Windows":
+      <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
+    % else:
+      <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-drive-setup.run" class="button">Download</a>
+    % endif
+
+    <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac and Linux"></p>
 
     <div class="client"></div>
   </section>
@@ -36,7 +46,14 @@
   </section>
 
   <section class="cta">
-    <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
-    <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac, Windows and Linux"></p>
+    % if os() == "Macintosh":
+      <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit%20Drive.dmg" class="button">Download</a>
+    % elif os() == "Windows":
+      <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
+    % else:
+      <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-drive-setup.run" class="button">Download</a>
+    % endif
+
+    <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac and Linux"></p>
   </section>
 </%block>

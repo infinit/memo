@@ -1,5 +1,7 @@
-Reference Documentation
-====================
+Reference
+========
+
+This document goes through the command-line tools, describing how to perform specific tasks such as creating a storage network, contributing storage capacity, inviting users to join a drive and more.
 
 Introduction
 ----------------
@@ -176,8 +178,6 @@ $>
 
 Just follow the instructions by visiting the URL provided in order to authenticate yourself and authorize Infinit to access your account. At this point, you should be automatically redirect to the infinit.sh website:
 
-<img src="${url('images/infinit-sh.png')}" alt="infinit.sh Website">
-
 _**NOTE**: Do not worry, Infinit will never alter the existing data items stored through a cloud service such as Dropbox; it will only create blocks of encrypted data in a subfolder specific to Infinit._
 
 Once a cloud service added to your account, you can fetch those credentials on your device through the `--fetch` option:
@@ -208,7 +208,7 @@ The _infinit-storage_ binary allows for the definition of storage resources. Suc
 
 ### Create a storage resource ###
 
-#### Create a local storage resource ####
+#### Locally ####
 
 To create a storage resource on top of a local file system, simply specify the `--filesystem` option. Note that you can also specify, through the `--path` option, where the encrypted data blocks will be stored.
 
@@ -221,7 +221,7 @@ Likewise, you can create a storage on top of a cloud service API. Obviously, you
 
 All you need to do is specify the type of cloud service you want your storage to rely upon along with the cloud service account identifier. You can find this cloud service identifier when <a href=”#list-credentials”>listing your credentials</a>.
 
-#### Create a remote storage resource ####
+#### Remotely ####
 
 The following creates a storage resource on top of Dropbox, specifying the account identifier and the name of your choice:
 

@@ -1,4 +1,5 @@
-<h1 id="reference-documentation">Reference Documentation</h1>
+<h1 id="reference">Reference</h1>
+<p>This document goes through the command-line tools, describing how to perform specific tasks such as creating a storage network, contributing storage capacity, inviting users to join a drive and more.</p>
 <h2 id="introduction">Introduction</h2>
 <h3 id="terminology">Terminology</h3>
 <p>The Infinit command-line tools are composed of several binaries, each dealing with a specific resource/object.</p>
@@ -99,7 +100,6 @@ Remotely pushed user “alice”.
 Register your Dropbox account with Infinit by visiting https://…
 $&gt;
 </code></pre><p>Just follow the instructions by visiting the URL provided in order to authenticate yourself and authorize Infinit to access your account. At this point, you should be automatically redirect to the infinit.sh website:</p>
-<p><img src="${url('images/infinit-sh.png')}" alt="infinit.sh Website"></p>
 <p><em><strong>NOTE</strong>: Do not worry, Infinit will never alter the existing data items stored through a cloud service such as Dropbox; it will only create blocks of encrypted data in a subfolder specific to Infinit.</em></p>
 <p>Once a cloud service added to your account, you can fetch those credentials on your device through the <code>--fetch</code> option:</p>
 <pre><code>$&gt; infinit-credentials --fetch --as alice
@@ -116,13 +116,13 @@ AWS S3:
 </code></pre><h2 id="storage">Storage</h2>
 <p>The <em>infinit-storage</em> binary allows for the definition of storage resources. Such storage resources can be local --- storing blocks of data on the local file system, on a partition or in a database --- or remote in which case the blocks of data are stored through a cloud service API.</p>
 <h3 id="create-a-storage-resource">Create a storage resource</h3>
-<h4 id="create-a-local-storage-resource">Create a local storage resource</h4>
+<h4 id="locally">Locally</h4>
 <p>To create a storage resource on top of a local file system, simply specify the <code>--filesystem</code> option. Note that you can also specify, through the <code>--path</code> option, where the encrypted data blocks will be stored.</p>
 <pre><code>$&gt; infinit-storage --create --filesystem --capacity 2GB --name local
 Created storage “local”.
 </code></pre><p>Likewise, you can create a storage on top of a cloud service API. Obviously, you will need to add this cloud service through the <em>infinit-credentials</em> first, as shown in the <a href=”#add-credentials”>Add credentials</a> section.</p>
 <p>All you need to do is specify the type of cloud service you want your storage to rely upon along with the cloud service account identifier. You can find this cloud service identifier when <a href=”#list-credentials”>listing your credentials</a>.</p>
-<h4 id="create-a-remote-storage-resource">Create a remote storage resource</h4>
+<h4 id="remotely">Remotely</h4>
 <p>The following creates a storage resource on top of Dropbox, specifying the account identifier and the name of your choice:</p>
 <pre><code>$&gt; infinit-storage --create --dropbox --account 51218344 --name dropbox
 Created storage “dropbox”.
