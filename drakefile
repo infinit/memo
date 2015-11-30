@@ -11,9 +11,11 @@ import platform
 
 from itertools import chain
 
+
 git = None
 
 elle = None
+installed_binaries = []
 
 rule_build = None
 rule_check = None
