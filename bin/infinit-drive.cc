@@ -88,6 +88,9 @@ COMMAND(join)
   ELLE_TRACE_SCOPE("join");
   auto self = self_user(ifnt, args);
   auto drive = ifnt.drive_get(drive_name(args, self));
+
+  if (self.name == boost::filesystem::path(drive.name).parent_path().string())
+    throw elle::Error("The owner is automatically invited to its drives");
   auto it = drive.users.find(self.name);
   if (it == drive.users.end())
     throw elle::Error(
