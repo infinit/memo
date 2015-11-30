@@ -221,23 +221,28 @@ struct Mode
       mode_options.add(
         boost::shared_ptr<boost::program_options::option_description>
         (new boost::program_options::option_description(std::move(option))));
-    this->options.add(mode_options);
-    this->visible_options.add(mode_options);
+    this->_add_options(mode_options);
     for (auto const& extra: extra_options)
-    {
-      this->options.add(extra);
-      this->visible_options.add(extra);
-    }
+      this->_add_options(extra);
     boost::program_options::options_description hidden;
     for (auto const& option: hidden_options)
-    {
       hidden.add(
         boost::shared_ptr<boost::program_options::option_description>
         (new boost::program_options::option_description(std::move(option))));
-    }
-    this->options.add(hidden);
+    this->_add_options(hidden, false);
     for (auto const& extra: hidden_extra_options)
-      this->options.add(extra);
+      this->_add_options(extra, false);
+  }
+
+  void
+  _add_options(boost::program_options::options_description const& options,
+               bool visible_in_production = true)
+  {
+    this->options.add(options);
+#ifdef INFINIT_PRODUCTION_BUILD
+    if (visible_in_production)
+#endif
+      this->visible_options.add(options);
   }
 
   void
