@@ -188,7 +188,7 @@ COMMAND(fetch)
     auto res = beyond_fetch<
       std::unordered_map<std::string, std::vector<infinit::Drive>>>(
         elle::sprintf("users/%s/drives", self.name),
-        "drive for user",
+        "drives for user",
         self.name,
         self);
     for (auto const& drive: res["drives"])
@@ -224,7 +224,11 @@ main(int argc, char** argv)
       "invite",
       "Invite a user to join the drive (Hub operation)",
       &invite,
-      "--name DRIVE --user USER [--permissions]",
+      "--name DRIVE --user USER"
+#ifndef INFINIT_PRODUCTION_BUILD
+      " [--permissions]"
+#endif
+      ,
       {
         { "name,n", value<std::string>(), "drive to invite the user to" },
         { "user,u", value<std::string>(), "user to invite to the drive" },
