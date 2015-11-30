@@ -54,11 +54,10 @@ def test(infinit, size):
     infinit.run(['infinit-storage', '--create', '--filesystem',
                 str(test.name),
                 '--capacity', hsize])
-    with open("%s/%s/%s" % (infinit.dir,
-                            'storages',
-                            str(test.name)), 'r') as conf:
-        j = json.loads(''.join(conf.readlines()))
-        assertEq(j['capacity'], unformat(hsize))
+    with open('%s/.local/share/infinit/filesystem/storages/%s' %
+              (infinit.dir, str(test.name)), 'r') as conf:
+      j = json.loads(''.join(conf.readlines()))
+      assertEq(j['capacity'], unformat(hsize))
 
 with Infinit() as bob:
   test(bob, '0')
