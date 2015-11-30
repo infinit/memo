@@ -432,10 +432,15 @@ namespace infinit
   boost::filesystem::path
   root_dir()
   {
-    static auto const env = elle::os::getenv("INFINIT_HOME", "");
-    static auto const res =
-      env.empty() ? elle::system::home_directory() / ".infinit/filesystem"
-                  : boost::filesystem::path(env);
+    static auto const home = elle::os::getenv("INFINIT_HOME", "");
+    static auto const xdg = elle::os::getenv("XDG_DATA_HOME", "");
+    static auto const data =
+      home.empty() ?
+      xdg.empty() ?
+      elle::system::home_directory() / ".local" / "share" :
+      boost::filesystem::path(xdg) :
+      boost::filesystem::path(home) / ".local" / "share";
+    static auto const res = data / "infinit" / "filesystem";;
     return res;
   }
 
