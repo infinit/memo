@@ -485,7 +485,7 @@ namespace infinit
         elle::Buffer res;
         {
           elle::IOStream output(res.ostreambuf());
-          elle::serialization::binary::SerializerOut s(output);
+          elle::serialization::binary::SerializerOut s(output, false);
           s.serialize("salt", this->salt());
           s.serialize("key", this->owner_key());
           s.serialize("version", this->_data_version);
