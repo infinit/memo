@@ -442,7 +442,8 @@ def configure(
     'demo-home/users/demo',
     'demo-home/volumes/infinit/demo',
   )
-  rule_install << drake.copy(demo_home, '%s/test' % prefix, 'demo-home')
+  rule_install << drake.copy(
+    demo_home, '%s/share/infinit/test' % prefix, 'demo-home')
 
   # man = drake.nodes(
   #   'share/man/man1/infinit.1',
