@@ -109,6 +109,7 @@ def configure(
                        prefix = False,
                        codesign = codesign)
   windows = elle.cxx_toolkit.os is drake.os.windows
+  linux = elle.cxx_toolkit.os is drake.os.linux
 
   if not windows:
     dropbox_lib = drake.copy(elle.dropbox.lib_dynamic, 'lib',
@@ -369,7 +370,26 @@ def configure(
     bin_cxx_config.lib('crypt32')
     bin_cxx_config.library_add(elle.boost.program_options_static)
     bin_cxx_config.use_whole_archive()
-
+  # Ship libstdc++
+  additional_libs = []
+  if linux:
+    output = subprocess.check_output(['ldconfig', '-p'])
+    path = None
+    searched_for = {'libstdc++', 'libgcc_s'}
+    for line in output.decode('utf-8').split('\n'):
+      for searched in searched_for:
+        if searched in line:
+          path = drake.Path(line.split(' ')[-1])
+          additional_libs.append(
+            drake.copy(drake.cxx.DynLib(path), 'lib', strip_prefix = True))
+          searched_for.remove(searched)
+          break
+      if not searched_for:
+        break
+    if searched_for:
+      raise Exception('Unable to find %s with ldconfig -p',
+                      ', '.join(searched_for))
+  # Build
   binaries_config = [
     ('doughnode', [], False),
     ('generatekeys', [], False),
@@ -400,7 +420,7 @@ def configure(
         elle_lib,
         reactor_lib,
         cryptography_lib
-      ] + libs,
+      ] + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
