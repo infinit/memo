@@ -404,7 +404,7 @@ main(int argc, char** argv)
     },
     {
       "signup",
-      "Create and register a user",
+      elle::sprintf("Create and push a user to %s").c_str(),
       &signup_,
       {},
       {
