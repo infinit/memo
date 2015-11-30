@@ -16,7 +16,7 @@ The *hub* is a cloud service whose role is to ease the process of discovery, sha
 
 ### Home ###
 
-All the configuration files Infinit creates and uses are located in the `$INFINIT_HOME` directory which, by default, is set to `$HOME/.infinit/filesystem/`.
+All the configuration files Infinit creates and uses are located in the `$INFINIT_HOME` directory which, by default, is set to `$HOME/.local/share/infinit/filesystem/`.
 
 One can very easily set the environment variable to point to the directory of his/her choice, either by modifying your shell configuration or by setting it manually:
 
@@ -668,4 +668,3 @@ Remotely pushed invitation “alice/workspace”.
 ```
 
 That’s it, you are now allowed to mount the volume associated with the drive to browse, store and access files. Note that you could have done that without going through the drive invitation process because you are using the command-line tools. Non-tech-savvy users however will appreciate having an interface clean of all everything but the drives they have been invited to join.
-

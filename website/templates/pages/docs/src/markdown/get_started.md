@@ -72,7 +72,7 @@ infinit-0.2.0/bin/infinit-volume
 ...
 ```
 
-All the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_HOME` directory which, by default, is set to `$HOME/.infinit/filesystem/`. You can edit your shell configuration to set `INFINIT_HOME` to another location if you would like.
+All the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_HOME` directory which, by default, is set to `$HOME/.local/share/infinit/filesystem/`. You can edit your shell configuration to set `INFINIT_HOME` to another location if you would like.
 
 Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:
 
