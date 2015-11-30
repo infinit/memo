@@ -17,7 +17,7 @@ This layer is composed of modules to perform various operations such as HTTP cal
 
 XXX table
 
-[Learn More](http://www.slideshare.net/infinitdotio/highly-concurrentyetnaturalprogramming)
+[Learn More](http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming)
 
 Overlay Network
 ----------------------
@@ -29,8 +29,9 @@ Such a layer can be used for many different purposes from distributing jobs betw
 
 There exists a large variety of overlay networks, some supporting very small networks but being extremely fast, others scaling to several million of nodes and other relying on more complicated algorithms to tolerate malicious nodes.
 
+<img src="${url('images/schema-chord.png')}" alt="Chord Schema">
 
-<!-- *Caption: An illustration of the [Chord](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) overlay network*. -->
+*Caption: An illustration of the [Chord](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) overlay network.*
 
 The decentralized nature of the overlay network ensures scalability and performance while removing any bottleneck and single point of failure. In addition, such systems no longer need to rely on a complicated infrastructure composed of specific server hardware, appliances and ancient client software. The overlay naturally distribute the load between the nodes while tolerating faults.
 
@@ -44,7 +45,7 @@ The [distributed hash table](https://en.wikipedia.org/wiki/Distributed_hash_tabl
 
 Even more than for the overlay network, the DHT construct can be, and has already been, used to develop many applications from web caching, content distribution, domain name service, instant messaging and more.
 
-
+<img src="${url('images/schema-dhash.png')}" alt="Distributed Hash Table Schema">
 
 *Caption: An example of DHT built on top of Chord and replicating the ‘value’ four times: once on the node responsible for the ‘key’ identifier and three more times on the neighbor nodes.*
 

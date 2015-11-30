@@ -146,6 +146,10 @@ def configure(
     'resources/images/schema-two-clients@2x.png',
     'resources/images/infinit-sh.png',
     'resources/images/infinit-sh@2x.png',
+    'resources/images/schema-chord.png',
+    'resources/images/schema-chord@2x.png',
+    'resources/images/schema-dhash.png',
+    'resources/images/schema-dhash@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',

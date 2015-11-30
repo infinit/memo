@@ -7,19 +7,21 @@
 <p>The <a href="https://en.wikipedia.org/wiki/Reactor_pattern">reactor layer</a> is a C++ development framework that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write, read and therefore to maintain.</p>
 <p>This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.</p>
 <p>XXX table</p>
-<p><a href="http://www.slideshare.net/infinitdotio/highly-concurrentyetnaturalprogramming">Learn More</a></p>
+<p><a href="http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming">Learn More</a></p>
 <h2 id="overlay-network">Overlay Network</h2>
 <p><em>#control</em> <em>#affordable</em> <em>#scalable</em> <em>#fault-tolerant</em> <em>#migration</em></p>
 <p>The <a href="https://en.wikipedia.org/wiki/Overlay_network">overlay network</a> layer connects the devices (desktop computer, server, mobile etc.) in a peer-to-peer manner i.e without a central server. The main purpose of this layer is to map identifiers (more precisely ranges of identifiers) onto nodes and to provide an algorithm to locate the node responsible for a given identifier.</p>
 <p>Such a layer can be used for many different purposes from distributing jobs between computers (a node being responsible as many identifiers as it has computing resources) to distributing data to archive, and many more.</p>
 <p>There exists a large variety of overlay networks, some supporting very small networks but being extremely fast, others scaling to several million of nodes and other relying on more complicated algorithms to tolerate malicious nodes.</p>
-<!-- *Caption: An illustration of the [Chord](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) overlay network*. -->
+<p><img src="${url('images/schema-chord.png')}" alt="Chord Schema"></p>
+<p><em>Caption: An illustration of the <a href="https://en.wikipedia.org/wiki/Chord_(peer-to-peer">Chord</a>) overlay network.</em></p>
 <p>The decentralized nature of the overlay network ensures scalability and performance while removing any bottleneck and single point of failure. In addition, such systems no longer need to rely on a complicated infrastructure composed of specific server hardware, appliances and ancient client software. The overlay naturally distribute the load between the nodes while tolerating faults.</p>
 <p>Finally, by creating the overlay network according to your needs (data location for instance), you control the flow of information. Also, the flexibility to add and remove nodes dynamically generally make such systems extremely affordable.</p>
 <h2 id="distributed-hash-table">Distributed Hash Table</h2>
 <p><em>#flexible</em> <em>#reliable</em> <em>#migration</em></p>
 <p>The <a href="https://en.wikipedia.org/wiki/Distributed_hash_table">distributed hash table</a> (DHT) layer relies on the overlay network to provide a key-value store similar to hash tables, with the difference that the information is distributed across the network.</p>
 <p>Even more than for the overlay network, the DHT construct can be, and has already been, used to develop many applications from web caching, content distribution, domain name service, instant messaging and more.</p>
+<p><img src="${url('images/schema-dhash.png')}" alt="Distributed Hash Table Schema"></p>
 <p><em>Caption: An example of DHT built on top of Chord and replicating the ‘value’ four times: once on the node responsible for the ‘key’ identifier and three more times on the neighbor nodes.</em></p>
 <p>In addition to distributing the values among the nodes composing the overlay network, the DHT is responsible for replicating the items in order to ensure reliability and availability while providing an efficient way to retrieve the value given its key.</p>
 <p><em><strong>Note</strong>: In practice, the overlay network and distributed hash table are often combined into a single piece of software. For more information on the overlay networks and DHTs available, please refer to the <a href="${route('doc_reference')}">command-line tools documentation</a>.</em></p>
