@@ -7,7 +7,6 @@ import drake.valgrind
 
 import os
 import shutil
-import platform
 
 from itertools import chain
 
@@ -384,7 +383,7 @@ def configure(
     output = subprocess.check_output(['ldconfig', '-p'])
     path = None
     searched_for = {'libstdc++', 'libgcc_s'}
-    need_64 = platform.machine() == 'x86_64'
+    need_64 = cxx_toolkit.architecture == drake.architecture.x86_64
     for line in output.decode('utf-8').split('\n'):
       for searched in searched_for:
         if searched in line:
