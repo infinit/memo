@@ -5,6 +5,8 @@ import os
 import os.path
 import sys
 
+from infinit.website.version import version
+
 ROOT = os.path.dirname(os.path.realpath(__file__))
 PREFIX = ROOT
 for i in range(4):
@@ -42,6 +44,7 @@ def view(name):
       route = find_route,
       url = url,
       os = detect_os,
+      version = version,
     )(f)
   return res
 

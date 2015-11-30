@@ -11,6 +11,9 @@ check = None
 install = None
 tests = None
 
+with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
+  exec(f.read(), globals(), globals())
+
 def configure(
     python,
     git,
@@ -52,6 +55,15 @@ def configure(
     'src/utils.py',
     'src/wsgi.py',
   )
+
+  version = drake.node('src/version.py')
+  if git is None:
+    git = drake.git.Git()
+  class PythonVersionGenerator(VersionGenerator):
+    def _variable(self, name, value):
+      return '%s = %r' % (name, value)
+  PythonVersionGenerator(version, git)
+  sources.append(version)
 
   dependencies = drake.nodes(
     'src/httpagentparser.py',
