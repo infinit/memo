@@ -1,5 +1,6 @@
 import drake
 import drake.cxx
+import drake.debian
 import drake.git
 import drake.python
 import drake.valgrind
@@ -7,12 +8,16 @@ import drake.valgrind
 import os
 import shutil
 
+from itertools import chain
+
 git = None
 
 elle = None
 
 rule_build = None
+rule_check = None
 rule_install = None
+rule_tests = None
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -32,9 +37,12 @@ def configure(
     beyond = True,
 ):
 
+  global rule_build, rule_check, rule_install, rule_tests
+  rule_build = drake.Rule('build')
+  rule_check = drake.Rule('check')
+  rule_install = drake.Rule('install')
   rule_tests = drake.Rule('tests')
   rule_functional_tests = drake.Rule('functional/tests')
-  rule_check = drake.Rule('check')
   rule_functional_check = drake.Rule('functional/check')
 
   class PatchAndInstall(drake.Install):
@@ -144,9 +152,6 @@ def configure(
 
   if cxx_toolkit.os in [drake.os.macos] and cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.clang:
     cxx_config.use_local_libcxx = True
-
-  global rule_build
-  rule_build = drake.Rule('build')
 
   ## --------------- ##
   ## Infinit library ##
@@ -428,28 +433,56 @@ def configure(
     if install:
       installed_binaries.append(bin)
 
-  ## ------- ##
-  ## Install ##
-  ## ------- ##
+  ## ----- ##
+  ## Share ##
+  ## ----- ##
 
-  global rule_install
-  rule_install = drake.Rule('install')
-  rule_install << drake.copy(installed_binaries, prefix, None,
-                             builder = PatchAndInstall)
   demo_home = drake.nodes(
     'demo-home/networks/infinit/demo',
     'demo-home/passports/infinit/demo/demo',
     'demo-home/users/demo',
     'demo-home/volumes/infinit/demo',
   )
-  rule_install << drake.copy(
-    demo_home, '%s/share/infinit/test' % prefix, 'demo-home')
+
+  ## ------- ##
+  ## Install ##
+  ## ------- ##
+
+  def install_nodes(where):
+    where = drake.Path(where)
+    yield from drake.copy(installed_binaries, where, None,
+                          builder = PatchAndInstall)
+    yield from drake.copy(
+      demo_home, where / 'share/infinit/test', 'demo-home')
+
+  rule_install << install_nodes(prefix)
 
   # man = drake.nodes(
   #   'share/man/man1/infinit.1',
   #   'share/man/man5/infinit.5',
   # )
   # rule_install << drake.install(man, prefix)
+
+  ## ------ ##
+  ## Debian ##
+  ## ------ ##
+
+  debian_nodes = install_nodes('debian/opt/infinit')
+  git = drake.git.Git()
+  with drake.templating.Context(content = {
+      'version': git.description(),
+      'version_major': git.version().split('.')[0],
+      'version_minor': git.version().split('.')[1],
+  }):
+    drake.node('control.tmpl')
+  debian_nodes = chain(
+    debian_nodes,
+    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
+  )
+  rule_debian = drake.Rule('debian')
+  rule_debian << drake.debian.Packager(
+    'infinit_%s_amd64.deb' % git.description(),
+    debian_nodes, 'debian').package
 
   ## ------ ##
   ## Beyond ##
