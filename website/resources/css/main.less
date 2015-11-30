@@ -541,10 +541,49 @@ body.pricing {
     ul { list-style-type: circle; }
     ul li { margin: 10px 20px;}
 
-    pre code {
-      display: block; font-family: @monospace; background: #23241f;
-      padding: 15px 20px; border-radius: 5px; color: #f8f8f2;
-      margin-left: 0;
+    pre {
+      position: relative;
+      code {
+        display: block; font-family: @monospace; background: #23241f;
+        padding: 15px 20px; border-radius: 5px; color: #f8f8f2;
+        margin-left: 0; min-height: 48px;
+      }
+      &.alternate code { background: #2B3F63}
+    }
+
+
+    pre > div {
+      position: absolute; right: -5px; top: 11px; z-index: 1; overflow: hidden;
+      width: 75px; height: 75px; text-align: right;
+    }
+
+    pre > div span {
+      font-size: 10px; font-weight: bold; color: #FFF; text-transform: uppercase;
+      text-align: center; line-height: 20px;  width: 100px;
+      transform: rotate(45deg); -webkit-transform: rotate(45deg);
+      display: block; font-family: @sourcesans; background: #808080;
+      position: absolute; top: 19px; right: -21px;
+      // box shadow: 0 3px 10px -5px rgba(0, 0, 0, 1);
+    }
+    pre > div span::before {
+      content: ""; position: absolute; left: 0px; top: 100%; z-index: -1;
+      border-left: 3px solid darken(#808080, 20%); border-right: 3px solid transparent;
+      border-bottom: 3px solid transparent; border-top: 3px solid darken(#808080, 20%)
+    }
+    pre > div span::after {
+      content: "";
+      position: absolute; right: 0px; top: 100%; z-index: -1;
+      border-left: 3px solid transparent; border-right: 3px solid darken(#808080, 20%);
+      border-bottom: 3px solid transparent; border-top: 3px solid darken(#808080, 20%)
+    }
+    pre.alternate > div span { background: #799AD4; }
+    pre.alternate > div span::before {
+      border-left: 3px solid darken(#799AD4, 20%);
+      border-top: 3px solid darken(#799AD4, 20%);
+    }
+    pre.alternate > div span::after {
+      border-right: 3px solid darken(#799AD4, 20%);
+      border-top: 3px solid darken(#799AD4, 20%);
     }
 
     img { max-width: 100%; }
@@ -577,6 +616,11 @@ body.doc_get_started {
     img.fuse { margin-right: 29px; margin-left: 17px; margin-top: 20px; }
     h3#download-and-install-infinit-s-dependencies + p { margin-top: 5px; }
     h3#download-and-install-the-infinit-command-line-tools + p { margin-top: 18px; }
+
+    a.icon-facebook, a.icon-twitter, a.icon-slack {
+      float: left; width: 33%; text-align: center; margin-top: 20px;
+      &:hover { border-bottom: 0; }
+    }
   }
 }
 

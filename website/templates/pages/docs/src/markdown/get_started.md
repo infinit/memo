@@ -20,7 +20,7 @@
 
 <p><a href="https://osxfuse.github.io/" class="button">Download OSXFUSE core</a></p>
 
-*__NOTE__: Infinit requires a version of OSXFUSE core that is newer than available on https://osxfuse.github.io/.*
+_**NOTE**: Infinit requires a version of OSXFUSE core that is newer than available on https://osxfuse.github.io/._
 % else:
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use *apt-get* :</p>
 
@@ -54,7 +54,7 @@ infinit-0.2.0/bin/infinit-volume
 ...
 ```
 
-All the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_HOME` diresctory which, by default, is set to `$HOME/.infinit/filesystem/`. You can edit your shell configuration to set `INFINIT_HOME` to another location if you would like.
+All the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_HOME` directory which, by default, is set to `$HOME/.infinit/filesystem/`. You can edit your shell configuration to set `INFINIT_HOME` to another location if you would like.
 
 Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:
 
@@ -85,10 +85,15 @@ That’s it, you can now access the files in the ‘demo’ by browsing the moun
 
 ```
 $ ls test/mountpoint/
-XXX
+Aosta Valley
+Brannenburg
+Cape Town
+Infinit_MakingOf.mp4
+New York
+Paris
 ```
 
-Noteworthy is that the volume contains several hundred megabytes of data. However, unlike cloud storage services like Dropbox, you were able to browse the volume’s content without having to wait hours for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand.
+Noteworthy is that the volume contains several hundred megabytes of data. However, unlike cloud storage services like Dropbox, you were able to browse the volume’s content without having to for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand.
 
 You can stop this test by hitting `CTRL^C` or by interrupting the `infinit-volume` process.
 
@@ -99,7 +104,7 @@ It is now time for you to **create your own storage infrastructure**. What follo
 
 <img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices">
 
-_**NOTE**: For more information to learn how to set up completely decentralized infrastructure i.e without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('reference')}">reference documentation</a>._
+_**NOTE**: For more information to learn how to set up completely decentralized infrastructure i.e without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('doc_reference')}">reference documentation</a>._
 
 First, add the `bin/` directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:
 
@@ -111,12 +116,12 @@ $ export PATH=$PWD/bin/:$PATH
 
 The first step consists of creating a user on the Hub. All the commands that follow use the user name ‘bob’ but you should pick your own unique one:
 
-```
-$[device A]> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
+<pre>
+<div><span>Device A</span></div>
+<code>$> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
 Generating RSA keypair.
-Remotely pushed user “bob”.
-$[device A]>
-```
+Remotely pushed user "bob".
+</code></pre>
 
 ### Create a storage resource
 
@@ -124,13 +129,13 @@ A storage resource behaves like a hard disk, storing data blocks without underst
 
 Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as `/var/storage/infinit/`) on the local filesystem.
 
-The binary `infinit-storage` is used for this purpose. The option `--filesystem` is used to indicate that the storage will be on the local filesystem while the --path option specifies in which folder to put the blocks of data:
+The binary `infinit-storage` is used for this purpose. The option `--filesystem` is used to indicate that the storage will be on the local filesystem:
 
-```
-$[device A]> infinit-storage --create --filesystem --name local --capacity 1GB
-Locally created storage "local".
-$[device A]>
-```
+<pre>
+<div><span>Device A</span></div>
+<code>$> infinit-storage --create --filesystem --name local --capacity 1GB
+Created storage "local".
+</code></pre>
 
 ### Create a network
 
@@ -138,49 +143,51 @@ Now that we have at least one storage resource to store data, we can create a ne
 
 The `infinit-network` command is used to create the network, specifying a name for the network and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:
 
-```
-$[device A]> infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
-Locally created network "mine".
-Remotely pushed network “bobby/mine”.
-$[device A]>
-```
+<pre>
+<div><span>Device A</span></div>
+<code>$> infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
+Locally created network "bob/mine".
+Remotely pushed network "bob/mine".
+</code></pre>
 
-_**NOTE**: The `--push` option is used to publish the created network (likewise for volumes) onto the Hub for it to be easily fetched on another device or shared with other users._
+*__NOTE__: The `--push` option is used to publish the created network (likewise for volumes) onto the Hub for it to be easily fetched on another device or shared with other users.*
 
 ### Create a volume
 
 The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the `infinit-volume` binary as shown next:
 
-```
-$[device A]> infinit-volume --create --as bob --network mine --name personal --push
-Locally created volume “bobby/personal”.
-Remotely pushed volume “bobby/personal”.
-$[device A]>
-```
+<pre>
+<div><span>Device A</span></div>
+<code>$> infinit-volume --create --as bob --network mine --name personal --push
+Locally created volume “bob/personal”.
+Remotely pushed volume “bob/personal”.
+$>
+</code></pre>
+
 That’s it, you’ve created a ‘personal’ volume i.e. a filesystem. The blocks that the files are composed of are stored through the ‘personal’ volume and will be distributed across the network named ‘mine’, currently composed of a single computer.
 
 ### Mount the volume
 
 Let’s access this volume by mounting it as simply as any other filesystem:
 
-```
-$[device A]> mkdir mnt/
-$[device A]> infinit-volume --mount --as bob --name personal --mountpoint mnt/  --async --cache --publish
-Fetched endpoints for "bobby/mine".
-Running network "bobby/mine".
-...
+<pre>
+<div><span>Device A</span></div>
+<code>$> infinit-volume --mount --as bob --name personal --mountpoint mnt/  --async --cache --publish
+Fetched endpoints for "bob/mine".
+Running network "bob/mine".
+</code></pre>
 ```
 
 That’s it! You can now create, list and access files from the mount point `mnt/`. Try creating a file right now:
 
-```
-$[device A]> echo "everything is" > mnt/awesome.txt
-$[device A]> cat mnt/awesome.txt
-awesome.txt
-$[device A]>
-```
+<pre>
+<div><span>Device A</span></div>
+<code>$> echo "everything is" > mnt/awesome.txt
+$> cat mnt/awesome.txt
+everything is
+</code></pre>
 
-_**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait the end of the guide to stop this process though._
+_**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait until the end of the guide to stop this process though._
 
 ### Access from another machine
 
@@ -188,64 +195,69 @@ Now that you have successfully created and mounted a volume on your machine, it 
 
 In order to access your volume from another device, you will need to transfer your user’s identity to the device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like networks and volumes are. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.
 
-Let’s first export the user’s identity to the Hub. Note that the identity will be encrypted with a one time password chosen by you.
+Let’s first transmit the user’s identity to the Hub. Note that the identity will be encrypted with a one time passphrase chosen by you and will only be present on the Hub for a fixed period of time.
 
-```
-$[device A]> infinit-user --export --as bob --full --with-hub
-```
-
-_**NOTE**: The --full option means that both the public and private parts of the user’s key pair will be exported, hence the warning._
+<pre>
+<div><span>Device A</span></div>
+<code>$> infinit-device --transmit --user --as bob
+Password: ********
+Transmitted user identity for "bob".
+</code></pre>
 
 Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.
 
-```
-$[device B]> infinit-user --import --name bob --with-hub
-```
+<pre class="alternate">
+<div><span>Device B</span></div>
+<code>$> infinit-device --receive --user --name bob
+Received user identity for "bob".
+</code></pre>
+
+_**NOTE**: The pairing process may have expired on device A. If so, please try again and enter the passphrase on device B in order to retrieve your user identity B before the counter runs down._
 
 The next steps consist of fetching the resources that you previously pushed on the Hub: networks and volumes.
 
-```
-$[device B]> infinit-network --fetch --as bob --name mine
-Fetched network ".../mine".
-$[device B]> infinit-volume --fetch --as bob --name personal
-Fetched volume ".../personal".
-$[device B]>
-```
+<pre class="alternate">
+<div><span>Device B</span></div>
+<code>$> infinit-network --fetch --as bob --name mine
+Fetched network "bob/mine".
+$> infinit-volume --fetch --as bob --name personal
+Fetched volume "bob/personal".
+</code></pre>
 
 Let’s connect this device to the ‘mine’ network you created on device A.
 
-```
-$[device B]> infinit-network --join --as bob --name mine
-Joined network ".../mine".
-$[device B]>
-```
+<pre class="alternate">
+<div><span>Device B</span></div>
+<code>$> infinit-network --join --as bob --name bob/mine
+Joined network "bob/mine".
+</code></pre>
 
-Finally, the volume can be mounted on device B as show below:
+Finally, the volume can be mounted on device B as simply as on device A:
 
-```
-$[device B]> mkdir mnt/
-$[device B]> infinit-volume --mount --mountpoint mnt/ --as bob --name personal --async --cache --publish
-Running network ".../mine".
-Running volume ".../personal".
-[…]
-```
+<pre class="alternate">
+<div><span>Device B</span></div>
+<code>$> infinit-volume --mount --mountpoint mnt/ --as bob --name personal --async --cache --publish
+Fetch endpoints for "bob/mine".
+Running network “bob/mine”.
+Running volume "bob/personal".
+</code></pre>
 
 It is now time to check if the file you created on device A is synchronized with device B:
 
-```
-$[device B]> ls mnt/
+<pre class="alternate">
+<div><span>Device B</span></div>
+<code>$> ls mnt/
 awesome.txt
-$[device B]> cat mnt/awesome.txt
+$> cat mnt/awesome.txt
 everything is
-$[device B]>
-```
+</code></pre>
 
 That’s it, you’ve created a filesystem that you quickly connected to with two devices, without having to go through a complicated administrative process.
 
 4. Go Further
 ------------------
 
-You can now invite other users to join the network to contribute additional storage and/or share files and collaborate. Just keep in mind that the storage infrastructure presented in this guide is very sensitive to computers disconnecting, possibly rendering files inaccessible. Please take a look to the <a href="${route('reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient to faults.
+You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Just keep in mind that the storage infrastructure presented in this guide is very sensitive to computers disconnecting, possibly rendering files inaccessible. Please take a look to the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient to faults.
 
 <a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Join our Facebook Group</a>
 

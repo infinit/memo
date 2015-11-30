@@ -14,34 +14,36 @@
       <a href="${route('doc_comparisons')}">Comparisons</a>
     </li>
 
-    <li ${'class="active"' if request.route.name == 'doc_deployments' else ''}>
-      <a href="${route('doc_deployment_personal_cloud')}">Deployments</a>
+    ## <li ${'class="active"' if request.route.name == 'doc_deployments' else ''}>
+    ##   <a href="${route('doc_deployment_personal_cloud')}">Deployments</a>
 
-      <ul>
-        <li ${'class="active"' if request.route.name == 'doc_deployment_personal_cloud' else ''}><a href="${route('doc_deployment_personal_cloud')}">Personal Cloud</a></li>
+    ##   <ul>
+    ##     <li ${'class="active"' if request.route.name == 'doc_deployment_personal_cloud' else ''}><a href="${route('doc_deployment_personal_cloud')}">Personal Cloud</a></li>
 
-        <li ${'class="active"' if request.route.name == 'doc_deployment_file_system' else ''}><a href="${route('doc_deployment_file_system')}">Storage Infrastructure</a></li>
+    ##     <li ${'class="active"' if request.route.name == 'doc_deployment_file_system' else ''}><a href="${route('doc_deployment_file_system')}">Storage Infrastructure</a></li>
 
-        <li><a href="#">API-based Filesystem</a></li>
-      </ul>
-    </li>
+    ##     <li><a href="#">API-based Filesystem</a></li>
+    ##   </ul>
+    ## </li>
 
     <li ${'class="active"' if request.route.name == 'doc_reference' else ''}>
       <a href="${route('doc_reference')}">Reference</a>
 
       <ul>
-        <li><a href="${route('doc_reference')}#user">infinit-user</a></li>
-        <li><a href="${route('doc_reference')}#credentials">infinit-credentials</a></li>
-        <li><a href="${route('doc_reference')}#storage">infinit-storage</a></li>
-        <li><a href="${route('doc_reference')}#network">infinit-network</a></li>
-        <li><a href="${route('doc_reference')}#volume">infinit-volume</a></li>
-        <li><a href="${route('doc_reference')}#hub">infinit-hub</a></li>
+        <li><a href="${route('doc_reference')}#introduction">Introduction</a></li>
+        <li><a href="${route('doc_reference')}#user">User</a></li>
+        <li><a href="${route('doc_reference')}#credentials">Credentials</a></li>
+        <li><a href="${route('doc_reference')}#device">Device</a></li>
+        <li><a href="${route('doc_reference')}#storage">Storage</a></li>
+        <li><a href="${route('doc_reference')}#network">Network</a></li>
+        <li><a href="${route('doc_reference')}#passport">Passport</a></li>
+        <li><a href="${route('doc_reference')}#volume">Volume</a></li>
       </ul>
     </li>
 
-    <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
-      <a href="${route('doc_roadmap')}">Roadmap</a>
-    </li>
+    ## <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
+    ##   <a href="${route('doc_roadmap')}">Roadmap</a>
+    ## </li>
 
   </ul>
 </nav>

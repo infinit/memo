@@ -81,6 +81,7 @@ def configure(
     'templates/pages/docs/src/html/get_started.html',
     'templates/pages/docs/src/html/overview.html',
     'templates/pages/docs/src/html/technology.html',
+    'templates/pages/docs/src/html/reference.html',
   )
 
   resources = drake.nodes(
@@ -131,6 +132,8 @@ def configure(
     'resources/images/schema-nfs-like@2x.png',
     'resources/images/schema-two-clients.png',
     'resources/images/schema-two-clients@2x.png',
+    'resources/images/infinit-sh.png',
+    'resources/images/infinit-sh@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
