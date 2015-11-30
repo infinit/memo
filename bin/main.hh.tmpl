@@ -192,20 +192,26 @@ struct Mode
 {
   typedef
     std::function<void (boost::program_options::variables_map const&)> Action;
-
+  typedef
+    std::vector<boost::program_options::option_description> Options;
+  typedef
+    std::vector<boost::program_options::options_description> OptionsVector;
   Mode(
     std::string name_,
     std::string description_,
     Action action_,
     std::string help = {},
-    std::vector<boost::program_options::option_description> options = {},
-    std::vector<boost::program_options::options_description> extra_options = {}
+    Options options = {},
+    OptionsVector extra_options = {},
+    Options hidden_options = {},
+    OptionsVector hidden_extra_options = {}
     )
     : name(std::move(name_))
     , description(std::move(description_))
     , action(std::move(action_))
     , help_complement(std::move(help))
     , options(this->description)
+    , visible_options(this->description)
   {
     boost::program_options::options_description mode_options(
       elle::sprintf("%s%s options",
@@ -216,7 +222,21 @@ struct Mode
         boost::shared_ptr<boost::program_options::option_description>
         (new boost::program_options::option_description(std::move(option))));
     this->options.add(mode_options);
+    this->visible_options.add(mode_options);
     for (auto const& extra: extra_options)
+    {
+      this->options.add(extra);
+      this->visible_options.add(extra);
+    }
+    boost::program_options::options_description hidden;
+    for (auto const& option: hidden_options)
+    {
+      hidden.add(
+        boost::shared_ptr<boost::program_options::option_description>
+        (new boost::program_options::option_description(std::move(option))));
+    }
+    this->options.add(hidden);
+    for (auto const& extra: hidden_extra_options)
       this->options.add(extra);
   }
 
@@ -229,7 +249,7 @@ struct Mode
       output << " " << this->help_complement;
     output << " [OPTIONS...]" << std::endl;
     output << std::endl;
-    output << this->options;
+    output << this->visible_options;
     output << std::endl;
   }
 
@@ -238,6 +258,7 @@ struct Mode
   Action action;
   std::string help_complement;
   boost::program_options::options_description options;
+  boost::program_options::options_description visible_options;
 };
 typedef std::vector<Mode> Modes;
 

@@ -235,15 +235,18 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "drive to invite the user to" },
         { "user,u", value<std::string>(), "user to invite to the drive" },
-#ifndef INFINIT_PRODUCTION_BUILD
-        { "permissions,p", value<std::string>(),
-          "set default user permissions to XXX" },
-        { "home,h", bool_switch(),
-          "creates a home directory for the invited user" },
-#endif
         { "fetch-drive", bool_switch(), "update local drive descriptor" },
         { "fetch,f", bool_switch(), "alias for --fetch-drive" },
         option_owner,
+      },
+      {
+      },
+      // Hidden options.
+      {
+        { "permissions,p", value<std::string>(),
+            "set default user permissions to XXX" },
+        { "home,h", bool_switch(),
+          "creates a home directory for the invited user" },
       },
     },
     {
