@@ -190,6 +190,8 @@ class Bottle(bottle.Bottle):
                method = 'DELETE')(self.drive_delete)
     self.route('/drives/<owner>/<name>/invitations/<user>',
                method = 'PUT')(self.drive_invitation_put)
+    self.route('/drives/<owner>/<name>/invitations',
+               method = 'PUT')(self.drive_invitations_put)
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -664,23 +666,48 @@ class Bottle(bottle.Bottle):
     return self.drive_from_name(owner, name).json()
 
   def drive_invitation_put(self, owner, name, user):
+    print('PUT invitation')
+    drive_owner = self.user_from_name(name = owner)
     invitee = self.user_from_name(name = user)
+    as_owner = True
+    try:
+      self.authenticate(drive_owner)
+    except Exception:
+      as_owner = False
+      self.authenticate(invitee)
+    drive = self.drive_from_name(owner = owner, name = name)
+    self.__drive_integrity(drive, passport = user)
+    json = bottle.request.json
+    invitation = Drive.Invitation(self.__beyond, **json)
+    invitation.save(beyond = self._Bottle__beyond,
+                    drive = drive,
+                    owner = drive_owner,
+                    invitee = invitee,
+                    invitation = as_owner)
+    raise Response(201, {}) # FIXME: 200 if existed
+
+  def drive_invitations_put(self, owner, name):
+    print('PUT invitationS from %s' % owner)
     owner = self.user_from_name(name = owner)
     as_owner = True
     try:
       self.authenticate(owner)
     except Exception:
-      as_owner = False
-      self.authenticate(invitee)
+      raise Response(401, { "error": "user/not_authorized" })
     drive = self.drive_from_name(owner = owner.name, name = name)
-    self.__drive_integrity(drive, passport = invitee.name)
     json = bottle.request.json
-    invitation = Drive.Invitation(self.__beyond, **json)
-    invitation.save(beyond = self._Bottle__beyond,
-                    drive = drive,
-                    owner = owner,
-                    invitee = invitee,
-                    invitation = as_owner)
+    for name, value in json.items():
+      print("%s invited by %s" % (name, owner.name))
+      if name == owner.name:
+        continue
+      print('invite %s: %s' % (name, value))
+      self.__drive_integrity(drive, passport = name)
+      invitation = Drive.Invitation(self.__beyond, **value)
+      invitation.save(beyond = self._Bottle__beyond,
+                      drive = drive,
+                      owner = owner,
+                      invitee = self.user_from_name(name = name),
+                      invitation = as_owner)
     raise Response(201, {}) # FIXME: 200 if existed
 
   ## --- ##

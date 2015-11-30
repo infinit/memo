@@ -74,29 +74,27 @@ public:
 };
 
 struct BeyondError
-  : public elle::Printable
+  : public elle::Error
 {
   BeyondError(std::string const& error,
-              std::string const& reason)
-    : error(error)
-    , reason(reason)
+              std::string const& reason,
+              std::string const& name = "NAME")
+    : elle::Error(error)
+    , _reason(reason)
+    , _name(name)
   {
     ELLE_TRACE("error: %s", *this);
   }
 
   BeyondError(elle::serialization::SerializerIn& s)
     : BeyondError(s.deserialize<std::string>("error"),
-                  s.deserialize<std::string>("reason"))
-  {}
-
-  void
-  print(std::ostream& out) const override
+                  s.deserialize<std::string>("reason"),
+                  s.deserialize<std::string>("name"))
   {
-    out << this->reason;
   }
 
-  std::string error;
-  std::string reason;
+  ELLE_ATTRIBUTE_R(std::string, reason);
+  ELLE_ATTRIBUTE_R(std::string, name);
 };
 
 class MissingResource
@@ -609,7 +607,8 @@ beyond_push(std::string const& where,
             std::string const& name,
             T const& o,
             infinit::User const& self,
-            bool report = true);
+            bool report = true,
+            bool beyonderror = false); // FIXME: Remove when migration done.
 
 namespace infinit
 {
@@ -788,6 +787,14 @@ namespace infinit
         s.serialize("permissions", this->permissions);
         s.serialize("status", this->status);
         s.serialize("create_home", this->create_home);
+      }
+
+      bool
+      operator==(User const& other)
+      {
+        return permissions == other.permissions
+               && status == other.status
+               && create_home == other.create_home;
       }
 
       std::string permissions = "rw";
@@ -1790,6 +1797,29 @@ signature_headers(
   return res;
 }
 
+namespace detail
+{
+  template <typename Exception>
+  void
+  _read_error(elle::json::Object& request)
+  {
+    auto error = boost::any_cast<std::string>(request["error"]);
+    throw Exception(error);
+  }
+
+  template <>
+  void
+  _read_error<BeyondError>(elle::json::Object& request)
+  {
+    auto error = boost::any_cast<std::string>(request["error"]);
+    auto reason = boost::any_cast<std::string>(request["reason"]);
+    auto name = boost::any_cast<std::string>(request["name"]);
+    throw BeyondError(error,
+                      reason,
+                      name);
+  }
+}
+
 template <typename Exception>
 void
 read_error(reactor::http::Request& r,
@@ -1798,8 +1828,7 @@ read_error(reactor::http::Request& r,
   try
   {
     auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-    auto error = boost::any_cast<std::string>(json["error"]);
-    throw Exception(error);
+    detail::_read_error<Exception>(json);
   }
   catch (elle::json::ParseError const&)
   {
@@ -1813,7 +1842,8 @@ void
 _beyond_push(reactor::http::Request& r,
              std::string const& type,
              std::string const& name,
-             bool report = false)
+             bool report = false,
+             bool beyonderror = false)
 {
   r.finalize();
   reactor::wait(r);
@@ -1835,7 +1865,10 @@ _beyond_push(reactor::http::Request& r,
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type);
+    if (beyonderror)
+      read_error<BeyondError>(r, type);
+    else
+      read_error<MissingResource>(r, type);
   }
   else if (r.status() == reactor::http::StatusCode::Gone)
   {
@@ -1854,10 +1887,10 @@ _beyond_push(reactor::http::Request& r,
       }
       return BeyondError("unknown", "Unknown error");
     }();
-    if (error.error == "user/missing_field/email")
-      throw elle::Error{"email unspecified (use --email)"};
-    if (error.error == "user/invalid_format/email")
-      throw elle::Error{"email address is invalid"};
+    if (error.error() == std::string("user/missing_field/email"))
+      throw elle::Error("email unspecified (use --email)");
+    if (error.error() == std::string("user/invalid_format/email"))
+      throw elle::Error("email address is invalid");
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s pushing %s:\n%s",
                     r.status(), type, error));

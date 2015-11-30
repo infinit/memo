@@ -4,7 +4,10 @@ from utils import *
 import json
 
 # Creating and inviting.
-with Beyond() as beyond, Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+with Beyond() as beyond,\
+     Infinit(beyond = beyond) as bob,\
+     Infinit(beyond = beyond) as alice,\
+     Infinit(beyond = beyond) as god:
   # Create bob.
   bob.run(['infinit-user', '--signup',  'bob', '--email',  'bob@infinit.io'])
 
@@ -12,8 +15,14 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, Infinit(beyond = beyon
   alice.run(['infinit-user', '--signup',  '--name', 'alice', '--email',  'alice@infinit.io'])
   a = alice.run(['infinit-user', '--export', 'alice'])
 
+  # Create god.
+  god.run(['infinit-user', '--signup', '--name', 'god', '--email', 'god@paradis.up'])
+  g = god.run(['infinit-user', '--export', 'god'])
+
   # Import alice as bob.
   bob.run(['infinit-user', '--import'], input = a)
+  # Import god as bob.
+  bob.run(['infinit-user', '--import'], input = g)
 
   # Create network & volume.
   bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob', '--push'])
@@ -53,7 +62,24 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, Infinit(beyond = beyon
            '--name', 'employees',
            '--user', 'alice',
            '--as', 'bob',
-           '--fetch'])
+           '--fetch',
+           '--push'])
+
+  # Just Invite god without inviting him to the network.
+
+  bob.run(['infinit-drive', '--invite',
+           '--name', 'employees',
+           '--user', 'god',
+           '--as', 'bob',
+           '--push'],
+           return_code = 1)
+
+  bob.run(['infinit-drive', '--invite',
+           '--name', 'employees',
+           '--user', 'god',
+           '--as', 'bob',
+           '--push',
+           '--passport'])
 
   # Make sure alice doesn't have it.
   l = alice.run(['infinit-drive', '--list'])

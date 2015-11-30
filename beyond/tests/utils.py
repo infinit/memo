@@ -345,6 +345,7 @@ class Drive(dict):
     self['network'] = self.volume.network['name']
     self['volume'] = self.volume['name']
     self['description'] = description
+    self['users'] = members
 
   @property
   def volume(self):
@@ -357,15 +358,36 @@ class Drive(dict):
                    auth = owner.private_key)
 
   def invite(self, hub, invitee, **kwargs):
+    '''Invite one user to the drive.
+
+    Keyword arguments:
+    hub -- the server (Beyond)
+    invitee -- the user name to invite (str)
+    kwargs -- Drive.Invitation.__init__ arguments
+    '''
     invitation = Drive.Invitation(**kwargs)
     owner = self.volume.network.owner
-    return hub.put('drives/%s/invitations/%s' % (self['name'], invitee['name']),
+    return hub.put('drives/%s/invitations/%s' % (self['name'], invitee),
                    json = invitation,
                    auth = owner.private_key)
 
   def invite_many(self, hub, invitees, **kwargs):
+    json = {}
+    print('Invitees:')
+    print(invitees)
     for invitee in invitees:
-      self.invite(hub, invitee, **kwargs)
+      json[invitee['name']] = {
+        'status': 'pending',
+        'create_home': False,
+        'permissions': 'rw'
+      }
+    print("Json")
+    print(json)
+    owner = self.volume.network.owner
+    return hub.put('drives/%s/invitations' % self['name'],
+                   json = json,
+                   auth = owner.private_key)
+
 
   def accept(self, hub, invitee, **kwargs):
     if 'status' not in kwargs:

@@ -65,7 +65,7 @@ with Beyond() as beyond:
       # Invite alice.
       p = Passport(n, invitee = alice)
       p.put(beyond)
-      d.invite(hub = beyond, invitee = alice)
+      d.invite(hub = beyond, invitee = alice['name'])
       assert 'Drive/Invitation' in emailer.get(alice['email'])
       email = emailer.get_specifics(alice['email'], 'Drive/Invitation')[0]
       for key in ['owner', 'invitee']:

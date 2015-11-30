@@ -30,6 +30,25 @@ with Beyond() as beyond:
       for field in ['name', 'description', 'volume', 'network']:
         assertEq(drive[field], _drive[field])
 
+    def test_route(self):
+      user = User()
+      user.put(beyond)
+      network = Network('network', owner = user)
+      network.put(beyond)
+      volume = Volume('business', network = network)
+      volume.put(beyond)
+      drive = Drive('business',
+                    volume = volume,
+                    description = 'woot')
+      drive.put(beyond)
+
+      invitees = [User() for _ in range(4)]
+      for invitee in invitees:
+        invitee.put(beyond)
+        Passport(network, invitee).put(beyond)
+        print(invitee['name'])
+        drive.invite(beyond, invitee['name'])
+
     def test_remove(self):
       user = User()
       user.put(beyond)
@@ -99,7 +118,7 @@ with Beyond() as beyond:
                            create_volume('volume',
                                          alice_network))
       create_passport(alice_network, eve)
-      drive.invite(beyond, eve)
+      drive.invite(beyond, eve['name'])
       assertEq(len(beyond.get('users/%s/drives' % eve['name'],
                               auth = eve.private_key).json()['drives']),
                4)
