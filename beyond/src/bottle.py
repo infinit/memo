@@ -550,6 +550,9 @@ class Bottle(bottle.Bottle):
       self.authenticate(user)
       network = self.__beyond.network_get(owner = owner, name = name)
       json = bottle.request.json
+      # XXX: Fix that...
+      if not 'capacity' in json or json['capacity'] == None:
+        json['capacity'] = 0
       stats = Network.Statistics(self.__beyond, **json)
       network.storages.setdefault(user.name, {})[node_id] = stats.json()
       network.save()
