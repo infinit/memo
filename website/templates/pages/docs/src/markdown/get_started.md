@@ -49,7 +49,7 @@ Click the link below to download the Infinit command-line tools:
 <a href="https://storage.googleapis.com/sh_infinit_releases/osx/infinit-cli.tbz
 " class="button">Download Command Line Tools</a>
 % else:
-<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-cli.tar.tbz
+<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-cli.tbz
 " class="button">Download Command Line Tools</a>
 % endif
 </div>

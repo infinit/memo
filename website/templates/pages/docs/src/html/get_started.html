@@ -37,7 +37,7 @@
 <a href="https://storage.googleapis.com/sh_infinit_releases/osx/infinit-cli.tbz
 " class="button">Download Command Line Tools</a>
 % else:
-<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-cli.tar.tbz
+<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-cli.tbz
 " class="button">Download Command Line Tools</a>
 % endif
 </div>
@@ -53,11 +53,7 @@ Infinit-&lt;version&gt;/bin/infinit-storage
 Infinit-&lt;version&gt;/bin/infinit-user
 Infinit-&lt;version&gt;/bin/infinit-volume
 ...
-<<<<<<< HEAD
-</code></pre><p>All the configuration files that the Infinit command-line tools create and use are located in the <code>$INFINIT_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>. You can edit your shell configuration to set <code>INFINIT_HOME</code> to another location if you would like.</p>
-=======
 </code></pre><p>All the configuration files that the Infinit command-line tools create and use are located in the <code>$INFINIT_DATA_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>, following the <a href="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">XDG Base Directory Specification</a>. You can edit your shell configuration to set <code>INFINIT_DATA_HOME</code> to another location if you would like.</p>
->>>>>>> website: Update all documentation.
 <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
 <ul>
 <li>The <code>bin/</code> subdirectory contains the actual Infinit binaries such as <code>infinit-user</code>, <code>infinit-network</code>, etc.</li>
