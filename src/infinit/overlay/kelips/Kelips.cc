@@ -9,8 +9,6 @@
 #include <boost/filesystem.hpp>
 
 #include <elle/bench.hh>
-#include <elle/container/map.hh>
-#include <elle/format/base64.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/Serializer.hh>
