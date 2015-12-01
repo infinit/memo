@@ -5,6 +5,7 @@
 
 ### Added
 - Enable to point the data directory directly with the INFINIT_DATA_HOME environment variable.
+- Generate Debian package.
 
 ### Fixed
 - Change demo home path to be usable with INFINIT_DATA_HOME.
