@@ -266,14 +266,15 @@ namespace infinit
           memcpy(_owner->_data.mutable_contents() + offset,
                  buffer.contents(),
                  to_write);
-          _owner->_header.size = std::max(_owner->_header.size, offset + size);
+          this->_owner->_header.size = std::max(this->_owner->_header.size,
+                                                uint64_t(offset + size));
           return to_write + write(
             elle::WeakBuffer(buffer.mutable_contents() + to_write, size - to_write),
             size - to_write, offset + to_write);
         }
-        _owner->_header.size = std::max(_owner->_header.size, offset + size);
+        this->_owner->_header.size = std::max(this->_owner->_header.size,
+                                              uint64_t(offset + size));
         offset -= File::first_block_size;
-
         uint64_t const block_size = this->_owner->_header.block_size;
         int const start_block = offset / block_size;
         int const end_block = (offset + size - 1) / block_size;
