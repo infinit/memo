@@ -459,9 +459,7 @@ def configure(
     yield from drake.copy(installed_binaries, where, None,
                           builder = PatchAndInstall)
     yield from drake.copy(
-      demo_home, where /
-      'share/infinit/test/home/.local/share/infinit/filesystem',
-      'demo-home')
+      demo_home, where / 'share/infinit/filesystem/test/home/', 'demo-home')
 
   rule_install << install_nodes(prefix)
 
