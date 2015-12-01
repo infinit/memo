@@ -59,14 +59,11 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("inheriting auth");
         ELLE_ASSERT(!!_parent->_block);
-        // We must store first to ready ACL layer
-        this->_owner.store_or_die(*b, model::STORE_INSERT,
-          dummy_conflict_resolver());
         umbrella([&] { this->_parent->_block->copy_permissions(*b);});
         Directory d(this->_parent, this->_owner, this->_name, address);
         d._block = std::move(b);
         d._inherit_auth = true;
-        d._push_changes({OperationType::update, "/inherit"});
+        d._push_changes({OperationType::update, "/inherit"}, true);
       }
       else
         this->_owner.store_or_die(std::move(b), model::STORE_INSERT,
