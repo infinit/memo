@@ -72,7 +72,6 @@ COMMAND(export_)
 
 COMMAND(fetch)
 {
-  auto owner = self_user(ifnt, args);
   auto user_name = mandatory(args, "name", "user name");
   auto user =
     beyond_fetch<infinit::User>("user", user_name);
@@ -356,7 +355,6 @@ main(int argc, char** argv)
       "--name USER",
       {
         { "name,n", value<std::string>(), "user to fetch" },
-        option_owner,
       },
     },
     {
