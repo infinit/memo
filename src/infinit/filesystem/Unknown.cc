@@ -129,7 +129,7 @@ namespace infinit
           dynamic_cast<ACLBlock&>(*f->_first_block));
         });
       }
-      f->_commit();
+      f->_commit_first(false);
       _owner.filesystem()->set(f->full_path().string(), f);
       std::unique_ptr<rfs::Handle> handle(new FileHandle(f, true, true, true));
       remove_from_parent.abort();

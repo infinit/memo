@@ -216,12 +216,20 @@ namespace infinit
       {
         return;
       }
-      _commit_first();
+      _commit_first(true);
     }
 
     void
-    File::_commit_first()
+    File::_commit_first(bool final_flush)
     {
+      ELLE_DEBUG("commit_first, final=%s", final_flush);
+      if (!_first_block)
+      {
+        ELLE_DEBUG("re-fetching first_block");
+         Address addr = _parent->_files.find(_name)->second.second;
+        _first_block = elle::cast<MutableBlock>::runtime(
+          _owner.fetch_or_die(addr));
+      }
       elle::Buffer serdata;
       {
         elle::IOStream os(serdata.ostreambuf());
@@ -233,10 +241,16 @@ namespace infinit
       _first_block->data(serdata);
       try
       {
-        _owner.block_store()->store(*_first_block,
-          this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
-          elle::make_unique<FileConflictResolver>(
-            full_path(), _owner.block_store().get()));
+        if (final_flush && _parent)
+          _owner.block_store()->store(std::move(_first_block),
+            this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
+            elle::make_unique<FileConflictResolver>(
+              full_path(), _owner.block_store().get()));
+        else
+          _owner.block_store()->store(*_first_block,
+            this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
+            elle::make_unique<FileConflictResolver>(
+              full_path(), _owner.block_store().get()));
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
@@ -354,7 +368,7 @@ namespace infinit
       {
         ELLE_DEBUG("%s remaining links", links - 1);
         _header.links--;
-        _commit_first();
+        _commit_first(false);
       }
       else
       {
@@ -508,7 +522,7 @@ namespace infinit
                    this->_data.size(), this->_fat, _header.size)
         {
           _header.mtime = time(nullptr);
-          _commit_first();
+          _commit_first(true);
         }
       }
     }
@@ -618,7 +632,8 @@ namespace infinit
       bool prev = _fat_changed;
       if (_fat_changed)
       {
-        _commit_first();
+        ELLE_DEBUG("FAT changed, commiting first block");
+        _commit_first(cache_size == 0);
         _first_block_new = false;
         _fat_changed = false;
       }
