@@ -3305,8 +3305,7 @@ namespace infinit
             auto r = std::make_shared<PendingRequest>();
             r->startTime = now();
             r->barrier.close();
-            auto ir =
-              this->_pending_requests.insert(std::make_pair(gf.request_id, r));
+            this->_pending_requests.insert(std::make_pair(gf.request_id, r));
             send(gf, c.second);
             if (!reactor::wait(r->barrier, 100_ms))
               ++hits[0];
