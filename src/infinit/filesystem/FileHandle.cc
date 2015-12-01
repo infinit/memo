@@ -253,7 +253,7 @@ namespace infinit
         this->_dirty = true;
         if (offset < signed(File::first_block_size))
         { // write on first block
-          auto wend = std::min(size + offset, File::first_block_size);
+          auto wend = std::min(uint64_t(size + offset), File::first_block_size);
           if (_owner->_data.size() < wend)
           {
             auto oldsz = _owner->_data.size();
