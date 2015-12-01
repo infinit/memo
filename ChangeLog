@@ -1,5 +1,16 @@
 # Change Log
 
+
+## [0.3.2] - 2015-12-01
+
+### Added
+- Enable to point the data directory directly with the INFINIT_DATA_HOME environment variable.
+
+### Fixed
+- Change demo home path to be usable with INFINIT_DATA_HOME.
+- Fix unmount when pushing stats of a storage with no maximum capacity.
+
+
 ## [0.3.1] - 2015-11-30
 
 Release adjustments.
@@ -16,6 +27,7 @@ Release adjustments.
 ### Fixed
 - Ship compiler-specific dynamic libraries for portability.
 - Fix unmounting on OSX.
+
 
 ## [0.3.0] - 2015-11-29
 
