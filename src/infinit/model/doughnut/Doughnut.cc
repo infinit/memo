@@ -55,6 +55,7 @@ namespace infinit
           this->_consensus->make_local(std::move(port), std::move(storage)) :
           nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
+        , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
       {}
 
       Doughnut::Doughnut(Address id,
@@ -162,7 +163,8 @@ namespace infinit
       Doughnut::_make_acl_block() const
       {
         ELLE_TRACE_SCOPE("%s: create ACB", *this);
-        return elle::make_unique<ACB>(const_cast<Doughnut*>(this));
+        return elle::cast<blocks::ACLBlock>::runtime(
+          elle::unconst(this)->_pool.get());
       }
 
       std::unique_ptr<model::User>

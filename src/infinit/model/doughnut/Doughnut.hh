@@ -4,6 +4,7 @@
 # include <memory>
 # include <boost/filesystem.hpp>
 
+# include <elle/ProducerPool.hh>
 # include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/Model.hh>
@@ -61,7 +62,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
-
+        ELLE_ATTRIBUTE(elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
       protected:
         virtual
         std::unique_ptr<blocks::MutableBlock>
