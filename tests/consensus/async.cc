@@ -5,6 +5,7 @@
 
 #include <reactor/scheduler.hh>
 #include <reactor/semaphore.hh>
+#include <reactor/signal.hh>
 
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Consensus.hh>
@@ -32,6 +33,7 @@ public:
          std::unique_ptr<infinit::model::ConflictResolver>) override
   {
     reactor::wait(sem);
+    this->_stored.signal();
     ++nstore;
   }
 
@@ -49,6 +51,8 @@ public:
     reactor::wait(sem);
     ++nremove;
   }
+
+  ELLE_ATTRIBUTE_RX(reactor::Signal, stored);
 };
 
 class BlockingConsensus
@@ -132,11 +136,13 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
                 infinit::model::STORE_UPDATE, nullptr);
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
+    reactor::wait(sc.stored());
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
+    reactor::wait(sc.stored());
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
     sc.sem.release();
-    BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a3");
+    reactor::wait(sc.stored());
   }
 }
 
