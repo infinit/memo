@@ -153,10 +153,7 @@ namespace infinit
                   new protocol::ChanneledStream(*this->_serializer));
                 static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");
                 if (!disable_key)
-                {
-                  ELLE_TRACE_SCOPE("exchanging keys");
                   this->_key_exchange();
-                }
                 ELLE_TRACE("connected");
                 _connected = true;
               }
@@ -210,9 +207,9 @@ namespace infinit
       void
       Remote::_key_exchange()
       {
+        ELLE_TRACE_SCOPE("%s: exchange keys", *this);
         // challenge, token
         typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
-        ELLE_TRACE("starting key exchange");
         RPC<std::pair<Challenge, std::unique_ptr<Passport>>(Passport const&)>
           auth_syn("auth_syn", *this->_channels, nullptr);
         auto challenge_passport = auth_syn(this->_doughnut.passport());
@@ -220,12 +217,12 @@ namespace infinit
         ELLE_ASSERT(remote_passport);
         // validate res
         bool check = remote_passport->verify(this->_doughnut.owner());
-        ELLE_TRACE("got remote passport, check=%s", check);
         if (!check)
         {
           ELLE_LOG("Passport validation failed.");
           throw elle::Error("Passport validation failed");
         }
+        ELLE_DEBUG("got valid remote passport");
         // sign the challenge
         auto signed_challenge = this->_doughnut.keys().k().sign(
           challenge_passport.first.first,
@@ -234,18 +231,21 @@ namespace infinit
         // generate, seal
         // dont set _key yet so that our 2 rpcs are in cleartext
         auto key = infinit::cryptography::secretkey::generate(256);
-        ELLE_TRACE("passwording...");
         elle::Buffer password = key.password();
-        ELLE_TRACE("sealing...");
         auto sealed_key = remote_passport->user().seal(password,
           infinit::cryptography::Cipher::aes256,
           infinit::cryptography::Mode::cbc);
-        ELLE_TRACE("Invoking auth_ack...");
-        RPC<bool(elle::Buffer const&, elle::Buffer const&, elle::Buffer const&)>
-        auth_ack("auth_ack", *this->_channels, nullptr);
-        auth_ack(sealed_key, challenge_passport.first.second, signed_challenge);
-        _credentials = std::move(password);
-        ELLE_TRACE("...done");
+        ELLE_DEBUG("acknowledge authentication")
+        {
+          RPC<bool (elle::Buffer const&,
+                    elle::Buffer const&,
+                    elle::Buffer const&)>
+            auth_ack("auth_ack", *this->_channels, nullptr);
+          auth_ack(sealed_key,
+                   challenge_passport.first.second,
+                   signed_challenge);
+          this->_credentials = std::move(password);
+        }
       }
 
       void
