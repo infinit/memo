@@ -16,6 +16,14 @@ namespace infinit
   {
     return RPCCall<R (Args...)>::_call(*this, args...);
   }
+
+  inline
+  std::ostream&
+  operator <<(std::ostream& o, BaseRPC const& rpc)
+  {
+    elle::fprintf(o, "RPC(%s)", rpc.name());
+    return o;
+  }
 }
 
 #endif

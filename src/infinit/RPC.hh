@@ -361,7 +361,7 @@ namespace infinit
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       ELLE_DUMP("%s: set context for %s: %s",
-                *this, elle::demangle(typeid(T).name()), value);
+                *this, elle::type_info<T>(), value);
       this->_context.template set<T>(value);
     }
 
@@ -479,7 +479,7 @@ namespace infinit
       {
         elle::Buffer call;
         elle::IOStream outs(call.ostreambuf());
-        ELLE_DEBUG("%s: build request", self)
+        ELLE_DEBUG("build request")
         {
           elle::serialization::binary::SerializerOut output(outs, false);
           output.serialize("procedure", self.name());
@@ -501,11 +501,11 @@ namespace infinit
             call = self.key()->encipher(
               elle::ConstWeakBuffer(call.contents(), call.size()));
         }
-        ELLE_DEBUG("%s: send request", self)
+        ELLE_DEBUG("send request")
           channel.write(call);
       }
+      ELLE_DEBUG("read response request")
       {
-        ELLE_DEBUG_SCOPE("%s: read response request", self);
         auto response = channel.read();
         if (self.key())
         {
@@ -529,15 +529,14 @@ namespace infinit
         input.serialize("success", success);
         if (success)
         {
-          ELLE_TRACE_SCOPE("%s: get result", self);
+          ELLE_TRACE_SCOPE("get result");
           auto res = get_result<R>(input);
-          // not everything is printable
-          // ELLE_DUMP("%s: result: %s", self, res);
+          ELLE_DUMP("result: %s", res);
           return std::move(res);
         }
         else
         {
-          ELLE_TRACE_SCOPE("%s: call failed, get exception", self);
+          ELLE_TRACE_SCOPE("call failed, get exception");
           auto e =
             input.deserialize<std::exception_ptr>("exception");
           std::rethrow_exception(e);
@@ -546,19 +545,22 @@ namespace infinit
     }
   };
 
-  inline BaseRPC::BaseRPC(std::string name,
-                          protocol::ChanneledStream& channels,
-                          elle::Buffer* credentials
-    )
+  inline
+  BaseRPC::BaseRPC(std::string name,
+                   protocol::ChanneledStream& channels,
+                   elle::Buffer* credentials)
     : _name(std::move(name))
     , _channels(&channels)
+  {
+    if (credentials && !credentials->empty())
     {
-      if (credentials && !credentials->empty())
-      {
-        elle::Buffer creds(*credentials);
-        _key = elle::make_unique<cryptography::SecretKey>(std::move(creds));
-      }
+      elle::Buffer creds(*credentials);
+      _key = elle::make_unique<cryptography::SecretKey>(std::move(creds));
     }
+  }
+
+  std::ostream&
+  operator <<(std::ostream& o, BaseRPC const& rpc);
 }
 
 
