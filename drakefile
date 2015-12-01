@@ -397,7 +397,7 @@ def configure(
       if not searched_for:
         break
     if searched_for:
-      raise Exception('Unable to find %s with ldconfig -p',
+      raise Exception('Unable to find %s with ldconfig -p' %
                       ', '.join(searched_for))
   # Build
   binaries_config = [
