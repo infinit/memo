@@ -15,7 +15,7 @@ The [reactor layer](https://en.wikipedia.org/wiki/Reactor_pattern) is a C++ deve
 
 This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.
 
-XXX table
+<!-- XXX table -->
 
 [Learn More](http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming)
 

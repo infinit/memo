@@ -2,37 +2,36 @@
 <div>
 % if os() == "Windows":
 <blockquote class="warning">
-<strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it will be available on <strong>Windows</strong>.
+<strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
 </blockquote>
 
 % else:
-<p><em>The following is written for users of Mac OS X and Linux. If you are not using it, please refer to the <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+<p><em>The following is written for users of Mac OS X and Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
 % endif
 </div>
 
-<p><em>Before proceeding, make sure you understand that this guide uses the Infinit command-line tools with a terminal window. You can otherwise download the <a href="${route('drive')}">Infinit Drive desktop client</a>.</em></p>
-<p><em>You don’t need to be a UNIX guru but you should be familiar with typing shell commands and interpreting outputs.</em></p>
+<p><em>Before proceeding, this guide uses the Infinit command-line tools with a terminal window. You don’t need to be a UNIX guru but you should be familiar with typing shell commands and interpreting outputs. You can otherwise download the <a href="${route('drive')}">Infinit Drive desktop client</a>.</em></p>
 <h2 id="1-installation">1. Installation</h2>
 <h3 id="download-and-install-infinit-s-dependencies">Download and install Infinit’s dependencies</h3>
 <p><img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE"></p>
 <div>
 % if os() == "Macintosh":
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. If not already, you will need install the OSXFUSE core module by following the instructions:</p>
+<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE core module by downloading and opening the package below:</p>
 
 <p><a href="https://storage.googleapis.com/sh_infinit_releases/osx/osxfuse-core.dmg
 " class="button">Download OSXFUSE core</a></p>
 
 <em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE core that is newer than available on <a href="https://osxfuse.github.io/">https://osxfuse.github.io/</a>.</em>
 % else:
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution&#39;s package manager. For example, if you use a Debian based distribution, you would use <em>apt-get</em> :</p>
+<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution&#39;s package manager. For example, if you use a Debian based distribution, you would use <code>apt-get</code> :</p>
 
-<code>$ sudo apt-get install fuse</code>
+<code>$&gt; sudo apt-get install fuse</code>
 % endif
 </div>
 
 <h3 id="download-and-install-the-infinit-command-line-tools">Download and install the Infinit command-line tools</h3>
 <p><img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools"></p>
-<p>Please follow the link below to download the Infinit command-line tools:</p>
+<p>Click the link below to download the Infinit command-line tools:</p>
 <div>
 % if os() == "Macintosh":
 <a href="https://storage.googleapis.com/sh_infinit_releases/osx/infinit-cli.tbz
@@ -45,48 +44,47 @@
 
 <p><br></p>
 <p>Next, open your terminal and extract the Infinit tarball:</p>
-<pre><code>$ tar xjvf infinit-0.2.0.tbz
-infinit-0.2.0/
-infinit-0.2.0/bin/
-infinit-0.2.0/lib
+<pre><code>$&gt; tar xjvf infinit-cli.tbz
+Infinit-&lt;version&gt;/
+Infinit-&lt;version&gt;/bin/
+Infinit-&lt;version&gt;/lib
 ...
-infinit-0.2.0/bin/infinit-storage
-infinit-0.2.0/bin/infinit-user
-infinit-0.2.0/bin/infinit-volume
+Infinit-&lt;version&gt;/bin/infinit-storage
+Infinit-&lt;version&gt;/bin/infinit-user
+Infinit-&lt;version&gt;/bin/infinit-volume
 ...
+<<<<<<< HEAD
 </code></pre><p>All the configuration files that the Infinit command-line tools create and use are located in the <code>$INFINIT_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>. You can edit your shell configuration to set <code>INFINIT_HOME</code> to another location if you would like.</p>
+=======
+</code></pre><p>All the configuration files that the Infinit command-line tools create and use are located in the <code>$INFINIT_DATA_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>, following the <a href="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">XDG Base Directory Specification</a>. You can edit your shell configuration to set <code>INFINIT_DATA_HOME</code> to another location if you would like.</p>
+>>>>>>> website: Update all documentation.
 <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
 <ul>
 <li>The <code>bin/</code> subdirectory contains the actual Infinit binaries such as <code>infinit-user</code>, <code>infinit-network</code>, etc.</li>
-<li>The <code>lib/</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding libosxfuse which should be in your <code>/usr/local/lib</code> directory as installed by FUSE for OS X).</li>
-<li>The <code>test/</code> subdirectory is provided for you to quickly test those command-line tools, see below.</li>
+<li>The <code>lib/</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
+<li>The <code>share/infinit/filesystem/test/</code> subdirectory is provided for you to quickly test the command-line tools, see below.</li>
 </ul>
-<pre><code>$ cd infinit-0.2.0/
-$ ls
-bin/    lib/    test/
+<pre><code>$&gt; cd Infinit-&lt;version&gt;/
+$&gt; ls
+bin/    lib/    share/
 </code></pre><h2 id="2-basic-test">2. Basic Test</h2>
-<p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this volume only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
-<p>Run the <code>infinit-volume</code> command by prefixing it with the environment variable <code>INFINIT_HOME=$PWD/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
-<pre><code>$ INFINIT_HOME=$PWD/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint $PWD/test/mountpoint/ --fetch-endpoints --cache
-</code></pre><p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>test/mountpoint/</code>.</p>
-<p>That’s it, you can now access the files in the ‘demo’ by browsing the mount point as you would any other POSIX-compliant filesystem.</p>
-<pre><code>$ ls test/mountpoint/
-Aosta Valley
-Brannenburg
-Cape Town
-Infinit_MakingOf.mp4
-New York
-Paris
-</code></pre><p>Noteworthy is that the volume contains several hundred megabytes of data. However, unlike cloud storage services like Dropbox, you were able to browse the volume’s content without having to for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand.</p>
-<p>You can stop this test by hitting <code>CTRL^C</code> or by interrupting the <code>infinit-volume</code> process.</p>
+<p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
+<p>Run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
+<pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --fetch-endpoints --cache
+</code></pre><p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>demo-mnt/</code>.</p>
+<p>That’s it, you can now access the files in the ‘demo’ volume by browsing the mount point as you would any other POSIX-compliant filesystem.</p>
+<pre><code>$&gt; ls demo/
+Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
+</code></pre><p>Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services like Dropbox, you were able to browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand from our server located on the East Coast of the United States.</p>
+<p>You can stop this test by hitting <code>CTRL^C</code> or by interrupting the <em>infinit-volume</em> process.</p>
 <h2 id="3-create-infrastructure">3. Create Infrastructure</h2>
-<p>It is now time for you to <strong>create your own storage infrastructure</strong>. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS like system. It is also possible to create infrastructure where more than one node stores blocks.</p>
+<p>It is now time for you to <strong>create your own storage infrastructure</strong>. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS-like system even though it is also possible to create infrastructure where more than one node stores blocks.</p>
 <p><img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices"></p>
-<p>_<strong>NOTE</strong>: For more information to learn how to set up completely decentralized infrastructure i.e without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('doc_reference')}">reference documentation</a>._</p>
+<p><em><strong>NOTE</strong>: For more information to learn how to set up completely decentralized infrastructure i.e without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
 <p>First, add the <code>bin/</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
-<pre><code>$ export PATH=$PWD/bin/:$PATH
+<pre><code>$&gt; export PATH=$PWD/bin/:$PATH
 </code></pre><h3 id="create-a-user">Create a user</h3>
-<p>The first step consists of creating a user on the Hub. All the commands that follow use the user name ‘bob’ but you should pick your own unique one:</p>
+<p>The first step consists of creating a user on the Hub. All the commands that follow use the user name ‘bob’ but you should <strong>pick your own unique user name</strong>:</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
@@ -97,7 +95,7 @@ Remotely pushed user "bob".
 <h3 id="create-a-storage-resource">Create a storage resource</h3>
 <p>A storage resource behaves like a hard disk, storing data blocks without understanding the data’s meaning. The beauty of Infinit is that it is completely agnostic of the nature of such storage resources.</p>
 <p>Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as <code>/var/storage/infinit/</code>) on the local filesystem.</p>
-<p>The binary <code>infinit-storage</code> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
+<p>The binary <em>infinit-storage</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-storage --create --filesystem --name local --capacity 1GB
@@ -106,7 +104,7 @@ Created storage "local".
 
 <h3 id="create-a-network">Create a network</h3>
 <p>Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.</p>
-<p>The <code>infinit-network</code> command is used to create the network, specifying a name for the network and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:</p>
+<p>The <em>infinit-network</em> command is used to create the network, specifying a name and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
@@ -114,30 +112,29 @@ Locally created network "bob/mine".
 Remotely pushed network "bob/mine".
 </code></pre>
 
-<p><em><strong>NOTE</strong>: The <code>--push</code> option is used to publish the created network (likewise for volumes) onto the Hub for it to be easily fetched on another device or shared with other users.</em></p>
+<p><em><strong>NOTE</strong>: The <code>--push</code> option is used to publish the created network (likewise for other objects) onto the Hub for it to be easily fetched on another device or shared with other users.</em></p>
 <h3 id="create-a-volume">Create a volume</h3>
-<p>The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the <code>infinit-volume</code> binary as shown next:</p>
+<p>The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the <em>infinit-volume</em> binary as shown next:</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-volume --create --as bob --network mine --name personal --push
-Locally created volume “bob/personal”.
-Remotely pushed volume “bob/personal”.
-$>
+Locally created volume "bob/personal".
+Remotely pushed volume "bob/personal".
 </code></pre>
 
-<p>That’s it, you’ve created a ‘personal’ volume i.e. a filesystem. The blocks that the files are composed of are stored through the ‘personal’ volume and will be distributed across the network named ‘mine’, currently composed of a single computer.</p>
+<p>That’s it, you’ve created a ‘personal’ volume i.e. filesystem. The blocks that the files are composed of will be distributed across the network named ‘mine’, currently composed of a single computer with a single storage resource.</p>
 <h3 id="mount-the-volume">Mount the volume</h3>
-<p>Let’s access this volume by mounting it as simply as any other filesystem:</p>
+<p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --mount --as bob --name personal --mountpoint mnt/  --async --cache &#8211;&#8211;publish
+<code>$> infinit-volume --mount --as bob --name personal --mountpoint mnt/ --async --cache --publish
 Fetched endpoints for "bob/mine".
 Running network "bob/mine".
+Remotely pushed endpoints for "bob/mine".
+Running volume "bob/personal".
 </code></pre>
-```
 
-That’s it! You can now create, list and access files from the mount point `mnt/`. Try creating a file right now:
-
+<p>That’s it! You can now create, list and access files from the mount point <code>mnt/</code>. Try creating a file right now:</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> echo "everything is" > mnt/awesome.txt
@@ -148,12 +145,12 @@ everything is
 <p><em><strong>NOTE</strong>: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
 <h3 id="access-from-another-machine">Access from another machine</h3>
 <p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. In this guide we’ll show you how to connect your other devices. In the case you don’t have another device, you can can skip to the end of the guide.</p>
-<p>In order to access your volume from another device, you will need to transfer your user’s identity to the device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like networks and volumes are. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
-<p>Let’s first transmit the user’s identity to the Hub. Note that the identity will be encrypted with a one time passphrase chosen by you and will only be present on the Hub for a fixed period of time.</p>
+<p>In order to access your volume from another device, you will need to transfer your user’s identity to the device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
+<p>Let’s first transmit the user’s identity to the Hub. Note that the identity will be encrypted with a one time passphrase chosen by you and will only be present on the Hub for a fixed period of time (5 minutes).</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-device --transmit --user --as bob
-Password: ********
+Passphrase: ********
 Transmitted user identity for "bob".
 </code></pre>
 
@@ -161,10 +158,11 @@ Transmitted user identity for "bob".
 <pre class="alternate">
 <div><span>Device B</span></div>
 <code>$> infinit-device --receive --user --name bob
+Passphrase: ********
 Received user identity for "bob".
 </code></pre>
 
-<p><em><strong>NOTE</strong>: The pairing process may have expired on device A. If so, please try again and enter the passphrase on device B in order to retrieve your user identity B before the counter runs down.</em></p>
+<p><em><strong>NOTE</strong>: The pairing process may have expired on device A. If so, please try again and enter the passphrase on device B in order to retrieve your user identity before the counter runs down.</em></p>
 <p>The next steps consist of fetching the resources that you previously pushed on the Hub: networks and volumes.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
@@ -177,7 +175,7 @@ Fetched volume "bob/personal".
 <p>Let’s connect this device to the ‘mine’ network you created on device A.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --join --as bob --name bob/mine
+<code>$> infinit-network --join --as bob --name mine
 Joined network "bob/mine".
 </code></pre>
 
@@ -201,7 +199,7 @@ everything is
 
 <p>That’s it, you’ve created a filesystem that you quickly connected to with two devices, without having to go through a complicated administrative process.</p>
 <h2 id="4-go-further">4. Go Further</h2>
-<p>You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Just keep in mind that the storage infrastructure presented in this guide is very sensitive to computers disconnecting, possibly rendering files inaccessible. Please take a look to the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient to faults.</p>
+<p>You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Just keep in mind that the storage infrastructure presented in this guide is very sensitive to computers disconnecting, possibly rendering files inaccessible. Please take a look at the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.</p>
 <p><a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Join our Facebook Group</a></p>
 <p><a href="#slack" class="icon-slack">Ask us something on Slack</a></p>
 <p><a href="https://twitter.com/infinit_sh" class="icon-twitter">Follow us on Twitter</a></p>
