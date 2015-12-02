@@ -155,7 +155,7 @@ namespace infinit
     void
     File::_fetch()
     {
-      if (_rw_handle_count)
+      if ((_rw_handle_count && _first_block)  || !_parent)
         return;
       _parent->_fetch();
       auto it = _parent->_files.find(_name);
