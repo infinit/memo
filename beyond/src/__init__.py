@@ -104,6 +104,13 @@ class Beyond:
   def pairing_information_delete(self, owner):
     self.__datastore.pairing_delete(owner)
 
+  def pairing_information_status(self, owner):
+    json = self.__datastore.pairing_fetch(owner)
+    pairing = PairingInformation.from_json(self, json)
+    if self.now > pairing.expiration:
+      raise exceptions.NoLongerAvailable("%s pairing information" % owner)
+    return True
+
   ## ------- ##
   ## Network ##
   ## ------- ##

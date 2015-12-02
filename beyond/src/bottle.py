@@ -140,8 +140,12 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>/drives',
                method = 'GET')(self.user_drives_get)
     self.route('/users/<name>/login', method = 'POST')(self.login)
-    self.route('/users/<name>/pairing', method = 'PUT')(self.store_pairing_information)
-    self.route('/users/<name>/pairing', method = 'GET')(self.get_pairing_information)
+    self.route('/users/<name>/pairing',
+               method = 'PUT')(self.store_pairing_information)
+    self.route('/users/<name>/pairing',
+               method = 'GET')(self.get_pairing_information)
+    self.route('/users/<name>/pairing/status',
+               method = 'GET')(self.get_pairing_status)
     # Network
     self.route('/networks/<owner>/<name>',
                method = 'GET')(self.network_get)
@@ -412,26 +416,41 @@ class Bottle(bottle.Bottle):
 
   def get_pairing_information(self, name):
     user = self.user_from_name(name = name)
-    paring_passphrase_hash = bottle.request.headers.get('infinit-pairing-passphrase-hash', '')
+    paring_passphrase_hash = \
+      bottle.request.headers.get('infinit-pairing-passphrase-hash', '')
     try:
-      pairing = self.__beyond.pairing_information_get(user.name, paring_passphrase_hash)
+      pairing = \
+        self.__beyond.pairing_information_get(user.name, paring_passphrase_hash)
     except PairingInformation.NotFound:
       raise self.__not_found('pairing_information', user.name)
     except ValueError as e:
       if e.args[0] == 'passphrase_hash':
-        raise Response(403,
-                       {
-                         'error': 'pairing/invalid_passphrase',
-                         'reason': 'passphrases do not match',
-                      })
+        raise Response(403, {
+           'error': 'pairing/invalid_passphrase',
+           'reason': 'passphrases do not match',
+        })
       raise e
     except exceptions.NoLongerAvailable as e:
-      raise Response(410,
-                      {
-                        'error': 'pairing/gone',
-                        'reason': e.args[0],
-                      })
+      raise Response(410, {
+        'error': 'pairing/gone',
+        'reason': e.args[0],
+      })
     return pairing.json()
+
+  def get_pairing_status(self, name):
+    user = self.user_from_name(name = name)
+    self.authenticate(user)
+    try:
+      if self.__beyond.pairing_information_status(user.name):
+        return {}
+    except PairingInformation.NotFound:
+      raise self.__not_found('pairing_information', user.name)
+    except exceptions.NoLongerAvailable as e:
+      raise Response(410, {
+        'error': 'pairing/gone',
+        'reason': e.args[0],
+      })
+    raise self.__not_found('pairing_information', user.name)
 
   ## ------- ##
   ## Network ##
