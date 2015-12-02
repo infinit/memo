@@ -191,7 +191,6 @@ set_action(std::string const& path,
            bool inherit,
            bool disinherit,
            bool verbose,
-           bool try_with_public_key,
            bool fallback_xattrs)
 {
   if (verbose)
@@ -233,13 +232,6 @@ set_action(std::string const& path,
       // distinguish the different errors.
       catch (InvalidArgument const&)
       {
-        if (!try_with_public_key)
-        {
-          ELLE_ERR("setattr (mode: %s) on %s failed: %s", mode, path,
-                   elle::exception_string());
-          throw;
-        }
-
         try
         {
           auto user = ifnt.user_get(username);
@@ -309,7 +301,6 @@ COMMAND(set)
   mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
   bool verbose = flag(args, "verbose");
-  bool try_with_public_key = flag(args, "try-with-public-key");
   bool fallback = flag(args, "fallback-xattrs");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
@@ -324,13 +315,11 @@ COMMAND(set)
   }
   for (auto const& path: paths)
   {
-    set_action(path, users, mode, inherit, disinherit, verbose,
-               try_with_public_key, fallback);
+    set_action(path, users, mode, inherit, disinherit, verbose, fallback);
     if (recursive)
     {
       recursive_action(
-        set_action, path, users, mode, inherit, disinherit, verbose,
-        try_with_public_key, fallback);
+        set_action, path, users, mode, inherit, disinherit, verbose, fallback);
     }
   }
 }
@@ -365,9 +354,6 @@ main(int argc, char** argv)
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "apply recursively" },
-        { "try-with-public-key", bool_switch(),
-          "if a corresponding user block is not found, fallback to the local "
-          "copy of the user's public key" },
         { "fallback-xattrs", bool_switch(), "fallback to creating xattrs "
           "folder if system xattrs are not suppported" },
         { "verbose", bool_switch(), "verbose output" },
