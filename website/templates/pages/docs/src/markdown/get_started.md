@@ -92,7 +92,7 @@ For you to quickly (through a single command) try Infinit out, the following is 
 Run the _infinit-volume_ command by prefixing it with the environment variable `INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home` to tell the command where to look for the configuration files required for this test.
 
 ```
-$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --fetch-endpoints --cache
+$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --publish --cache
 ```
 
 This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `demo/`.
