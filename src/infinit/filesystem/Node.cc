@@ -21,6 +21,57 @@ namespace infinit
 {
   namespace filesystem
   {
+    class ACLConflictResolver: public model::ConflictResolver
+    {
+    public:
+      ACLConflictResolver(model::Model* model,
+                          bool r,
+                          bool w,
+                          std::string const& key)
+      : _model(model)
+      , _read(r)
+      , _write(w)
+      , _userkey(key)
+      {}
+      ACLConflictResolver(elle::serialization::SerializerIn& s)
+      {
+        serialize(s);
+      }
+      void serialize(elle::serialization::Serializer& s) override
+      {
+        s.serialize("read", _read);
+        s.serialize("write", _write);
+        s.serialize("userkey", _userkey);
+        if (s.in())
+        {
+          infinit::model::Model* model = nullptr;
+          const_cast<elle::serialization::Context&>(s.context()).get(model);
+          ELLE_ASSERT(model);
+          _model = model;
+        }
+      }
+      std::unique_ptr<Block>
+      operator() (Block& block,
+                  Block& current,
+                  model::StoreMode mode)
+      {
+        ELLE_TRACE("ACLConflictResolver: replaying set_permissions on new block.");
+        std::unique_ptr<model::User> user = _model->make_user(
+          elle::Buffer(_userkey.data(), _userkey.size()));
+        auto& acl = dynamic_cast<model::blocks::ACLBlock&>(current);
+        // Force a change
+        acl.set_permissions(*user, !_read, !_write);
+        acl.set_permissions(*user, _read, _write);
+        return current.clone();
+      }
+      model::Model* _model;
+      bool _read;
+      bool _write;
+      std::string _userkey;
+    };
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<ACLConflictResolver> _register_dcr("acl");
+
     void
     Node::rename(boost::filesystem::path const& where)
     {
@@ -58,7 +109,7 @@ namespace infinit
       _parent->_files.erase(_name);
       _parent->_commit({OperationType::remove, _name});
       dir->_files.insert(std::make_pair(newname, data));
-      dir->_commit({OperationType::insert, newname});
+      dir->_commit({OperationType::insert, newname, data.first, data.second});
       _name = newname;
       _parent = dir;
       // Move the node in cache
@@ -274,7 +325,12 @@ namespace infinit
       ELLE_TRACE("Setting permission at %s for %s", acl->address(), user->name());
       umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},
         EACCES);
-      _owner.store_or_die(std::move(acl));
+      _owner.store_or_die(
+        std::move(acl),
+        model::STORE_UPDATE,
+        elle::make_unique<ACLConflictResolver>(
+          _owner.block_store().get(), perms.first, perms.second, userkey
+        ));
     }
   }
 }

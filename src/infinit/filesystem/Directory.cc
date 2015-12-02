@@ -58,6 +58,7 @@ namespace infinit
        switch(op.type)
        {
        case OperationType::insert:
+         ELLE_ASSERT(!op.target.empty());
          if (d._files.find(op.target) != d._files.end())
          {
            ELLE_LOG("Conflict: the object %s was also created remotely,"
@@ -71,7 +72,8 @@ namespace infinit
          if (op.target == "")
          {
            ELLE_LOG("Conflict: the directory %s was updated remotely, your"
-                    " changes will be dropped.");
+                    " changes will be dropped.", p);
+           break;
          }
          else if (op.target == "/inherit")
          {
