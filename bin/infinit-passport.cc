@@ -86,7 +86,8 @@ COMMAND(fetch)
       elle::sprintf("networks/%s/passports/%s",
                     network_name.get(), user_name.get()),
       "passport for",
-      network_name.get());
+      user_name.get(),
+      self);
     ifnt.passport_save(passport);
   }
   // Fetch all network passports if owner else fetch just the user's passport.
