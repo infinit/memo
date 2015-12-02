@@ -78,11 +78,9 @@ namespace infinit
     {
       if (full_path == boost::filesystem::path())
         full_path = this->full_path();
-      ELLE_DEBUG("remove_from_cache: %s (%s) entering", _name, full_path);
       std::shared_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path.string());
-      ELLE_DEBUG("remove_from_cache: %s released (%s), this %s", _name, self, this);
+      ELLE_TRACE("remove_from_cache: %s released (%s), this=%s, path=%s", _name, self, this, full_path);
       new reactor::Thread("delayed_cleanup", [self] { ELLE_DEBUG("async_clean");}, true);
-      ELLE_DEBUG("remove_from_cache: %s exiting with async cleaner", _name);
     }
 
     boost::filesystem::path

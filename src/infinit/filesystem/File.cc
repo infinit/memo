@@ -156,7 +156,11 @@ namespace infinit
     File::_fetch()
     {
       if ((_rw_handle_count && _first_block)  || !_parent)
+      {
+        ELLE_TRACE("%s: bypassing fetch: w_handle=%s, first_block=%s parent=%s",
+                   *this, _rw_handle_count, !!_first_block, !!_parent);
         return;
+      }
       _parent->_fetch();
       auto it = _parent->_files.find(_name);
       if (it == _parent->_files.end())
