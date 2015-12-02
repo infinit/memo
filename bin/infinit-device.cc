@@ -73,6 +73,73 @@ COMMAND(transmit_user)
     elle::sprintf("users/%s/pairing", user.name),
     "user identity for", user.name, view, user, false);
   report_action("transmitted", "user identity for", user.name);
+  if (!script_mode && !flag(args, "no-countdown"))
+  {
+    int timeout = 5 * 60; // 5 min.
+    bool timed_out = false;
+    bool done = false;
+    reactor::Thread beyond_poller(reactor::scheduler(), "beyond poller", [&]
+      {
+        auto where = elle::sprintf("users/%s/pairing/status", user.name);
+        while (timeout > 0)
+        {
+          reactor::http::Request::Configuration c;
+          auto headers =
+            signature_headers(reactor::http::Method::GET, where, user);
+          for (auto const& header: headers)
+            c.header_add(header.first, header.second);
+          reactor::http::Request r(
+            elle::sprintf("%s/%s", beyond(), where),
+            reactor::http::Method::GET,
+            std::move(c));
+          reactor::wait(r);
+          if (r.status() == reactor::http::StatusCode::OK)
+          {
+            // Do nothing.
+          }
+          else if (r.status() == reactor::http::StatusCode::Not_Found)
+          {
+            done = true;
+            return;
+          }
+          else if (r.status() == reactor::http::StatusCode::Gone)
+          {
+            timed_out = true;
+            return;
+          }
+          else if (r.status() == reactor::http::StatusCode::Forbidden)
+          {
+            read_error<ResourceProtected>(
+              r, "user identity", reactor::http::Method::GET);
+          }
+          else
+          {
+            throw elle::Error(
+              elle::sprintf("unexpected HTTP error %s fetching user identity",
+                            r.status()));
+          }
+          reactor::sleep(10_sec);
+        }
+      });
+    for (; timeout > 0; timeout--)
+    {
+      std::cout << elle::sprintf("User identity on %s for: ", beyond(true))
+                << timeout << " seconds" << std::flush;
+      reactor::sleep(1_sec);
+      std::cout << "\r" << std::string(80, ' ') << "\r";
+      if (done)
+      {
+        std::cout << "User identity received on another device" << std::endl;
+        return;
+      }
+      if (timed_out)
+        break;
+    }
+    beyond_poller.terminate_now();
+    std::cout << elle::sprintf(
+      "Timed out, user identity no longer available on %s", beyond(true))
+              << std::endl;
+  }
 }
 
 COMMAND(transmit)
@@ -144,28 +211,29 @@ main(int argc, char** argv)
   Modes modes {
     {
       "transmit",
-      elle::sprintf("Transmit object to another device using %s",
+      elle::sprintf("transmit object to another device using %s",
                     beyond(true)).c_str(),
       &transmit,
       {},
       {
         { "user,u", bool_switch(),
-          elle::sprintf("Transmit the user identity to another device using %s",
+          elle::sprintf("transmit the user identity to another device using %s",
                         beyond(true)).c_str(), },
         option_passphrase,
+        { "no-countdown", bool_switch(), "do not show countdown timer" },
         option_owner,
       },
     },
     {
       "receive",
-      elle::sprintf("Receive an object from another device using %s",
+      elle::sprintf("receive an object from another device using %s",
                     beyond(true)).c_str(),
       &receive,
       {},
       {
         { "name,n", value<std::string>(), "name of object to receive" },
         { "user,u", bool_switch(),
-          elle::sprintf("Receive a user identity from another device using %s",
+          elle::sprintf("receive a user identity from another device using %s",
                         beyond(true)).c_str() },
         option_passphrase,
       }
