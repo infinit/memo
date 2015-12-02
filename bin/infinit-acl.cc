@@ -359,7 +359,7 @@ main(int argc, char** argv)
       "--path PATHS [--user USERS] [OPTIONS...]",
       {
         { "path,p", value<std::vector<std::string>>(), "paths" },
-        { "user,u", value<std::vector<std::string>>(), "user" },
+        { "user,u", value<std::vector<std::string>>(), "users" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
           "new files/folders inherit from their parent directory" },
