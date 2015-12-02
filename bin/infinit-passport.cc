@@ -199,12 +199,15 @@ COMMAND(pull)
 COMMAND(list)
 {
   namespace boost_fs = boost::filesystem;
-  auto self = self_user(ifnt, args);
   auto network_name = optional(args, "network");
   boost_fs::path path;
   if (network_name)
   {
-    network_name = ifnt.qualified_name(network_name.get(), self);
+    if (!ifnt.is_qualified_name(network_name.get()))
+    {
+      auto self = self_user(ifnt, args);
+      network_name = ifnt.qualified_name(network_name.get(), self);
+    }
     path = ifnt._passport_path() / network_name.get();
   }
   else
