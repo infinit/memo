@@ -190,23 +190,6 @@ class Bottle(bottle.Bottle):
     self.route('/drives/<owner>/<name>/invitations/<user>',
                method = 'PUT')(self.drive_invitation_put)
 
-    # Update.
-    self.route('/updates/package.json', method = 'GET')(
-      lambda: bottle.static_file('package.json',
-                                 root='/home/dimrok/updates/',
-                                 mimetype = 'application/json'))
-    # Linux.
-    self.route('/updates/linux/InfinitDrive.run', method = 'GET')(
-      lambda: bottle.static_file('InfinitDriveSetup.run',
-                                 root='/home/dimrok/updates/linux'))
-    # OSX.
-    self.route('/updates/mac/Infinit Drive.dmg', method = 'GET')(
-      lambda: bottle.static_file('InfinitDrive.dmg',
-                                 root='/home/dimrok/updates/mac',
-                                 download = 'Infinit Drive.dmg'
-                               ))
-
-
   def __not_found(self, type, name):
     return Response(404, {
       'error': '%s/not_found' % type,
