@@ -31,7 +31,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
-  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice'],
+  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
              input = passphrase, input_as_it_is = True)
   alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
              input = passphrase, input_as_it_is = True)
@@ -47,7 +47,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
               '--name', 'alice',
               '--email', 'alice@infinit.io'])
    alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
-   alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice'],
+   alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
              input = passphrase, input_as_it_is = True)
    beyond.advance(5 * 6000 + 1)
    try:
@@ -66,7 +66,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
-  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice'],
+  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
             input = passphrase, input_as_it_is = True)
   try:
     alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
@@ -99,7 +99,7 @@ Infinit(beyond = beyond) as alice2:
   alice.run(['infinit-user', '--signup',
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
-  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice'],
+  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
              input = passphrase, input_as_it_is = True)
   alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
              input = passphrase, input_as_it_is = True)
