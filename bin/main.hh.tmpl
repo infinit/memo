@@ -812,6 +812,14 @@ namespace infinit
   class Infinit
   {
   public:
+    bool
+    is_qualified_name(std::string const& network_name)
+    {
+      if (network_name.find("/") != std::string::npos)
+        return true;
+      return false;
+    }
+
     std::string
     qualified_name(std::string const& network_name, User const& owner)
     {
