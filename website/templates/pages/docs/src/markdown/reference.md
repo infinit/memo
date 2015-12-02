@@ -171,7 +171,7 @@ The list of users kept locally can contain both user identities that you created
 ```
 $> infinit-user --list
 alice: public/private keys
-bob: public key
+bob: public key only
 ```
 
 Credentials
@@ -225,7 +225,7 @@ AWS S3:
 Storage
 -----------
 
-The _infinit-storage_ binary allows for the definition of storage resources. Such storage resources can be local --- storing blocks of data on the local file system, on a partition or in a database --- or remote in which case the blocks of data are stored through a cloud service API.
+The _infinit-storage_ binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on the local file system, on a partition or in a database — or remote in which case the blocks of data are stored through a cloud service API.
 
 Noteworthy is the storage resources are device-specific. As such, such resources cannot be pushed to the hub since they only live locally.
 
@@ -253,15 +253,7 @@ $> infinit-storage --create --dropbox --account 51218344 --name dropbox
 Created storage "dropbox".
 ```
 
-### List storage resources ###
-
-As with other binaries, you can list the storage resources you’ve created on this device through the `--list` action option:
-
-```
-$> infinit-storage --list
-local
-dropbox
-```
+Note that the list of supported cloud services can be retrieved through the `--create --help` options. In the future, more of those will be supported, from <a href="https://aws.amazon.com/s3">AWS S3</a>, <a href="https://cloud.google.com/storage">Google Cloud Storage</a>, <a href="https://www.backblaze.com/b2">Backblaze B2</a> and many more.
 
 Network
 -----------

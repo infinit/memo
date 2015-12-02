@@ -58,9 +58,17 @@ module.exports = function(grunt) {
         }],
         options: {
           template: 'templates/pages/docs/src/layout.jst',
+          preCompile: function(src, context) {
+            // replace --dash with html code character
+
+
+            return src;
+          },
           postCompile: function(src, context) {
             // don't escape quotes for Mako templates
             src = src.replace(/&quot;/gi, '\"');
+            src = src.replace(/ --/gi, '&nbsp;&#8209;&#8209;');
+            src = src.replace(/<code>--/gi, '<code>&#8209;&#8209;');
             return src;
           },
         }

@@ -6,7 +6,7 @@
 <p><em>#high-performance</em> <em>#interoperability</em></p>
 <p>The <a href="https://en.wikipedia.org/wiki/Reactor_pattern">reactor layer</a> is a C++ development framework that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write, read and therefore to maintain.</p>
 <p>This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.</p>
-<!-- XXX table -->
+<!-- XXX table&nbsp;&#8209;&#8209;>
 <p><a href="http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming">Learn More</a></p>
 <h2 id="overlay-network">Overlay Network</h2>
 <p><em>#control</em> <em>#affordable</em> <em>#scalable</em> <em>#fault-tolerant</em> <em>#migration</em></p>
@@ -35,5 +35,5 @@
 <p>Thanks to the on-demand property of the Infinit file system, developers and system administrators can create storage infrastructure of extremely large size that will be accessible on any device, no matter how much storage capacity they have left.</p>
 <p>Note that one can configure a device to use some local storage capacity to act as a cache, hence speeding up accesses. Likewise, one could want to keep some files or part of the file system hierarchy local at any time for offline access.</p>
 <p>Another problem with most cloud storage providers, including Dropbox, is that the files are not encrypted leaving the user with no choice but to trust the cloud storage provider. Infinit has been conceived with the assumption that no storage provider can be trusted. In addition to relying on fault-tolerant algorithms, Infinit makes use of strong encryption. Whenever a document is edited for instance, the file is cut into chunks, every chunk is encrypted and then distributed and replicated throughout the distributed hash table. Every key used for encrypting a block is unique and known to the file owner only (along with the users who have been granted access).</p>
-<!-- *[GIF(better) or static: 1) file saved 2) cut into chunks 3) every block is encrypted 4) every block is replicated and distributed in the Infinit network … 5) every encrypted block is fetch from the network 6) the blocks are decrypted 8) and the file is reconstructed]* -->
+<!-- *[GIF(better) or static: 1) file saved 2) cut into chunks 3) every block is encrypted 4) every block is replicated and distributed in the Infinit network … 5) every encrypted block is fetch from the network 6) the blocks are decrypted 8) and the file is reconstructed]*&nbsp;&#8209;&#8209;>
 <p>Finally, the file system layer also provides access control (without the use of a centralized server), versioning and other file-system-related features.</p>

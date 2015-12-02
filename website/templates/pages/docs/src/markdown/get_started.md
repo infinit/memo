@@ -74,7 +74,7 @@ All the configuration files that the Infinit command-line tools create and use a
 
 Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:
 
-* The `bin/` subdirectory contains the actual Infinit binaries such as `infinit-user`, `infinit-network`, etc.
+* The `bin/` subdirectory contains the actual Infinit binaries such as _infinit-user_, _infinit-network_, etc.
 * The `lib/` subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).
 * The `share/infinit/filesystem/test/` subdirectory is provided for you to quickly test the command-line tools, see below.
 
@@ -95,7 +95,7 @@ Run the _infinit-volume_ command by prefixing it with the environment variable `
 $> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --fetch-endpoints --cache
 ```
 
-This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `demo-mnt/`.
+This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `demo/`.
 
 That’s it, you can now access the files in the ‘demo’ volume by browsing the mount point as you would any other POSIX-compliant filesystem.
 
@@ -104,7 +104,7 @@ $> ls demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
 
-Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services like Dropbox, you were able to browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand from our server located on the East Coast of the United States.
+Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services such as Dropbox, you were able to browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand from our server located on the East Coast of the United States.
 
 You can stop this test by hitting `CTRL^C` or by interrupting the _infinit-volume_ process.
 
@@ -115,7 +115,7 @@ It is now time for you to **create your own storage infrastructure**. What follo
 
 <img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices">
 
-*__NOTE__: For more information to learn how to set up completely decentralized infrastructure i.e without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.*
+*__NOTE__: For more information to learn how to set up completely decentralized infrastructure i.e. without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.*
 
 First, add the `bin/` directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:
 
