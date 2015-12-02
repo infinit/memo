@@ -66,7 +66,7 @@ bin/    lib/    share/
 </code></pre><h2 id="2-basic-test">2. Basic Test</h2>
 <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
 <p>Run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
-<pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume&nbsp;&#8209;&#8209;mount&nbsp;&#8209;&#8209;as demo&nbsp;&#8209;&#8209;name infinit/demo&nbsp;&#8209;&#8209;mountpoint demo/&nbsp;&#8209;&#8209;fetch-endpoints&nbsp;&#8209;&#8209;cache
+<pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --fetch-endpoints --cache
 </code></pre><p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>demo/</code>.</p>
 <p>That’s it, you can now access the files in the ‘demo’ volume by browsing the mount point as you would any other POSIX-compliant filesystem.</p>
 <pre><code>$&gt; ls demo/
@@ -83,7 +83,7 @@ Aosta Valley/         Brannenburg/          Cape Town/            Infinit_Making
 <p>The first step consists of creating a user on the Hub. All the commands that follow use the user name ‘bob’ but you should <strong>pick your own unique user name</strong>:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-user&nbsp;&#8209;&#8209;signup&nbsp;&#8209;&#8209;name bob&nbsp;&#8209;&#8209;email bob@company.com&nbsp;&#8209;&#8209;fullname "Bob"
+<code>$> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
 Generating RSA keypair.
 Remotely pushed user "bob".
 </code></pre>
@@ -94,7 +94,7 @@ Remotely pushed user "bob".
 <p>The binary <em>infinit-storage</em> is used for this purpose. The option <code>&#8209;&#8209;filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-storage&nbsp;&#8209;&#8209;create&nbsp;&#8209;&#8209;filesystem&nbsp;&#8209;&#8209;name local&nbsp;&#8209;&#8209;capacity 1GB
+<code>$> infinit-storage --create --filesystem --name local --capacity 1GB
 Created storage "local".
 </code></pre>
 
@@ -103,7 +103,7 @@ Created storage "local".
 <p>The <em>infinit-network</em> command is used to create the network, specifying a name and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-network&nbsp;&#8209;&#8209;create&nbsp;&#8209;&#8209;as bob&nbsp;&#8209;&#8209;storage local&nbsp;&#8209;&#8209;kelips&nbsp;&#8209;&#8209;k 1&nbsp;&#8209;&#8209;name mine&nbsp;&#8209;&#8209;push
+<code>$> infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
 Locally created network "bob/mine".
 Remotely pushed network "bob/mine".
 </code></pre>
@@ -113,7 +113,7 @@ Remotely pushed network "bob/mine".
 <p>The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the <em>infinit-volume</em> binary as shown next:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume&nbsp;&#8209;&#8209;create&nbsp;&#8209;&#8209;as bob&nbsp;&#8209;&#8209;network mine&nbsp;&#8209;&#8209;name personal&nbsp;&#8209;&#8209;push
+<code>$> infinit-volume --create --as bob --network mine --name personal --push
 Locally created volume "bob/personal".
 Remotely pushed volume "bob/personal".
 </code></pre>
@@ -123,7 +123,7 @@ Remotely pushed volume "bob/personal".
 <p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume&nbsp;&#8209;&#8209;mount&nbsp;&#8209;&#8209;as bob&nbsp;&#8209;&#8209;name personal&nbsp;&#8209;&#8209;mountpoint mnt/&nbsp;&#8209;&#8209;async&nbsp;&#8209;&#8209;cache&nbsp;&#8209;&#8209;publish
+<code>$> infinit-volume --mount --as bob --name personal --mountpoint mnt/ --async --cache --publish
 Fetched endpoints for "bob/mine".
 Running network "bob/mine".
 Remotely pushed endpoints for "bob/mine".
@@ -145,7 +145,7 @@ everything is
 <p>Let’s first transmit the user’s identity to the Hub. Note that the identity will be encrypted with a one time passphrase chosen by you and will only be present on the Hub for a fixed period of time (5 minutes).</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-device&nbsp;&#8209;&#8209;transmit&nbsp;&#8209;&#8209;user&nbsp;&#8209;&#8209;as bob
+<code>$> infinit-device --transmit --user --as bob
 Passphrase: ********
 Transmitted user identity for "bob".
 </code></pre>
@@ -153,7 +153,7 @@ Transmitted user identity for "bob".
 <p>Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-device&nbsp;&#8209;&#8209;receive&nbsp;&#8209;&#8209;user&nbsp;&#8209;&#8209;name bob
+<code>$> infinit-device --receive --user --name bob
 Passphrase: ********
 Received user identity for "bob".
 </code></pre>
@@ -162,23 +162,23 @@ Received user identity for "bob".
 <p>The next steps consist of fetching the resources that you previously pushed on the Hub: networks and volumes.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network&nbsp;&#8209;&#8209;fetch&nbsp;&#8209;&#8209;as bob&nbsp;&#8209;&#8209;name mine
+<code>$> infinit-network --fetch --as bob --name mine
 Fetched network "bob/mine".
-$> infinit-volume&nbsp;&#8209;&#8209;fetch&nbsp;&#8209;&#8209;as bob&nbsp;&#8209;&#8209;name personal
+$> infinit-volume --fetch --as bob --name personal
 Fetched volume "bob/personal".
 </code></pre>
 
 <p>Let’s connect this device to the ‘mine’ network you created on device A.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network&nbsp;&#8209;&#8209;join&nbsp;&#8209;&#8209;as bob&nbsp;&#8209;&#8209;name mine
+<code>$> infinit-network --join --as bob --name mine
 Joined network "bob/mine".
 </code></pre>
 
 <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-volume&nbsp;&#8209;&#8209;mount&nbsp;&#8209;&#8209;mountpoint mnt/&nbsp;&#8209;&#8209;as bob&nbsp;&#8209;&#8209;name personal&nbsp;&#8209;&#8209;async&nbsp;&#8209;&#8209;cache&nbsp;&#8209;&#8209;publish
+<code>$> infinit-volume --mount --mountpoint mnt/ --as bob --name personal --async --cache --publish
 Fetch endpoints for "bob/mine".
 Running network “bob/mine”.
 Running volume "bob/personal".
