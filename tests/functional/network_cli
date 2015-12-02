@@ -39,8 +39,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
 
   bob.run(['infinit-user', '--signup', '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'alice@infinit.io'])
-  bob.run(['infinit-user', '--fetch', '--name', 'alice', '--as', 'bob'])
-  alice.run(['infinit-user', '--fetch', '--name', 'bob', '--as', 'alice'])
+  bob.run(['infinit-user', '--fetch', '--name', 'alice'])
+  alice.run(['infinit-user', '--fetch', '--name', 'bob'])
 
   # Create.
   l = bob.run(['infinit-network', '--list'])

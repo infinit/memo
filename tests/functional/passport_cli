@@ -12,8 +12,7 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
            ])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
   bob.run(['infinit-user', '--fetch',
-           '--name', 'alice',
-           '--as', 'bob'])
+           '--name', 'alice'])
   networks = []
   for i in range(10):
     network = 'network%r' % i
