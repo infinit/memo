@@ -97,25 +97,25 @@ $> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volu
 
 This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `demo/`.
 
-That’s it, you can now access the files in the ‘demo’ volume by browsing the mount point as you would any other POSIX-compliant filesystem.
+Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `demo/` as you would any other POSIX-compliant filesystem.
+
+Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services such as Dropbox, you can browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand (i.e streamed) from our server located on the East Coast of the United States.
 
 ```
 $> ls demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
 
-Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services such as Dropbox, you were able to browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand from our server located on the East Coast of the United States.
-
-You can stop this test by hitting `CTRL^C` or by interrupting the _infinit-volume_ process.
+You can stop this test volume by hitting `CTRL^C` or by interrupting the _infinit-volume_ process.
 
 3. Create Infrastructure
---------------------------------
+-------------------------------
 
 It is now time for you to **create your own storage infrastructure**. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS-like system even though it is also possible to create infrastructure where more than one node stores blocks.
 
 <img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices">
 
-*__NOTE__: For more information to learn how to set up completely decentralized infrastructure i.e. without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.*
+*__NOTE__: For more information to learn how to set up completely decentralized infrastructure, how to plug cloud storage services such as AWS S3, Google Cloud Storage etc. or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files as usual, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.*
 
 First, add the `bin/` directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:
 
@@ -152,7 +152,7 @@ Created storage "local".
 
 Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.
 
-The _infinit-network_ command is used to create the network, specifying a name and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:
+The _infinit-network_ command is used to create the network, specifying a name and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like. Obviously, you need to substitute 'bob' with your username:
 
 <pre>
 <div><span>Device A</span></div>
@@ -189,6 +189,8 @@ Remotely pushed endpoints for "bob/mine".
 Running volume "bob/personal".
 </code></pre>
 
+_**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait until the end of the guide to stop this process though._
+
 That’s it! You can now create, list and access files from the mount point `mnt/`. Try creating a file right now:
 
 <pre>
@@ -198,15 +200,13 @@ $> cat mnt/awesome.txt
 everything is
 </code></pre>
 
-_**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait until the end of the guide to stop this process though._
-
 ### Access from another machine
 
 Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. In this guide we’ll show you how to connect your other devices. In the case you don’t have another device, you can can skip to the end of the guide.
 
-In order to access your volume from another device, you will need to transfer your user’s identity to the device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.
+In order to access your volume from another device, you will need to transfer your user’s identity to that device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.
 
-Let’s first transmit the user’s identity to the Hub. Note that the identity will be encrypted with a one time passphrase chosen by you and will only be present on the Hub for a fixed period of time (5 minutes).
+Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.
 
 <pre>
 <div><span>Device A</span></div>

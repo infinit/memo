@@ -68,15 +68,15 @@ bin/    lib/    share/
 <p>Run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
 <pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --publish --cache
 </code></pre><p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>demo/</code>.</p>
-<p>That’s it, you can now access the files in the ‘demo’ volume by browsing the mount point as you would any other POSIX-compliant filesystem.</p>
+<p>Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point <code>demo/</code> as you would any other POSIX-compliant filesystem.</p>
+<p>Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services such as Dropbox, you can browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand (i.e streamed) from our server located on the East Coast of the United States.</p>
 <pre><code>$&gt; ls demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
-</code></pre><p>Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services such as Dropbox, you were able to browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand from our server located on the East Coast of the United States.</p>
-<p>You can stop this test by hitting <code>CTRL^C</code> or by interrupting the <em>infinit-volume</em> process.</p>
+</code></pre><p>You can stop this test volume by hitting <code>CTRL^C</code> or by interrupting the <em>infinit-volume</em> process.</p>
 <h2 id="3-create-infrastructure">3. Create Infrastructure</h2>
 <p>It is now time for you to <strong>create your own storage infrastructure</strong>. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS-like system even though it is also possible to create infrastructure where more than one node stores blocks.</p>
 <p><img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices"></p>
-<p><em><strong>NOTE</strong>: For more information to learn how to set up completely decentralized infrastructure i.e. without creating an account on the Hub, how to plug cloud storage services such as AWS S3, Google Cloud Storage or even Dropbox or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
+<p><em><strong>NOTE</strong>: For more information to learn how to set up completely decentralized infrastructure, how to plug cloud storage services such as AWS S3, Google Cloud Storage etc. or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files as usual, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
 <p>First, add the <code>bin/</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
 <pre><code>$&gt; export PATH=$PWD/bin/:$PATH
 </code></pre><h3 id="create-a-user">Create a user</h3>
@@ -100,7 +100,7 @@ Created storage "local".
 
 <h3 id="create-a-network">Create a network</h3>
 <p>Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.</p>
-<p>The <em>infinit-network</em> command is used to create the network, specifying a name and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like:</p>
+<p>The <em>infinit-network</em> command is used to create the network, specifying a name and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like. Obviously, you need to substitute &#39;bob&#39; with your username:</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
@@ -130,6 +130,7 @@ Remotely pushed endpoints for "bob/mine".
 Running volume "bob/personal".
 </code></pre>
 
+<p><em><strong>NOTE</strong>: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
 <p>That’s it! You can now create, list and access files from the mount point <code>mnt/</code>. Try creating a file right now:</p>
 <pre>
 <div><span>Device A</span></div>
@@ -138,11 +139,10 @@ $> cat mnt/awesome.txt
 everything is
 </code></pre>
 
-<p><em><strong>NOTE</strong>: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
 <h3 id="access-from-another-machine">Access from another machine</h3>
 <p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. In this guide we’ll show you how to connect your other devices. In the case you don’t have another device, you can can skip to the end of the guide.</p>
-<p>In order to access your volume from another device, you will need to transfer your user’s identity to the device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
-<p>Let’s first transmit the user’s identity to the Hub. Note that the identity will be encrypted with a one time passphrase chosen by you and will only be present on the Hub for a fixed period of time (5 minutes).</p>
+<p>In order to access your volume from another device, you will need to transfer your user’s identity to that device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
+<p>Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-device --transmit --user --as bob
