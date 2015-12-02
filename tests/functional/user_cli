@@ -16,7 +16,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
     assert False
   except Exception as e:
     pass
-  bob.run(['infinit-user', '--fetch', '--name', 'alice', '--as', 'bob'])
+  bob.run(['infinit-user', '--fetch', '--name', 'alice'])
   bob.run(['infinit-user', '--export', '--name', 'alice'])
 
 ## ----------------- ##
