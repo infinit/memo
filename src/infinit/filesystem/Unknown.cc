@@ -162,7 +162,7 @@ namespace infinit
     Unknown::stat(struct stat*)
     {
       ELLE_TRACE_SCOPE("%s: stat", *this);
-      THROW_NOENT;
+      throw rfs::Error(ENOENT, "No such file or directory", elle::Backtrace());
     }
 
     void

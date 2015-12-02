@@ -177,7 +177,7 @@ namespace infinit
       if (it == _header.xattrs.end())
       {
         ELLE_DEBUG("no such attribute");
-        THROW_NOATTR;
+        throw rfs::Error(ENOATTR, "No attribute", elle::Backtrace());
       }
       std::string value = it->second.string();
       ELLE_DUMP("value: %s", elle::ConstWeakBuffer(value));
