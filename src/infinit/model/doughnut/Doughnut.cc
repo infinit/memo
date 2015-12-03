@@ -6,6 +6,7 @@
 #include <elle/Error.hh>
 #include <elle/IOStream.hh>
 #include <elle/cast.hh>
+#include <elle/format/hexadecimal.hh>
 #include <elle/log.hh>
 #include <elle/serialization/json.hh> // FIXME
 
@@ -187,8 +188,13 @@ namespace infinit
           }
           catch (MissingBlock const&)
           {
-            ELLE_TRACE("Reverse UB not found, returning no name");
-            return elle::make_unique<doughnut::User>(pub, "");
+            ELLE_TRACE("Reverse UB not found, returning public key hash");
+            auto buffer =
+              infinit::cryptography::rsa::publickey::der::encode(pub);
+            auto key_hash = infinit::cryptography::hash(
+              buffer, infinit::cryptography::Oneway::sha256);
+            return elle::make_unique<doughnut::User>(
+              pub, elle::format::hexadecimal::encode(key_hash));
           }
         }
         else
