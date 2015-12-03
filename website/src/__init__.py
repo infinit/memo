@@ -9,7 +9,7 @@ class Website(bottle.Bottle):
     super().__init__()
     self.install(bottle.CertificationPlugin())
     route.apply(self)
-    self.__swu = sendwithus.api(api_key = 'live_7e775f6f0e1404802a5fbbc0fcfa9c238b065c49')
+    self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
 
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
@@ -162,7 +162,7 @@ class Website(bottle.Bottle):
       return {}
     else:
       response = self.__swu.send(
-        email_id = 'tem_KL7zioLvZEASeg5M4QTv53',
+        email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
         email_data = {
           f: bottle.request.forms.get(f) for f in ['first_name', 'last_name', 'email', 'message', 'phone', 'company', 'country'] if bottle.request.forms.get(f)
@@ -190,7 +190,7 @@ class Website(bottle.Bottle):
       return {}
     else:
       response = self.__swu.send(
-        email_id = 'tem_KL7zioLvZEASeg5M4QTv53',
+        email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
         email_data = {
           'email': email,

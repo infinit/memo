@@ -2,7 +2,7 @@
 =========
 
 <div>
-% if os() == "Windows":
+% if os() == "Windows" :
 <blockquote class="warning">
 <strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
 </blockquote>
