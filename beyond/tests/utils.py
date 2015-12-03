@@ -91,6 +91,10 @@ class Beyond:
     self.__app.__enter__()
     return self
 
+  @property
+  def app(self):
+    return self.__app
+
   def now(self):
     import datetime
     return datetime.datetime.utcnow() + self.__advance
