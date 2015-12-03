@@ -34,17 +34,22 @@
 <p>Click the link below to download the Infinit command-line tools:</p>
 <div>
 % if os() == "Macintosh":
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/infinit-cli.tbz
+<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-0.3.3.tbz
 " class="button">Download Command Line Tools</a>
 % else:
-<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-cli.tbz
+<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
 " class="button">Download Command Line Tools</a>
 % endif
 </div>
 
 <p><br></p>
 <p>Next, open your terminal and extract the Infinit tarball:</p>
-<pre><code>$&gt; tar xjvf infinit-cli.tbz
+<pre><code>
+% if os() == "Macintosh":
+$&gt; tar xjvf Infinit-x86_64-osx-clang3-0.3.3.tbz
+% else:
+$&gt; tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
+% endif
 Infinit-&lt;version&gt;/
 Infinit-&lt;version&gt;/bin/
 Infinit-&lt;version&gt;/lib
