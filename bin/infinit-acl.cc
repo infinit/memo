@@ -155,7 +155,6 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
     try
     {
       // [{name: s, read: bool, write: bool}]
-      using namespace elle::json;
       std::stringstream output;
       output << path << ":" << std::endl;
       if (dir_inherit)
@@ -164,11 +163,11 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
                << (dir_inherit.get() ? "yes" : "no")
                << std::endl;
       }
-      Json j = elle::json::read(ss);
-      auto a = boost::any_cast<Array>(j);
+      elle::json::Json j = elle::json::read(ss);
+      auto a = boost::any_cast<elle::json::Array>(j);
       for (auto& li: a)
       {
-        auto d = boost::any_cast<Object>(li);
+        auto d = boost::any_cast<elle::json::Object>(li);
         auto n = boost::any_cast<std::string>(d.at("name"));
         auto r = boost::any_cast<bool>(d.at("read"));
         auto w = boost::any_cast<bool>(d.at("write"));
