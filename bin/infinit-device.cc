@@ -217,7 +217,7 @@ main(int argc, char** argv)
       {},
       {
         { "user,u", bool_switch(),
-          elle::sprintf("transmit the user identity to another device using %s",
+          elle::sprintf("Transmit the user identity to another device using %s",
                         beyond(true)).c_str(), },
         option_passphrase,
         { "no-countdown", bool_switch(), "do not show countdown timer" },
@@ -226,7 +226,7 @@ main(int argc, char** argv)
     },
     {
       "receive",
-      elle::sprintf("receive an object from another device using %s",
+      elle::sprintf("Receive an object from another device using %s",
                     beyond(true)).c_str(),
       &receive,
       {},
@@ -236,8 +236,8 @@ main(int argc, char** argv)
           elle::sprintf("receive a user identity from another device using %s",
                         beyond(true)).c_str() },
         option_passphrase,
-      }
-    }
+      },
+    },
   };
   return infinit::main("Infinit device utility", modes, argc, argv);
 }
