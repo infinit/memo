@@ -14,21 +14,12 @@ COMMAND(create)
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "network", "network name");
   auto user_name = mandatory(args, "user", "user name");
-  auto network = ifnt.network_get(network_name, self);
+  auto network = ifnt.network_descriptor_get(network_name, self, true);
   auto user = ifnt.user_get(user_name);
-  if (auto conf = dynamic_cast<
-        infinit::model::doughnut::Configuration*>(network.model.get()))
+  if (self.public_key != network.owner)
   {
-    if (self.public_key != conf->owner)
-    {
-      throw elle::Error(
-        elle::sprintf("not owner of network \"%s\"", network_name));
-    }
-  }
-  else
-  {
-    throw elle::Error(elle::sprintf(
-      "unknown model configuration: %s", typeid(network.model.get()).name()));
+    throw elle::Error(
+      elle::sprintf("not owner of network \"%s\"", network_name));
   }
   infinit::model::doughnut::Passport passport(
     user.public_key,
