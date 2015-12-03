@@ -323,7 +323,7 @@ COMMAND(link_)
       std::move(passport),
       self.name));
   ifnt.network_save(network, true);
-  report_action("linked", "network", network.name, std::string("locally"));
+  report_action("linked", "device to network", network.name);
 }
 
 COMMAND(list)
