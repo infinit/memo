@@ -6,6 +6,16 @@
 ### Changed
 - Always try using a public key in inifinit-acl if the user does not
   exist in the network. Remove --try-with-public-key as a consequence.
+- Improve directory creation performances.
+- Remove --as option from infinit-user --fetch.
+- Improve network error reporting in the CLI.
+- Add a timeout when pairing devices.
+- Show user public key hash in permissions listing if name is unknown.
+
+### Fixed
+- Add missing automatic conflicts resolver.
+- Let a user create passport for a network without joining it.
+- Don't require a valid current user to list a network passports.
 
 
 ## [0.3.2] - 2015-12-01
