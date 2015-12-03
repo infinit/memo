@@ -43,6 +43,8 @@ std::string program;
 
 #define COMMAND(name) static void name(variables_map const& args)
 
+#define NO_PRIVATE_KEY "user \"%s\" has no private key"
+
 struct Credentials
 {
   std::string uid;
@@ -509,8 +511,7 @@ namespace infinit
     {
       if (!this->private_key)
       {
-        throw elle::Error(
-          elle::sprintf("user \"%s\" has no private key", this->name));
+        throw elle::Error(elle::sprintf(NO_PRIVATE_KEY, this->name));
       }
       return infinit::cryptography::rsa::KeyPair(this->public_key,
                                                  this->private_key.get());
