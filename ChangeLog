@@ -3,6 +3,9 @@
 
 ## [Unreleased]
 
+
+## [0.3.3] - 2015-12-03
+
 ### Changed
 - Always try using a public key in inifinit-acl if the user does not
   exist in the network. Remove --try-with-public-key as a consequence.
