@@ -11,7 +11,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
 
   try:
     bob.run(['infinit-network', '--delete', '--name', 'broken', '--as', 'bob'])
-    assert False
+    unreachable()
   except Exception as e:
     pass
   bob.run(['infinit-network', '--create', '--name', 'broken', '--as', 'bob'])
@@ -28,7 +28,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
 
   try:
     alice.run(['infinit-network', '--delete', '--name', 'osef', '--as', 'alice'])
-    assert False
+    unreachable()
   except Exception as e:
     pass
   alice.run(['infinit-network', '--delete', '--name', 'bob/osef', '--as', 'alice'])
@@ -48,7 +48,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   bob.run(['infinit-network', '--create', '--name', 'a', '--as', 'bob', '--push'])
   try:
     bob.run(['infinit-network', '--push', '--name', 'a'])
-    assert False
+    unreachable()
   except Exception as e:
     pass
   l = bob.run(['infinit-network', '--list'])

@@ -17,7 +17,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'bob/network', '--as', 'bob', '--push'])
   try:
     bob.run(['infinit-volume', '--push', '--name', 'volume'])
-    assert False
+    unreachable()
   except Exception as e:
     pass
   bob.run(['infinit-volume', '--export', '--name', 'bob/volume', '--as', 'bob'])

@@ -37,7 +37,7 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
       alice.run(['infinit-network', '--run',
                  '--name', network,
                  '--as', 'alice'])
-      assert False
+      unreachable()
     except Exception as e:
       assert 'this device is not yet linked to the network' in e.args[0]
   for network in networks:

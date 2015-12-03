@@ -31,6 +31,13 @@ class TemporaryDirectory:
   def dir(self):
     return self.__dir
 
+class Unreachable(BaseException):
+
+  def __init__(self):
+    super().__init__("Unreachable code reached")
+
+def unreachable():
+  raise Unreachable()
 
 class Infinit(TemporaryDirectory):
 
@@ -72,6 +79,8 @@ class Infinit(TemporaryDirectory):
     if process.returncode != return_code:
       reason = err.decode('utf-8')
       print(reason, file = sys.stderr)
+      if process.returncode not in [0, 1]:
+        unreachable()
       raise Exception('command failed with code %s: %s (reason: %s)' % \
                       (process.returncode, pretty, reason))
     out = out.decode('utf-8')

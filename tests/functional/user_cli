@@ -13,7 +13,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
              '--password', 'loremipsword'])
   try:
     bob.run(['infinit-user', '--export', '--name', 'alice'])
-    assert False
+    unreachable()
   except Exception as e:
     pass
   bob.run(['infinit-user', '--fetch', '--name', 'alice'])
@@ -69,7 +69,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp, \
   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
   try:
     alice.run(['infinit-user', '--login', '--name', 'alice', '--password', 'loremipsword'])
-    assert False
+    unreachable()
   except Exception as e:
     assert 'doesn\'t use the hub to login' in e.args[0]
 
@@ -119,18 +119,18 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
      Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
   try:
     alice.run(['infinit-user', '--signup', '--name', 'alice'])
-    assert False
+    unreachable()
   except Exception as e:
     assert '(use --email)' in  e.args[0]
   try:
     alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'foo@'])
-    assert False
+    unreachable()
   except Exception as e:
     assert 'email address is invalid' in  e.args[0]
   # Create is not atomic, so 'alice' will be created after that.
   try:
     alice.run(['infinit-user', '--create', '--name', 'alice', '--push'])
-    assert False
+    unreachable()
   except Exception as e:
     assert '(use --email)' in  e.args[0]
 
