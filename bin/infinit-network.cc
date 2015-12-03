@@ -279,7 +279,7 @@ COMMAND(import)
   report_imported("network", desc.name);
 }
 
-COMMAND(join)
+COMMAND(link_)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
@@ -295,8 +295,8 @@ COMMAND(join)
     }
     catch (elle::serialization::Error const&)
     {
-      throw elle::Error(
-        elle::sprintf("this device has already joined %s", network_name));
+      throw elle::Error(elle::sprintf(
+        "this device has already been linked to %s", network_name));
     }
   }();
   auto passport = [&] () -> infinit::Passport
@@ -323,7 +323,7 @@ COMMAND(join)
       std::move(passport),
       self.name));
   ifnt.network_save(network, true);
-  report_action("joined", "network", network.name, std::string("locally"));
+  report_action("linked", "network", network.name, std::string("locally"));
 }
 
 COMMAND(list)
@@ -558,12 +558,12 @@ main(int argc, char** argv)
       },
     },
     {
-      "join",
-      "Join a network with this device",
-      &join,
+      "link",
+      "Link this device to a network",
+      &link_,
       "--name NETWORK",
       {
-        { "name,n", value<std::string>(), "network to join" },
+        { "name,n", value<std::string>(), "network to link to" },
         option_owner,
       },
       {

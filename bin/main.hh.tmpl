@@ -885,8 +885,8 @@ namespace infinit
       if (!res.model)
       {
         throw elle::Error(
-          elle::sprintf("you are not part of network %s, join it first",
-                        name_));
+          elle::sprintf("this device is not yet linked to the network \"%s\" "
+                        "link it using infinit-network", name_));
       }
       return res;
     }
