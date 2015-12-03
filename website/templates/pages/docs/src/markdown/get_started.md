@@ -99,7 +99,7 @@ This command mounts the volume named ‘infinit/demo’ on behalf of the user �
 
 Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `demo/` as you would any other POSIX-compliant filesystem.
 
-Noteworthy is that the volume contains a couple of hundred megabytes of data. However, unlike cloud storage services such as Dropbox, you can browse the volume’s content without having to wait for all the files to be downloaded locally. This is because only the data actually accessed is retrieved on demand (i.e streamed) from our server located on the East Coast of the United States.
+Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.
 
 ```
 $> ls demo/
@@ -213,6 +213,7 @@ Let’s transmit the user’s identity to the other device. Note that it will be
 <code>$> infinit-device --transmit --user --as bob
 Passphrase: ********
 Transmitted user identity for "bob".
+User identity on the Hub for: 297 seconds
 </code></pre>
 
 Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.
