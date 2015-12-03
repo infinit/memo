@@ -192,9 +192,8 @@ COMMAND(create)
       owner.name,
       std::move(port));
   {
-    infinit::Network network;
-    network.model = std::move(dht);
-    network.name = ifnt.qualified_name(name, owner);
+    infinit::Network network(std::move(ifnt.qualified_name(name, owner)),
+                             std::move(dht));
     if (args.count("output"))
     {
       auto output = get_output(args);
@@ -312,8 +311,8 @@ COMMAND(join)
   bool ok = passport.verify(desc.owner);
   if (!ok)
     throw elle::Error("passport signature is invalid");
-  infinit::Network network;
-  network.model =
+  infinit::Network network(
+    desc.name,
     elle::make_unique<infinit::model::doughnut::Configuration>(
       infinit::model::Address::random(),
       std::move(desc.consensus),
@@ -322,8 +321,7 @@ COMMAND(join)
       self.keypair(),
       std::move(desc.owner),
       std::move(passport),
-      self.name);
-  network.name = desc.name;
+      self.name));
   ifnt.network_save(network, true);
   report_action("joined", "network", network.name, std::string("locally"));
 }

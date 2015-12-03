@@ -604,9 +604,9 @@ namespace infinit
 {
   struct Network
   {
-    Network()
-      : name()
-      , model()
+    Network(std::string name, std::unique_ptr<model::ModelConfig> model)
+      : name(std::move(name))
+      , model(std::move(model))
     {
       check_name(this->name);
     }
@@ -676,7 +676,7 @@ namespace infinit
     Volume(std::string name,
            boost::optional<std::string> mountpoint_,
            std::string network_)
-      : name(name)
+      : name(std::move(name))
       , mountpoint(std::move(mountpoint_))
       , network(std::move(network_))
     {
