@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/program_options.hpp>
+#include <boost/regex.hpp>
 
 #include <elle/Error.hh>
 #include <elle/Exit.hh>
@@ -84,8 +85,7 @@ struct BeyondError
   BeyondError(elle::serialization::SerializerIn& s)
     : BeyondError(s.deserialize<std::string>("error"),
                   s.deserialize<std::string>("reason"))
-  {
-  }
+  {}
 
   void
   print(std::ostream& out) const override
@@ -298,6 +298,25 @@ namespace infinit
 {
   typedef infinit::model::doughnut::Passport Passport;
 
+  void
+  check_name(std::string const& name, bool no_slash = false)
+  {
+    static const std::string error_message(
+      "Only lower case alphanumeric characters and - . _ allowed in name");
+    std::string test_name;
+    auto slash_pos = name.find_first_of("/");
+    if (no_slash && slash_pos != std::string::npos)
+      throw CommandLineError(error_message);
+    if (slash_pos == std::string::npos)
+      test_name = name;
+    else
+      test_name = name.substr(slash_pos + 1);
+    static const boost::regex allowed("${name_regex}");
+    boost::smatch str_matches;
+    if (!boost::regex_match(test_name, str_matches, allowed))
+      throw CommandLineError(error_message);
+  }
+
   int
   main(std::string desc,
        Modes const& modes,
@@ -459,7 +478,9 @@ namespace infinit
       , email(email)
       , fullname(fullname)
       , password_hash()
-    {}
+    {
+      check_name(this->name, true);
+    }
 
     User(elle::serialization::SerializerIn& s)
       : name(s.deserialize<std::string>("name"))
@@ -469,7 +490,9 @@ namespace infinit
       , email(s.deserialize<boost::optional<std::string>>("email"))
       , fullname(s.deserialize<boost::optional<std::string>>("fullname"))
       , password_hash()
-    {}
+    {
+      check_name(this->name, true);
+    }
 
     infinit::cryptography::rsa::KeyPair
     keypair() const
@@ -536,7 +559,9 @@ namespace infinit
       , consensus(std::move(consensus_))
       , overlay(std::move(overlay_))
       , owner(std::move(owner_))
-    {}
+    {
+      check_name(this->name);
+    }
 
     NetworkDescriptor(elle::serialization::SerializerIn& s)
       : name(s.deserialize<std::string>("name"))
@@ -545,7 +570,9 @@ namespace infinit
       , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-    {}
+    {
+      check_name(this->name);
+    }
 
     void
     serialize(elle::serialization::Serializer& s)
@@ -580,11 +607,14 @@ namespace infinit
     Network()
       : name()
       , model()
-    {}
+    {
+      check_name(this->name);
+    }
 
     Network(elle::serialization::SerializerIn& s)
     {
       this->serialize(s);
+      check_name(this->name);
     }
 
     void
@@ -649,11 +679,14 @@ namespace infinit
       : name(name)
       , mountpoint(std::move(mountpoint_))
       , network(std::move(network_))
-    {}
+    {
+      check_name(this->name);
+    }
 
     Volume(elle::serialization::SerializerIn& s)
     {
       this->serialize(s);
+      check_name(this->name);
     }
 
     void
@@ -765,7 +798,9 @@ namespace infinit
       , network(network)
       , description(description)
       , users(users)
-    {}
+    {
+      check_name(this->name);
+    }
 
   public:
     Drive(std::string const& name,
@@ -787,8 +822,7 @@ namespace infinit
               s.deserialize<std::string>("network"),
               s.deserialize<std::string>("description"),
               s.deserialize<Users>("users"))
-    {
-    }
+    {}
 
     void
     serialize(elle::serialization::Serializer& s)

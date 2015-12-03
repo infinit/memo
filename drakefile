@@ -10,7 +10,6 @@ import shutil
 
 from itertools import chain
 
-
 git = None
 
 elle = None
@@ -20,6 +19,8 @@ rule_build = None
 rule_check = None
 rule_install = None
 rule_tests = None
+
+name_regex = '^[-a-z0-9._]+$'
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -351,6 +352,7 @@ def configure(
 
   with drake.templating.Context(content = {
       'beyond_host': beyond_host,
+      'name_regex': name_regex,
   }):
     drake.node('bin/main.hh.tmpl')
 
@@ -366,6 +368,8 @@ def configure(
     bin_cxx_config.library_add(
         drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
     bin_cxx_config.library_add(
+        drake.copy(elle.boost.regex_dynamic, 'lib', True))
+    bin_cxx_config.library_add(
         drake.copy(elle.boost.system_dynamic, 'lib', True))
   else:
     bin_cxx_config.lib('shlwapi')
@@ -376,6 +380,7 @@ def configure(
     bin_cxx_config.lib('iphlpapi')
     bin_cxx_config.lib('crypt32')
     bin_cxx_config.library_add(elle.boost.program_options_static)
+    bin_cxx_config.library_add(elle.boost.regex_static)
     bin_cxx_config.use_whole_archive()
   # Ship libstdc++
   additional_libs = []
@@ -515,6 +520,7 @@ def configure(
         git = git,
         bottle = bottle,
         PatchAndInstall = PatchAndInstall,
+        name_regex = name_regex,
       )
       rule_check << beyond.rule_check
       for test_name in [

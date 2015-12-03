@@ -26,6 +26,7 @@ def configure(
     dropbox_app_secret = 'gwca0vz648u0y6r',
     google_app_key = '798530033299-jiqlihdquc70r08ucthm3o1omp594ihm',
     google_app_secret = 'ufwn6w0hAT2MDuwOzfWxh4Sx',
+    name_regex = '^[-a-z0-9._]+$',
 ):
 
   global build, install, package, rule_check, tests
@@ -67,9 +68,11 @@ def configure(
       'google_app_key':
         '%s.apps.googleusercontent.com' % google_app_key,
       'google_app_secret': google_app_secret,
+      'name_regex': name_regex,
   }):
     drake.node('beyond.tmpl')
     drake.node('src/wsgi.py.tmpl')
+    drake.node('src/validation.py.tmpl')
 
   sources = drake.nodes(
     'src/__init__.py',

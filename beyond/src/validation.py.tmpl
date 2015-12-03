@@ -12,7 +12,14 @@ class Name(Validator):
 
   def __call__(self, name):
     import re
-    if len(name) == 0 or re.compile('^[^\/]+$').match(name) is None:
+    components = name.split('/')
+    if object == 'user' and len(components) > 1:
+      raise InvalidFormat(self.field.object, self.field.name)
+    elif len(components) > 2:
+      raise InvalidFormat(self.field.object, self.field.name)
+    else:
+      name = components[-1]
+    if re.compile(${repr(name_regex)}).match(name) is None:
       raise InvalidFormat(self.field.object, self.field.name)
 
 class Email(Validator):
