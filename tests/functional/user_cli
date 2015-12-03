@@ -148,3 +148,26 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
     assert False
   except Exception as e:
     assert 'password do not match' in e.args[0]
+
+# Invalid user name.
+with Beyond() as beyond, TemporaryDirectory() as tmp,  \
+     Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+  def create_with_name(name):
+    bob.run(['infinit-user', '--create',
+               '--name', name, '--email', '%s@infinit.io' % name])
+
+  def create_with_name_throw(name):
+    try:
+      create_with_name(name)
+      assert False
+    except Exception as e:
+      pass
+
+  create_with_name("bob")
+  create_with_name("alice123")
+  create_with_name("eve_2")
+
+  create_with_name_throw("Bob")
+  create_with_name_throw("accént")
+  create_with_name_throw("char+acter")
+  create_with_name_throw("s/ash")
