@@ -165,7 +165,7 @@ def random_sequence(count = 10):
   from random import SystemRandom
   import string
   return ''.join(SystemRandom().choice(
-    string.ascii_uppercase + string.digits) for _ in range(count))
+    string.ascii_lowercase + string.digits) for _ in range(count))
 
 def password_hash(password):
   salt = 'z^$P;:`a~F'
