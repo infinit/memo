@@ -45,21 +45,21 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   # Create.
   l = bob.run(['infinit-network', '--list'])
   assertEq(len(l), 0)
-  bob.run(['infinit-network', '--create', '--name', 'A', '--as', 'bob', '--push'])
+  bob.run(['infinit-network', '--create', '--name', 'a', '--as', 'bob', '--push'])
   try:
-    bob.run(['infinit-network', '--push', '--name', 'A'])
+    bob.run(['infinit-network', '--push', '--name', 'a'])
     assert False
   except Exception as e:
     pass
   l = bob.run(['infinit-network', '--list'])
   assertEq(len(l), 1)
-  bob.run(['infinit-network', '--create', '--name', 'B', '--as', 'bob', '--push'])
+  bob.run(['infinit-network', '--create', '--name', 'b', '--as', 'bob', '--push'])
   l = bob.run(['infinit-network', '--list'])
   assertEq(len(l), 2)
 
   l = alice.run(['infinit-network', '--list'])
   assertEq(len(l), 0)
-  alice.run(['infinit-network', '--fetch', '--name', 'bob/A', '--as', 'alice'])
+  alice.run(['infinit-network', '--fetch', '--name', 'bob/a', '--as', 'alice'])
   l = alice.run(['infinit-network', '--list'])
   assertEq(len(l), 1)
   alice.run(['infinit-network', '--fetch', '--as', 'alice'])
