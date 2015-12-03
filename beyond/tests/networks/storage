@@ -47,6 +47,15 @@ with Beyond() as beyond:
       stat.put(beyond, alice)
       res = beyond.get('networks/%s/stat' % network['name']).json()
 
+    def test_unknown_network(self):
+      alice = User()
+      alice.put(beyond)
+      network = Network('infinit', owner = alice)
+      stat = Statistics(network, capacity = None, usage = 10000)
+      throws(lambda: stat.put(beyond, alice), expected = 404)
+      throws(lambda: beyond.get('networks/%s/stat' % network['name']),
+             expected = 404)
+
     def test_one_user_multiple_devices(self):
       alice = User()
       alice.put(beyond)
