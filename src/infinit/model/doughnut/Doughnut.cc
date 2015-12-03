@@ -193,8 +193,9 @@ namespace infinit
               infinit::cryptography::rsa::publickey::der::encode(pub);
             auto key_hash = infinit::cryptography::hash(
               buffer, infinit::cryptography::Oneway::sha256);
+            std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
             return elle::make_unique<doughnut::User>(
-              pub, elle::format::hexadecimal::encode(key_hash));
+              pub, hex_hash.substr(0, 6));
           }
         }
         else
