@@ -117,19 +117,38 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
+          static elle::Bench bench("bench.cache.store", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
           ELLE_TRACE_SCOPE("%s: store %s", *this, block->address());
-          this->_backend->store(
-            block->clone(), mode, std::move(resolver));
-          auto hit = this->_cache.find(block->address());
+          std::unique_ptr<blocks::Block> cloned;
+          {
+            static elle::Bench bench("bench.cache.store.clone", 10000_sec);
+            elle::Bench::BenchScope bs(bench);
+            auto mb = dynamic_cast<blocks::MutableBlock*>(block.get());
+            // Block was necessarily validated on its way up, so it's safe
+            // to flag it as local
+            if (mb)
+              mb->is_local(true);
+            bool skip_seal = mb && mb->is_local();
+            cloned = block->clone(!skip_seal);
+          }
+          auto address = block->address();
+          {
+            static elle::Bench bench("bench.cache.store.store", 10000_sec);
+            elle::Bench::BenchScope bs(bench);
+            this->_backend->store(
+              std::move(block), mode, std::move(resolver));
+          }
+          auto hit = this->_cache.find(address);
           if (hit != this->_cache.end())
             this->_cache.modify(
               hit, [&] (CachedBlock& b) {
-                b.block() = std::move(block);
+                b.block() = std::move(cloned);
                 b.last_used(now());
                 b.last_fetched(now());
               });
           else
-            this->_cache.emplace(std::move(block));
+            this->_cache.emplace(std::move(cloned));
         }
 
         /*------.

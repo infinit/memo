@@ -55,7 +55,7 @@ namespace infinit
       `-------*/
 
       std::unique_ptr<blocks::Block>
-      UB::clone() const
+      UB::clone(bool) const
       {
         return std::unique_ptr<blocks::Block>(new UB(*this));
       }

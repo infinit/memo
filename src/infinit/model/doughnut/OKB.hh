@@ -75,7 +75,7 @@ namespace infinit
       `-------------*/
       public:
         BaseOKB(Doughnut* owner);
-        BaseOKB(BaseOKB const& other);
+        BaseOKB(BaseOKB const& other, bool sealed_copy = true);
         ELLE_ATTRIBUTE(int, version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
@@ -117,7 +117,7 @@ namespace infinit
         void
         _seal() override;
         void
-        _seal_okb();
+        _seal_okb(bool bump_version = true);
         virtual
         blocks::ValidationResult
         _validate() const override;
@@ -149,7 +149,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone() const override;
+        clone(bool seal_copy) const override;
 
       /*--------------.
       | Serialization |

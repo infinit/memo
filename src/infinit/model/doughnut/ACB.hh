@@ -55,7 +55,7 @@ namespace infinit
       `-------------*/
       public:
         ACB(Doughnut* owner);
-        ACB(ACB const& other);
+        ACB(ACB const& other, bool sealed_copy = true);
         ~ACB();
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
@@ -72,7 +72,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone() const override;
+        clone(bool sealed_copy) const override;
 
       /*--------.
       | Content |

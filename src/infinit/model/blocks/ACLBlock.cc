@@ -30,7 +30,7 @@ namespace infinit
       | Clone  |
       `-------*/
       std::unique_ptr<Block>
-      ACLBlock::clone() const
+      ACLBlock::clone(bool) const
       {
         return std::unique_ptr<Block>(new ACLBlock(*this));
       }

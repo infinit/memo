@@ -8,7 +8,6 @@
 
 #include <cryptography/hash.hh>
 #include <cryptography/random.hh>
-#include <cryptography/rsa/KeyPool.hh>
 
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
@@ -116,24 +115,30 @@ namespace infinit
       {}
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other)
+      BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other, bool sealed_copy)
         : OKBHeader(other)
         , Super(other)
         , _version{other._version}
-        , _signature{other._signature}
         , _doughnut{other._doughnut}
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
-      {}
+      {
+        if (sealed_copy || !other._signature.running())
+          this->_signature = other._signature.value();
+        else
+        {
+          this->_signature = elle::Buffer();
+        }
+      }
 
       /*-------.
       | Clone  |
       `-------*/
       template <typename Block>
       std::unique_ptr<blocks::Block>
-      BaseOKB<Block>::clone() const
+      BaseOKB<Block>::clone(bool sealed_copy) const
       {
-        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this));
+        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this, sealed_copy));
       }
 
       /*--------.
@@ -257,19 +262,30 @@ namespace infinit
           this->_data_changed = false;
         }
         else
+        {
           ELLE_DEBUG("%s: data didn't change", *this);
+          if (!this->_signature.running() && this->_signature.value().empty())
+          {
+            ELLE_DEBUG("%s: signature missing, recalculating...", *this);
+            this->_seal_okb(false);
+          }
+        }
       }
 
       template <typename Block>
       void
-      BaseOKB<Block>::_seal_okb()
+      BaseOKB<Block>::_seal_okb(bool bump_version)
       {
-        ++this->_version; // FIXME: idempotence in case the write fails ?
+        if (bump_version)
+          ++this->_version; // FIXME: idempotence in case the write fails ?
         auto keys = this->_doughnut->keys_shared();
         auto sign = elle::utility::move_on_copy(this->_sign());
+        ELLE_ASSERT_EQ(keys->K(), this->_owner_key);
         this->_signature =
           [keys, sign]
           {
+            static elle::Bench bench("bench.okb.seal.signing", 10000_sec);
+            elle::Bench::BenchScope scope(bench);
             return keys->k().sign(*sign);
           };
       }
@@ -294,7 +310,9 @@ namespace infinit
           if (!this->_check_signature
               (this->_owner_key, this->signature(), sign, "owner"))
           {
-            ELLE_DEBUG("%s: invalid signature", *this);
+            ELLE_TRACE("signing %x\nwith %x", sign, this->_owner_key);
+            ELLE_TRACE("%s: invalid signature for version %s: '%x'",
+              *this, this->_version, this->signature());
             return blocks::ValidationResult::failure("invalid signature");
           }
         }
@@ -392,17 +410,30 @@ namespace infinit
         s.serialize_context<Doughnut*>(this->_doughnut);
         ELLE_ASSERT(this->_doughnut);
         bool need_signature = ! s.context().has<OKBDontWaitForSignature>();
-        if (need_signature)
-          this->signature();
         s.serialize("key", this->_owner_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
-        s.serialize("signature", this->_signature.value());
-        if (s.in() && !need_signature)
+        if (need_signature || (s.out() && !this->_signature.running()))
         {
-          auto keys = this->_doughnut->keys_shared();
-          auto sign = elle::utility::move_on_copy(this->_sign());
-          this->_signature = [keys, sign] {return keys->k().sign(*sign);};
+          s.serialize("signature", this->_signature.value());
+          ELLE_ASSERT(!this->_signature.value().empty());
+        }
+        else
+        {
+          elle::Buffer signature;
+          s.serialize("signature", signature);
+          if (s.in())
+          {
+            if (signature.empty())
+            {
+              auto keys = this->_doughnut->keys_shared();
+              ELLE_ASSERT_EQ(keys->K(), this->_owner_key);
+              auto sign = elle::utility::move_on_copy(this->_sign());
+              this->_signature = [keys, sign] {return keys->k().sign(*sign);};
+            }
+            else
+              this->_signature = std::move(signature);
+          }
         }
       }
 

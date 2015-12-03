@@ -35,7 +35,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<Block>
-        clone() const override;
+        clone(bool seal_copy=true) const override;
 
       /*--------------.
       | Serialization |
@@ -63,7 +63,7 @@ namespace infinit
         virtual
         void
         data(std::function<void (elle::Buffer&)> transformation);
-        ELLE_ATTRIBUTE_R(bool, is_local, protected);
+        ELLE_ATTRIBUTE_RW(bool, is_local, protected);
       };
     }
   }

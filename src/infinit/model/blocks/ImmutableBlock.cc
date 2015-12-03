@@ -22,7 +22,7 @@ namespace infinit
       | Clone  |
       `-------*/
       std::unique_ptr<Block>
-      ImmutableBlock::clone() const
+      ImmutableBlock::clone(bool) const
       {
         return std::unique_ptr<Block>(new ImmutableBlock(*this));
       }

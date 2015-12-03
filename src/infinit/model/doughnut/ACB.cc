@@ -130,25 +130,31 @@ namespace infinit
         , _data_signature()
       {}
 
-      ACB::ACB(ACB const& other)
-        : Super(other)
+      ACB::ACB(ACB const& other, bool sealed_copy)
+        : Super(other, sealed_copy)
         , _editor(other._editor)
         , _owner_token(other._owner_token)
         , _acl_changed(other._acl_changed)
         , _acl_entries(other._acl_entries)
         , _data_version(other._data_version)
-        , _data_signature(other._data_signature)
       {
-
+        if (sealed_copy)
+        {
+          _data_signature = other._data_signature.value();
+        }
+        else
+        {
+          this->_data_signature = elle::Buffer();
+        }
       }
 
       /*-------.
       | Clone  |
       `-------*/
       std::unique_ptr<blocks::Block>
-      ACB::clone() const
+      ACB::clone(bool sealed_copy) const
       {
-        return std::unique_ptr<blocks::Block>(new ACB(*this));
+        return std::unique_ptr<blocks::Block>(new ACB(*this, sealed_copy));
       }
 
       /*--------.
@@ -456,7 +462,8 @@ namespace infinit
           ELLE_DEBUG("%s: data didn't change", *this);
         // Even if only the ACL was changed, we need to re-sign because the ACL
         // address is part of the signature.
-        if (acl_changed || data_changed)
+        if (acl_changed || data_changed ||
+          (!this->_data_signature.running() && this->_data_signature.value().empty()))
         {
           auto keys = this->doughnut()->keys_shared();
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
@@ -468,6 +475,7 @@ namespace infinit
               return keys->k().sign(*to_sign);
             };
         }
+        Super::_seal();
       }
 
       ACB::~ACB()

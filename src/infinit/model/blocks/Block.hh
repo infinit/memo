@@ -38,8 +38,10 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<Block>
+        clone(bool seal_copy) const;
+        virtual
+        std::unique_ptr<Block>
         clone() const override;
-
       /*--------.
       | Content |
       `--------*/
