@@ -24,23 +24,38 @@ with Beyond() as beyond:
              json = False)
       volume.put(beyond)
       res = beyond.get('volumes/%s' % volume['name']).json()
-      assert res['name'] == volume['name']
-      assert res['network'] == network['name']
+      assertEq(res['name'], volume['name'])
+      assertEq(res['network'], network['name'])
 
-  def test_already_pushed(self):
-    # Test same already pushed
-    user = User()
-    user.put(beyond)
-    network = Network('infinit', owner = user)
-    network.put(beyond)
-    volume = Volume('stuff', network = network)
-    res = volume.put(beyond)
-    asserEq(res.status_code, 201)
-    res = volume.put(beyond)
-    asserEq(res.status_code, 200)
-    # Test conflict
-    volume['network'] = 'foo/bar'
-    throws(lambda: volume.put(beyond), 409)
+    def test_already_pushed(self):
+      # Test same already pushed
+      user = User()
+      user.put(beyond)
+      network = Network('infinit', owner = user)
+      network.put(beyond)
+      volume = Volume('stuff', network = network)
+      res = volume.put(beyond)
+      assertEq(res.status_code, 201)
+      res = volume.put(beyond)
+      assertEq(res.status_code, 200)
+      # Test conflict
+      volume['network'] = 'foo/bar'
+      throws(lambda: volume.put(beyond), 409)
+
+    def test_user_demo_is_not_allowed_to_put(self):
+      infinit = User(name = 'infinit')
+      infinit.put(beyond)
+      demo = User(name = 'demo')
+      demo.put(beyond)
+      # Create network as infinit.
+      network = Network('share', owner = infinit)
+      network.put(beyond)
+      # Invite demo.
+      Passport(network, demo).put(beyond)
+      volume = Volume('stuff', network = network, owner = demo)
+      throws(lambda: volume.put(beyond, owner = demo),
+             expected = 403,
+             json = False)
 
   if __name__ == '__main__':
     unittest.main()

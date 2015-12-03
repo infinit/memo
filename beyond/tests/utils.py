@@ -308,10 +308,11 @@ class Statistics(dict):
 
 class Volume(dict):
 
-  def __init__(self, name, network):
+  def __init__(self, name, network, owner = None):
     self.__short_name = name
     self.__network = network
-    self['name'] = self.__network.owner['name'] + '/' + name
+    self.__owner = owner or self.network.owner
+    self['name'] = self.__owner['name'] + '/' + name
     self['network'] = self.__network['name']
 
   @property
@@ -320,7 +321,7 @@ class Volume(dict):
 
   def put(self, hub, owner = None):
     if owner is None:
-      owner = self.network.owner
+      owner = self.__owner
     return hub.put('volumes/%s' % self['name'], json = self,
                    auth = owner.private_key)
 

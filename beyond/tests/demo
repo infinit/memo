@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+import unittest
+
+from utils import *
+
+# Things demo user is not allowed to do.
+demo_user = User(name = 'demo')
+infinit_user = User(name = 'infinit')
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_all(self):
+      # Push demo.
+      demo_user.put(beyond)
+      # Push infinit.
+      infinit_user.put(beyond)
+      demo_network = Network('demo', infinit_user)
+      demo_network.put(beyond)
+      demo_volume = Volume('demo', demo_network)
+      demo_volume.put(beyond)
+      Passport(demo_network, demo_user).put(beyond)
+
+      # Putting a user again doesn't update it so right now, this works:
+      demo_user.put(beyond)
+
+      # Destroying stuff.
+      throws(lambda: beyond.delete('networks/%s' % demo_network['name'],
+                                   auth = demo_user.private_key),
+             expected = 403, json = False)
+      throws(lambda: beyond.delete('volumes/%s' % demo_volume['name'],
+                                   auth = demo_user.private_key),
+             expected = 403, json = False)
+      throws(lambda: beyond.delete('networks/%s/passports/%s' % (
+        demo_volume['name'], demo_user['name']),
+                                   auth = demo_user.private_key),
+             expected = 403, json = False)
+      throws(lambda: beyond.delete('users/%s' % demo_user['name'],
+                                   auth = demo_user.private_key),
+             expected = 403, json = False)
+
+      # Pushing stuff.
+      net = Network('osef', demo_user)
+      throws(lambda: net.put(beyond), expected = 403, json = False)
+      vol = Volume('Pirate', network = demo_network, owner = demo_user)
+      throws(lambda: vol.put(beyond), expected = 403, json = False)
+
+
+  if __name__ == '__main__':
+    unittest.main()

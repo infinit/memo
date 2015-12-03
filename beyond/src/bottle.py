@@ -104,6 +104,7 @@ class Bottle(bottle.Bottle):
   ):
     super().__init__(catchall = not production)
     self.__beyond = beyond
+    self.__ban_list = ['demo']
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
     self.install(JsongoPlugin())
@@ -210,6 +211,11 @@ class Bottle(bottle.Bottle):
       })
 
   def authenticate(self, user):
+    if user.name in self.__ban_list:
+      raise Response(403, {
+        'error': 'restricted',
+        'reason': 'This user cannot perform any operation'
+      })
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
       raise Response(401, 'Missing signature header')
@@ -299,6 +305,8 @@ class Bottle(bottle.Bottle):
       raise Response(201, {})
     except User.Duplicate:
       if user == self.user_from_name(name = name):
+        # When update is available, uncomment next line:
+        # self.authenticate(user)
         return {}
       else:
         raise Response(409, {
@@ -561,8 +569,6 @@ class Bottle(bottle.Bottle):
       raise Response(201, {}) # FIXME: 200 if existed
     except Network.NotFound:
       raise self.__not_found('network', '%s/%s' % (owner, name))
-
-
 
   ## ------ ##
   ## Volume ##

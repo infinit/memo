@@ -197,6 +197,7 @@ def configure(
   test_utils = drake.Node('tests/utils.py')
   for test_name in [
       'auth',
+      'demo',
       'full-flow',
       'oauth-dropbox',
       'emails',
