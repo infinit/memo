@@ -51,7 +51,7 @@ for i in $(seq 1 $nodes); do
   echo $exported_network | INFINIT_HOME=$rootdir/conf$i infinit-network --import
   INFINIT_HOME=$rootdir/conf0 infinit-passport --create --as $user --network kelips --user $user$i --output - \
   | INFINIT_HOME=$rootdir/conf$i infinit-passport --import
-  INFINIT_HOME=$rootdir/conf$i infinit-network --join --as $user$i --name $user_hash/kelips --storage storage $(port $i $port_base $nports)
+  INFINIT_HOME=$rootdir/conf$i infinit-network --link --as $user$i --name $user_hash/kelips --storage storage $(port $i $port_base $nports)
 done
 
 #observers
@@ -65,7 +65,7 @@ for i in $(seq 0 $observers); do
 
   INFINIT_HOME=$rootdir/conf0 infinit-passport --create --as $user --network kelips --user obs$i --output - \
   | INFINIT_HOME=$rootdir/observer_conf_$i infinit-passport --import
-  INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --join --as obs$i --name $user_hash/kelips
+  INFINIT_HOME=$rootdir/observer_conf_$i infinit-network --link --as obs$i --name $user_hash/kelips
 done
 
 # create volume

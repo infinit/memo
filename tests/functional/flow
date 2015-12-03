@@ -29,7 +29,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run('infinit-network --fetch --name %s --as %s' %
             (bob.network, alice.name))
   alice.run('infinit-passport --fetch --as %s' % alice.name)
-  alice.run('infinit-network --join --name %s' % bob.network)
+  alice.run('infinit-network --link --name %s' % bob.network)
   alice.run('infinit-volume --fetch --as %s' % alice.name)
 
   bob_volume = bob.async('infinit-volume --run --name %s --mountpoint %s --push --fetch' %

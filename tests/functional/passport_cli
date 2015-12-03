@@ -39,8 +39,8 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
                  '--as', 'alice'])
       assert False
     except Exception as e:
-      assert "join it first" in e.args[0]
+      assert 'this device is not yet linked to the network' in e.args[0]
   for network in networks:
-    alice.run(['infinit-network', '--join',
+    alice.run(['infinit-network', '--link',
                '--name', network,
                '--as', 'alice'])

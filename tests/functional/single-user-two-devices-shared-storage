@@ -48,7 +48,7 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   ])
   infinit_2.run(['infinit-network', '--import'], input = network)
   infinit_2.run([
-    'infinit-network', '--join',
+    'infinit-network', '--link',
      'network',
     '--storage', 'storage',
     '--as', 'user',
