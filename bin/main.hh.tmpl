@@ -302,11 +302,12 @@ namespace infinit
   check_name(std::string const& name, bool no_slash = false)
   {
     static const std::string error_message(
-      "Only lower case alphanumeric characters and - . _ allowed in name");
+      "name (%s) must only contain lower case alphanumeric and - . _ "
+      "characters");
     std::string test_name;
     auto slash_pos = name.find_first_of("/");
     if (no_slash && slash_pos != std::string::npos)
-      throw CommandLineError(error_message);
+      throw CommandLineError(elle::sprintf(error_message, name));
     if (slash_pos == std::string::npos)
       test_name = name;
     else
@@ -314,7 +315,7 @@ namespace infinit
     static const boost::regex allowed("${name_regex}");
     boost::smatch str_matches;
     if (!boost::regex_match(test_name, str_matches, allowed))
-      throw CommandLineError(error_message);
+      throw CommandLineError(elle::sprintf(error_message, test_name));
   }
 
   int
