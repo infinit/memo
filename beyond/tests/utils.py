@@ -45,7 +45,6 @@ class Beyond:
     self.__app = None
     self.__advance = timedelta()
     self.__beyond = None
-    self.__bottle = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
     self.__beyond_args = beyond_args
