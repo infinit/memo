@@ -51,8 +51,8 @@ COMMAND(create)
   }
   else
   {
-    report_created("volume", name);
     ifnt.volume_save(volume);
+    report_created("volume", name);
   }
   if (aliased_flag(args, {"push-volume", "push"}))
     beyond_push("volume", name, volume, owner);
