@@ -9,6 +9,8 @@
 
 ## [0.3.3] - 2015-12-03
 
+Bugfix release to correct conflict errors, plus minor improvements.
+
 ### Changed
 - Always try using a public key in inifinit-acl if the user does not
   exist in the network. Remove --try-with-public-key as a consequence.
@@ -26,13 +28,17 @@
 
 ## [0.3.2] - 2015-12-01
 
+Release adjustments.
+
 ### Added
-- Enable to point the data directory directly with the INFINIT_DATA_HOME environment variable.
+- Enable to point the data directory directly with the
+  INFINIT_DATA_HOME environment variable.
 - Generate Debian package.
 
 ### Fixed
 - Change demo home path to be usable with INFINIT_DATA_HOME.
-- Fix unmount when pushing stats of a storage with no maximum capacity.
+- Fix unmount when pushing stats of a storage with no maximum
+  capacity.
 
 
 ## [0.3.1] - 2015-11-30
@@ -40,13 +46,15 @@
 Release adjustments.
 
 ### Added
-- Magic number on stored binary blocks to enable transparent future format changes, e.g. JSON.
+- Magic number on stored binary blocks to enable transparent future
+  format changes, e.g. JSON.
 
 ### Changed
 - Store configuration and data files according to XDG convention.
 - Improve infinit-user --signup help.
 - Prevent infinit-drive from joining own network.
-- Hide unstable features for now: Dropbox and Google Drive storage, multiple storage nodes.
+- Hide unstable features for now: Dropbox and Google Drive storage,
+  multiple storage nodes.
 
 ### Fixed
 - Ship compiler-specific dynamic libraries for portability.
