@@ -630,7 +630,6 @@ main(int argc, char** argv)
     { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
-    option_owner,
   };
   Modes modes {
     {
@@ -649,7 +648,6 @@ main(int argc, char** argv)
         { "push-volume", bool_switch(),
           elle::sprintf("push the volume to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-volume" },
-        option_owner,
       },
     },
     {
@@ -660,7 +658,6 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to export" },
         option_output("volume"),
-        option_owner,
       },
     },
     {
@@ -672,7 +669,6 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "volume to fetch (optional)" },
         { "network", value<std::string>(),
           "network to fetch all volumes for (optional)" },
-        option_owner,
       },
     },
     {
@@ -693,7 +689,6 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to push" },
-        option_owner,
       },
     },
     {
@@ -717,7 +712,6 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to delete" },
-        option_owner,
       },
     },
     {
@@ -727,7 +721,6 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to remove" },
-        option_owner,
       },
     },
     {
@@ -735,9 +728,7 @@ main(int argc, char** argv)
       "List volumes",
       &list,
       {},
-      {
-        option_owner,
-      }
+      {},
     },
   };
   return infinit::main("Infinit volume management utility", modes, argc, argv);

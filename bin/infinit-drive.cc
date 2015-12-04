@@ -220,7 +220,6 @@ main(int argc, char** argv)
         { "push-drive", bool_switch(),
           elle::sprintf("push the created drive to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-drive" },
-        option_owner,
       },
     },
     {
@@ -237,10 +236,8 @@ main(int argc, char** argv)
         { "user,u", value<std::string>(), "user to invite to the drive" },
         { "fetch-drive", bool_switch(), "update local drive descriptor" },
         { "fetch,f", bool_switch(), "alias for --fetch-drive" },
-        option_owner,
       },
-      {
-      },
+      {},
       // Hidden options.
       {
         { "permissions,p", value<std::string>(),
@@ -256,7 +253,6 @@ main(int argc, char** argv)
       "--name DRIVE",
       {
         { "name,n", value<std::string>(), "drive to invite the user on" },
-        option_owner,
       },
     },
     {
@@ -266,7 +262,6 @@ main(int argc, char** argv)
       "--name DRIVE",
       {
         { "name,n", value<std::string>(), "drive to export" },
-        option_owner,
       },
     },
     {
@@ -277,7 +272,6 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           elle::sprintf("drive to push to %s", beyond(true)).c_str() },
-        option_owner,
       }
     },
     {
@@ -287,7 +281,6 @@ main(int argc, char** argv)
       "",
       {
         { "name,n", value<std::string>(), "drive to fetch (optional)" },
-        option_owner,
       },
     },
     {
@@ -303,8 +296,7 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "drive to delete" },
-        option_owner,
-      }
+      },
     },
     {
       "pull",
@@ -313,9 +305,8 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "drive to remove" },
-        option_owner,
-      }
-    }
+      },
+    },
   };
   return infinit::main("Infinit drive management utility", modes, argc, argv);
 }

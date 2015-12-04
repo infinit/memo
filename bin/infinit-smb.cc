@@ -62,7 +62,6 @@ int main(int argc, char** argv)
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
-        option_owner,
       },
     },
   };

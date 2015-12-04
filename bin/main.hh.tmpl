@@ -196,16 +196,14 @@ struct Mode
     std::vector<boost::program_options::option_description> Options;
   typedef
     std::vector<boost::program_options::options_description> OptionsVector;
-  Mode(
-    std::string name_,
-    std::string description_,
-    Action action_,
-    std::string help = {},
-    Options options = {},
-    OptionsVector extra_options = {},
-    Options hidden_options = {},
-    OptionsVector hidden_extra_options = {}
-    )
+  Mode(std::string name_,
+       std::string description_,
+       Action action_,
+       std::string help = {},
+       Options options = {},
+       OptionsVector extra_options = {},
+       Options hidden_options = {},
+       OptionsVector hidden_extra_options = {})
     : name(std::move(name_))
     , description(std::move(description_))
     , action(std::move(action_))
@@ -284,6 +282,7 @@ parse_args(boost::program_options::options_description const& options,
 }
 
 bool script_mode = false;
+boost::optional<std::string> _as_user = {};
 
 static
 bool
@@ -345,6 +344,7 @@ namespace infinit
             options_description misc("Miscellaneous");
             misc.add_options()
               ("help,h", "display the help")
+              ("as,a", value<std::string>(), "user to run commands as (default: system user)")
               ("script,s", "silence all extraneous human friendly messages")
               ("version,v", "display version")
             ;
@@ -363,8 +363,10 @@ namespace infinit
                 std::cout << INFINIT_VERSION << std::endl;
                 throw elle::Exit(0);
               }
-              script_mode = vm.count("script");
               bool help = vm.count("help");
+              script_mode = vm.count("script");
+              if (vm.count("as"))
+                _as_user = vm["as"].as<std::string>();
               Mode const* mode = nullptr;
               std::vector<std::string> args;
               for (auto const& m: modes)
@@ -1999,10 +2001,6 @@ beyond_delete(std::string const& type,
   beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self);
 }
 
-boost::program_options::option_description option_owner(
-  "as,a", boost::program_options::value<std::string>(),
-  "user to run commands as (default: system user)");
-
 inline
 static
 infinit::User
@@ -2011,10 +2009,9 @@ self_user(infinit::Infinit const& ifnt,
           bool private_mandatory = true)
 {
   static auto const env  = elle::os::getenv("INFINIT_USER", "");
-  auto as = optional(args, option_owner.long_name());
-  if (!as && !env.empty())
-    as = env;
-  auto res = ifnt.user_get(as);
+  if (!_as_user && !env.empty())
+    _as_user = env;
+  auto res = ifnt.user_get(_as_user);
   if (private_mandatory && !res.private_key)
   {
     throw elle::Error(

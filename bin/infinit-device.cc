@@ -221,7 +221,6 @@ main(int argc, char** argv)
                         beyond(true)).c_str(), },
         option_passphrase,
         { "no-countdown", bool_switch(), "do not show countdown timer" },
-        option_owner,
       },
     },
     {

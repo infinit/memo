@@ -551,7 +551,6 @@ int main(int argc, char** argv)
       &run,
       "--name NETWORK",
       {
-        option_owner,
         { "fetch", bool_switch(),
             elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "peer", value<std::vector<std::string>>()->multitoken(),

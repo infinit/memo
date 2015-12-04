@@ -518,7 +518,6 @@ main(int argc, char** argv)
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-network" },
-        option_owner,
       },
       {
         consensus_types_options,
@@ -535,7 +534,6 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to export" },
         option_output("network"),
-        option_owner,
       },
     },
     {
@@ -545,7 +543,6 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(), "network to fetch (optional)" },
-        option_owner,
       },
     },
     {
@@ -564,10 +561,8 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to link to" },
-        option_owner,
       },
-      {
-      },
+      {},
       // Hidden options.
       {
         { "storage", value<std::string>(), "storage to contribute (optional)" },
@@ -587,7 +582,6 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to push" },
-        option_owner,
       },
     },
     {
@@ -597,7 +591,6 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to delete" },
-        option_owner,
       },
     },
     {
@@ -607,7 +600,6 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to remove" },
-        option_owner,
       },
     },
     {
@@ -632,7 +624,6 @@ main(int argc, char** argv)
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
-        option_owner,
       },
     },
     {
@@ -642,7 +633,6 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network name" },
-        option_owner,
       },
     },
     {
@@ -653,7 +643,6 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network name" },
-        option_owner,
       },
     },
   };

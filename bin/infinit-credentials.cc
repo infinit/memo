@@ -181,9 +181,7 @@ main(int argc, char** argv)
       "Add credentials for a third-party service",
       &add,
       "SERVICE",
-      {
-        option_owner,
-      },
+      {},
       {services_options},
     },
     {
@@ -191,9 +189,7 @@ main(int argc, char** argv)
       elle::sprintf("Fetch credentials from %s", beyond(true)),
       &fetch,
       "[SERVICE]",
-      {
-        option_owner,
-      },
+      {},
       {services_options},
     },
     {

@@ -259,7 +259,6 @@ main(int argc, char** argv)
           elle::sprintf("push the passport to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-passport" },
         option_output("passport"),
-        option_owner,
       },
     },
     {
@@ -271,7 +270,6 @@ main(int argc, char** argv)
         { "network,n", value<std::string>(), "network to export passport for" },
         { "user,u", value<std::string>(), "user to export passport for" },
         option_output("passport"),
-        option_owner,
       },
     },
     {
@@ -285,7 +283,6 @@ main(int argc, char** argv)
           "network to fetch the passport for (optional)" },
         { "user,u", value<std::string>(),
           "user to fetch passports for (optional)" },
-        option_owner,
       },
     },
     {
@@ -306,7 +303,6 @@ main(int argc, char** argv)
       {
         { "network,n", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
-        option_owner,
       },
     },
     {
@@ -318,7 +314,6 @@ main(int argc, char** argv)
       {
         { "network,n", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
-        option_owner,
       },
     },
     {
@@ -329,7 +324,6 @@ main(int argc, char** argv)
       {
         { "network,n", value<std::string>(),
           "network to list passports for (optional)" },
-        option_owner,
       },
     },
     {
@@ -340,7 +334,6 @@ main(int argc, char** argv)
       {
         { "network,n", value<std::string>(), "network name" },
         { "user,u", value<std::string>(), "user name" },
-        option_owner,
       },
     },
   };
