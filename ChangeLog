@@ -3,8 +3,15 @@
 
 ## [Unreleased]
 
+### Changed
+- Only allow lowercase alpha-numeric characters in objects names
+  (i.e. users, networks, volumes ...).
+- Rename `infinit-network --join` to `infinit-network --link`.
+
 ### Fixed
 - Properly handle execution permissions.
+- Drop removed files from cache, fixing many IO errors when trying to
+  perform operations on a deleted file.
 
 
 ## [0.3.3] - 2015-12-03
