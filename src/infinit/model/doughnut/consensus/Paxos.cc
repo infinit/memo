@@ -458,82 +458,71 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: store %f", *this, *inblock);
           std::shared_ptr<blocks::Block> b(inblock.release());
-          do
+          ELLE_ASSERT(b);
+          overlay::Operation op;
+          switch (mode)
           {
-            ELLE_ASSERT(b);
-            overlay::Operation op;
-            switch (mode)
+            case STORE_ANY:
+              op = overlay::OP_INSERT_OR_UPDATE;
+              break;
+            case STORE_INSERT:
+              op = overlay::OP_INSERT;
+              break;
+            case STORE_UPDATE:
+              op = overlay::OP_UPDATE;
+              break;
+            default:
+              elle::unreachable();
+          }
+          auto owners = this->_owners(b->address(), this->_factor, op);
+          if (dynamic_cast<blocks::MutableBlock*>(b.get()))
+          {
+            // FIXME: this voids the whole "query on the fly" optimisation
+            Paxos::PaxosClient::Peers peers;
+            PaxosServer::Quorum peers_id;
+            // FIXME: This void the "query on the fly" optimization as it
+            // forces resolution of all peers to get their idea. Any other
+            // way ?
+            for (auto peer: owners)
             {
-              case STORE_ANY:
-                op = overlay::OP_INSERT_OR_UPDATE;
-                break;
-              case STORE_INSERT:
-                op = overlay::OP_INSERT;
-                break;
-              case STORE_UPDATE:
-                op = overlay::OP_UPDATE;
-                break;
-              default:
-                elle::unreachable();
+              peers_id.insert(peer->id());
+              peers.push_back(
+                elle::make_unique<Peer>(peer, b->address()));
             }
-            auto owners = this->_owners(b->address(), this->_factor, op);
-            if (dynamic_cast<blocks::MutableBlock*>(b.get()))
+            if (peers.empty())
+              throw elle::Error(
+                elle::sprintf("No peer available for store %x", b->address()));
+            // FIXME: client is persisted on conflict resolution, hence the
+            // round number is kept and won't start at 0.
+            while (true)
             {
-              // FIXME: this voids the whole "query on the fly" optimisation
-              Paxos::PaxosClient::Peers peers;
-              PaxosServer::Quorum peers_id;
-              // FIXME: This void the "query on the fly" optimization as it
-              // forces resolution of all peers to get their idea. Any other
-              // way ?
-              for (auto peer: owners)
+              try
               {
-                peers_id.insert(peer->id());
-                peers.push_back(
-                  elle::make_unique<Peer>(peer, b->address()));
-              }
-              if (peers.empty())
-                throw elle::Error(
-                  elle::sprintf("No peer available for store %x", b->address()));
-              // FIXME: client is persisted on conflict resolution, hence the
-              // round number is kept and won't start at 0.
-              while (true)
-              {
-                try
+                Paxos::PaxosClient client(
+                  uid(this->doughnut().keys().K()), std::move(peers));
+                while (true)
                 {
-                  Paxos::PaxosClient client(
-                    uid(this->doughnut().keys().K()), std::move(peers));
-                  while (true)
+                  auto version =
+                    dynamic_cast<blocks::MutableBlock*>(b.get())->version();
+                  boost::optional<std::shared_ptr<blocks::Block>> chosen;
+                  ELLE_DEBUG("run Paxos for version %s", version)
+                    chosen = client.choose(peers_id, version, b);
+                  if (chosen && *chosen.get() != *b)
                   {
-                    auto version =
-                      dynamic_cast<blocks::MutableBlock*>(b.get())->version();
-                    boost::optional<std::shared_ptr<blocks::Block>> chosen;
-                    ELLE_DEBUG("run Paxos for version %s", version)
-                      chosen = client.choose(peers_id, version, b);
-                    if (chosen && *chosen.get() != *b)
+                    if (resolver)
                     {
-                      if (resolver)
+                      ELLE_TRACE_SCOPE(
+                        "chosen block differs, run conflict resolution");
+                      auto block = (*resolver)(*b, *chosen.get(), mode);
+                      if (block)
                       {
-                        ELLE_TRACE_SCOPE(
-                          "chosen block differs, run conflict resolution");
-                        auto block = (*resolver)(*b, *chosen.get(), mode);
-                        if (block)
-                        {
-                          ELLE_DEBUG_SCOPE("seal resolved block");
-                          block->seal();
-                          b.reset(block.release());
-                        }
-                        else
-                        {
-                          ELLE_TRACE("resolution failed");
-                          // FIXME: useless clone, find a way to steal ownership
-                          throw infinit::model::doughnut::Conflict(
-                            "Paxos chose a different value",
-                            chosen.get()->clone());
-                        }
+                        ELLE_DEBUG_SCOPE("seal resolved block");
+                        block->seal();
+                        b.reset(block.release());
                       }
                       else
                       {
-                        ELLE_TRACE("chosen block differs, signal conflict");
+                        ELLE_TRACE("resolution failed");
                         // FIXME: useless clone, find a way to steal ownership
                         throw infinit::model::doughnut::Conflict(
                           "Paxos chose a different value",
@@ -541,36 +530,43 @@ namespace infinit
                       }
                     }
                     else
-                      break;
+                    {
+                      ELLE_TRACE("chosen block differs, signal conflict");
+                      // FIXME: useless clone, find a way to steal ownership
+                      throw infinit::model::doughnut::Conflict(
+                        "Paxos chose a different value",
+                        chosen.get()->clone());
+                    }
                   }
+                  else
+                    break;
                 }
-                catch (Paxos::PaxosServer::WrongQuorum const& e)
-                {
-                  ELLE_TRACE("%s: %s instead of %s",
-                             e.what(), e.effective(), e.expected());
-                  peers = lookup_nodes(
-                    this->doughnut(), e.expected(), b->address());
-                  peers_id.clear();
-                  for (auto const& peer: peers)
-                    peers_id.insert(static_cast<Peer&>(*peer).member().id());
-                  continue;
-                }
-                break;
               }
-            }
-            else
-            {
-              elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+              catch (Paxos::PaxosServer::WrongQuorum const& e)
               {
-                for (auto owner: owners)
-                  scope.run_background(
-                    "store block",
-                    [&, owner] { owner->store(*b, STORE_ANY); });
-                reactor::wait(scope);
-              };
+                ELLE_TRACE("%s: %s instead of %s",
+                           e.what(), e.effective(), e.expected());
+                peers = lookup_nodes(
+                  this->doughnut(), e.expected(), b->address());
+                peers_id.clear();
+                for (auto const& peer: peers)
+                  peers_id.insert(static_cast<Peer&>(*peer).member().id());
+                continue;
+              }
+              break;
             }
-            break;
-          } while (true);
+          }
+          else
+          {
+            elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
+            {
+              for (auto owner: owners)
+                scope.run_background(
+                  "store block",
+                  [&, owner] { owner->store(*b, STORE_ANY); });
+              reactor::wait(scope);
+            };
+          }
         }
 
         std::unique_ptr<blocks::Block>
