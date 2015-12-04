@@ -433,5 +433,5 @@ main(int argc, char** argv)
       &list,
     },
   };
-  return infinit::main("Infinit user utility", modes, argc, argv);
+  return infinit::main("Infinit user utility", modes, argc, argv, {}, true);
 }

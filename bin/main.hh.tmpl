@@ -322,7 +322,8 @@ namespace infinit
        Modes const& modes,
        int argc,
        char** argv,
-       boost::optional<std::string> positional_arg = {})
+       boost::optional<std::string> positional_arg = {},
+       boost::optional<bool> disable_as_arg = {})
   {
     try
     {
@@ -330,7 +331,7 @@ namespace infinit
       reactor::Thread main_thread(
         sched,
         "main",
-        [&sched, &modes, &desc, argc, argv, &positional_arg]
+        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg]
         {
           ELLE_TRACE("parse command line")
           {
@@ -344,10 +345,16 @@ namespace infinit
             options_description misc("Miscellaneous");
             misc.add_options()
               ("help,h", "display the help")
-              ("as,a", value<std::string>(), "user to run commands as (default: system user)")
               ("script,s", "silence all extraneous human friendly messages")
               ("version,v", "display version")
             ;
+            if (!disable_as_arg || !disable_as_arg.get())
+            {
+              misc.add_options()
+                ("as,a", value<std::string>(),
+                 "user to run commands as (default: system user)")
+              ;
+            }
             options.add(misc);
             variables_map vm;
             try
