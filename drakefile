@@ -20,7 +20,7 @@ rule_check = None
 rule_install = None
 rule_tests = None
 
-name_regex = '^[-a-z0-9._]+$'
+name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())

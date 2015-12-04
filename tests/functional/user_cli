@@ -159,15 +159,17 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   def create_with_name_throw(name):
     try:
       create_with_name(name)
-      assert False
+      unreachable()
     except Exception as e:
       pass
 
-  create_with_name("bob")
-  create_with_name("alice123")
-  create_with_name("eve_2")
+  for name in ['bob', 'alice', 'eve_2', 'o', 'o2', 'first.last', 'first_last',
+               'first-last', '_xxx_german_nickname_xxx_', '-dash', 'x' * 128,
+               '2zio', '-lol-']:
+    create_with_name(name)
 
-  create_with_name_throw("Bob")
-  create_with_name_throw("accént")
-  create_with_name_throw("char+acter")
-  create_with_name_throw("s/ash")
+  for name in ['Bob', 'accént', 'char+acter', 's/ash', '5tartWithADigit',
+               '.start', '*', ' whitespace', '..', 'ру́сский', '汉语', 'にほん',
+               'saṃskṛtam', 'it\'s', 'white space', '"ok"', 'o"k', 'x' * 129,
+             ]:
+    create_with_name_throw(name)

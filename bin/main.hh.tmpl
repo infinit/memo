@@ -304,7 +304,7 @@ namespace infinit
   {
     static const std::string error_message(
       "name (%s) must only contain lower case alphanumeric and - . _ "
-      "characters");
+      "characters but not start with the . character");
     std::string test_name;
     auto slash_pos = name.find_first_of("/");
     if (no_slash && slash_pos != std::string::npos)
