@@ -170,11 +170,11 @@ namespace infinit
       Address addr = it->second.second;
       if (!_first_block)
         _first_block = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr));
+          _owner.fetch_or_die(addr, {}, this));
       else
       {
         auto res = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr, _first_block->version()));
+          _owner.fetch_or_die(addr, _first_block->version(), this));
         if (res)
           _first_block = std::move(res);
         else
@@ -414,7 +414,11 @@ namespace infinit
       {
         ELLE_DEBUG("%s: filesystem exception: %s", *this, e.what());
         if (e.error_code() != EACCES)
+        {
+          if (!_rw_handle_count)
+            _remove_from_cache();
           throw;
+        }
       }
       catch (elle::Error const& e)
       {

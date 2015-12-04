@@ -121,7 +121,8 @@ namespace infinit
 
     std::unique_ptr<model::blocks::Block>
     FileSystem::fetch_or_die(model::Address address,
-                             boost::optional<int> local_version)
+                             boost::optional<int> local_version,
+                             Node* node)
     {
       try
       {
@@ -138,7 +139,10 @@ namespace infinit
       }
       catch (model::MissingBlock const& mb)
       {
-        ELLE_WARN("unexpected storage result fetching: %s", mb);
+        ELLE_WARN("data not found fetching %s : %s",
+                  node? node->full_path() : "", mb);
+        if (node)
+          node->_remove_from_cache();
         throw rfs::Error(EIO, elle::sprintf("%s", mb));
       }
       catch (elle::serialization::Error const& se)

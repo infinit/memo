@@ -47,6 +47,7 @@ namespace infinit
       std::shared_ptr<Directory> _parent;
       std::string _name;
       FileHeader _header;
+      friend class FileSystem;
     };
   }
 }

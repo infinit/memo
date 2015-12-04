@@ -228,13 +228,13 @@ namespace infinit
       {
         auto block =
           elle::cast<ACLBlock>::runtime(
-            this->_owner.fetch_or_die(this->_address, this->_block->version()));
+            this->_owner.fetch_or_die(this->_address, this->_block->version(), this));
         if (block)
           this->_block = std::move(block);
       }
       else
         this->_block = elle::cast<ACLBlock>::runtime(
-          this->_owner.fetch_or_die(this->_address));
+          this->_owner.fetch_or_die(this->_address, {}, this));
       ELLE_TRACE("Got block");
       ELLE_DUMP("block: %s", *this->_block);
       std::unordered_map<std::string, std::pair<EntryType,Address>> local;

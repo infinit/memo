@@ -8,6 +8,7 @@ namespace infinit
 {
   namespace filesystem
   {
+    class Node;
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -30,7 +31,8 @@ namespace infinit
 
       std::unique_ptr<model::blocks::Block>
       fetch_or_die(model::Address address,
-                   boost::optional<int> local_version = {});
+                   boost::optional<int> local_version = {},
+                   Node* node = nullptr);
 
       void
       store_or_die(std::unique_ptr<model::blocks::Block> block,
