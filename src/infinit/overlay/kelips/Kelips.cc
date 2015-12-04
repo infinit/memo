@@ -2899,6 +2899,7 @@ namespace infinit
       Node::make_peer(PeerLocation hosts)
       {
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
+        static int cache_count = std::stoi(elle::os::getenv("INFINIT_PEER_CACHE_DUP", "1"));
         ELLE_TRACE("connecting to %s", hosts);
         if (hosts.first == _self || hosts.first == Address::null)
         {
@@ -2917,8 +2918,8 @@ namespace infinit
         if (!disable_cache)
         {
           auto it = _peer_cache.find(hosts.first);
-          if (it != _peer_cache.end())
-            return it->second;
+          if (it != _peer_cache.end() && signed(it->second.size()) >= cache_count)
+            return it->second[rand()%it->second.size()];
         }
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: hosts.second)
@@ -2945,7 +2946,7 @@ namespace infinit
                           this, std::placeholders::_1,
                           uid)));
             if (!disable_cache)
-              _peer_cache[hosts.first] = res;
+              _peer_cache[hosts.first].push_back(res);
             return res;
           }
           catch (elle::Error const& e)
