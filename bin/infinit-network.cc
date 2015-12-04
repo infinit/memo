@@ -69,8 +69,6 @@ COMMAND(create)
       elle::make_unique<infinit::overlay::kelips::Configuration>();
     if (args.count("k"))
       kelips->k = args["k"].as<int>();
-    else
-      kelips->k = 1;
     else if (args.count("nodes"))
     {
       int nodes = args["nodes"].as<int>();
@@ -81,6 +79,8 @@ COMMAND(create)
       else
         kelips->k = sqrt(nodes);
     }
+    else
+      kelips->k = 1;
     if (args.count("encrypt"))
     {
       std::string enc = args["encrypt"].as<std::string>();
