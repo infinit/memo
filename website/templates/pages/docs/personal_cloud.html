@@ -27,7 +27,7 @@ $[device A]>
 
     <p>By simply passing the --create option, Infinit takes care of generating a RSA key pair and creating a user whose name is based on your UNIX username. Please refer to the infinit-user manual or reference page for more options such as using your existing SSH RSA key.</p>
 
-    <h2>Register your user on the hub</h2>
+    <h2>Register your user on the Hub</h2>
 
     <p>The Infinit hub allows for users to very easily manage their resources being networks and storages (in particular cloud-based) from any device without having to move configuration files around manually.</p>
 
@@ -38,7 +38,7 @@ $[device A]>
 $[device A]>
 </code></pre>
 
-    <p>To simplify all the hub-related commands, you can set the INFINIT_HUB_HANDLE environment variable to your handle:</p>
+    <p>To simplify all the Hub-related commands, you can set the INFINIT_HUB_HANDLE environment variable to your handle:</p>
 
 <pre><code>$[device A]> export INFINIT_HUB_HANDLE=”jrc”
 $[device A]>
@@ -159,7 +159,7 @@ Running volume ".../personal".
 
     <p>Now that you have successfully mounted the volume on your machine, it could be interesting to access the same data on another device.</p>
 
-    <p>Before moving on to the other devices, we need to make the resources we’ve created retrievable. The following commands publish the network and volume resources on the hub:</p>
+    <p>Before moving on to the other devices, we need to make the resources we’ve created retrievable. The following commands publish the network and volume resources on the Hub:</p>
 
 <pre><code>$[device A]> infinit-network --publish --name clouds --as jacquo
 … XXX …
@@ -191,7 +191,7 @@ Imported user “jacquo”.
 $[device B]>
 </code></pre>
 
-    <p>The next steps consist in fetching the resources that you previously published on the hub: networks and volumes.</p>
+    <p>The next steps consist in fetching the resources that you previously published on the Hub: networks and volumes.</p>
 
 <pre><code>$[device B]> infinit-network --fetch --name clouds --user jacquo
 Fetched network ".../clouds".
@@ -204,7 +204,7 @@ $[device B]>
 
   <p>This is why we are going to set up a little optimization that will remove the step of going through <span class="code">device A</span> leading to better performance and more availability. Note however that this is unnatural in Infinit’s architecture and is used only in this deployment where there are multiple devices belonging to the same user.</p>
 
-  <p>First, let’s fetch the credentials to the cloud services from the hub and then re-create the associated storages:</p>
+  <p>First, let’s fetch the credentials to the cloud services from the Hub and then re-create the associated storages:</p>
 
 <pre><code>$[device B]> infinit-credentials --fetch --as jacquo
 Fetched Dropbox credentials 455444556 (Jacques Chirac)
