@@ -119,6 +119,9 @@ namespace infinit
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
+            virtual
+            void
+            remove(Address address) override;
             struct Decision
             {
               Decision(PaxosServer paxos);

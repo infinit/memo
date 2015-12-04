@@ -452,6 +452,13 @@ namespace infinit
         }
 
         void
+        Paxos::LocalPeer::remove(Address address)
+        {
+          Local::remove(address);
+          this->_addresses.erase(address);
+        }
+
+        void
         Paxos::_store(std::unique_ptr<blocks::Block> inblock,
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
