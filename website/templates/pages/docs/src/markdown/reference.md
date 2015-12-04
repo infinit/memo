@@ -53,6 +53,7 @@ Miscellaneous:
   -h [ --help ]          display the help
   -s [ --script ]        silence all extraneous human friendly messages
   -v [ --version ]       display version
+  -a [ --as ]            user to run commands as (default: system user)
 ```
 
 However, the help when invoking the `--create` option gives a completely different output:
@@ -85,7 +86,7 @@ $> infinit-volume --push --name personal
 $> infinit-volume --push personal
 ```
 
-Except for the _infinit-user_ binary, one can specify the Infinit user behind the action by relying on the `--as` option followed by the user name. If not specified, the `$INFINIT_USER` environment variable is used, unless not set in which case the system user name is used.
+With the exception of the _infinit-user_ binary, one can specify the Infinit user behind the action by relying on the `--as` option followed by the user name. If not specified, the `$INFINIT_USER` environment variable is used, unless not set in which case the system user name is used.
 
 Finally, some command-line tools, in particular _infinit-network_, and _infinit-volume_ can be "run". As such, they have options such as `--start`, `--stop`, `--status` etc. in order to allow developers to manipulate them in a similar fashion to other UNIX daemons e.g init scripts.
 
