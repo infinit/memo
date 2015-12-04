@@ -109,10 +109,13 @@ namespace infinit
         std::weak_ptr<Directory> wd);
       void _commit(Operation op, bool set_mtime = false);
       void _push_changes(Operation op, bool first_write = false);
+      void _prefetch();
       Address _address;
       std::unique_ptr<ACLBlock> _block;
-      elle::unordered_map<std::string, std::pair<EntryType, Address>> _files;
+      typedef elle::unordered_map<std::string, std::pair<EntryType, Address>> Files;
+      Files _files;
       bool _inherit_auth; //child nodes inherit this dir's permissions
+      bool _prefetching; // true if prefetch thread is running
       friend class FileSystem;
     };
 

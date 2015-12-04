@@ -1,5 +1,6 @@
 #include <infinit/filesystem/Directory.hh>
 #include <elle/cast.hh>
+#include <elle/os/environ.hh>
 #include <reactor/exception.hh>
 
 #include <infinit/filesystem/File.hh>
@@ -210,6 +211,7 @@ namespace infinit
       : Node(owner, parent, name)
       , _address(address)
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
+      , _prefetching(false)
     {}
 
     void
@@ -397,10 +399,40 @@ namespace infinit
       }
 
     void
+    Directory::_prefetch()
+    {
+      static int prefetch_threads = std::stoi(
+        elle::os::getenv("INFINIT_PREFETCH_THREADS", "3"));
+      int nthreads = std::min(prefetch_threads, signed(_files.size()) / 2);
+      if (_prefetching || !nthreads)
+        return;
+      auto files = std::make_shared<Files>(_files);
+      _prefetching = true;
+      auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
+      auto model = _owner.block_store();
+      auto running = std::make_shared<int>(nthreads);
+      for (int i=0; i<nthreads; ++i)
+        new reactor::Thread("prefetcher", [self, files, model, running] {
+            int nf = 0;
+            while (!files->empty())
+            {
+              ++nf;
+              auto it = files->begin();
+              auto a = it->second.second;
+              files->erase(it);
+              model->fetch(a);
+            }
+            if (!(--(*running)))
+              self->_prefetching = false;
+        }, true);
+    }
+
+    void
       Directory::list_directory(rfs::OnDirectoryEntry cb)
       {
         ELLE_TRACE_SCOPE("%s: list", *this);
         _fetch();
+        _prefetch();
         struct stat st;
         for (auto const& e: _files)
         {
