@@ -69,6 +69,8 @@ COMMAND(create)
       elle::make_unique<infinit::overlay::kelips::Configuration>();
     if (args.count("k"))
       kelips->k = args["k"].as<int>();
+    else
+      kelips->k = 1;
     else if (args.count("nodes"))
     {
       int nodes = args["nodes"].as<int>();
@@ -102,8 +104,8 @@ COMMAND(create)
     }
     else
     {
-      kelips->encrypt = false;
-      kelips->accept_plain = true;
+      kelips->encrypt = true;
+      kelips->accept_plain = false;
     }
     if (args.count("protocol"))
     {
@@ -493,9 +495,11 @@ main(int argc, char** argv)
   options_description kelips_options("Kelips options");
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
-    ("k", value<int>(), "number of groups")
-    ("encrypt", value<std::string>(), "use encryption: no,lazy,yes")
-    ("protocol", value<std::string>(), "RPC protocol to use: tcp,utp,all")
+    ("k", value<int>(), "number of groups (default: 1)")
+    ("encrypt", value<std::string>(),
+      "use encryption: no,lazy,yes (default: yes)")
+    ("protocol", value<std::string>(),
+      "RPC protocol to use: tcp,utp,all (default: all)")
     ;
   options_description options("Infinit network utility");
   Modes modes {
