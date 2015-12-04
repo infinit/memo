@@ -3,6 +3,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Properly handle execution permissions.
+
 
 ## [0.3.3] - 2015-12-03
 
@@ -19,7 +22,6 @@
 - Add missing automatic conflicts resolver.
 - Let a user create passport for a network without joining it.
 - Don't require a valid current user to list a network passports.
-- Properly handle user executable mode for files.
 
 
 ## [0.3.2] - 2015-12-01
