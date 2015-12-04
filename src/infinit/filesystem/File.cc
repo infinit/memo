@@ -404,7 +404,7 @@ namespace infinit
       {
         this->_fetch();
         Node::stat(st);
-        st->st_mode |= S_IFREG;
+        st->st_mode |= S_IFREG | (_header.mode & 0100);
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
