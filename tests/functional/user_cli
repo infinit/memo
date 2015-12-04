@@ -4,8 +4,7 @@ from utils import *
 import json
 
 # Using hub to retreive a user.
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
   bob.run(['infinit-user', '--signup',
            '--name', 'bob', '--email', 'bob@infinit.io'])
   alice.run(['infinit-user', '--signup', '--full',
@@ -23,8 +22,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
 ## Login / Push full ##
 ## ----------------- ##
 # Using login.
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   alice.run(['infinit-user', '--signup', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
@@ -41,8 +39,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   assertEq(alice_json, alice2_json)
 
 # Push --full.
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   alice.run(['infinit-user', '--create', '--name', 'alice'])
   alice.run(['infinit-user', '--push', '--full',
              '--name', 'alice',
@@ -55,13 +52,12 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
   alice2_json = alice2.run(['infinit-user', '--export', '--full',
                             '--name', 'alice'])
   # XXX: Fix missing email.
-  del alice_json['email']
-  del alice2_json['email']
+  # del alice_json['email']
+  # del alice2_json['email']
   assertEq(alice_json, alice2_json)
 
 # Push without --full.
-with Beyond() as beyond, TemporaryDirectory() as tmp, \
-     Infinit(beyond = beyond) as alice:
+with Beyond() as b, Infinit(beyond = b) as alice:
   alice.run(['infinit-user', '--create', '--name', 'alice'])
   alice.run(['infinit-user', '--push',
              '--name', 'alice',
@@ -71,11 +67,10 @@ with Beyond() as beyond, TemporaryDirectory() as tmp, \
     alice.run(['infinit-user', '--login', '--name', 'alice', '--password', 'loremipsword'])
     unreachable()
   except Exception as e:
-    assert 'doesn\'t use the hub to login' in e.args[0]
+    assertIn('doesn\'t use the hub to login', e.args[0])
 
 # Read password from stdin (signup).
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   alice.run(['infinit-user', '--create', '--name', 'alice'])
   alice.run(['infinit-user', '--push',
              '--full',
@@ -88,8 +83,7 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
               '--password', 'loremipsword'])
 
 # Read password from stdin (login).
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   alice.run(['infinit-user', '--create', '--name', 'alice'])
   alice.run(['infinit-user', '--push',
              '--full',
@@ -115,28 +109,26 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
              input_as_it_is = True)
 
 # Missing and invalid email.
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   try:
     alice.run(['infinit-user', '--signup', '--name', 'alice'])
     unreachable()
   except Exception as e:
-    assert '(use --email)' in  e.args[0]
+    assertIn('(use --email)', e.args[0])
   try:
     alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'foo@'])
     unreachable()
   except Exception as e:
-    assert 'email address is invalid' in  e.args[0]
+    assertIn('email address is invalid', e.args[0])
   # Create is not atomic, so 'alice' will be created after that.
   try:
     alice.run(['infinit-user', '--create', '--name', 'alice', '--push'])
     unreachable()
   except Exception as e:
-    assert '(use --email)' in  e.args[0]
+    assertIn('(use --email)', e.args[0])
 
 # Password missmatch.
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as alice, Infinit(beyond = beyond) as alice2:
+with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
   alice.run(['infinit-user', '--signup', '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io',
@@ -145,13 +137,28 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
     alice2.run(['infinit-user', '--login',
                 '--name', 'alice',
                 '--password', 'not_password'])
-    assert False
+    unreachable()
   except Exception as e:
-    assert 'password do not match' in e.args[0]
+    assertIn('password do not match', e.args[0])
+
+# Pull a user that is not you.
+with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as bob:
+  alice.run(['infinit-user', '--signup', '--full',
+             '--name', 'alice',
+             '--email', 'alice@infinit.io',
+             '--password', 'loremipsword'])
+  bob.run(['infinit-user', '--signup',
+           '--name', 'bob',
+           '--email', 'bob@infinit.io'])
+  alice.run(['infinit-user', '--fetch', 'bob'])
+  try:
+    alice.run(['infinit-user', '--pull', 'bob'])
+    unreachable()
+  except Exception as e:
+    assertIn('has no private key', e.args[0])
 
 # Invalid user name.
-with Beyond() as beyond, TemporaryDirectory() as tmp,  \
-     Infinit(beyond = beyond) as bob, Infinit(beyond = beyond) as alice:
+with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
   def create_with_name(name):
     bob.run(['infinit-user', '--create',
                '--name', name, '--email', '%s@infinit.io' % name])
