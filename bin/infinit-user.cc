@@ -1,6 +1,4 @@
 #include <elle/log.hh>
-// #include <elle/serialization/Serializer.hh>
-// #include <elle/serialization/json.hh>
 
 #include <das/serializer.hh>
 
