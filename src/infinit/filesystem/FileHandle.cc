@@ -161,6 +161,8 @@ namespace infinit
       }
       off_t end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
+      _owner->_last_read_block = start_block;
+      _owner->_check_prefetch();
       int end_block = end ? (end - 1) / block_size : 0;
       if (start_block == end_block)
       { // single block case
@@ -172,6 +174,7 @@ namespace infinit
           ELLE_DEBUG("obtained block %s : %x from cache, with %s bytes",
                      start_block, it->second.block.address(),
                      it->second.block.data().size());
+          reactor::wait(it->second.ready);
           block = &it->second.block;
           it->second.last_use = std::chrono::system_clock::now();
         }

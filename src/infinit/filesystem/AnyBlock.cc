@@ -28,8 +28,18 @@ namespace infinit
           static elle::Bench bench("bench.anyblock.decipher", 10000_sec);
           elle::Bench::BenchScope bs(bench);
           cryptography::SecretKey sk(secret);
-          auto res = sk.decipher(_buf);
-          _buf = std::move(res);
+          if (_buf.size() < 100000)
+          {
+            auto res = sk.decipher(_buf);
+            _buf = std::move(res);
+          }
+          else
+          {
+            reactor::background([&] {
+                auto res = sk.decipher(_buf);
+                _buf = std::move(res);
+            });
+          }
         }
       }
     }

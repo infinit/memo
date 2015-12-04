@@ -2,6 +2,7 @@
 # define INFINIT_FILESYSTEM_FILE_HH
 
 # include <reactor/filesystem.hh>
+# include <reactor/Barrier.hh>
 # include <reactor/thread.hh>
 # include <infinit/filesystem/Node.hh>
 # include <infinit/filesystem/AnyBlock.hh>
@@ -73,12 +74,15 @@ namespace infinit
       void _commit_first(bool final_flush);
       void _commit_all();
       bool _flush_block(int id);
+      void _prefetch(int idx);
+      void _check_prefetch();
       struct CacheEntry
       {
         AnyBlock block;
         bool dirty;
         std::chrono::system_clock::time_point last_use;
         bool new_block;
+        reactor::Barrier ready;
       };
 
       std::vector<reactor::Thread::unique_ptr> _flushers;
@@ -92,6 +96,8 @@ namespace infinit
       typedef std::pair<Address, std::string> FatEntry; // (address, key)
       std::vector<FatEntry> _fat;
       elle::Buffer _data; // first block data
+      int _prefetchers_count; // number of running prefetchers
+      int _last_read_block; // block hit by last read operation
       static const uint64_t first_block_size = 16384;
     };
   }

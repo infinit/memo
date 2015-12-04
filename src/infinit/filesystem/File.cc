@@ -30,6 +30,10 @@ namespace infinit
 {
   namespace filesystem
   {
+
+    static const int lookahead_blocks = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
+    static const int max_lookahead_threads = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
+
     class FileConflictResolver
       : public model::ConflictResolver
     {
@@ -128,6 +132,8 @@ namespace infinit
       , _rw_handle_count(0)
       , _fat_changed(false)
       , _full_path(full_path())
+      , _prefetchers_count(0)
+      , _last_read_block(0)
     {}
 
     File::~File()
@@ -303,16 +309,58 @@ namespace infinit
       }
       else
       {
+        ELLE_TRACE("Fetching %s", index);
         b = AnyBlock(_owner.fetch_or_die(_fat[index].first), _fat[index].second);
         is_new = false;
       }
 
       auto inserted = _blocks.insert(std::make_pair(index,
         File::CacheEntry{AnyBlock(std::move(b)), false}));
+      inserted.first->second.ready.open();
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
       inserted.first->second.new_block = is_new;
       return &inserted.first->second.block;
+    }
+
+    void
+    File::_check_prefetch()
+    {
+      // Check if we need to relaunch a prefetcher
+      int nidx = _last_read_block + 1;
+      for (; nidx < _last_read_block + lookahead_blocks
+        && _prefetchers_count < max_lookahead_threads; ++nidx)
+      {
+        if (nidx >= signed(_fat.size()))
+          break;
+        if (_blocks.find(nidx) == _blocks.end())
+        {
+          _prefetch(nidx);
+          break;
+        }
+      }
+    }
+
+    void
+    File::_prefetch(int idx)
+    {
+      ELLE_TRACE("Prefetching %s", idx);
+      auto inserted = _blocks.insert(std::make_pair(idx, File::CacheEntry{}));
+      inserted.first->second.last_use = std::chrono::system_clock::now();
+      inserted.first->second.dirty = false;
+      inserted.first->second.new_block = false;
+      auto self = std::dynamic_pointer_cast<File>(shared_from_this());
+      auto addr = _fat[idx].first;
+      auto key = _fat[idx].second;
+      ++_prefetchers_count;
+      new reactor::Thread("prefetcher", [self, addr, idx, key] {
+          auto b = AnyBlock(self->_owner.fetch_or_die(addr), key);
+          self->_blocks[idx].last_use = std::chrono::system_clock::now();
+          self->_blocks[idx].block = std::move(b);
+          self->_blocks[idx].ready.open();
+          --self->_prefetchers_count;
+          self->_check_prefetch();
+      }, true);
     }
 
     void
