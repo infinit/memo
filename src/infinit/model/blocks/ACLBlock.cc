@@ -42,7 +42,8 @@ namespace infinit
       void
       ACLBlock::set_permissions(User const& user,
                                 bool read,
-                                bool write)
+                                bool write
+                                )
       {
         ELLE_TRACE_SCOPE("%s: set permissions for %f: read = %s, write = %s",
                          *this, user, read, write);

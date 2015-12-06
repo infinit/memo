@@ -123,8 +123,9 @@ namespace infinit
 
       ACB::ACB(Doughnut* owner,
                elle::Buffer data,
-               boost::optional<elle::Buffer> salt)
-        : Super(owner, std::move(data), std::move(salt))
+               boost::optional<elle::Buffer> salt,
+               boost::optional<cryptography::rsa::KeyPair> kp)
+        : Super(owner, std::move(data), std::move(salt), std::move(kp))
         , _editor(-1)
         , _owner_token()
         , _acl_changed(true)
@@ -262,7 +263,8 @@ namespace infinit
           elle::Buffer token;
           if (this->_owner_token.size())
           {
-            auto secret = this->doughnut()->keys().k().open(this->_owner_token);
+            auto& k = keys() ? keys()->k() : this->doughnut()->keys().k();
+            auto secret = k.open(this->_owner_token);
             token = key.seal(secret);
           }
           acl_entries.emplace_back(ACLEntry(key, read, write, token));
@@ -395,7 +397,7 @@ namespace infinit
             return blocks::ValidationResult::failure("no write permissions");
           }
         }
-        ELLE_DEBUG("%s: check author signature", *this)
+        ELLE_DEBUG("%s: check author signature, entry=%s", *this, !!entry)
         {
           auto sign = this->_data_sign();
           auto& key = entry ? entry->key : *this->owner_key();
@@ -408,6 +410,12 @@ namespace infinit
         }
         return blocks::ValidationResult::success();
       }
+
+      template <typename T>
+      static
+      void
+      null_deleter(T*)
+      {}
 
       void
       ACB::seal(cryptography::SecretKey const& key)
@@ -435,6 +443,8 @@ namespace infinit
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
           this->_acl_changed = false;
           bool owner = this->doughnut()->keys().K() == *this->owner_key();
+          if (this->keys())
+            owner |= this->keys()->K() == *this->owner_key();
           if (owner)
             this->_editor = -1;
           Super::_seal_okb();
@@ -457,6 +467,8 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
                            *this, this->_data_version);
           bool owner = this->doughnut()->keys().K() == *this->owner_key();
+          if (this->keys())
+            owner |= this->keys()->K() == *this->owner_key();
           if (owner)
             this->_editor = -1;
           boost::optional<cryptography::SecretKey> secret;
@@ -477,7 +489,7 @@ namespace infinit
             {
               e.token = e.key.seal(secret_buffer);
             }
-            if (e.key == this->doughnut()->keys().K())
+            if (!owner && e.key == this->doughnut()->keys().K())
             {
               found = true;
               this->_editor = idx;
@@ -500,8 +512,10 @@ namespace infinit
           (!this->_data_signature.running() && this->_data_signature.value().empty()))
         {
           // note: in world_writable mode, the signing key might not be
-          // present in the block, so signing might not be that important.
-          auto keys = this->doughnut()->keys_shared();
+          // present in the block, so signing might not be that important.      
+          auto keys = this->keys() ?
+            std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>)
+            : this->doughnut()->keys_shared();
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
             [keys, to_sign]

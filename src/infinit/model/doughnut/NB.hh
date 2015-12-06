@@ -4,6 +4,7 @@
 # include <elle/attribute.hh>
 
 # include <cryptography/rsa/PublicKey.hh>
+# include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/blocks/ImmutableBlock.hh>
 # include <infinit/model/doughnut/fwd.hh>
@@ -32,8 +33,13 @@ namespace infinit
            infinit::cryptography::rsa::PublicKey owner,
            std::string name,
            elle::Buffer data);
+        NB(Doughnut* doughnut,
+           infinit::cryptography::rsa::KeyPair keys,
+           std::string name,
+           elle::Buffer data);
         NB(NB const& other);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
+        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::PublicKey, owner);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);

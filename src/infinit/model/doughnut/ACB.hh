@@ -59,7 +59,8 @@ namespace infinit
       public:
         ACB(Doughnut* owner,
             elle::Buffer data = {},
-            boost::optional<elle::Buffer> salt = {});
+            boost::optional<elle::Buffer> salt = {},
+            boost::optional<cryptography::rsa::KeyPair> kp = {});
         ACB(ACB const& other, bool sealed_copy = true);
         ~ACB();
         ELLE_ATTRIBUTE_R(int, editor);
@@ -105,13 +106,15 @@ namespace infinit
         void
         set_permissions(cryptography::rsa::PublicKey const& key,
                         bool read,
-                        bool write);
+                        bool write
+                        );
       protected:
         virtual
         void
         _set_permissions(model::User const& key,
                          bool read,
-                         bool write) override;
+                         bool write
+                         ) override;
         virtual
         void
         _copy_permissions(ACLBlock& to) override;

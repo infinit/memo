@@ -78,7 +78,9 @@ namespace infinit
       public:
         BaseOKB(Doughnut* owner,
                 elle::Buffer data = {},
-                boost::optional<elle::Buffer> salt = {});
+                boost::optional<elle::Buffer> salt = {},
+                boost::optional<cryptography::rsa::KeyPair> kp = {}
+                );
         BaseOKB(BaseOKB const& other, bool sealed_copy = true);
         ELLE_ATTRIBUTE(int, version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
@@ -104,6 +106,7 @@ namespace infinit
         virtual
         bool
         operator ==(blocks::Block const& rhs) const override;
+        ELLE_ATTRIBUTE_RX(boost::optional<cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(elle::Buffer, data_plain, protected);
         ELLE_ATTRIBUTE(bool, data_decrypted, protected);
       protected:

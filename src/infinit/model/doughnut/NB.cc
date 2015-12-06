@@ -30,9 +30,21 @@ namespace infinit
         , _name(std::move(name))
       {}
 
+      NB::NB(Doughnut* doughnut,
+             infinit::cryptography::rsa::KeyPair keys,
+             std::string name,
+             elle::Buffer data)
+        : Super(NB::address(keys.K(), name), std::move(data))
+        , _doughnut(std::move(doughnut))
+        , _keys(keys)
+        , _owner(keys.K())
+        , _name(std::move(name))
+      {}
+
       NB::NB(NB const& other)
         : Super(other)
         , _doughnut(other._doughnut)
+        , _keys(other._keys)
         , _owner(other._owner)
         , _name(other._name)
         , _signature(other._signature)
@@ -66,9 +78,12 @@ namespace infinit
       void
       NB::_seal()
       {
-        ELLE_ASSERT_EQ(this->doughnut()->keys().K(), this->owner());
+        if (this->_keys)
+          ELLE_ASSERT_EQ(this->_keys->K(), this->owner());
+        else
+          ELLE_ASSERT_EQ(this->doughnut()->keys().K(), this->owner());
         auto sign = this->_data_sign();
-        auto const& key = this->doughnut()->keys().k();
+        auto const& key = _keys ? _keys->k() : this->doughnut()->keys().k();
         this->_signature = key.sign(sign);
       }
 

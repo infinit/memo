@@ -110,12 +110,15 @@ namespace infinit
       template <typename Block>
       BaseOKB<Block>::BaseOKB(Doughnut* owner,
                               elle::Buffer data,
-                              boost::optional<elle::Buffer> salt)
-        : OKBHeader(*owner->keys_shared(), std::move(salt))
+                              boost::optional<elle::Buffer> salt,
+                              boost::optional<cryptography::rsa::KeyPair> kp
+                              )
+        : OKBHeader(kp? *kp : *owner->keys_shared(), std::move(salt))
         , Super(this->_hash_address())
         , _version(-1)
         , _signature()
         , _doughnut(owner)
+        , _keys(kp)
         , _data_plain()
         , _data_decrypted(true)
       {
@@ -280,13 +283,21 @@ namespace infinit
         }
       }
 
+      template <typename T>
+      static
+      void
+      null_deleter(T*)
+      {}
+
       template <typename Block>
       void
       BaseOKB<Block>::_seal_okb(bool bump_version)
       {
         if (bump_version)
           ++this->_version; // FIXME: idempotence in case the write fails ?
-        auto keys = this->_doughnut->keys_shared();
+        auto keys = _keys ?
+        std::shared_ptr<cryptography::rsa::KeyPair>(&*_keys, null_deleter<cryptography::rsa::KeyPair>)
+        : this->_doughnut->keys_shared();
         auto sign = elle::utility::move_on_copy(this->_sign());
         ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
         this->_signature =

@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 # define INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 
+# include <cryptography/rsa/KeyPair.hh>
+
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/MutableBlock.hh>
 
@@ -44,7 +46,8 @@ namespace infinit
         void
         set_permissions(User const& user,
                         bool read,
-                        bool write);
+                        bool write
+                        );
         void
         set_world_permissions(bool read, bool write);
         std::pair<bool, bool>
@@ -72,7 +75,8 @@ namespace infinit
         void
         _set_permissions(User const& user,
                          bool read,
-                         bool write);
+                         bool write
+                         );
         virtual
         void
         _set_world_permissions(bool read, bool write);
