@@ -378,6 +378,7 @@ class Bottle(bottle.Bottle):
                      {
                        'error': 'users/not_in', # Better name.
                        'reason': 'User doesn\'t use the hub to login',
+                       'name': name
                      })
       if json['password_hash'] != user.password_hash:
         raise Response(403,

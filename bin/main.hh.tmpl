@@ -78,9 +78,9 @@ struct BeyondError
 {
   BeyondError(std::string const& error,
               std::string const& reason,
-              std::string const& name = "NAME")
-    : elle::Error(error)
-    , _reason(reason)
+              boost::optional<std::string> const& name = boost::none)
+    : elle::Error(reason)
+    , _error(error)
     , _name(name)
   {
     ELLE_TRACE("error: %s", *this);
@@ -89,12 +89,18 @@ struct BeyondError
   BeyondError(elle::serialization::SerializerIn& s)
     : BeyondError(s.deserialize<std::string>("error"),
                   s.deserialize<std::string>("reason"),
-                  s.deserialize<std::string>("name"))
+                  s.deserialize<boost::optional<std::string>>("name"))
   {
   }
 
-  ELLE_ATTRIBUTE_R(std::string, reason);
-  ELLE_ATTRIBUTE_R(std::string, name);
+  std::string
+  name_opt() const
+  {
+    return _name ? *_name : "NAME";
+  }
+
+  ELLE_ATTRIBUTE_R(std::string, error);
+  ELLE_ATTRIBUTE_R(boost::optional<std::string>, name);
 };
 
 class MissingResource
@@ -1813,7 +1819,9 @@ namespace detail
   {
     auto error = boost::any_cast<std::string>(request["error"]);
     auto reason = boost::any_cast<std::string>(request["reason"]);
-    auto name = boost::any_cast<std::string>(request["name"]);
+    boost::optional<std::string> name = boost::none;
+    if (request.find("name") != request.end())
+      name = boost::any_cast<std::string>(request["name"]);
     throw BeyondError(error,
                       reason,
                       name);
@@ -1825,17 +1833,25 @@ void
 read_error(reactor::http::Request& r,
            std::string const& type)
 {
+  ELLE_DEBUG("read_error");
+  elle::json::Object json;
   try
   {
-    auto json = boost::any_cast<elle::json::Object>(elle::json::read(r));
-    detail::_read_error<Exception>(json);
+    json = boost::any_cast<elle::json::Object>(elle::json::read(r));
   }
-  catch (elle::json::ParseError const&)
+  catch (boost::bad_any_cast const& e)
   {
+    ELLE_DEBUG("Not json. html ?");
+    throw elle::Error(e.what());
+  }
+  catch (elle::json::ParseError const& e)
+  {
+    ELLE_DEBUG("ParseError: %s", e.what());
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s while performing %s for %s",
                     r.status(), r.method(), type));
   }
+  detail::_read_error<Exception>(json);
 }
 
 void

@@ -268,11 +268,10 @@ beyond_login(std::string const& name,
   r.finalize();
   if (r.status() != reactor::http::StatusCode::OK)
   {
-    auto error = elle::serialization::json::deserialize<BeyondError>(r, false);
-    throw elle::Error(elle::sprintf("%s", error));
+    read_error<BeyondError>(r, name, reactor::http::Method::POST);
   }
-  else
-    return elle::json::read(r);
+
+  return elle::json::read(r);
 }
 
 COMMAND(login)

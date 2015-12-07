@@ -244,12 +244,12 @@ COMMAND(invite)
     }
     catch (BeyondError const& e)
     {
-      if (e.what() == std::string("user/not_found"))
-        not_found(e.name(), "User");
-      else if (e.what() == std::string("drive/not_found"))
-        not_found(e.name(), "Drive");
-      else if (e.what() == std::string("passport/not_found"))
-        not_found(e.name(), "Passport");
+      if (e.error() == std::string("user/not_found"))
+        not_found(e.name_opt(), "User");
+      else if (e.error() == std::string("drive/not_found"))
+        not_found(e.name_opt(), "Drive");
+      else if (e.error() == std::string("passport/not_found"))
+        not_found(e.name_opt(), "Passport");
       throw;
     }
   }
@@ -407,9 +407,6 @@ main(int argc, char** argv)
         { "push-drive", bool_switch(), "update remote drive descriptor" },
         { "push,f", bool_switch(), "alias for --push-drive" },
         { "passports", bool_switch(), "create passports for each invitee" },
-        option_owner,
-      },
-      {
       },
       {},
       // Hidden options.
