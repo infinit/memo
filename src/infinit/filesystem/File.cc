@@ -749,6 +749,13 @@ namespace infinit
         set_permissions(name.substr(strlen("user.infinit.auth.")), value,
                         _parent->_files.at(_name).second);
       }
+      else if (name == "user.infinit.fsck.nullentry")
+      {
+        int idx = std::stoi(value);
+        _fat[idx] = std::make_pair(model::Address::null, "");
+        _fat_changed = true;
+        _commit_first(false);
+      }
       else
         Node::setxattr(name, value, flags);
     }

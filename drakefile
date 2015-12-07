@@ -420,6 +420,7 @@ def configure(
     ('infinit-user', [], True),
     ('infinit-volume', [], True),
     ('infinit-webdav', [], False),
+    ('infinit-fsck', [], False),
     ('s3fs', [aws_lib], False),
   ]
   if not windows:

@@ -94,7 +94,7 @@ namespace infinit
       bool _fat_changed;
       boost::filesystem::path _full_path;
       typedef std::pair<Address, std::string> FatEntry; // (address, key)
-      std::vector<FatEntry> _fat;
+      ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       elle::Buffer _data; // first block data
       int _prefetchers_count; // number of running prefetchers
       int _last_read_block; // block hit by last read operation

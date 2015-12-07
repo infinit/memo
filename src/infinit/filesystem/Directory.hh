@@ -113,7 +113,7 @@ namespace infinit
       Address _address;
       std::unique_ptr<ACLBlock> _block;
       typedef elle::unordered_map<std::string, std::pair<EntryType, Address>> Files;
-      Files _files;
+      ELLE_ATTRIBUTE_R(Files, files);
       bool _inherit_auth; //child nodes inherit this dir's permissions
       bool _prefetching; // true if prefetch thread is running
       friend class FileSystem;

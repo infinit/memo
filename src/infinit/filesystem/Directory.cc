@@ -642,6 +642,29 @@ namespace infinit
                         _block->address());
         _block.reset();
       }
+      else if (name == "user.infinit.fsck.deref")
+      {
+        _files.erase(value);
+        _commit({OperationType::remove, value}, true);
+      }
+      else if (name == "user.infinit.fsck.ref")
+      {
+        auto p1 = value.find_first_of(':');
+        auto p2 = value.find_last_of(':');
+        if (p1 == p2 || p1 != 1)
+          THROW_INVAL;
+        EntryType type;
+        if (value[0] == 'd')
+          type = EntryType::directory;
+        else if (value[0] == 'f')
+          type = EntryType::file;
+        else
+          type = EntryType::symlink;
+        std::string ename = value.substr(p1+1, p2 - p1 - 1);
+        Address eaddr = Address::from_string(value.substr(p2+1));
+        _files[ename] = std::make_pair(type, eaddr);
+        _commit({OperationType::insert, ename}, true);
+      }
       else if (name == "user.infinit.fsck.unlink")
       {
         auto it = _files.find(value);

@@ -22,6 +22,9 @@ namespace infinit
     {
     public:
       typedef infinit::serialization_tag serialization_tag;
+      boost::filesystem::path full_path();
+      void fetch() {_fetch();}
+      void commit() {_commit();}
     protected:
       Node(FileSystem& owner, std::shared_ptr<Directory> parent, std::string const& name)
       : _owner(owner)
@@ -42,11 +45,10 @@ namespace infinit
       virtual void _fetch() = 0;
       virtual void _commit() = 0;
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
-      boost::filesystem::path full_path();
       FileSystem& _owner;
       std::shared_ptr<Directory> _parent;
       std::string _name;
-      FileHeader _header;
+      ELLE_ATTRIBUTE_R(FileHeader, header, protected);
       friend class FileSystem;
     };
   }
