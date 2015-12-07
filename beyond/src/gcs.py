@@ -12,7 +12,6 @@ import Crypto.Signature.PKCS1_v1_5 as PKCS1_v1_5
 
 class GCS:
 
-  default_bucket = 'io_infinit_links'
   host = 'storage.googleapis.com'
 
   def __init__(self, login, key, bucket_ns = None):
