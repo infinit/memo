@@ -46,6 +46,10 @@ namespace infinit
                         bool read,
                         bool write);
         void
+        set_world_readable(bool enable);
+        bool
+        is_world_readable();
+        void
         copy_permissions(ACLBlock& to);
 
         struct Entry
@@ -69,6 +73,12 @@ namespace infinit
         _set_permissions(User const& user,
                          bool read,
                          bool write);
+        virtual
+        void
+        _set_world_readable(bool val);
+        virtual
+        bool
+        _is_world_readable();
         virtual
         void
         _copy_permissions(ACLBlock& to);

@@ -50,6 +50,19 @@ namespace infinit
       }
 
       void
+      ACLBlock::set_world_readable(bool enable)
+      {
+        ELLE_TRACE_SCOPE("%s: set world readable to %s", *this, enable);
+        this->_set_world_readable(enable);
+      }
+
+      bool
+      ACLBlock::is_world_readable()
+      {
+        return this->_is_world_readable();
+      }
+
+      void
       ACLBlock::copy_permissions(ACLBlock& to)
       {
         ELLE_TRACE_SCOPE("%s: copy permissions to %s", *this, to);
@@ -67,6 +80,17 @@ namespace infinit
       ACLBlock::_set_permissions(User const&, bool, bool)
       {
         // FIXME: what do ?
+      }
+
+      void
+      ACLBlock::_set_world_readable(bool)
+      {
+      }
+
+      bool
+      ACLBlock::_is_world_readable()
+      {
+        return false;
       }
 
       void

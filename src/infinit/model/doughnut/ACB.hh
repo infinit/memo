@@ -68,6 +68,7 @@ namespace infinit
         ELLE_ATTRIBUTE(std::vector<ACLEntry>, acl_entries);
         ELLE_ATTRIBUTE_R(int, data_version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
+        ELLE_ATTRIBUTE_R(bool, world_readable);
       protected:
         elle::Buffer const& data_signature() const;
 
@@ -116,7 +117,12 @@ namespace infinit
         virtual
         std::vector<Entry>
         _list_permissions(boost::optional<Model const&> model) override;
-
+        virtual
+        void
+        _set_world_readable(bool val) override;
+        virtual
+        bool
+        _is_world_readable() override;
       /*-----------.
       | Validation |
       `-----------*/

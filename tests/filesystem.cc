@@ -1259,6 +1259,44 @@ test_acl(bool paxos)
   BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
+
+  ELLE_LOG("world-readable");
+  setxattr((m0).c_str(), "user.infinit.auth.inherit",
+    "false", strlen("false"), 0 SXA_EXTRA);
+  bfs::create_directory(m0 / "dir3");
+  bfs::create_directory(m0 / "dir3" / "dir");
+  {
+     boost::filesystem::ofstream ofs(m0 / "dir3" / "file");
+     ofs << "foo";
+  }
+  BOOST_CHECK_EQUAL(directory_count(m0 / "dir3"), 2);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), -1);
+  // open dir3
+  bfs::permissions(m0 / "dir3", bfs::add_perms | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), 2);
+  bfs::create_directory(m1 / "dir3" / "tdir", erc);
+  BOOST_CHECK(erc);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3" / "dir"), -1);
+  // close dir3
+  bfs::permissions(m0 / "dir3", bfs::remove_perms | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), -1);
+  bfs::permissions(m0 / "dir3", bfs::add_perms | bfs::others_read);
+  bfs::permissions(m0 / "dir3" / "file", bfs::add_perms | bfs::others_read);
+  bfs::permissions(m0 / "dir3" / "dir", bfs::add_perms | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3" / "dir"), 0);
+  BOOST_CHECK_EQUAL(read(m1 / "dir3" / "file"), "foo");
+  write(m1 / "dir3" / "file", "babar");
+  BOOST_CHECK_EQUAL(read(m1 / "dir3" / "file"), "foo");
+  BOOST_CHECK_EQUAL(read(m0 / "dir3" / "file"), "foo");
+  write(m0 / "dir3" / "file", "bim");
+  BOOST_CHECK_EQUAL(read(m1 / "dir3" / "file"), "bim");
+  BOOST_CHECK_EQUAL(read(m0 / "dir3" / "file"), "bim");
+  bfs::create_directory(m0 / "dir3" / "dir2");
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), 3);
+  BOOST_CHECK_EQUAL(directory_count(m0 / "dir3"), 3);
+  bfs::permissions(m0 / "dir3" / "file", bfs::remove_perms | bfs::others_read);
+  write(m0 / "dir3" / "file", "foo2");
+  BOOST_CHECK_EQUAL(read(m0 / "dir3" / "file"), "foo2");
   ELLE_LOG("test end");
 }
 

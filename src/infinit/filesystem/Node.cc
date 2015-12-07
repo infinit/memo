@@ -148,6 +148,11 @@ namespace infinit
       _fetch();
       _header.mode = mode;
       _header.ctime = time(nullptr);
+      auto acl = _header_block();
+      if (acl)
+      {
+        acl->set_world_readable(mode & 4);
+      }
       _commit();
     }
 
@@ -251,6 +256,8 @@ namespace infinit
       st->st_gid   = getgid();
       st->st_dev = 1;
       auto block = _header_block();
+      if (block && block->is_world_readable())
+        st->st_mode |= 4;
       std::pair<bool, bool> perms = _owner.get_permissions(*block);
       if (!perms.first)
         st->st_mode &= ~0400;

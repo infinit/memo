@@ -130,6 +130,7 @@ namespace infinit
         , _acl_changed(true)
         , _data_version(-1)
         , _data_signature()
+        , _world_readable(false)
       {}
 
       ACB::ACB(ACB const& other, bool sealed_copy)
@@ -139,6 +140,7 @@ namespace infinit
         , _acl_changed(other._acl_changed)
         , _acl_entries(other._acl_entries)
         , _data_version(other._data_version)
+        , _world_readable(other._world_readable)
       {
         if (sealed_copy)
         {
@@ -172,6 +174,8 @@ namespace infinit
       elle::Buffer
       ACB::_decrypt_data(elle::Buffer const& data) const
       {
+        if (this->world_readable())
+          return this->_data;
         auto& mine = this->doughnut()->keys().K();
         elle::Buffer const* encrypted_secret = nullptr;
         std::vector<ACLEntry> entries;
@@ -208,6 +212,22 @@ namespace infinit
       /*------------.
       | Permissions |
       `------------*/
+
+      void
+      ACB::_set_world_readable(bool val)
+      {
+        if (this->_world_readable == val)
+          return;
+        this->_world_readable = val;
+        this->_acl_changed = true;
+        this->_data_changed = true;
+      }
+
+      bool
+      ACB::_is_world_readable()
+      {
+        return this->_world_readable;
+      }
 
       void
       ACB::set_permissions(cryptography::rsa::PublicKey const& key,
@@ -459,7 +479,10 @@ namespace infinit
           }
           if (!owner && !found)
             throw ValidationFailed("not owner and no write permissions");
-          this->MutableBlock::data(key->encipher(this->data_plain()));
+          if (!this->_world_readable)
+            this->MutableBlock::data(key->encipher(this->data_plain()));
+          else
+            this->MutableBlock::data(this->data_plain());
           this->_data_changed = false;
         }
         else
@@ -514,6 +537,7 @@ namespace infinit
         s.serialize(
           "acls", elle::unconst(this)->_acl_entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
+        s.serialize("world_readable", this->_world_readable);
       }
 
       template <typename... T>
@@ -604,6 +628,8 @@ namespace infinit
               [keys, sign] { return keys->k().sign(*sign); };
           }
         }
+        // BREAKS BACKWARD
+        s.serialize("world_readable", this->_world_readable);
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

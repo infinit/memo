@@ -268,6 +268,8 @@ namespace infinit
           if (hit)
             return std::make_pair(e.read, e.write);
         }
+        if (acl->is_world_readable())
+          return std::make_pair(true, false);
         throw rfs::Error(EACCES, "Access denied.");
       });
       return res;
@@ -291,7 +293,8 @@ namespace infinit
           if (e.write >= w && e.read >= r && u->key() == keys.K())
             return;
         }
-        throw rfs::Error(EACCES, "Access denied.");
+        if (w || !acl->is_world_readable())
+          throw rfs::Error(EACCES, "Access denied.");
       });
     }
   }
