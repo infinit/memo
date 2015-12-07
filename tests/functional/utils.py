@@ -190,10 +190,11 @@ class User():
 
   def run(self, cli, **kargs):
     print('run as %s:\t' % self.name, cli)
-    self.infinit.run(cli.split(' '), env = { 'INFINIT_USER': self.name }, **kargs)
+    return self.infinit.run(cli.split(' '),
+                            env = { 'INFINIT_USER': self.name }, **kargs)
 
   def run_split(self, args, **kargs):
-    self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
+    return self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
 
   def async(self, cli, **kargs):
     import threading

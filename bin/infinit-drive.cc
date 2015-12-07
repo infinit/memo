@@ -119,6 +119,9 @@ _update_local_json(infinit::Drive& drive,
 {
   for (auto const& invitation: invitations)
   {
+    if (drive.owner == invitation.first)
+      continue;
+
     auto it = drive.users.find(invitation.first);
     if (it != drive.users.end())
       continue;
@@ -127,24 +130,6 @@ _update_local_json(infinit::Drive& drive,
   }
   ifnt.drive_save(drive);
   report_action("created", "invitations for", drive.name, std::string("locally"));
-}
-
-template <typename T>
-static
-std::vector<T>
-intersection(std::vector<T> const& a, std::vector<T> const& b)
-{
-  std::vector<T> out;
-
-  // To match std::set_intersection predicate.
-  std::sort(a.begin(), a.end());
-  std::sort(b.begin(), b.end());
-
-  std::set_intersection(a.begin(), a.end(),
-                        b.begin(), b.end(),
-                        std::back_inserter(out));
-
-  return out;
 }
 
 COMMAND(invite)
@@ -185,12 +170,13 @@ COMMAND(invite)
     }
   }
 
-  // If at least one --user is specified.
   auto drive = ifnt.drive_get(name);
   std::vector<std::string> new_passport_users;
+  std::unordered_map<std::string, infinit::Drive::User> invitees;
+
+  // If at least one --user is specified.
   if (args.count("user") != 0)
   {
-    std::unordered_map<std::string, infinit::Drive::User> invitees;
     for (auto const& user: users)
       invitees[user] = {permissions, "pending", home};
 
@@ -198,6 +184,14 @@ COMMAND(invite)
       new_passport_users = _create_passports(invitees, owner.name, drive);
 
     _update_local_json(drive, std::move(invitees));
+  }
+  else if (flag(args, "passports"))
+  {
+    for (auto const& user: drive.users)
+      if (user.second.status == "pending")
+        invitees[user.first] = user.second;
+
+    new_passport_users = _create_passports(invitees, owner.name, drive);
   }
 
   if (aliased_flag(args, { "push-drive", "push" }))

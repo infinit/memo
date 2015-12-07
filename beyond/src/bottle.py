@@ -667,7 +667,6 @@ class Bottle(bottle.Bottle):
     return self.drive_from_name(owner, name).json()
 
   def drive_invitation_put(self, owner, name, user):
-    print('PUT invitation')
     drive_owner = self.user_from_name(name = owner)
     invitee = self.user_from_name(name = user)
     as_owner = True
@@ -688,7 +687,6 @@ class Bottle(bottle.Bottle):
     raise Response(201, {}) # FIXME: 200 if existed
 
   def drive_invitations_put(self, owner, name):
-    print('PUT invitationS from %s' % owner)
     owner = self.user_from_name(name = owner)
     as_owner = True
     try:
@@ -698,10 +696,8 @@ class Bottle(bottle.Bottle):
     drive = self.drive_from_name(owner = owner.name, name = name)
     json = bottle.request.json
     for name, value in json.items():
-      print("%s invited by %s" % (name, owner.name))
       if name == owner.name:
         continue
-      print('invite %s: %s' % (name, value))
       self.__drive_integrity(drive, passport = name)
       invitation = Drive.Invitation(self.__beyond, **value)
       invitation.save(beyond = self._Bottle__beyond,

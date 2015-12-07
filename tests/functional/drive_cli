@@ -2,12 +2,17 @@
 
 from utils import *
 import json
+import random
+import string
 
 # Creating and inviting.
 with Beyond() as beyond,\
      Infinit(beyond = beyond) as bob,\
      Infinit(beyond = beyond) as alice,\
-     Infinit(beyond = beyond) as god:
+     Infinit(beyond = beyond) as god,\
+     Infinit(beyond = beyond) as god1,\
+     Infinit(beyond = beyond) as god2,\
+     Infinit(beyond = beyond) as god3:
   # Create bob.
   bob.run(['infinit-user', '--signup',  'bob', '--email',  'bob@infinit.io'])
 
@@ -15,14 +20,23 @@ with Beyond() as beyond,\
   alice.run(['infinit-user', '--signup',  '--name', 'alice', '--email',  'alice@infinit.io'])
   a = alice.run(['infinit-user', '--export', 'alice'])
 
-  # Create god.
+  # Create gods.
   god.run(['infinit-user', '--signup', '--name', 'god', '--email', 'god@paradis.up'])
+  god1.run(['infinit-user', '--signup', '--name', 'god1', '--email', 'god1@paradis.up'])
+  god2.run(['infinit-user', '--signup', '--name', 'god2', '--email', 'god2@paradis.up'])
+  god3.run(['infinit-user', '--signup', '--name', 'god3', '--email', 'god3@paradis.up'])
   g = god.run(['infinit-user', '--export', 'god'])
+  g1 = god1.run(['infinit-user', '--export', 'god1'])
+  g2 = god2.run(['infinit-user', '--export', 'god2'])
+  g3 = god3.run(['infinit-user', '--export', 'god3'])
 
   # Import alice as bob.
   bob.run(['infinit-user', '--import'], input = a)
   # Import god as bob.
   bob.run(['infinit-user', '--import'], input = g)
+  bob.run(['infinit-user', '--import'], input = g1)
+  bob.run(['infinit-user', '--import'], input = g2)
+  bob.run(['infinit-user', '--import'], input = g3)
 
   # Create network & volume.
   bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob', '--push'])
@@ -108,3 +122,29 @@ with Beyond() as beyond,\
   bob.run(['infinit-drive', '--fetch', '--as', 'bob'])
   drive = bob.run(['infinit-drive', '--export', '--name', l[0], '--as', 'bob'])
   assert drive['users']['alice']['status'] == 'ok'
+
+  users = []
+  for name in ['god1', 'god2', 'god3']:
+    users += ['--user', name]
+
+  # Invite a couple of users without pushing.
+  bob.run(['infinit-drive', '--as', 'bob',
+           '--invite', 'employees'] + users)
+  # They do not have passports.
+  bob.run(['infinit-drive', '--as', 'bob',
+           '--invite', 'employees',
+           '--push'], return_code = 1)
+  # Create them passports and push invitation.
+  bob.run(['infinit-drive', '--as', 'bob',
+          '--invite', 'employees',
+          '--push', '--passports'])
+
+  god1.run(['infinit-drive', '--fetch', '--as', 'god1'])
+  god2.run(['infinit-drive', '--fetch', '--as', 'god2'])
+  god3.run(['infinit-drive', '--fetch', '--as', 'god3'])
+
+  l1 = god1.run(['infinit-drive', '--list', '--as', 'god1'])
+  l2 = god2.run(['infinit-drive', '--list', '--as', 'god2'])
+  l3 = god3.run(['infinit-drive', '--list', '--as', 'god3'])
+
+  assert l1 == l2 and l2 == l3
