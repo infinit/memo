@@ -326,8 +326,14 @@ COMMAND(pull)
 COMMAND(list)
 {
   ELLE_TRACE_SCOPE("list");
-  for (auto const& drive: ifnt.drives_get())
-    std::cout << drive.name << std::endl;
+  auto self = self_user(ifnt, args);
+  for (auto& drive: ifnt.drives_get())
+  {
+    std::cout << drive.name;
+    if (drive.users.find(self.name) != drive.users.end())
+      std::cout << ": " << drive.users[self.name].status;
+    std::cout << std::endl;
+  }
 }
 
 static

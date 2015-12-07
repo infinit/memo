@@ -96,31 +96,32 @@ with Beyond() as beyond,\
            '--passport'])
 
   # Make sure alice doesn't have it.
-  l = alice.run(['infinit-drive', '--list'])
+  l = alice.run(['infinit-drive', '--as', 'alice', '--list'])
   assertEq(len(l), 0)
 
   # Fetch invitations.
   alice.run(['infinit-drive', '--fetch', '--as', 'alice'])
 
   # Make sure alice has it.
-  l = alice.run(['infinit-drive', '--list'])
+  l = alice.run(['infinit-drive', '--as', 'alice', '--list'])
   assertEq(len(l), 1)
 
+  drive_name = l[0].split(':')[0]
   # Check that invitation is present.
-  drive = alice.run(['infinit-drive', '--export', '--name', l[0], '--as', 'alice'])
+  drive = alice.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'alice'])
   assert 'alice' in drive['users'].keys()
   assert drive['users']['alice']['status'] == 'pending'
 
   # Join it.
-  alice.run(['infinit-drive', '--join', '--name', l[0], '--as', 'alice'])
-  drive = alice.run(['infinit-drive', '--export', '--name', l[0], '--as', 'alice'])
+  alice.run(['infinit-drive', '--join', '--name', drive_name, '--as', 'alice'])
+  drive = alice.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'alice'])
   assert drive['users']['alice']['status'] == 'ok'
 
   # Make sure it's replicated to other users.
-  drive = bob.run(['infinit-drive', '--export', '--name', l[0], '--as', 'bob'])
+  drive = bob.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'bob'])
   assert drive['users']['alice']['status'] == 'pending'
   bob.run(['infinit-drive', '--fetch', '--as', 'bob'])
-  drive = bob.run(['infinit-drive', '--export', '--name', l[0], '--as', 'bob'])
+  drive = bob.run(['infinit-drive', '--export', '--name', drive_name, '--as', 'bob'])
   assert drive['users']['alice']['status'] == 'ok'
 
   users = []
@@ -148,3 +149,5 @@ with Beyond() as beyond,\
   l3 = god3.run(['infinit-drive', '--list', '--as', 'god3'])
 
   assert l1 == l2 and l2 == l3
+
+
