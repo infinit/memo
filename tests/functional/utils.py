@@ -159,7 +159,7 @@ class Beyond():
     return self
 
   def __exit__(self, *args, **kwargs):
-    pass
+    self.__couchdb.__exit__()
 
   @property
   def domain(self):
