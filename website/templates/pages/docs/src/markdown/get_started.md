@@ -207,7 +207,7 @@ everything is
 
 ### Access from another machine
 
-Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. In this guide we’ll show you how to connect your other devices. In the case you don’t have another device, you can can skip to the end of the guide.
+Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. If you don’t have another device, you can simulate another device by opening another terminal and setting `INFINIT_DATA_HOME` to a different directory.
 
 In order to access your volume from another device, you will need to transfer your user’s identity to that device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.
 
