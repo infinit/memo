@@ -1758,7 +1758,7 @@ signature_headers(
   reactor::http::Method method,
   std::string const& where,
   infinit::User const& self,
-  boost::optional<std::stringstream const&> payload_ = {})
+  boost::optional<elle::ConstWeakBuffer> payload = {})
 {
   using namespace infinit::cryptography;
   auto semi_colon_append = [](elle::Buffer& buffer, std::string const& str)
@@ -1770,16 +1770,10 @@ signature_headers(
   semi_colon_append(string_to_sign, elle::sprintf("%s", method));
   semi_colon_append(string_to_sign, where);
   elle::Buffer payload_hash;
-  if (payload_)
-  {
-    auto payload = payload_.get().str();
-    payload_hash = hash(
-      elle::ConstWeakBuffer(payload.data(), payload.size()), Oneway::sha256);
-  }
+  if (payload)
+    payload_hash = hash(payload.get(), Oneway::sha256);
   else
-  {
     payload_hash = hash(elle::ConstWeakBuffer(), Oneway::sha256);
-  }
   auto encoded_hash = elle::format::base64::encode(payload_hash);
   semi_colon_append(string_to_sign, encoded_hash.string());
   auto now = std::to_string(time(0));
@@ -1815,29 +1809,12 @@ read_error(reactor::http::Request& r,
   }
 }
 
-template <typename T>
 void
-beyond_push(std::string const& where,
-            std::string const& type,
-            std::string const& name,
-            T const& o,
-            infinit::User const& self,
-            bool report = true)
+_beyond_push(reactor::http::Request& r,
+             std::string const& type,
+             std::string const& name,
+             bool report = false)
 {
-  using namespace infinit::cryptography;
-  reactor::http::Request::Configuration c;
-  c.header_add("Content-Type", "application/json");
-  std::stringstream payload;
-  elle::serialization::json::serialize(o, payload, false);
-  auto headers = signature_headers(reactor::http::Method::PUT,
-                                   where,
-                                   self,
-                                   payload);
-  for (auto const& header: headers)
-    c.header_add(header.first, header.second);
-  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
-                           reactor::http::Method::PUT, std::move(c));
-  r << payload.str();
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::Created)
@@ -1885,6 +1862,45 @@ beyond_push(std::string const& where,
       elle::sprintf("unexpected HTTP error %s pushing %s:\n%s",
                     r.status(), type, error));
   }
+}
+
+void
+beyond_push_data(std::string const& where,
+                 std::string const& type,
+                 std::string const& name,
+                 elle::ConstWeakBuffer const& object,
+                 std::string const& content_type,
+                 infinit::User const& self,
+                 bool report = true)
+{
+  reactor::http::Request::Configuration c;
+  c.header_add("Content-Type", content_type);
+  auto headers = signature_headers(
+    reactor::http::Method::PUT, where, self, object);
+  for (auto const& header: headers)
+    c.header_add(header.first, header.second);
+  reactor::http::Request r(
+    elle::sprintf("%s/%s", beyond(), where),
+    reactor::http::Method::PUT, std::move(c));
+  r << object.string();
+  _beyond_push(r, type, name, report);
+}
+
+template <typename T>
+void
+beyond_push(std::string const& where,
+            std::string const& type,
+            std::string const& name,
+            T const& o,
+            infinit::User const& self,
+            bool report = true)
+{
+  std::stringstream stream;
+  elle::serialization::json::serialize(o, stream, false);
+  auto payload_ = stream.str();
+  elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
+  beyond_push_data(
+    where, type, name, payload, "application/json", self, report);
 }
 
 template <typename T>
