@@ -1920,7 +1920,8 @@ beyond_push_data(std::string const& where,
                  elle::ConstWeakBuffer const& object,
                  std::string const& content_type,
                  infinit::User const& self,
-                 bool report = true)
+                 bool report = true,
+                 bool beyond_error = false)
 {
   reactor::http::Request::Configuration c;
   c.header_add("Content-Type", content_type);
@@ -1932,7 +1933,7 @@ beyond_push_data(std::string const& where,
     elle::sprintf("%s/%s", beyond(), where),
     reactor::http::Method::PUT, std::move(c));
   r << object.string();
-  _beyond_push(r, type, name, report);
+  _beyond_push(r, type, name, report, beyond_error);
 }
 
 template <typename T>
@@ -1942,22 +1943,24 @@ beyond_push(std::string const& where,
             std::string const& name,
             T const& o,
             infinit::User const& self,
-            bool report = true)
+            bool report = true,
+            bool beyond_error = false)
 {
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
   auto payload_ = stream.str();
   elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
   beyond_push_data(
-    where, type, name, payload, "application/json", self, report);
+    where, type, name, payload, "application/json", self, report, beyond_error);
 }
 
 template <typename T>
 void
 beyond_push(std::string const& type, std::string const& name, T const& o,
-  infinit::User const& self, bool report = true)
+  infinit::User const& self, bool report = true, bool beyond_error = false)
 {
-  beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self, report);
+  beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self, report,
+      beyond_error);
 }
 
 // FIXME: Workaround used to handle objects that have had their copy

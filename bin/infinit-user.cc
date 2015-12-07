@@ -268,7 +268,7 @@ beyond_login(std::string const& name,
   r.finalize();
   if (r.status() != reactor::http::StatusCode::OK)
   {
-    read_error<BeyondError>(r, name, reactor::http::Method::POST);
+    read_error<BeyondError>(r, name);
   }
 
   return elle::json::read(r);
