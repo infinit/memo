@@ -11,6 +11,8 @@
 
 #include <elle/serialization/binary.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Cache.hh>
 // #include <infinit/filesystem/FileHandle.hh>
 
 #include <sys/stat.h> // S_IMFT...
@@ -737,6 +739,24 @@ namespace infinit
       {
         _fetch();
         return _inherit_auth ? "true" : "false";
+      }
+      else if (key == "user.infinit.sync")
+      {
+        auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
+        auto c = dn->consensus().get();
+        auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
+        if (!a)
+        {
+          auto cache = dynamic_cast<model::doughnut::consensus::Cache*>(c);
+          if (!cache)
+            return "no async";
+          a = dynamic_cast<model::doughnut::consensus::Async*>(
+            cache->backend().get());
+          if (!a)
+            return "no async behind cache";
+        }
+        a->sync();
+        return "ok";
       }
       else
         return Node::getxattr(key);

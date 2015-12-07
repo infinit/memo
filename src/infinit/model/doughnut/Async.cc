@@ -52,6 +52,7 @@ namespace infinit
           : Consensus(backend->doughnut())
           , _backend(std::move(backend))
           , _next_index(1)
+          , _last_processed_index(0)
           , _journal_dir(journal_dir)
           , _exit_requested(false)
           , _process_thread(
@@ -82,6 +83,14 @@ namespace infinit
                           std::unique_ptr<storage::Storage> storage)
         {
           return this->_backend->make_local(port, std::move(storage));
+        }
+
+        void
+        Async::sync()
+        {
+          int wait_id = _next_index-1;
+          while (_last_processed_index < wait_id)
+            reactor::sleep(100_ms);
         }
 
         void
@@ -292,6 +301,7 @@ namespace infinit
                 auto path = boost::filesystem::path(this->_journal_dir) /
                   std::to_string(op.index);
                 boost::filesystem::remove(path);
+                _last_processed_index = op.index;
               }
             }
             catch (elle::Error const& e)

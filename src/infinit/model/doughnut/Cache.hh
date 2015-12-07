@@ -68,7 +68,7 @@ namespace infinit
         private:
           void _cleanup();
           std::unique_ptr<blocks::Block> _copy(blocks::Block& block);
-          std::unique_ptr<Consensus> _backend;
+          ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);
           ELLE_ATTRIBUTE_R(int, cache_size);

@@ -28,7 +28,7 @@ namespace infinit
           std::unique_ptr<Local>
           make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
-
+          void sync(); // wait until last pushed op gets processed
         protected:
           virtual
           void
@@ -72,6 +72,7 @@ namespace infinit
           ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
           ELLE_ATTRIBUTE(reactor::Channel<Op>, ops);
           ELLE_ATTRIBUTE(int, next_index);
+          ELLE_ATTRIBUTE(int, last_processed_index);
           // This map contains for a given address the last version of each
           // block.
           typedef
