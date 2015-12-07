@@ -398,15 +398,27 @@ namespace infinit
           return std::shared_ptr<rfs::Path>(new Unknown(self, _owner, name));
       }
 
+    struct PrefetchEntry
+    {
+      Address address;
+      int level;
+      bool is_dir;
+    };
+
     void
     Directory::_prefetch()
     {
       static int prefetch_threads = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_THREADS", "3"));
+      static int prefetch_depth = std::stoi(
+        elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
       int nthreads = std::min(prefetch_threads, signed(_files.size()) / 2);
       if (_prefetching || !nthreads)
         return;
-      auto files = std::make_shared<Files>(_files);
+      auto files = std::make_shared<std::vector<PrefetchEntry>>();
+      for (auto const& f: _files)
+        files->push_back(PrefetchEntry{ f.second.second, 0,
+                           f.second.first == EntryType::directory});
       _prefetching = true;
       auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
       auto model = _owner.block_store();
@@ -417,10 +429,25 @@ namespace infinit
             while (!files->empty())
             {
               ++nf;
-              auto it = files->begin();
-              auto a = it->second.second;
-              files->erase(it);
-              model->fetch(a);
+              auto e = files->back();
+              files->pop_back();
+              std::unique_ptr<model::blocks::Block> block;
+              try
+              {
+                block = model->fetch(e.address);
+                if (block && e.is_dir && e.level +1 < prefetch_depth)
+                {
+                  Directory d(self, self->_owner, "", e.address);
+                  d._fetch(elle::cast<ACLBlock>::runtime(block));
+                  for (auto const& f: d._files)
+                    files->push_back(PrefetchEntry{ f.second.second, e.level+1,
+                      f.second.first == EntryType::directory});
+                }
+              }
+              catch(elle::Error const& e)
+              {
+                ELLE_TRACE("Exception while prefeching: %s", e.what());
+              }
             }
             if (!(--(*running)))
               self->_prefetching = false;
