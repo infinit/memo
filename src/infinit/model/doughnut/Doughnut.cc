@@ -195,7 +195,7 @@ namespace infinit
               buffer, infinit::cryptography::Oneway::sha256);
             std::string hex_hash = elle::format::hexadecimal::encode(key_hash);
             return elle::make_unique<doughnut::User>(
-              pub, hex_hash.substr(0, 6));
+              pub, elle::sprintf("#%s", hex_hash.substr(0, 6)));
           }
         }
         else
