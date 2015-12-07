@@ -678,13 +678,13 @@ Remotely pushed invitations "alice/workspace".
 
 That’s it, Bob and Charlie have been invited to join the drive named "alice/workspace". Following the `--push` of the invitations, an email will be sent to notify them of such an invitation, letting them know how to proceed.
 
-If you want to prepare the invitations locally and push them all later, you can do that by omitting the option `--push` in the previous sequence of commands and later call this command.
+If you want to prepare invitations locally and push them all later, you can do that by omitting the option `--push` in the previous sequence of commands and later call the command below.
 
 ```
 $> infinit-drive --invite --as alice --name workspace --push
 ```
 
-Without any `--user` specified the `--invite` commnand will push each pending invitations to the Hub and send emails to notifiy them.
+Without any `--user` specified the `--invite` command will push each pending invitations to the Hub and send emails to notifiy them.
 
 Another option is to generate the passport for each user that has not already one for the associated network. See below.
 
