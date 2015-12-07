@@ -553,12 +553,7 @@ namespace infinit
         this->_fetch();
         this->Node::stat(st);
         st->st_mode |= S_IFDIR;
-        std::pair<bool, bool> perms = _owner.get_permissions(*_block);
-        if (!perms.first)
-          st->st_mode &= ~0400;
-        if (!perms.second)
-          st->st_mode &= ~0200;
-        if (perms.first)
+        if (st->st_mode & 0400)
           st->st_mode |= 0100; // Set x.
         can_access = true;
       }
@@ -586,6 +581,12 @@ namespace infinit
         st->st_dev = 1;
         st->st_ino = (unsigned short)(uint64_t)(void*)this;
       }
+    }
+
+    model::blocks::ACLBlock*
+    Directory::_header_block()
+    {
+      return dynamic_cast<model::blocks::ACLBlock*>(_block.get());
     }
 
     void

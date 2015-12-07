@@ -37,6 +37,7 @@ namespace infinit
       std::string getxattr(std::string const& k) override {THROW_NODATA;}
       void _fetch() override {}
       void _commit() override {}
+      model::blocks::ACLBlock* _header_block() override { return nullptr;}
       virtual
       void
       print(std::ostream& stream) const override;

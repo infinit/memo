@@ -71,6 +71,7 @@ namespace infinit
       void _ensure_first_block();
       void _fetch() override;
       void _commit() override;
+      model::blocks::ACLBlock* _header_block() override;
       void _commit_first(bool final_flush);
       void _commit_all();
       bool _flush_block(int id);

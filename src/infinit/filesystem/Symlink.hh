@@ -43,6 +43,7 @@ namespace infinit
         bool allow_cache() override { return false;}
         void _fetch() override;
         void _commit() override;
+        model::blocks::ACLBlock* _header_block() override;
         virtual void print(std::ostream& stream) const override;
         std::unique_ptr<MutableBlock> _block;
     };

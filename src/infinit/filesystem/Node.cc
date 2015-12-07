@@ -250,6 +250,12 @@ namespace infinit
       st->st_uid   = getuid();
       st->st_gid   = getgid();
       st->st_dev = 1;
+      auto block = _header_block();
+      std::pair<bool, bool> perms = _owner.get_permissions(*block);
+      if (!perms.first)
+        st->st_mode &= ~0400;
+      if (!perms.second)
+        st->st_mode &= ~0200;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
     }
 
