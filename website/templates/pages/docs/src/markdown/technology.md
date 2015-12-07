@@ -31,7 +31,7 @@ There exists a large variety of overlay networks, some supporting very small net
 
 <img src="${url('images/schema-chord.png')}" alt="Chord Schema">
 
-*Caption: An illustration of the [Chord](https://en.wikipedia.org/wiki/Chord_(peer-to-peer)) overlay network.*
+*Caption: An illustration of the <a href="https://en.wikipedia.org/wiki/Chord_(peer-to-peer)">Chord</a> overlay network.*
 
 The decentralized nature of the overlay network ensures scalability and performance while removing any bottleneck and single point of failure. In addition, such systems no longer need to rely on a complicated infrastructure composed of specific server hardware, appliances and ancient client software. The overlay naturally distribute the load between the nodes while tolerating faults.
 
