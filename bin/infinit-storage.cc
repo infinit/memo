@@ -55,6 +55,31 @@ convert_capacity(int64_t value, std::string quantifier)
 }
 
 static
+std::string
+pretty_print(int64_t bytes, int64_t zeros)
+{
+  std::string str = std::to_string(bytes);
+  std::string integer = std::to_string(bytes / zeros);
+
+  return integer + "." + str.substr(integer.size(), 2);
+}
+
+static
+std::string
+pretty_print(int64_t bytes)
+{
+  if (bytes / 1000 == 0)
+    return std::to_string(bytes) + "B";
+  if (bytes / 1000000 == 0) // Under 1 Mio and higher than 1 Kio
+    return pretty_print(bytes, 1000) + "KB";
+  if (bytes / 1000000000 == 0)
+    return pretty_print(bytes, 1000000) + "MB";
+  if (bytes / 1000000000000 == 0)
+    return pretty_print(bytes, 1000000000) + "GB";
+  return pretty_print(bytes, 1000000000000) + "TB";
+}
+
+static
 int64_t
 convert_capacity(std::string value)
 {
@@ -139,10 +164,12 @@ COMMAND(create)
 
 COMMAND(list)
 {
-  auto s = ifnt.storages_get();
-  for (auto const& name: s)
+  auto storages = ifnt.storages_get();
+  for (auto const& storage: storages)
   {
-    std::cout << name << std::endl;
+    std::cout << storage->name << ": "
+      << (storage->capacity ? pretty_print(*storage->capacity) : "")
+      << std::endl;
   }
 }
 

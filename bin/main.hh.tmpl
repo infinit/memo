@@ -1094,18 +1094,18 @@ namespace infinit
       return s.deserialize<std::unique_ptr<storage::StorageConfig>>();
     }
 
-    std::vector<std::string>
+    std::vector<std::unique_ptr<storage::StorageConfig>>
     storages_get()
     {
       namespace boost_fs = boost::filesystem;
-      std::vector<std::string> res;
+      std::vector<std::unique_ptr<storage::StorageConfig>> res;
       for (boost_fs::recursive_directory_iterator it(this->_storage_path());
            it != boost_fs::recursive_directory_iterator();
            ++it)
       {
         if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
         {
-          res.push_back(it->path().filename().string());
+          res.emplace_back(storage_get(it->path().filename().string()));
         }
       }
       return res;
