@@ -1799,8 +1799,7 @@ signature_headers(
 template <typename Exception>
 void
 read_error(reactor::http::Request& r,
-           std::string const& type,
-           reactor::http::Method method)
+           std::string const& type)
 {
   try
   {
@@ -1812,7 +1811,7 @@ read_error(reactor::http::Request& r,
   {
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s while performing %s for %s",
-                    r.status(), method, type));
+                    r.status(), r.method(), type));
   }
 }
 
@@ -1853,16 +1852,17 @@ beyond_push(std::string const& where,
   }
   else if (r.status() == reactor::http::StatusCode::Conflict)
   {
-    throw elle::Error(elle::sprintf(
-      "%s \"%s\" already exists with a different key", type, name));
+    throw elle::Error(
+      elle::sprintf(
+        "%s \"%s\" already exists with a different key", type, name));
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type, reactor::http::Method::PUT);
+    read_error<MissingResource>(r, type);
   }
   else if (r.status() == reactor::http::StatusCode::Gone)
   {
-    read_error<ResourceGone>(r, type, reactor::http::Method::PUT);
+    read_error<ResourceGone>(r, type);
   }
   else
   {
@@ -1928,15 +1928,15 @@ beyond_fetch_json(std::string const& where,
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type, reactor::http::Method::GET);
+    read_error<MissingResource>(r, type);
   }
   else if (r.status() == reactor::http::StatusCode::Gone)
   {
-    read_error<ResourceGone>(r, type, reactor::http::Method::GET);
+    read_error<ResourceGone>(r, type);
   }
   else if (r.status() == reactor::http::StatusCode::Forbidden)
   {
-    read_error<ResourceProtected>(r, type, reactor::http::Method::GET);
+    read_error<ResourceProtected>(r, type);
   }
   else
   {
@@ -1991,7 +1991,7 @@ beyond_delete(std::string const& where,
     report_action("deleted", type, name, std::string("remotely"));
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type, reactor::http::Method::DELETE);
+    read_error<MissingResource>(r, type);
   }
   else
   {
