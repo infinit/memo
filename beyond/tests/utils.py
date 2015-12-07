@@ -107,17 +107,20 @@ class Beyond:
 
   def request(self, url, throws = True, json = {}, auth = None, extra_headers = {}, **kwargs):
     # Older requests don't have json parameter
-    if json is not None:
-      j = json
-      import json
-      kwargs['data'] = json.dumps(j)
-      kwargs['headers'] = {'Content-Type': 'application/json'}
-      kwargs['headers'].update(extra_headers)
+    if json is not None or 'data' in kwargs:
+      if 'data' not in kwargs:
+        j = json
+        import json
+        kwargs['data'] = json.dumps(j)
+        kwargs['headers'] = {'Content-Type': 'application/json'}
+      kwargs.setdefault('headers', {}).update(extra_headers)
       if auth is not None:
         der = base64.b64decode(auth.encode('utf-8'))
         k = RSA.importKey(der)
-        h = base64.b64encode(
-          hashlib.sha256(kwargs['data'].encode('latin-1')).digest())
+        data = kwargs['data']
+        if not isinstance(data, bytes):
+          data = data.encode('latin-1')
+        h = base64.b64encode(hashlib.sha256(data).digest())
         t = str(int(time.time()))
         string_to_sign = kwargs['method'] + ';' + url + ';'
         string_to_sign += h.decode('latin-1') + ';' + t

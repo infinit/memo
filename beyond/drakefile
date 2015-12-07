@@ -125,15 +125,20 @@ def configure(
     dependencies = [],
     module_name = 'Crypto')
   sources += crypto.targets()
+  PIL = drake.PythonModule(
+    'PILLOW', python_prefix,
+    module_name = 'PIL',
+    dependencies = ['Pillow-3.0.0.egg-info'])
+  sources += PIL.targets()
   def install_nodes(where, how):
     where = drake.Path(where)
     for node in how(sources,
                     where / python_prefix / 'infinit/beyond',
                     strip_prefix = 'src'):
       yield node
-    for node in  how(couchdb_sources,
-                     where / python_prefix,
-                     strip_prefix = 'couchdb-python'):
+    for node in how(couchdb_sources,
+                    where / python_prefix,
+                    strip_prefix = 'couchdb-python'):
       yield node
     for node in how(sendwithus.nodes,
                     where / python_prefix,
@@ -213,6 +218,7 @@ def configure(
       'volumes/delete',
       'passports/put',
       'drives/put',
+      'drives/icons',
       # Higher level.
       'users/register_login',
   ]:

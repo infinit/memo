@@ -190,6 +190,12 @@ class Bottle(bottle.Bottle):
                method = 'DELETE')(self.drive_delete)
     self.route('/drives/<owner>/<name>/invitations/<user>',
                method = 'PUT')(self.drive_invitation_put)
+    self.route('/drives/<owner>/<name>/icon', method = 'GET')(
+      self.drive_icon_get)
+    self.route('/drives/<owner>/<name>/icon', method = 'PUT')(
+      self.drive_icon_put)
+    self.route('/drives/<owner>/<name>/icon', method = 'DELETE')(
+      self.drive_icon_delete)
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -324,6 +330,8 @@ class Bottle(bottle.Bottle):
     self.__beyond.user_delete(name)
 
   def user_avatar_put(self, name):
+    user = self.user_from_name(name = name)
+    self.authenticate(user)
     return self.__user_avatar_manipulate(
       name, self.__cloud_image_upload)
 
@@ -607,7 +615,7 @@ class Bottle(bottle.Bottle):
     self.__beyond.volume_delete(owner = owner, name = name)
 
   ## ----- ##
-  ## DRIVE ##
+  ## Drive ##
   ## ----- ##
   def __drive_integrity(self, drive, passport = None):
     drive = drive.json()
@@ -683,6 +691,28 @@ class Bottle(bottle.Bottle):
                     invitation = as_owner)
     raise Response(201, {}) # FIXME: 200 if existed
 
+  def __qualified_name(self, owner, name):
+    return '%s/%s' % (owner, name)
+
+  def drive_icon_put(self, owner, name):
+    user = self.user_from_name(name = owner)
+    self.authenticate(user)
+    return self.__drive_icon_manipulate(
+      self.__qualified_name(owner, name), self.__cloud_image_upload)
+
+  def drive_icon_get(self, owner, name):
+    return self.__drive_icon_manipulate(
+      self.__qualified_name(owner, name), self.__cloud_image_get)
+
+  def drive_icon_delete(self, owner, name):
+    user = self.user_from_name(name = owner)
+    self.authenticate(user)
+    return self.__drive_icon_manipulate(
+       self.__qualified_name(owner, name), self.__cloud_image_delete)
+
+  def __drive_icon_manipulate(self, name, f):
+    return f('users', '%s/icon' % name)
+
   ## --- ##
   ## GCS ##
   ## --- ##
@@ -693,25 +723,42 @@ class Bottle(bottle.Bottle):
         'reason': 'GCS support not enabled',
       })
 
+  @staticmethod
+  def content_type(image):
+    from PIL import JpegImagePlugin, PngImagePlugin, GifImagePlugin, TiffImagePlugin
+    if isinstance(image, JpegImagePlugin.JpegImageFile):
+      return 'image/jpeg'
+    elif isinstance(image, PngImagePlugin.PngImageFile):
+      return 'image/png'
+    elif isinstance(image, GifImagePlugin.GifImageFile):
+      return 'image/gif'
+    elif isinstance(image, TiffImagePlugin.TiffImageFile):
+      return 'image/tiff'
+    raise ValueError('Image type is not recognized')
+
   def __cloud_image_upload(self, bucket, name):
     self.__check_gcs()
-    t = bottle.request.headers['Content-Type']
-    l = bottle.request.headers['Content-Length']
-    if t not in ['image/gif', 'image/jpeg', 'image/png']:
-      bottle.response.status = 415
-      return {
-        'reason': 'invalid image format: %s' % t,
-        'mime-type': t,
-      }
-    url = self.__gcs.upload_url(
+    content_type = None
+    try:
+      import PIL.Image
+      image = PIL.Image.open(bottle.request.body)
+      content_type = Bottle.content_type(image)
+    except (ValueError, IOError, OSError) as e:
+      raise Response(415, {
+        'error': '%s/invalid' % name,
+        'reason': 'invalid image format: %s' % e
+      })
+    image = image.resize((256, 256), PIL.Image.ANTIALIAS)
+    from io import BytesIO
+    bs = BytesIO()
+    image.save(bs, "PNG")
+    self.__gcs.upload(
       bucket,
       name,
-      content_type = t,
-      content_length = l,
-      expiration = datetime.timedelta(minutes = 3),
+      data = bs.getvalue(),
+      content_type = content_type
     )
-    bottle.response.status = 307
-    bottle.response.headers['Location'] = url
+    raise Response(201, {})
 
   def __cloud_image_get(self, bucket, name):
     self.__check_gcs()
@@ -720,22 +767,15 @@ class Bottle(bottle.Bottle):
       name,
       expiration = datetime.timedelta(minutes = 3),
     )
-    bottle.response.status = 307
-    bottle.response.headers['Location'] = url
+    raise Response(200, {'url': url})
 
   def __cloud_image_delete(self, bucket, name):
     self.__check_gcs()
-    url = self.__gcs.delete_url(
+    self.__gcs.delete(
       bucket,
       name,
-      expiration = datetime.timedelta(minutes = 3),
     )
-    bottle.response.status = 307
-    bottle.response.headers['Location'] = url
-    # self.gcs.delete(
-    #   bucket,
-    #   name)
-    # bottle.response.status = 204
+    raise Response(200, {})
 
 for name, conf in Bottle._Bottle__oauth_services.items():
   def oauth_get(self, username, name = name, conf = conf):

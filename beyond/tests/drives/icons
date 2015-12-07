@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+from os import path
+from utils import *
+
+from copy import deepcopy
+import PIL.Image
+
+class FakeGCS:
+
+  def __init__(self):
+    self.__icons = {}
+
+  def upload(self, bucket, path, *args, **kwargs):
+    self.__icons[path] = 'url'
+
+  def delete(self, bucket, path):
+    if path in self.__icons:
+      del self.__icons[path]
+
+  def download_url(self, bucket, path, *args, **kwargs):
+    return self.__icons[path]
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      user = User()
+      user.put(beyond)
+      network = Network('network', owner = user)
+      network.put(beyond)
+      volume = Volume('business', network = network)
+      volume.put(beyond)
+      drive = Drive('business',
+                    volume = volume,
+                    description = "Hyperdrive!")
+      drive.put(beyond)
+      assertEq(getattr(beyond.app, '_Bottle__gcs'), None)
+      fakegcs = FakeGCS()
+      setattr(beyond.app, '_Bottle__gcs', fakegcs)
+      file = path.join(path.dirname(path.abspath(__file__)), 'icon.png')
+      with PIL.Image.open(file, mode = 'r') as icon:
+        from io import BytesIO
+        bs = BytesIO()
+        for format in ['png', 'gif', 'jpg']:
+          icon.save(bs, format.upper())
+          extra_headers = {'Content-Type': 'image/%s' % format}
+          beyond.put('drives/%s/icon' % drive['name'],
+                     extra_headers = extra_headers,
+                     auth = user.private_key,
+                     json = None,
+                     data = bs.getvalue())
+          res = beyond.get('drives/%s/icon' % drive['name']).json()
+          assert 'url' in res
+          beyond.delete('drives/%s/icon' % drive['name'],
+                        auth = user.private_key)
+
+  if __name__ == '__main__':
+    unittest.main()
