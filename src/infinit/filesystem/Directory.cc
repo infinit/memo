@@ -540,7 +540,13 @@ namespace infinit
         this->_fetch();
         this->Node::stat(st);
         st->st_mode |= S_IFDIR;
-        st->st_mode |= 0100; // Set x.
+        std::pair<bool, bool> perms = _owner.get_permissions(*_block);
+        if (!perms.first)
+          st->st_mode &= ~0400;
+        if (!perms.second)
+          st->st_mode &= ~0200;
+        if (perms.first)
+          st->st_mode |= 0100; // Set x.
         can_access = true;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)

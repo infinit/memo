@@ -452,7 +452,14 @@ namespace infinit
       {
         this->_fetch();
         Node::stat(st);
-        st->st_mode |= S_IFREG | (_header.mode & 0100);
+        std::pair<bool, bool> perms = _owner.get_permissions(*_first_block);
+        if (!perms.first)
+          st->st_mode &= ~0400;
+        if (!perms.second)
+          st->st_mode &= ~0200;
+        st->st_mode |= S_IFREG;
+        if (perms.first && (_header.mode & 0100))
+          st->st_mode |= 0100;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {

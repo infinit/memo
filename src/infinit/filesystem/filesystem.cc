@@ -250,6 +250,29 @@ namespace infinit
       return elle::cast<MutableBlock>::runtime(fetch_or_die(addr));
     }
 
+    std::pair<bool, bool>
+    FileSystem::get_permissions(model::blocks::Block const& block)
+    {
+      auto dn =
+        std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
+      auto keys = dn->keys();
+      auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
+      ELLE_ASSERT(acl);
+      auto res = umbrella([&] {
+        for (auto const& e: acl->list_permissions(true))
+        {
+          auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
+          if (!u)
+            continue;
+          auto hit = u->key() == keys.K();
+          if (hit)
+            return std::make_pair(e.read, e.write);
+        }
+        throw rfs::Error(EACCES, "Access denied.");
+      });
+      return res;
+    }
+
     void
     FileSystem::ensure_permissions(model::blocks::Block const& block,
                                    bool r, bool w)

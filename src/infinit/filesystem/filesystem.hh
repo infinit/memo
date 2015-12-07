@@ -45,6 +45,8 @@ namespace infinit
       // Check permissions and throws on access failure
       void
       ensure_permissions(model::blocks::Block const& block, bool r, bool w);
+      std::pair<bool, bool>
+      get_permissions(model::blocks::Block const& block);
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
