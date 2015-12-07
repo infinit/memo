@@ -50,16 +50,16 @@ namespace infinit
       }
 
       void
-      ACLBlock::set_world_readable(bool enable)
+      ACLBlock::set_world_permissions(bool read, bool write)
       {
-        ELLE_TRACE_SCOPE("%s: set world readable to %s", *this, enable);
-        this->_set_world_readable(enable);
+        ELLE_TRACE_SCOPE("%s: set world perms to r=%s w=%s", *this, read, write);
+        this->_set_world_permissions(read, write);
       }
 
-      bool
-      ACLBlock::is_world_readable()
+      std::pair<bool,bool>
+      ACLBlock::get_world_permissions()
       {
-        return this->_is_world_readable();
+        return this->_get_world_permissions();
       }
 
       void
@@ -83,14 +83,14 @@ namespace infinit
       }
 
       void
-      ACLBlock::_set_world_readable(bool)
+      ACLBlock::_set_world_permissions(bool, bool)
       {
       }
 
-      bool
-      ACLBlock::_is_world_readable()
+      std::pair<bool, bool>
+      ACLBlock::_get_world_permissions()
       {
-        return false;
+        return std::make_pair(false, false);
       }
 
       void

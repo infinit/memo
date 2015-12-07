@@ -46,9 +46,9 @@ namespace infinit
                         bool read,
                         bool write);
         void
-        set_world_readable(bool enable);
-        bool
-        is_world_readable();
+        set_world_permissions(bool read, bool write);
+        std::pair<bool, bool>
+        get_world_permissions();
         void
         copy_permissions(ACLBlock& to);
 
@@ -75,10 +75,10 @@ namespace infinit
                          bool write);
         virtual
         void
-        _set_world_readable(bool val);
+        _set_world_permissions(bool read, bool write);
         virtual
-        bool
-        _is_world_readable();
+        std::pair<bool, bool>
+        _get_world_permissions();
         virtual
         void
         _copy_permissions(ACLBlock& to);

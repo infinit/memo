@@ -268,9 +268,8 @@ namespace infinit
           if (hit)
             return std::make_pair(e.read, e.write);
         }
-        if (acl->is_world_readable())
-          return std::make_pair(true, false);
-        throw rfs::Error(EACCES, "Access denied.");
+        return acl->get_world_permissions();
+        //throw rfs::Error(EACCES, "Access denied.");
       });
       return res;
     }
@@ -293,7 +292,8 @@ namespace infinit
           if (e.write >= w && e.read >= r && u->key() == keys.K())
             return;
         }
-        if (w || !acl->is_world_readable())
+        auto wp = acl->get_world_permissions();
+        if (wp.first < r || wp.second < w)
           throw rfs::Error(EACCES, "Access denied.");
       });
     }

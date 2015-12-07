@@ -151,7 +151,10 @@ namespace infinit
       auto acl = _header_block();
       if (acl)
       {
-        acl->set_world_readable(mode & 4);
+        auto wm = acl->get_world_permissions();
+        wm.first = mode & 4;
+        wm.second = mode & 2;
+        acl->set_world_permissions(wm.first, wm.second);
       }
       _commit();
     }
@@ -256,8 +259,14 @@ namespace infinit
       st->st_gid   = getgid();
       st->st_dev = 1;
       auto block = _header_block();
-      if (block && block->is_world_readable())
-        st->st_mode |= 4;
+      if (block)
+      {
+        auto wp = block->get_world_permissions();
+        if (wp.first)
+          st->st_mode |= 4;
+        if (wp.second)
+          st->st_mode |= 2;
+      }
       std::pair<bool, bool> perms = _owner.get_permissions(*block);
       if (!perms.first)
         st->st_mode &= ~0400;

@@ -131,6 +131,7 @@ namespace infinit
         , _data_version(-1)
         , _data_signature()
         , _world_readable(false)
+        , _world_writable(false)
       {}
 
       ACB::ACB(ACB const& other, bool sealed_copy)
@@ -141,6 +142,7 @@ namespace infinit
         , _acl_entries(other._acl_entries)
         , _data_version(other._data_version)
         , _world_readable(other._world_readable)
+        , _world_writable(other._world_writable)
       {
         if (sealed_copy)
         {
@@ -214,19 +216,20 @@ namespace infinit
       `------------*/
 
       void
-      ACB::_set_world_readable(bool val)
+      ACB::_set_world_permissions(bool read, bool write)
       {
-        if (this->_world_readable == val)
+        if (this->_world_readable == read && this->_world_writable == write)
           return;
-        this->_world_readable = val;
+        this->_world_readable = read;
+        this->_world_writable = write;
         this->_acl_changed = true;
         this->_data_changed = true;
       }
 
-      bool
-      ACB::_is_world_readable()
+      std::pair<bool, bool>
+      ACB::_get_world_permissions()
       {
-        return this->_world_readable;
+        return std::make_pair(this->_world_readable, this->_world_writable);
       }
 
       void
@@ -317,6 +320,8 @@ namespace infinit
         }
         if (*other->owner_key() != *this->owner_key())
           other->set_permissions(*this->owner_key(), true, true);
+        other->_world_readable = this->_world_readable;
+        other->_world_writable = this->_world_writable;
       }
 
       std::vector<ACB::Entry>
@@ -365,6 +370,8 @@ namespace infinit
         ELLE_DEBUG("%s: validate owner part", *this)
           if (auto res = Super::_validate()); else
             return res;
+        if (this->_world_writable)
+          return blocks::ValidationResult::success();
         ELLE_DEBUG_SCOPE("%s: validate author part", *this);
         ACLEntry* entry = nullptr;
         if (this->_editor != -1)
@@ -477,7 +484,7 @@ namespace infinit
             }
             ++idx;
           }
-          if (!owner && !found)
+          if (!owner && !found && !this->_world_writable)
             throw ValidationFailed("not owner and no write permissions");
           if (!this->_world_readable)
             this->MutableBlock::data(key->encipher(this->data_plain()));
@@ -492,6 +499,8 @@ namespace infinit
         if (acl_changed || data_changed ||
           (!this->_data_signature.running() && this->_data_signature.value().empty()))
         {
+          // note: in world_writable mode, the signing key might not be
+          // present in the block, so signing might not be that important.
           auto keys = this->doughnut()->keys_shared();
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
@@ -537,7 +546,9 @@ namespace infinit
         s.serialize(
           "acls", elle::unconst(this)->_acl_entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
+        // BREAKS BACKWARDS
         s.serialize("world_readable", this->_world_readable);
+        s.serialize("world_writable", this->_world_writable);
       }
 
       template <typename... T>
@@ -580,6 +591,10 @@ namespace infinit
         if (this->_data_version != other_acb->_data_version)
           return false;
         if (this->_data_signature.value() != other_acb->_data_signature.value())
+          return false;
+        if (this->_world_readable != other_acb->_world_readable)
+          return false;
+        if (this->_world_writable != other_acb->_world_writable)
           return false;
         return this->Super::operator ==(rhs);
       }
@@ -630,6 +645,7 @@ namespace infinit
         }
         // BREAKS BACKWARD
         s.serialize("world_readable", this->_world_readable);
+        s.serialize("world_writable", this->_world_writable);
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

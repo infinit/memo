@@ -1297,6 +1297,30 @@ test_acl(bool paxos)
   bfs::permissions(m0 / "dir3" / "file", bfs::remove_perms | bfs::others_read);
   write(m0 / "dir3" / "file", "foo2");
   BOOST_CHECK_EQUAL(read(m0 / "dir3" / "file"), "foo2");
+
+  ELLE_LOG("world-writable");
+  bfs::create_directory(m0 / "dir4");
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), -1);
+  bfs::permissions(m0 / "dir4", bfs::add_perms |bfs::others_write | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), 0);
+  write(m1 / "dir4" / "file", "foo");
+  bfs::create_directory(m1 /"dir4"/ "dir");
+  BOOST_CHECK_EQUAL(read(m0 / "dir4" / "file"), "");
+  BOOST_CHECK_EQUAL(read(m1 / "dir4" / "file"), "foo");
+  BOOST_CHECK_EQUAL(directory_count(m0 / "dir4" / "dir"), -1);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir4" / "dir"), 0);
+  bfs::permissions(m0 / "dir4", bfs::remove_perms |bfs::others_write);
+  BOOST_CHECK_EQUAL(read(m1 / "dir4" / "file"), "foo");
+
+  write(m0 / "file5", "foo");
+  bfs::permissions(m0 / "file5", bfs::add_perms |bfs::others_write | bfs::others_read);
+  write(m1 / "file5", "bar");
+  BOOST_CHECK_EQUAL(read(m1 / "file5"), "bar");
+  BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
+  bfs::permissions(m0 / "file5", bfs::remove_perms |bfs::others_write);
+  write(m1 / "file5", "barbar");
+  BOOST_CHECK_EQUAL(read(m1 / "file5"), "bar");
+  BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
   ELLE_LOG("test end");
 }
 
