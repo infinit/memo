@@ -25,6 +25,7 @@
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
@@ -205,6 +206,14 @@ namespace infinit
             return elle::make_unique<doughnut::User>(
               pub, elle::sprintf("#%s", hex_hash.substr(0, 6)));
           }
+        }
+        else if (data[0] == '@')
+        {
+          ELLE_TRACE_SCOPE("%s: fetch user from group", *this);
+          auto gn = data.string().substr(1);
+          Group g(*elle::unconst(this), gn);
+          auto ck = g.current_key();
+          return elle::make_unique<doughnut::User>(ck, gn);
         }
         else
         {

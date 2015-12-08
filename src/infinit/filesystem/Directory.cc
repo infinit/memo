@@ -13,6 +13,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
+#include <infinit/model/doughnut/Group.hh>
 // #include <infinit/filesystem/FileHandle.hh>
 
 #include <sys/stat.h> // S_IMFT...
@@ -706,6 +707,45 @@ namespace infinit
           _commit({OperationType::remove, value}, true);
         }
       }
+      else if (name == "user.infinit.group.make")
+      {
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        model::doughnut::Group g(*dn, value);
+        g.create();
+      }
+      else if (name == "user.infinit.group.add")
+      {
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        auto sep = value.find_first_of(':');
+        auto gn = value.substr(0, sep);
+        auto userdata = value.substr(sep+1);
+        model::doughnut::Group g(*dn, gn);
+        auto user = dn->make_user(elle::Buffer(userdata.data(), userdata.size()));
+        g.add_member(*user);
+      }
+      else if (name == "user.infinit.group.remove")
+      {
+         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+         auto sep = value.find_first_of(':');
+         auto gn = value.substr(0, sep);
+         auto userdata = value.substr(sep+1);
+         model::doughnut::Group g(*dn, gn);
+         g.remove_member(*dn->make_user(elle::Buffer(userdata.data(), userdata.size())));
+      }
+      else if (name.find("user.infinit.group.load.") == 0)
+      {
+        std::string value = name.substr(strlen("user.infinit.group.load."));
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        model::doughnut::Group g(*dn, value);
+        auto keys = g.group_keys();
+        for (auto const& k: keys)
+        {
+          ELLE_DEBUG("registering %s", k.K());
+          dn->other_keys().insert(std::make_pair(
+            std::hash<infinit::cryptography::rsa::PublicKey>()(k.K()),
+            std::make_shared<infinit::cryptography::rsa::KeyPair>(k)));
+        }
+      }
       else
         Node::setxattr(name, value, flags);
     }
@@ -769,6 +809,19 @@ namespace infinit
         }
         a->sync();
         return "ok";
+      }
+      else if (key.find("user.infinit.group.list.") == 0)
+      {
+        std::string value = key.substr(strlen("user.infinit.group.list."));
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        model::doughnut::Group g(*dn, value);
+        auto members = g.list_members();
+        elle::json::Array v;
+        for (auto const& m: members)
+          v.push_back(m->name());
+        std::stringstream ss;
+        elle::json::write(ss, v, true);
+        return ss.str();
       }
       else
         return Node::getxattr(key);

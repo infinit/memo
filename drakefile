@@ -243,6 +243,8 @@ def configure(
     'src/infinit/model/doughnut/Consensus.hh',
     'src/infinit/model/doughnut/Doughnut.cc',
     'src/infinit/model/doughnut/Doughnut.hh',
+    'src/infinit/model/doughnut/Group.cc',
+    'src/infinit/model/doughnut/Group.hh',
     'src/infinit/model/doughnut/Local.cc',
     'src/infinit/model/doughnut/Local.hh',
     'src/infinit/model/doughnut/NB.cc',

@@ -54,6 +54,7 @@ ELLE_LOG_COMPONENT("test");
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
+namespace bfs = boost::filesystem;
 
 bool mounted = false;
 infinit::storage::Storage* storage;
@@ -70,6 +71,26 @@ std::vector<std::unique_ptr<elle::system::Process>> processes;
 static void sig_int()
 {
   fs->unmount();
+}
+
+static void group_create(bfs::path p, std::string const& name)
+{
+  setxattr(p.c_str(), "user.infinit.group.make", name.c_str(), name.size(), 0 SXA_EXTRA);
+}
+static void group_add(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  setxattr(p.c_str(), "user.infinit.group.add", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+static void group_remove(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  setxattr(p.c_str(), "user.infinit.group.remove", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+static void group_load(bfs::path p, std::string const& gname)
+{
+  setxattr(p.c_str(), ("user.infinit.group.load." + gname).c_str(), "", 0, 0
+    SXA_EXTRA);
 }
 
 static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
@@ -1321,6 +1342,40 @@ test_acl(bool paxos)
   write(m1 / "file5", "barbar");
   BOOST_CHECK_EQUAL(read(m1 / "file5"), "bar");
   BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
+
+  ELLE_LOG("groups");
+  write(m0 / "g1", "foo\n");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(read(m1 / "g1"), "");
+  group_create(m0, "group1");
+  group_add(m0, "group1", "user1");
+  setxattr((m0 / "g1").c_str(), "user.infinit.auth.setrw",
+    "@group1", 7, 0 SXA_EXTRA);
+  group_load(m1, "group1");
+  usleep(100000);
+  BOOST_CHECK_EQUAL(read(m1 / "g1"), "foo");
+  group_remove(m0, "group1", "user1");
+  write(m0 / "g2", "foo");
+  setxattr((m0 / "g2").c_str(), "user.infinit.auth.setrw",
+    "@group1", 7, 0 SXA_EXTRA);
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "");
+  group_add(m0, "group1", "user1");
+  group_load(m1, "group1");
+  usleep(100000);
+  BOOST_CHECK_EQUAL(read(m1 / "g1"), "foo");
+  //incorrect stuff, check it doesn't crash us
+  group_create(m0, "group1");
+  group_add(m0, "group1","user1");
+  group_add(m0, "group1","user1");
+  group_remove(m0, "group1", "user1");
+  group_remove(m0, "group1", "user1");
+  group_add(m0, "group1", "group1");
+  group_add(m0, "nosuch", "user1");
+  group_add(m0, "group1","nosuch");
+  group_remove(m0, "group1","nosuch");
+  group_load(m0, "group1");
+  group_load(m0, "nosuch");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   ELLE_LOG("test end");
 }
 
