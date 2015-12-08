@@ -405,7 +405,7 @@ main(int argc, char** argv)
         { "fetch-drive", bool_switch(), "update local drive descriptor" },
         { "fetch,f", bool_switch(), "alias for --fetch-drive" },
         { "push-drive", bool_switch(), "update remote drive descriptor" },
-        { "push,f", bool_switch(), "alias for --push-drive" },
+        { "push,p", bool_switch(), "alias for --push-drive" },
         { "passports", bool_switch(), "create passports for each invitee" },
       },
       {},
