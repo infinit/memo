@@ -4,8 +4,9 @@ from utils import *
 import json
 import random
 import string
+import os
 
-# Creating and inviting.
+ # Creating and inviting.
 with Beyond() as beyond,\
      Infinit(beyond = beyond) as bob,\
      Infinit(beyond = beyond) as alice,\
@@ -150,4 +151,30 @@ with Beyond() as beyond,\
 
   assert l1 == l2 and l2 == l3
 
+# Test infinit drive --list and deleting or own drive after pushing, then
+# fetch.
+with Beyond() as beyond,\
+     Infinit(beyond = beyond) as ifnt1:
+  bob = User('bob', ifnt1)
+  bob.run('infinit-user --signup --email bob@infinit.io')
 
+  l = bob.run('infinit-drive --list')
+  assert len(l) == 0
+
+  bob.run('infinit-network --create %s -p' % bob.network)
+  bob.run('infinit-volume --create %s --network %s -p' % (bob.volume,
+                                                          bob.network))
+  bob.run('infinit-drive --create %s --network %s --volume %s -p' % (bob.drive,
+                                                                     bob.network,
+                                                                     bob.volume))
+  l = bob.run('infinit-drive --list')
+  assert l[0] == 'bob/bob-drive: ok'
+
+  os.remove('%s/.local/share/infinit/filesystem/drives/%s' % (bob.infinit.dir,
+                                                              bob.drive))
+  l = bob.run('infinit-drive --list')
+  assert len(l) == 0
+
+  bob.run('infinit-drive --fetch')
+  l = bob.run('infinit-drive --list')
+  assert l[0] == 'bob/bob-drive: ok'

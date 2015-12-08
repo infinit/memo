@@ -184,6 +184,7 @@ class User():
     self.network = '%s/%s-network' % (name, name)
     self.volume = '%s/%s-volume' % (name, name)
     self.mountpoint = '%s/mountpoint' % infinit.dir
+    self.drive = '%s/%s-drive' % (name, name)
     os.mkdir(self.mountpoint)
 
     self.infinit = infinit
