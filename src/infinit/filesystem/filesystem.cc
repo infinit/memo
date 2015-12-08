@@ -139,8 +139,8 @@ namespace infinit
       }
       catch (model::MissingBlock const& mb)
       {
-        ELLE_WARN("data not found fetching %s : %s",
-                  node? node->full_path() : "", mb);
+        ELLE_WARN("data not found fetching \"/%s\": %s",
+                  node ? node->full_path().string() : "", mb);
         if (node)
           node->_remove_from_cache();
         throw rfs::Error(EIO, elle::sprintf("%s", mb));
