@@ -253,6 +253,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: write %s at %s", *this, size, offset);
       ELLE_ASSERT_EQ(buffer.size(), size);
       this->_dirty = true;
+      _owner->_header.mtime = time(nullptr);
       if (offset < signed(File::first_block_size))
       { // write on first block
         auto wend = std::min(uint64_t(size + offset), File::first_block_size);
