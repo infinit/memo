@@ -712,6 +712,7 @@ test_filesystem(bool dht,
     bfs::rename(mount / "dir2" / "foo", mount / "foo");
     bfs::remove(mount / "dir2");
     bfs::remove(mount / "foo");
+    bfs::remove(mount / "test3");
   }
 
   ELLE_LOG("test cross-block")
@@ -736,6 +737,7 @@ test_filesystem(bool dht,
     BOOST_CHECK_EQUAL(std::string(output, output+31),
                       std::string(5, 0) + data);
     close(fd);
+    bfs::remove(mount / "babar");
   }
   ELLE_LOG("test cross-block 2")
   {
@@ -759,6 +761,7 @@ test_filesystem(bool dht,
     BOOST_CHECK_EQUAL(std::string(output, output+31),
                       std::string(5, 0) + data);
     close(fd);
+    bfs::remove(mount / "bibar");
   }
 
   ELLE_LOG("test link/unlink")
@@ -896,6 +899,17 @@ test_filesystem(bool dht,
     ofs.close();
     bfs::remove(mount / "test");
   }
+
+  ELLE_LOG("utf-8");
+  const char* name = "éùßñЂ";
+  write(mount / name, "foo");
+  BOOST_CHECK_EQUAL(read(mount / name), "foo");
+  BOOST_CHECK_EQUAL(directory_count(mount), 1);
+  bfs::directory_iterator it(mount);
+  BOOST_CHECK_EQUAL(it->path().filename(), name);
+  BOOST_CHECK_EQUAL(it->path().filename(), std::string(name));
+  bfs::remove(mount / name);
+  BOOST_CHECK_EQUAL(directory_count(mount), 0);
 }
 
 void test_basic()
