@@ -206,7 +206,7 @@ namespace infinit
           }
           // Some overlays may return peers even if they don't have the block,
           // so we have to return MissingBlock here.
-          ELLE_TRACE("Peers exhausted, throwing missingblock(%x)", address);
+          ELLE_TRACE("all peers failed fetching %x", address);
           throw MissingBlock(address);
         }
 
