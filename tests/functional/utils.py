@@ -44,7 +44,7 @@ class Infinit(TemporaryDirectory):
   def __init__(self, beyond = None):
     self.__beyond = beyond
 
-  def run(self, args, input = None, return_code = 0, env = {}, input_as_it_is = False):
+  def run(self, args, input = None, return_code = 0, env = {}):
     self.env = {
       'PATH': 'bin:backend/bin:/bin:/usr/sbin',
       'INFINIT_HOME': self.dir,
@@ -53,18 +53,21 @@ class Infinit(TemporaryDirectory):
     if self.__beyond is not None:
       self.env['INFINIT_BEYOND'] = self.__beyond.domain
     self.env.update(env)
+    args.append('-s')
     pretty = '%s %s' % (
       ' '.join('%s=%s' % (k, v) for k, v in self.env.items()),
       ' '.join(pipes.quote(arg) for arg in args))
-    print(pretty)
-    if input is not None and not input_as_it_is:
+    if input is not None:
       if isinstance(input, list):
         input = '\n'.join(map(json.dumps, input)) + '\n'
-      else:
+      elif isinstance(input, dict):
         input = json.dumps(input) + '\n'
+      pretty = 'echo %s | %s' % (
+        pipes.quote(input.strip()), pretty)
       input = input.encode('utf-8')
+    print(pretty)
     process = subprocess.Popen(
-      args + ['-s'],
+      args,
       env = self.env,
       stdin =  subprocess.PIPE,
       stdout =  subprocess.PIPE,

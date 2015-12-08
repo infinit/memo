@@ -76,8 +76,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
              '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io'],
-            input = 'loremipsword'.encode('utf-8'),
-            input_as_it_is = True)
+            input = 'loremipsword')
   alice2.run(['infinit-user', '--login',
               '--name', 'alice',
               '--password', 'loremipsword'])
@@ -91,8 +90,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
              '--email', 'alice@infinit.io',
              '--password', 'loremipsword'])
   alice2.run(['infinit-user', '--login', '--name', 'alice'],
-             input = 'loremipsword'.encode('utf-8'),
-             input_as_it_is = True)
+             input = 'loremipsword')
 
 # Read password from stdin (both).
 with Beyond() as beyond, TemporaryDirectory() as tmp,  \
@@ -102,11 +100,9 @@ with Beyond() as beyond, TemporaryDirectory() as tmp,  \
              '--full',
              '--name', 'alice',
              '--email', 'alice@infinit.io'],
-            input = 'loremipsword'.encode('utf-8'),
-            input_as_it_is = True)
+            input = 'loremipsword')
   alice2.run(['infinit-user', '--login', '--name', 'alice'],
-             input = 'loremipsword'.encode('utf-8'),
-             input_as_it_is = True)
+             input = 'loremipsword')
 
 # Missing and invalid email.
 with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
