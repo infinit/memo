@@ -127,9 +127,10 @@ _update_local_json(infinit::Drive& drive,
       continue;
 
     drive.users[invitation.first] = invitation.second;
+    report_action("created", "invitation for", invitation.first, std::string("locally"));
   }
   ifnt.drive_save(drive);
-  report_action("created", "invitations for", drive.name, std::string("locally"));
+  report_action("done creating", "invitations for", drive.name, std::string("locally"));
 }
 
 COMMAND(invite)
