@@ -339,6 +339,18 @@ namespace infinit
         "main",
         [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg]
         {
+          // boost::filesystem uses the default locale, detect here if it
+          // cant be instantiated.
+          try
+          {
+            std::locale locale("");
+          }
+          catch(std::exception const& e)
+          {
+            ELLE_WARN("Something is wrong with your locale settings, overriding: %s",
+                      e.what());
+            setenv("LC_ALL", "C", 1);
+          }
           ELLE_TRACE("parse command line")
           {
             using namespace boost::program_options;
