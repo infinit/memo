@@ -159,6 +159,8 @@ namespace infinit
         virtual
         void
         serialize(elle::serialization::Serializer& s) override;
+        // Solve ambiguity between Block and OKBHedar wich both have the tag.
+        typedef infinit::serialization_tag serialization_tag;
       private:
         class SerializationContent;
         BaseOKB(SerializationContent input);
