@@ -177,7 +177,7 @@ COMMAND(invite)
   std::unordered_map<std::string, infinit::Drive::User> invitees;
 
   // If at least one --user is specified.
-  if (args.count("user") != 0)
+  if (args.count("user") > 0)
   {
     for (auto const& user: users)
       invitees[user] = {permissions, "pending", home};
@@ -196,7 +196,7 @@ COMMAND(invite)
     new_passport_users = _create_passports(invitees, owner.name, drive);
   }
 
-  if (aliased_flag(args, { "push-drive", "push" }))
+  if (aliased_flag(args, { "push-invitations", "push" }))
   {
     if (flag(args, "passports"))
       _push_passports(drive, new_passport_users, owner);
@@ -219,7 +219,15 @@ COMMAND(invite)
 
     try
     {
-      if (users.size() > 1)
+      if (users.size() == 1)
+      {
+        auto const& user = users.front();
+        auto data = drive.users[user];
+        ELLE_DEBUG("data: %s", data);
+        beyond_push(url, "invitation", elle::sprintf("%s: %s", name, user),
+                    data, owner, true, true);
+      }
+      else
       {
         auto user_names = [users] {
           std::string res;
@@ -230,14 +238,6 @@ COMMAND(invite)
         beyond_push(url, "invitations",
                     elle::sprintf("%s: %s", name, user_names()),
                     drive.users, owner, true, true);
-      }
-      else if (users.size() == 1)
-      {
-        auto const& user = users.front();
-        auto data = drive.users[user];
-        ELLE_DEBUG("data: %s", data);
-        beyond_push(url, "invitation", elle::sprintf("%s: %s", name, user),
-                    data, owner, true, true);
       }
     }
     catch (MissingResource const& e)
@@ -419,7 +419,7 @@ main(int argc, char** argv)
         { "fetch-drive", bool_switch(), "update local drive descriptor" },
         { "fetch,f", bool_switch(), "alias for --fetch-drive" },
         { "push-drive", bool_switch(), "update remote drive descriptor" },
-        { "push,p", bool_switch(), "alias for --push-drive" },
+        { "push,p", bool_switch(), "alias for --push-invitations" },
         { "passports", bool_switch(), "create passports for each invitee" },
       },
       {},
