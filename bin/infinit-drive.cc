@@ -387,7 +387,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "created drive name" },
         { "network,N", value<std::string>(), "associated network name" },
-        { "volume,v", value<std::string>(), "associated volume name" },
+        { "volume,V", value<std::string>(), "associated volume name" },
         { "description,d", value<std::string>(), "created drive description" },
         { "push-drive", bool_switch(),
           elle::sprintf("push the created drive to %s", beyond(true)).c_str() },
@@ -412,7 +412,7 @@ main(int argc, char** argv)
       {},
       // Hidden options.
       {
-        { "permissions,p", value<std::string>(),
+        { "permissions", value<std::string>(),
             "set default user permissions to XXX" },
         { "home,h", bool_switch(),
           "creates a home directory for the invited user" },
