@@ -866,6 +866,7 @@ namespace infinit
       s.serialize("network", this->network);
       s.serialize("description", this->description);
       s.serialize("users", this->users);
+      s.serialize("icon_path", this->icon_path);
     }
 
     std::string name;
@@ -874,6 +875,7 @@ namespace infinit
     std::string network;
     std::string description;
     Users users;
+    boost::optional<std::string> icon_path;
   };
 
   class Infinit
@@ -1442,6 +1444,20 @@ namespace infinit
       if (boost::filesystem::exists(drive_path))
         return boost::filesystem::remove(drive_path);
       return false;
+    }
+
+    boost::filesystem::path
+    _drive_icon_path() const
+    {
+      auto root = cache_dir() / "icons";
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _drive_icon_path(std::string const& name) const
+    {
+      return this->_drive_icon_path() / name;
     }
 
     Drive
