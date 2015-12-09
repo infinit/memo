@@ -640,21 +640,30 @@ body.doc_overview {
     .features {
       &:after { display: table; content: ''; clear: both; }
       div {
-        float: left; width: 31%; margin-right: 3%;
+        float: left; width: 40%; margin: 0 5%; min-height: 120px;
 
         h2 { font-size: 15px; text-transform: uppercase; margin: 25px 0 5px 0;}
-        p { font-size: 13px; color: #959595; line-height: 19px; margin-top: 0;}
+        p { font-size: 14px; color: #959595; line-height: 19px; margin-top: 0;}
       }
+    }
 
-      div:nth-child(3n) { margin-right: 0; }
-      div:nth-child(3n+1) { clear: both; }
+    h3 {
+      font-family: @helvetica; text-align: center; font-weight: 300;
+      font-size: 28px; clear: both; padding-top: 80px; padding-bottom: 15px;
+     }
+    h3:first-child { padding-top: 0; }
+    h3 img {
+      margin: 0; margin-right: 7px;
+      max-height: 38px; vertical-align: bottom; margin-top: 0px; width: auto;
     }
     .button { clear:both; margin-top: 30px; }
+    .cta { text-align: center; }
   }
 }
 
 body.doc_technology {
   section.doc {
+    img { display: block; margin: auto; }
     h2 { margin-bottom: 0px; }
     h2 + p { margin-top: 5px; }
     h2 + p em {
@@ -1002,9 +1011,29 @@ body.opensource {
     padding: 0 17% 100px 17%; width: 66%;
 
     .projects:after { content: ''; display: table; clear: both; }
-    .card { float: left; margin:15px 15px 15px 0; }
+    .card { float: left; margin:15px 15px 0; }
     .card:nth-child(2n+1) { clear: both; }
     .repo-card .content p { font-size: 13px; font-family: @sourcesans; }
+
+    .card.soon .github-card {
+      border-radius: 5px; padding: 8px 11px 0; position: relative;
+      min-height: 143px; border: 1px solid #D6D6D6; min-width: 325px;
+      background: #f7f7f7;
+
+      img { float: left; margin-top: 4px; margin-right: 12px; }
+      span {
+        display: block; float: right; margin-top: 8px; background: #6D6D6D;
+        padding: 3px 6px; border-radius: 3px; color: white;
+      }
+      strong {
+        font-size: 18px; font-family: @helvetica; margin-top: 7px;
+        display: block; padding-top: 3px; float: left;
+      }
+      p {
+        font: 18px/24px Georgia,"Times New Roman",Palatino,serif; color: #555;
+        margin-top: 56px;
+      }
+    }
 
     table { width: 80%; }
     table tr td, table tr th { text-align: left; padding-left: 20px; }

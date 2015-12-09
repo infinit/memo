@@ -197,6 +197,10 @@ def configure(
     'resources/images/icons/cash@2x.png',
     'resources/images/icons/osxfuse.png',
     'resources/images/icons/osxfuse@2x.png',
+    'resources/images/icons/control.png',
+    'resources/images/icons/control@2x.png',
+    'resources/images/icons/keyboard.png',
+    'resources/images/icons/keyboard@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
@@ -220,6 +224,8 @@ def configure(
     'resources/images/logos/google-drive-big@2x.png',
     'resources/images/logos/osxfuse.png',
     'resources/images/logos/osxfuse@2x.png',
+    'resources/images/logos/infinit.png',
+    'resources/images/logos/infinit@2x.png',
 
     'resources/fonts/icons.eot',
     'resources/fonts/icons.svg',

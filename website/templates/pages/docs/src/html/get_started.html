@@ -105,12 +105,12 @@ Created storage "local".
 
 <h3 id="create-a-network">Create a network</h3>
 <p>Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.</p>
-<p>The <em>infinit-network</em> command is used to create the network, specifying a name and the list of storage resources to rely upon. In this example, only the ‘local’ storage resource is used but you could plug as many as you like. Obviously, you need to substitute &#39;bob&#39; with your username:</p>
+<p>The <em>infinit-network</em> command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the ‘local’ storage resource is used but you could plug as many as you like. Obviously, you need to substitute &#39;bob&#39; with your username:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-network --create --as bob --storage local --kelips --k 1 --name mine --push
-Locally created network "bob/mine".
-Remotely pushed network "bob/mine".
+<code>$> infinit-network --create --as bob --storage local --kelips --name my-network --push
+Locally created network "bob/my-network".
+Remotely pushed network "bob/my-network".
 </code></pre>
 
 <p><em><strong>NOTE</strong>: The <code>&#8209;&#8209;push</code> option is used to publish the created network (likewise for other objects) onto the Hub for it to be easily fetched on another device or shared with other users.</em></p>
@@ -118,21 +118,21 @@ Remotely pushed network "bob/mine".
 <p>The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the <em>infinit-volume</em> binary as shown next:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --create --as bob --network mine --name personal --push
-Locally created volume "bob/personal".
-Remotely pushed volume "bob/personal".
+<code>$> infinit-volume --create --as bob --network my-network --name my-volume --push
+Locally created volume "bob/my-volume".
+Remotely pushed volume "bob/my-volume".
 </code></pre>
 
-<p>That’s it, you’ve created a ‘personal’ volume i.e. filesystem. The blocks that the files are composed of will be distributed across the network named ‘mine’, currently composed of a single computer with a single storage resource.</p>
+<p>That’s it, you’ve created a volume named ‘my-volume’ i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named ‘my-network’, currently composed of a single computer with a single storage resource.</p>
 <h3 id="mount-the-volume">Mount the volume</h3>
 <p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --mount --as bob --name personal --mountpoint mnt/ --async --cache --publish
-Fetched endpoints for "bob/mine".
-Running network "bob/mine".
-Remotely pushed endpoints for "bob/mine".
-Running volume "bob/personal".
+<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint mnt/ --async --cache --publish
+Fetched endpoints for "bob/my-network".
+Running network "bob/my-network".
+Remotely pushed endpoints for "bob/my-network".
+Running volume "bob/my-volume".
 </code></pre>
 
 <p><em><strong>NOTE</strong>: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
@@ -145,7 +145,7 @@ everything is
 </code></pre>
 
 <h3 id="access-from-another-machine">Access from another machine</h3>
-<p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. In this guide we’ll show you how to connect your other devices. In the case you don’t have another device, you can can skip to the end of the guide.</p>
+<p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. If you don’t have another device, you can simulate another device by opening another terminal and setting <code>INFINIT_DATA_HOME</code> to a different directory.</p>
 <p>In order to access your volume from another device, you will need to transfer your user’s identity to that device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
 <p>Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.</p>
 <pre>
@@ -168,26 +168,26 @@ Received user identity for "bob".
 <p>The next steps consist of fetching the resources that you previously pushed on the Hub: networks and volumes.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --fetch --as bob --name mine
-Fetched network "bob/mine".
-$> infinit-volume --fetch --as bob --name personal
-Fetched volume "bob/personal".
+<code>$> infinit-network --fetch --as bob --name my-network
+Fetched network "bob/my-network".
+$> infinit-volume --fetch --as bob --name my-volume
+Fetched volume "bob/my-volume".
 </code></pre>
 
-<p>Let’s connect this device to the ‘mine’ network you created on device A.</p>
+<p>Let’s link this device to the ‘my-network’ network you created on device A.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --join --as bob --name mine
-Joined network "bob/mine".
+<code>$> infinit-network --link --as bob --name my-network
+Linked device to network "bob/my-network".
 </code></pre>
 
 <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-volume --mount --mountpoint mnt/ --as bob --name personal --async --cache --publish
-Fetch endpoints for "bob/mine".
-Running network “bob/mine”.
-Running volume "bob/personal".
+<code>$> infinit-volume --mount --mountpoint mnt/ --as bob --name my-volume --async --cache --publish
+Fetch endpoints for "bob/my-network".
+Running network “bob/my-network”.
+Running volume "bob/my-volume".
 </code></pre>
 
 <p>It is now time to check if the file you created on device A is synchronized with device B:</p>

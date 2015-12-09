@@ -5,7 +5,7 @@ At the <a href="${route('doc_overview')}">highest-level</a>, Infinit is a file s
 
 However, at the technology level, Infinit is a set of independent layers that can be used to develop powerful applications, create block-level data stores and more.
 
-<img src="${url('images/schema-technology.png')}" alt="Infinit Technology"><br>
+<br><img src="${url('images/schema-technology.png')}" alt="Infinit Technology"><br>
 
 Reactor
 -----------
