@@ -380,12 +380,15 @@ fetch_avatar(std::string const& name)
 {
   auto url = elle::sprintf("users/%s/avatar", name);
   auto redirect = beyond_fetch<FakeRedirect>(url, "avatar route", name);
-  auto response = fetch_data(redirect.url, "avatar", name)->response();
-  // XXX: Deserialize XML.
-  if (response.size() == 0 || response[0] == '<')
-    throw MissingResource(
-      elle::sprintf("avatar for %s not found on %s", name, beyond(true)));
-  _save_avatar(name, response);
+  if (redirect.url)
+  {
+    auto response = fetch_data(redirect.url.get(), "avatar", name)->response();
+    // XXX: Deserialize XML.
+    if (response.size() == 0 || response[0] == '<')
+      throw MissingResource(
+        elle::sprintf("avatar for %s not found on %s", name, beyond(true)));
+    _save_avatar(name, response);
+  }
 }
 
 void

@@ -268,12 +268,15 @@ fetch_icon(std::string const& name)
 {
   auto url = elle::sprintf("drives/%s/icon", name);
   auto redirect = beyond_fetch<FakeRedirect>(url, "icon route", name);
-  auto response = fetch_data(redirect.url, "icon", name)->response();
-  // XXX: Deserialize XML.
-  if (response.size() == 0 || response[0] == '<')
-    throw MissingResource(
-      elle::sprintf("icon for %s not found on %s", name, beyond(true)));
-  _save_icon(name, response);
+  if (redirect.url)
+  {
+    auto response = fetch_data(redirect.url.get(), "icon", name)->response();
+    // XXX: Deserialize XML.
+    if (response.size() == 0 || response[0] == '<')
+      throw MissingResource(
+        elle::sprintf("icon for %s not found on %s", name, beyond(true)));
+    _save_icon(name, response);
+  }
 }
 
 void

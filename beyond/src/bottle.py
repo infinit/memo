@@ -720,6 +720,7 @@ class Bottle(bottle.Bottle):
   def __check_gcs(self):
     if self.__gcs is None:
       raise Response(501, {
+        'error': 'GCS/not_implemented',
         'reason': 'GCS support not enabled',
       })
 
@@ -767,7 +768,10 @@ class Bottle(bottle.Bottle):
       name,
       expiration = datetime.timedelta(minutes = 3),
     )
-    raise Response(200, {'url': url})
+    res = {}
+    if url is not None:
+      res['url'] = url
+    raise Response(200, res)
 
   def __cloud_image_delete(self, bucket, name):
     self.__check_gcs()

@@ -1806,8 +1806,9 @@ typedef std::unordered_map<std::string, std::string> Headers;
 
 struct FakeRedirect
 {
-  std::string url;
+  boost::optional<std::string> url;
 };
+
 DAS_MODEL(FakeRedirect, (url), DasFakeRedirect);
 DAS_MODEL_DEFAULT(FakeRedirect, DasFakeRedirect);
 DAS_MODEL_SERIALIZE(FakeRedirect);

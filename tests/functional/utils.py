@@ -114,6 +114,23 @@ def assertIn(a, b):
 
 import bottle
 
+class FakeGCS:
+
+  def __init__(self):
+    self.__icons = {}
+
+  def upload(self, bucket, path, *args, **kwargs):
+    self.__icons[path] = 'url'
+
+  def delete(self, bucket, path):
+    if path in self.__icons:
+      del self.__icons[path]
+
+  def download_url(self, bucket, path, *args, **kwargs):
+    if path in self.__icons:
+      return self.__icons[path]
+    return None
+
 class Beyond():
 
   def __init__(self):
@@ -124,6 +141,7 @@ class Beyond():
     self.__beyond = None
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
+    self.__gcs = FakeGCS()
 
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
@@ -138,7 +156,10 @@ class Beyond():
         google_app_secret = 'google_secret',
       )
       setattr(self.__beyond, '_Beyond__now', self.now)
-      self.__app = infinit.beyond.bottle.Bottle(beyond = self.__beyond)
+      self.__app = infinit.beyond.bottle.Bottle(
+        beyond = self.__beyond,
+        gcs = self.__gcs
+      )
       try:
         bottle.run(app = self.__app,
                    quiet = True,
