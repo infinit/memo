@@ -152,6 +152,16 @@ public:
   {}
 };
 
+class Redirected
+  : public elle::Error
+{
+public:
+  Redirected(std::string const& url)
+    : elle::Error(
+      elle::sprintf("%s caused an unsupported redirection", url))
+  {}
+};
+
 void
 not_found(std::string const& name,
           std::string const& type)
@@ -1961,6 +1971,11 @@ _beyond_push(reactor::http::Request& r,
     else
       read_error<MissingResource>(r, type, name);
   }
+  else if (r.status() == reactor::http::StatusCode::See_Other ||
+           r.status() == reactor::http::StatusCode::Temporary_Redirect)
+  {
+    throw Redirected(r.url());
+  }
   else if (r.status() == reactor::http::StatusCode::Gone)
   {
     read_error<ResourceGone>(r, type, name);
@@ -2073,8 +2088,8 @@ beyond_fetch_data(std::string const& where,
   }
   for (auto const& header: extra_headers)
     headers[header.first] = header.second;
-  auto r = fetch_data(
-    elle::sprintf("%s/%s", beyond(), where), type, name, self, headers,
+  auto url = elle::sprintf("%s/%s", beyond(), where);
+  auto r = fetch_data(url, type, name, self, headers,
     output_report_action);
   reactor::wait(*r);
   if (r->status() == reactor::http::StatusCode::OK)
@@ -2093,6 +2108,11 @@ beyond_fetch_data(std::string const& where,
   else if (r->status() == reactor::http::StatusCode::Forbidden)
   {
     read_error<ResourceProtected>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::See_Other ||
+           r->status() == reactor::http::StatusCode::Temporary_Redirect)
+  {
+    throw Redirected(url);
   }
   else
   {
@@ -2151,9 +2171,8 @@ beyond_delete(std::string const& where,
                                    self);
   for (auto const& header: headers)
     c.header_add(header.first, header.second);
-  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
-                           reactor::http::Method::DELETE,
-                           std::move(c));
+  auto url = elle::sprintf("%s/%s", beyond(), where);
+  reactor::http::Request r(url, reactor::http::Method::DELETE, std::move(c));
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
@@ -2161,6 +2180,11 @@ beyond_delete(std::string const& where,
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
     read_error<MissingResource>(r, type, name);
+  }
+  else if (r.status() == reactor::http::StatusCode::See_Other ||
+           r.status() == reactor::http::StatusCode::Temporary_Redirect)
+  {
+    throw Redirected(url);
   }
   else
   {

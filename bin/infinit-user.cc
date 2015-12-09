@@ -92,17 +92,19 @@ COMMAND(fetch)
       {
         try
         {
-          fetch_avatar(user_name);
+          fetch_avatar(name);
+        }
+        catch (Redirected)
+        {
         }
         catch (MissingResource)
         {
         }
       }
     };
-    auto user =
-      beyond_fetch<infinit::User>("user", user_name);
     try
     {
+      auto user = beyond_fetch<infinit::User>("user", name);
       ifnt.user_save(std::move(user));
       avatar();
     }
@@ -320,7 +322,7 @@ beyond_login(std::string const& name,
   r.finalize();
   if (r.status() != reactor::http::StatusCode::OK)
   {
-    read_error<BeyondError>(r, name);
+    read_error<BeyondError>(r, "login", name);
   }
 
   return elle::json::read(r);
