@@ -317,9 +317,8 @@ namespace infinit
           elle::Buffer buf;
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
-          auto ptr = &(packet::Packet const&)packet;
+          auto ptr = &(packet::Packet&)packet;
           output.serialize_forward(ptr);
-          //const_cast<T&>(packet).serialize(output);
           return buf;
         }
 

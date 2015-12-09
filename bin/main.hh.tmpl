@@ -1175,7 +1175,8 @@ namespace infinit
     }
 
     void
-    storage_save(std::string const& name, storage::StorageConfig const& storage)
+    storage_save(std::string const& name,
+                 std::unique_ptr<storage::StorageConfig> const& storage)
     {
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_storage_path(name), name, "storage", false);

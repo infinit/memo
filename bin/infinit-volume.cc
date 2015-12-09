@@ -3,6 +3,7 @@
 
 #include <reactor/FDStream.hh>
 
+#include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
@@ -264,11 +265,14 @@ COMMAND(run)
             pathname = command.deserialize<std::string>("path");
             path = fs->path(pathname);
           }
-          catch(...) {}
+          catch (...)
+          {}
           try
           {
             handlename = command.deserialize<std::string>("handle");
-          } catch(...) {}
+          }
+          catch (...)
+          {}
           if (op == "list_directory")
           {
             std::vector<std::string> entries;

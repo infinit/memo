@@ -176,16 +176,6 @@ namespace kademlia
     #undef REGISTER
     #undef SER
     #undef PACKET
-
-    template<typename T> elle::Buffer serialize(T const& packet)
-    {
-      elle::Buffer buf;
-      elle::IOStream stream(buf.ostreambuf());
-      Serializer::SerializerOut output(stream, false);
-      output.serialize_forward((packet::Packet const&)packet);
-      //const_cast<T&>(packet).serialize(output);
-      return buf;
-    }
   }
 
   template<typename E1, typename E2>
@@ -271,8 +261,7 @@ namespace kademlia
       packet::Ping p;
       p.sender = _self;
       p.remote_endpoint = ep;
-      elle::Buffer buf = serialize(p);
-      send(buf, ep);
+      send(elle::serialization::json::serialize(&p), ep);
     }
     if (_config.wait)
     {
@@ -342,7 +331,7 @@ namespace kademlia
         packet::Pong r;
         r.sender = _self;
         r.remote_endpoint = ep;
-        elle::Buffer s = packet::serialize(r);
+        auto s = elle::serialization::json::serialize(&r);
         send(s, ep);
       }
       CASE(Pong)
@@ -439,7 +428,7 @@ namespace kademlia
       s.sender = _self;
       s.key = k;
       s.value = {_local_endpoint};
-      elle::Buffer buf = serialize(s);
+      auto buf = elle::serialization::json::serialize(&s);
       // store the mapping in the k closest nodes
       for (unsigned int i=0; i<q->res.size() && i<unsigned(_config.k); ++i)
       {
@@ -466,7 +455,7 @@ namespace kademlia
       s.sender = _self;
       s.key = address;
       s.value = {q->endpoints.at(q->res[0])};
-      elle::Buffer buf = serialize(s);
+      auto buf = elle::serialization::json::serialize(&s);
       // store the mapping in the k closest nodes
       for (unsigned int i=0; i<q->res.size() && i<unsigned(_config.k); ++i)
       {
@@ -560,7 +549,7 @@ namespace kademlia
         fv.sender = _self;
         fv.requestId = id;
         fv.target = target;
-        buf = serialize(fv);
+        buf = elle::serialization::json::serialize(&fv);
       }
       else
       {
@@ -568,7 +557,7 @@ namespace kademlia
         fn.sender = _self;
         fn.requestId = id;
         fn.target = target;
-        buf = serialize(fn);
+        buf = elle::serialization::json::serialize(&fn);
       }
       ELLE_TRACE("%s: startquery %s(%s) send to %s",
         *this, id, storage, *a);
@@ -685,8 +674,7 @@ namespace kademlia
     res.sender = _self;
     res.nodes = result;
     res.requestId = p->requestId;
-    elle::Buffer buf = packet::serialize(res);
-    send(buf, p->endpoint);
+    send(elle::serialization::json::serialize(&res), p->endpoint);
   }
 
   void Kademlia::onFindValue(packet::FindValue* p)
@@ -705,8 +693,7 @@ namespace kademlia
     }
     ELLE_DEBUG("%s: onFindValue %s replying with %s nodes and %s results",
       *this, p->requestId, res.nodes.size(), res.results.size());
-    elle::Buffer buf = packet::serialize(res);
-    send(buf, p->endpoint);
+    send(elle::serialization::json::serialize(&res), p->endpoint);
   }
 
   void Kademlia::onStore(packet::Store* p)
@@ -802,8 +789,7 @@ namespace kademlia
     fn.requestId = it->first;
     fn.sender = _self;
     fn.target = q.target;
-    elle::Buffer buf = serialize(fn);
-    send(buf, q.endpoints.at(*addr));
+    send(elle::serialization::json::serialize(&fn), q.endpoints.at(*addr));
   }
   void Kademlia::onFindValueReply(packet::FindValueReply * p)
   {
@@ -835,7 +821,7 @@ namespace kademlia
     fv.sender = _self;
     fv.target = q.target;
     fv.requestId = it->first;
-    elle::Buffer buf = serialize(fv);
+    auto buf = elle::serialization::json::serialize(&fv);
     ELLE_DEBUG("%s: forwarding value query %s to %x", *this, p->requestId, *addr);
     send(buf, q.endpoints.at(*addr));
   }
@@ -879,7 +865,7 @@ namespace kademlia
       s.sender = _self;
       s.key = oldest;
       s.value = {_local_endpoint};
-      elle::Buffer buf = serialize(s);
+      auto buf = elle::serialization::json::serialize(&s);
       for (unsigned int i=0; i<q->res.size() && i<unsigned(_config.k); ++i)
       {
         send(buf, q->endpoints.at(q->res[i]));
@@ -931,8 +917,7 @@ namespace kademlia
           packet::Ping pi;
           pi.sender = _self;
           pi.remote_endpoint = node.endpoint;
-          elle::Buffer buf = serialize(pi);
-          send(buf, node.endpoint);
+          send(elle::serialization::json::serialize(&pi), node.endpoint);
           break;
         }
         p += b.size();

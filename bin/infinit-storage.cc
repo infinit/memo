@@ -156,7 +156,7 @@ COMMAND(create)
   }
   else
   {
-    ifnt.storage_save(name, *config);
+    ifnt.storage_save(name, config);
     // Custom message as storage can only be created locally.
     report_action("created", "storage", name);
   }
@@ -197,7 +197,7 @@ COMMAND(import)
       std::unique_ptr<infinit::storage::StorageConfig>>(*input, false);
     if (!storage->name.size())
       throw elle::Error("storage does not have a name");
-    ifnt.storage_save(storage->name, *storage);
+    ifnt.storage_save(storage->name, storage);
     report_imported("storage", storage->name);
   }
 }
