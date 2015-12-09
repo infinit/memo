@@ -365,7 +365,7 @@ class Bottle(bottle.Bottle):
     user = self.user_from_name(name = name)
     self.authenticate(user)
     drives = self.__beyond.user_drives_get(user = user)
-    return {'drives': list(map(lambda v: v.json(), drives))}
+    return {'drives': list(map(lambda d: d.json(), drives))}
 
   def login(self, name):
     json = bottle.request.json
@@ -493,7 +493,7 @@ class Bottle(bottle.Bottle):
     passport = network.passports.get(invitee)
     if passport is None:
       raise self.__not_found(
-        'passport', '%s/%s/%s' % (owner, name, invitee))
+        'passport', '%s/%s: %s' % (owner, name, invitee))
     else:
       return passport
 
@@ -610,7 +610,7 @@ class Bottle(bottle.Bottle):
     self.__beyond.volume_delete(owner = owner, name = name)
 
   ## ----- ##
-  ## DRIVE ##
+  ## Drive ##
   ## ----- ##
   def __drive_integrity(self, drive, passport = None):
     drive = drive.json()
