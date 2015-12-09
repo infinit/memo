@@ -542,6 +542,7 @@ namespace infinit
     {
       s.serialize("email", this->email);
       s.serialize("fullname", this->fullname);
+      s.serialize("avatar", this->avatar_path);
       s.serialize("name", this->name);
       s.serialize("password_hash", this->password_hash);
       s.serialize("private_key", this->private_key);
@@ -576,6 +577,7 @@ namespace infinit
     // Hub.
     boost::optional<std::string> email;
     boost::optional<std::string> fullname;
+    boost::optional<std::string> avatar_path;
     boost::optional<std::string> password_hash;
   };
 
@@ -1090,6 +1092,20 @@ namespace infinit
         }
       }
       return res;
+    }
+
+    boost::filesystem::path
+    _user_avatar_path() const
+    {
+      auto root = cache_dir() / "avatars";
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _user_avatar_path(std::string const& name) const
+    {
+      return this->_user_avatar_path() / name;
     }
 
     std::unique_ptr<storage::StorageConfig>
@@ -1705,12 +1721,12 @@ get_username(boost::program_options::variables_map const& args,
 
 DAS_MODEL_FIELDS(
   infinit::User,
-  (name, email, fullname, public_key, private_key, password_hash));
+  (name, email, fullname, avatar_path, public_key, private_key, password_hash));
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, fullname, public_key), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key, private_key),
+  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key), DasPublicUser);
+  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, private_key),
                    DasUser);
   // Publication to the hub.
   DAS_MODEL_DEFINE(User, (name, email, fullname, public_key),
