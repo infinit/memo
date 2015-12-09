@@ -47,7 +47,7 @@ with Beyond() as beyond:
       with PIL.Image.open(file, mode = 'r') as icon:
         from io import BytesIO
         bs = BytesIO()
-        for format in ['png', 'gif', 'jpg']:
+        for format in ['png', 'gif', 'jpeg']:
           icon.save(bs, format.upper())
           extra_headers = {'Content-Type': 'image/%s' % format}
           beyond.put('drives/%s/icon' % drive['name'],
