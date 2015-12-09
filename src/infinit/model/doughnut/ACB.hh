@@ -94,6 +94,9 @@ namespace infinit
         _decrypt_data(elle::Buffer const& data) const override;
         void
         _stored() override;
+        std::pair<std::vector<ACLEntry>::const_iterator,
+                  std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
+        _find_token() const;
         virtual
         bool
         operator ==(Block const& rhs) const override;

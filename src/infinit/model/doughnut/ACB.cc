@@ -174,6 +174,33 @@ namespace infinit
         return this->_data_version;
       }
 
+      std::pair<std::vector<ACB::ACLEntry>::const_iterator,
+                  std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
+      ACB::_find_token() const
+      {
+        auto& mine = this->doughnut()->keys().K();
+        auto it = std::find_if
+            (this->_acl_entries.begin(), this->_acl_entries.end(),
+             [&] (ACLEntry const& e) { return e.key == mine; });
+        if (it != this->_acl_entries.end())
+          return std::make_pair(it,
+            this->doughnut()->keys_shared());
+        // search in other keys
+        auto const& other_keys = this->doughnut()->other_keys();
+        for (auto it = this->_acl_entries.begin();
+             it != this->_acl_entries.end(); ++it)
+        {
+          ELLE_DEBUG("scanning %s", it->key);
+          auto hit = other_keys.find(std::hash<infinit::cryptography::rsa::PublicKey>()(it->key));
+          if (hit != other_keys.end())
+          {
+            ELLE_DEBUG("hit");
+            return std::make_pair(it, hit->second);
+          }
+        }
+        return std::make_pair(this->_acl_entries.end(), nullptr);
+      }
+
       elle::Buffer
       ACB::_decrypt_data(elle::Buffer const& data) const
       {
@@ -181,22 +208,23 @@ namespace infinit
           return this->_data;
         auto& mine = this->doughnut()->keys().K();
         elle::Buffer const* encrypted_secret = nullptr;
+        infinit::cryptography::rsa::PrivateKey const* priv = nullptr;
         std::vector<ACLEntry> entries;
         if (mine == *this->owner_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
           encrypted_secret = &this->_owner_token;
+          priv = &this->doughnut()->keys().k();
         }
         else if (!this->_acl_entries.empty())
         {
           // FIXME: factor searching the token
-          auto it = std::find_if
-            (this->_acl_entries.begin(), this->_acl_entries.end(),
-             [&] (ACLEntry const& e) { return e.key == mine; });
-          if (it != this->_acl_entries.end() && it->read)
+          auto entry = this->_find_token();
+          if (entry.second && entry.first->read)
           {
             ELLE_DEBUG("%s: we are an editor", *this);
-            encrypted_secret = &it->token;
+            encrypted_secret = &entry.first->token;
+            priv = &entry.second->k();
           }
         }
         if (!encrypted_secret)
@@ -205,7 +233,7 @@ namespace infinit
           throw ValidationFailed("no read permissions");
         }
         auto secret_buffer =
-          this->doughnut()->keys().k().open(*encrypted_secret);
+          priv->open(*encrypted_secret);
         auto secret = elle::serialization::json::deserialize
           <cryptography::SecretKey>(secret_buffer);
         ELLE_DUMP("%s: secret: %s", *this, secret);
@@ -436,6 +464,7 @@ namespace infinit
         elle::Bench::BenchScope scope(bench);
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
+        std::shared_ptr<infinit::cryptography::rsa::KeyPair const> sign_keys;
         if (acl_changed)
         {
           static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
@@ -446,7 +475,10 @@ namespace infinit
           if (this->keys())
             owner |= this->keys()->K() == *this->owner_key();
           if (owner)
+          {
+            sign_keys = this->doughnut()->keys_shared();
             this->_editor = -1;
+          }
           Super::_seal_okb();
           if (!data_changed)
             // FIXME: idempotence in case the write fails ?
@@ -470,7 +502,10 @@ namespace infinit
           if (this->keys())
             owner |= this->keys()->K() == *this->owner_key();
           if (owner)
+          {
+            sign_keys = this->doughnut()->keys_shared();
             this->_editor = -1;
+          }
           boost::optional<cryptography::SecretKey> secret;
           elle::Buffer secret_buffer;
           if (!key)
@@ -493,11 +528,21 @@ namespace infinit
             {
               found = true;
               this->_editor = idx;
+              sign_keys = this->doughnut()->keys_shared();
             }
             ++idx;
           }
           if (!owner && !found && !this->_world_writable)
-            throw ValidationFailed("not owner and no write permissions");
+          {
+            // group search
+            auto hit = _find_token();
+            if (!hit.second)
+              throw ValidationFailed("not owner and no write permissions");
+            this->_editor = hit.first - this->_acl_entries.begin();
+            sign_keys = hit.second;
+          }
+          if (!sign_keys && this->_world_writable)
+            sign_keys = this->doughnut()->keys_shared();
           if (!this->_world_readable)
             this->MutableBlock::data(key->encipher(this->data_plain()));
           else
@@ -512,17 +557,16 @@ namespace infinit
           (!this->_data_signature.running() && this->_data_signature.value().empty()))
         {
           // note: in world_writable mode, the signing key might not be
-          // present in the block, so signing might not be that important.      
-          auto keys = this->keys() ?
-            std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>)
-            : this->doughnut()->keys_shared();
+          // present in the block, so signing might not be that important. 
+          if (this->keys())
+            sign_keys = std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>);
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
-            [keys, to_sign]
+            [sign_keys, to_sign]
             {
               static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
               elle::Bench::BenchScope scope(bench);
-              return keys->k().sign(*to_sign);
+              return sign_keys->k().sign(*to_sign);
             };
         }
         Super::_seal();

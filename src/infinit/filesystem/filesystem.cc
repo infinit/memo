@@ -256,6 +256,7 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
       auto keys = dn->keys();
+      auto& other_keys = dn->other_keys();
       auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
       ELLE_ASSERT(acl);
       auto res = umbrella([&] {
@@ -264,7 +265,9 @@ namespace infinit
           auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
           if (!u)
             continue;
-          auto hit = u->key() == keys.K();
+          auto hit = u->key() == keys.K()
+             || other_keys.find(std::hash<infinit::cryptography::rsa::PublicKey>()(u->key()))
+                != other_keys.end();
           if (hit)
             return std::make_pair(e.read, e.write);
         }
@@ -281,6 +284,7 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
       auto keys = dn->keys();
+      auto& other_keys = dn->other_keys();
       auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
       ELLE_ASSERT(acl);
       umbrella([&] {
@@ -289,12 +293,17 @@ namespace infinit
           auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
           if (!u)
             continue;
-          if (e.write >= w && e.read >= r && u->key() == keys.K())
+          bool have_key = u->key() == keys.K()
+             || other_keys.find(std::hash<infinit::cryptography::rsa::PublicKey>()(u->key()))
+                != other_keys.end();
+          if (e.write >= w && e.read >= r && have_key)
             return;
         }
         auto wp = acl->get_world_permissions();
         if (wp.first < r || wp.second < w)
+        {
           throw rfs::Error(EACCES, "Access denied.");
+        }
       });
     }
   }
