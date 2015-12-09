@@ -1142,7 +1142,7 @@ namespace infinit
       if (!remove(path))
       {
         throw elle::Error(
-          elle::sprintf("storage '%s' does not exist", name));
+          elle::sprintf("storage \"%s\" does not exist", name));
       }
     }
 
@@ -1365,7 +1365,7 @@ namespace infinit
       if (!f.good())
       {
         throw MissingLocalResource(
-          elle::sprintf("%s '%s' does not exist", type, name));
+          elle::sprintf("%s \"%s\" does not exist", type, name));
       }
     }
 
@@ -1380,13 +1380,13 @@ namespace infinit
       if (!overwrite && exists(path))
       {
         throw ResourceAlreadyFetched(
-          elle::sprintf("%s '%s' already exists", type, name));
+          elle::sprintf("%s \"%s\" already exists", type, name));
       }
       f.open(path);
       if (!f.good())
       {
         throw elle::Error(
-          elle::sprintf("unable to open '%s' for writing", path));
+          elle::sprintf("unable to open \"%s\" for writing", path));
       }
     }
 
@@ -1556,9 +1556,9 @@ private:
   {
     auto count = this->_variables.count(name);
     if (!count)
-      throw elle::Error(elle::sprintf("missing required '%s' option", name));
+      throw elle::Error(elle::sprintf("missing required \"%s\" option", name));
     if (count > 1)
-      throw elle::Error(elle::sprintf("duplicate '%s' option", name));
+      throw elle::Error(elle::sprintf("duplicate \"%s\" option", name));
     return this->_variables[name];
   }
 };
