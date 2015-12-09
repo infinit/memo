@@ -480,20 +480,40 @@ namespace infinit
 
   inline
   boost::filesystem::path
-  root_dir()
+  home()
   {
-    static auto const data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
-    if (!data_home.empty())
-      return data_home;
     static auto const home = elle::os::getenv("INFINIT_HOME", "");
     static auto const xdg = elle::os::getenv("XDG_DATA_HOME", "");
     static auto const data =
       home.empty() ?
       xdg.empty() ?
-      elle::system::home_directory() / ".local" / "share" :
+      elle::system::home_directory() :
       boost::filesystem::path(xdg) :
-      boost::filesystem::path(home) / ".local" / "share";
-    static auto const res = data / "infinit" / "filesystem";
+      boost::filesystem::path(home);
+    return data;
+  }
+
+  inline
+  boost::filesystem::path
+  root_dir()
+  {
+    static auto const data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
+    if (!data_home.empty())
+      return data_home;
+    static auto const res =
+      home() / ".local" / "share" / "infinit" / "filesystem";
+    return res;
+  }
+
+  inline
+  boost::filesystem::path
+  cache_dir()
+  {
+    static auto const cache_home = elle::os::getenv("INFINIT_CACHE_HOME", "");
+    if (!cache_home.empty())
+      return cache_home;
+    static auto const res =
+      home() / ".cache" / "infinit" / "filesystem";
     return res;
   }
 
@@ -541,6 +561,7 @@ namespace infinit
     {
       s.serialize("email", this->email);
       s.serialize("fullname", this->fullname);
+      s.serialize("avatar", this->avatar_path);
       s.serialize("name", this->name);
       s.serialize("password_hash", this->password_hash);
       s.serialize("private_key", this->private_key);
@@ -575,6 +596,7 @@ namespace infinit
     // Hub.
     boost::optional<std::string> email;
     boost::optional<std::string> fullname;
+    boost::optional<std::string> avatar_path;
     boost::optional<std::string> password_hash;
   };
 
@@ -872,6 +894,7 @@ namespace infinit
       s.serialize("network", this->network);
       s.serialize("description", this->description);
       s.serialize("users", this->users);
+      s.serialize("icon_path", this->icon_path);
     }
 
     std::string name;
@@ -880,6 +903,7 @@ namespace infinit
     std::string network;
     std::string description;
     Users users;
+    boost::optional<std::string> icon_path;
   };
 
   class Infinit
@@ -1098,6 +1122,20 @@ namespace infinit
         }
       }
       return res;
+    }
+
+    boost::filesystem::path
+    _user_avatar_path() const
+    {
+      auto root = cache_dir() / "avatars";
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _user_avatar_path(std::string const& name) const
+    {
+      return this->_user_avatar_path() / name;
     }
 
     std::unique_ptr<storage::StorageConfig>
@@ -1436,6 +1474,20 @@ namespace infinit
       return false;
     }
 
+    boost::filesystem::path
+    _drive_icon_path() const
+    {
+      auto root = cache_dir() / "icons";
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _drive_icon_path(std::string const& name) const
+    {
+      return this->_drive_icon_path() / name;
+    }
+
     Drive
     drive_fetch(std::string const& name);
   };
@@ -1713,12 +1765,12 @@ get_username(boost::program_options::variables_map const& args,
 
 DAS_MODEL_FIELDS(
   infinit::User,
-  (name, email, fullname, public_key, private_key, password_hash));
+  (name, email, fullname, avatar_path, public_key, private_key, password_hash));
 
 namespace infinit
 {
-  DAS_MODEL_DEFINE(User, (name, fullname, public_key), DasPublicUser);
-  DAS_MODEL_DEFINE(User, (name, email, fullname, public_key, private_key),
+  DAS_MODEL_DEFINE(User, (name, fullname, avatar_path,  public_key), DasPublicUser);
+  DAS_MODEL_DEFINE(User, (name, email, avatar_path, fullname, public_key, private_key),
                    DasUser);
   // Publication to the hub.
   DAS_MODEL_DEFINE(User, (name, email, fullname, public_key),
@@ -1779,6 +1831,15 @@ report_exported(std::ostream& output,
 }
 
 typedef std::unordered_map<std::string, std::string> Headers;
+
+struct FakeRedirect
+{
+  boost::optional<std::string> url;
+};
+
+DAS_MODEL(FakeRedirect, (url), DasFakeRedirect);
+DAS_MODEL_DEFAULT(FakeRedirect, DasFakeRedirect);
+DAS_MODEL_SERIALIZE(FakeRedirect);
 
 static
 Headers
@@ -1844,7 +1905,8 @@ namespace detail
 template <typename Exception>
 void
 read_error(reactor::http::Request& r,
-           std::string const& type)
+           std::string const& type,
+           std::string const& name)
 {
   ELLE_DEBUG("read_error");
   elle::json::Object json;
@@ -1861,8 +1923,8 @@ read_error(reactor::http::Request& r,
   {
     ELLE_DEBUG("ParseError: %s", e.what());
     throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s while performing %s for %s",
-                    r.status(), r.method(), type));
+      elle::sprintf("unexpected HTTP error %s while performing %s for %s %s",
+                    r.status(), r.method(), type, name));
   }
   detail::_read_error<Exception>(json);
 }
@@ -1895,13 +1957,13 @@ _beyond_push(reactor::http::Request& r,
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
     if (beyonderror)
-      read_error<BeyondError>(r, type);
+      read_error<BeyondError>(r, type, name);
     else
-      read_error<MissingResource>(r, type);
+      read_error<MissingResource>(r, type, name);
   }
   else if (r.status() == reactor::http::StatusCode::Gone)
   {
-    read_error<ResourceGone>(r, type);
+    read_error<ResourceGone>(r, type, name);
   }
   else
   {
@@ -1976,9 +2038,71 @@ beyond_push(std::string const& type, std::string const& name, T const& o,
       beyond_error);
 }
 
+static
+std::unique_ptr<reactor::http::Request>
+fetch_data(std::string const& where,
+           std::string const& type,
+           std::string const& name,
+           boost::optional<infinit::User const&> self = boost::none,
+           Headers const& headers = Headers{},
+           bool output_report_action = true)
+{
+  reactor::http::Request::Configuration c;
+  for (auto const& header: headers)
+    c.header_add(header.first, header.second);
+  auto r = elle::make_unique<reactor::http::Request>(
+    where, reactor::http::Method::GET, std::move(c));
+  return r;
+}
 // FIXME: Workaround used to handle objects that have had their copy
 // constructor deleted. See infinit-network.cc:fetch(), NetworkDescriptor.
 // Remove when serialization does not require copy.
+static
+std::unique_ptr<reactor::http::Request>
+beyond_fetch_data(std::string const& where,
+                  std::string const& type,
+                  std::string const& name,
+                  boost::optional<infinit::User const&> self = boost::none,
+                  Headers const& extra_headers = Headers{},
+                  bool output_report_action = true)
+{
+  Headers headers;
+  if (self)
+  {
+    headers = signature_headers(reactor::http::Method::GET, where, self.get());
+  }
+  for (auto const& header: extra_headers)
+    headers[header.first] = header.second;
+  auto r = fetch_data(
+    elle::sprintf("%s/%s", beyond(), where), type, name, self, headers,
+    output_report_action);
+  reactor::wait(*r);
+  if (r->status() == reactor::http::StatusCode::OK)
+  {
+    if (output_report_action)
+      report_action("fetched", type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Not_Found)
+  {
+    read_error<MissingResource>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Gone)
+  {
+    read_error<ResourceGone>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Forbidden)
+  {
+    read_error<ResourceProtected>(*r, type, name);
+  }
+  else
+  {
+    throw elle::Error(
+      elle::sprintf("unexpected HTTP error %s fetching %s",
+                    r->status(), type));
+  }
+  return r;
+}
+
 elle::json::Json
 beyond_fetch_json(std::string const& where,
                   std::string const& type,
@@ -1987,45 +2111,9 @@ beyond_fetch_json(std::string const& where,
                   Headers const& extra_headers = Headers{},
                   bool output_report_action = true)
 {
-  reactor::http::Request::Configuration c;
-  if (self)
-  {
-    auto headers = signature_headers(reactor::http::Method::GET,
-                                     where,
-                                     self.get());
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
-  }
-  for (auto const& header: extra_headers)
-    c.header_add(header.first, header.second);
-  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
-                           reactor::http::Method::GET,
-                           std::move(c));
-  reactor::wait(r);
-  if (r.status() == reactor::http::StatusCode::OK)
-  {
-    if (output_report_action)
-      report_action("fetched", type, name);
-  }
-  else if (r.status() == reactor::http::StatusCode::Not_Found)
-  {
-    read_error<MissingResource>(r, type);
-  }
-  else if (r.status() == reactor::http::StatusCode::Gone)
-  {
-    read_error<ResourceGone>(r, type);
-  }
-  else if (r.status() == reactor::http::StatusCode::Forbidden)
-  {
-    read_error<ResourceProtected>(r, type);
-  }
-  else
-  {
-    throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s fetching %s",
-                    r.status(), type));
-  }
-  return elle::json::read(r);
+  auto r = beyond_fetch_data(
+    where, type, name, self, extra_headers, output_report_action);
+  return elle::json::read(*r);
 }
 
 template <typename T>
@@ -2072,7 +2160,7 @@ beyond_delete(std::string const& where,
     report_action("deleted", type, name, std::string("remotely"));
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type);
+    read_error<MissingResource>(r, type, name);
   }
   else
   {

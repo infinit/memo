@@ -41,11 +41,24 @@ get_name(variables_map const& args, std::string const& name = "name")
   return get_username(args, name);
 }
 
+void
+upload_avatar(infinit::User& self,
+              boost::filesystem::path const& avatar_path);
+void
+fetch_avatar(std::string const& name);
+void
+pull_avatar(infinit::User& self);
+boost::optional<boost::filesystem::path>
+avatar_path(std::string const& name);
+
 COMMAND(export_)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   auto output = get_output(args);
+  auto avatar = avatar_path(name);
+  if (avatar)
+    user.avatar_path = avatar.get().string();
   if (args.count("full") && args["full"].as<bool>())
   {
     if (!script_mode)
@@ -74,8 +87,30 @@ COMMAND(fetch)
     mandatory<std::vector<std::string>>(args, "name", "user name");
   for (auto const& name: user_names)
   {
-    auto user = beyond_fetch<infinit::User>("user", name);
-    ifnt.user_save(std::move(user));
+    auto avatar = [&] () {
+      if (!flag(args, "no-avatar"))
+      {
+        try
+        {
+          fetch_avatar(user_name);
+        }
+        catch (MissingResource)
+        {
+        }
+      }
+    };
+    auto user =
+      beyond_fetch<infinit::User>("user", user_name);
+    try
+    {
+      ifnt.user_save(std::move(user));
+      avatar();
+    }
+    catch (ResourceAlreadyFetched const& e)
+    {
+      avatar();
+      throw;
+    }
   }
 }
 
@@ -103,6 +138,13 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
     user.email = email;
     user_updated = true;
   }
+  auto avatar_path = optional(args, "avatar");
+  if (avatar_path && avatar_path.get().length() > 0)
+  {
+    if (!boost::filesystem::exists(avatar_path.get()))
+      throw CommandLineError(
+        elle::sprintf("%s doesn't exist", avatar_path.get()));
+  }
   auto fullname = optional(args, "fullname");
   if (fullname) // Overwrite existing fullname.
   {
@@ -127,6 +169,13 @@ _push(variables_map const& args, infinit::User& user, bool atomic)
   }
   if (user_updated && !atomic)
     ifnt.user_save(user, true);
+  if (avatar_path)
+  {
+    if (avatar_path.get().length() > 0)
+      upload_avatar(user, avatar_path.get());
+    else
+      pull_avatar(user);
+  }
 }
 
 static
@@ -302,6 +351,65 @@ COMMAND(list)
   }
 }
 
+template <typename Buffer>
+void
+_save_avatar(std::string const& name,
+             Buffer const& buffer)
+{
+  boost::filesystem::ofstream f;
+  ifnt._open_write(f, ifnt._user_avatar_path(name),
+                   name, "avatar", true);
+  f << buffer.string();
+  report_action("fetched", "avatar", name, std::string("locally"));
+}
+
+void
+upload_avatar(infinit::User& self,
+              boost::filesystem::path const& avatar_path)
+{
+  boost::filesystem::ifstream icon;
+  ifnt._open_read(icon, avatar_path, self.name, "icon");
+  std::string s(
+    std::istreambuf_iterator<char>{icon},
+    std::istreambuf_iterator<char>{});
+  elle::ConstWeakBuffer data(s.data(), s.size());
+  auto url = elle::sprintf("users/%s/avatar", self.name);
+  beyond_push_data(url, "avatar", self.name, data, "image/jpeg", self);
+  _save_avatar(self.name, data);
+}
+
+void
+fetch_avatar(std::string const& name)
+{
+  auto url = elle::sprintf("users/%s/avatar", name);
+  auto redirect = beyond_fetch<FakeRedirect>(url, "avatar route", name);
+  if (redirect.url)
+  {
+    auto response = fetch_data(redirect.url.get(), "avatar", name)->response();
+    // XXX: Deserialize XML.
+    if (response.size() == 0 || response[0] == '<')
+      throw MissingResource(
+        elle::sprintf("avatar for %s not found on %s", name, beyond(true)));
+    _save_avatar(name, response);
+  }
+}
+
+void
+pull_avatar(infinit::User& self)
+{
+  auto url = elle::sprintf("users/%s/avatar", self.name);
+  beyond_delete(url, "avatar", self.name, self);
+}
+
+boost::optional<boost::filesystem::path>
+avatar_path(std::string const& name)
+{
+  auto path = ifnt._user_avatar_path(name);
+  if (!boost::filesystem::exists(path))
+    return boost::optional<boost::filesystem::path>{};
+  return path;
+}
+
 int
 main(int argc, char** argv)
 {
@@ -315,6 +423,8 @@ main(int argc, char** argv)
       "(default: prompt for password)", beyond(true)).c_str() };
   boost::program_options::option_description option_fullname =
     { "fullname", value<std::string>(), "user's fullname (optional)" };
+  boost::program_options::option_description option_avatar =
+    { "avatar", value<std::string>(), "path to an image to use as avatar" };
 
   Modes modes {
     {
@@ -354,9 +464,10 @@ main(int argc, char** argv)
       "fetch",
       elle::sprintf("Fetch a user from %s", beyond(true)).c_str(),
       &fetch,
-      "--name USER",
+      {},
       {
         { "name,n", value<std::vector<std::string>>(), "user to fetch" },
+        { "no-avatar", bool_switch(), "do not fetch user avatar" },
       },
     },
     {
@@ -398,6 +509,7 @@ main(int argc, char** argv)
           "user to push (default: system user)" },
         { "email", value<std::string>(), "valid email address" },
         option_fullname,
+        option_avatar,
         option_push_full,
         option_push_password,
       },
@@ -411,6 +523,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "user name (default: system user)" },
         { "email,n", value<std::string>(), "valid email address" },
         option_fullname,
+        option_avatar,
         { "key,k", value<std::string>(),
           "RSA key pair in PEM format - e.g. your SSH key "
           "(default: generate key pair)" },
@@ -437,5 +550,5 @@ main(int argc, char** argv)
       &list,
     },
   };
-  return infinit::main("Infinit user utility", modes, argc, argv, {}, true);
+  return infinit::main("Infinit user utility", modes, argc, argv, {});
 }

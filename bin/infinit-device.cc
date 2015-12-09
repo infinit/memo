@@ -109,7 +109,7 @@ COMMAND(transmit_user)
           }
           else if (r.status() == reactor::http::StatusCode::Forbidden)
           {
-            read_error<ResourceProtected>(r, "user identity");
+            read_error<ResourceProtected>(r, "user identity", user.name);
           }
           else
           {
