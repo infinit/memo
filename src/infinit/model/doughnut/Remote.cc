@@ -208,43 +208,53 @@ namespace infinit
       Remote::_key_exchange()
       {
         ELLE_TRACE_SCOPE("%s: exchange keys", *this);
-        // challenge, token
-        typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
-        RPC<std::pair<Challenge, std::unique_ptr<Passport>>(Passport const&)>
-          auth_syn("auth_syn", *this->_channels, nullptr);
-        auto challenge_passport = auth_syn(this->_doughnut.passport());
-        auto& remote_passport = challenge_passport.second;
-        ELLE_ASSERT(remote_passport);
-        // validate res
-        bool check = remote_passport->verify(this->_doughnut.owner());
-        if (!check)
+        try
         {
-          ELLE_LOG("Passport validation failed.");
-          throw elle::Error("Passport validation failed");
+          // challenge, token
+          typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
+          RPC<std::pair<Challenge, std::unique_ptr<Passport>>(Passport const&)>
+            auth_syn("auth_syn", *this->_channels, nullptr);
+          auto challenge_passport = auth_syn(this->_doughnut.passport());
+          auto& remote_passport = challenge_passport.second;
+          ELLE_ASSERT(remote_passport);
+          if (!remote_passport->verify(this->_doughnut.owner()))
+          {
+            auto msg = elle::sprintf(
+              "passport validation failed for %s", this->id());
+            ELLE_WARN("%s", msg);
+            throw elle::Error(msg);
+          }
+          ELLE_DEBUG("got valid remote passport");
+          // sign the challenge
+          auto signed_challenge = this->_doughnut.keys().k().sign(
+            challenge_passport.first.first,
+            infinit::cryptography::rsa::Padding::pss,
+            infinit::cryptography::Oneway::sha256);
+          // generate, seal
+          // dont set _key yet so that our 2 rpcs are in cleartext
+          auto key = infinit::cryptography::secretkey::generate(256);
+          elle::Buffer password = key.password();
+          auto sealed_key =
+            remote_passport->user().seal(password,
+                                         infinit::cryptography::Cipher::aes256,
+                                         infinit::cryptography::Mode::cbc);
+          ELLE_DEBUG("acknowledge authentication")
+          {
+            RPC<bool (elle::Buffer const&,
+                      elle::Buffer const&,
+                      elle::Buffer const&)>
+              auth_ack("auth_ack", *this->_channels, nullptr);
+            auth_ack(sealed_key,
+                     challenge_passport.first.second,
+                     signed_challenge);
+            this->_credentials = std::move(password);
+          }
         }
-        ELLE_DEBUG("got valid remote passport");
-        // sign the challenge
-        auto signed_challenge = this->_doughnut.keys().k().sign(
-          challenge_passport.first.first,
-          infinit::cryptography::rsa::Padding::pss,
-          infinit::cryptography::Oneway::sha256);
-        // generate, seal
-        // dont set _key yet so that our 2 rpcs are in cleartext
-        auto key = infinit::cryptography::secretkey::generate(256);
-        elle::Buffer password = key.password();
-        auto sealed_key = remote_passport->user().seal(password,
-          infinit::cryptography::Cipher::aes256,
-          infinit::cryptography::Mode::cbc);
-        ELLE_DEBUG("acknowledge authentication")
+        catch (elle::Error& e)
         {
-          RPC<bool (elle::Buffer const&,
-                    elle::Buffer const&,
-                    elle::Buffer const&)>
-            auth_ack("auth_ack", *this->_channels, nullptr);
-          auth_ack(sealed_key,
-                   challenge_passport.first.second,
-                   signed_challenge);
-          this->_credentials = std::move(password);
+          ELLE_WARN("key exchange failed with %s: %s",
+                    this->id(), elle::exception_string());
+          throw;
         }
       }
 
