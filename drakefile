@@ -364,13 +364,13 @@ def configure(
   bin_cxx_config.lib_path_runtime('../lib')
   if not windows:
     bin_cxx_config.library_add(
-        drake.copy(elle.boost.program_options_dynamic, 'lib', True))
+      drake.copy(elle.boost.program_options_dynamic, 'lib', True))
     bin_cxx_config.library_add(
-        drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+      drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
     bin_cxx_config.library_add(
-        drake.copy(elle.boost.regex_dynamic, 'lib', True))
+      drake.copy(elle.boost.regex_dynamic, 'lib', True))
     bin_cxx_config.library_add(
-        drake.copy(elle.boost.system_dynamic, 'lib', True))
+      drake.copy(elle.boost.system_dynamic, 'lib', True))
   else:
     bin_cxx_config.lib('shlwapi')
     bin_cxx_config.lib('ws2_32')
