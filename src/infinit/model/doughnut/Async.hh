@@ -1,13 +1,20 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_ASYNC_HH
 # define INFINIT_MODEL_DOUGHNUT_ASYNC_HH
 
-# include <boost/optional.hpp>
-# include <infinit/model/doughnut/Consensus.hh>
-# include <reactor/Channel.hh>
-# include <reactor/thread.hh>
 # include <functional>
 # include <unordered_map>
-# include <sstream>
+
+# include <boost/multi_index_container.hpp>
+# include <boost/multi_index/hashed_index.hpp>
+# include <boost/multi_index/member.hpp>
+# include <boost/multi_index/ordered_index.hpp>
+
+# include <reactor/Channel.hh>
+# include <reactor/thread.hh>
+
+# include <elle/optional.hh>
+
+# include <infinit/model/doughnut/Consensus.hh>
 
 namespace infinit
 {
@@ -17,6 +24,7 @@ namespace infinit
     {
       namespace consensus
       {
+        namespace bmi = boost::multi_index;
         class Async
           : public Consensus
         {
@@ -53,6 +61,8 @@ namespace infinit
                std::unique_ptr<blocks::Block>&& block_,
                boost::optional<StoreMode> mode_ = {},
                std::unique_ptr<ConflictResolver> resolver_ = {});
+            Op(elle::serialization::SerializerIn& ser);
+            void serialize(elle::serialization::Serializer& ser);
             Address address;
             std::unique_ptr<blocks::Block> block;
             boost::optional<StoreMode> mode;
@@ -66,18 +76,24 @@ namespace infinit
           void
           _push_op(Op op);
           Async::Op
-          _load_op(int id);
+          _load_op(boost::filesystem::path const& path, bool signature = true);
+          Async::Op
+          _load_op(int id, bool signature = true);
           void
-          _restore_journal(bool first = false);
+          _load_operations();
           ELLE_ATTRIBUTE(std::unique_ptr<Consensus>, backend);
-          ELLE_ATTRIBUTE(reactor::Channel<Op>, ops);
+          typedef bmi::multi_index_container<
+            Op,
+            bmi::indexed_by<
+              bmi::hashed_non_unique<
+                bmi::member<Op, Address, &Op::address> >,
+              bmi::ordered_unique<
+                bmi::member<Op, int, &Op::index> >
+            > > Operations;
+          ELLE_ATTRIBUTE(Operations, operations);
+          ELLE_ATTRIBUTE(reactor::Channel<int>, queue);
           ELLE_ATTRIBUTE(int, next_index);
           ELLE_ATTRIBUTE(int, last_processed_index);
-          // This map contains for a given address the last version of each
-          // block.
-          typedef
-          std::unordered_map<Address, std::pair<int, blocks::Block*>> Last;
-          ELLE_ATTRIBUTE(Last, last);
           ELLE_ATTRIBUTE(boost::filesystem::path, journal_dir);
           /// Index of the first operation stored on disk because memory is at
           /// capacity.
