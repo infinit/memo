@@ -138,7 +138,7 @@ namespace infinit
                this->_owner->_data.contents() + offset,
                size1);
         if (size1 == size || _owner->_fat.empty())
-          return size;
+          return size1;
         return size1 + read(
           elle::WeakBuffer(buffer.mutable_contents() + size1, size - size1),
           size - size1, offset + size1);
