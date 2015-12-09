@@ -268,7 +268,6 @@ COMMAND(join)
   ELLE_TRACE_SCOPE("join");
   auto self = self_user(ifnt, args);
   auto drive = ifnt.drive_get(drive_name(args, self));
-
   if (self.name == boost::filesystem::path(drive.name).parent_path().string())
     throw elle::Error("The owner is automatically invited to its drives");
   auto it = drive.users.find(self.name);
@@ -280,7 +279,8 @@ COMMAND(join)
   auto url = elle::sprintf("drives/%s/invitations/%s", drive.name, self.name);
   try
   {
-    beyond_push(url, "invitation", drive.name, invitation, self);
+    beyond_push(url, "invitation", drive.name, invitation, self, false);
+    report_action("joined", "drive", drive.name);
   }
   catch (MissingResource const& e)
   {
