@@ -506,6 +506,6 @@ class CouchDBDatastore:
     return list(map(lambda x: drive_from_db(x.value), rows))
 
   def __drives_per_member_map(drive):
-    for elem in drive['users'].keys():
+    for elem in drive.get('users', {}).keys():
       yield elem, drive
     yield drive['owner'], drive
