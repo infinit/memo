@@ -1772,6 +1772,14 @@ report_exported(std::ostream& output,
 
 typedef std::unordered_map<std::string, std::string> Headers;
 
+struct FakeRedirect
+{
+  std::string url;
+};
+DAS_MODEL(FakeRedirect, (url), DasFakeRedirect);
+DAS_MODEL_DEFAULT(FakeRedirect, DasFakeRedirect);
+DAS_MODEL_SERIALIZE(FakeRedirect);
+
 static
 Headers
 signature_headers(
