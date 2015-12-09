@@ -127,10 +127,11 @@ _update_local_json(infinit::Drive& drive,
       continue;
 
     drive.users[invitation.first] = invitation.second;
-    report_action("created", "invitation for", invitation.first, std::string("locally"));
+    report_action("created", "invitation",
+                  elle::sprintf("%s: %s", drive.name, invitation.first),
+                  std::string("locally"));
   }
   ifnt.drive_save(drive);
-  report_action("done creating", "invitations for", drive.name, std::string("locally"));
 }
 
 COMMAND(invite)
@@ -218,14 +219,26 @@ COMMAND(invite)
 
     try
     {
-      if (users.size() == 1)
+      if (users.size() > 1)
       {
-        auto data = drive.users[users.front()];
-        ELLE_DEBUG("data: %s", data);
-        beyond_push(url, "invitation for", name, data, owner, true, true);
+        auto user_names = [users] {
+          std::string res;
+          for (auto const& user: users)
+            res += elle::sprintf("%s, ", user);
+          return res.substr(0, res.size() - 2);
+        };
+        beyond_push(url, "invitations",
+                    elle::sprintf("%s: %s", name, user_names()),
+                    drive.users, owner, true, true);
       }
-      else
-        beyond_push(url, "invitations for", name, drive.users, owner, true, true);
+      else if (users.size() == 1)
+      {
+        auto const& user = users.front();
+        auto data = drive.users[user];
+        ELLE_DEBUG("data: %s", data);
+        beyond_push(url, "invitation", elle::sprintf("%s: %s", name, user),
+                    data, owner, true, true);
+      }
     }
     catch (MissingResource const& e)
     {
