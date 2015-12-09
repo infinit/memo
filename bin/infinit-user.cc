@@ -70,10 +70,13 @@ COMMAND(export_)
 
 COMMAND(fetch)
 {
-  auto user_name = mandatory(args, "name", "user name");
-  auto user =
-    beyond_fetch<infinit::User>("user", user_name);
-  ifnt.user_save(std::move(user));
+  auto user_names =
+    mandatory<std::vector<std::string>>(args, "name", "user name");
+  for (auto const& name: user_names)
+  {
+    auto user = beyond_fetch<infinit::User>("user", name);
+    ifnt.user_save(std::move(user));
+  }
 }
 
 std::string
@@ -353,7 +356,7 @@ main(int argc, char** argv)
       &fetch,
       "--name USER",
       {
-        { "name,n", value<std::string>(), "user to fetch" },
+        { "name,n", value<std::vector<std::string>>(), "user to fetch" },
       },
     },
     {
