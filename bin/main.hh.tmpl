@@ -90,8 +90,7 @@ struct BeyondError
     : BeyondError(s.deserialize<std::string>("error"),
                   s.deserialize<std::string>("reason"),
                   s.deserialize<boost::optional<std::string>>("name"))
-  {
-  }
+  {}
 
   std::string
   name_opt() const
@@ -339,18 +338,22 @@ namespace infinit
         "main",
         [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg]
         {
+#ifdef INFINIT_LINUX
           // boost::filesystem uses the default locale, detect here if it
           // cant be instantiated.
+          // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
           try
           {
             std::locale locale("");
           }
-          catch(std::exception const& e)
+          catch (std::exception const& e)
           {
-            ELLE_WARN("Something is wrong with your locale settings, overriding: %s",
-                      e.what());
+            ELLE_WARN(
+              "Something is wrong with your locale settings, overriding: %s",
+              e.what());
             setenv("LC_ALL", "C", 1);
           }
+#endif
           ELLE_TRACE("parse command line")
           {
             using namespace boost::program_options;
@@ -1834,9 +1837,7 @@ namespace detail
     boost::optional<std::string> name = boost::none;
     if (request.find("name") != request.end())
       name = boost::any_cast<std::string>(request["name"]);
-    throw BeyondError(error,
-                      reason,
-                      name);
+    throw BeyondError(error, reason, name);
   }
 }
 
