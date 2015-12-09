@@ -1813,7 +1813,8 @@ signature_headers(
 template <typename Exception>
 void
 read_error(reactor::http::Request& r,
-           std::string const& type)
+           std::string const& type,
+           std::string const& name)
 {
   try
   {
@@ -1824,8 +1825,8 @@ read_error(reactor::http::Request& r,
   catch (elle::json::ParseError const&)
   {
     throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s while performing %s for %s",
-                    r.status(), r.method(), type));
+      elle::sprintf("unexpected HTTP error %s while performing %s for %s %s",
+                    r.status(), r.method(), type, name));
   }
 }
 
@@ -1855,11 +1856,11 @@ _beyond_push(reactor::http::Request& r,
   }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type);
+    read_error<MissingResource>(r, type, name);
   }
   else if (r.status() == reactor::http::StatusCode::Gone)
   {
-    read_error<ResourceGone>(r, type);
+    read_error<ResourceGone>(r, type, name);
   }
   else
   {
@@ -1931,9 +1932,71 @@ beyond_push(std::string const& type, std::string const& name, T const& o,
   beyond_push(elle::sprintf("%ss/%s", type, name), type, name, o, self, report);
 }
 
+static
+std::unique_ptr<reactor::http::Request>
+fetch_data(std::string const& where,
+           std::string const& type,
+           std::string const& name,
+           boost::optional<infinit::User const&> self = boost::none,
+           Headers const& headers = Headers{},
+           bool output_report_action = true)
+{
+  reactor::http::Request::Configuration c;
+  for (auto const& header: headers)
+    c.header_add(header.first, header.second);
+  auto r = elle::make_unique<reactor::http::Request>(
+    where, reactor::http::Method::GET, std::move(c));
+  return r;
+}
 // FIXME: Workaround used to handle objects that have had their copy
 // constructor deleted. See infinit-network.cc:fetch(), NetworkDescriptor.
 // Remove when serialization does not require copy.
+static
+std::unique_ptr<reactor::http::Request>
+beyond_fetch_data(std::string const& where,
+                  std::string const& type,
+                  std::string const& name,
+                  boost::optional<infinit::User const&> self = boost::none,
+                  Headers const& extra_headers = Headers{},
+                  bool output_report_action = true)
+{
+  Headers headers;
+  if (self)
+  {
+    headers = signature_headers(reactor::http::Method::GET, where, self.get());
+  }
+  for (auto const& header: extra_headers)
+    headers[header.first] = header.second;
+  auto r = fetch_data(
+    elle::sprintf("%s/%s", beyond(), where), type, name, self, headers,
+    output_report_action);
+  reactor::wait(*r);
+  if (r->status() == reactor::http::StatusCode::OK)
+  {
+    if (output_report_action)
+      report_action("fetched", type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Not_Found)
+  {
+    read_error<MissingResource>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Gone)
+  {
+    read_error<ResourceGone>(*r, type, name);
+  }
+  else if (r->status() == reactor::http::StatusCode::Forbidden)
+  {
+    read_error<ResourceProtected>(*r, type, name);
+  }
+  else
+  {
+    throw elle::Error(
+      elle::sprintf("unexpected HTTP error %s fetching %s",
+                    r->status(), type));
+  }
+  return r;
+}
+
 elle::json::Json
 beyond_fetch_json(std::string const& where,
                   std::string const& type,
@@ -1942,45 +2005,9 @@ beyond_fetch_json(std::string const& where,
                   Headers const& extra_headers = Headers{},
                   bool output_report_action = true)
 {
-  reactor::http::Request::Configuration c;
-  if (self)
-  {
-    auto headers = signature_headers(reactor::http::Method::GET,
-                                     where,
-                                     self.get());
-    for (auto const& header: headers)
-      c.header_add(header.first, header.second);
-  }
-  for (auto const& header: extra_headers)
-    c.header_add(header.first, header.second);
-  reactor::http::Request r(elle::sprintf("%s/%s", beyond(), where),
-                           reactor::http::Method::GET,
-                           std::move(c));
-  reactor::wait(r);
-  if (r.status() == reactor::http::StatusCode::OK)
-  {
-    if (output_report_action)
-      report_action("fetched", type, name);
-  }
-  else if (r.status() == reactor::http::StatusCode::Not_Found)
-  {
-    read_error<MissingResource>(r, type);
-  }
-  else if (r.status() == reactor::http::StatusCode::Gone)
-  {
-    read_error<ResourceGone>(r, type);
-  }
-  else if (r.status() == reactor::http::StatusCode::Forbidden)
-  {
-    read_error<ResourceProtected>(r, type);
-  }
-  else
-  {
-    throw elle::Error(
-      elle::sprintf("unexpected HTTP error %s fetching %s",
-                    r.status(), type));
-  }
-  return elle::json::read(r);
+  auto r = beyond_fetch_data(
+    where, type, name, self, extra_headers, output_report_action);
+  return elle::json::read(*r);
 }
 
 template <typename T>
@@ -2027,7 +2054,7 @@ beyond_delete(std::string const& where,
     report_action("deleted", type, name, std::string("remotely"));
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type);
+    read_error<MissingResource>(r, type, name);
   }
   else
   {
