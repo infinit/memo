@@ -163,7 +163,7 @@ namespace infinit
     {
       if ((_rw_handle_count && _first_block)  || !_parent)
       {
-        ELLE_TRACE("%s: bypassing fetch: w_handle=%s, first_block=%s parent=%s",
+        ELLE_DEBUG("%s: bypassing fetch: w_handle=%s, first_block=%s parent=%s",
                    *this, _rw_handle_count, !!_first_block, !!_parent);
         return;
       }
@@ -354,7 +354,18 @@ namespace infinit
       auto key = _fat[idx].second;
       ++_prefetchers_count;
       new reactor::Thread("prefetcher", [self, addr, idx, key] {
-          auto b = AnyBlock(self->_owner.fetch_or_die(addr), key);
+          std::unique_ptr<model::blocks::Block> bl;
+          try
+          {
+            bl = self->_owner.fetch_or_die(addr);
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_TRACE("Prefetcher error fetching %x: %s", addr, e);
+            --self->_prefetchers_count;
+            return;
+          }
+          auto b = AnyBlock(std::move(bl), key);
           self->_blocks[idx].last_use = std::chrono::system_clock::now();
           self->_blocks[idx].block = std::move(b);
           self->_blocks[idx].ready.open();
