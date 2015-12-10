@@ -18,15 +18,17 @@ namespace infinit
     namespace doughnut
     {
       struct ACBDontWaitForSignature {};
-      class ACB
-        : public BaseOKB<blocks::ACLBlock>
+
+      template<typename Block>
+      class BaseACB
+        : public BaseOKB<Block>
       {
       /*------.
       | Types |
       `------*/
       public:
-        typedef ACB Self;
-        typedef BaseOKB<blocks::ACLBlock> Super;
+        typedef BaseACB<Block> Self;
+        typedef BaseOKB<Block> Super;
         struct ACLEntry
         {
           infinit::cryptography::rsa::PublicKey key;
@@ -57,12 +59,12 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        ACB(Doughnut* owner,
+        BaseACB(Doughnut* owner,
             elle::Buffer data = {},
             boost::optional<elle::Buffer> salt = {},
             boost::optional<cryptography::rsa::KeyPair> kp = {});
-        ACB(ACB const& other, bool sealed_copy = true);
-        ~ACB();
+        BaseACB(Self const& other, bool sealed_copy = true);
+        ~BaseACB();
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE(bool, acl_changed);
@@ -94,12 +96,12 @@ namespace infinit
         _decrypt_data(elle::Buffer const& data) const override;
         void
         _stored() override;
-        std::pair<std::vector<ACLEntry>::const_iterator,
+        std::pair<typename std::vector<typename BaseACB<Block>::ACLEntry>::const_iterator,
                   std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
         _find_token() const;
         virtual
         bool
-        operator ==(Block const& rhs) const override;
+        operator ==(blocks::Block const& rhs) const override;
 
       /*------------.
       | Permissions |
@@ -120,9 +122,9 @@ namespace infinit
                          ) override;
         virtual
         void
-        _copy_permissions(ACLBlock& to) override;
+        _copy_permissions(blocks::ACLBlock& to) override;
         virtual
-        std::vector<Entry>
+        std::vector<blocks::ACLBlock::Entry>
         _list_permissions(boost::optional<Model const&> model) override;
         virtual
         void
@@ -159,7 +161,7 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        ACB(elle::serialization::SerializerIn& input);
+        BaseACB(elle::serialization::SerializerIn& input);
         virtual
         void
         serialize(elle::serialization::Serializer& s) override;
@@ -167,6 +169,8 @@ namespace infinit
         void
         _serialize(elle::serialization::Serializer& input);
       };
+
+      typedef BaseACB<blocks::ACLBlock> ACB;
     }
   }
 }

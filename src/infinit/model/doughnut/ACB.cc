@@ -60,7 +60,8 @@ namespace infinit
       | ACLEntry |
       `---------*/
 
-      ACB::ACLEntry::ACLEntry(infinit::cryptography::rsa::PublicKey key_,
+      template <typename Block>
+      BaseACB<Block>::ACLEntry::ACLEntry(infinit::cryptography::rsa::PublicKey key_,
                               bool read_,
                               bool write_,
                               elle::Buffer token_)
@@ -70,19 +71,22 @@ namespace infinit
         , token(std::move(token_))
       {}
 
-      ACB::ACLEntry::ACLEntry(ACLEntry const& other)
+      template <typename Block>
+      BaseACB<Block>::ACLEntry::ACLEntry(ACLEntry const& other)
         : key{other.key}
         , read{other.read}
         , write{other.write}
         , token{other.token}
       {}
 
-      ACB::ACLEntry::ACLEntry(elle::serialization::SerializerIn& s)
+      template <typename Block>
+      BaseACB<Block>::ACLEntry::ACLEntry(elle::serialization::SerializerIn& s)
         : ACLEntry(deserialize(s))
       {}
 
-      ACB::ACLEntry
-      ACB::ACLEntry::deserialize(elle::serialization::SerializerIn& s)
+      template <typename Block>
+      typename BaseACB<Block>::ACLEntry
+      BaseACB<Block>::ACLEntry::deserialize(elle::serialization::SerializerIn& s)
       {
 
         auto key = s.deserialize<cryptography::rsa::PublicKey>("key");
@@ -101,8 +105,9 @@ namespace infinit
       }
 
 
+      template <typename Block>
       void
-      ACB::ACLEntry::serialize(elle::serialization::Serializer& s)
+      BaseACB<Block>::ACLEntry::serialize(elle::serialization::Serializer& s)
       {
         s.serialize("key", key);
         s.serialize("read", read);
@@ -110,8 +115,9 @@ namespace infinit
         s.serialize("token", token);
       }
 
+      template <typename Block>
       bool
-      ACB::ACLEntry::operator == (ACB::ACLEntry const& b) const
+      BaseACB<Block>::ACLEntry::operator == (BaseACB<Block>::ACLEntry const& b) const
       {
         return key == b.key && read == b.read && write && b.write
           && token == b.token;
@@ -121,7 +127,8 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      ACB::ACB(Doughnut* owner,
+      template <typename Block>
+      BaseACB<Block>::BaseACB(Doughnut* owner,
                elle::Buffer data,
                boost::optional<elle::Buffer> salt,
                boost::optional<cryptography::rsa::KeyPair> kp)
@@ -135,7 +142,8 @@ namespace infinit
         , _world_writable(false)
       {}
 
-      ACB::ACB(ACB const& other, bool sealed_copy)
+      template <typename Block>
+      BaseACB<Block>::BaseACB(BaseACB<Block> const& other, bool sealed_copy)
         : Super(other, sealed_copy)
         , _editor(other._editor)
         , _owner_token(other._owner_token)
@@ -158,8 +166,9 @@ namespace infinit
       /*-------.
       | Clone  |
       `-------*/
+      template <typename Block>
       std::unique_ptr<blocks::Block>
-      ACB::clone(bool sealed_copy) const
+      BaseACB<Block>::clone(bool sealed_copy) const
       {
         return std::unique_ptr<blocks::Block>(new ACB(*this, sealed_copy));
       }
@@ -168,15 +177,17 @@ namespace infinit
       | Content |
       `--------*/
 
+      template <typename Block>
       int
-      ACB::version() const
+      BaseACB<Block>::version() const
       {
         return this->_data_version;
       }
 
-      std::pair<std::vector<ACB::ACLEntry>::const_iterator,
+      template <typename Block>
+      std::pair<typename std::vector<typename BaseACB<Block>::ACLEntry>::const_iterator,
                   std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
-      ACB::_find_token() const
+      BaseACB<Block>::_find_token() const
       {
         auto& mine = this->doughnut()->keys().K();
         auto it = std::find_if
@@ -201,8 +212,9 @@ namespace infinit
         return std::make_pair(this->_acl_entries.end(), nullptr);
       }
 
+      template <typename Block>
       elle::Buffer
-      ACB::_decrypt_data(elle::Buffer const& data) const
+      BaseACB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
         if (this->world_readable())
           return this->_data;
@@ -244,8 +256,9 @@ namespace infinit
       | Permissions |
       `------------*/
 
+      template <typename Block>
       void
-      ACB::_set_world_permissions(bool read, bool write)
+      BaseACB<Block>::_set_world_permissions(bool read, bool write)
       {
         if (this->_world_readable == read && this->_world_writable == write)
           return;
@@ -255,14 +268,16 @@ namespace infinit
         this->_data_changed = true;
       }
 
+      template <typename Block>
       std::pair<bool, bool>
-      ACB::_get_world_permissions()
+      BaseACB<Block>::_get_world_permissions()
       {
         return std::make_pair(this->_world_readable, this->_world_writable);
       }
 
+      template <typename Block>
       void
-      ACB::set_permissions(cryptography::rsa::PublicKey const& key,
+      BaseACB<Block>::set_permissions(cryptography::rsa::PublicKey const& key,
                            bool read,
                            bool write)
       {
@@ -291,7 +306,7 @@ namespace infinit
           elle::Buffer token;
           if (this->_owner_token.size())
           {
-            auto& k = keys() ? keys()->k() : this->doughnut()->keys().k();
+            auto& k = this->keys() ? this->keys()->k() : this->doughnut()->keys().k();
             auto secret = k.open(this->_owner_token);
             token = key.seal(secret);
           }
@@ -322,8 +337,9 @@ namespace infinit
         }
       }
 
+      template <typename Block>
       void
-      ACB::_set_permissions(model::User const& user_, bool read, bool write)
+      BaseACB<Block>::_set_permissions(model::User const& user_, bool read, bool write)
       {
         try
         {
@@ -336,10 +352,11 @@ namespace infinit
         }
       }
 
+      template <typename Block>
       void
-      ACB::_copy_permissions(ACLBlock& to)
+      BaseACB<Block>::_copy_permissions(blocks::ACLBlock& to)
       {
-        ACB* other = dynamic_cast<ACB*>(&to);
+        Self* other = dynamic_cast<Self*>(&to);
         if (!other)
           throw elle::Error("Other block is not an ACB");
         // FIXME: better implementation
@@ -354,8 +371,9 @@ namespace infinit
         other->_world_writable = this->_world_writable;
       }
 
-      std::vector<ACB::Entry>
-      ACB::_list_permissions(boost::optional<Model const&> model)
+      template <typename Block>
+      std::vector<blocks::ACLBlock::Entry>
+      BaseACB<Block>::_list_permissions(boost::optional<Model const&> model)
       {
         auto make_user =
           [&] (cryptography::rsa::PublicKey const& k)
@@ -392,10 +410,11 @@ namespace infinit
       | Validation |
       `-----------*/
 
+      template <typename Block>
       blocks::ValidationResult
-      ACB::_validate() const
+      BaseACB<Block>::_validate() const
       {
-        if (_is_local)
+        if (this->_is_local)
           return blocks::ValidationResult::success();
         ELLE_DEBUG("%s: validate owner part", *this)
           if (auto res = Super::_validate()); else
@@ -445,20 +464,23 @@ namespace infinit
       null_deleter(T*)
       {}
 
+      template <typename Block>
       void
-      ACB::seal(cryptography::SecretKey const& key)
+      BaseACB<Block>::seal(cryptography::SecretKey const& key)
       {
         this->_seal(key);
       }
 
+      template <typename Block>
       void
-      ACB::_seal()
+      BaseACB<Block>::_seal()
       {
         this->_seal({});
       }
 
+      template <typename Block>
       void
-      ACB::_seal(boost::optional<cryptography::SecretKey const&> key)
+      BaseACB<Block>::_seal(boost::optional<cryptography::SecretKey const&> key)
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
@@ -544,9 +566,9 @@ namespace infinit
           if (!sign_keys && this->_world_writable)
             sign_keys = this->doughnut()->keys_shared();
           if (!this->_world_readable)
-            this->MutableBlock::data(key->encipher(this->data_plain()));
+            this->blocks::MutableBlock::data(key->encipher(this->data_plain()));
           else
-            this->MutableBlock::data(this->data_plain());
+            this->blocks::MutableBlock::data(this->data_plain());
           this->_data_changed = false;
         }
         else
@@ -572,17 +594,20 @@ namespace infinit
         Super::_seal();
       }
 
-      ACB::~ACB()
+      template <typename Block>
+      BaseACB<Block>::~BaseACB()
       {}
 
+      template <typename Block>
       elle::Buffer const&
-      ACB::data_signature() const
+      BaseACB<Block>::data_signature() const
       {
         return this->_data_signature.value();
       }
 
+      template <typename Block>
       elle::Buffer
-      ACB::_data_sign() const
+      BaseACB<Block>::_data_sign() const
       {
         elle::Buffer res;
         {
@@ -598,8 +623,9 @@ namespace infinit
         return res;
       }
 
+      template <typename Block>
       void
-      ACB::_sign(elle::serialization::SerializerOut& s) const
+      BaseACB<Block>::_sign(elle::serialization::SerializerOut& s) const
       {
         s.serialize(
           "acls", elle::unconst(this)->_acl_entries,
@@ -628,14 +654,15 @@ namespace infinit
       /*--------.
       | Content |
       `--------*/
-
+      template <typename Block>
       void
-      ACB::_stored()
+      BaseACB<Block>::_stored()
       {
       }
 
+      template <typename Block>
       bool
-      ACB::operator ==(blocks::Block const& rhs) const
+      BaseACB<Block>::operator ==(blocks::Block const& rhs) const
       {
         auto other_acb = dynamic_cast<ACB const*>(&rhs);
         if (!other_acb)
@@ -661,7 +688,8 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      ACB::ACB(elle::serialization::SerializerIn& input)
+      template <typename Block>
+      BaseACB<Block>::BaseACB(elle::serialization::SerializerIn& input)
         : Super(input)
         , _editor(-2)
         , _owner_token()
@@ -672,15 +700,17 @@ namespace infinit
         this->_serialize(input);
       }
 
+      template <typename Block>
       void
-      ACB::serialize(elle::serialization::Serializer& s)
+      BaseACB<Block>::serialize(elle::serialization::Serializer& s)
       {
         Super::serialize(s);
         this->_serialize(s);
       }
 
+      template <typename Block>
       void
-      ACB::_serialize(elle::serialization::Serializer& s)
+      BaseACB<Block>::_serialize(elle::serialization::Serializer& s)
       {
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
@@ -705,6 +735,9 @@ namespace infinit
         s.serialize("world_readable", this->_world_readable);
         s.serialize("world_writable", this->_world_writable);
       }
+
+      template
+      class BaseACB<blocks::ACLBlock>;
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<ACB> _register_okb_serialization("ACB");
