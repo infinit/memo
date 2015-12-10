@@ -14,56 +14,10 @@ from copy import deepcopy
 from requests import Request, Session
 
 from infinit.beyond import *
+from infinit.beyond.response import Response
 from infinit.beyond.gcs import GCS
 from infinit.beyond.plugins.jsongo import Plugin as JsongoPlugin
-
-## -------- ##
-## Response ##
-## -------- ##
-
-class Response(Exception):
-
-  def __init__(self, status = 200, body = None):
-    self.__status = status
-    self.__body = body
-
-  @property
-  def status(self):
-    return self.__status
-
-  @property
-  def body(self):
-    return self.__body
-
-class ResponsePlugin(object):
-
-  '''Bottle plugin to generate throw a response.'''
-
-  name = 'meta.short-circuit'
-  api  = 2
-
-  def apply(self, f, route):
-    def wrapper(*args, **kwargs):
-      try:
-        return f(*args, **kwargs)
-      except exceptions.MissingField as exception:
-        bottle.response.status = 400
-        return {
-          'error': '%s/missing_field/%s' % (
-            exception.field.object, exception.field.name),
-          'reason': 'missing field %s' % exception.field.name
-        }
-      except exceptions.InvalidFormat as exception:
-        bottle.response.status = 422
-        return {
-          'error': '%s/invalid_format/%s' % (
-            exception.field.object, exception.field.name),
-          'reason': '%s has an invalid format' % exception.field.name
-        }
-      except Response as response:
-        bottle.response.status = response.status
-        return response.body
-    return wrapper
+from infinit.beyond.plugins.response import Plugin as ResponsePlugin
 
 ## ------ ##
 ## Bottle ##
