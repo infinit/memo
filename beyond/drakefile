@@ -87,6 +87,7 @@ def configure(
   ) + [bottle, version]
   plugins = drake.nodes(
     'src/plugins/jsongo.py',
+    'src/plugins/max_size.py',
     'src/plugins/response.py',
   )
   sources += plugins
