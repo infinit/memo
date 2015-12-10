@@ -92,6 +92,16 @@ static int group_load(bfs::path p, std::string const& gname)
   return setxattr(p.c_str(), ("user.infinit.group.load." + gname).c_str(), "", 0, 0
     SXA_EXTRA);
 }
+static int group_add_admin(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.addadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+static int group_remove_admin(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.removeadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
 
 static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
 {
@@ -1363,12 +1373,25 @@ test_acl(bool paxos)
   group_load(m1, "group1");
   usleep(1100000);
   BOOST_CHECK_EQUAL(read(m1 / "g2"), "foo");
+
+  ELLE_LOG("group admin");
+  BOOST_CHECK_EQUAL(group_add_admin(m0, "group1", "user1"), 0);
+  BOOST_CHECK_EQUAL(group_add(m1, "group1", "user0"), 0);
+  write(m1 / "g3", "bar");
+  BOOST_CHECK_EQUAL(read(m0 / "g3"), "");
+  setxattr((m1 / "g3").c_str(), "user.infinit.auth.setrw",
+    "@group1", 7, 0 SXA_EXTRA);
+  group_load(m0, "group1");
+  usleep(1100000);
+  BOOST_CHECK_EQUAL(read(m0 / "g3"), "bar");
+  BOOST_CHECK_EQUAL(group_remove_admin(m0, "group1", "user1"), 0);
+  BOOST_CHECK_EQUAL(group_remove(m1, "group1", "user0"), -1);
+  BOOST_CHECK_EQUAL(group_remove_admin(m1, "group1", "user0"), -1);
+
   //incorrect stuff, check it doesn't crash us
   ELLE_LOG("groups bad operations");
   BOOST_CHECK_EQUAL(group_add(m1, "group1", "user0"), -1);
   BOOST_CHECK_EQUAL(group_create(m0, "group1"), -1);
-  BOOST_CHECK_EQUAL(group_add(m0, "group1","user1"), -1);
-  BOOST_CHECK_EQUAL(group_add(m0, "group1","user1"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_remove(m0, "group1", "user1");
   group_remove(m0, "group1", "user1");
@@ -1376,7 +1399,6 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(group_add(m0, "nosuch", "user1"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
-  ELLE_LOG("nosuchuser");
   BOOST_CHECK_EQUAL(group_add(m0, "group1","nosuch"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(group_remove(m0, "group1","nosuch"), -1);

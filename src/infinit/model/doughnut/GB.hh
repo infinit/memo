@@ -34,6 +34,12 @@ namespace infinit
         void
         remove_member(model::User const& user) override;
         virtual
+        void
+        add_admin(model::User const& user) override;
+        virtual
+        void
+        remove_admin(model::User const& user) override;
+        virtual
         cryptography::rsa::PublicKey
         current_key() override;
         virtual
@@ -62,7 +68,10 @@ namespace infinit
         ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::PublicKey>, group_public_keys);
         // key is serialized public key because of a serialization glitch
         typedef
-        std::unordered_map<elle::Buffer, elle::Buffer>
+        std::pair<elle::Buffer, elle::Buffer>
+        BufferPair;
+        typedef
+        std::vector<BufferPair>
         CipheredMasterKey;
 
         ELLE_ATTRIBUTE(CipheredMasterKey, ciphered_master_key);

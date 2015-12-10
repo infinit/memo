@@ -119,6 +119,27 @@ namespace infinit
       }
 
       void
+      Group::add_admin(model::User const& user)
+      {
+        auto key = public_control_key();
+        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
+          OKBHeader::hash_address(key, group_block_key)));
+        block->add_admin(user);
+        _dht.store(std::move(block));
+      }
+
+      void
+      Group::add_admin(elle::Buffer const& userdata)
+      {
+        infinit::filesystem::umbrella([&] {
+            auto user = _dht.make_user(userdata);
+            if (!user)
+              THROW_NOENT;
+            add_admin(*user);
+        });
+      }
+
+      void
       Group::remove_member(model::User const& user)
       {
         auto key = public_control_key();
@@ -136,6 +157,27 @@ namespace infinit
             if (!user)
               THROW_NOENT;
             remove_member(*user);
+        });
+      }
+
+      void
+      Group::remove_admin(model::User const& user)
+      {
+        auto key = public_control_key();
+        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
+          OKBHeader::hash_address(key, group_block_key)));
+        block->remove_admin(user);
+        _dht.store(std::move(block));
+      }
+
+      void
+      Group::remove_admin(elle::Buffer const& userdata)
+      {
+        infinit::filesystem::umbrella([&] {
+            auto user = _dht.make_user(userdata);
+            if (!user)
+              THROW_NOENT;
+            remove_admin(*user);
         });
       }
 

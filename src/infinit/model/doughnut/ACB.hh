@@ -70,7 +70,7 @@ namespace infinit
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE(bool, acl_changed, protected);
         ELLE_ATTRIBUTE(std::vector<ACLEntry>, acl_entries);
-        ELLE_ATTRIBUTE_R(int, data_version);
+        ELLE_ATTRIBUTE_R(int, data_version, protected);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
         ELLE_ATTRIBUTE_R(bool, world_readable);
         ELLE_ATTRIBUTE_R(bool, world_writable);

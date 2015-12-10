@@ -39,7 +39,16 @@ namespace infinit
       {
         throw elle::Error("Not implemented");
       }
-
+      void
+      GroupBlock::add_admin(model::User const& user)
+      {
+        throw elle::Error("Not implemented");
+      }
+      void
+      GroupBlock::remove_admin(model::User const& user)
+      {
+        throw elle::Error("Not implemented");
+      }
     }
   }
 }

@@ -38,6 +38,12 @@ namespace infinit
         virtual
         std::vector<cryptography::rsa::KeyPair>
         all_keys();
+        virtual
+        void
+        add_admin(model::User const& user);
+        virtual
+        void
+        remove_admin(model::User const& user);
 
       public:
         GroupBlock(elle::serialization::Serializer& input);

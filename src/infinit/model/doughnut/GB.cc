@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/GB.hh>
 
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/User.hh>
 
 namespace infinit
 {
@@ -20,7 +21,7 @@ namespace infinit
         auto ser_master = elle::serialization::binary::serialize(master.k());
         auto sealed = user_key.K().seal(ser_master);
         auto sk = elle::serialization::binary::serialize(user_key.K());
-        this->_ciphered_master_key.insert(std::make_pair(sk, sealed));
+        this->_ciphered_master_key.push_back(std::make_pair(sk, sealed));
         this->data(elle::serialization::binary::serialize(this->_group_keys));
         this->_acl_changed = true;
         this->set_permissions(user_key.K(), true, false);
@@ -76,7 +77,11 @@ namespace infinit
       {
         auto sk = elle::serialization::binary::serialize(
           doughnut()->keys().K());
-        auto it = this->_ciphered_master_key.find(sk);
+        auto it = std::find_if(_ciphered_master_key.begin(),
+          _ciphered_master_key.end(), [&](BufferPair const& bp)
+          {
+            return bp.first == sk;
+          });
         if (it != this->_ciphered_master_key.end())
         {
           auto buf = doughnut()->keys().k().open(it->second);
@@ -88,7 +93,11 @@ namespace infinit
         for (auto const& key: this->doughnut()->other_keys())
         {
           sk = elle::serialization::binary::serialize(key.second->K());
-          auto it = this->_ciphered_master_key.find(sk);
+          auto it = std::find_if(_ciphered_master_key.begin(),
+          _ciphered_master_key.end(), [&](BufferPair const& bp)
+          {
+            return bp.first == sk;
+          });
           if (it != this->_ciphered_master_key.end())
           {
             auto buf = key.second->k().open(it->second);
@@ -106,6 +115,7 @@ namespace infinit
         this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
           *this->_master_key));
         this->_set_permissions(user, true, false);
+        this->_acl_changed = true;
       }
       void
       GB::remove_member(model::User const& user)
@@ -114,11 +124,64 @@ namespace infinit
         this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
           *this->_master_key));
         this->_set_permissions(user, false, false);
+        this->_acl_changed = true;
         _extract_group_keys();
         auto new_key = infinit::cryptography::rsa::keypair::generate(2048);
         this->_group_public_keys.push_back(new_key.K());
         this->_group_keys.push_back(new_key);
         this->data(elle::serialization::binary::serialize(this->_group_keys));
+      }
+      void
+      GB::add_admin(model::User const& user_)
+      {
+        _extract_master_key();
+        this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
+          *this->_master_key));
+        try
+        {
+          auto& user = dynamic_cast<doughnut::User const&>(user_);
+          auto sk = elle::serialization::binary::serialize(user.key());
+          auto it = std::find_if(_ciphered_master_key.begin(),
+          _ciphered_master_key.end(), [&](BufferPair const& bp)
+          {
+            return bp.first == sk;
+          });
+          if (it != this->_ciphered_master_key.end())
+            return;
+          auto ser_master = elle::serialization::binary::serialize(*this->_master_key);
+          this->_ciphered_master_key.push_back(std::make_pair(sk,
+            user.key().seal(ser_master)));
+          this->_acl_changed = true;
+        }
+        catch (std::bad_cast const&)
+        {
+          throw elle::Error("doughnut was passed a non-doughnut user.");
+        }
+      }
+      void
+      GB::remove_admin(model::User const& user_)
+      {
+        _extract_master_key();
+        this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
+          *this->_master_key));
+        try
+        {
+          auto& user = dynamic_cast<doughnut::User const&>(user_);
+          auto sk = elle::serialization::binary::serialize(user.key());
+          auto it = std::find_if(_ciphered_master_key.begin(),
+          _ciphered_master_key.end(), [&](BufferPair const& bp)
+          {
+            return bp.first == sk;
+          });
+          if (it == this->_ciphered_master_key.end())
+            throw elle::Error("No such user in admin list");
+          this->_ciphered_master_key.erase(it);
+          this->_acl_changed = true;
+        }
+        catch (std::bad_cast const&)
+        {
+          throw elle::Error("doughnut was passed a non-doughnut user.");
+        }
       }
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<GB> _register_gb_serialization("GB");

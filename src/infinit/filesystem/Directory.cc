@@ -731,6 +731,24 @@ namespace infinit
          model::doughnut::Group g(*dn, gn);
          g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
       }
+      else if (name == "user.infinit.group.addadmin")
+      {
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        auto sep = value.find_first_of(':');
+        auto gn = value.substr(0, sep);
+        auto userdata = value.substr(sep+1);
+        model::doughnut::Group g(*dn, gn);
+        g.add_admin(elle::Buffer(userdata.data(), userdata.size()));
+      }
+      else if (name == "user.infinit.group.removeadmin")
+      {
+         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+         auto sep = value.find_first_of(':');
+         auto gn = value.substr(0, sep);
+         auto userdata = value.substr(sep+1);
+         model::doughnut::Group g(*dn, gn);
+         g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
+      }
       else if (name.find("user.infinit.group.load.") == 0)
       {
         std::string value = name.substr(strlen("user.infinit.group.load."));
