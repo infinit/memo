@@ -360,6 +360,7 @@ namespace infinit
           self->_blocks[idx].ready.open();
           --self->_prefetchers_count;
           self->_check_prefetch();
+          self->check_cache(self->max_cache_size);
       }, true);
     }
 
