@@ -73,23 +73,23 @@ static void sig_int()
   fs->unmount();
 }
 
-static void group_create(bfs::path p, std::string const& name)
+static int group_create(bfs::path p, std::string const& name)
 {
-  setxattr(p.c_str(), "user.infinit.group.make", name.c_str(), name.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.make", name.c_str(), name.size(), 0 SXA_EXTRA);
 }
-static void group_add(bfs::path p, std::string const& gname, std::string const& uname)
+static int group_add(bfs::path p, std::string const& gname, std::string const& uname)
 {
   std::string cmd = gname + ":" + uname;
-  setxattr(p.c_str(), "user.infinit.group.add", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.add", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
-static void group_remove(bfs::path p, std::string const& gname, std::string const& uname)
+static int group_remove(bfs::path p, std::string const& gname, std::string const& uname)
 {
   std::string cmd = gname + ":" + uname;
-  setxattr(p.c_str(), "user.infinit.group.remove", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.remove", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
-static void group_load(bfs::path p, std::string const& gname)
+static int group_load(bfs::path p, std::string const& gname)
 {
-  setxattr(p.c_str(), ("user.infinit.group.load." + gname).c_str(), "", 0, 0
+  return setxattr(p.c_str(), ("user.infinit.group.load." + gname).c_str(), "", 0, 0
     SXA_EXTRA);
 }
 
@@ -1344,7 +1344,7 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
 
   ELLE_LOG("groups");
-  write(m0 / "g1", "foo\n");
+  write(m0 / "g1", "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m1 / "g1"), "");
   group_create(m0, "group1");
@@ -1352,7 +1352,7 @@ test_acl(bool paxos)
   setxattr((m0 / "g1").c_str(), "user.infinit.auth.setrw",
     "@group1", 7, 0 SXA_EXTRA);
   group_load(m1, "group1");
-  usleep(100000);
+  usleep(1100000);
   BOOST_CHECK_EQUAL(read(m1 / "g1"), "foo");
   group_remove(m0, "group1", "user1");
   write(m0 / "g2", "foo");
@@ -1361,28 +1361,29 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m1 / "g2"), "");
   group_add(m0, "group1", "user1");
   group_load(m1, "group1");
-  usleep(100000);
-  BOOST_CHECK_EQUAL(read(m1 / "g1"), "foo");
+  usleep(1100000);
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "foo");
   //incorrect stuff, check it doesn't crash us
   ELLE_LOG("groups bad operations");
-  group_create(m0, "group1");
-  group_add(m0, "group1","user1");
-  group_add(m0, "group1","user1");
+  BOOST_CHECK_EQUAL(group_add(m1, "group1", "user0"), -1);
+  BOOST_CHECK_EQUAL(group_create(m0, "group1"), -1);
+  BOOST_CHECK_EQUAL(group_add(m0, "group1","user1"), -1);
+  BOOST_CHECK_EQUAL(group_add(m0, "group1","user1"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_remove(m0, "group1", "user1");
   group_remove(m0, "group1", "user1");
-  group_add(m0, "group1", "group1");
+  BOOST_CHECK_EQUAL(group_add(m0, "group1", "group1"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
-  group_add(m0, "nosuch", "user1");
+  BOOST_CHECK_EQUAL(group_add(m0, "nosuch", "user1"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   ELLE_LOG("nosuchuser");
-  group_add(m0, "group1","nosuch");
+  BOOST_CHECK_EQUAL(group_add(m0, "group1","nosuch"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
-  group_remove(m0, "group1","nosuch");
+  BOOST_CHECK_EQUAL(group_remove(m0, "group1","nosuch"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_load(m0, "group1");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
-  group_load(m0, "nosuch");
+  BOOST_CHECK_EQUAL(group_load(m0, "nosuch"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   ELLE_LOG("test end");
 }

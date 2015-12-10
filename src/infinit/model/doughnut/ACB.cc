@@ -20,6 +20,7 @@
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
+#include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/User.hh>
@@ -28,7 +29,7 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.ACB");
 
-DAS_MODEL_FIELDS(infinit::model::doughnut::ACB::ACLEntry,
+DAS_MODEL_FIELDS(infinit::model::doughnut::ACLEntry,
                  (key, read, write, token));
 
 namespace infinit
@@ -37,15 +38,15 @@ namespace infinit
   {
     namespace doughnut
     {
-      DAS_MODEL_DEFINE(ACB::ACLEntry, (key, read, write, token),
+      DAS_MODEL_DEFINE(ACLEntry, (key, read, write, token),
                        DasACLEntry);
-      DAS_MODEL_DEFINE(ACB::ACLEntry, (key, read, write),
+      DAS_MODEL_DEFINE(ACLEntry, (key, read, write),
                        DasACLEntryPermissions);
     }
   }
 }
 
-DAS_MODEL_DEFAULT(infinit::model::doughnut::ACB::ACLEntry,
+DAS_MODEL_DEFAULT(infinit::model::doughnut::ACLEntry,
                   infinit::model::doughnut::DasACLEntry);
 // FAILS in binary mode
 // DAS_MODEL_SERIALIZE(infinit::model::doughnut::ACB::ACLEntry);
@@ -60,8 +61,7 @@ namespace infinit
       | ACLEntry |
       `---------*/
 
-      template <typename Block>
-      BaseACB<Block>::ACLEntry::ACLEntry(infinit::cryptography::rsa::PublicKey key_,
+      ACLEntry::ACLEntry(infinit::cryptography::rsa::PublicKey key_,
                               bool read_,
                               bool write_,
                               elle::Buffer token_)
@@ -71,22 +71,19 @@ namespace infinit
         , token(std::move(token_))
       {}
 
-      template <typename Block>
-      BaseACB<Block>::ACLEntry::ACLEntry(ACLEntry const& other)
+      ACLEntry::ACLEntry(ACLEntry const& other)
         : key{other.key}
         , read{other.read}
         , write{other.write}
         , token{other.token}
       {}
 
-      template <typename Block>
-      BaseACB<Block>::ACLEntry::ACLEntry(elle::serialization::SerializerIn& s)
+      ACLEntry::ACLEntry(elle::serialization::SerializerIn& s)
         : ACLEntry(deserialize(s))
       {}
 
-      template <typename Block>
-      typename BaseACB<Block>::ACLEntry
-      BaseACB<Block>::ACLEntry::deserialize(elle::serialization::SerializerIn& s)
+      ACLEntry
+      ACLEntry::deserialize(elle::serialization::SerializerIn& s)
       {
 
         auto key = s.deserialize<cryptography::rsa::PublicKey>("key");
@@ -104,10 +101,8 @@ namespace infinit
 
       }
 
-
-      template <typename Block>
       void
-      BaseACB<Block>::ACLEntry::serialize(elle::serialization::Serializer& s)
+      ACLEntry::serialize(elle::serialization::Serializer& s)
       {
         s.serialize("key", key);
         s.serialize("read", read);
@@ -115,9 +110,8 @@ namespace infinit
         s.serialize("token", token);
       }
 
-      template <typename Block>
       bool
-      BaseACB<Block>::ACLEntry::operator == (BaseACB<Block>::ACLEntry const& b) const
+      ACLEntry::operator == (ACLEntry const& b) const
       {
         return key == b.key && read == b.read && write && b.write
           && token == b.token;
@@ -170,7 +164,7 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       BaseACB<Block>::clone(bool sealed_copy) const
       {
-        return std::unique_ptr<blocks::Block>(new ACB(*this, sealed_copy));
+        return std::unique_ptr<blocks::Block>(new Self(*this, sealed_copy));
       }
 
       /*--------.
@@ -185,7 +179,7 @@ namespace infinit
       }
 
       template <typename Block>
-      std::pair<typename std::vector<typename BaseACB<Block>::ACLEntry>::const_iterator,
+      std::pair<std::vector<ACLEntry>::const_iterator,
                   std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
       BaseACB<Block>::_find_token() const
       {
@@ -613,14 +607,21 @@ namespace infinit
         {
           elle::IOStream output(res.ostreambuf());
           elle::serialization::binary::SerializerOut s(output, false);
-          s.serialize("salt", this->salt());
-          s.serialize("key", *this->owner_key());
-          s.serialize("version", this->_data_version);
-          s.serialize("data", this->Block::data());
-          s.serialize("owner_token", this->_owner_token);
-          s.serialize("acl", this->_acl_entries);
+          this->_data_sign(s);
         }
         return res;
+      }
+
+      template <typename Block>
+      void
+      BaseACB<Block>::_data_sign(elle::serialization::SerializerOut& s) const
+      {
+        s.serialize("salt", this->salt());
+        s.serialize("key", this->owner_key());
+        s.serialize("version", this->_data_version);
+        s.serialize("data", this->Block::data());
+        s.serialize("owner_token", this->_owner_token);
+        s.serialize("acl", this->_acl_entries);
       }
 
       template <typename Block>
@@ -664,7 +665,7 @@ namespace infinit
       bool
       BaseACB<Block>::operator ==(blocks::Block const& rhs) const
       {
-        auto other_acb = dynamic_cast<ACB const*>(&rhs);
+        auto other_acb = dynamic_cast<Self const*>(&rhs);
         if (!other_acb)
           return false;
         if (this->_editor != other_acb->_editor)
@@ -738,6 +739,9 @@ namespace infinit
 
       template
       class BaseACB<blocks::ACLBlock>;
+
+      template
+      class BaseACB<blocks::GroupBlock>;
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<ACB> _register_okb_serialization("ACB");

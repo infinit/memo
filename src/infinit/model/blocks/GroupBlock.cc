@@ -1,0 +1,45 @@
+#include <infinit/model/blocks/GroupBlock.hh>
+
+
+namespace infinit
+{
+  namespace model
+  {
+    namespace blocks
+    {
+      GroupBlock::GroupBlock(GroupBlock const& other)
+      : ACLBlock(other)
+      {}
+      GroupBlock::GroupBlock(Address a)
+      : ACLBlock(a)
+      {}
+      GroupBlock::GroupBlock(Address a, elle::Buffer data)
+      : ACLBlock(a, data)
+      {}
+      GroupBlock::GroupBlock(elle::serialization::Serializer& input)
+      : ACLBlock(input)
+      {}
+      void
+      GroupBlock::add_member(model::User const& user)
+      {
+        throw elle::Error("Not implemented");
+      }
+      void
+      GroupBlock::remove_member(model::User const& user)
+      {
+        throw elle::Error("Not implemented");
+      }
+      cryptography::rsa::PublicKey
+      GroupBlock::current_key()
+      {
+        throw elle::Error("Not implemented");
+      }
+      std::vector<cryptography::rsa::KeyPair>
+      GroupBlock::all_keys()
+      {
+        throw elle::Error("Not implemented");
+      }
+
+    }
+  }
+}

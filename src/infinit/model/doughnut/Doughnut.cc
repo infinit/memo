@@ -20,6 +20,7 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/CHB.hh>
+#include <infinit/model/doughnut/GB.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -175,6 +176,13 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: create ACB", *this);
         return elle::cast<blocks::ACLBlock>::runtime(
           elle::unconst(this)->_pool.get());
+      }
+
+      std::unique_ptr<blocks::GroupBlock>
+      Doughnut::_make_group_block() const
+      {
+        return elle::make_unique<GB>(elle::unconst(this),
+                                     cryptography::rsa::keypair::generate(2048));
       }
 
       std::unique_ptr<model::User>

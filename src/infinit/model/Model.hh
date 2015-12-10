@@ -97,6 +97,9 @@ namespace infinit
       std::unique_ptr<blocks::ACLBlock>
       _make_acl_block() const;
       virtual
+      std::unique_ptr<blocks::GroupBlock>
+      _make_group_block() const;
+      virtual
       std::unique_ptr<User>
       _make_user(elle::Buffer const& data) const;
       virtual

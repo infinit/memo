@@ -57,6 +57,10 @@ namespace infinit
                   elle::Buffer signature);
         void
         serialize(elle::serialization::Serializer& s);
+        static
+        Address
+        hash_address(cryptography::rsa::PublicKey& key,
+                     elle::Buffer const& salt);
         typedef infinit::serialization_tag serialization_tag;
       };
 

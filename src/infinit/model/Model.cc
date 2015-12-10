@@ -5,6 +5,7 @@
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/blocks/GroupBlock.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.Model");
 
@@ -56,11 +57,25 @@ namespace infinit
       return res;
     }
 
+    template <>
+    std::unique_ptr<blocks::GroupBlock>
+    Model::make_block(elle::Buffer data) const
+    {
+      auto res = this->_make_group_block();
+      return res;
+    }
+
     std::unique_ptr<blocks::ACLBlock>
     Model::_make_acl_block() const
     {
       ELLE_TRACE_SCOPE("%s: create ACL block", *this);
       return this->_construct_block<blocks::ACLBlock>(Address::random());
+    }
+
+    std::unique_ptr<blocks::GroupBlock>
+    Model::_make_group_block() const
+    {
+      return this->_construct_block<blocks::GroupBlock>(Address::random());
     }
 
     std::unique_ptr<User>

@@ -19,6 +19,29 @@ namespace infinit
     {
       struct ACBDontWaitForSignature {};
 
+      struct ACLEntry
+      {
+        infinit::cryptography::rsa::PublicKey key;
+        bool read;
+        bool write;
+        elle::Buffer token;
+
+        ACLEntry(infinit::cryptography::rsa::PublicKey key_,
+                 bool read_,
+                 bool write_,
+                 elle::Buffer token_);
+        ACLEntry(ACLEntry const& other);
+        ACLEntry(elle::serialization::SerializerIn& s);
+        void serialize(elle::serialization::Serializer& s);
+        ACLEntry&
+        operator =(ACLEntry&& other) = default;
+
+        bool operator == (ACLEntry const& b) const;
+
+        typedef infinit::serialization_tag serialization_tag;
+        static ACLEntry deserialize(elle::serialization::SerializerIn& s);
+      };
+
       template<typename Block>
       class BaseACB
         : public BaseOKB<Block>
@@ -29,28 +52,6 @@ namespace infinit
       public:
         typedef BaseACB<Block> Self;
         typedef BaseOKB<Block> Super;
-        struct ACLEntry
-        {
-          infinit::cryptography::rsa::PublicKey key;
-          bool read;
-          bool write;
-          elle::Buffer token;
-
-          ACLEntry(infinit::cryptography::rsa::PublicKey key_,
-                   bool read_,
-                   bool write_,
-                   elle::Buffer token_);
-          ACLEntry(ACLEntry const& other);
-          ACLEntry(elle::serialization::SerializerIn& s);
-          void serialize(elle::serialization::Serializer& s);
-          ACLEntry&
-          operator =(ACLEntry&& other) = default;
-
-          bool operator == (ACLEntry const& b) const;
-
-          typedef infinit::serialization_tag serialization_tag;
-          static ACLEntry deserialize(elle::serialization::SerializerIn& s);
-        };
 
         static_assert(!std::is_base_of<boost::optional_detail::optional_tag, ACLEntry>::value, "");
         static_assert(std::is_constructible<ACLEntry, elle::serialization::SerializerIn&>::value, "");
@@ -67,7 +68,7 @@ namespace infinit
         ~BaseACB();
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
-        ELLE_ATTRIBUTE(bool, acl_changed);
+        ELLE_ATTRIBUTE(bool, acl_changed, protected);
         ELLE_ATTRIBUTE(std::vector<ACLEntry>, acl_entries);
         ELLE_ATTRIBUTE_R(int, data_version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
@@ -96,7 +97,7 @@ namespace infinit
         _decrypt_data(elle::Buffer const& data) const override;
         void
         _stored() override;
-        std::pair<typename std::vector<typename BaseACB<Block>::ACLEntry>::const_iterator,
+        std::pair<typename std::vector<ACLEntry>::const_iterator,
                   std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
         _find_token() const;
         virtual
@@ -156,6 +157,10 @@ namespace infinit
       private:
         elle::Buffer
         _data_sign() const;
+      protected:
+        virtual
+        void
+        _data_sign(elle::serialization::SerializerOut& s) const;
 
       /*--------------.
       | Serialization |

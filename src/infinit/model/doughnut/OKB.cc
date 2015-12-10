@@ -11,6 +11,7 @@
 
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
@@ -49,14 +50,20 @@ namespace infinit
       {}
 
       Address
-      OKBHeader::_hash_address() const
+      OKBHeader::hash_address(cryptography::rsa::PublicKey& key,
+                              elle::Buffer const& salt)
       {
         auto key_buffer =
-          elle::serialization::json::serialize(*this->_owner_key);
-        key_buffer.append(this->_salt.contents(), this->_salt.size());
+          elle::serialization::json::serialize(key);
+        key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
         return Address(hash.contents());
+      }
+      Address
+      OKBHeader::_hash_address() const
+      {
+        return hash_address(*this->_owner_key, this->_salt);
       }
 
       blocks::ValidationResult
@@ -460,6 +467,8 @@ namespace infinit
       class BaseOKB<blocks::MutableBlock>;
       template
       class BaseOKB<blocks::ACLBlock>;
+      template
+      class BaseOKB<blocks::GroupBlock>;
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<OKB> _register_okb_serialization("OKB");
