@@ -720,8 +720,7 @@ namespace infinit
         auto gn = value.substr(0, sep);
         auto userdata = value.substr(sep+1);
         model::doughnut::Group g(*dn, gn);
-        auto user = dn->make_user(elle::Buffer(userdata.data(), userdata.size()));
-        g.add_member(*user);
+        g.add_member(elle::Buffer(userdata.data(), userdata.size()));
       }
       else if (name == "user.infinit.group.remove")
       {
@@ -730,7 +729,7 @@ namespace infinit
          auto gn = value.substr(0, sep);
          auto userdata = value.substr(sep+1);
          model::doughnut::Group g(*dn, gn);
-         g.remove_member(*dn->make_user(elle::Buffer(userdata.data(), userdata.size())));
+         g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
       }
       else if (name.find("user.infinit.group.load.") == 0)
       {

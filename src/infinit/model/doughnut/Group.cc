@@ -19,6 +19,8 @@ namespace infinit
     namespace doughnut
     {
 
+      namespace rfs = reactor::filesystem;
+
       static const elle::Buffer group_public_block_name
         = elle::Buffer::make("keysPublic");
       static const elle::Buffer group_private_block_name
@@ -136,6 +138,17 @@ namespace infinit
       }
 
       void
+      Group::add_member(elle::Buffer const& userdata)
+      {
+        infinit::filesystem::umbrella([&] {
+            auto user = _dht.make_user(userdata);
+            if (!user)
+              THROW_NOENT;
+            add_member(*user);
+        });
+      }
+
+      void
       Group::remove_member(model::User const& user)
       {
         ELLE_DEBUG("remove member %s from %s", elle::unconst(user).name(), _name);
@@ -166,17 +179,30 @@ namespace infinit
          });
       }
 
+      void
+      Group::remove_member(elle::Buffer const& userdata)
+      {
+        infinit::filesystem::umbrella([&] {
+            auto user = _dht.make_user(userdata);
+            if (!user)
+              THROW_NOENT;
+            remove_member(*user);
+        });
+      }
+
       std::vector<cryptography::rsa::KeyPair>
       Group::group_keys()
       {
-        auto key = public_control_key();
-        auto priv_key_block = elle::cast<ACB>::runtime(_dht.fetch(
-          ACB::hash_address(key, group_private_block_name)));
-        auto priv_content = elle::serialization::binary::deserialize
-          <GroupPrivateBlockContent>(
-            priv_key_block->data());
-        ELLE_DEBUG("Returning %s keys for %s", priv_content.size(), _name);
-        return priv_content;
+        return infinit::filesystem::umbrella([&] {
+            auto key = public_control_key();
+            auto priv_key_block = elle::cast<ACB>::runtime(_dht.fetch(
+              ACB::hash_address(key, group_private_block_name)));
+            auto priv_content = elle::serialization::binary::deserialize
+            <GroupPrivateBlockContent>(
+              priv_key_block->data());
+            ELLE_DEBUG("Returning %s keys for %s", priv_content.size(), _name);
+            return priv_content;
+        });
       }
     }
   }

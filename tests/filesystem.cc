@@ -1364,16 +1364,24 @@ test_acl(bool paxos)
   usleep(100000);
   BOOST_CHECK_EQUAL(read(m1 / "g1"), "foo");
   //incorrect stuff, check it doesn't crash us
+  ELLE_LOG("groups bad operations");
   group_create(m0, "group1");
   group_add(m0, "group1","user1");
   group_add(m0, "group1","user1");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_remove(m0, "group1", "user1");
   group_remove(m0, "group1", "user1");
   group_add(m0, "group1", "group1");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_add(m0, "nosuch", "user1");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  ELLE_LOG("nosuchuser");
   group_add(m0, "group1","nosuch");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_remove(m0, "group1","nosuch");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_load(m0, "group1");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   group_load(m0, "nosuch");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   ELLE_LOG("test end");

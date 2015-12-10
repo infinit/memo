@@ -26,7 +26,11 @@ namespace infinit
         void
         add_member(model::User const& user);
         void
+        add_member(elle::Buffer const& user_data);
+        void
         remove_member(model::User const& user);
+        void
+        remove_member(elle::Buffer const& user_data);
         std::vector<cryptography::rsa::KeyPair>
         group_keys();
       private:
