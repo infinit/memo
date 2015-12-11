@@ -9,6 +9,14 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Storage.hh>
 
+#ifdef INFINIT_MACOSX
+# if defined(__GNUC__) && !defined(__clang__)
+#  undef __OSX_AVAILABLE_STARTING
+#  define __OSX_AVAILABLE_STARTING(A, B)
+# endif
+# include <CoreServices/CoreServices.h>
+#endif
+
 ELLE_LOG_COMPONENT("infinit-volume");
 
 #include <main.hh>
@@ -158,6 +166,71 @@ COMMAND(fetch)
   }
 }
 
+#ifdef INFINIT_MACOSX
+static
+void
+add_path_to_finder_sidebar(std::string const& path)
+{
+  LSSharedFileListRef favorite_items =
+    LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+  if (!favorite_items)
+    return;
+  CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+    kCFAllocatorDefault,
+    reinterpret_cast<const unsigned char*>(path.data()),
+    path.size(),
+    true);
+  LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
+    favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
+  if (url)
+    CFRelease(url);
+  if (item)
+    CFRelease(item);
+}
+
+static
+void
+remove_path_from_finder_sidebar(std::string const& path_)
+{
+  LSSharedFileListRef favorite_items =
+    LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+  CFStringRef path = CFStringCreateWithCString(
+    kCFAllocatorDefault, path_.c_str(), kCFStringEncodingUTF8);
+  if (favorite_items)
+  {
+    CFArrayRef items_array =
+      LSSharedFileListCopySnapshot(favorite_items, NULL);
+    CFIndex count = CFArrayGetCount(items_array);
+    LSSharedFileListItemRef item_ref;
+    for (CFIndex i = 0; i < count; i++)
+    {
+      item_ref =
+        (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+      CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+        item_ref,
+        kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+        NULL);
+      if (item_url)
+      {
+        CFStringRef item_path = CFURLCopyPath(item_url);
+        if (CFStringHasPrefix(item_path, path))
+          LSSharedFileListItemRemove(favorite_items, item_ref);
+        if (item_path)
+          CFRelease(item_path);
+        if (item_url)
+          CFRelease(item_url);
+      }
+    }
+    if (items_array)
+      CFRelease(items_array);
+  }
+  if (path)
+    CFRelease(path);
+  if (favorite_items)
+    CFRelease(favorite_items);
+}
+#endif
+
 COMMAND(run)
 {
   auto self = self_user(ifnt, args);
@@ -198,8 +271,8 @@ COMMAND(run)
     cache, cache_size, cache_ttl, cache_invalidation,
     flag(args, "async"));
   // Only push if we have are contributing storage.
-  bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
-            && model->local();
+  bool push =
+    aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
   boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint = {};
   if (push)
     local_endpoint = model->local()->server_endpoint();
@@ -216,28 +289,49 @@ COMMAND(run)
 
       {
         static reactor::Thread updater("periodic_stat_updater", [&] {
-            while (true)
-            {
-              ELLE_LOG_COMPONENT("infinit-volume");
-              ELLE_DEBUG("Hourly notification to beyond with storage usage (periodic)");
+          while (true)
+          {
+            ELLE_LOG_COMPONENT("infinit-volume");
+            ELLE_DEBUG(
+              "Hourly notification to beyond with storage usage (periodic)");
                 network.notify_storage(self,
                                        node_id);
                 reactor::wait(updater, 60_min);
-            }
+          }
         });
       }
     }
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
+    auto mountpoint = optional(args, "mountpoint");
+    auto add_to_sidebar = flag(args, "finder-sidebar");
     auto fs = volume.run(std::move(model),
-                         optional(args, "mountpoint")
+                         mountpoint
 #ifdef INFINIT_MACOSX
                          , optional(args, "mount-name")
                          , optional(args, "mount-icon")
 #endif
                          );
+#ifdef INFINIT_MACOSX
+    if (add_to_sidebar && mountpoint)
+    {
+      reactor::background([mountpoint]
+        {
+          add_path_to_finder_sidebar(mountpoint.get());
+        });
+    }
+#endif
     elle::SafeFinally unmount([&]
     {
+      if (add_to_sidebar && mountpoint)
+      {
+#ifdef INFINIT_MACOSX
+        reactor::background([mountpoint]
+          {
+            remove_path_from_finder_sidebar(mountpoint.get());
+          });
+#endif
+      }
       ELLE_TRACE("unmounting")
         fs->unmount();
     });
@@ -618,6 +712,7 @@ main(int argc, char** argv)
 #ifdef INFINIT_MACOSX
     { "mount-name", value<std::string>(), "name of mounted volume" },
     { "mount-icon", value<std::string>(), "icon for mounted volume" },
+    { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
 #endif
     { "async", bool_switch(), "use asynchronous operations" },
     option_cache,
