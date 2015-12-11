@@ -248,11 +248,8 @@ COMMAND(push)
 
 COMMAND(pull)
 {
-  auto name = get_name(args);
-  auto user = ifnt.user_get(name);
-  if (!user.private_key)
-    throw elle::Error(elle::sprintf(NO_PRIVATE_KEY, name));
-  beyond_delete("user", user.name, user);
+  auto self = self_user(ifnt, args);
+  beyond_delete("user", self.name, self);
 }
 
 COMMAND(delete_)
