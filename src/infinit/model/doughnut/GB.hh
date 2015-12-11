@@ -27,6 +27,7 @@ namespace infinit
         typedef BaseACB<blocks::GroupBlock> Super;
 
         GB(Doughnut* owner, cryptography::rsa::KeyPair master);
+        ~GB();
         virtual
         void
         add_member(model::User const& user) override;
@@ -55,7 +56,10 @@ namespace infinit
       public:
         GB(elle::serialization::SerializerIn& s);
         void serialize(elle::serialization::Serializer& s) override;
-
+        GB(GB const& other, bool sealed_copy = true);
+        virtual
+        std::unique_ptr<blocks::Block>
+        clone(bool sealed_copy) const override;
       private:
         void
         _extract_group_keys();
@@ -75,6 +79,7 @@ namespace infinit
         CipheredMasterKey;
 
         ELLE_ATTRIBUTE(CipheredMasterKey, ciphered_master_key);
+        typedef infinit::serialization_tag serialization_tag;
       };
     }
   }

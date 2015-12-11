@@ -183,6 +183,19 @@ namespace infinit
           throw elle::Error("doughnut was passed a non-doughnut user.");
         }
       }
+      std::unique_ptr<blocks::Block>
+      GB::clone(bool sealed_copy) const
+      {
+        return std::unique_ptr<blocks::Block>(new Self(*this, sealed_copy));
+      }
+      GB::GB(const GB& other, bool sealed_copy)
+      : Super(other, sealed_copy)
+      , _group_public_keys(other._group_public_keys)
+      , _ciphered_master_key(other._ciphered_master_key)
+      {}
+      GB::~GB()
+      {}
+
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<GB> _register_gb_serialization("GB");
     }

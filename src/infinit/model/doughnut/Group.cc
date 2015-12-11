@@ -46,6 +46,8 @@ namespace infinit
             {}
             auto block = _dht.make_block<blocks::GroupBlock>();
             auto gb = elle::cast<GB>::runtime(block);
+            ELLE_TRACE("New group block address: %x, key %s",
+                       gb->address(), gb->owner_key());
             auto ub = elle::make_unique<UB>(_name,
               gb->owner_key());
             _dht.store(std::move(ub), STORE_INSERT);
@@ -79,8 +81,9 @@ namespace infinit
       Group::current_key()
       {
         auto key = public_control_key();
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-          ACB::hash_address(key, group_block_key)));
+        auto addr = ACB::hash_address(key, group_block_key);
+        ELLE_DEBUG("group block for %s is at %s", _name, addr);
+        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(addr));
         return block->current_key();
       }
 
