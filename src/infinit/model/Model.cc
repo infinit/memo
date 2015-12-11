@@ -99,7 +99,7 @@ namespace infinit
     std::unique_ptr<blocks::Block>
     Model::fetch(Address address, boost::optional<int> local_version) const
     {
-      if (auto res = this->_fetch(address, std::move(local_version)))
+      if (auto res = this->_fetch(address, local_version))
       {
         if (!res->validate())
         {
