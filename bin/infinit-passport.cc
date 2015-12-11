@@ -228,6 +228,9 @@ COMMAND(delete_)
   network_name = ifnt.qualified_name(network_name, self);
   auto user_name = mandatory(args, "user", "user name");
   auto path = ifnt._passport_path(network_name, user_name);
+  if (!boost::filesystem::exists(path))
+    throw elle::Error(
+      elle::sprintf("Passport for %s in %s not found", user_name, network_name));
   if (boost::filesystem::remove(path))
   {
     report_action("deleted", "passport",
