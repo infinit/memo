@@ -282,7 +282,10 @@ namespace infinit
             else
             {
               ELLE_TRACE("%s: fetch %s from disk journal", *this, address);
-              return this->_load_op(it->index).block;
+              auto res = this->_load_op(it->index).block;
+              if (!res)
+                throw MissingBlock(address);
+              return res;
             }
           }
           return this->_backend->fetch(address);
