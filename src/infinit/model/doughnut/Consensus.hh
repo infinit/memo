@@ -84,7 +84,7 @@ namespace infinit
         `--------------*/
 
         class Configuration
-          : public elle::serialization::VirtuallySerializable
+          : public elle::serialization::VirtuallySerializable<false>
         {
         /*--------.
         | Factory |

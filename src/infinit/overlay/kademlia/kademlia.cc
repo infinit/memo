@@ -107,7 +107,7 @@ namespace kademlia
     _registerPacket##classname(type)
 
     struct Packet
-    : public elle::serialization::VirtuallySerializable
+      : public elle::serialization::VirtuallySerializable<false>
     {
       Endpoint endpoint; // remote endpoint, filled by recvfrom
       Address sender;

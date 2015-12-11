@@ -197,10 +197,8 @@ namespace infinit
         }
         auto secret_buffer =
           this->doughnut()->keys().k().open(*encrypted_secret);
-        auto secret =
-          elle::serialization::deserialize
-          <cryptography::SecretKey, elle::serialization::Json>
-          (secret_buffer);
+        auto secret = elle::serialization::json::deserialize
+          <cryptography::SecretKey>(secret_buffer);
         ELLE_DUMP("%s: secret: %s", *this, secret);
         return secret.decipher(this->_data);
       }
@@ -310,9 +308,7 @@ namespace infinit
             user.reset(new doughnut::User(this->owner_key(), ""));
           else
             user = this->doughnut()->make_user(
-              elle::serialization::serialize
-                <cryptography::rsa::PublicKey, elle::serialization::Json>(
-                  this->owner_key()));
+              elle::serialization::json::serialize(this->owner_key()));
           res.emplace_back(std::move(user), true, true);
         }
         catch (reactor::Terminate const& e)
@@ -332,9 +328,7 @@ namespace infinit
               user.reset(new doughnut::User(ent.key, ""));
             else
               user = this->doughnut()->make_user(
-                elle::serialization::serialize
-                <cryptography::rsa::PublicKey, elle::serialization::Json>(
-                  ent.key));
+                elle::serialization::json::serialize(ent.key));
             res.emplace_back(std::move(user), ent.read, ent.write);
           }
           catch(reactor::Terminate const& e)
@@ -439,9 +433,7 @@ namespace infinit
             this->_editor = -1;
           auto secret = cryptography::secretkey::generate(256);
           ELLE_DUMP("%s: new block secret: %s", *this, secret);
-          auto secret_buffer =
-            elle::serialization::serialize
-            <cryptography::SecretKey, elle::serialization::Json>(secret);
+          auto secret_buffer = elle::serialization::json::serialize(secret);
           this->_owner_token = this->owner_key().seal(secret_buffer);
           bool found = false;
           int idx = 0;

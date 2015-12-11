@@ -18,7 +18,7 @@ namespace infinit
     {
       class Block
         : public elle::Printable
-        , public elle::serialization::VirtuallySerializable
+        , public elle::serialization::VirtuallySerializable<false>
         , public elle::Clonable<Block>
       {
       /*-------------.

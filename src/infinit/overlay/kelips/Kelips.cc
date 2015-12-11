@@ -328,7 +328,7 @@ namespace infinit
         _registerPacket##classname(type)
 
         struct Packet
-          : public elle::serialization::VirtuallySerializable
+          : public elle::serialization::VirtuallySerializable<false>
         {
           GossipEndpoint endpoint;
           Address sender;

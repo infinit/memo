@@ -114,6 +114,7 @@ namespace infinit
           Passport passport,
           boost::optional<std::string> name,
           boost::optional<int> port = {});
+        Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
         void

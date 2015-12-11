@@ -84,7 +84,7 @@ namespace infinit
     };
 
     struct Configuration
-      : public elle::serialization::VirtuallySerializable
+      : public elle::serialization::VirtuallySerializable<false>
     {
       Configuration() = default;
       Configuration(elle::serialization::SerializerIn& input);

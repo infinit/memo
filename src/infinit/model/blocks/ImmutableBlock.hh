@@ -22,6 +22,9 @@ namespace infinit
       /*-------------.
       | Construction |
       `-------------*/
+      public:
+        ImmutableBlock(ImmutableBlock&&) = default;
+
       protected:
         ImmutableBlock(Address address);
         ImmutableBlock(Address address, elle::Buffer data);

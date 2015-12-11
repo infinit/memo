@@ -31,7 +31,7 @@ namespace infinit
     // Called in case of conflict error. Returns the new block to retry with
     // or null to abort
     class ConflictResolver
-      : public elle::serialization::VirtuallySerializable
+      : public elle::serialization::VirtuallySerializable<false>
     {
     public:
       virtual
@@ -107,7 +107,7 @@ namespace infinit
     };
 
     struct ModelConfig:
-      public elle::serialization::VirtuallySerializable
+      public elle::serialization::VirtuallySerializable<false>
     {
       static constexpr char const* virtually_serializable_key = "type";
       std::unique_ptr<infinit::storage::StorageConfig> storage;

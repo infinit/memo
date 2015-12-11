@@ -98,7 +98,12 @@ namespace infinit
 
   private:
     template <typename Remaining, typename ... Parsed>
-    typename std::enable_if<!Remaining::empty && !std::is_base_of<elle::serialization::VirtuallySerializable, typename std::remove_reference<typename Remaining::Head>::type>::value, void>::type
+    typename std::enable_if<
+      !Remaining::empty &&
+      !std::is_base_of<
+        elle::serialization::VirtuallySerializableBase,
+        typename std::remove_reference<typename Remaining::Head>::type>::value,
+      void>::type
     _handle(int n,
             elle::serialization::SerializerIn& input,
             elle::serialization::SerializerOut& output,
@@ -120,8 +125,9 @@ namespace infinit
     template <typename Remaining, typename ... Parsed>
     typename std::enable_if<
       !Remaining::empty &&
-      std::is_base_of<elle::serialization::VirtuallySerializable,
-                      typename std::remove_reference<typename Remaining::Head>::type>::value,
+      std::is_base_of<
+        elle::serialization::VirtuallySerializableBase,
+        typename std::remove_reference<typename Remaining::Head>::type>::value,
       void>::type
     _handle(int n,
             elle::serialization::SerializerIn& input,
@@ -416,9 +422,11 @@ namespace infinit
   {
     template <typename Head, typename ... Tail>
     static
-    typename std::enable_if<std::is_base_of<elle::serialization::VirtuallySerializable,
-                      typename std::remove_const<typename std::remove_reference<Head>::type>::type>::value,
-                      void>::type
+    typename std::enable_if<
+      std::is_base_of<
+        elle::serialization::VirtuallySerializableBase,
+        typename std::remove_cv_reference<Head>::type>::value,
+      void>::type
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,
                    Head&& head,
@@ -434,8 +442,9 @@ namespace infinit
 
     template <typename Head, typename ... Tail>
     static
-    typename std::enable_if<!std::is_base_of<elle::serialization::VirtuallySerializable,
-      typename std::remove_reference<Head>::type>::value,
+    typename std::enable_if<
+      !std::is_base_of<elle::serialization::VirtuallySerializableBase,
+                       typename std::remove_reference<Head>::type>::value,
     void>::type
     call_arguments(int n,
                    elle::serialization::SerializerOut& output,

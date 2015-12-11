@@ -88,7 +88,7 @@ namespace infinit
                 std::string const& args);
 
     struct StorageConfig
-      : public elle::serialization::VirtuallySerializable
+      : public elle::serialization::VirtuallySerializable<false>
     {
       StorageConfig() = default;
       StorageConfig(std::string name, boost::optional<int64_t> capacity = {});

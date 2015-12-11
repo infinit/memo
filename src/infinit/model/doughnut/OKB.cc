@@ -30,9 +30,8 @@ namespace infinit
           - boost::posix_time::ptime(boost::posix_time::min_date_time))
           .total_milliseconds();
         _salt.append(&now, 8);
-        auto owner_key_buffer = elle::serialization::serialize
-          <cryptography::rsa::PublicKey, elle::serialization::Json>
-          (this->_owner_key);
+        auto owner_key_buffer =
+          elle::serialization::json::serialize(this->_owner_key);
         owner_key_buffer.append(_salt.contents(), _salt.size());
         this->_signature = keys.k().sign(owner_key_buffer);
       }
@@ -46,8 +45,8 @@ namespace infinit
       Address
       OKBHeader::_hash_address() const
       {
-        auto key_buffer = elle::serialization::serialize
-          <cryptography::rsa::PublicKey, elle::serialization::Json>(this->_owner_key);
+        auto key_buffer =
+          elle::serialization::json::serialize(this->_owner_key);
         key_buffer.append(this->_salt.contents(), this->_salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
@@ -70,9 +69,8 @@ namespace infinit
         }
         ELLE_DEBUG("%s: check owner key", *this)
         {
-          auto owner_key_buffer = elle::serialization::serialize
-            <cryptography::rsa::PublicKey, elle::serialization::Json>
-            (this->_owner_key);
+          auto owner_key_buffer =
+            elle::serialization::json::serialize(this->_owner_key);
           owner_key_buffer.append(_salt.contents(), _salt.size());
           if (!this->_owner_key.verify(this->OKBHeader::_signature, owner_key_buffer))
           {
