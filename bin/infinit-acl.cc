@@ -324,6 +324,32 @@ COMMAND(set)
   }
 }
 
+COMMAND(group)
+{
+  auto g = mandatory<std::string>(args, "name", "group name");
+  auto add = optional<std::vector<std::string>>(args, "add");
+  auto rem = optional<std::vector<std::string>>(args, "remove");
+  auto adm_add = optional<std::vector<std::string>>(args, "admin-add");
+  auto adm_rem = optional<std::vector<std::string>>(args, "admin-remove");
+  bool create = flag(args, "create");
+  bool verbose = flag(args, "verbose");
+  bool fallback = flag(args, "fallback-xattrs");
+  bool load = flag(args, "load");
+  std::string path = mandatory<std::string>(args, "path", "path to filesystem");
+  if (create)
+    check(port_setxattr, path, "user.infinit.group.make", g, fallback);
+  if (add) for (auto const& u: *add)
+    check(port_setxattr, path, "user.infinit.group.add", g + ":" + u , fallback);
+  if (rem) for (auto const& u: *rem)
+    check(port_setxattr, path, "user.infinit.group.remove", g + ":" + u , fallback);
+  if (adm_add) for (auto const& u: *adm_add)
+    check(port_setxattr, path, "user.infinit.group.addadmin", g + ":" + u , fallback);
+  if (adm_rem) for (auto const& u: *adm_rem)
+    check(port_setxattr, path, "user.infinit.group.removeadmin", g + ":" + u , fallback);
+  if (load)
+    check(port_setxattr, path, "user.infinit.group.load." + g, "", fallback);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -359,6 +385,25 @@ main(int argc, char** argv)
         { "verbose", bool_switch(), "verbose output" },
       },
     },
+    {
+      "group",
+      "Group control",
+      &group,
+      "[--user USERS] [OPTIONS...]",
+      {
+        { "name,n", value<std::string>(), "group name"},
+        { "create,c", bool_switch(), "create the group"},
+        { "add,a", value<std::vector<std::string>>(), "users to add to group" },
+        { "remove,r", value<std::vector<std::string>>(), "users to remove from group" },
+        { "admin-add,A", value<std::vector<std::string>>(), "admins to add to group" },
+        { "admin-remove,R", value<std::vector<std::string>>(), "admins to remove from group" },
+        { "fallback-xattrs", bool_switch(), "fallback to creating xattrs "
+          "folder if system xattrs are not suppported" },
+        { "verbose", bool_switch(), "verbose output" },
+        { "load", bool_switch(), "load group keys (TEMPORARY)" },
+        { "path,p", value<std::string>(), "path" },
+      },
+    }
   };
   return infinit::main("Infinit access control list utility", modes, argc, argv,
                        std::string("path"));
