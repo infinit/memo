@@ -323,15 +323,15 @@ COMMAND(run)
 #endif
     elle::SafeFinally unmount([&]
     {
+#ifdef INFINIT_MACOSX
       if (add_to_sidebar && mountpoint)
       {
-#ifdef INFINIT_MACOSX
         reactor::background([mountpoint]
           {
             remove_path_from_finder_sidebar(mountpoint.get());
           });
-#endif
       }
+#endif
       ELLE_TRACE("unmounting")
         fs->unmount();
     });
