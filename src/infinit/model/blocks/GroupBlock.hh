@@ -44,6 +44,9 @@ namespace infinit
         virtual
         void
         remove_admin(model::User const& user);
+        virtual
+        std::vector<std::unique_ptr<User>>
+        list_admins(bool ommit_names);
 
       public:
         GroupBlock(elle::serialization::Serializer& input);

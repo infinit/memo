@@ -100,6 +100,16 @@ namespace infinit
         return res;
       }
 
+      std::vector<std::unique_ptr<model::User>>
+      Group::list_admins(bool ommit_names)
+      {
+        auto key = public_control_key();
+        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
+          OKBHeader::hash_address(key, group_block_key)));
+        auto entries = block->list_admins(ommit_names);
+        return entries;
+      }
+
       void
       Group::add_member(model::User const& user)
       {

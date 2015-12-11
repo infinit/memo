@@ -46,6 +46,9 @@ namespace infinit
         virtual
         std::vector<cryptography::rsa::KeyPair>
         all_keys() override;
+        virtual
+        std::vector<std::unique_ptr<model::User>>
+        list_admins(bool ommit_names) override;
       protected:
         virtual
         void

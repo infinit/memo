@@ -1,5 +1,7 @@
 #include <infinit/model/doughnut/GB.hh>
 
+#include <elle/serialization/json.hh>
+
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
 
@@ -183,6 +185,28 @@ namespace infinit
           throw elle::Error("doughnut was passed a non-doughnut user.");
         }
       }
+
+      std::vector<std::unique_ptr<model::User>>
+      GB::list_admins(bool ommit_names)
+      {
+        std::vector<std::unique_ptr<model::User>> res;
+        for (auto const& p: this->_ciphered_master_key)
+        {
+          std::unique_ptr<model::User> user;
+          auto key = elle::serialization::binary::deserialize
+            <cryptography::rsa::PublicKey>(p.first);
+          if (ommit_names)
+            user.reset(new doughnut::User(this->owner_key(), ""));
+          else
+            user = this->doughnut()->make_user(
+                elle::serialization::serialize
+                <cryptography::rsa::PublicKey, elle::serialization::Json>(
+                  key));
+            res.emplace_back(std::move(user));
+        }
+        return res;
+      }
+
       std::unique_ptr<blocks::Block>
       GB::clone(bool sealed_copy) const
       {

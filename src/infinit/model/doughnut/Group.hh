@@ -23,6 +23,8 @@ namespace infinit
         current_key();
         std::vector<std::unique_ptr<model::User>>
         list_members(bool ommit_names = false);
+        std::vector<std::unique_ptr<model::User>>
+        list_admins(bool ommit_names = false);
         void
         add_member(model::User const& user);
         void

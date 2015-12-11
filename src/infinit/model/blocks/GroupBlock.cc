@@ -49,6 +49,11 @@ namespace infinit
       {
         throw elle::Error("Not implemented");
       }
+      std::vector<std::unique_ptr<User>>
+      GroupBlock::list_admins(bool ommit_names)
+      {
+        throw elle::Error("Not implemented");
+      }
     }
   }
 }
