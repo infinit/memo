@@ -682,6 +682,7 @@ If you would like to prepare invitations locally and push them all later, you ca
 
 ```
 $> infinit-drive --invite --as alice --name workspace --push
+Remotely pushed invitations "alice/workspace: bob, charlie".
 ```
 
 Without any `--user` specified the `--invite` command will push each pending invitations to the Hub, sending the notification emails as a consequence.
