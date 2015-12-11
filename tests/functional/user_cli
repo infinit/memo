@@ -146,9 +146,9 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as bob:
   bob.run(['infinit-user', '--signup',
            '--name', 'bob',
            '--email', 'bob@infinit.io'])
-  alice.run(['infinit-user', '--fetch', 'bob'])
+  alice.run(['infinit-user', '--fetch', '--name', 'bob'])
   try:
-    alice.run(['infinit-user', '--pull', 'bob'])
+    alice.run(['infinit-user', '--pull', '--as', 'bob'])
     unreachable()
   except Exception as e:
     assertIn('has no private key', e.args[0])
