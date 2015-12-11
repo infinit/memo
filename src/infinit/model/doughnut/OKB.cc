@@ -141,7 +141,7 @@ namespace infinit
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
       {
-        if (sealed_copy || !other._signature.running())
+        if (sealed_copy || !other._signature.running() || other.keys())
           this->_signature = other._signature.value();
         else
         {
@@ -439,7 +439,13 @@ namespace infinit
         s.serialize("key", *this->_owner_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
-        if (need_signature || (s.out() && !this->_signature.running()))
+        /* Write signature even when not asked to if either of:
+        * - the signature is already computed
+        * - computing the signature requires a different key
+        */
+        if (need_signature
+          || (s.out()
+             && (this->keys() || !this->_signature.running())))
         {
           s.serialize("signature", this->_signature.value());
           ELLE_ASSERT(!this->_signature.value().empty());

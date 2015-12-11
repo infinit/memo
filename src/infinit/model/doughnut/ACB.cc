@@ -147,7 +147,7 @@ namespace infinit
         , _world_readable(other._world_readable)
         , _world_writable(other._world_writable)
       {
-        if (sealed_copy)
+        if (sealed_copy || !other._data_signature.running() || other.keys())
         {
           _data_signature = other._data_signature.value();
         }
@@ -441,7 +441,8 @@ namespace infinit
             return blocks::ValidationResult::failure("no write permissions");
           }
         }
-        ELLE_DEBUG("%s: check author signature, entry=%s", *this, !!entry)
+        ELLE_DEBUG("%s: check author signature, entry=%s, sig=%s",
+                   *this, !!entry, this->data_signature())
         {
           auto sign = this->_data_sign();
           auto& key = entry ? entry->key : *this->owner_key();
@@ -575,10 +576,18 @@ namespace infinit
         if (acl_changed || data_changed ||
           (!this->_data_signature.running() && this->_data_signature.value().empty()))
         {
+          ELLE_LOG("%s: recompute signature: %s %s %s", *this,
+            acl_changed, data_changed, this->_data_signature.running());
           // note: in world_writable mode, the signing key might not be
           // present in the block, so signing might not be that important. 
           if (this->keys())
             sign_keys = std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>);
+          if (!sign_keys)
+          {
+            auto hit = _find_token();
+            sign_keys = hit.second;
+          }
+          ELLE_ASSERT(sign_keys);
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
             [sign_keys, to_sign]
@@ -721,23 +730,19 @@ namespace infinit
         s.serialize("acl", this->_acl_entries);
         s.serialize("data_version", this->_data_version);
         bool need_signature = !s.context().has<ACBDontWaitForSignature>();
-        if (need_signature)
+        // see comment in BaseOKB::_serialize
+        if (need_signature
+          || (s.out()
+            && (this->keys() || !this->_data_signature.running())))
           s.serialize("data_signature", this->_data_signature.value());
         else
         {
           elle::Buffer signature;
           s.serialize("data_signature", signature);
-          if (s.in())
-          {
-            auto hit = this->_find_token();
-            auto keys = hit.second;
-            if (this->keys())
-              keys = std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>);
-            ELLE_ASSERT(keys);
-            auto sign = elle::utility::move_on_copy(this->_data_sign());
-            this->_data_signature =
-              [keys, sign] { return keys->k().sign(*sign); };
-          }
+          if (!signature.empty())
+            this->_data_signature = std::move(signature);
+          // cant't do anything here, we might have child classes and still
+          // be in the constructor
         }
         // BREAKS BACKWARD
         s.serialize("world_readable", this->_world_readable);

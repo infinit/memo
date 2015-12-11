@@ -154,6 +154,7 @@ namespace infinit
           this->_ciphered_master_key.push_back(std::make_pair(sk,
             user.key().seal(ser_master)));
           this->_acl_changed = true;
+          this->_data_changed = true;
         }
         catch (std::bad_cast const&)
         {
@@ -179,6 +180,7 @@ namespace infinit
             throw elle::Error("No such user in admin list");
           this->_ciphered_master_key.erase(it);
           this->_acl_changed = true;
+          this->_data_changed = true;
         }
         catch (std::bad_cast const&)
         {
