@@ -184,6 +184,9 @@ namespace infinit
       BaseACB<Block>::_find_token() const
       {
         auto& mine = this->doughnut()->keys().K();
+        if (mine == this->owner_key())
+          return std::make_pair(this->_acl_entries.end(),
+                                this->doughnut()->keys_shared());
         auto it = std::find_if
             (this->_acl_entries.begin(), this->_acl_entries.end(),
              [&] (ACLEntry const& e) { return e.key == mine; });
@@ -726,7 +729,11 @@ namespace infinit
           s.serialize("data_signature", signature);
           if (s.in())
           {
-            auto keys = this->doughnut()->keys_shared();
+            auto hit = this->_find_token();
+            auto keys = hit.second;
+            if (this->keys())
+              keys = std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>);
+            ELLE_ASSERT(keys);
             auto sign = elle::utility::move_on_copy(this->_data_sign());
             this->_data_signature =
               [keys, sign] { return keys->k().sign(*sign); };
