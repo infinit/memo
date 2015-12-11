@@ -100,6 +100,8 @@ Run the _infinit-volume_ command by prefixing it with the environment variable `
 $> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --publish --cache
 ```
 
+_**NOTE**: You can stop this test volume by hitting `CTRL^C` or by interrupting the infinit-volume process._
+
 This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `demo/`.
 
 Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `demo/` as you would any other POSIX-compliant filesystem.
@@ -110,8 +112,6 @@ Infinit streams the data as it is needed from our server in the US. This allows 
 $> ls demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
-
-You can stop this test volume by hitting `CTRL^C` or by interrupting the _infinit-volume_ process.
 
 3. Create Infrastructure
 -------------------------------

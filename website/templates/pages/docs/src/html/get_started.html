@@ -72,13 +72,13 @@ bin/    lib/    share/
 <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
 <p>Run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
 <pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --publish --cache
-</code></pre><p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>demo/</code>.</p>
+</code></pre><p><em><strong>NOTE</strong>: You can stop this test volume by hitting <code>CTRL^C</code> or by interrupting the infinit-volume process.</em></p>
+<p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>demo/</code>.</p>
 <p>Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point <code>demo/</code> as you would any other POSIX-compliant filesystem.</p>
 <p>Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.</p>
 <pre><code>$&gt; ls demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
-</code></pre><p>You can stop this test volume by hitting <code>CTRL^C</code> or by interrupting the <em>infinit-volume</em> process.</p>
-<h2 id="3-create-infrastructure">3. Create Infrastructure</h2>
+</code></pre><h2 id="3-create-infrastructure">3. Create Infrastructure</h2>
 <p>It is now time for you to <strong>create your own storage infrastructure</strong>. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS-like system even though it is also possible to create infrastructure where more than one node stores blocks.</p>
 <p><img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices"></p>
 <p><em><strong>NOTE</strong>: For more information to learn how to set up completely decentralized infrastructure, how to plug cloud storage services such as AWS S3, Google Cloud Storage etc. or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files as usual, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
