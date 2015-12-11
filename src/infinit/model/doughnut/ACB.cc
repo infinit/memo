@@ -420,6 +420,11 @@ namespace infinit
             // FIXME: idempotence in case the write fails ?
             ++this->_data_version;
         }
+        else if (!this->_signature.running() && this->_signature.value().empty())
+        {
+          ELLE_DEBUG("%s: signature missing, recalculating...", *this);
+          this->_seal_okb(false);
+        }
         else
           ELLE_DEBUG("%s: ACL didn't change", *this);
         if (data_changed)

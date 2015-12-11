@@ -196,7 +196,10 @@ namespace infinit
           {
             sin.set_context(OpAddressOnly{});
           }
-          return sin.deserialize<Op>();
+          auto op = sin.deserialize<Op>();
+          if (op.block)
+            op.block->seal();
+          return op;
         }
 
         Async::Op

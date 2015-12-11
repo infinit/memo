@@ -77,7 +77,7 @@ namespace infinit
         BaseOKB(Doughnut* owner);
         BaseOKB(BaseOKB const& other, bool sealed_copy = true);
         ELLE_ATTRIBUTE(int, version);
-        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature);
+        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
 
