@@ -73,14 +73,7 @@ namespace infinit
         typedef std::unordered_map<elle::Buffer,
           std::shared_ptr<const cryptography::rsa::KeyPair>> KeyMap;
         ELLE_ATTRIBUTE_R(KeyMap, other_keys);
-        typedef std::unordered_map<cryptography::rsa::PublicKey,
-          std::string> KeyNameMap;
-        ELLE_ATTRIBUTE(KeyNameMap, key_names);
       public:
-        std::pair<std::shared_ptr<const cryptography::rsa::KeyPair>, int>
-        find_key(std::vector<ACLEntry> const& entries,
-                 cryptography::rsa::PublicKey const& owner,
-                 bool read, bool write, bool best=false);
 
       protected:
         virtual

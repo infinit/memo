@@ -31,6 +31,11 @@ namespace infinit
         , _name(name)
       {}
 
+      Group::Group(Doughnut& dht, cryptography::rsa::PublicKey k)
+      : _dht(dht)
+      , _public_control_key(k)
+      {}
+
       void
       Group::create()
       {
@@ -51,7 +56,7 @@ namespace infinit
             auto ub = elle::make_unique<UB>(_name,
               gb->owner_key());
             auto rub = elle::make_unique<UB>("@"+_name,
-              gb->current_key(), true);
+              gb->owner_key(), true);
             _dht.store(std::move(ub), STORE_INSERT);
             _dht.store(std::move(rub), STORE_INSERT);
             _dht.store(std::move(gb), STORE_INSERT);
@@ -62,11 +67,13 @@ namespace infinit
       cryptography::rsa::PublicKey
       Group::public_control_key()
       {
+        if (_public_control_key)
+          return *_public_control_key;
         auto ub = elle::cast<UB>::runtime(
           _dht.fetch(UB::hash_address(_name)));
-        auto key = ub->key();
-        ELLE_DEBUG("public_control_key for %s is %s", _name, key);
-        return key;
+        _public_control_key.emplace(ub->key());
+        ELLE_DEBUG("public_control_key for %s is %s", _name, _public_control_key);
+        return *_public_control_key;
       }
 
       cryptography::rsa::KeyPair
@@ -81,6 +88,26 @@ namespace infinit
       }
 
       cryptography::rsa::PublicKey
+      Group::current_public_key()
+      {
+        auto key = public_control_key();
+        auto addr = ACB::hash_address(key, group_block_key);
+        ELLE_DEBUG("group block for %s is at %s", _name, addr);
+        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(addr));
+        return block->current_public_key();
+      }
+
+      int
+      Group::version()
+      {
+        auto key = public_control_key();
+        auto addr = ACB::hash_address(key, group_block_key);
+        ELLE_DEBUG("group block for %s is at %s", _name, addr);
+        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(addr));
+        return block->version();
+      }
+
+      cryptography::rsa::KeyPair
       Group::current_key()
       {
         auto key = public_control_key();
@@ -162,9 +189,6 @@ namespace infinit
         auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
           OKBHeader::hash_address(key, group_block_key)));
         block->remove_member(user);
-        auto rub = elle::make_unique<UB>("@" + this->_name,
-          block->current_key(), true);
-        _dht.store(std::move(rub), STORE_INSERT);
         _dht.store(std::move(block));
       }
 

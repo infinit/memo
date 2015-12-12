@@ -16,11 +16,16 @@ namespace infinit
       {
       public:
         Group(Doughnut& dht, std::string const& name);
+        Group(Doughnut& dht, cryptography::rsa::PublicKey);
         void create();
         cryptography::rsa::PublicKey
         public_control_key();
         cryptography::rsa::PublicKey
+        current_public_key();
+        cryptography::rsa::KeyPair
         current_key();
+        int
+        version();
         std::vector<std::unique_ptr<model::User>>
         list_members(bool ommit_names = false);
         std::vector<std::unique_ptr<model::User>>
@@ -49,6 +54,7 @@ namespace infinit
         typedef std::vector<cryptography::rsa::KeyPair> GroupPrivateBlockContent;
         ELLE_ATTRIBUTE(Doughnut&, dht);
         ELLE_ATTRIBUTE_R(std::string, name);
+        ELLE_ATTRIBUTE(boost::optional<cryptography::rsa::PublicKey>, public_control_key);
       };
     }
   }

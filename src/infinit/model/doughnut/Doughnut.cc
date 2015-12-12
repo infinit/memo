@@ -65,7 +65,11 @@ namespace infinit
           nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
-      {}
+      {
+        this->_other_keys.insert(std::make_pair(
+          elle::serialization::binary::serialize(this->_keys->K()),
+          this->_keys));
+      }
 
       Doughnut::Doughnut(Address id,
                          std::string const& name,
@@ -220,8 +224,8 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: fetch user from group", *this);
           auto gn = data.string().substr(1);
           Group g(*elle::unconst(this), gn);
-          auto ck = g.current_key();
-          return elle::make_unique<doughnut::User>(ck, gn);
+          return elle::make_unique<doughnut::User>(g.public_control_key(),
+                                                   data.string());
         }
         else
         {
@@ -269,109 +273,6 @@ namespace infinit
       Doughnut::_remove(Address address)
       {
         this->_consensus->remove(address);
-      }
-
-      std::pair<std::shared_ptr<const cryptography::rsa::KeyPair>, int>
-      Doughnut::find_key(std::vector<ACLEntry> const& entries,
-                         cryptography::rsa::PublicKey const& owner,
-                         bool read, bool write, bool best)
-      {
-        std::pair<std::shared_ptr<const cryptography::rsa::KeyPair>, int> res;
-        // make a first run with our cache, flagging candidates to investigate
-        std::vector<std::pair<cryptography::rsa::PublicKey, std::string>>
-        candidates;
-        auto serownerkey = elle::serialization::binary::serialize(
-          owner);
-        _other_keys.insert(std::make_pair(elle::serialization::binary::serialize(
-          keys().K()), keys_shared()));
-        auto it = _other_keys.find(serownerkey);
-        if (it != _other_keys.end())
-          return std::make_pair(it->second, -1);
-        for (int i=0; i<signed(entries.size()); ++i)
-        {
-          auto const& target = entries[i].key;
-          if (entries[i].read < read || entries[i].write < write)
-            continue;
-          auto sertarget = elle::serialization::binary::serialize(target);
-          auto it = _other_keys.find(sertarget);
-          if (it != _other_keys.end())
-          {
-            if (entries[i].write || !best)
-              return std::make_pair(it->second, i);
-            else
-              res = std::make_pair(it->second, i);
-          }
-          // check if we know something about this key
-          auto itname = _key_names.find(target);
-          // keep unknown keys and known group keys, drop known user keys
-          if (itname == _key_names.end())
-            candidates.push_back(std::make_pair(target, ""));
-          else if (!itname->second.empty() && itname->second[0] == '@')
-            candidates.push_back(std::make_pair(target, itname->second));
-        }
-        // process candidates
-        for (auto const& c: candidates)
-        {
-          std::string name = c.second;
-          if (c.second.empty())
-          {
-            // try fetching a reverse user block
-            ELLE_DEBUG("try fetching RUB for %s", c.first);
-            try
-            {
-              auto block = fetch(UB::hash_address(c.first));
-              auto rub = elle::cast<UB>::runtime(block);
-              if (!rub)
-                continue;
-              _key_names.insert(std::make_pair(c.first, rub->name()));
-              name = rub->name();
-              ELLE_DEBUG("got name %s", name);
-              if (name.empty() || name[0] != '@')
-                continue;
-            }
-            catch (MissingBlock const& mb)
-            {
-              continue;
-            }
-          }
-          ELLE_ASSERT_EQ(name[0], '@');
-          // try acquiring the group
-          try
-          {
-            Group g(*this, name.substr(1));
-            auto keys = g.group_keys();
-            std::shared_ptr<const cryptography::rsa::KeyPair> hit;
-            for (auto const& k: keys)
-            {
-              _key_names.insert(std::make_pair(k.K(), name));
-              auto ser = elle::serialization::binary::serialize(k.K());
-              auto it = _other_keys.find(ser);
-              if (it == _other_keys.end())
-                it = _other_keys.insert(std::make_pair(ser,
-                  std::make_shared<cryptography::rsa::KeyPair>(k))).first;
-              if (k.K() == c.first)
-                hit = it->second;
-            }
-            if (hit)
-            { // refetch the index
-              auto it = std::find_if(entries.begin(), entries.end(),
-                [&](ACLEntry const& e) { return e.key == hit->K();});
-              ELLE_ASSERT(it != entries.end());
-              int index = it - entries.begin();
-              if (entries[index].write || !best)
-                return std::make_pair(hit, it - entries.begin());
-              else
-                res = std::make_pair(hit, it - entries.begin());
-            }
-          }
-          catch(elle::Error const& e)
-          {
-            ELLE_TRACE("Error acquiring group %s: %s", name, e.what());
-          }
-        }
-        if (!res.first)
-          res.second = -2;
-        return res;
       }
 
       Configuration::~Configuration()

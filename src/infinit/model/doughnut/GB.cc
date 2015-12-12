@@ -68,9 +68,21 @@ namespace infinit
         s.serialize("master_key", this->_ciphered_master_key);
       }
       cryptography::rsa::PublicKey
-      GB::current_key()
+      GB::current_public_key()
       {
         return this->_group_public_keys.back();
+      }
+      cryptography::rsa::KeyPair
+      GB::current_key()
+      {
+        if (this->_group_keys.empty())
+          this->_extract_group_keys();
+        return this->_group_keys.back();
+      }
+      int
+      GB::version()
+      {
+        return this->_group_public_keys.size();
       }
       std::vector<cryptography::rsa::KeyPair>
       GB::all_keys()
@@ -102,20 +114,7 @@ namespace infinit
             cryptography::rsa::PrivateKey>(buf));
           return;
         }
-        // look in other keys
-        std::vector<ACLEntry> dummy;
-        for (auto const& e: _group_admins)
-          dummy.emplace_back(e, true, true, elle::Buffer());
-        auto res = this->doughnut()->find_key(dummy, this->owner_key(), true, true);
-        if (res.first)
-        {
-          ELLE_ASSERT(res.second >= 0);
-          auto buf = res.first->k().open(this->_ciphered_master_key[res.second]);
-          this->_master_key.emplace(elle::serialization::binary::deserialize<
-              cryptography::rsa::PrivateKey>(buf));
-        }
-        else
-          throw elle::Error("Access to master key denied.");
+        throw elle::Error("Access to master key denied.");
       }
       void
       GB::add_member(model::User const& user)

@@ -24,13 +24,23 @@ namespace infinit
       {
         throw elle::Error("Not implemented");
       }
+      int
+      GroupBlock::version()
+      {
+        throw elle::Error("Not implemented");
+      }
       void
       GroupBlock::remove_member(model::User const& user)
       {
         throw elle::Error("Not implemented");
       }
-      cryptography::rsa::PublicKey
+      cryptography::rsa::KeyPair
       GroupBlock::current_key()
+      {
+        throw elle::Error("Not implemented");
+      }
+      cryptography::rsa::PublicKey
+      GroupBlock::current_public_key()
       {
         throw elle::Error("Not implemented");
       }

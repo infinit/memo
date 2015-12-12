@@ -34,10 +34,16 @@ namespace infinit
         remove_member(model::User const& user);
         virtual
         cryptography::rsa::PublicKey
+        current_public_key();
+        virtual
+        cryptography::rsa::KeyPair
         current_key();
         virtual
         std::vector<cryptography::rsa::KeyPair>
         all_keys();
+        virtual
+        int
+        version();
         virtual
         void
         add_admin(model::User const& user);

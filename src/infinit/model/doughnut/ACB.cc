@@ -22,6 +22,8 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Conflict.hh>
+#include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/UB.hh>
@@ -143,6 +145,8 @@ namespace infinit
         , _owner_token(other._owner_token)
         , _acl_changed(other._acl_changed)
         , _acl_entries(other._acl_entries)
+        , _acl_group_entries(other._acl_group_entries)
+        , _group_version(other._group_version)
         , _data_version(other._data_version)
         , _world_readable(other._world_readable)
         , _world_writable(other._world_writable)
@@ -179,52 +183,65 @@ namespace infinit
       }
 
       template <typename Block>
-      std::pair<int, std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
-      BaseACB<Block>::_find_token() const
-      {
-        auto res = this->doughnut()->find_key(this->_acl_entries,
-                                              this->owner_key(),
-                                              false, false, true);
-        if (res.first)
-          return std::make_pair(res.second, res.first);
-        else
-          return std::make_pair(-2, nullptr);
-      }
-
-      template <typename Block>
       elle::Buffer
       BaseACB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
         if (this->world_readable())
           return this->_data;
         auto& mine = this->doughnut()->keys().K();
-        elle::Buffer const* encrypted_secret = nullptr;
-        infinit::cryptography::rsa::PrivateKey const* priv = nullptr;
+
+        elle::Buffer secret_buffer;
         std::vector<ACLEntry> entries;
         if (mine == *this->owner_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
-          encrypted_secret = &this->_owner_token;
-          priv = &this->doughnut()->keys().k();
+          secret_buffer = this->doughnut()->keys().k().open(this->_owner_token);
         }
         else if (!this->_acl_entries.empty())
         {
           // FIXME: factor searching the token
-          auto entry = this->_find_token();
-          if (entry.second && this->_acl_entries[entry.first].read)
+          for (auto const& e: this->_acl_entries)
           {
-            ELLE_DEBUG("%s: we are an editor at %s", *this, entry.first);
-            encrypted_secret = &this->_acl_entries[entry.first].token;
-            priv = &entry.second->k();
+            auto it = this->doughnut()->other_keys().find(
+              elle::serialization::binary::serialize(e.key));
+            if (it != this->doughnut()->other_keys().end())
+            {
+              secret_buffer = it->second->k().open(e.token);
+              break;
+            }
           }
         }
-        if (!encrypted_secret)
+        if (secret_buffer.empty())
+        {
+          int idx = 0;
+          for (auto const& e: this->_acl_group_entries)
+          {
+            try
+            {
+              Group g(*this->doughnut(), e.key);
+              auto keys = g.group_keys();
+              int v = this->_group_version[idx];
+              if (v >= keys.size())
+              {
+                ELLE_DEBUG("announced version %s bigger than size %s",
+                           v, keys.size());
+                ++idx;
+                continue;
+              }
+              secret_buffer = keys[v].k().open(e.token);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_DEBUG("error accessing group: %s", e);
+            }
+            ++idx;
+          }
+        }
+        if (secret_buffer.empty())
         {
           // FIXME: better exceptions
           throw ValidationFailed("no read permissions");
         }
-        auto secret_buffer =
-          priv->open(*encrypted_secret);
         auto secret = elle::serialization::json::deserialize
           <cryptography::SecretKey>(secret_buffer);
         ELLE_DUMP("%s: secret: %s", *this, secret);
@@ -254,6 +271,68 @@ namespace infinit
         return std::make_pair(this->_world_readable, this->_world_writable);
       }
 
+      template <typename Block>
+      void
+      BaseACB<Block>::set_group_permissions(cryptography::rsa::PublicKey const& key,
+                           bool read,
+                           bool write)
+      {
+        ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
+                         *this, key, read, write);
+        auto& acl_entries = this->_acl_group_entries;
+        ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
+        auto it = std::find_if
+          (acl_entries.begin(), acl_entries.end(),
+           [&] (ACLEntry const& e) { return e.key == key; });
+        if (it == acl_entries.end())
+        {
+          if (!read && !write)
+          {
+            ELLE_DUMP("%s: new user with no read or write permissions, "
+                      "do nothing", *this);
+            return;
+          }
+          ELLE_DEBUG_SCOPE("%s: new user, insert ACL entry", *this);
+          // If the owner token is empty, this block was never pushed and
+          // sealing will generate a new secret and update the token.
+          elle::Buffer token;
+          Group g(*this->doughnut(), key);
+          if (this->_owner_token.size())
+          {
+            auto& k = this->keys() ? this->keys()->k() : this->doughnut()->keys().k();
+            auto secret = k.open(this->_owner_token);
+
+            token = g.current_public_key().seal(secret);
+          }
+          acl_entries.emplace_back(ACLEntry(key, read, write, token));
+          this->_group_version.push_back(g.version()-1);
+          this->_acl_changed = true;
+        }
+        else
+        {
+          if (!read && !write)
+          {
+            ELLE_DEBUG_SCOPE("%s: user (%s) no longer has read or write "
+                             "permissions, remove ACL entry", *this, key);
+            acl_entries.erase(it);
+            this->_group_version.erase(this->_group_version.begin()
+              + (it - acl_entries.begin()));
+            this->_acl_changed = true;
+            return;
+          }
+          ELLE_DEBUG_SCOPE("%s: edit ACL entry", *this);
+          if (it->read != read)
+          {
+            it->read = read;
+            this->_acl_changed = true;
+          }
+          if (it->write != write)
+          {
+            it->write = write;
+            this->_acl_changed = true;
+          }
+        }
+      }
       template <typename Block>
       void
       BaseACB<Block>::set_permissions(cryptography::rsa::PublicKey const& key,
@@ -323,7 +402,10 @@ namespace infinit
         try
         {
           auto& user = dynamic_cast<User const&>(user_);
-          this->set_permissions(user.key(), read, write);
+          if (user.name()[0] == '@')
+            this->set_group_permissions(user.key(), read, write);
+          else
+            this->set_permissions(user.key(), read, write);
         }
         catch (std::bad_cast const&)
         {
@@ -343,6 +425,10 @@ namespace infinit
         {
           if (e.key != *other->owner_key())
             other->set_permissions(e.key, e.read, e.write);
+        }
+        for (auto const& e: this->_acl_group_entries)
+        {
+          other->set_group_permissions(e.key, e.read, e.write);
         }
         if (*other->owner_key() != *this->owner_key())
           other->set_permissions(*this->owner_key(), true, true);
@@ -382,6 +468,28 @@ namespace infinit
           if (user)
             res.emplace_back(std::move(user), ent.read, ent.write);
         }
+        for (auto const& ent: this->_acl_group_entries)
+        {
+          try
+          {
+            std::unique_ptr<model::User> user;
+            if (ommit_names)
+              user.reset(new doughnut::User(ent.key, ""));
+            else
+              user = this->doughnut()->make_user(
+                elle::serialization::json::serialize(ent.key));
+            res.emplace_back(std::move(user), ent.read, ent.write);
+          }
+          catch(reactor::Terminate const& e)
+          {
+            throw;
+          }
+          catch(std::exception const& e)
+          {
+            ELLE_TRACE("Exception making user: %s", e);
+            res.emplace_back(elle::make_unique<model::User>(), ent.read, ent.write);
+          }
+        }
         return res;
       }
 
@@ -402,6 +510,7 @@ namespace infinit
           return blocks::ValidationResult::success();
         ELLE_DEBUG_SCOPE("%s: validate author part", *this);
         ACLEntry* entry = nullptr;
+        bool is_group_entry = false;
         if (this->_editor != -1)
         {
           ELLE_DEBUG_SCOPE("%s: check author has write permissions", *this);
@@ -412,11 +521,18 @@ namespace infinit
           }
           if (this->_editor >= signed(this->_acl_entries.size()))
           {
-            ELLE_DEBUG("%s: editor index out of bounds", *this);
-            return blocks::ValidationResult::failure
+            int gindex = this->_editor - this->_acl_entries.size();
+            if (gindex >= signed(this->_acl_group_entries.size()))
+            {
+              ELLE_DEBUG("%s: editor index out of bounds", *this);
+              return blocks::ValidationResult::failure
               ("editor index out of bounds");
+            }
+            entry = elle::unconst(&this->_acl_group_entries[gindex]);
+            is_group_entry = true;
           }
-          entry = elle::unconst(&this->_acl_entries[this->_editor]);
+          else
+            entry = elle::unconst(&this->_acl_entries[this->_editor]);
           if (!entry->write)
           {
             ELLE_DEBUG("%s: no write permissions", *this);
@@ -427,12 +543,25 @@ namespace infinit
                    *this, !!entry, this->data_signature())
         {
           auto sign = this->_data_sign();
-          auto& key = entry ? entry->key : *this->owner_key();
-          if (!this->_check_signature(key, this->data_signature(), sign, "data"))
+          if (is_group_entry)
+          { // fetch latest key for group
+            Group g(*this->doughnut(), entry->key);
+            auto key = g.current_public_key();
+            if (!this->_check_signature(key, this->data_signature(), sign, "data"))
+            {
+              ELLE_DEBUG("%s: group author signature invalid", *this);
+              throw Conflict("invalid group signature", this->clone(true));
+            }
+          }
+          else
           {
-            ELLE_DEBUG("%s: author signature invalid", *this);
-            return blocks::ValidationResult::failure
-              ("author signature invalid");
+            auto& key = entry ? entry->key : *this->owner_key();
+            if (!this->_check_signature(key, this->data_signature(), sign, "data"))
+            {
+              ELLE_DEBUG("%s: author signature invalid", *this);
+              return blocks::ValidationResult::failure
+                ("author signature invalid");
+            }
           }
         }
         return blocks::ValidationResult::success();
@@ -534,14 +663,29 @@ namespace infinit
             }
             ++idx;
           }
-          if (!owner && !found && !this->_world_writable)
+          for (auto& e: this->_acl_group_entries)
           {
-            // group search
-            auto hit = _find_token();
-            if (!hit.second)
-              throw ValidationFailed("not owner and no write permissions");
-            this->_editor = hit.first;
-            sign_keys = hit.second;
+            Group g(*this->doughnut(), e.key);
+            if (e.read)
+            {
+              e.token = g.current_public_key().seal(secret_buffer);
+            }
+            if (!owner && !found)
+            {
+              try
+              { // try signing with the latest key from this group
+                auto kp = g.current_key();
+                found = true;
+                this->_editor = idx;
+                this->_group_version[idx - this->_acl_entries.size()] = g.version()-1;
+                sign_keys = std::make_shared<cryptography::rsa::KeyPair>(kp);
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_DEBUG("Error accessing group: %s", e);
+              }
+            }
+            ++idx;
           }
           if (!sign_keys && this->_world_writable)
             sign_keys = this->doughnut()->keys_shared();
@@ -561,15 +705,11 @@ namespace infinit
           ELLE_DEBUG("%s: recompute signature: %s %s %s", *this,
             acl_changed, data_changed, this->_data_signature.running());
           // note: in world_writable mode, the signing key might not be
-          // present in the block, so signing might not be that important. 
+          // present in the block, so signing might not be that important.
           if (this->keys())
             sign_keys = std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>);
           if (!sign_keys)
-          {
-            auto hit = _find_token();
-            sign_keys = hit.second;
-          }
-          ELLE_ASSERT(sign_keys);
+            throw ValidationFailed("not owner and no write permissions");
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
             [sign_keys, to_sign]
@@ -616,6 +756,7 @@ namespace infinit
         s.serialize("data", this->Block::data());
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
+        s.serialize("group_acl", this->_acl_group_entries);
       }
 
       template <typename Block>
@@ -624,6 +765,9 @@ namespace infinit
       {
         s.serialize(
           "acls", elle::unconst(this)->_acl_entries,
+          elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
+        s.serialize(
+          "group_acls", elle::unconst(this)->_acl_group_entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
         // BREAKS BACKWARDS
         s.serialize("world_readable", this->_world_readable);
@@ -729,6 +873,8 @@ namespace infinit
         // BREAKS BACKWARD
         s.serialize("world_readable", this->_world_readable);
         s.serialize("world_writable", this->_world_writable);
+        s.serialize("group_acl", this->_acl_group_entries);
+        s.serialize("group_version", this->_group_version);
       }
 
       template

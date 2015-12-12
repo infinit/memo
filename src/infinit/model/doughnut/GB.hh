@@ -42,6 +42,9 @@ namespace infinit
         remove_admin(model::User const& user) override;
         virtual
         cryptography::rsa::PublicKey
+        current_public_key() override;
+        virtual
+        cryptography::rsa::KeyPair
         current_key() override;
         virtual
         std::vector<cryptography::rsa::KeyPair>
@@ -49,6 +52,9 @@ namespace infinit
         virtual
         std::vector<std::unique_ptr<model::User>>
         list_admins(bool ommit_names) override;
+        virtual
+        int
+        version() override;
       protected:
         virtual
         void
