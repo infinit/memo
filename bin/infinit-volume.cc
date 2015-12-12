@@ -171,61 +171,102 @@ static
 void
 add_path_to_finder_sidebar(std::string const& path)
 {
+  ELLE_DUMP("add to sidebar: %s", path);
   LSSharedFileListRef favorite_items =
     LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
   if (!favorite_items)
     return;
-  CFURLRef url = CFURLCreateFromFileSystemRepresentation(
-    kCFAllocatorDefault,
-    reinterpret_cast<const unsigned char*>(path.data()),
-    path.size(),
-    true);
-  LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
-    favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
-  if (url)
-    CFRelease(url);
-  if (item)
-    CFRelease(item);
+  CFStringRef path_str = CFStringCreateWithCString(
+    kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+  CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+  CFIndex count = CFArrayGetCount(items_array);
+  LSSharedFileListItemRef item_ref;
+  bool in_list = false;
+  for (CFIndex i = 0; i < count; i++)
+  {
+    item_ref =
+      (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+      item_ref,
+      kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      NULL);
+    if (item_url)
+    {
+      CFStringRef item_path = CFURLCopyPath(item_url);
+      if (CFStringHasPrefix(item_path, path_str))
+      {
+        ELLE_DEBUG("already in sidebar favorites: %s", path);
+        in_list = true;
+      }
+      if (item_path)
+        CFRelease(item_path);
+      if (item_url)
+        CFRelease(item_url);
+    }
+  }
+  if (items_array)
+    CFRelease(items_array);
+  if (path_str)
+    CFRelease(path_str);
+  if (!in_list)
+  {
+    CFURLRef url = CFURLCreateFromFileSystemRepresentation(
+      kCFAllocatorDefault,
+      reinterpret_cast<const unsigned char*>(path.data()),
+      path.size(),
+      true);
+    LSSharedFileListItemRef item = LSSharedFileListInsertItemURL(
+      favorite_items, kLSSharedFileListItemLast, NULL, NULL, url, NULL, NULL);
+    ELLE_DEBUG("added to sidebar favorites: %s", path);
+    if (url)
+      CFRelease(url);
+    if (item)
+      CFRelease(item);
+  }
+  if (favorite_items)
+    CFRelease(favorite_items);
 }
 
 static
 void
-remove_path_from_finder_sidebar(std::string const& path_)
+remove_path_from_finder_sidebar(std::string const& path)
 {
+  ELLE_DUMP("remove from sidebar: %s", path);
   LSSharedFileListRef favorite_items =
     LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
-  CFStringRef path = CFStringCreateWithCString(
-    kCFAllocatorDefault, path_.c_str(), kCFStringEncodingUTF8);
-  if (favorite_items)
+  if (!favorite_items)
+    return;
+  CFStringRef path_str = CFStringCreateWithCString(
+    kCFAllocatorDefault, path.c_str(), kCFStringEncodingUTF8);
+  CFArrayRef items_array = LSSharedFileListCopySnapshot(favorite_items, NULL);
+  CFIndex count = CFArrayGetCount(items_array);
+  LSSharedFileListItemRef item_ref;
+  for (CFIndex i = 0; i < count; i++)
   {
-    CFArrayRef items_array =
-      LSSharedFileListCopySnapshot(favorite_items, NULL);
-    CFIndex count = CFArrayGetCount(items_array);
-    LSSharedFileListItemRef item_ref;
-    for (CFIndex i = 0; i < count; i++)
+    item_ref =
+      (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
+    CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
+      item_ref,
+      kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
+      NULL);
+    if (item_url)
     {
-      item_ref =
-        (LSSharedFileListItemRef)CFArrayGetValueAtIndex(items_array, i);
-      CFURLRef item_url = LSSharedFileListItemCopyResolvedURL(
-        item_ref,
-        kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes,
-        NULL);
-      if (item_url)
+      CFStringRef item_path = CFURLCopyPath(item_url);
+      if (CFStringHasPrefix(item_path, path_str))
       {
-        CFStringRef item_path = CFURLCopyPath(item_url);
-        if (CFStringHasPrefix(item_path, path))
-          LSSharedFileListItemRemove(favorite_items, item_ref);
-        if (item_path)
-          CFRelease(item_path);
-        if (item_url)
-          CFRelease(item_url);
+        LSSharedFileListItemRemove(favorite_items, item_ref);
+        ELLE_DEBUG("found and removed item from sidebar: %s", path);
       }
+      if (item_path)
+        CFRelease(item_path);
+      if (item_url)
+        CFRelease(item_url);
     }
-    if (items_array)
-      CFRelease(items_array);
   }
-  if (path)
-    CFRelease(path);
+  if (items_array)
+    CFRelease(items_array);
+  if (path_str)
+    CFRelease(path_str);
   if (favorite_items)
     CFRelease(favorite_items);
 }
