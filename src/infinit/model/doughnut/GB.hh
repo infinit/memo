@@ -72,18 +72,13 @@ namespace infinit
         ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::PrivateKey>, master_key);
         ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::KeyPair>, group_keys);
         // stored stuff
-        ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::PublicKey>, group_public_keys);
-        // key is serialized public key because of a serialization glitch
-        // FIXME must not be versioned!
-        typedef
-        std::pair<elle::Buffer, elle::Buffer>
-        BufferPair;
-        typedef
-        std::vector<BufferPair>
-        CipheredMasterKey;
+        //due to serialization glitch (cant serialize pair
+        //with non-default-constructible type,
+        // use two vectors
+        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::PublicKey>, group_admins);
+        ELLE_ATTRIBUTE(std::vector<elle::Buffer>, ciphered_master_key);
 
-        ELLE_ATTRIBUTE(CipheredMasterKey, ciphered_master_key);
       public:
         typedef infinit::serialization_tag serialization_tag;
       };
