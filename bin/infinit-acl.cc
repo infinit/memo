@@ -334,7 +334,7 @@ COMMAND(group)
   bool create = flag(args, "create");
   bool verbose = flag(args, "verbose");
   bool fallback = flag(args, "fallback-xattrs");
-  bool load = flag(args, "load");
+  bool list = flag(args, "show");
   std::string path = mandatory<std::string>(args, "path", "path to filesystem");
   if (create)
     check(port_setxattr, path, "user.infinit.group.make", g, fallback);
@@ -346,8 +346,18 @@ COMMAND(group)
     check(port_setxattr, path, "user.infinit.group.addadmin", g + ":" + u , fallback);
   if (adm_rem) for (auto const& u: *adm_rem)
     check(port_setxattr, path, "user.infinit.group.removeadmin", g + ":" + u , fallback);
-  if (load)
-    check(port_setxattr, path, "user.infinit.group.load." + g, "", fallback);
+  if (list)
+  {
+    char res[16384];
+    int sz = port_getxattr(path, "user.infinit.group.list." + g, res, 16384, fallback);
+    if (sz >=0)
+    {
+      res[sz] = 0;
+      std::cout << res << std::endl;
+    }
+    else
+      throw std::runtime_error("group query failure");
+  }
 }
 
 int
@@ -392,6 +402,7 @@ main(int argc, char** argv)
       "[--user USERS] [OPTIONS...]",
       {
         { "name,n", value<std::string>(), "group name"},
+        { "show,s", bool_switch(), "list group users and admins"},
         { "create,c", bool_switch(), "create the group"},
         { "add,a", value<std::vector<std::string>>(), "users to add to group" },
         { "remove,r", value<std::vector<std::string>>(), "users to remove from group" },
@@ -400,7 +411,6 @@ main(int argc, char** argv)
         { "fallback-xattrs", bool_switch(), "fallback to creating xattrs "
           "folder if system xattrs are not suppported" },
         { "verbose", bool_switch(), "verbose output" },
-        { "load", bool_switch(), "load group keys (TEMPORARY)" },
         { "path,p", value<std::string>(), "path" },
       },
     }
