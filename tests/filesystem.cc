@@ -87,11 +87,7 @@ static int group_remove(bfs::path p, std::string const& gname, std::string const
   std::string cmd = gname + ":" + uname;
   return setxattr(p.c_str(), "user.infinit.group.remove", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
-static int group_load(bfs::path p, std::string const& gname)
-{
-  return setxattr(p.c_str(), ("user.infinit.group.load." + gname).c_str(), "", 0, 0
-    SXA_EXTRA);
-}
+
 static int group_add_admin(bfs::path p, std::string const& gname, std::string const& uname)
 {
   std::string cmd = gname + ":" + uname;
@@ -1214,7 +1210,7 @@ test_acl(bool paxos)
   setxattr(m0.c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   // expire directory cache
-  usleep(2100000);
+  usleep(1100000);
   // k1 can now list directory
   BOOST_CHECK_EQUAL(directory_count(m1), 1);
   // but the file is still not readable
@@ -1225,7 +1221,7 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(directory_count(m0), 1);
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK(can_access(m1/"test"));
   {
      boost::filesystem::ifstream ifs(m1 / "test");
@@ -1236,11 +1232,11 @@ test_acl(bool paxos)
   }
   setxattr((m0/"test").c_str(), "user.infinit.auth.clear",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(3100000);
+  usleep(100000);
   BOOST_CHECK(!can_access(m1/"test"));
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK(can_access(m1/"test"));
   bfs::create_directory(m0 / "dir1");
   BOOST_CHECK(touch(m0 / "dir1" / "pan"));
@@ -1249,7 +1245,7 @@ test_acl(bool paxos)
   BOOST_CHECK(!touch(m1 / "dir1" / "coin"));
   setxattr((m0 / "dir1").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK(can_access(m1 / "dir1"));
   BOOST_CHECK(!can_access(m1 / "dir1" / "pan"));
   BOOST_CHECK(touch(m1 / "dir1" / "coin"));
@@ -1258,7 +1254,7 @@ test_acl(bool paxos)
   BOOST_CHECK(!can_access(m1 / "byuser"));
   setxattr((m0 / "byuser").c_str(), "user.infinit.auth.setrw",
     "user1", strlen("user1"), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK(can_access(m1/"test"));
   BOOST_CHECK(can_access(m1 / "byuser"));
   // inheritance
@@ -1266,7 +1262,7 @@ test_acl(bool paxos)
   ELLE_LOG("setattrs");
   setxattr((m0 / "dirs").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 0);
   ELLE_LOG("setinherit");
   setxattr((m0 / "dirs").c_str(), "user.infinit.auth.inherit",
@@ -1275,7 +1271,7 @@ test_acl(bool paxos)
   touch(m0 / "dirs" / "coin");
   bfs::create_directory(m0 / "dirs" / "dir");
   touch(m0 / "dirs" / "dir" / "coin");
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK(can_access(m1 / "dirs" / "coin"));
   BOOST_CHECK(can_access(m1 / "dirs" / "dir" / "coin"));
   BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 2);
@@ -1286,7 +1282,7 @@ test_acl(bool paxos)
   BOOST_CHECK(touch(m0 / "dir2" / "coin"));
   setxattr((m0 / "dir2"/ "coin").c_str(), "user.infinit.auth.setr",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
@@ -1361,7 +1357,6 @@ test_acl(bool paxos)
   group_add(m0, "group1", "user1");
   setxattr((m0 / "g1").c_str(), "user.infinit.auth.setrw",
     "@group1", 7, 0 SXA_EXTRA);
-  group_load(m1, "group1");
   usleep(1100000);
   BOOST_CHECK_EQUAL(read(m1 / "g1"), "foo");
   group_remove(m0, "group1", "user1");
@@ -1370,7 +1365,6 @@ test_acl(bool paxos)
     "@group1", 7, 0 SXA_EXTRA);
   BOOST_CHECK_EQUAL(read(m1 / "g2"), "");
   group_add(m0, "group1", "user1");
-  group_load(m1, "group1");
   usleep(1100000);
   BOOST_CHECK_EQUAL(read(m1 / "g2"), "foo");
 
@@ -1381,7 +1375,6 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "g3"), "");
   setxattr((m1 / "g3").c_str(), "user.infinit.auth.setrw",
     "@group1", 7, 0 SXA_EXTRA);
-  group_load(m0, "group1");
   usleep(1100000);
   BOOST_CHECK_EQUAL(read(m0 / "g3"), "bar");
   BOOST_CHECK_EQUAL(group_remove_admin(m0, "group1", "user1"), 0);
@@ -1403,9 +1396,7 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(group_remove(m0, "group1","nosuch"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
-  group_load(m0, "group1");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
-  BOOST_CHECK_EQUAL(group_load(m0, "nosuch"), -1);
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   ELLE_LOG("test end");
 }

@@ -255,26 +255,15 @@ namespace infinit
     {
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
-      auto keys = dn->keys();
-      auto& other_keys = dn->other_keys();
-      auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
-      ELLE_ASSERT(acl);
-      auto res = umbrella([&] {
-        for (auto const& e: acl->list_permissions(*dn))
-        {
-          auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
-          if (!u)
-            continue;
-          auto hit = u->key() == keys.K()
-             || other_keys.find(std::hash<infinit::cryptography::rsa::PublicKey>()(u->key()))
-                != other_keys.end();
-          if (hit)
-            return std::make_pair(e.read, e.write);
-        }
-        return acl->get_world_permissions();
-        //throw rfs::Error(EACCES, "Access denied.");
-      });
-      return res;
+      auto acb = dynamic_cast<const model::doughnut::ACB*>(&block);
+      ELLE_ASSERT(acb);
+      auto res = dn->find_key(acb->acl_entries(), acb->owner_key(), false, false, true);
+      if (res.second == -1)
+        return std::make_pair(true, true);
+      else if (res.first && res.second >= 0)
+        return std::make_pair(acb->acl_entries()[res.second].read,
+                              acb->acl_entries()[res.second].write);
+      return elle::unconst(acb)->get_world_permissions();
     }
 
     void
@@ -283,28 +272,15 @@ namespace infinit
     {
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
-      auto keys = dn->keys();
-      auto& other_keys = dn->other_keys();
-      auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
-      ELLE_ASSERT(acl);
-      umbrella([&] {
-        for (auto const& e: acl->list_permissions(*dn))
-        {
-          auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
-          if (!u)
-            continue;
-          bool have_key = u->key() == keys.K()
-             || other_keys.find(std::hash<infinit::cryptography::rsa::PublicKey>()(u->key()))
-                != other_keys.end();
-          if (e.write >= w && e.read >= r && have_key)
-            return;
-        }
-        auto wp = acl->get_world_permissions();
-        if (wp.first < r || wp.second < w)
-        {
-          throw rfs::Error(EACCES, "Access denied.");
-        }
-      });
+      auto acb = dynamic_cast<const model::doughnut::ACB*>(&block);
+      auto res = dn->find_key(acb->acl_entries(), acb->owner_key(), r, w);
+      if (res.first)
+        return;
+      auto wp = elle::unconst(acb)->get_world_permissions();
+      if (wp.first < r || wp.second < w)
+      {
+        throw rfs::Error(EACCES, "Access denied.");
+      }
     }
   }
 }

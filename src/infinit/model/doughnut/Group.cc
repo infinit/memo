@@ -50,7 +50,10 @@ namespace infinit
                        gb->address(), gb->owner_key());
             auto ub = elle::make_unique<UB>(_name,
               gb->owner_key());
+            auto rub = elle::make_unique<UB>("@"+_name,
+              gb->current_key(), true);
             _dht.store(std::move(ub), STORE_INSERT);
+            _dht.store(std::move(rub), STORE_INSERT);
             _dht.store(std::move(gb), STORE_INSERT);
             ELLE_DEBUG("...done");
         });
@@ -159,6 +162,9 @@ namespace infinit
         auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
           OKBHeader::hash_address(key, group_block_key)));
         block->remove_member(user);
+        auto rub = elle::make_unique<UB>("@" + this->_name,
+          block->current_key(), true);
+        _dht.store(std::move(rub), STORE_INSERT);
         _dht.store(std::move(block));
       }
 

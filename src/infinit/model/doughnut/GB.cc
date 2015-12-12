@@ -71,8 +71,10 @@ namespace infinit
       void
       GB::_extract_group_keys()
       {
+        auto d = this->data();
+        ELLE_ASSERT(!d.empty());
         this->_group_keys = elle::serialization::binary::deserialize<
-          decltype(this->_group_keys)>(this->data());
+          decltype(this->_group_keys)>(d);
       }
       void
       GB::_extract_master_key()
@@ -92,23 +94,20 @@ namespace infinit
           return;
         }
         // look in other keys
-        for (auto const& key: this->doughnut()->other_keys())
+        std::vector<ACLEntry> dummy;
+        for (auto const& e: _ciphered_master_key)
+          dummy.emplace_back(elle::serialization::binary::deserialize
+            <cryptography::rsa::PublicKey>(e.first), true, true, elle::Buffer());
+        auto res = this->doughnut()->find_key(dummy, this->owner_key(), true, true);
+        if (res.first)
         {
-          sk = elle::serialization::binary::serialize(key.second->K());
-          auto it = std::find_if(_ciphered_master_key.begin(),
-          _ciphered_master_key.end(), [&](BufferPair const& bp)
-          {
-            return bp.first == sk;
-          });
-          if (it != this->_ciphered_master_key.end())
-          {
-            auto buf = key.second->k().open(it->second);
-            this->_master_key.emplace(elle::serialization::binary::deserialize<
+          ELLE_ASSERT(res.second >= 0);
+          auto buf = res.first->k().open(this->_ciphered_master_key[res.second].second);
+          this->_master_key.emplace(elle::serialization::binary::deserialize<
               cryptography::rsa::PrivateKey>(buf));
-          return;
-          }
         }
-        throw elle::Error("Access to master key denied.");
+        else
+          throw elle::Error("Access to master key denied.");
       }
       void
       GB::add_member(model::User const& user)
@@ -154,7 +153,6 @@ namespace infinit
           this->_ciphered_master_key.push_back(std::make_pair(sk,
             user.key().seal(ser_master)));
           this->_acl_changed = true;
-          this->_data_changed = true;
         }
         catch (std::bad_cast const&)
         {
@@ -180,7 +178,6 @@ namespace infinit
             throw elle::Error("No such user in admin list");
           this->_ciphered_master_key.erase(it);
           this->_acl_changed = true;
-          this->_data_changed = true;
         }
         catch (std::bad_cast const&)
         {
@@ -201,9 +198,7 @@ namespace infinit
             user.reset(new doughnut::User(this->owner_key(), ""));
           else
             user = this->doughnut()->make_user(
-                elle::serialization::serialize
-                <cryptography::rsa::PublicKey, elle::serialization::Json>(
-                  key));
+                elle::serialization::json::serialize(key));
             res.emplace_back(std::move(user));
         }
         return res;

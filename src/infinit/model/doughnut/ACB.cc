@@ -179,34 +179,16 @@ namespace infinit
       }
 
       template <typename Block>
-      std::pair<std::vector<ACLEntry>::const_iterator,
-                  std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
+      std::pair<int, std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
       BaseACB<Block>::_find_token() const
       {
-        auto& mine = this->doughnut()->keys().K();
-        if (mine == this->owner_key())
-          return std::make_pair(this->_acl_entries.end(),
-                                this->doughnut()->keys_shared());
-        auto it = std::find_if
-            (this->_acl_entries.begin(), this->_acl_entries.end(),
-             [&] (ACLEntry const& e) { return e.key == mine; });
-        if (it != this->_acl_entries.end())
-          return std::make_pair(it,
-            this->doughnut()->keys_shared());
-        // search in other keys
-        auto const& other_keys = this->doughnut()->other_keys();
-        for (auto it = this->_acl_entries.begin();
-             it != this->_acl_entries.end(); ++it)
-        {
-          ELLE_DEBUG("scanning %s", it->key);
-          auto hit = other_keys.find(std::hash<infinit::cryptography::rsa::PublicKey>()(it->key));
-          if (hit != other_keys.end())
-          {
-            ELLE_DEBUG("hit");
-            return std::make_pair(it, hit->second);
-          }
-        }
-        return std::make_pair(this->_acl_entries.end(), nullptr);
+        auto res = this->doughnut()->find_key(this->_acl_entries,
+                                              this->owner_key(),
+                                              false, false, true);
+        if (res.first)
+          return std::make_pair(res.second, res.first);
+        else
+          return std::make_pair(-2, nullptr);
       }
 
       template <typename Block>
@@ -229,10 +211,10 @@ namespace infinit
         {
           // FIXME: factor searching the token
           auto entry = this->_find_token();
-          if (entry.second && entry.first->read)
+          if (entry.second && this->_acl_entries[entry.first].read)
           {
-            ELLE_DEBUG("%s: we are an editor", *this);
-            encrypted_secret = &entry.first->token;
+            ELLE_DEBUG("%s: we are an editor at %s", *this, entry.first);
+            encrypted_secret = &this->_acl_entries[entry.first].token;
             priv = &entry.second->k();
           }
         }
@@ -558,7 +540,7 @@ namespace infinit
             auto hit = _find_token();
             if (!hit.second)
               throw ValidationFailed("not owner and no write permissions");
-            this->_editor = hit.first - this->_acl_entries.begin();
+            this->_editor = hit.first;
             sign_keys = hit.second;
           }
           if (!sign_keys && this->_world_writable)
@@ -576,7 +558,7 @@ namespace infinit
         if (acl_changed || data_changed ||
           (!this->_data_signature.running() && this->_data_signature.value().empty()))
         {
-          ELLE_LOG("%s: recompute signature: %s %s %s", *this,
+          ELLE_DEBUG("%s: recompute signature: %s %s %s", *this,
             acl_changed, data_changed, this->_data_signature.running());
           // note: in world_writable mode, the signing key might not be
           // present in the block, so signing might not be that important. 

@@ -749,20 +749,6 @@ namespace infinit
          model::doughnut::Group g(*dn, gn);
          g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
       }
-      else if (name.find("user.infinit.group.load.") == 0)
-      {
-        std::string value = name.substr(strlen("user.infinit.group.load."));
-        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-        model::doughnut::Group g(*dn, value);
-        auto keys = g.group_keys();
-        for (auto const& k: keys)
-        {
-          ELLE_DEBUG("registering %s", k.K());
-          dn->other_keys().insert(std::make_pair(
-            std::hash<infinit::cryptography::rsa::PublicKey>()(k.K()),
-            std::make_shared<infinit::cryptography::rsa::KeyPair>(k)));
-        }
-      }
       else
         Node::setxattr(name, value, flags);
     }

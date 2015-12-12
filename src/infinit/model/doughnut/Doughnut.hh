@@ -22,6 +22,7 @@ namespace infinit
   {
     namespace doughnut
     {
+      struct ACLEntry;
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
         , public std::enable_shared_from_this<Doughnut>
@@ -69,9 +70,18 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
         ELLE_ATTRIBUTE(elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
-        typedef std::unordered_map<uint64_t,
-          std::shared_ptr<infinit::cryptography::rsa::KeyPair>> KeyMap;
-        ELLE_ATTRIBUTE_RX(KeyMap, other_keys);
+        typedef std::unordered_map<elle::Buffer,
+          std::shared_ptr<const cryptography::rsa::KeyPair>> KeyMap;
+        ELLE_ATTRIBUTE_R(KeyMap, other_keys);
+        typedef std::unordered_map<cryptography::rsa::PublicKey,
+          std::string> KeyNameMap;
+        ELLE_ATTRIBUTE(KeyNameMap, key_names);
+      public:
+        std::pair<std::shared_ptr<const cryptography::rsa::KeyPair>, int>
+        find_key(std::vector<ACLEntry> const& entries,
+                 cryptography::rsa::PublicKey const& owner,
+                 bool read, bool write, bool best=false);
+
       protected:
         virtual
         std::unique_ptr<blocks::MutableBlock>

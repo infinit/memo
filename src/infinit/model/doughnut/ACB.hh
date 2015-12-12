@@ -69,7 +69,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE(bool, acl_changed, protected);
-        ELLE_ATTRIBUTE(std::vector<ACLEntry>, acl_entries);
+        ELLE_ATTRIBUTE_R(std::vector<ACLEntry>, acl_entries);
         ELLE_ATTRIBUTE_R(int, data_version, protected);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
         ELLE_ATTRIBUTE_R(bool, world_readable);
@@ -97,7 +97,7 @@ namespace infinit
         _decrypt_data(elle::Buffer const& data) const override;
         void
         _stored() override;
-        std::pair<typename std::vector<ACLEntry>::const_iterator,
+        std::pair<int,
                   std::shared_ptr<infinit::cryptography::rsa::KeyPair const>>
         _find_token() const;
         virtual
