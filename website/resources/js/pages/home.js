@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-  if ($('body').hasClass('home')) {
+  function launchTerminal() {
     $('body.home #commands').t(
       '<ins>1 </ins><mark>$></mark> infinit-storage --create --aws-s3 --name s3 --capacity 10TB' +
       '<ins>0.5</ins><ins>\nCreated storage "s3". \n\n</ins>' +
@@ -29,6 +29,17 @@ $(document).ready(function() {
         speed_vary: true
       }
     );
+  }
+
+  if ($('body').hasClass('home')) {
+    var has_reach_terminal = false;
+
+    $(window).scroll(function () {
+      if ($(window).scrollTop() > 700 && !has_reach_terminal) {
+        has_reach_terminal = true;
+        launchTerminal();
+      }
+    });
 
     if (window.location.hash === '#slack') {
       // $('#slack').magnificPopup('open');
