@@ -191,8 +191,10 @@ namespace infinit
           });
           // try to get on all connected peers sequentially to avoid wasting
           // bandwidth
+          int attempt = 0;
           for (auto peer: connected_peers)
           {
+            ++attempt;
             try
             {
               ELLE_TRACE_SCOPE("fetch from %s", *peer);
@@ -206,7 +208,7 @@ namespace infinit
           }
           // Some overlays may return peers even if they don't have the block,
           // so we have to return MissingBlock here.
-          ELLE_TRACE("all peers failed fetching %x", address);
+          ELLE_TRACE("all %s peers failed fetching %x", attempt, address);
           throw MissingBlock(address);
         }
 
