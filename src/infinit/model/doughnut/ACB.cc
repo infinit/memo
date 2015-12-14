@@ -757,6 +757,7 @@ namespace infinit
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
         s.serialize("group_acl", this->_acl_group_entries);
+        s.serialize("group_version", this->_acl_group_entries);
       }
 
       template <typename Block>
