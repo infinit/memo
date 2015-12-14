@@ -93,6 +93,11 @@ namespace infinit
           this->_extract_group_keys();
         return this->_group_keys;
       }
+      std::vector<cryptography::rsa::PublicKey>
+      GB::all_public_keys()
+      {
+        return this->_group_public_keys;
+      }
       void
       GB::_extract_group_keys()
       {

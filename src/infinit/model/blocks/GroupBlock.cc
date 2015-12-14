@@ -50,6 +50,11 @@ namespace infinit
       {
         throw elle::Error("Not implemented");
       }
+      std::vector<cryptography::rsa::PublicKey>
+      GroupBlock::all_public_keys()
+      {
+        throw elle::Error("Not implemented");
+      }
       void
       GroupBlock::add_admin(model::User const& user)
       {

@@ -234,6 +234,16 @@ namespace infinit
             return block->all_keys();
         });
       }
+      std::vector<cryptography::rsa::PublicKey>
+      Group::group_public_keys()
+      {
+        return filesystem::umbrella([&] {
+            auto key = public_control_key();
+            auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
+              OKBHeader::hash_address(key, group_block_key)));
+            return block->all_public_keys();
+        });
+      }
     }
   }
 }

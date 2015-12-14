@@ -48,6 +48,8 @@ namespace infinit
         remove_admin(elle::Buffer const& user_data);
         std::vector<cryptography::rsa::KeyPair>
         group_keys();
+        std::vector<cryptography::rsa::PublicKey>
+        group_public_keys();
       private:
         cryptography::rsa::KeyPair _control_key();
         typedef std::vector<cryptography::rsa::PublicKey> GroupPublicBlockContent;

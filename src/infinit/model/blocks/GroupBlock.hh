@@ -42,6 +42,9 @@ namespace infinit
         std::vector<cryptography::rsa::KeyPair>
         all_keys();
         virtual
+        std::vector<cryptography::rsa::PublicKey>
+        all_public_keys();
+        virtual
         int
         version();
         virtual

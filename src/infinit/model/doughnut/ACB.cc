@@ -513,6 +513,7 @@ namespace infinit
         ELLE_DEBUG_SCOPE("%s: validate author part", *this);
         ACLEntry* entry = nullptr;
         bool is_group_entry = false;
+        int group_index = -1;
         if (this->_editor != -1)
         {
           ELLE_DEBUG_SCOPE("%s: check author has write permissions", *this);
@@ -532,6 +533,7 @@ namespace infinit
             }
             entry = elle::unconst(&this->_acl_group_entries[gindex]);
             is_group_entry = true;
+            group_index = gindex;
           }
           else
             entry = elle::unconst(&this->_acl_entries[this->_editor]);
@@ -548,11 +550,17 @@ namespace infinit
           if (is_group_entry)
           { // fetch latest key for group
             Group g(*this->doughnut(), entry->key);
-            auto key = g.current_public_key();
+            auto pubkeys = g.group_public_keys();
+            if (group_index >= this->_group_version.size())
+              return blocks::ValidationResult::failure("group_version array too short");
+            auto key_index = this->_group_version[group_index];
+            if (key_index >= pubkeys.size())
+              return blocks::ValidationResult::failure("group key out of range");
+            auto& key = pubkeys[key_index];
             if (!this->_check_signature(key, this->data_signature(), sign, "data"))
             {
               ELLE_DEBUG("%s: group author signature invalid", *this);
-              throw Conflict("invalid group signature", this->clone(true));
+              return blocks::ValidationResult::failure("Incorrect group key signature");
             }
           }
           else

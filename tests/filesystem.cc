@@ -1361,6 +1361,19 @@ test_acl(bool paxos)
   group_add(m0, "group1", "user1");
   usleep(1100000);
   BOOST_CHECK_EQUAL(read(m1 / "g2"), "foo");
+  write(m1 / "g2", "bar");
+  // now block is signed with group key
+  usleep(1100000);
+  BOOST_CHECK_EQUAL(read(m0 / "g2"), "bar");
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "bar");
+  // force a group update
+  group_remove(m0, "group1", "user1");
+  usleep(1100000);
+  // check we can still fetch stuff
+  BOOST_CHECK_EQUAL(read(m0 / "g2"), "bar");
+  group_add(m0, "group1", "user1");
+  BOOST_CHECK_EQUAL(read(m0 / "g2"), "bar");
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "bar");
 
   ELLE_LOG("group admin");
   BOOST_CHECK_EQUAL(group_add_admin(m0, "group1", "user1"), 0);
