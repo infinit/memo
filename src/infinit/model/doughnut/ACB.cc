@@ -723,7 +723,22 @@ namespace infinit
           if (this->keys())
             sign_keys = std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>);
           if (!sign_keys)
-            throw ValidationFailed("not owner and no write permissions");
+          { // can happen if we didn't go through the if (data_changed)
+            // in that case _editor was set, we just lost the signature
+            if (this->_editor == -1
+              || this->_editor < signed(this->_acl_entries.size()))
+              sign_keys = this->doughnut()->keys_shared();
+            else if (this->_editor < signed(this->_acl_entries.size())
+                     + signed(this->_acl_group_entries.size()))
+            {
+              int gindex = this->_editor - signed(this->_acl_entries.size());
+              Group g(*this->doughnut(), this->_acl_group_entries[gindex].key);
+              auto kp = g.current_key();
+              sign_keys = std::make_shared<cryptography::rsa::KeyPair>(kp);
+            }
+            else
+              throw ValidationFailed("not owner and no write permissions");
+          }
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
             [sign_keys, to_sign]
