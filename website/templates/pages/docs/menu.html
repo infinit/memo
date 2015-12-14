@@ -26,6 +26,10 @@
     ##   </ul>
     ## </li>
 
+    <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
+      <a href="${route('doc_roadmap')}">Roadmap</a>
+    </li>
+
     <li ${'class="active"' if request.route.name == 'doc_reference' else ''}>
       <a href="${route('doc_reference')}">Reference</a>
 
@@ -42,10 +46,6 @@
         <li><a href="${route('doc_reference')}#drive">Drive</a></li>
       </ul>
     </li>
-
-    ## <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
-    ##   <a href="${route('doc_roadmap')}">Roadmap</a>
-    ## </li>
 
   </ul>
 </nav>

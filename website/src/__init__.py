@@ -106,7 +106,7 @@ class Website(bottle.Bottle):
       'description': 'Read the reference document detailing how to use the Infinit command-line tools, hub and more.',
     }
 
-  @route('/roadmap', name = 'doc_roadmap')
+  @route('/documentation/roadmap', name = 'doc_roadmap')
   @view('pages/docs/roadmap.html')
   def root(self):
     return {

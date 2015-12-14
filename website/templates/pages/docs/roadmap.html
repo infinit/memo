@@ -8,16 +8,368 @@
 
     <h1>Roadmap</h1>
 
-    <p>blabla</p> <br><br>
-
     <div class="roadmap">
-      <div class="step">
+
+      <div class="step soon">
         <div class="date">
-          July <br><span>2015</span>
+          Year <br><span>2016</span>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Byzantine fault tolerance</h2>
+          <p>Allow for the creation of untrustworthy networks (in which data is stored on storage resources that users may not trust) while ensuring reliability and security.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Locking</h2>
+          <p>Allow applications to lock file system objects to prevent other user/applications to use them.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Garbage collecting</h2>
+          <p>Operations in a decentralized file system may lead to unreferenced blocks consuming storage capacity, also known as orphan blocks. Such blocks should be deleted from time to time through a garbage collecting mechanism.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Storage reliability level</h2>
+          <p>Allow the administrator to define the reliability of storage resources/providers. For instance, S3 already replicates data internally while a standalone server does not.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Erasure coding</h2>
+          <p>Provide erasure coding as an alternative to bare replication to halve the storage capacity required to ensure data durability.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>LDAP</h2>
+          <p>Integrate with LDAP to retrieve the users, groups and permissions in an existing organization.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Heterogeneous storage contributions</h2>
+          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
+        </div>
+      </div>
+      <div class="step soon">
+        <div class="date">
+          Mar <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2>Local file system storage</h2>
-          <p>Support storing blocks on a local file system.</p>
+          <h2>Manual local caching</h2>
+          <p>Allow the end-user to specify which hierarchies of files and directories to keep local at any time for offline access.</p>
+        </div>
+      </div>
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Windows native file system integration</h2>
+          <p>Provide a native interface for Windows operating systems to mount Infinit file systems.</p>
+        </div>
+      </div>
+      <div class="step soon">
+        <div class="date">
+          Feb <br><span>2016</span>
+        </div>
+        <div class="desc">
+          <h2>Backblaze B2 storage resource</h2>
+          <p>Allow Backblaze B2 service to be used as a block storage resource.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Google Cloud Storage storage resource</h2>
+          <p>Allow Google Cloud Storage to be used as a block storage resource.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Erasure coding</h2>
+          <p>Provide erasure coding as an alternative to bare replication to halve the storage capacity required to ensure data durability.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>AWS S3 storage resource</h2>
+          <p>PAllow AWS S3 to be used as a block storage resource.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Scale up/down</h2>
+          <p>Allow to attach additional/detach storage resources and/or increase/decrease the storage capacity contributions from a device to an existing network, without incurring any interruption of service.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Windows SMB/NFS integrations</h2>
+          <p>Provide an NFS/SMB integration server to easily integrate in existing production environments.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <div class="date">
+          Jan <br><span>2016</span>
+        </div>
+        <div class="desc">
+          <h2>Storage contribution limit</h2>
+          <p>Allow one to specify the storage capacity to allocate when creating a storage.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Versioning</h2>
+          <p>Allow users to explore and roll-back to a previous version of a file.</p>
+        </div>
+      </div>
+
+      <div class="step soon">
+        <hr>
+        <div class="desc">
+          <h2>Group-based access control</h2>
+          <p>Allow users to organize themselves into groups and control access to files/directories to those groups.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Fine-grained passports</h2>
+          <p>Allow the administrator to issue passport for a user to act either as a client and/or server (preventing a user from attaching additional storage resources) but also to control whether a user can put and/or get blocks in the network.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Storage load network-wide balancing</h2>
+          <p>Support distributing the blocks across several storage nodes that contribute storage capacity through one or more storage resources.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Dynamic rebalancing</h2>
+          <p>Dynamically rebalancing some blocks to another nodes following the fault of a storage node in order to maintain the replication factor defined by the network administrator.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Dec <br><span>2015</span>
+        </div>
+        <div class="desc">
+          <h2>NAT traversal</h2>
+          <p>Improve the probability of connection by relying on NAT traversal if directly connection and uPnP failed.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>UPnP</h2>
+          <p>Offer nodes to configure, if available, their router to open a port to connect to other nodes in peer-to-peer.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Fault tolerance</h2>
+          <p>Detect failures (crash, disconnection etc.) and rely on the other replicas for the service to operate as usual without the users noticing something went wrong.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Multi-device user</h2>
+          <p>Provide users ways to transfer their user identities to another device.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Nov <br><span>2015</span>
+        </div>
+        <div class="desc">
+          <h2>Paxos consensus</h2>
+          <p>Introduce Paxos to reach consensus among the storage nodes responsible for the replicas of a specific piece of data.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Replication</h2>
+          <p>Define the replication factor for every block of every file system object (file, directory etc.) to be stored multiple times to ensure the durability and availability of the data.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Caching</h2>
+          <p>Introduce a caching mechanism to speed up operations.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Asynchronous operations</h2>
+          <p>Support operations being performed asynchronously meaning that system calls return once the operation is committed in the journal with the data modifications being later published throughout the storage network.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Oct <br><span>2015</span>
+        </div>
+        <div class="desc">
+          <h2>uTP</h2>
+          <p>Support for high-throughput data transmission through UDP-based network protocols.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Import SSH RSA key</h2>
+          <p>Allow users to import their existing SSH RSA key to work with Infinit.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Dropbox storage resource</h2>
+          <p>Allow Dropbox to be used as a block storage resource.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Google Drive storage resource</h2>
+          <p>Allow Google Drive to be used as a block storage resource.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Cloud storage services management</h2>
+          <p>Offer an easy way to manage credentials to cloud storage services, possibly by relying on the Infinit Hub.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Hub</h2>
+          <p>Introduce the Hub to ease the process of connecting cloud storage services, share networks/volumes/etc. with friends etc.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Passport</h2>
+          <p>Allow the network administrator to authorize other users to connect and possibly contribute additional storage capacity.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Access control list</h2>
+          <p>Allow users to control the permissions on their file system objects: files, directories etc.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Sept <br><span>2015</span>
+        </div>
+        <div class="desc">
+          <h2>Kelips overlay network</h2>
+          <p>Introduce the Kelips gossip-based overlay network.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>OS X native file system integration</h2>
+          <p>Support for a native integration through the FUSE kernel module on OS X.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Aug <br><span>2015</span>
+        </div>
+        <div class="desc">
+          <h2>Command-line tools</h2>
+          <p>Provide basic command-line tools to create users, storages, networks and volumes.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Linux native file system integration</h2>
+          <p>Support for a native integration through the FUSE Linux kernel module.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Multiple storage resources per server</h2>
+          <p>Allow nodes to attach several storage nodes and distribute blocks among those storages.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Block encryption</h2>
+          <p>Encrypt the data blocks with a key unique to the block.</p>
         </div>
       </div>
 
@@ -32,8 +384,8 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2>Overlay network</h2>
-          <p>Implement a simplistic know-everybody overlay network.</p>
+          <h2>Local storage resource</h2>
+          <p>Allow a local file system to act as a storage resource by storing blocks of encrypted data as local files.</p>
         </div>
       </div>
 
