@@ -137,6 +137,17 @@ namespace infinit
       {
         serialize(s);
       }
+      DirectoryConflictResolver(DirectoryConflictResolver&& b)
+      : _path(b._path)
+      , _owner(b._owner)
+      , _owner_allocated(b._owner_allocated)
+      , _op(b._op)
+      , _wptr(b._wptr)
+      {
+        b._owner_allocated = false;
+        b._owner = nullptr;
+      }
+
       DirectoryConflictResolver()
       : _owner(nullptr)
       {}
