@@ -136,6 +136,7 @@ namespace infinit
         , _data_signature()
         , _world_readable(false)
         , _world_writable(false)
+        , _serialized_version(serialization_tag::version)
       {}
 
       template <typename Block>
@@ -150,6 +151,7 @@ namespace infinit
         , _data_version(other._data_version)
         , _world_readable(other._world_readable)
         , _world_writable(other._world_writable)
+        , _serialized_version(other._serialized_version)
       {
         if (sealed_copy || !other._data_signature.running() || other.keys())
         {
@@ -595,6 +597,10 @@ namespace infinit
         elle::Bench::BenchScope scope(bench);
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
+        ELLE_TRACE("%s: _seal version %s -> %s",
+          *this, this->_serialized_version, serialization_tag::version);
+        this->_serialized_version = serialization_tag::version;
+
         std::shared_ptr<infinit::cryptography::rsa::KeyPair const> sign_keys;
         if (acl_changed)
         {
@@ -756,23 +762,29 @@ namespace infinit
         s.serialize("data", this->Block::data());
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
-        s.serialize("group_acl", this->_acl_group_entries);
-        s.serialize("group_version", this->_acl_group_entries);
+        if (this->_serialized_version > elle::Version(0, 3, 3))
+        {
+          s.serialize("group_acl", this->_acl_group_entries);
+          s.serialize("group_version", this->_acl_group_entries);
+        }
       }
 
       template <typename Block>
       void
       BaseACB<Block>::_sign(elle::serialization::SerializerOut& s) const
       {
+        ELLE_TRACE("%s: _sign version %s", *this, this->_serialized_version);
         s.serialize(
           "acls", elle::unconst(this)->_acl_entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
-        s.serialize(
-          "group_acls", elle::unconst(this)->_acl_group_entries,
-          elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
-        // BREAKS BACKWARDS
-        s.serialize("world_readable", this->_world_readable);
-        s.serialize("world_writable", this->_world_writable);
+        if (this->_serialized_version > elle::Version(0, 3, 3))
+        {
+          s.serialize(
+            "group_acls", elle::unconst(this)->_acl_group_entries,
+            elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
+          s.serialize("world_readable", this->_world_readable);
+          s.serialize("world_writable", this->_world_writable);
+        }
       }
 
       template <typename... T>
@@ -837,6 +849,8 @@ namespace infinit
         , _acl_changed(false)
         , _data_version(-1)
         , _data_signature()
+        , _world_readable(false)
+        , _world_writable(false)
         , _serialized_version(version)
       {
         this->_serialize(input, version);
@@ -856,6 +870,7 @@ namespace infinit
       BaseACB<Block>::_serialize(elle::serialization::Serializer& s,
                                  elle::Version const& version)
       {
+        ELLE_TRACE("%s: _serialize version %s", *this, version);
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
@@ -875,11 +890,13 @@ namespace infinit
           // cant't do anything here, we might have child classes and still
           // be in the constructor
         }
-        // BREAKS BACKWARD
-        s.serialize("world_readable", this->_world_readable);
-        s.serialize("world_writable", this->_world_writable);
-        s.serialize("group_acl", this->_acl_group_entries);
-        s.serialize("group_version", this->_group_version);
+        if (version > elle::Version(0, 3, 3))
+        {
+          s.serialize("world_readable", this->_world_readable);
+          s.serialize("world_writable", this->_world_writable);
+          s.serialize("group_acl", this->_acl_group_entries);
+          s.serialize("group_version", this->_group_version);
+        }
       }
 
       template
