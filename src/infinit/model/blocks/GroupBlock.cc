@@ -16,8 +16,9 @@ namespace infinit
       GroupBlock::GroupBlock(Address a, elle::Buffer data)
       : ACLBlock(a, data)
       {}
-      GroupBlock::GroupBlock(elle::serialization::Serializer& input)
-      : ACLBlock(input)
+      GroupBlock::GroupBlock(elle::serialization::Serializer& input,
+                             elle::Version const& version)
+      : ACLBlock(input, version)
       {}
       void
       GroupBlock::add_member(model::User const& user)

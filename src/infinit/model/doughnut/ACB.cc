@@ -829,28 +829,32 @@ namespace infinit
       `--------------*/
 
       template <typename Block>
-      BaseACB<Block>::BaseACB(elle::serialization::SerializerIn& input)
-        : Super(input)
+      BaseACB<Block>::BaseACB(elle::serialization::SerializerIn& input,
+                              elle::Version const& version)
+        : Super(input, version)
         , _editor(-2)
         , _owner_token()
         , _acl_changed(false)
         , _data_version(-1)
         , _data_signature()
+        , _serialized_version(version)
       {
-        this->_serialize(input);
+        this->_serialize(input, version);
       }
 
       template <typename Block>
       void
-      BaseACB<Block>::serialize(elle::serialization::Serializer& s)
+      BaseACB<Block>::serialize(elle::serialization::Serializer& s,
+                                elle::Version const& version)
       {
-        Super::serialize(s);
-        this->_serialize(s);
+        Super::serialize(s, version);
+        this->_serialize(s, version);
       }
 
       template <typename Block>
       void
-      BaseACB<Block>::_serialize(elle::serialization::Serializer& s)
+      BaseACB<Block>::_serialize(elle::serialization::Serializer& s,
+                                 elle::Version const& version)
       {
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);

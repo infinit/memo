@@ -131,8 +131,9 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      NB::NB(elle::serialization::SerializerIn& input)
-        : Super(input)
+      NB::NB(elle::serialization::SerializerIn& input,
+             elle::Version const& version)
+        : Super(input, version)
         , _doughnut(nullptr)
         , _owner(input.deserialize<cryptography::rsa::PublicKey>("owner"))
         , _name(input.deserialize<std::string>("name"))
@@ -142,9 +143,10 @@ namespace infinit
       }
 
       void
-      NB::serialize(elle::serialization::Serializer& s)
+      NB::serialize(elle::serialization::Serializer& s,
+                    elle::Version const& version)
       {
-        Super::serialize(s);
+        Super::serialize(s, version);
         this->_serialize(s);
       }
 

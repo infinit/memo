@@ -55,7 +55,8 @@ namespace infinit
         list_admins(bool ommit_names);
 
       public:
-        GroupBlock(elle::serialization::Serializer& input);
+        GroupBlock(elle::serialization::Serializer& input,
+                   elle::Version const& version);
       };
     }
   }

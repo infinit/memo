@@ -31,8 +31,9 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      ImmutableBlock::ImmutableBlock(elle::serialization::Serializer& input)
-        : Super(input)
+      ImmutableBlock::ImmutableBlock(elle::serialization::Serializer& input,
+                                     elle::Version const& version)
+        : Super(input, version)
       {}
 
       static const elle::serialization::Hierarchy<Block>::

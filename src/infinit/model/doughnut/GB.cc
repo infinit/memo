@@ -34,8 +34,9 @@ namespace infinit
         ELLE_TRACE("group created");
       }
 
-      GB::GB(elle::serialization::SerializerIn& s)
-      : Super(s)
+      GB::GB(elle::serialization::SerializerIn& s,
+             elle::Version const& version)
+      : Super(s, version)
       {
         s.serialize("group_public_keys", this->_group_public_keys);
         s.serialize("group_admins", this->_group_admins);
@@ -43,9 +44,10 @@ namespace infinit
         ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
       }
       void
-      GB::serialize(elle::serialization::Serializer& s)
+      GB::serialize(elle::serialization::Serializer& s,
+                    elle::Version const& version)
       {
-        Super::serialize(s);
+        Super::serialize(s, version);
         ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
         s.serialize("group_public_keys", this->_group_public_keys);
         s.serialize("group_admins", this->_group_admins);

@@ -95,10 +95,12 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        ACLBlock(elle::serialization::Serializer& input);
+        ACLBlock(elle::serialization::Serializer& input,
+                 elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
       private:
         void
         _serialize(elle::serialization::Serializer& input);

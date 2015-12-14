@@ -18,7 +18,7 @@ namespace infinit
     {
       class Block
         : public elle::Printable
-        , public elle::serialization::VirtuallySerializable<false>
+        , public elle::serialization::VirtuallySerializable<true>
         , public elle::Clonable<Block>
       {
       /*-------------.
@@ -85,9 +85,11 @@ namespace infinit
       `--------------*/
       public:
         static constexpr char const* virtually_serializable_key = "type";
-        Block(elle::serialization::Serializer& input);
+        Block(elle::serialization::Serializer& input,
+              elle::Version const& version);
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
         typedef infinit::serialization_tag serialization_tag;
 
       /*----------.

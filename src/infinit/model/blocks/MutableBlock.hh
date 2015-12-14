@@ -41,10 +41,12 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        MutableBlock(elle::serialization::Serializer& input);
+        MutableBlock(elle::serialization::Serializer& input,
+                     elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
       private:
         void
         _serialize(elle::serialization::Serializer& s);

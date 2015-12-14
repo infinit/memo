@@ -109,16 +109,18 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      ACLBlock::ACLBlock(elle::serialization::Serializer& input)
-        : Super(input)
+      ACLBlock::ACLBlock(elle::serialization::Serializer& input,
+                         elle::Version const& version)
+        : Super(input, version)
       {
         this->_serialize(input);
       }
 
       void
-      ACLBlock::serialize(elle::serialization::Serializer& s)
+      ACLBlock::serialize(elle::serialization::Serializer& s,
+                          elle::Version const& version)
       {
-        this->Super::serialize(s);
+        this->Super::serialize(s, version);
         this->_serialize(s);
       }
 

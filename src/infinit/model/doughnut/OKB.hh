@@ -166,10 +166,12 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        BaseOKB(elle::serialization::SerializerIn& input);
+        BaseOKB(elle::serialization::SerializerIn& input,
+                elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
         // Solve ambiguity between Block and OKBHedar wich both have the tag.
         typedef infinit::serialization_tag serialization_tag;
       private:

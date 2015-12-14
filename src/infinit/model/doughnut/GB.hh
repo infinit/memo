@@ -63,8 +63,10 @@ namespace infinit
         void
         _data_sign(elle::serialization::SerializerOut& s) const override;
       public:
-        GB(elle::serialization::SerializerIn& s);
-        void serialize(elle::serialization::Serializer& s) override;
+        GB(elle::serialization::SerializerIn& s,
+           elle::Version const& version);
+        void serialize(elle::serialization::Serializer& s,
+                       elle::Version const& version) override;
         GB(GB const& other, bool sealed_copy = true);
         virtual
         std::unique_ptr<blocks::Block>

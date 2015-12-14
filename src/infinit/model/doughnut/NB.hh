@@ -74,10 +74,12 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        NB(elle::serialization::SerializerIn& input);
+        NB(elle::serialization::SerializerIn& input,
+           elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
         void
         _serialize(elle::serialization::Serializer& input);
       };

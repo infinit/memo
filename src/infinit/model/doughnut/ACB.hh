@@ -76,6 +76,7 @@ namespace infinit
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
         ELLE_ATTRIBUTE_R(bool, world_readable);
         ELLE_ATTRIBUTE_R(bool, world_writable);
+        ELLE_ATTRIBUTE_R(elle::Version, serialized_version);
       protected:
         elle::Buffer const& data_signature() const;
 
@@ -171,13 +172,16 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        BaseACB(elle::serialization::SerializerIn& input);
+        BaseACB(elle::serialization::SerializerIn& input,
+                elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
       private:
         void
-        _serialize(elle::serialization::Serializer& input);
+        _serialize(elle::serialization::Serializer& input,
+                   elle::Version const& version);
       };
 
       typedef BaseACB<blocks::ACLBlock> ACB;

@@ -51,8 +51,9 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      MutableBlock::MutableBlock(elle::serialization::Serializer& input)
-        : Super(input)
+      MutableBlock::MutableBlock(elle::serialization::Serializer& input,
+                                 elle::Version const& version)
+        : Super(input, version)
         , _data_changed(false)
         , _is_local(false)
       {
@@ -60,9 +61,10 @@ namespace infinit
       }
 
       void
-      MutableBlock::serialize(elle::serialization::Serializer& s)
+      MutableBlock::serialize(elle::serialization::Serializer& s,
+                              elle::Version const& v)
       {
-        this->Super::serialize(s);
+        this->Super::serialize(s, v);
         this->_serialize(s);
       }
 

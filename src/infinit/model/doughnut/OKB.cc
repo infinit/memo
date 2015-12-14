@@ -385,8 +385,9 @@ namespace infinit
           typedef infinit::serialization_tag serialization_tag;
         };
 
-        SerializationContent(elle::serialization::SerializerIn& s)
-          : block(s)
+        SerializationContent(elle::serialization::SerializerIn& s,
+                             elle::Version const& version)
+          : block(s, version)
           , key(s.template deserialize<cryptography::rsa::PublicKey>("key"))
           , header(s.template deserialize<Header>("owner"))
           , version(s.template deserialize<int>("version"))
@@ -402,8 +403,9 @@ namespace infinit
       };
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(elle::serialization::SerializerIn& input)
-        : BaseOKB(SerializationContent(input))
+      BaseOKB<Block>::BaseOKB(elle::serialization::SerializerIn& input,
+                              elle::Version const& version)
+        : BaseOKB(SerializationContent(input, version))
       {
         input.serialize_context<Doughnut*>(this->_doughnut);
       }
@@ -423,9 +425,10 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseOKB<Block>::serialize(elle::serialization::Serializer& s)
+      BaseOKB<Block>::serialize(elle::serialization::Serializer& s,
+                                elle::Version const& version)
       {
-        this->Super::serialize(s);
+        this->Super::serialize(s, version);
         this->_serialize(s);
       }
 

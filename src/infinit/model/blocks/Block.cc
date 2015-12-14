@@ -108,13 +108,15 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      Block::Block(elle::serialization::Serializer& input)
+      Block::Block(elle::serialization::Serializer& input,
+                   elle::Version const& version)
       {
-        this->serialize(input);
+        this->serialize(input, version);
       }
 
       void
-      Block::serialize(elle::serialization::Serializer& s)
+      Block::serialize(elle::serialization::Serializer& s,
+                       elle::Version const&)
       {
         s.serialize("address", this->_address);
         s.serialize("data", this->_data);

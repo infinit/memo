@@ -44,7 +44,8 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        ImmutableBlock(elle::serialization::Serializer& input);
+        ImmutableBlock(elle::serialization::Serializer& input,
+                       elle::Version const& version);
       };
     }
   }

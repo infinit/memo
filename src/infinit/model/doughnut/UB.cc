@@ -91,17 +91,19 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      UB::UB(elle::serialization::SerializerIn& input)
-        : Super(input)
+      UB::UB(elle::serialization::SerializerIn& input,
+             elle::Version const& version)
+        : Super(input, version)
         , _name(input.deserialize<std::string>("name"))
         , _key(input.deserialize<cryptography::rsa::PublicKey>("key"))
         , _reverse(input.deserialize<bool>("reverse"))
       {}
 
       void
-      UB::serialize(elle::serialization::Serializer& s)
+      UB::serialize(elle::serialization::Serializer& s,
+                    elle::Version const& version)
       {
-        Super::serialize(s);
+        Super::serialize(s,version);
         this->_serialize(s);
       }
 
