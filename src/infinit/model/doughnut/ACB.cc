@@ -770,7 +770,7 @@ namespace infinit
         s.serialize("data", this->Block::data());
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
-        if (this->_serialized_version > elle::Version(0, 3, 3))
+        if (this->_serialized_version >= elle::Version(0, 4, 0))
         {
           s.serialize("group_acl", this->_acl_group_entries);
           s.serialize("group_version", this->_acl_group_entries);
@@ -785,7 +785,7 @@ namespace infinit
         s.serialize(
           "acls", elle::unconst(this)->_acl_entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
-        if (this->_serialized_version > elle::Version(0, 3, 3))
+        if (this->_serialized_version > elle::Version(0, 4, 0))
         {
           s.serialize(
             "group_acls", elle::unconst(this)->_acl_group_entries,
@@ -898,7 +898,7 @@ namespace infinit
           // cant't do anything here, we might have child classes and still
           // be in the constructor
         }
-        if (version > elle::Version(0, 3, 3))
+        if (version >= elle::Version(0, 4, 0))
         {
           s.serialize("world_readable", this->_world_readable);
           s.serialize("world_writable", this->_world_writable);
