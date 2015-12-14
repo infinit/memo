@@ -167,7 +167,7 @@ alice/cluster
 <p>Note that when linking a device to a network, you can decide to contribute storage from this new device. In the example below, Alice is going to connect one of her other devices, taking care to contribute storage capacity from her personal Network-Attached Storage (NAS).</p>
 <pre><code>$&gt; infinit-network --link --as alice --name cluster --storage nas
 Linked device to network "cluster".
-</code></pre><p>_<strong>NOTE</strong>: Keep in mind that the action of linking a device to a network must only be performed once on every new device.</p>
+</code></pre><p><em><strong>NOTE</strong>: Keep in mind that the action of linking a device to a network must only be performed once on every new device.</em></p>
 <h4 id="as-an-invitee">As an invitee</h4>
 <p>In this case, you should have <a href="#receive-a-passport">received</a>, through the Hub or manually, an invitation to join a network created by someone else. Such invitations are called <em>passports</em> and allow users to link their devices to the network they’ve been allowed to join.</p>
 <p>In order to link a device to a network, you must first retrieve its descriptor. This network descriptor can be fetched from the Hub through a single command:</p>
@@ -176,7 +176,7 @@ Fetched network "alice/cluster".
 </code></pre><p>You now have locally both the network descriptor and a passport allowing you to link new devices to it. Let’s link Bob&#39;s current device to Alice’s ‘cluster’ network. Note that one can decide to contribute additional storage capacity through the <code>&#8209;&#8209;storage</code> option.</p>
 <pre><code>$&gt; infinit-network --link --as bob --name alice/cluster
 Linked device to network "alice/cluster".
-</code></pre><p>_<strong>NOTE</strong>: This process must be repeated on every device, proving that Bob has indeed been allowed to join the network (via the passport) and that this device belongs to Bob.</p>
+</code></pre><p><em><strong>NOTE</strong>: This process must be repeated on every device, proving that Bob has indeed been allowed to join the network (via the passport) and that this device belongs to Bob.</em></p>
 <h2 id="passport">Passport</h2>
 <p>The <em>infinit-passport</em> binary can be used to allow other users to join one’s networks, granting them the right to link devices, contribute storage resources and potentially access files.</p>
 <h3 id="create-a-passport">Create a passport</h3>
@@ -254,7 +254,7 @@ everything is
 <p>In order to grant or revoke access to a file or directory, one simply has to rely on the <em>infinit-acl</em> binary, providing the path to the object to manage and the permissions to apply.</p>
 <p>The following grants Bob the permissions to read and write the root directory of Alice’s volume named ‘shared’.</p>
 <pre><code>$&gt; infinit-acl --set --path /mnt/shared/ --mode rw --user bob
-</code></pre><p><strong><em>NOTE</em>: Note that the <em>infinit-acl</em> binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more.</strong></p>
+</code></pre><p>_<strong>NOTE:</strong> The <em>infinit-acl</em> binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._</p>
 <p>From that point, Bob will be able to access the volume to read and write files/directories in the root directory of Alice&#39;s &#39;shared&#39; volume.</p>
 <h3 id="list-permissions">List permissions</h3>
 <p>Every user with the volume descriptor and the right permissions can very easily consult the Access Control List (ACL) associated with a file system object:</p>

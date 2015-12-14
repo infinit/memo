@@ -315,7 +315,7 @@ $> infinit-network --link --as alice --name cluster --storage nas
 Linked device to network "cluster".
 ```
 
-_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once on every new device.
+_**NOTE**: Keep in mind that the action of linking a device to a network must only be performed once on every new device._
 
 #### As an invitee ####
 
@@ -335,7 +335,7 @@ $> infinit-network --link --as bob --name alice/cluster
 Linked device to network "alice/cluster".
 ```
 
-_**NOTE**: This process must be repeated on every device, proving that Bob has indeed been allowed to join the network (via the passport) and that this device belongs to Bob.
+_**NOTE**: This process must be repeated on every device, proving that Bob has indeed been allowed to join the network (via the passport) and that this device belongs to Bob._
 
 Passport
 ------------
@@ -496,7 +496,7 @@ The following grants Bob the permissions to read and write the root directory of
 $> infinit-acl --set --path /mnt/shared/ --mode rw --user bob
 ```
 
-**_NOTE_: Note that the _infinit-acl_ binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more.**
+_**NOTE:** The _infinit-acl_ binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._
 
 From that point, Bob will be able to access the volume to read and write files/directories in the root directory of Alice's 'shared' volume.
 
