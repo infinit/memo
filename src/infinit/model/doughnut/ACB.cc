@@ -223,7 +223,7 @@ namespace infinit
               Group g(*this->doughnut(), e.key);
               auto keys = g.group_keys();
               int v = this->_group_version[idx];
-              if (v >= keys.size())
+              if (v >= signed(keys.size()))
               {
                 ELLE_DEBUG("announced version %s bigger than size %s",
                            v, keys.size());
@@ -551,10 +551,10 @@ namespace infinit
           { // fetch latest key for group
             Group g(*this->doughnut(), entry->key);
             auto pubkeys = g.group_public_keys();
-            if (group_index >= this->_group_version.size())
+            if (group_index >= signed(this->_group_version.size()))
               return blocks::ValidationResult::failure("group_version array too short");
             auto key_index = this->_group_version[group_index];
-            if (key_index >= pubkeys.size())
+            if (key_index >= signed(pubkeys.size()))
               return blocks::ValidationResult::failure("group key out of range");
             auto& key = pubkeys[key_index];
             if (!this->_check_signature(key, this->data_signature(), sign, "data"))
