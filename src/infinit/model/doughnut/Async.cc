@@ -90,46 +90,59 @@ namespace infinit
           this->_queue.close();
           if (!this->_journal_dir.empty())
           {
-            ELLE_TRACE_SCOPE("%s: restore journal from %s",
-                             *this, this->_journal_dir);
-            boost::filesystem::path p(_journal_dir);
-            std::vector<boost::filesystem::path> files;
-            for (auto it = boost::filesystem::directory_iterator(this->_journal_dir);
-                 it != boost::filesystem::directory_iterator();
-                 ++it)
-              files.push_back(it->path());
-            std::sort(
-              files.begin(),
-              files.end(),
-              [] (boost::filesystem::path const& a,
-                  boost::filesystem::path const& b) -> bool
-              {
-                return std::stoi(a.filename().string()) <
-                  std::stoi(b.filename().string());
-              });
-            for (auto const& p: files)
-            {
-              auto id = std::stoi(p.filename().string());
-              auto op = this->_load_op(id,
-                this->_queue.size() < this->_queue.max_size());
-              this->_next_index = std::max(id, this->_next_index);
-              if (this->_queue.size() < this->_queue.max_size())
-                this->_queue.put(op.index);
-              else
-              {
-                if (!this->_first_disk_index)
-                {
-                  ELLE_TRACE(
-                    "in-memory asynchronous queue at capacity at index %s",
-                    op.index);
-                  this->_first_disk_index = op.index;
-                }
-                op.block.reset();
-              }
-              this->_operations.emplace(std::move(op));
-            }
-            ELLE_TRACE("...done restoring journal");
+            this->_init_barrier.close();
+            _init_thread.reset(new reactor::Thread(elle::sprintf("%s init", *this),
+              [this] { this->_init();}));
           }
+          else
+            this->_init_barrier.open();
+        }
+        void
+        Async::_init()
+        {
+          reactor::sleep(100_ms);
+          elle::SafeFinally open_barrier([this] {
+              this->_init_barrier.open();
+          });
+         ELLE_TRACE_SCOPE("%s: restore journal from %s",
+                          *this, this->_journal_dir);
+         boost::filesystem::path p(_journal_dir);
+         std::vector<boost::filesystem::path> files;
+         for (auto it = boost::filesystem::directory_iterator(this->_journal_dir);
+              it != boost::filesystem::directory_iterator();
+              ++it)
+           files.push_back(it->path());
+         std::sort(
+           files.begin(),
+           files.end(),
+           [] (boost::filesystem::path const& a,
+               boost::filesystem::path const& b) -> bool
+           {
+             return std::stoi(a.filename().string()) <
+               std::stoi(b.filename().string());
+           });
+         for (auto const& p: files)
+         {
+           auto id = std::stoi(p.filename().string());
+           auto op = this->_load_op(id,
+             this->_queue.size() < this->_queue.max_size());
+           this->_next_index = std::max(id, this->_next_index);
+           if (this->_queue.size() < this->_queue.max_size())
+             this->_queue.put(op.index);
+           else
+           {
+             if (!this->_first_disk_index)
+             {
+               ELLE_TRACE(
+                 "in-memory asynchronous queue at capacity at index %s",
+                 op.index);
+               this->_first_disk_index = op.index;
+             }
+             op.block.reset();
+           }
+           this->_operations.emplace(std::move(op));
+         }
+         ELLE_TRACE("...done restoring journal");
         }
 
         Async::~Async()
@@ -139,7 +152,8 @@ namespace infinit
           // Wake up the thread if needed.
           if (this->_queue.size() == 0)
             this->_queue.put(0);
-          if (!reactor::wait(*this->_process_thread, 10_sec))
+          if (!reactor::wait(*this->_process_thread, 10_sec)
+            || !reactor::wait(*this->_init_thread, 10_sec))
             ELLE_WARN("forcefully kiling async process loop");
         }
 
@@ -253,6 +267,7 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
+          reactor::wait(this->_init_barrier);
           this->_queue.open();
           this->_push_op(
             Op(block->address(), std::move(block), mode, std::move(resolver)));
@@ -261,6 +276,7 @@ namespace infinit
         void
         Async::_remove(Address address)
         {
+          reactor::wait(this->_init_barrier);
           this->_queue.open();
           this->_push_op(Op(address, nullptr, {}));
         }
@@ -270,6 +286,10 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Async::_fetch(Address address, boost::optional<int> local_version)
         {
+          if (this->_init_thread && !this->_init_thread->done()
+            && reactor::scheduler().current() != this->_init_thread.get())
+            reactor::wait(this->_init_barrier);
+
           this->_queue.open();
           auto it = this->_operations.find(address);
           if (it != this->_operations.end())

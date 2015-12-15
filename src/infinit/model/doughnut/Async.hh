@@ -74,6 +74,8 @@ namespace infinit
           void
           _process_loop();
           void
+          _init();
+          void
           _push_op(Op op);
           Async::Op
           _load_op(boost::filesystem::path const& path, bool signature = true);
@@ -101,6 +103,8 @@ namespace infinit
           /// Background loop processing asynchronous operations.
           ELLE_ATTRIBUTE(bool, exit_requested);
           ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, process_thread);
+          ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, init_thread);
+          ELLE_ATTRIBUTE(reactor::Barrier, init_barrier);
         };
       }
     }
