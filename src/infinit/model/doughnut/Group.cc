@@ -24,17 +24,40 @@ namespace infinit
       namespace rfs = reactor::filesystem;
 
       static const elle::Buffer group_block_key = elle::Buffer("group", 5);
-
+      reactor::LocalStorage<std::vector<cryptography::rsa::PublicKey>>
+      Group::_stack;
 
       Group::Group(Doughnut& dht, std::string const& name)
         : _dht(dht)
         , _name(name)
-      {}
+      {
+      }
 
       Group::Group(Doughnut& dht, cryptography::rsa::PublicKey k)
       : _dht(dht)
       , _public_control_key(k)
-      {}
+      {
+        _stack_push();
+      }
+
+      Group::~Group()
+      {
+        if (!_public_control_key)
+          return;
+        if (_stack.Get().back() != _public_control_key)
+          ELLE_WARN("Group stack error");
+        else
+          _stack.Get().pop_back();
+      }
+
+      void
+      Group::_stack_push()
+      {
+        auto& s = _stack.Get();
+        if (std::find(s.begin(), s.end(), _public_control_key) != s.end())
+          throw elle::Error("Group loop");
+        s.push_back(*_public_control_key);
+      }
 
       void
       Group::create()
@@ -72,6 +95,7 @@ namespace infinit
         auto ub = elle::cast<UB>::runtime(
           _dht.fetch(UB::hash_address(_name)));
         _public_control_key.emplace(ub->key());
+        _stack_push();
         ELLE_DEBUG("public_control_key for %s is %s", _name, _public_control_key);
         return *_public_control_key;
       }
