@@ -552,6 +552,7 @@ namespace infinit
             if (key_index >= signed(pubkeys.size()))
               return blocks::ValidationResult::failure("group key out of range");
             auto& key = pubkeys[key_index];
+            ELLE_DEBUG("validating with group key %s: %s", key_index, key);
             if (!this->_check_signature(key, this->data_signature(), sign, "data"))
             {
               ELLE_DEBUG("%s: group author signature invalid", *this);
@@ -590,6 +591,8 @@ namespace infinit
             {
               if (this->_group_version[i] > acb->_group_version[j])
               {
+                ELLE_TRACE("Group key index downgraded: %s -> %s",
+                         this->_group_version, acb->_group_version);
                 return blocks::ValidationResult::conflict(
                   "Group key index downgraded.");
               }
@@ -706,6 +709,7 @@ namespace infinit
             if (e.read)
             {
               e.token = g.current_public_key().seal(secret_buffer);
+              this->_group_version[idx - this->_acl_entries.size()] = g.version()-1;
             }
             if (!owner && !found)
             {
@@ -714,8 +718,8 @@ namespace infinit
                 auto kp = g.current_key();
                 found = true;
                 this->_editor = idx;
-                this->_group_version[idx - this->_acl_entries.size()] = g.version()-1;
                 sign_keys = std::make_shared<cryptography::rsa::KeyPair>(kp);
+                ELLE_DEBUG("Signing with group key %s: %s", g.version()-1, kp.K());
               }
               catch (elle::Error const& e)
               {
@@ -756,7 +760,7 @@ namespace infinit
             {
               int gindex = this->_editor - signed(this->_acl_entries.size());
               Group g(*this->doughnut(), this->_acl_group_entries[gindex].key);
-              auto kp = g.current_key();
+              auto kp = g.group_keys()[this->_group_version[gindex]];
               sign_keys = std::make_shared<cryptography::rsa::KeyPair>(kp);
             }
             else
