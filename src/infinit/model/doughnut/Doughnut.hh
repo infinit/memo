@@ -70,9 +70,6 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
         ELLE_ATTRIBUTE(elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
-        typedef std::unordered_map<elle::Buffer,
-          std::shared_ptr<const cryptography::rsa::KeyPair>> KeyMap;
-        ELLE_ATTRIBUTE_R(KeyMap, other_keys);
       public:
 
       protected:

@@ -65,11 +65,7 @@ namespace infinit
           nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
-      {
-        this->_other_keys.insert(std::make_pair(
-          elle::serialization::binary::serialize(this->_keys->K()),
-          this->_keys));
-      }
+      {}
 
       Doughnut::Doughnut(Address id,
                          std::string const& name,

@@ -259,17 +259,13 @@ namespace infinit
       auto acb = dynamic_cast<const model::doughnut::ACB*>(&block);
       bool r = false, w = false;
       ELLE_ASSERT(acb);
-      if (dn->other_keys().find(
-          elle::serialization::binary::serialize(acb->owner_key()))
-        != dn->other_keys().end())
+      if (dn->keys().K() == acb->owner_key())
         return std::make_pair(true, true);
       for (auto const& e: acb->acl_entries())
       {
         if (e.read <= r && e.write <= w)
           continue; // this entry doesnt add any perm
-        auto it = dn->other_keys().find(
-          elle::serialization::binary::serialize(e.key));
-        if (it != dn->other_keys().end())
+        if (e.key == dn->keys().K())
         {
           r = r || e.read;
           w = w || e.write;

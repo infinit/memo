@@ -204,13 +204,8 @@ namespace infinit
           // FIXME: factor searching the token
           for (auto const& e: this->_acl_entries)
           {
-            auto it = this->doughnut()->other_keys().find(
-              elle::serialization::binary::serialize(e.key));
-            if (it != this->doughnut()->other_keys().end())
-            {
-              secret_buffer = it->second->k().open(e.token);
-              break;
-            }
+            if (e.key == this->doughnut()->keys().K())
+              secret_buffer = this->doughnut()->keys().k().open(e.token);
           }
         }
         if (secret_buffer.empty())
