@@ -95,6 +95,19 @@ namespace infinit
         return ValidationResult::success();
       }
 
+      ValidationResult
+      Block::validate(Block const& new_block) const
+      {
+        ELLE_DEBUG_SCOPE("%s: validate %s", *this, new_block);
+        return this->_validate(new_block);
+      }
+
+      ValidationResult
+      Block::_validate(Block const& new_block) const
+      {
+        return ValidationResult::success();
+      }
+
       void
       Block::stored()
       {

@@ -294,6 +294,13 @@ namespace infinit
               throw ValidationFailed(res.reason());
           auto& decision = this->_addresses.at(address);
           auto& paxos = decision.paxos;
+          if (auto highest = paxos.highest_accepted())
+          {
+            auto& val = highest->value;
+            auto valres = val->validate(*value);
+            if (!valres)
+              throw Conflict("peer validation failed", value->clone());
+          }
           auto res = paxos.accept(std::move(peers), p, value);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");

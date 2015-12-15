@@ -67,6 +67,8 @@ namespace infinit
         seal();
         ValidationResult
         validate() const;
+        ValidationResult
+        validate(const Block& new_block) const;
         void
         stored(); // called right after a successful store
       protected:
@@ -76,6 +78,9 @@ namespace infinit
         virtual
         ValidationResult
         _validate() const;
+        virtual
+        ValidationResult
+        _validate(const Block& new_block) const;
         virtual
         void
         _stored();

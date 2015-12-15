@@ -97,14 +97,15 @@ namespace infinit
         ELLE_DEBUG("%s: validate block", *this)
           if (auto res = block.validate()); else
             throw ValidationFailed(res.reason());
-        if (auto* mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
-          try
+        try
+        {
+          auto previous_buffer = this->_storage->get(block.address());
+          elle::IOStream s(previous_buffer.istreambuf());
+          typename elle::serialization::binary::SerializerIn input(s);
+          input.set_context<Doughnut*>(&this->_doughnut);
+          auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+          if (auto* mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
           {
-            auto previous_buffer = this->_storage->get(block.address());
-            elle::IOStream s(previous_buffer.istreambuf());
-            typename elle::serialization::binary::SerializerIn input(s);
-            input.set_context<Doughnut*>(&this->_doughnut);
-            auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
             auto mprevious =
               dynamic_cast<blocks::MutableBlock const*>(previous.get());
             if (!mprevious)
@@ -115,8 +116,12 @@ namespace infinit
                               mblock->version(), mprevious->version()),
                 std::move(previous));
           }
-          catch (storage::MissingKey const&)
-          {}
+          auto vr = previous->validate(block);
+          if (!vr)
+            throw Conflict(vr.reason(), std::move(previous));
+        }
+        catch (storage::MissingKey const&)
+        {}
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());

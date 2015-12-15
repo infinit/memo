@@ -572,6 +572,34 @@ namespace infinit
         return blocks::ValidationResult::success();
       }
 
+      template <typename Block>
+      blocks::ValidationResult
+      BaseACB<Block>::_validate(blocks::Block const& new_block) const
+      {
+        auto acb = dynamic_cast<Self const*>(&new_block);
+        if (!acb)
+          return blocks::ValidationResult::failure("New block is not an ACB");
+        // check non-regression of group signature indexes
+        if (acb->_group_version.size() != acb->_acl_group_entries.size())
+          return blocks::ValidationResult::failure("Mismatch size in group entries");
+        for (int i=0; i<signed(this->_group_version.size()); ++i)
+        {
+          for (int j=0; j<signed(acb->_group_version.size()); ++j)
+          {
+            if (this->_acl_group_entries[i].key == acb->_acl_group_entries[j].key)
+            {
+              if (this->_group_version[i] > acb->_group_version[j])
+              {
+                return blocks::ValidationResult::conflict(
+                  "Group key index downgraded.");
+              }
+              break;
+            }
+          }
+        }
+        return blocks::ValidationResult::success();
+      }
+
       template <typename T>
       static
       void

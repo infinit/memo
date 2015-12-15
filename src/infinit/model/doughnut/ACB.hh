@@ -153,6 +153,9 @@ namespace infinit
         blocks::ValidationResult
         _validate() const override;
         virtual
+        blocks::ValidationResult
+        _validate(blocks::Block const& new_block) const override;
+        virtual
         void
         _seal() override;
         void
