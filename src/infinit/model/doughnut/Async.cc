@@ -314,35 +314,58 @@ namespace infinit
               if (_exit_requested)
                 break;
               auto it = this->_operations.get<1>().begin();
-              auto& op = *it;
-              ELLE_ASSERT_EQ(op.index, index);
-              Address addr = op.address;
+              Op const* op = &*it;
+              bool must_delete = false;
+              ELLE_ASSERT_EQ(op->index, index);
+              Address addr = op->address;
               ELLE_TRACE_SCOPE("%s: process %s", *this, op);
-              boost::optional<StoreMode> mode = op.mode;
-              if (!mode)
+              boost::optional<StoreMode> mode = op->mode;
+              int attempt = 0;
+              while (true)
+              {
                 try
                 {
-                  this->_backend->remove(addr);
+                  if (!mode)
+                    try
+                    {
+                      this->_backend->remove(addr);
+                    }
+                    catch (MissingBlock const&)
+                    {
+                      // Nothing: block was already removed.
+                    }
+                  else
+                  {
+                    this->_backend->store(
+                      std::move(elle::unconst(op)->block),
+                      *mode,
+                      std::move(elle::unconst(op)->resolver));
+                  }
+                  break;
                 }
-                catch (MissingBlock const&)
+                catch (elle::Error const& e)
                 {
-                  // Nothing: block was already removed.
+                  ELLE_LOG("error in async loop: %s", e);
+                  ++attempt;
+                  reactor::sleep(std::min(20000_ms,
+                    boost::posix_time::milliseconds(200 * attempt)));
+                  // reload block and try again
+                  if (must_delete)
+                    delete op;
+                  op = new Op(_load_op(op->index));
+                  must_delete = true;
                 }
-              else
-              {
-                this->_backend->store(
-                  std::move(elle::unconst(op).block),
-                  *mode,
-                  std::move(elle::unconst(op).resolver));
               }
               if (!this->_journal_dir.empty())
               {
                 auto path = boost::filesystem::path(this->_journal_dir) /
-                  std::to_string(op.index);
+                  std::to_string(op->index);
                 boost::filesystem::remove(path);
-                _last_processed_index = op.index;
+                _last_processed_index = op->index;
               }
               this->_operations.get<1>().erase(it);
+              if (must_delete)
+                delete op;
             }
             catch (elle::Error const& e)
             {
