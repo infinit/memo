@@ -34,7 +34,8 @@ class Website(bottle.Bottle):
       'description': 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.',
     }
 
-  @route('/documenation/overview', name = 'doc_overview')
+  @route('/documentation', name = 'doc_overview')
+  @route('/documentation/overview', name = 'doc_overview')
   @view('pages/docs/overview.html')
   def root(self):
     return {
