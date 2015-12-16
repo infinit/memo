@@ -584,6 +584,24 @@ test_filesystem(bool dht,
   bfs::file_size(mount / "foo", erc);
   BOOST_CHECK_EQUAL(true, !!erc);
 
+  char buffer[16384];
+  //truncate
+  {
+    bfs::ofstream ofs(mount / "tt");
+    for (int i=0; i<100; ++i)
+      ofs.write(buffer, 16384);
+  }
+  int tfd = open( (mount / "tt").c_str(), O_RDWR);
+  ftruncate(tfd, 0);
+  write(tfd, buffer, 16384);
+  write(tfd, buffer, 12288);
+  write(tfd, buffer, 3742);
+  ftruncate(tfd, 32414);
+  ftruncate(tfd, 32413);
+  close(tfd);
+  BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
+
+  bfs::remove(mount / "tt");
   struct stat st;
   // hardlink
 #ifndef INFINIT_MACOSX
