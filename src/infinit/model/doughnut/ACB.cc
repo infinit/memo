@@ -234,6 +234,8 @@ namespace infinit
           ELLE_DEBUG_SCOPE("%s: new user, insert ACL entry", *this);
           // If the owner token is empty, this block was never pushed and
           // sealing will generate a new secret and update the token.
+          // FIXME: the block will always be sealed anyway, why encrypt a token
+          // now ?
           elle::Buffer token;
           if (this->_owner_token.size())
           {
@@ -296,8 +298,6 @@ namespace infinit
         if (*other->owner_key() != *this->owner_key())
           other->set_permissions(*this->owner_key(), true, true);
       }
-
-
 
       std::vector<ACB::Entry>
       ACB::_list_permissions(boost::optional<Model const&> model)
@@ -433,7 +433,7 @@ namespace infinit
             key = secret;
           }
           ELLE_DUMP("%s: new block secret: %s", *this, key.get());
-          elle::serialization::json::serialize(key.get());
+          secret_buffer = elle::serialization::json::serialize(key.get());
           this->_owner_token = this->owner_key()->seal(secret_buffer);
           bool found = false;
           int idx = 0;
