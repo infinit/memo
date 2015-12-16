@@ -395,7 +395,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 {
   DHTs dhts(paxos);
   auto block = elle::make_unique<dht::NB>(
-    dhts.dht_a.get(), dhts.keys_a->K(), "blockname",
+    dhts.dht_a->keys_shared(), dhts.keys_a->K(), "blockname",
     elle::Buffer("blockdata", 9));
   ELLE_LOG("owner: store NB")
     dhts.dht_a->store(*block);

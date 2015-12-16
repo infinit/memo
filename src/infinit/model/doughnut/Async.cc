@@ -188,8 +188,8 @@ namespace infinit
         {
           boost::filesystem::ifstream is(p, std::ios::binary);
           elle::serialization::binary::SerializerIn sin(is, false);
-          sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
-          sin.set_context<Doughnut*>(&this->doughnut());
+          sin.set_context<std::shared_ptr<cryptography::rsa::KeyPair>>
+            (this->doughnut().keys_shared());
           sin.set_context(ACBDontWaitForSignature{});
           sin.set_context(OKBDontWaitForSignature{});
           if (!signature)

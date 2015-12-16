@@ -239,7 +239,8 @@ namespace infinit
             ELLE_TRACE("create missing root bootstrap block")
             {
               auto nb = elle::make_unique<model::doughnut::NB>(
-                dn.get(), dn->owner(), this->_volume_name + ".root", baddr);
+                dn->keys_shared(), dn->owner(),
+                this->_volume_name + ".root", baddr);
               this->store_or_die(std::move(nb), model::STORE_INSERT);
             }
             return mb;

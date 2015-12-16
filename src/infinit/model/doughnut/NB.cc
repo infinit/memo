@@ -20,19 +20,20 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      NB::NB(Doughnut* doughnut,
+      NB::NB(std::shared_ptr<cryptography::rsa::KeyPair> keys,
              infinit::cryptography::rsa::PublicKey owner,
              std::string name,
              elle::Buffer data)
         : Super(NB::address(owner, name), std::move(data))
-        , _doughnut(std::move(doughnut))
+        , _keys(std::move(keys))
         , _owner(std::move(owner))
         , _name(std::move(name))
+        , _signature()
       {}
 
       NB::NB(NB const& other)
         : Super(other)
-        , _doughnut(other._doughnut)
+        , _keys(other._keys)
         , _owner(other._owner)
         , _name(other._name)
         , _signature(other._signature)
@@ -66,9 +67,9 @@ namespace infinit
       void
       NB::_seal()
       {
-        ELLE_ASSERT_EQ(this->doughnut()->keys().K(), this->owner());
+        ELLE_ASSERT_EQ(this->keys()->K(), this->owner());
         auto sign = this->_data_sign();
-        auto const& key = this->doughnut()->keys().k();
+        auto const& key = this->keys()->k();
         this->_signature = key.sign(sign);
       }
 
@@ -118,12 +119,13 @@ namespace infinit
 
       NB::NB(elle::serialization::SerializerIn& input)
         : Super(input)
-        , _doughnut(nullptr)
+        , _keys(nullptr)
         , _owner(input.deserialize<cryptography::rsa::PublicKey>("owner"))
         , _name(input.deserialize<std::string>("name"))
         , _signature(input.deserialize<elle::Buffer>("signature"))
       {
-        input.serialize_context<Doughnut*>(this->_doughnut);
+        input.serialize_context<std::shared_ptr<cryptography::rsa::KeyPair>>
+          (this->_keys);
       }
 
       void

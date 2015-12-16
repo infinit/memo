@@ -194,7 +194,7 @@ namespace infinit
         if (s.in())
         {
           infinit::model::Model* model = nullptr;
-          const_cast<elle::serialization::Context&>(s.context()).get(model);
+          s.serialize_context(model);
           ELLE_ASSERT(model);
           _owner_allocated = true;
           _owner = new FileSystem("", std::shared_ptr<model::Model>(model));

@@ -217,7 +217,8 @@ namespace infinit
               PaxosServer::Quorum,
               Address,
               PaxosClient::Proposal const&)>("propose");
-            propose.set_context<Doughnut*>(&this->_doughnut);
+            propose.set_context<std::shared_ptr<cryptography::rsa::KeyPair>>
+              (this->_doughnut.keys_shared());
             return propose(peers, address, p);
           });
         }
@@ -234,7 +235,8 @@ namespace infinit
               Address,
               Paxos::PaxosClient::Proposal const&,
               std::shared_ptr<blocks::Block> const&)>("accept");
-            accept.set_context<Doughnut*>(&this->_doughnut);
+            accept.set_context<std::shared_ptr<cryptography::rsa::KeyPair>>
+              (this->_doughnut.keys_shared());
             return accept(peers, address, p, value);
           });
         }
@@ -256,7 +258,8 @@ namespace infinit
             {
               auto buffer = this->storage()->get(address);
               elle::serialization::Context context;
-              context.set<Doughnut*>(&this->doughnut());
+              context.set<std::shared_ptr<cryptography::rsa::KeyPair>>
+                (this->doughnut().keys_shared());
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
@@ -363,7 +366,8 @@ namespace infinit
             try
             {
               elle::serialization::Context context;
-              context.set<Doughnut*>(&this->doughnut());
+              context.set<std::shared_ptr<cryptography::rsa::KeyPair>>
+                (this->doughnut().keys_shared());
               auto data =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   this->storage()->get(address), true, context);

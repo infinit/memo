@@ -52,7 +52,7 @@ namespace infinit
         ~Doughnut();
         cryptography::rsa::KeyPair const&
         keys() const;
-        std::shared_ptr<cryptography::rsa::KeyPair const>
+        std::shared_ptr<cryptography::rsa::KeyPair>
         keys_shared() const;
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
