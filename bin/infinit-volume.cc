@@ -345,7 +345,6 @@ COMMAND(run)
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
     auto mountpoint = optional(args, "mountpoint");
-    auto add_to_sidebar = flag(args, "finder-sidebar");
     auto fs = volume.run(std::move(model),
                          mountpoint
 #ifdef INFINIT_MACOSX
@@ -354,6 +353,7 @@ COMMAND(run)
 #endif
                          );
 #ifdef INFINIT_MACOSX
+    auto add_to_sidebar = flag(args, "finder-sidebar");
     if (add_to_sidebar && mountpoint)
     {
       reactor::background([mountpoint]
