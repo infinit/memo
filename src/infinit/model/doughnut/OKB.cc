@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <infinit/model/doughnut/OKB.hh>
 
 #include <elle/bench.hh>
@@ -11,7 +13,6 @@
 
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
 
@@ -21,15 +22,22 @@ namespace infinit
   {
     namespace doughnut
     {
-      OKBHeader::OKBHeader(cryptography::rsa::KeyPair const& keys)
-        : _owner_key(keys.K())
+      OKBHeader::OKBHeader(cryptography::rsa::KeyPair const& keys,
+                           boost::optional<elle::Buffer> salt)
+        : _owner_key(keys.public_key())
         , _signature()
       {
-        this->_salt = cryptography::random::generate<elle::Buffer>(24);
-        uint64_t now = (boost::posix_time::microsec_clock::universal_time()
-          - boost::posix_time::ptime(boost::posix_time::min_date_time))
-          .total_milliseconds();
-        _salt.append(&now, 8);
+        if (salt)
+          this->_salt = std::move(salt.get());
+        else
+        {
+          this->_salt = cryptography::random::generate<elle::Buffer>(24);
+          uint64_t now =
+            (boost::posix_time::microsec_clock::universal_time()
+             - boost::posix_time::ptime(boost::posix_time::min_date_time))
+            .total_milliseconds();
+          this->_salt.append(&now, 8);
+        }
         auto owner_key_buffer =
           elle::serialization::json::serialize(this->_owner_key);
         owner_key_buffer.append(_salt.contents(), _salt.size());
@@ -46,7 +54,7 @@ namespace infinit
       OKBHeader::_hash_address() const
       {
         auto key_buffer =
-          elle::serialization::json::serialize(this->_owner_key);
+          elle::serialization::json::serialize(*this->_owner_key);
         key_buffer.append(this->_salt.contents(), this->_salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
@@ -70,9 +78,10 @@ namespace infinit
         ELLE_DEBUG("%s: check owner key", *this)
         {
           auto owner_key_buffer =
-            elle::serialization::json::serialize(this->_owner_key);
+            elle::serialization::json::serialize(*this->_owner_key);
           owner_key_buffer.append(_salt.contents(), _salt.size());
-          if (!this->_owner_key.verify(this->OKBHeader::_signature, owner_key_buffer))
+          if (!this->_owner_key->verify(this->OKBHeader::_signature,
+                                        owner_key_buffer))
           {
             ELLE_DEBUG("%s: invalid owner key", *this);
             return blocks::ValidationResult::failure("invalid owner key");
@@ -81,7 +90,7 @@ namespace infinit
         return blocks::ValidationResult::success();
       }
 
-      OKBHeader::OKBHeader(cryptography::rsa::PublicKey key,
+      OKBHeader::OKBHeader(std::shared_ptr<cryptography::rsa::PublicKey> key,
                            elle::Buffer salt,
                            elle::Buffer signature)
         : _salt(std::move(salt))
@@ -102,22 +111,26 @@ namespace infinit
       `-------------*/
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(Doughnut* owner)
-        : OKBHeader(owner->keys())
-        , Super(this->_hash_address())
+      BaseOKB<Block>::BaseOKB(std::shared_ptr<cryptography::rsa::KeyPair> keys,
+                              elle::Buffer data,
+                              boost::optional<elle::Buffer> salt)
+        : OKBHeader(*keys, std::move(salt))
+        , Super(this->_hash_address(), std::move(data))
         , _version(-1)
         , _signature()
-        , _doughnut(owner)
+        , _keys(std::move(keys))
         , _data_plain()
         , _data_decrypted(true)
-      {}
+      {
+        this->data(std::move(data));
+      }
 
       template <typename Block>
       BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other, bool sealed_copy)
         : OKBHeader(other)
         , Super(other)
         , _version{other._version}
-        , _doughnut{other._doughnut}
+        , _keys(other._keys)
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
       {
@@ -132,6 +145,7 @@ namespace infinit
       /*-------.
       | Clone  |
       `-------*/
+
       template <typename Block>
       std::unique_ptr<blocks::Block>
       BaseOKB<Block>::clone(bool sealed_copy) const
@@ -152,7 +166,7 @@ namespace infinit
           return false;
         if (this->_salt != other_okb->_salt)
           return false;
-        if (this->_owner_key != other_okb->_owner_key)
+        if (*this->_owner_key != *other_okb->_owner_key)
           return false;
         if (this->_signature.value() != other_okb->_signature.value())
           return false;
@@ -212,9 +226,9 @@ namespace infinit
       elle::Buffer
       BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
-        if (this->doughnut()->keys().K() != this->owner_key())
+        if (this->keys()->K() != *this->owner_key())
           throw elle::Error("attempting to decrypt an unowned OKB");
-        return this->doughnut()->keys().k().open(data);
+        return this->keys()->k().open(data);
       }
 
       /*-----------.
@@ -230,7 +244,7 @@ namespace infinit
           elle::IOStream output(res.ostreambuf());
           elle::serialization::binary::SerializerOut s(output, false);
           s.serialize("salt", this->_salt);
-          s.serialize("owner_key", this->_owner_key);
+          s.serialize("owner_key", *this->_owner_key);
           s.serialize("version", this->_version);
           this->_sign(s);
         }
@@ -253,7 +267,7 @@ namespace infinit
           ELLE_DEBUG_SCOPE("%s: data changed, seal", *this);
           ELLE_DUMP("%s: data: %s", *this, this->_data_plain);
           auto encrypted =
-            this->doughnut()->keys().K().seal(this->_data_plain);
+            this->keys()->K().seal(this->_data_plain);
           ELLE_DUMP("%s: encrypted data: %s", *this, encrypted);
           this->Block::data(std::move(encrypted));
           this->_seal_okb();
@@ -276,9 +290,9 @@ namespace infinit
       {
         if (bump_version)
           ++this->_version; // FIXME: idempotence in case the write fails ?
-        auto keys = this->_doughnut->keys_shared();
+        auto keys = this->keys();
         auto sign = elle::utility::move_on_copy(this->_sign());
-        ELLE_ASSERT_EQ(keys->K(), this->_owner_key);
+        ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
         this->_signature =
           [keys, sign]
           {
@@ -306,9 +320,9 @@ namespace infinit
         {
           auto sign = this->_sign();
           if (!this->_check_signature
-              (this->_owner_key, this->signature(), sign, "owner"))
+              (*this->_owner_key, this->signature(), sign, "owner"))
           {
-            ELLE_TRACE("signing %x\nwith %x", sign, this->_owner_key);
+            ELLE_TRACE("signing %x\nwith %x", sign, *this->_owner_key);
             ELLE_TRACE("%s: invalid signature for version %s: '%x'",
               *this, this->_version, this->signature());
             return blocks::ValidationResult::failure("invalid signature");
@@ -377,18 +391,19 @@ namespace infinit
       BaseOKB<Block>::BaseOKB(elle::serialization::SerializerIn& input)
         : BaseOKB(SerializationContent(input))
       {
-        input.serialize_context<Doughnut*>(this->_doughnut);
+        input.serialize_context<
+          std::shared_ptr<cryptography::rsa::KeyPair>>(this->_keys);
       }
 
       template <typename Block>
       BaseOKB<Block>::BaseOKB(SerializationContent content)
-        : OKBHeader(std::move(content.key),
+        : OKBHeader(std::make_shared(std::move(content.key)),
                     std::move(content.header.salt),
                     std::move(content.header.signature))
         , Super(std::move(content.block))
         , _version(std::move(content.version))
         , _signature(std::move(content.signature))
-        , _doughnut(nullptr)
+        , _keys(nullptr) // FIXME: ?
         , _data_plain()
         , _data_decrypted(false)
       {}
@@ -405,10 +420,10 @@ namespace infinit
       void
       BaseOKB<Block>::_serialize(elle::serialization::Serializer& s)
       {
-        s.serialize_context<Doughnut*>(this->_doughnut);
-        ELLE_ASSERT(this->_doughnut);
+        s.serialize_context<std::shared_ptr<cryptography::rsa::KeyPair>>(
+          this->_keys);
         bool need_signature = ! s.context().has<OKBDontWaitForSignature>();
-        s.serialize("key", this->_owner_key);
+        s.serialize("key", *this->_owner_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
         if (need_signature || (s.out() && !this->_signature.running()))
@@ -424,8 +439,8 @@ namespace infinit
           {
             if (signature.empty())
             {
-              auto keys = this->_doughnut->keys_shared();
-              ELLE_ASSERT_EQ(keys->K(), this->_owner_key);
+              auto keys = this->keys();
+              ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
               auto sign = elle::utility::move_on_copy(this->_sign());
               this->_signature = [keys, sign] {return keys->k().sign(*sign);};
             }

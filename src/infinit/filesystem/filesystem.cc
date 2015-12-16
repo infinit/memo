@@ -259,7 +259,7 @@ namespace infinit
       auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
       ELLE_ASSERT(acl);
       auto res = umbrella([&] {
-        for (auto const& e: acl->list_permissions(true))
+          for (auto const& e: acl->list_permissions({}))
         {
           auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
           if (!u)
@@ -282,17 +282,37 @@ namespace infinit
       auto keys = dn->keys();
       auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
       ELLE_ASSERT(acl);
-      umbrella([&] {
-        for (auto const& e: acl->list_permissions(true))
+      umbrella(
+        [&]
         {
-          auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
-          if (!u)
-            continue;
-          if (e.write >= w && e.read >= r && u->key() == keys.K())
-            return;
-        }
-        throw rfs::Error(EACCES, "Access denied.");
-      });
+          for (auto const& e: acl->list_permissions({}))
+          {
+            auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
+            if (!u)
+              continue;
+            if (e.write >= w && e.read >= r && u->key() == keys.K())
+              return;
+          }
+          throw rfs::Error(EACCES, "Access denied.");
+        });
+    }
+
+    std::string
+    perms_to_json(model::Model const& model, ACLBlock& block)
+    {
+      auto perms = block.list_permissions(model);
+      elle::json::Array v;
+      for (auto const& perm: perms)
+      {
+        elle::json::Object o;
+        o["name"] = perm.user->name();
+        o["read"] = perm.read;
+        o["write"] = perm.write;
+        v.push_back(o);
+      }
+      std::stringstream ss;
+      elle::json::write(ss, v, true);
+      return ss.str();
     }
   }
 }

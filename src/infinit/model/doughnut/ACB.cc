@@ -121,8 +121,10 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      ACB::ACB(Doughnut* owner)
-        : Super(owner)
+      ACB::ACB(std::shared_ptr<cryptography::rsa::KeyPair> keys,
+               elle::Buffer data,
+               boost::optional<elle::Buffer> salt)
+        : Super(std::move(keys), std::move(data), std::move(salt))
         , _editor(-1)
         , _owner_token()
         , _acl_changed(true)
@@ -170,10 +172,10 @@ namespace infinit
       elle::Buffer
       ACB::_decrypt_data(elle::Buffer const& data) const
       {
-        auto& mine = this->doughnut()->keys().K();
+        auto& mine = this->keys()->K();
         elle::Buffer const* encrypted_secret = nullptr;
         std::vector<ACLEntry> entries;
-        if (mine == this->owner_key())
+        if (mine == *this->owner_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
           encrypted_secret = &this->_owner_token;
@@ -196,7 +198,7 @@ namespace infinit
           throw ValidationFailed("no read permissions");
         }
         auto secret_buffer =
-          this->doughnut()->keys().k().open(*encrypted_secret);
+          this->keys()->k().open(*encrypted_secret);
         auto secret = elle::serialization::json::deserialize
           <cryptography::SecretKey>(secret_buffer);
         ELLE_DUMP("%s: secret: %s", *this, secret);
@@ -214,7 +216,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
                          *this, key, read, write);
-        if (key == this->owner_key())
+        if (key == *this->owner_key())
           throw elle::Error("Cannot set permissions for owner");
         auto& acl_entries = this->_acl_entries;
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
@@ -235,7 +237,7 @@ namespace infinit
           elle::Buffer token;
           if (this->_owner_token.size())
           {
-            auto secret = this->doughnut()->keys().k().open(this->_owner_token);
+            auto secret = this->keys()->k().open(this->_owner_token);
             token = key.seal(secret);
           }
           acl_entries.emplace_back(ACLEntry(key, read, write, token));
@@ -288,59 +290,39 @@ namespace infinit
         // FIXME: better implementation
         for (auto const& e: this->_acl_entries)
         {
-          if (e.key != other->owner_key())
+          if (e.key != *other->owner_key())
             other->set_permissions(e.key, e.read, e.write);
         }
-        if (other->owner_key() != this->owner_key())
-          other->set_permissions(this->owner_key(), true, true);
+        if (*other->owner_key() != *this->owner_key())
+          other->set_permissions(*this->owner_key(), true, true);
       }
 
 
 
       std::vector<ACB::Entry>
-      ACB::_list_permissions(bool ommit_names)
+      ACB::_list_permissions(boost::optional<Model const&> model)
       {
+        auto make_user =
+          [&] (cryptography::rsa::PublicKey const& k)
+          -> std::unique_ptr<infinit::model::User>
+          {
+            try
+            {
+              if (model)
+                return
+                  model->make_user(elle::serialization::json::serialize(k));
+              else
+                return elle::make_unique<doughnut::User>(k, "");
+            }
+            catch(elle::Error const& e)
+            {
+              ELLE_WARN("exception making user: %s", e);
+            }
+          };
         std::vector<ACB::Entry> res;
-        try
-        {
-          std::unique_ptr<model::User> user;
-          if (ommit_names)
-            user.reset(new doughnut::User(this->owner_key(), ""));
-          else
-            user = this->doughnut()->make_user(
-              elle::serialization::json::serialize(this->owner_key()));
-          res.emplace_back(std::move(user), true, true);
-        }
-        catch (reactor::Terminate const& e)
-        {
-          throw;
-        }
-        catch(std::exception const& e)
-        {
-          ELLE_TRACE("Exception making owner: %s", e);
-        }
+        res.emplace_back(make_user(*this->owner_key()), true, true);
         for (auto const& ent: this->_acl_entries)
-        {
-          try
-          {
-            std::unique_ptr<model::User> user;
-            if (ommit_names)
-              user.reset(new doughnut::User(ent.key, ""));
-            else
-              user = this->doughnut()->make_user(
-                elle::serialization::json::serialize(ent.key));
-            res.emplace_back(std::move(user), ent.read, ent.write);
-          }
-          catch(reactor::Terminate const& e)
-          {
-            throw;
-          }
-          catch(std::exception const& e)
-          {
-            ELLE_TRACE("Exception making user: %s", e);
-            res.emplace_back(elle::make_unique<model::User>(), ent.read, ent.write);
-          }
-        }
+          res.emplace_back(make_user(ent.key), ent.read, ent.write);
         return res;
       }
 
@@ -382,7 +364,7 @@ namespace infinit
         ELLE_DEBUG("%s: check author signature", *this)
         {
           auto sign = this->_data_sign();
-          auto& key = entry ? entry->key : this->owner_key();
+          auto& key = entry ? entry->key : *this->owner_key();
           if (!this->_check_signature(key, this->data_signature(), sign, "data"))
           {
             ELLE_DEBUG("%s: author signature invalid", *this);
@@ -394,7 +376,19 @@ namespace infinit
       }
 
       void
+      ACB::seal(cryptography::SecretKey const& key)
+      {
+        this->_seal(key);
+      }
+
+      void
       ACB::_seal()
+      {
+        this->_seal({});
+      }
+
+      void
+      ACB::_seal(boost::optional<cryptography::SecretKey const&> key)
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
@@ -406,7 +400,7 @@ namespace infinit
           elle::Bench::BenchScope scope(bench);
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
           this->_acl_changed = false;
-          bool owner = this->doughnut()->keys().K() == this->owner_key();
+          bool owner = this->keys()->K() == *this->owner_key();
           if (owner)
             this->_editor = -1;
           Super::_seal_okb();
@@ -428,13 +422,19 @@ namespace infinit
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
           ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
                            *this, this->_data_version);
-          bool owner = this->doughnut()->keys().K() == this->owner_key();
+          bool owner = this->keys()->K() == *this->owner_key();
           if (owner)
             this->_editor = -1;
-          auto secret = cryptography::secretkey::generate(256);
-          ELLE_DUMP("%s: new block secret: %s", *this, secret);
-          auto secret_buffer = elle::serialization::json::serialize(secret);
-          this->_owner_token = this->owner_key().seal(secret_buffer);
+          boost::optional<cryptography::SecretKey> secret;
+          elle::Buffer secret_buffer;
+          if (!key)
+          {
+            secret = cryptography::secretkey::generate(256);
+            key = secret;
+          }
+          ELLE_DUMP("%s: new block secret: %s", *this, key.get());
+          elle::serialization::json::serialize(key.get());
+          this->_owner_token = this->owner_key()->seal(secret_buffer);
           bool found = false;
           int idx = 0;
           for (auto& e: this->_acl_entries)
@@ -443,7 +443,7 @@ namespace infinit
             {
               e.token = e.key.seal(secret_buffer);
             }
-            if (e.key == this->doughnut()->keys().K())
+            if (e.key == this->keys()->K())
             {
               found = true;
               this->_editor = idx;
@@ -452,7 +452,7 @@ namespace infinit
           }
           if (!owner && !found)
             throw ValidationFailed("not owner and no write permissions");
-          this->MutableBlock::data(secret.encipher(this->data_plain()));
+          this->MutableBlock::data(key->encipher(this->data_plain()));
           this->_data_changed = false;
         }
         else
@@ -462,7 +462,7 @@ namespace infinit
         if (acl_changed || data_changed ||
           (!this->_data_signature.running() && this->_data_signature.value().empty()))
         {
-          auto keys = this->doughnut()->keys_shared();
+          auto keys = this->keys();
           auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           this->_data_signature =
             [keys, to_sign]
@@ -492,7 +492,7 @@ namespace infinit
           elle::IOStream output(res.ostreambuf());
           elle::serialization::binary::SerializerOut s(output, false);
           s.serialize("salt", this->salt());
-          s.serialize("key", this->owner_key());
+          s.serialize("key", *this->owner_key());
           s.serialize("version", this->_data_version);
           s.serialize("data", this->Block::data());
           s.serialize("owner_token", this->_owner_token);
@@ -591,7 +591,7 @@ namespace infinit
           s.serialize("data_signature", signature);
           if (s.in())
           {
-            auto keys = this->doughnut()->keys_shared();
+            auto keys = this->keys();
             auto sign = elle::utility::move_on_copy(this->_data_sign());
             this->_data_signature =
               [keys, sign] { return keys->k().sign(*sign); };

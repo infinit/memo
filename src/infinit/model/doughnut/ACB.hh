@@ -57,7 +57,9 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        ACB(Doughnut* owner);
+        ACB(std::shared_ptr<cryptography::rsa::KeyPair> keys,
+            elle::Buffer data = {},
+            boost::optional<elle::Buffer> salt = {});
         ACB(ACB const& other, bool sealed_copy = true);
         ~ACB();
         ELLE_ATTRIBUTE_R(int, editor);
@@ -113,11 +115,17 @@ namespace infinit
         _copy_permissions(ACLBlock& to) override;
         virtual
         std::vector<Entry>
-        _list_permissions(bool ommit_names) override;
+        _list_permissions(boost::optional<Model const&> model) override;
 
       /*-----------.
       | Validation |
       `-----------*/
+      public:
+        using Super::seal;
+        // Seal with a specific secret key.
+        void
+        seal(cryptography::SecretKey const& key);
+
       protected:
         virtual
         blocks::ValidationResult
@@ -125,6 +133,8 @@ namespace infinit
         virtual
         void
         _seal() override;
+        void
+        _seal(boost::optional<cryptography::SecretKey const&> key);
         virtual
         void
         _sign(elle::serialization::SerializerOut& s) const override;

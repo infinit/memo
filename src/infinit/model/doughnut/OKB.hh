@@ -28,7 +28,8 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        OKBHeader(cryptography::rsa::KeyPair const& keys);
+        OKBHeader(cryptography::rsa::KeyPair const& keys,
+                  boost::optional<elle::Buffer> salt = {});
         OKBHeader(OKBHeader const& other);
 
       /*---------.
@@ -38,7 +39,8 @@ namespace infinit
         blocks::ValidationResult
         validate(Address const& address) const;
         ELLE_ATTRIBUTE_R(elle::Buffer, salt);
-        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner_key);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>,
+                         owner_key);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
       protected:
         Address
@@ -50,7 +52,7 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        OKBHeader(cryptography::rsa::PublicKey keys,
+        OKBHeader(std::shared_ptr<cryptography::rsa::PublicKey> keys,
                   elle::Buffer salt,
                   elle::Buffer signature);
         void
@@ -74,11 +76,15 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        BaseOKB(Doughnut* owner);
+        BaseOKB(std::shared_ptr<cryptography::rsa::KeyPair> keys,
+                elle::Buffer data = {},
+                boost::optional<elle::Buffer> salt = {});
         BaseOKB(BaseOKB const& other, bool sealed_copy = true);
         ELLE_ATTRIBUTE(int, version);
-        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
-        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
+        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>,
+                       signature, protected);
+        /// The user keys.
+        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
         friend class Doughnut;
 
       /*--------.
