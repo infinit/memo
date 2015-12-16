@@ -3,12 +3,16 @@
 #include <elle/memory.hh>
 #include <elle/test.hh>
 
+#include <cryptography/rsa/KeyPair.hh>
+
 #include <reactor/scheduler.hh>
 #include <reactor/semaphore.hh>
 #include <reactor/signal.hh>
 
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Consensus.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Passport.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async.test");
 
@@ -20,8 +24,8 @@ class SyncedConsensus
 public:
   reactor::Semaphore sem;
   int nstore, nremove;
-  SyncedConsensus()
-    : dht::consensus::Consensus(*(dht::Doughnut*)(nullptr))
+  SyncedConsensus(infinit::model::doughnut::Doughnut& dht)
+    : dht::consensus::Consensus(dht)
     , nstore(0)
     , nremove(0)
   {}
@@ -59,8 +63,8 @@ class BlockingConsensus
   : public dht::consensus::Consensus
 {
 public:
-  BlockingConsensus()
-    : dht::consensus::Consensus(*(dht::Doughnut*)(nullptr))
+  BlockingConsensus(infinit::model::doughnut::Doughnut& dht)
+    : dht::consensus::Consensus(dht)
   {}
 
   virtual
@@ -90,15 +94,40 @@ public:
   }
 };
 
+class DummyDoughnut
+  : public dht::Doughnut
+{
+public:
+  DummyDoughnut()
+    : DummyDoughnut(infinit::model::Address::random(),
+                    infinit::cryptography::rsa::keypair::generate(1024))
+  {}
+
+  DummyDoughnut(infinit::model::Address id,
+                infinit::cryptography::rsa::KeyPair keys)
+    : dht::Doughnut(
+      id, keys, keys.K(),
+      infinit::model::doughnut::Passport(keys.K(), "network", keys.k()),
+      [] (dht::Doughnut&)
+      { return nullptr; },
+      [] (dht::Doughnut&, infinit::model::Address, std::shared_ptr<dht::Local>)
+      { return nullptr; },
+      {}, nullptr)
+  {}
+};
+
 // Check blocks are fetched from the queue, even if stored on disk
 ELLE_TEST_SCHEDULED(fetch_disk_queued)
 {
   elle::filesystem::TemporaryDirectory d;
   auto a1 = infinit::model::Address::random();
   auto a2 = infinit::model::Address::random();
+  auto keys = infinit::cryptography::rsa::keypair::generate(1024);
+  infinit::model::doughnut::Passport passport(keys.K(), "network", keys.k());
+  DummyDoughnut dht;
   {
     dht::consensus::Async async(
-      elle::make_unique<BlockingConsensus>(), d.path(), 1);
+      elle::make_unique<BlockingConsensus>(dht), d.path(), 1);
     async.store(elle::make_unique<infinit::model::blocks::Block>(
                   a1, elle::Buffer("a1", 2)),
                 infinit::model::STORE_INSERT, nullptr);
@@ -111,7 +140,7 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued)
   ELLE_LOG("reload from disk")
   {
     dht::consensus::Async async(
-      elle::make_unique<BlockingConsensus>(), d.path(), 1);
+      elle::make_unique<BlockingConsensus>(dht), d.path(), 1);
     BOOST_CHECK_EQUAL(async.fetch(a1)->data(), "a1");
     BOOST_CHECK_EQUAL(async.fetch(a2)->data(), "a2");
   }
@@ -119,10 +148,11 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued)
 
 ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
 {
+  DummyDoughnut dht;
   elle::filesystem::TemporaryDirectory d;
   auto a1 = infinit::model::Address::random();
   {
-    auto scu = elle::make_unique<SyncedConsensus>();
+    auto scu = elle::make_unique<SyncedConsensus>(dht);
     auto& sc = *scu;
     dht::consensus::Async async(std::move(scu), d.path(), 1);
     async.store(elle::make_unique<infinit::model::blocks::Block>(
