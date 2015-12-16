@@ -408,8 +408,16 @@ COMMAND(run)
           }
           catch (...)
           {}
+          auto require_path = [&]
+            {
+              if (!path)
+                throw reactor::filesystem::Error(
+                  ENOENT,
+                  elle::sprintf("no such file or directory: %s", pathname));
+            };
           if (op == "list_directory")
           {
+            require_path();
             std::vector<std::string> entries;
             path->list_directory(
               [&] (std::string const& path, struct stat*)
@@ -425,10 +433,12 @@ COMMAND(run)
           }
           else if (op == "mkdir")
           {
+            require_path();
             path->mkdir(0777);
           }
           else if (op == "stat")
           {
+            require_path();
             struct stat st;
             path->stat(&st);
             elle::serialization::json::SerializerOut response(std::cout);
@@ -454,12 +464,14 @@ COMMAND(run)
           }
           else if (op == "setxattr")
           {
+            require_path();
             auto name = command.deserialize<std::string>("name");
             auto value = command.deserialize<std::string>("value");
             path->setxattr(name, value, 0);
           }
           else if (op == "getxattr")
           {
+            require_path();
             auto name = command.deserialize<std::string>("name");
             auto value = path->getxattr(name);
             elle::serialization::json::SerializerOut response(std::cout);
@@ -471,6 +483,7 @@ COMMAND(run)
           }
           else if (op == "listxattr")
           {
+            require_path();
             auto attrs = path->listxattr();
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("entries", attrs);
@@ -481,21 +494,25 @@ COMMAND(run)
           }
           else if (op == "removexattr")
           {
+            require_path();
             auto name = command.deserialize<std::string>("name");
             path->removexattr(name);
           }
           else if (op == "link")
           {
+            require_path();
             auto target = command.deserialize<std::string>("target");
             path->link(target);
           }
           else if (op == "symlink")
           {
+            require_path();
             auto target = command.deserialize<std::string>("target");
             path->symlink(target);
           }
           else if (op == "readlink")
           {
+            require_path();
             auto res = path->readlink();
             elle::serialization::json::SerializerOut response(std::cout);
             response.serialize("target", res.string());
@@ -506,16 +523,19 @@ COMMAND(run)
           }
           else if (op == "rename")
           {
+            require_path();
             auto target = command.deserialize<std::string>("target");
             path->rename(target);
           }
           else if (op == "truncate")
           {
+            require_path();
             auto sz = command.deserialize<uint64_t>("size");
             path->truncate(sz);
           }
           else if (op == "utimens")
           {
+            require_path();
             auto last_access = command.deserialize<uint64_t>("access");
             auto last_change = command.deserialize<uint64_t>("change");
             timespec ts[2];
@@ -527,6 +547,7 @@ COMMAND(run)
           }
           else if (op == "statfs")
           {
+            require_path();
             struct statvfs sv;
             path->statfs(&sv);
             elle::serialization::json::SerializerOut response(std::cout);
@@ -548,17 +569,20 @@ COMMAND(run)
           }
           else if (op == "chown")
           {
+            require_path();
             auto uid = command.deserialize<int>("uid");
             auto gid = command.deserialize<int>("gid");
             path->chown(uid, gid);
           }
           else if (op == "chmod")
           {
+            require_path();
             auto mode = command.deserialize<int>("mode");
             path->chmod(mode);
           }
           else if (op == "write_file")
           {
+            require_path();
             auto content = command.deserialize<std::string>("content");
             auto handle = path->create(O_TRUNC|O_CREAT, 0100666);
             handle->write(elle::WeakBuffer(elle::unconst(content.data()),
@@ -568,6 +592,7 @@ COMMAND(run)
           }
           else if (op == "read_file")
           {
+            require_path();
             struct stat st;
             path->stat(&st);
             auto handle = path->open(O_RDONLY, 0666);
@@ -585,14 +610,17 @@ COMMAND(run)
           }
           else if (op == "unlink")
           {
+            require_path();
             path->unlink();
           }
           else if (op == "rmdir")
           {
+            require_path();
             path->rmdir();
           }
           else if (op == "create")
           {
+            require_path();
             int flags = command.deserialize<int>("flags");
             int mode = command.deserialize<int>("mode");
             auto handle = path->create(flags, mode);
@@ -601,6 +629,7 @@ COMMAND(run)
           }
           else if (op == "open")
           {
+            require_path();
             int flags = command.deserialize<int>("flags");
             int mode = command.deserialize<int>("mode");
             auto handle = path->open(flags, mode);
