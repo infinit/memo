@@ -488,6 +488,9 @@ namespace infinit
     File::truncate(off_t new_size)
     {
       _fetch();
+      ELLE_TRACE("%s: truncate %s -> %s", *this, _header.size, new_size);
+      if (new_size == signed(_header.size))
+        return;
       if (new_size > signed(_header.size))
       {
         auto h = open(O_RDWR, 0666);
@@ -512,19 +515,32 @@ namespace infinit
         }
         else if (signed(offset + _header.block_size) >= new_size)
         { // maybe truncate the block
-          cryptography::SecretKey sk(_fat[i].second);
           auto targetsize = new_size - offset;
-          auto block = _owner.fetch_or_die(_fat[i].first);
-          elle::Buffer buf(sk.decipher(block->data()));
-          if (buf.size() > targetsize)
+          auto it = _blocks.find(i);
+          if (it != _blocks.end())
           {
-            buf.size(targetsize);
+            it->second.block.data([&](elle::Buffer& buf) {
+                if (buf.size() > targetsize)
+                  buf.size(targetsize);
+            });
+            it->second.dirty = true;
           }
-          auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
-            sk.encipher(buf));
-          _owner.unchecked_remove(_fat[i].first);
-          _fat[i].first = newblock->address();
-          _owner.store_or_die(std::move(newblock));
+          else
+          {
+            cryptography::SecretKey sk(_fat[i].second);
+            auto targetsize = new_size - offset;
+            auto block = _owner.fetch_or_die(_fat[i].first);
+            elle::Buffer buf(sk.decipher(block->data()));
+            if (buf.size() > targetsize)
+            {
+              buf.size(targetsize);
+            }
+            auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
+              sk.encipher(buf));
+            _owner.unchecked_remove(_fat[i].first);
+            _fat[i].first = newblock->address();
+            _owner.store_or_die(std::move(newblock));
+          }
         }
       }
       // check first block data
