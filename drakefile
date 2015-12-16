@@ -580,6 +580,10 @@ def configure(
     cxx_config_tests += elle.boost.config_filesystem(link = False)
     cxx_config_tests.library_add(
       drake.copy(elle.boost.filesystem_dynamic, 'lib', True))
+    cxx_config_tests += elle.boost.config_program_options(
+      link = False)
+    cxx_config_tests.library_add(
+      drake.copy(elle.boost.program_options_dynamic, 'lib', True))
   else:
     cxx_config_tests.lib('shlwapi')
     cxx_config_tests.lib('ws2_32')
@@ -588,15 +592,18 @@ def configure(
     cxx_config_tests.lib('dbghelp')
     cxx_config_tests.lib('iphlpapi')
     cxx_config_tests.lib('crypt32')
+    cxx_config_tests.library_add(elle.boost.filesystem_static)
     cxx_config_tests.library_add(elle.boost.program_options_static)
+    cxx_config_tests.library_add(elle.boost.system_static)
     cxx_config_tests.library_add(elle.boost.test_static)
     cxx_config_tests.use_whole_archive()
   tests_names = [
-      'consensus/async',
-      'doughnut',
-      'faith',
-      'rpc',
-      'storage',
+    'backward-compatibility',
+    'consensus/async',
+    'doughnut',
+    'faith',
+    'rpc',
+    'storage',
   ]
   if not windows:
     tests_names += ['filesystem']
@@ -616,10 +623,13 @@ def configure(
     # filesystem requires 'infinit'.
     test.dependencies_add(binaries)
     rule_tests << test
+    env = {'SOURCE_DIR': drake.path_source()}
     if valgrind_tests:
       runner = drake.valgrind.ValgrindRunner(
-        exe = test, valgrind = valgrind)
+        exe = test,
+        valgrind = valgrind,
+        env = env)
     else:
-      runner = drake.Runner(exe = test)
+      runner = drake.Runner(exe = test, env = env)
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
