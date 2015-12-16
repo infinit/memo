@@ -56,7 +56,7 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   infinit_2.run(['infinit-volume', '--import'], input = volume)
   response = infinit_2.run([
     'infinit-volume', '--run',
-     'volume',
+    'volume',
     '--as', 'user',
   ],
   input = {'operation': 'list_directory', 'path': '/'})
