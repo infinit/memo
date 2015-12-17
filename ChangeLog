@@ -3,15 +3,39 @@
 
 ## [Unreleased]
 
+
+## [0.3.4] - 2015-12-17
+
+### Added
+- Cache directories preventively to speed up browsing speed.
+- Let extended attribute `user.infinit.sync` wait for file synchronization.
+- Add fetch and push options to `infinit-drive --invite`, clarify help.
+- Enable to fetch several users at once with `infinit-user --fetch`.
+- Enable to show volume in the finder sidebar on OSX with
+  `infinit-volume --finder-sidebar`.
+
 ### Changed
 - Only allow lowercase alpha-numeric characters in objects names
   (i.e. users, networks, volumes ...).
 - Rename `infinit-network --join` to `infinit-network --link`.
+- Accept --as option on all commands.
+- Set kelips group count to 1 by default.
+- Translate user rwx permissions from ACLs.
+- Prefix user public key hash with a `#` in permissions listing if
+  name is unknown.
+- Show storage capacity in `infinit-storage --list`.
+- Show invitation status in `infinit-drive --list`.
+- Improve many `infinit-drive` output messages.
+- Bump files mtime on each write.
+- Optimize on-disk asynchronous journal loading time.
 
 ### Fixed
 - Properly handle execution permissions.
 - Drop removed files from cache, fixing many IO errors when trying to
   perform operations on a deleted file.
+- Fix crash with broken locale setting.
+- Fix wrong file size reported in some cases.
+- Fix truncate on cached files.
 
 
 ## [0.3.3] - 2015-12-03
