@@ -317,12 +317,19 @@ namespace infinit
             catch(elle::Error const& e)
             {
               ELLE_WARN("exception making user: %s", e);
+              return nullptr;
             }
           };
         std::vector<ACB::Entry> res;
-        res.emplace_back(make_user(*this->owner_key()), true, true);
+        auto owner = make_user(*this->owner_key());
+        if (owner)
+          res.emplace_back(std::move(owner), true, true);
         for (auto const& ent: this->_acl_entries)
-          res.emplace_back(make_user(ent.key), ent.read, ent.write);
+        {
+          auto user = make_user(ent.key);
+          if (user)
+            res.emplace_back(std::move(user), ent.read, ent.write);
+        }
         return res;
       }
 
