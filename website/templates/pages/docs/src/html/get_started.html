@@ -174,11 +174,11 @@ $> infinit-volume --fetch --as bob --name my-volume
 Fetched volume "bob/my-volume".
 </code></pre>
 
-<p>Let’s link this device to the ‘my-network’ network you created on device A.</p>
+<p>Let’s connect this device to the ‘mine’ network you created on device A.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --link --as bob --name my-network
-Linked device to network "bob/my-network".
+<code>$> infinit-network --join --as bob --name mine
+Joined network "bob/mine".
 </code></pre>
 
 <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
