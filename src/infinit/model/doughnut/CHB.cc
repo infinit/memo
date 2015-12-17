@@ -1,5 +1,14 @@
-#include <cryptography/hash.hh>
 #include <elle/bench.hh>
+#include <elle/log.hh>
+
+#include <cryptography/hash.hh>
+
+#include <reactor/duration.hh>
+#include <reactor/scheduler.hh>
+
+#include <infinit/model/doughnut/CHB.hh>
+
+ELLE_LOG_COMPONENT("infinit.model.doughnut.CHB")
 
 namespace infinit
 {
@@ -7,102 +16,103 @@ namespace infinit
   {
     namespace doughnut
     {
-      class CHB
-        : public elle::Buffer, public blocks::ImmutableBlock
+      /*-------------.
+      | Construction |
+      `-------------*/
+
+      CHB::CHB(elle::Buffer data)
+        : CHB(std::move(data), this->_make_salt())
+      {}
+
+      CHB::CHB(elle::Buffer data, elle::Buffer salt)
+        : Super(CHB::_hash_address(data, salt), data)
+        , _salt(std::move(salt))
+      {}
+
+      CHB::CHB(CHB const& other)
+        : Super(other)
+        , _salt(other._salt)
+      {}
+
+      /*---------.
+      | Clonable |
+      `---------*/
+
+      std::unique_ptr<blocks::Block>
+      CHB::clone(bool) const
       {
-      // Types
-      public:
-        typedef CHB Self;
-        typedef blocks::ImmutableBlock Super;
+        return std::unique_ptr<blocks::Block>(new CHB(*this));
+      }
 
+      /*-----------.
+      | Validation |
+      `-----------*/
 
-      // Construction
-      public:
-        CHB(elle::Buffer data)
-          : elle::Buffer(_make_salt())
-          , Super(CHB::_hash_address(data, *this), data)
-          , _salt(*this)
-        {}
+      void
+      CHB::_seal()
+      {}
 
-        CHB(CHB const& other)
-          : Super(other)
-          , _salt(other._salt)
-        {}
-
-      // Clone.
-        virtual
-        std::unique_ptr<blocks::Block>
-        clone(bool) const override
+      blocks::ValidationResult
+      CHB::_validate() const
+      {
+        ELLE_DEBUG_SCOPE("%s: validate", *this);
+        auto expected_address = CHB::_hash_address(this->data(), this->_salt);
+        if (this->address() != expected_address)
         {
-          return std::unique_ptr<blocks::Block>(new CHB(*this));
+          auto reason =
+            elle::sprintf("address %x invalid, expecting %x",
+                          this->address(), expected_address);
+          ELLE_DUMP("%s: %s", *this, reason);
+          return blocks::ValidationResult::failure(reason);
         }
+        return blocks::ValidationResult::success();
+      }
 
-      // Validation
-      protected:
-        virtual
-        void
-        _seal() override
-        {}
+      /*--------------.
+      | Serialization |
+      `--------------*/
 
-        virtual
-        blocks::ValidationResult
-        _validate() const override
-        {
-          ELLE_DEBUG_SCOPE("%s: validate", *this);
-          auto expected_address = CHB::_hash_address(this->data(), this->_salt);
-          if (this->address() != expected_address)
-          {
-            auto reason =
-              elle::sprintf("address %x invalid, expecting %x",
-                            this->address(), expected_address);
-            ELLE_DUMP("%s: %s", *this, reason);
-            return blocks::ValidationResult::failure(reason);
-          }
-          return blocks::ValidationResult::success();
-        }
+      CHB::CHB(elle::serialization::Serializer& input)
+        : Super(input)
+      {
+        input.serialize("salt", _salt);
+      }
 
-      // Serialization
-      public:
-        CHB(elle::serialization::Serializer& input)
-          : Super(input)
-        {
-          input.serialize("salt", _salt);
-        }
-        void serialize(elle::serialization::Serializer& s) override
-        {
-          Super::serialize(s);
-          s.serialize("salt", _salt);
-        }
-      // Details
-      private:
-        static
-        elle::Buffer
-        _make_salt()
-        {
-          return elle::Buffer(Address::random().value(),
-                                          sizeof(Address::Value));
-        }
+      void
+      CHB::serialize(elle::serialization::Serializer& s)
+      {
+        Super::serialize(s);
+        s.serialize("salt", _salt);
+      }
 
-        static
-        Address
-        _hash_address(elle::Buffer const& content, elle::Buffer const& salt)
+      /*--------.
+      | Details |
+      `--------*/
+
+      elle::Buffer
+      CHB::_make_salt()
+      {
+        return elle::Buffer(Address::random().value(),
+                            sizeof(Address::Value));
+      }
+
+      Address
+      CHB::_hash_address(elle::Buffer const& content, elle::Buffer const& salt)
+      {
+        static elle::Bench bench("bench.chb.hash", 10000_sec);
+        elle::Bench::BenchScope bs(bench);
+        elle::IOStream stream(salt.istreambuf_combine(content));
+        elle::Buffer hash;
+        if (content.size() > 262144)
         {
-          static elle::Bench bench("bench.chb.hash", 10000_sec);
-          elle::Bench::BenchScope bs(bench);
-          elle::IOStream stream(salt.istreambuf_combine(content));
-          elle::Buffer hash;
-          if (content.size() > 262144)
-          {
-            reactor::background([&] {
+          reactor::background([&] {
               hash = cryptography::hash(stream, cryptography::Oneway::sha256);
             });
-          }
-          else
-            hash = cryptography::hash(stream, cryptography::Oneway::sha256);
-          return Address(hash.contents());
         }
-        elle::Buffer _salt;
-      };
+        else
+          hash = cryptography::hash(stream, cryptography::Oneway::sha256);
+        return Address(hash.contents());
+      }
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<CHB> _register_chb_serialization("CHB");

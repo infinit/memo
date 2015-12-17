@@ -229,6 +229,8 @@ def configure(
     'src/infinit/model/doughnut/Async.hh',
     'src/infinit/model/doughnut/Cache.cc',
     'src/infinit/model/doughnut/Cache.hh',
+    'src/infinit/model/doughnut/CHB.cc',
+    'src/infinit/model/doughnut/CHB.hh',
     'src/infinit/model/doughnut/Conflict.cc',
     'src/infinit/model/doughnut/Conflict.hh',
     'src/infinit/model/doughnut/Consensus.cc',

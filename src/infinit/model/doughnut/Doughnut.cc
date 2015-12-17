@@ -8,7 +8,9 @@
 #include <elle/cast.hh>
 #include <elle/format/hexadecimal.hh>
 #include <elle/log.hh>
-#include <elle/serialization/json.hh> // FIXME
+#include <elle/serialization/json.hh>
+
+#include <cryptography/hash.hh>
 
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
@@ -17,6 +19,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/CHB.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -29,8 +32,6 @@
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
-
-#include <infinit/model/doughnut/CHB.cc>
 
 namespace infinit
 {
