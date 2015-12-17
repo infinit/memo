@@ -11,6 +11,10 @@
 
 #include <infinit/model/blocks/Block.hh>
 #include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/CHB.hh>
+#include <infinit/model/doughnut/NB.hh>
+#include <infinit/model/doughnut/OKB.hh>
+#include <infinit/model/doughnut/UB.hh>
 #include <infinit/version.hh>
 
 static
@@ -144,10 +148,40 @@ main(int argc, char** argv)
         <std::unique_ptr<DeterministicPrivateKey>>(private_key);
       auto keys = std::make_shared
         <infinit::cryptography::rsa::KeyPair>(std::move(K), std::move(k));
-      std::string acb_contents("ACB content");
-      auto acb = new infinit::model::doughnut::ACB(keys, acb_contents, salt);
+      auto chb =
+        new infinit::model::doughnut::CHB(std::string("CHB contents"), salt);
+      chb->seal();
+      auto acb = new infinit::model::doughnut::ACB(
+        keys, std::string("ACB contents"), salt);
       acb->seal(secret);
-      infinit::model::blocks::Block* block = acb;
+      auto okb = new infinit::model::doughnut::OKB(
+        keys, std::string("OKB contents"), salt);
+      okb->seal();
+      auto nb = new infinit::model::doughnut::NB(
+        keys, keys->K(), "NB name", std::string("NB contents"));
+      nb->seal();
+      auto ub = new infinit::model::doughnut::UB("USERNAME", keys->K(), false);
+      ub->seal();
+      auto rub = new infinit::model::doughnut::UB("USERNAME", keys->K(), true);
+      rub->seal();
+      auto apply =
+        [&] (std::string const& action,
+             std::function<void(std::string const&,
+                                infinit::model::blocks::Block*)> const& f)
+        {
+          std::cout << "  " << action << " CHB" << std::endl;
+          f("CHB", chb);
+          std::cout << "  " << action << " OKB" << std::endl;
+          f("OKB", okb);
+          std::cout << "  " << action << " ACB" << std::endl;
+          f("ACB", acb);
+          std::cout << "  " << action << " NB" << std::endl;
+          f("NB",  nb);
+          std::cout << "  " << action << " UB" << std::endl;
+          f("UB",  ub);
+          std::cout << "  " << action << " RUB" << std::endl;
+          f("RUB",  rub);
+        };
       if (vm.count("generate"))
       {
         elle::Version current_version(INFINIT_MAJOR, INFINIT_MINOR, 0);
@@ -155,20 +189,25 @@ main(int argc, char** argv)
         std::cout << "Create reference data for version "
                   << current_version << std::endl;
         boost::filesystem::create_directories(current);
-        {
-          auto path = current / "ACB.bin";
-          boost::filesystem::ofstream output(path);
-          if (!output.good())
-            throw elle::Error(elle::sprintf("unable to open %s", path));
-          elle::serialization::binary::serialize(block, output, false);
-        }
-        {
-          auto path = current / "ACB.json";
-          boost::filesystem::ofstream output(path);
-          if (!output.good())
-            throw elle::Error(elle::sprintf("unable to open %s", path));
-          elle::serialization::json::serialize(block, output, false);
-        }
+        auto generate =
+          [&] (std::string const& name, infinit::model::blocks::Block* b)
+          {
+            {
+              auto path = current / elle::sprintf("%s.bin", name);
+              boost::filesystem::ofstream output(path);
+              if (!output.good())
+                throw elle::Error(elle::sprintf("unable to open %s", path));
+              elle::serialization::binary::serialize(b, output, false);
+            }
+            {
+              auto path = current / elle::sprintf("%s.json", name);
+              boost::filesystem::ofstream output(path);
+              if (!output.good())
+                throw elle::Error(elle::sprintf("unable to open %s", path));
+              elle::serialization::json::serialize(b, output, false);
+            }
+          };
+        apply("generate", generate);
       }
       else
       {
@@ -196,32 +235,45 @@ main(int argc, char** argv)
           }();
           std::cout << "check backward compatibility with version "
                     << version << std::endl;
-          {
-            auto path = it->path() / "ACB.bin";
-            boost::filesystem::ifstream input(path);
-            if (!input.good())
-              throw elle::Error(elle::sprintf("unable to open %s", path));
-            elle::Buffer contents(
-              std::string((std::istreambuf_iterator<char>(input)),
-                          std::istreambuf_iterator<char>()));
-            ELLE_ASSERT_EQ(
-              contents,
-              elle::serialization::binary::serialize(block, version, false));
-          }
-          {
-            auto path = it->path() / "ACB.json";
-            boost::filesystem::ifstream input(path);
-            if (!input.good())
-              throw elle::Error(elle::sprintf("unable to open %s", path));
-            elle::Buffer contents(
-              std::string((std::istreambuf_iterator<char>(input)),
-                          std::istreambuf_iterator<char>()));
-            ELLE_ASSERT_EQ(
-              contents,
-              elle::serialization::json::serialize(block, version, false));
-          }
+          auto check =
+            [&] (std::string const& name, infinit::model::blocks::Block* b)
+            {
+              {
+                auto path = it->path() / elle::sprintf("%s.bin", name);
+                boost::filesystem::ifstream input(path);
+                if (!input.good())
+                  throw elle::Error(elle::sprintf("unable to open %s", path));
+                elle::Buffer contents(
+                  std::string((std::istreambuf_iterator<char>(input)),
+                              std::istreambuf_iterator<char>()));
+                ELLE_ASSERT_EQ(
+                  contents,
+                  elle::serialization::binary::serialize(b, version, false));
+              }
+              {
+                auto path = it->path() / elle::sprintf("%s.json", name);
+                boost::filesystem::ifstream input(path);
+                if (!input.good())
+                  throw elle::Error(elle::sprintf("unable to open %s", path));
+                elle::Buffer contents(
+                  std::string((std::istreambuf_iterator<char>(input)),
+                              std::istreambuf_iterator<char>()));
+                ELLE_ASSERT_EQ(
+                  contents,
+                  elle::serialization::json::serialize(b, version, false));
+              }
+            };
+          apply("check", check);
         }
       }
     });
-  sched.run();
+  try
+  {
+    sched.run();
+  }
+  catch (elle::Error const& e)
+  {
+    std::cerr << argv[0] << ": " << e.what() << std::endl;
+    return 1;
+  }
 }
