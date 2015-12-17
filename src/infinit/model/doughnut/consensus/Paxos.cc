@@ -459,9 +459,65 @@ namespace infinit
         }
 
         void
-        Paxos::LocalPeer::remove(Address address)
+        Paxos::LocalPeer::remove(Address address, blocks::RemoveSignature rs)
         {
-          Local::remove(address);
+          // FIXME: use doughnut version
+          if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+          {
+            auto it = this->_addresses.find(address);
+            ELLE_TRACE("paxos::remove, known=%s", it != this->_addresses.end());
+            if (it != this->_addresses.end())
+            {
+              auto& decision = this->_addresses.at(address);
+              auto& paxos = decision.paxos;
+              if (auto highest = paxos.highest_accepted())
+              {
+                auto& val = highest->value;
+                auto valres = val->validate_remove(rs);
+                if (!valres)
+                  if (valres.conflict())
+                    throw Conflict(valres.reason(), val->clone());
+                  else
+                    throw ValidationFailed(valres.reason());
+              }
+              else
+                ELLE_WARN("No paxos accepted, cannot validate removal");
+            }
+            else
+            { // immutable block
+              auto buffer = this->storage()->get(address);
+              elle::serialization::Context context;
+              context.set<Doughnut*>(&this->doughnut());
+              auto stored =
+                elle::serialization::binary::deserialize<BlockOrPaxos>(
+                  buffer, true, context);
+              elle::SafeFinally cleanup([&] {
+                  delete stored.block;
+                  delete stored.paxos;
+              });
+              if (!stored.block)
+                ELLE_WARN("No paxos and no block, cannot validate removal");
+              else
+              {
+                auto previous = stored.block;
+                auto valres = previous->validate_remove(rs);
+                if (!valres)
+                  if (valres.conflict())
+                    throw Conflict(valres.reason(), previous->clone());
+                  else
+                    throw ValidationFailed(valres.reason());
+              }
+            }
+          }
+          try
+          {
+            this->storage()->erase(address);
+          }
+          catch (storage::MissingKey const& k)
+          {
+            throw MissingBlock(k.key());
+          }
+          on_remove(address);
           this->_addresses.erase(address);
         }
 
@@ -592,9 +648,9 @@ namespace infinit
         }
 
         void
-        Paxos::_remove(Address address)
+        Paxos::_remove(Address address, blocks::RemoveSignature rs)
         {
-          this->remove_many(address, _factor);
+          this->remove_many(address, std::move(rs), _factor);
         }
 
         Paxos::LocalPeer::Decision::Decision(PaxosServer paxos)

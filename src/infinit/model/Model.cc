@@ -134,7 +134,15 @@ namespace infinit
     void
     Model::remove(Address address)
     {
-      this->_remove(address);
+      auto block = this->fetch(address);
+      auto rs = block->sign_remove();
+      this->remove(address, std::move(rs));
+    }
+
+    void
+    Model::remove(Address address, blocks::RemoveSignature rs)
+    {
+      this->_remove(address, std::move(rs));
     }
 
     ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_,

@@ -33,7 +33,7 @@ namespace infinit
           std::unique_ptr<blocks::Block>
           fetch(Address address, boost::optional<int> local_version = {});
           void
-          remove(Address address);
+          remove(Address address, blocks::RemoveSignature rs);
           static
           std::unique_ptr<blocks::Block>
           fetch_from_members(
@@ -41,7 +41,9 @@ namespace infinit
             Address address,
             boost::optional<int> local_version);
           void
-          remove_many(Address address, int factor);
+          remove_many(Address address,
+                      blocks::RemoveSignature rs,
+                      int factor);
         protected:
           virtual
           void
@@ -53,7 +55,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version);
           virtual
           void
-          _remove(Address address);
+          _remove(Address address, blocks::RemoveSignature rs);
           std::shared_ptr<Peer>
           _owner(Address const& address,
                  overlay::Operation op) const;

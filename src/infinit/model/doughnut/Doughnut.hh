@@ -99,7 +99,7 @@ namespace infinit
                boost::optional<int> local_version) const override;
         virtual
         void
-        _remove(Address address) override;
+        _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
       };
 

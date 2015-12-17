@@ -48,7 +48,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
-          _remove(Address address) override;
+          _remove(Address address, blocks::RemoveSignature rs) override;
 
           /*----------.
           | Operation |
@@ -60,13 +60,16 @@ namespace infinit
             Op(Address addr_,
                std::unique_ptr<blocks::Block>&& block_,
                boost::optional<StoreMode> mode_ = {},
-               std::unique_ptr<ConflictResolver> resolver_ = {});
+               std::unique_ptr<ConflictResolver> resolver_ = {},
+               blocks::RemoveSignature remove_signature_ = {}
+               );
             Op(elle::serialization::SerializerIn& ser);
             void serialize(elle::serialization::Serializer& ser);
             Address address;
             std::unique_ptr<blocks::Block> block;
             boost::optional<StoreMode> mode;
             std::unique_ptr<ConflictResolver> resolver;
+            blocks::RemoveSignature remove_signature;
             int index;
           };
 

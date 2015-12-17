@@ -47,7 +47,7 @@ namespace infinit
               boost::optional<int> local_version) const;
         virtual
         void
-        remove(Address address) = 0;
+        remove(Address address, blocks::RemoveSignature rs) = 0;
       protected:
         virtual
         std::unique_ptr<blocks::Block>

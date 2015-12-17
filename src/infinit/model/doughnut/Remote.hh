@@ -108,7 +108,7 @@ namespace infinit
         store(blocks::Block const& block, StoreMode mode) override;
         virtual
         void
-        remove(Address address) override;
+        remove(Address address, blocks::RemoveSignature rs) override;
       protected:
         virtual
         std::unique_ptr<blocks::Block>

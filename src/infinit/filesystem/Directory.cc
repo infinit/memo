@@ -686,6 +686,12 @@ namespace infinit
         _files[ename] = std::make_pair(type, eaddr);
         _commit({OperationType::insert, ename}, true);
       }
+      else if (name == "user.infinit.fsck.rmblock")
+      {
+        umbrella([&] {
+            this->_owner.block_store()->remove(Address::from_string(value));
+        });
+      }
       else if (name == "user.infinit.fsck.unlink")
       {
         auto it = _files.find(value);
@@ -748,6 +754,38 @@ namespace infinit
          auto userdata = value.substr(sep+1);
          model::doughnut::Group g(*dn, gn);
          g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
+      }
+      else if (name == "user.infinit.hack.forge")
+      {
+        class MyMB: public model::blocks::MutableBlock
+        {
+        public:
+          typedef model::blocks::MutableBlock Super;
+          MyMB(Address addr) : Super(addr) {}
+          MyMB(elle::serialization::Serializer& input,
+            elle::Version const& version)
+          : Super(input, version)
+          {}
+          void serialize(elle::serialization::Serializer& s,
+                              elle::Version const& v) override
+          {
+            Super::serialize(s, v);
+          }
+          int version() const override { return 2384;}
+          std::unique_ptr<model::blocks::Block> clone(bool) const override
+          {
+            return elle::make_unique<MyMB>(this->address());
+          }
+        };
+        static const elle::serialization::Hierarchy<Block>::
+        Register<MyMB> _register_serialization("ha><or");
+        MyMB mb(Address::from_string(value));
+        _owner.block_store()->store(mb);
+        /*
+        model::blocks::Block b(Address::from_string(value),
+                        elle::Buffer("coin", 4));
+        _owner.block_store()->store(b);
+        */
       }
       else
         Node::setxattr(name, value, flags);

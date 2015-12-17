@@ -102,7 +102,7 @@ namespace infinit
       }
 
       void
-      Paranoid::_remove(Address address)
+      Paranoid::_remove(Address address, blocks::RemoveSignature rs)
       {
         ELLE_TRACE_SCOPE("%s: remove block at %x", *this, address);
         try

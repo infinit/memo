@@ -69,7 +69,7 @@ namespace infinit
       }
 
       void
-      Faith::_remove(Address address)
+      Faith::_remove(Address address, blocks::RemoveSignature)
       {
         ELLE_TRACE_SCOPE("%s: remove block at %x", *this, address);
         try

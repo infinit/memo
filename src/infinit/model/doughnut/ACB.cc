@@ -137,6 +137,7 @@ namespace infinit
         , _world_readable(false)
         , _world_writable(false)
         , _serialized_version(serialization_tag::version)
+        , _deleted(false)
       {}
 
       template <typename Block>
@@ -152,6 +153,7 @@ namespace infinit
         , _world_readable(other._world_readable)
         , _world_writable(other._world_writable)
         , _serialized_version(other._serialized_version)
+        , _deleted(other._deleted)
       {
         if (sealed_copy || !other._data_signature.running() || other.keys())
         {
@@ -577,6 +579,9 @@ namespace infinit
       blocks::ValidationResult
       BaseACB<Block>::_validate(blocks::Block const& new_block) const
       {
+        auto supval = Block::_validate(new_block);
+        if (!supval)
+          return supval;
         auto acb = dynamic_cast<Self const*>(&new_block);
         if (!acb)
           return blocks::ValidationResult::failure("New block is not an ACB");
@@ -816,6 +821,7 @@ namespace infinit
         {
           s.serialize("group_acl", this->_acl_group_entries);
           s.serialize("group_version", this->_acl_group_entries);
+          s.serialize("deleted", this->_deleted);
         }
       }
 
@@ -835,6 +841,43 @@ namespace infinit
           s.serialize("world_readable", this->_world_readable);
           s.serialize("world_writable", this->_world_writable);
         }
+      }
+
+      template<typename Block>
+      model::blocks::RemoveSignature
+      BaseACB<Block>::_sign_remove() const
+      {
+        auto res = this->clone(false);
+        auto acb = dynamic_cast<Self*>(res.get());
+        ELLE_ASSERT(acb);
+        acb->_deleted = true;
+        acb->_data_changed = true;
+        acb->seal();
+        blocks::RemoveSignature rs;
+        rs.block = std::move(res);
+        return rs;
+      }
+
+      template<typename Block>
+      blocks::ValidationResult
+      BaseACB<Block>::_validate_remove(blocks::RemoveSignature const& rs) const
+      {
+        if (!rs.block)
+          return blocks::ValidationResult::failure("Expected a block in RemoveSignature");
+        auto mb = dynamic_cast<Self*>(rs.block.get());
+        if (!mb)
+          return blocks::ValidationResult::failure("Signature is not a mutable block");
+        if (!mb->deleted())
+          return blocks::ValidationResult::failure("Block not marked for deletion");
+        auto isvalid = rs.block->validate();
+        if (!isvalid)
+          return isvalid;
+        if (this->version() >= mb->version())
+          return blocks::ValidationResult::conflict("Invalid version");
+        isvalid = dynamic_cast<const blocks::Block*>(this)->validate(*mb);
+        if (!isvalid)
+          return isvalid;
+        return blocks::ValidationResult::success();
       }
 
       template <typename... T>
@@ -883,6 +926,8 @@ namespace infinit
           return false;
         if (this->_world_writable != other_acb->_world_writable)
           return false;
+        if (this->_deleted != other_acb->_deleted)
+          return false;
         return this->Super::operator ==(rhs);
       }
 
@@ -902,6 +947,7 @@ namespace infinit
         , _world_readable(false)
         , _world_writable(false)
         , _serialized_version(version)
+        , _deleted(false)
       {
         this->_serialize(input, version);
       }
@@ -946,6 +992,7 @@ namespace infinit
           s.serialize("world_writable", this->_world_writable);
           s.serialize("group_acl", this->_acl_group_entries);
           s.serialize("group_version", this->_group_version);
+          s.serialize("deleted", this->_deleted);
         }
       }
 

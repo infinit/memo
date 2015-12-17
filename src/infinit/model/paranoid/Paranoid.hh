@@ -35,7 +35,7 @@ namespace infinit
                boost::optional<int> local_version) const override;
         virtual
         void
-        _remove(Address address) override;
+        _remove(Address address, blocks::RemoveSignature) override;
         ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::KeyPair, keys);
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
       };

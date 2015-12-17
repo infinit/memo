@@ -266,9 +266,9 @@ namespace infinit
       }
 
       void
-      Doughnut::_remove(Address address)
+      Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
-        this->_consensus->remove(address);
+        this->_consensus->remove(address, std::move(rs));
       }
 
       Configuration::~Configuration()

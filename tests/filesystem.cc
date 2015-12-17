@@ -73,6 +73,24 @@ static void sig_int()
   fs->unmount();
 }
 
+static int setxattr_(bfs::path p, std::string const& name, std::string const& value)
+{
+  return setxattr(p.c_str(), name.c_str(), value.c_str(), value.size(), 0 SXA_EXTRA);
+}
+
+std::string getxattr_(bfs::path p, std::string const& name)
+{
+  char buf[2048];
+  int res = getxattr(p.c_str(), name.c_str(), buf, 2048 SXA_EXTRA SXA_EXTRA);
+  if (res >= 0)
+  {
+    buf[res] = 0;
+    return buf;
+  }
+  else
+    return "";
+}
+
 static int group_create(bfs::path p, std::string const& name)
 {
   return setxattr(p.c_str(), "user.infinit.group.make", name.c_str(), name.size(), 0 SXA_EXTRA);
@@ -156,7 +174,7 @@ static int directory_count(boost::filesystem::path const& p)
 
 static
 bool
-can_access(boost::filesystem::path const& p)
+can_access(boost::filesystem::path const& p, bool read=false)
 {
   struct stat st;
   if (stat(p.string().c_str(), &st) == -1)
@@ -182,6 +200,16 @@ can_access(boost::filesystem::path const& p)
     int fd = open(p.string().c_str(), O_RDONLY);
     if (fd < 0)
       return false;
+    if (read)
+    {
+      char buf[1024];
+      int res = ::read(fd, buf, 1024);
+      if (res < 0)
+      {
+        close(fd);
+        return false;
+      }
+    }
     close(fd);
     return true;
   }
@@ -1405,6 +1433,31 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+
+  ELLE_LOG("removal");
+  //test the xattrs we'll use
+  auto base0 = m0 / "dirrm";
+  auto base1 = m1 / "dirrm";
+  bfs::create_directory(base0);
+  setxattr_(base0, "user.infinit.auth.setrw", "user1");
+  write(base0 / "rm", "pan");
+  BOOST_CHECK_EQUAL(directory_count(base0), 1);
+  BOOST_CHECK_EQUAL(directory_count(base1), 1);
+  BOOST_CHECK(can_access(base0 / "rm"));
+  std::string block = getxattr_(base0 / "rm", "user.infinit.block");
+  block = block.substr(2);
+  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", block), 0);
+  BOOST_CHECK(!can_access(base0 / "rm", true));
+  BOOST_CHECK_EQUAL(directory_count(base0), 1);
+  setxattr_(base0, "user.infinit.fsck.unlink", "rm");
+  BOOST_CHECK_EQUAL(directory_count(base0), 0);
+
+  write(base0 / "rm2", "foo");
+  BOOST_CHECK_EQUAL(directory_count(base0), 1);
+  block = getxattr_(base0 / "rm2", "user.infinit.block");
+  block = block.substr(2);
+  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", block), -1);
+  BOOST_CHECK(can_access(base0 / "rm2", true));
   ELLE_LOG("test end");
 }
 

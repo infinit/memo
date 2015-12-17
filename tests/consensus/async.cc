@@ -56,7 +56,7 @@ public:
 
   virtual
   void
-  _remove(infinit::model::Address) override
+  _remove(infinit::model::Address, infinit::model::blocks::RemoveSignature) override
   {
     reactor::wait(sem);
     ++nremove;
@@ -93,7 +93,7 @@ public:
 
   virtual
   void
-  _remove(infinit::model::Address) override
+  _remove(infinit::model::Address, infinit::model::blocks::RemoveSignature) override
   {
     reactor::sleep();
     elle::unreachable();

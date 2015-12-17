@@ -282,12 +282,22 @@ namespace infinit
       }
 
       void
-      Remote::remove(Address address)
+      Remote::remove(Address address, blocks::RemoveSignature rs)
       {
         BENCH("remove");
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
-        auto remove = make_rpc<void (Address)>("remove");
-        remove(address);
+        if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+        {
+          auto remove = make_rpc<void (Address, blocks::RemoveSignature)>
+            ("remove");
+          remove(address, rs);
+        }
+        else
+        {
+          auto remove = make_rpc<void (Address)>
+            ("remove");
+          remove(address);
+        }
       }
 
       /*----------.

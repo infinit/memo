@@ -94,15 +94,15 @@ namespace infinit
         }
 
         void
-        Consensus::remove(Address address)
+        Consensus::remove(Address address, blocks::RemoveSignature rs)
         {
-          return this->_remove(address);
+          return this->_remove(address, std::move(rs));
         }
 
         void
-        Consensus::_remove(Address address)
+        Consensus::_remove(Address address, blocks::RemoveSignature rs)
         {
-          this->_owner(address, overlay::OP_REMOVE)->remove(address);
+          this->_owner(address, overlay::OP_REMOVE)->remove(address, std::move(rs));
         }
 
         std::shared_ptr<Peer>
@@ -121,7 +121,9 @@ namespace infinit
         }
 
         void
-        Consensus::remove_many(Address address, int factor)
+        Consensus::remove_many(Address address,
+                               blocks::RemoveSignature rs,
+                               int factor)
         {
           auto peers = this->_owners(address, factor, overlay::OP_REMOVE);
           int count = 0;
@@ -129,11 +131,11 @@ namespace infinit
           {
             for (auto const& p: peers)
             {
-              s.run_background("remove", [this, p, address,&count]
+              s.run_background("remove", [this, p, address,&count, &rs]
               {
                 try
                 {
-                  p->remove(address);
+                  p->remove(address, rs);
                   ++count;
                 }
                 catch (reactor::network::Exception const& e)

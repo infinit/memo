@@ -82,6 +82,8 @@ namespace infinit
       fetch(Address address, boost::optional<int> local_version = {}) const;
       void
       remove(Address address);
+      void
+      remove(Address address, blocks::RemoveSignature sig);
     protected:
       template <typename Block, typename ... Args>
       static
@@ -112,7 +114,7 @@ namespace infinit
       _fetch(Address address, boost::optional<int> local_version) const = 0;
       virtual
       void
-      _remove(Address address) = 0;
+      _remove(Address address, blocks::RemoveSignature sig) = 0;
     };
 
     struct ModelConfig:

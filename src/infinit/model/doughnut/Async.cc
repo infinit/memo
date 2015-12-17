@@ -61,6 +61,7 @@ namespace infinit
           s.serialize("block", block);
           s.serialize("mode", mode);
           s.serialize("resolver", resolver);
+          s.serialize("remove_signature", remove_signature);
         }
 
         Async::Async(std::unique_ptr<Consensus> backend,
@@ -274,11 +275,11 @@ namespace infinit
         }
 
         void
-        Async::_remove(Address address)
+        Async::_remove(Address address, blocks::RemoveSignature rs)
         {
           reactor::wait(this->_init_barrier);
           this->_queue.open();
-          this->_push_op(Op(address, nullptr, {}));
+          this->_push_op(Op(address, nullptr, {}, {}, std::move(rs)));
         }
 
         // Fetch operation must be synchronous, else the consistency is not
@@ -348,7 +349,7 @@ namespace infinit
                   if (!mode)
                     try
                     {
-                      this->_backend->remove(addr);
+                      this->_backend->remove(addr, op->remove_signature);
                     }
                     catch (MissingBlock const&)
                     {
@@ -401,11 +402,13 @@ namespace infinit
         Async::Op::Op(Address address_,
                       std::unique_ptr<blocks::Block>&& block_,
                       boost::optional<StoreMode> mode_,
-                      std::unique_ptr<ConflictResolver> resolver_)
+                      std::unique_ptr<ConflictResolver> resolver_,
+                      blocks::RemoveSignature remove_signature_)
           : address(address_)
           , block(std::move(block_))
           , mode(std::move(mode_))
           , resolver(std::move(resolver_))
+          , remove_signature(remove_signature_)
         {}
       }
     }

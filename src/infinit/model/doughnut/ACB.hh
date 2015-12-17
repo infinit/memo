@@ -77,6 +77,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(bool, world_readable);
         ELLE_ATTRIBUTE_R(bool, world_writable);
         ELLE_ATTRIBUTE_R(elle::Version, serialized_version);
+        ELLE_ATTRIBUTE_R(bool, deleted);
       protected:
         elle::Buffer const& data_signature() const;
 
@@ -163,6 +164,12 @@ namespace infinit
         virtual
         void
         _sign(elle::serialization::SerializerOut& s) const override;
+        virtual
+        model::blocks::RemoveSignature
+        _sign_remove() const override;
+        virtual
+        blocks::ValidationResult
+        _validate_remove(blocks::RemoveSignature const& rs) const override;
       private:
         elle::Buffer
         _data_sign() const;

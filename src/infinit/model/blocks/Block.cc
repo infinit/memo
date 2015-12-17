@@ -105,6 +105,8 @@ namespace infinit
       ValidationResult
       Block::_validate(Block const& new_block) const
       {
+        if (this->address() != new_block.address())
+          return ValidationResult::failure("Addresses do not match");
         return ValidationResult::success();
       }
 
@@ -116,6 +118,30 @@ namespace infinit
       void
       Block::_stored()
       {}
+
+      RemoveSignature
+      Block::sign_remove() const
+      {
+        return _sign_remove();
+      }
+
+      RemoveSignature
+      Block::_sign_remove() const
+      {
+        return RemoveSignature();
+      }
+
+      ValidationResult
+      Block::validate_remove(RemoveSignature const & sig) const
+      {
+        return _validate_remove(sig);
+      }
+
+      ValidationResult
+      Block::_validate_remove(RemoveSignature const& sig) const
+      {
+        return ValidationResult::success();
+      }
 
       /*--------------.
       | Serialization |
@@ -148,6 +174,28 @@ namespace infinit
         elle::fprintf(
           output, "%s(%f, %f)",
           elle::type_info(*this).name(), this->_address, this->_data);
+      }
+
+      RemoveSignature::RemoveSignature()
+      {
+      }
+      RemoveSignature::RemoveSignature(elle::serialization::Serializer& s)
+      {
+        this->serialize(s);
+      }
+      RemoveSignature::RemoveSignature(RemoveSignature const& other)
+      : signature_key(other.signature_key)
+      , signature(other.signature)
+      {
+        if (other.block)
+          block = other.block->clone(true);
+      }
+      void
+      RemoveSignature::serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("block", block);
+        s.serialize("key", signature_key);
+        s.serialize("signature", signature);
       }
     }
   }

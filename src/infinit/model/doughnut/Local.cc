@@ -158,11 +158,26 @@ namespace infinit
       }
 
       void
-      Local::remove(Address address)
+      Local::remove(Address address, blocks::RemoveSignature rs)
       {
         ELLE_DEBUG("remove %x", address);
         try
         {
+          // FIXME: use doughnut version
+          if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+          {
+            auto previous_buffer = this->_storage->get(address);
+            elle::IOStream s(previous_buffer.istreambuf());
+            typename elle::serialization::binary::SerializerIn input(s);
+            input.set_context<Doughnut*>(&this->_doughnut);
+            auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+            auto val = previous->validate_remove(rs);
+            if (!val)
+              if (val.conflict())
+                throw Conflict(val.reason(), previous->clone());
+              else
+                throw ValidationFailed(val.reason());
+          }
           this->_storage->erase(address);
         }
         catch (storage::MissingKey const& k)
@@ -206,12 +221,21 @@ namespace infinit
                   {
                     return this->fetch(address, local_version);
                   }));
-        rpcs.add("remove",
-                std::function<void (Address address)>(
+        // FIXME: use doughnut version
+        if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+          rpcs.add("remove",
+                  std::function<void (Address address, blocks::RemoveSignature)>(
+                    [this] (Address address, blocks::RemoveSignature rs)
+                    {
+                      this->remove(address, rs);
+                    }));
+        else
+          rpcs.add("remove",
+                  std::function<void (Address address)>(
                   [this] (Address address)
-                  {
-                    this->remove(address);
-                  }));
+                    {
+                      this->remove(address, {});
+                    }));
         rpcs.add("ping",
                 std::function<int(int)>(
                   [this] (int i)

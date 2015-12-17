@@ -5,6 +5,8 @@
 # include <elle/Printable.hh>
 # include <elle/Clonable.hh>
 
+# include <cryptography/rsa/PublicKey.hh>
+
 # include <infinit/model/Address.hh>
 # include <infinit/model/blocks/ValidationResult.hh>
 # include <infinit/model/fwd.hh>
@@ -16,6 +18,16 @@ namespace infinit
   {
     namespace blocks
     {
+      struct RemoveSignature
+      {
+        RemoveSignature();
+        RemoveSignature(RemoveSignature const& other);
+        RemoveSignature(elle::serialization::Serializer& input);
+        void serialize(elle::serialization::Serializer& s);
+        std::unique_ptr<Block> block;
+        boost::optional<cryptography::rsa::PublicKey> signature_key;
+        boost::optional<elle::Buffer> signature;
+      };
       class Block
         : public elle::Printable
         , public elle::serialization::VirtuallySerializable<true>
@@ -71,6 +83,10 @@ namespace infinit
         validate(const Block& new_block) const;
         void
         stored(); // called right after a successful store
+        RemoveSignature
+        sign_remove() const; // generate signature for removal request
+        ValidationResult
+        validate_remove(RemoveSignature const& sig) const;
       protected:
         virtual
         void
@@ -84,6 +100,12 @@ namespace infinit
         virtual
         void
         _stored();
+        virtual
+        RemoveSignature
+        _sign_remove() const;
+        virtual
+        ValidationResult
+        _validate_remove(RemoveSignature const& sig) const;
 
       /*--------------.
       | Serialization |
