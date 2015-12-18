@@ -9,10 +9,12 @@
 #include <elle/serialization/Serializer.hh>
 #include <elle/serialization/json.hh>
 
+#include <aws/Credentials.hh>
+
 #include <infinit/storage/Dropbox.hh>
-#include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/Filesystem.hh>
-#include <infinit/storage/Storage.hh>
+#include <infinit/storage/GoogleDrive.hh>
+#include <infinit/storage/S3.hh>
 
 ELLE_LOG_COMPONENT("infinit-storage");
 
@@ -120,7 +122,7 @@ COMMAND(create)
     auto account = ifnt.credentials_dropbox(account_name);
     config =
       elle::make_unique<infinit::storage::DropboxStorageConfig>
-      (name, account.token, std::move(root), std::move(capacity));
+      (name, account->token, std::move(root), std::move(capacity));
   }
   if (args.count("filesystem"))
   {
@@ -142,9 +144,27 @@ COMMAND(create)
       elle::make_unique<infinit::storage::GoogleDriveStorageConfig>
       (name,
        std::move(root),
-       account.refresh_token,
+       account->refresh_token,
        self_user(ifnt, {}).name,
        std::move(capacity));
+  }
+  if (args.count("s3"))
+  {
+    auto region = mandatory(args, "region", "AWS region");
+    auto bucket = mandatory(args, "bucket", "S3 bucket");
+    auto account_name = mandatory(args, "aws-account", "AWS account");
+    auto root = optional(args, "bucket-folder");
+    if (!root)
+      root = elle::sprintf("%s_blocks", name);
+    auto account = ifnt.credentials_aws(account_name);
+    aws::Credentials aws_credentials(account->access_key_id,
+                                     account->secret_access_key,
+                                     region, bucket, root.get());
+    config = elle::make_unique<infinit::storage::S3StorageConfig>(
+      name,
+      std::move(aws_credentials),
+      flag(args, "reduced-redundancy"),
+      std::move(capacity));
   }
   if (!config)
     throw CommandLineError("storage type unspecified");
@@ -223,6 +243,7 @@ main(int argc, char** argv)
   options_description storage_types("Storage types");
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
+    ("s3", "store data in using Amazon S3")
     ;
   options_description hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
@@ -237,10 +258,19 @@ main(int argc, char** argv)
     ;
   options_description dropbox_storage_options("Dropbox storage options");
   dropbox_storage_options.add_options()
-    ("account", value<std::string>(), "Dropbox account to use")
+    ("dropbox-account", value<std::string>(), "Dropbox account to use")
     ("root", value<std::string>(),
       "where to store blocks in Dropbox (default: .infinit)")
     ("token", value<std::string>(), "authentication token")
+    ;
+  options_description s3_options("Amazon S3 storage options");
+  s3_options.add_options()
+    ("aws-account", value<std::string>(), "AWS account to use")
+    ("region", value<std::string>(), "AWS region to use")
+    ("bucket", value<std::string>(), "S3 bucket to use")
+    ("bucket-folder", value<std::string>(),
+     "where to store blocks in the bucket (default: <name>_blocks)")
+    ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
     ;
   program = argv[0];
   Modes modes {
@@ -258,9 +288,9 @@ main(int argc, char** argv)
       {
         storage_types,
         fs_storage_options,
+        s3_options,
       },
-      {
-      },
+      {},
       {
         hidden_storage_types,
         dropbox_storage_options,
