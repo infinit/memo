@@ -127,6 +127,39 @@ namespace infinit
         return blocks::ValidationResult::success();
       }
 
+      blocks::RemoveSignature
+      NB::_sign_remove() const
+      {
+        blocks::RemoveSignature res;
+        res.block.reset(new NB(this->_doughnut,
+                               this->_doughnut->keys(),
+                               this->_name,
+                               elle::Buffer("INFINIT_REMOVE", 14)));
+        res.block->seal();
+        return res;
+      }
+
+      blocks::ValidationResult
+      NB::_validate_remove(blocks::RemoveSignature const& sig) const
+      {
+        if (!sig.block)
+          return blocks::ValidationResult::failure("No block in signature");
+        NB* other = dynamic_cast<NB*>(sig.block.get());
+        if (!other)
+          return blocks::ValidationResult::failure("not a NB");
+        auto val = other->validate();
+        if (!val)
+          return val;
+        if (other->address() != this->address())
+          return blocks::ValidationResult::failure("Address mismatch");
+        // redundant check, same address+validated implies same key
+        if (other->owner() != this->owner())
+          return blocks::ValidationResult::failure("Key mismatch (wow)");
+        if (other->data() != elle::Buffer("INFINIT_REMOVE", 14))
+          return blocks::ValidationResult::failure("Invalid payload");
+        return blocks::ValidationResult::success();
+      }
+
       /*--------------.
       | Serialization |
       `--------------*/

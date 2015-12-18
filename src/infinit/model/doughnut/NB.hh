@@ -66,6 +66,12 @@ namespace infinit
         virtual
         blocks::ValidationResult
         _validate() const override;
+        virtual
+        blocks::RemoveSignature
+        _sign_remove() const override;
+        virtual
+        blocks::ValidationResult
+        _validate_remove(blocks::RemoveSignature const& sig) const override;
       private:
         elle::Buffer
         _data_sign() const;
