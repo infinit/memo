@@ -10,11 +10,11 @@
 #include <elle/With.hh>
 #include <elle/cast.hh>
 #include <elle/format/base64url.hh>
+#include <elle/json/exceptions.hh>
 #include <elle/network/Interface.hh>
 #include <elle/os/environ.hh>
 #include <elle/system/home_directory.hh>
 #include <elle/system/username.hh>
-#include <elle/json/exceptions.hh>
 
 #include <das/model.hh>
 #include <das/serializer.hh>
@@ -30,6 +30,8 @@
 
 #include <reactor/network/upnp.hh>
 
+#include <infinit/credentials/AWSCredentials.hh>
+#include <infinit/credentials/OAuthCredentials.hh>
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -44,14 +46,6 @@ std::string program;
 #define COMMAND(name) static void name(variables_map const& args)
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
-
-struct Credentials
-{
-  std::string uid;
-  std::string display_name;
-  std::string token;
-  std::string refresh_token;
-};
 
 std::string
 beyond(bool help = false)
@@ -187,12 +181,6 @@ gone(std::string const& type)
             << std::endl;
 }
 
-DAS_MODEL(Credentials,
-          (uid, display_name, token, refresh_token),
-          DasCredentials);
-DAS_MODEL_DEFAULT(Credentials, DasCredentials);
-DAS_MODEL_SERIALIZE(Credentials);
-
 struct Storages
 {
   int64_t usage;
@@ -310,6 +298,10 @@ is_hidden_file(boost::filesystem::path const& path)
 
 namespace infinit
 {
+  typedef infinit::AWSCredentials AWSCredentials;
+  typedef infinit::Credentials Credentials;
+  typedef infinit::OAuthCredentials OAuthCredentials;
+
   typedef infinit::model::doughnut::Passport Passport;
 
   void
@@ -1236,9 +1228,9 @@ namespace infinit
     }
 
     void
-    credentials_add(std::string const& name, Credentials const& a)
+    credentials_add(std::string const& name, std::unique_ptr<Credentials> a)
     {
-      auto path = this->_credentials_path(name, elle::sprintf("%s", a.uid));
+      auto path = this->_credentials_path(name, elle::sprintf("%s", a->uid()));
       boost::filesystem::ofstream f(path);
       if (!f.good())
       {
@@ -1248,10 +1240,10 @@ namespace infinit
       elle::serialization::json::serialize(a, f, false);
     }
 
-    std::vector<Credentials>
+    std::vector<std::unique_ptr<Credentials>>
     credentials(std::string const& name) const
     {
-      std::vector<Credentials> res;
+      std::vector<std::unique_ptr<Credentials>> res;
       auto const path = this->_credentials_path(name);
       boost::filesystem::directory_iterator const end;
       for (boost::filesystem::directory_iterator it(path);
@@ -1266,58 +1258,83 @@ namespace infinit
             throw elle::Error(
               elle::sprintf("unable to open %s for reading", path));
           }
-          res.push_back(
-            elle::serialization::json::deserialize<Credentials>(f, false));
+          res.push_back(elle::serialization::json::deserialize<
+            std::unique_ptr<Credentials>>(f, false));
         }
       }
       return res;
     }
 
-    Credentials
-    credentials(std::string const& name, std::string const& uid) const
+    std::unique_ptr<Credentials>
+    credentials(std::string const& name, std::string const& identifier) const
     {
-      for (auto const& account: this->credentials(name))
+      for (auto& account: this->credentials(name))
       {
-        if (account.display_name == uid || account.uid == uid)
-          return account;
+        if (account->display_name() == identifier ||
+            account->uid() == identifier)
+        {
+          return std::move(account);
+        }
       }
-      throw elle::Error(elle::sprintf("no such %s account: %s", name, uid));
+      throw elle::Error(
+        elle::sprintf("no such %s account: %s", name, identifier));
     }
 
     void
-    credentials_dropbox_add(Credentials const& a)
+    credentials_aws_add(std::unique_ptr<Credentials> a)
     {
-      this->credentials_add("dropbox", a);
+      this->credentials_add("aws", std::move(a));
     }
 
-    std::vector<Credentials>
+    std::vector<std::unique_ptr<Credentials>>
+    credentials_aws() const
+    {
+      return this->credentials("aws");
+    }
+
+    std::unique_ptr<AWSCredentials, std::default_delete<infinit::Credentials>>
+    credentials_aws(std::string const& uid) const
+    {
+      auto res = this->credentials("aws", uid);
+      return std::dynamic_pointer_cast<AWSCredentials>(res);
+    }
+
+    void
+    credentials_dropbox_add(std::unique_ptr<Credentials> a)
+    {
+      this->credentials_add("dropbox", std::move(a));
+    }
+
+    std::vector<std::unique_ptr<Credentials>>
     credentials_dropbox() const
     {
       return this->credentials("dropbox");
     }
 
-    Credentials
+    std::unique_ptr<OAuthCredentials, std::default_delete<infinit::Credentials>>
     credentials_dropbox(std::string const& uid) const
     {
-      return credentials("dropbox", uid);
+      auto res = this->credentials("dropbox", uid);
+      return std::dynamic_pointer_cast<OAuthCredentials>(res);
     }
 
     void
-    credentials_google_add(Credentials const& a)
+    credentials_google_add(std::unique_ptr<Credentials> a)
     {
-      this->credentials_add("google", a);
+      this->credentials_add("google", std::move(a));
     }
 
-    std::vector<Credentials>
+    std::vector<std::unique_ptr<Credentials>>
     credentials_google() const
     {
       return this->credentials("google");
     }
 
-    Credentials
+    std::unique_ptr<OAuthCredentials, std::default_delete<infinit::Credentials>>
     credentials_google(std::string const& uid) const
     {
-      return credentials("google", uid);
+      auto res = this->credentials("google", uid);
+      return std::dynamic_pointer_cast<OAuthCredentials>(res);
     }
 
     boost::filesystem::path
