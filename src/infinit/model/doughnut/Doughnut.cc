@@ -140,7 +140,7 @@ namespace infinit
         return *this->_keys;
       }
 
-      std::shared_ptr<cryptography::rsa::KeyPair>
+      std::shared_ptr<cryptography::rsa::KeyPair const>
       Doughnut::keys_shared() const
       {
         return this->_keys;

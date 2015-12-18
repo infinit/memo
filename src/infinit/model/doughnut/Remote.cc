@@ -12,9 +12,9 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Remote")
 
-#define BENCH(name)                                          \
+#define BENCH(name)                                      \
   static elle::Bench bench("bench.remote." name, 10000_sec); \
-  elle::Bench::BenchScope bs(bench)                          \
+  elle::Bench::BenchScope bs(bench)
 
 namespace infinit
 {
@@ -265,8 +265,7 @@ namespace infinit
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         auto store = make_rpc<void (blocks::Block const&, StoreMode)>("store");
-        store.set_context<std::shared_ptr<cryptography::rsa::KeyPair>>
-          (this->_doughnut.keys_shared());
+        store.set_context<Doughnut*>(&this->_doughnut);
         store(block, mode);
       }
 
@@ -278,8 +277,7 @@ namespace infinit
         auto fetch = elle::unconst(this)->make_rpc<
           std::unique_ptr<blocks::Block>(Address,
                                          boost::optional<int>)>("fetch");
-        fetch.set_context<std::shared_ptr<cryptography::rsa::KeyPair>>
-          (this->_doughnut.keys_shared());
+        fetch.set_context<Doughnut*>(&this->_doughnut);
         return fetch(std::move(address), std::move(local_version));
       }
 
