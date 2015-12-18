@@ -421,7 +421,9 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
   }
   ELLE_LOG("alice: store block")
     dhts.dht_a->store(*block_alice);
-  std::unique_ptr<infinit::model::blocks::ACLBlock> block_bob;
+  std::unique_ptr<
+    infinit::model::blocks::ACLBlock,
+    std::default_delete<infinit::model::blocks::Block>> block_bob;
   ELLE_LOG("bob: fetch block");
   {
     block_bob = std::static_pointer_cast<infinit::model::blocks::ACLBlock>

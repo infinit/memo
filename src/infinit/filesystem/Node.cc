@@ -308,8 +308,8 @@ namespace infinit
         THROW_INVAL;
       }
       auto block = _owner.fetch_or_die(self_address);
-      std::unique_ptr<model::blocks::ACLBlock> acl
-        = std::static_pointer_cast<model::blocks::ACLBlock>(std::move(block));
+      auto acl =
+        std::static_pointer_cast<model::blocks::ACLBlock>(std::move(block));
       if (!acl)
         throw rfs::Error(EIO, "Block is not an ACL block");
       // permission check
