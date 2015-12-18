@@ -22,7 +22,10 @@ boost::filesystem::path
 root()
 {
   static boost::filesystem::path source(elle::os::getenv("SOURCE_DIR", "."));
-  return source / "tests/backward-compatibility";
+  auto res = source / "tests/backward-compatibility";
+  if (!boost::filesystem::exists(res))
+    res = source / "backend/tests/backward-compatibility";
+  return res;
 }
 
 static
