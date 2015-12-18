@@ -57,7 +57,7 @@ namespace infinit
           this->_consensus->make_local(std::move(port), std::move(storage)) :
           nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
-        , _pool([this] { return elle::make_unique<ACB>(this->_keys); }, 100, 1)
+        , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
       {}
 
       Doughnut::Doughnut(Address id,
@@ -98,6 +98,7 @@ namespace infinit
               auto user = elle::make_unique<UB>(name, this->keys().K());
               ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
                                *this, user->address(), name);
+
               this->store(std::move(user));
             }
             try
@@ -150,7 +151,7 @@ namespace infinit
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        return elle::make_unique<OKB>(this->_keys);
+        return elle::make_unique<OKB>(const_cast<Doughnut*>(this));
       }
 
       std::unique_ptr<blocks::ImmutableBlock>

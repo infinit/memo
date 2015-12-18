@@ -60,12 +60,8 @@ namespace infinit
           bool write;
         };
 
-        /** List permissions
-         *
-         *  \param model The model to retreive user blocks.
-         */
         std::vector<Entry>
-        list_permissions(boost::optional<Model const&> model);
+        list_permissions(bool ommit_names=false);
 
       protected:
         virtual
@@ -79,7 +75,7 @@ namespace infinit
 
         virtual
         std::vector<Entry>
-        _list_permissions(boost::optional<Model const&> model);
+        _list_permissions(bool ommit_names);
 
       /*--------------.
       | Serialization |

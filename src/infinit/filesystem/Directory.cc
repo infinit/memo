@@ -709,6 +709,23 @@ namespace infinit
         Node::setxattr(name, value, flags);
     }
 
+    static std::string perms_to_json(ACLBlock& block)
+    {
+      auto perms = block.list_permissions();
+      elle::json::Array v;
+      for (auto const& perm: perms)
+      {
+        elle::json::Object o;
+        o["name"] = perm.user->name();
+        o["read"] = perm.read;
+        o["write"] = perm.write;
+        v.push_back(o);
+      }
+      std::stringstream ss;
+      elle::json::write(ss, v, true);
+      return ss.str();
+    }
+
     std::string
     Directory::getxattr(std::string const& key)
     {
@@ -727,7 +744,7 @@ namespace infinit
       else if (key == "user.infinit.auth")
       {
         _fetch();
-        return perms_to_json(*this->_owner.block_store(), *_block);
+        return perms_to_json(*_block);
       }
       else if (key == "user.infinit.auth.inherit")
       {
@@ -736,8 +753,7 @@ namespace infinit
       }
       else if (key == "user.infinit.sync")
       {
-        auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>
-          (this->_owner.block_store());
+        auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
         auto c = dn->consensus().get();
         auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
         if (!a)

@@ -88,6 +88,23 @@ namespace infinit
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");
 
+    static std::string perms_to_json(ACLBlock& block)
+    {
+      auto perms = block.list_permissions();
+      elle::json::Array v;
+      for (auto const& perm: perms)
+      {
+        elle::json::Object o;
+        o["name"] = perm.user->name();
+        o["read"] = perm.read;
+        o["write"] = perm.write;
+        v.push_back(o);
+      }
+      std::stringstream ss;
+      elle::json::write(ss, v, true);
+      return ss.str();
+    }
+
     void
     File::chmod(mode_t mode)
     {
@@ -751,8 +768,7 @@ namespace infinit
       {
         Address addr = _parent->_files.at(_name).second;
         auto block = _owner.fetch_or_die(addr);
-        return perms_to_json(*this->_owner.block_store(),
-                             dynamic_cast<ACLBlock&>(*block));
+        return perms_to_json(dynamic_cast<ACLBlock&>(*block));
       }
       else
         return Node::getxattr(key);

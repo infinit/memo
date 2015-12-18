@@ -53,9 +53,6 @@ namespace infinit
       ELLE_ATTRIBUTE_RW(bool, single_mount);
       ELLE_ATTRIBUTE_R(std::string, volume_name);
     };
-
-    std::string
-    perms_to_json(model::Model const& model, model::blocks::ACLBlock& block);
   }
 }
 
