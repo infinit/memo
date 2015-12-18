@@ -61,7 +61,7 @@ namespace infinit
       std::vector<Key>
       _list() = 0;
       /// Return the status of a given key.
-      /// Implementations should check localy only if the information is
+      /// Implementations should check locally only if the information is
       /// available, or return BlockStatus::unknown.
       virtual
       BlockStatus
