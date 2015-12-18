@@ -17,6 +17,7 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
@@ -418,6 +419,31 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   }
 }
 
+ELLE_TEST_SCHEDULED(UB, (bool, paxos))
+{
+  DHTs dhts(paxos);
+  auto& dhta = dhts.dht_a;
+  auto& dhtb = dhts.dht_b;
+  {
+    dht::UB uba(dhta.get(), "a", dhta->keys().K());
+    dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
+    dhta->store(uba);
+    dhta->store(ubarev);
+  }
+  auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K()));
+  BOOST_CHECK(ruba);
+  auto* uba = dynamic_cast<dht::UB*>(ruba.get());
+  BOOST_CHECK(uba);
+  dht::UB ubf(dhta.get(), "duck", dhta->keys().K(), true);
+  BOOST_CHECK_THROW(dhta->store(ubf), std::exception);
+  BOOST_CHECK_THROW(dhtb->store(ubf), std::exception);
+  BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
+  BOOST_CHECK_THROW(dhtb->remove(ruba->address(), {}), std::exception);
+  BOOST_CHECK_THROW(dhta->remove(ruba->address(), {}), std::exception);
+  dhta->remove(ruba->address());
+  dhtb->store(ubf);
+}
+
 ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
 {
   DHTs dhts(paxos);
@@ -635,6 +661,7 @@ ELLE_TEST_SUITE()
   TEST(async);
   TEST(ACB);
   TEST(NB);
+  TEST(UB);
   TEST(conflict);
   TEST(restart);
   TEST(cache);

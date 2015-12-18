@@ -104,7 +104,7 @@ namespace infinit
             }
             catch (MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(name, this->keys().K());
+              auto user = elle::make_unique<UB>(this, name, this->keys().K());
               ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
                                *this, user->address(), name);
 
@@ -126,7 +126,7 @@ namespace infinit
             }
             catch(MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(name, this->keys().K(), true);
+              auto user = elle::make_unique<UB>(this, name, this->keys().K(), true);
               ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
                                user->address());
               this->store(std::move(user));

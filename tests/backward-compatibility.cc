@@ -186,9 +186,9 @@ main(int argc, char** argv)
       auto nb = new infinit::model::doughnut::NB(
         &dht, keys->K(), "NB name", std::string("NB contents"));
       nb->seal();
-      auto ub = new infinit::model::doughnut::UB("USERNAME", keys->K(), false);
+      auto ub = new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), false);
       ub->seal();
-      auto rub = new infinit::model::doughnut::UB("USERNAME", keys->K(), true);
+      auto rub = new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), true);
       rub->seal();
       auto apply =
         [&] (std::string const& action,

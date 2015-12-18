@@ -7,6 +7,8 @@
 
 # include <infinit/model/blocks/ImmutableBlock.hh>
 
+# include <infinit/model/doughnut/Doughnut.hh>
+
 namespace infinit
 {
   namespace model
@@ -27,12 +29,13 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        UB(std::string name, cryptography::rsa::PublicKey key,
+        UB(Doughnut* dht, std::string name, cryptography::rsa::PublicKey key,
            bool reverse = false);
         UB(UB const& other);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(bool, reverse);
+        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         static
         Address
         hash_address(std::string const& name);
@@ -58,7 +61,15 @@ namespace infinit
         virtual
         blocks::ValidationResult
         _validate() const override;
-
+        virtual
+        blocks::RemoveSignature
+        _sign_remove() const override;
+        virtual
+        blocks::ValidationResult
+        _validate_remove(blocks::RemoveSignature const& sig) const override;
+        virtual
+        blocks::ValidationResult
+        _validate(const Block& new_block) const override;
       /*--------------.
       | Serialization |
       `--------------*/

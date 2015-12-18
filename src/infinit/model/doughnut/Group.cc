@@ -76,9 +76,9 @@ namespace infinit
             auto gb = elle::cast<GB>::runtime(block);
             ELLE_TRACE("New group block address: %x, key %s",
                        gb->address(), gb->owner_key());
-            auto ub = elle::make_unique<UB>(_name,
+            auto ub = elle::make_unique<UB>(&_dht, _name,
               gb->owner_key());
-            auto rub = elle::make_unique<UB>("@"+_name,
+            auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
               gb->owner_key(), true);
             _dht.store(std::move(ub), STORE_INSERT);
             _dht.store(std::move(rub), STORE_INSERT);
