@@ -6,7 +6,6 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 
-#include <elle/factory.hh>
 #include <elle/log.hh>
 
 #include <infinit/storage/Collision.hh>
@@ -141,13 +140,8 @@ namespace infinit
       return dir / elle::sprintf("%x", key);
     }
 
-    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
-    {
-      return elle::make_unique<infinit::storage::Filesystem>(args[0]);
-    }
-
     FilesystemStorageConfig::FilesystemStorageConfig(
-      std::string name, std::string path_, boost::optional<int64_t> capacity)
+        std::string name, std::string path_, boost::optional<int64_t> capacity)
       : StorageConfig(std::move(name), std::move(capacity))
       , path(std::move(path_))
     {}
@@ -178,5 +172,3 @@ namespace infinit
     _register_FilesystemStorageConfig("filesystem");
   }
 }
-
-FACTORY_REGISTER(infinit::storage::Storage, "filesystem", &infinit::storage::make);
