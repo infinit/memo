@@ -449,6 +449,33 @@ namespace infinit
               throw ValidationFailed(res.reason());
           if (!dynamic_cast<blocks::ImmutableBlock const*>(&block))
             throw ValidationFailed("bypassing Paxos for a non-immutable block");
+          // validate with previous version
+          try
+          {
+            auto previous_buffer = this->storage()->get(block.address());
+            elle::IOStream s(previous_buffer.istreambuf());
+            typename elle::serialization::binary::SerializerIn input(s);
+            input.set_context<Doughnut*>(&this->doughnut());
+            auto stored = input.deserialize<BlockOrPaxos>();
+            elle::SafeFinally cleanup([&] {
+                  delete stored.block;
+                  delete stored.paxos;
+            });
+            if (!stored.block)
+              ELLE_WARN("No block, cannot validate update");
+            else
+            {
+              auto vr = stored.block->validate(block);
+              if (!vr)
+                if (vr.conflict())
+                  throw Conflict(vr.reason(), stored.block->clone());
+                else
+                  throw ValidationFailed(vr.reason());
+            }
+          }
+          catch (storage::MissingKey const&)
+          {
+          }
           elle::Buffer data =
             elle::serialization::binary::serialize(
               BlockOrPaxos(const_cast<blocks::Block*>(&block)));
@@ -474,6 +501,7 @@ namespace infinit
               {
                 auto& val = highest->value;
                 auto valres = val->validate_remove(rs);
+                ELLE_TRACE("mutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
                     throw Conflict(valres.reason(), val->clone());
@@ -501,6 +529,7 @@ namespace infinit
               {
                 auto previous = stored.block;
                 auto valres = previous->validate_remove(rs);
+                ELLE_TRACE("Immutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
                     throw Conflict(valres.reason(), previous->clone());

@@ -174,7 +174,7 @@ static int directory_count(boost::filesystem::path const& p)
 
 static
 bool
-can_access(boost::filesystem::path const& p, bool read=false)
+can_access(boost::filesystem::path const& p, bool read=false, bool read_all=false)
 {
   struct stat st;
   if (stat(p.string().c_str(), &st) == -1)
@@ -208,6 +208,18 @@ can_access(boost::filesystem::path const& p, bool read=false)
       {
         close(fd);
         return false;
+      }
+      if (read_all)
+      {
+        do
+        {
+          res = ::read(fd, buf, 1024);
+          if (res < 0)
+          {
+            close(fd);
+            return false;
+          }
+        } while (res > 0);
       }
     }
     close(fd);
@@ -1458,6 +1470,26 @@ test_acl(bool paxos)
   block = block.substr(2);
   BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", block), -1);
   BOOST_CHECK(can_access(base0 / "rm2", true));
+  bfs::remove(base0 / "rm2");
+
+  ELLE_LOG("removal CHB");
+  {
+    bfs::ofstream ofs(base0 / "rm3");
+    char buffer[16384];
+    for (int i=0; i<100; ++i)
+      ofs.write(buffer, 16384);
+  }
+  auto fat = getxattr_(base0 / "rm3", "user.infinit.fat");
+  std::stringstream ss(fat);
+  std::string address;
+  ss >> address >> address >> address >> address;
+  address = address.substr(2);
+  infinit::model::Address::from_string(address);
+
+  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", address), -1);
+  BOOST_CHECK(can_access(base0 / "rm3", true, true));
+  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", address), 0);
+  BOOST_CHECK(!can_access(base0 / "rm3", true, true));
   ELLE_LOG("test end");
 }
 

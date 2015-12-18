@@ -164,10 +164,11 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::ImmutableBlock>
-      Doughnut::_make_immutable_block(elle::Buffer content) const
+      Doughnut::_make_immutable_block(elle::Buffer content, Address owner) const
       {
         ELLE_TRACE_SCOPE("%s: create CHB", *this);
-        return elle::make_unique<CHB>(std::move(content));
+        return elle::make_unique<CHB>(elle::unconst(this),
+                                      std::move(content), owner);
       }
 
       std::unique_ptr<blocks::ACLBlock>

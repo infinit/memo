@@ -25,6 +25,8 @@ namespace infinit
         RemoveSignature(elle::serialization::Serializer& input);
         void serialize(elle::serialization::Serializer& s);
         std::unique_ptr<Block> block;
+        boost::optional<cryptography::rsa::PublicKey> group_key;
+        boost::optional<int> group_index;
         boost::optional<cryptography::rsa::PublicKey> signature_key;
         boost::optional<elle::Buffer> signature;
       };

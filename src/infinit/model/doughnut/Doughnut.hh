@@ -78,7 +78,7 @@ namespace infinit
         _make_mutable_block() const override;
         virtual
         std::unique_ptr<blocks::ImmutableBlock>
-        _make_immutable_block(elle::Buffer content) const override;
+        _make_immutable_block(elle::Buffer content, Address owner) const override;
         virtual
         std::unique_ptr<blocks::ACLBlock>
         _make_acl_block() const override;

@@ -184,7 +184,9 @@ namespace infinit
         this->serialize(s);
       }
       RemoveSignature::RemoveSignature(RemoveSignature const& other)
-      : signature_key(other.signature_key)
+      : group_key(other.group_key)
+      , group_index(other.group_index)
+      , signature_key(other.signature_key)
       , signature(other.signature)
       {
         if (other.block)
@@ -196,6 +198,8 @@ namespace infinit
         s.serialize("block", block);
         s.serialize("key", signature_key);
         s.serialize("signature", signature);
+        s.serialize("group_key", group_key);
+        s.serialize("group_index", group_index);
       }
     }
   }

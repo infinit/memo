@@ -304,7 +304,9 @@ namespace infinit
       bool is_new = false;
       if (_fat[index].first == Address::null)
       {
-        b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>());
+        ELLE_ASSERT(_first_block);
+        b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>(
+          elle::Buffer(), _first_block->address()), std::string());
         is_new = true;
       }
       else
@@ -548,7 +550,7 @@ namespace infinit
               buf.size(targetsize);
             }
             auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
-              sk.encipher(buf));
+              sk.encipher(buf), _first_block->address());
             _owner.unchecked_remove(_fat[i].first);
             _fat[i].first = newblock->address();
             _owner.store_or_die(std::move(newblock));

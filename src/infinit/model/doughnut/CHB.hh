@@ -1,4 +1,5 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
+#include <infinit/model/doughnut/fwd.hh>
 
 namespace infinit
 {
@@ -20,8 +21,8 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        CHB(elle::Buffer data);
-        CHB(elle::Buffer data, elle::Buffer salt);
+        CHB(Doughnut* d, elle::Buffer data, Address owner = Address::null);
+        CHB(Doughnut* d, elle::Buffer data, elle::Buffer salt, Address owner = Address::null);
         CHB(CHB const& other);
 
       /*---------.
@@ -47,8 +48,18 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        CHB(elle::serialization::Serializer& input);
-        void serialize(elle::serialization::Serializer& s) override;
+        CHB(elle::serialization::Serializer& input,
+            elle::Version const& v);
+        void serialize(elle::serialization::Serializer& s,
+                       elle::Version const& v) override;
+
+      protected:
+        virtual
+        blocks::RemoveSignature
+        _sign_remove() const override;
+        virtual
+        blocks::ValidationResult
+        _validate_remove(blocks::RemoveSignature const& sig) const override;
 
       /*--------.
       | Details |
@@ -59,8 +70,11 @@ namespace infinit
         _make_salt();
         static
         Address
-        _hash_address(elle::Buffer const& content, elle::Buffer const& salt);
+        _hash_address(elle::Buffer const& content, Address owner,
+                      elle::Buffer const& salt);
         ELLE_ATTRIBUTE(elle::Buffer, salt);
+        ELLE_ATTRIBUTE_R(Address, owner); // owner ACB address or null
+        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
       };
     }
   }

@@ -118,7 +118,10 @@ namespace infinit
           }
           auto vr = previous->validate(block);
           if (!vr)
-            throw Conflict(vr.reason(), std::move(previous));
+            if (vr.conflict())
+              throw Conflict(vr.reason(), std::move(previous));
+            else
+              throw ValidationFailed(vr.reason());
         }
         catch (storage::MissingKey const&)
         {}

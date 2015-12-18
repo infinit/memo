@@ -19,7 +19,7 @@ namespace infinit
 
     template <>
     std::unique_ptr<blocks::MutableBlock>
-    Model::make_block(elle::Buffer data) const
+    Model::make_block(elle::Buffer data, Address addr) const
     {
       auto res = this->_make_mutable_block();
       res->data(std::move(data));
@@ -35,13 +35,13 @@ namespace infinit
 
     template <>
     std::unique_ptr<blocks::ImmutableBlock>
-    Model::make_block(elle::Buffer data) const
+    Model::make_block(elle::Buffer data, Address owner) const
     {
-      return this->_make_immutable_block(std::move(data));
+      return this->_make_immutable_block(std::move(data), owner);
     }
 
     std::unique_ptr<blocks::ImmutableBlock>
-    Model::_make_immutable_block(elle::Buffer data) const
+    Model::_make_immutable_block(elle::Buffer data, Address owner) const
     {
       ELLE_TRACE_SCOPE("%s: create block", *this);
       return this->_construct_block<blocks::ImmutableBlock>(Address::random(),
@@ -50,7 +50,7 @@ namespace infinit
 
     template <>
     std::unique_ptr<blocks::ACLBlock>
-    Model::make_block(elle::Buffer data) const
+    Model::make_block(elle::Buffer data, Address) const
     {
       auto res = this->_make_acl_block();
       res->data(std::move(data));
@@ -59,7 +59,7 @@ namespace infinit
 
     template <>
     std::unique_ptr<blocks::GroupBlock>
-    Model::make_block(elle::Buffer data) const
+    Model::make_block(elle::Buffer data, Address) const
     {
       auto res = this->_make_group_block();
       return res;

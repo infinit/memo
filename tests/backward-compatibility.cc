@@ -175,7 +175,7 @@ main(int argc, char** argv)
         <infinit::cryptography::rsa::KeyPair>(K, k);
       DummyDoughnut dht(infinit::model::Address::null, keys);
       auto chb =
-        new infinit::model::doughnut::CHB(std::string("CHB contents"), salt);
+        new infinit::model::doughnut::CHB(&dht, std::string("CHB contents"), salt);
       chb->seal();
       auto acb = new infinit::model::doughnut::ACB(
         &dht, std::string("ACB contents"), salt);

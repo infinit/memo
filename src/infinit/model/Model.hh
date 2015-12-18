@@ -56,7 +56,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(elle::Version, version);
       template <typename Block>
       std::unique_ptr<Block>
-      make_block(elle::Buffer data = elle::Buffer()) const;
+      make_block(elle::Buffer data = elle::Buffer(), Address owner = Address::null) const;
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
       void
@@ -94,7 +94,7 @@ namespace infinit
       _make_mutable_block() const;
       virtual
       std::unique_ptr<blocks::ImmutableBlock>
-      _make_immutable_block(elle::Buffer content) const;
+      _make_immutable_block(elle::Buffer content, Address owner = Address::null) const;
       virtual
       std::unique_ptr<blocks::ACLBlock>
       _make_acl_block() const;

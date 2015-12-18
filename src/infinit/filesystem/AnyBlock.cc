@@ -2,6 +2,7 @@
 #include <elle/bench.hh>
 #include <cryptography/SecretKey.hh>
 #include <infinit/filesystem/umbrella.hh>
+#include <infinit/model/doughnut/CHB.hh>
 #include <reactor/scheduler.hh>
 
 ELLE_LOG_COMPONENT("infinit.filesystem.AnyBlock");
@@ -21,6 +22,7 @@ namespace infinit
       ELLE_DEBUG("Anyblock mutable=%s, addr = %x", _is_mutable, _backend->address());
       if (!_is_mutable)
       {
+        _owner = dynamic_cast<model::doughnut::CHB*>(_backend.get())->owner();
         _buf = _backend->take_data();
         ELLE_DEBUG("Nonmutable, stole %s bytes", _buf.size());
         if (!_buf.empty() && !secret.empty())
@@ -49,6 +51,7 @@ namespace infinit
     , _is_mutable(b._is_mutable)
     , _buf(std::move(b._buf))
     , _address(b._address)
+    , _owner(b._owner)
     {
 
     }
@@ -58,6 +61,7 @@ namespace infinit
      _is_mutable = b._is_mutable;
      _buf = std::move(b._buf);
      _address = b._address;
+     _owner = b._owner;
     }
     void AnyBlock::data(std::function<void (elle::Buffer&)> transformation)
     {
@@ -105,7 +109,7 @@ namespace infinit
       if (_is_mutable)
         return std::move(_backend);
       else
-        return model.make_block<ImmutableBlock>(std::move(_buf));
+        return model.make_block<ImmutableBlock>(std::move(_buf), _owner);
     }
 
     std::unique_ptr<Block> AnyBlock::make(infinit::model::Model& model,
@@ -118,7 +122,7 @@ namespace infinit
       });
       else
         _buf = sk.encipher(_buf);
-      return model.make_block<ImmutableBlock>(_buf);
+      return model.make_block<ImmutableBlock>(_buf, _owner);
     }
 
     Address AnyBlock::crypt_store(infinit::model::Model& model,
@@ -150,7 +154,7 @@ namespace infinit
         umbrella([&] {model.store(std::move(_backend), mode);});
         return addr;
       }
-      auto block = model.make_block<ImmutableBlock>(_buf);
+      auto block = model.make_block<ImmutableBlock>(_buf, _owner);
       _address = block->address();
       umbrella([&] { model.store(std::move(block), mode);});
       return _address;
