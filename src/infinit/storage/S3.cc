@@ -2,26 +2,30 @@
 
 #include <infinit/storage/S3.hh>
 
-#include <elle/factory.hh>
 #include <elle/log.hh>
 #include <elle/serialization/json/SerializerIn.hh>
 #include <aws/S3.hh>
-
 
 #include <infinit/model/Address.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/Block.hh>
 #include <infinit/storage/MissingKey.hh>
 
-ELLE_LOG_COMPONENT("infinit.model.s3.S3");
+ELLE_LOG_COMPONENT("infinit.storage.S3");
 
 namespace infinit
 {
   namespace storage
   {
+    S3::S3(std::unique_ptr<aws::S3> storage,
+           bool reduced_redundancy,
+           boost::optional<int64_t> capacity)
+      : Storage(std::move(capacity))
+      , _storage(std::move(storage))
+      , _reduced_redundancy(reduced_redundancy)
+    {}
 
-    S3::S3(std::unique_ptr<aws::S3> storage)
-    : _storage(std::move(storage))
+    S3::~S3()
     {}
 
     elle::Buffer
@@ -29,90 +33,128 @@ namespace infinit
     {
       try
       {
-        return _storage->get_object(elle::sprintf("%x", key));
+        return this->_storage->get_object(elle::sprintf("%x", key));
       }
-      catch(aws::AWSException const& e)
+      catch (aws::AWSException const& e)
       {
-        ELLE_TRACE("aws exception: %s", e);
-        throw MissingKey(key);
+        if (e.inner_exception())
+        {
+          try
+          {
+            std::rethrow_exception(e.inner_exception());
+          }
+          catch (aws::FileNotFound const& e)
+          {
+            ELLE_WARN("unable to GET block: %s", e);
+            throw MissingKey(key);
+          }
+        }
+        else
+        {
+          throw e;
+        }
       }
     }
 
     int
     S3::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
-      _storage->put_object(value, elle::sprintf("%x", key));
-
-      //FIXME: impl.
+      if (!insert && !update)
+        throw elle::Error("neither inserting nor updating");
+      if (!insert || !update)
+        throw elle::Error("only update and insert are supported");
+      // FIXME: Use multipart upload for blocks bigger than 5 MiB.
+      this->_storage->put_object(value,
+                                 elle::sprintf("%x", key),
+                                 aws::RequestQuery(),
+                                 !this->reduced_redundancy());
       return 0;
     }
 
     int
     S3::_erase(Key key)
     {
-      _storage->delete_object(elle::sprintf("%x", key));
-
-      //FIXME: impl.
+      try
+      {
+        this->_storage->delete_object(elle::sprintf("%x", key));
+      }
+      catch (aws::AWSException const& e)
+      {
+        if (e.inner_exception())
+        {
+          try
+          {
+            std::rethrow_exception(e.inner_exception());
+          }
+          catch (aws::FileNotFound const& e)
+          {
+            ELLE_WARN("unable to DELETE block: %s", e);
+            throw MissingKey(key);
+          }
+        }
+        else
+        {
+          throw e;
+        }
+      }
       return 0;
     }
 
     std::vector<Key>
     S3::_list()
     {
-      throw std::runtime_error("Not implemented");
+      std::vector<Key> res;
+      auto s3_res = this->_storage->list_remote_folder_full();
+      for (auto const& pair: s3_res)
+      {
+        try
+        {
+          // Remove the 0x from the block file name.
+          res.push_back(
+            infinit::model::Address::from_string(pair.first.substr(2)));
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("ignoring filename that is not an address: %s", pair.first);
+        }
+      }
+      return res;
     }
 
-    static std::unique_ptr<Storage> make(std::vector<std::string> const& args)
+    S3StorageConfig::S3StorageConfig(std::string name,
+                                    aws::Credentials credentials,
+                                    bool reduced_redundancy,
+                                    boost::optional<int64_t> capacity)
+      : StorageConfig(std::move(name), std::move(capacity))
+      , credentials(std::move(credentials))
+      , reduced_redundancy(reduced_redundancy)
+    {}
+
+    S3StorageConfig::S3StorageConfig(elle::serialization::SerializerIn& input)
+      : StorageConfig()
     {
-      std::ifstream is(args[0]);
-      elle::serialization::json::SerializerIn input(is);
-      aws::Credentials creds(input);
-      creds.skew(boost::posix_time::time_duration());
-      auto s3 = elle::make_unique<aws::S3>(creds);
-      return elle::make_unique<infinit::storage::S3>(std::move(s3));
+      this->serialize(input);
     }
 
-
-    struct S3StorageConfig:
-    public StorageConfig
+    void
+    S3StorageConfig::serialize(elle::serialization::Serializer& s)
     {
-    public:
-      std::string configuration;
+      StorageConfig::serialize(s);
+      s.serialize("aws_credentials", this->credentials);
+      s.serialize("reduced_redundancy", this->reduced_redundancy);
+    }
 
-      S3StorageConfig(std::string name, int64_t capacity = 0)
-        : StorageConfig(std::move(name), std::move(capacity))
-      {}
-
-      S3StorageConfig(elle::serialization::SerializerIn& input)
-        : StorageConfig()
-      {
-        this->serialize(input);
-      }
-
-      void
-      serialize(elle::serialization::Serializer& s) override
-      {
-        StorageConfig::serialize(s);
-        s.serialize("configuration", this->configuration);
-      }
-
-      virtual
-      std::unique_ptr<infinit::storage::Storage>
-      make() override
-      {
-        std::ifstream is(configuration);
-        elle::serialization::json::SerializerIn input(is);
-        aws::Credentials creds(input);
-        creds.skew(boost::posix_time::time_duration());
-        auto s3 = elle::make_unique<aws::S3>(creds);
-        return elle::make_unique<infinit::storage::S3>(std::move(s3));
-      }
-    };
+    std::unique_ptr<infinit::storage::Storage>
+    S3StorageConfig::make()
+    {
+      auto s3 = elle::make_unique<aws::S3>(credentials);
+      return elle::make_unique<infinit::storage::S3>(std::move(s3),
+                                                     this->reduced_redundancy,
+                                                     this->capacity);
+    }
 
     static const elle::serialization::Hierarchy<StorageConfig>::
     Register<S3StorageConfig>
     _register_S3StorageConfig("s3");
   }
 }
-
-FACTORY_REGISTER(infinit::storage::Storage, "s3", &infinit::storage::make);
