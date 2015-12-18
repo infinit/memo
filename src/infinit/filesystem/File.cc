@@ -40,7 +40,7 @@ namespace infinit
     public:
       FileConflictResolver(elle::serialization::SerializerIn& s)
       {
-        serialize(s);
+        this->serialize(s);
       }
 
       FileConflictResolver()
