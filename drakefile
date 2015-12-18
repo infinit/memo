@@ -414,24 +414,25 @@ def configure(
     if searched_for:
       raise Exception('Unable to find %s with ldconfig -p' %
                       ', '.join(searched_for))
+
   # Build
   binaries_config = [
     ('doughnode', [], False),
     ('generatekeys', [], False),
     ('infinit', [], False),
     ('infinit-acl', [], True),
-    ('infinit-credentials', [], not production_build),
+    ('infinit-credentials', [], True),
     ('infinit-device', [], True),
     ('infinit-drive', [], True),
     ('infinit-network', [], True),
     ('infinit-passport', [], True),
     ('infinit-smb', [], False),
-    ('infinit-storage', [], True),
+    ('infinit-storage', [aws_lib], True),
     ('infinit-user', [], True),
     ('infinit-volume', [], True),
     ('infinit-webdav', [], False),
     ('infinit-fsck', [], False),
-    ('s3fs', [aws_lib], False),
+    # ('s3fs', [aws_lib], False),
   ]
   if not windows:
     binaries_config.append(('sshfs', [], False))
