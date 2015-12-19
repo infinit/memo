@@ -176,7 +176,7 @@ namespace infinit
       {
         auto block = _header_block();
         // clear current perms
-        auto perms = block->list_permissions();
+        auto perms = block->list_permissions({});
         for (auto const& p: perms)
           try
           { // owner is in that list and we cant touch his perms

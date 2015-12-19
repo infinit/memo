@@ -77,9 +77,9 @@ namespace infinit
             ELLE_TRACE("New group block address: %x, key %s",
                        gb->address(), gb->owner_key());
             auto ub = elle::make_unique<UB>(&_dht, _name,
-              gb->owner_key());
+              *gb->owner_key());
             auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
-              gb->owner_key(), true);
+              *gb->owner_key(), true);
             _dht.store(std::move(ub), STORE_INSERT);
             _dht.store(std::move(rub), STORE_INSERT);
             _dht.store(std::move(gb), STORE_INSERT);
@@ -147,7 +147,7 @@ namespace infinit
         auto key = public_control_key();
         auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
           OKBHeader::hash_address(key, group_block_key)));
-        auto entries = block->list_permissions(ommit_names);
+        auto entries = block->list_permissions(_dht);
         std::vector<std::unique_ptr<model::User>> res;
         for (auto& ent: entries)
           res.emplace_back(std::move(ent.user));

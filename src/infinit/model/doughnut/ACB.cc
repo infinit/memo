@@ -472,7 +472,7 @@ namespace infinit
           try
           {
             std::unique_ptr<model::User> user;
-            if (ommit_names)
+            if (model)
               user.reset(new doughnut::User(ent.key, ""));
             else
               user = this->doughnut()->make_user(

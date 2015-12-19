@@ -14,7 +14,7 @@ namespace infinit
     namespace doughnut
     {
       GB::GB(Doughnut* owner, cryptography::rsa::KeyPair master)
-      : Super(owner, master, elle::Buffer("group", 5))
+      : Super(owner, {}, elle::Buffer("group", 5), master)
       , _master_key(master.k())
       {
         ELLE_TRACE_SCOPE("creating new group");
@@ -127,7 +127,7 @@ namespace infinit
       GB::add_member(model::User const& user)
       {
         _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
+        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
           *this->_master_key));
         this->_set_permissions(user, true, false);
         this->_acl_changed = true;
@@ -136,7 +136,7 @@ namespace infinit
       GB::remove_member(model::User const& user)
       {
         _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
+        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
           *this->_master_key));
         this->_set_permissions(user, false, false);
         this->_acl_changed = true;
@@ -150,7 +150,7 @@ namespace infinit
       GB::add_admin(model::User const& user_)
       {
         _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
+        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
           *this->_master_key));
         try
         {
@@ -174,7 +174,7 @@ namespace infinit
       GB::remove_admin(model::User const& user_)
       {
         _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(this->owner_key(),
+        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
           *this->_master_key));
         try
         {
@@ -203,7 +203,7 @@ namespace infinit
         {
           std::unique_ptr<model::User> user;
           if (ommit_names)
-            user.reset(new doughnut::User(this->owner_key(), ""));
+            user.reset(new doughnut::User(*this->owner_key(), ""));
           else
             user = this->doughnut()->make_user(
                 elle::serialization::json::serialize(key));

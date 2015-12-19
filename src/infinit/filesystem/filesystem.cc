@@ -259,7 +259,7 @@ namespace infinit
       auto acb = dynamic_cast<const model::doughnut::ACB*>(&block);
       bool r = false, w = false;
       ELLE_ASSERT(acb);
-      if (dn->keys().K() == acb->owner_key())
+      if (dn->keys().K() == *acb->owner_key())
         return std::make_pair(true, true);
       for (auto const& e: acb->acl_entries())
       {
