@@ -259,7 +259,7 @@ namespace infinit
       auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
       ELLE_ASSERT(acl);
       auto res = umbrella([&] {
-        for (auto const& e: acl->list_permissions(true))
+        for (auto const& e: acl->list_permissions(*dn))
         {
           auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
           if (!u)
@@ -283,7 +283,7 @@ namespace infinit
       auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
       ELLE_ASSERT(acl);
       umbrella([&] {
-        for (auto const& e: acl->list_permissions(true))
+        for (auto const& e: acl->list_permissions(*dn))
         {
           auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
           if (!u)

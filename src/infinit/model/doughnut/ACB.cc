@@ -121,8 +121,10 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      ACB::ACB(Doughnut* owner)
-        : Super(owner)
+      ACB::ACB(Doughnut* owner,
+               elle::Buffer data,
+               boost::optional<elle::Buffer> salt)
+        : Super(owner, std::move(data), std::move(salt))
         , _editor(-1)
         , _owner_token()
         , _acl_changed(true)
@@ -173,7 +175,7 @@ namespace infinit
         auto& mine = this->doughnut()->keys().K();
         elle::Buffer const* encrypted_secret = nullptr;
         std::vector<ACLEntry> entries;
-        if (mine == this->owner_key())
+        if (mine == *this->owner_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
           encrypted_secret = &this->_owner_token;
@@ -214,7 +216,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
                          *this, key, read, write);
-        if (key == this->owner_key())
+        if (key == *this->owner_key())
           throw elle::Error("Cannot set permissions for owner");
         auto& acl_entries = this->_acl_entries;
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
@@ -290,15 +292,15 @@ namespace infinit
         // FIXME: better implementation
         for (auto const& e: this->_acl_entries)
         {
-          if (e.key != other->owner_key())
+          if (e.key != *other->owner_key())
             other->set_permissions(e.key, e.read, e.write);
         }
-        if (other->owner_key() != this->owner_key())
-          other->set_permissions(this->owner_key(), true, true);
+        if (*other->owner_key() != *this->owner_key())
+          other->set_permissions(*this->owner_key(), true, true);
       }
 
       std::vector<ACB::Entry>
-      ACB::_list_permissions(bool ommit_names)
+      ACB::_list_permissions(boost::optional<Model const&> model)
       {
         auto make_user =
           [&] (cryptography::rsa::PublicKey const& k)
@@ -369,7 +371,7 @@ namespace infinit
         ELLE_DEBUG("%s: check author signature", *this)
         {
           auto sign = this->_data_sign();
-          auto& key = entry ? entry->key : this->owner_key();
+          auto& key = entry ? entry->key : *this->owner_key();
           if (!this->_check_signature(key, this->data_signature(), sign, "data"))
           {
             ELLE_DEBUG("%s: author signature invalid", *this);
@@ -381,7 +383,19 @@ namespace infinit
       }
 
       void
+      ACB::seal(cryptography::SecretKey const& key)
+      {
+        this->_seal(key);
+      }
+
+      void
       ACB::_seal()
+      {
+        this->_seal({});
+      }
+
+      void
+      ACB::_seal(boost::optional<cryptography::SecretKey const&> key)
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
@@ -393,7 +407,7 @@ namespace infinit
           elle::Bench::BenchScope scope(bench);
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
           this->_acl_changed = false;
-          bool owner = this->doughnut()->keys().K() == this->owner_key();
+          bool owner = this->doughnut()->keys().K() == *this->owner_key();
           if (owner)
             this->_editor = -1;
           Super::_seal_okb();
@@ -415,7 +429,7 @@ namespace infinit
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
           ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
                            *this, this->_data_version);
-          bool owner = this->doughnut()->keys().K() == this->owner_key();
+          bool owner = this->doughnut()->keys().K() == *this->owner_key();
           if (owner)
             this->_editor = -1;
           boost::optional<cryptography::SecretKey> secret;
@@ -445,7 +459,7 @@ namespace infinit
           }
           if (!owner && !found)
             throw ValidationFailed("not owner and no write permissions");
-          this->MutableBlock::data(secret.encipher(this->data_plain()));
+          this->MutableBlock::data(key->encipher(this->data_plain()));
           this->_data_changed = false;
         }
         else
@@ -485,7 +499,7 @@ namespace infinit
           elle::IOStream output(res.ostreambuf());
           elle::serialization::binary::SerializerOut s(output, false);
           s.serialize("salt", this->salt());
-          s.serialize("key", this->owner_key());
+          s.serialize("key", *this->owner_key());
           s.serialize("version", this->_data_version);
           s.serialize("data", this->Block::data());
           s.serialize("owner_token", this->_owner_token);

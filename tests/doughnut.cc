@@ -109,9 +109,9 @@ public:
               }, std::forward<Args>(args)...);
   }
 
-  std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys_a;
-  std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys_b;
-  std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys_c;
+  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys_a;
+  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys_b;
+  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys_c;
   std::shared_ptr<dht::Doughnut> dht_a;
   std::shared_ptr<dht::Doughnut> dht_b;
   std::shared_ptr<dht::Doughnut> dht_c;
@@ -140,11 +140,11 @@ private:
            std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
   {
     this->keys_a =
-      elle::make_unique<infinit::cryptography::rsa::KeyPair>(std::move(keys_a));
+      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_a));
     this->keys_b =
-      elle::make_unique<infinit::cryptography::rsa::KeyPair>(std::move(keys_b));
+      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_b));
     this->keys_c =
-      elle::make_unique<infinit::cryptography::rsa::KeyPair>(std::move(keys_c));
+      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_c));
     if (!storage_a)
       storage_a = elle::make_unique<storage::Memory>();
     if (!storage_b)
@@ -192,7 +192,7 @@ private:
       };
     this->dht_a = std::make_shared<dht::Doughnut>(
       id_a,
-      *this->keys_a,
+      this->keys_a,
       this->keys_a->K(),
       passport_a,
       consensus,
@@ -207,7 +207,7 @@ private:
       std::move(storage_a));
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
-      *this->keys_b,
+      this->keys_b,
       this->keys_a->K(),
       passport_b,
       consensus,
@@ -222,7 +222,7 @@ private:
       std::move(storage_b));
     this->dht_c = std::make_shared<dht::Doughnut>(
       id_c,
-      *this->keys_c,
+      this->keys_c,
       this->keys_a->K(),
       passport_c,
       consensus,

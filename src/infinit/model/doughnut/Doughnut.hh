@@ -33,7 +33,7 @@ namespace infinit
         typedef std::function<
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
         Doughnut(Address id,
-                 infinit::cryptography::rsa::KeyPair keys,
+                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  ConsensusBuilder consensus,
@@ -42,7 +42,7 @@ namespace infinit
                  std::unique_ptr<storage::Storage> local);
         Doughnut(Address id,
                  std::string const& name,
-                 infinit::cryptography::rsa::KeyPair keys,
+                 std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
                  infinit::cryptography::rsa::PublicKey owner,
                  Passport passport,
                  ConsensusBuilder consensus,
@@ -52,7 +52,7 @@ namespace infinit
         ~Doughnut();
         cryptography::rsa::KeyPair const&
         keys() const;
-        std::shared_ptr<cryptography::rsa::KeyPair const>
+        std::shared_ptr<cryptography::rsa::KeyPair>
         keys_shared() const;
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);

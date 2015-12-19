@@ -10,12 +10,15 @@
 #include <cryptography/SecretKey.hh>
 
 #include <infinit/model/blocks/Block.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/CHB.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/version.hh>
+
+ELLE_LOG_COMPONENT("backward_compatibility");
 
 static
 boost::filesystem::path
@@ -107,6 +110,25 @@ public:
   }
 };
 
+class DummyDoughnut
+  : public infinit::model::doughnut::Doughnut
+{
+public:
+
+  DummyDoughnut(infinit::model::Address id,
+                std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys)
+    : infinit::model::doughnut::Doughnut(
+      id, keys, keys->K(),
+      infinit::model::doughnut::Passport(keys->K(), "network", keys->k()),
+      [] (infinit::model::doughnut::Doughnut&)
+      { return nullptr; },
+      [] (infinit::model::doughnut::Doughnut&, infinit::model::Address, std::shared_ptr<infinit::model::doughnut::Local>)
+      { return nullptr; },
+      {}, nullptr)
+  {
+  }
+};
+
 int
 main(int argc, char** argv)
 {
@@ -146,22 +168,23 @@ main(int argc, char** argv)
         elle::serialization::json::deserialize<DeterministicSecretKey>
         (secret_buffer);
       auto K = elle::serialization::json::deserialize
-        <std::unique_ptr<DeterministicPublicKey>>(public_key);
+        <std::shared_ptr<DeterministicPublicKey>>(public_key);
       auto k = elle::serialization::json::deserialize
-        <std::unique_ptr<DeterministicPrivateKey>>(private_key);
+        <std::shared_ptr<DeterministicPrivateKey>>(private_key);
       auto keys = std::make_shared
-        <infinit::cryptography::rsa::KeyPair>(std::move(K), std::move(k));
+        <infinit::cryptography::rsa::KeyPair>(K, k);
+      DummyDoughnut dht(infinit::model::Address::null, keys);
       auto chb =
         new infinit::model::doughnut::CHB(std::string("CHB contents"), salt);
       chb->seal();
       auto acb = new infinit::model::doughnut::ACB(
-        keys, std::string("ACB contents"), salt);
+        &dht, std::string("ACB contents"), salt);
       acb->seal(secret);
       auto okb = new infinit::model::doughnut::OKB(
-        keys, std::string("OKB contents"), salt);
+        &dht, std::string("OKB contents"), salt);
       okb->seal();
       auto nb = new infinit::model::doughnut::NB(
-        keys, keys->K(), "NB name", std::string("NB contents"));
+        &dht, keys->K(), "NB name", std::string("NB contents"));
       nb->seal();
       auto ub = new infinit::model::doughnut::UB("USERNAME", keys->K(), false);
       ub->seal();
@@ -242,18 +265,6 @@ main(int argc, char** argv)
             [&] (std::string const& name, infinit::model::blocks::Block* b)
             {
               {
-                auto path = it->path() / elle::sprintf("%s.bin", name);
-                boost::filesystem::ifstream input(path);
-                if (!input.good())
-                  throw elle::Error(elle::sprintf("unable to open %s", path));
-                elle::Buffer contents(
-                  std::string((std::istreambuf_iterator<char>(input)),
-                              std::istreambuf_iterator<char>()));
-                ELLE_ASSERT_EQ(
-                  contents,
-                  elle::serialization::binary::serialize(b, version, false));
-              }
-              {
                 auto path = it->path() / elle::sprintf("%s.json", name);
                 boost::filesystem::ifstream input(path);
                 if (!input.good())
@@ -264,6 +275,18 @@ main(int argc, char** argv)
                 ELLE_ASSERT_EQ(
                   contents,
                   elle::serialization::json::serialize(b, version, false));
+              }
+              {
+                auto path = it->path() / elle::sprintf("%s.bin", name);
+                boost::filesystem::ifstream input(path);
+                if (!input.good())
+                  throw elle::Error(elle::sprintf("unable to open %s", path));
+                elle::Buffer contents(
+                  std::string((std::istreambuf_iterator<char>(input)),
+                              std::istreambuf_iterator<char>()));
+                ELLE_ASSERT_EQ(
+                  contents,
+                  elle::serialization::binary::serialize(b, version, false));
               }
             };
           apply("check", check);

@@ -40,7 +40,7 @@ namespace infinit
     namespace doughnut
     {
       Doughnut::Doughnut(Address id,
-                         cryptography::rsa::KeyPair keys,
+                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          ConsensusBuilder consensus,
@@ -48,7 +48,7 @@ namespace infinit
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage)
         : _id(std::move(id))
-        , _keys(std::make_shared<cryptography::rsa::KeyPair>(std::move(keys)))
+        , _keys(keys)
         , _owner(std::move(owner))
         , _passport(std::move(passport))
         , _consensus(consensus(*this))
@@ -62,7 +62,7 @@ namespace infinit
 
       Doughnut::Doughnut(Address id,
                          std::string const& name,
-                         cryptography::rsa::KeyPair keys,
+                         std::shared_ptr<cryptography::rsa::KeyPair> keys,
                          cryptography::rsa::PublicKey owner,
                          Passport passport,
                          ConsensusBuilder consensus,
@@ -141,7 +141,7 @@ namespace infinit
         return *this->_keys;
       }
 
-      std::shared_ptr<cryptography::rsa::KeyPair const>
+      std::shared_ptr<cryptography::rsa::KeyPair>
       Doughnut::keys_shared() const
       {
         return this->_keys;
@@ -347,7 +347,7 @@ namespace infinit
         if (!client || !this->name)
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
-            keys,
+            std::make_shared<cryptography::rsa::KeyPair>(keys),
             owner,
             passport,
             std::move(consensus),
@@ -358,7 +358,7 @@ namespace infinit
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
             this->name.get(),
-            keys,
+            std::make_shared<cryptography::rsa::KeyPair>(keys),
             owner,
             passport,
             std::move(consensus),

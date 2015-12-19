@@ -320,7 +320,7 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
       auto keys = dn->keys();
-      if (keys.K() != acb->owner_key())
+      if (keys.K() != *acb->owner_key())
         THROW_ACCES;
       ELLE_TRACE("Setting permission at %s for %s", acl->address(), user->name());
       umbrella([&] {acl->set_permissions(*user, perms.first, perms.second);},

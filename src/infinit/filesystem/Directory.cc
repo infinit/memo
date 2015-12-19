@@ -709,9 +709,9 @@ namespace infinit
         Node::setxattr(name, value, flags);
     }
 
-    static std::string perms_to_json(ACLBlock& block)
+    static std::string perms_to_json(model::Model& model, ACLBlock& block)
     {
-      auto perms = block.list_permissions();
+      auto perms = block.list_permissions(model);
       elle::json::Array v;
       for (auto const& perm: perms)
       {
@@ -744,7 +744,7 @@ namespace infinit
       else if (key == "user.infinit.auth")
       {
         _fetch();
-        return perms_to_json(*_block);
+        return perms_to_json(*_owner.block_store(), *_block);
       }
       else if (key == "user.infinit.auth.inherit")
       {

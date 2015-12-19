@@ -222,7 +222,7 @@ static void make_nodes(std::string store, int node_count,
         };
       nodes.emplace_back(new infinit::model::doughnut::Doughnut(
                            peers[i].id,
-                           std::move(kp),
+                           std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
                            owner.K(),
                            passport,
                            consensus,
@@ -310,7 +310,7 @@ run_filesystem_dht(std::string const& store,
         elle::make_unique<infinit::model::doughnut::Doughnut>(
           infinit::model::Address::random(),
           "testnet",
-          owner_keys,
+          std::make_shared<infinit::cryptography::rsa::KeyPair>(owner_keys),
           owner_keys.K(),
           passport,
           consensus,
