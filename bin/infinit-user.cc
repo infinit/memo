@@ -119,7 +119,7 @@ COMMAND(fetch)
 std::string
 hub_password_hash(variables_map const& args)
 {
-  return hash_password(_password(args, "password"),
+  return hash_password(_password(args, "password", "Password"),
                        _hub_salt);
 }
 
