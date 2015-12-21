@@ -12,7 +12,8 @@ namespace infinit
 {
   namespace model
   {
-    Model::Model()
+    Model::Model(elle::Version version)
+      : _version(version)
     {}
 
     template <>
@@ -121,8 +122,10 @@ namespace infinit
       this->_remove(address);
     }
 
-    ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_)
+    ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_,
+                             boost::optional<elle::Version> version_)
       : storage(std::move(storage_))
+      , version(std::move(version_))
     {}
 
     ModelConfig::ModelConfig(elle::serialization::SerializerIn& s)
@@ -134,6 +137,7 @@ namespace infinit
     ModelConfig::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("storage", this->storage);
+      s.serialize("version", this->version);
     }
   }
 }

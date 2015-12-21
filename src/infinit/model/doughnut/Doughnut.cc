@@ -33,6 +33,9 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
 namespace infinit
 {
   namespace model
@@ -46,8 +49,10 @@ namespace infinit
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
-                         std::unique_ptr<storage::Storage> storage)
-        : _id(std::move(id))
+                         std::unique_ptr<storage::Storage> storage,
+                         elle::Version version)
+        : Model(std::move(version))
+        , _id(std::move(id))
         , _keys(keys)
         , _owner(std::move(owner))
         , _passport(std::move(passport))
@@ -68,7 +73,8 @@ namespace infinit
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
-                         std::unique_ptr<storage::Storage> storage)
+                         std::unique_ptr<storage::Storage> storage,
+                         elle::Version version)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -76,7 +82,8 @@ namespace infinit
                    std::move(consensus),
                    std::move(overlay_builder),
                    std::move(port),
-                   std::move(storage))
+                   std::move(storage),
+                   std::move(version))
       {
         auto check_user_blocks = [name, this]
           {
@@ -259,8 +266,10 @@ namespace infinit
         cryptography::rsa::PublicKey owner_,
         Passport passport_,
         boost::optional<std::string> name_,
-        boost::optional<int> port_)
-        : ModelConfig(std::move(storage))
+        boost::optional<int> port_,
+        boost::optional<elle::Version> version)
+        : ModelConfig(std::move(storage),
+                      std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
         , overlay(std::move(overlay_))
@@ -302,9 +311,10 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       Configuration::make(overlay::NodeEndpoints const& hosts,
                           bool client,
-                          boost::filesystem::path const& dir)
+                          boost::filesystem::path const& dir,
+                          boost::optional<elle::Version> version)
       {
-        return this->make(hosts, client, dir, false, false);
+        return this->make(hosts, client, dir, version, false, false);
       }
 
       std::unique_ptr<Doughnut>
@@ -312,6 +322,7 @@ namespace infinit
         overlay::NodeEndpoints const& hosts,
         bool client,
         boost::filesystem::path const& p,
+        boost::optional<elle::Version> version,
         bool async,
         bool cache,
         boost::optional<int> cache_size,
@@ -353,7 +364,8 @@ namespace infinit
             std::move(consensus),
             std::move(overlay),
             std::move(port),
-            std::move(storage));
+            std::move(storage),
+            version ? *version : INFINIT_ELLE_VERSION);
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
@@ -364,7 +376,8 @@ namespace infinit
             std::move(consensus),
             std::move(overlay),
             std::move(port),
-            std::move(storage));
+            std::move(storage),
+            version ? *version : INFINIT_ELLE_VERSION);
         return dht;
       }
 

@@ -57,6 +57,18 @@ beyond(bool help = false)
   return res;
 }
 
+elle::Version
+getset_version(std::string value = "")
+{
+  static elle::Version _version = INFINIT_ELLE_VERSION;
+
+  if (value != "")
+    _version = elle::Version::from_string(value);
+
+  return _version;
+}
+
+
 class CommandLineError
   : public elle::Error
 {
@@ -369,6 +381,7 @@ namespace infinit
             misc.add_options()
               ("help,h", "display the help")
               ("script,s", "silence all extraneous human friendly messages")
+              ("force-version,f", value<std::string>(), "force used version")
               ("version,v", "display version")
             ;
             if (!disable_as_arg || !disable_as_arg.get())
@@ -388,9 +401,13 @@ namespace infinit
               auto parsed = parser.run();
               store(parsed, vm);
               notify(vm);
+              if (vm.count("force-version"))
+              {
+                getset_version(vm["force-version"].as<std::string>());
+              }
               if (vm.count("version"))
               {
-                std::cout << INFINIT_VERSION << std::endl;
+                std::cout << getset_version() << std::endl;
                 throw elle::Exit(0);
               }
               bool help = vm.count("help");
@@ -696,11 +713,19 @@ namespace infinit
     {
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
-        hosts, client, p, async_writes, cache, cache_size,
-        cache_ttl ? std::chrono::seconds(cache_ttl.get()) :
-          boost::optional<std::chrono::seconds>(),
-        cache_invalidation ? std::chrono::seconds(cache_invalidation.get()) :
-          boost::optional<std::chrono::seconds>());
+        hosts,
+        client,
+        p,
+        getset_version(),
+        async_writes,
+        cache,
+        cache_size,
+        cache_ttl
+          ? std::chrono::seconds(cache_ttl.get())
+          : boost::optional<std::chrono::seconds>(),
+        cache_invalidation
+          ? std::chrono::seconds(cache_invalidation.get())
+          : boost::optional<std::chrono::seconds>());
     }
 
     inline

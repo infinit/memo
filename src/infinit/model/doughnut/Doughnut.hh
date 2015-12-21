@@ -12,6 +12,10 @@
 # include <infinit/model/doughnut/Passport.hh>
 # include <infinit/overlay/Overlay.hh>
 
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
+
 namespace infinit
 {
   namespace model
@@ -39,7 +43,8 @@ namespace infinit
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
-                 std::unique_ptr<storage::Storage> local);
+                 std::unique_ptr<storage::Storage> local,
+                 elle::Version version = INFINIT_ELLE_VERSION);
         Doughnut(Address id,
                  std::string const& name,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
@@ -48,7 +53,8 @@ namespace infinit
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
-                 std::unique_ptr<storage::Storage> local);
+                 std::unique_ptr<storage::Storage> local,
+                 elle::Version version = INFINIT_ELLE_VERSION);
         ~Doughnut();
         cryptography::rsa::KeyPair const&
         keys() const;
@@ -113,7 +119,8 @@ namespace infinit
           cryptography::rsa::PublicKey owner,
           Passport passport,
           boost::optional<std::string> name,
-          boost::optional<int> port = {});
+          boost::optional<int> port = {},
+          boost::optional<elle::Version> version = {});
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
@@ -123,11 +130,13 @@ namespace infinit
         std::unique_ptr<infinit::model::Model>
         make(overlay::NodeEndpoints const& hosts,
              bool client,
-             boost::filesystem::path const& p);
+             boost::filesystem::path const& p,
+             boost::optional<elle::Version> version = {});
         std::unique_ptr<Doughnut>
         make(overlay::NodeEndpoints const& hosts,
              bool client,
              boost::filesystem::path const& p,
+             boost::optional<elle::Version> version = {},
              bool async = false,
              bool cache = false,
              boost::optional<int> cach_size = {},

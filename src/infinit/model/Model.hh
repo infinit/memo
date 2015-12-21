@@ -4,13 +4,18 @@
 # include <memory>
 # include <boost/filesystem.hpp>
 # include <elle/UUID.hh>
+# include <elle/Version.hh>
 
 # include <infinit/model/Address.hh>
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/fwd.hh>
 # include <infinit/serialization.hh>
 # include <infinit/storage/Storage.hh>
+# include <infinit/version.hh>
 
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
 namespace infinit
 {
   namespace overlay
@@ -47,7 +52,8 @@ namespace infinit
     class Model
     {
     public:
-      Model();
+      Model(elle::Version version = INFINIT_ELLE_VERSION);
+      ELLE_ATTRIBUTE_R(elle::Version, version);
       template <typename Block>
       std::unique_ptr<Block>
       make_block(elle::Buffer data = elle::Buffer()) const;
@@ -111,14 +117,18 @@ namespace infinit
     {
       static constexpr char const* virtually_serializable_key = "type";
       std::unique_ptr<infinit::storage::StorageConfig> storage;
-      ModelConfig(std::unique_ptr<storage::StorageConfig> storage);
+      boost::optional<elle::Version> version;
+      ModelConfig(std::unique_ptr<storage::StorageConfig> storage,
+                  boost::optional<elle::Version> version);
       ModelConfig(elle::serialization::SerializerIn& s);
       void
       serialize(elle::serialization::Serializer& s) override;
       virtual
       std::unique_ptr<infinit::model::Model>
-      make(overlay::NodeEndpoints const& hosts, bool client,
-           boost::filesystem::path const& dir) = 0;
+      make(overlay::NodeEndpoints const& hosts,
+           bool client,
+           boost::filesystem::path const& dir,
+           boost::optional<elle::Version> version = {}) = 0;
       typedef infinit::serialization_tag serialization_tag;
     };
   }

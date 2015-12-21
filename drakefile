@@ -317,6 +317,7 @@ def configure(
     'src/infinit/storage/fwd.hh',
 
     'src/infinit/version.hh',
+    'src/infinit/Version.hh',
   )
   if not windows:
     infinit_sources += drake.nodes(
@@ -540,6 +541,7 @@ def configure(
           'single-user-two-devices-shared-storage',
           #FIXME: 'flow',
           # Test clis.
+          'main_cli',
           'device_cli',
           'user_cli',
           'network_cli',

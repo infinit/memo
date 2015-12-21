@@ -1,12 +1,18 @@
 #include <elle/log.hh>
 #include <elle/test.hh>
+#include <elle/Version.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/storage/Memory.hh>
+#include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.faith.test");
+
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
 
 template <typename B>
 static
@@ -24,7 +30,8 @@ faith()
 {
   std::unique_ptr<infinit::storage::Storage> storage
     = elle::make_unique<infinit::storage::Memory>();
-  infinit::model::faith::Faith faith(std::move(storage));
+  infinit::model::faith::Faith faith(std::move(storage),
+                                     INFINIT_ELLE_VERSION);
 
   auto block1 = faith.make_block<infinit::model::blocks::MutableBlock>();
   auto block2 = faith.make_block<infinit::model::blocks::MutableBlock>();

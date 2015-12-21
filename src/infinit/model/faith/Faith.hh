@@ -15,7 +15,8 @@ namespace infinit
         : public Model
       {
       public:
-        Faith(std::unique_ptr<storage::Storage> storage);
+        Faith(std::unique_ptr<storage::Storage> storage,
+              elle::Version version);
       protected:
         virtual
         void

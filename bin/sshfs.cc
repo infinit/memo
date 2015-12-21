@@ -6,8 +6,14 @@
 
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/faith/Faith.hh>
+#include <infinit/version.hh>
 
 reactor::filesystem::FileSystem* fs;
+
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
+
 
 static void sig_int()
 {
@@ -27,7 +33,8 @@ void main_scheduled(int argc, char** argv)
     storage = elle::make_unique<infinit::storage::Crypt>
       (std::move(storage), argv[5], true);
   auto faith =
-    elle::make_unique<infinit::model::faith::Faith>(std::move(storage));
+    elle::make_unique<infinit::model::faith::Faith>(std::move(storage),
+                                                    INFINIT_ELLE_VERSION);
   auto fsops = elle:: make_unique<infinit::filesystem::FileSystem>
     ("default-volume", std::move(faith));
   fs = new reactor::filesystem::FileSystem(std::move(fsops), true);

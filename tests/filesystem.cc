@@ -23,6 +23,7 @@
 #include <elle/system/Process.hh>
 #include <elle/test.hh>
 #include <elle/utils.hh>
+#include <elle/Version.hh>
 
 #include <reactor/scheduler.hh>
 
@@ -36,6 +37,7 @@
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
+#include <infinit/version.hh>
 
 #ifdef INFINIT_MACOSX
 # define SXA_EXTRA ,0
@@ -44,6 +46,11 @@
 #endif
 
 ELLE_LOG_COMPONENT("test");
+
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
+
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
@@ -228,7 +235,8 @@ static void make_nodes(std::string store, int node_count,
                            consensus,
                            overlay,
                            boost::optional<int>(),
-                           std::move(s)));
+                           std::move(s),
+                           INFINIT_ELLE_VERSION));
     }
     for (int i = 0; i < node_count; ++i)
       peers[i].endpoint = infinit::overlay::Stonehenge::Peer::Endpoint{
@@ -316,7 +324,8 @@ run_filesystem_dht(std::string const& store,
           consensus,
           overlay,
           boost::optional<int>(),
-          nullptr);
+          nullptr,
+          INFINIT_ELLE_VERSION);
         ELLE_TRACE("instantiating ops...");
         std::unique_ptr<ifs::FileSystem> ops;
         ops = elle::make_unique<ifs::FileSystem>("default-volume", std::move(model));
@@ -455,7 +464,8 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     else
       storage = new infinit::storage::Filesystem(store);
     model = elle::make_unique<infinit::model::faith::Faith>(
-      std::unique_ptr<infinit::storage::Storage>(storage));
+      std::unique_ptr<infinit::storage::Storage>(storage),
+      INFINIT_ELLE_VERSION);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "default-volume", std::move(model));
     fs = new reactor::filesystem::FileSystem(std::move(ops), true);

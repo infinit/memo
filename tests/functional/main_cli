@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+with Infinit() as bob:
+  v = bob.run(['infinit-user', '--force-version', '1.0.0', '--version'])
+  assertEq(v, ['1.0.0'])
+
+  v = bob.run(['infinit-user', '--force-version', '2.1', '--version'])
+  assertEq(v, ['2.1.0'])
+
+  v = bob.run(['infinit-user', '--force-version', '3', '--version'])
+  assertEq(v, ['3.0.0'])
+
+  try:
+    bob.run(['infinit-user',  '--force-version', '1..'])
+  except Exception as e:
+    pass
+
+  try:
+    bob.run(['infinit-user',  '--force-version', ' '])
+  except Exception as e:
+    pass
+
+  try:
+    bob.run(['infinit-user',  '--force-version', 'nekolas'])
+  except Exception as e:
+    pass
+
+  try:
+    bob.run(['infinit-user',  '--force-version', '0..'])
+  except Exception as e:
+    pass
+

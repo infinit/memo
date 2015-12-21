@@ -14,6 +14,10 @@
 
 ELLE_LOG_COMPONENT("infinit.model.faith.Faith");
 
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
+
 typedef elle::serialization::Binary Serializer;
 
 namespace infinit
@@ -22,8 +26,10 @@ namespace infinit
   {
     namespace faith
     {
-      Faith::Faith(std::unique_ptr<storage::Storage> storage)
-        : _storage(std::move(storage))
+      Faith::Faith(std::unique_ptr<storage::Storage> storage,
+                   elle::Version version)
+        : Model(std::move(version))
+        , _storage(std::move(storage))
       {}
 
       void
@@ -80,8 +86,10 @@ namespace infinit
         public ModelConfig
       {
       public:
-        FaithModelConfig(elle::serialization::SerializerIn& input)
-          : ModelConfig(nullptr)
+        FaithModelConfig(elle::serialization::SerializerIn& input,
+                         boost::optional<elle::Version> version)
+          : ModelConfig(nullptr,
+                        std::move(version))
         {
           this->serialize(input);
         }
@@ -94,11 +102,14 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const&, bool,
-             boost::filesystem::path const&) override
+        make(overlay::NodeEndpoints const&,
+             bool,
+             boost::filesystem::path const&,
+             boost::optional<elle::Version> version) override
         {
-          return elle::make_unique<infinit::model::faith::Faith>
-            (this->storage->make());
+          return elle::make_unique<infinit::model::faith::Faith>(
+            this->storage->make(),
+            version ? *version : INFINIT_ELLE_VERSION);
         }
       };
 

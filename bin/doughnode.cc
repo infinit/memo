@@ -4,6 +4,7 @@
 #include <elle/Exit.hh>
 #include <elle/cast.hh>
 #include <elle/serialization/json.hh>
+#include <elle/Version.hh>
 
 #include <reactor/scheduler.hh>
 
@@ -14,6 +15,10 @@
 #include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("doughnode");
+
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
 
 struct Config
 {
@@ -54,6 +59,7 @@ parse_options(int argc, char** argv, Config& cfg, boost::filesystem::path & p)
     ("config,c", value<std::string>(), "configuration file")
     ("help,h", "display the help")
     ("version,v", "display version")
+    ("force-version,f", value<std::string>(), "force used version")
     ;
   variables_map vm;
   try
@@ -65,18 +71,21 @@ parse_options(int argc, char** argv, Config& cfg, boost::filesystem::path & p)
   {
     throw elle::Error(elle::sprintf("command line error: %s", e.what()));
   }
+  elle::Version version = vm.count("force-version")
+    ? elle::Version::from_string(vm["force-version"].as<std::string>())
+    : INFINIT_ELLE_VERSION;
   if (vm.count("help"))
   {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
     std::cout << std::endl;
     std::cout << options;
     std::cout << std::endl;
-    std::cout << "Infinit v" << INFINIT_VERSION << std::endl;
+    std::cout << "Infinit v" << version << std::endl;
     throw elle::Exit(0);
   }
   if (vm.count("version"))
   {
-    std::cout << INFINIT_VERSION << std::endl;
+    std::cout << version << std::endl;
     throw elle::Exit(0);
   }
   if (vm.count("config") != 0)
@@ -115,7 +124,10 @@ main(int argc, char** argv)
         parse_options(argc, argv, cfg, p);
         ELLE_ASSERT(cfg.model.get());
         auto model = cfg.model->make(
-          infinit::overlay::NodeEndpoints(), false, p);
+          infinit::overlay::NodeEndpoints(),
+          false,
+          p,
+          INFINIT_ELLE_VERSION);
         reactor::sleep();
       });
     sched.run();

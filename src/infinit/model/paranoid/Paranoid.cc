@@ -10,6 +10,9 @@
 
 ELLE_LOG_COMPONENT("infinit.model.paranoid.Paranoid");
 
+# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                            INFINIT_MINOR,   \
+                                            INFINIT_SUBMINOR)
 namespace infinit
 {
   namespace model
@@ -17,8 +20,10 @@ namespace infinit
     namespace paranoid
     {
       Paranoid::Paranoid(infinit::cryptography::rsa::KeyPair keys,
-                         std::unique_ptr<storage::Storage> storage)
-        : _keys(std::move(keys))
+                         std::unique_ptr<storage::Storage> storage,
+                         elle::Version version)
+        : Model(std::move(version))
+        , _keys(std::move(keys))
         , _storage(std::move(storage))
       {}
 
@@ -118,8 +123,9 @@ namespace infinit
         // std::unique_ptr instead since KeyPair is not copiable.
         std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
 
-        ParanoidModelConfig(elle::serialization::SerializerIn& input)
-          : ModelConfig(nullptr)
+        ParanoidModelConfig(elle::serialization::SerializerIn& input,
+                            boost::optional<elle::Version> version)
+          : ModelConfig(nullptr, std::move(version))
         {
           this->serialize(input);
         }
@@ -133,8 +139,10 @@ namespace infinit
 
         virtual
         std::unique_ptr<infinit::model::Model>
-        make(overlay::NodeEndpoints const&, bool,
-          boost::filesystem::path const&)
+        make(overlay::NodeEndpoints const&,
+             bool,
+             boost::filesystem::path const&,
+             boost::optional<elle::Version> version = {})
         {
           if (!this->keys)
           {
@@ -145,8 +153,10 @@ namespace infinit
             std::cout << "No key specified, generating fresh ones:" << std::endl;
             this->keys->serialize(output);
           }
-          return elle::make_unique<infinit::model::paranoid::Paranoid>
-            (std::move(*this->keys), this->storage->make());
+          return elle::make_unique<infinit::model::paranoid::Paranoid>(
+            std::move(*this->keys),
+            this->storage->make(),
+            version ? *version : INFINIT_ELLE_VERSION);
         }
       };
 
