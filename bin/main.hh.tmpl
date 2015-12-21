@@ -1296,7 +1296,7 @@ namespace infinit
     credentials_aws(std::string const& uid) const
     {
       auto res = this->credentials("aws", uid);
-      return std::dynamic_pointer_cast<AWSCredentials>(res);
+      return elle::cast<AWSCredentials>::runtime(res);
     }
 
     void
@@ -1315,7 +1315,7 @@ namespace infinit
     credentials_dropbox(std::string const& uid) const
     {
       auto res = this->credentials("dropbox", uid);
-      return std::dynamic_pointer_cast<OAuthCredentials>(res);
+      return elle::cast<OAuthCredentials>::runtime(res);
     }
 
     void
@@ -1334,7 +1334,7 @@ namespace infinit
     credentials_google(std::string const& uid) const
     {
       auto res = this->credentials("google", uid);
-      return std::dynamic_pointer_cast<OAuthCredentials>(res);
+      return elle::cast<OAuthCredentials>::runtime(res);
     }
 
     boost::filesystem::path
