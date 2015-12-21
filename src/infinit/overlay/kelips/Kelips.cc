@@ -2587,7 +2587,7 @@ namespace infinit
           if (it == _state.contacts[_group].end())
           {
             if (fg != _group || _observer)
-              throw std::runtime_error("No contacts in self/target groups");
+              return {};
             // Bootstraping only: Store locally.
             if (_config.bootstrap_nodes.empty())
             {
