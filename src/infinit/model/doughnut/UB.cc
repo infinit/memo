@@ -122,6 +122,14 @@ namespace infinit
       blocks::ValidationResult
       UB::_validate(const Block& new_block) const
       {
+        auto ub = dynamic_cast<const UB*>(&new_block);
+        if (ub)
+        {
+          if (this->_name == ub->_name
+            && this->_key == ub->_key
+            && this->_reverse == ub->_reverse)
+          return blocks::ValidationResult::success();
+        }
         return blocks::ValidationResult::failure("UB overwrite denied");
       }
 
