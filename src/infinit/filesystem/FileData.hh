@@ -61,6 +61,7 @@ namespace infinit
         , atime(0)
         , mtime(0)
         , ctime(0)
+        , block_size(0)
       {
         #ifndef INFINIT_WINDOWS
         uid = getuid();
