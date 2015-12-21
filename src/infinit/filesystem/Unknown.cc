@@ -117,7 +117,7 @@ namespace infinit
                  raw.get(), typeid(*raw).name());
       f->_first_block = std::move(b);
       f->_first_block_new = true;
-      f->_header = FileHeader(0, 1, S_IFREG | 0666,
+      f->_header = FileHeader(0, 1, S_IFREG | (mode & 0700),
                               time(nullptr), time(nullptr), time(nullptr),
                               File::default_block_size);
       if (_parent->_inherit_auth)
