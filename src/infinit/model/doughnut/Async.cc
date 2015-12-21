@@ -320,6 +320,7 @@ namespace infinit
         void
         Async::_process_loop()
         {
+          reactor::wait(this->_init_barrier);
           while (!_exit_requested)
           {
             try
