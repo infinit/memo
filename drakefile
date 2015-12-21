@@ -613,6 +613,7 @@ def configure(
     'faith',
     'rpc',
     'storage',
+    'async-conflict',
   ]
   if not windows:
     tests_names += ['filesystem']

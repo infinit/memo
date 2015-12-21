@@ -76,7 +76,12 @@ namespace infinit
           , _exit_requested(false)
           , _process_thread(
             new reactor::Thread(elle::sprintf("%s loop", *this),
-                                [this] { this->_process_loop();}))
+                                [this] {
+                                  bool freeze = getenv("INFINIT_ASYNC_NOPOP");
+                                  if (freeze)
+                                    return;
+                                  this->_process_loop();
+                                }))
         {
           if (!this->_journal_dir.empty())
             boost::filesystem::create_directories(this->_journal_dir);
@@ -294,9 +299,6 @@ namespace infinit
         void
         Async::_process_loop()
         {
-          static bool freeze = getenv("INFINIT_ASYNC_NOPOP");
-          if (freeze)
-            return;
           while (!_exit_requested)
           {
             try
