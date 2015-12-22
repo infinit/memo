@@ -7,8 +7,12 @@
 <strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
 </blockquote>
 
+% elif "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
+<p><em>The following is written for users of Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
 % else:
-<p><em>The following is written for users of Mac OS X and Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+<p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
 % endif
 </div>
 
@@ -22,19 +26,21 @@
 <img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE">
 
 <div>
-% if os() == "Macintosh":
+% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
+<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get` :</p>
+
+```
+$> sudo apt-get install fuse
+```
+
+% else:
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install the OSXFUSE core module by downloading and opening the package below:</p>
 
 <p><a href="https://storage.googleapis.com/sh_infinit_releases/osx/osxfuse-core.dmg
 " class="button">Download OSXFUSE core</a></p>
 
 _**NOTE**: Infinit requires a version of OSXFUSE core that is newer than available on https://osxfuse.github.io/._
-% else:
-<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get` :</p>
 
-```
-$> sudo apt-get install fuse
-```
 % endif
 </div>
 
@@ -45,12 +51,14 @@ $> sudo apt-get install fuse
 Click the link below to download the Infinit command-line tools:
 
 <div>
-% if os() == "Macintosh":
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-0.3.3.tbz
-" class="button">Download Command Line Tools</a>
-% else:
+% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
 <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
 " class="button">Download Command Line Tools</a>
+
+% else:
+<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-0.3.3.tbz
+" class="button">Download Command Line Tools</a>
+
 % endif
 </div>
 
@@ -60,10 +68,10 @@ Next, open your terminal and extract the Infinit tarball:
 
 ```
 
-% if os() == "Macintosh":
-$> tar xjvf Infinit-x86_64-osx-clang3-0.3.3.tbz
-% else:
+% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
 $> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
+% else:
+$> tar xjvf Infinit-x86_64-osx-clang3-0.3.3.tbz
 % endif
 Infinit-<version>/
 Infinit-<version>/bin/
