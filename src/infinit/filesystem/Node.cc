@@ -307,9 +307,8 @@ namespace infinit
         ELLE_WARN("user %s does not exist", userkey);
         THROW_INVAL;
       }
-      auto block = _owner.fetch_or_die(self_address);
-      auto acl =
-        std::static_pointer_cast<model::blocks::ACLBlock>(std::move(block));
+      auto acl = std::dynamic_pointer_cast<model::blocks::ACLBlock>(
+        this->_owner.fetch_or_die(self_address));
       if (!acl)
         throw rfs::Error(EIO, "Block is not an ACL block");
       // permission check

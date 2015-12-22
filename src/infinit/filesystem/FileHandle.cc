@@ -200,7 +200,7 @@ namespace infinit
           _owner->check_cache();
         }
         ELLE_ASSERT_LTE(signed(block_offset + size), block_size);
-        if (block->data().size() < block_offset + size)
+        if (signed(block->data().size()) < signed(block_offset + size))
         { // sparse file, eof shrinkage of size was handled above
           long available = block->data().size() - block_offset;
           if (available < 0)
