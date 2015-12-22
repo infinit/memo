@@ -454,8 +454,8 @@ COMMAND(run)
             response.serialize("st_rdev"   , st.st_rdev           );
             response.serialize("st_size"   , uint64_t(st.st_size) );
 #ifndef INFINIT_WINDOWS
-            response.serialize("st_blksize", st.st_blksize        );
-            response.serialize("st_blocks" , st.st_blocks         );
+            response.serialize("st_blksize", int64_t(st.st_blksize));
+            response.serialize("st_blocks" , st.st_blocks);
 #endif
             response.serialize("st_atime"  , uint64_t(st.st_atime));
             response.serialize("st_mtime"  , uint64_t(st.st_mtime));
