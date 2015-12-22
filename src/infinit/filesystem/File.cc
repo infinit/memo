@@ -31,6 +31,7 @@ namespace infinit
   namespace filesystem
   {
 
+    const uint64_t File::first_block_size = 16384;
     static const int lookahead_blocks = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
     static const int max_lookahead_threads = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
 

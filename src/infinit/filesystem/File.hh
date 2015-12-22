@@ -99,7 +99,7 @@ namespace infinit
       elle::Buffer _data; // first block data
       int _prefetchers_count; // number of running prefetchers
       int _last_read_block; // block hit by last read operation
-      static const uint64_t first_block_size = 16384;
+      static const uint64_t first_block_size;
     };
   }
 }
