@@ -127,6 +127,20 @@ namespace infinit
         return blocks::ValidationResult::success();
       }
 
+      blocks::ValidationResult
+      NB::_validate(const Block& new_block) const
+      {
+        auto nb = dynamic_cast<const NB*>(&new_block);
+        if (nb)
+        {
+          if (this->_name == nb->_name
+            && this->_owner == nb->_owner
+            && this->data() == nb->data())
+          return blocks::ValidationResult::success();
+        }
+        return blocks::ValidationResult::failure("NB overwrite denied");
+      }
+
       blocks::RemoveSignature
       NB::_sign_remove() const
       {

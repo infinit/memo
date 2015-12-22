@@ -421,10 +421,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
     auto block = elle::make_unique<dht::NB>(
       dhts.dht_a.get(), dhts.keys_a->K(), "blockname",
       elle::Buffer("blockdatb", 9));
-    dhts.dht_a->store(*block);
-    auto fetched =
-      dhts.dht_b->fetch(dht::NB::address(dhts.keys_a->K(), "blockname"));
-      BOOST_CHECK_EQUAL(fetched->data(), "blockdatb");
+     BOOST_CHECK_THROW(dhts.dht_a->store(*block), std::exception);
   }
   // remove and remove protection
   BOOST_CHECK_THROW(dhts.dht_a->remove(
