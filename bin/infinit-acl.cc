@@ -332,7 +332,6 @@ COMMAND(group)
   auto adm_add = optional<std::vector<std::string>>(args, "admin-add");
   auto adm_rem = optional<std::vector<std::string>>(args, "admin-remove");
   bool create = flag(args, "create");
-  bool verbose = flag(args, "verbose");
   bool fallback = flag(args, "fallback-xattrs");
   bool list = flag(args, "show");
   std::string path = mandatory<std::string>(args, "path", "path to filesystem");
