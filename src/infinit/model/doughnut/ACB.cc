@@ -201,6 +201,10 @@ namespace infinit
           ELLE_DEBUG("%s: we are owner", *this);
           secret_buffer = this->doughnut()->keys().k().open(this->_owner_token);
         }
+        else if (this->keys() && this->keys()->K() == *this->owner_key())
+        {
+          secret_buffer = this->keys()->k().open(this->_owner_token);
+        }
         else if (!this->_acl_entries.empty())
         {
           // FIXME: factor searching the token
