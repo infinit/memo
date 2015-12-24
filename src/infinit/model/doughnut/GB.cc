@@ -4,6 +4,7 @@
 
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/ValidationFailed.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.GB");
 
@@ -101,10 +102,23 @@ namespace infinit
       void
       GB::_extract_group_keys()
       {
-        auto d = this->data();
-        ELLE_ASSERT(!d.empty());
+        boost::optional<elle::Buffer> d;
+        try
+        {
+          d.emplace(this->data());
+        }
+        catch (ValidationFailed const& vf)
+        {
+          // we are not in the group, but maybe we are owner
+          this->_extract_master_key();
+          this->keys().emplace(
+            cryptography::rsa::PublicKey(*this->_master_key),
+            *this->_master_key);
+          d.emplace(this->data());
+        }
+        ELLE_ASSERT(!d->empty());
         this->_group_keys = elle::serialization::binary::deserialize<
-          decltype(this->_group_keys)>(d);
+          decltype(this->_group_keys)>(*d);
       }
       void
       GB::_extract_master_key()
