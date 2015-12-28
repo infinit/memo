@@ -642,7 +642,8 @@ namespace infinit
         bool data_changed = this->_data_changed;
         ELLE_TRACE("%s: _seal version %s -> %s",
           *this, this->_serialized_version, serialization_tag::version);
-        this->_serialized_version = serialization_tag::version;
+        // FIXME restore when doughnut version is available
+        //this->_serialized_version = serialization_tag::version;
 
         std::shared_ptr<infinit::cryptography::rsa::KeyPair const> sign_keys;
         if (acl_changed)
@@ -802,12 +803,14 @@ namespace infinit
       elle::Buffer
       BaseACB<Block>::_data_sign() const
       {
+        ELLE_TRACE("_data sign, v=%s", this->_serialized_version);
         elle::Buffer res;
         {
           elle::IOStream output(res.ostreambuf());
           elle::serialization::binary::SerializerOut s(output, false);
           this->_data_sign(s);
         }
+        ELLE_DEBUG("to_sign: %x", res);
         return res;
       }
 
@@ -823,8 +826,9 @@ namespace infinit
         s.serialize("acl", this->_acl_entries);
         if (this->_serialized_version >= elle::Version(0, 4, 0))
         {
+          ELLE_LOG("data_sign ext, %s", this->_serialized_version);
           s.serialize("group_acl", this->_acl_group_entries);
-          s.serialize("group_version", this->_acl_group_entries);
+          s.serialize("group_version", this->_group_version);
           s.serialize("deleted", this->_deleted);
         }
       }
@@ -837,7 +841,7 @@ namespace infinit
         s.serialize(
           "acls", elle::unconst(this)->_acl_entries,
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
-        if (this->_serialized_version > elle::Version(0, 4, 0))
+        if (this->_serialized_version >= elle::Version(0, 4, 0))
         {
           s.serialize(
             "group_acls", elle::unconst(this)->_acl_group_entries,
@@ -961,6 +965,19 @@ namespace infinit
       BaseACB<Block>::serialize(elle::serialization::Serializer& s,
                                 elle::Version const& version)
       {
+        ELLE_DEBUG("serialize, v=%s, sv=%s", version, this->_serialized_version);
+        // FIXME: wont happen when doughnut will have a version
+        if (this->_serialized_version != version)
+        {
+          this->_serialized_version = version;
+          if (s.out())
+          {
+            ELLE_DEBUG("version change, re-sealing block");
+            this->_data_signature = elle::Buffer();
+            this->_seal();
+            this->_seal_okb(false);
+          }
+        }
         Super::serialize(s, version);
         this->_serialize(s, version);
       }
