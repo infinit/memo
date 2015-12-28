@@ -91,7 +91,7 @@ namespace infinit
       NB::_data_sign() const
       {
         // FIXME use doughnut version
-        bool pre04 = serialization_tag::version < elle::Version(0, 4, 0);
+        bool pre04 = this->_doughnut->version() < elle::Version(0, 4, 0);
         elle::Buffer res;
         {
           elle::IOStream output(res.ostreambuf());

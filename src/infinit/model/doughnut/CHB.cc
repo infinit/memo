@@ -28,12 +28,12 @@ namespace infinit
       {}
 
       CHB::CHB(Doughnut* d, elle::Buffer data, elle::Buffer salt, Address owner)
-        : Super(CHB::_hash_address(data, owner, salt), data)
+        : Super(CHB::_hash_address(data, owner, salt, d->version()), data)
         , _salt(std::move(salt))
         , _owner(owner)
         , _doughnut(d)
       {
-        if (infinit::serialization_tag::version < elle::Version(0, 4, 0))
+        if (d->version() < elle::Version(0, 4, 0))
           this->_owner = Address::null;
       }
 
@@ -66,7 +66,8 @@ namespace infinit
       CHB::_validate() const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
-        auto expected_address = CHB::_hash_address(this->data(), this->_owner, this->_salt);
+        auto expected_address = CHB::_hash_address(this->data(), this->_owner,
+          this->_salt, this->_doughnut->version());
         if (this->address() != expected_address)
         {
           auto reason =
@@ -240,12 +241,13 @@ namespace infinit
 
       Address
       CHB::_hash_address(elle::Buffer const& content,
-                         Address owner, elle::Buffer const& salt)
+                         Address owner, elle::Buffer const& salt,
+                         elle::Version const& version)
       {
         static elle::Bench bench("bench.chb.hash", 10000_sec);
         elle::Bench::BenchScope bs(bench);
         elle::Buffer saltowner(salt);
-        if (infinit::serialization_tag::version < elle::Version(0, 4, 0))
+        if (version < elle::Version(0, 4, 0))
           owner = Address::null;
         if (owner != Address::null)
           saltowner.append(owner.value(), sizeof(Address::Value));

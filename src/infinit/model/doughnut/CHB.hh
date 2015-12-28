@@ -71,7 +71,8 @@ namespace infinit
         static
         Address
         _hash_address(elle::Buffer const& content, Address owner,
-                      elle::Buffer const& salt);
+                      elle::Buffer const& salt,
+                      elle::Version const& version);
         ELLE_ATTRIBUTE(elle::Buffer, salt);
         ELLE_ATTRIBUTE_R(Address, owner); // owner ACB address or null
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);

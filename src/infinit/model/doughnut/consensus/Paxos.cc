@@ -488,8 +488,7 @@ namespace infinit
         void
         Paxos::LocalPeer::remove(Address address, blocks::RemoveSignature rs)
         {
-          // FIXME: use doughnut version
-          if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+          if (this->doughnut().version() >= elle::Version(0, 4, 0))
           {
             auto it = this->_addresses.find(address);
             ELLE_TRACE("paxos::remove, known=%s", it != this->_addresses.end());

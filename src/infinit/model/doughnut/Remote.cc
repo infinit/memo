@@ -286,7 +286,7 @@ namespace infinit
       {
         BENCH("remove");
         ELLE_TRACE_SCOPE("%s: remove %x", *this, address);
-        if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+        if (this->_doughnut.version() >= elle::Version(0, 4, 0))
         {
           auto remove = make_rpc<void (Address, blocks::RemoveSignature)>
             ("remove");

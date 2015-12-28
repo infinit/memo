@@ -136,7 +136,7 @@ namespace infinit
         , _data_signature()
         , _world_readable(false)
         , _world_writable(false)
-        , _serialized_version(serialization_tag::version)
+        , _serialized_version(owner->version())
         , _deleted(false)
       {}
 
@@ -641,9 +641,7 @@ namespace infinit
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
         ELLE_TRACE("%s: _seal version %s -> %s",
-          *this, this->_serialized_version, serialization_tag::version);
-        // FIXME restore when doughnut version is available
-        //this->_serialized_version = serialization_tag::version;
+          *this, this->_serialized_version, this->doughnut()->version());
 
         std::shared_ptr<infinit::cryptography::rsa::KeyPair const> sign_keys;
         if (acl_changed)
@@ -826,7 +824,6 @@ namespace infinit
         s.serialize("acl", this->_acl_entries);
         if (this->_serialized_version >= elle::Version(0, 4, 0))
         {
-          ELLE_LOG("data_sign ext, %s", this->_serialized_version);
           s.serialize("group_acl", this->_acl_group_entries);
           s.serialize("group_version", this->_group_version);
           s.serialize("deleted", this->_deleted);
@@ -957,6 +954,7 @@ namespace infinit
         , _serialized_version(version)
         , _deleted(false)
       {
+        ELLE_DEBUG("serialize, bv=%s, dv=%s", version, this->doughnut()->version());
         this->_serialize(input, version);
       }
 
@@ -966,7 +964,6 @@ namespace infinit
                                 elle::Version const& version)
       {
         ELLE_DEBUG("serialize, v=%s, sv=%s", version, this->_serialized_version);
-        // FIXME: wont happen when doughnut will have a version
         if (this->_serialized_version != version)
         {
           this->_serialized_version = version;

@@ -166,8 +166,7 @@ namespace infinit
         ELLE_DEBUG("remove %x", address);
         try
         {
-          // FIXME: use doughnut version
-          if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+          if (this->_doughnut.version() >= elle::Version(0, 4, 0))
           {
             auto previous_buffer = this->_storage->get(address);
             elle::IOStream s(previous_buffer.istreambuf());
@@ -224,8 +223,7 @@ namespace infinit
                   {
                     return this->fetch(address, local_version);
                   }));
-        // FIXME: use doughnut version
-        if (infinit::serialization_tag::version >= elle::Version(0, 4, 0))
+        if (this->_doughnut.version() >= elle::Version(0, 4, 0))
           rpcs.add("remove",
                   std::function<void (Address address, blocks::RemoveSignature)>(
                     [this] (Address address, blocks::RemoveSignature rs)
