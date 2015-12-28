@@ -816,7 +816,7 @@ namespace infinit
       BaseACB<Block>::_data_sign(elle::serialization::SerializerOut& s) const
       {
         s.serialize("salt", this->salt());
-        s.serialize("key", this->owner_key());
+        s.serialize("key", *this->owner_key());
         s.serialize("version", this->_data_version);
         s.serialize("data", this->Block::data());
         s.serialize("owner_token", this->_owner_token);
