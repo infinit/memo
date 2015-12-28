@@ -383,7 +383,6 @@ namespace infinit
               ("script,s", "silence all extraneous human friendly messages")
               ("force-version,f", value<std::string>(), "force used version")
               ("version,v", "display version")
-              ("force-version,V", value<std::string>(), "emulate given infinit version")
             ;
             if (!disable_as_arg || !disable_as_arg.get())
             {
@@ -415,18 +414,6 @@ namespace infinit
               script_mode = vm.count("script");
               if (vm.count("as"))
                 _as_user = vm["as"].as<std::string>();
-              if (vm.count("force-version"))
-              {
-                std::string version = vm["force-version"].as<std::string>();
-                std::vector<std::string> strs;
-                boost::split(strs, version, boost::is_any_of("."));
-                int major, minor, subminor;
-                major = std::stoi(strs[0]);
-                minor = std::stoi(strs[1]);
-                subminor = std::stoi(strs[2]);
-                infinit::serialization_tag::version =
-                  elle::Version(major, minor, subminor);
-              }
               Mode const* mode = nullptr;
               std::vector<std::string> args;
               for (auto const& m: modes)
