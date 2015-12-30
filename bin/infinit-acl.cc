@@ -36,10 +36,16 @@ file_xattrs_dir(std::string const& file)
   boost::filesystem::path p(file);
   auto filename = p.filename();
   auto dir = p.parent_path();
-  auto attr_dir = dir / ("$xattrs." + filename.string());
+  boost::filesystem::path res;
+  // dir might be outside the filesystem, so dont go below file if its a
+  // directory
+  if (boost::filesystem::is_directory(file))
+    res = p / "$xattrs..";
+  else
+    res = dir / ("$xattrs." + filename.string());
   boost::system::error_code erc;
-  boost::filesystem::create_directory(attr_dir, erc);
-  return attr_dir;
+  boost::filesystem::create_directory(res, erc);
+  return res;
 }
 
 static
