@@ -136,7 +136,6 @@ namespace infinit
         , _data_signature()
         , _world_readable(false)
         , _world_writable(false)
-        , _serialized_version(owner->version())
         , _deleted(false)
       {}
 
@@ -152,7 +151,6 @@ namespace infinit
         , _data_version(other._data_version)
         , _world_readable(other._world_readable)
         , _world_writable(other._world_writable)
-        , _serialized_version(other._serialized_version)
         , _deleted(other._deleted)
       {
         if (sealed_copy || !other._data_signature.running() || other.keys())
@@ -547,7 +545,6 @@ namespace infinit
         ELLE_DEBUG("%s: check author signature, entry=%s, sig=%s",
                    *this, !!entry, this->data_signature())
         {
-          auto sign = this->_data_sign();
           if (is_group_entry)
           { // fetch latest key for group
             Group g(*this->doughnut(), entry->key);
@@ -559,7 +556,7 @@ namespace infinit
               return blocks::ValidationResult::failure("group key out of range");
             auto& key = pubkeys[key_index];
             ELLE_DEBUG("validating with group key %s: %s", key_index, key);
-            if (!this->_check_signature(key, this->data_signature(), sign, "data"))
+            if (!key.verify(this->data_signature(), *this->_data_sign()))
             {
               ELLE_DEBUG("%s: group author signature invalid", *this);
               return blocks::ValidationResult::failure("Incorrect group key signature");
@@ -568,7 +565,7 @@ namespace infinit
           else
           {
             auto& key = entry ? entry->key : *this->owner_key();
-            if (!this->_check_signature(key, this->data_signature(), sign, "data"))
+            if (!key.verify(this->data_signature(), *this->_data_sign()))
             {
               ELLE_DEBUG("%s: author signature invalid", *this);
               return blocks::ValidationResult::failure
@@ -640,9 +637,6 @@ namespace infinit
         elle::Bench::BenchScope scope(bench);
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
-        ELLE_TRACE("%s: _seal version %s -> %s",
-          *this, this->_serialized_version, this->doughnut()->version());
-
         std::shared_ptr<infinit::cryptography::rsa::KeyPair const> sign_keys;
         if (acl_changed)
         {
@@ -774,14 +768,15 @@ namespace infinit
             else
               throw ValidationFailed("not owner and no write permissions");
           }
-          auto to_sign = elle::utility::move_on_copy(this->_data_sign());
-          this->_data_signature =
-            [sign_keys, to_sign]
-            {
-              static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
-              elle::Bench::BenchScope scope(bench);
-              return sign_keys->k().sign(*to_sign);
-            };
+          this->_data_signature = sign_keys->k().sign(*this->_data_sign());
+          // auto to_sign = elle::utility::move_on_copy(this->_data_sign());
+          // this->_data_signature =
+          //   [sign_keys, to_sign]
+          //   {
+          //     static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
+          //     elle::Bench::BenchScope scope(bench);
+          //     return sign_keys->k().sign(*to_sign);
+          //   };
         }
         Super::_seal();
       }
@@ -798,54 +793,37 @@ namespace infinit
       }
 
       template <typename Block>
-      elle::Buffer
-      BaseACB<Block>::_data_sign() const
-      {
-        ELLE_TRACE("_data sign, v=%s", this->_serialized_version);
-        elle::Buffer res;
-        {
-          elle::IOStream output(res.ostreambuf());
-          elle::serialization::binary::SerializerOut s(output, false);
-          this->_data_sign(s);
-        }
-        ELLE_DEBUG("to_sign: %x", res);
-        return res;
-      }
+      BaseACB<Block>::OwnerSignature::OwnerSignature(BaseACB<Block> const& b)
+        : Super::OwnerSignature(b)
+        , _block(b)
+      {}
 
       template <typename Block>
       void
-      BaseACB<Block>::_data_sign(elle::serialization::SerializerOut& s) const
+      BaseACB<Block>::OwnerSignature::_serialize(
+        elle::serialization::SerializerOut& s,
+        elle::Version const& v)
       {
-        s.serialize("salt", this->salt());
-        s.serialize("key", *this->owner_key());
-        s.serialize("version", this->_data_version);
-        s.serialize("data", this->Block::data());
-        s.serialize("owner_token", this->_owner_token);
-        s.serialize("acl", this->_acl_entries);
-        if (this->_serialized_version >= elle::Version(0, 4, 0))
-        {
-          s.serialize("group_acl", this->_acl_group_entries);
-          s.serialize("group_version", this->_group_version);
-          s.serialize("deleted", this->_deleted);
-        }
-      }
-
-      template <typename Block>
-      void
-      BaseACB<Block>::_sign(elle::serialization::SerializerOut& s) const
-      {
-        ELLE_TRACE("%s: _sign version %s", *this, this->_serialized_version);
         s.serialize(
-          "acls", elle::unconst(this)->_acl_entries,
+          // FIXME: no non-const overload for that version
+          "acls", elle::unconst(this->_block.acl_entries()),
           elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
-        if (this->_serialized_version >= elle::Version(0, 4, 0))
+        if (v >= elle::Version(0, 4, 0))
         {
           s.serialize(
-            "group_acls", elle::unconst(this)->_acl_group_entries,
+            // FIXME: no non-const overload for that version
+            "group_acls", elle::unconst(this->_block.acl_group_entries()),
             elle::serialization::as<das::Serializer<DasACLEntryPermissions>>());
-          s.serialize("world_readable", this->_world_readable);
-          s.serialize("world_writable", this->_world_writable);
+          s.serialize("world_readable", this->_block.world_readable());
+          s.serialize("world_writable", this->_block.world_writable());
         }
+      }
+
+      template <typename Block>
+      std::unique_ptr<typename BaseACB<Block>::Super::OwnerSignature>
+      BaseACB<Block>::_sign() const
+      {
+        return elle::make_unique<OwnerSignature>(*this);
       }
 
       template<typename Block>
@@ -897,9 +875,40 @@ namespace infinit
         return boost::make_iterator_range(zip_begin, zip_end);
       }
 
-      /*--------.
-      | Content |
-      `--------*/
+      template <typename Block>
+      std::unique_ptr<typename BaseACB<Block>::DataSignature>
+      BaseACB<Block>::_data_sign() const
+      {
+        return elle::make_unique<DataSignature>(*this);
+      }
+
+      template <typename Block>
+      BaseACB<Block>::DataSignature::DataSignature(BaseACB<Block> const& block)
+        : _block(block)
+      {}
+
+      template <typename Block>
+      void
+      BaseACB<Block>::DataSignature::serialize(
+        elle::serialization::Serializer& s_,
+        elle::Version const& v)
+      {
+        // FIXME: Improve when split-serialization is added.
+        ELLE_ASSERT(s_.out());
+        auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
+        s.serialize("salt", this->_block.salt());
+        s.serialize("key", this->_block.owner_key());
+        s.serialize("version", this->_block.data_version());
+        s.serialize("data", this->_block.Block::data());
+        s.serialize("owner_token", this->_block.owner_token());
+        s.serialize("acl", this->_block.acl_entries());
+        if (v >= elle::Version(0, 4, 0))
+        {
+          s.serialize("group_acl", this->_block.acl_group_entries());
+          s.serialize("group_version", this->_block.group_version());
+          s.serialize("deleted", this->_block.deleted());
+        }
+      }
 
       /*--------.
       | Content |
@@ -951,7 +960,6 @@ namespace infinit
         , _data_signature()
         , _world_readable(false)
         , _world_writable(false)
-        , _serialized_version(version)
         , _deleted(false)
       {
         ELLE_DEBUG("serialize, bv=%s, dv=%s", version, this->doughnut()->version());
@@ -963,18 +971,6 @@ namespace infinit
       BaseACB<Block>::serialize(elle::serialization::Serializer& s,
                                 elle::Version const& version)
       {
-        ELLE_DEBUG("serialize, v=%s, sv=%s", version, this->_serialized_version);
-        if (this->_serialized_version != version)
-        {
-          this->_serialized_version = version;
-          if (s.out())
-          {
-            ELLE_DEBUG("version change, re-sealing block");
-            this->_data_signature = elle::Buffer();
-            this->_seal();
-            this->_seal_okb(false);
-          }
-        }
         Super::serialize(s, version);
         this->_serialize(s, version);
       }
@@ -984,7 +980,6 @@ namespace infinit
       BaseACB<Block>::_serialize(elle::serialization::Serializer& s,
                                  elle::Version const& version)
       {
-        ELLE_TRACE("%s: _serialize version %s", *this, version);
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
@@ -992,9 +987,20 @@ namespace infinit
         bool need_signature = !s.context().has<ACBDontWaitForSignature>();
         // see comment in BaseOKB::_serialize
         if (need_signature
-          || (s.out()
-            && (this->keys() || !this->_data_signature.running())))
-          s.serialize("data_signature", this->_data_signature.value());
+          || s.out() && (this->keys() || !this->_data_signature.running()))
+        {
+          if (version < elle::Version(0, 4, 0))
+            if (s.out())
+            {
+              auto value =
+                elle::WeakBuffer(this->_data_signature.value()).range(4);
+              s.serialize("data_signature", value);
+            }
+            else
+              s.serialize("data_signature", this->_data_signature.value());
+          else
+            s.serialize("data_signature", this->_data_signature.value());
+        }
         else
         {
           elle::Buffer signature;

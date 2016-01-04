@@ -67,7 +67,7 @@ namespace infinit
         BaseACB(Self const& other, bool sealed_copy = true);
         ~BaseACB();
         ELLE_ATTRIBUTE_R(int, editor);
-        ELLE_ATTRIBUTE(elle::Buffer, owner_token);
+        ELLE_ATTRIBUTE_R(elle::Buffer, owner_token);
         ELLE_ATTRIBUTE(bool, acl_changed, protected);
         ELLE_ATTRIBUTE_R(std::vector<ACLEntry>, acl_entries);
         ELLE_ATTRIBUTE_R(std::vector<ACLEntry>, acl_group_entries);
@@ -76,7 +76,6 @@ namespace infinit
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
         ELLE_ATTRIBUTE_R(bool, world_readable);
         ELLE_ATTRIBUTE_R(bool, world_writable);
-        ELLE_ATTRIBUTE_R(elle::Version, serialized_version);
         ELLE_ATTRIBUTE_R(bool, deleted);
       protected:
         elle::Buffer const& data_signature() const;
@@ -161,22 +160,42 @@ namespace infinit
         _seal() override;
         void
         _seal(boost::optional<cryptography::SecretKey const&> key);
+        class OwnerSignature
+          : public Super::OwnerSignature
+        {
+        public:
+          OwnerSignature(BaseACB<Block> const& block);
+        protected:
+          virtual
+          void
+          _serialize(elle::serialization::SerializerOut& s,
+                     elle::Version const& v);
+          ELLE_ATTRIBUTE_R(BaseACB<Block> const&, block);
+        };
         virtual
-        void
-        _sign(elle::serialization::SerializerOut& s) const override;
+        std::unique_ptr<typename Super::OwnerSignature>
+        _sign() const override;
         virtual
         model::blocks::RemoveSignature
         _sign_remove() const override;
         virtual
         blocks::ValidationResult
         _validate_remove(blocks::RemoveSignature const& rs) const override;
-      private:
-        elle::Buffer
-        _data_sign() const;
       protected:
+        class DataSignature
+        {
+        public:
+          typedef infinit::serialization_tag serialization_tag;
+          DataSignature(BaseACB<Block> const& block);
+          virtual
+          void
+          serialize(elle::serialization::Serializer& s_,
+                    elle::Version const& v);
+          ELLE_ATTRIBUTE_R(BaseACB<Block> const&, block);
+        };
         virtual
-        void
-        _data_sign(elle::serialization::SerializerOut& s) const;
+        std::unique_ptr<DataSignature>
+        _data_sign() const;
 
       /*--------------.
       | Serialization |

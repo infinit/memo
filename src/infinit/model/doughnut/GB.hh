@@ -59,12 +59,35 @@ namespace infinit
         int
         version() override;
       protected:
+        class OwnerSignature
+          : public Super::OwnerSignature
+        {
+        public:
+          OwnerSignature(GB const& block);
+        protected:
+          virtual
+          void
+          _serialize(elle::serialization::SerializerOut& s,
+                     elle::Version const& v);
+          ELLE_ATTRIBUTE_R(GB const&, block);
+        };
         virtual
-        void
-        _sign(elle::serialization::SerializerOut& s) const override;
+        std::unique_ptr<typename BaseOKB<blocks::GroupBlock>::OwnerSignature>
+        _sign() const override;
+        class DataSignature
+          : public Super::DataSignature
+        {
+        public:
+          DataSignature(GB const& block);
+          virtual
+          void
+          serialize(elle::serialization::Serializer& s_,
+                    elle::Version const& v);
+          ELLE_ATTRIBUTE_R(GB const&, block);
+        };
         virtual
-        void
-        _data_sign(elle::serialization::SerializerOut& s) const override;
+        std::unique_ptr<Super::DataSignature>
+        _data_sign() const override;
       public:
         GB(elle::serialization::SerializerIn& s,
            elle::Version const& version);
@@ -80,15 +103,18 @@ namespace infinit
         void
         _extract_master_key();
         // extracted stuff
-        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::PrivateKey>, master_key);
-        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::KeyPair>, group_keys);
+        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::PrivateKey>,
+                       master_key);
+        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::KeyPair>,
+                       group_keys);
         // stored stuff
-        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::PublicKey>, group_public_keys);
-        //due to serialization glitch (cant serialize pair
-        //with non-default-constructible type,
-        // use two vectors
-        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::PublicKey>, group_admins);
-        ELLE_ATTRIBUTE(std::vector<elle::Buffer>, ciphered_master_key);
+        ELLE_ATTRIBUTE_R(std::vector<infinit::cryptography::rsa::PublicKey>,
+                         group_public_keys);
+        // Due to serialization glitch (cant serialize pair with
+        // non-default-constructible type, use two vectors
+        ELLE_ATTRIBUTE_R(std::vector<infinit::cryptography::rsa::PublicKey>,
+                         group_admins);
+        ELLE_ATTRIBUTE_R(std::vector<elle::Buffer>, ciphered_master_key);
 
       public:
         typedef infinit::serialization_tag serialization_tag;

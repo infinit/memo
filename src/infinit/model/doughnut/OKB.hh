@@ -133,9 +133,24 @@ namespace infinit
         blocks::ValidationResult
         _validate() const override;
       protected:
+        class OwnerSignature
+        {
+        public:
+          typedef infinit::serialization_tag serialization_tag;
+          OwnerSignature(BaseOKB<Block> const& block);
+          void
+          serialize(elle::serialization::Serializer& s_,
+                    elle::Version const& v);
+        protected:
+          virtual
+          void
+          _serialize(elle::serialization::SerializerOut& s_,
+                     elle::Version const& v);
+          ELLE_ATTRIBUTE_R(BaseOKB<Block> const&, block);
+        };
         virtual
-        void
-        _sign(elle::serialization::SerializerOut& s) const;
+        std::unique_ptr<OwnerSignature>
+        _sign() const;
         bool
         _check_signature(cryptography::rsa::PublicKey const& key,
                          elle::Buffer const& signature,
@@ -149,10 +164,6 @@ namespace infinit
           int T::*member,
           int version) const;
         elle::Buffer const& signature() const;
-
-      private:
-        elle::Buffer
-        _sign() const;
 
       /*---------.
       | Clonable |
@@ -178,7 +189,8 @@ namespace infinit
         class SerializationContent;
         BaseOKB(SerializationContent input);
         void
-        _serialize(elle::serialization::Serializer& input);
+        _serialize(elle::serialization::Serializer& input,
+                   elle::Version const& version);
       };
 
       typedef BaseOKB<blocks::MutableBlock> OKB;

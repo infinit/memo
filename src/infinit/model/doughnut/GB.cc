@@ -44,6 +44,7 @@ namespace infinit
         s.serialize("master_key", this->_ciphered_master_key);
         ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
       }
+
       void
       GB::serialize(elle::serialization::Serializer& s,
                     elle::Version const& version)
@@ -55,26 +56,57 @@ namespace infinit
         s.serialize("master_key", this->_ciphered_master_key);
       }
 
+      GB::OwnerSignature::OwnerSignature(GB const& b)
+        : Super::OwnerSignature(b)
+        , _block(b)
+      {}
+
       void
-      GB::_sign(elle::serialization::SerializerOut& s) const
+      GB::OwnerSignature::_serialize(elle::serialization::SerializerOut& s,
+                                     elle::Version const& v)
       {
-        Super::_sign(s);
-        s.serialize("group_admins", this->_group_admins);
-        s.serialize("master_key", this->_ciphered_master_key);
+        ELLE_ASSERT_GTE(v, elle::Version(0, 4, 0));
+        GB::Super::OwnerSignature::_serialize(s, v);
+        s.serialize("group_admins", this->_block.group_admins());
+        s.serialize("master_key", this->_block.ciphered_master_key());
       }
+
+      std::unique_ptr<typename BaseOKB<blocks::GroupBlock>::OwnerSignature>
+      GB::_sign() const
+      {
+        return elle::make_unique<OwnerSignature>(*this);
+      }
+
+      GB::DataSignature::DataSignature(GB const& block)
+        : GB::Super::DataSignature(block)
+        , _block(block)
+      {}
+
       void
-      GB::_data_sign(elle::serialization::SerializerOut& s) const
+      GB::DataSignature::serialize(elle::serialization::Serializer& s_,
+                                   elle::Version const& v)
       {
-        Super::_data_sign(s);
-        s.serialize("group_public_keys", this->_group_public_keys);
-        s.serialize("group_admins", this->_group_admins);
-        s.serialize("master_key", this->_ciphered_master_key);
+        // FIXME: Improve when split-serialization is added.
+        ELLE_ASSERT(s_.out());
+        auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
+        GB::Super::DataSignature::serialize(s, v);
+        s.serialize("group_public_keys", this->_block.group_public_keys());
+        s.serialize("group_admins", this->_block.group_admins());
+        s.serialize("master_key", this->_block.ciphered_master_key());
       }
+
+      std::unique_ptr<GB::Super::DataSignature>
+      GB::_data_sign() const
+      {
+        return elle::make_unique<DataSignature>(*this);
+      }
+
       cryptography::rsa::PublicKey
       GB::current_public_key()
       {
         return this->_group_public_keys.back();
       }
+
       cryptography::rsa::KeyPair
       GB::current_key()
       {

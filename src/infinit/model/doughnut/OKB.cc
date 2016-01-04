@@ -229,6 +229,13 @@ namespace infinit
       }
 
       template <typename Block>
+      std::unique_ptr<typename BaseOKB<Block>::OwnerSignature>
+      BaseOKB<Block>::_sign() const
+      {
+        return elle::make_unique<OwnerSignature>(*this);
+      }
+
+      template <typename Block>
       elle::Buffer
       BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
@@ -242,26 +249,33 @@ namespace infinit
       `-----------*/
 
       template <typename Block>
-      elle::Buffer
-      BaseOKB<Block>::_sign() const
+      BaseOKB<Block>::OwnerSignature::OwnerSignature(
+        BaseOKB<Block> const& block)
+        : _block(block)
+      {}
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::OwnerSignature::serialize(
+        elle::serialization::Serializer& s_,
+        elle::Version const& v)
       {
-        elle::Buffer res;
-        {
-          elle::IOStream output(res.ostreambuf());
-          elle::serialization::binary::SerializerOut s(output, false);
-          s.serialize("salt", this->_salt);
-          s.serialize("owner_key", *this->_owner_key);
-          s.serialize("version", this->_version);
-          this->_sign(s);
-        }
-        return res;
+        // FIXME: Improve when split-serialization is added.
+        ELLE_ASSERT(s_.out());
+        auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
+        s.serialize("salt", this->_block.salt());
+        s.serialize("owner_key", *this->_block.owner_key());
+        s.serialize("version", this->_block.version());
+        this->_serialize(s, v);
       }
 
       template <typename Block>
       void
-      BaseOKB<Block>::_sign(elle::serialization::SerializerOut& s) const
+      BaseOKB<Block>::OwnerSignature::_serialize(
+        elle::serialization::SerializerOut& s,
+        elle::Version const& v)
       {
-        s.serialize("data", this->_data);
+        s.serialize("data", this->_block.data());
       }
 
       template <typename Block>
@@ -303,17 +317,19 @@ namespace infinit
         if (bump_version)
           ++this->_version; // FIXME: idempotence in case the write fails ?
         auto keys = _keys ?
-        std::shared_ptr<cryptography::rsa::KeyPair>(&*_keys, null_deleter<cryptography::rsa::KeyPair>)
-        : this->_doughnut->keys_shared();
-        auto sign = elle::utility::move_on_copy(this->_sign());
+          std::shared_ptr<cryptography::rsa::KeyPair>
+            (&*_keys, null_deleter<cryptography::rsa::KeyPair>)
+          : this->_doughnut->keys_shared();
         ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
-        this->_signature =
-          [keys, sign]
-          {
-            static elle::Bench bench("bench.okb.seal.signing", 10000_sec);
-            elle::Bench::BenchScope scope(bench);
-            return keys->k().sign(*sign);
-          };
+        this->_signature = keys->k().sign(*this->_sign());
+        // auto sign = elle::utility::move_on_copy(this->_sign());
+        // this->_signature =
+        //   [keys, sign]
+        //   {
+        //     static elle::Bench bench("bench.okb.seal.signing", 10000_sec);
+        //     elle::Bench::BenchScope scope(bench);
+        //     return keys->k().sign(*sign);
+        //   };
       }
 
       template <typename Block>
@@ -333,8 +349,7 @@ namespace infinit
         ELLE_DEBUG("%s: check signature", *this)
         {
           auto sign = this->_sign();
-          if (!this->_check_signature
-              (*this->_owner_key, this->signature(), sign, "owner"))
+          if (!this->_owner_key->verify(this->signature(), *this->_sign()))
           {
             ELLE_TRACE("signing %x\nwith %x", sign, *this->_owner_key);
             ELLE_TRACE("%s: invalid signature for version %s: '%x'",
@@ -429,16 +444,17 @@ namespace infinit
                                 elle::Version const& version)
       {
         this->Super::serialize(s, version);
-        this->_serialize(s);
+        this->_serialize(s, version);
       }
 
       template <typename Block>
       void
-      BaseOKB<Block>::_serialize(elle::serialization::Serializer& s)
+      BaseOKB<Block>::_serialize(elle::serialization::Serializer& s,
+                                 elle::Version const& version)
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
         ELLE_ASSERT(this->_doughnut);
-        bool need_signature = ! s.context().has<OKBDontWaitForSignature>();
+        bool need_signature = !s.context().has<OKBDontWaitForSignature>();
         s.serialize("key", *this->_owner_key);
         s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
@@ -447,10 +463,18 @@ namespace infinit
         * - computing the signature requires a different key
         */
         if (need_signature
-          || (s.out()
-             && (this->keys() || !this->_signature.running())))
+            || s.out() && (this->keys() || !this->_signature.running()))
         {
-          s.serialize("signature", this->_signature.value());
+          if (version < elle::Version(0, 4, 0))
+            if (s.out())
+            {
+              auto value = elle::WeakBuffer(this->_signature.value()).range(4);
+              s.serialize("signature", value);
+            }
+            else
+              s.serialize("signature", this->_signature.value()); // FIXME
+          else
+            s.serialize("signature", this->_signature.value());
           ELLE_ASSERT(!this->_signature.value().empty());
         }
         else
@@ -463,8 +487,9 @@ namespace infinit
             {
               auto keys = this->_doughnut->keys_shared();
               ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
-              auto sign = elle::utility::move_on_copy(this->_sign());
-              this->_signature = [keys, sign] {return keys->k().sign(*sign);};
+              this->_signature = keys->k().sign(*this->_sign());
+              // auto sign = elle::utility::move_on_copy(this->_sign());
+              // this->_signature = [keys, sign] {return keys->k().sign(*sign);};
             }
             else
               this->_signature = std::move(signature);
