@@ -433,6 +433,7 @@ def configure(
     ('infinit-volume', [], True),
     ('infinit-webdav', [], False),
     ('infinit-fsck', [], False),
+    ('reactor-example', [], False),
     # ('s3fs', [aws_lib], False),
   ]
   if not windows:
