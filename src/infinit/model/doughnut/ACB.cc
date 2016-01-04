@@ -900,7 +900,7 @@ namespace infinit
         s.serialize("salt", this->_block.salt());
         s.serialize("key", this->_block.owner_key());
         s.serialize("version", this->_block.data_version());
-        s.serialize("data", this->_block.Block::data());
+        s.serialize("data", this->_block.blocks::Block::data());
         s.serialize("owner_token", this->_block.owner_token());
         s.serialize("acl", this->_block.acl_entries());
         if (v >= elle::Version(0, 4, 0))

@@ -275,7 +275,7 @@ namespace infinit
         elle::serialization::SerializerOut& s,
         elle::Version const& v)
       {
-        s.serialize("data", this->_block.data());
+        s.serialize("data", this->_block.blocks::Block::data());
       }
 
       template <typename Block>
