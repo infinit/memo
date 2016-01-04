@@ -47,6 +47,7 @@ namespace infinit
         _hash_address() const;
         template <typename Block>
         friend class BaseOKB;
+        friend class OwnerSignature;
 
       /*--------------.
       | Serialization |

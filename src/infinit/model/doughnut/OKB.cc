@@ -265,7 +265,7 @@ namespace infinit
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
         s.serialize("owner_key", *this->_block.owner_key());
-        s.serialize("version", this->_block.version());
+        s.serialize("version", this->_block._version);
         this->_serialize(s, v);
       }
 
