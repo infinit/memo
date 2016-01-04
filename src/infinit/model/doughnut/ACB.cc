@@ -898,7 +898,7 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         s.serialize("salt", this->_block.salt());
-        s.serialize("key", this->_block.owner_key());
+        s.serialize("key", *this->_block.owner_key());
         s.serialize("version", this->_block.data_version());
         s.serialize("data", this->_block.blocks::Block::data());
         s.serialize("owner_token", this->_block.owner_token());
