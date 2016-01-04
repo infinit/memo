@@ -768,7 +768,8 @@ namespace infinit
             else
               throw ValidationFailed("not owner and no write permissions");
           }
-          this->_data_signature = sign_keys->k().sign(*this->_data_sign());
+          this->_data_signature = sign_keys->k().sign(
+            *this->_data_sign(), this->doughnut()->version());
           // auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           // this->_data_signature =
           //   [sign_keys, to_sign]

@@ -110,23 +110,72 @@ public:
   }
 };
 
+static const elle::Buffer salt("HARDCODED_SALT");
+static const DeterministicSecretKey secret =
+  elle::serialization::json::deserialize<DeterministicSecretKey>(secret_buffer);
+
 class DummyDoughnut
   : public infinit::model::doughnut::Doughnut
 {
 public:
-
-  DummyDoughnut(infinit::model::Address id,
-                std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys)
+  DummyDoughnut(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+                boost::optional<elle::Version> v)
     : infinit::model::doughnut::Doughnut(
-      id, keys, keys->K(),
+      infinit::model::Address::null, keys, keys->K(),
       infinit::model::doughnut::Passport(keys->K(), "network", keys->k()),
       [] (infinit::model::doughnut::Doughnut&)
       { return nullptr; },
       [] (infinit::model::doughnut::Doughnut&, infinit::model::Address, std::shared_ptr<infinit::model::doughnut::Local>)
       { return nullptr; },
-      {}, nullptr)
+      {}, nullptr, v)
+  {}
+};
+
+struct TestSet
+{
+  TestSet(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+          boost::optional<elle::Version> v)
+    : dht(keys, std::move(v))
+    , chb(new infinit::model::doughnut::CHB(&dht, std::string("CHB contents"), salt))
+    , acb(new infinit::model::doughnut::ACB(&dht, std::string("ACB contents"), salt))
+    , okb(new infinit::model::doughnut::OKB(&dht, std::string("OKB contents"), salt))
+    , nb(new infinit::model::doughnut::NB(&dht, keys->K(), "NB name", std::string("NB contents")))
+    , ub(new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), false))
+    , rub(new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), true))
   {
+    chb->seal();
+    acb->seal(secret);
+    okb->seal();
+    nb->seal();
+    ub->seal();
+    rub->seal();
   }
+
+  void apply(std::string const& action,
+             std::function<void(std::string const&,
+                                infinit::model::blocks::Block*)> const& f)
+  {
+    std::cout << "  " << action << " CHB" << std::endl;
+    f("CHB", chb.get());
+    std::cout << "  " << action << " OKB" << std::endl;
+    f("OKB", okb.get());
+    std::cout << "  " << action << " ACB" << std::endl;
+    f("ACB", acb.get());
+    std::cout << "  " << action << " NB" << std::endl;
+    f("NB",  nb.get());
+    std::cout << "  " << action << " UB" << std::endl;
+    f("UB",  ub.get());
+    std::cout << "  " << action << " RUB" << std::endl;
+    f("RUB",  rub.get());
+  };
+
+  DummyDoughnut dht;
+  std::shared_ptr<infinit::model::doughnut::CHB> chb;
+  std::shared_ptr<infinit::model::doughnut::ACB> acb;
+  std::shared_ptr<infinit::model::doughnut::OKB> okb;
+  std::shared_ptr<infinit::model::doughnut::NB> nb;
+  std::shared_ptr<infinit::model::doughnut::UB> ub;
+  std::shared_ptr<infinit::model::doughnut::UB> rub;
 };
 
 int
@@ -163,51 +212,12 @@ main(int argc, char** argv)
     "main",
     [&]
     {
-      static const elle::Buffer salt("HARDCODED_SALT");
-      auto secret =
-        elle::serialization::json::deserialize<DeterministicSecretKey>
-        (secret_buffer);
       auto K = elle::serialization::json::deserialize
         <std::shared_ptr<DeterministicPublicKey>>(public_key);
       auto k = elle::serialization::json::deserialize
         <std::shared_ptr<DeterministicPrivateKey>>(private_key);
       auto keys = std::make_shared
         <infinit::cryptography::rsa::KeyPair>(K, k);
-      DummyDoughnut dht(infinit::model::Address::null, keys);
-      auto chb =
-        new infinit::model::doughnut::CHB(&dht, std::string("CHB contents"), salt);
-      chb->seal();
-      auto acb = new infinit::model::doughnut::ACB(
-        &dht, std::string("ACB contents"), salt);
-      acb->seal(secret);
-      auto okb = new infinit::model::doughnut::OKB(
-        &dht, std::string("OKB contents"), salt);
-      okb->seal();
-      auto nb = new infinit::model::doughnut::NB(
-        &dht, keys->K(), "NB name", std::string("NB contents"));
-      nb->seal();
-      auto ub = new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), false);
-      ub->seal();
-      auto rub = new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), true);
-      rub->seal();
-      auto apply =
-        [&] (std::string const& action,
-             std::function<void(std::string const&,
-                                infinit::model::blocks::Block*)> const& f)
-        {
-          std::cout << "  " << action << " CHB" << std::endl;
-          f("CHB", chb);
-          std::cout << "  " << action << " OKB" << std::endl;
-          f("OKB", okb);
-          std::cout << "  " << action << " ACB" << std::endl;
-          f("ACB", acb);
-          std::cout << "  " << action << " NB" << std::endl;
-          f("NB",  nb);
-          std::cout << "  " << action << " UB" << std::endl;
-          f("UB",  ub);
-          std::cout << "  " << action << " RUB" << std::endl;
-          f("RUB",  rub);
-        };
       if (vm.count("generate"))
       {
         elle::Version current_version(INFINIT_MAJOR, INFINIT_MINOR, 0);
@@ -215,7 +225,9 @@ main(int argc, char** argv)
         std::cout << "Create reference data for version "
                   << current_version << std::endl;
         boost::filesystem::create_directories(current);
-        auto generate =
+        TestSet set(keys, current_version);
+        set.apply(
+          "generate",
           [&] (std::string const& name, infinit::model::blocks::Block* b)
           {
             {
@@ -232,8 +244,7 @@ main(int argc, char** argv)
                 throw elle::Error(elle::sprintf("unable to open %s", path));
               elle::serialization::json::serialize(b, output, false);
             }
-          };
-        apply("generate", generate);
+          });
       }
       else
       {
@@ -261,7 +272,9 @@ main(int argc, char** argv)
           }();
           std::cout << "check backward compatibility with version "
                     << version << std::endl;
-          auto check =
+          TestSet set(keys, version);
+          set.apply(
+            "check",
             [&] (std::string const& name, infinit::model::blocks::Block* b)
             {
               {
@@ -288,8 +301,7 @@ main(int argc, char** argv)
                   contents,
                   elle::serialization::binary::serialize(b, version, false));
               }
-            };
-          apply("check", check);
+            });
         }
       }
     });

@@ -321,7 +321,8 @@ namespace infinit
             (&*_keys, null_deleter<cryptography::rsa::KeyPair>)
           : this->_doughnut->keys_shared();
         ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
-        this->_signature = keys->k().sign(*this->_sign());
+        this->_signature = keys->k().sign(*this->_sign(),
+                                          this->doughnut()->version());
         // auto sign = elle::utility::move_on_copy(this->_sign());
         // this->_signature =
         //   [keys, sign]
@@ -349,7 +350,7 @@ namespace infinit
         ELLE_DEBUG("%s: check signature", *this)
         {
           auto sign = this->_sign();
-          if (!this->_owner_key->verify(this->signature(), *this->_sign()))
+          if (!this->_owner_key->verify(this->signature(), *sign))
           {
             ELLE_TRACE("signing %x\nwith %x", sign, *this->_owner_key);
             ELLE_TRACE("%s: invalid signature for version %s: '%x'",
@@ -487,7 +488,8 @@ namespace infinit
             {
               auto keys = this->_doughnut->keys_shared();
               ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
-              this->_signature = keys->k().sign(*this->_sign());
+              this->_signature = keys->k().sign(*this->_sign(),
+                                                this->doughnut()->version());
               // auto sign = elle::utility::move_on_copy(this->_sign());
               // this->_signature = [keys, sign] {return keys->k().sign(*sign);};
             }
