@@ -9,12 +9,15 @@
 
 ELLE_LOG_COMPONENT("infinit.model.Model");
 
+static const elle::Version default_version(
+  INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+
 namespace infinit
 {
   namespace model
   {
-    Model::Model(elle::Version version)
-      : _version(version)
+    Model::Model(boost::optional<elle::Version> version)
+      : _version(version ? *version : default_version)
     {}
 
     template <>

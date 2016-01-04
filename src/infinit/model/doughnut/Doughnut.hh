@@ -12,10 +12,6 @@
 # include <infinit/model/doughnut/Passport.hh>
 # include <infinit/overlay/Overlay.hh>
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
-
 namespace infinit
 {
   namespace model
@@ -45,7 +41,7 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local,
-                 elle::Version version = INFINIT_ELLE_VERSION);
+                 boost::optional<elle::Version> version = {});
         Doughnut(Address id,
                  std::string const& name,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
@@ -55,7 +51,7 @@ namespace infinit
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local,
-                 elle::Version version = INFINIT_ELLE_VERSION);
+                 boost::optional<elle::Version> version = {});
         ~Doughnut();
         cryptography::rsa::KeyPair const&
         keys() const;

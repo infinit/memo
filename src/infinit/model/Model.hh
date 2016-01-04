@@ -13,9 +13,6 @@
 # include <infinit/storage/Storage.hh>
 # include <infinit/version.hh>
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
 namespace infinit
 {
   namespace overlay
@@ -52,7 +49,7 @@ namespace infinit
     class Model
     {
     public:
-      Model(elle::Version version = INFINIT_ELLE_VERSION);
+      Model(boost::optional<elle::Version> version = {});
       ELLE_ATTRIBUTE_R(elle::Version, version);
       template <typename Block>
       std::unique_ptr<Block>
