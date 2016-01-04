@@ -193,7 +193,7 @@ COMMAND(create)
         owner.private_key.get()),
       owner.name,
       std::move(port),
-      getset_version());
+      version);
   {
     infinit::Network network(std::move(ifnt.qualified_name(name, owner)),
                              std::move(dht));
