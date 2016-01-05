@@ -218,6 +218,10 @@ namespace infinit
       void
       Local::_register_rpcs(RPCServer& rpcs)
       {
+        rpcs._destroying.connect([this] ( RPCServer* rpcs)
+          {
+            this->_passports.erase(rpcs);
+          });
         rpcs.add("store",
                  std::function<void (blocks::Block const& data, StoreMode)>(
                    [this,&rpcs] (blocks::Block const& block, StoreMode mode)
@@ -257,10 +261,9 @@ namespace infinit
                     return i;
                   }));
         auto stored_challenge = std::make_shared<elle::Buffer>();
-        auto stored_passport = std::make_shared<std::unique_ptr<Passport>>();
         typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
 
-        auto auth_syn = [this, stored_challenge, stored_passport] (Passport const& p)
+        auto auth_syn = [this, &rpcs, stored_challenge, stored_passport] (Passport const& p)
           -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
@@ -274,7 +277,7 @@ namespace infinit
             // generate and store a challenge to ensure remote owns the passport
             auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
             *stored_challenge = std::move(challenge);
-            stored_passport->reset(new Passport(p));
+            this->_passports.insert(std::make_pair(&rpcs, p));
             return std::make_pair(
               std::make_pair(*stored_challenge, elle::Buffer()), // we no longuer need token
               const_cast<Passport*>(&_doughnut.passport()));
@@ -308,15 +311,16 @@ namespace infinit
         }
         rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
           elle::Buffer const&, elle::Buffer const&)>(
-          [this,&rpcs, stored_challenge, stored_passport](
+          [this, &rpcs, stored_challenge](
                  elle::Buffer const& enc_key,
                  elle::Buffer const& /*token*/,
                  elle::Buffer const& signed_challenge) -> bool
           {
             ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
-            if (stored_challenge->empty() || !*stored_passport)
+            if (stored_challenge->empty())
               throw elle::Error("auth_syn must be called before auth_ack");
-            bool ok = (*stored_passport)->user().verify(
+            auto& passport = this->_passports.at(&rpcs);
+            bool ok = passport.user().verify(
               signed_challenge,
               *stored_challenge,
               infinit::cryptography::rsa::Padding::pss,
