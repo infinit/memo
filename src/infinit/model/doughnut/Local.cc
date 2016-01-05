@@ -325,7 +325,7 @@ namespace infinit
               enc_key,
               infinit::cryptography::Cipher::aes256,
               infinit::cryptography::Mode::cbc);
-            rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
+            rpcs._key.reset(new infinit::cryptography::SecretKey(
               std::move(password)));
             return true;
           }));

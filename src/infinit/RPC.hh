@@ -247,8 +247,8 @@ namespace infinit
           auto channel = channels.accept();
           auto request = channel.read();
           ELLE_DEBUG("Processing one request, key=%s, len=%s data=%x",
-            !!this->_key.Get(), request.size(), request);
-          bool had_key = !!_key.Get();
+            !!this->_key, request.size(), request);
+          bool had_key = !!_key;
           if (had_key)
           {
             try
@@ -257,13 +257,13 @@ namespace infinit
               elle::Bench::BenchScope bs(bench);
               if (request.size() > 262144)
               {
-                auto key = this->_key.Get().get();
+                auto key = this->_key.get();
                 reactor::background([&] {
                     request = key->decipher(request);
                 });
               }
               else
-                request = this->_key.Get()->decipher(request);
+                request = this->_key->decipher(request);
               ELLE_DEBUG("Wrote %s plain bytes", request.size());
             }
             catch(std::exception const& e)
@@ -311,14 +311,14 @@ namespace infinit
             elle::Bench::BenchScope bs(bench);
             if (response.size() >= 262144)
             {
-              auto key = this->_key.Get().get();
+              auto key = this->_key.get();
               reactor::background([&] {
                   response = key->encipher(
                     elle::ConstWeakBuffer(response.contents(), response.size()));
               });
             }
             else
-              response = _key.Get()->encipher(
+              response = _key->encipher(
                 elle::ConstWeakBuffer(response.contents(), response.size()));
           }
           channel.write(response);
@@ -339,8 +339,9 @@ namespace infinit
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
-    reactor::LocalStorage<std::unique_ptr<infinit::cryptography::SecretKey>> _key;
     boost::optional<elle::Version> _version;
+    std::unique_ptr<infinit::cryptography::SecretKey> _key;
+    infinit::model::doughnut::Doughnut* _doughnut;
 
   };
 
