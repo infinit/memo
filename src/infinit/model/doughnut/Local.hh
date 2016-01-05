@@ -103,6 +103,8 @@ namespace infinit
         _serve_tcp();
         void
         _serve_utp();
+        void
+        _require_auth(RPCServer& rpcs);
 
       /*----------.
       | Printable |

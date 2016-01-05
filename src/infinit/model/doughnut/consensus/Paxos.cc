@@ -329,8 +329,14 @@ namespace infinit
             boost::optional<Paxos::PaxosClient::Accepted>(
               PaxosServer::Quorum, Address,
               Paxos::PaxosClient::Proposal const&)>
-            (std::bind(&LocalPeer::propose,
-                       this, ph::_1, ph::_2, ph::_3)));
+            (
+              [this, &rpcs](PaxosServer::Quorum q, Address a,
+                            Paxos::PaxosClient::Proposal const& p)
+              {
+                this->_require_auth(rpcs);
+                return this->propose(std::move(q), a, p);
+              }
+          ));
           rpcs.add(
             "accept",
             std::function<
@@ -338,8 +344,14 @@ namespace infinit
               PaxosServer::Quorum, Address,
               Paxos::PaxosClient::Proposal const& p,
               std::shared_ptr<blocks::Block> const& value)>
-            (std::bind(&LocalPeer::accept,
-                       this, ph::_1, ph::_2, ph::_3, ph::_4)));
+            ([this, &rpcs](PaxosServer::Quorum q, Address a,
+                           Paxos::PaxosClient::Proposal const& p,
+                           std::shared_ptr<blocks::Block> const& value)
+              {
+                this->_require_auth(rpcs);
+                return this->accept(std::move(q), a, p, value);
+              }
+            ));
         }
 
         template <typename T>
