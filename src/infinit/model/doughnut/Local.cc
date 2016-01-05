@@ -41,7 +41,6 @@ namespace infinit
         : Super(std::move(id))
         , _storage(std::move(storage))
         , _doughnut(dht)
-        , _rpcs(dht.version())
       {
         if (p == Protocol::tcp || p == Protocol::all)
         {
@@ -298,7 +297,7 @@ namespace infinit
         }
         rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
           elle::Buffer const&, elle::Buffer const&)>(
-          [this](elle::Buffer const& enc_key,
+          [this,&rpcs](elle::Buffer const& enc_key,
                  elle::Buffer const& token,
                  elle::Buffer const& signed_challenge) -> bool
           {
@@ -326,7 +325,7 @@ namespace infinit
               enc_key,
               infinit::cryptography::Cipher::aes256,
               infinit::cryptography::Mode::cbc);
-            _rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
+            rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
               std::move(password)));
             return true;
           }));
@@ -335,7 +334,6 @@ namespace infinit
       void
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
-        this->_register_rpcs(_rpcs);
         elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)
@@ -346,8 +344,11 @@ namespace infinit
               name,
               [this, socket]
               {
-                _rpcs.set_context<Doughnut*>(&this->_doughnut);
-                _rpcs.serve(**socket);
+                RPCServer rpcs(this->_doughnut.version());
+                this->_register_rpcs(rpcs);
+                this->on_connect(rpcs);
+                rpcs.set_context<Doughnut*>(&this->_doughnut);
+                rpcs.serve(**socket);
               });
           }
         };

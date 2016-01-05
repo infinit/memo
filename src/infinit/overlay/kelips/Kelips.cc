@@ -787,7 +787,9 @@ namespace infinit
           l->on_remove.connect(std::bind(&Node::remove, this,
                                          std::placeholders::_1));
 
-          l->rpcs().add("kelips_fetch_state",
+          l->on_connect.connect([this](RPCServer& rpcs)
+            {
+              rpcs.add("kelips_fetch_state",
                         std::function<SerState ()>(
                           [this] ()
                           {
@@ -810,6 +812,7 @@ namespace infinit
                             res.second.push_back(std::make_pair(Address::null, _self));
                             return res;
                           }));
+            });
           this->_port = l->server_endpoint().port();
           for (auto const& itf: elle::network::Interface::get_map(
                  elle::network::Interface::Filter::only_up |
