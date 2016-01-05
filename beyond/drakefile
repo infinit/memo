@@ -209,6 +209,7 @@ def configure(
       'full-flow',
       'oauth-dropbox',
       'emails',
+      'users/avatar',
       'users/put',
       'users/get',
       'users/pairing',

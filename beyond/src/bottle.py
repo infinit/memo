@@ -12,6 +12,7 @@ import Crypto.Signature.PKCS1_v1_5
 
 from copy import deepcopy
 from requests import Request, Session
+from functools import partial
 
 from infinit.beyond import *
 from infinit.beyond.response import Response
@@ -21,6 +22,9 @@ from infinit.beyond.plugins.max_size import Plugin as MaxSizePlugin
 from infinit.beyond.plugins.response import Plugin as ResponsePlugin
 
 bottle.BaseRequest.MEMFILE_MAX = 2.5 * 1000 * 1000
+
+def str2bool(v):
+  return v.lower() in ("yes", "true", "t", "1")
 
 ## ------ ##
 ## Bottle ##
@@ -682,9 +686,10 @@ class Bottle(bottle.Bottle):
     return self.__drive_icon_manipulate(
       self.__qualified_name(owner, name), self.__cloud_image_upload)
 
-  def drive_icon_get(self, owner, name):
+  def drive_icon_get(self, owner, name, redirect = False):
     return self.__drive_icon_manipulate(
-      self.__qualified_name(owner, name), self.__cloud_image_get)
+      self.__qualified_name(owner, name),
+      self.__cloud_image_get)
 
   def drive_icon_delete(self, owner, name):
     user = self.user_from_name(name = owner)
@@ -743,17 +748,17 @@ class Bottle(bottle.Bottle):
     )
     raise Response(201, {})
 
-  def __cloud_image_get(self, bucket, name):
+  def __cloud_image_get_url(self, bucket, name):
     self.__check_gcs()
     url = self.__gcs.download_url(
       bucket,
       name,
       expiration = datetime.timedelta(minutes = 3),
     )
-    res = {}
-    if url is not None:
-      res['url'] = url
-    raise Response(200, res)
+    return url
+
+  def __cloud_image_get(self, bucket, name):
+    bottle.redirect(self.__cloud_image_get_url(bucket, name))
 
   def __cloud_image_delete(self, bucket, name):
     self.__check_gcs()
