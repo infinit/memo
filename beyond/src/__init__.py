@@ -522,6 +522,10 @@ class Drive(metaclass = Entity,
         'invitee': { x: getattr(invitee, x) for x in ['name', 'email'] },
         'drive': { x: getattr(drive, x) for x in ['name', 'description'] },
       }
+      r = '?redirect=True'
+      variables['owner']['avatar'] = '/users/%s/avatar%s' % (owner.name, r)
+      variables['invitee']['avatar'] = '/users/%s/avatar%s' % (invitee.name, r)
+      variables['drive']['icon'] = '/drives/%s/icon%s' % (drive.name, r)
       if invitation and invitee.email is not None:
         beyond.emailer.send_one(
           template = beyond.template("Drive/Invitation"),
