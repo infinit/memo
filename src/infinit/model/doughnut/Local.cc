@@ -242,9 +242,11 @@ namespace infinit
                   {
                     return i;
                   }));
+        auto stored_challenge = std::make_shared<elle::Buffer>();
+        auto stored_passport = std::make_shared<std::unique_ptr<Passport>>();
         typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
 
-        auto auth_syn = [this] (Passport const& p)
+        auto auth_syn = [this, stored_challenge, stored_passport] (Passport const& p)
           -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
@@ -255,17 +257,12 @@ namespace infinit
               ELLE_LOG("Passport validation failed");
               throw elle::Error("Passport validation failed");
             }
-            // Generate and store a challenge to ensure remote owns the
-            // passport.
-            auto challenge =
-              infinit::cryptography::random::generate<elle::Buffer>(128);
-            auto token =
-              infinit::cryptography::random::generate<elle::Buffer>(128);
-            this->_challenges.insert(
-              std::make_pair(token.string(),
-                             std::make_pair(challenge, std::move(p))));
+            // generate and store a challenge to ensure remote owns the passport
+            auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+            *stored_challenge = std::move(challenge);
+            stored_passport->reset(new Passport(p));
             return std::make_pair(
-              std::make_pair(challenge, token),
+              std::make_pair(*stored_challenge, elle::Buffer()), // we no longuer need token
               const_cast<Passport*>(&_doughnut.passport()));
           };
         if (this->_doughnut.version() >= elle::Version(0, 4, 0))
@@ -297,25 +294,19 @@ namespace infinit
         }
         rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
           elle::Buffer const&, elle::Buffer const&)>(
-          [this,&rpcs](elle::Buffer const& enc_key,
-                 elle::Buffer const& token,
+          [this,&rpcs, stored_challenge, stored_passport](
+                 elle::Buffer const& enc_key,
+                 elle::Buffer const& /*token*/,
                  elle::Buffer const& signed_challenge) -> bool
           {
-            ELLE_TRACE("%s: authentication acknowledgment", *this);
-            auto it = this->_challenges.find(token.string());
-            if (it == this->_challenges.end())
-            {
-              ELLE_LOG("Challenge token does not exist.");
-              throw elle::Error("challenge token does not exist");
-            }
-            auto& stored_challenge = it->second.first;
-            auto& peer_passport = it->second.second;
-            bool ok = peer_passport.user().verify(
+            ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+            if (stored_challenge->empty() || !*stored_passport)
+              throw elle::Error("auth_syn must be called before auth_ack");
+            bool ok = (*stored_passport)->user().verify(
               signed_challenge,
-              stored_challenge,
+              *stored_challenge,
               infinit::cryptography::rsa::Padding::pss,
               infinit::cryptography::Oneway::sha256);
-            this->_challenges.erase(it);
             if (!ok)
             {
               ELLE_LOG("Challenge verification failed");
