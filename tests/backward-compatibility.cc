@@ -291,6 +291,12 @@ main(int argc, char** argv)
                 ELLE_ASSERT_EQ(
                   contents,
                   elle::serialization::json::serialize(b, version, false));
+                elle::serialization::Context ctx;
+                ctx.set<dht::Doughnut*>(&set.dht);
+                auto loaded =
+                  elle::serialization::json::deserialize<
+                  std::unique_ptr<infinit::model::blocks::Block>>(
+                    contents, version, false, ctx);
               }
               {
                 auto path = it->path() / elle::sprintf("%s.bin", name);
