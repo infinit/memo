@@ -147,7 +147,17 @@ Created storage "dropbox".
 <p>The following creates a small storage network, relying on the Kelips overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network in creation.</p>
 <pre><code>$&gt; infinit-network --create --as alice --kelips --k 1 --replication-factor 3 --storage local --storage dropbox --name cluster
 Locally created network "alice/cluster".
-</code></pre><h3 id="publish-a-network">Publish a network</h3>
+</code></pre><p>The folowwing overlay types are currently available:</p>
+<ul>
+<li>kalimero: Simple test overlay supporting only one node.</li>
+<li>stonehenge: Overlay supporting multiple storage nodes in a static configuration: the
+list of peers must never change or be reordered once set.</li>
+<li>kelips: Overlay with support for node churn. The <em>k</em> argument specifies the
+number of groups to use, each group being responsible for <em>1/kth</em> of the files.
+See the reference paper <em>"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</em>
+for more informations.</li>
+</ul>
+<h3 id="publish-a-network">Publish a network</h3>
 <p>You can now publish a network for other users to retrieve it. Note that the easiest way is always to append the <code>&#8209;&#8209;push</code> option to the network creation command to perform both creation and publications actions at once.</p>
 <p>Otherwise, you can push the network to the Hub through the <code>&#8209;&#8209;push</code> action option, as usual:</p>
 <pre><code>$&gt; infinit-network --push --as alice --name cluster
@@ -256,12 +266,29 @@ everything is
 <pre><code>$&gt; infinit-acl --set --path /mnt/shared/ --mode rw --user bob
 </code></pre><p>_<strong>NOTE:</strong> The <em>infinit-acl</em> binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._</p>
 <p>From that point, Bob will be able to access the volume to read and write files/directories in the root directory of Alice&#39;s &#39;shared&#39; volume.</p>
+<h3 id="acl-inheritance">ACL inheritance</h3>
+<p>ACL inheritance is a mechanism that sets ACL of newly created files and directories to the ACL of their parent directory.</p>
+<p>It can be enabled or disabled on a per-directory basis using <em>infinit-acl</em>:</p>
+<pre><code>$&gt; infint-acl --set --path /mnt/shared --enable-inherit
+</code></pre><p>If ACL inheritance is disabled, newly created files and directories can only be accessed by the creating user.</p>
+<p>If enabled, all the ACLs set on the parent directory are copied to the new object, including the inheritance flag for directories.</p>
+<h3 id="world-readable-and-world-writable-files">World-readable and World-writable files</h3>
+<p>By default, files and directories can only be read/written by users present in the object ACLs. It is possible to flag any file/directory as world-readable or world-writable by setting the <em>o+r</em> and <em>o+w</em> POSIX permission flags using <em>chmod</em> (or any other mean).</p>
 <h3 id="list-permissions">List permissions</h3>
 <p>Every user with the volume descriptor and the right permissions can very easily consult the Access Control List (ACL) associated with a file system object:</p>
 <pre><code>$&gt; infinit-acl --list --path /mnt/shared/awesome.txt
 /mnt/shared/awesome.txt:
      alice: rw
      bob: r
+</code></pre><h3 id="acls-and-posix-file-mode">ACLs and POSIX file mode</h3>
+<p>Since the infinit access model is ACL based, POSIX file mode as displayed by <em>ls -l</em> differs from what you might expect in the following ways:</p>
+<ul>
+<li>User and group ids are set to the user who mounted the filesystem if it has read or write access to the file. Otherwise they are set to root. Changing them (using <em>chown</em>) has no effect.</li>
+<li>User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations will be permitted on the file. Changing those flags has no effect.</li>
+<li>User execute access mode can be set or cleared and is preserved.</li>
+<li>Group modes are irrelevant and set to 0.</li>
+<li>Other read/write access mode can be set to make the object readable/writable for all.</li>
+</ul>
 </code></pre><h2 id="device">Device</h2>
 <h3 id="log-in-on-another-device">Log in on another device</h3>
 <p>You may want to access your file systems from another machine. Even though it sounds easy, the critical nature of the user’s identity, similar to a SSH key, makes it a bit more complicated that all the other operations.</p>

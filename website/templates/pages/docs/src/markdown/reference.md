@@ -274,6 +274,16 @@ $> infinit-network --create --as alice --kelips --k 1 --replication-factor 3 --s
 Locally created network "alice/cluster".
 ```
 
+The folowwing overlay types are currently available:
+
+- kalimero: Simple test overlay supporting only one node.
+- stonehenge: Overlay supporting multiple storage nodes in a static configuration: the
+list of peers must never change or be reordered once set.
+- kelips: Overlay with support for node churn. The _k_ argument specifies the
+number of groups to use, each group being responsible for _1/kth_ of the files.
+See the reference paper _"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"_
+for more informations.
+
 ### Publish a network ###
 
 You can now publish a network for other users to retrieve it. Note that the easiest way is always to append the `--push` option to the network creation command to perform both creation and publications actions at once.
@@ -500,6 +510,24 @@ _**NOTE:** The _infinit-acl_ binary provides additional options to better manage
 
 From that point, Bob will be able to access the volume to read and write files/directories in the root directory of Alice's 'shared' volume.
 
+### ACL inheritance ###
+
+ACL inheritance is a mechanism that sets ACL of newly created files and directories to the ACL of their parent directory.
+
+It can be enabled or disabled on a per-directory basis using _infinit-acl_:
+
+```
+$> infint-acl --set --path /mnt/shared --enable-inherit
+```
+
+If ACL inheritance is disabled, newly created files and directories can only be accessed by the creating user.
+
+If enabled, all the ACLs set on the parent directory are copied to the new object, including the inheritance flag for directories.
+
+### World-readable and World-writable files ###
+
+By default, files and directories can only be read/written by users present in the object ACLs. It is possible to flag any file/directory as world-readable or world-writable by setting the _o+r_ and _o+w_ POSIX permission flags using _chmod_ (or any other mean).
+
 ### List permissions ###
 
 Every user with the volume descriptor and the right permissions can very easily consult the Access Control List (ACL) associated with a file system object:
@@ -511,6 +539,15 @@ $> infinit-acl --list --path /mnt/shared/awesome.txt
      bob: r
 ```
 
+### ACLs and POSIX file mode ###
+
+Since the infinit access model is ACL based, POSIX file mode as displayed by _ls -l_ differs from what you might expect in the following ways:
+
+- User and group ids are set to the user who mounted the filesystem if it has read or write access to the file. Otherwise they are set to root. Changing them (using _chown_) has no effect.
+- User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations will be permitted on the file. Changing those flags has no effect.
+- User execute access mode can be set or cleared and is preserved.
+- Group modes are irrelevant and set to 0.
+- Other read/write access mode can be set to make the object readable/writable for all.
 Device
 ---------
 
