@@ -2,7 +2,9 @@
 # define INFINIT_MODEL_MODEL_HH
 
 # include <memory>
+
 # include <boost/filesystem.hpp>
+
 # include <elle/UUID.hh>
 # include <elle/Version.hh>
 
@@ -11,7 +13,6 @@
 # include <infinit/model/blocks/fwd.hh>
 # include <infinit/serialization.hh>
 # include <infinit/storage/Storage.hh>
-# include <infinit/version.hh>
 
 namespace infinit
 {

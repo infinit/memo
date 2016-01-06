@@ -16,7 +16,7 @@ namespace infinit
       {
       public:
         Faith(std::unique_ptr<storage::Storage> storage,
-              elle::Version version);
+              boost::optional<elle::Version> version);
       protected:
         virtual
         void

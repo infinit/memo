@@ -6,6 +6,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
+#include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.Model");
 

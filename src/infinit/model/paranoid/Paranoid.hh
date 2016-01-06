@@ -19,7 +19,7 @@ namespace infinit
       public:
         Paranoid(infinit::cryptography::rsa::KeyPair keys,
                  std::unique_ptr<storage::Storage> storage,
-                 elle::Version version);
+                 boost::optional<elle::Version> version);
         virtual
         ~Paranoid();
 
