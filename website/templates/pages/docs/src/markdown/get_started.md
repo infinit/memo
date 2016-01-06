@@ -23,12 +23,11 @@
 
 <div>
 % if os() == "Macintosh":
-<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install the OSXFUSE core module by downloading and opening the package below:</p>
+<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
-<p><a href="https://storage.googleapis.com/sh_infinit_releases/osx/osxfuse-core.dmg
-" class="button">Download OSXFUSE core</a></p>
+<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.0.9/osxfuse-3.0.9.dmg" class="button">Download OSXFUSE</a></p>
 
-_**NOTE**: Infinit requires a version of OSXFUSE core that is newer than available on https://osxfuse.github.io/._
+_**NOTE**: Infinit requires a version of OSXFUSE that is newer than available on https://osxfuse.github.io/._
 % else:
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get` :</p>
 
@@ -40,16 +39,64 @@ $> sudo apt-get install fuse
 
 ### Download and install the Infinit command-line tools
 
-<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-
-Click the link below to download the Infinit command-line tools:
-
 <div>
-% if os() == "Macintosh":
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-0.3.3.tbz
-" class="button">Download Command Line Tools</a>
+% if os() != "Macintosh":
+<div>
+<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href=${url('get-started#linux-tarball-install')}>Tarball Install</a>.</p>
+
+<h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
+<p>First import the public key used by the pacakge management system:</p>
+<pre><code>$> sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
+Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
+gpg: requesting key 3D2C3B0B from hkp server keyserver.ubuntu.com
+gpg: key 6821EB43: public key "Infinit <contact@infinit.one>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1  (RSA: 1)
+</code></pre>
+
+<p>Then add the repository locally:</p>
+<pre><code>$> sudo add-apt-repository "deb https://debian.infinit.sh/ trusty main"
+</code></pre>
+
+<p>Finally, you can update your local list of packages and install the command-line tools as you would any other package:</p>
+
+<pre><code>$> sudo apt-get update
+...
+Reading package lists... Done
+$> sudo apt-get install infinit
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+The following NEW packages will be installed:
+  infinit
+0 upgraded, 1 newly installed, 0 to remove and 24 not upgraded.
+Need to get 51,6 MB/51,6 MB of archives.
+After this operation, 51,6 MB of additional disk space will be used.
+Selecting previously unselected package infinit.
+(Reading database ... 208105 files and directories currently installed.)
+Preparing to unpack .../infinit_${tarball_version}_amd64.deb ...
+Unpacking infinit (${tarball_version}) ...
+Setting up infinit (${tarball_version}) ...
+</code></pre>
+<p></p>
+<p>You can now change to the install directory and <a href=${url('get-started#2-basic-test')}>test</a> your install.</p>
+<pre><code>$> cd /opt/infinit
+</code></pre>
+</div>
+
+<h3 id="linux-tarball-install">&#9679; Tarball Install</h3>
+<div>
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+" class="button">Download Command Line Tools Tarball</a>
+</div>
 % else:
-<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 " class="button">Download Command Line Tools</a>
 % endif
 </div>
@@ -61,17 +108,17 @@ Next, open your terminal and extract the Infinit tarball:
 ```
 
 % if os() == "Macintosh":
-$> tar xjvf Infinit-x86_64-osx-clang3-0.3.3.tbz
+$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 % else:
-$> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
+$> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
 % endif
-Infinit-<version>/
-Infinit-<version>/bin/
-Infinit-<version>/lib
+Infinit-${tarball_version}/
+Infinit-${tarball_version}/bin/
+Infinit-${tarball_version}/lib
 ...
-Infinit-<version>/bin/infinit-storage
-Infinit-<version>/bin/infinit-user
-Infinit-<version>/bin/infinit-volume
+Infinit-${tarball_version}/bin/infinit-storage
+Infinit-${tarball_version}/bin/infinit-user
+Infinit-${tarball_version}/bin/infinit-volume
 ...
 ```
 
@@ -84,7 +131,7 @@ Now that you’ve extracted the tarball, take a look. The extracted directory co
 * The `share/infinit/filesystem/test/` subdirectory is provided for you to quickly test the command-line tools, see below.
 
 ```
-$> cd Infinit-<version>/
+$> cd Infinit-${tarball_version}/
 $> ls
 bin/    lib/    share/
 ```
@@ -97,7 +144,7 @@ For you to quickly (through a single command) try Infinit out, the following is 
 Run the _infinit-volume_ command by prefixing it with the environment variable `INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home` to tell the command where to look for the configuration files required for this test.
 
 ```
-$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --publish --cache
+$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/demo/ --publish --cache
 ```
 
 _**NOTE**: You can stop this test volume by hitting `CTRL^C` or by interrupting the infinit-volume process._
@@ -109,7 +156,7 @@ Now open another terminal. You can access the files in the ‘demo’ volume by 
 Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.
 
 ```
-$> ls demo/
+$> ls ~/demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
 
