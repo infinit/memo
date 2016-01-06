@@ -615,17 +615,17 @@ def configure(
     cxx_config_tests.library_add(elle.boost.test_static)
     cxx_config_tests.use_whole_archive()
   tests_names = [
-    'backward-compatibility',
-    'consensus/async',
-    'doughnut',
-    'faith',
-    'rpc',
-    'storage',
-    'async-conflict',
+    ('backward-compatibility', []),
+    ('consensus/async', []),
+    ('doughnut', []),
+    ('faith', []),
+    ('rpc', []),
+    ('storage', []),
+    ('async-conflict', []),
   ]
   if not windows:
-    tests_names += ['filesystem']
-  for test_name in tests_names:
+    tests_names.append(('filesystem', binaries))
+  for test_name, dependencies in tests_names:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
@@ -638,8 +638,7 @@ def configure(
       ],
       cxx_toolkit,
       cxx_config_tests)
-    # filesystem requires 'infinit'.
-    test.dependencies_add(binaries)
+    test.dependencies_add(dependencies)
     rule_tests << test
     env = {'SOURCE_DIR': drake.path_source()}
     if valgrind_tests:
