@@ -6,6 +6,7 @@ import os.path
 import sys
 
 from infinit.website.version import version
+from infinit.website.tarball_version import tarball_version
 
 ROOT = os.path.dirname(os.path.realpath(__file__))
 PREFIX = ROOT
@@ -45,6 +46,7 @@ def view(name):
       url = url,
       os = detect_os,
       version = version,
+      tarball_version = tarball_version,
     )(f)
   return res
 
