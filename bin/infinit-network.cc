@@ -154,17 +154,14 @@ COMMAND(create)
       throw CommandLineError("replication factor must be greater than 0");
     bool no_consensus = args.count("no-consensus");
     bool paxos = args.count("paxos");
-    bool replicator = args.count("replicator");
-    if (!no_consensus && !replicator)
+    if (!no_consensus)
       paxos = true;
-    if (!one(no_consensus, paxos, replicator))
+    if (!one(no_consensus, paxos))
       throw CommandLineError("more than one consensus specified");
     if (paxos)
       consensus_config = elle::make_unique<
         infinit::model::doughnut::consensus::Paxos::Configuration>(
           replication_factor);
-    else if (replicator)
-      ELLE_ABORT("FORGIVE ME BEARCLAW");
     else
     {
       if (replication_factor != 1)
@@ -485,7 +482,6 @@ main(int argc, char** argv)
   options_description consensus_types_options("Consensus types");
   consensus_types_options.add_options()
     ("paxos", "use Paxos consensus algorithm (default)")
-    ("replicator", "use Replicator consensus algorithm")
     ("no-consensus", "use no consensus algorithm")
     ;
   options_description stonehenge_options("Stonehenge options");
