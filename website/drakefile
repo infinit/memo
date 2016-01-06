@@ -52,6 +52,7 @@ def configure(
   sources = drake.nodes(
     'src/__init__.py',
     'src/__main__.py',
+    'src/tarball_version.py',
     'src/utils.py',
     'src/wsgi.py',
   )
@@ -59,9 +60,6 @@ def configure(
   version = drake.node('src/version.py')
   if git is None:
     git = drake.git.Git()
-  class PythonVersionGenerator(VersionGenerator):
-    def _variable(self, name, value):
-      return '%s = %r' % (name, value)
   PythonVersionGenerator(version, git)
   sources.append(version)
 
