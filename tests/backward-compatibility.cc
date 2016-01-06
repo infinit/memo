@@ -114,18 +114,20 @@ static const elle::Buffer salt("HARDCODED_SALT");
 static const DeterministicSecretKey secret =
   elle::serialization::json::deserialize<DeterministicSecretKey>(secret_buffer);
 
+namespace dht = infinit::model::doughnut;
+
 class DummyDoughnut
-  : public infinit::model::doughnut::Doughnut
+  : public dht::Doughnut
 {
 public:
   DummyDoughnut(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
                 boost::optional<elle::Version> v)
-    : infinit::model::doughnut::Doughnut(
+    : dht::Doughnut(
       infinit::model::Address::null, keys, keys->K(),
-      infinit::model::doughnut::Passport(keys->K(), "network", keys->k()),
-      [] (infinit::model::doughnut::Doughnut&)
+      dht::Passport(keys->K(), "network", keys->k()),
+      [] (dht::Doughnut&)
       { return nullptr; },
-      [] (infinit::model::doughnut::Doughnut&, infinit::model::Address, std::shared_ptr<infinit::model::doughnut::Local>)
+      [] (dht::Doughnut&, infinit::model::Address, std::shared_ptr<dht::Local>)
       { return nullptr; },
       {}, nullptr, v)
   {}
@@ -136,12 +138,13 @@ struct TestSet
   TestSet(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
           boost::optional<elle::Version> v)
     : dht(keys, std::move(v))
-    , chb(new infinit::model::doughnut::CHB(&dht, std::string("CHB contents"), salt))
-    , acb(new infinit::model::doughnut::ACB(&dht, std::string("ACB contents"), salt))
-    , okb(new infinit::model::doughnut::OKB(&dht, std::string("OKB contents"), salt))
-    , nb(new infinit::model::doughnut::NB(&dht, keys->K(), "NB name", std::string("NB contents")))
-    , ub(new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), false))
-    , rub(new infinit::model::doughnut::UB(&dht, "USERNAME", keys->K(), true))
+    , chb(new dht::CHB(&dht, std::string("CHB contents"), salt))
+    , acb(new dht::ACB(&dht, std::string("ACB contents"), salt))
+    , okb(new dht::OKB(&dht, std::string("OKB contents"), salt))
+    , nb(new dht::NB(&dht, keys->K(),
+                     "NB name", std::string("NB contents")))
+    , ub(new dht::UB(&dht, "USERNAME", keys->K(), false))
+    , rub(new dht::UB(&dht, "USERNAME", keys->K(), true))
   {
     chb->seal();
     acb->seal(secret);
@@ -170,12 +173,12 @@ struct TestSet
   };
 
   DummyDoughnut dht;
-  std::shared_ptr<infinit::model::doughnut::CHB> chb;
-  std::shared_ptr<infinit::model::doughnut::ACB> acb;
-  std::shared_ptr<infinit::model::doughnut::OKB> okb;
-  std::shared_ptr<infinit::model::doughnut::NB> nb;
-  std::shared_ptr<infinit::model::doughnut::UB> ub;
-  std::shared_ptr<infinit::model::doughnut::UB> rub;
+  std::shared_ptr<dht::CHB> chb;
+  std::shared_ptr<dht::ACB> acb;
+  std::shared_ptr<dht::OKB> okb;
+  std::shared_ptr<dht::NB> nb;
+  std::shared_ptr<dht::UB> ub;
+  std::shared_ptr<dht::UB> rub;
 };
 
 int
