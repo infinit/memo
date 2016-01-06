@@ -1335,7 +1335,7 @@ namespace infinit
         {
           ELLE_DEBUG("%s: processing key request from %s", *this, source);
           // validate passport
-          bool ok = p->passport.verify(doughnut()->owner());
+          bool ok = p->passport.verify(*doughnut()->owner());
           if (!ok)
           {
             ELLE_WARN("%s: failed to validate passport from %s : %s",
@@ -1366,7 +1366,7 @@ namespace infinit
         {
           ELLE_DEBUG("%s: processing key reply from %s", *this, source);
           // validate passport
-          bool ok = p->passport.verify(doughnut()->owner());
+          bool ok = p->passport.verify(*doughnut()->owner());
           if (!ok)
           {
             ELLE_WARN("%s: failed to validate passport from %s : %s",

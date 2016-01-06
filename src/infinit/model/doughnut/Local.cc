@@ -248,7 +248,8 @@ namespace infinit
           [this] (Passport const& p) -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("entering auth_syn, dn=%s", this->_doughnut);
-            bool verify = const_cast<Passport&>(p).verify(this->_doughnut.owner());
+            bool verify = const_cast<Passport&>(p).verify(
+              *this->_doughnut.owner());
             ELLE_TRACE("auth_syn verify = %s", verify);
             if (!verify)
             {

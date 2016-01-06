@@ -215,7 +215,7 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
       Address addr =
-        model::doughnut::NB::address(dn->owner(), _volume_name + ".root");
+        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root");
       while (true)
       {
         try
@@ -227,7 +227,7 @@ namespace infinit
         }
         catch (model::MissingBlock const& e)
         {
-          if (dn->owner() == dn->keys().K())
+          if (*dn->owner() == dn->keys().K())
           {
             std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
             auto saddr = elle::sprintf("%x", mb->address());

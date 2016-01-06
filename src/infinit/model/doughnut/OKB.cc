@@ -442,7 +442,16 @@ namespace infinit
               s.serialize("signature", value);
             }
             else
-              s.serialize("signature", this->_signature.value()); // FIXME
+            {
+              elle::Buffer signature;
+              s.serialize("signature", signature);
+              auto versioned =
+                elle::serialization::binary::serialize(elle::Version(0, 3, 0));
+              versioned.size(versioned.size() + signature.size());
+              memcpy(versioned.mutable_contents() + 4,
+                     signature.contents(), signature.size());
+              this->_signature = std::move(versioned);
+            }
           else
             s.serialize("signature", this->_signature.value());
           ELLE_ASSERT(!this->_signature.value().empty());

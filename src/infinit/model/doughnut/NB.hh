@@ -30,7 +30,7 @@ namespace infinit
       `-------------*/
       public:
         NB(Doughnut* doughnut,
-           infinit::cryptography::rsa::PublicKey owner,
+           std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
            std::string name,
            elle::Buffer data);
         NB(Doughnut* doughnut,
@@ -39,8 +39,10 @@ namespace infinit
            elle::Buffer data);
         NB(NB const& other);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
-        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>, keys);
-        ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::PublicKey, owner);
+        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>,
+                       keys);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::cryptography::rsa::PublicKey>,
+                         owner);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
         static

@@ -999,7 +999,16 @@ namespace infinit
               s.serialize("data_signature", value);
             }
             else
-              s.serialize("data_signature", this->_data_signature.value());
+            {
+              elle::Buffer signature;
+              s.serialize("data_signature", signature);
+              auto versioned =
+                elle::serialization::binary::serialize(elle::Version(0, 3, 0));
+              versioned.size(versioned.size() + signature.size());
+              memcpy(versioned.mutable_contents() + 4,
+                     signature.contents(), signature.size());
+              this->_data_signature = std::move(versioned);
+            }
           else
             s.serialize("data_signature", this->_data_signature.value());
         }

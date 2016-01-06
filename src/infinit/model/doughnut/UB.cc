@@ -94,7 +94,7 @@ namespace infinit
       UB::_sign_remove() const
       {
         auto& keys = this->_doughnut->keys();
-        if (keys.K() != this->_key && keys.K() != this->_doughnut->owner())
+        if (keys.K() != this->_key && keys.K() != *this->_doughnut->owner())
           throw elle::Error("Only block owner and network owner can delete UB");
         auto to_sign = elle::serialization::binary::serialize((Block*)elle::unconst(this));
         auto signature = keys.k().sign(to_sign);
@@ -113,7 +113,7 @@ namespace infinit
         bool ok = sig.signature_key->verify(*sig.signature, to_sign);
         if (!ok)
           return blocks::ValidationResult::failure("Invalid signature");
-        if (*sig.signature_key != this->_doughnut->owner()
+        if (*sig.signature_key != *this->_doughnut->owner()
           && *sig.signature_key != this->_key)
           return blocks::ValidationResult::failure("Unauthorized signing key");
         return blocks::ValidationResult::success();

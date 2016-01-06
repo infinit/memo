@@ -67,7 +67,8 @@ void fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
   typedef std::shared_ptr<reactor::filesystem::Path> PathPtr;
   // account for root block
   auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(fs->block_store());
-  Address addr = infinit::model::doughnut::NB::address(dn->owner(), fs->volume_name() + ".root");
+  Address addr = infinit::model::doughnut::NB::address(
+    *dn->owner(), fs->volume_name() + ".root");
   account_for(blocks, addr, "root block address");
   auto block = fs->block_store()->fetch(addr);
   addr = Address::from_string(block->data().string().substr(2));

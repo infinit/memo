@@ -1035,7 +1035,7 @@ namespace infinit
               network.name,
               std::move(network.dht()->consensus),
               std::move(network.dht()->overlay),
-              std::move(network.dht()->owner)
+              std::move(*network.dht()->owner)
             };
           }
           catch (elle::Error const&)

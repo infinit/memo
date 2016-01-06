@@ -51,7 +51,7 @@ std::unique_ptr<reactor::filesystem::FileSystem> make(
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
     infinit::model::Address::random(),
     std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
-    kp.K(),
+    kp.public_key(),
     passport,
     consensus,
     overlay,

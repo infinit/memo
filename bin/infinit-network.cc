@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <elle/log.hh>
 #include <elle/serialization/json.hh>
 #include <elle/json/exceptions.hh>
@@ -186,7 +188,7 @@ COMMAND(create)
       std::move(overlay_config),
       std::move(storage),
       owner.keypair(),
-      owner.public_key,
+      std::make_shared<infinit::cryptography::rsa::PublicKey>(owner.public_key),
       infinit::model::doughnut::Passport(
         owner.public_key,
         ifnt.qualified_name(name, owner),
@@ -213,7 +215,7 @@ COMMAND(create)
         network.name,
         std::move(network.dht()->consensus),
         std::move(network.dht()->overlay),
-        std::move(network.dht()->owner));
+        std::move(*network.dht()->owner));
       beyond_push("network", desc.name, desc, owner);
     }
   }
@@ -230,7 +232,7 @@ COMMAND(export_)
       (*network.model);
     infinit::NetworkDescriptor desc(
       network.name, std::move(dht.consensus),
-      std::move(dht.overlay), std::move(dht.owner));
+      std::move(dht.overlay), std::move(*dht.owner));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network.name);
@@ -322,7 +324,7 @@ COMMAND(link_)
       std::move(desc.overlay),
       std::move(storage),
       self.keypair(),
-      std::move(desc.owner),
+      std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
       std::move(passport),
       self.name));
   ifnt.network_save(network, true);
@@ -342,11 +344,11 @@ COMMAND(push)
   auto network = ifnt.network_get(network_name, self);
   {
     auto& dht = *network.dht();
-    auto owner_uid = infinit::User::uid(dht.owner);
+    auto owner_uid = infinit::User::uid(*dht.owner);
     infinit::NetworkDescriptor desc(network.name,
                                     std::move(dht.consensus),
                                     std::move(dht.overlay),
-                                    std::move(dht.owner));
+                                    std::move(*dht.owner));
     beyond_push("network", desc.name, desc, self);
   }
 }

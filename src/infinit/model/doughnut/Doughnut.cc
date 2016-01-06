@@ -43,7 +43,7 @@ namespace infinit
     {
       Doughnut::Doughnut(Address id,
                          std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         cryptography::rsa::PublicKey owner,
+                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
@@ -67,7 +67,7 @@ namespace infinit
       Doughnut::Doughnut(Address id,
                          std::string const& name,
                          std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         cryptography::rsa::PublicKey owner,
+                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
@@ -279,7 +279,7 @@ namespace infinit
         std::unique_ptr<overlay::Configuration> overlay_,
         std::unique_ptr<storage::StorageConfig> storage,
         cryptography::rsa::KeyPair keys_,
-        cryptography::rsa::PublicKey owner_,
+        std::shared_ptr<cryptography::rsa::PublicKey> owner_,
         Passport passport_,
         boost::optional<std::string> name_,
         boost::optional<int> port_,
@@ -304,7 +304,8 @@ namespace infinit
         , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>(
                     "overlay"))
         , keys(s.deserialize<cryptography::rsa::KeyPair>("keys"))
-        , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
+        , owner(
+          s.deserialize<std::shared_ptr<cryptography::rsa::PublicKey>>("owner"))
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , port(s.deserialize<boost::optional<int>>("port"))

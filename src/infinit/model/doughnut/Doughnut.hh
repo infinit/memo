@@ -35,7 +35,7 @@ namespace infinit
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
         Doughnut(Address id,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 infinit::cryptography::rsa::PublicKey owner,
+                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
                  Passport passport,
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
@@ -45,7 +45,7 @@ namespace infinit
         Doughnut(Address id,
                  std::string const& name,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 infinit::cryptography::rsa::PublicKey owner,
+                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
                  Passport passport,
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
@@ -59,7 +59,7 @@ namespace infinit
         keys_shared() const;
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
-        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
@@ -107,7 +107,7 @@ namespace infinit
         std::unique_ptr<consensus::Configuration> consensus;
         std::unique_ptr<overlay::Configuration> overlay;
         cryptography::rsa::KeyPair keys;
-        cryptography::rsa::PublicKey owner;
+        std::shared_ptr<cryptography::rsa::PublicKey> owner;
         Passport passport;
         boost::optional<std::string> name;
         boost::optional<int> port;
@@ -118,7 +118,7 @@ namespace infinit
           std::unique_ptr<overlay::Configuration> overlay,
           std::unique_ptr<storage::StorageConfig> storage,
           cryptography::rsa::KeyPair keys,
-          cryptography::rsa::PublicKey owner,
+          std::shared_ptr<cryptography::rsa::PublicKey> owner,
           Passport passport,
           boost::optional<std::string> name,
           boost::optional<int> port = {},

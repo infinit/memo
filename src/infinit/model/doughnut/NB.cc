@@ -21,10 +21,10 @@ namespace infinit
       `-------------*/
 
       NB::NB(Doughnut* doughnut,
-             infinit::cryptography::rsa::PublicKey owner,
+             std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
              std::string name,
              elle::Buffer data)
-        : Super(NB::address(owner, name), std::move(data))
+        : Super(NB::address(*owner, name), std::move(data))
         , _doughnut(std::move(doughnut))
         , _owner(std::move(owner))
         , _name(std::move(name))
@@ -36,8 +36,8 @@ namespace infinit
              elle::Buffer data)
         : Super(NB::address(keys.K(), name), std::move(data))
         , _doughnut(std::move(doughnut))
-        , _keys(keys)
-        , _owner(keys.K())
+        , _keys(std::move(keys))
+        , _owner(this->_keys->public_key())
         , _name(std::move(name))
       {}
 
@@ -79,9 +79,9 @@ namespace infinit
       NB::_seal()
       {
         if (this->_keys)
-          ELLE_ASSERT_EQ(this->_keys->K(), this->owner());
+          ELLE_ASSERT_EQ(this->_keys->K(), *this->owner());
         else
-          ELLE_ASSERT_EQ(this->doughnut()->keys().K(), this->owner());
+          ELLE_ASSERT_EQ(this->doughnut()->keys().K(), *this->owner());
         auto sign = this->_data_sign();
         auto const& key = _keys ? _keys->k() : this->doughnut()->keys().k();
         this->_signature = key.sign(sign);
@@ -108,7 +108,7 @@ namespace infinit
       {
         ELLE_TRACE("%s: check address", *this)
         {
-          auto expected_address = NB::address(this->owner(), this->name());
+          auto expected_address = NB::address(*this->owner(), this->name());
           if (this->address() != expected_address)
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
@@ -120,7 +120,7 @@ namespace infinit
         ELLE_TRACE("%s: check signature", *this)
         {
           auto signed_data = this->_data_sign();
-          if (!this->_owner.verify(this->signature(), signed_data))
+          if (!this->_owner->verify(this->signature(), signed_data))
           {
             ELLE_DEBUG("%s: invalid signature", *this);
             return blocks::ValidationResult::failure("invalid signature");
@@ -169,7 +169,7 @@ namespace infinit
         if (other->address() != this->address())
           return blocks::ValidationResult::failure("Address mismatch");
         // redundant check, same address+validated implies same key
-        if (other->owner() != this->owner())
+        if (*other->owner() != *this->owner())
           return blocks::ValidationResult::failure("Key mismatch (wow)");
         if (other->data() != elle::Buffer("INFINIT_REMOVE", 14))
           return blocks::ValidationResult::failure("Invalid payload");
@@ -184,7 +184,8 @@ namespace infinit
              elle::Version const& version)
         : Super(input, version)
         , _doughnut(nullptr)
-        , _owner(input.deserialize<cryptography::rsa::PublicKey>("owner"))
+        , _owner(std::make_shared(
+                   input.deserialize<cryptography::rsa::PublicKey>("owner")))
         , _name(input.deserialize<std::string>("name"))
         , _signature(input.deserialize<elle::Buffer>("signature"))
       {
@@ -202,7 +203,7 @@ namespace infinit
       void
       NB::_serialize(elle::serialization::Serializer& s)
       {
-        s.serialize("owner", this->_owner);
+        s.serialize("owner", *this->_owner);
         s.serialize("name", this->_name);
         s.serialize("signature", this->_signature);
       }

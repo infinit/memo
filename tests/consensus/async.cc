@@ -112,7 +112,8 @@ public:
   DummyDoughnut(infinit::model::Address id,
                 infinit::cryptography::rsa::KeyPair keys)
     : dht::Doughnut(
-      id, std::make_shared<infinit::cryptography::rsa::KeyPair>(keys), keys.K(),
+      id, std::make_shared<infinit::cryptography::rsa::KeyPair>(keys),
+      keys.public_key(),
       infinit::model::doughnut::Passport(keys.K(), "network", keys.k()),
       [] (dht::Doughnut&)
       { return nullptr; },

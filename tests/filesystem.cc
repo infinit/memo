@@ -294,16 +294,17 @@ static void make_nodes(std::string store, int node_count,
           return elle::make_unique<infinit::overlay::Stonehenge>(
             id, peers, std::move(local), &dht);
         };
-      nodes.emplace_back(new infinit::model::doughnut::Doughnut(
-                           peers[i].id,
-                           std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
-                           owner.K(),
-                           passport,
-                           consensus,
-                           overlay,
-                           boost::optional<int>(),
-                           std::move(s),
-                           INFINIT_ELLE_VERSION));
+      nodes.emplace_back(
+        new infinit::model::doughnut::Doughnut(
+          peers[i].id,
+          std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
+          owner.public_key(),
+          passport,
+          consensus,
+          overlay,
+          boost::optional<int>(),
+          std::move(s),
+          INFINIT_ELLE_VERSION));
     }
     for (int i = 0; i < node_count; ++i)
       peers[i].endpoint = infinit::overlay::Stonehenge::Peer::Endpoint{
@@ -386,7 +387,7 @@ run_filesystem_dht(std::string const& store,
           infinit::model::Address::random(),
           "testnet",
           std::make_shared<infinit::cryptography::rsa::KeyPair>(owner_keys),
-          owner_keys.K(),
+          owner_keys.public_key(),
           passport,
           consensus,
           overlay,
