@@ -567,6 +567,7 @@ def configure(
               drake.path_build('beyond/lib/python%s' % elle.python3.version)
           })
         rule_functional_check << runner.status
+        runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests
       rule_check << rule_functional_check
     website = drake.include(
