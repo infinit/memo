@@ -2,13 +2,17 @@
 =========
 
 <div>
-% if os() == "Windows" :
+% if os() == "Windows":
 <blockquote class="warning">
 <strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
 </blockquote>
 
+% elif "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
 % else:
-<p><em>The following is written for users of Mac OS X and Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+<p><em>The following is written for users of Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
 % endif
 </div>
 
@@ -22,27 +26,25 @@
 <img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE">
 
 <div>
-% if os() == "Macintosh":
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
 <p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.0.9/osxfuse-3.0.9.dmg" class="button">Download OSXFUSE</a></p>
 
 _**NOTE**: Infinit requires a version of OSXFUSE that is newer than available on https://osxfuse.github.io/._
+
 % else:
+
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get` :</p>
 
-```
-$> sudo apt-get install fuse
-```
 % endif
 </div>
 
 ### Download and install the Infinit command-line tools
 
 <div>
-% if os() != "Macintosh":
-<div>
-<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href=${url('get-started#linux-tarball-install')}>Tarball Install</a>.</p>
+% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
+<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href='#linux-tarball-install'>Tarball Install</a>.</p>
 
 <h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
 <p>First import the public key used by the pacakge management system:</p>
@@ -79,19 +81,17 @@ Unpacking infinit (${tarball_version}) ...
 Setting up infinit (${tarball_version}) ...
 </code></pre>
 <p></p>
-<p>You can now change to the install directory and <a href=${url('get-started#2-basic-test')}>test</a> your install.</p>
+<p>You can now change to the install directory and <a href='#2-basic-test'>test</a> your install.</p>
 <pre><code>$> cd /opt/infinit
 </code></pre>
-</div>
 
 <h3 id="linux-tarball-install">&#9679; Tarball Install</h3>
-<div>
+
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
 <p>Click the link below to download the Infinit command-line tools:</p>
 
 <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
 " class="button">Download Command Line Tools Tarball</a>
-</div>
 % else:
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
 <p>Click the link below to download the Infinit command-line tools:</p>
@@ -107,7 +107,7 @@ Next, open your terminal and extract the Infinit tarball:
 
 ```
 
-% if os() == "Macintosh":
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 $> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 % else:
 $> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
@@ -289,12 +289,12 @@ $> infinit-volume --fetch --as bob --name my-volume
 Fetched volume "bob/my-volume".
 </code></pre>
 
-Let’s link this device to the ‘my-network’ network you created on device A.
+Let’s connect this device to the ‘mine’ network you created on device A.
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --link --as bob --name my-network
-Linked device to network "bob/my-network".
+<code>$> infinit-network --join --as bob --name mine
+Joined network "bob/mine".
 </code></pre>
 
 Finally, the volume can be mounted on device B as simply as on device A:
