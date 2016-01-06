@@ -53,22 +53,21 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        OKBHeader(std::shared_ptr<cryptography::rsa::PublicKey> keys,
-                  elle::Buffer salt,
-                  elle::Buffer signature);
+        OKBHeader(elle::serialization::SerializerIn& input,
+                  elle::Version const& version);
         void
         serialize(elle::serialization::Serializer& s);
         static
         Address
-        hash_address(cryptography::rsa::PublicKey& key,
+        hash_address(cryptography::rsa::PublicKey const& key,
                      elle::Buffer const& salt);
         typedef infinit::serialization_tag serialization_tag;
       };
 
       template <typename Block>
       class BaseOKB
-        : public OKBHeader
-        , public Block
+        : public Block
+        , public OKBHeader
       {
       /*------.
       | Types |
@@ -84,13 +83,17 @@ namespace infinit
         BaseOKB(Doughnut* owner,
                 elle::Buffer data = {},
                 boost::optional<elle::Buffer> salt = {},
-                boost::optional<cryptography::rsa::KeyPair> kp = {}
-                );
+                boost::optional<cryptography::rsa::KeyPair> kp = {});
         BaseOKB(BaseOKB const& other, bool sealed_copy = true);
         ELLE_ATTRIBUTE(int, version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
+      private:
+        BaseOKB(OKBHeader header,
+                Doughnut* owner,
+                elle::Buffer data = {},
+                boost::optional<cryptography::rsa::KeyPair> kp = {});
 
       /*--------.
       | Content |
@@ -187,8 +190,6 @@ namespace infinit
         // Solve ambiguity between Block and OKBHedar wich both have the tag.
         typedef infinit::serialization_tag serialization_tag;
       private:
-        class SerializationContent;
-        BaseOKB(SerializationContent input);
         void
         _serialize(elle::serialization::Serializer& input,
                    elle::Version const& version);

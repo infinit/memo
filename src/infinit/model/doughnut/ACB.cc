@@ -124,10 +124,11 @@ namespace infinit
       `-------------*/
 
       template <typename Block>
-      BaseACB<Block>::BaseACB(Doughnut* owner,
-               elle::Buffer data,
-               boost::optional<elle::Buffer> salt,
-               boost::optional<cryptography::rsa::KeyPair> kp)
+      BaseACB<Block>::BaseACB(
+        Doughnut* owner,
+        elle::Buffer data,
+        boost::optional<elle::Buffer> salt,
+        boost::optional<cryptography::rsa::KeyPair> kp)
         : Super(owner, std::move(data), std::move(salt), std::move(kp))
         , _editor(-1)
         , _owner_token()

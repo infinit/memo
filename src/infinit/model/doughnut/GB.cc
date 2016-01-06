@@ -15,8 +15,14 @@ namespace infinit
     namespace doughnut
     {
       GB::GB(Doughnut* owner, cryptography::rsa::KeyPair master)
-      : Super(owner, {}, elle::Buffer("group", 5), master)
-      , _master_key(master.k())
+        : GB(owner, std::move(master), master.private_key())
+      {}
+
+      GB::GB(Doughnut* owner,
+             cryptography::rsa::KeyPair master,
+             std::shared_ptr<cryptography::rsa::PrivateKey> master_key)
+        : Super(owner, {}, elle::Buffer("group", 5), master)
+        , _master_key(*master_key)
       {
         ELLE_TRACE_SCOPE("creating new group");
         keys().emplace(master);

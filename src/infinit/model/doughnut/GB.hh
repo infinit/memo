@@ -22,12 +22,20 @@ namespace infinit
       class GB
         : public BaseACB<blocks::GroupBlock>
       {
+      /*-------------.
+      | Construction |
+      `-------------*/
       public:
         typedef GB Self;
         typedef BaseACB<blocks::GroupBlock> Super;
-
         GB(Doughnut* owner, cryptography::rsa::KeyPair master);
         ~GB();
+      private:
+        GB(Doughnut* owner,
+           cryptography::rsa::KeyPair master,
+           std::shared_ptr<cryptography::rsa::PrivateKey> master_key);
+
+      public:
         virtual
         void
         add_member(model::User const& user) override;

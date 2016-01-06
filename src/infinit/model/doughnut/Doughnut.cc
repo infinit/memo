@@ -157,7 +157,7 @@ namespace infinit
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        return elle::make_unique<OKB>(const_cast<Doughnut*>(this));
+        return elle::make_unique<OKB>(elle::unconst(this));
       }
 
       std::unique_ptr<blocks::ImmutableBlock>
@@ -179,8 +179,9 @@ namespace infinit
       std::unique_ptr<blocks::GroupBlock>
       Doughnut::_make_group_block() const
       {
-        return elle::make_unique<GB>(elle::unconst(this),
-                                     cryptography::rsa::keypair::generate(2048));
+        return elle::make_unique<GB>(
+          elle::unconst(this),
+          cryptography::rsa::keypair::generate(2048));
       }
 
       std::unique_ptr<model::User>
