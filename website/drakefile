@@ -150,6 +150,8 @@ def configure(
     'resources/images/schema-chord@2x.png',
     'resources/images/schema-dhash.png',
     'resources/images/schema-dhash@2x.png',
+    'resources/images/schema-encryption.png',
+    'resources/images/schema-encryption@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
