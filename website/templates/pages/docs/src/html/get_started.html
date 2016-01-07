@@ -1,15 +1,15 @@
 <h1 id="get-started">Get Started</h1>
 <div>
-% if os() == "Windows" :
+% if os() == "Windows":
 <blockquote class="warning">
 <strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
 </blockquote>
 
-% elif "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
-<p><em>The following is written for users of Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+% elif "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
 
 % else:
-<p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+<p><em>The following is written for users of Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
 
 % endif
 </div>
@@ -19,33 +19,78 @@
 <h3 id="download-and-install-infinit-s-dependencies">Download and install Infinit’s dependencies</h3>
 <p><img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE"></p>
 <div>
-% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution&#39;s package manager. For example, if you use a Debian based distribution, you would use <code>apt-get</code> :</p>
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
-<code>$&gt; sudo apt-get install fuse</code>
+<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.0.9/osxfuse-3.0.9.dmg" class="button">Download OSXFUSE</a></p>
+
+<em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE that is newer than available on <a href="https://osxfuse.github.io/">https://osxfuse.github.io/</a>.</em>
 
 % else:
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE core module by downloading and opening the package below:</p>
 
-<p><a href="https://storage.googleapis.com/sh_infinit_releases/osx/osxfuse-core.dmg
-" class="button">Download OSXFUSE core</a></p>
-
-<em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE core that is newer than available on <a href="https://osxfuse.github.io/">https://osxfuse.github.io/</a>.</em>
+<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution&#39;s package manager. For example, if you use a Debian based distribution, you would use <code>apt-get</code> :</p>
 
 % endif
 </div>
 
 <h3 id="download-and-install-the-infinit-command-line-tools">Download and install the Infinit command-line tools</h3>
-<p><img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools"></p>
-<p>Click the link below to download the Infinit command-line tools:</p>
 <div>
-% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
-<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 " class="button">Download Command Line Tools</a>
 
 % else:
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-0.3.3.tbz
-" class="button">Download Command Line Tools</a>
+<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href='#linux-tarball-install'>Tarball Install</a>.</p>
+
+<h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
+<p>First import the public key used by the pacakge management system:</p>
+<pre><code>$&gt; sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
+Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
+gpg: requesting key 3D2C3B0B from hkp server keyserver.ubuntu.com
+gpg: key 6821EB43: public key "Infinit <a href="&#x6d;&#97;&#x69;&#x6c;&#116;&#111;&#58;&#x63;&#111;&#x6e;&#x74;&#97;&#99;&#116;&#x40;&#105;&#x6e;&#102;&#x69;&#110;&#x69;&#x74;&#x2e;&#111;&#x6e;&#101;">&#x63;&#111;&#x6e;&#x74;&#97;&#99;&#116;&#x40;&#105;&#x6e;&#102;&#x69;&#110;&#x69;&#x74;&#x2e;&#111;&#x6e;&#101;</a>" imported
+gpg: Total number processed: 1
+gpg:               imported: 1  (RSA: 1)
+</code></pre>
+
+<p>Then add the repository locally:</p>
+<pre><code>$&gt; sudo add-apt-repository "deb <a href="https://debian.infinit.sh/">https://debian.infinit.sh/</a> trusty main"
+</code></pre>
+
+<p>Finally, you can update your local list of packages and install the command-line tools as you would any other package:</p>
+
+<pre><code>$&gt; sudo apt-get update
+...
+Reading package lists... Done
+$&gt; sudo apt-get install infinit
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+The following NEW packages will be installed:
+  infinit
+0 upgraded, 1 newly installed, 0 to remove and 24 not upgraded.
+Need to get 51,6 MB/51,6 MB of archives.
+After this operation, 51,6 MB of additional disk space will be used.
+Selecting previously unselected package infinit.
+(Reading database ... 208105 files and directories currently installed.)
+Preparing to unpack .../infinit_${tarball_version}_amd64.deb ...
+Unpacking infinit (${tarball_version}) ...
+Setting up infinit (${tarball_version}) ...
+</code></pre>
+<p></p>
+<p>You can now change to the install directory and <a href='#2-basic-test'>test</a> your install.</p>
+<pre><code>$&gt; cd /opt/infinit
+</code></pre>
+
+<h3 id="linux-tarball-install">&#9679; Tarball Install</h3>
+
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+" class="button">Download Command Line Tools Tarball</a>
 
 % endif
 </div>
@@ -53,18 +98,18 @@
 <p><br></p>
 <p>Next, open your terminal and extract the Infinit tarball:</p>
 <pre><code>
-% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
-$&gt; tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-0.3.3.tbz
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+$&gt; tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 % else:
-$&gt; tar xjvf Infinit-x86_64-osx-clang3-0.3.3.tbz
+$&gt; tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
 % endif
-Infinit-&lt;version&gt;/
-Infinit-&lt;version&gt;/bin/
-Infinit-&lt;version&gt;/lib
+Infinit-${tarball_version}/
+Infinit-${tarball_version}/bin/
+Infinit-${tarball_version}/lib
 ...
-Infinit-&lt;version&gt;/bin/infinit-storage
-Infinit-&lt;version&gt;/bin/infinit-user
-Infinit-&lt;version&gt;/bin/infinit-volume
+Infinit-${tarball_version}/bin/infinit-storage
+Infinit-${tarball_version}/bin/infinit-user
+Infinit-${tarball_version}/bin/infinit-volume
 ...
 </code></pre><p>All the configuration files that the Infinit command-line tools create and use are located in the <code>$INFINIT_DATA_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>, following the <a href="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">XDG Base Directory Specification</a>. You can edit your shell configuration to set <code>INFINIT_DATA_HOME</code> to another location if you would like.</p>
 <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
@@ -73,18 +118,18 @@ Infinit-&lt;version&gt;/bin/infinit-volume
 <li>The <code>lib/</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
 <li>The <code>share/infinit/filesystem/test/</code> subdirectory is provided for you to quickly test the command-line tools, see below.</li>
 </ul>
-<pre><code>$&gt; cd Infinit-&lt;version&gt;/
+<pre><code>$&gt; cd Infinit-${tarball_version}/
 $&gt; ls
 bin/    lib/    share/
 </code></pre><h2 id="2-basic-test">2. Basic Test</h2>
 <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
 <p>Run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
-<pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint demo/ --publish --cache
+<pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/demo/ --publish --cache
 </code></pre><p><em><strong>NOTE</strong>: You can stop this test volume by hitting <code>CTRL^C</code> or by interrupting the infinit-volume process.</em></p>
 <p>This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point <code>demo/</code>.</p>
 <p>Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point <code>demo/</code> as you would any other POSIX-compliant filesystem.</p>
 <p>Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.</p>
-<pre><code>$&gt; ls demo/
+<pre><code>$&gt; ls ~/demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 </code></pre><h2 id="3-create-infrastructure">3. Create Infrastructure</h2>
 <p>It is now time for you to <strong>create your own storage infrastructure</strong>. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS-like system even though it is also possible to create infrastructure where more than one node stores blocks.</p>
@@ -182,11 +227,11 @@ $> infinit-volume --fetch --as bob --name my-volume
 Fetched volume "bob/my-volume".
 </code></pre>
 
-<p>Let’s connect this device to the ‘mine’ network you created on device A.</p>
+<p>Let’s link this device to the ‘my-network’ network you created on device A.</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --join --as bob --name mine
-Joined network "bob/mine".
+<code>$> infinit-network --link --as bob --name my-network
+Linked device to network "bob/my-network".
 </code></pre>
 
 <p>Finally, the volume can be mounted on device B as simply as on device A:</p>

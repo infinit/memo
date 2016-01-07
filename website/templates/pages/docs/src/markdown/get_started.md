@@ -43,7 +43,14 @@ _**NOTE**: Infinit requires a version of OSXFUSE that is newer than available on
 ### Download and install the Infinit command-line tools
 
 <div>
-% if "linux" in request.path or (os() == "Linux" and "mac" not in request.path):
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
+" class="button">Download Command Line Tools</a>
+
+% else:
 <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href='#linux-tarball-install'>Tarball Install</a>.</p>
 
 <h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
@@ -92,12 +99,7 @@ Setting up infinit (${tarball_version}) ...
 
 <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
 " class="button">Download Command Line Tools Tarball</a>
-% else:
-<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-<p>Click the link below to download the Infinit command-line tools:</p>
 
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-" class="button">Download Command Line Tools</a>
 % endif
 </div>
 
