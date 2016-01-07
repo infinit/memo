@@ -3,7 +3,7 @@
 <h2 id="introduction">Introduction</h2>
 <h3 id="terminology">Terminology</h3>
 <p>The Infinit command-line tools are composed of several binaries, each dealing with a specific resource/object.</p>
-<p>A <em>user</em> represents the entity performing operations on files, directly or indirectly. Every user possesses a RSA key pair that is used to identify him/her. A user can create a <em>network</em> which represents the interconnection of computing devices that will compose the storage infrastructure. A <em>storage</em> is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several <em>volume</em>s --- i.e. logical drives ---  can be created within a network.</p>
+<p>A <em>user</em> represents the entity performing operations on files, directly or indirectly. Every user possesses a RSA key pair that is used to identify him/her. A user can create a <em>network</em> which represents the interconnection of computing §s that will compose the storage infrastructure. A <em>storage</em> is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several <em>volume</em>s --- i.e. logical drives ---  can be created within a network.</p>
 <p>The <em>hub</em> is a cloud service whose role is to ease the process of discovery, sharing and more.</p>
 <h3 id="home">Home</h3>
 <p>All the configuration files Infinit creates and uses are located in the <code>$INFINIT_DATA_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>.</p>
@@ -287,10 +287,9 @@ everything is
 <li>User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations will be permitted on the file. Changing those flags has no effect.</li>
 <li>User execute access mode can be set or cleared and is preserved.</li>
 <li>Group modes are irrelevant and set to 0.</li>
-<li>Other read/write access mode can be set to make the object readable/writable for all.
-Device</li>
+<li>Other read/write access mode can be set to make the object readable/writable for all.</li>
 </ul>
-<hr>
+<h2 id="device">Device</h2>
 <h3 id="log-in-on-another-device">Log in on another device</h3>
 <p>You may want to access your file systems from another machine. Even though it sounds easy, the critical nature of the user’s identity, similar to a SSH key, makes it a bit more complicated that all the other operations.</p>
 <p>In a nutshell, one needs to re-create his/her Infinit environment with all the resources (users, networks, volumes, drives etc.) on the other computer. If you are already using Infinit in a completely decentralized manner, then the operation of exporting all the objects manually and re-importing them on the other device should not frighten you. If you have gotten used to the ease-of-use of the Hub, then we offer you two methods to transmit your user identity on another device.</p>

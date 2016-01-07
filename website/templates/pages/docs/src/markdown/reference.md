@@ -10,7 +10,7 @@ Introduction
 
 The Infinit command-line tools are composed of several binaries, each dealing with a specific resource/object.
 
-A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses a RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing devices that will compose the storage infrastructure. A *storage* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volume*s --- i.e. logical drives ---  can be created within a network.
+A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses a RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing §s that will compose the storage infrastructure. A *storage* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volume*s --- i.e. logical drives ---  can be created within a network.
 
 The *hub* is a cloud service whose role is to ease the process of discovery, sharing and more.
 
@@ -548,6 +548,7 @@ Since the infinit access model is ACL based, POSIX file mode as displayed by _ls
 - User execute access mode can be set or cleared and is preserved.
 - Group modes are irrelevant and set to 0.
 - Other read/write access mode can be set to make the object readable/writable for all.
+
 Device
 ---------
 
