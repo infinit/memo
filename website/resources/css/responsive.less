@@ -1,12 +1,16 @@
 @media (max-width:950px) {
   body.home {
     section.presentation {
+      h1 { margin-top: 0; font-size: 27px; line-height: 33px; }
+    }
+
+    section.features {
       .headline, .terminal {  width: 90%; float: none;}
       .headline { text-align: center; padding: 0 5%; }
       .terminal { max-width: 600px; margin: auto;}
       hr { float: none; margin: 30px auto; width: 60% }
       a.button {  margin-bottom: 55px; }
-      h1 { margin-top: 0; font-size: 27px; line-height: 33px; }
+
       p { line-height: 30px; }
     }
 
@@ -25,25 +29,29 @@
     section.download {
       div { width: 92%; padding: 30px 4% 60px 4%; float: none; }
     }
+  }
 
-    footer {
-      min-height: 600px;
-      nav > ul > li { width: 25%; padding-left: 7%; padding-bottom: 8px; }
-      nav ul {
-        li {padding-left: 7%;}
-        li.list-help { width: 11%; padding-left: 0; }
-        li.list-product { padding-left: 15%; }
-        li.made, li.connect { width: 98%; text-align: center; clear: both; padding-left: 0; }
-        ul.social { padding-top: 20px; padding-left: 0;}
-        ul.social li { float: none; margin-bottom: 25px; padding-left: 0; }
-        li.connect { padding-bottom: 40px; padding-top: 20px; }
-        li.connect ul li { padding-left: 0; }
-      }
+  footer {
+    min-height: 600px;
+    nav > ul > li { width: 25%; padding-left: 7%; padding-bottom: 8px; }
+    nav ul {
+      li {padding-left: 7%;}
+      li.list-help { width: 11%; padding-left: 0; }
+      li.list-product { padding-left: 15%; }
+      li.made, li.connect { width: 98%; text-align: center; clear: both; padding-left: 0; }
+      ul.social { padding-top: 20px; padding-left: 0;}
+      ul.social li { float: none; margin-bottom: 25px; padding-left: 0; }
+      li.connect { padding-bottom: 40px; padding-top: 20px; }
+      li.connect ul li { padding-left: 0; }
     }
   }
 }
 
 @media (max-width:600px) {
+  header {
+    ul { display: none; }
+  }
+
   body.home {
     section.features {
       span.arrow { display: none; }
@@ -58,12 +66,38 @@
       }
     }
   }
+
+  body.drive {
+    section.intro {
+      p.subtitle { margin: 0;}
+      .client { width: 100%; margin: auto; max-width: 767px; }
+    }
+
+    section.location {
+      img { float: none; width: 100%; max-width: 540px; margin-left: 0; }
+    }
+
+    section.access {
+      p { margin: 0 5%;}
+      img {  width: 90%;  margin-left: auto; margin-right: auto; }
+    }
+
+    section.integrations {
+      p { max-width: 100%; }
+      img { float: none; margin-right: auto; margin-left: auto; width: 20%; }
+    }
+  }
+
+  body.documentation {
+    #sidebar { display: none; }
+    section.doc { float: left; width: 84%; padding: 0 7%;}
+  }
 }
 
 @media (max-width:500px) {
   body.home {
     section.features, section.features.benefits {
-      div { width: 100%; float: none; padding: 10px 0;}
+      div.network, div.storage, div.volume, div { width: 100%; float: none; padding: 10px 0;}
     }
   }
 }
