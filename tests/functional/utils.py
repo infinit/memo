@@ -106,10 +106,12 @@ class Infinit(TemporaryDirectory):
           _out.append('%s' % line);
       return _out
 
-  def run_script(self, user = None, volume='volume', seq = None, **kvargs):
+  def run_script(self, user = None, volume='volume', peer = None, seq = None, **kvargs):
     cmd = ['infinit-volume', '--run', volume]
     if user is not None:
       cmd += ['--as', user]
+    if peer is not None:
+      cmd += ['--peer', peer]
     response = self.run(cmd, input = seq or kvargs)
     return response
 

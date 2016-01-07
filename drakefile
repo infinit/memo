@@ -596,6 +596,7 @@ def configure(
       for test_name in [
           'errors',
           'single-user-two-devices-shared-storage',
+          'passport-restrictions',
           #FIXME: 'flow',
           # Test clis.
           'main_cli',
