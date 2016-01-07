@@ -975,45 +975,69 @@ body.contact, body.opensource, body.pricing {
 `------------*/
 
 body.pricing {
-  h1 { text-align: center; }
-  section.doc { padding-bottom: 100px; padding-left: 7%; padding-right: 7%; width: 86%; }
+  section.doc h1 { text-align:center; margin-bottom: 20px; border-bottom: none;}
+  section.doc { padding-bottom: 10px; padding-left: 7%; padding-right: 7%; width: 86%; }
   section.doc:after { content: ''; display: table; clear: both; }
 
   .plan {
-    float: left; width: 26%; padding: 0 3% 0 3%; text-align: left;
-    border-radius: 5px; border-right: 1px solid #f2f2f2; margin-top: 40px;
+    float: left; width: 26%; padding: 0 3% 100px 3%; text-align: left; position: relative;
+    border-radius: 5px; border-right: 1px solid #f2f2f2;
   }
   .plan h2 {
-    font-size: 22px; margin-top: 0; padding-top: 0;
-    border-bottom: 2px solid @infinitblack; padding-bottom: 17px;
+    font-size: 22px; margin: 0 auto 15px auto; padding-top: 0; text-align: center;
+    border-bottom: 2px solid @infinitblack; padding-bottom: 17px; width: 70%;
   }
-  .plan h2 img { float: left; margin-top: -5px; margin-right: 8px;}
-  .plan p { margin: 7px 0;}
-
+  .plan h2 img { margin-top: -5px; margin-right: 8px; vertical-align: bottom;}
+  .plan p { margin: 7px 0; clear: both; text-align: center;  }
+  .plan p.big { font-size: 16px; line-height: 24px;}
+  .plan p span { color: @infinitgray; }
+  .plan p span.badge {
+    color: #718287; background: #DBEBF0; border-radius: 3px; padding: 4px 6px;
+    text-transform: uppercase; font-size: 10px; margin-left: 3px; font-weight: bold;
+  }
+  .plan hr {
+    width: 50%; border: none; height: 1px; background: lighten(@infinitgray, 15%);
+    display: block; margin: 10px auto 15px auto;
+  }
+  .plan p.price {
+    position: absolute; top:510px; width: 80%; text-align: center;
+    font-family: @helvetica; font-weight: 300; font-size: 23px;
+  }
+  .plan a.button {
+    color:white; margin-top: 10px; position: absolute; top:550px;
+    margin-left: -60px;
+  }
+  .plan a.button:hover { color: white; border-bottom: none; }
   .plan:last-child { border-right: 0}
   .plan:last-child h2 img {  margin-top: -13px; }
 
   section.estimation {
-    text-align: center; min-height: 400px;
+    text-align: center; min-height: 400px; padding-bottom: 100px; padding-top: 50px;
 
-    .controls { width: 670px; margin: auto; margin-top: 90px; }
+    .controls { width: 670px; margin: auto; margin-top: 40px; margin-bottom: 30px; }
     .controls label { font-size: 20px; font-weight: bold; }
     .controls label#usersLabel { margin-right: 80px;}
     input, label, .slider { float: left; }
 
     h2 { font-size: 2em; margin-bottom: 0;}
-    table tr:nth-child(1) th { padding-top: 40px; clear: both; border-bottom: none; }
+    table tr:nth-child(1) th { padding-top: 80px; clear: both; border-bottom: none; }
 
-    table tr td { width: 19%; padding: 10px 3%; border-right: 1px solid #E6E6E6; }
+    table tr td { width: 16%; padding: 10px 2%; border-right: 1px solid #E6E6E6; }
+    table tr td:first-child, table tr th:first-child { text-align: left; padding-left: 3%; }
     table tr td:last-child { border-right: none;}
     table tr.capacity td span { font-weight: bold; }
     table tr.price td {
-      font-family: @helvetica; font-size: 25px; font-weight: 300;
+      font-family: @helvetica; font-size: 22px; font-weight: 300;
     }
     table tr td.users_disabled, table tr th.users_disabled,
     table tr td.capacity_disabled, table tr th.capacity_disabled {
-      opacity: 0.4; .transition();
+      opacity: 0.4; .transition(); position: relative;
       filter: grayscale(100%);  -webkit-filter: grayscale(1);
+    }
+
+    table tr.price td.users_disabled, table tr.price td.capacity_disabled {
+      visibility: hidden;
+      &:after { content: '/'; visibility: visible; position: absolute; left:50%;}
     }
   }
 
@@ -1053,6 +1077,7 @@ body.opensource {
     .card:nth-child(2n+1) { clear: both; }
     .repo-card .content p { font-size: 13px; font-family: @sourcesans; }
 
+<<<<<<< Updated upstream
     .card.soon .github-card {
       border-radius: 5px; padding: 8px 11px 0; position: relative;
       min-height: 143px; border: 1px solid #D6D6D6; width: 325px;
@@ -1074,6 +1099,9 @@ body.opensource {
     }
 
     table { width: 80%; }
+=======
+    table { width: 50%; }
+>>>>>>> Stashed changes
     table tr td, table tr th { text-align: left; padding-left: 20px; }
     table tr:nth-child(1) th:nth-child(1) { text-align: left; }
     table tr td:nth-child(1) { border: none;}
