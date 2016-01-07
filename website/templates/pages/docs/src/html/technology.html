@@ -36,7 +36,7 @@ void do_write(std::size_t length)
     });
 }
 ....
-</code></pre><p>The Reactor example uses a coroutine with a <code>while</code> loop to accept connections from clients and then a coroutine for each client. The reading and writing to each client is handled in again handled in a simple <code>while</code> loop.</p>
+</code></pre><p>The Reactor example uses a coroutine with a <code>while</code> loop to accept connections from clients and then a coroutine for each client. The reading and writing to each client is handled again in a simple <code>while</code> loop.</p>
 <p><strong>Reactor Example</strong> <a href="https://gist.github.com/mycure/2a8e974bc47bbef10add" target="_blank">(full code here)</a></p>
 <pre><code>...
 void echo(std::unique_ptr&lt;reactor::network::Socket&gt; socket)

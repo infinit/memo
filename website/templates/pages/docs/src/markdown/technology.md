@@ -50,7 +50,7 @@ void do_write(std::size_t length)
 ....
 ```
 
-The Reactor example uses a coroutine with a `while` loop to accept connections from clients and then a coroutine for each client. The reading and writing to each client is handled in again handled in a simple `while` loop.
+The Reactor example uses a coroutine with a `while` loop to accept connections from clients and then a coroutine for each client. The reading and writing to each client is handled again in a simple `while` loop.
 
 **Reactor Example** <a href="https://gist.github.com/mycure/2a8e974bc47bbef10add" target="_blank">(full code here)</a>
 
