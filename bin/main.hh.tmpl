@@ -2102,42 +2102,20 @@ beyond_push(std::string const& type, std::string const& name, T const& o,
 
 static
 std::unique_ptr<reactor::http::Request>
-fetch_data(std::string const& where,
+fetch_data(std::string const& url,
            std::string const& type,
            std::string const& name,
-           boost::optional<infinit::User const&> self = boost::none,
-           Headers const& headers = Headers{},
+           Headers const& extra_headers = Headers{},
            bool output_report_action = true)
 {
+  Headers headers;
+  for (auto const& header: extra_headers)
+    headers[header.first] = header.second;
   reactor::http::Request::Configuration c;
   for (auto const& header: headers)
     c.header_add(header.first, header.second);
   auto r = elle::make_unique<reactor::http::Request>(
-    where, reactor::http::Method::GET, std::move(c));
-  return r;
-}
-// FIXME: Workaround used to handle objects that have had their copy
-// constructor deleted. See infinit-network.cc:fetch(), NetworkDescriptor.
-// Remove when serialization does not require copy.
-static
-std::unique_ptr<reactor::http::Request>
-beyond_fetch_data(std::string const& where,
-                  std::string const& type,
-                  std::string const& name,
-                  boost::optional<infinit::User const&> self = boost::none,
-                  Headers const& extra_headers = Headers{},
-                  bool output_report_action = true)
-{
-  Headers headers;
-  if (self)
-  {
-    headers = signature_headers(reactor::http::Method::GET, where, self.get());
-  }
-  for (auto const& header: extra_headers)
-    headers[header.first] = header.second;
-  auto url = elle::sprintf("%s/%s", beyond(), where);
-  auto r = fetch_data(url, type, name, self, headers,
-    output_report_action);
+    url, reactor::http::Method::GET, std::move(c));
   reactor::wait(*r);
   if (r->status() == reactor::http::StatusCode::OK)
   {
@@ -2159,7 +2137,15 @@ beyond_fetch_data(std::string const& where,
   else if (r->status() == reactor::http::StatusCode::See_Other ||
            r->status() == reactor::http::StatusCode::Temporary_Redirect)
   {
-    throw Redirected(url);
+    auto redirection = r->headers().find("Location");
+    if (redirection != r->headers().end())
+    {
+      auto new_url = redirection->second;
+      if (!new_url.empty() && new_url != url)
+      {
+        return fetch_data(new_url, type, name);
+      }
+    }
   }
   else
   {
@@ -2168,6 +2154,32 @@ beyond_fetch_data(std::string const& where,
                     r->status(), type));
   }
   return r;
+}
+
+// FIXME: Workaround used to handle objects that have had their copy
+// constructor deleted. See infinit-network.cc:fetch(), NetworkDescriptor.
+// Remove when serialization does not require copy.
+static
+std::unique_ptr<reactor::http::Request>
+beyond_fetch_data(std::string const& where,
+                  std::string const& type,
+                  std::string const& name,
+                  boost::optional<infinit::User const&> self = boost::none,
+                  Headers const& extra_headers = Headers{},
+                  bool output_report_action = true)
+{
+  Headers headers;
+  if (self)
+  {
+    headers = signature_headers(reactor::http::Method::GET, where, self.get());
+  }
+  for (auto const& header: extra_headers)
+    headers[header.first] = header.second;
+  return fetch_data(elle::sprintf("%s/%s", beyond(), where),
+                    type,
+                    name,
+                    headers,
+                    output_report_action);
 }
 
 elle::json::Json

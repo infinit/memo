@@ -453,10 +453,10 @@ void
 fetch_icon(std::string const& name)
 {
   auto url = elle::sprintf("drives/%s/icon", name);
-  auto redirect = beyond_fetch<FakeRedirect>(url, "icon route", name);
-  if (redirect.url)
+  auto request= beyond_fetch_data(url, "icon", name);
+  if (request->status() == reactor::http::StatusCode::OK)
   {
-    auto response = fetch_data(redirect.url.get(), "icon", name)->response();
+    auto response = request->response();
     // XXX: Deserialize XML.
     if (response.size() == 0 || response[0] == '<')
       throw MissingResource(

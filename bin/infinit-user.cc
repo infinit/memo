@@ -94,9 +94,6 @@ COMMAND(fetch)
         {
           fetch_avatar(name);
         }
-        catch (Redirected)
-        {
-        }
         catch (MissingResource)
         {
         }
@@ -381,10 +378,10 @@ void
 fetch_avatar(std::string const& name)
 {
   auto url = elle::sprintf("users/%s/avatar", name);
-  auto redirect = beyond_fetch<FakeRedirect>(url, "avatar route", name);
-  if (redirect.url)
+  auto request = beyond_fetch_data(url, "avatar", name);
+  if (request->status() == reactor::http::StatusCode::OK)
   {
-    auto response = fetch_data(redirect.url.get(), "avatar", name)->response();
+    auto response = request->response();
     // XXX: Deserialize XML.
     if (response.size() == 0 || response[0] == '<')
       throw MissingResource(
