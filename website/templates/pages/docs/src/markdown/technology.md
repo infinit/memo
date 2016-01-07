@@ -15,7 +15,46 @@ The [reactor layer](https://en.wikipedia.org/wiki/Reactor_pattern) is a C++ deve
 
 This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.
 
-<!-- XXX table -->
+
+**Boost Example** <a href="https://gist.github.com/mycure/60ae5d6f7d5bb3ee4ffa" target="_blank">(full code here)</a>
+```
+using boost::asio::ip::tcp;
+
+class session
+  : public std::enable_shared_from_this<session>
+{
+public:
+  session(tcp::socket socket)
+    : socket_(std::move(socket))
+  {
+  }
+  void start()
+  {
+    do_read();
+  }
+....
+....
+```
+
+**Reactor Example** <a href="https://gist.github.com/mycure/2a8e974bc47bbef10add" target="_blank">(full code here)</a>
+
+```
+void echo(std::unique_ptr<reactor::network::Socket> socket)
+{
+  try
+  {
+    while (true)
+    {
+      elle::Buffer line = socket->read_until("\n");
+      socket->write(line);
+    }
+  }
+  catch (reactor::network::ConnectionClosed const&)
+  {}
+}
+...
+...
+```
 
 [Learn More](http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming)
 

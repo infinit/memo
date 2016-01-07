@@ -6,8 +6,40 @@
 <p><em>#high-performance</em> <em>#interoperability</em></p>
 <p>The <a href="https://en.wikipedia.org/wiki/Reactor_pattern">reactor layer</a> is a C++ development coroutine-based framework that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write/read and therefore to maintain.</p>
 <p>This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.</p>
-<!-- XXX table -->
-<p><a href="http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming">Learn More</a></p>
+<p><strong>Boost Example</strong> <a href="https://gist.github.com/mycure/60ae5d6f7d5bb3ee4ffa" target="_blank">(full code here)</a></p>
+<pre><code>using boost::asio::ip::tcp;
+
+class session
+  : public std::enable_shared_from_this&lt;session&gt;
+{
+public:
+  session(tcp::socket socket)
+    : socket_(std::move(socket))
+  {
+  }
+  void start()
+  {
+    do_read();
+  }
+....
+....
+</code></pre><p><strong>Reactor Example</strong> <a href="https://gist.github.com/mycure/2a8e974bc47bbef10add" target="_blank">(full code here)</a></p>
+<pre><code>void echo(std::unique_ptr&lt;reactor::network::Socket&gt; socket)
+{
+  try
+  {
+    while (true)
+    {
+      elle::Buffer line = socket-&gt;read_until("\n");
+      socket-&gt;write(line);
+    }
+  }
+  catch (reactor::network::ConnectionClosed const&amp;)
+  {}
+}
+...
+...
+</code></pre><p><a href="http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming">Learn More</a></p>
 <h2 id="overlay-network">Overlay Network</h2>
 <p><em>#control</em> <em>#affordable</em> <em>#scalable</em> <em>#fault-tolerant</em> <em>#migration</em></p>
 <p>The <a href="https://en.wikipedia.org/wiki/Overlay_network">overlay network</a> layer connects the devices (desktop computer, server, mobile etc.) in a peer-to-peer manner i.e without a central server. The main purpose of this layer is to map identifiers (more precisely ranges of identifiers) onto nodes and to provide an algorithm to locate the node responsible for a given identifier.</p>
