@@ -523,7 +523,9 @@ class Network(metaclass = Entity,
     pass
 
 class Passport(metaclass = Entity,
-               fields = fields('user', 'network', 'signature')):
+               fields = fields('user', 'network', 'signature',
+                               allow_write = True,
+                               allow_storage = True)):
   pass
 
 class Volume(metaclass = Entity,

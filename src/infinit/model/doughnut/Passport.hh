@@ -19,7 +19,9 @@ namespace infinit
       public:
         Passport(cryptography::rsa::PublicKey user,
                  std::string network,
-                 cryptography::rsa::PrivateKey const& owner);
+                 cryptography::rsa::PrivateKey const& owner,
+                 bool allow_write = true,
+                 bool allow_storage = true);
         Passport(elle::serialization::SerializerIn& s);
         ~Passport();
         void
@@ -32,6 +34,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, user);
         ELLE_ATTRIBUTE_R(std::string, network);
         ELLE_ATTRIBUTE(elle::Buffer, signature);
+        ELLE_ATTRIBUTE_R(bool, allow_write);
+        ELLE_ATTRIBUTE_R(bool, allow_storage);
       };
     }
   }

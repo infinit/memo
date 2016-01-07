@@ -21,7 +21,9 @@ COMMAND(create)
   infinit::model::doughnut::Passport passport(
     user.public_key,
     network.name,
-    self.private_key.get());
+    self.private_key.get(),
+    !flag(args, "deny-write"),
+    !flag(args, "deny-storage"));
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -260,6 +262,8 @@ main(int argc, char** argv)
         { "push-passport", bool_switch(),
           elle::sprintf("push the passport to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-passport" },
+        { "deny-write", bool_switch(), "Deny write access to the user"},
+        { "deny-storage", bool_switch(), "Deny contributing storage to the user"},
         option_output("passport"),
       },
     },

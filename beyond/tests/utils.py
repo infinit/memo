@@ -278,6 +278,8 @@ class Passport(dict):
     self.__invitee = invitee
     self['user'] = invitee['public_key']
     self['signature'] = signature
+    self['allow_write'] = True
+    self['allow_storage'] = True
 
   @property
   def network(self):

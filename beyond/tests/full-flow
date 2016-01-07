@@ -42,7 +42,9 @@ with Beyond() as beyond:
       passport = {
         'network':'mefyl/infinit',
         'signature':'BUNiO620HwGlA9YtqqPEwszkLapLbAvJPRnzQY8H5imdOrQQxSjFT5fJ4W8eQQZJCXmVY53gQwEoaj+4C3sbpqq0XvhnbrEozpTxj+vjAp4m5IKXt08YukL3eWLEQp23HIaoNWWpbbu7sVmlryKmiwXKRIGK+xqZ3DBkx92rMljiNPhdUInt3cMR+kWe0rLbi2jVf7m8wZOiBIwE1eov2+tKPukUkE3RZMInFezGbc2b7BT7BW1/dJ8u+z0O0a+XjWcGHluR+zkALIcgiVq48SyuuW98Kicx8bFaJNaUnZXWLrdOj6B4TFk1Jguo2jx0eZronGzrGtjPS+R5ioS6rA==',
-        'user': {'rsa':'MIIBCgKCAQEAr8UUcxZ2ujNWzQPA9J5FjClZxzXRjRQrb+xCP6Z+iG4/TJ5E0v4+wbXDHQC4hp3asXOJeQXEEOCG+eHIStKw0xAlZq1aF8Vtvhjrqk8BZxLUx+tovnE0G5oiFQRk19SLUcHpcdCIPWUhsmULLyrDfOE9yxcH7r3FCsz2MSSee9hffxzBF6AOsYPJLbui/PPhaSuWlwcRQ76s3iTiB6WKi+Rw77lTlyFMt/XpgyxHCb2IT0GYbshwZ3p1bEHdiqise1c/81/t9SdROjwSnL+aHp6Kf4pFe4lUNSSyX8Jc81k8YpJhR+qs2gSKhkdl4i7WpLjVaPhSpdut9GYC3ujHzwIDAQAB'}
+        'user': {'rsa':'MIIBCgKCAQEAr8UUcxZ2ujNWzQPA9J5FjClZxzXRjRQrb+xCP6Z+iG4/TJ5E0v4+wbXDHQC4hp3asXOJeQXEEOCG+eHIStKw0xAlZq1aF8Vtvhjrqk8BZxLUx+tovnE0G5oiFQRk19SLUcHpcdCIPWUhsmULLyrDfOE9yxcH7r3FCsz2MSSee9hffxzBF6AOsYPJLbui/PPhaSuWlwcRQ76s3iTiB6WKi+Rw77lTlyFMt/XpgyxHCb2IT0GYbshwZ3p1bEHdiqise1c/81/t9SdROjwSnL+aHp6Kf4pFe4lUNSSyX8Jc81k8YpJhR+qs2gSKhkdl4i7WpLjVaPhSpdut9GYC3ujHzwIDAQAB'},
+        'allow_write': True,
+        'allow_storage': True
       }
       bearclaw = User(name = 'bearclaw')
       bearclaw.put(beyond)
