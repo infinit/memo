@@ -52,6 +52,8 @@ namespace infinit
       , _single_mount(false)
       , _volume_name(volume_name)
     {
+      _read_only = !dynamic_cast<model::doughnut::Doughnut*>(_block_store.get())
+        ->passport().allow_write();
 #ifndef INFINIT_WINDOWS
       reactor::scheduler().signal_handle
         (SIGUSR1, [this] { this->print_cache_stats();});

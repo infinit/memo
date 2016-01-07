@@ -52,6 +52,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
       ELLE_ATTRIBUTE_RW(bool, single_mount);
       ELLE_ATTRIBUTE_R(std::string, volume_name);
+      ELLE_ATTRIBUTE_R(bool, read_only);
     };
   }
 }

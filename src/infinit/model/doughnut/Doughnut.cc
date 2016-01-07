@@ -104,8 +104,14 @@ namespace infinit
               auto user = elle::make_unique<UB>(this, name, this->keys().K());
               ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
                                *this, user->address(), name);
-
-              this->store(std::move(user));
+              try
+              {
+                this->store(std::move(user));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to store user block: %s", *this, e);
+              }
             }
             try
             {
@@ -126,7 +132,14 @@ namespace infinit
               auto user = elle::make_unique<UB>(this, name, this->keys().K(), true);
               ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
                                user->address());
-              this->store(std::move(user));
+              try
+              {
+                this->store(std::move(user));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to store reverse user block: %s", *this, e);
+              }
             }
           };
         _user_init.reset(new reactor::Thread(
