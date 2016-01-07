@@ -303,7 +303,7 @@ Finally, the volume can be mounted on device B as simply as on device A:
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume/ --as bob --name my-volume --async --cache --publish
+<code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume2/ --as bob --name my-volume --async --cache --publish
 Fetch endpoints for "bob/my-network".
 Running network “bob/my-network”.
 Running volume "bob/my-volume".
@@ -313,7 +313,7 @@ It is now time to check if the file you created on device A is synchronized with
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> ls ~/mnt-my-volume/
+<code>$> ls ~/mnt-my-volume2/
 awesome.txt
 $> cat ~/mnt-my-volume/awesome.txt
 everything is
