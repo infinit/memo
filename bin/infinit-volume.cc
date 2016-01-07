@@ -200,11 +200,9 @@ add_path_to_finder_sidebar(std::string const& path)
           ELLE_DEBUG("already in sidebar favorites: %s", path);
           in_list = true;
         }
-        if (item_path)
-          CFRelease(item_path);
+        CFRelease(item_path);
       }
-      if (item_url)
-        CFRelease(item_url);
+      CFRelease(item_url);
     }
   }
   if (items_array)
@@ -262,11 +260,9 @@ remove_path_from_finder_sidebar(std::string const& path)
           LSSharedFileListItemRemove(favorite_items, item_ref);
           ELLE_DEBUG("found and removed item from sidebar: %s", path);
         }
-        if (item_path)
-          CFRelease(item_path);
+        CFRelease(item_path);
       }
-      if (item_url)
-        CFRelease(item_url);
+      CFRelease(item_url);
     }
   }
   if (items_array)
