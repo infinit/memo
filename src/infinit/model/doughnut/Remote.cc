@@ -241,6 +241,13 @@ namespace infinit
             ELLE_WARN("%s", msg);
             throw elle::Error(msg);
           }
+          if (!remote_passport->allow_storage())
+          {
+            auto msg = elle::sprintf(
+              "%s: Peer passport disallows storage", *this);
+            ELLE_WARN("%s", msg);
+            throw elle::Error(msg);
+          }
           ELLE_DEBUG("got valid remote passport");
           // sign the challenge
           auto signed_challenge = this->_doughnut.keys().k().sign(

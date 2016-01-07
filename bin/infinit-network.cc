@@ -361,6 +361,8 @@ COMMAND(link_)
   bool ok = passport.verify(desc.owner);
   if (!ok)
     throw elle::Error("passport signature is invalid");
+  if (storage && !passport.allow_storage())
+    throw elle::Error("passport does not allow storage");
   infinit::Network network(
     desc.name,
     elle::make_unique<infinit::model::doughnut::Configuration>(

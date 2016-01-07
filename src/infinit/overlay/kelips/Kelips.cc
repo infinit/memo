@@ -1118,28 +1118,29 @@ namespace infinit
 
       void
       Node::setKey(Address const& a,
-                   infinit::cryptography::SecretKey sk)
+                   infinit::cryptography::SecretKey sk,
+                   bool observer)
       {
         auto oldkey = getKey(a);
-        if (oldkey)
+        if (oldkey.first)
         {
           ELLE_DEBUG("%s: overriding key %s -> %s  for %s",
-            *this, key_hash(*oldkey), key_hash(sk), a);
-          _keys.find(a)->second = std::move(sk);
+            *this, key_hash(*oldkey.first), key_hash(sk), a);
+          _keys.find(a)->second = std::make_pair(std::move(sk), observer);
         }
         else
         {
-          _keys.insert(std::make_pair(a, std::move(sk)));
+          _keys.insert(std::make_pair(a, std::make_pair(std::move(sk), observer)));
         }
       }
 
-      infinit::cryptography::SecretKey*
+      std::pair<infinit::cryptography::SecretKey*, bool>
       Node::getKey(Address const& a)
       {
         auto it = _keys.find(a);
         if (it != _keys.end())
-          return &it->second;
-        return nullptr;
+          return std::make_pair(&it->second.first, it->second.second);
+        return std::make_pair(nullptr, false);
       }
 
       void
@@ -1172,7 +1173,7 @@ namespace infinit
         auto key = getKey(address);
         if (is_crypto
           || !_config.encrypt
-          || (!key && _config.accept_plain)
+          || (!key.first && _config.accept_plain)
           )
         {
           b = packet::serialize(p);
@@ -1180,7 +1181,7 @@ namespace infinit
         }
         else
         {
-          if (!key)
+          if (!key.first)
           {
             // FIXME queue packet
             ELLE_DEBUG("%s: dropping packet to %s: no key available",
@@ -1195,7 +1196,7 @@ namespace infinit
             {
               static elle::Bench decrypt("kelips.encrypt", 10_sec);
               elle::Bench::BenchScope bs(decrypt);
-              ep.encrypt(*key, p);
+              ep.encrypt(*key.first, p);
             }
             b = packet::serialize(ep);
           }
@@ -1299,7 +1300,7 @@ namespace infinit
         {
           auto key = getKey(packet->sender);
           bool failure = true;
-          if (!key)
+          if (!key.first)
           {
             ELLE_WARN("%s: key unknown for %s : %s",
               *this, source, packet->sender);
@@ -1312,12 +1313,28 @@ namespace infinit
               {
                 static elle::Bench decrypt("kelips.decrypt", 10_sec);
                 elle::Bench::BenchScope bs(decrypt);
-                plain = p->decrypt(*key);
+                plain = p->decrypt(*key.first);
               }
               if (plain->sender != p->sender)
               {
                 ELLE_WARN("%s: sender inconsistency in encrypted packet: %s != %s",
                   *this, p->sender, plain->sender);
+                return;
+              }
+              if (plain->observer < key.second)
+              {
+                ELLE_WARN("%s: sender %s is observer and sent a misflaged packet",
+                          *this, p->sender);
+                return;
+              }
+              if (key.second && (
+                     dynamic_cast<packet::Gossip*>(plain.get())
+                  || dynamic_cast<packet::GetFileReply*>(plain.get())
+                  || dynamic_cast<packet::PutFileReply*>(plain.get())
+                  ))
+              {
+                ELLE_WARN("%s: sender %s is observer and sent a non-observer packet",
+                  *this, p->sender);
                 return;
               }
               packet = std::move(plain);
@@ -1329,7 +1346,7 @@ namespace infinit
             {
               ELLE_DEBUG(
                 "%s: decryption with %s from %s : %s failed: %s",
-                *this, key_hash(*key), source, packet->sender, e.what());
+                *this, key_hash(*key.first), source, packet->sender, e.what());
             }
           }
           if (failure)
@@ -1360,7 +1377,8 @@ namespace infinit
           // generate key
           auto sk = infinit::cryptography::secretkey::generate(256);
           elle::Buffer password = sk.password();
-          setKey(p->sender, std::move(sk));
+          bool observer = !p->passport.allow_storage();
+          setKey(p->sender, std::move(sk), observer);
           packet::KeyReply kr(doughnut()->passport());
           kr.sender = _self;
           kr.encrypted_key = p->passport.user().seal(
@@ -1398,6 +1416,7 @@ namespace infinit
             stored_challenge,
             infinit::cryptography::rsa::Padding::pss,
             infinit::cryptography::Oneway::sha256);
+          bool observer = !p->passport.allow_storage();
           this->_challenges.erase(it);
           if (!ok)
           {
@@ -1411,7 +1430,7 @@ namespace infinit
             infinit::cryptography::Cipher::aes256,
             infinit::cryptography::Mode::cbc);
           infinit::cryptography::SecretKey sk(std::move(password));
-          setKey(p->sender, std::move(sk));
+          setKey(p->sender, std::move(sk), observer);
           // Flush operations waiting on crypto ready
           bool bootstrap_requested = false;
           {
