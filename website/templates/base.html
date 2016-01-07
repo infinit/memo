@@ -50,9 +50,6 @@
         <li>
           <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
         </li>
-        <li>
-          <a ${'class="active"' if request.route.name == 'drive' else ''} href="${route('drive')}">Drive</a>
-        </li>
       </ul>
     </header>
 
