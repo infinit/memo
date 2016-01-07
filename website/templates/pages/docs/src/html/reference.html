@@ -289,6 +289,14 @@ everything is
 <li>Group modes are irrelevant and set to 0.</li>
 <li>Other read/write access mode can be set to make the object readable/writable for all.</li>
 </ul>
+<h3 id="groups">Groups</h3>
+<p>Infinit supports a concept of groups similar to what you might expect. A group is identified by it&#39;s unique name, and can be created by any user. It stores a list of group members, that can be users and other groups. This member list can be modified only by the user who created the group.</p>
+<pre><code>$&gt; infinit-acl --group --create --name all .
+$&gt; infinit-acl --group --name all --add bob .
+$&gt; infinit-acl --group --create --name engineering .
+$&gt; infinit-acl --group --name all --add @engineering .
+</code></pre><p>Once created, a group can be added to any object&#39;s ACLs using <em>infinit-acl</em>, by prefixing an <em>@</em> to the group name:</p>
+<pre><code>$&gt; infinit-acl --set --mode rw --user @all --path some_file
 </code></pre><h2 id="device">Device</h2>
 <h3 id="log-in-on-another-device">Log in on another device</h3>
 <p>You may want to access your file systems from another machine. Even though it sounds easy, the critical nature of the user’s identity, similar to a SSH key, makes it a bit more complicated that all the other operations.</p>
