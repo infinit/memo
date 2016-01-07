@@ -146,19 +146,19 @@ For you to quickly (through a single command) try Infinit out, the following is 
 Run the _infinit-volume_ command by prefixing it with the environment variable `INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home` to tell the command where to look for the configuration files required for this test.
 
 ```
-$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/demo/ --publish --cache
+$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
 ```
 
 _**NOTE**: You can stop this test volume by hitting `CTRL^C` or by interrupting the infinit-volume process._
 
-This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `demo/`.
+This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `~/mnt-demo/`.
 
-Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `demo/` as you would any other POSIX-compliant filesystem.
+Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `~/mnt-demo/` as you would any other POSIX-compliant filesystem.
 
 Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.
 
 ```
-$> ls ~/demo/
+$> ls ~/mnt-demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
 
