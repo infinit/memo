@@ -228,9 +228,7 @@ class CouchDBDatastore:
     rows = list(rows)
     res = {'capacity': 0, 'usage': 0}
     if len(rows) > 0:
-      value  = rows[0].value
-      res['capacity'] = value[0]
-      res['usage'] = value[1]
+      res = rows[0].value
     return res
 
   def __user_per_name(user):
@@ -389,10 +387,10 @@ class CouchDBDatastore:
         yield network['name'], stat
 
   def __network_stat_reduce(keys, values, rereduce):
-    res = [0, 0]
+    res = {'capacity': 0, 'usage': 0}
     for v in values:
-      res[0] += v['capacity']
-      res[1] += v['usage']
+      res['capacity'] += v['capacity']
+      res['usage'] += v['usage']
     return res
 
   ## ------ ##
