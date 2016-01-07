@@ -15,30 +15,47 @@ The [reactor layer](https://en.wikipedia.org/wiki/Reactor_pattern) is a C++ deve
 
 This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.
 
+### Echo Server Example
+
+In the Boost example, you will notice that there are a system of callbacks which quickly becomes confusing.
 
 **Boost Example** <a href="https://gist.github.com/mycure/60ae5d6f7d5bb3ee4ffa" target="_blank">(full code here)</a>
 ```
-using boost::asio::ip::tcp;
-
-class session
-  : public std::enable_shared_from_this<session>
-{
-public:
-  session(tcp::socket socket)
-    : socket_(std::move(socket))
-  {
-  }
-  void start()
-  {
-    do_read();
-  }
 ....
+void do_read()
+{
+  auto self(shared_from_this());
+  socket_.async_read_some(boost::asio::buffer(data_, max_length),
+    [this, self](boost::system::error_code ec, std::size_t length)
+    {
+      if (!ec)
+      {
+        do_write(length);
+      }
+    });
+}
+
+void do_write(std::size_t length)
+{
+  auto self(shared_from_this());
+  boost::asio::async_write(socket_, boost::asio::buffer(data_, length),
+    [this, self](boost::system::error_code ec, std::size_t /*length*/)
+    {
+      if (!ec)
+      {
+        do_read();
+      }
+    });
+}
 ....
 ```
+
+The Reactor example uses a coroutine with a `while` loop to accept connections from clients and then a coroutine for each client. The reading and writing to each client is handled in again handled in a simple `while` loop.
 
 **Reactor Example** <a href="https://gist.github.com/mycure/2a8e974bc47bbef10add" target="_blank">(full code here)</a>
 
 ```
+...
 void echo(std::unique_ptr<reactor::network::Socket> socket)
 {
   try
@@ -52,7 +69,6 @@ void echo(std::unique_ptr<reactor::network::Socket> socket)
   catch (reactor::network::ConnectionClosed const&)
   {}
 }
-...
 ...
 ```
 

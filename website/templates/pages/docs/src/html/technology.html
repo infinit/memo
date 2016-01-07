@@ -6,25 +6,40 @@
 <p><em>#high-performance</em> <em>#interoperability</em></p>
 <p>The <a href="https://en.wikipedia.org/wiki/Reactor_pattern">reactor layer</a> is a C++ development coroutine-based framework that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write/read and therefore to maintain.</p>
 <p>This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.</p>
+<h3 id="echo-server-example">Echo Server Example</h3>
+<p>In the Boost example, you will notice that there are a system of callbacks which quickly becomes confusing.</p>
 <p><strong>Boost Example</strong> <a href="https://gist.github.com/mycure/60ae5d6f7d5bb3ee4ffa" target="_blank">(full code here)</a></p>
-<pre><code>using boost::asio::ip::tcp;
-
-class session
-  : public std::enable_shared_from_this&lt;session&gt;
+<pre><code>....
+void do_read()
 {
-public:
-  session(tcp::socket socket)
-    : socket_(std::move(socket))
-  {
-  }
-  void start()
-  {
-    do_read();
-  }
+  auto self(shared_from_this());
+  socket_.async_read_some(boost::asio::buffer(data_, max_length),
+    [this, self](boost::system::error_code ec, std::size_t length)
+    {
+      if (!ec)
+      {
+        do_write(length);
+      }
+    });
+}
+
+void do_write(std::size_t length)
+{
+  auto self(shared_from_this());
+  boost::asio::async_write(socket_, boost::asio::buffer(data_, length),
+    [this, self](boost::system::error_code ec, std::size_t /*length*/)
+    {
+      if (!ec)
+      {
+        do_read();
+      }
+    });
+}
 ....
-....
-</code></pre><p><strong>Reactor Example</strong> <a href="https://gist.github.com/mycure/2a8e974bc47bbef10add" target="_blank">(full code here)</a></p>
-<pre><code>void echo(std::unique_ptr&lt;reactor::network::Socket&gt; socket)
+</code></pre><p>The Reactor example uses a coroutine with a <code>while</code> loop to accept connections from clients and then a coroutine for each client. The reading and writing to each client is handled in again handled in a simple <code>while</code> loop.</p>
+<p><strong>Reactor Example</strong> <a href="https://gist.github.com/mycure/2a8e974bc47bbef10add" target="_blank">(full code here)</a></p>
+<pre><code>...
+void echo(std::unique_ptr&lt;reactor::network::Socket&gt; socket)
 {
   try
   {
@@ -37,7 +52,6 @@ public:
   catch (reactor::network::ConnectionClosed const&amp;)
   {}
 }
-...
 ...
 </code></pre><p><a href="http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming">Learn More</a></p>
 <h2 id="overlay-network">Overlay Network</h2>
