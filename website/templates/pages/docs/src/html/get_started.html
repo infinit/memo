@@ -50,7 +50,7 @@
 <pre><code>$&gt; sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
 Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
 gpg: requesting key 3D2C3B0B from hkp server keyserver.ubuntu.com
-gpg: key 6821EB43: public key "Infinit <a href="&#x6d;&#x61;&#105;&#x6c;&#x74;&#111;&#x3a;&#99;&#111;&#x6e;&#x74;&#x61;&#99;&#116;&#64;&#x69;&#110;&#x66;&#x69;&#110;&#105;&#116;&#x2e;&#x6f;&#x6e;&#101;">&#99;&#111;&#x6e;&#x74;&#x61;&#99;&#116;&#64;&#x69;&#110;&#x66;&#x69;&#110;&#105;&#116;&#x2e;&#x6f;&#x6e;&#101;</a>" imported
+gpg: key 6821EB43: public key "Infinit <a href="&#x6d;&#x61;&#105;&#x6c;&#x74;&#111;&#58;&#99;&#x6f;&#110;&#116;&#x61;&#x63;&#116;&#64;&#x69;&#x6e;&#102;&#x69;&#x6e;&#x69;&#116;&#x2e;&#x6f;&#110;&#x65;">&#99;&#x6f;&#110;&#116;&#x61;&#x63;&#116;&#64;&#x69;&#x6e;&#102;&#x69;&#x6e;&#x69;&#116;&#x2e;&#x6f;&#110;&#x65;</a>" imported
 gpg: Total number processed: 1
 gpg:               imported: 1  (RSA: 1)
 </code></pre>
@@ -181,7 +181,7 @@ Remotely pushed volume "bob/my-volume".
 <p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint mnt/ --async --cache --publish
+<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
 Fetched endpoints for "bob/my-network".
 Running network "bob/my-network".
 Remotely pushed endpoints for "bob/my-network".
@@ -189,11 +189,11 @@ Running volume "bob/my-volume".
 </code></pre>
 
 <p><em><strong>NOTE</strong>: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
-<p>That’s it! You can now create, list and access files from the mount point <code>mnt/</code>. Try creating a file right now:</p>
+<p>That’s it! You can now create, list and access files from the mount point <code>~/mnt-my-volume</code>. Try creating a file right now:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> echo "everything is" > mnt/awesome.txt
-$> cat mnt/awesome.txt
+<code>$> echo "everything is" > ~/mnt-my-volume/awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
 everything is
 </code></pre>
 
@@ -237,7 +237,7 @@ Linked device to network "bob/my-network".
 <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-volume --mount --mountpoint mnt/ --as bob --name my-volume --async --cache --publish
+<code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume/ --as bob --name my-volume --async --cache --publish
 Fetch endpoints for "bob/my-network".
 Running network “bob/my-network”.
 Running volume "bob/my-volume".
@@ -246,9 +246,9 @@ Running volume "bob/my-volume".
 <p>It is now time to check if the file you created on device A is synchronized with device B:</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> ls mnt/
+<code>$> ls ~/mnt-my-volume/
 awesome.txt
-$> cat mnt/awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
 everything is
 </code></pre>
 

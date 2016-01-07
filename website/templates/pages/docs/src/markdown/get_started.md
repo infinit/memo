@@ -236,7 +236,7 @@ Let’s access this volume by mounting it as easily as any other filesystem:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint mnt/ --async --cache --publish
+<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
 Fetched endpoints for "bob/my-network".
 Running network "bob/my-network".
 Remotely pushed endpoints for "bob/my-network".
@@ -245,12 +245,12 @@ Running volume "bob/my-volume".
 
 _**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait until the end of the guide to stop this process though._
 
-That’s it! You can now create, list and access files from the mount point `mnt/`. Try creating a file right now:
+That’s it! You can now create, list and access files from the mount point `~/mnt-my-volume`. Try creating a file right now:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> echo "everything is" > mnt/awesome.txt
-$> cat mnt/awesome.txt
+<code>$> echo "everything is" > ~/mnt-my-volume/awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
 everything is
 </code></pre>
 
@@ -303,7 +303,7 @@ Finally, the volume can be mounted on device B as simply as on device A:
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-volume --mount --mountpoint mnt/ --as bob --name my-volume --async --cache --publish
+<code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume/ --as bob --name my-volume --async --cache --publish
 Fetch endpoints for "bob/my-network".
 Running network “bob/my-network”.
 Running volume "bob/my-volume".
@@ -313,9 +313,9 @@ It is now time to check if the file you created on device A is synchronized with
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> ls mnt/
+<code>$> ls ~/mnt-my-volume/
 awesome.txt
-$> cat mnt/awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
 everything is
 </code></pre>
 
