@@ -46,11 +46,11 @@
 <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href='#linux-tarball-install'>Tarball Install</a>.</p>
 
 <h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
-<p>First import the public key used by the pacakge management system:</p>
+<p>First import the public key used by the package management system:</p>
 <pre><code>$&gt; sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
 Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
 gpg: requesting key 3D2C3B0B from hkp server keyserver.ubuntu.com
-gpg: key 6821EB43: public key "Infinit <a href="&#109;&#97;&#105;&#x6c;&#x74;&#x6f;&#58;&#x63;&#111;&#x6e;&#116;&#x61;&#99;&#116;&#x40;&#x69;&#x6e;&#102;&#105;&#110;&#x69;&#116;&#46;&#x6f;&#110;&#x65;">&#x63;&#111;&#x6e;&#116;&#x61;&#99;&#116;&#x40;&#x69;&#x6e;&#102;&#105;&#110;&#x69;&#116;&#46;&#x6f;&#110;&#x65;</a>" imported
+gpg: key 6821EB43: public key "Infinit <a href="&#109;&#x61;&#x69;&#108;&#x74;&#x6f;&#x3a;&#99;&#111;&#110;&#x74;&#x61;&#x63;&#x74;&#64;&#x69;&#110;&#102;&#x69;&#x6e;&#x69;&#116;&#x2e;&#111;&#110;&#x65;">&#99;&#111;&#110;&#x74;&#x61;&#x63;&#x74;&#64;&#x69;&#110;&#102;&#x69;&#x6e;&#x69;&#116;&#x2e;&#111;&#110;&#x65;</a>" imported
 gpg: Total number processed: 1
 gpg:               imported: 1  (RSA: 1)
 </code></pre>
@@ -97,31 +97,55 @@ Setting up infinit (${tarball_version}) ...
 
 <p><br></p>
 <p>Next, open your terminal and extract the Infinit tarball:</p>
-<pre><code>
+<div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
-$&gt; tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
+
+<pre><code>$&gt; tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
+Infinit-x86_64-osx-clang3-${tarball_version}/
+Infinit-x86_64-osx-clang3-${tarball_version}/bin/
+Infinit-x86_64-osx-clang3-${tarball_version}/lib
+...
+Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-storage
+Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-user
+Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-volume
+...
+</code></pre>
+
 % else:
-$&gt; tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+
+<pre><code>$&gt; tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
+Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
+...
+Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-storage
+Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-user
+Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-volume
+...
+</code></pre>
+
 % endif
-Infinit-${tarball_version}/
-Infinit-${tarball_version}/bin/
-Infinit-${tarball_version}/lib
-...
-Infinit-${tarball_version}/bin/infinit-storage
-Infinit-${tarball_version}/bin/infinit-user
-Infinit-${tarball_version}/bin/infinit-volume
-...
-</code></pre><p>All the configuration files that the Infinit command-line tools create and use are located in the <code>$INFINIT_DATA_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>, following the <a href="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">XDG Base Directory Specification</a>. You can edit your shell configuration to set <code>INFINIT_DATA_HOME</code> to another location if you would like.</p>
+</div>
+
+<p>All the configuration files that the Infinit command-line tools create and use are located in the <code>$INFINIT_DATA_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>, following the <a href="http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html">XDG Base Directory Specification</a>. You can edit your shell configuration to set <code>INFINIT_DATA_HOME</code> to another location if you would like.</p>
 <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
 <ul>
 <li>The <code>bin/</code> subdirectory contains the actual Infinit binaries such as <em>infinit-user</em>, <em>infinit-network</em>, etc.</li>
 <li>The <code>lib/</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
 <li>The <code>share/infinit/filesystem/test/</code> subdirectory is provided for you to quickly test the command-line tools, see below.</li>
 </ul>
-<pre><code>$&gt; cd Infinit-${tarball_version}/
+<div>
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<pre><code>$&gt; cd Infinit-x86_64-osx-clang3-${tarball_version}/
+% else:
+<pre><code>$&gt; cd Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+% endif
 $&gt; ls
 bin/    lib/    share/
-</code></pre><h2 id="2-basic-test">2. Basic Test</h2>
+</code></pre>
+</div>
+
+<h2 id="2-basic-test">2. Basic Test</h2>
 <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
 <p>Run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test.</p>
 <pre><code>$&gt; INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
