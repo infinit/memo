@@ -206,13 +206,15 @@ namespace infinit
       }
 
       void
-      Local::_require_auth(RPCServer& rpcs)
+      Local::_require_auth(RPCServer& rpcs, bool write_op)
       {
         static bool disable = getenv("INFINIT_RPC_DISABLE_CRYPTO");
         if (disable)
           return;
         if (!rpcs._key)
           throw elle::Error("Authentication required");
+        if (write_op && !this->_passports.at(&rpcs).allow_write())
+          throw elle::Error("Write permission denied.");
       }
 
       void
@@ -226,7 +228,7 @@ namespace infinit
                  std::function<void (blocks::Block const& data, StoreMode)>(
                    [this,&rpcs] (blocks::Block const& block, StoreMode mode)
                    {
-                     this->_require_auth(rpcs);
+                     this->_require_auth(rpcs, true);
                      return this->store(block, mode);
                    }));
         rpcs.add("fetch",
@@ -235,7 +237,7 @@ namespace infinit
                                                    boost::optional<int>)>(
                   [this, &rpcs] (Address address, boost::optional<int> local_version)
                   {
-                    this->_require_auth(rpcs);
+                    this->_require_auth(rpcs, false);
                     return this->fetch(address, local_version);
                   }));
         if (this->_doughnut.version() >= elle::Version(0, 4, 0))
@@ -243,7 +245,7 @@ namespace infinit
                   std::function<void (Address address, blocks::RemoveSignature)>(
                     [this, &rpcs] (Address address, blocks::RemoveSignature rs)
                     {
-                      this->_require_auth(rpcs);
+                      this->_require_auth(rpcs, true);
                       this->remove(address, rs);
                     }));
         else
@@ -251,7 +253,7 @@ namespace infinit
                   std::function<void (Address address)>(
                   [this, &rpcs] (Address address)
                     {
-                      this->_require_auth(rpcs);
+                      this->_require_auth(rpcs, true);
                       this->remove(address, {});
                     }));
         rpcs.add("ping",

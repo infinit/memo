@@ -333,7 +333,7 @@ namespace infinit
               [this, &rpcs](PaxosServer::Quorum q, Address a,
                             Paxos::PaxosClient::Proposal const& p)
               {
-                this->_require_auth(rpcs);
+                this->_require_auth(rpcs, true);
                 return this->propose(std::move(q), a, p);
               }
           ));
@@ -348,7 +348,7 @@ namespace infinit
                            Paxos::PaxosClient::Proposal const& p,
                            std::shared_ptr<blocks::Block> const& value)
               {
-                this->_require_auth(rpcs);
+                this->_require_auth(rpcs, true);
                 return this->accept(std::move(q), a, p, value);
               }
             ));

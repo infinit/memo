@@ -104,7 +104,7 @@ namespace infinit
         void
         _serve_utp();
         void
-        _require_auth(RPCServer& rpcs);
+        _require_auth(RPCServer& rpcs, bool write_op);
         std::unordered_map<RPCServer*, Passport> _passports;
       /*----------.
       | Printable |
