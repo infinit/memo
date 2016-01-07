@@ -94,7 +94,7 @@ COMMAND(fetch)
         {
           fetch_avatar(name);
         }
-        catch (MissingResource)
+        catch (elle::Error const&)
         {
         }
       }
