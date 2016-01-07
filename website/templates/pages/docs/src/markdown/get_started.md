@@ -35,7 +35,12 @@ _**NOTE**: Infinit requires a version of OSXFUSE that is newer than available on
 
 % else:
 
-<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get` :</p>
+<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get`:</p>
+
+<br>
+
+<pre><code>$> sudo apt-get install fuse
+</code></pre>
 
 % endif
 </div>
