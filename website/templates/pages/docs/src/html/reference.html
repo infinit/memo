@@ -3,39 +3,43 @@
 <h2 id="introduction">Introduction</h2>
 <h3 id="terminology">Terminology</h3>
 <p>The Infinit command-line tools are composed of several binaries, each dealing with a specific resource/object.</p>
-<p>A <em>user</em> represents the entity performing operations on files, directly or indirectly. Every user possesses a RSA key pair that is used to identify him/her. A user can create a <em>network</em> which represents the interconnection of computing §s that will compose the storage infrastructure. A <em>storage</em> is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several <em>volume</em>s --- i.e. logical drives ---  can be created within a network.</p>
-<p>The <em>hub</em> is a cloud service whose role is to ease the process of discovery, sharing and more.</p>
+<p>A <em>user</em> represents the entity performing operations on files, directly or indirectly. Every user possesses an RSA key pair that is used to identify him/her. A user can create a <em>network</em> which represents the interconnection of computing resources that will compose the storage infrastructure. A <em>storage</em> is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several <em>volumes</em> --- i.e. logical drives ---  can be created within a network.</p>
+<p>The <em>Hub</em> is a cloud service whose role is to ease the process of discovery, sharing and more.</p>
 <h3 id="home">Home</h3>
 <p>All the configuration files Infinit creates and uses are located in the <code>$INFINIT_DATA_HOME</code> directory which, by default, is set to <code>$HOME/.local/share/infinit/filesystem/</code>.</p>
 <p>One can very easily set the environment variable to point to the directory of his/her choice, either by modifying the shell configuration or by setting it manually:</p>
 <pre><code>$&gt; export INFINIT_DATA_HOME="/some/where/"
 </code></pre><h3 id="nomenclature">Nomenclature</h3>
-<p>All the command-line tools rely on the same terminology when it comes to options and arguments. As an example, most binaries have options named <code>&#8209;&#8209;create</code>, <code>&#8209;&#8209;list</code>, <code>&#8209;&#8209;fetch</code> etc.</p>
-<p>For more information on the options provided by a binary, do not hesitate to rely on the <code>&#8209;&#8209;help</code> option. Noteworthy is that the help is relative to the options already provided.</p>
-<p>As an example, the help for <em>infinit-user</em> displays the general options available: export, create, import, list etc.:</p>
-<pre><code>$&gt; Usage: infinit-user MODE [OPTIONS...]
+<p>All the command-line tools rely on the same terminology when it comes to options and arguments. As an example, most binaries have options named <code>&#8209;&#8209;create</code>, <code>&#8209;&#8209;list</code>, <code>&#8209;&#8209;fetch</code>, etc.</p>
+<p>For more information on the options provided by a binary, do not hesitate to rely on the <code>&#8209;&#8209;help</code> option. Note that the help is relative to the options already provided.</p>
+<p>For example, the help for <em>infinit-user</em> displays the general options available: export, create, import, list, etc.:</p>
+<pre><code>$&gt; infinit-user --help
+Usage: infinit-user MODE [OPTIONS...]
 
 Infinit user utility:
 
 Modes:
-  --create               Create a user
-  --export               Export a user so that it may be imported elsewhere
-  --fetch                Fetch a user from the Hub
-  --import               Import a user
-  --pull                 Remove a user from the Hub
-  --delete               Delete a user locally
-  --push                 Push a user to the Hub
-  --signup               Create and register a user
-  --login                Log the user to the Hub
-  --list                 List users
+  --create                    Create a user
+  --export                    Export a user so that it may be imported
+                              elsewhere
+  --fetch                     Fetch a user from the Hub
+  --import                    Import a user
+  --pull                      Remove a user from the Hub
+  --delete                    Delete a user locally
+  --push                      Push a user to the Hub
+  --signup                    Create and push a user to the Hub
+  --login                     Log the user to the Hub
+  --list                      List users
 
 Miscellaneous:
-  -h [ --help ]          display the help
-  -s [ --script ]        silence all extraneous human friendly messages
-  -v [ --version ]       display version
-  -a [ --as ]            user to run commands as (default: system user)
-</code></pre><p>However, the help when invoking the <code>&#8209;&#8209;create</code> option gives a completely different output:</p>
-<pre><code>$&gt; Usage: infinit-user --create [OPTIONS...]
+  -h [ --help ]               display the help
+  -s [ --script ]             silence all extraneous human friendly messages
+  -f [ --force-version ] arg  force used version
+  -v [ --version ]            display version
+  -a [ --as ] arg             user to run commands as (default: system user)
+</code></pre><p>While the help when invoking the <code>&#8209;&#8209;create</code> shows the options associated with creating a user:</p>
+<pre><code>$&gt; infinit-user --create --help
+Usage: infinit-user --create [OPTIONS...]
 
 Create a user:
 
@@ -46,28 +50,27 @@ Create options:
   --push-user            push the user to the Hub
   -p [ --push ]          alias for --push-user
   --email arg            valid email address (mandatory when using --push-user)
-  --fullname arg         user fullname (optional)
+  --fullname arg         user&#39;s fullname (optional)
   --full                 include private key in order to facilitate device
-                         pairing and fetching lost keys.
-  --password arg  password to authenticate with the Hub. Used with
+                         pairing and fetching lost keys
+  --password arg         password to authenticate with the Hub. Used with
                          --full (default: prompt for password)
-</code></pre><p>Every binary follows the same semantic with the first option representing the mode of operation (a verb): <code>&#8209;&#8209;create</code>, <code>&#8209;&#8209;pull</code>, <code>&#8209;&#8209;list</code>, <code>&#8209;&#8209;delete</code>, <code>&#8209;&#8209;export</code> etc.</p>
-<p>The name/identifier of the object on which you which to operate can be specified through the <code>&#8209;&#8209;name</code> option or simply by providing it outside of any option. As such both lines below are equivalent:</p>
+</code></pre><p>Every binary follows the same semantic with the first option representing the mode of operation (a verb): <code>&#8209;&#8209;create</code>, <code>&#8209;&#8209;pull</code>, <code>&#8209;&#8209;list</code>, <code>&#8209;&#8209;delete</code>, <code>&#8209;&#8209;export</code>, etc.</p>
+<p>The name/identifier of the object on which you wish to operate can be specified through the <code>&#8209;&#8209;name</code> option or simply by providing it outside of any option. As such both commands below are equivalent:</p>
 <pre><code>$&gt; infinit-volume --push --name personal
 $&gt; infinit-volume --push personal
 </code></pre><p>With the exception of the <em>infinit-user</em> binary, one can specify the Infinit user behind the action by relying on the <code>&#8209;&#8209;as</code> option followed by the user name. If not specified, the <code>$INFINIT_USER</code> environment variable is used, unless not set in which case the system user name is used.</p>
-<p>Finally, some command-line tools, in particular <em>infinit-network</em>, and <em>infinit-volume</em> can be "run". As such, they have options such as <code>&#8209;&#8209;start</code>, <code>&#8209;&#8209;stop</code>, <code>&#8209;&#8209;status</code> etc. in order to allow developers to manipulate them in a similar fashion to other UNIX daemons e.g init scripts.</p>
 <h3 id="hub">Hub</h3>
 <p>All objects (users, storages, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the <code>$INFINIT_DATA_HOME</code> directory.</p>
 <p>The command-line tools however provide a way to rely on the Hub for certain operations in order to simplify some administrative tasks such as inviting a user to a drive, sharing the volumes created within a network, moving the user identity to another of your devices and so on. In addition, some functionalities such as the consumption of storage capacity in a network are only available through the Hub. As a rule of thumb, we advise you to always rely on the Hub, unless you know exactly what you are doing.</p>
-<p>The use of the Hub can be activated through specific options, mostly <code>&#8209;&#8209;push</code>, <code>&#8209;&#8209;fetch</code> and <code>&#8209;&#8209;pull</code>. The <code>&#8209;&#8209;push</code> option publishes an object on the Hub for other users to retrieve it. The <code>&#8209;&#8209;pull</code> option does the exact opposite, removing the object from the Hub. Finally, the <code>&#8209;&#8209;fetch</code> option retrieves a resource from the Hub, e.g a network descriptor, and stores it locally in the <code>$INFINIT_DATA_HOME</code> directory.</p>
+<p>The use of the Hub can be activated through specific options, mostly <code>&#8209;&#8209;push</code>, <code>&#8209;&#8209;fetch</code> and <code>&#8209;&#8209;pull</code>. The <code>&#8209;&#8209;push</code> option publishes an object on the Hub for other users to retrieve it. The <code>&#8209;&#8209;pull</code> option does the exact opposite, removing the object from the Hub. Finally, the <code>&#8209;&#8209;fetch</code> option retrieves a resource from the Hub, e.g. a network descriptor, and stores it locally in the <code>$INFINIT_DATA_HOME</code> directory.</p>
 <p>One can decide to either create objects locally before pushing them to the Hub or to perform both tasks through a single action by specifying <code>&#8209;&#8209;push</code> option when invoking the command.</p>
 <p>Note that some binaries operate in hub mode by default. For instance the <em>infinit-drive</em> binary would not make sense without the Hub since its role is to bridge the gap between a low-level storage infrastructure and potential non-tech-savvy users.</p>
-<p><strong>IMPORTANT</strong>: This document covers mainly flows involving the Hub. For users wanting to use Infinit in a pure decentralized environment, just know that <code>&#8209;&#8209;push</code>/<code>&#8209;&#8209;fetch</code> operations must be replaced by <code>&#8209;&#8209;export</code>/<code>&#8209;&#8209;import</code> operations while the files must be manually shared with other users and moved between devices. Also, you will sometimes need to provide additional information such as the IP address of bootstrap nodes in order to discover the other nodes of a network.</p>
+<p><strong>IMPORTANT</strong>: This document mainly covers flows involving the Hub. For users wanting to use Infinit in a pure decentralized environment, the <code>&#8209;&#8209;push</code>/<code>&#8209;&#8209;fetch</code> operations must be replaced with <code>&#8209;&#8209;export</code>/<code>&#8209;&#8209;import</code> operations and the resulting files must be manually shared with other users and moved between devices. You will sometimes need to provide additional information such as the IP address of bootstrap nodes in order to discover the other nodes of a network.</p>
 <h2 id="user">User</h2>
-<p>The <em>infinit-user</em> binary allows one to create a user identity, publish it on the Hub to be referenced by other users and so on and so forth.</p>
+<p>The <em>infinit-user</em> binary allows one to create a user identity, publish it to the Hub so that it can be referenced by other users and perform other user based operations.</p>
 <h3 id="create-a-user">Create a user</h3>
-<p>A user is not much more than a RSA key pair that will be used to sign and encrypt data. The following creates a user, automatically generating a new RSA key pair.</p>
+<p>A user is not much more than an RSA key pair that will be used to sign and encrypt data. The following creates a user, automatically generating a new RSA key pair.</p>
 <p>Note that the name of the user is deduced from the system if you do not specify a name through the <code>&#8209;&#8209;name</code> option or the <code>$INFINIT_USER</code> environment variable.</p>
 <pre><code>$&gt; echo $USER
 alice
@@ -76,17 +79,17 @@ Generating RSA keypair.
 Locally generated user "alice".
 </code></pre><p>You may want to specify the RSA key pair to use rather than generating a new one. You can use the <code>&#8209;&#8209;key</code> option to reference a PEM-formatted RSA private key (e.g your SSH RSA key) and Infinit will create a user identity based on it.</p>
 <pre><code>$&gt; infinit-user --create --name alice --key ~/.ssh/id_rsa
-Passphrase: ********
+Key passphrase: ********
 Locally generated user "alice".
-</code></pre><p><em><strong>WARNING</strong>: Keep in mind that your Infinit user identity must never fall into someone else’s hands. The user identity file is the equivalent of an SSH key file and must therefore be kept private at all times.</em></p>
+</code></pre><p><em><strong>WARNING</strong>: The user identity file is the equivalent of an SSH key file and must therefore be kept private at all times.</em></p>
 <h3 id="sign-up-on-the-hub">Sign up on the Hub</h3>
 <p>To register on the Hub, you can either use the <code>&#8209;&#8209;push</code> option when creating your user, push the user once it has been created locally or sign up directly on the Hub.</p>
-<p>To push an existing user, simply invoke the <em>infinit-user</em> with the <code>&#8209;&#8209;push</code> mode and <code>&#8209;&#8209;email</code> option to specify a valid email address. Needless to say that this email address will <em>never</em> be shared with third parties and will solely be used for Infinit to communicate news of its file storage platform.</p>
+<p>To push an existing user, simply invoke <em>infinit-user</em> with the <code>&#8209;&#8209;push</code> mode and <code>&#8209;&#8209;email</code> option to specify a valid email address. Needless to say that this email address will <em>never</em> be shared with third parties and will solely be used for Infinit to communicate news of its file storage platform.</p>
 <p><strong>IMPORTANT</strong>: Given the critical nature of the user identity, we strongly advise you to read the <a href="#log-in-on-another-device">Log in on another device</a> section in order to completely understand the ramifications of the options used when pushing your user.</p>
 <pre><code>$&gt; infinit-user --push --name alice --fullname "Alice" --email alice@company.com
 Remotely pushed user "alice".
 </code></pre><p>Unfortunately, since names are unique, your user name may already be taken on the Hub, in which case the operation will fail. The action <code>&#8209;&#8209;signup</code> has been introduced to overcome this problem, performing the equivalent of <code>&#8209;&#8209;create --push</code> atomically, making sure that the user is created locally and remotely at once.</p>
-<p>We advise users to sign up to the Hub very early on in order to avoid future complications:</p>
+<p>We advise users to sign up to the Hub before performing other operations to avoid complications:</p>
 <pre><code>$&gt; infinit-user --signup --name alice --fullname "Alice" --email alice@company.com
 Generating RSA keypair.
 Remotely pushed user "alice".
@@ -95,50 +98,42 @@ Remotely pushed user "alice".
 <pre><code>$&gt; infinit-user --fetch --name bob
 Fetched user "bob".
 </code></pre><h3 id="list-users">List users</h3>
-<p>The list of users kept locally can contain both user identities that you created and therefore own but also public identities of users that you fetched from the Hub for instance.</p>
+<p>The list of users kept locally can contain both user identities that you created and therefore own as well as public identities of users that you fetched from the Hub for instance.</p>
 <pre><code>$&gt; infinit-user --list
 alice: public/private keys
 bob: public key only
 </code></pre><h2 id="credentials">Credentials</h2>
-<p>The <em>infinit-credentials</em> binary manages the credentials to your cloud services. Indeed, cloud services can be added to be later plugged to a network as storage resources.</p>
-<p>The cloud services can be of very different nature, being storage service at the block level such as the AWS S3 object store service, at the file level such as Dropbox or Google Drive, even services that store data item of a specific nature such as images with Flickr. Basically anything that allows writing, editing, finding and deleting a piece of information.</p>
-<p>Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.</p>
-<p><em><strong>NOTE</strong>: Because this binary exclusively works with the Hub, you must have registered your user to the Infinit hub to be able to manage your credentials. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>.</em></p>
+<p>The <em>infinit-credentials</em> binary manages the credentials for your cloud services. Cloud services, such as Amazon S3 and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.</p>
+<p><em><strong>NOTE</strong>: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>.</em></p>
 <h3 id="add-credentials">Add credentials</h3>
-<p>To add a cloud service such as Dropbox, just use the <code>&#8209;&#8209;add</code> action option. Note however that depending on the cloud service to add, the options may vary along with the authentication process. Please refer to the help for more information.</p>
-<pre><code>$&gt; infinit-credentials --add --as alice --dropbox
-Register your Dropbox account with Infinit by visiting https://…
-$&gt;
-</code></pre><p>Just follow the instructions by visiting the URL provided in order to authenticate yourself and authorize Infinit to access your account. At this point, you should be automatically redirected to the infinit.sh website.</p>
-<p><em><strong>NOTE</strong>: Do not worry, Infinit will never alter the existing data items stored in your cloud services; it will only create blocks of encrypted data in a subfolder specific to Infinit.</em></p>
-<p>Once a cloud service added to your account, you can fetch the new credentials on your device through the <code>&#8209;&#8209;fetch</code> option:</p>
-<pre><code>$&gt; infinit-credentials --fetch --as alice
-Fetched Dropbox credentials 51218344 (Alice)
-Fetched AWS S3 credentials alice@company.com (Alice)
-</code></pre><h3 id="list-credentials">List credentials</h3>
-<p>At any point, you can list your local credentials through the <code>&#8209;&#8209;list</code> option.</p>
-<p>Note that this list may be outdated, in which case you may want to update it by fetching the most recent credentials from the Hub:</p>
-<pre><code>$&gt; infinit-credentials --fetch --as alice
-$&gt; infinit-credentials --list
-Dropbox:
-  51218344 (Alice)
-AWS S3:
-  alice@company.com (Alice)
+<p>To add AWS credentials so that an Amazon S3 bucket can be used to store data, simply use the <code>&#8209;&#8209;add</code> option specifying <code>aws</code>. Note that an Access Key ID and Secrect Access Key are used, not the user name and password:</p>
+<pre><code>$&gt; infinit-credentials --add --aws --account s3-user
+Please enter your AWS credentials
+Access Key ID: AKIAIOSFODNN7EXAMPLE
+Secret Access Key: ****************************************
+Locally stored AWS credentials "s3-user".
+</code></pre><p><em><strong>IMPORTANT</strong>: AWS credentials are only ever stored locally and cannot be pushed to the Hub. Never use the AWS root user. Always create a specific user, giving them the minimum required permissions.</em></p>
+<h3 id="list-credentials">List credentials</h3>
+<p>At any point, you can list your local credentials using the <code>&#8209;&#8209;list</code> option:</p>
+<pre><code>$&gt; infinit-credentials --list
+AWS:
+  AKIAIOSFODNN7EXAMPLE: s3-user
 </code></pre><h2 id="storage">Storage</h2>
-<p>The <em>infinit-storage</em> binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on the local file system, on a partition or in a database — or remote in which case the blocks of data are stored through a cloud service API.</p>
-<p>Noteworthy is the storage resources are device-specific. As such, such resources cannot be pushed to the Hub since they only live locally.</p>
+<p>The <em>infinit-storage</em> binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API.</p>
+<p>Note that storage resources are device-specific. As such, resources cannot be pushed to the Hub since they only live locally.</p>
 <h3 id="create-a-storage-resource">Create a storage resource</h3>
 <h4 id="locally">Locally</h4>
-<p>To create a storage resource on top of a local file system, simply specify the <code>&#8209;&#8209;filesystem</code> option. Note that you can also specify, through the <code>&#8209;&#8209;path</code> option, where the encrypted data blocks will be stored.</p>
+<p>To create a storage resource on top of a local file system, simply specify the <code>&#8209;&#8209;filesystem</code> option. You specify the path where the encrypted data blocks are stored using the <code>&#8209;&#8209;path</code> option:</p>
 <pre><code>$&gt; infinit-storage --create --filesystem --capacity 2GB --name local
 Created storage "local".
 </code></pre><h4 id="remotely">Remotely</h4>
-<p>You can create a storage on top of a cloud service API. Obviously, you will need to add this cloud service through the <em>infinit-credentials</em> first, as shown in the <a href="#add-credentials">Add credentials</a> section.</p>
-<p>All you need to do then is specify the type of cloud service you want your storage to rely upon along with the cloud service account identifier. Cloud service identifiers can be retrieved when <a href="#list-credentials">listing your credentials</a>.</p>
-<p>The following creates a storage resource on top of Dropbox, specifying the account identifier and a name for the storage:</p>
-<pre><code>$&gt; infinit-storage --create --dropbox --account 51218344 --name dropbox
-Created storage "dropbox".
-</code></pre><p>Note that the list of supported cloud services can be retrieved through the <code>&#8209;&#8209;create --help</code> options. In the future, more of those will be supported, from <a href="https://aws.amazon.com/s3">AWS S3</a>, <a href="https://cloud.google.com/storage">Google Cloud Storage</a>, <a href="https://www.backblaze.com/b2">Backblaze B2</a> and many more.</p>
+<p>You can create a storage on top of a cloud service API. In order to do this, you will first need to add the cloud service&#39;s credentials using <em>infinit-credentials</em>, as shown in the <a href="#add-credentials">Add credentials</a> section.</p>
+<p>You can then specify the type of cloud service you want your storage to rely upon along with the cloud service account identifier. Cloud service identifiers can be retrieved when <a href="#list-credentials">listing your credentials</a>.</p>
+<p>In order to use Amazon S3, you must first have created an AWS user and an S3 bucket. Ensure that the user has permissions to read and write in the bucket.</p>
+<p>The following creates a storage resource which uses a folder of an Amazon S3 bucket, specifying a name for the storage, the AWS account identifier, the region the bucket is in, the bucket&#39;s name and the folder to store the blocks in:</p>
+<pre><code>$&gt; infinit-storage --create --s3 --name s3 --aws-account s3-user --region eu-central-1 --bucket my-s3-bucket --bucket-folder blocks-folder
+Created storage "s3".
+</code></pre><p>The list of supported cloud services is continually evolving and can be seen by using <code>&#8209;&#8209;create --help</code>. Enterprise storage solutions such as <a href="https://cloud.google.com/storage">Google Cloud Storage</a> and <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported.</p>
 <h2 id="network">Network</h2>
 <p>Through the <em>infinit-network</em> you are going to be able to create overlay networks, configure the the way the distributed hash table behaves and much more.</p>
 <h3 id="create-a-network">Create a network</h3>
