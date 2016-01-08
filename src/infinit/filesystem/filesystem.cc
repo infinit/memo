@@ -96,6 +96,7 @@ namespace infinit
                              std::unique_ptr<model::ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store or die: %s", *this, *block);
+      auto address = block->address();
       try
       {
         this->_block_store->store(std::move(block), mode, std::move(resolver));
@@ -114,7 +115,7 @@ namespace infinit
       catch(elle::Error const& e)
       {
         ELLE_WARN("unexpected exception storing %x: %s",
-                  block->address(), e);
+                  address, e);
         throw rfs::Error(EIO, e.what());
       }
     }
