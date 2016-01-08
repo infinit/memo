@@ -264,7 +264,7 @@ everything is
 <p>In order to grant or revoke access to a file or directory, one simply has to rely on the <em>infinit-acl</em> binary, providing the path to the object to manage and the permissions to apply.</p>
 <p>The following grants Bob the permissions to read and write the root directory of Alice’s volume named ‘shared’.</p>
 <pre><code>$&gt; infinit-acl --set --path /mnt/shared/ --mode rw --user bob
-</code></pre><p>_<strong>NOTE:</strong> The <em>infinit-acl</em> binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._</p>
+</code></pre><p><em><strong>NOTE:</strong> The infinit-acl binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more.</em></p>
 <p>From that point, Bob will be able to access the volume to read and write files/directories in the root directory of Alice&#39;s &#39;shared&#39; volume.</p>
 <h3 id="acl-inheritance">ACL inheritance</h3>
 <p>ACL inheritance is a mechanism that sets ACL of newly created files and directories to the ACL of their parent directory.</p>

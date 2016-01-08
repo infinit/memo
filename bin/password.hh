@@ -45,11 +45,12 @@ read_passphrase(std::string const& prompt_text = "Passphrase")
 static
 std::string
 _password(variables_map const& args,
-          std::string const& argument)
+          std::string const& argument,
+          std::string const& prompt_text = "Password")
 {
   auto password = optional(args, argument);
   if (!password)
-    password = read_passphrase("Password");
+    password = read_passphrase(prompt_text);
   ELLE_ASSERT(password);
   return password.get();
 };

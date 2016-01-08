@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+
+import unittest
+
+from utils import *
+
+class FakeGCS:
+
+  def __init__(self):
+    self.__icons = {}
+
+  def upload(self, bucket, path, *args, **kwargs):
+    self.__icons[path] = 'url'
+
+  def delete(self, bucket, path):
+    if path in self.__icons:
+      del self.__icons[path]
+
+  def download_url(self, bucket, path, *args, **kwargs):
+    return self.__icons.get(path,  '')
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_route(self):
+      setattr(beyond.app, '_Bottle__gcs', FakeGCS())
+      user = User()
+      res = beyond.get('users/%s/avatar' % user['name'])
+      assertEq(res.status_code, 303)
+
+  if __name__ == '__main__':
+    unittest.main()

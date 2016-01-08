@@ -3,15 +3,16 @@
 <%block name="content">
 
   <section class="doc">
-    <h1>Pricing</h1>
+    <h1>Plans</h1>
 
     <div class="plan">
       <h2>
         <img src="${url('images/icons/startup.png')}" alt="Startup">
         Startup
       </h2>
-      <p>Up to <strong>20</strong> users</p>
-      <p><strong>1</strong> integration</p>
+      <p class="big">Up to 20 users</p>
+      <p class="big">1 integration</p>
+      <hr>
       <p>Public, private or hybrid infrastructure</p>
       <p>Unlimited volumes</p>
       <p>
@@ -19,17 +20,19 @@
         <span>(in-transit and at-rest)</span>
       </p>
       <p>Read/write access control</p>
-      <p>Unlimited storage capacity *</p>
+      <p>Unlimited storage capacity*</p>
       <p>Unlimited number of devices per user</p>
       <p>Unlimited file size</p>
       <p>
-        Free desktop apps
+        Free desktop apps<br>
         <span>(Windows, Mac, Linux)</span>
       </p>
       <p>
-        Free mobile apps #
+        Free mobile apps <span class="badge">soon</span><br>
         <span>(iOS, Android)</span>
       </p>
+      <p class="price">$7/month</p>
+      <p><a href="#" class="button">Buy Startup</a></p>
     </div>
 
     <div class="plan">
@@ -37,30 +40,16 @@
         <img src="${url('images/icons/business.png')}" alt="Business">
         Business
       </h2>
-      <p>Up to <strong>100</strong> users</p>
-      <p><strong>3</strong> integrations</p>
-      <p>Public, private or hybrid infrastructure</p>
-      <p>Unlimited volumes</p>
-      <p>
-        Bank-level encryption
-        <span>(in-transit and at-rest)</span>
-      </p>
-      <p>Read/write access control</p>
-      <p>Unlimited storage capacity *</p>
-      <p>Unlimited number of devices per user</p>
-      <p>Unlimited file size</p>
-      <p>
-        Free desktop apps
-        <span>(Windows, Mac, Linux)</span>
-      </p>
-      <p>
-        Free mobile apps #
-        <span>(iOS, Android)</span>
-      </p>
-      <p>Default access permissions</p>
-      <p>Versioning</p>
-      <p>Groups</p>
-      <p>Premium Support</p>
+      <p class="big">Up to 100 users</p>
+      <p class="big">3 integrations</p>
+      <hr>
+      <p><strong>Everything from Startup</strong>
+      <p>+ Default access permissions <span class="badge">soon</span></p>
+      <p>+ Versioning <span class="badge">soon</span></p>
+      <p>+ Groups <span class="badge">soon</span></p>
+      <p>+ Premium Support</p>
+      <p class="price">$10/month</p>
+      <p><a href="#" class="button">Buy Business</a></p>
     </div>
 
     <div class="plan">
@@ -68,45 +57,28 @@
         <img src="${url('images/icons/enterprise.png')}" alt="Enterprise">
         Enterprise
       </h2>
-      <p>Up to <strong>100</strong> users</p>
-      <p><strong>Unlimited</strong> integrations</p>
-      <p>Public, private or hybrid infrastructure</p>
-      <p>Unlimited volumes</p>
-      <p>
-        <strong>Military</strong>-level encryption
-        <span>(in-transit and at-rest)</span>
-      </p>
-      <p>Read/write access control</p>
-      <p>Unlimited storage capacity *</p>
-      <p>Unlimited number of devices per user</p>
-      <p>Unlimited file size</p>
-      <p>
-        Free desktop apps
-        <span>(Windows, Mac, Linux)</span>
-      </p>
-      <p>
-        Free mobile apps #
-        <span>(iOS, Android)</span>
-      </p>
-      <p>Default access permissions</p>
-      <p>Versioning</p>
-      <p>Groups</p>
-      <p>Priority Support</p>
-      <p>Monitoring</p>
-      <p>Analytics</p>
-      <p>On-premise setup</p>
-      <p>LDAP/AD integration</p>
-      <p>Device management</p>
-      <p>Dynamic redundancy control</p>
-      <p>Storage migration</p>
-      <p>NFS/Samba interface</p>
+      <p class="big">Up to 100 users</p>
+      <p class="big">Unlimited integrations</p>
+      <hr>
+      <p><strong>Everything from Business</strong>
+      <p>+ Priority Support</p>
+      <p>+ Monitoring</p>
+      <p>+ Analytics</p>
+      <p>+ On-premise setup</p>
+      <p>+ LDAP/AD integration</p>
+      <p>+ Device management</p>
+      <p>+ Dynamic redundancy control</p>
+      <p>+ Storage migration</p>
+      <p>+ NFS/Samba interface</p>
+      <p class="price">$15/month</p>
+      <p><a href="#" class="button">Buy Enterprise</a></p>
     </div>
 
   </section>
 
 
   <section class="estimation doc">
-    <h2>Estimate and compare</h2>
+    <h2>Estimate and Compare</h2>
     <p class="subtitle">Choose the number of users and the storage capacity you need.</p>
 
     <div class="controls">
@@ -119,16 +91,32 @@
 
     <table>
       <tr>
+        <th></th>
         <th data-service="infinit"><img src="${url('images/logo.png')}" alt="Logo Infinit"></th>
         <th data-service="dropbox" data-max-capacity="1"><img src="${url('images/logos/dropbox-logotype.png')}" alt="Logo Dropbox"></th>
         <th data-service="aerofs"><img src="${url('images/logos/aerofs.png')}" alt="Logo AeroFS"></th>
         <th data-service="egnyte" data-max-capacity="10" data-start-at="8"><img src="${url('images/logos/egnyte.png')}" alt="Logo Egnyte"></th>
       </tr>
       <tr>
-        <td data-service="infinit">No file size limit</td>
-        <td data-service="dropbox">10 GB file size limit</td>
-        <td data-service="aerofs">Unknown file size limit</td>
-        <td data-service="egnyte">10 GB file size limit</td>
+        <td>File Size Limit</td>
+        <td data-service="infinit">Unlimited</td>
+        <td data-service="dropbox">10 GB </td>
+        <td data-service="aerofs">Unknown</td>
+        <td data-service="egnyte">10 GB</td>
+      </tr>
+      <tr>
+        <td>Public Cloud</td>
+        <td data-service="infinit">✔</td>
+        <td data-service="dropbox">✔</td>
+        <td data-service="aerofs">✔</td>
+        <td data-service="egnyte">✔</td>
+      </tr>
+      <tr>
+        <td>Hybrid Cloud</td>
+        <td data-service="infinit">✔</td>
+        <td data-service="dropbox"></td>
+        <td data-service="aerofs"></td>
+        <td data-service="egnyte"></td>
       </tr>
       <tr>
         <td data-service="infinit">Public, private, hybrid cloud &amp; on premise</td>
@@ -137,12 +125,35 @@
         <td data-service="egnyte">Public, private cloud &amp; on premise</td>
       </tr>
       <tr>
-        <td data-service="infinit">In-transit and at-rest encryption</td>
-        <td data-service="dropbox">In-transit encryption</td>
-        <td data-service="aerofs">In-transit and at-rest encryption</td>
-        <td data-service="egnyte">In-transit and at-rest encryption</td>
+        <td>Security In Transit</td>
+        <td data-service="infinit">✔</td>
+        <td data-service="dropbox">✔</td>
+        <td data-service="aerofs">✔</td>
+        <td data-service="egnyte">✔</td>
+      </tr>
+      <tr>
+        <td>Security At Rest</td>
+        <td data-service="infinit">✔</td>
+        <td data-service="dropbox"></td>
+        <td data-service="aerofs">✔</td>
+        <td data-service="egnyte">✔</td>
+      </tr>
+       <tr>
+        <td>Access Control</td>
+        <td data-service="infinit">✔</td>
+        <td data-service="dropbox"></td>
+        <td data-service="aerofs">✔</td>
+        <td data-service="egnyte">✔</td>
+      </tr>
+       <tr>
+        <td>Migration</td>
+        <td data-service="infinit">✔</td>
+        <td data-service="dropbox"></td>
+        <td data-service="aerofs"></td>
+        <td data-service="egnyte"></td>
       </tr>
       <tr class="price">
+        <td></td>
         <td data-service="infinit">
           $<span data-price="9" data-free-until="20" data-price-gb="0.01"></span>/year
         </td>

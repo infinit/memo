@@ -16,7 +16,7 @@ using namespace boost::program_options;
 std::string
 pairing_passphrase(variables_map const& args)
 {
-  return _password(args, "passphrase");
+  return _password(args, "passphrase", "Passphrase");
 }
 
 inline

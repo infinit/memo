@@ -4,7 +4,37 @@
 ## [Unreleased]
 
 
+## [0.3.5] - 2016-01-06
+
+Hotfix release to fix mounting in async mode, plus some stability and
+performance improvement and S3 storage support.
+
+### Added
+
+- Support S3 as storage backend.
+- Enable to force compatibility version with --force-version option.
+
+### Changed
+
+- Set permissions on user configuration files to 066 as some contain
+  private keys.
+
+### Fixed
+
+- Fix critical bug preventing running networks using --async with
+  error message "fatal error: missing serialization context for
+  infinit::model::Model*".
+- Fix reported file size that could sometime be random.
+- Fix extended attribute compatibility mode writing files above the
+  filesystem root.
+- Fix potential segfault on OSX with finder sidebar.
+- Fix fetching network with several storages.
+- Retry forever if storage is full in async mode instead of asserting.
+
+
 ## [0.3.4] - 2015-12-17
+
+Stability and performance release.
 
 ### Added
 - Cache directories preventively to speed up browsing speed.

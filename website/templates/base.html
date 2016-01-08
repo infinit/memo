@@ -28,30 +28,31 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
+    % if 'doc_get_started' in request.route.name:
+      <link rel="canonical" href="https://infinit.sh${route('doc_get_started')}" />
+    % endif
+
     <link rel="icon" type="image/png" href="${url('images/favicon@2x.png')}" />
     <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
   </head>
 
-  <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''}">
+  <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''} ${'doc_get_started' if 'doc_get_started' in request.route.name else ''}">
 
     <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
 
     <header>
       <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"></a>
-      <div class="hiring">beta</div>
 
       <ul>
-        % if request.route.name[:4] == 'doc_' or request.route.name == 'drive':
-          <li>
-            <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
-          </li>
-          <li>
-            <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
-          </li>
-          <li>
-            <a ${'class="active"' if request.route.name == 'drive' else ''} href="${route('drive')}">Drive</a>
-          </li>
-        % endif
+        <li>
+          <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
+        </li>
+        <li>
+          <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
+        </li>
+        <li>
+          <a ${'class="active"' if request.route.name == 'drive' else ''} href="${route('drive')}">Drive</a>
+        </li>
       </ul>
     </header>
 
@@ -100,6 +101,8 @@
             </li>
             <li class="list-product">
               <ul>
+                <li><a href="${route('doc_get_started')}">Get Started</a></li>
+                <li><a href="${route('doc_overview')}">Documentation</a></li>
                 <li><a href="${route('solutions')}">Solutions</a></li>
                 <li><a href="${route('opensource')}">Open Source</a></li>
               </ul>

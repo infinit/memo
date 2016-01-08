@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      user = User()
+      user.put(beyond)
+      network = Network('infinit', owner = user)
+      res = beyond.get('networks/%s' % network['name']).json()
+
+
+  if __name__ == '__main__':
+    unittest.main()

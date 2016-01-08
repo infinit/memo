@@ -2,13 +2,17 @@
 =========
 
 <div>
-% if os() == "Windows" :
+% if os() == "Windows":
 <blockquote class="warning">
 <strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
 </blockquote>
 
+% elif "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
 % else:
-<p><em>The following is written for users of Mac OS X and Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+<p><em>The following is written for users of Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
 % endif
 </div>
 
@@ -22,27 +26,32 @@
 <img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE">
 
 <div>
-% if os() == "Macintosh":
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
 <p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.0.9/osxfuse-3.0.9.dmg" class="button">Download OSXFUSE</a></p>
 
 _**NOTE**: Infinit requires a version of OSXFUSE that is newer than available on https://osxfuse.github.io/._
+
 % else:
+
 <p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get` :</p>
 
-```
-$> sudo apt-get install fuse
-```
 % endif
 </div>
 
 ### Download and install the Infinit command-line tools
 
 <div>
-% if os() != "Macintosh":
-<div>
-<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href=${url('get-started#linux-tarball-install')}>Tarball Install</a>.</p>
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
+" class="button">Download Command Line Tools</a>
+
+% else:
+<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href='#linux-tarball-install'>Tarball Install</a>.</p>
 
 <h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
 <p>First import the public key used by the pacakge management system:</p>
@@ -79,25 +88,18 @@ Unpacking infinit (${tarball_version}) ...
 Setting up infinit (${tarball_version}) ...
 </code></pre>
 <p></p>
-<p>You can now change to the install directory and <a href=${url('get-started#2-basic-test')}>test</a> your install.</p>
+<p>You can now change to the install directory and <a href='#2-basic-test'>test</a> your install.</p>
 <pre><code>$> cd /opt/infinit
 </code></pre>
-</div>
 
 <h3 id="linux-tarball-install">&#9679; Tarball Install</h3>
-<div>
+
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
 <p>Click the link below to download the Infinit command-line tools:</p>
 
 <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
 " class="button">Download Command Line Tools Tarball</a>
-</div>
-% else:
-<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-<p>Click the link below to download the Infinit command-line tools:</p>
 
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-" class="button">Download Command Line Tools</a>
 % endif
 </div>
 
@@ -107,7 +109,7 @@ Next, open your terminal and extract the Infinit tarball:
 
 ```
 
-% if os() == "Macintosh":
+% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 $> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 % else:
 $> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
@@ -149,14 +151,14 @@ $> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volu
 
 _**NOTE**: You can stop this test volume by hitting `CTRL^C` or by interrupting the infinit-volume process._
 
-This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `demo/`.
+This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `~/mnt-demo/`.
 
-Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `demo/` as you would any other POSIX-compliant filesystem.
+Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `~/mnt-demo/` as you would any other POSIX-compliant filesystem.
 
 Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.
 
 ```
-$> ls ~/demo/
+$> ls ~/mnt-demo/
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
 
@@ -234,7 +236,7 @@ Let’s access this volume by mounting it as easily as any other filesystem:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint mnt/ --async --cache --publish
+<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
 Fetched endpoints for "bob/my-network".
 Running network "bob/my-network".
 Remotely pushed endpoints for "bob/my-network".
@@ -243,12 +245,12 @@ Running volume "bob/my-volume".
 
 _**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait until the end of the guide to stop this process though._
 
-That’s it! You can now create, list and access files from the mount point `mnt/`. Try creating a file right now:
+That’s it! You can now create, list and access files from the mount point `~/mnt-my-volume`. Try creating a file right now:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> echo "everything is" > mnt/awesome.txt
-$> cat mnt/awesome.txt
+<code>$> echo "everything is" > ~/mnt-my-volume/awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
 everything is
 </code></pre>
 
@@ -301,7 +303,7 @@ Finally, the volume can be mounted on device B as simply as on device A:
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-volume --mount --mountpoint mnt/ --as bob --name my-volume --async --cache --publish
+<code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume2/ --as bob --name my-volume --async --cache --publish
 Fetch endpoints for "bob/my-network".
 Running network “bob/my-network”.
 Running volume "bob/my-volume".
@@ -311,9 +313,9 @@ It is now time to check if the file you created on device A is synchronized with
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> ls mnt/
+<code>$> ls ~/mnt-my-volume2/
 awesome.txt
-$> cat mnt/awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
 everything is
 </code></pre>
 

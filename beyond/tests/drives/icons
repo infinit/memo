@@ -55,8 +55,9 @@ with Beyond() as beyond:
                      auth = user.private_key,
                      json = None,
                      data = bs.getvalue())
-          res = beyond.get('drives/%s/icon' % drive['name']).json()
-          assert 'url' in res
+          res = beyond.get('drives/%s/icon' % drive['name'])
+          assertEq(res.status_code, 303)
+          assert 'Location' in res.headers
           beyond.delete('drives/%s/icon' % drive['name'],
                         auth = user.private_key)
 

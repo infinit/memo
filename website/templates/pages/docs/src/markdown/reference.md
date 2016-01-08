@@ -506,7 +506,7 @@ The following grants Bob the permissions to read and write the root directory of
 $> infinit-acl --set --path /mnt/shared/ --mode rw --user bob
 ```
 
-_**NOTE:** The _infinit-acl_ binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._
+_**NOTE:** The infinit-acl binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._
 
 From that point, Bob will be able to access the volume to read and write files/directories in the root directory of Alice's 'shared' volume.
 

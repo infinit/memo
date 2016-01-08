@@ -193,15 +193,16 @@ add_path_to_finder_sidebar(std::string const& path)
     if (item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
-      if (CFStringHasPrefix(item_path, path_str))
-      {
-        ELLE_DEBUG("already in sidebar favorites: %s", path);
-        in_list = true;
-      }
       if (item_path)
+      {
+        if (CFStringHasPrefix(item_path, path_str))
+        {
+          ELLE_DEBUG("already in sidebar favorites: %s", path);
+          in_list = true;
+        }
         CFRelease(item_path);
-      if (item_url)
-        CFRelease(item_url);
+      }
+      CFRelease(item_url);
     }
   }
   if (items_array)
@@ -252,15 +253,16 @@ remove_path_from_finder_sidebar(std::string const& path)
     if (item_url)
     {
       CFStringRef item_path = CFURLCopyPath(item_url);
-      if (CFStringHasPrefix(item_path, path_str))
-      {
-        LSSharedFileListItemRemove(favorite_items, item_ref);
-        ELLE_DEBUG("found and removed item from sidebar: %s", path);
-      }
       if (item_path)
+      {
+        if (CFStringHasPrefix(item_path, path_str))
+        {
+          LSSharedFileListItemRemove(favorite_items, item_ref);
+          ELLE_DEBUG("found and removed item from sidebar: %s", path);
+        }
         CFRelease(item_path);
-      if (item_url)
-        CFRelease(item_url);
+      }
+      CFRelease(item_url);
     }
   }
   if (items_array)
