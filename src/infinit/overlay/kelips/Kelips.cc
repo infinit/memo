@@ -3410,7 +3410,7 @@ namespace infinit
 
       Configuration::Configuration()
         : overlay::Configuration()
-        , k(6)
+        , k(1)
         , max_other_contacts(6)
         , query_get_retries(30)
         , query_put_retries(12)
