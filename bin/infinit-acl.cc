@@ -344,6 +344,8 @@ main(int argc, char** argv)
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "recursive,R", bool_switch(), "list recursively" },
         { "verbose", bool_switch(), "verbose output" },
+        { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
+          "if system xattrs are not suppported" },
       },
     },
     {
@@ -360,8 +362,8 @@ main(int argc, char** argv)
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "apply recursively" },
-        { "fallback-xattrs", bool_switch(), "fallback to creating xattrs "
-          "folder if system xattrs are not suppported" },
+        { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
+          "if system xattrs are not suppported" },
         { "verbose", bool_switch(), "verbose output" },
       },
     },
