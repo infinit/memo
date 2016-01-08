@@ -82,8 +82,11 @@ namespace infinit
       public:
         BaseOKB(Doughnut* owner,
                 elle::Buffer data = {},
-                boost::optional<elle::Buffer> salt = {},
-                boost::optional<cryptography::rsa::KeyPair> kp = {});
+                boost::optional<elle::Buffer> salt = {});
+        BaseOKB(Doughnut* owner,
+                elle::Buffer data,
+                boost::optional<elle::Buffer> salt,
+                cryptography::rsa::KeyPair const& owner_keys);
         BaseOKB(BaseOKB const& other, bool sealed_copy = true);
         ELLE_ATTRIBUTE(int, version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
@@ -92,8 +95,8 @@ namespace infinit
       private:
         BaseOKB(OKBHeader header,
                 Doughnut* owner,
-                elle::Buffer data = {},
-                boost::optional<cryptography::rsa::KeyPair> kp = {});
+                elle::Buffer data,
+                std::shared_ptr<cryptography::rsa::PrivateKey> owner_key);
 
       /*--------.
       | Content |
@@ -114,7 +117,8 @@ namespace infinit
         virtual
         bool
         operator ==(blocks::Block const& rhs) const override;
-        ELLE_ATTRIBUTE_RX(boost::optional<cryptography::rsa::KeyPair>, keys);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PrivateKey>,
+                         owner_private_key, protected);
         ELLE_ATTRIBUTE_R(elle::Buffer, data_plain, protected);
         ELLE_ATTRIBUTE(bool, data_decrypted, protected);
       protected:

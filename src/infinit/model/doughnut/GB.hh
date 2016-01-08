@@ -30,10 +30,6 @@ namespace infinit
         typedef BaseACB<blocks::GroupBlock> Super;
         GB(Doughnut* owner, cryptography::rsa::KeyPair master);
         ~GB();
-      private:
-        GB(Doughnut* owner,
-           cryptography::rsa::KeyPair master,
-           std::shared_ptr<cryptography::rsa::PrivateKey> master_key);
 
       public:
         virtual
@@ -108,11 +104,6 @@ namespace infinit
       private:
         void
         _extract_group_keys();
-        void
-        _extract_master_key();
-        // extracted stuff
-        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::PrivateKey>,
-                       master_key);
         ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::KeyPair>,
                        group_keys);
         // stored stuff
@@ -126,6 +117,14 @@ namespace infinit
 
       public:
         typedef infinit::serialization_tag serialization_tag;
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        virtual
+        void
+        print(std::ostream& ouptut) const;
       };
     }
   }

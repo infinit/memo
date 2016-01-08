@@ -61,9 +61,12 @@ namespace infinit
       `-------------*/
       public:
         BaseACB(Doughnut* owner,
-            elle::Buffer data = {},
-            boost::optional<elle::Buffer> salt = {},
-            boost::optional<cryptography::rsa::KeyPair> kp = {});
+                elle::Buffer data = {},
+                boost::optional<elle::Buffer> salt = {});
+        BaseACB(Doughnut* owner,
+                elle::Buffer data,
+                boost::optional<elle::Buffer> salt,
+                cryptography::rsa::KeyPair const& keys);
         BaseACB(Self const& other, bool sealed_copy = true);
         ~BaseACB();
         ELLE_ATTRIBUTE_R(int, editor);

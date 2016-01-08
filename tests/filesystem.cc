@@ -174,12 +174,14 @@ static int directory_count(boost::filesystem::path const& p)
 
 static
 bool
-can_access(boost::filesystem::path const& p, bool read=false, bool read_all=false)
+can_access(boost::filesystem::path const& p,
+           bool read = false, bool read_all = false,
+           int expected_errno = EACCES)
 {
   struct stat st;
   if (stat(p.string().c_str(), &st) == -1)
   {
-    BOOST_CHECK_EQUAL(errno, EACCES);
+    BOOST_CHECK_EQUAL(errno, expected_errno);
     return false;
   }
   if (S_ISDIR(st.st_mode))
@@ -1460,7 +1462,7 @@ test_acl(bool paxos)
   std::string block = getxattr_(base0 / "rm", "user.infinit.block");
   block = block.substr(2);
   BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", block), 0);
-  BOOST_CHECK(!can_access(base0 / "rm", true));
+  BOOST_CHECK(!can_access(base0 / "rm", true, false, EIO));
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
   setxattr_(base0, "user.infinit.fsck.unlink", "rm");
   BOOST_CHECK_EQUAL(directory_count(base0), 0);

@@ -14,18 +14,11 @@ namespace infinit
   {
     namespace doughnut
     {
-      GB::GB(Doughnut* owner, cryptography::rsa::KeyPair master)
-        : GB(owner, std::move(master), master.private_key())
-      {}
-
       GB::GB(Doughnut* owner,
-             cryptography::rsa::KeyPair master,
-             std::shared_ptr<cryptography::rsa::PrivateKey> master_key)
+             cryptography::rsa::KeyPair master)
         : Super(owner, {}, elle::Buffer("group", 5), master)
-        , _master_key(*master_key)
       {
-        ELLE_TRACE_SCOPE("creating new group");
-        keys().emplace(master);
+        ELLE_TRACE_SCOPE("%s: create", *this);
         auto first_group_key = cryptography::rsa::keypair::generate(2048);
         this->_group_public_keys.push_back(first_group_key.K());
         this->_group_keys.push_back(first_group_key);
@@ -38,18 +31,37 @@ namespace infinit
         this->_acl_changed = true;
         this->set_permissions(user_key.K(), true, false);
         ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
-        ELLE_TRACE("group created");
       }
 
       GB::GB(elle::serialization::SerializerIn& s,
              elle::Version const& version)
-      : Super(s, version)
+        : Super(s, version)
       {
+        ELLE_TRACE_SCOPE("%s: deserialize", *this);
         s.serialize("group_public_keys", this->_group_public_keys);
         s.serialize("group_admins", this->_group_admins);
         s.serialize("master_key", this->_ciphered_master_key);
         ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
+        // Extract owner key if possible
+        auto const& keys = this->doughnut()->keys();
+        auto it = std::find(this->_group_admins.begin(),
+                            this->_group_admins.end(),
+                            keys.K());
+        if (it != this->_group_admins.end())
+        {
+          auto idx = it - this->_group_admins.begin();
+          ELLE_DEBUG("group admin number %s", idx);
+          auto buf = keys.k().open(this->_ciphered_master_key[idx]);
+          this->_owner_private_key =
+            std::make_shared(elle::serialization::binary::deserialize<
+                             cryptography::rsa::PrivateKey>(buf));
+        }
+        else
+          ELLE_DEBUG("not a group admin");
       }
+
+      GB::~GB()
+      {}
 
       void
       GB::serialize(elle::serialization::Serializer& s,
@@ -120,11 +132,13 @@ namespace infinit
           this->_extract_group_keys();
         return this->_group_keys.back();
       }
+
       int
       GB::version()
       {
         return this->_group_public_keys.size();
       }
+
       std::vector<cryptography::rsa::KeyPair>
       GB::all_keys()
       {
@@ -132,64 +146,29 @@ namespace infinit
           this->_extract_group_keys();
         return this->_group_keys;
       }
+
       std::vector<cryptography::rsa::PublicKey>
       GB::all_public_keys()
       {
         return this->_group_public_keys;
       }
+
       void
       GB::_extract_group_keys()
       {
-        boost::optional<elle::Buffer> d;
-        try
-        {
-          d.emplace(this->data());
-        }
-        catch (ValidationFailed const& vf)
-        {
-          // we are not in the group, but maybe we are owner
-          this->_extract_master_key();
-          this->keys().emplace(
-            cryptography::rsa::PublicKey(*this->_master_key),
-            *this->_master_key);
-          d.emplace(this->data());
-        }
-        ELLE_ASSERT(!d->empty());
         this->_group_keys = elle::serialization::binary::deserialize<
-          decltype(this->_group_keys)>(*d);
+          decltype(this->_group_keys)>(this->data());
       }
-      void
-      GB::_extract_master_key()
-      {
-        ELLE_TRACE_SCOPE("extract_master_key, have %s admins", _group_admins.size());
-        ELLE_ASSERT_EQ(_group_admins.size(), _ciphered_master_key.size());
-        auto it = std::find(_group_admins.begin(),
-          _group_admins.end(), doughnut()->keys().K());
 
-        if (it != this->_group_admins.end())
-        {
-          auto buf = doughnut()->keys().k().open(_ciphered_master_key[it - _group_admins.begin()]);
-          this->_master_key.emplace(elle::serialization::binary::deserialize<
-            cryptography::rsa::PrivateKey>(buf));
-          return;
-        }
-        throw elle::Error("Access to master key denied.");
-      }
       void
       GB::add_member(model::User const& user)
       {
-        _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
-          *this->_master_key));
         this->_set_permissions(user, true, false);
         this->_acl_changed = true;
       }
       void
       GB::remove_member(model::User const& user)
       {
-        _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
-          *this->_master_key));
         this->_set_permissions(user, false, false);
         this->_acl_changed = true;
         _extract_group_keys();
@@ -198,20 +177,19 @@ namespace infinit
         this->_group_keys.push_back(new_key);
         this->data(elle::serialization::binary::serialize(this->_group_keys));
       }
+
       void
       GB::add_admin(model::User const& user_)
       {
-        _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
-          *this->_master_key));
         try
         {
           auto& user = dynamic_cast<doughnut::User const&>(user_);
           auto it = std::find(_group_admins.begin(),
-          _group_admins.end(), user.key());
+                              _group_admins.end(), user.key());
           if (it != this->_group_admins.end())
             return;
-          auto ser_master = elle::serialization::binary::serialize(*this->_master_key);
+          auto ser_master = elle::serialization::binary::serialize(
+            *this->_owner_private_key);
           this->_group_admins.push_back(user.key());
           this->_ciphered_master_key.push_back(user.key().seal(ser_master));
           this->_acl_changed = true;
@@ -222,17 +200,15 @@ namespace infinit
           throw elle::Error("doughnut was passed a non-doughnut user.");
         }
       }
+
       void
       GB::remove_admin(model::User const& user_)
       {
-        _extract_master_key();
-        this->keys().emplace(cryptography::rsa::KeyPair(*this->owner_key(),
-          *this->_master_key));
         try
         {
           auto& user = dynamic_cast<doughnut::User const&>(user_);
           auto it = std::find(_group_admins.begin(),
-            _group_admins.end(), user.key());
+                              _group_admins.end(), user.key());
           if (it == this->_group_admins.end())
             throw elle::Error("No such user in admin list");
           this->_ciphered_master_key.erase(
@@ -258,8 +234,8 @@ namespace infinit
             user.reset(new doughnut::User(*this->owner_key(), ""));
           else
             user = this->doughnut()->make_user(
-                elle::serialization::json::serialize(key));
-            res.emplace_back(std::move(user));
+              elle::serialization::json::serialize(key));
+          res.emplace_back(std::move(user));
         }
         return res;
       }
@@ -269,17 +245,27 @@ namespace infinit
       {
         return std::unique_ptr<blocks::Block>(new Self(*this, sealed_copy));
       }
+
       GB::GB(const GB& other, bool sealed_copy)
-      : Super(other, sealed_copy)
-      , _group_public_keys(other._group_public_keys)
-      , _group_admins(other._group_admins)
-      , _ciphered_master_key(other._ciphered_master_key)
-      {}
-      GB::~GB()
+        : Super(other, sealed_copy)
+        , _group_public_keys(other._group_public_keys)
+        , _group_admins(other._group_admins)
+        , _ciphered_master_key(other._ciphered_master_key)
       {}
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<GB> _register_gb_serialization("GB");
+
+      /*----------.
+      | Printable |
+      `----------*/
+
+      void
+      GB::print(std::ostream& ouptut) const
+      {
+        elle::fprintf(ouptut, "%s(%f)",
+                      elle::type_info<GB>(), *this->owner_key());
+      }
     }
   }
 }

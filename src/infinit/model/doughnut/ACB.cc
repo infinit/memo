@@ -124,12 +124,18 @@ namespace infinit
       `-------------*/
 
       template <typename Block>
-      BaseACB<Block>::BaseACB(
-        Doughnut* owner,
-        elle::Buffer data,
-        boost::optional<elle::Buffer> salt,
-        boost::optional<cryptography::rsa::KeyPair> kp)
-        : Super(owner, std::move(data), std::move(salt), std::move(kp))
+      BaseACB<Block>::BaseACB(Doughnut* owner,
+                              elle::Buffer data,
+                              boost::optional<elle::Buffer> salt)
+        : BaseACB(owner, std::move(data), std::move(salt), owner->keys())
+      {}
+
+      template <typename Block>
+      BaseACB<Block>::BaseACB(Doughnut* owner,
+                              elle::Buffer data,
+                              boost::optional<elle::Buffer> salt,
+                              cryptography::rsa::KeyPair const& keys)
+        : Super(owner, std::move(data), std::move(salt), keys)
         , _editor(-1)
         , _owner_token()
         , _acl_changed(true)
@@ -154,7 +160,10 @@ namespace infinit
         , _world_writable(other._world_writable)
         , _deleted(other._deleted)
       {
-        if (sealed_copy || !other._data_signature.running() || other.keys())
+        if (sealed_copy ||
+            !other._data_signature.running() ||
+            (other.owner_private_key() &&
+             *other.owner_key() != this->doughnut()->keys().K()))
         {
           _data_signature = other._data_signature.value();
         }
@@ -191,18 +200,11 @@ namespace infinit
       {
         if (this->world_readable())
           return this->_data;
-        auto& mine = this->doughnut()->keys().K();
-
         elle::Buffer secret_buffer;
-        std::vector<ACLEntry> entries;
-        if (mine == *this->owner_key())
+        if (this->owner_private_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
-          secret_buffer = this->doughnut()->keys().k().open(this->_owner_token);
-        }
-        else if (this->keys() && this->keys()->K() == *this->owner_key())
-        {
-          secret_buffer = this->keys()->k().open(this->_owner_token);
+          secret_buffer = this->owner_private_key()->open(this->_owner_token);
         }
         else if (!this->_acl_entries.empty())
         {
@@ -275,17 +277,18 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseACB<Block>::set_group_permissions(cryptography::rsa::PublicKey const& key,
-                           bool read,
-                           bool write)
+      BaseACB<Block>::set_group_permissions(
+        cryptography::rsa::PublicKey const& key,
+        bool read,
+        bool write)
       {
         ELLE_TRACE_SCOPE("%s: set permisions for %s: %s, %s",
                          *this, key, read, write);
         auto& acl_entries = this->_acl_group_entries;
         ELLE_DUMP("%s: ACL entries: %s", *this, acl_entries);
-        auto it = std::find_if
-          (acl_entries.begin(), acl_entries.end(),
-           [&] (ACLEntry const& e) { return e.key == key; });
+        auto it = std::find_if(
+          acl_entries.begin(), acl_entries.end(),
+          [&] (ACLEntry const& e) { return e.key == key; });
         if (it == acl_entries.end())
         {
           if (!read && !write)
@@ -297,13 +300,13 @@ namespace infinit
           ELLE_DEBUG_SCOPE("%s: new user, insert ACL entry", *this);
           // If the owner token is empty, this block was never pushed and
           // sealing will generate a new secret and update the token.
+          // FIXME: the block will always be sealed anyway, why encrypt a token
+          // now ?
           elle::Buffer token;
           Group g(*this->doughnut(), key);
           if (this->_owner_token.size())
           {
-            auto& k = this->keys() ? this->keys()->k() : this->doughnut()->keys().k();
-            auto secret = k.open(this->_owner_token);
-
+            auto secret = this->owner_private_key()->open(this->_owner_token);
             token = g.current_public_key().seal(secret);
           }
           acl_entries.emplace_back(ACLEntry(key, read, write, token));
@@ -366,8 +369,7 @@ namespace infinit
           elle::Buffer token;
           if (this->_owner_token.size())
           {
-            auto& k = this->keys() ? this->keys()->k() : this->doughnut()->keys().k();
-            auto secret = k.open(this->_owner_token);
+            auto secret = this->owner_private_key()->open(this->_owner_token);
             token = key.seal(secret);
           }
           acl_entries.emplace_back(ACLEntry(key, read, write, token));
@@ -638,19 +640,16 @@ namespace infinit
         elle::Bench::BenchScope scope(bench);
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
-        std::shared_ptr<infinit::cryptography::rsa::KeyPair const> sign_keys;
+        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
         if (acl_changed)
         {
           static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
           ELLE_DEBUG_SCOPE("%s: ACL changed, seal", *this);
           this->_acl_changed = false;
-          bool owner = this->doughnut()->keys().K() == *this->owner_key();
-          if (this->keys())
-            owner |= this->keys()->K() == *this->owner_key();
-          if (owner)
+          if (this->owner_private_key())
           {
-            sign_keys = this->doughnut()->keys_shared();
+            sign_key = this->owner_private_key();
             this->_editor = -1;
           }
           Super::_seal_okb();
@@ -672,37 +671,32 @@ namespace infinit
           ++this->_data_version; // FIXME: idempotence in case the write fails ?
           ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
                            *this, this->_data_version);
-          bool owner = this->doughnut()->keys().K() == *this->owner_key();
-          if (this->keys())
-            owner |= this->keys()->K() == *this->owner_key();
-          if (owner)
+          if (this->owner_private_key())
           {
-            sign_keys = this->doughnut()->keys_shared();
+            ELLE_DEBUG("we are owner");
+            sign_key = this->owner_private_key();
             this->_editor = -1;
           }
           boost::optional<cryptography::SecretKey> secret;
-          elle::Buffer secret_buffer;
           if (!key)
           {
             secret = cryptography::secretkey::generate(256);
             key = secret;
           }
           ELLE_DUMP("%s: new block secret: %s", *this, key.get());
-          secret_buffer = elle::serialization::json::serialize(key.get());
+          auto secret_buffer = elle::serialization::json::serialize(key.get());
           this->_owner_token = this->owner_key()->seal(secret_buffer);
-          bool found = false;
           int idx = 0;
           for (auto& e: this->_acl_entries)
           {
             if (e.read)
-            {
               e.token = e.key.seal(secret_buffer);
-            }
-            if (!owner && e.key == this->doughnut()->keys().K())
+            if (!sign_key && e.key == this->doughnut()->keys().K())
             {
-              found = true;
+              // FIXME: throw preemptively if no write permissions ?
+              ELLE_DEBUG("we are editor %s", idx);
               this->_editor = idx;
-              sign_keys = this->doughnut()->keys_shared();
+              sign_key = this->doughnut()->keys().private_key();
             }
             ++idx;
           }
@@ -712,29 +706,31 @@ namespace infinit
             if (e.read)
             {
               e.token = g.current_public_key().seal(secret_buffer);
-              this->_group_version[idx - this->_acl_entries.size()] = g.version()-1;
+              this->_group_version[idx - this->_acl_entries.size()] =
+                g.version() - 1;
             }
-            if (!owner && !found)
+            if (!sign_key)
             {
               try
-              { // try signing with the latest key from this group
+              {
                 auto kp = g.current_key();
-                found = true;
                 this->_editor = idx;
-                sign_keys = std::make_shared<cryptography::rsa::KeyPair>(kp);
-                ELLE_DEBUG("Signing with group key %s: %s", g.version()-1, kp.K());
+                ELLE_DEBUG("we are editor from group %s", g);
+                sign_key = g.current_key().private_key();
               }
               catch (elle::Error const& e)
-              {
-                ELLE_DEBUG("Error accessing group: %s", e);
-              }
+              {}
             }
             ++idx;
           }
-          if (!sign_keys && this->_world_writable)
-            sign_keys = this->doughnut()->keys_shared();
+          if (!sign_key && this->_world_writable)
+          {
+            ELLE_DEBUG("block is world writable");
+            sign_key = this->doughnut()->keys().private_key();
+          }
           if (!this->_world_readable)
-            this->blocks::MutableBlock::data(key->encipher(this->data_plain()));
+            this->blocks::MutableBlock::data(
+              key->encipher(this->data_plain()));
           else
             this->blocks::MutableBlock::data(this->data_plain());
           this->_data_changed = false;
@@ -744,32 +740,31 @@ namespace infinit
         // Even if only the ACL was changed, we need to re-sign because the ACL
         // address is part of the signature.
         if (acl_changed || data_changed ||
-          (!this->_data_signature.running() && this->_data_signature.value().empty()))
+            (!this->_data_signature.running() &&
+             this->_data_signature.value().empty()))
         {
-          ELLE_DEBUG("%s: recompute signature: %s %s %s", *this,
-            acl_changed, data_changed, this->_data_signature.running());
+          ELLE_DEBUG_SCOPE("%s: sign data", *this);
           // note: in world_writable mode, the signing key might not be
           // present in the block, so signing might not be that important.
-          if (this->keys())
-            sign_keys = std::shared_ptr<cryptography::rsa::KeyPair>(&*this->keys(), null_deleter<cryptography::rsa::KeyPair>);
-          if (!sign_keys)
-          { // can happen if we didn't go through the if (data_changed)
-            // in that case _editor was set, we just lost the signature
+          if (!sign_key)
+          {
+            // Can happen if we reload a block from disk an reseal it (think
+            // async) and we lost the signature.
             if (this->_editor == -1
-              || this->_editor < signed(this->_acl_entries.size()))
-              sign_keys = this->doughnut()->keys_shared();
+                || this->_editor < signed(this->_acl_entries.size()))
+              sign_key = this->doughnut()->keys().private_key();
             else if (this->_editor < signed(this->_acl_entries.size())
                      + signed(this->_acl_group_entries.size()))
             {
               int gindex = this->_editor - signed(this->_acl_entries.size());
               Group g(*this->doughnut(), this->_acl_group_entries[gindex].key);
-              auto kp = g.group_keys()[this->_group_version[gindex]];
-              sign_keys = std::make_shared<cryptography::rsa::KeyPair>(kp);
+              sign_key =
+                g.group_keys()[this->_group_version[gindex]].private_key();
             }
             else
               throw ValidationFailed("not owner and no write permissions");
           }
-          this->_data_signature = sign_keys->k().sign(
+          this->_data_signature = sign_key->sign(
             *this->_data_sign(), this->doughnut()->version());
           // auto to_sign = elle::utility::move_on_copy(this->_data_sign());
           // this->_data_signature =
@@ -988,8 +983,9 @@ namespace infinit
         s.serialize("data_version", this->_data_version);
         bool need_signature = !s.context().has<ACBDontWaitForSignature>();
         // see comment in BaseOKB::_serialize
-        if (need_signature
-          || s.out() && (this->keys() || !this->_data_signature.running()))
+        if (need_signature ||
+            s.out() && (*this->owner_key() != this->doughnut()->keys().K() ||
+                        !this->_signature.running()))
         {
           if (version < elle::Version(0, 4, 0))
             if (s.out())

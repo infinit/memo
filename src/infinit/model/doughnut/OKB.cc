@@ -118,24 +118,31 @@ namespace infinit
       template <typename Block>
       BaseOKB<Block>::BaseOKB(Doughnut* owner,
                               elle::Buffer data,
-                              boost::optional<elle::Buffer> salt,
-                              boost::optional<cryptography::rsa::KeyPair> kp)
-        : BaseOKB(OKBHeader(kp ? *kp : *owner->keys_shared(), std::move(salt)),
-                  owner, std::move(data), kp)
+                              boost::optional<elle::Buffer> salt)
+        : BaseOKB(owner, std::move(data), std::move(salt), owner->keys())
       {}
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(OKBHeader header,
-                              Doughnut* owner,
+      BaseOKB<Block>::BaseOKB(Doughnut* owner,
                               elle::Buffer data,
-                              boost::optional<cryptography::rsa::KeyPair> kp
-                              )
+                              boost::optional<elle::Buffer> salt,
+                              cryptography::rsa::KeyPair const& owner_keys)
+        : BaseOKB(OKBHeader(owner_keys, std::move(salt)),
+                  owner, std::move(data), owner_keys.private_key())
+      {}
+
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(
+        OKBHeader header,
+        Doughnut* owner,
+        elle::Buffer data,
+        std::shared_ptr<cryptography::rsa::PrivateKey> owner_key)
         : Super(header._hash_address())
         , OKBHeader(std::move(header))
         , _version(-1)
         , _signature()
         , _doughnut(owner)
-        , _keys(kp)
+        , _owner_private_key(std::move(owner_key))
         , _data_plain()
         , _data_decrypted(true)
       {
@@ -148,10 +155,13 @@ namespace infinit
         , OKBHeader(other)
         , _version{other._version}
         , _doughnut{other._doughnut}
+        , _owner_private_key(other._owner_private_key)
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
       {
-        if (sealed_copy || !other._signature.running() || other.keys())
+        if (sealed_copy ||
+            !other._signature.running() ||
+            *other.owner_key() != other.doughnut()->keys().K())
           this->_signature = other._signature.value();
         else
         {
@@ -249,9 +259,9 @@ namespace infinit
       elle::Buffer
       BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
-        if (this->doughnut()->keys().K() != *this->owner_key())
+        if (!this->_owner_private_key)
           throw elle::Error("attempting to decrypt an unowned OKB");
-        return this->doughnut()->keys().k().open(data);
+        return this->_owner_private_key->open(data);
       }
 
       /*-----------.
@@ -326,13 +336,10 @@ namespace infinit
       {
         if (bump_version)
           ++this->_version; // FIXME: idempotence in case the write fails ?
-        auto keys = _keys ?
-          std::shared_ptr<cryptography::rsa::KeyPair>
-            (&*_keys, null_deleter<cryptography::rsa::KeyPair>)
-          : this->_doughnut->keys_shared();
-        ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
-        this->_signature = keys->k().sign(*this->_sign(),
-                                          this->doughnut()->version());
+        ELLE_ASSERT(this->_owner_private_key);
+        this->_signature =
+          this->_owner_private_key->sign(*this->_sign(),
+                                         this->doughnut()->version());
         // auto sign = elle::utility::move_on_copy(this->_sign());
         // this->_signature =
         //   [keys, sign]
@@ -402,10 +409,14 @@ namespace infinit
         : Super(s, version)
         , OKBHeader(s, version)
         , _doughnut(nullptr)
+        , _owner_private_key()
         , _data_plain()
         , _data_decrypted(false)
       {
         this->_serialize(s, version);
+        if (*this->owner_key() == this->doughnut()->keys().K())
+          this->_owner_private_key = this->doughnut()->keys().private_key();
+
       }
 
       template <typename Block>
@@ -432,8 +443,9 @@ namespace infinit
         * - the signature is already computed
         * - computing the signature requires a different key
         */
-        if (need_signature
-            || s.out() && (this->keys() || !this->_signature.running()))
+        if (need_signature ||
+            s.out() && (*this->owner_key() != this->doughnut()->keys().K() ||
+                        !this->_signature.running()))
         {
           if (version < elle::Version(0, 4, 0))
             if (s.out())
