@@ -7,14 +7,14 @@ namespace infinit
   void
   RPC<void (Args...)>::operator ()(Args const& ... args)
   {
-    RPCCall<void (Args...)>::_call(*this, args...);
+    RPCCall<void (Args...)>::_call(_version, *this, args...);
   }
 
   template <typename R, typename ... Args>
   R
   RPC<R (Args...)>::operator ()(Args const& ... args)
   {
-    return RPCCall<R (Args...)>::_call(*this, args...);
+    return RPCCall<R (Args...)>::_call(_version, *this, args...);
   }
 
   inline

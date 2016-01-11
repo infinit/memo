@@ -213,7 +213,7 @@ namespace infinit
           // challenge, token
           typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
           RPC<std::pair<Challenge, std::unique_ptr<Passport>>(Passport const&)>
-            auth_syn("auth_syn", *this->_channels, nullptr);
+            auth_syn("auth_syn", *this->_channels, this->_doughnut.version());
           auto challenge_passport = auth_syn(this->_doughnut.passport());
           auto& remote_passport = challenge_passport.second;
           ELLE_ASSERT(remote_passport);
@@ -243,7 +243,8 @@ namespace infinit
             RPC<bool (elle::Buffer const&,
                       elle::Buffer const&,
                       elle::Buffer const&)>
-              auth_ack("auth_ack", *this->_channels, nullptr);
+              auth_ack("auth_ack", *this->_channels, this->_doughnut.version(),
+                       nullptr);
             auth_ack(sealed_key,
                      challenge_passport.first.second,
                      signed_challenge);
