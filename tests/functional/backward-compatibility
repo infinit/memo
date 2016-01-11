@@ -68,6 +68,7 @@ for p in sys.argv[1:]:
     input = [
       {'operation': 'mkdir', 'path': '/beacon'},
       {'operation': 'write_file', 'path': '/beacon/readme.txt', 'content': 'foo'},
+      {'operation': 'write_file', 'path': '/beacon/big', 'content': 'f' * 32768},
     ])
     # run on side 1
     def run_volume():
@@ -88,15 +89,20 @@ for p in sys.argv[1:]:
     input = [
       {'operation': 'mkdir', 'path': '/beacon2'},
       {'operation': 'write_file', 'path': '/beacon2/readme.txt', 'content': 'foo'},
+      {'operation': 'write_file', 'path': '/beacon2/big', 'content': 'f' * 32768},
       {'operation': 'list_directory', 'path': '/beacon'},
       {'operation': 'read_file', 'path': '/beacon/readme.txt'},
+      {'operation': 'read_file', 'path': '/beacon/big'},
       {'operation': 'unlink', 'path':  '/beacon/readme.txt'},
+      {'operation': 'unlink', 'path':  '/beacon/big'},
       {'operation': 'rmdir', 'path': '/beacon'},
     ])
-    assertEq(response[2]['entries'], ['readme.txt'])
-    assertEq(response[3]['content'], 'foo')
-    assertEq(response[4]['success'], True)
-    assertEq(response[5]['success'], True)
+    assertEq(sorted(response[3]['entries']), ['big', 'readme.txt'])
+    assertEq(response[4]['content'], 'foo')
+    assertEq(response[5]['content'], 'f' * 32768)
+    assertEq(response[6]['success'], True)
+    assertEq(response[7]['success'], True)
+    assertEq(response[8]['success'], True)
     infinit_1.process.kill()
     response = infinit_1.run([
       'infinit-volume', '--run',
@@ -106,12 +112,16 @@ for p in sys.argv[1:]:
     input = [
       {'operation': 'list_directory', 'path': '/beacon2'},
       {'operation': 'read_file', 'path': '/beacon2/readme.txt'},
+      {'operation': 'read_file', 'path': '/beacon2/big'},
       {'operation': 'unlink', 'path':  '/beacon2/readme.txt'},
+      {'operation': 'unlink', 'path':  '/beacon2/big'},
       {'operation': 'rmdir', 'path': '/beacon2'},
       {'operation': 'list_directory', 'path': '/'},
     ])
-    assertEq(response[0]['entries'], ['readme.txt'])
+    assertEq(sorted(response[0]['entries']), ['big', 'readme.txt'])
     assertEq(response[1]['content'], 'foo')
-    assertEq(response[2]['success'], True)
+    assertEq(response[2]['content'], 'f' * 32768)
     assertEq(response[3]['success'], True)
-    assertEq(response[4]['entries'], [])
+    assertEq(response[4]['success'], True)
+    assertEq(response[5]['success'], True)
+    assertEq(response[6]['entries'], [])
