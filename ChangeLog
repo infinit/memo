@@ -4,6 +4,32 @@
 ## [Unreleased]
 
 
+## [0.3.7] - 2016-01-11
+
+Small improvements and fixes.
+
+### Added
+
+- Add `--no-countdown` option to `infinit-device --transmit`.
+- Accept `--fallback-xattrs` in `infinit-acl --list`.
+
+### Changed
+
+- Change default kelips group count to 1, to avoid deadlocked networks
+  with too few computer if unspecified.
+- Terminate gracefully on `SIGTERM` and `SIGQUIT`, just like `SIGINT`
+  previously.
+
+### Fixed
+
+- Don't err in `infinit-user --fetch` if the avatar is missing.
+
+
+## [0.3.6] - 2016-01-11 [YANKED]
+
+Skipped release because of a botched tag.
+
+
 ## [0.3.5] - 2016-01-06
 
 Hotfix release to fix mounting in async mode, plus some stability and
@@ -12,7 +38,7 @@ performance improvement and S3 storage support.
 ### Added
 
 - Support S3 as storage backend.
-- Enable to force compatibility version with --force-version option.
+- Enable to force compatibility version with `--force-version` option.
 
 ### Changed
 
@@ -21,7 +47,7 @@ performance improvement and S3 storage support.
 
 ### Fixed
 
-- Fix critical bug preventing running networks using --async with
+- Fix critical bug preventing running networks using `--async` with
   error message "fatal error: missing serialization context for
   infinit::model::Model*".
 - Fix reported file size that could sometime be random.
