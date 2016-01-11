@@ -29,6 +29,7 @@ namespace infinit
         typedef GB Self;
         typedef BaseACB<blocks::GroupBlock> Super;
         GB(Doughnut* owner, cryptography::rsa::KeyPair master);
+        GB(GB const& other, bool sealed_copy = true);
         ~GB();
 
       public:
@@ -92,28 +93,40 @@ namespace infinit
         virtual
         std::unique_ptr<Super::DataSignature>
         _data_sign() const override;
+
+      /*--------------.
+      | Serialization |
+      `--------------*/
       public:
         GB(elle::serialization::SerializerIn& s,
            elle::Version const& version);
-        void serialize(elle::serialization::Serializer& s,
-                       elle::Version const& version) override;
-        GB(GB const& other, bool sealed_copy = true);
+        void
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
+      private:
+        void
+        _serialize(elle::serialization::Serializer& s,
+                   elle::Version const& version);
+
+      /*---------.
+      | Clonable |
+      `---------*/
+      public:
         virtual
         std::unique_ptr<blocks::Block>
         clone(bool sealed_copy) const override;
       private:
         void
-        _extract_group_keys();
-        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::KeyPair>,
-                       group_keys);
-        // stored stuff
+        _extract_keys();
+        /// The decrypted group keys.
+        ELLE_ATTRIBUTE(std::vector<infinit::cryptography::rsa::KeyPair>, keys);
+        /// The group public keys, for other user to give the group access.
         ELLE_ATTRIBUTE_R(std::vector<infinit::cryptography::rsa::PublicKey>,
-                         group_public_keys);
-        // Due to serialization glitch (cant serialize pair with
-        // non-default-constructible type, use two vectors
-        ELLE_ATTRIBUTE_R(std::vector<infinit::cryptography::rsa::PublicKey>,
-                         group_admins);
-        ELLE_ATTRIBUTE_R(std::vector<elle::Buffer>, ciphered_master_key);
+                         public_keys);
+        typedef std::unordered_map<infinit::cryptography::rsa::PublicKey,
+                                   elle::Buffer> AdminKeys;
+        /// The group admin keys ciphered for every admin.
+        ELLE_ATTRIBUTE_R(AdminKeys, admin_keys);
 
       public:
         typedef infinit::serialization_tag serialization_tag;

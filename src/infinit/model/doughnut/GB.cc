@@ -20,17 +20,15 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: create", *this);
         auto first_group_key = cryptography::rsa::keypair::generate(2048);
-        this->_group_public_keys.push_back(first_group_key.K());
-        this->_group_keys.push_back(first_group_key);
+        this->_public_keys.push_back(first_group_key.K());
+        this->_keys.push_back(first_group_key);
         auto user_key = owner->keys();
         auto ser_master = elle::serialization::binary::serialize(master.k());
         auto sealed = user_key.K().seal(ser_master);
-        this->_group_admins.push_back(user_key.K());
-        this->_ciphered_master_key.push_back(sealed);
-        this->data(elle::serialization::binary::serialize(this->_group_keys));
+        this->_admin_keys.emplace(user_key.K(), sealed);
+        this->data(elle::serialization::binary::serialize(this->_keys));
         this->_acl_changed = true;
         this->set_permissions(user_key.K(), true, false);
-        ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
       }
 
       GB::GB(elle::serialization::SerializerIn& s,
@@ -38,26 +36,20 @@ namespace infinit
         : Super(s, version)
       {
         ELLE_TRACE_SCOPE("%s: deserialize", *this);
-        s.serialize("group_public_keys", this->_group_public_keys);
-        s.serialize("group_admins", this->_group_admins);
-        s.serialize("master_key", this->_ciphered_master_key);
-        ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
+        this->_serialize(s, version);
         // Extract owner key if possible
         auto const& keys = this->doughnut()->keys();
-        auto it = std::find(this->_group_admins.begin(),
-                            this->_group_admins.end(),
-                            keys.K());
-        if (it != this->_group_admins.end())
+        auto it = this->_admin_keys.find(keys.K());
+        if (it != this->_admin_keys.end())
         {
-          auto idx = it - this->_group_admins.begin();
-          ELLE_DEBUG("group admin number %s", idx);
-          auto buf = keys.k().open(this->_ciphered_master_key[idx]);
+          ELLE_DEBUG("we are group admin");
           this->_owner_private_key =
             std::make_shared(elle::serialization::binary::deserialize<
-                             cryptography::rsa::PrivateKey>(buf));
+                             cryptography::rsa::PrivateKey>(
+                               keys.k().open(it->second)));
         }
         else
-          ELLE_DEBUG("not a group admin");
+          ELLE_DEBUG("we are not group admin");
       }
 
       GB::~GB()
@@ -68,10 +60,15 @@ namespace infinit
                     elle::Version const& version)
       {
         Super::serialize(s, version);
-        ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
-        s.serialize("group_public_keys", this->_group_public_keys);
-        s.serialize("group_admins", this->_group_admins);
-        s.serialize("master_key", this->_ciphered_master_key);
+        this->_serialize(s, version);
+      }
+
+      void
+      GB::_serialize(elle::serialization::Serializer& s,
+                    elle::Version const&)
+      {
+        s.serialize("public_keys", this->_public_keys);
+        s.serialize("admin_keys", this->_admin_keys);
       }
 
       GB::OwnerSignature::OwnerSignature(GB const& b)
@@ -85,8 +82,7 @@ namespace infinit
       {
         ELLE_ASSERT_GTE(v, elle::Version(0, 4, 0));
         GB::Super::OwnerSignature::_serialize(s, v);
-        s.serialize("group_admins", this->_block.group_admins());
-        s.serialize("master_key", this->_block.ciphered_master_key());
+        s.serialize("admins", this->_block._admin_keys);
       }
 
       std::unique_ptr<typename BaseOKB<blocks::GroupBlock>::OwnerSignature>
@@ -108,9 +104,7 @@ namespace infinit
         ELLE_ASSERT(s_.out());
         auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
         GB::Super::DataSignature::serialize(s, v);
-        s.serialize("group_public_keys", this->_block.group_public_keys());
-        s.serialize("group_admins", this->_block.group_admins());
-        s.serialize("master_key", this->_block.ciphered_master_key());
+        s.serialize("public_keys", this->_block.public_keys());
       }
 
       std::unique_ptr<GB::Super::DataSignature>
@@ -122,42 +116,42 @@ namespace infinit
       cryptography::rsa::PublicKey
       GB::current_public_key()
       {
-        return this->_group_public_keys.back();
+        return this->_public_keys.back();
       }
 
       cryptography::rsa::KeyPair
       GB::current_key()
       {
-        if (this->_group_keys.empty())
-          this->_extract_group_keys();
-        return this->_group_keys.back();
+        if (this->_keys.empty())
+          this->_extract_keys();
+        return this->_keys.back();
       }
 
       int
       GB::version()
       {
-        return this->_group_public_keys.size();
+        return this->_public_keys.size();
       }
 
       std::vector<cryptography::rsa::KeyPair>
       GB::all_keys()
       {
-        if (this->_group_keys.empty())
-          this->_extract_group_keys();
-        return this->_group_keys;
+        if (this->_keys.empty())
+          this->_extract_keys();
+        return this->_keys;
       }
 
       std::vector<cryptography::rsa::PublicKey>
       GB::all_public_keys()
       {
-        return this->_group_public_keys;
+        return this->_public_keys;
       }
 
       void
-      GB::_extract_group_keys()
+      GB::_extract_keys()
       {
-        this->_group_keys = elle::serialization::binary::deserialize<
-          decltype(this->_group_keys)>(this->data());
+        this->_keys = elle::serialization::binary::deserialize<
+          decltype(this->_keys)>(this->data());
       }
 
       void
@@ -171,11 +165,11 @@ namespace infinit
       {
         this->_set_permissions(user, false, false);
         this->_acl_changed = true;
-        _extract_group_keys();
+        _extract_keys();
         auto new_key = infinit::cryptography::rsa::keypair::generate(2048);
-        this->_group_public_keys.push_back(new_key.K());
-        this->_group_keys.push_back(new_key);
-        this->data(elle::serialization::binary::serialize(this->_group_keys));
+        this->_public_keys.push_back(new_key.K());
+        this->_keys.push_back(new_key);
+        this->data(elle::serialization::binary::serialize(this->_keys));
       }
 
       void
@@ -184,16 +178,12 @@ namespace infinit
         try
         {
           auto& user = dynamic_cast<doughnut::User const&>(user_);
-          auto it = std::find(_group_admins.begin(),
-                              _group_admins.end(), user.key());
-          if (it != this->_group_admins.end())
+          if (contains(this->_admin_keys, user.key()))
             return;
           auto ser_master = elle::serialization::binary::serialize(
             *this->_owner_private_key);
-          this->_group_admins.push_back(user.key());
-          this->_ciphered_master_key.push_back(user.key().seal(ser_master));
+          this->_admin_keys.emplace(user.key(), user.key().seal(ser_master));
           this->_acl_changed = true;
-          ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
         }
         catch (std::bad_cast const&)
         {
@@ -207,15 +197,11 @@ namespace infinit
         try
         {
           auto& user = dynamic_cast<doughnut::User const&>(user_);
-          auto it = std::find(_group_admins.begin(),
-                              _group_admins.end(), user.key());
-          if (it == this->_group_admins.end())
-            throw elle::Error("No such user in admin list");
-          this->_ciphered_master_key.erase(
-            _ciphered_master_key.begin() + (it - _group_admins.begin()));
-          this->_group_admins.erase(it);
+          auto it = this->_admin_keys.find(user.key());
+          if (it == this->_admin_keys.end())
+            throw elle::Error(elle::sprintf("no such admin: %s", user.key()));
+          this->_admin_keys.erase(it);
           this->_acl_changed = true;
-          ELLE_ASSERT_EQ(_ciphered_master_key.size(), _group_admins.size());
         }
         catch (std::bad_cast const&)
         {
@@ -227,14 +213,14 @@ namespace infinit
       GB::list_admins(bool ommit_names)
       {
         std::vector<std::unique_ptr<model::User>> res;
-        for (auto const& key: this->_group_admins)
+        for (auto const& key: this->_admin_keys)
         {
           std::unique_ptr<model::User> user;
           if (ommit_names)
             user.reset(new doughnut::User(*this->owner_key(), ""));
           else
             user = this->doughnut()->make_user(
-              elle::serialization::json::serialize(key));
+              elle::serialization::json::serialize(key.second));
           res.emplace_back(std::move(user));
         }
         return res;
@@ -248,9 +234,8 @@ namespace infinit
 
       GB::GB(const GB& other, bool sealed_copy)
         : Super(other, sealed_copy)
-        , _group_public_keys(other._group_public_keys)
-        , _group_admins(other._group_admins)
-        , _ciphered_master_key(other._ciphered_master_key)
+        , _public_keys(other._public_keys)
+        , _admin_keys(other._admin_keys)
       {}
 
       static const elle::serialization::Hierarchy<blocks::Block>::
