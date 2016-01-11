@@ -123,8 +123,9 @@ namespace infinit
         /// The group public keys, for other user to give the group access.
         ELLE_ATTRIBUTE_R(std::vector<infinit::cryptography::rsa::PublicKey>,
                          public_keys);
-        typedef std::unordered_map<infinit::cryptography::rsa::PublicKey,
-                                   elle::Buffer> AdminKeys;
+        // Order matter for signing, hence std::map.
+        typedef std::map<infinit::cryptography::rsa::PublicKey, elle::Buffer>
+          AdminKeys;
         /// The group admin keys ciphered for every admin.
         ELLE_ATTRIBUTE_R(AdminKeys, admin_keys);
 

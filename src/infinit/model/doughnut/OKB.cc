@@ -370,7 +370,6 @@ namespace infinit
           auto sign = this->_sign();
           if (!this->_owner_key->verify(this->signature(), *sign))
           {
-            ELLE_TRACE("signing %x\nwith %x", sign, *this->_owner_key);
             ELLE_TRACE("%s: invalid signature for version %s: '%x'",
               *this, this->_version, this->signature());
             return blocks::ValidationResult::failure("invalid signature");

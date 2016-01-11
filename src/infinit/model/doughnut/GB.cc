@@ -160,6 +160,7 @@ namespace infinit
         this->_set_permissions(user, true, false);
         this->_acl_changed = true;
       }
+
       void
       GB::remove_member(model::User const& user)
       {
