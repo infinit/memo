@@ -302,11 +302,11 @@ namespace infinit
     SMBServer::SMBServer(std::unique_ptr<infinit::filesystem::FileSystem> fs)
     : _fs(new reactor::filesystem::FileSystem(std::move(fs), true))
     {
+      this->_server = elle::make_unique<reactor::network::TCPServer>();
+      this->_server->listen(445);
       this->_server_thread = elle::make_unique<reactor::Thread>(
         elle::sprintf("%s server", *this),
         [this] { this->_serve(); });
-      this->_server = elle::make_unique<reactor::network::TCPServer>();
-      this->_server->listen(445);
     }
     void SMBServer::_serve()
     {

@@ -298,13 +298,15 @@ COMMAND(run)
     option_opt<int>(args, option_cache_invalidation.long_name());
   if (cache_size || cache_ttl || cache_invalidation)
     cache = true;
-  reactor::scheduler().signal_handle(
-    SIGINT,
-    [&]
-    {
-      ELLE_TRACE("terminating");
-      reactor::scheduler().terminate();
-    });
+  static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
+  for (auto signal: signals)
+    reactor::scheduler().signal_handle(
+      signal,
+      [&]
+      {
+        ELLE_TRACE("terminating");
+        reactor::scheduler().terminate();
+      });
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);

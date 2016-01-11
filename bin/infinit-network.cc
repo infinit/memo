@@ -401,8 +401,10 @@ COMMAND(run)
             && dht->local()->storage();
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
-  reactor::scheduler().signal_handle(
-    SIGINT,
+  static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
+  for (auto signal: signals)
+    reactor::scheduler().signal_handle(
+    signal,
     [&]
     {
       ELLE_TRACE("terminating");
