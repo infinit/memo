@@ -336,7 +336,8 @@ namespace infinit
       {
         if (bump_version)
           ++this->_version; // FIXME: idempotence in case the write fails ?
-        ELLE_ASSERT(this->_owner_private_key);
+        if (!this->_owner_private_key)
+          throw elle::Error("attempting to seal an unowned OKB");
         this->_signature =
           this->_owner_private_key->sign(*this->_sign(),
                                          this->doughnut()->version());
