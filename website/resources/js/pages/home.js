@@ -2,7 +2,7 @@ $(document).ready(function() {
 
   function launchTerminal() {
     $('body.home #commands').t(
-      '<ins>1 </ins><mark>$></mark> infinit-storage --create --aws-s3 --name s3 --capacity 10TB' +
+      '<ins>1 </ins><mark>$></mark> infinit-storage --create --s3 --name s3 --capacity 10TB' +
       '<ins>0.5</ins><ins>\nCreated storage "s3". \n\n</ins>' +
       '<mark>$></mark> <ins>2</ins>'+
 
