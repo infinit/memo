@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+from utils import *
+
+if len(sys.argv) == 1 or sys.argv[1] == '-h' or sys.argv[1] == '--help':
+  print('Usage: backward-compat path_to_infinit_root ...')
+
+for p in sys.argv[1:]:
+  if not os.path.exists(p + '/bin/infinit-volume'):
+    print('Path %s does not contain bin/infinit-volume' % p)
+    continue
+  with TemporaryDirectory() as tmp, \
+    Infinit(infinit_root = p) as infinit_1, \
+    Infinit() as infinit_2:
+    old_version = infinit_1.version
+    new_version = infinit_2.version
+    print('versions: %s %s' % (old_version, new_version))
+    # set subminor to 0
+    old_version = old_version[:-1] + '0'
+    infinit_1.run(['infinit-user', '--create',  'user'])
+    user = infinit_1.run([
+      'infinit-user', '--export', '--full',  'user'
+    ])
+    infinit_1.run([
+      'infinit-storage', '--create',
+       'storage',
+      '--filesystem', '--path', tmp.dir,
+    ])
+    network_name = infinit_1.run([
+      'infinit-network', '--create',
+       'network', '--storage', 'storage',
+       '--kelips',
+       '--port', '63198',
+      '--as', 'user',
+    ])
+    network = infinit_1.run([
+      'infinit-network', '--export',
+       'network',
+      '--as', 'user',
+    ])
+    infinit_1.run([
+      'infinit-volume', '--create',
+       'volume', '--network', 'network',
+      '--as', 'user',
+    ])
+    volume = infinit_1.run([
+      'infinit-volume', '--export',
+       'volume',
+      '--as', 'user',
+    ])
+    # device 2
+    infinit_2.run(['infinit-user', '--import'], input = user)
+    infinit_2.run(['infinit-network', '--import'], input = network)
+    infinit_2.run([
+      'infinit-network', '--link',
+       'network',
+      '--as', 'user',
+    ])
+    infinit_2.run(['infinit-volume', '--import'], input = volume)
+    # init on side 1
+    response = infinit_1.run([
+      'infinit-volume', '--run',
+      'volume',
+      '--as', 'user',
+    ],
+    input = [
+      {'operation': 'mkdir', 'path': '/beacon'},
+      {'operation': 'write_file', 'path': '/beacon/readme.txt', 'content': 'foo'},
+    ])
+    # run on side 1
+    def run_volume():
+      r = infinit_1.run(['infinit-volume', '--run', '--as', 'user', 'volume'])
+      print('PROCESS EXITED: %s' % r)
+    import threading
+    t = threading.Thread(target = run_volume)
+    t.start()
+    time.sleep(1)
+    # ops on side 2
+    response = infinit_2.run([
+      'infinit-volume', '--run',
+      'volume',
+      '--as', 'user',
+      '--force-version', old_version,
+      '--peer', '127.0.0.1:63198',
+    ],
+    input = [
+      {'operation': 'mkdir', 'path': '/beacon2'},
+      {'operation': 'write_file', 'path': '/beacon2/readme.txt', 'content': 'foo'},
+      {'operation': 'list_directory', 'path': '/beacon'},
+      {'operation': 'read_file', 'path': '/beacon/readme.txt'},
+      {'operation': 'unlink', 'path':  '/beacon/readme.txt'},
+      {'operation': 'rmdir', 'path': '/beacon'},
+    ])
+    assertEq(response[2]['entries'], ['readme.txt'])
+    assertEq(response[3]['content'], 'foo')
+    assertEq(response[4]['success'], True)
+    assertEq(response[5]['success'], True)
+    infinit_1.process.kill()
+    response = infinit_1.run([
+      'infinit-volume', '--run',
+      'volume',
+      '--as', 'user',
+    ],
+    input = [
+      {'operation': 'list_directory', 'path': '/beacon2'},
+      {'operation': 'read_file', 'path': '/beacon2/readme.txt'},
+      {'operation': 'unlink', 'path':  '/beacon2/readme.txt'},
+      {'operation': 'rmdir', 'path': '/beacon2'},
+      {'operation': 'list_directory', 'path': '/'},
+    ])
+    assertEq(response[0]['entries'], ['readme.txt'])
+    assertEq(response[1]['content'], 'foo')
+    assertEq(response[2]['success'], True)
+    assertEq(response[3]['success'], True)
+    assertEq(response[4]['entries'], [])
