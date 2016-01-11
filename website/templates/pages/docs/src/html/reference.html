@@ -112,7 +112,7 @@ Please enter your AWS credentials
 Access Key ID: AKIAIOSFODNN7EXAMPLE
 Secret Access Key: ****************************************
 Locally stored AWS credentials "s3-user".
-</code></pre><p><em><strong>IMPORTANT</strong>: AWS credentials are only ever stored locally and cannot be pushed to the Hub. Never use the AWS root user. Always create a specific user, giving them the minimum required permissions.</em></p>
+</code></pre><p><em><strong>IMPORTANT</strong>: AWS credentials are only ever stored locally and cannot be pushed to the Hub. Never use the AWS root user. Always create a specific user, giving the user the minimum required permissions.</em></p>
 <h3 id="list-credentials">List credentials</h3>
 <p>At any point, you can list your local credentials using the <code>&#8209;&#8209;list</code> option:</p>
 <pre><code>$&gt; infinit-credentials --list
@@ -135,58 +135,57 @@ Created storage "local".
 Created storage "s3".
 </code></pre><p>The list of supported cloud services is continually evolving and can be seen by using <code>&#8209;&#8209;create --help</code>. Enterprise storage solutions such as <a href="https://cloud.google.com/storage">Google Cloud Storage</a> and <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported.</p>
 <h2 id="network">Network</h2>
-<p>Through the <em>infinit-network</em> you are going to be able to create overlay networks, configure the the way the distributed hash table behaves and much more.</p>
+<p>With the <em>infinit-network</em> utility you are able to create overlay networks, configure the way the distributed hash table behaves and much more.</p>
 <h3 id="create-a-network">Create a network</h3>
-<p>The example below creates a network named <em>‘cluster’</em> which aggregates the storage resources controlled by the users involved in this network.</p>
-<p>The network can be configured depending on the requirements of the storage infrastructure the administrator is setting up. For instance, the number of computing devices could be extremely small, the owners of those computers could be somewhat untrustworthy or the machines could be expected to be turned off and on on a daily basis following their work schedule. All these parameters can be used to tune the network: the overlay’s topology, the replication factor, the fault tolerance algorithm and much more.</p>
-<p>The following creates a small storage network, relying on the Kelips overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network in creation.</p>
-<pre><code>$&gt; infinit-network --create --as alice --kelips --k 1 --replication-factor 3 --storage local --storage dropbox --name cluster
+<p>The example below creates a network named <em>&#39;cluster&#39;</em> which aggregates the storage resources controlled by the users involved in this network.</p>
+<p>The network can be configured depending on the requirements of the storage infrastructure the administrator is setting up. For instance, the number of computing devices could be extremely small, the owners of those computers could be somewhat untrustworthy or their machines could be expected to be turned on and off throughout the day. To cater for this the network parameters can be tuned: the overlay&#39;s topology, the replication factor, the fault tolerance algorithm, etc.</p>
+<p>The following creates a small storage network, relying on the Kelips overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network on creation.</p>
+<pre><code>$&gt; infinit-network --create --as alice --kelips --k 1 --replication-factor 3 --storage local --storage s3 --name cluster
 Locally created network "alice/cluster".
-</code></pre><p>The folowwing overlay types are currently available:</p>
+</code></pre><p>The following overlay types are currently available:</p>
 <ul>
-<li>kalimero: Simple test overlay supporting only one node.</li>
-<li>stonehenge: Overlay supporting multiple storage nodes in a static configuration: the
+<li>Kalimero: Simple test overlay supporting only one node.</li>
+<li>Stonehenge: Overlay supporting multiple storage nodes in a static configuration: the
 list of peers must never change or be reordered once set.</li>
-<li>kelips: Overlay with support for node churn. The <em>k</em> argument specifies the
+<li>Kelips: Overlay with support for node churn. The <em>k</em> argument specifies the
 number of groups to use, each group being responsible for <em>1/kth</em> of the files.
-See the reference paper <em>"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</em>
-for more informations.</li>
+See the reference paper <a href="http://link.springer.com/chapter/10.1007/978-3-540-45172-3_15"><em>"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</em></a> for more information.</li>
 </ul>
 <h3 id="publish-a-network">Publish a network</h3>
-<p>You can now publish a network for other users to retrieve it. Note that the easiest way is always to append the <code>&#8209;&#8209;push</code> option to the network creation command to perform both creation and publications actions at once.</p>
-<p>Otherwise, you can push the network to the Hub through the <code>&#8209;&#8209;push</code> action option, as usual:</p>
+<p>You can now publish a network for other users to retrieve it. Note that the easiest way is always to append the <code>&#8209;&#8209;push</code> option to the network creation command to perform both the creation and publication actions at once.</p>
+<p>As with the other utilities, you can otherwise push the network to the Hub with the <code>&#8209;&#8209;push</code> option:</p>
 <pre><code>$&gt; infinit-network --push --as alice --name cluster
 Remotely pushed network "alice/cluster".
-</code></pre><p>As for every other resource, you can decide to manipulate networks without relying on the Hub. Please refer to the <code>&#8209;&#8209;export</code> and <code>&#8209;&#8209;import</code> options in this case.</p>
+</code></pre><p>You can also manipulate networks without relying on the Hub. Please refer to the <code>&#8209;&#8209;export</code> and <code>&#8209;&#8209;import</code> options in this case.</p>
 <h3 id="list-the-networks">List the networks</h3>
-<p>You can easily list the networks that you have locally through the <code>&#8209;&#8209;list</code> mode. Do not forget that you may need to fetch the networks from the Hub in order to be in sync:</p>
+<p>You can list the networks that you have locally using the <code>&#8209;&#8209;list</code> mode. Do not forget that you may need to fetch the networks from the Hub in order to be up to date:</p>
 <pre><code>$&gt; infinit-network --fetch --as alice
 Fetched networks for user "alice".
 $&gt; infinit-network --list
 alice/cluster
 </code></pre><h3 id="link-a-device-to-a-network">Link a device to a network</h3>
-<p>Let us say that you want to connect a device to a network, this device being different from the one on which the network has been created.</p>
-<p>There are two ways to do this depending on who you are related to the network: its owner or an invited user.</p>
+<p>Let us say that you want to connect a device to a network, this device being different from the one on which the network has been created but which is still used by the same user.</p>
+<p>There are two ways to do this depending on who you are in relation to the network: its owner or an invited user.</p>
 <h4 id="as-the-owner">As the owner</h4>
-<p>As the owner of the network, the system automatically recognizes you and allows you to link any of your devices to the network. The process in this case is pretty straightforward.</p>
-<p>Note that when linking a device to a network, you can decide to contribute storage from this new device. In the example below, Alice is going to connect one of her other devices, taking care to contribute storage capacity from her personal Network-Attached Storage (NAS).</p>
+<p>As the owner of the network, the system automatically recognizes you and allows you to link any of your devices to the network. The process in this case is straightforward.</p>
+<p>When linking a device to a network, you can decide to contribute storage from the new device. In the example below, Alice connects one of her other devices and contributes storage capacity from her personal Network-Attached Storage (NAS).</p>
 <pre><code>$&gt; infinit-network --link --as alice --name cluster --storage nas
-Linked device to network "cluster".
+Linked device to network "alice/cluster".
 </code></pre><p><em><strong>NOTE</strong>: Keep in mind that the action of linking a device to a network must only be performed once on every new device.</em></p>
 <h4 id="as-an-invitee">As an invitee</h4>
-<p>In this case, you should have <a href="#receive-a-passport">received</a>, through the Hub or manually, an invitation to join a network created by someone else. Such invitations are called <em>passports</em> and allow users to link their devices to the network they’ve been allowed to join.</p>
+<p>In this case, you should have <a href="#receive-a-passport">received</a>, through the Hub or manually, an invitation to join a network created by someone else. Such invitations are called <em>passports</em> and allow users to link their devices to the network they&#39;ve been allowed to join.</p>
 <p>In order to link a device to a network, you must first retrieve its descriptor. This network descriptor can be fetched from the Hub through a single command:</p>
 <pre><code>$&gt; infinit-network --fetch --as bob --name alice/cluster
 Fetched network "alice/cluster".
-</code></pre><p>You now have locally both the network descriptor and a passport allowing you to link new devices to it. Let’s link Bob&#39;s current device to Alice’s ‘cluster’ network. Note that one can decide to contribute additional storage capacity through the <code>&#8209;&#8209;storage</code> option.</p>
+</code></pre><p>You now have both the network descriptor and a passport locally allowing you to link new devices to it. Let&#39;s link Bob&#39;s current device to Alice&#39;s &#39;cluster&#39; network. Note that one can decide to contribute additional storage capacity through the <code>&#8209;&#8209;storage</code> option.</p>
 <pre><code>$&gt; infinit-network --link --as bob --name alice/cluster
 Linked device to network "alice/cluster".
-</code></pre><p><em><strong>NOTE</strong>: This process must be repeated on every device, proving that Bob has indeed been allowed to join the network (via the passport) and that this device belongs to Bob.</em></p>
+</code></pre><p><em><strong>NOTE</strong>: This process must be performed on each new device, proving that the user has indeed been allowed to join the network (via the passport) and that this device belongs to the user.</em></p>
 <h2 id="passport">Passport</h2>
-<p>The <em>infinit-passport</em> binary can be used to allow other users to join one’s networks, granting them the right to link devices, contribute storage resources and potentially access files.</p>
+<p>The <em>infinit-passport</em> binary is used to allow other users to join one&#39;s networks, granting him/her the right to link devices, contribute storage resources and potentially access files.</p>
 <h3 id="create-a-passport">Create a passport</h3>
-<p>In order to allow another user to join a network and link devices, you must issue a passport. In order to reference the user to invite, you first need to obtain his/her user public identity.</p>
-<p>Let’s say that you want to invite the user ‘bob’ to your network. First you need to fetch his identity from the Hub (or retrieve it manually if operating without the Hub, see <code>&#8209;&#8209;export</code> and <code>&#8209;&#8209;import</code>):</p>
+<p>To allow another user to join a network and link devices, you must issue him/her a passport. In order to reference the user to invite, you first need to obtain his/her user public identity.</p>
+<p>Let&#39;s say that you want to invite the user &#39;bob&#39; to your network. First you need to fetch his identity from the Hub (or retrieve it manually if operating without the Hub, see <code>&#8209;&#8209;export</code> and <code>&#8209;&#8209;import</code>):</p>
 <pre><code>$&gt; infinit-user --fetch --as alice --name bob
 Fetched user "bob".
 </code></pre><p>The passport that you are about to create will be sealed, allowing only Bob to <a href="#link-a-device-to-a-network">connect new devices</a> to the network:</p>
@@ -194,40 +193,40 @@ Fetched user "bob".
 Locally created passport "alice/cluster: bob".
 </code></pre><p>Now that the passport has been created, read the <a href="#distribute-a-passport">Distribute a passport</a> section to learn how to distribute it to the invited user.</p>
 <h3 id="list-the-passports">List the passports</h3>
-<p>You can list both the passports you’ve created for other users to join your networks and the passports issued by other users for you to join their networks:</p>
+<p>You can list both the passports you&#39;ve created for other users to join your networks and the passports issued by other users for you to join their networks:</p>
 <pre><code>$&gt; infinit-passport --list --as alice
 alice/cluster: bob
 </code></pre><h3 id="distribute-a-passport">Distribute a passport</h3>
 <p>Once the passport has been locally created, you must distribute it to the invited user for him/her to be able to join your network.</p>
-<p>The easiest way to do that is to rely on the Hub, by appending the <code>&#8209;&#8209;push</code> option when creating the passport; see the <a href="#create-a-passport">Create a passport</a> section.</p>
+<p>The easiest way to do this is to rely on the Hub, by appending the <code>&#8209;&#8209;push</code> option when creating the passport; see the <a href="#create-a-passport">Create a passport</a> section.</p>
 <p>You can otherwise push a local passport by invoking the <code>&#8209;&#8209;push</code> action option as shown below:</p>
 <pre><code>$&gt; infinit-passport --push --as alice --network cluster --user bob
 Remotely pushed passport "alice/cluster: bob".
-</code></pre><p>Should you be evolving in a pure decentralized environment i.e. without the Hub, you will need to manually export the passport and transmit it to the invited user in which case you should refer to the <code>&#8209;&#8209;export</code> and <code>&#8209;&#8209;import</code> options.</p>
-<p><strong>IMPORTANT</strong>: Be aware that the invited user will not be notified of that fact that you’ve allowed him/her to join your network. The invited user could detect it by fetching his passport and noticing a new one but that’s about it. In order to speed things up, you should probably tell him through the medium of your choice: chat, email, carrier pigeon or else.</p>
+</code></pre><p>If you are using the pure decentralized environment i.e. without the Hub, you will need to manually export the passport and transmit it to the invited user in which case you should refer to the <code>&#8209;&#8209;export</code> and <code>&#8209;&#8209;import</code> options.</p>
+<p><strong>IMPORTANT</strong>: Be aware that the invited user will not be notified that there is a new passport for him/her to join your network. The invited user could detect this by fetching his/her passports and noticing a new one but that&#39;s about it. In order to speed things up, you should probably inform him/her through the medium of your choice: chat, email, carrier pigeon or else.</p>
 <h3 id="receive-a-passport">Receive a passport</h3>
-<p>You can very easily fetch your passports from the Hub in order to refresh your local snapshots:</p>
+<p>You can fetch your passports from the Hub in order to refresh the local snapshots using the <code>&#8209;&#8209;fetch</code> option:</p>
 <pre><code>$&gt; infinit-passport --fetch --as bob
 Fetched passports for user "bob"
 $&gt; infinit-passport --list --as bob
 alice/cluster: bob
-</code></pre><p><em><strong>NOTE</strong>: The <em>infinit-passport</em> binary provides options to specifically fetch passports from a certain user or for a specific network.</em></p>
-<p>That’s it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.</p>
+</code></pre><p><em><strong>NOTE</strong>: The <em>infinit-passport</em> binary also provides options to fetch all the passports for a specific user or for a specific network.</em></p>
+<p>That&#39;s it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.</p>
 <h2 id="volume">Volume</h2>
-<p>On top of the storage layer i.e. the network, one can create a file system also known as logical drive or volume. A volume is represented by the address of its root directory. While centralized file systems store this address in a specific block known as the <em>superblock</em>, Infinit simply stores it in a file located in the <code>$INFINIT_DATA_HOME</code> directory which describes the volume.</p>
-<p>Note that several volumes can be created within the same network, in which case you could see those as partitions on the same hard disk drive.</p>
+<p>On top of the distributed storage layer i.e. the network, one can create a volume also known as logical drive. A volume is represented by the address of its root directory. While centralized file systems store this address in a specific block known as the <em>superblock</em>, Infinit uses a file located in the <code>$INFINIT_DATA_HOME</code> directory which describes the volume.</p>
+<p>Note that several volumes can be created on the same network, which is analogous to partitions on the same hard disk drive.</p>
 <h3 id="create-a-volume">Create a volume</h3>
-<p>The command below creates a volume in a network. You can specify the default mount point for the volume through the <code>&#8209;&#8209;mountpoint</code> option even though the following example does not:</p>
+<p>The command below creates a volume on a network. You can specify the default mount point for the volume through the <code>&#8209;&#8209;mountpoint</code> option even though the following example does not:</p>
 <pre><code>$&gt; infinit-volume --create --as alice --network cluster --name shared
 Locally created volume "alice/shared".
-</code></pre><p><em><strong>NOTE</strong>: You may have noticed that the name of the network is sometimes prepended with the username of its owner e.g alice/cluster. This fully-qualified name helps distinguish objects that you own from the ones that you don’t. However, in most cases, you will not have to specify the fully-qualified name as the command-line tools are smart enough to deduce the object you are trying to reference.</em></p>
+</code></pre><p><em><strong>NOTE</strong>: You may have noticed that the name of the network is sometimes prepended with the username of its owner e.g "alice/cluster". This fully-qualified name distinguishes objects that you own from the ones that you don&#39;t. When manipulating objects of which you are the owner, you will not need to use the fully-qualified name as the command-line tools will automatically search in the user&#39;s namespace.</em></p>
 <h3 id="publish-a-volume">Publish a volume</h3>
-<p>A volume often needs to be shared with the other users in the network. As for the other resources, the easiest way to perform this action is to rely on the Hub, either by using the <code>&#8209;&#8209;push</code> option at the volume creation or by publishing the volume as a separate action:</p>
+<p>A volume often needs to be shared with the other users in the network. As with the other resources, the easiest way to do this is to rely on the Hub, either using the <code>&#8209;&#8209;push</code> option on volume creation or by publishing the volume as a separate action:</p>
 <pre><code>$&gt; infinit-volume --push --as alice --name shared
 Remotely pushed volume "alice/shared".
-</code></pre><p><em><strong>NOTE</strong>: You may however want to keep your volume private in a network which several users contribute storage capacity to, in which case you could omit this step.</em></p>
+</code></pre><p><em><strong>NOTE</strong>: You may want to keep your volume hidden from the users on a network, in which case you could omit this step and distribute its descriptor using the <code>&#8209;&#8209;export</code> and <code>&#8209;&#8209;import</code> options.</em></p>
 <h3 id="list-the-volumes">List the volumes</h3>
-<p>You can very easily list the volumes that you have locally through the <code>&#8209;&#8209;list</code> mode. Remember that you can also fetch the volumes of your networks and the ones you’ve been invited to:</p>
+<p>You can list the volumes that you have local descriptors for with the <code>&#8209;&#8209;list</code> option. Remember that you can also fetch the volumes on your networks which have been published to the Hub:</p>
 <pre><code>$&gt; infinit-volume --fetch --as alice
 Fetched volumes for user "alice".
 $&gt; infinit-volume --list
@@ -242,43 +241,44 @@ Running network "alice/cluster".
 Remotely pushed endpoints for "alice/cluster".
 Running volume "alice/shared".
 ...
-</code></pre><p>The <code>&#8209;&#8209;mountpoint</code> option could be omitted should a default mount point had been provided at the volume creation.</p>
-<p><em><strong>NOTE</strong>: There are a number of options that can be used to alter the behavior of the file system such as determining the size of the cache, activating asynchronous operations for better performance and many more. Please invoke the <code>&#8209;&#8209;help</code> option to learn more.</em></p>
-<p>If evolving in a completely decentralized environment, you will need to rely on the <code>&#8209;&#8209;peer</code> option to provide the binary one or more bootstrap nodes to discover the underlying network.</p>
-<p>At this point, one can interact with the file system through common UNIX built-ins and binaries as for any other file system:</p>
+</code></pre><p>The <code>&#8209;&#8209;mountpoint</code> option could be omitted if a default mount point was provided at the volume&#39;s creation.</p>
+<p><em><strong>NOTE</strong>: There are a number of options that can be used to alter the behavior of the file system such as determining the size of the cache, activating asynchronous operations for better performance, etc. Invoke the <code>&#8209;&#8209;help</code> option to learn more.</em></p>
+<p>When using a completely decentralized environment, the <code>&#8209;&#8209;peer</code> option provides the binary one or more bootstrap nodes needed to discover the underlying network.</p>
+<p>Once the volume is mounted, one can interact with the file system through common UNIX built-ins and binaries as for any other file system:</p>
 <pre><code>$&gt; ls /mnt/shared/
 $&gt; echo "everything is" &gt; /mnt/shared/awesome.txt
 $&gt; cat /mnt/shared/awesome.txt
 everything is
-</code></pre><p><strong>IMPORTANT</strong>: It is possible that the volume owner didn’t grant you access to the root directory, in which case you should get a "Permission Denied" error when listing the mount point. In this case, request the volume owner to <a href="#grant-revoke-access">grant you access</a>.</p>
+</code></pre><p><strong>IMPORTANT</strong>: It is possible that the volume owner didn&#39;t grant you access to the root directory, in which case you would get a "Permission Denied" error when listing the mount point. In this case, request that the volume owner <a href="#grant-revoke-access">grant&#39;s you access</a>.</p>
 <h2 id="access-control-list">Access Control List</h2>
-<p>Having joined a volume does not necessarily mean that you will have the permission to browse the files and directories in it. As in most file system, in order to access, edit and even delete a file, its owner must first grant you the permission to do so.</p>
+<p>Having joined a volume does not necessarily mean that you have the required permissions to browse the files and directories in it. As in most file system, in order to access, edit and even delete a file, its owner must first grant you the permission to do so.</p>
 <p>Unlike many file systems, Infinit provides advanced decentralized (i.e. without relying on a centralized server) access control mechanisms that allow any user to manage permissions on his/her files and directories.</p>
 <p>Note that being the owner of a volume automatically grants you access to its root directory. It is then your responsibility to manage the permissions on the root directory for other users to use the volume.</p>
 <h3 id="grant-revoke-access">Grant/revoke access</h3>
-<p>In order to grant or revoke access to a file or directory, one simply has to rely on the <em>infinit-acl</em> binary, providing the path to the object to manage and the permissions to apply.</p>
-<p>The following grants Bob the permissions to read and write the root directory of Alice’s volume named ‘shared’.</p>
+<p>In order to grant or revoke access to a file or directory, one uses the <em>infinit-acl</em> binary, providing the path to the object to manage and the permissions to apply.</p>
+<p>The following grants Bob the permissions required to read and write the root directory of Alice&#39;s volume mounted to <code>/mnt/shared/</code>.</p>
 <pre><code>$&gt; infinit-acl --set --path /mnt/shared/ --mode rw --user bob
 </code></pre><p><em><strong>NOTE:</strong> The infinit-acl binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more.</em></p>
-<p>From that point, Bob will be able to access the volume to read and write files/directories in the root directory of Alice&#39;s &#39;shared&#39; volume.</p>
+<p>Once the command has been run, Bob will be able to read and write files/directories in the root directory of Alice&#39;s &#39;shared&#39; volume.</p>
 <h3 id="acl-inheritance">ACL inheritance</h3>
-<p>ACL inheritance is a mechanism that sets ACL of newly created files and directories to the ACL of their parent directory.</p>
+<p>ACL inheritance is a mechanism that sets the ACL of newly created files and directories to the ACL of their parent directory.</p>
 <p>It can be enabled or disabled on a per-directory basis using <em>infinit-acl</em>:</p>
 <pre><code>$&gt; infint-acl --set --path /mnt/shared --enable-inherit
 </code></pre><p>If ACL inheritance is disabled, newly created files and directories can only be accessed by the creating user.</p>
 <p>If enabled, all the ACLs set on the parent directory are copied to the new object, including the inheritance flag for directories.</p>
-<h3 id="world-readable-and-world-writable-files">World-readable and World-writable files</h3>
-<p>By default, files and directories can only be read/written by users present in the object ACLs. It is possible to flag any file/directory as world-readable or world-writable by setting the <em>o+r</em> and <em>o+w</em> POSIX permission flags using <em>chmod</em> (or any other mean).</p>
+<!-- ### World-readable and World-writable files ###
+
+By default, files and directories can only be read/written by users present in the object ACLs. It is possible to flag any file/directory as world-readable or world-writable by setting the _o+r_ and _o+w_ POSIX permission flags using _chmod_ (or any other mean). -->
 <h3 id="list-permissions">List permissions</h3>
-<p>Every user with the volume descriptor and the right permissions can very easily consult the Access Control List (ACL) associated with a file system object:</p>
+<p>Every user with the volume descriptor and the right permissions can consult the Access Control List (ACL) associated with a file system object:</p>
 <pre><code>$&gt; infinit-acl --list --path /mnt/shared/awesome.txt
 /mnt/shared/awesome.txt:
      alice: rw
      bob: r
 </code></pre><h3 id="acls-and-posix-file-mode">ACLs and POSIX file mode</h3>
-<p>Since the infinit access model is ACL based, POSIX file mode as displayed by <em>ls -l</em> differs from what you might expect in the following ways:</p>
+<p>Since the Infinit access model is ACL based, the POSIX file mode as displayed by <em>ls -l</em> differs from what you might expect in the following ways:</p>
 <ul>
-<li>User and group ids are set to the user who mounted the filesystem if it has read or write access to the file. Otherwise they are set to root. Changing them (using <em>chown</em>) has no effect.</li>
+<li>User and group IDs are set to the user who mounted the file system if he/she has read or write access to the file. Otherwise they are set to root. Changing them (using <em>chown</em>) has no effect.</li>
 <li>User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations will be permitted on the file. Changing those flags has no effect.</li>
 <li>User execute access mode can be set or cleared and is preserved.</li>
 <li>Group modes are irrelevant and set to 0.</li>
@@ -286,15 +286,15 @@ everything is
 </ul>
 <h2 id="device">Device</h2>
 <h3 id="log-in-on-another-device">Log in on another device</h3>
-<p>You may want to access your file systems from another machine. Even though it sounds easy, the critical nature of the user’s identity, similar to a SSH key, makes it a bit more complicated that all the other operations.</p>
-<p>In a nutshell, one needs to re-create his/her Infinit environment with all the resources (users, networks, volumes, drives etc.) on the other computer. If you are already using Infinit in a completely decentralized manner, then the operation of exporting all the objects manually and re-importing them on the other device should not frighten you. If you have gotten used to the ease-of-use of the Hub, then we offer you two methods to transmit your user identity on another device.</p>
+<p>You may wish to access your file systems from another machine. The critical nature of the user&#39;s identity (which is similar to an SSH key) makes this operation more complex than the others.</p>
+<p>In a nutshell, one needs to re-create his/her Infinit environment with all the resources (users, networks, volumes, drives etc.) on the other computer. If you are using Infinit in a completely decentralized manner, then the operation of exporting all the objects manually and re-importing them on the other device will be familiar. If you have gotten used to the ease-of-use of the Hub, then we offer you two methods to transmit your user identity to another device.</p>
 <p>Note that the preferred method when using the command-line tools should be to <a href="#transmit-user-identity-to-another-device">transmit the user identity</a> to another device.</p>
-<h4 id="keep-the-user-identity">Keep the user identity</h4>
-<p>The easiest (least secure) way to retrieve your user identity on another device is to activate a mode in which your private identity is kept on the Hub, encrypted with a key to protect it from potential intruders.</p>
-<p>To activate this mode, you need to specify the <code>&#8209;&#8209;full</code> option when signing up on the Hub, along with a password, as shown below. Note that the password can be provided through the <code>&#8209;&#8209;password</code> option or entered when prompted:</p>
+<h4 id="store-the-user-identity-on-the-hub">Store the user identity on the Hub</h4>
+<p>The easiest (but least secure) way to retrieve your user identity on another device is to activate a mode in which your private identity is kept on the Hub, encrypted with a key to protect it from potential intruders.</p>
+<p>To activate this mode, you need to specify the <code>&#8209;&#8209;full</code> option when signing up on the Hub, along with a password, as shown below. Note that the password can be provided in-line using the <code>&#8209;&#8209;password</code> option or entered when prompted:</p>
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-user --signup --name alice --email alice@company.com --fullname Alice &#8211;&#8211;full
+<code>$> infinit-user --signup --name alice --email alice@company.com --fullname Alice --full
 Password: ********
 Remotely pushed user "alice".
 </code>
@@ -309,7 +309,7 @@ Locally saved user "alice".
 </code>
 </pre>
 
-<p>That’s it, you can see by listing the local users that your private user identity has been retrieved:</p>
+<p>That&#39;s it, you can see by listing the local users that your private user identity has been retrieved:</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
 <code>$> infinit-user --list
@@ -317,19 +317,20 @@ alice: public/private keys
 </code>
 </pre>
 
-<p><em><strong>NOTE</strong>: If you already registered your user on the Hub but would like to activate this login mode, you can remove your user from the Hub through the <code>&#8209;&#8209;pull</code> option and then re-<code>&#8209;&#8209;push</code> it taking care to provide the <code>&#8209;&#8209;full</code> option along with a password.</em></p>
+<p><em><strong>NOTE</strong>: If you already registered your user on the Hub but would like to activate this login mode, you can remove your user from the Hub with the <code>&#8209;&#8209;pull</code> option and then re-<code>&#8209;&#8209;push</code> with the <code>&#8209;&#8209;full</code> option along with a password.</em></p>
 <h4 id="transmit-user-identity-to-another-device">Transmit user identity to another device</h4>
-<p>If you are uncomfortable with us keeping your user identity (we are! you should be!), there is another (preferred) way for you to just transmit your user identity to another machine.</p>
-<p>Just know that for now, the method does rely on the Hub as a temporary place for your user identity to be kept until it is retrieved on another device. Do not worry though, if not retrieved after 5 minutes, it will be removed from the Hub. Besides, your user identity is encrypted with a key of your choice so we cannot access it. In the future, a direct point-to-point method will be used to bypass the Hub altogether.</p>
+<p>If you are uncomfortable with us keeping your user identity, there is another (preferred) way for you to transmit your user identity to another machine.</p>
+<p>The method relies on the Hub as a temporary store for your user identity to be kept until it is retrieved on another device. If not retrieved after 5 minutes, the user identity will be removed from the Hub. The user identity is also encrypted with a key of your choice so that we cannot access it. In the future, a direct point-to-point method will be used to bypass the Hub altogether.</p>
 <pre>
 <div><span>Device A</span></div>
 <code>$> infinit-device --transmit --as alice --user
 Passphrase: ********
 Transmitted user identity for "alice".
+User identity on the Hub for: 297 seconds
 </code>
 </pre>
 
-<p>From that point, you have 5 minutes to retrieve the user identity on another device through the following command:</p>
+<p>Once the command has been launched, you have 5 minutes to retrieve the user identity on another device using the following command:</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
 <code>$> infinit-device --receive --user --name alice
@@ -346,9 +347,9 @@ alice: public/private keys
 </code>
 </pre>
 
-<p>Once retrieved, the user identity is wiped out from the Hub to make sure nobody can try anything. Even though this method is not ideal yet, it is a fair compromise between security (short window of attack, encrypted with a unique key of your choosing etc.) and simplicity (two commands to invoke, no file to manually move around etc.).</p>
+<p>Once retrieved, the user identity is removed from the Hub. Even though this method is not ideal, it is a fair compromise between security (short window of attack, encrypted with a unique key of your choosing etc.) and simplicity (two commands to invoke, no file to manually move around etc.).</p>
 <h4 id="manually-export-import-the-user-identity">Manually export/import the user identity</h4>
-<p>For users that either do not trust any of the two methods above or want to evolve in a completely decentralized environment, there is another method which consists in exporting, moving the file manually and finally re-importing the user identity on the new device.</p>
+<p>For users that either do not trust the two methods above or who are using a completely decentralized environment, there is another method which can be used. This requires exporting the full user identity, moving the file manually and finally re-importing it on the new device.</p>
 <p>First, export the user identity to a file:</p>
 <pre>
 <div><span>Device A</span></div>
@@ -362,7 +363,7 @@ $> cat alice.user
 </code>
 </pre>
 
-<p>At this point, it is your responsibility to move the file to your other device, through <em>SCP</em> for instance. Re-creating the user entity is then just one step away:</p>
+<p>At this point, it is your responsibility to move the file to your other device, using <em>SCP</em> for instance. Re-creating the user entity the just requires an import:</p>
 <pre class="alternate">
 <div><span>Device B</span></div>
 <code>$> infinit-user --import --input alice.user
@@ -371,26 +372,26 @@ Imported user "alice".
 </pre>
 
 <h2 id="drive">Drive</h2>
-<p>Once you’ve created your storage infrastructure comprising of a network, storage resources and volumes, you may want to invite other users, potentially non-tech-savvy, to use it to seamlessly store and access their files.</p>
-<p>A client application with graphical interface called <a href="http://infinit.sh/drive">Infinit Drive</a> is provided for end-users to see the drives they are allowed to access, the people contributing to it, their permissions, etc.</p>
+<p>Once you&#39;ve created your storage infrastructure comprising of a network, storage resources and volumes, you may wish to invite other users, potentially non-tech-savvy, to use it to seamlessly store and access their files.</p>
+<p>A client application with a graphical interface called <a href="http://infinit.sh/drive">Infinit Drive</a> is provided for end-users to see the drives they are allowed to access, the people contributing to it, their permissions, etc.</p>
 <p><img src="${url('images/desktop-client.png')}" alt="Infinit Drive app"></p>
 <p>The notions of storage resources, networks and volumes are too technical for most end-users. Such users may also require a simple email guiding them through the set-up process.</p>
-<p>This is why the notion of <em>drive</em> has been introduced. A drive is nothing more than an abstraction on top of a volume.</p>
+<p>This is why the notion of a <em>drive</em> has been introduced. A drive is nothing more than an abstraction on top of a volume.</p>
 <p>Rather than listing all the networks and volumes a user is allowed to access in the graphical interface, only the drives the user has been invited to join will be shown. This way, should an administrator create a storage network with hundreds of volumes, the end-user will only see the drives they have been explicitly given access to, making his/her experience as enjoyable as possible without limiting the possibilities of the underlying command-line tools.</p>
 <h3 id="create-a-drive">Create a drive</h3>
 <p>Creating a drive is as easy as any other operation. The following creates a drive named "workspace" based on the network "cluster" and volume "shared".</p>
-<pre><code>$&gt; infinit-drive --create --as alice --network cluster --volume shared --name workspace --description "Alice’s, Bob’s and Charlie’s workspace" --push
+<pre><code>$&gt; infinit-drive --create --as alice --network cluster --volume shared --name workspace --description "Alice&#39;s, Bob&#39;s and Charlie&#39;s workspace" --push
 Locally created drive "alice/workspace".
 Remotely pushed drive "alice/workspace".
 </code></pre><p>Note that the <code>&#8209;&#8209;push</code> option is included to publish the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-users">inviting</a> to join.</p>
 <h3 id="list-the-drives">List the drives</h3>
-<p>As for the other resources, one can very simply list the local drives. Note that refreshing the local snapshots can be achieved through the <code>&#8209;&#8209;fetch</code> action:</p>
+<p>As for the other resources, one can very simply list the local drives. Note that refreshing the local snapshots can be achieved with the <code>&#8209;&#8209;fetch</code> action:</p>
 <pre><code>$&gt; infinit-drive --fetch --as alice
 Fetched drives for user "alice".
 $&gt; infinit-drive --list
 alice/workspace: ok
 </code></pre><h3 id="invite-users">Invite users</h3>
-<p>It is now time to invite users to join the drive you’ve created for them.</p>
+<p>It is now time to invite users to join the drive you&#39;ve created for them.</p>
 <p>Note that before you can reference a user, you need to fetch his/her public identity using the <code>infinit-user --fetch</code> command. Likewise, every user that will be invited must have been issued a passport to connect to the network.</p>
 <p>When inviting users, you can use the <code>&#8209;&#8209;passports</code> option to automatically create any passports that are needed for the users you are inviting to the drive. The sequence of commands below shows how to invite both Bob and Charlie. The user Bob has already been fetched while Charlie is a completely new user, that needs to be fetched.</p>
 <pre><code>$&gt; infinit-user --fetch --as alice --name charlie
@@ -401,14 +402,14 @@ Locally created invitation for "bob".
 Locally created invitation for "charlie".
 Remotely pushed passport "alice/cluster: charlie".
 Remotely pushed invitations "alice/workspace: bob, charlie".
-</code></pre><p>That’s it, Bob and Charlie have been invited to join the drive named "alice/workspace". Following the <code>&#8209;&#8209;push</code> of the invitations, an email is sent to notify each invited user of their invitation and letting them know how to proceed.</p>
+</code></pre><p>That&#39;s it, Bob and Charlie have been invited to join the drive named "alice/workspace". Following the <code>&#8209;&#8209;push</code> of the invitations, an email is sent to notify each invited user of their invitation and letting them know how to proceed.</p>
 <p>If you would like to prepare invitations locally and push them all later, you can do this by omitting the option <code>&#8209;&#8209;push</code> in the previous sequence of commands and later call the command as shown below:</p>
 <pre><code>$&gt; infinit-drive --invite --as alice --name workspace --push
 Remotely pushed invitations "alice/workspace: bob, charlie".
 </code></pre><p>Without any <code>&#8209;&#8209;user</code> specified the <code>&#8209;&#8209;invite</code> command will push each pending invitations to the Hub, sending the notification emails as a consequence.</p>
 <h3 id="join-a-drive">Join a drive</h3>
 <p>Even though the drive abstraction has been introduced for users of graphical interface, you can decide to join a drive through the command-line tools.</p>
-<p>First, remember to update your local drive descriptors by fetching the drives you’ve been invited to and already have access to. Once fetched, you can list the drives you have locally.</p>
+<p>First, remember to update your local drive descriptors by fetching the drives you&#39;ve been invited to and already have access to. Once fetched, you can list the drives you have locally.</p>
 <pre><code>$&gt; infinit-drive --fetch --as charlie
 Fetched drive for user "charlie"
 $&gt; infinit-drive --list --as charlie
@@ -416,4 +417,4 @@ alice/workspace
 </code></pre><p>You can then join a drive using the following command:</p>
 <pre><code>$&gt; infinit-drive --join --as charlie --name alice/workspace
 Joined drive "alice/workspace".
-</code></pre><p>That’s it, you are now allowed to mount the volume (i.e. &#39;alice/shared&#39;) associated with the drive to browse, store and access files. Note that you could have done that without using through the drive invitation process because you are using the command-line tools. Non-tech-savvy users, however, will appreciate having an interface with only the drives they have been invited to join and thus have access to.</p>
+</code></pre><p>That&#39;s it, you are now allowed to mount the volume (i.e. &#39;alice/shared&#39;) associated with the drive to browse, store and access files. Note that you could have done that without using through the drive invitation process because you are using the command-line tools. Non-tech-savvy users, however, will appreciate having an interface with only the drives they have been invited to join and thus have access to.</p>
