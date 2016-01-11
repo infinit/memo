@@ -31,7 +31,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool) const override;
+        clone() const override;
 
       /*-----------.
       | Validation |

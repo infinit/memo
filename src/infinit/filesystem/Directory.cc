@@ -764,15 +764,22 @@ namespace infinit
           MyMB(Address addr) : Super(addr) {}
           MyMB(elle::serialization::Serializer& input,
             elle::Version const& version)
-          : Super(input, version)
+            : Super(input, version)
           {}
+
           void serialize(elle::serialization::Serializer& s,
                               elle::Version const& v) override
           {
             Super::serialize(s, v);
           }
-          int version() const override { return 2384;}
-          std::unique_ptr<model::blocks::Block> clone(bool) const override
+
+          int
+          version() const override
+          {
+            return 2384;
+          }
+
+          std::unique_ptr<model::blocks::Block> clone() const override
           {
             return elle::make_unique<MyMB>(this->address());
           }

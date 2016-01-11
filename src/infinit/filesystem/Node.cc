@@ -283,7 +283,7 @@ namespace infinit
         st->st_gid   = getgid();
       else
       {
-        acl_save[gid_position] = block->clone(false);
+        acl_save[gid_position] = block->clone();
         dynamic_cast<model::blocks::MutableBlock*>(acl_save[gid_position].get())
           ->data(elle::Buffer());
         st->st_gid = gid_start + gid_position;

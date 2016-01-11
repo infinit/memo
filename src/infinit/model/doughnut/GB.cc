@@ -228,13 +228,13 @@ namespace infinit
       }
 
       std::unique_ptr<blocks::Block>
-      GB::clone(bool sealed_copy) const
+      GB::clone() const
       {
-        return std::unique_ptr<blocks::Block>(new Self(*this, sealed_copy));
+        return std::unique_ptr<blocks::Block>(new Self(*this));
       }
 
-      GB::GB(const GB& other, bool sealed_copy)
-        : Super(other, sealed_copy)
+      GB::GB(const GB& other)
+        : Super(other)
         , _public_keys(other._public_keys)
         , _admin_keys(other._admin_keys)
       {}

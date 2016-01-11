@@ -67,7 +67,7 @@ namespace infinit
                 elle::Buffer data,
                 boost::optional<elle::Buffer> salt,
                 cryptography::rsa::KeyPair const& keys);
-        BaseACB(Self const& other, bool sealed_copy = true);
+        BaseACB(Self const& other);
         ~BaseACB();
         ELLE_ATTRIBUTE_R(int, editor);
         ELLE_ATTRIBUTE_R(elle::Buffer, owner_token);
@@ -89,7 +89,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool sealed_copy) const override;
+        clone() const override;
 
       /*--------.
       | Content |

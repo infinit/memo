@@ -30,6 +30,7 @@ namespace infinit
         boost::optional<cryptography::rsa::PublicKey> signature_key;
         boost::optional<elle::Buffer> signature;
       };
+
       class Block
         : public elle::Printable
         , public elle::serialization::VirtuallySerializable<true>
@@ -52,10 +53,8 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<Block>
-        clone(bool seal_copy) const;
-        virtual
-        std::unique_ptr<Block>
         clone() const override;
+
       /*--------.
       | Content |
       `--------*/

@@ -150,33 +150,25 @@ namespace infinit
       }
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other, bool sealed_copy)
+      BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other)
         : Super(other)
         , OKBHeader(other)
         , _version{other._version}
+        , _signature(other._signature.value())
         , _doughnut{other._doughnut}
         , _owner_private_key(other._owner_private_key)
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
-      {
-        if (sealed_copy ||
-            !other._signature.running() ||
-            *other.owner_key() != other.doughnut()->keys().K())
-          this->_signature = other._signature.value();
-        else
-        {
-          this->_signature = elle::Buffer();
-        }
-      }
+      {}
 
       /*-------.
       | Clone  |
       `-------*/
       template <typename Block>
       std::unique_ptr<blocks::Block>
-      BaseOKB<Block>::clone(bool sealed_copy) const
+      BaseOKB<Block>::clone() const
       {
-        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this, sealed_copy));
+        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this));
       }
 
       /*--------.
@@ -314,14 +306,7 @@ namespace infinit
           this->_data_changed = false;
         }
         else
-        {
           ELLE_DEBUG("%s: data didn't change", *this);
-          if (!this->_signature.running() && this->_signature.value().empty())
-          {
-            ELLE_DEBUG("%s: signature missing, recalculating...", *this);
-            this->_seal_okb(false);
-          }
-        }
       }
 
       template <typename T>
@@ -437,56 +422,26 @@ namespace infinit
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
         ELLE_ASSERT(this->_doughnut);
-        bool need_signature = !s.context().has<OKBDontWaitForSignature>();
         s.serialize("version", this->_version);
-        /* Write signature even when not asked to if either of:
-        * - the signature is already computed
-        * - computing the signature requires a different key
-        */
-        if (need_signature ||
-            s.out() && (*this->owner_key() != this->doughnut()->keys().K() ||
-                        !this->_signature.running()))
-        {
-          if (version < elle::Version(0, 4, 0))
-            if (s.out())
-            {
-              auto value = elle::WeakBuffer(this->_signature.value()).range(4);
-              s.serialize("signature", value);
-            }
-            else
-            {
-              elle::Buffer signature;
-              s.serialize("signature", signature);
-              auto versioned =
-                elle::serialization::binary::serialize(elle::Version(0, 3, 0));
-              versioned.size(versioned.size() + signature.size());
-              memcpy(versioned.mutable_contents() + 4,
-                     signature.contents(), signature.size());
-              this->_signature = std::move(versioned);
-            }
-          else
-            s.serialize("signature", this->_signature.value());
-          ELLE_ASSERT(!this->_signature.value().empty());
-        }
-        else
-        {
-          elle::Buffer signature;
-          s.serialize("signature", signature);
-          if (s.in())
+        if (version < elle::Version(0, 4, 0))
+          if (s.out())
           {
-            if (signature.empty())
-            {
-              auto keys = this->_doughnut->keys_shared();
-              ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
-              this->_signature = keys->k().sign(*this->_sign(),
-                                                this->doughnut()->version());
-              // auto sign = elle::utility::move_on_copy(this->_sign());
-              // this->_signature = [keys, sign] {return keys->k().sign(*sign);};
-            }
-            else
-              this->_signature = std::move(signature);
+            auto value = elle::WeakBuffer(this->_signature.value()).range(4);
+            s.serialize("signature", value);
           }
-        }
+          else
+          {
+            elle::Buffer signature;
+            s.serialize("signature", signature);
+            auto versioned =
+              elle::serialization::binary::serialize(elle::Version(0, 3, 0));
+            versioned.size(versioned.size() + signature.size());
+            memcpy(versioned.mutable_contents() + 4,
+                   signature.contents(), signature.size());
+            this->_signature = std::move(versioned);
+          }
+        else
+          s.serialize("signature", this->_signature.value());
       }
 
       template

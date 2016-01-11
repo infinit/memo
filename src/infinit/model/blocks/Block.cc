@@ -34,15 +34,9 @@ namespace infinit
       `---------*/
 
       std::unique_ptr<Block>
-      Block::clone(bool) const
-      {
-        return elle::make_unique<Block>(this->address(), this->data());
-      }
-
-      std::unique_ptr<Block>
       Block::clone() const
       {
-        return clone(true);
+        return elle::make_unique<Block>(this->address(), this->data());
       }
 
       /*--------.
@@ -177,12 +171,13 @@ namespace infinit
       }
 
       RemoveSignature::RemoveSignature()
-      {
-      }
+      {}
+
       RemoveSignature::RemoveSignature(elle::serialization::Serializer& s)
       {
         this->serialize(s);
       }
+
       RemoveSignature::RemoveSignature(RemoveSignature const& other)
       : group_key(other.group_key)
       , group_index(other.group_index)
@@ -190,7 +185,7 @@ namespace infinit
       , signature(other.signature)
       {
         if (other.block)
-          block = other.block->clone(true);
+          block = other.block->clone();
       }
       void
       RemoveSignature::serialize(elle::serialization::Serializer& s)

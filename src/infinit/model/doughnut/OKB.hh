@@ -87,7 +87,7 @@ namespace infinit
                 elle::Buffer data,
                 boost::optional<elle::Buffer> salt,
                 cryptography::rsa::KeyPair const& owner_keys);
-        BaseOKB(BaseOKB const& other, bool sealed_copy = true);
+        BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE(int, version);
         ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
@@ -179,7 +179,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool seal_copy) const override;
+        clone() const override;
 
       /*--------------.
       | Serialization |

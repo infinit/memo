@@ -37,7 +37,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool seal_copy) const override;
+        clone() const override;
 
       /*------------.
       | Permissions |

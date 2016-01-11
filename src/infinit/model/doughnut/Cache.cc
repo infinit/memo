@@ -129,8 +129,7 @@ namespace infinit
             // to flag it as local
             if (mb)
               mb->is_local(true);
-            bool skip_seal = mb && mb->is_local();
-            cloned = block->clone(!skip_seal);
+            cloned = block->clone();
           }
           auto address = block->address();
           {

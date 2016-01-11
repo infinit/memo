@@ -147,8 +147,8 @@ namespace infinit
       {}
 
       template <typename Block>
-      BaseACB<Block>::BaseACB(BaseACB<Block> const& other, bool sealed_copy)
-        : Super(other, sealed_copy)
+      BaseACB<Block>::BaseACB(BaseACB<Block> const& other)
+        : Super(other)
         , _editor(other._editor)
         , _owner_token(other._owner_token)
         , _acl_changed(other._acl_changed)
@@ -156,31 +156,20 @@ namespace infinit
         , _acl_group_entries(other._acl_group_entries)
         , _group_version(other._group_version)
         , _data_version(other._data_version)
+        , _data_signature(other._data_signature.value()) // FIXME
         , _world_readable(other._world_readable)
         , _world_writable(other._world_writable)
         , _deleted(other._deleted)
-      {
-        if (sealed_copy ||
-            !other._data_signature.running() ||
-            (other.owner_private_key() &&
-             *other.owner_key() != this->doughnut()->keys().K()))
-        {
-          _data_signature = other._data_signature.value();
-        }
-        else
-        {
-          this->_data_signature = elle::Buffer();
-        }
-      }
+      {}
 
       /*-------.
       | Clone  |
       `-------*/
       template <typename Block>
       std::unique_ptr<blocks::Block>
-      BaseACB<Block>::clone(bool sealed_copy) const
+      BaseACB<Block>::clone() const
       {
-        return std::unique_ptr<blocks::Block>(new Self(*this, sealed_copy));
+        return std::unique_ptr<blocks::Block>(new Self(*this));
       }
 
       /*--------.
@@ -657,11 +646,6 @@ namespace infinit
             // FIXME: idempotence in case the write fails ?
             ++this->_data_version;
         }
-        else if (!this->_signature.running() && this->_signature.value().empty())
-        {
-          ELLE_DEBUG("%s: signature missing, recalculating...", *this);
-          this->_seal_okb(false);
-        }
         else
           ELLE_DEBUG("%s: ACL didn't change", *this);
         if (data_changed)
@@ -693,11 +677,12 @@ namespace infinit
               e.token = e.key.seal(secret_buffer);
             if (!sign_key && e.key == this->doughnut()->keys().K())
             {
-              // FIXME: throw preemptively if no write permissions ?
               ELLE_DEBUG("we are editor %s", idx);
               this->_editor = idx;
               sign_key = this->doughnut()->keys().private_key();
             }
+            else
+              ELLE_DEBUG("we are not editor %s", idx);
             ++idx;
           }
           for (auto& e: this->_acl_group_entries)
@@ -739,31 +724,11 @@ namespace infinit
           ELLE_DEBUG("%s: data didn't change", *this);
         // Even if only the ACL was changed, we need to re-sign because the ACL
         // address is part of the signature.
-        if (acl_changed || data_changed ||
-            (!this->_data_signature.running() &&
-             this->_data_signature.value().empty()))
+        if (acl_changed || data_changed)
         {
-          ELLE_DEBUG_SCOPE("%s: sign data", *this);
-          // note: in world_writable mode, the signing key might not be
-          // present in the block, so signing might not be that important.
           if (!sign_key)
-          {
-            // Can happen if we reload a block from disk an reseal it (think
-            // async) and we lost the signature.
-            if (this->_editor == -1
-                || this->_editor < signed(this->_acl_entries.size()))
-              sign_key = this->doughnut()->keys().private_key();
-            else if (this->_editor < signed(this->_acl_entries.size())
-                     + signed(this->_acl_group_entries.size()))
-            {
-              int gindex = this->_editor - signed(this->_acl_entries.size());
-              Group g(*this->doughnut(), this->_acl_group_entries[gindex].key);
-              sign_key =
-                g.group_keys()[this->_group_version[gindex]].private_key();
-            }
-            else
-              throw ValidationFailed("not owner and no write permissions");
-          }
+            throw ValidationFailed("not owner and no write permissions");
+          ELLE_DEBUG_SCOPE("%s: sign data", *this);
           this->_data_signature = sign_key->sign(
             *this->_data_sign(), this->doughnut()->version());
           // auto to_sign = elle::utility::move_on_copy(this->_data_sign());
@@ -775,7 +740,6 @@ namespace infinit
           //     return sign_keys->k().sign(*to_sign);
           //   };
         }
-        Super::_seal();
       }
 
       template <typename Block>
@@ -827,7 +791,7 @@ namespace infinit
       model::blocks::RemoveSignature
       BaseACB<Block>::_sign_remove() const
       {
-        auto res = this->clone(false);
+        auto res = this->clone();
         auto acb = dynamic_cast<Self*>(res.get());
         ELLE_ASSERT(acb);
         acb->_deleted = true;
@@ -981,42 +945,26 @@ namespace infinit
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
         s.serialize("data_version", this->_data_version);
-        bool need_signature = !s.context().has<ACBDontWaitForSignature>();
-        // see comment in BaseOKB::_serialize
-        if (need_signature ||
-            s.out() && (*this->owner_key() != this->doughnut()->keys().K() ||
-                        !this->_signature.running()))
-        {
-          if (version < elle::Version(0, 4, 0))
-            if (s.out())
-            {
-              auto value =
-                elle::WeakBuffer(this->_data_signature.value()).range(4);
-              s.serialize("data_signature", value);
-            }
-            else
-            {
-              elle::Buffer signature;
-              s.serialize("data_signature", signature);
-              auto versioned =
-                elle::serialization::binary::serialize(elle::Version(0, 3, 0));
-              versioned.size(versioned.size() + signature.size());
-              memcpy(versioned.mutable_contents() + 4,
-                     signature.contents(), signature.size());
-              this->_data_signature = std::move(versioned);
-            }
+        if (version < elle::Version(0, 4, 0))
+          if (s.out())
+          {
+            auto value =
+              elle::WeakBuffer(this->_data_signature.value()).range(4);
+            s.serialize("data_signature", value);
+          }
           else
-            s.serialize("data_signature", this->_data_signature.value());
-        }
+          {
+            elle::Buffer signature;
+            s.serialize("data_signature", signature);
+            auto versioned =
+              elle::serialization::binary::serialize(elle::Version(0, 3, 0));
+            versioned.size(versioned.size() + signature.size());
+            memcpy(versioned.mutable_contents() + 4,
+                   signature.contents(), signature.size());
+            this->_data_signature = std::move(versioned);
+          }
         else
-        {
-          elle::Buffer signature;
-          s.serialize("data_signature", signature);
-          if (!signature.empty())
-            this->_data_signature = std::move(signature);
-          // cant't do anything here, we might have child classes and still
-          // be in the constructor
-        }
+          s.serialize("data_signature", this->_data_signature.value());
         if (version >= elle::Version(0, 4, 0))
         {
           s.serialize("world_readable", this->_world_readable);

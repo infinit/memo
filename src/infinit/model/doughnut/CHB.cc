@@ -49,7 +49,7 @@ namespace infinit
       `---------*/
 
       std::unique_ptr<blocks::Block>
-      CHB::clone(bool) const
+      CHB::clone() const
       {
         return std::unique_ptr<blocks::Block>(new CHB(*this));
       }

@@ -29,7 +29,7 @@ namespace infinit
         typedef GB Self;
         typedef BaseACB<blocks::GroupBlock> Super;
         GB(Doughnut* owner, cryptography::rsa::KeyPair master);
-        GB(GB const& other, bool sealed_copy = true);
+        GB(GB const& other);
         ~GB();
 
       public:
@@ -114,7 +114,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool sealed_copy) const override;
+        clone() const override;
       private:
         void
         _extract_keys();
