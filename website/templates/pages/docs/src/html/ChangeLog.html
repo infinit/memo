@@ -1,12 +1,32 @@
 <h1 id="change-log">Change Log</h1>
 <h2 id="-unreleased-">[Unreleased]</h2>
+<h2 id="-0-3-7-2016-01-11">[0.3.7] - 2016-01-11</h2>
+<p>Small improvements and fixes.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>Add <code>&#8209;&#8209;no-countdown</code> option to <code>infinit-device --transmit</code>.</li>
+<li>Accept <code>&#8209;&#8209;fallback-xattrs</code> in <code>infinit-acl --list</code>.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Change default kelips group count to 1, to avoid deadlocked networks
+with too few computer if unspecified.</li>
+<li>Terminate gracefully on <code>SIGTERM</code> and <code>SIGQUIT</code>, just like <code>SIGINT</code>
+previously.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Don&#39;t err in <code>infinit-user --fetch</code> if the avatar is missing.</li>
+</ul>
+<h2 id="-0-3-6-2016-01-11-yanked-">[0.3.6] - 2016-01-11 [YANKED]</h2>
+<p>Skipped release because of a botched tag.</p>
 <h2 id="-0-3-5-2016-01-06">[0.3.5] - 2016-01-06</h2>
 <p>Hotfix release to fix mounting in async mode, plus some stability and
 performance improvement and S3 storage support.</p>
 <h3 id="added">Added</h3>
 <ul>
 <li>Support S3 as storage backend.</li>
-<li>Enable to force compatibility version with --force-version option.</li>
+<li>Enable to force compatibility version with <code>&#8209;&#8209;force-version</code> option.</li>
 </ul>
 <h3 id="changed">Changed</h3>
 <ul>
@@ -15,7 +35,7 @@ private keys.</li>
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
-<li>Fix critical bug preventing running networks using --async with
+<li>Fix critical bug preventing running networks using <code>&#8209;&#8209;async</code> with
 error message "fatal error: missing serialization context for
 infinit::model::Model*".</li>
 <li>Fix reported file size that could sometime be random.</li>
