@@ -247,10 +247,9 @@ namespace infinit
         rpcs.add("auth_syn", std::function<std::pair<Challenge,Passport*>(Passport const&)>(
           [this] (Passport const& p) -> std::pair<Challenge, Passport*>
           {
-            ELLE_TRACE("entering auth_syn, dn=%s", this->_doughnut);
+            ELLE_TRACE("%s: authentication syn", *this);
             bool verify = const_cast<Passport&>(p).verify(
               *this->_doughnut.owner());
-            ELLE_TRACE("auth_syn verify = %s", verify);
             if (!verify)
             {
               ELLE_LOG("Passport validation failed");
@@ -271,7 +270,7 @@ namespace infinit
                  elle::Buffer const& token,
                  elle::Buffer const& signed_challenge) -> bool
           {
-            ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+            ELLE_TRACE("%s: authentication acknowledgment", *this);
             auto it = this->_challenges.find(token.string());
             if (it == this->_challenges.end())
             {
@@ -297,7 +296,6 @@ namespace infinit
               infinit::cryptography::Mode::cbc);
             _rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
               std::move(password)));
-            ELLE_TRACE("auth_ack exiting");
             return true;
           }));
       }
