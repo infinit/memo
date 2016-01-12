@@ -33,21 +33,6 @@ namespace infinit
         void
         remove_member(model::User const& user);
         virtual
-        cryptography::rsa::PublicKey
-        current_public_key();
-        virtual
-        cryptography::rsa::KeyPair
-        current_key();
-        virtual
-        std::vector<cryptography::rsa::KeyPair>
-        all_keys();
-        virtual
-        std::vector<cryptography::rsa::PublicKey>
-        all_public_keys();
-        virtual
-        int
-        version();
-        virtual
         void
         add_admin(model::User const& user);
         virtual
@@ -55,7 +40,7 @@ namespace infinit
         remove_admin(model::User const& user);
         virtual
         std::vector<std::unique_ptr<User>>
-        list_admins(bool ommit_names);
+        list_admins(bool ommit_names) const;
 
       public:
         GroupBlock(elle::serialization::Serializer& input,

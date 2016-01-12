@@ -71,7 +71,7 @@ namespace infinit
       }
 
       std::vector<ACLBlock::Entry>
-      ACLBlock::list_permissions(boost::optional<Model const&> model)
+      ACLBlock::list_permissions(boost::optional<Model const&> model) const
       {
         ELLE_TRACE_SCOPE("%s: list permissions", *this);
         return this->_list_permissions(model);
@@ -100,7 +100,7 @@ namespace infinit
       }
 
       std::vector<ACLBlock::Entry>
-      ACLBlock::_list_permissions(boost::optional<Model const&>)
+      ACLBlock::_list_permissions(boost::optional<Model const&>) const
       {
         return {};
       }

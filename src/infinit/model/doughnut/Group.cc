@@ -30,43 +30,46 @@ namespace infinit
       Group::Group(Doughnut& dht, std::string const& name)
         : _dht(dht)
         , _name(name)
-      {
-      }
+        , _public_control_key()
+        , _block()
+      {}
 
       Group::Group(Doughnut& dht, cryptography::rsa::PublicKey k)
-      : _dht(dht)
-      , _public_control_key(k)
+        : _dht(dht)
+        , _name()
+        , _public_control_key(k)
+        , _block()
       {
-        _stack_push();
+        this->_stack_push();
       }
 
       Group::~Group()
       {
-        if (!_public_control_key)
+        if (!this->_public_control_key)
           return;
-        if (_stack.Get().back() != _public_control_key)
+        if (this->_stack.Get().back() != this->_public_control_key)
           ELLE_WARN("Group stack error");
         else
-          _stack.Get().pop_back();
+          this->_stack.Get().pop_back();
       }
 
       void
       Group::_stack_push()
       {
-        auto& s = _stack.Get();
-        if (std::find(s.begin(), s.end(), _public_control_key) != s.end())
+        auto& s = this->_stack.Get();
+        if (std::find(s.begin(), s.end(), this->_public_control_key) != s.end())
           throw elle::Error("Group loop");
-        s.push_back(*_public_control_key);
+        s.push_back(*this->_public_control_key);
       }
 
       void
       Group::create()
       {
+        ELLE_TRACE_SCOPE("%s: create", *this);
         infinit::filesystem::umbrella([&] {
-            ELLE_DEBUG("create group");
             try
             {
-              auto block = _dht.fetch(UB::hash_address(_name));
+              auto block = this->_dht.fetch(UB::hash_address(_name));
               if (block)
                 throw elle::Error(elle::sprintf("Group %s already exists", _name));
             }
@@ -88,66 +91,62 @@ namespace infinit
       }
 
       cryptography::rsa::PublicKey
-      Group::public_control_key()
+      Group::public_control_key() const
       {
-        if (_public_control_key)
+        if (this->_public_control_key)
           return *_public_control_key;
+        ELLE_TRACE_SCOPE("%s: fetch", *this);
         auto ub = elle::cast<UB>::runtime(
-          _dht.fetch(UB::hash_address(_name)));
-        _public_control_key.emplace(ub->key());
-        _stack_push();
-        ELLE_DEBUG("public_control_key for %s is %s", _name, _public_control_key);
-        return *_public_control_key;
+          this->_dht.fetch(UB::hash_address(_name)));
+        elle::unconst(this)->_public_control_key.emplace(ub->key());
+        elle::unconst(this)->_stack_push();
+        ELLE_DEBUG("public_control_key for %s is %s",
+                   this->_name, this->_public_control_key);
+        return *this->_public_control_key;
+      }
+
+      GB&
+      Group::block() const
+      {
+        if (this->_block)
+          return *this->_block;
+        ELLE_TRACE_SCOPE("%s: fetch block", *this);
+        auto key = this->public_control_key();
+        auto addr = ACB::hash_address(key, group_block_key);
+        elle::unconst(this)->_block = elle::cast<GB>::runtime(
+          this->_dht.fetch(addr));
+        return *this->_block;
       }
 
       cryptography::rsa::KeyPair
       Group::_control_key()
       {
-        auto pub = public_control_key();
-        auto master_block = _dht.fetch(
-          OKBHeader::hash_address(pub, group_block_key));
         return elle::serialization::binary::deserialize
-          <cryptography::rsa::KeyPair>
-          (master_block->data());
+          <cryptography::rsa::KeyPair>(this->block().data());
       }
 
       cryptography::rsa::PublicKey
-      Group::current_public_key()
+      Group::current_public_key() const
       {
-        auto key = public_control_key();
-        auto addr = ACB::hash_address(key, group_block_key);
-        ELLE_DEBUG("group block for %s is at %s", _name, addr);
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(addr));
-        return block->current_public_key();
+        return this->block().current_public_key();
       }
 
       int
-      Group::version()
+      Group::version() const
       {
-        auto key = public_control_key();
-        auto addr = ACB::hash_address(key, group_block_key);
-        ELLE_DEBUG("group block for %s is at %s", _name, addr);
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(addr));
-        return block->version();
+        return this->block().group_version();
       }
 
       cryptography::rsa::KeyPair
-      Group::current_key()
+      Group::current_key() const
       {
-        auto key = public_control_key();
-        auto addr = ACB::hash_address(key, group_block_key);
-        ELLE_DEBUG("group block for %s is at %s", _name, addr);
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(addr));
-        return block->current_key();
+        return this->block().current_key();
       }
 
       std::vector<std::unique_ptr<model::User>>
       Group::list_members(bool ommit_names)
       {
-        auto key = public_control_key();
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-          OKBHeader::hash_address(key, group_block_key)));
-        auto entries = block->list_permissions(_dht);
+        auto entries = this->block().list_permissions(_dht);
         std::vector<std::unique_ptr<model::User>> res;
         for (auto& ent: entries)
           res.emplace_back(std::move(ent.user));
@@ -157,21 +156,15 @@ namespace infinit
       std::vector<std::unique_ptr<model::User>>
       Group::list_admins(bool ommit_names)
       {
-        auto key = public_control_key();
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-          OKBHeader::hash_address(key, group_block_key)));
-        auto entries = block->list_admins(ommit_names);
+        auto entries = this->block().list_admins(ommit_names);
         return entries;
       }
 
       void
       Group::add_member(model::User const& user)
       {
-        auto key = public_control_key();
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-          OKBHeader::hash_address(key, group_block_key)));
-        block->add_member(user);
-        _dht.store(std::move(block));
+        this->block().add_member(user);
+        this->_dht.store(this->block());
       }
 
       void
@@ -181,18 +174,15 @@ namespace infinit
             auto user = _dht.make_user(userdata);
             if (!user)
               THROW_NOENT;
-            add_member(*user);
+            this->add_member(*user);
         });
       }
 
       void
       Group::add_admin(model::User const& user)
       {
-        auto key = public_control_key();
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-          OKBHeader::hash_address(key, group_block_key)));
-        block->add_admin(user);
-        _dht.store(std::move(block));
+        this->block().add_admin(user);
+        this->_dht.store(this->block());
       }
 
       void
@@ -209,11 +199,8 @@ namespace infinit
       void
       Group::remove_member(model::User const& user)
       {
-        auto key = public_control_key();
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-          OKBHeader::hash_address(key, group_block_key)));
-        block->remove_member(user);
-        _dht.store(std::move(block));
+        this->block().remove_member(user);
+        this->_dht.store(this->block());
       }
 
       void
@@ -223,18 +210,15 @@ namespace infinit
             auto user = _dht.make_user(userdata);
             if (!user)
               THROW_NOENT;
-            remove_member(*user);
+            this->remove_member(*user);
         });
       }
 
       void
       Group::remove_admin(model::User const& user)
       {
-        auto key = public_control_key();
-        auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-          OKBHeader::hash_address(key, group_block_key)));
-        block->remove_admin(user);
-        _dht.store(std::move(block));
+        this->block().remove_admin(user);
+        this->_dht.store(this->block());
       }
 
       void
@@ -244,7 +228,7 @@ namespace infinit
             auto user = _dht.make_user(userdata);
             if (!user)
               THROW_NOENT;
-            remove_admin(*user);
+            this->remove_admin(*user);
         });
       }
 
@@ -252,20 +236,15 @@ namespace infinit
       Group::group_keys()
       {
         return filesystem::umbrella([&] {
-            auto key = public_control_key();
-            auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-              OKBHeader::hash_address(key, group_block_key)));
-            return block->all_keys();
+            return this->block().all_keys();
         });
       }
+
       std::vector<cryptography::rsa::PublicKey>
       Group::group_public_keys()
       {
         return filesystem::umbrella([&] {
-            auto key = public_control_key();
-            auto block = elle::cast<blocks::GroupBlock>::runtime(_dht.fetch(
-              OKBHeader::hash_address(key, group_block_key)));
-            return block->all_public_keys();
+            return this->block().all_public_keys();
         });
       }
     }

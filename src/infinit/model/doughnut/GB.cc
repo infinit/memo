@@ -114,35 +114,35 @@ namespace infinit
       }
 
       cryptography::rsa::PublicKey
-      GB::current_public_key()
+      GB::current_public_key() const
       {
         return this->_public_keys.back();
       }
 
       cryptography::rsa::KeyPair
-      GB::current_key()
+      GB::current_key() const
       {
         if (this->_keys.empty())
-          this->_extract_keys();
+          elle::unconst(this)->_extract_keys();
         return this->_keys.back();
       }
 
       int
-      GB::version()
+      GB::group_version() const
       {
         return this->_public_keys.size();
       }
 
       std::vector<cryptography::rsa::KeyPair>
-      GB::all_keys()
+      GB::all_keys() const
       {
         if (this->_keys.empty())
-          this->_extract_keys();
+          elle::unconst(this)->_extract_keys();
         return this->_keys;
       }
 
       std::vector<cryptography::rsa::PublicKey>
-      GB::all_public_keys()
+      GB::all_public_keys() const
       {
         return this->_public_keys;
       }
@@ -211,7 +211,7 @@ namespace infinit
       }
 
       std::vector<std::unique_ptr<model::User>>
-      GB::list_admins(bool ommit_names)
+      GB::list_admins(bool ommit_names) const
       {
         std::vector<std::unique_ptr<model::User>> res;
         for (auto const& key: this->_admin_keys)

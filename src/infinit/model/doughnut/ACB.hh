@@ -135,7 +135,7 @@ namespace infinit
         _copy_permissions(blocks::ACLBlock& to) override;
         virtual
         std::vector<blocks::ACLBlock::Entry>
-        _list_permissions(boost::optional<Model const&> model) override;
+        _list_permissions(boost::optional<Model const&> model) const override;
         virtual
         void
         _set_world_permissions(bool read, bool write) override;

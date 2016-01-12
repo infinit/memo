@@ -431,7 +431,8 @@ namespace infinit
 
       template <typename Block>
       std::vector<blocks::ACLBlock::Entry>
-      BaseACB<Block>::_list_permissions(boost::optional<Model const&> model)
+      BaseACB<Block>::_list_permissions(
+        boost::optional<Model const&> model) const
       {
         auto make_user =
           [&] (cryptography::rsa::PublicKey const& k)

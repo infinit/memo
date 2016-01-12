@@ -68,15 +68,14 @@ namespace infinit
         };
 
         std::vector<Entry>
-        list_permissions(boost::optional<Model const&> model);
+        list_permissions(boost::optional<Model const&> model) const;
 
       protected:
         virtual
         void
         _set_permissions(User const& user,
                          bool read,
-                         bool write
-                         );
+                         bool write);
         virtual
         void
         _set_world_permissions(bool read, bool write);
@@ -86,10 +85,9 @@ namespace infinit
         virtual
         void
         _copy_permissions(ACLBlock& to);
-
         virtual
         std::vector<Entry>
-        _list_permissions(boost::optional<Model const&> model);
+        _list_permissions(boost::optional<Model const&> model) const;
 
       /*--------------.
       | Serialization |

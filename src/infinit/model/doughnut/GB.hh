@@ -46,23 +46,23 @@ namespace infinit
         void
         remove_admin(model::User const& user) override;
         virtual
+        std::vector<std::unique_ptr<model::User>>
+        list_admins(bool ommit_names) const override;
+        virtual
         cryptography::rsa::PublicKey
-        current_public_key() override;
+        current_public_key() const;
         virtual
         cryptography::rsa::KeyPair
-        current_key() override;
+        current_key() const;
         virtual
         std::vector<cryptography::rsa::KeyPair>
-        all_keys() override;
+        all_keys() const;
         virtual
         std::vector<cryptography::rsa::PublicKey>
-        all_public_keys() override;
-        virtual
-        std::vector<std::unique_ptr<model::User>>
-        list_admins(bool ommit_names) override;
+        all_public_keys() const;
         virtual
         int
-        version() override;
+        group_version() const;
       protected:
         class OwnerSignature
           : public Super::OwnerSignature
