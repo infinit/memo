@@ -421,8 +421,11 @@ body.home {
   }
 
   section.download {
-    background: #F9F9F9; padding-top: 40px;
-    p.title { text-align: center;}
+    background: #F9F9F9; padding-top: 40px; text-align: center;
+    p.title {
+      text-align: center; margin-bottom: 5px; font-family: @sourcesans; font-weight: bold;
+    }
+    p.subtitle { margin-top: 0; }
     &:after { display: table; clear: both; content: ''; }
 
     div:last-child img { margin-bottom: 8px;}
