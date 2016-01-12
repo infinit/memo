@@ -60,6 +60,10 @@ $(document).ready(function() {
 
   if ($('body').hasClass('doc_get_started')) {
 
+    $('a.button').click(function() {
+      ga('send', 'event', 'download', $(this).text(), navigator.userAgent);
+    });
+
     var winHeight = $(window).height(),
         docHeight = $(document).height(),
         progressBar = $('progress'),
