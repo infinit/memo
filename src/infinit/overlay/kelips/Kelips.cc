@@ -737,6 +737,7 @@ namespace infinit
         : Overlay(doughnut, local, std::move(node_id))
         , _config(config)
         , _next_id(1)
+        , _port(0)
         , _observer(!local)
         , _dropped_puts(0)
         , _dropped_gets(0)
