@@ -75,7 +75,15 @@ namespace infinit
                 elle::sprintf("%s: fetch node by address", *this),
                 [&]
                 {
-                  yield(this->lookup_node(address));
+                  try
+                  {
+                    auto peer = this->lookup_node(address);
+                    yield(peer);
+                  }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_TRACE("Failed to lookup node %s: %s", address, e);
+                  }
                 });
             reactor::wait(scope);
           };
