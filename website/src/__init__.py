@@ -135,7 +135,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/changelog.html')
   def root(self):
     return {
-      'title': 'Changelog',
+      'title': 'Change Log',
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
