@@ -7,7 +7,7 @@ The goals of the two projects are quite different. IPFS aims to be used to build
 
 2. How does Infinit differ from Dropbox, Google Drive and BitTorrent Sync?
 --------------------------------------------------------------------------
-Infinit is primarily an enterprise solution, offering system administrators complete control over where and how their data storage infrastructure works. That being said, end users will have similar functionality to that found in other cloud storage systems. One of our core values is in making technology accessible which means we've worked hard to make Infinit as easy to configure and use as possible.
+Infinit is primarily an enterprise solution, offering system administrators complete control over where their data is stored and how their data storage infrastructure works. That being said, end users will have similar functionality to that found in other cloud storage systems. One of our core values is in making technology accessible which means we've worked hard to make Infinit as easy to configure and use as possible.
 
 3. Where is the open source code?
 ---------------------------------
