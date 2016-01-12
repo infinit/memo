@@ -624,6 +624,7 @@ def configure(
     ('rpc', []),
     ('storage', []),
     ('async-conflict', []),
+    ('kelips', []),
   ]
   if not windows:
     tests_names.append(('filesystem', binaries))
