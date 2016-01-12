@@ -3183,13 +3183,44 @@ namespace infinit
       {
         if (address == _self)
           return this->local();
+        auto async_lookup = [this, address]() {
+          boost::optional<PeerLocation> result;
+          kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
+            {
+              result = p;
+            });
+          auto it = _node_lookups.find(address);
+          if (it != _node_lookups.end())
+            it->second.second = !!result;
+        };
+        auto it = _node_lookups.find(address);
+        if (it != _node_lookups.end())
+        {
+          if (it->second.second == true)
+          { // async lookup suceeded
+            _node_lookups.erase(it);
+          }
+          else if (!it->second.first || it->second.first->done())
+          { // restart async lookup
+            it->second.first.reset(new reactor::Thread("async_lookup",
+              async_lookup));
+            // and fast fail
+            throw elle::Error(elle::sprintf("Node %s not found", address));
+          }
+          else // thread still running
+            throw elle::Error(elle::sprintf("Node %s not found", address));
+        }
         boost::optional<PeerLocation> result;
         kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
           {
             result = p;
           });
         if (!result)
+        { // mark for future fast fail
+          _node_lookups.insert(std::make_pair(address, std::make_pair(
+            reactor::Thread::unique_ptr(), false)));
           throw elle::Error(elle::sprintf("Node %s not found", address));
+        }
         return make_peer(*result);
       }
 
