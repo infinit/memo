@@ -51,7 +51,7 @@ module.exports = function(grunt) {
       all: {
         files: [{
           expand: true,
-          src: 'templates/pages/docs/src/markdown/*.md',
+          src: ['templates/pages/docs/src/markdown/*.md', '../ChangeLog'],
           dest: 'templates/pages/docs/src/html',
           flatten: true,
           ext: '.html'

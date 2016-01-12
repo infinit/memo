@@ -131,6 +131,14 @@ class Website(bottle.Bottle):
       'description': 'Discover the next developments of the Infinit platform.',
     }
 
+  @route('/documentation/changelog', name = 'doc_changelog')
+  @view('pages/docs/changelog.html')
+  def root(self):
+    return {
+      'title': 'Changelog',
+      'description': 'Have a look at all the recent changes of the Infinit platform.',
+    }
+
   @route('/open-source', name = 'opensource')
   @view('pages/opensource.html')
   def root(self):

@@ -1,0 +1,117 @@
+<h1 id="change-log">Change Log</h1>
+<h2 id="-unreleased-">[Unreleased]</h2>
+<h2 id="-0-3-5-2016-01-06">[0.3.5] - 2016-01-06</h2>
+<p>Hotfix release to fix mounting in async mode, plus some stability and
+performance improvement and S3 storage support.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>Support S3 as storage backend.</li>
+<li>Enable to force compatibility version with --force-version option.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Set permissions on user configuration files to 066 as some contain
+private keys.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Fix critical bug preventing running networks using --async with
+error message "fatal error: missing serialization context for
+infinit::model::Model*".</li>
+<li>Fix reported file size that could sometime be random.</li>
+<li>Fix extended attribute compatibility mode writing files above the
+filesystem root.</li>
+<li>Fix potential segfault on OSX with finder sidebar.</li>
+<li>Fix fetching network with several storages.</li>
+<li>Retry forever if storage is full in async mode instead of asserting.</li>
+</ul>
+<h2 id="-0-3-4-2015-12-17">[0.3.4] - 2015-12-17</h2>
+<p>Stability and performance release.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>Cache directories preventively to speed up browsing speed.</li>
+<li>Let extended attribute <code>user.infinit.sync</code> wait for file synchronization.</li>
+<li>Add fetch and push options to <code>infinit-drive --invite</code>, clarify help.</li>
+<li>Enable to fetch several users at once with <code>infinit-user --fetch</code>.</li>
+<li>Enable to show volume in the finder sidebar on OSX with
+<code>infinit-volume --finder-sidebar</code>.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Only allow lowercase alpha-numeric characters in objects names
+(i.e. users, networks, volumes ...).</li>
+<li>Rename <code>infinit-network --join</code> to <code>infinit-network --link</code>.</li>
+<li>Accept --as option on all commands.</li>
+<li>Set kelips group count to 1 by default.</li>
+<li>Translate user rwx permissions from ACLs.</li>
+<li>Prefix user public key hash with a <code>#</code> in permissions listing if
+name is unknown.</li>
+<li>Show storage capacity in <code>infinit-storage --list</code>.</li>
+<li>Show invitation status in <code>infinit-drive --list</code>.</li>
+<li>Improve many <code>infinit-drive</code> output messages.</li>
+<li>Bump files mtime on each write.</li>
+<li>Optimize on-disk asynchronous journal loading time.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Properly handle execution permissions.</li>
+<li>Drop removed files from cache, fixing many IO errors when trying to
+perform operations on a deleted file.</li>
+<li>Fix crash with broken locale setting.</li>
+<li>Fix wrong file size reported in some cases.</li>
+<li>Fix truncate on cached files.</li>
+</ul>
+<h2 id="-0-3-3-2015-12-03">[0.3.3] - 2015-12-03</h2>
+<p>Bugfix release to correct conflict errors, plus minor improvements.</p>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Always try using a public key in inifinit-acl if the user does not
+exist in the network. Remove --try-with-public-key as a consequence.</li>
+<li>Improve directory creation performances.</li>
+<li>Remove --as option from infinit-user --fetch.</li>
+<li>Improve network error reporting in the CLI.</li>
+<li>Add a timeout when pairing devices.</li>
+<li>Show user public key hash in permissions listing if name is unknown.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Add missing automatic conflicts resolver.</li>
+<li>Let a user create passport for a network without joining it.</li>
+<li>Don&#39;t require a valid current user to list a network passports.</li>
+</ul>
+<h2 id="-0-3-2-2015-12-01">[0.3.2] - 2015-12-01</h2>
+<p>Release adjustments.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>Enable to point the data directory directly with the
+INFINIT_DATA_HOME environment variable.</li>
+<li>Generate Debian package.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Change demo home path to be usable with INFINIT_DATA_HOME.</li>
+<li>Fix unmount when pushing stats of a storage with no maximum
+capacity.</li>
+</ul>
+<h2 id="-0-3-1-2015-11-30">[0.3.1] - 2015-11-30</h2>
+<p>Release adjustments.</p>
+<h3 id="added">Added</h3>
+<ul>
+<li>Magic number on stored binary blocks to enable transparent future
+format changes, e.g. JSON.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>Store configuration and data files according to XDG convention.</li>
+<li>Improve infinit-user --signup help.</li>
+<li>Prevent infinit-drive from joining own network.</li>
+<li>Hide unstable features for now: Dropbox and Google Drive storage,
+multiple storage nodes.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>Ship compiler-specific dynamic libraries for portability.</li>
+<li>Fix unmounting on OSX.</li>
+</ul>
+<h2 id="-0-3-0-2015-11-29">[0.3.0] - 2015-11-29</h2>
+<p>First public release candidate.</p>

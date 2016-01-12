@@ -81,6 +81,7 @@ def configure(
     'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
+    'templates/pages/docs/ChangeLog.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
@@ -92,6 +93,7 @@ def configure(
     'templates/pages/docs/src/html/overview.html',
     'templates/pages/docs/src/html/technology.html',
     'templates/pages/docs/src/html/reference.html',
+    'templates/pages/docs/src/html/ChangeLog.html',
   )
 
   resources = drake.nodes(
