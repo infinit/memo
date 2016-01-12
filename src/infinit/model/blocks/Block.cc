@@ -166,8 +166,8 @@ namespace infinit
       Block::print(std::ostream& output) const
       {
         elle::fprintf(
-          output, "%s(%f, %f)",
-          elle::type_info(*this).name(), this->_address, this->_data);
+          output, "%s(%s)",
+          elle::type_info(*this).name(), this->_address);
       }
 
       RemoveSignature::RemoveSignature()
