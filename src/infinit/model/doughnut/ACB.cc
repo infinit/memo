@@ -554,7 +554,6 @@ namespace infinit
               ELLE_DEBUG("%s: group author signature invalid", *this);
               return blocks::ValidationResult::failure("Incorrect group key signature");
             }
-            ELLE_WARN("VERIFIED");
           }
           else
           {
@@ -733,7 +732,6 @@ namespace infinit
           ELLE_DEBUG_SCOPE("%s: sign data", *this);
           this->_data_signature = sign_key->sign_async(
             *this->_data_sign(), this->doughnut()->version());
-          ELLE_WARN("async");
         }
       }
 
