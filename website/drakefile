@@ -71,6 +71,7 @@ def configure(
     'templates/base.html',
     'templates/pages/home.html',
     'templates/pages/drive.html',
+    'templates/pages/faq.html',
     'templates/pages/docs/menu.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
@@ -90,6 +91,7 @@ def configure(
     'templates/pages/legal.html',
 
     'templates/pages/docs/src/html/get_started.html',
+    'templates/pages/docs/src/html/faq.html',
     'templates/pages/docs/src/html/overview.html',
     'templates/pages/docs/src/html/technology.html',
     'templates/pages/docs/src/html/reference.html',
