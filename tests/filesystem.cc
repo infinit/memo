@@ -68,11 +68,6 @@ std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
 
-static void sig_int()
-{
-  fs->unmount();
-}
-
 static int setxattr_(bfs::path p, std::string const& name, std::string const& value)
 {
   return setxattr(p.c_str(), name.c_str(), value.c_str(), value.size(), 0 SXA_EXTRA);
@@ -672,12 +667,12 @@ test_filesystem(bool dht,
       ofs.write(buffer, 16384);
   }
   int tfd = open( (mount / "tt").c_str(), O_RDWR);
-  ftruncate(tfd, 0);
-  write(tfd, buffer, 16384);
-  write(tfd, buffer, 12288);
-  write(tfd, buffer, 3742);
-  ftruncate(tfd, 32414);
-  ftruncate(tfd, 32413);
+  BOOST_CHECK_EQUAL(ftruncate(tfd, 0), 0);
+  BOOST_CHECK_EQUAL(write(tfd, buffer, 16384), 16384);;
+  BOOST_CHECK_EQUAL(write(tfd, buffer, 12288), 12288);
+  BOOST_CHECK_EQUAL(write(tfd, buffer, 3742), 3742);
+  BOOST_CHECK_EQUAL(ftruncate(tfd, 32414), 0);
+  BOOST_CHECK_EQUAL(ftruncate(tfd, 32413), 0);
   close(tfd);
   BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
 
