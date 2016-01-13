@@ -27,10 +27,6 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
-
 namespace dht = infinit::model::doughnut;
 namespace storage = infinit::storage;
 
@@ -211,8 +207,7 @@ private:
           return make_overlay(0, id, members, std::move(local), d);
         }),
       boost::optional<int>(),
-      std::move(storage_a),
-      INFINIT_ELLE_VERSION);
+      std::move(storage_a));
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
       this->keys_b,
@@ -227,8 +222,7 @@ private:
           return make_overlay(1, id, members, std::move(local), d);
         }),
       boost::optional<int>(),
-      std::move(storage_b),
-      INFINIT_ELLE_VERSION);
+      std::move(storage_b));
     this->dht_c = std::make_shared<dht::Doughnut>(
       id_c,
       this->keys_c,
@@ -243,8 +237,7 @@ private:
           return make_overlay(2, id, members, std::move(local), d);
         }),
       boost::optional<int>(),
-      std::move(storage_c),
-      INFINIT_ELLE_VERSION);
+      std::move(storage_c));
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
       {
