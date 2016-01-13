@@ -45,10 +45,13 @@
 
       <ul>
         <li>
-          <a ${'class="active"' if request.route.name == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
+          <a ${'class="active"' if request.route.name[:15] == 'doc_get_started' else ''} href="${route('doc_get_started')}">Get Started</a>
         </li>
         <li>
-          <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name != 'doc_get_started' else ''} href="${route('doc_overview')}">Documentation</a>
+          <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name[:15] != 'doc_get_started' and request.route.name != 'doc_faq' else ''} href="${route('doc_overview')}">Documentation</a>
+        </li>
+        <li>
+          <a ${'class="active"' if request.route.name == 'doc_faq' else ''} href="${route('doc_faq')}">FAQ</a>
         </li>
       </ul>
     </header>
