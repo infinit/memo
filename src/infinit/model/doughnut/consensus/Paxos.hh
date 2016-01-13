@@ -50,7 +50,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
-          _remove(Address address) override;
+          _remove(Address address, blocks::RemoveSignature rs) override;
 
         /*--------.
         | Factory |
@@ -121,7 +121,7 @@ namespace infinit
             store(blocks::Block const& block, StoreMode mode) override;
             virtual
             void
-            remove(Address address) override;
+            remove(Address address, blocks::RemoveSignature rs) override;
             struct Decision
             {
               Decision(PaxosServer paxos);

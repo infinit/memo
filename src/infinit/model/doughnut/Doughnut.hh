@@ -12,16 +12,13 @@
 # include <infinit/model/doughnut/Passport.hh>
 # include <infinit/overlay/Overlay.hh>
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
-
 namespace infinit
 {
   namespace model
   {
     namespace doughnut
     {
+      struct ACLEntry;
       class Doughnut // Doughnut. DougHnuT. Get it ?
         : public Model
         , public std::enable_shared_from_this<Doughnut>
@@ -38,23 +35,23 @@ namespace infinit
           std::unique_ptr<consensus::Consensus>(Doughnut&)> ConsensusBuilder;
         Doughnut(Address id,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 infinit::cryptography::rsa::PublicKey owner,
+                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
                  Passport passport,
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local,
-                 elle::Version version = INFINIT_ELLE_VERSION);
+                 boost::optional<elle::Version> version = {});
         Doughnut(Address id,
                  std::string const& name,
                  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
-                 infinit::cryptography::rsa::PublicKey owner,
+                 std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
                  Passport passport,
                  ConsensusBuilder consensus,
                  OverlayBuilder overlay_builder,
                  boost::optional<int> port,
                  std::unique_ptr<storage::Storage> local,
-                 elle::Version version = INFINIT_ELLE_VERSION);
+                 boost::optional<elle::Version> version = {});
         ~Doughnut();
         cryptography::rsa::KeyPair const&
         keys() const;
@@ -62,23 +59,28 @@ namespace infinit
         keys_shared() const;
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
-        ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, owner);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>, owner);
         ELLE_ATTRIBUTE_R(Passport, passport);
         ELLE_ATTRIBUTE_R(std::unique_ptr<consensus::Consensus>, consensus)
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
         ELLE_ATTRIBUTE(elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
+      public:
+
       protected:
         virtual
         std::unique_ptr<blocks::MutableBlock>
         _make_mutable_block() const override;
         virtual
         std::unique_ptr<blocks::ImmutableBlock>
-        _make_immutable_block(elle::Buffer content) const override;
+        _make_immutable_block(elle::Buffer content, Address owner) const override;
         virtual
         std::unique_ptr<blocks::ACLBlock>
         _make_acl_block() const override;
+        virtual
+        std::unique_ptr<blocks::GroupBlock>
+        _make_group_block() const override;
         virtual
         std::unique_ptr<model::User>
         _make_user(elle::Buffer const& data) const override;
@@ -93,7 +95,7 @@ namespace infinit
                boost::optional<int> local_version) const override;
         virtual
         void
-        _remove(Address address) override;
+        _remove(Address address, blocks::RemoveSignature rs) override;
         friend class Local;
       };
 
@@ -105,7 +107,7 @@ namespace infinit
         std::unique_ptr<consensus::Configuration> consensus;
         std::unique_ptr<overlay::Configuration> overlay;
         cryptography::rsa::KeyPair keys;
-        cryptography::rsa::PublicKey owner;
+        std::shared_ptr<cryptography::rsa::PublicKey> owner;
         Passport passport;
         boost::optional<std::string> name;
         boost::optional<int> port;
@@ -116,7 +118,7 @@ namespace infinit
           std::unique_ptr<overlay::Configuration> overlay,
           std::unique_ptr<storage::StorageConfig> storage,
           cryptography::rsa::KeyPair keys,
-          cryptography::rsa::PublicKey owner,
+          std::shared_ptr<cryptography::rsa::PublicKey> owner,
           Passport passport,
           boost::optional<std::string> name,
           boost::optional<int> port = {},

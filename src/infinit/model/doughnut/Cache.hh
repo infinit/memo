@@ -56,7 +56,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
-          _remove(Address address) override;
+          _remove(Address address, blocks::RemoveSignature rs) override;
 
         /*------.
         | Cache |

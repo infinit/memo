@@ -16,7 +16,7 @@ namespace infinit
       {
       public:
         Faith(std::unique_ptr<storage::Storage> storage,
-              elle::Version version);
+              boost::optional<elle::Version> version);
       protected:
         virtual
         void
@@ -29,7 +29,7 @@ namespace infinit
                boost::optional<int> local_version) const override;
         virtual
         void
-        _remove(Address address) override;
+        _remove(Address address, blocks::RemoveSignature rs) override;
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
       };
     }

@@ -11,6 +11,7 @@
 
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.OKB");
@@ -49,14 +50,20 @@ namespace infinit
       {}
 
       Address
-      OKBHeader::_hash_address() const
+      OKBHeader::hash_address(cryptography::rsa::PublicKey const& key,
+                              elle::Buffer const& salt)
       {
         auto key_buffer =
-          elle::serialization::json::serialize(*this->_owner_key);
-        key_buffer.append(this->_salt.contents(), this->_salt.size());
+          elle::serialization::json::serialize(key);
+        key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
         return Address(hash.contents());
+      }
+      Address
+      OKBHeader::_hash_address() const
+      {
+        return hash_address(*this->_owner_key, this->_salt);
       }
 
       blocks::ValidationResult
@@ -87,19 +94,20 @@ namespace infinit
         return blocks::ValidationResult::success();
       }
 
-      OKBHeader::OKBHeader(std::shared_ptr<cryptography::rsa::PublicKey> key,
-                           elle::Buffer salt,
-                           elle::Buffer signature)
-        : _salt(std::move(salt))
-        , _owner_key(std::move(key))
-        , _signature(std::move(signature))
-      {}
+      OKBHeader::OKBHeader(elle::serialization::SerializerIn& s,
+                           elle::Version const&)
+        : _salt()
+        , _owner_key(std::make_shared(
+                       s.deserialize<cryptography::rsa::PublicKey>("key")))
+        , _signature()
+      {
+        s.serialize("owner", *this);
+      }
 
       void
       OKBHeader::serialize(elle::serialization::Serializer& input)
       {
         input.serialize("salt", this->_salt);
-        //input.serialize("key", this->_owner_key);
         input.serialize("signature", this->_signature);
       }
 
@@ -111,11 +119,30 @@ namespace infinit
       BaseOKB<Block>::BaseOKB(Doughnut* owner,
                               elle::Buffer data,
                               boost::optional<elle::Buffer> salt)
-        : OKBHeader(*owner->keys_shared(), std::move(salt))
-        , Super(this->_hash_address())
+        : BaseOKB(owner, std::move(data), std::move(salt), owner->keys())
+      {}
+
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(Doughnut* owner,
+                              elle::Buffer data,
+                              boost::optional<elle::Buffer> salt,
+                              cryptography::rsa::KeyPair const& owner_keys)
+        : BaseOKB(OKBHeader(owner_keys, std::move(salt)),
+                  owner, std::move(data), owner_keys.private_key())
+      {}
+
+      template <typename Block>
+      BaseOKB<Block>::BaseOKB(
+        OKBHeader header,
+        Doughnut* owner,
+        elle::Buffer data,
+        std::shared_ptr<cryptography::rsa::PrivateKey> owner_key)
+        : Super(header._hash_address())
+        , OKBHeader(std::move(header))
         , _version(-1)
         , _signature()
         , _doughnut(owner)
+        , _owner_private_key(std::move(owner_key))
         , _data_plain()
         , _data_decrypted(true)
       {
@@ -123,30 +150,25 @@ namespace infinit
       }
 
       template <typename Block>
-      BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other, bool sealed_copy)
-        : OKBHeader(other)
-        , Super(other)
+      BaseOKB<Block>::BaseOKB(BaseOKB<Block> const& other)
+        : Super(other)
+        , OKBHeader(other)
         , _version{other._version}
+        , _signature(other._signature.value())
         , _doughnut{other._doughnut}
+        , _owner_private_key(other._owner_private_key)
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
-      {
-        if (sealed_copy || !other._signature.running())
-          this->_signature = other._signature.value();
-        else
-        {
-          this->_signature = elle::Buffer();
-        }
-      }
+      {}
 
       /*-------.
       | Clone  |
       `-------*/
       template <typename Block>
       std::unique_ptr<blocks::Block>
-      BaseOKB<Block>::clone(bool sealed_copy) const
+      BaseOKB<Block>::clone() const
       {
-        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this, sealed_copy));
+        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this));
       }
 
       /*--------.
@@ -219,12 +241,19 @@ namespace infinit
       }
 
       template <typename Block>
+      std::unique_ptr<typename BaseOKB<Block>::OwnerSignature>
+      BaseOKB<Block>::_sign() const
+      {
+        return elle::make_unique<OwnerSignature>(*this);
+      }
+
+      template <typename Block>
       elle::Buffer
       BaseOKB<Block>::_decrypt_data(elle::Buffer const& data) const
       {
-        if (this->doughnut()->keys().K() != *this->owner_key())
+        if (!this->_owner_private_key)
           throw elle::Error("attempting to decrypt an unowned OKB");
-        return this->doughnut()->keys().k().open(data);
+        return this->_owner_private_key->open(data);
       }
 
       /*-----------.
@@ -232,26 +261,33 @@ namespace infinit
       `-----------*/
 
       template <typename Block>
-      elle::Buffer
-      BaseOKB<Block>::_sign() const
+      BaseOKB<Block>::OwnerSignature::OwnerSignature(
+        BaseOKB<Block> const& block)
+        : _block(block)
+      {}
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::OwnerSignature::serialize(
+        elle::serialization::Serializer& s_,
+        elle::Version const& v)
       {
-        elle::Buffer res;
-        {
-          elle::IOStream output(res.ostreambuf());
-          elle::serialization::binary::SerializerOut s(output, false);
-          s.serialize("salt", this->_salt);
-          s.serialize("owner_key", *this->_owner_key);
-          s.serialize("version", this->_version);
-          this->_sign(s);
-        }
-        return res;
+        // FIXME: Improve when split-serialization is added.
+        ELLE_ASSERT(s_.out());
+        auto& s = reinterpret_cast<elle::serialization::SerializerOut&>(s_);
+        s.serialize("salt", this->_block.salt());
+        s.serialize("owner_key", *this->_block.owner_key());
+        s.serialize("version", this->_block._version);
+        this->_serialize(s, v);
       }
 
       template <typename Block>
       void
-      BaseOKB<Block>::_sign(elle::serialization::SerializerOut& s) const
+      BaseOKB<Block>::OwnerSignature::_serialize(
+        elle::serialization::SerializerOut& s,
+        elle::Version const& v)
       {
-        s.serialize("data", this->_data);
+        s.serialize("data", this->_block.blocks::Block::data());
       }
 
       template <typename Block>
@@ -270,15 +306,14 @@ namespace infinit
           this->_data_changed = false;
         }
         else
-        {
           ELLE_DEBUG("%s: data didn't change", *this);
-          if (!this->_signature.running() && this->_signature.value().empty())
-          {
-            ELLE_DEBUG("%s: signature missing, recalculating...", *this);
-            this->_seal_okb(false);
-          }
-        }
       }
+
+      template <typename T>
+      static
+      void
+      null_deleter(T*)
+      {}
 
       template <typename Block>
       void
@@ -286,16 +321,11 @@ namespace infinit
       {
         if (bump_version)
           ++this->_version; // FIXME: idempotence in case the write fails ?
-        auto keys = this->_doughnut->keys_shared();
-        auto sign = elle::utility::move_on_copy(this->_sign());
-        ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
+        if (!this->_owner_private_key)
+          throw elle::Error("attempting to seal an unowned OKB");
         this->_signature =
-          [keys, sign]
-          {
-            static elle::Bench bench("bench.okb.seal.signing", 10000_sec);
-            elle::Bench::BenchScope scope(bench);
-            return keys->k().sign(*sign);
-          };
+          this->_owner_private_key->sign_async(*this->_sign(),
+                                               this->doughnut()->version());
       }
 
       template <typename Block>
@@ -315,10 +345,8 @@ namespace infinit
         ELLE_DEBUG("%s: check signature", *this)
         {
           auto sign = this->_sign();
-          if (!this->_check_signature
-              (*this->_owner_key, this->signature(), sign, "owner"))
+          if (!this->_owner_key->verify(this->signature(), *sign))
           {
-            ELLE_TRACE("signing %x\nwith %x", sign, *this->_owner_key);
             ELLE_TRACE("%s: invalid signature for version %s: '%x'",
               *this, this->_version, this->signature());
             return blocks::ValidationResult::failure("invalid signature");
@@ -353,102 +381,67 @@ namespace infinit
       `--------------*/
 
       template <typename Block>
-      struct BaseOKB<Block>::SerializationContent
-      {
-        struct Header
-        {
-          Header(elle::serialization::SerializerIn& s)
-            : salt(s.template deserialize<elle::Buffer>("salt"))
-            , signature(s.template deserialize<elle::Buffer>("signature"))
-          {}
-
-          elle::Buffer salt;
-          elle::Buffer signature;
-          typedef infinit::serialization_tag serialization_tag;
-        };
-
-        SerializationContent(elle::serialization::SerializerIn& s)
-          : block(s)
-          , key(s.template deserialize<cryptography::rsa::PublicKey>("key"))
-          , header(s.template deserialize<Header>("owner"))
-          , version(s.template deserialize<int>("version"))
-          , signature(s.template deserialize<elle::Buffer>("signature"))
-        {}
-
-        Block block;
-        cryptography::rsa::PublicKey key;
-        Header header;
-        int version;
-        elle::Buffer signature;
-        typedef infinit::serialization_tag serialization_tag;
-      };
-
-      template <typename Block>
-      BaseOKB<Block>::BaseOKB(elle::serialization::SerializerIn& input)
-        : BaseOKB(SerializationContent(input))
-      {
-        input.serialize_context<Doughnut*>(this->_doughnut);
-      }
-
-      template <typename Block>
-      BaseOKB<Block>::BaseOKB(SerializationContent content)
-        : OKBHeader(std::make_shared(std::move(content.key)),
-                    std::move(content.header.salt),
-                    std::move(content.header.signature))
-        , Super(std::move(content.block))
-        , _version(std::move(content.version))
-        , _signature(std::move(content.signature))
+      BaseOKB<Block>::BaseOKB(elle::serialization::SerializerIn& s,
+                              elle::Version const& version)
+        : Super(s, version)
+        , OKBHeader(s, version)
         , _doughnut(nullptr)
+        , _owner_private_key()
         , _data_plain()
         , _data_decrypted(false)
-      {}
-
-      template <typename Block>
-      void
-      BaseOKB<Block>::serialize(elle::serialization::Serializer& s)
       {
-        this->Super::serialize(s);
-        this->_serialize(s);
+        this->_serialize(s, version);
+        if (*this->owner_key() == this->doughnut()->keys().K())
+          this->_owner_private_key = this->doughnut()->keys().private_key();
+
       }
 
       template <typename Block>
       void
-      BaseOKB<Block>::_serialize(elle::serialization::Serializer& s)
+      BaseOKB<Block>::serialize(elle::serialization::Serializer& s,
+                                elle::Version const& version)
+      {
+        this->Super::serialize(s, version);
+        s.serialize("key", *this->_owner_key);
+        s.serialize("owner", static_cast<OKBHeader&>(*this));
+        this->_serialize(s, version);
+      }
+
+      template <typename Block>
+      void
+      BaseOKB<Block>::_serialize(elle::serialization::Serializer& s,
+                                 elle::Version const& version)
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
         ELLE_ASSERT(this->_doughnut);
-        bool need_signature = ! s.context().has<OKBDontWaitForSignature>();
-        s.serialize("key", *this->_owner_key);
-        s.serialize("owner", static_cast<OKBHeader&>(*this));
         s.serialize("version", this->_version);
-        if (need_signature || (s.out() && !this->_signature.running()))
-        {
-          s.serialize("signature", this->_signature.value());
-          ELLE_ASSERT(!this->_signature.value().empty());
-        }
-        else
-        {
-          elle::Buffer signature;
-          s.serialize("signature", signature);
-          if (s.in())
+        if (version < elle::Version(0, 4, 0))
+          if (s.out())
           {
-            if (signature.empty())
-            {
-              auto keys = this->_doughnut->keys_shared();
-              ELLE_ASSERT_EQ(keys->K(), *this->_owner_key);
-              auto sign = elle::utility::move_on_copy(this->_sign());
-              this->_signature = [keys, sign] {return keys->k().sign(*sign);};
-            }
-            else
-              this->_signature = std::move(signature);
+            auto value = elle::WeakBuffer(this->_signature.value()).range(4);
+            s.serialize("signature", value);
           }
-        }
+          else
+          {
+            elle::Buffer signature;
+            s.serialize("signature", signature);
+            auto versioned =
+              elle::serialization::binary::serialize(elle::Version(0, 3, 0));
+            versioned.size(versioned.size() + signature.size());
+            memcpy(versioned.mutable_contents() + 4,
+                   signature.contents(), signature.size());
+            this->_signature = std::move(versioned);
+          }
+        else
+          s.serialize("signature", this->_signature.value());
       }
 
       template
       class BaseOKB<blocks::MutableBlock>;
       template
       class BaseOKB<blocks::ACLBlock>;
+      template
+      class BaseOKB<blocks::GroupBlock>;
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<OKB> _register_okb_serialization("OKB");

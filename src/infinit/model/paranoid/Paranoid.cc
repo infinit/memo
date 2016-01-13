@@ -10,9 +10,6 @@
 
 ELLE_LOG_COMPONENT("infinit.model.paranoid.Paranoid");
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
 namespace infinit
 {
   namespace model
@@ -21,7 +18,7 @@ namespace infinit
     {
       Paranoid::Paranoid(infinit::cryptography::rsa::KeyPair keys,
                          std::unique_ptr<storage::Storage> storage,
-                         elle::Version version)
+                         boost::optional<elle::Version> version)
         : Model(std::move(version))
         , _keys(std::move(keys))
         , _storage(std::move(storage))
@@ -102,7 +99,7 @@ namespace infinit
       }
 
       void
-      Paranoid::_remove(Address address)
+      Paranoid::_remove(Address address, blocks::RemoveSignature rs)
       {
         ELLE_TRACE_SCOPE("%s: remove block at %x", *this, address);
         try
@@ -154,9 +151,7 @@ namespace infinit
             this->keys->serialize(output);
           }
           return elle::make_unique<infinit::model::paranoid::Paranoid>(
-            std::move(*this->keys),
-            this->storage->make(),
-            version ? *version : INFINIT_ELLE_VERSION);
+            std::move(*this->keys), this->storage->make(), version);
         }
       };
 

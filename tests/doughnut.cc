@@ -17,6 +17,7 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
@@ -199,7 +200,7 @@ private:
     this->dht_a = std::make_shared<dht::Doughnut>(
       id_a,
       this->keys_a,
-      this->keys_a->K(),
+      this->keys_a->public_key(),
       passport_a,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
@@ -215,7 +216,7 @@ private:
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
       this->keys_b,
-      this->keys_a->K(),
+      this->keys_a->public_key(),
       passport_b,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
@@ -231,7 +232,7 @@ private:
     this->dht_c = std::make_shared<dht::Doughnut>(
       id_c,
       this->keys_c,
-      this->keys_a->K(),
+      this->keys_a->public_key(),
       passport_c,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(
@@ -404,7 +405,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
 {
   DHTs dhts(paxos);
   auto block = elle::make_unique<dht::NB>(
-    dhts.dht_a.get(), dhts.keys_a->K(), "blockname",
+    dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
     elle::Buffer("blockdata", 9));
   ELLE_LOG("owner: store NB")
     dhts.dht_a->store(*block);
@@ -416,6 +417,43 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
     auto nb = elle::cast<dht::NB>::runtime(fetched);
     BOOST_CHECK(nb);
   }
+  { // overwrite
+    auto block = elle::make_unique<dht::NB>(
+      dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
+      elle::Buffer("blockdatb", 9));
+     BOOST_CHECK_THROW(dhts.dht_a->store(*block), std::exception);
+  }
+  // remove and remove protection
+  BOOST_CHECK_THROW(dhts.dht_a->remove(
+    dht::NB::address(dhts.keys_a->K(), "blockname"), {}), std::exception);
+  BOOST_CHECK_THROW(dhts.dht_b->remove(
+    dht::NB::address(dhts.keys_a->K(), "blockname")), std::exception);
+  dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname"));
+}
+
+ELLE_TEST_SCHEDULED(UB, (bool, paxos))
+{
+  DHTs dhts(paxos);
+  auto& dhta = dhts.dht_a;
+  auto& dhtb = dhts.dht_b;
+  {
+    dht::UB uba(dhta.get(), "a", dhta->keys().K());
+    dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
+    dhta->store(uba);
+    dhta->store(ubarev);
+  }
+  auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K()));
+  BOOST_CHECK(ruba);
+  auto* uba = dynamic_cast<dht::UB*>(ruba.get());
+  BOOST_CHECK(uba);
+  dht::UB ubf(dhta.get(), "duck", dhta->keys().K(), true);
+  BOOST_CHECK_THROW(dhta->store(ubf), std::exception);
+  BOOST_CHECK_THROW(dhtb->store(ubf), std::exception);
+  BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
+  BOOST_CHECK_THROW(dhtb->remove(ruba->address(), {}), std::exception);
+  BOOST_CHECK_THROW(dhta->remove(ruba->address(), {}), std::exception);
+  dhta->remove(ruba->address());
+  dhtb->store(ubf);
 }
 
 ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
@@ -635,6 +673,7 @@ ELLE_TEST_SUITE()
   TEST(async);
   TEST(ACB);
   TEST(NB);
+  TEST(UB);
   TEST(conflict);
   TEST(restart);
   TEST(cache);

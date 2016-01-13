@@ -72,6 +72,12 @@ namespace infinit
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<ACLConflictResolver> _register_dcr("acl");
 
+    static const int gid_start = 61234;
+    static const int gid_count = 50;
+    static int gid_position = 0;
+    static std::vector<std::unique_ptr<model::blocks::Block>> acl_save(gid_count);
+    static bool acl_preserver = getenv("INFINIT_PRESERVE_ACLS");
+
     void
     Node::rename(boost::filesystem::path const& where)
     {
@@ -148,6 +154,14 @@ namespace infinit
       _fetch();
       _header.mode = mode;
       _header.ctime = time(nullptr);
+      auto acl = _header_block();
+      if (acl)
+      {
+        auto wm = acl->get_world_permissions();
+        wm.first = mode & 4;
+        wm.second = mode & 2;
+        acl->set_world_permissions(wm.first, wm.second);
+      }
       _commit();
     }
 
@@ -157,6 +171,22 @@ namespace infinit
       _fetch();
       _header.uid = uid;
       _header.gid = gid;
+      if (acl_preserver && gid >= gid_start && gid < gid_start + gid_count
+        && acl_save[gid - gid_start])
+      {
+        auto block = _header_block();
+        // clear current perms
+        auto perms = block->list_permissions({});
+        for (auto const& p: perms)
+          try
+          { // owner is in that list and we cant touch his perms
+            block->set_permissions(*p.user, false, false);
+          }
+          catch (elle::Error const& e)
+          {}
+        dynamic_cast<model::blocks::ACLBlock*>(acl_save[gid - gid_start].get())
+          ->copy_permissions(*block);
+      }
       _header.ctime = time(nullptr);
       _commit();
     }
@@ -248,8 +278,31 @@ namespace infinit
       st->st_ctime = this->_header.ctime;
       st->st_nlink = this->_header.links;
       st->st_uid   = getuid();
-      st->st_gid   = getgid();
+      auto block = _header_block();
+      if (!acl_preserver || !block)
+        st->st_gid   = getgid();
+      else
+      {
+        acl_save[gid_position] = block->clone();
+        dynamic_cast<model::blocks::MutableBlock*>(acl_save[gid_position].get())
+          ->data(elle::Buffer());
+        st->st_gid = gid_start + gid_position;
+        gid_position = (gid_position + 1) % gid_count;
+      }
       st->st_dev = 1;
+      if (block)
+      {
+        auto wp = block->get_world_permissions();
+        if (wp.first)
+          st->st_mode |= 4;
+        if (wp.second)
+          st->st_mode |= 2;
+      }
+      std::pair<bool, bool> perms = _owner.get_permissions(*block);
+      if (!perms.first)
+        st->st_mode &= ~0400;
+      if (!perms.second)
+        st->st_mode &= ~0200;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
     }
 

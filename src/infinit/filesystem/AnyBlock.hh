@@ -48,6 +48,7 @@ namespace infinit
         bool _is_mutable;
         elle::Buffer _buf;
         Address _address;
+        Address _owner;
     };
   }
 }

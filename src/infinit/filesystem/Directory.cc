@@ -13,6 +13,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
+#include <infinit/model/doughnut/Group.hh>
 // #include <infinit/filesystem/FileHandle.hh>
 
 #include <sys/stat.h> // S_IMFT...
@@ -553,12 +554,7 @@ namespace infinit
         this->_fetch();
         this->Node::stat(st);
         st->st_mode |= S_IFDIR;
-        std::pair<bool, bool> perms = _owner.get_permissions(*_block);
-        if (!perms.first)
-          st->st_mode &= ~0400;
-        if (!perms.second)
-          st->st_mode &= ~0200;
-        if (perms.first)
+        if (st->st_mode & 0400)
           st->st_mode |= 0100; // Set x.
         can_access = true;
       }
@@ -586,6 +582,12 @@ namespace infinit
         st->st_dev = 1;
         st->st_ino = (unsigned short)(uint64_t)(void*)this;
       }
+    }
+
+    model::blocks::ACLBlock*
+    Directory::_header_block()
+    {
+      return dynamic_cast<model::blocks::ACLBlock*>(_block.get());
     }
 
     void
@@ -684,6 +686,12 @@ namespace infinit
         _files[ename] = std::make_pair(type, eaddr);
         _commit({OperationType::insert, ename}, true);
       }
+      else if (name == "user.infinit.fsck.rmblock")
+      {
+        umbrella([&] {
+            this->_owner.block_store()->remove(Address::from_string(value));
+        });
+      }
       else if (name == "user.infinit.fsck.unlink")
       {
         auto it = _files.find(value);
@@ -704,6 +712,87 @@ namespace infinit
           _files.erase(value);
           _commit({OperationType::remove, value}, true);
         }
+      }
+      else if (name == "user.infinit.group.make")
+      {
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        model::doughnut::Group g(*dn, value);
+        g.create();
+      }
+      else if (name == "user.infinit.group.add")
+      {
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        auto sep = value.find_first_of(':');
+        auto gn = value.substr(0, sep);
+        auto userdata = value.substr(sep+1);
+        model::doughnut::Group g(*dn, gn);
+        g.add_member(elle::Buffer(userdata.data(), userdata.size()));
+      }
+      else if (name == "user.infinit.group.remove")
+      {
+         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+         auto sep = value.find_first_of(':');
+         auto gn = value.substr(0, sep);
+         auto userdata = value.substr(sep+1);
+         model::doughnut::Group g(*dn, gn);
+         g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
+      }
+      else if (name == "user.infinit.group.addadmin")
+      {
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        auto sep = value.find_first_of(':');
+        auto gn = value.substr(0, sep);
+        auto userdata = value.substr(sep+1);
+        model::doughnut::Group g(*dn, gn);
+        g.add_admin(elle::Buffer(userdata.data(), userdata.size()));
+      }
+      else if (name == "user.infinit.group.removeadmin")
+      {
+         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+         auto sep = value.find_first_of(':');
+         auto gn = value.substr(0, sep);
+         auto userdata = value.substr(sep+1);
+         model::doughnut::Group g(*dn, gn);
+         g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
+      }
+      else if (name == "user.infinit.hack.forge")
+      {
+        class MyMB: public model::blocks::MutableBlock
+        {
+        public:
+          typedef model::blocks::MutableBlock Super;
+          MyMB(Address addr) : Super(addr) {}
+          MyMB(elle::serialization::Serializer& input,
+            elle::Version const& version)
+            : Super(input, version)
+          {}
+
+          void serialize(elle::serialization::Serializer& s,
+                              elle::Version const& v) override
+          {
+            Super::serialize(s, v);
+          }
+
+          int
+          version() const override
+          {
+            return 2384;
+          }
+
+          std::unique_ptr<model::blocks::Block> clone() const override
+          {
+            return elle::make_unique<MyMB>(this->address());
+          }
+        };
+        static const elle::serialization::Hierarchy<Block>::
+        Register<MyMB> _register_serialization("ha><or");
+        MyMB mb(Address::from_string(value));
+        _owner.block_store()->store(mb);
+        /*
+        model::blocks::Block b(Address::from_string(value),
+                        elle::Buffer("coin", 4));
+        _owner.block_store()->store(b);
+        */
       }
       else
         Node::setxattr(name, value, flags);
@@ -768,6 +857,26 @@ namespace infinit
         }
         a->sync();
         return "ok";
+      }
+      else if (key.find("user.infinit.group.list.") == 0)
+      {
+        std::string value = key.substr(strlen("user.infinit.group.list."));
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        model::doughnut::Group g(*dn, value);
+        elle::json::Object o;
+        auto members = g.list_members();
+        elle::json::Array v;
+        for (auto const& m: members)
+          v.push_back(m->name());
+        o["members"] = v;
+        members = g.list_admins();
+        elle::json::Array va;
+        for (auto const& m: members)
+          va.push_back(m->name());
+        o["admins"] = va;
+        std::stringstream ss;
+        elle::json::write(ss, o, true);
+        return ss.str();
       }
       else
         return Node::getxattr(key);

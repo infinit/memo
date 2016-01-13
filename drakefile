@@ -222,6 +222,8 @@ def configure(
     'src/infinit/model/blocks/ACLBlock.hh',
     'src/infinit/model/blocks/Block.cc',
     'src/infinit/model/blocks/Block.hh',
+    'src/infinit/model/blocks/GroupBlock.cc',
+    'src/infinit/model/blocks/GroupBlock.hh',
     'src/infinit/model/blocks/ImmutableBlock.cc',
     'src/infinit/model/blocks/ImmutableBlock.hh',
     'src/infinit/model/blocks/MutableBlock.cc',
@@ -243,6 +245,10 @@ def configure(
     'src/infinit/model/doughnut/Consensus.hh',
     'src/infinit/model/doughnut/Doughnut.cc',
     'src/infinit/model/doughnut/Doughnut.hh',
+    'src/infinit/model/doughnut/GB.cc',
+    'src/infinit/model/doughnut/GB.hh',
+    'src/infinit/model/doughnut/Group.cc',
+    'src/infinit/model/doughnut/Group.hh',
     'src/infinit/model/doughnut/Local.cc',
     'src/infinit/model/doughnut/Local.hh',
     'src/infinit/model/doughnut/NB.cc',
@@ -562,6 +568,7 @@ def configure(
               drake.path_build('beyond/lib/python%s' % elle.python3.version)
           })
         rule_functional_check << runner.status
+        runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests
       rule_check << rule_functional_check
     website = drake.include(
@@ -610,17 +617,17 @@ def configure(
     cxx_config_tests.library_add(elle.boost.test_static)
     cxx_config_tests.use_whole_archive()
   tests_names = [
-    'backward-compatibility',
-    'consensus/async',
-    'doughnut',
-    'faith',
-    'rpc',
-    'storage',
-    'async-conflict',
+    ('backward-compatibility', []),
+    ('consensus/async', []),
+    ('doughnut', []),
+    ('faith', []),
+    ('rpc', []),
+    ('storage', []),
+    ('async-conflict', []),
   ]
   if not windows:
-    tests_names += ['filesystem']
-  for test_name in tests_names:
+    tests_names.append(('filesystem', binaries))
+  for test_name, dependencies in tests_names:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
@@ -633,8 +640,7 @@ def configure(
       ],
       cxx_toolkit,
       cxx_config_tests)
-    # filesystem requires 'infinit'.
-    test.dependencies_add(binaries)
+    test.dependencies_add(dependencies)
     rule_tests << test
     env = {'SOURCE_DIR': drake.path_source()}
     if valgrind_tests:

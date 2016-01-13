@@ -6,6 +6,7 @@
 #include <protocol/Serializer.hh>
 #include <protocol/ChanneledStream.hh>
 
+#include <infinit/version.hh>
 #include <infinit/RPC.hh>
 
 ELLE_LOG_COMPONENT("RPC");
@@ -32,8 +33,16 @@ ELLE_TEST_SCHEDULED(move)
   infinit::protocol::Serializer serializer(stream, false);
   infinit::protocol::ChanneledStream channels(serializer);
   infinit::RPC<std::unique_ptr<int> (int, std::unique_ptr<int>)>
-    rpc("coin", channels);
-  BOOST_CHECK_EQUAL(*rpc(7, elle::make_unique<int>(35)), 42);
+    rpc("coin", channels, elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR));
+  try
+  {
+    BOOST_CHECK_EQUAL(*rpc(7, elle::make_unique<int>(35)), 42);
+  }
+  catch (std::exception const& e)
+  {
+    ELLE_ERR("exception: %s", e.what());
+    BOOST_CHECK(false);
+  }
   server_thread.terminate_now();
 }
 

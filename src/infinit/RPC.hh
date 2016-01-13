@@ -15,6 +15,7 @@
 # include <protocol/ChanneledStream.hh>
 # include <protocol/Serializer.hh>
 
+# include <infinit/version.hh>
 # include <infinit/model/doughnut/Doughnut.hh>
 # include <infinit/model/doughnut/Passport.hh>
 
@@ -275,7 +276,10 @@ namespace infinit
           }
           ELLE_DEBUG("Deserializing...");
           elle::IOStream ins(request.istreambuf());
-          elle::serialization::binary::SerializerIn input(ins, false);
+          auto versions = elle::serialization::get_serialization_versions
+            <infinit::serialization_tag>(
+              this->_doughnut ? this->_doughnut->version() : elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR));
+          elle::serialization::binary::SerializerIn input(ins, versions, false);
           input.set_context(this->_context);
           std::string name;
           input.serialize("procedure", name);
@@ -289,7 +293,7 @@ namespace infinit
           elle::Buffer response;
           elle::IOStream outs(response.ostreambuf());
           {
-            elle::serialization::binary::SerializerOut output(outs, false);
+            elle::serialization::binary::SerializerOut output(outs, versions, false);
             try
             {
               it->second->handle(input, output);
@@ -352,6 +356,7 @@ namespace infinit
     using Passport = infinit::model::doughnut::Passport;
     using Doughnut = infinit::model::doughnut::Doughnut;
     BaseRPC(std::string name, protocol::ChanneledStream& channels,
+            elle::Version const& version,
             elle::Buffer* credentials = nullptr);
 
     elle::Buffer credentials()
@@ -375,6 +380,7 @@ namespace infinit
     ELLE_ATTRIBUTE_R(std::string, name);
     ELLE_ATTRIBUTE_R(protocol::ChanneledStream*, channels, protected);
     ELLE_ATTRIBUTE_RX(std::unique_ptr<infinit::cryptography::SecretKey>, key, protected);
+    ELLE_ATTRIBUTE_R(elle::Version, version, protected);
   };
 
   template <typename Proto>
@@ -387,8 +393,9 @@ namespace infinit
   {
   public:
     RPC(std::string name, protocol::ChanneledStream& channels,
-      elle::Buffer* credentials = nullptr)
-      : BaseRPC(std::move(name), channels, credentials)
+        elle::Version const& version,
+        elle::Buffer* credentials = nullptr)
+      : BaseRPC(std::move(name), channels, version, credentials)
     {}
 
     void
@@ -402,8 +409,9 @@ namespace infinit
   {
   public:
     RPC(std::string name, protocol::ChanneledStream& channels,
+        elle::Version const& version,
         elle::Buffer* credentials = nullptr)
-      : BaseRPC(std::move(name), channels, credentials)
+      : BaseRPC(std::move(name), channels, version, credentials)
     {}
 
     R
@@ -480,17 +488,22 @@ namespace infinit
 
     static
     typename std::conditional<std::is_same<R, void>::value, int, R>::type
-    _call(RPC<R (Args...)>& self, Args const&... args)
+    _call(elle::Version const& version,
+          RPC<R (Args...)>& self,
+          Args const&... args)
     {
       ELLE_LOG_COMPONENT("infinit.RPC");
       ELLE_TRACE_SCOPE("%s: call", self);
+      auto versions = elle::serialization::get_serialization_versions
+        <infinit::serialization_tag>(version);
       protocol::Channel channel(*self.channels());
       {
         elle::Buffer call;
         elle::IOStream outs(call.ostreambuf());
+
         ELLE_DEBUG("build request")
         {
-          elle::serialization::binary::SerializerOut output(outs, false);
+          elle::serialization::binary::SerializerOut output(outs, versions, false);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
         }
@@ -532,7 +545,7 @@ namespace infinit
               elle::ConstWeakBuffer(response.contents(), response.size()));
         }
         elle::IOStream ins(response.istreambuf());
-        elle::serialization::binary::SerializerIn input(ins, false);
+        elle::serialization::binary::SerializerIn input(ins, versions, false);
         input.set_context(self._context);
         bool success = false;
         input.serialize("success", success);
@@ -557,9 +570,12 @@ namespace infinit
   inline
   BaseRPC::BaseRPC(std::string name,
                    protocol::ChanneledStream& channels,
-                   elle::Buffer* credentials)
+                   elle::Version const& version,
+                   elle::Buffer* credentials
+                   )
     : _name(std::move(name))
     , _channels(&channels)
+    , _version(version)
   {
     if (credentials && !credentials->empty())
     {

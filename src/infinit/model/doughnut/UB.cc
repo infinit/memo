@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/UB.hh>
 
 #include <elle/log.hh>
+#include <elle/utils.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
@@ -19,11 +20,12 @@ namespace infinit
       | Construction |
       `-------------*/
 
-      UB::UB(std::string name, cryptography::rsa::PublicKey key, bool reverse)
+      UB::UB(Doughnut* dn, std::string name, cryptography::rsa::PublicKey key, bool reverse)
         : Super(reverse ? UB::hash_address(key) : UB::hash_address(name))
         , _name(std::move(name))
         , _key(std::move(key))
         , _reverse(reverse)
+        , _doughnut(dn)
       {}
 
       UB::UB(UB const& other)
@@ -31,6 +33,7 @@ namespace infinit
         , _name{other._name}
         , _key{other._key}
         , _reverse{other._reverse}
+        , _doughnut(other._doughnut)
       {}
 
       Address
@@ -55,7 +58,7 @@ namespace infinit
       `-------*/
 
       std::unique_ptr<blocks::Block>
-      UB::clone(bool) const
+      UB::clone() const
       {
         return std::unique_ptr<blocks::Block>(new UB(*this));
       }
@@ -87,21 +90,68 @@ namespace infinit
         return blocks::ValidationResult::success();
       }
 
+      blocks::RemoveSignature
+      UB::_sign_remove() const
+      {
+        auto& keys = this->_doughnut->keys();
+        if (keys.K() != this->_key && keys.K() != *this->_doughnut->owner())
+          throw elle::Error("Only block owner and network owner can delete UB");
+        auto to_sign = elle::serialization::binary::serialize((Block*)elle::unconst(this));
+        auto signature = keys.k().sign(to_sign);
+        blocks::RemoveSignature res;
+        res.signature_key.emplace(keys.K());
+        res.signature.emplace(signature);
+        return res;
+      }
+
+      blocks::ValidationResult
+      UB::_validate_remove(blocks::RemoveSignature const& sig) const
+      {
+        if (!sig.signature_key || !sig.signature)
+          return blocks::ValidationResult::failure("Missing key or signature");
+        auto to_sign = elle::serialization::binary::serialize((Block*)elle::unconst(this));
+        bool ok = sig.signature_key->verify(*sig.signature, to_sign);
+        if (!ok)
+          return blocks::ValidationResult::failure("Invalid signature");
+        if (*sig.signature_key != *this->_doughnut->owner()
+          && *sig.signature_key != this->_key)
+          return blocks::ValidationResult::failure("Unauthorized signing key");
+        return blocks::ValidationResult::success();
+      }
+
+      blocks::ValidationResult
+      UB::_validate(const Block& new_block) const
+      {
+        auto ub = dynamic_cast<const UB*>(&new_block);
+        if (ub)
+        {
+          if (this->_name == ub->_name
+            && this->_key == ub->_key
+            && this->_reverse == ub->_reverse)
+          return blocks::ValidationResult::success();
+        }
+        return blocks::ValidationResult::failure("UB overwrite denied");
+      }
+
       /*--------------.
       | Serialization |
       `--------------*/
 
-      UB::UB(elle::serialization::SerializerIn& input)
-        : Super(input)
+      UB::UB(elle::serialization::SerializerIn& input,
+             elle::Version const& version)
+        : Super(input, version)
         , _name(input.deserialize<std::string>("name"))
         , _key(input.deserialize<cryptography::rsa::PublicKey>("key"))
         , _reverse(input.deserialize<bool>("reverse"))
-      {}
+      {
+        input.serialize_context<Doughnut*>(this->_doughnut);
+      }
 
       void
-      UB::serialize(elle::serialization::Serializer& s)
+      UB::serialize(elle::serialization::Serializer& s,
+                    elle::Version const& version)
       {
-        Super::serialize(s);
+        Super::serialize(s,version);
         this->_serialize(s);
       }
 
@@ -114,7 +164,7 @@ namespace infinit
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::
-      Register<UB> _register_chb_serialization("UB");
+      Register<UB> _register_ub_serialization("UB");
     }
   }
 }

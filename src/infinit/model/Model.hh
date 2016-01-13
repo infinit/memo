@@ -2,7 +2,9 @@
 # define INFINIT_MODEL_MODEL_HH
 
 # include <memory>
+
 # include <boost/filesystem.hpp>
+
 # include <elle/UUID.hh>
 # include <elle/Version.hh>
 
@@ -11,11 +13,7 @@
 # include <infinit/model/blocks/fwd.hh>
 # include <infinit/serialization.hh>
 # include <infinit/storage/Storage.hh>
-# include <infinit/version.hh>
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
 namespace infinit
 {
   namespace overlay
@@ -52,11 +50,11 @@ namespace infinit
     class Model
     {
     public:
-      Model(elle::Version version = INFINIT_ELLE_VERSION);
+      Model(boost::optional<elle::Version> version = {});
       ELLE_ATTRIBUTE_R(elle::Version, version);
       template <typename Block>
       std::unique_ptr<Block>
-      make_block(elle::Buffer data = elle::Buffer()) const;
+      make_block(elle::Buffer data = elle::Buffer(), Address owner = Address::null) const;
       std::unique_ptr<User>
       make_user(elle::Buffer const& data) const;
       void
@@ -82,6 +80,8 @@ namespace infinit
       fetch(Address address, boost::optional<int> local_version = {}) const;
       void
       remove(Address address);
+      void
+      remove(Address address, blocks::RemoveSignature sig);
     protected:
       template <typename Block, typename ... Args>
       static
@@ -92,10 +92,13 @@ namespace infinit
       _make_mutable_block() const;
       virtual
       std::unique_ptr<blocks::ImmutableBlock>
-      _make_immutable_block(elle::Buffer content) const;
+      _make_immutable_block(elle::Buffer content, Address owner = Address::null) const;
       virtual
       std::unique_ptr<blocks::ACLBlock>
       _make_acl_block() const;
+      virtual
+      std::unique_ptr<blocks::GroupBlock>
+      _make_group_block() const;
       virtual
       std::unique_ptr<User>
       _make_user(elle::Buffer const& data) const;
@@ -109,7 +112,7 @@ namespace infinit
       _fetch(Address address, boost::optional<int> local_version) const = 0;
       virtual
       void
-      _remove(Address address) = 0;
+      _remove(Address address, blocks::RemoveSignature sig) = 0;
     };
 
     struct ModelConfig:

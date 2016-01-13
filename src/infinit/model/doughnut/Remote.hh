@@ -52,7 +52,7 @@ namespace infinit
         virtual
         ~Remote();
       protected:
-        Doughnut& _doughnut;
+        ELLE_ATTRIBUTE_R(Doughnut&, doughnut, protected);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPSocket>, socket);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::UTPSocket>, utp_socket);
         ELLE_ATTRIBUTE(std::unique_ptr<protocol::Serializer>, serializer);
@@ -108,7 +108,7 @@ namespace infinit
         store(blocks::Block const& block, StoreMode mode) override;
         virtual
         void
-        remove(Address address) override;
+        remove(Address address, blocks::RemoveSignature rs) override;
       protected:
         virtual
         std::unique_ptr<blocks::Block>
@@ -133,6 +133,7 @@ namespace infinit
         typedef RPC<F> Super;
         RemoteRPC(std::string name, Remote* remote)
           : Super(name, *remote->channels(),
+                  remote->doughnut().version(),
                   elle::unconst(&remote->credentials()))
           , _remote(remote)
         {}

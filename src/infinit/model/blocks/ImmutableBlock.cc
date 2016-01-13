@@ -22,7 +22,7 @@ namespace infinit
       | Clone  |
       `-------*/
       std::unique_ptr<Block>
-      ImmutableBlock::clone(bool) const
+      ImmutableBlock::clone() const
       {
         return std::unique_ptr<Block>(new ImmutableBlock(*this));
       }
@@ -31,8 +31,9 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      ImmutableBlock::ImmutableBlock(elle::serialization::Serializer& input)
-        : Super(input)
+      ImmutableBlock::ImmutableBlock(elle::serialization::Serializer& input,
+                                     elle::Version const& version)
+        : Super(input, version)
       {}
 
       static const elle::serialization::Hierarchy<Block>::

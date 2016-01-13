@@ -536,6 +536,24 @@ Since the infinit access model is ACL based, POSIX file mode as displayed by _ls
 - Group modes are irrelevant and set to 0.
 - Other read/write access mode can be set to make the object readable/writable for all.
 
+### Groups ###
+
+Infinit supports a concept of groups similar to what you might expect. A group is identified by it's unique name, and can be created by any user. It stores a list of group members, that can be users and other groups. This member list can be modified only by the user who created the group.
+
+```
+$> infinit-acl --group --create --name all .
+$> infinit-acl --group --name all --add bob .
+$> infinit-acl --group --create --name engineering .
+$> infinit-acl --group --name all --add @engineering .
+```
+
+
+Once created, a group can be added to any object's ACLs using _infinit-acl_, by prefixing an _@_ to the group name:
+
+```
+$> infinit-acl --set --mode rw --user @all --path some_file
+```
+
 Device
 ---------
 
