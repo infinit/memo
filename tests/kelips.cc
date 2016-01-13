@@ -29,6 +29,9 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
   std::vector<std::shared_ptr<imd::Doughnut>> res;
   iok::Configuration config;
   config.k = groups;
+  config.contact_timeout_ms = 4000;
+  config.ping_interval_ms = 4000 / count / 3;
+  config.ping_timeout_ms = 1000;
   infinit::overlay::NodeEndpoints endpoints;
   for (int n=0; n<count; ++n)
   {
@@ -62,7 +65,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       boost::optional<int>(),
       std::move(s));
     res.push_back(dn);
-    if (res.size() == 1)
+    //if (res.size() == 1)
     {
       std::string ep = "127.0.0.1:"
         + std::to_string(dn->local()->server_endpoint().port());
@@ -147,6 +150,20 @@ void writefile(rfs::FileSystem& fs,
   handle->close();
   handle.reset();
 }
+
+void appendfile(rfs::FileSystem& fs,
+               std::string const& name,
+               std::string const& content)
+{
+  auto handle = fs.path("/")->child(name)->open(O_RDWR, 0666 | S_IFREG);
+  struct stat st;
+  fs.path("/")->child(name)->stat(&st);
+  handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
+                content.size(), st.st_size);
+  handle->close();
+  handle.reset();
+}
+
 std::string readfile(rfs::FileSystem& fs,
               std::string const& name)
 {
@@ -179,38 +196,102 @@ ELLE_TEST_SCHEDULED(basic)
   ELLE_LOG("teardown");
 }
 
-ELLE_TEST_SCHEDULED(killed_nodes)
+void test_kill_nodes(int node_count, int replication, int kill, bool overwrite_while_down)
 {
-  srand(time(nullptr));
+  static const int file_count = 20;
+  ELLE_LOG("kill_nodes n=%s k=%s r=%s", node_count, kill, replication);
   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-  auto nodes = run_nodes(tmp, kp, 5, 1, 3);
-  auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false);
-  for (int i=0; i<50; ++i)
+  auto nodes = run_nodes(tmp, kp, node_count, 1, replication);
+  auto fs = make_observer(nodes.front(), tmp, kp, 1, replication, false, false);
+  ELLE_LOG("initial file write");
+  for (int i=0; i<file_count; ++i)
     writefile(*fs, "foo" + std::to_string(i), "foo");
-  for (int i=0; i<50; ++i)
+  for (int i=0; i<file_count; ++i)
     BOOST_CHECK_EQUAL(readfile(*fs, "foo" + std::to_string(i)), "foo");
-
-  for (int k=0; k<1; ++k)
-    nodes[rand()%nodes.size()].reset();
-  for (int i=0; i<50; ++i)
+  ELLE_LOG("killing nodes");
+  for (int k=0; k<kill; ++k)
+  {
+    // We must kill the same nodes as the ones we wont reinstantiate below
+    int idx = nodes.size() - k - 1;
+    nodes[idx].reset();
+  }
+  ELLE_LOG("checking files");
+  for (int i=0; i<file_count; ++i)
+  {
+    std::cerr << "\r" << i << "                ";
     BOOST_CHECK_EQUAL(readfile(*fs, "foo" + std::to_string(i)), "foo");
+  }
 
+  ELLE_LOG("write new files");
+  // WRITE
+  for (int i=0; i<file_count; ++i)
+  {
+    std::cerr << "\r" << i << "                ";
+    writefile(*fs, "bar" + std::to_string(i), "bar");
+  }
+  if (overwrite_while_down)
+  {
+    ELLE_LOG("append existing files");
+    for (int i=0; i<file_count; ++i)
+    {
+      std::cerr << "\r" << i << "                ";
+      appendfile(*fs, "foo" + std::to_string(i), "foo");
+    }
+  }
+  // OVERWRITE
   ELLE_LOG("teardown");
   fs.reset();
   nodes.clear();
-  nodes = run_nodes(tmp, kp, 4, 1, 3); // dont reload the last node
-  fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false);
-  for (int i=0; i<50; ++i)
-    BOOST_CHECK_EQUAL(readfile(*fs, "foo" + std::to_string(i)), "foo");
-  ELLE_LOG("teardown");
+  ELLE_LOG("reinitialize");
+  nodes = run_nodes(tmp, kp, node_count - kill, 1, replication); // dont reload the last node
+  fs = make_observer(nodes.front(), tmp, kp, 1, replication, false, false);
+  if (overwrite_while_down)
+  {
+    ELLE_LOG("overwrite");
+    for (int i=0; i<file_count; ++i)
+    {
+      std::cerr << "\r" << i << "                ";
+      appendfile(*fs, "foo" + std::to_string(i), "foo");
+    }
+  }
+  ELLE_LOG("check");
+  auto value = overwrite_while_down ? "foofoofoo" : "foo";
+  for (int i=0; i<file_count; ++i)
+    BOOST_CHECK_EQUAL(readfile(*fs, "foo" + std::to_string(i)), value);
+  for (int i=0; i<file_count; ++i)
+    BOOST_CHECK_EQUAL(readfile(*fs, "bar" + std::to_string(i)), "bar");
+  ELLE_LOG("final teardown");
+}
+
+ELLE_TEST_SCHEDULED(killed_nodes)
+{
+  test_kill_nodes(5, 3, 1, true);
+}
+ELLE_TEST_SCHEDULED(killed_nodes_big)
+{
+  test_kill_nodes(10, 5, 2, true);
+}
+ELLE_TEST_SCHEDULED(killed_nodes_more)
+{
+  test_kill_nodes(5, 3, 2, false);
+}
+ELLE_TEST_SCHEDULED(killed_nodes_half)
+{
+  test_kill_nodes(5, 2, 1, false);
 }
 
 ELLE_TEST_SUITE()
 {
+  srand(time(nullptr));
   setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
   setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, 120);
-  suite.add(BOOST_TEST_CASE(killed_nodes), 0, 180);
+  suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
+  suite.add(BOOST_TEST_CASE(killed_nodes_big), 0, 600);
+  // fails
+  //suite.add(BOOST_TEST_CASE(killed_nodes_half), 0, 600);
+  // fails, read requires a consensus
+  //suite.add(BOOST_TEST_CASE(killed_nodes_more), 0, 600);
 }
