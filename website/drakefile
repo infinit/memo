@@ -91,7 +91,6 @@ def configure(
     'templates/pages/legal.html',
 
     'templates/pages/docs/src/html/get_started.html',
-    'templates/pages/docs/src/html/faq.html',
     'templates/pages/docs/src/html/overview.html',
     'templates/pages/docs/src/html/technology.html',
     'templates/pages/docs/src/html/reference.html',
