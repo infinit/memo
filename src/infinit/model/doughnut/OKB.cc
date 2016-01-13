@@ -324,16 +324,8 @@ namespace infinit
         if (!this->_owner_private_key)
           throw elle::Error("attempting to seal an unowned OKB");
         this->_signature =
-          this->_owner_private_key->sign(*this->_sign(),
-                                         this->doughnut()->version());
-        // auto sign = elle::utility::move_on_copy(this->_sign());
-        // this->_signature =
-        //   [keys, sign]
-        //   {
-        //     static elle::Bench bench("bench.okb.seal.signing", 10000_sec);
-        //     elle::Bench::BenchScope scope(bench);
-        //     return keys->k().sign(*sign);
-        //   };
+          this->_owner_private_key->sign_async(*this->_sign(),
+                                               this->doughnut()->version());
       }
 
       template <typename Block>

@@ -554,6 +554,7 @@ namespace infinit
               ELLE_DEBUG("%s: group author signature invalid", *this);
               return blocks::ValidationResult::failure("Incorrect group key signature");
             }
+            ELLE_WARN("VERIFIED");
           }
           else
           {
@@ -730,16 +731,9 @@ namespace infinit
           if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
           ELLE_DEBUG_SCOPE("%s: sign data", *this);
-          this->_data_signature = sign_key->sign(
+          this->_data_signature = sign_key->sign_async(
             *this->_data_sign(), this->doughnut()->version());
-          // auto to_sign = elle::utility::move_on_copy(this->_data_sign());
-          // this->_data_signature =
-          //   [sign_keys, to_sign]
-          //   {
-          //     static elle::Bench bench("bench.acb.seal.signing", 10000_sec);
-          //     elle::Bench::BenchScope scope(bench);
-          //     return sign_keys->k().sign(*to_sign);
-          //   };
+          ELLE_WARN("async");
         }
       }
 
