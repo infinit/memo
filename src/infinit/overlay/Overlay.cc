@@ -4,6 +4,7 @@
 
 #include <infinit/overlay/Overlay.hh>
 #include <infinit/model/MissingBlock.hh>
+#include <infinit/model/doughnut/DummyPeer.hh>
 
 ELLE_LOG_COMPONENT("infinit.overlay.Overlay");
 
@@ -83,6 +84,7 @@ namespace infinit
                   catch (elle::Error const& e)
                   {
                     ELLE_TRACE("Failed to lookup node %s: %s", address, e);
+                    yield(Member(new model::doughnut::DummyPeer(address)));
                   }
                 });
             reactor::wait(scope);
