@@ -41,7 +41,7 @@ namespace infinit
         : Super(std::move(id))
         , _storage(std::move(storage))
         , _doughnut(dht)
-        , _rpcs(&dht)
+        , _rpcs(dht.version())
       {
         if (p == Protocol::tcp || p == Protocol::all)
         {

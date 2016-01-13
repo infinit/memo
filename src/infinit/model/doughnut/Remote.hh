@@ -11,6 +11,7 @@
 # include <protocol/ChanneledStream.hh>
 
 # include <infinit/model/doughnut/fwd.hh>
+# include <infinit/model/doughnut/Doughnut.hh>
 # include <infinit/model/doughnut/Peer.hh>
 
 # include <infinit/RPC.hh>

@@ -15,8 +15,6 @@
 # include <protocol/ChanneledStream.hh>
 # include <protocol/Serializer.hh>
 
-# include <infinit/version.hh>
-# include <infinit/model/doughnut/Doughnut.hh>
 # include <infinit/model/doughnut/Passport.hh>
 
 namespace infinit
@@ -217,7 +215,7 @@ namespace infinit
   {
   public:
     using Passport = infinit::model::doughnut::Passport;
-    using Doughnut = infinit::model::doughnut::Doughnut;
+
     template <typename R, typename ... Args>
     void
     add(std::string const& name, std::function<R (Args...)> f)
@@ -226,10 +224,10 @@ namespace infinit
         elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
     }
 
-    RPCServer(Doughnut* doughnut = nullptr)
-      : _doughnut(doughnut)
-    {
-    }
+    RPCServer(boost::optional<elle::Version> const& version = {})
+      : _version(version)
+    {}
+
     void
     serve(std::iostream& s)
     {
@@ -274,11 +272,11 @@ namespace infinit
               throw;
             }
           }
-          ELLE_DEBUG("Deserializing...");
           elle::IOStream ins(request.istreambuf());
-          auto versions = elle::serialization::get_serialization_versions
-            <infinit::serialization_tag>(
-              this->_doughnut ? this->_doughnut->version() : elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR));
+          std::unordered_map<elle::TypeInfo, elle::Version> versions;
+          if (this->_version)
+            versions = elle::serialization::get_serialization_versions
+              <infinit::serialization_tag>(this->_version.get());
           elle::serialization::binary::SerializerIn input(ins, versions, false);
           input.set_context(this->_context);
           std::string name;
@@ -342,7 +340,7 @@ namespace infinit
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
     reactor::LocalStorage<std::unique_ptr<infinit::cryptography::SecretKey>> _key;
-    infinit::model::doughnut::Doughnut* _doughnut;
+    boost::optional<elle::Version> _version;
 
   };
 
@@ -354,7 +352,6 @@ namespace infinit
   {
   public:
     using Passport = infinit::model::doughnut::Passport;
-    using Doughnut = infinit::model::doughnut::Doughnut;
     BaseRPC(std::string name, protocol::ChanneledStream& channels,
             elle::Version const& version,
             elle::Buffer* credentials = nullptr);
