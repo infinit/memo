@@ -854,14 +854,19 @@ namespace infinit
       Node::~Node()
       {
         ELLE_TRACE_SCOPE("%s: destroy", *this);
+        if (this->local())
+          this->local()->utp_server()->socket()->unregister_reader("KELIPSGS");
         _emitter_thread.reset();
         _listener_thread.reset();
         _pinger_thread.reset();
+        ELLE_DEBUG("%s: destroy rdv thread", *this);
         _rdv_connect_thread.reset();
         _rdv_connect_thread_local.reset();
         _rdv_connect_gossip_thread.reset();
         // Terminate rdv threads
+        ELLE_DEBUG("%s: destroy rdv threads", *this);
         this->_state.contacts.clear();
+        ELLE_DEBUG("%s: destroyed", *this);
       }
 
       SerState Node::get_serstate(PeerLocation pl)
