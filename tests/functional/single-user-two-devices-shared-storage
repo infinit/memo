@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 from utils import *
 
 with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
@@ -39,8 +40,10 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     '--as', 'user',
   ],
   input = {'operation': 'mkdir', 'path': '/beacon'})
+  if not response['success']:
+    raise AssertionError('operation failed: %s' % response)
   # Device 2
-  infinit_2.run(['infinit-user', '--import'], input = user)
+  response = infinit_2.run(['infinit-user', '--import'], input = user)
   infinit_2.run([
     'infinit-storage', '--create',
      'storage',
@@ -60,6 +63,8 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
     '--as', 'user',
   ],
   input = {'operation': 'list_directory', 'path': '/'})
+  if not response['success']:
+    raise AssertionError('operation failed: %s' % response)
   assertEq(response['entries'], ['beacon'])
   # XATTRS
   response = infinit_1.run_script(user = 'user', operation = 'setxattr',

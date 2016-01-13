@@ -117,6 +117,10 @@ def assertEq(a, b):
   if a != b:
     raise AssertionError('%r != %r' % (a, b))
 
+def assertEq(a, b):
+  if a != b:
+    raise AssertionError('%r != %r' % (a, b))
+
 def assertIn(a, b):
   if a not in b:
     raise AssertionError('%r not in %r' % (a, b))
