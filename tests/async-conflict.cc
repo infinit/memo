@@ -229,5 +229,5 @@ ELLE_TEST_SCHEDULED(async_cache)
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(async_cache), 0, 10);
+  suite.add(BOOST_TEST_CASE(async_cache), 0, valgrind(10));
 }
