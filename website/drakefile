@@ -82,7 +82,7 @@ def configure(
     'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
-    'templates/pages/docs/ChangeLog.html',
+    'templates/pages/docs/changelog.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
