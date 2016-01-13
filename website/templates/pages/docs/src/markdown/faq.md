@@ -32,3 +32,7 @@ Infinit can be configured to use either TCP or UDP ([µTP](https://en.wikipedia.
 8. Which cloud storage providers does Infinit support?
 ------------------------------------------------------
 Currently Infinit supports Amazon S3 and Google Cloud Storage with Backblaze [planned](http://infinit.sh/documentation/roadmap). Please [let us know](http://infinit-sh.uservoice.com) what else you would like us to support.
+
+9. Do I have to use the server-side 'hub'?
+------------------------------------------
+No, using the hub facilitates exchanging user public keys and IP addresses of the peers, but it is not required.
