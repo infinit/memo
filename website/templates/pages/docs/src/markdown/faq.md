@@ -36,3 +36,8 @@ Currently Infinit supports Amazon S3 and Google Cloud Storage with Backblaze [pl
 9. Do I have to use the server-side 'hub'?
 ------------------------------------------
 No, using the hub facilitates exchanging user public keys and IP addresses of the peers, but it is not required.
+
+10. How does the infinit ACL work?
+----------------------------------
+To summarize, each file or directory is encrypted using a newly generated AES key. That key is then sealed using the RSA keys of all users who've been granted access. No information about the filesystem layout is leaked to the storage providers.
+
