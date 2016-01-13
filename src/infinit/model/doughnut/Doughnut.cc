@@ -136,9 +136,11 @@ namespace infinit
 
       Doughnut::~Doughnut()
       {
-        if (_user_init)
-          _user_init->terminate_now();
-        ELLE_TRACE("~Doughnut");
+        ELLE_TRACE_SCOPE("%s: destruct", *this);
+        if (this->_user_init)
+          this->_user_init->terminate_now();
+        this->_consensus.reset();
+        this->_overlay.reset();
       }
 
       cryptography::rsa::KeyPair const&
