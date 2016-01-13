@@ -11,7 +11,7 @@
 ELLE_LOG_COMPONENT("infinit.model.Model");
 
 static const elle::Version default_version(
-  INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+  INFINIT_MAJOR, INFINIT_MINOR, 0);
 
 namespace infinit
 {
@@ -19,7 +19,9 @@ namespace infinit
   {
     Model::Model(boost::optional<elle::Version> version)
       : _version(version ? *version : default_version)
-    {}
+    {
+      ELLE_TRACE("%s: compatibility version %s", *this, this->_version);
+    }
 
     template <>
     std::unique_ptr<blocks::MutableBlock>
