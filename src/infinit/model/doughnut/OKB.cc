@@ -186,8 +186,8 @@ namespace infinit
           return false;
         if (*this->_owner_key != *other_okb->_owner_key)
           return false;
-        if (this->_signature.value() != other_okb->_signature.value())
-          return false;
+        //if (this->_signature->value() != other_okb->_signature->value())
+        //  return false;
         return this->Super::operator ==(other);
       }
 

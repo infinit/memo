@@ -888,8 +888,8 @@ namespace infinit
           return false;
         if (this->_data_version != other_acb->_data_version)
           return false;
-        if (this->_data_signature.value() != other_acb->_data_signature.value())
-          return false;
+        //if (this->_data_signature->value() != other_acb->_data_signature->value())
+        //  return false;
         if (this->_world_readable != other_acb->_world_readable)
           return false;
         if (this->_world_writable != other_acb->_world_writable)
