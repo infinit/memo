@@ -89,7 +89,9 @@ namespace infinit
                 cryptography::rsa::KeyPair const& owner_keys);
         BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE(int, version);
-        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
+      protected:
+        typedef reactor::BackgroundFuture<elle::Buffer> SignFuture;
+        ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
       private:

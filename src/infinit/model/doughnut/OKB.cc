@@ -154,7 +154,7 @@ namespace infinit
         : Super(other)
         , OKBHeader(other)
         , _version{other._version}
-        , _signature(other._signature.value())
+        , _signature(other._signature)
         , _doughnut{other._doughnut}
         , _owner_private_key(other._owner_private_key)
         , _data_plain{other._data_plain}
@@ -324,15 +324,16 @@ namespace infinit
         if (!this->_owner_private_key)
           throw elle::Error("attempting to seal an unowned OKB");
         this->_signature =
-          this->_owner_private_key->sign_async(*this->_sign(),
-                                               this->doughnut()->version());
+          std::make_shared<SignFuture>(
+            this->_owner_private_key->sign_async(*this->_sign(),
+              this->doughnut()->version()));
       }
 
       template <typename Block>
       elle::Buffer const&
       BaseOKB<Block>::signature() const
       {
-        return this->_signature.value();
+        return this->_signature->value();
       }
 
       template <typename Block>
@@ -344,6 +345,7 @@ namespace infinit
           return res;
         ELLE_DEBUG("%s: check signature", *this)
         {
+          ELLE_ASSERT(this->signature() != elle::Buffer());
           auto sign = this->_sign();
           if (!this->_owner_key->verify(this->signature(), *sign))
           {
@@ -415,10 +417,12 @@ namespace infinit
         s.serialize_context<Doughnut*>(this->_doughnut);
         ELLE_ASSERT(this->_doughnut);
         s.serialize("version", this->_version);
+        if (!this->_signature)
+          this->_signature = std::make_shared<SignFuture>();
         if (version < elle::Version(0, 4, 0))
           if (s.out())
           {
-            auto value = elle::WeakBuffer(this->_signature.value()).range(4);
+            auto value = elle::WeakBuffer(this->_signature->value()).range(4);
             s.serialize("signature", value);
           }
           else
@@ -430,10 +434,51 @@ namespace infinit
             versioned.size(versioned.size() + signature.size());
             memcpy(versioned.mutable_contents() + 4,
                    signature.contents(), signature.size());
-            this->_signature = std::move(versioned);
+            this->_signature = std::make_shared<SignFuture>(std::move(versioned));
           }
         else
-          s.serialize("signature", this->_signature.value());
+        {
+          bool need_signature = !s.context().has<OKBDontWaitForSignature>();
+          if (!need_signature)
+          {
+            if (s.out())
+            {
+              bool ready = !this->_signature->running();
+              s.serialize("signature_ready", ready);
+              if (ready)
+                s.serialize("signature", this->_signature->value());
+              else
+              {
+                bool is_doughnut_key = !this->owner_private_key() ||
+                  *this->owner_private_key() == this->doughnut()->keys_shared()->k();
+                s.serialize("signature_is_doughnut_key", is_doughnut_key);
+                if (!is_doughnut_key)
+                  s.serialize("signature_key", this->_owner_private_key);
+              }
+            }
+            else
+            {
+              bool ready;
+              s.serialize("signature_ready", ready);
+              if (ready)
+                s.serialize("signature", this->_signature->value());
+              else
+              {
+                bool is_doughnut_key;
+                s.serialize("signature_is_doughnut_key", is_doughnut_key);
+                if (!is_doughnut_key)
+                  s.serialize("signature_key", this->_owner_private_key);
+                else
+                  this->_owner_private_key = this->doughnut()->keys_shared()->private_key();
+                // can't restart signing now, we might be in OKB ctor
+              }
+            }
+          }
+          else
+          {
+            s.serialize("signature", this->_signature->value());
+          }
+        }
       }
 
       template

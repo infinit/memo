@@ -156,10 +156,11 @@ namespace infinit
         , _acl_group_entries(other._acl_group_entries)
         , _group_version(other._group_version)
         , _data_version(other._data_version)
-        , _data_signature(other._data_signature.value()) // FIXME
+        , _data_signature(other._data_signature)
         , _world_readable(other._world_readable)
         , _world_writable(other._world_writable)
         , _deleted(other._deleted)
+        , _sign_key(other._sign_key)
       {}
 
       /*-------.
@@ -502,6 +503,7 @@ namespace infinit
             return res;
         if (this->_world_writable)
           return blocks::ValidationResult::success();
+        ELLE_ASSERT(this->data_signature() != elle::Buffer());
         ELLE_DEBUG_SCOPE("%s: validate author part", *this);
         ACLEntry* entry = nullptr;
         bool is_group_entry = false;
@@ -730,9 +732,23 @@ namespace infinit
           if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
           ELLE_DEBUG_SCOPE("%s: sign data", *this);
-          this->_data_signature = sign_key->sign_async(
-            *this->_data_sign(), this->doughnut()->version());
+          this->_data_signature = std::make_shared<typename Super::SignFuture>(
+              sign_key->sign_async(
+                *this->_data_sign(), this->doughnut()->version()));
+          this->_sign_key = sign_key;
         }
+        // restart signature process in case we were restored from storage
+        if (!this->_data_signature->running()
+          && this->_data_signature->value() == elle::Buffer())
+        {
+          ELLE_ASSERT(_sign_key);
+          this->_data_signature = std::make_shared<typename Super::SignFuture>(
+            _sign_key->sign_async(
+              *this->_data_sign(), this->doughnut()->version()));
+        }
+        if (!this->_signature->running()
+          && this->_signature->value() == elle::Buffer())
+          this->_seal_okb(false);
       }
 
       template <typename Block>
@@ -743,7 +759,7 @@ namespace infinit
       elle::Buffer const&
       BaseACB<Block>::data_signature() const
       {
-        return this->_data_signature.value();
+        return this->_data_signature->value();
       }
 
       template <typename Block>
@@ -934,6 +950,8 @@ namespace infinit
       BaseACB<Block>::_serialize(elle::serialization::Serializer& s,
                                  elle::Version const& version)
       {
+        if (!this->_data_signature)
+          this->_data_signature = std::make_shared<typename Super::SignFuture>();
         s.serialize("editor", this->_editor);
         s.serialize("owner_token", this->_owner_token);
         s.serialize("acl", this->_acl_entries);
@@ -942,7 +960,7 @@ namespace infinit
           if (s.out())
           {
             auto value =
-              elle::WeakBuffer(this->_data_signature.value()).range(4);
+              elle::WeakBuffer(this->_data_signature->value()).range(4);
             s.serialize("data_signature", value);
           }
           else
@@ -954,10 +972,51 @@ namespace infinit
             versioned.size(versioned.size() + signature.size());
             memcpy(versioned.mutable_contents() + 4,
                    signature.contents(), signature.size());
-            this->_data_signature = std::move(versioned);
+            this->_data_signature = std::make_shared<typename Super::SignFuture>(
+              std::move(versioned));
           }
         else
-          s.serialize("data_signature", this->_data_signature.value());
+        {
+          bool need_signature = !s.context().has<ACBDontWaitForSignature>();
+          if (!need_signature)
+          {
+            if (s.out())
+            {
+              bool ready = !this->_data_signature->running();
+              s.serialize("data_signature_ready", ready);
+              if (ready)
+                s.serialize("data_signature", this->_data_signature->value());
+              else
+              {
+                bool is_doughnut_key =
+                  *this->_sign_key == this->doughnut()->keys_shared()->k();
+                s.serialize("data_signature_is_doughnut_key", is_doughnut_key);
+                if (!is_doughnut_key)
+                  s.serialize("data_signature_key", this->_sign_key);
+              }
+            }
+            else
+            {
+              bool ready;
+              s.serialize("data_signature_ready", ready);
+              if (ready)
+                s.serialize("data_signature", this->_data_signature->value());
+              else
+              {
+                bool is_doughnut_key;
+                s.serialize("data_signature_is_doughnut_key", is_doughnut_key);
+                if (!is_doughnut_key)
+                  s.serialize("data_signature_key", this->_sign_key);
+                else
+                  this->_sign_key = this->doughnut()->keys_shared()->private_key();
+              }
+            }
+          }
+          else
+          {
+            s.serialize("data_signature", this->_data_signature->value());
+          }
+        }
         if (version >= elle::Version(0, 4, 0))
         {
           s.serialize("world_readable", this->_world_readable);

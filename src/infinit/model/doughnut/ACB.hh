@@ -76,10 +76,12 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::vector<ACLEntry>, acl_group_entries);
         ELLE_ATTRIBUTE_R(std::vector<int>, group_version);
         ELLE_ATTRIBUTE_R(int, data_version, protected);
-        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, data_signature);
+        ELLE_ATTRIBUTE(std::shared_ptr<reactor::BackgroundFuture<elle::Buffer>>,
+                       data_signature);
         ELLE_ATTRIBUTE_R(bool, world_readable);
         ELLE_ATTRIBUTE_R(bool, world_writable);
         ELLE_ATTRIBUTE_R(bool, deleted);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PrivateKey>, sign_key);
       protected:
         elle::Buffer const& data_signature() const;
 

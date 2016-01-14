@@ -11,9 +11,11 @@
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/Remote.hh>
@@ -645,6 +647,94 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
   }
 }
 
+static std::unique_ptr<infinit::model::blocks::Block>
+cycle(infinit::model::doughnut::Doughnut& dht,
+      std::unique_ptr<infinit::model::blocks::Block> b)
+{
+  elle::Buffer buf;
+  {
+    elle::IOStream os(buf.ostreambuf());
+    elle::serialization::binary::SerializerOut sout(os, false);
+    sout.set_context(infinit::model::doughnut::ACBDontWaitForSignature{});
+    sout.set_context(infinit::model::doughnut::OKBDontWaitForSignature{});
+    sout.serialize_forward(b);
+  }
+  elle::IOStream is(buf.istreambuf());
+  elle::serialization::binary::SerializerIn sin(is, false);
+  sin.set_context<infinit::model::Model*>(&dht); // FIXME: needed ?
+  sin.set_context<infinit::model::doughnut::Doughnut*>(&dht);
+  sin.set_context(infinit::model::doughnut::ACBDontWaitForSignature{});
+  sin.set_context(infinit::model::doughnut::OKBDontWaitForSignature{});
+  auto res = sin.deserialize<std::unique_ptr<infinit::model::blocks::Block>>();
+  res->seal();
+  return res;
+}
+
+ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
+{ // test serialization used by async
+  DHTs dhts(paxos);
+  {
+    auto b =  dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    b->data(elle::Buffer("foo"));
+    b->seal();
+    auto addr = b->address();
+    auto cb = cycle(*dhts.dht_a, std::move(b));
+    dhts.dht_a->store(std::move(cb));
+    cb = dhts.dht_a->fetch(addr);
+    BOOST_CHECK_EQUAL(cb->data(), elle::Buffer("foo"));
+  }
+  { // wait for signature
+    auto b =  dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    b->data(elle::Buffer("foo"));
+    b->seal();
+    reactor::sleep(100_ms);
+    auto addr = b->address();
+    auto cb = cycle(*dhts.dht_a, std::move(b));
+    dhts.dht_a->store(std::move(cb));
+    cb = dhts.dht_a->fetch(addr);
+    BOOST_CHECK_EQUAL(cb->data(), elle::Buffer("foo"));
+  }
+  { // block we dont own
+    auto block_alice = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    block_alice->data(elle::Buffer("alice_1", 7));
+    block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"), true, true);
+    auto addr = block_alice->address();
+    dhts.dht_a->store(std::move(block_alice));
+    auto block_bob = dhts.dht_b->fetch(addr);
+    BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("alice_1"));
+    dynamic_cast<infinit::model::blocks::MutableBlock*>(block_bob.get())->data(
+      elle::Buffer("bob_1"));
+    block_bob->seal();
+    block_bob = cycle(*dhts.dht_b, std::move(block_bob));
+    dhts.dht_b->store(std::move(block_bob));
+    block_bob = dhts.dht_a->fetch(addr);
+    BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("bob_1"));
+  }
+  { // signing with group key
+    std::unique_ptr<infinit::cryptography::rsa::PublicKey> gkey;
+    {
+      infinit::model::doughnut::Group g(*dhts.dht_a, "g");
+      g.create();
+      g.add_member(dht::User(dhts.keys_b->K(), "bob"));
+      gkey.reset(new infinit::cryptography::rsa::PublicKey(g.public_control_key()));
+    }
+    auto block_alice = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    block_alice->data(elle::Buffer("alice_1", 7));
+    block_alice->set_permissions(dht::User(*gkey, "@g"), true, true);
+    auto addr = block_alice->address();
+    dhts.dht_a->store(std::move(block_alice));
+    auto block_bob = dhts.dht_b->fetch(addr);
+    BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("alice_1"));
+    dynamic_cast<infinit::model::blocks::MutableBlock*>(block_bob.get())->data(
+      elle::Buffer("bob_1"));
+    block_bob->seal();
+    block_bob = cycle(*dhts.dht_b, std::move(block_bob));
+    dhts.dht_b->store(std::move(block_bob));
+    block_bob = dhts.dht_a->fetch(addr);
+    BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("bob_1"));
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -670,6 +760,7 @@ ELLE_TEST_SUITE()
   TEST(conflict);
   TEST(restart);
   TEST(cache);
+  TEST(serialize);
 #undef TEST
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
 }
