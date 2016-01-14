@@ -23,7 +23,7 @@
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async");
 
 DAS_MODEL(infinit::model::doughnut::consensus::Async::Op,
-          (address, block, mode, resolver),
+          (address, block, mode, resolver, remove_signature),
           DasOp);
 DAS_MODEL_DEFAULT(infinit::model::doughnut::consensus::Async::Op, DasOp)
 //DAS_MODEL_SERIALIZE(infinit::model::doughnut::consensus::Async::Op);
@@ -198,6 +198,7 @@ namespace infinit
               o.block = std::move(op.block);
               o.mode = std::move(op.mode);
               o.resolver = std::move(op.resolver);
+              o.remove_signature = std::move(op.remove_signature);
               });
           }
           this->_first_disk_index.reset();
@@ -219,6 +220,8 @@ namespace infinit
           auto op = sin.deserialize<Op>();
           if (op.block)
             op.block->seal();
+          if (op.remove_signature.block)
+            op.remove_signature.block->seal();
           return op;
         }
 
