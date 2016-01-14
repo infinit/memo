@@ -178,6 +178,25 @@ namespace infinit
         this->serialize(s);
       }
 
+      RemoveSignature::RemoveSignature(RemoveSignature && other)
+      : block(std::move(other.block))
+      , group_key(std::move(other.group_key))
+      , group_index(std::move(other.group_index))
+      , signature_key(std::move(other.signature_key))
+      , signature(std::move(other.signature))
+      {
+      }
+
+      RemoveSignature&
+      RemoveSignature::operator = (RemoveSignature && other)
+      {
+        this->block = std::move(other.block);
+        this->group_key = std::move(other.group_key);
+        this->group_index = std::move(other.group_index);
+        this->signature_key = std::move(other.signature_key);
+        this->signature = std::move(other.signature);
+      }
+
       RemoveSignature::RemoveSignature(RemoveSignature const& other)
       : group_key(other.group_key)
       , group_index(other.group_index)

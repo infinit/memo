@@ -22,7 +22,9 @@ namespace infinit
       {
         RemoveSignature();
         RemoveSignature(RemoveSignature const& other);
+        RemoveSignature(RemoveSignature && other);
         RemoveSignature(elle::serialization::Serializer& input);
+        RemoveSignature& operator = (RemoveSignature && other);
         void serialize(elle::serialization::Serializer& s);
         std::unique_ptr<Block> block;
         boost::optional<cryptography::rsa::PublicKey> group_key;
