@@ -241,7 +241,7 @@ $> infinit-storage --create --s3 --name s3 --aws-account s3-user --region eu-cen
 Created storage "s3".
 ```
 
-The list of supported cloud services is continually evolving and can be seen by using `--create --help`. Enterprise storage solutions such as <a href="https://cloud.google.com/storage">Google Cloud Storage</a> and <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported.
+The list of supported cloud services is continually evolving and can be seen by using `--create --help`. Enterprise storage solutions such as <a href="https://cloud.google.com/storage">Google Cloud Storage</a> and <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported. If you would like any others, [let us know](http://infinit-sh.uservoice.com).
 
 Network
 -----------
