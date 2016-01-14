@@ -17,7 +17,7 @@ $(document).ready(function() {
     }
   });
 
-  if ($('body').hasClass('documentation')) {
+  if ($('body').hasClass('documentation') || $('body').hasClass('opensource')) {
 
     var a = function () {
       var height = $(window).scrollTop();

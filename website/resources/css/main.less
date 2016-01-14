@@ -655,11 +655,13 @@ body.pricing {
 }
 
 
-body.doc_faq {
+body.doc_faq, body.opensource {
   nav#sidebar {
     a {
-      font-family: @sourcesans; margin-top: 5px; display: block; margin: 3px 0;
+      font-family: @sourcesans; margin-top: 5px; display: block; margin-top: 7px;
       display: inline-block; font-weight: normal; font-size: 14px;
+
+      &.icon-email:before { width: 1.2em; margin-top: 0.2em; margin-left: 0.1em; }
     }
   }
 }
@@ -989,7 +991,7 @@ body.about {
 | Single Column Pages    |
 `-----------------------*/
 
-body.contact, body.opensource, body.pricing {
+body.contact, body.pricing {
   section.doc { margin-top: 30px; padding: 0 15% 100px 15%; width: 70%; }
 }
 
@@ -1024,12 +1026,12 @@ body.pricing {
     display: block; margin: 10px auto 15px auto;
   }
   .plan p.price {
-    position: absolute; top:510px; width: 80%; text-align: center;
+    position: absolute; top:540px; width: 80%; text-align: center;
     font-family: @helvetica; font-weight: 300; font-size: 23px;
+    span { display: inline-block; margin-top: 26px; font-size: 18px; }
   }
   .plan a.button {
-    color:white; margin-top: 10px; position: absolute; top:550px;
-    margin-left: -60px;
+    color:white; margin-top: 20px;
   }
   .plan a.button:hover { color: white; border-bottom: none; }
   .plan:last-child { border-right: 0}
@@ -1094,10 +1096,10 @@ body.contact, body.solutions {
 
 body.opensource {
   section.doc {
-    padding: 0 17% 100px 17%; width: 66%;
 
+    .projects { width: 120%; }
     .projects:after { content: ''; display: table; clear: both; }
-    .card { float: left; margin:15px 15px 0; }
+    .card { float: left; margin: 0 10px 10px 0  }
     .card:nth-child(2n+1) { clear: both; }
     .repo-card .content p { font-size: 13px; font-family: @sourcesans; }
 
