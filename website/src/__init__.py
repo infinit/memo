@@ -247,3 +247,7 @@ class Website(bottle.Bottle):
   @route('/robots.txt')
   def file(self):
     return static_file('robots.txt')
+
+  @route('/sitemap.xml')
+  def file(self):
+    return static_file('sitemap.xml')
