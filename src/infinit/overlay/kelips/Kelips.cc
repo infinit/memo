@@ -2048,7 +2048,8 @@ namespace infinit
         if (g == _group && !p->observer)
         {
           PeerLocation peer(p->sender, {e2e(ep)});
-          new reactor::Thread("reverse bootstraper",
+          reactor::Thread::unique_ptr t(
+            new reactor::Thread("reverse bootstraper",
             [this, peer] {
               try
               {
@@ -2061,7 +2062,9 @@ namespace infinit
               {
                 ELLE_WARN("Error processing bootstrap data: %s", e);
               }
-            }, true);
+            }, false));
+          auto ptr = t.get();
+          _bootstraper_threads.insert(std::make_pair(ptr, std::move(t)));
         }
 
         packet::Gossip res;

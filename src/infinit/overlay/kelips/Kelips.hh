@@ -344,6 +344,8 @@ namespace infinit
         // node_id -> (lookup_thread, lookup_success)
         std::unordered_map<Address,
           std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
+        std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>
+          _bootstraper_threads;
       };
     }
   }
