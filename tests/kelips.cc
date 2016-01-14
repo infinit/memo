@@ -29,9 +29,9 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
   std::vector<std::shared_ptr<imd::Doughnut>> res;
   iok::Configuration config;
   config.k = groups;
-  config.contact_timeout_ms = 4000;
-  config.ping_interval_ms = 4000 / count / 3;
-  config.ping_timeout_ms = 1000;
+  config.contact_timeout_ms = 1000;
+  config.ping_interval_ms = 1000 / count / 3;
+  config.ping_timeout_ms = 200;
   infinit::overlay::NodeEndpoints endpoints;
   for (int n=0; n<count; ++n)
   {
