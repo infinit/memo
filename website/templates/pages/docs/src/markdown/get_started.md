@@ -27,15 +27,15 @@
 
 <div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
-<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
+<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
 <p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.0.9/osxfuse-3.0.9.dmg" class="button">Download OSXFUSE</a></p>
 
-_**NOTE**: Infinit requires a version of OSXFUSE that is newer than available on https://osxfuse.github.io/._
+<em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/.</em>
 
 % else:
 
-<p>Infinit relies on [FUSE](https://en.wikipedia.org/wiki/Filesystem_in_Userspace) to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use `apt-get`:</p>
+<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use <code>apt-get</code>:</p>
 
 <br>
 
@@ -63,7 +63,7 @@ _**NOTE**: Infinit requires a version of OSXFUSE that is newer than available on
 <pre><code>$> sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
 Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
 gpg: requesting key 3D2C3B0B from hkp server keyserver.ubuntu.com
-gpg: key 6821EB43: public key "Infinit <contact@infinit.one>" imported
+gpg: key 6821EB43: public key "Infinit &lt;contact@infinit.one&gt;" imported
 gpg: Total number processed: 1
 gpg:               imported: 1  (RSA: 1)
 </code></pre>
