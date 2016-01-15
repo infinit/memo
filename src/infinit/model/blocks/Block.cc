@@ -195,6 +195,7 @@ namespace infinit
         this->group_index = std::move(other.group_index);
         this->signature_key = std::move(other.signature_key);
         this->signature = std::move(other.signature);
+        return *this;
       }
 
       RemoveSignature::RemoveSignature(RemoveSignature const& other)
