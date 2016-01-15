@@ -33,8 +33,9 @@ namespace infinit
         | Construction |
         `-------------*/
         public:
-          Paxos(Doughnut& doughnut, int factor);
+          Paxos(Doughnut& doughnut, int factor, bool lenient_fetch = false);
           ELLE_ATTRIBUTE_R(int, factor);
+          ELLE_ATTRIBUTE_R(bool, lenient_fetch);
 
         /*-------.
         | Blocks |
@@ -91,6 +92,9 @@ namespace infinit
                    Address address,
                    PaxosClient::Proposal const& p,
                    std::shared_ptr<blocks::Block> const& value);
+            virtual
+            std::unique_ptr<Paxos::PaxosClient::Accepted>
+            _fetch_paxos(Address address);
           };
 
           class LocalPeer
@@ -132,6 +136,8 @@ namespace infinit
               int chosen;
               PaxosServer paxos;
             };
+            std::unique_ptr<PaxosClient::Accepted>
+            _fetch_paxos(Address address);
           protected:
             virtual
             std::unique_ptr<blocks::Block>
