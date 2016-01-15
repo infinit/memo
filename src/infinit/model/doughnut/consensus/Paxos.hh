@@ -93,7 +93,8 @@ namespace infinit
                    PaxosClient::Proposal const& p,
                    std::shared_ptr<blocks::Block> const& value);
             virtual
-            std::unique_ptr<Paxos::PaxosClient::Accepted>
+            std::pair<PaxosServer::Quorum,
+                      std::unique_ptr<Paxos::PaxosClient::Accepted>>
             _fetch_paxos(Address address);
           };
 
@@ -136,7 +137,8 @@ namespace infinit
               int chosen;
               PaxosServer paxos;
             };
-            std::unique_ptr<PaxosClient::Accepted>
+            std::pair<PaxosServer::Quorum,
+                      std::unique_ptr<Paxos::PaxosClient::Accepted>>
             _fetch_paxos(Address address);
           protected:
             virtual

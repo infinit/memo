@@ -248,11 +248,13 @@ namespace infinit
           });
         }
 
-        std::unique_ptr<Paxos::PaxosClient::Accepted>
+        std::pair<Paxos::PaxosServer::Quorum,
+                  std::unique_ptr<Paxos::PaxosClient::Accepted>>
         Paxos::RemotePeer::_fetch_paxos(Address address)
         {
           auto fetch = make_rpc
-            <std::unique_ptr<Paxos::PaxosClient::Accepted>(Address)>
+            <std::pair<PaxosServer::Quorum,
+                       std::unique_ptr<Paxos::PaxosClient::Accepted>>(Address)>
             ("fetch_paxos");
           fetch.set_context<Doughnut*>(&this->doughnut());
           return fetch(address);
@@ -356,7 +358,9 @@ namespace infinit
                        this, ph::_1, ph::_2, ph::_3, ph::_4)));
           rpcs.add(
             "fetch_paxos",
-            std::function<std::unique_ptr<Paxos::PaxosClient::Accepted>(Address)>
+            std::function<std::pair<PaxosServer::Quorum,
+                                   std::unique_ptr<Paxos::PaxosClient::Accepted>>
+                                   (Address)>
             (std::bind(&LocalPeer::_fetch_paxos,
                        this, ph::_1)));
         }
@@ -384,8 +388,8 @@ namespace infinit
           return res;
         }
 
-
-        std::unique_ptr<Paxos::PaxosClient::Accepted>
+        std::pair<Paxos::PaxosServer::Quorum,
+                  std::unique_ptr<Paxos::PaxosClient::Accepted>>
         Paxos::LocalPeer::_fetch_paxos(Address address)
         {
           auto decision = this->_addresses.find(address);
@@ -400,9 +404,9 @@ namespace infinit
               if (data.block)
               {
                 ELLE_DEBUG("loaded immutable block from storage");
-                return elle::make_unique<PaxosClient::Accepted>(
+                return std::make_pair(PaxosServer::Quorum(),elle::make_unique<PaxosClient::Accepted>(
                   PaxosClient::Proposal(-1, -1, this->doughnut().id()),
-                  std::shared_ptr<blocks::Block>(data.block));
+                  std::shared_ptr<blocks::Block>(data.block)));
               }
               else
               {
@@ -422,7 +426,9 @@ namespace infinit
           auto highest = paxos.highest_accepted();
           if (!highest)
             throw MissingBlock(address);
-          return elle::make_unique<PaxosClient::Accepted>(*highest);
+          return std::make_pair(
+            paxos.quorum(),
+            elle::make_unique<PaxosClient::Accepted>(*highest));
         }
 
         std::unique_ptr<blocks::Block>
@@ -741,11 +747,13 @@ namespace infinit
           {
             auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
             std::vector<PaxosClient::Accepted> hits;
+            std::vector<PaxosServer::Quorum> quorums;
             for (auto peer: peers)
             {
               try
               {
-                std::unique_ptr<PaxosClient::Accepted> hit;
+                std::pair<PaxosServer::Quorum,
+                      std::unique_ptr<Paxos::PaxosClient::Accepted>> hit;
                 if (auto local = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
                   hit = local->_fetch_paxos(address);
                 else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
@@ -754,11 +762,12 @@ namespace infinit
                   ;
                 else
                   ELLE_ABORT("invalid paxos peer: %s", *peer);
-                if (hit)
+                if (hit.second)
                 {
-                  if (!dynamic_cast<blocks::MutableBlock*>(hit->value.get()))
-                    return hit->value->clone();
-                  hits.push_back(*hit);
+                  if (!dynamic_cast<blocks::MutableBlock*>(hit.second->value.get()))
+                    return hit.second->value->clone();
+                  hits.push_back(*hit.second);
+                  quorums.push_back(hit.first);
                 }
               }
               catch (reactor::network::Exception const& e)
@@ -777,7 +786,7 @@ namespace infinit
               });
             for (auto const& a: hits)
               ELLE_DEBUG("  %s", a.proposal);
-            if (signed(hits.size()) > this->_factor / 2
+            if (signed(hits.size()) > signed(quorums.front().size()) / 2
               || this->_lenient_fetch)
             {
               if (auto mb = dynamic_cast<blocks::MutableBlock*>(hits.front().value.get()))
