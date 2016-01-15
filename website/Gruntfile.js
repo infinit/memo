@@ -47,26 +47,6 @@ module.exports = function(grunt) {
         }
       }
     },
-    markdown: {
-      all: {
-        files: [{
-          expand: true,
-          src: ['templates/pages/docs/src/markdown/*.md', '../ChangeLog'],
-          dest: 'templates/pages/docs/src/html',
-          flatten: true,
-          ext: '.html'
-        }],
-        options: {
-          template: 'templates/pages/docs/src/layout.jst',
-          postCompile: function(src, context) {
-            // don't escape quotes for Mako templates
-            src = src.replace(/&quot;/gi, '\"');
-            src = src.replace(/<code>--/gi, '<code>&#8209;&#8209;');
-            return src;
-          },
-        }
-      }
-    },
     watch: {
       less: {
         files: [
@@ -74,12 +54,6 @@ module.exports = function(grunt) {
           'resources/css/plugins/*.css'
         ],
         tasks: ['less']
-      },
-      md: {
-        files: [
-          'templates/pages/docs/src/markdown/*.md',
-        ],
-        tasks: ['markdown']
       },
       js: {
         files: [
@@ -115,14 +89,12 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-less');
-  grunt.loadNpmTasks('grunt-markdown');
 
   // Register tasks
   grunt.registerTask('default', [
     'clean',
     'less',
     'uglify',
-    'markdown'
   ]);
   grunt.registerTask('dev', [
     'watch'
