@@ -746,14 +746,14 @@ namespace infinit
           if (this->doughnut().version() >= elle::Version(0, 5, 0))
           {
             auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
-            std::vector<PaxosClient::Accepted> hits;
-            std::vector<PaxosServer::Quorum> quorums;
+            typedef std::pair<PaxosServer::Quorum,
+                      std::unique_ptr<PaxosClient::Accepted>> FetchData;
+            std::vector<FetchData> hits;
             for (auto peer: peers)
             {
               try
               {
-                std::pair<PaxosServer::Quorum,
-                      std::unique_ptr<Paxos::PaxosClient::Accepted>> hit;
+                FetchData hit;
                 if (auto local = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
                   hit = local->_fetch_paxos(address);
                 else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
@@ -766,8 +766,7 @@ namespace infinit
                 {
                   if (!dynamic_cast<blocks::MutableBlock*>(hit.second->value.get()))
                     return hit.second->value->clone();
-                  hits.push_back(*hit.second);
-                  quorums.push_back(hit.first);
+                  hits.push_back(std::move(hit));
                 }
               }
               catch (reactor::network::Exception const& e)
@@ -780,22 +779,23 @@ namespace infinit
               throw MissingBlock(address);
             // Reverse sort
             std::sort(hits.begin(), hits.end(),
-              [] ( PaxosClient::Accepted const& a, PaxosClient::Accepted const& b)
+              [] (FetchData const& a, FetchData const& b)
               {
-                return a.proposal > b.proposal;
+                return a.second->proposal > b.second->proposal;
               });
             for (auto const& a: hits)
-              ELLE_DEBUG("  %s", a.proposal);
-            if (signed(hits.size()) > signed(quorums.front().size()) / 2
+              ELLE_DEBUG("  %s", a.second->proposal);
+            if (signed(hits.size()) > signed(hits.front().first.size()) / 2
               || this->_lenient_fetch)
             {
-              if (auto mb = dynamic_cast<blocks::MutableBlock*>(hits.front().value.get()))
+              if (auto mb = dynamic_cast<blocks::MutableBlock*>(hits.front().second->value.get()))
                 if (local_version && *local_version == mb->version())
                   return std::unique_ptr<blocks::Block>();
-              return hits.front().value->clone();
+              return hits.front().second->value->clone();
             }
             else
-              throw athena::paxos::TooFewPeers(hits.size(), this->_factor);
+              throw athena::paxos::TooFewPeers(hits.size(),
+                                               hits.front().first.size());
           }
           else
           {
