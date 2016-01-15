@@ -323,7 +323,9 @@ COMMAND(link_)
       self.keypair(),
       std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
       std::move(passport),
-      self.name));
+      self.name,
+      {},
+      desc.version));
   ifnt.network_save(network, true);
   report_action("linked", "device to network", network.name);
 }

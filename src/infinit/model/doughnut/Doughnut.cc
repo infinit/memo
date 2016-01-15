@@ -285,9 +285,8 @@ namespace infinit
         Passport passport_,
         boost::optional<std::string> name_,
         boost::optional<int> port_,
-        boost::optional<elle::Version> version)
-        : ModelConfig(std::move(storage),
-                      std::move(version))
+        elle::Version version)
+        : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
         , overlay(std::move(overlay_))
@@ -330,10 +329,9 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       Configuration::make(overlay::NodeEndpoints const& hosts,
                           bool client,
-                          boost::filesystem::path const& dir,
-                          boost::optional<elle::Version> version)
+                          boost::filesystem::path const& dir)
       {
-        return this->make(hosts, client, dir, version, false, false);
+        return this->make(hosts, client, dir, this->version, false, false);
       }
 
       std::unique_ptr<Doughnut>

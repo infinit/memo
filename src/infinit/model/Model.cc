@@ -152,7 +152,7 @@ namespace infinit
     }
 
     ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_,
-                             boost::optional<elle::Version> version_)
+                             elle::Version version_)
       : storage(std::move(storage_))
       , version(std::move(version_))
     {}
@@ -166,7 +166,15 @@ namespace infinit
     ModelConfig::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("storage", this->storage);
-      s.serialize("version", this->version);
+      try
+      {
+        s.serialize("version", this->version);
+      }
+      catch (elle::Error)
+      {
+        // Oldest versions did not specify compatibility version.
+        this->version = elle::Version(0, 3, 0);
+      }
     }
   }
 }

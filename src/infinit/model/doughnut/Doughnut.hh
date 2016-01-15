@@ -121,8 +121,8 @@ namespace infinit
           std::shared_ptr<cryptography::rsa::PublicKey> owner,
           Passport passport,
           boost::optional<std::string> name,
-          boost::optional<int> port = {},
-          boost::optional<elle::Version> version = {});
+          boost::optional<int> port,
+          elle::Version version);
         Configuration(Configuration&&) = default;
         Configuration(elle::serialization::SerializerIn& input);
         ~Configuration();
@@ -132,8 +132,7 @@ namespace infinit
         std::unique_ptr<infinit::model::Model>
         make(overlay::NodeEndpoints const& hosts,
              bool client,
-             boost::filesystem::path const& p,
-             boost::optional<elle::Version> version = {});
+             boost::filesystem::path const& p);
         std::unique_ptr<Doughnut>
         make(overlay::NodeEndpoints const& hosts,
              bool client,

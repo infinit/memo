@@ -641,12 +641,14 @@ namespace infinit
       s.serialize("consensus", this->consensus);
       s.serialize("overlay", this->overlay);
       s.serialize("owner", this->owner);
+      s.serialize("version", this->version);
     }
 
     std::string name;
     std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
     std::unique_ptr<overlay::Configuration> overlay;
     cryptography::rsa::PublicKey owner;
+    elle::Version version;
   };
 }
 
