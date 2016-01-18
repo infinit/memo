@@ -4,6 +4,22 @@
 ## [Unreleased]
 
 
+## [0.4.0]
+
+Groups support.
+
+### Added
+
+- Support group ACL.
+- Add compatibility version to network configuration files.
+
+### Fixed
+
+- Set permissions on journal directories to 700 as it can contain
+  private keys.
+- Fix S3 storage in case of HTTP redirections.
+
+
 ## [0.3.7] - 2016-01-11
 
 Small improvements and fixes.
@@ -42,7 +58,7 @@ performance improvement and S3 storage support.
 
 ### Changed
 
-- Set permissions on user configuration files to 066 as some contain
+- Set permissions on user configuration files to 700 as some contain
   private keys.
 
 ### Fixed
