@@ -343,7 +343,8 @@ namespace infinit
         bool cache,
         boost::optional<int> cache_size,
         boost::optional<std::chrono::seconds> cache_ttl,
-        boost::optional<std::chrono::seconds> cache_invalidation)
+        boost::optional<std::chrono::seconds> cache_invalidation,
+        boost::optional<elle::Version> version)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -381,7 +382,7 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            this->version);
+            version ? version.get() : this->version);
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
@@ -393,7 +394,7 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version);
+            version ? version.get() : this->version);
         return dht;
       }
 

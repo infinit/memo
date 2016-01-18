@@ -399,7 +399,7 @@ COMMAND(run)
     cache = true;
   auto dht =
     network.run(eps, false, cache, cache_size, cache_ttl, cache_invalidation,
-                flag(args, "async"));
+                flag(args, "async"), compatibility_version);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
             && dht->local()->storage();

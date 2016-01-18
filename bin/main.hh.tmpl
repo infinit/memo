@@ -57,7 +57,9 @@ beyond(bool help = false)
   return res;
 }
 
-static elle::Version version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+static const elle::Version version(
+  INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+static boost::optional<elle::Version> compatibility_version;
 
 class CommandLineError
   : public elle::Error
@@ -371,7 +373,8 @@ namespace infinit
             misc.add_options()
               ("help,h", "display the help")
               ("script,s", "silence all extraneous human friendly messages")
-              ("compatibility-version,f", value<std::string>(), "force used version")
+              ("compatibility-version,f", value<std::string>(),
+               "force compatibility version")
               ("version,v", "display version")
             ;
             if (!disable_as_arg || !disable_as_arg.get())
@@ -392,7 +395,7 @@ namespace infinit
               store(parsed, vm);
               notify(vm);
               if (vm.count("compatibility-version"))
-                version = elle::Version::from_string(
+                compatibility_version = elle::Version::from_string(
                   vm["compatibility-version"].as<std::string>());
               if (vm.count("version"))
               {
@@ -699,7 +702,8 @@ namespace infinit
         boost::optional<int> cache_size = {},
         boost::optional<int> cache_ttl = {},
         boost::optional<int> cache_invalidation = {},
-        bool async_writes = false)
+        bool async_writes = false,
+        boost::optional<elle::Version> version = {})
     {
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
@@ -710,11 +714,12 @@ namespace infinit
         cache,
         cache_size,
         cache_ttl
-          ? std::chrono::seconds(cache_ttl.get())
-          : boost::optional<std::chrono::seconds>(),
+        ? std::chrono::seconds(cache_ttl.get())
+        : boost::optional<std::chrono::seconds>(),
         cache_invalidation
-          ? std::chrono::seconds(cache_invalidation.get())
-          : boost::optional<std::chrono::seconds>());
+        ? std::chrono::seconds(cache_invalidation.get())
+        : boost::optional<std::chrono::seconds>(),
+        std::move(version));
     }
 
     inline
