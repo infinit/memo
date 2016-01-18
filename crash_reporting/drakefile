@@ -131,9 +131,9 @@ def configure(cxx_toolkit = None,
     breakpad_sources += drake.nodes(
       'src/third_party/lss/linux_syscall_support.h',
     )
-    breakpad_configure += [
-      'CFLAGS=%s' % drake.source_path('src'),
-      'CXXFLAGS=%s' % drake.source_path('src'),
+    breakpad_configure_args += [
+      'CFLAGS=-I%s' % drake.path_source('src'),
+      'CXXFLAGS=-I%s' % drake.path_source('src'),
     ]
     dump_syms_exe = drake.cxx.Executable('breakpad/bin/dump_syms')
   elif cxx_toolkit.os is drake.os.macos:
@@ -214,18 +214,18 @@ def configure(cxx_toolkit = None,
       'common/mac/macho_walker.h',
       'tools/mac/dump_syms/dump_syms_tool.cc',
     ]
-  dump_syms_sources = \
-    drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, dump_syms_sources)))
-  dump_syms_cxx_config = drake.cxx.Config(cxx_config)
-  dump_syms_cxx_config.flag('-DHAVE_MACH_O_NLIST_H')
-  dump_syms_cxx_config.framework_add('CoreFoundation')
-  dump_syms_cxx_config.add_local_include_path('breakpad/src')
-  dump_syms_exe = drake.cxx.Executable(
-    'breakpad/bin/dump_syms',
-    dump_syms_sources,
-    cxx_toolkit,
-    dump_syms_cxx_config,
-  )
+    dump_syms_sources = \
+      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, dump_syms_sources)))
+    dump_syms_cxx_config = drake.cxx.Config(cxx_config)
+    dump_syms_cxx_config.flag('-DHAVE_MACH_O_NLIST_H')
+    dump_syms_cxx_config.framework_add('CoreFoundation')
+    dump_syms_cxx_config.add_local_include_path('breakpad/src')
+    dump_syms_exe = drake.cxx.Executable(
+      'breakpad/bin/dump_syms',
+      dump_syms_sources,
+      cxx_toolkit,
+      dump_syms_cxx_config,
+    )
 
   # Use our own UTF conversion file which adds guards for C++.
   breakpad_sources += drake.nodes(
