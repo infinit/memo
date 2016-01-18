@@ -239,7 +239,7 @@ ELLE_TEST_SCHEDULED(conflictor)
   ELLE_LOG("teardown");
 }
 
-void test_kill_nodes(int node_count, int replication, int kill, bool overwrite_while_down, bool lenient)
+void test_kill_nodes(int node_count, int k, int replication, int kill, bool overwrite_while_down, bool lenient)
 {
   static const int file_count = 20;
   ELLE_LOG("kill_nodes n=%s k=%s r=%s", node_count, kill, replication);
@@ -249,8 +249,8 @@ void test_kill_nodes(int node_count, int replication, int kill, bool overwrite_w
       boost::filesystem::remove_all(tmp);
     });
   auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-  auto nodes = run_nodes(tmp, kp, node_count, 1, replication, lenient);
-  auto fs = make_observer(nodes.front(), tmp, kp, 1, replication, false, false, lenient);
+  auto nodes = run_nodes(tmp, kp, node_count, k, replication, lenient);
+  auto fs = make_observer(nodes.front(), tmp, kp, k, replication, false, false, lenient);
   ELLE_LOG("initial file write");
   for (int i=0; i<file_count; ++i)
     writefile(*fs, "foo" + std::to_string(i), "foo");
@@ -315,17 +315,20 @@ void test_kill_nodes(int node_count, int replication, int kill, bool overwrite_w
 
 ELLE_TEST_SCHEDULED(killed_nodes)
 {
-  test_kill_nodes(5, 3, 1, true, false);
+  test_kill_nodes(5, 1, 3, 1, true, false);
 }
 ELLE_TEST_SCHEDULED(killed_nodes_big)
 {
-  test_kill_nodes(10, 5, 2, true, false);
+  test_kill_nodes(10, 1, 5, 2, true, false);
 }
 ELLE_TEST_SCHEDULED(killed_nodes_half_lenient)
 {
-  test_kill_nodes(5, 2, 1, false, true);
+  test_kill_nodes(5, 1, 2, 1, false, true);
 }
-
+ELLE_TEST_SCHEDULED(killed_nodes_k2)
+{
+  test_kill_nodes(15, 3, 3, 1, true, false);
+}
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
@@ -336,5 +339,6 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   suite.add(BOOST_TEST_CASE(killed_nodes_big), 0, 600);
   suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
+  suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);
   suite.add(BOOST_TEST_CASE(conflictor), 0, 300);
 }
