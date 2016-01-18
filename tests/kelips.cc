@@ -21,19 +21,21 @@ namespace bfs = boost::filesystem;
 namespace imd = infinit::model::doughnut;
 namespace iok = infinit::overlay::kelips;
 
+infinit::overlay::NodeEndpoints endpoints;
+
 static std::vector<std::shared_ptr<imd::Doughnut>>
 run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
           int count = 10, int groups = 1, int replication_factor = 3,
           bool paxos_lenient = false)
 {
   ELLE_LOG("building and running %s nodes", count);
+  endpoints.clear();
   std::vector<std::shared_ptr<imd::Doughnut>> res;
   iok::Configuration config;
   config.k = groups;
   config.contact_timeout_ms = 1000;
   config.ping_interval_ms = 1000 / count / 3;
-  config.ping_timeout_ms = 200;
-  infinit::overlay::NodeEndpoints endpoints;
+  config.ping_timeout_ms = 500;
   for (int n=0; n<count; ++n)
   {
     std::unique_ptr<infinit::storage::Storage> s;
@@ -91,18 +93,18 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   ELLE_LOG("building observer");
   iok::Configuration config;
   config.k = groups;
-  infinit::overlay::NodeEndpoints endpoints;
+  /*infinit::overlay::NodeEndpoints endpoints;
   std::string ep = "127.0.0.1:"
     + std::to_string(root_node->local()->server_endpoint().port());
   std::vector<std::string> eps;
   eps.push_back(ep);
-  endpoints.emplace(root_node->id(), eps);
+  endpoints.emplace(root_node->id(), eps);*/
   infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp.k());
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
   [&] (infinit::model::doughnut::Doughnut& dht)
   -> std::unique_ptr<imd::consensus::Consensus>
   {
-    std::unique_ptr<imd::consensus::Consensus> backend = 
+    std::unique_ptr<imd::consensus::Consensus> backend =
       elle::make_unique<imd::consensus::Paxos>(dht, replication_factor, paxos_lenient);
     if (async)
     {
