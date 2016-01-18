@@ -12,12 +12,15 @@ Groups support.
 
 - Support group ACL.
 - Add compatibility version to network configuration files.
+- Support reading when a minority of the quorum nodes are down.
 
 ### Fixed
 
 - Set permissions on journal directories to 700 as it can contain
   private keys.
 - Fix S3 storage in case of HTTP redirections.
+- Fix SEGV on shutdown in some rare cases.
+- Fix SEGV with ipv6 interfaces.
 
 
 ## [0.3.7] - 2016-01-11
