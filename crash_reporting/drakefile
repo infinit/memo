@@ -11,25 +11,23 @@ rule_tools = None
 with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
-
 ## ------------ ##
 ## Dump Symbols ##
 ## ------------ ##
 
-class SymbolsBuilder(drake.Builder):
+class SymbolsGenerator(drake.Builder):
   def __init__(self,
                dump_syms_tool,
-               executable,
-               dst_folder):
+               normalized_directory,
+               binary,
+               output_file):
     self.__dump_syms_tool = dump_syms_tool
-    self.__executable = executable
-    if not drake.path_build(dst_folder).exists():
-      drake.path_build(dst_folder).mkpath()
-    bin_name = str(self.__executable.path().basename())
-    self.__output_file = drake.node('%s/%s.sym' % (dst_folder, bin_name))
+    self.__normalized_directory = normalized_directory
+    self.__binary = binary
+    self.__output_file = output_file
     drake.Builder.__init__(
       self,
-      [self.__dump_syms_tool, self.__executable],
+      [self.__dump_syms_tool, self.__binary],
       [self.__output_file],
     )
 
@@ -37,15 +35,38 @@ class SymbolsBuilder(drake.Builder):
   def dump_syms_cmd(self):
     return str(self.__dump_syms_tool.path())
 
+  @property
+  def binary_path(self):
+    return str(self.__binary.path())
+
+  def output_folder(self, sym_file):
+    with open(str(sym_file), 'r') as f:
+      line = f.readline()
+      uid = line.split(' ')[3]
+      name = self.__binary.path().basename()
+      res = '%s/%s/%s' % (self.__normalized_directory, name, uid)
+      import os
+      os.makedirs(res, exist_ok = True)
+      return res
+    return None
+
   def execute(self):
-    self.cmd(
-      'generate symbols for %s' % self.__executable.path().basename(),
-      [
-        self.dump_syms_cmd(), str(self.__executable.path()),
-        '>', str(self.__output_file),
-      ]
-    )
+    out = self.__output_file
+    self.cmd('Generating symbols file for %s' % self.__binary,
+             [self.dump_syms_cmd, self.binary_path],
+             redirect_stdout = out,
+             throw = True)
+    # We don't know what the unique ID will be until we've created the file.
+    # Copy them afterwards (with no checks) to the correct place.
+    import shutil
+    shutil.copy2(str(out), self.output_folder(out))
     return True
+
+  def __repr__(self):
+    return 'SymbolsGenerator(%s)' % self.__binary
+
+  def __str__(self):
+    return 'SymbolsGenerator(%s)' % self.__binary
 
 def configure(cxx_toolkit = None,
               cxx_config = drake.cxx.Config()):
