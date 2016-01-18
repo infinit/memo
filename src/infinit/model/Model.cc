@@ -5,20 +5,27 @@
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
+#include <infinit/model/blocks/GroupBlock.hh>
+#include <infinit/version.hh>
 
 ELLE_LOG_COMPONENT("infinit.model.Model");
+
+static const elle::Version default_version(
+  INFINIT_MAJOR, INFINIT_MINOR, 0);
 
 namespace infinit
 {
   namespace model
   {
-    Model::Model(elle::Version version)
-      : _version(version)
-    {}
+    Model::Model(boost::optional<elle::Version> version)
+      : _version(version ? *version : default_version)
+    {
+      ELLE_TRACE("%s: compatibility version %s", *this, this->_version);
+    }
 
     template <>
     std::unique_ptr<blocks::MutableBlock>
-    Model::make_block(elle::Buffer data) const
+    Model::make_block(elle::Buffer data, Address addr) const
     {
       auto res = this->_make_mutable_block();
       res->data(std::move(data));
@@ -34,13 +41,13 @@ namespace infinit
 
     template <>
     std::unique_ptr<blocks::ImmutableBlock>
-    Model::make_block(elle::Buffer data) const
+    Model::make_block(elle::Buffer data, Address owner) const
     {
-      return this->_make_immutable_block(std::move(data));
+      return this->_make_immutable_block(std::move(data), owner);
     }
 
     std::unique_ptr<blocks::ImmutableBlock>
-    Model::_make_immutable_block(elle::Buffer data) const
+    Model::_make_immutable_block(elle::Buffer data, Address owner) const
     {
       ELLE_TRACE_SCOPE("%s: create block", *this);
       return this->_construct_block<blocks::ImmutableBlock>(Address::random(),
@@ -49,10 +56,18 @@ namespace infinit
 
     template <>
     std::unique_ptr<blocks::ACLBlock>
-    Model::make_block(elle::Buffer data) const
+    Model::make_block(elle::Buffer data, Address) const
     {
       auto res = this->_make_acl_block();
       res->data(std::move(data));
+      return res;
+    }
+
+    template <>
+    std::unique_ptr<blocks::GroupBlock>
+    Model::make_block(elle::Buffer data, Address) const
+    {
+      auto res = this->_make_group_block();
       return res;
     }
 
@@ -61,6 +76,12 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: create ACL block", *this);
       return this->_construct_block<blocks::ACLBlock>(Address::random());
+    }
+
+    std::unique_ptr<blocks::GroupBlock>
+    Model::_make_group_block() const
+    {
+      return this->_construct_block<blocks::GroupBlock>(Address::random());
     }
 
     std::unique_ptr<User>
@@ -119,7 +140,15 @@ namespace infinit
     void
     Model::remove(Address address)
     {
-      this->_remove(address);
+      auto block = this->fetch(address);
+      auto rs = block->sign_remove();
+      this->remove(address, std::move(rs));
+    }
+
+    void
+    Model::remove(Address address, blocks::RemoveSignature rs)
+    {
+      this->_remove(address, std::move(rs));
     }
 
     ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_,

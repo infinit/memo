@@ -9,9 +9,11 @@ namespace infinit
     {
       class ACLBlock;
       class Block;
+      class GroupBlock;
       class ImmutableBlock;
       class MutableBlock;
       class ValidationResult;
+      class RemoveSignature;
     }
   }
 }

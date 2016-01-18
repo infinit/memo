@@ -62,6 +62,10 @@ public:
   typedef infinit::cryptography::rsa::PublicKey Super;
   using Super::Super;
 
+  DeterministicPublicKey(Super const& model)
+    : Super(model)
+  {}
+
   virtual
   elle::Buffer
   seal(elle::ConstWeakBuffer const& plain,
@@ -69,6 +73,16 @@ public:
        infinit::cryptography::Mode const mode) const override
   {
     return elle::Buffer(plain);
+  }
+
+  virtual
+  bool
+  verify(elle::ConstWeakBuffer const& signature,
+         elle::ConstWeakBuffer const& plain,
+         infinit::cryptography::rsa::Padding const,
+         infinit::cryptography::Oneway const) const override
+  {
+    return signature == plain;
   }
 };
 
@@ -110,23 +124,75 @@ public:
   }
 };
 
+static const elle::Buffer salt("HARDCODED_SALT");
+static const DeterministicSecretKey secret =
+  elle::serialization::json::deserialize<DeterministicSecretKey>(secret_buffer);
+
+namespace dht = infinit::model::doughnut;
+
 class DummyDoughnut
-  : public infinit::model::doughnut::Doughnut
+  : public dht::Doughnut
 {
 public:
+  DummyDoughnut(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+                boost::optional<elle::Version> v)
+    : dht::Doughnut(
+      infinit::model::Address::null, keys, keys->public_key(),
+      dht::Passport(keys->K(), "network", keys->k()),
+      [] (dht::Doughnut&)
+      { return nullptr; },
+      [] (dht::Doughnut&, infinit::model::Address, std::shared_ptr<dht::Local>)
+      { return nullptr; },
+      {}, nullptr, v)
+  {}
+};
 
-  DummyDoughnut(infinit::model::Address id,
-                std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys)
-    : infinit::model::doughnut::Doughnut(
-      id, keys, keys->K(),
-      infinit::model::doughnut::Passport(keys->K(), "network", keys->k()),
-      [] (infinit::model::doughnut::Doughnut&)
-      { return nullptr; },
-      [] (infinit::model::doughnut::Doughnut&, infinit::model::Address, std::shared_ptr<infinit::model::doughnut::Local>)
-      { return nullptr; },
-      {}, nullptr)
+struct TestSet
+{
+  TestSet(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+          boost::optional<elle::Version> v)
+    : dht(keys, std::move(v))
+    , chb(new dht::CHB(&dht, std::string("CHB contents"), salt))
+    , acb(new dht::ACB(&dht, std::string("ACB contents"), salt))
+    , okb(new dht::OKB(&dht, std::string("OKB contents"), salt))
+    , nb(new dht::NB(&dht, keys->public_key(),
+                     "NB name", std::string("NB contents")))
+    , ub(new dht::UB(&dht, "USERNAME", keys->K(), false))
+    , rub(new dht::UB(&dht, "USERNAME", keys->K(), true))
   {
+    chb->seal();
+    acb->seal(secret);
+    okb->seal();
+    nb->seal();
+    ub->seal();
+    rub->seal();
   }
+
+  void apply(std::string const& action,
+             std::function<void(std::string const&,
+                                infinit::model::blocks::Block*)> const& f)
+  {
+    std::cout << "  " << action << " CHB" << std::endl;
+    f("CHB", chb.get());
+    std::cout << "  " << action << " OKB" << std::endl;
+    f("OKB", okb.get());
+    std::cout << "  " << action << " ACB" << std::endl;
+    f("ACB", acb.get());
+    std::cout << "  " << action << " NB" << std::endl;
+    f("NB",  nb.get());
+    std::cout << "  " << action << " UB" << std::endl;
+    f("UB",  ub.get());
+    std::cout << "  " << action << " RUB" << std::endl;
+    f("RUB",  rub.get());
+  };
+
+  DummyDoughnut dht;
+  std::shared_ptr<dht::CHB> chb;
+  std::shared_ptr<dht::ACB> acb;
+  std::shared_ptr<dht::OKB> okb;
+  std::shared_ptr<dht::NB> nb;
+  std::shared_ptr<dht::UB> ub;
+  std::shared_ptr<dht::UB> rub;
 };
 
 int
@@ -163,51 +229,12 @@ main(int argc, char** argv)
     "main",
     [&]
     {
-      static const elle::Buffer salt("HARDCODED_SALT");
-      auto secret =
-        elle::serialization::json::deserialize<DeterministicSecretKey>
-        (secret_buffer);
       auto K = elle::serialization::json::deserialize
         <std::shared_ptr<DeterministicPublicKey>>(public_key);
       auto k = elle::serialization::json::deserialize
         <std::shared_ptr<DeterministicPrivateKey>>(private_key);
       auto keys = std::make_shared
         <infinit::cryptography::rsa::KeyPair>(K, k);
-      DummyDoughnut dht(infinit::model::Address::null, keys);
-      auto chb =
-        new infinit::model::doughnut::CHB(std::string("CHB contents"), salt);
-      chb->seal();
-      auto acb = new infinit::model::doughnut::ACB(
-        &dht, std::string("ACB contents"), salt);
-      acb->seal(secret);
-      auto okb = new infinit::model::doughnut::OKB(
-        &dht, std::string("OKB contents"), salt);
-      okb->seal();
-      auto nb = new infinit::model::doughnut::NB(
-        &dht, keys->K(), "NB name", std::string("NB contents"));
-      nb->seal();
-      auto ub = new infinit::model::doughnut::UB("USERNAME", keys->K(), false);
-      ub->seal();
-      auto rub = new infinit::model::doughnut::UB("USERNAME", keys->K(), true);
-      rub->seal();
-      auto apply =
-        [&] (std::string const& action,
-             std::function<void(std::string const&,
-                                infinit::model::blocks::Block*)> const& f)
-        {
-          std::cout << "  " << action << " CHB" << std::endl;
-          f("CHB", chb);
-          std::cout << "  " << action << " OKB" << std::endl;
-          f("OKB", okb);
-          std::cout << "  " << action << " ACB" << std::endl;
-          f("ACB", acb);
-          std::cout << "  " << action << " NB" << std::endl;
-          f("NB",  nb);
-          std::cout << "  " << action << " UB" << std::endl;
-          f("UB",  ub);
-          std::cout << "  " << action << " RUB" << std::endl;
-          f("RUB",  rub);
-        };
       if (vm.count("generate"))
       {
         elle::Version current_version(INFINIT_MAJOR, INFINIT_MINOR, 0);
@@ -215,7 +242,9 @@ main(int argc, char** argv)
         std::cout << "Create reference data for version "
                   << current_version << std::endl;
         boost::filesystem::create_directories(current);
-        auto generate =
+        TestSet set(keys, current_version);
+        set.apply(
+          "generate",
           [&] (std::string const& name, infinit::model::blocks::Block* b)
           {
             {
@@ -232,8 +261,7 @@ main(int argc, char** argv)
                 throw elle::Error(elle::sprintf("unable to open %s", path));
               elle::serialization::json::serialize(b, output, false);
             }
-          };
-        apply("generate", generate);
+          });
       }
       else
       {
@@ -261,7 +289,9 @@ main(int argc, char** argv)
           }();
           std::cout << "check backward compatibility with version "
                     << version << std::endl;
-          auto check =
+          TestSet set(keys, version);
+          set.apply(
+            "check",
             [&] (std::string const& name, infinit::model::blocks::Block* b)
             {
               {
@@ -275,6 +305,35 @@ main(int argc, char** argv)
                 ELLE_ASSERT_EQ(
                   contents,
                   elle::serialization::json::serialize(b, version, false));
+                elle::serialization::Context ctx;
+                ctx.set<dht::Doughnut*>(&set.dht);
+                auto loaded =
+                  elle::serialization::json::deserialize<
+                  std::unique_ptr<infinit::model::blocks::Block>>(
+                    contents, version, false, ctx);
+                // Replace OKB owner keys with deterministic ones
+                if (auto okb = std::dynamic_pointer_cast<dht::OKB>(loaded))
+                {
+                  elle::unconst(okb->owner_key()) =
+                    std::make_shared<DeterministicPublicKey>(
+                      *std::move(okb->owner_key()));
+                  loaded = std::move(okb);
+                }
+                else if (auto acb = std::dynamic_pointer_cast<dht::ACB>(loaded))
+                {
+                  elle::unconst(acb->owner_key()) =
+                    std::make_shared<DeterministicPublicKey>(
+                      *std::move(acb->owner_key()));
+                  loaded = std::move(acb);
+                }
+                else if (auto nb = std::dynamic_pointer_cast<dht::NB>(loaded))
+                {
+                  elle::unconst(nb->owner()) =
+                    std::make_shared<DeterministicPublicKey>(
+                      *std::move(nb->owner()));
+                  loaded = std::move(nb);
+                }
+                ELLE_ASSERT(loaded->validate());
               }
               {
                 auto path = it->path() / elle::sprintf("%s.bin", name);
@@ -288,8 +347,7 @@ main(int argc, char** argv)
                   contents,
                   elle::serialization::binary::serialize(b, version, false));
               }
-            };
-          apply("check", check);
+            });
         }
       }
     });

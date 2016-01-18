@@ -30,7 +30,7 @@ namespace infinit
       | Clone  |
       `-------*/
       std::unique_ptr<Block>
-      ACLBlock::clone(bool) const
+      ACLBlock::clone() const
       {
         return std::unique_ptr<Block>(new ACLBlock(*this));
       }
@@ -42,11 +42,25 @@ namespace infinit
       void
       ACLBlock::set_permissions(User const& user,
                                 bool read,
-                                bool write)
+                                bool write
+                                )
       {
         ELLE_TRACE_SCOPE("%s: set permissions for %f: read = %s, write = %s",
                          *this, user, read, write);
         this->_set_permissions(user, read, write);
+      }
+
+      void
+      ACLBlock::set_world_permissions(bool read, bool write)
+      {
+        ELLE_TRACE_SCOPE("%s: set world perms to r=%s w=%s", *this, read, write);
+        this->_set_world_permissions(read, write);
+      }
+
+      std::pair<bool,bool>
+      ACLBlock::get_world_permissions()
+      {
+        return this->_get_world_permissions();
       }
 
       void
@@ -57,7 +71,7 @@ namespace infinit
       }
 
       std::vector<ACLBlock::Entry>
-      ACLBlock::list_permissions(boost::optional<Model const&> model)
+      ACLBlock::list_permissions(boost::optional<Model const&> model) const
       {
         ELLE_TRACE_SCOPE("%s: list permissions", *this);
         return this->_list_permissions(model);
@@ -70,12 +84,23 @@ namespace infinit
       }
 
       void
+      ACLBlock::_set_world_permissions(bool, bool)
+      {
+      }
+
+      std::pair<bool, bool>
+      ACLBlock::_get_world_permissions()
+      {
+        return std::make_pair(false, false);
+      }
+
+      void
       ACLBlock::_copy_permissions(ACLBlock& to)
       {
       }
 
       std::vector<ACLBlock::Entry>
-      ACLBlock::_list_permissions(boost::optional<Model const&>)
+      ACLBlock::_list_permissions(boost::optional<Model const&>) const
       {
         return {};
       }
@@ -84,16 +109,18 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      ACLBlock::ACLBlock(elle::serialization::Serializer& input)
-        : Super(input)
+      ACLBlock::ACLBlock(elle::serialization::Serializer& input,
+                         elle::Version const& version)
+        : Super(input, version)
       {
         this->_serialize(input);
       }
 
       void
-      ACLBlock::serialize(elle::serialization::Serializer& s)
+      ACLBlock::serialize(elle::serialization::Serializer& s,
+                          elle::Version const& version)
       {
-        this->Super::serialize(s);
+        this->Super::serialize(s, version);
         this->_serialize(s);
       }
 

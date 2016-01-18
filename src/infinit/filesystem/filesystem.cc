@@ -25,6 +25,7 @@
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/blocks/ACLBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/User.hh>
 #include <infinit/model/doughnut/ValidationFailed.hh>
 #include <infinit/model/doughnut/Conflict.hh>
@@ -215,7 +216,7 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
       Address addr =
-        model::doughnut::NB::address(dn->owner(), _volume_name + ".root");
+        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root");
       while (true)
       {
         try
@@ -227,7 +228,7 @@ namespace infinit
         }
         catch (model::MissingBlock const& e)
         {
-          if (dn->owner() == dn->keys().K())
+          if (*dn->owner() == dn->keys().K())
           {
             std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
             auto saddr = elle::sprintf("%x", mb->address());
@@ -256,44 +257,62 @@ namespace infinit
     {
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
-      auto keys = dn->keys();
-      auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
-      ELLE_ASSERT(acl);
-      auto res = umbrella([&] {
-        for (auto const& e: acl->list_permissions(*dn))
+      auto acb = dynamic_cast<const model::doughnut::ACB*>(&block);
+      bool r = false, w = false;
+      ELLE_ASSERT(acb);
+      if (dn->keys().K() == *acb->owner_key())
+        return std::make_pair(true, true);
+      for (auto const& e: acb->acl_entries())
+      {
+        if (e.read <= r && e.write <= w)
+          continue; // this entry doesnt add any perm
+        if (e.key == dn->keys().K())
         {
-          auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
-          if (!u)
-            continue;
-          auto hit = u->key() == keys.K();
-          if (hit)
-            return std::make_pair(e.read, e.write);
+          r = r || e.read;
+          w = w || e.write;
+          if (r && w)
+            return std::make_pair(r, w);
         }
-        throw rfs::Error(EACCES, "Access denied.");
-      });
-      return res;
+      }
+      int idx = 0;
+      for (auto const& e: acb->acl_group_entries())
+      {
+        if (e.read <= r && e.write <= w)
+        {
+          ++idx;
+          continue; // this entry doesnt add any perm
+        }
+        try
+        {
+          model::doughnut::Group g(*dn, e.key);
+          auto keys = g.group_keys();
+          if (acb->group_version()[idx] < signed(keys.size()))
+          {
+            r = r || e.read;
+            w = w || e.write;
+            if (r && w)
+              return std::make_pair(r, w);
+          }
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_DEBUG("error accessing group: %s", e);
+        }
+        ++idx;
+      }
+      auto wp = elle::unconst(acb)->get_world_permissions();
+      r = r || wp.first;
+      w = w || wp.second;
+      return std::make_pair(r, w);
     }
 
     void
     FileSystem::ensure_permissions(model::blocks::Block const& block,
                                    bool r, bool w)
     {
-      auto dn =
-        std::dynamic_pointer_cast<model::doughnut::Doughnut>(block_store());
-      auto keys = dn->keys();
-      auto acl = elle::unconst(dynamic_cast<const model::blocks::ACLBlock*>(&block));
-      ELLE_ASSERT(acl);
-      umbrella([&] {
-        for (auto const& e: acl->list_permissions(*dn))
-        {
-          auto u = dynamic_cast<model::doughnut::User*>(e.user.get());
-          if (!u)
-            continue;
-          if (e.write >= w && e.read >= r && u->key() == keys.K())
-            return;
-        }
+      auto perms = get_permissions(block);
+      if (perms.first < r || perms.second < w)
         throw rfs::Error(EACCES, "Access denied.");
-      });
     }
   }
 }

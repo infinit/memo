@@ -1,6 +1,8 @@
 #ifndef INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 # define INFINIT_MODEL_BLOCKS_ACL_BLOCK_HH
 
+# include <cryptography/rsa/KeyPair.hh>
+
 # include <infinit/model/User.hh>
 # include <infinit/model/blocks/MutableBlock.hh>
 
@@ -35,7 +37,7 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool seal_copy) const override;
+        clone() const override;
 
       /*------------.
       | Permissions |
@@ -44,7 +46,12 @@ namespace infinit
         void
         set_permissions(User const& user,
                         bool read,
-                        bool write);
+                        bool write
+                        );
+        void
+        set_world_permissions(bool read, bool write);
+        std::pair<bool, bool>
+        get_world_permissions();
         void
         copy_permissions(ACLBlock& to);
 
@@ -61,7 +68,7 @@ namespace infinit
         };
 
         std::vector<Entry>
-        list_permissions(boost::optional<Model const&> model);
+        list_permissions(boost::optional<Model const&> model) const;
 
       protected:
         virtual
@@ -71,20 +78,27 @@ namespace infinit
                          bool write);
         virtual
         void
+        _set_world_permissions(bool read, bool write);
+        virtual
+        std::pair<bool, bool>
+        _get_world_permissions();
+        virtual
+        void
         _copy_permissions(ACLBlock& to);
-
         virtual
         std::vector<Entry>
-        _list_permissions(boost::optional<Model const&> model);
+        _list_permissions(boost::optional<Model const&> model) const;
 
       /*--------------.
       | Serialization |
       `--------------*/
       public:
-        ACLBlock(elle::serialization::Serializer& input);
+        ACLBlock(elle::serialization::Serializer& input,
+                 elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
       private:
         void
         _serialize(elle::serialization::Serializer& input);

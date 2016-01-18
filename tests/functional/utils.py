@@ -41,19 +41,24 @@ def unreachable():
 
 class Infinit(TemporaryDirectory):
 
-  def __init__(self, beyond = None):
+  def __init__(self, beyond = None, infinit_root = None):
     self.__beyond = beyond
+    self.__infinit_root = infinit_root or ''
 
+  @property
+  def version(self):
+    return self.run(['infinit-volume', '--version'])[0]
   def run(self, args, input = None, return_code = 0, env = {}):
     self.env = {
-      'PATH': 'bin:backend/bin:/bin:/usr/sbin',
+      'PATH': self.__infinit_root + '/bin' + ':bin:backend/bin:/bin:/usr/sbin',
       'INFINIT_HOME': self.dir,
       'INFINIT_RDV': ''
     }
     if self.__beyond is not None:
       self.env['INFINIT_BEYOND'] = self.__beyond.domain
     self.env.update(env)
-    args.append('-s')
+    if input is not None:
+      args.append('-s')
     pretty = '%s %s' % (
       ' '.join('%s=%s' % (k, v) for k, v in self.env.items()),
       ' '.join(pipes.quote(arg) for arg in args))
@@ -73,6 +78,7 @@ class Infinit(TemporaryDirectory):
       stdout =  subprocess.PIPE,
       stderr =  subprocess.PIPE,
     )
+    self.process = process
     if input is not None:
       # FIXME: On OSX, if you spam stdin before the FDStream takes it
       # over, you get a broken pipe.
@@ -82,8 +88,8 @@ class Infinit(TemporaryDirectory):
     if process.returncode != return_code:
       reason = err.decode('utf-8')
       print(reason, file = sys.stderr)
-      if process.returncode not in [0, 1]:
-        unreachable()
+      #if process.returncode not in [0, 1]:
+      #  unreachable()
       raise Exception('command failed with code %s: %s (reason: %s)' % \
                       (process.returncode, pretty, reason))
     out = out.decode('utf-8')
@@ -106,6 +112,10 @@ class Infinit(TemporaryDirectory):
       cmd += ['--as', user]
     response = self.run(cmd, input = seq or kvargs)
     return response
+
+def assertEq(a, b):
+  if a != b:
+    raise AssertionError('%r != %r' % (a, b))
 
 def assertEq(a, b):
   if a != b:

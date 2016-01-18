@@ -20,11 +20,13 @@
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/CHB.hh>
+#include <infinit/model/doughnut/GB.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/Remote.hh>
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/model/doughnut/User.hh>
+#include <infinit/model/doughnut/Group.hh>
 #include <infinit/model/doughnut/Consensus.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
@@ -33,9 +35,6 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.Doughnut");
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
 namespace infinit
 {
   namespace model
@@ -44,13 +43,13 @@ namespace infinit
     {
       Doughnut::Doughnut(Address id,
                          std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         cryptography::rsa::PublicKey owner,
+                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
-                         elle::Version version)
+                         boost::optional<elle::Version> version)
         : Model(std::move(version))
         , _id(std::move(id))
         , _keys(keys)
@@ -68,13 +67,13 @@ namespace infinit
       Doughnut::Doughnut(Address id,
                          std::string const& name,
                          std::shared_ptr<cryptography::rsa::KeyPair> keys,
-                         cryptography::rsa::PublicKey owner,
+                         std::shared_ptr<cryptography::rsa::PublicKey> owner,
                          Passport passport,
                          ConsensusBuilder consensus,
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
-                         elle::Version version)
+                         boost::optional<elle::Version> version)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -102,7 +101,7 @@ namespace infinit
             }
             catch (MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(name, this->keys().K());
+              auto user = elle::make_unique<UB>(this, name, this->keys().K());
               ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
                                *this, user->address(), name);
 
@@ -124,7 +123,7 @@ namespace infinit
             }
             catch(MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(name, this->keys().K(), true);
+              auto user = elle::make_unique<UB>(this, name, this->keys().K(), true);
               ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
                                user->address());
               this->store(std::move(user));
@@ -137,9 +136,11 @@ namespace infinit
 
       Doughnut::~Doughnut()
       {
-        if (_user_init)
-          _user_init->terminate_now();
-        ELLE_TRACE("~Doughnut");
+        ELLE_TRACE_SCOPE("%s: destruct", *this);
+        if (this->_user_init)
+          this->_user_init->terminate_now();
+        this->_consensus.reset();
+        this->_overlay.reset();
       }
 
       cryptography::rsa::KeyPair const&
@@ -158,14 +159,15 @@ namespace infinit
       Doughnut::_make_mutable_block() const
       {
         ELLE_TRACE_SCOPE("%s: create OKB", *this);
-        return elle::make_unique<OKB>(const_cast<Doughnut*>(this));
+        return elle::make_unique<OKB>(elle::unconst(this));
       }
 
       std::unique_ptr<blocks::ImmutableBlock>
-      Doughnut::_make_immutable_block(elle::Buffer content) const
+      Doughnut::_make_immutable_block(elle::Buffer content, Address owner) const
       {
         ELLE_TRACE_SCOPE("%s: create CHB", *this);
-        return elle::make_unique<CHB>(std::move(content));
+        return elle::make_unique<CHB>(elle::unconst(this),
+                                      std::move(content), owner);
       }
 
       std::unique_ptr<blocks::ACLBlock>
@@ -174,6 +176,14 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: create ACB", *this);
         return elle::cast<blocks::ACLBlock>::runtime(
           elle::unconst(this)->_pool.get());
+      }
+
+      std::unique_ptr<blocks::GroupBlock>
+      Doughnut::_make_group_block() const
+      {
+        return elle::make_unique<GB>(
+          elle::unconst(this),
+          cryptography::rsa::keypair::generate(2048));
       }
 
       std::unique_ptr<model::User>
@@ -205,6 +215,14 @@ namespace infinit
             return elle::make_unique<doughnut::User>(
               pub, elle::sprintf("#%s", hex_hash.substr(0, 6)));
           }
+        }
+        else if (data[0] == '@')
+        {
+          ELLE_TRACE_SCOPE("%s: fetch user from group", *this);
+          auto gn = data.string().substr(1);
+          Group g(*elle::unconst(this), gn);
+          return elle::make_unique<doughnut::User>(g.public_control_key(),
+                                                   data.string());
         }
         else
         {
@@ -249,9 +267,9 @@ namespace infinit
       }
 
       void
-      Doughnut::_remove(Address address)
+      Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
-        this->_consensus->remove(address);
+        this->_consensus->remove(address, std::move(rs));
       }
 
       Configuration::~Configuration()
@@ -263,7 +281,7 @@ namespace infinit
         std::unique_ptr<overlay::Configuration> overlay_,
         std::unique_ptr<storage::StorageConfig> storage,
         cryptography::rsa::KeyPair keys_,
-        cryptography::rsa::PublicKey owner_,
+        std::shared_ptr<cryptography::rsa::PublicKey> owner_,
         Passport passport_,
         boost::optional<std::string> name_,
         boost::optional<int> port_,
@@ -288,7 +306,8 @@ namespace infinit
         , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>(
                     "overlay"))
         , keys(s.deserialize<cryptography::rsa::KeyPair>("keys"))
-        , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
+        , owner(
+          s.deserialize<std::shared_ptr<cryptography::rsa::PublicKey>>("owner"))
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , port(s.deserialize<boost::optional<int>>("port"))
@@ -365,7 +384,7 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version ? *version : INFINIT_ELLE_VERSION);
+            version);
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
@@ -377,7 +396,7 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version ? *version : INFINIT_ELLE_VERSION);
+            version);
         return dht;
       }
 

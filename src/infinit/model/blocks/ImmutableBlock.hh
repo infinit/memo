@@ -37,14 +37,15 @@ namespace infinit
       public:
       virtual
       std::unique_ptr<Block>
-      clone(bool seal_copy) const override;
+      clone() const override;
 
 
       /*--------------.
       | Serialization |
       `--------------*/
       public:
-        ImmutableBlock(elle::serialization::Serializer& input);
+        ImmutableBlock(elle::serialization::Serializer& input,
+                       elle::Version const& version);
       };
     }
   }

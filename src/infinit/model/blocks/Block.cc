@@ -34,15 +34,9 @@ namespace infinit
       `---------*/
 
       std::unique_ptr<Block>
-      Block::clone(bool) const
-      {
-        return elle::make_unique<Block>(this->address(), this->data());
-      }
-
-      std::unique_ptr<Block>
       Block::clone() const
       {
-        return clone(true);
+        return elle::make_unique<Block>(this->address(), this->data());
       }
 
       /*--------.
@@ -95,6 +89,21 @@ namespace infinit
         return ValidationResult::success();
       }
 
+      ValidationResult
+      Block::validate(Block const& new_block) const
+      {
+        ELLE_DEBUG_SCOPE("%s: validate %s", *this, new_block);
+        return this->_validate(new_block);
+      }
+
+      ValidationResult
+      Block::_validate(Block const& new_block) const
+      {
+        if (this->address() != new_block.address())
+          return ValidationResult::failure("Addresses do not match");
+        return ValidationResult::success();
+      }
+
       void
       Block::stored()
       {
@@ -104,17 +113,43 @@ namespace infinit
       Block::_stored()
       {}
 
+      RemoveSignature
+      Block::sign_remove() const
+      {
+        return _sign_remove();
+      }
+
+      RemoveSignature
+      Block::_sign_remove() const
+      {
+        return RemoveSignature();
+      }
+
+      ValidationResult
+      Block::validate_remove(RemoveSignature const & sig) const
+      {
+        return _validate_remove(sig);
+      }
+
+      ValidationResult
+      Block::_validate_remove(RemoveSignature const& sig) const
+      {
+        return ValidationResult::success();
+      }
+
       /*--------------.
       | Serialization |
       `--------------*/
 
-      Block::Block(elle::serialization::Serializer& input)
+      Block::Block(elle::serialization::Serializer& input,
+                   elle::Version const& version)
       {
-        this->serialize(input);
+        this->serialize(input, version);
       }
 
       void
-      Block::serialize(elle::serialization::Serializer& s)
+      Block::serialize(elle::serialization::Serializer& s,
+                       elle::Version const&)
       {
         s.serialize("address", this->_address);
         s.serialize("data", this->_data);
@@ -131,8 +166,55 @@ namespace infinit
       Block::print(std::ostream& output) const
       {
         elle::fprintf(
-          output, "%s(%f, %f)",
-          elle::type_info(*this).name(), this->_address, this->_data);
+          output, "%s(%s)",
+          elle::type_info(*this).name(), this->_address);
+      }
+
+      RemoveSignature::RemoveSignature()
+      {}
+
+      RemoveSignature::RemoveSignature(elle::serialization::Serializer& s)
+      {
+        this->serialize(s);
+      }
+
+      RemoveSignature::RemoveSignature(RemoveSignature && other)
+      : block(std::move(other.block))
+      , group_key(std::move(other.group_key))
+      , group_index(std::move(other.group_index))
+      , signature_key(std::move(other.signature_key))
+      , signature(std::move(other.signature))
+      {
+      }
+
+      RemoveSignature&
+      RemoveSignature::operator = (RemoveSignature && other)
+      {
+        this->block = std::move(other.block);
+        this->group_key = std::move(other.group_key);
+        this->group_index = std::move(other.group_index);
+        this->signature_key = std::move(other.signature_key);
+        this->signature = std::move(other.signature);
+        return *this;
+      }
+
+      RemoveSignature::RemoveSignature(RemoveSignature const& other)
+      : group_key(other.group_key)
+      , group_index(other.group_index)
+      , signature_key(other.signature_key)
+      , signature(other.signature)
+      {
+        if (other.block)
+          block = other.block->clone();
+      }
+      void
+      RemoveSignature::serialize(elle::serialization::Serializer& s)
+      {
+        s.serialize("block", block);
+        s.serialize("key", signature_key);
+        s.serialize("signature", signature);
+        s.serialize("group_key", group_key);
+        s.serialize("group_index", group_index);
       }
     }
   }

@@ -44,6 +44,7 @@ namespace infinit
       void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
       virtual void _fetch() = 0;
       virtual void _commit() = 0;
+      virtual model::blocks::ACLBlock* _header_block() = 0;
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       FileSystem& _owner;
       std::shared_ptr<Directory> _parent;

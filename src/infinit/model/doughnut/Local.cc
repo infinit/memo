@@ -41,7 +41,7 @@ namespace infinit
         : Super(std::move(id))
         , _storage(std::move(storage))
         , _doughnut(dht)
-        , _rpcs(&dht)
+        , _rpcs(dht.version())
       {
         if (p == Protocol::tcp || p == Protocol::all)
         {
@@ -97,14 +97,15 @@ namespace infinit
         ELLE_DEBUG("%s: validate block", *this)
           if (auto res = block.validate()); else
             throw ValidationFailed(res.reason());
-        if (auto* mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
-          try
+        try
+        {
+          auto previous_buffer = this->_storage->get(block.address());
+          elle::IOStream s(previous_buffer.istreambuf());
+          typename elle::serialization::binary::SerializerIn input(s);
+          input.set_context<Doughnut*>(&this->_doughnut);
+          auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+          if (auto* mblock = dynamic_cast<blocks::MutableBlock const*>(&block))
           {
-            auto previous_buffer = this->_storage->get(block.address());
-            elle::IOStream s(previous_buffer.istreambuf());
-            typename elle::serialization::binary::SerializerIn input(s);
-            input.set_context<Doughnut*>(&this->_doughnut);
-            auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
             auto mprevious =
               dynamic_cast<blocks::MutableBlock const*>(previous.get());
             if (!mprevious)
@@ -115,8 +116,15 @@ namespace infinit
                               mblock->version(), mprevious->version()),
                 std::move(previous));
           }
-          catch (storage::MissingKey const&)
-          {}
+          auto vr = previous->validate(block);
+          if (!vr)
+            if (vr.conflict())
+              throw Conflict(vr.reason(), std::move(previous));
+            else
+              throw ValidationFailed(vr.reason());
+        }
+        catch (storage::MissingKey const&)
+        {}
         elle::Buffer data;
         {
           elle::IOStream s(data.ostreambuf());
@@ -153,11 +161,25 @@ namespace infinit
       }
 
       void
-      Local::remove(Address address)
+      Local::remove(Address address, blocks::RemoveSignature rs)
       {
         ELLE_DEBUG("remove %x", address);
         try
         {
+          if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+          {
+            auto previous_buffer = this->_storage->get(address);
+            elle::IOStream s(previous_buffer.istreambuf());
+            typename elle::serialization::binary::SerializerIn input(s);
+            input.set_context<Doughnut*>(&this->_doughnut);
+            auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
+            auto val = previous->validate_remove(rs);
+            if (!val)
+              if (val.conflict())
+                throw Conflict(val.reason(), previous->clone());
+              else
+                throw ValidationFailed(val.reason());
+          }
           this->_storage->erase(address);
         }
         catch (storage::MissingKey const& k)
@@ -201,12 +223,20 @@ namespace infinit
                   {
                     return this->fetch(address, local_version);
                   }));
-        rpcs.add("remove",
-                std::function<void (Address address)>(
+        if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+          rpcs.add("remove",
+                  std::function<void (Address address, blocks::RemoveSignature)>(
+                    [this] (Address address, blocks::RemoveSignature rs)
+                    {
+                      this->remove(address, rs);
+                    }));
+        else
+          rpcs.add("remove",
+                  std::function<void (Address address)>(
                   [this] (Address address)
-                  {
-                    this->remove(address);
-                  }));
+                    {
+                      this->remove(address, {});
+                    }));
         rpcs.add("ping",
                 std::function<int(int)>(
                   [this] (int i)
@@ -217,9 +247,9 @@ namespace infinit
         rpcs.add("auth_syn", std::function<std::pair<Challenge,Passport*>(Passport const&)>(
           [this] (Passport const& p) -> std::pair<Challenge, Passport*>
           {
-            ELLE_TRACE("entering auth_syn, dn=%s", this->_doughnut);
-            bool verify = const_cast<Passport&>(p).verify(this->_doughnut.owner());
-            ELLE_TRACE("auth_syn verify = %s", verify);
+            ELLE_TRACE("%s: authentication syn", *this);
+            bool verify = const_cast<Passport&>(p).verify(
+              *this->_doughnut.owner());
             if (!verify)
             {
               ELLE_LOG("Passport validation failed");
@@ -240,7 +270,7 @@ namespace infinit
                  elle::Buffer const& token,
                  elle::Buffer const& signed_challenge) -> bool
           {
-            ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+            ELLE_TRACE("%s: authentication acknowledgment", *this);
             auto it = this->_challenges.find(token.string());
             if (it == this->_challenges.end())
             {
@@ -266,7 +296,6 @@ namespace infinit
               infinit::cryptography::Mode::cbc);
             _rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
               std::move(password)));
-            ELLE_TRACE("auth_ack exiting");
             return true;
           }));
       }

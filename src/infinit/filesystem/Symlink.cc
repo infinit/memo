@@ -34,6 +34,12 @@ namespace infinit
       });
     }
 
+    model::blocks::ACLBlock*
+    Symlink::_header_block()
+    {
+      return dynamic_cast<model::blocks::ACLBlock*>(_block.get());
+    }
+
     void
     Symlink::_commit()
     {

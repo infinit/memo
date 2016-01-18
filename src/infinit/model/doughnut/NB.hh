@@ -4,6 +4,7 @@
 # include <elle/attribute.hh>
 
 # include <cryptography/rsa/PublicKey.hh>
+# include <cryptography/rsa/KeyPair.hh>
 
 # include <infinit/model/blocks/ImmutableBlock.hh>
 # include <infinit/model/doughnut/fwd.hh>
@@ -29,12 +30,19 @@ namespace infinit
       `-------------*/
       public:
         NB(Doughnut* doughnut,
-           infinit::cryptography::rsa::PublicKey owner,
+           std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
+           std::string name,
+           elle::Buffer data);
+        NB(Doughnut* doughnut,
+           infinit::cryptography::rsa::KeyPair keys,
            std::string name,
            elle::Buffer data);
         NB(NB const& other);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
-        ELLE_ATTRIBUTE_R(infinit::cryptography::rsa::PublicKey, owner);
+        ELLE_ATTRIBUTE(boost::optional<infinit::cryptography::rsa::KeyPair>,
+                       keys);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::cryptography::rsa::PublicKey>,
+                         owner);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
         static
@@ -49,7 +57,8 @@ namespace infinit
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool) const override;
+        clone() const override;
+
       /*-----------.
       | Validation |
       `-----------*/
@@ -60,6 +69,15 @@ namespace infinit
         virtual
         blocks::ValidationResult
         _validate() const override;
+        virtual
+        blocks::RemoveSignature
+        _sign_remove() const override;
+        virtual
+        blocks::ValidationResult
+        _validate_remove(blocks::RemoveSignature const& sig) const override;
+        virtual
+        blocks::ValidationResult
+        _validate(const Block& new_block) const override;
       private:
         elle::Buffer
         _data_sign() const;
@@ -68,10 +86,12 @@ namespace infinit
       | Serialization |
       `--------------*/
       public:
-        NB(elle::serialization::SerializerIn& input);
+        NB(elle::serialization::SerializerIn& input,
+           elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
         void
         _serialize(elle::serialization::Serializer& input);
       };

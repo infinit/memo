@@ -54,6 +54,7 @@ ELLE_LOG_COMPONENT("test");
 
 namespace ifs = infinit::filesystem;
 namespace rfs = reactor::filesystem;
+namespace bfs = boost::filesystem;
 
 bool mounted = false;
 infinit::storage::Storage* storage;
@@ -67,9 +68,48 @@ std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
 
-static void sig_int()
+static int setxattr_(bfs::path p, std::string const& name, std::string const& value)
 {
-  fs->unmount();
+  return setxattr(p.c_str(), name.c_str(), value.c_str(), value.size(), 0 SXA_EXTRA);
+}
+
+std::string getxattr_(bfs::path p, std::string const& name)
+{
+  char buf[2048];
+  int res = getxattr(p.c_str(), name.c_str(), buf, 2048 SXA_EXTRA SXA_EXTRA);
+  if (res >= 0)
+  {
+    buf[res] = 0;
+    return buf;
+  }
+  else
+    return "";
+}
+
+static int group_create(bfs::path p, std::string const& name)
+{
+  return setxattr(p.c_str(), "user.infinit.group.make", name.c_str(), name.size(), 0 SXA_EXTRA);
+}
+static int group_add(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.add", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+static int group_remove(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.remove", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+
+static int group_add_admin(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.addadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+static int group_remove_admin(bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.removeadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
 
 static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
@@ -129,12 +169,14 @@ static int directory_count(boost::filesystem::path const& p)
 
 static
 bool
-can_access(boost::filesystem::path const& p)
+can_access(boost::filesystem::path const& p,
+           bool read = false, bool read_all = false,
+           int expected_errno = EACCES)
 {
   struct stat st;
   if (stat(p.string().c_str(), &st) == -1)
   {
-    BOOST_CHECK_EQUAL(errno, EACCES);
+    BOOST_CHECK_EQUAL(errno, expected_errno);
     return false;
   }
   if (S_ISDIR(st.st_mode))
@@ -155,6 +197,28 @@ can_access(boost::filesystem::path const& p)
     int fd = open(p.string().c_str(), O_RDONLY);
     if (fd < 0)
       return false;
+    if (read)
+    {
+      char buf[1024];
+      int res = ::read(fd, buf, 1024);
+      if (res < 0)
+      {
+        close(fd);
+        return false;
+      }
+      if (read_all)
+      {
+        do
+        {
+          res = ::read(fd, buf, 1024);
+          if (res < 0)
+          {
+            close(fd);
+            return false;
+          }
+        } while (res > 0);
+      }
+    }
     close(fd);
     return true;
   }
@@ -227,16 +291,17 @@ static void make_nodes(std::string store, int node_count,
           return elle::make_unique<infinit::overlay::Stonehenge>(
             id, peers, std::move(local), &dht);
         };
-      nodes.emplace_back(new infinit::model::doughnut::Doughnut(
-                           peers[i].id,
-                           std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
-                           owner.K(),
-                           passport,
-                           consensus,
-                           overlay,
-                           boost::optional<int>(),
-                           std::move(s),
-                           INFINIT_ELLE_VERSION));
+      nodes.emplace_back(
+        new infinit::model::doughnut::Doughnut(
+          peers[i].id,
+          std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
+          owner.public_key(),
+          passport,
+          consensus,
+          overlay,
+          boost::optional<int>(),
+          std::move(s),
+          INFINIT_ELLE_VERSION));
     }
     for (int i = 0; i < node_count; ++i)
       peers[i].endpoint = infinit::overlay::Stonehenge::Peer::Endpoint{
@@ -319,7 +384,7 @@ run_filesystem_dht(std::string const& store,
           infinit::model::Address::random(),
           "testnet",
           std::make_shared<infinit::cryptography::rsa::KeyPair>(owner_keys),
-          owner_keys.K(),
+          owner_keys.public_key(),
           passport,
           consensus,
           overlay,
@@ -602,12 +667,12 @@ test_filesystem(bool dht,
       ofs.write(buffer, 16384);
   }
   int tfd = open( (mount / "tt").c_str(), O_RDWR);
-  ftruncate(tfd, 0);
-  write(tfd, buffer, 16384);
-  write(tfd, buffer, 12288);
-  write(tfd, buffer, 3742);
-  ftruncate(tfd, 32414);
-  ftruncate(tfd, 32413);
+  BOOST_CHECK_EQUAL(ftruncate(tfd, 0), 0);
+  BOOST_CHECK_EQUAL(write(tfd, buffer, 16384), 16384);;
+  BOOST_CHECK_EQUAL(write(tfd, buffer, 12288), 12288);
+  BOOST_CHECK_EQUAL(write(tfd, buffer, 3742), 3742);
+  BOOST_CHECK_EQUAL(ftruncate(tfd, 32414), 0);
+  BOOST_CHECK_EQUAL(ftruncate(tfd, 32413), 0);
   close(tfd);
   BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
 
@@ -1183,7 +1248,7 @@ test_acl(bool paxos)
   setxattr(m0.c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
   // expire directory cache
-  usleep(2100000);
+  usleep(1100000);
   // k1 can now list directory
   BOOST_CHECK_EQUAL(directory_count(m1), 1);
   // but the file is still not readable
@@ -1194,7 +1259,7 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(directory_count(m0), 1);
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
+  usleep(1100000);
   BOOST_CHECK(can_access(m1/"test"));
   {
      boost::filesystem::ifstream ifs(m1 / "test");
@@ -1205,11 +1270,9 @@ test_acl(bool paxos)
   }
   setxattr((m0/"test").c_str(), "user.infinit.auth.clear",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(3100000);
   BOOST_CHECK(!can_access(m1/"test"));
   setxattr((m0/"test").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
   BOOST_CHECK(can_access(m1/"test"));
   bfs::create_directory(m0 / "dir1");
   BOOST_CHECK(touch(m0 / "dir1" / "pan"));
@@ -1218,7 +1281,6 @@ test_acl(bool paxos)
   BOOST_CHECK(!touch(m1 / "dir1" / "coin"));
   setxattr((m0 / "dir1").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
   BOOST_CHECK(can_access(m1 / "dir1"));
   BOOST_CHECK(!can_access(m1 / "dir1" / "pan"));
   BOOST_CHECK(touch(m1 / "dir1" / "coin"));
@@ -1227,7 +1289,6 @@ test_acl(bool paxos)
   BOOST_CHECK(!can_access(m1 / "byuser"));
   setxattr((m0 / "byuser").c_str(), "user.infinit.auth.setrw",
     "user1", strlen("user1"), 0 SXA_EXTRA);
-  usleep(2100000);
   BOOST_CHECK(can_access(m1/"test"));
   BOOST_CHECK(can_access(m1 / "byuser"));
   // inheritance
@@ -1235,7 +1296,6 @@ test_acl(bool paxos)
   ELLE_LOG("setattrs");
   setxattr((m0 / "dirs").c_str(), "user.infinit.auth.setrw",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
   BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 0);
   ELLE_LOG("setinherit");
   setxattr((m0 / "dirs").c_str(), "user.infinit.auth.inherit",
@@ -1244,7 +1304,6 @@ test_acl(bool paxos)
   touch(m0 / "dirs" / "coin");
   bfs::create_directory(m0 / "dirs" / "dir");
   touch(m0 / "dirs" / "dir" / "coin");
-  usleep(2100000);
   BOOST_CHECK(can_access(m1 / "dirs" / "coin"));
   BOOST_CHECK(can_access(m1 / "dirs" / "dir" / "coin"));
   BOOST_CHECK_EQUAL(directory_count(m1 / "dirs"), 2);
@@ -1255,10 +1314,180 @@ test_acl(bool paxos)
   BOOST_CHECK(touch(m0 / "dir2" / "coin"));
   setxattr((m0 / "dir2"/ "coin").c_str(), "user.infinit.auth.setr",
     k1.c_str(), k1.length(), 0 SXA_EXTRA);
-  usleep(2100000);
   BOOST_CHECK(can_access(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "coin"));
   BOOST_CHECK(!touch(m1 / "dir2" / "pan"));
+
+  ELLE_LOG("world-readable");
+  setxattr((m0).c_str(), "user.infinit.auth.inherit",
+    "false", strlen("false"), 0 SXA_EXTRA);
+  bfs::create_directory(m0 / "dir3");
+  bfs::create_directory(m0 / "dir3" / "dir");
+  {
+     boost::filesystem::ofstream ofs(m0 / "dir3" / "file");
+     ofs << "foo";
+  }
+  BOOST_CHECK_EQUAL(directory_count(m0 / "dir3"), 2);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), -1);
+  // open dir3
+  bfs::permissions(m0 / "dir3", bfs::add_perms | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), 2);
+  bfs::create_directory(m1 / "dir3" / "tdir", erc);
+  BOOST_CHECK(erc);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3" / "dir"), -1);
+  // close dir3
+  bfs::permissions(m0 / "dir3", bfs::remove_perms | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), -1);
+  bfs::permissions(m0 / "dir3", bfs::add_perms | bfs::others_read);
+  bfs::permissions(m0 / "dir3" / "file", bfs::add_perms | bfs::others_read);
+  bfs::permissions(m0 / "dir3" / "dir", bfs::add_perms | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3" / "dir"), 0);
+  BOOST_CHECK_EQUAL(read(m1 / "dir3" / "file"), "foo");
+  write(m1 / "dir3" / "file", "babar");
+  BOOST_CHECK_EQUAL(read(m1 / "dir3" / "file"), "foo");
+  BOOST_CHECK_EQUAL(read(m0 / "dir3" / "file"), "foo");
+  write(m0 / "dir3" / "file", "bim");
+  BOOST_CHECK_EQUAL(read(m1 / "dir3" / "file"), "bim");
+  BOOST_CHECK_EQUAL(read(m0 / "dir3" / "file"), "bim");
+  bfs::create_directory(m0 / "dir3" / "dir2");
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir3"), 3);
+  BOOST_CHECK_EQUAL(directory_count(m0 / "dir3"), 3);
+  bfs::permissions(m0 / "dir3" / "file", bfs::remove_perms | bfs::others_read);
+  write(m0 / "dir3" / "file", "foo2");
+  BOOST_CHECK_EQUAL(read(m0 / "dir3" / "file"), "foo2");
+
+  ELLE_LOG("world-writable");
+  bfs::create_directory(m0 / "dir4");
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), -1);
+  bfs::permissions(m0 / "dir4", bfs::add_perms |bfs::others_write | bfs::others_read);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), 0);
+  write(m1 / "dir4" / "file", "foo");
+  bfs::create_directory(m1 /"dir4"/ "dir");
+  BOOST_CHECK_EQUAL(read(m0 / "dir4" / "file"), "");
+  BOOST_CHECK_EQUAL(read(m1 / "dir4" / "file"), "foo");
+  BOOST_CHECK_EQUAL(directory_count(m0 / "dir4" / "dir"), -1);
+  BOOST_CHECK_EQUAL(directory_count(m1 / "dir4" / "dir"), 0);
+  bfs::permissions(m0 / "dir4", bfs::remove_perms |bfs::others_write);
+  BOOST_CHECK_EQUAL(read(m1 / "dir4" / "file"), "foo");
+
+  write(m0 / "file5", "foo");
+  bfs::permissions(m0 / "file5", bfs::add_perms |bfs::others_write | bfs::others_read);
+  write(m1 / "file5", "bar");
+  BOOST_CHECK_EQUAL(read(m1 / "file5"), "bar");
+  BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
+  bfs::permissions(m0 / "file5", bfs::remove_perms |bfs::others_write);
+  write(m1 / "file5", "barbar");
+  BOOST_CHECK_EQUAL(read(m1 / "file5"), "bar");
+  BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
+
+  ELLE_LOG("groups");
+  write(m0 / "g1", "foo");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(read(m1 / "g1"), "");
+  group_create(m0, "group1");
+  group_add(m0, "group1", "user1");
+  setxattr((m0 / "g1").c_str(), "user.infinit.auth.setrw",
+    "@group1", 7, 0 SXA_EXTRA);
+  usleep(1100000);
+  BOOST_CHECK_EQUAL(read(m1 / "g1"), "foo");
+
+  group_remove(m0, "group1", "user1");
+  write(m0 / "g2", "foo");
+  setxattr((m0 / "g2").c_str(), "user.infinit.auth.setrw",
+    "@group1", 7, 0 SXA_EXTRA);
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "");
+  group_add(m0, "group1", "user1");
+  usleep(1100000);
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "foo");
+  write(m1 / "g2", "bar");
+  // now block is signed with group key
+  usleep(1100000);
+  BOOST_CHECK_EQUAL(read(m0 / "g2"), "bar");
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "bar");
+  // force a group update
+  group_remove(m0, "group1", "user1");
+  usleep(1100000);
+  // check we can still fetch stuff
+  BOOST_CHECK_EQUAL(read(m0 / "g2"), "bar");
+  group_add(m0, "group1", "user1");
+  BOOST_CHECK_EQUAL(read(m0 / "g2"), "bar");
+  BOOST_CHECK_EQUAL(read(m1 / "g2"), "bar");
+
+  ELLE_LOG("group admin");
+  BOOST_CHECK_EQUAL(group_add_admin(m0, "group1", "user1"), 0);
+  BOOST_CHECK_EQUAL(group_add(m1, "group1", "user0"), 0);
+  write(m1 / "g3", "bar");
+  BOOST_CHECK_EQUAL(read(m0 / "g3"), "");
+  setxattr((m1 / "g3").c_str(), "user.infinit.auth.setrw",
+    "@group1", 7, 0 SXA_EXTRA);
+  usleep(1100000);
+  BOOST_CHECK_EQUAL(read(m0 / "g3"), "bar");
+  BOOST_CHECK_EQUAL(group_remove_admin(m0, "group1", "user1"), 0);
+  BOOST_CHECK_EQUAL(group_remove(m1, "group1", "user0"), -1);
+  BOOST_CHECK_EQUAL(group_remove_admin(m1, "group1", "user0"), -1);
+
+  //incorrect stuff, check it doesn't crash us
+  ELLE_LOG("groups bad operations");
+  BOOST_CHECK_EQUAL(group_add(m1, "group1", "user0"), -1);
+  BOOST_CHECK_EQUAL(group_create(m0, "group1"), -1);
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  group_remove(m0, "group1", "user1");
+  group_remove(m0, "group1", "user1");
+  BOOST_CHECK_EQUAL(group_add(m0, "group1", "group1"), -1);
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(group_add(m0, "nosuch", "user1"), -1);
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(group_add(m0, "group1","nosuch"), -1);
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(group_remove(m0, "group1","nosuch"), -1);
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+
+  ELLE_LOG("removal");
+  //test the xattrs we'll use
+  auto base0 = m0 / "dirrm";
+  auto base1 = m1 / "dirrm";
+  bfs::create_directory(base0);
+  setxattr_(base0, "user.infinit.auth.setrw", "user1");
+  write(base0 / "rm", "pan");
+  BOOST_CHECK_EQUAL(directory_count(base0), 1);
+  BOOST_CHECK_EQUAL(directory_count(base1), 1);
+  BOOST_CHECK(can_access(base0 / "rm"));
+  std::string block = getxattr_(base0 / "rm", "user.infinit.block");
+  block = block.substr(2);
+  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", block), 0);
+  BOOST_CHECK(!can_access(base0 / "rm", true, false, EIO));
+  BOOST_CHECK_EQUAL(directory_count(base0), 1);
+  setxattr_(base0, "user.infinit.fsck.unlink", "rm");
+  BOOST_CHECK_EQUAL(directory_count(base0), 0);
+
+  write(base0 / "rm2", "foo");
+  BOOST_CHECK_EQUAL(directory_count(base0), 1);
+  block = getxattr_(base0 / "rm2", "user.infinit.block");
+  block = block.substr(2);
+  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", block), -1);
+  BOOST_CHECK(can_access(base0 / "rm2", true));
+  bfs::remove(base0 / "rm2");
+
+  ELLE_LOG("removal CHB");
+  {
+    bfs::ofstream ofs(base0 / "rm3");
+    char buffer[16384];
+    for (int i=0; i<100; ++i)
+      ofs.write(buffer, 16384);
+  }
+  auto fat = getxattr_(base0 / "rm3", "user.infinit.fat");
+  std::stringstream ss(fat);
+  std::string address;
+  ss >> address >> address >> address >> address;
+  address = address.substr(2);
+  infinit::model::Address::from_string(address);
+
+  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", address), -1);
+  BOOST_CHECK(can_access(base0 / "rm3", true, true));
+  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", address), 0);
+  BOOST_CHECK(!can_access(base0 / "rm3", true, true));
   ELLE_LOG("test end");
 }
 

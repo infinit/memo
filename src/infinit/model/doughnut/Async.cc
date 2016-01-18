@@ -23,7 +23,7 @@
 ELLE_LOG_COMPONENT("infinit.model.doughnut.consensus.Async");
 
 DAS_MODEL(infinit::model::doughnut::consensus::Async::Op,
-          (address, block, mode, resolver),
+          (address, block, mode, resolver, remove_signature),
           DasOp);
 DAS_MODEL_DEFAULT(infinit::model::doughnut::consensus::Async::Op, DasOp)
 //DAS_MODEL_SERIALIZE(infinit::model::doughnut::consensus::Async::Op);
@@ -61,6 +61,7 @@ namespace infinit
           s.serialize("block", block);
           s.serialize("mode", mode);
           s.serialize("resolver", resolver);
+          s.serialize("remove_signature", remove_signature);
         }
 
         Async::Async(std::unique_ptr<Consensus> backend,
@@ -84,52 +85,70 @@ namespace infinit
                                 }))
         {
           if (!this->_journal_dir.empty())
+          {
             boost::filesystem::create_directories(this->_journal_dir);
+            boost::filesystem::permissions(this->_journal_dir,
+              boost::filesystem::remove_perms
+              | boost::filesystem::others_all | boost::filesystem::group_all);
+          }
           if (max_size)
             this->_queue.max_size(max_size);
           this->_queue.close();
           if (!this->_journal_dir.empty())
           {
-            ELLE_TRACE_SCOPE("%s: restore journal from %s",
-                             *this, this->_journal_dir);
-            boost::filesystem::path p(_journal_dir);
-            std::vector<boost::filesystem::path> files;
-            for (auto it = boost::filesystem::directory_iterator(this->_journal_dir);
-                 it != boost::filesystem::directory_iterator();
-                 ++it)
-              files.push_back(it->path());
-            std::sort(
-              files.begin(),
-              files.end(),
-              [] (boost::filesystem::path const& a,
-                  boost::filesystem::path const& b) -> bool
-              {
-                return std::stoi(a.filename().string()) <
-                  std::stoi(b.filename().string());
-              });
-            for (auto const& p: files)
-            {
-              auto id = std::stoi(p.filename().string());
-              auto op = this->_load_op(id,
-                this->_queue.size() < this->_queue.max_size());
-              this->_next_index = std::max(id, this->_next_index);
-              if (this->_queue.size() < this->_queue.max_size())
-                this->_queue.put(op.index);
-              else
-              {
-                if (!this->_first_disk_index)
-                {
-                  ELLE_TRACE(
-                    "in-memory asynchronous queue at capacity at index %s",
-                    op.index);
-                  this->_first_disk_index = op.index;
-                }
-                op.block.reset();
-              }
-              this->_operations.emplace(std::move(op));
-            }
-            ELLE_TRACE("...done restoring journal");
+            this->_init_barrier.close();
+            _init_thread.reset(new reactor::Thread(elle::sprintf("%s init", *this),
+              [this] { this->_init();}));
           }
+          else
+            this->_init_barrier.open();
+        }
+        void
+        Async::_init()
+        {
+          reactor::sleep(100_ms);
+          elle::SafeFinally open_barrier([this] {
+              this->_init_barrier.open();
+          });
+         ELLE_TRACE_SCOPE("%s: restore journal from %s",
+                          *this, this->_journal_dir);
+         boost::filesystem::path p(_journal_dir);
+         std::vector<boost::filesystem::path> files;
+         for (auto it = boost::filesystem::directory_iterator(this->_journal_dir);
+              it != boost::filesystem::directory_iterator();
+              ++it)
+           files.push_back(it->path());
+         std::sort(
+           files.begin(),
+           files.end(),
+           [] (boost::filesystem::path const& a,
+               boost::filesystem::path const& b) -> bool
+           {
+             return std::stoi(a.filename().string()) <
+               std::stoi(b.filename().string());
+           });
+         for (auto const& p: files)
+         {
+           auto id = std::stoi(p.filename().string());
+           auto op = this->_load_op(id,
+             this->_queue.size() < this->_queue.max_size());
+           this->_next_index = std::max(id, this->_next_index);
+           if (this->_queue.size() < this->_queue.max_size())
+             this->_queue.put(op.index);
+           else
+           {
+             if (!this->_first_disk_index)
+             {
+               ELLE_TRACE(
+                 "in-memory asynchronous queue at capacity at index %s",
+                 op.index);
+               this->_first_disk_index = op.index;
+             }
+             op.block.reset();
+           }
+           this->_operations.emplace(std::move(op));
+         }
+         ELLE_TRACE("...done restoring journal");
         }
 
         Async::~Async()
@@ -139,7 +158,8 @@ namespace infinit
           // Wake up the thread if needed.
           if (this->_queue.size() == 0)
             this->_queue.put(0);
-          if (!reactor::wait(*this->_process_thread, 10_sec))
+          if (!reactor::wait(*this->_process_thread, 10_sec)
+            || !reactor::wait(*this->_init_thread, 10_sec))
             ELLE_WARN("forcefully kiling async process loop");
         }
 
@@ -183,6 +203,7 @@ namespace infinit
               o.block = std::move(op.block);
               o.mode = std::move(op.mode);
               o.resolver = std::move(op.resolver);
+              o.remove_signature = std::move(op.remove_signature);
               });
           }
           this->_first_disk_index.reset();
@@ -204,6 +225,8 @@ namespace infinit
           auto op = sin.deserialize<Op>();
           if (op.block)
             op.block->seal();
+          if (op.remove_signature.block)
+            op.remove_signature.block->seal();
           return op;
         }
 
@@ -253,16 +276,18 @@ namespace infinit
                       StoreMode mode,
                       std::unique_ptr<ConflictResolver> resolver)
         {
+          reactor::wait(this->_init_barrier);
           this->_queue.open();
           this->_push_op(
             Op(block->address(), std::move(block), mode, std::move(resolver)));
         }
 
         void
-        Async::_remove(Address address)
+        Async::_remove(Address address, blocks::RemoveSignature rs)
         {
+          reactor::wait(this->_init_barrier);
           this->_queue.open();
-          this->_push_op(Op(address, nullptr, {}));
+          this->_push_op(Op(address, nullptr, {}, {}, std::move(rs)));
         }
 
         // Fetch operation must be synchronous, else the consistency is not
@@ -270,6 +295,10 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Async::_fetch(Address address, boost::optional<int> local_version)
         {
+          if (this->_init_thread && !this->_init_thread->done()
+            && reactor::scheduler().current() != this->_init_thread.get())
+            reactor::wait(this->_init_barrier);
+
           this->_queue.open();
           auto it = this->_operations.find(address);
           if (it != this->_operations.end())
@@ -299,6 +328,7 @@ namespace infinit
         void
         Async::_process_loop()
         {
+          reactor::wait(this->_init_barrier);
           while (!_exit_requested)
           {
             try
@@ -328,7 +358,7 @@ namespace infinit
                   if (!mode)
                     try
                     {
-                      this->_backend->remove(addr);
+                      this->_backend->remove(addr, op->remove_signature);
                     }
                     catch (MissingBlock const&)
                     {
@@ -381,11 +411,13 @@ namespace infinit
         Async::Op::Op(Address address_,
                       std::unique_ptr<blocks::Block>&& block_,
                       boost::optional<StoreMode> mode_,
-                      std::unique_ptr<ConflictResolver> resolver_)
+                      std::unique_ptr<ConflictResolver> resolver_,
+                      blocks::RemoveSignature remove_signature_)
           : address(address_)
           , block(std::move(block_))
           , mode(std::move(mode_))
           , resolver(std::move(resolver_))
+          , remove_signature(remove_signature_)
         {}
       }
     }

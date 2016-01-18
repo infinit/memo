@@ -71,6 +71,7 @@ namespace infinit
       void _ensure_first_block();
       void _fetch() override;
       void _commit() override;
+      model::blocks::ACLBlock* _header_block() override;
       void _commit_first(bool final_flush);
       void _commit_all();
       bool _flush_block(int id);
@@ -98,7 +99,7 @@ namespace infinit
       elle::Buffer _data; // first block data
       int _prefetchers_count; // number of running prefetchers
       int _last_read_block; // block hit by last read operation
-      static const uint64_t first_block_size = 16384;
+      static const uint64_t first_block_size;
     };
   }
 }

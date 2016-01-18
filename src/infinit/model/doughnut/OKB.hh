@@ -47,23 +47,27 @@ namespace infinit
         _hash_address() const;
         template <typename Block>
         friend class BaseOKB;
+        friend class OwnerSignature;
 
       /*--------------.
       | Serialization |
       `--------------*/
       public:
-        OKBHeader(std::shared_ptr<cryptography::rsa::PublicKey> keys,
-                  elle::Buffer salt,
-                  elle::Buffer signature);
+        OKBHeader(elle::serialization::SerializerIn& input,
+                  elle::Version const& version);
         void
         serialize(elle::serialization::Serializer& s);
+        static
+        Address
+        hash_address(cryptography::rsa::PublicKey const& key,
+                     elle::Buffer const& salt);
         typedef infinit::serialization_tag serialization_tag;
       };
 
       template <typename Block>
       class BaseOKB
-        : public OKBHeader
-        , public Block
+        : public Block
+        , public OKBHeader
       {
       /*------.
       | Types |
@@ -79,11 +83,22 @@ namespace infinit
         BaseOKB(Doughnut* owner,
                 elle::Buffer data = {},
                 boost::optional<elle::Buffer> salt = {});
-        BaseOKB(BaseOKB const& other, bool sealed_copy = true);
+        BaseOKB(Doughnut* owner,
+                elle::Buffer data,
+                boost::optional<elle::Buffer> salt,
+                cryptography::rsa::KeyPair const& owner_keys);
+        BaseOKB(BaseOKB const& other);
         ELLE_ATTRIBUTE(int, version);
-        ELLE_ATTRIBUTE(reactor::BackgroundFuture<elle::Buffer>, signature, protected);
+      protected:
+        typedef reactor::BackgroundFuture<elle::Buffer> SignFuture;
+        ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
+      private:
+        BaseOKB(OKBHeader header,
+                Doughnut* owner,
+                elle::Buffer data,
+                std::shared_ptr<cryptography::rsa::PrivateKey> owner_key);
 
       /*--------.
       | Content |
@@ -104,6 +119,8 @@ namespace infinit
         virtual
         bool
         operator ==(blocks::Block const& rhs) const override;
+        ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PrivateKey>,
+                         owner_private_key, protected);
         ELLE_ATTRIBUTE_R(elle::Buffer, data_plain, protected);
         ELLE_ATTRIBUTE(bool, data_decrypted, protected);
       protected:
@@ -126,9 +143,24 @@ namespace infinit
         blocks::ValidationResult
         _validate() const override;
       protected:
+        class OwnerSignature
+        {
+        public:
+          typedef infinit::serialization_tag serialization_tag;
+          OwnerSignature(BaseOKB<Block> const& block);
+          void
+          serialize(elle::serialization::Serializer& s_,
+                    elle::Version const& v);
+        protected:
+          virtual
+          void
+          _serialize(elle::serialization::SerializerOut& s_,
+                     elle::Version const& v);
+          ELLE_ATTRIBUTE_R(BaseOKB<Block> const&, block);
+        };
         virtual
-        void
-        _sign(elle::serialization::SerializerOut& s) const;
+        std::unique_ptr<OwnerSignature>
+        _sign() const;
         bool
         _check_signature(cryptography::rsa::PublicKey const& key,
                          elle::Buffer const& signature,
@@ -143,33 +175,30 @@ namespace infinit
           int version) const;
         elle::Buffer const& signature() const;
 
-      private:
-        elle::Buffer
-        _sign() const;
-
       /*---------.
       | Clonable |
       `---------*/
       public:
         virtual
         std::unique_ptr<blocks::Block>
-        clone(bool seal_copy) const override;
+        clone() const override;
 
       /*--------------.
       | Serialization |
       `--------------*/
       public:
-        BaseOKB(elle::serialization::SerializerIn& input);
+        BaseOKB(elle::serialization::SerializerIn& input,
+                elle::Version const& version);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const& version) override;
         // Solve ambiguity between Block and OKBHedar wich both have the tag.
         typedef infinit::serialization_tag serialization_tag;
       private:
-        class SerializationContent;
-        BaseOKB(SerializationContent input);
         void
-        _serialize(elle::serialization::Serializer& input);
+        _serialize(elle::serialization::Serializer& input,
+                   elle::Version const& version);
       };
 
       typedef BaseOKB<blocks::MutableBlock> OKB;

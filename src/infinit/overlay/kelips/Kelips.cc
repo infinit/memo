@@ -922,6 +922,7 @@ namespace infinit
       void
       Node::onPacket(reactor::network::Buffer nbuf, GossipEndpoint source)
       {
+        ELLE_DUMP("Received %s bytes packet from %s", nbuf.size(), source);
         elle::Buffer buf(nbuf.data()+8, nbuf.size()-8);
         static bool async = getenv("INFINIT_KELIPS_ASYNC");
         if (async)
@@ -1063,6 +1064,7 @@ namespace infinit
           }
           else
           {
+            ELLE_TRACE("Sending bootstrap to node %s", l.second);
             if (!_config.encrypt || _config.accept_plain)
             {
               for (auto const& ep: l.second)
@@ -1089,6 +1091,7 @@ namespace infinit
         }
         if (_config.wait)
           wait(_config.wait);
+        ELLE_TRACE("%s: node engaged", *this);
       }
 
       void Node::start()
@@ -1332,7 +1335,7 @@ namespace infinit
         {
           ELLE_DEBUG("%s: processing key request from %s", *this, source);
           // validate passport
-          bool ok = p->passport.verify(doughnut()->owner());
+          bool ok = p->passport.verify(*doughnut()->owner());
           if (!ok)
           {
             ELLE_WARN("%s: failed to validate passport from %s : %s",
@@ -1363,7 +1366,7 @@ namespace infinit
         {
           ELLE_DEBUG("%s: processing key reply from %s", *this, source);
           // validate passport
-          bool ok = p->passport.verify(doughnut()->owner());
+          bool ok = p->passport.verify(*doughnut()->owner());
           if (!ok)
           {
             ELLE_WARN("%s: failed to validate passport from %s : %s",
@@ -2584,7 +2587,7 @@ namespace infinit
           if (it == _state.contacts[_group].end())
           {
             if (fg != _group || _observer)
-              throw std::runtime_error("No contacts in self/target groups");
+              return {};
             // Bootstraping only: Store locally.
             if (_config.bootstrap_nodes.empty())
             {

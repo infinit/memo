@@ -91,6 +91,7 @@ namespace infinit
       void _fetch() override;
       void _fetch(std::unique_ptr<ACLBlock> block);
       void _commit() override;
+      model::blocks::ACLBlock* _header_block() override;
       void move_recurse(boost::filesystem::path const& current,
           boost::filesystem::path const& where);
       friend class Unknown;

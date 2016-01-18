@@ -31,6 +31,7 @@ namespace infinit
   namespace filesystem
   {
 
+    const uint64_t File::first_block_size = 16384;
     static const int lookahead_blocks = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
     static const int max_lookahead_threads = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
 
@@ -304,7 +305,9 @@ namespace infinit
       bool is_new = false;
       if (_fat[index].first == Address::null)
       {
-        b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>());
+        ELLE_ASSERT(_first_block);
+        b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>(
+          elle::Buffer(), _first_block->address()), std::string());
         is_new = true;
       }
       else
@@ -464,13 +467,8 @@ namespace infinit
       {
         this->_fetch();
         Node::stat(st);
-        std::pair<bool, bool> perms = _owner.get_permissions(*_first_block);
-        if (!perms.first)
-          st->st_mode &= ~0400;
-        if (!perms.second)
-          st->st_mode &= ~0200;
         st->st_mode |= S_IFREG;
-        if (perms.first && (_header.mode & 0100))
+        if ((st->st_mode & 0400) && (_header.mode & 0100))
           st->st_mode |= 0100;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
@@ -553,7 +551,7 @@ namespace infinit
               buf.size(targetsize);
             }
             auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
-              sk.encipher(buf));
+              sk.encipher(buf), _first_block->address());
             _owner.unchecked_remove(_fat[i].first);
             _fat[i].first = newblock->address();
             _owner.store_or_die(std::move(newblock));
@@ -615,6 +613,12 @@ namespace infinit
           _commit_first(true);
         }
       }
+    }
+
+    model::blocks::ACLBlock*
+    File::_header_block()
+    {
+      return dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
     }
 
     bool
