@@ -137,7 +137,6 @@ namespace infinit
         make(overlay::NodeEndpoints const& hosts,
              bool client,
              boost::filesystem::path const& p,
-             boost::optional<elle::Version> version = {},
              bool async = false,
              bool cache = false,
              boost::optional<int> cach_size = {},

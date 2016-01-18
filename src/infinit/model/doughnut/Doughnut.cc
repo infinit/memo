@@ -331,7 +331,7 @@ namespace infinit
                           bool client,
                           boost::filesystem::path const& dir)
       {
-        return this->make(hosts, client, dir, this->version, false, false);
+        return this->make(hosts, client, dir, false, false);
       }
 
       std::unique_ptr<Doughnut>
@@ -339,7 +339,6 @@ namespace infinit
         overlay::NodeEndpoints const& hosts,
         bool client,
         boost::filesystem::path const& p,
-        boost::optional<elle::Version> version,
         bool async,
         bool cache,
         boost::optional<int> cache_size,
@@ -382,7 +381,7 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version);
+            this->version);
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
