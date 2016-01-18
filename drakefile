@@ -26,18 +26,18 @@ with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
 def configure(
-    cxx_toolkit = None,
-    cxx_config = drake.cxx.Config(),
-    production_build = False,
-    beyond_host = 'https://beyond.infinit.io',
-    boost = None,
-    prefix = '/usr',
-    valgrind = None,
-    valgrind_tests = False,
-    python = None,
-    fuse = None,
-    codesign = False,
-    beyond = True,
+  cxx_toolkit = None,
+  cxx_config = drake.cxx.Config(),
+  production_build = False,
+  beyond_host = 'https://beyond.infinit.io',
+  boost = None,
+  prefix = '/usr',
+  valgrind = None,
+  valgrind_tests = False,
+  python = None,
+  fuse = None,
+  codesign = False,
+  beyond = True,
 ):
 
   global rule_build, rule_check, rule_install, rule_tests
@@ -361,6 +361,12 @@ def configure(
     cxx_config_infinit)
   rule_build << infinit_lib
 
+  crash_reporting = drake.include('crash_reporting',
+                                  cxx_toolkit = cxx_toolkit,
+                                  cxx_config = cxx_config)
+  crash_reporter_lib = drake.copy(crash_reporting.library, 'lib',
+                                  strip_prefix = True)
+
   ## -------- ##
   ## Binaries ##
   ## -------- ##
@@ -376,6 +382,7 @@ def configure(
   bin_cxx_config = drake.cxx.Config(cxx_config)
   bin_cxx_config += elle.das.config
   bin_cxx_config.add_local_include_path('bin')
+  bin_cxx_config.add_local_include_path('crash_reporting/src')
   bin_cxx_config.lib_path_runtime('../lib')
   if not windows:
     bin_cxx_config.library_add(
@@ -447,6 +454,7 @@ def configure(
   binaries = []
   global installed_binaries
   installed_binaries = []
+  installed_libraries = []
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
@@ -455,7 +463,8 @@ def configure(
         infinit_lib,
         elle_lib,
         reactor_lib,
-        cryptography_lib
+        cryptography_lib,
+        crash_reporter_lib,
       ] + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
@@ -463,6 +472,24 @@ def configure(
     binaries.append(bin)
     if install:
       installed_binaries.append(bin)
+      bin_syms = drake.node('bin/symbols/%s.sym' % name)
+      crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                       'symbols',
+                                       bin,
+                                       bin_syms)
+      rule_install << bin_syms
+      def add_libraries(binary):
+        installed_libraries.extend(binary.dynamic_libraries)
+        for lib in binary.dynamic_libraries:
+          add_libraries(lib)
+      add_libraries(bin)
+  for lib in set(installed_libraries):
+    lib_syms = drake.node('lib/symbols/%s.sym' % lib.path().basename())
+    crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                     'symbols',
+                                     lib,
+                                     lib_syms)
+    rule_install << lib_syms
 
   ## ----- ##
   ## Share ##
