@@ -85,7 +85,12 @@ namespace infinit
                                 }))
         {
           if (!this->_journal_dir.empty())
+          {
             boost::filesystem::create_directories(this->_journal_dir);
+            boost::filesystem::permissions(this->_journal_dir,
+              boost::filesystem::remove_perms
+              | boost::filesystem::others_all | boost::filesystem::group_all);
+          }
           if (max_size)
             this->_queue.max_size(max_size);
           this->_queue.close();

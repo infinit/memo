@@ -45,7 +45,7 @@ namespace infinit
           }
           catch (aws::FileNotFound const& e)
           {
-            ELLE_WARN("unable to GET block: %s", e);
+            ELLE_TRACE("unable to GET block: %s", e);
             throw MissingKey(key);
           }
         }
