@@ -1,24 +1,36 @@
 #include <crash_reporting/CrashReporter.hh>
 #include <iostream>
 
+#ifdef INFINIT_LINUX
+# include <client/linux/handler/exception_handler.h>
+#elif defined(INFINIT_MACOSX)
 #include <Availability.h>
-#ifdef __OSX_AVAILABLE_STARTING
-# undef __OSX_AVAILABLE_STARTING
-# define __OSX_AVAILABLE_STARTING(_osx, _ios)
+# ifdef __OSX_AVAILABLE_STARTING
+#  undef __OSX_AVAILABLE_STARTING
+#  define __OSX_AVAILABLE_STARTING(_osx, _ios)
+# endif
+# include <client/mac/handler/exception_handler.h>
+#else
+# error Unsupported platform.
 #endif
-#include <client/mac/handler/exception_handler.h>
 
 namespace crash_reporting
 {
+#ifdef INFINIT_LINUX
+  static
+  bool
+  dump_callback(const MinidumpDescriptor& descriptor,
+                void* context,
+                bool success)
+#elif INFINIT_MACOSX
   static
   bool
   dump_callback(const char* dump_dir,
                 const char* minidump_id,
                 void* context,
                 bool success)
+#endif
   {
-    std::cout << "saved dump to " << dump_dir << "/" << minidump_id
-              << std::endl;
     return success;
   }
 
@@ -28,6 +40,16 @@ namespace crash_reporting
     , _dump_path(std::move(dump_path))
     , _exception_handler(nullptr)
   {
+#ifdef INFINIT_LINUX
+    google_breakpad::MinidumpDescriptor descriptor(this->_dump_path);
+    this->_exception_handler =
+      new google_breakpad::ExceptionHandler(descriptor,
+                                            NULL,
+                                            dump_callback,
+                                            NULL,
+                                            true,
+                                            -1)
+#elif defined(INFINIT_MACOSX)
     this->_exception_handler =
       new google_breakpad::ExceptionHandler(this->_dump_path,
                                             NULL,
@@ -35,6 +57,7 @@ namespace crash_reporting
                                             NULL,
                                             true,
                                             NULL);
+#endif
   }
 
   CrashReporter::~CrashReporter()
