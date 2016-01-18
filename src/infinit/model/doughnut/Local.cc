@@ -244,8 +244,9 @@ namespace infinit
                     return i;
                   }));
         typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
-        rpcs.add("auth_syn", std::function<std::pair<Challenge,Passport*>(Passport const&)>(
-          [this] (Passport const& p) -> std::pair<Challenge, Passport*>
+
+        auto auth_syn = [this] (Passport const& p)
+          -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
             bool verify = const_cast<Passport&>(p).verify(
@@ -255,15 +256,46 @@ namespace infinit
               ELLE_LOG("Passport validation failed");
               throw elle::Error("Passport validation failed");
             }
-            // generate and store a challenge to ensure remote owns the passport
-            auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
-            auto token = infinit::cryptography::random::generate<elle::Buffer>(128);
-            this->_challenges.insert(std::make_pair(token.string(),
-              std::make_pair(challenge, std::move(p))));
+            // Generate and store a challenge to ensure remote owns the
+            // passport.
+            auto challenge =
+              infinit::cryptography::random::generate<elle::Buffer>(128);
+            auto token =
+              infinit::cryptography::random::generate<elle::Buffer>(128);
+            this->_challenges.insert(
+              std::make_pair(token.string(),
+                             std::make_pair(challenge, std::move(p))));
             return std::make_pair(
               std::make_pair(challenge, token),
               const_cast<Passport*>(&_doughnut.passport()));
-          }));
+          };
+        if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+        {
+          typedef std::pair<Challenge, Passport*>
+            AuthSyn(Passport const&, elle::Version const&);
+          rpcs.add(
+            "auth_syn", std::function<AuthSyn>(
+              [this, auth_syn] (Passport const& p, elle::Version const& v)
+                -> std::pair<Challenge, Passport*>
+              {
+                if (v != this->_doughnut.version())
+                  throw elle::Error(
+                    elle::sprintf("invalid version %s, we use %s",
+                                  v, this->_doughnut.version()));
+                return auth_syn(p);
+              }));
+        }
+        else
+        {
+          typedef std::pair<Challenge, Passport*> AuthSyn(Passport const&);
+          rpcs.add(
+            "auth_syn", std::function<AuthSyn>(
+              [this, auth_syn] (Passport const& p)
+                -> std::pair<Challenge, Passport*>
+              {
+                return auth_syn(p);
+              }));
+        }
         rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
           elle::Buffer const&, elle::Buffer const&)>(
           [this](elle::Buffer const& enc_key,
