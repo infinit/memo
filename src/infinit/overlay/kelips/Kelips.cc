@@ -1,5 +1,6 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 
+#include <pair>
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -1057,7 +1058,7 @@ namespace infinit
             std::vector<GossipEndpoint> eps;
             for (auto const& ep: l.second)
               eps.push_back(e2e(ep));
-            Contact& c = get_or_make(l.first, false, eps);
+            Contact& c = *get_or_make(l.first, false, eps);
             ELLE_TRACE("%s: sending bootstrap to node %s", *this, l);
             if (!_config.encrypt || _config.accept_plain)
               send(req, c);
@@ -1919,36 +1920,24 @@ namespace infinit
         if (addr == _self)
           return;
         int g = group_of(addr);
-        if (g == _group && !_bootstraping.opened())
+        if (g == _group && !_bootstraping.opened() && !observer)
         {
           ELLE_LOG("Peer found, write enabled");
           _bootstraping.open();
         }
-        Contacts& target = observer? _state.observers : _state.contacts[g];
-        auto it = target.find(addr);
-        if (it == target.end())
+        Contact* c = get_or_make(addr, observer, {endpoint},
+          observer || g == _group || signed(_state.contacts[g].size()) < _config.max_other_contacts);
+        if (!c)
+          return;
+        // reset validated endpoint
+        if (c->validated_endpoint && c->validated_endpoint->first != endpoint)
         {
-          if (observer || g == _group || signed(target.size()) < _config.max_other_contacts)
-          {
-            Contact contact{TimedEndpoint(endpoint, now()),
-                            {TimedEndpoint(endpoint, now())},
-                            addr, Duration(0), Time(), 0};
-            ELLE_LOG("%s: register %s", *this, contact);
-            target[addr] = std::move(contact);
-          }
+          ELLE_LOG("%s: change validated endpoint %s -> %s", *this,
+                   c->validated_endpoint->first, endpoint);
         }
-        else
-        {
-          // reset validated endpoint
-          if (it->second.validated_endpoint && it->second.validated_endpoint->first != endpoint)
-          {
-            ELLE_LOG("%s: change validated endpoint %s -> %s", *this,
-                     it->second.validated_endpoint->first, endpoint);
-          }
-          it->second.validated_endpoint = TimedEndpoint(endpoint, now());
-          // add/update to endpoint list
-          endpoints_update(it->second.endpoints, endpoint);
-        }
+        c->validated_endpoint = TimedEndpoint(endpoint, now());
+        // add/update to endpoint list
+        endpoints_update(c->endpoints, endpoint);
       }
 
       void
@@ -1995,6 +1984,7 @@ namespace infinit
           auto it = target.find(c.first);
           if (it == target.end())
           {
+            ELLE_LOG("%s: registering contact %x from gossip(%x)", *this, c.first, p->sender);
             if (g == _group || target.size() < (unsigned)_config.max_other_contacts)
               target[c.first] = Contact{{}, c.second, c.first, Duration(), Time(), 0};
           }
@@ -2236,7 +2226,7 @@ namespace infinit
             onGetFileReply(&res);
           else
           {
-            Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
+            Contact& c = *get_or_make(p->originAddress, true, p->originEndpoints);
             ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoints, p->request_id);
             send(res, c);
           }
@@ -2259,7 +2249,7 @@ namespace infinit
             onGetFileReply(&res);
           else
           {
-            Contact& c = get_or_make(p->originAddress, p->observer, p->originEndpoints);
+            Contact& c = *get_or_make(p->originAddress, true, p->originEndpoints);
             send(res, c);
           }
           _dropped_gets++;
@@ -2367,7 +2357,7 @@ namespace infinit
             onPutFileReply(&res);
           else
           {
-            Contact& c = get_or_make(p->originAddress, p->observer,
+            Contact& c = *get_or_make(p->originAddress, true,
                                      p->originEndpoints);
             send(res, c);
           }
@@ -2822,6 +2812,7 @@ namespace infinit
         }
         bench.add(cleared);
         auto contact_timeout = std::chrono::milliseconds(_config.contact_timeout_ms);
+        int idx = 0;
         for (auto& contacts: _state.contacts)
         {
           auto it = contacts.begin();
@@ -2830,12 +2821,13 @@ namespace infinit
             endpoints_cleanup(it->second.endpoints, now() - contact_timeout);
             if (it->second.endpoints.empty())
             {
-              ELLE_LOG("%s: erase %s", *this, it->second);
+              ELLE_LOG("%s: erase %s from %s", *this, it->second, idx);
               it = contacts.erase(it);
             }
             else
               ++it;
           }
+          ++idx;
         }
 
         int time_send_all = _state.files.size() / (_config.gossip.files/2 ) *  _config.gossip.interval_ms;
@@ -3169,21 +3161,36 @@ namespace infinit
         }
       }
 
-      Contact&
+      Contact*
       Node::get_or_make(Address address, bool observer,
-                        std::vector<GossipEndpoint> endpoints)
+                        std::vector<GossipEndpoint> endpoints,
+                        bool make)
       {
-        Contacts& target = observer ?
-        _state.observers : _state.contacts[group_of(address)];
-        auto it = target.find(address);
-        if (it == target.end())
-        {
-          Contact c {{},  {}, address, Duration(), Time(), 0};
-          for (auto const& ep: endpoints)
-            c.endpoints.push_back(TimedEndpoint(ep, now()));
-          it = target.insert(std::make_pair(address, std::move(c))).first;
+        Contacts* target = observer ?
+          &_state.observers : &_state.contacts[group_of(address)];
+        Contacts* ntarget = !observer ?
+          &_state.observers : &_state.contacts[group_of(address)];
+        auto it = target->find(address);
+        if (it == target->end())
+        { // check the other map for misplaced entries. This can happen
+          // when invoked with a packet's originAddress, for which we don't
+          // know the observer status
+          it = ntarget->find(address);
+          if (it != ntarget->end())
+          {
+            ELLE_TRACE("moving misplaced entry for %x", address);
+            target->insert(std::make_pair(address, std::move(it->second)));
+            ntarget->erase(address);
+            return &(*target)[address];
+          }
         }
-        return it->second;
+        if (!make)
+          return nullptr;
+        Contact c {{},  {}, address, Duration(), Time(), 0};
+        for (auto const& ep: endpoints)
+          c.endpoints.push_back(TimedEndpoint(ep, now()));
+        it = target->insert(std::make_pair(address, std::move(c))).first;
+        return &it->second;
       }
 
       Overlay::Member
@@ -3545,7 +3552,7 @@ namespace infinit
       {
         for (auto const& host: hosts)
         {
-          ELLE_LOG("processing %s", host);
+          ELLE_TRACE("processing %x (%s endpoints)", host.first, host.second.size());
           if (host.first == id)
             continue;
           PeerLocation pl;

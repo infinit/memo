@@ -293,9 +293,9 @@ namespace infinit
         contact(Address address); // establish contact with peer and flush buffer
         void onPacket(reactor::network::Buffer buf, GossipEndpoint source);
         void process(elle::Buffer const& buf, GossipEndpoint source);
-        Contact&
+        Contact*
         get_or_make(Address address, bool observer,
-          std::vector<GossipEndpoint> endponits);
+          std::vector<GossipEndpoint> endpoints, bool make=true);
         Node::Member
         make_peer(PeerLocation pl);
         packet::RequestKey make_key_request();
