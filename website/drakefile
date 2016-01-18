@@ -74,10 +74,13 @@ def configure(
     'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/reference.md',
   )
-  changelog = drake.nodes(
-    '../ChangeLog.md',
+  changelog = drake.Node(
+    'ChangeLog.html',
   )
-
+  drake.markdown.Renderer(
+    source = drake.Node('../ChangeLog'),
+    target = changelog
+  )
   class CopyAndCleanup(drake.Copy):
 
     def __init__(self, source, to, post_process):
@@ -105,13 +108,13 @@ def configure(
 
   def generate(nodes):
     return drake.copy(
-      drake.nodes(*[m.path().with_extension('html') for m in nodes]),
+      drake.nodes(*[m.path(True).with_extension('html') for m in nodes]),
       'templates/pages/docs/generated',
       strip_prefix = True,
       builder = CopyAndCleanup
     )
 
-  generated = generate(markdown) + generate(changelog)
+  generated = generate(markdown) + generate([changelog])
   templates = drake.nodes(
     'templates/base.html',
     'templates/pages/home.html',
