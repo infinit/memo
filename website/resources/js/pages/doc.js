@@ -58,7 +58,7 @@ $(document).ready(function() {
   }
 
 
-  if ($('body').hasClass('doc_get_started')) {
+  if ($('body').hasClass('doc_get_started') ) {
 
     $('a.button').click(function() {
       ga('send', 'event', 'download', $(this).text(), navigator.userAgent);
