@@ -68,11 +68,13 @@ namespace infinit
         */
         if (_fast_fail && enable_fast_fail)
         {
+          bool connect_running = false;
           try
           {
             if (!reactor::wait(*this->_connection_thread, 0_sec))
             { // still connecting
               ELLE_DEBUG("still connecting");
+              connect_running = true;
               throw reactor::network::ConnectionClosed("Connection pending");
             }
             // if we reach here, connection thread finished without exception,
@@ -81,6 +83,8 @@ namespace infinit
           }
           catch (reactor::network::Exception const& e)
           {
+            if (connect_running)
+              throw;
             ELLE_DEBUG("connection attempt failed, restarting");
             try
             {
