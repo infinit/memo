@@ -302,6 +302,21 @@ is_hidden_file(boost::filesystem::path const& path)
 
 namespace infinit
 {
+  struct User;
+}
+
+template <typename T>
+void
+beyond_push(std::string const& where,
+            std::string const& type,
+            std::string const& name,
+            T const& o,
+            infinit::User const& self,
+            bool report = true,
+            bool beyonderror = false); // FIXME: Remove when migration done.
+
+namespace infinit
+{
   typedef infinit::AWSCredentials AWSCredentials;
   typedef infinit::Credentials Credentials;
   typedef infinit::OAuthCredentials OAuthCredentials;
@@ -611,64 +626,6 @@ namespace infinit
     boost::optional<std::string> password_hash;
   };
 
-  struct NetworkDescriptor
-  {
-    NetworkDescriptor(
-      std::string name_,
-      std::unique_ptr<model::doughnut::consensus::Configuration> consensus_,
-      std::unique_ptr<overlay::Configuration> overlay_,
-      cryptography::rsa::PublicKey owner_,
-      elle::Version version_)
-      : name(std::move(name_))
-      , consensus(std::move(consensus_))
-      , overlay(std::move(overlay_))
-      , owner(std::move(owner_))
-      , version(std::move(version_))
-    {
-      check_name(this->name);
-    }
-
-    NetworkDescriptor(elle::serialization::SerializerIn& s)
-      : name(s.deserialize<std::string>("name"))
-      , consensus(s.deserialize<std::unique_ptr<
-                  model::doughnut::consensus::Configuration>>("consensus"))
-      , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
-                ("overlay"))
-      , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-    {
-      check_name(this->name);
-    }
-
-    void
-    serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("name", this->name);
-      s.serialize("consensus", this->consensus);
-      s.serialize("overlay", this->overlay);
-      s.serialize("owner", this->owner);
-      s.serialize("version", this->version);
-    }
-
-    std::string name;
-    std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
-    std::unique_ptr<overlay::Configuration> overlay;
-    cryptography::rsa::PublicKey owner;
-    elle::Version version;
-  };
-}
-
-template <typename T>
-void
-beyond_push(std::string const& where,
-            std::string const& type,
-            std::string const& name,
-            T const& o,
-            infinit::User const& self,
-            bool report = true,
-            bool beyonderror = false); // FIXME: Remove when migration done.
-
-namespace infinit
-{
   struct Network
   {
     Network(std::string name, std::unique_ptr<model::ModelConfig> model)
@@ -743,6 +700,61 @@ namespace infinit
 
     std::string name;
     std::unique_ptr<model::ModelConfig> model;
+  };
+
+  struct NetworkDescriptor
+  {
+    NetworkDescriptor(
+      std::string name_,
+      std::unique_ptr<model::doughnut::consensus::Configuration> consensus_,
+      std::unique_ptr<overlay::Configuration> overlay_,
+      cryptography::rsa::PublicKey owner_,
+      elle::Version version_)
+      : name(std::move(name_))
+      , consensus(std::move(consensus_))
+      , overlay(std::move(overlay_))
+      , owner(std::move(owner_))
+      , version(std::move(version_))
+    {
+      check_name(this->name);
+    }
+
+    NetworkDescriptor(elle::serialization::SerializerIn& s)
+      : name(s.deserialize<std::string>("name"))
+      , consensus(s.deserialize<std::unique_ptr<
+                  model::doughnut::consensus::Configuration>>("consensus"))
+      , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
+                ("overlay"))
+      , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
+    {
+      check_name(this->name);
+    }
+
+    NetworkDescriptor(Network&& network)
+      : name(std::move(network.name))
+      , consensus(std::move(network.dht()->consensus))
+      , overlay(std::move(network.dht()->overlay))
+      , owner(std::move(*network.dht()->owner))
+      , version(std::move(network.dht()->version))
+    {
+      check_name(this->name);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("name", this->name);
+      s.serialize("consensus", this->consensus);
+      s.serialize("overlay", this->overlay);
+      s.serialize("owner", this->owner);
+      s.serialize("version", this->version);
+    }
+
+    std::string name;
+    std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
+    std::unique_ptr<overlay::Configuration> overlay;
+    cryptography::rsa::PublicKey owner;
+    elle::Version version;
   };
 
   struct Volume
@@ -1037,14 +1049,7 @@ namespace infinit
         {
           try
           {
-            auto network = this->network_get(name_, owner);
-            return NetworkDescriptor{
-              network.name,
-              std::move(network.dht()->consensus),
-              std::move(network.dht()->overlay),
-              std::move(*network.dht()->owner),
-              network.dht()->version
-            };
+            return NetworkDescriptor(this->network_get(name_, owner));
           }
           catch (elle::Error const&)
           {}

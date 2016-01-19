@@ -208,12 +208,7 @@ COMMAND(create)
     }
     if (aliased_flag(args, {"push-network", "push"}))
     {
-      infinit::NetworkDescriptor desc(
-        network.name,
-        std::move(network.dht()->consensus),
-        std::move(network.dht()->overlay),
-        std::move(*network.dht()->owner),
-        network.dht()->version);
+      infinit::NetworkDescriptor desc(std::move(network));
       beyond_push("network", desc.name, desc, owner);
     }
   }
@@ -241,12 +236,7 @@ COMMAND(update)
   }
   if (aliased_flag(args, {"push-network", "push"}))
   {
-    infinit::NetworkDescriptor desc(
-      network.name,
-      std::move(network.dht()->consensus),
-      std::move(network.dht()->overlay),
-      std::move(*network.dht()->owner),
-      network.dht()->version);
+    infinit::NetworkDescriptor desc(std::move(network));
     beyond_push("network", desc.name, desc, owner);
   }
 }
@@ -260,12 +250,7 @@ COMMAND(export_)
   {
     auto& dht = static_cast<infinit::model::doughnut::Configuration&>
       (*network.model);
-    infinit::NetworkDescriptor desc(
-      network.name,
-      std::move(dht.consensus),
-      std::move(dht.overlay),
-      std::move(*dht.owner),
-      network.dht()->version);
+    infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network.name);
@@ -380,11 +365,7 @@ COMMAND(push)
   {
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(*dht.owner);
-    infinit::NetworkDescriptor desc(network.name,
-                                    std::move(dht.consensus),
-                                    std::move(dht.overlay),
-                                    std::move(*dht.owner),
-                                    network.dht()->version);
+    infinit::NetworkDescriptor desc(std::move(network));
     beyond_push("network", desc.name, desc, self);
   }
 }
