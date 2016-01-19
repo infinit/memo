@@ -155,7 +155,7 @@ def throws(function, expected = None, json = True):
     assert False
   except requests.exceptions.HTTPError as e:
     if expected:
-      assert e.response.status_code == expected
+      assertEq(e.response.status_code, expected)
     if not json:
       return e.response
     response = e.response.json()

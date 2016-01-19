@@ -33,7 +33,7 @@ with Beyond() as beyond:
       # No password provided.
       throws(
         lambda: beyond.post('users/%s/login' % bob['name'], json = {}),
-        400,
+        401,
         json = False)
       # No password provided.
       throws(
