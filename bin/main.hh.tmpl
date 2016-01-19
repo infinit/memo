@@ -373,7 +373,7 @@ namespace infinit
             misc.add_options()
               ("help,h", "display the help")
               ("script,s", "silence all extraneous human friendly messages")
-              ("compatibility-version,f", value<std::string>(),
+              ("compatibility-version", value<std::string>(),
                "force compatibility version")
               ("version,v", "display version")
             ;
@@ -617,11 +617,13 @@ namespace infinit
       std::string name_,
       std::unique_ptr<model::doughnut::consensus::Configuration> consensus_,
       std::unique_ptr<overlay::Configuration> overlay_,
-      cryptography::rsa::PublicKey owner_)
+      cryptography::rsa::PublicKey owner_,
+      elle::Version version_)
       : name(std::move(name_))
       , consensus(std::move(consensus_))
       , overlay(std::move(overlay_))
       , owner(std::move(owner_))
+      , version(std::move(version_))
     {
       check_name(this->name);
     }
@@ -1040,7 +1042,8 @@ namespace infinit
               network.name,
               std::move(network.dht()->consensus),
               std::move(network.dht()->overlay),
-              std::move(*network.dht()->owner)
+              std::move(*network.dht()->owner),
+              network.dht()->version
             };
           }
           catch (elle::Error const&)
@@ -1051,11 +1054,11 @@ namespace infinit
     }
 
     void
-    network_save(NetworkDescriptor const& network)
+    network_save(NetworkDescriptor const& network, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_network_path(network.name),
-                        network.name, "network", false);
+                        network.name, "network", overwrite);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
     }
@@ -1855,6 +1858,12 @@ void
 report_created(std::string const& type, std::string const& name)
 {
   report_action("created", type, name, std::string("locally"));
+}
+
+void
+report_updated(std::string const& type, std::string const& name)
+{
+  report_action("updated", type, name, std::string("locally"));
 }
 
 void

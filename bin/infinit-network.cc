@@ -212,9 +212,42 @@ COMMAND(create)
         network.name,
         std::move(network.dht()->consensus),
         std::move(network.dht()->overlay),
-        std::move(*network.dht()->owner));
+        std::move(*network.dht()->owner),
+        network.dht()->version);
       beyond_push("network", desc.name, desc, owner);
     }
+  }
+}
+
+COMMAND(update)
+{
+  auto name = mandatory(args, "name", "network name");
+  auto owner = self_user(ifnt, args);
+  auto network = ifnt.network_get(name, owner);
+  auto& dht = *network.dht();
+  if (auto port = optional<int>(args, "port"))
+    dht.port = port.get();
+  if (compatibility_version)
+    dht.version = compatibility_version.get();
+  if (args.count("output"))
+  {
+    auto output = get_output(args);
+    elle::serialization::json::serialize(network, *output, false);
+  }
+  else
+  {
+    ifnt.network_save(network, true);
+    report_updated("network", network.name);
+  }
+  if (aliased_flag(args, {"push-network", "push"}))
+  {
+    infinit::NetworkDescriptor desc(
+      network.name,
+      std::move(network.dht()->consensus),
+      std::move(network.dht()->overlay),
+      std::move(*network.dht()->owner),
+      network.dht()->version);
+    beyond_push("network", desc.name, desc, owner);
   }
 }
 
@@ -228,8 +261,11 @@ COMMAND(export_)
     auto& dht = static_cast<infinit::model::doughnut::Configuration&>
       (*network.model);
     infinit::NetworkDescriptor desc(
-      network.name, std::move(dht.consensus),
-      std::move(dht.overlay), std::move(*dht.owner));
+      network.name,
+      std::move(dht.consensus),
+      std::move(dht.overlay),
+      std::move(*dht.owner),
+      network.dht()->version);
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network.name);
@@ -347,7 +383,8 @@ COMMAND(push)
     infinit::NetworkDescriptor desc(network.name,
                                     std::move(dht.consensus),
                                     std::move(dht.overlay),
-                                    std::move(*dht.owner));
+                                    std::move(*dht.owner),
+                                    network.dht()->version);
     beyond_push("network", desc.name, desc, self);
   }
 }
@@ -513,7 +550,8 @@ main(int argc, char** argv)
       "--name NAME "
         "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
         "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
-        "[STORAGE...]",
+        "[STORAGE...] "
+        "[OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage", value<std::vector<std::string>>()->multitoken(),
@@ -532,6 +570,22 @@ main(int argc, char** argv)
         stonehenge_options,
         kelips_options,
       },
+    },
+    {
+      "update",
+      "Update a network",
+      &update,
+      "--name NAME [OPTIONS...]",
+      {
+        { "name,n", value<std::string>(), "network to update" },
+        { "port", value<int>(), "port to listen on (default: random)" },
+        option_output("network"),
+        { "push-network", bool_switch(),
+            elle::sprintf("push the updated network to %s",
+                          beyond(true)).c_str() },
+        { "push,p", bool_switch(), "alias for --push-network" },
+      },
+      {},
     },
     {
       "export",
