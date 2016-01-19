@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <boost/filesystem.hpp>
+
 #include <crash_reporting/fwd.hh>
 
 namespace crash_reporting
@@ -10,16 +12,18 @@ namespace crash_reporting
   class CrashReporter
   {
   public:
-    CrashReporter(std::string binary_name,
-                  std::string dump_path);
+    CrashReporter(std::string crash_url);
     ~CrashReporter();
 
     void
     upload_existing();
 
   private:
-    std::string _binary_name;
-    std::string _dump_path;
+    boost::filesystem::path
+    _get_dump_path();
+
+    std::string _crash_url;
+    boost::filesystem::path _dump_path;
     google_breakpad::ExceptionHandler* _exception_handler;
   };
 }

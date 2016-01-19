@@ -1,5 +1,14 @@
 #include <crash_reporting/CrashReporter.hh>
-#include <iostream>
+
+#include <elle/os/environ.hh>
+#include <elle/log.hh>
+#include <elle/system/platform.hh>
+#include <elle/system/user_paths.hh>
+
+#include <boost/filesystem/fstream.hpp>
+
+#include <reactor/http/exceptions.hh>
+#include <reactor/http/Request.hh>
 
 #ifdef INFINIT_LINUX
 # include <client/linux/handler/exception_handler.h>
@@ -9,6 +18,8 @@
 #else
 # error Unsupported platform.
 #endif
+
+ELLE_LOG_COMPONENT("CrashReporter");
 
 namespace crash_reporting
 {
@@ -30,14 +41,19 @@ namespace crash_reporting
     return success;
   }
 
-  CrashReporter::CrashReporter(std::string binary_name,
-                               std::string dump_path)
-    : _binary_name(std::move(binary_name))
-    , _dump_path(std::move(dump_path))
+  CrashReporter::CrashReporter(std::string crash_url)
+    : _crash_url(std::move(crash_url))
+    , _dump_path()
     , _exception_handler(nullptr)
   {
+    this->_dump_path = this->_get_dump_path();
+    if (elle::os::getenv("INFINIT_CRASH_REPORTER_ENABLED", "") == "0")
+    {
+      ELLE_LOG("crash reporter disabled");
+      return;
+    }
 #ifdef INFINIT_LINUX
-    google_breakpad::MinidumpDescriptor descriptor(this->_dump_path);
+    google_breakpad::MinidumpDescriptor descriptor(this->_dump_path.string());
     this->_exception_handler =
       new google_breakpad::ExceptionHandler(descriptor,
                                             NULL,
@@ -47,13 +63,14 @@ namespace crash_reporting
                                             -1);
 #elif defined(INFINIT_MACOSX)
     this->_exception_handler =
-      new google_breakpad::ExceptionHandler(this->_dump_path,
+      new google_breakpad::ExceptionHandler(this->_dump_path.string(),
                                             NULL,
                                             dump_callback,
                                             NULL,
                                             true,
                                             NULL);
 #endif
+    ELLE_TRACE("crash reporter started");
   }
 
   CrashReporter::~CrashReporter()
@@ -62,7 +79,125 @@ namespace crash_reporting
       delete this->_exception_handler;
   }
 
+  static
+  bool
+  _is_crash_report(boost::filesystem::path const& path)
+  {
+    namespace fs = boost::filesystem;
+    if (fs::is_regular_file(path) && path.extension().string() == ".dmp")
+      return true;
+    return false;
+  }
+
+  static
   void
-  upload_existing()
-  {}
+  _remove_file(boost::filesystem::path const& path)
+  {
+    boost::system::error_code erc;
+    boost::filesystem::remove(path, erc);
+    if (erc)
+      ELLE_WARN("unable to remove crash dump (%s): %s", path, erc.message());
+  }
+
+  void
+  CrashReporter::upload_existing()
+  {
+    namespace fs = boost::filesystem;
+    for (fs::directory_iterator it(this->_dump_path);
+         it != fs::directory_iterator();
+         ++it)
+    {
+      if (!_is_crash_report(it->path()))
+      {
+        ELLE_DUMP("%s: file is not crash dump: %s", *this, it->path());
+        continue;
+      }
+      auto const& path = it->path();
+      fs::ifstream f;
+      f.open(path, std::ios_base::in | std::ios_base::binary);
+      if (!f.good())
+      {
+        ELLE_ERR("%s: unable to read crash dump: %s", *this, path);
+        continue;
+      }
+      try
+      {
+        ELLE_DEBUG("%s: uploading: %s", *this, path);
+        reactor::http::Request r(this->_crash_url,
+                                 reactor::http::Method::PUT,
+                                 "application/octet-stream");
+        std::istreambuf_iterator<char> end;
+        std::copy(std::istreambuf_iterator<char>(f),
+                  end,
+                  std::ostreambuf_iterator<char>(r));
+        if (r.status() == reactor::http::StatusCode::OK)
+        {
+          ELLE_DUMP("%s: removing uploaded crash dump: %s", *this, path);
+          f.close();
+          // _remove_file(path);
+        }
+        else
+        {
+          ELLE_ERR("%s: unable to upload crash report (%s) to %s: %s",
+                   *this, path, this->_crash_url, r.status());
+        }
+        if (f.is_open())
+          f.close();
+      }
+      catch (reactor::http::RequestError const& e)
+      {
+        ELLE_TRACE("%s: unable to complete upload of %s: %s", *this, path, e);
+      }
+    }
+  }
+
+  static
+  void
+  _ensure_folder(boost::filesystem::path const& path)
+  {
+    namespace fs = boost::filesystem;
+    boost::system::error_code erc;
+    if (fs::exists(path) && !fs::is_directory(path))
+      ELLE_ABORT("%s exists and is not a directory", path);
+    fs::create_directories(path, erc);
+    if (!fs::exists(path) || erc)
+    {
+      std::string reason = erc ? erc.message() : "unknown error";
+      ELLE_ABORT("%s cannot be created: %s", path, reason);
+    }
+    fs::permissions(path, fs::add_perms | fs::owner_write, erc);
+    if (erc)
+    {
+      ELLE_ABORT("unable to add write permission for owner on %s: %s",
+                 path, erc.message());
+    }
+  }
+
+  boost::filesystem::path
+  CrashReporter::_get_dump_path()
+  {
+    namespace fs = boost::filesystem;
+    std::string dump_str = elle::os::getenv("INFINIT_CRASH_DUMP_PATH", "");
+    if (!dump_str.empty())
+    {
+      fs::path dump_path(dump_str);
+      if (!fs::exists(dump_path.parent_path()))
+        ELLE_ABORT("parent path does not exist: %s", dump_path.parent_path());
+      _ensure_folder(dump_path);
+      return dump_path;
+    }
+    std::string ifnt_home = elle::os::getenv("INFINIT_HOME", "");
+    std::string xdg_home = elle::os::getenv("XDG_DATA_HOME", "");
+    fs::path home =
+      ifnt_home.empty() ?
+      xdg_home.empty() ?
+      elle::system::home_directory() :
+      fs::path(xdg_home) :
+      fs::path(ifnt_home);
+    if (!fs::exists(home))
+      ELLE_ABORT("home directory does not exist: %s", home);
+    auto res = home / ".state" / "infinit" / "crash_dumps";
+    _ensure_folder(res);
+    return res;
+  }
 }
