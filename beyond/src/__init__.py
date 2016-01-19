@@ -19,10 +19,14 @@ templates = {
     'noop': 'Drive/Invitation',
     'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
   },
+  'Internal/CrashReport': {
+    'noop': 'Internal/CrashReport',
+    'swu': 'tem_fu5GEE6jxByj2SB4zM6CrH',
+  },
   'User/Welcome': {
     'noop': 'User/Welcome',
     'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
-  }
+  },
 }
 
 class Beyond:
@@ -174,6 +178,25 @@ class Beyond:
   def drive_delete(self, owner, name):
     return self.__datastore.drive_delete(
         owner = owner, name = name)
+
+  ## ------------ ##
+  ## Crash Report ##
+  ## ------------ ##
+
+  def crash_report_send(self, data):
+    variables = None
+    import tempfile
+    with tempfile.TemporaryDirectory() as temp_dir:
+      with open('%s/client.txt' % temp_dir, 'wb') as crash_dump:
+        crash_dump.write(data.getvalue())
+      with open('%s/client.txt' % temp_dir, 'rb') as crash_dump:
+        self.__emailer.send_one(
+          template = self.template('Internal/CrashReport'),
+          recipient_email = 'chris@infinit.io',
+          recipient_name = 'Developers',
+          variables = variables,
+          files = [crash_dump],
+        )
 
 class User:
   fields = {

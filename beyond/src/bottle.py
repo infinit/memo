@@ -160,6 +160,8 @@ class Bottle(bottle.Bottle):
       self.drive_icon_put)
     self.route('/drives/<owner>/<name>/icon', method = 'DELETE')(
       self.drive_icon_delete)
+    # Crash reports
+    self.route('/crash/report', method = 'PUT')(self.crash_report_put)
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -699,6 +701,13 @@ class Bottle(bottle.Bottle):
 
   def __drive_icon_manipulate(self, name, f):
     return f('users', '%s/icon' % name)
+
+  ## ------------ ##
+  ## Crash Report ##
+  ## ------------ ##
+  def crash_report_put(self):
+    self.__beyond.crash_report_send(bottle.request.body)
+    return {}
 
   ## --- ##
   ## GCS ##
