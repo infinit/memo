@@ -442,7 +442,8 @@ class Network(metaclass = Entity,
               insert = 'network_insert',
               update = 'network_update',
               fields = fields(
-                'name', 'owner', 'consensus', 'overlay', 'version',
+                'name', 'owner', 'consensus', 'overlay',
+                version = '0.3.0',
                 passports = {},
                 endpoints = {},
                 storages = {})):
