@@ -4,11 +4,7 @@
 #ifdef INFINIT_LINUX
 # include <client/linux/handler/exception_handler.h>
 #elif defined(INFINIT_MACOSX)
-#include <Availability.h>
-# ifdef __OSX_AVAILABLE_STARTING
-#  undef __OSX_AVAILABLE_STARTING
-#  define __OSX_AVAILABLE_STARTING(_osx, _ios)
-# endif
+# include <crash_reporting/gcc_fix.hh>
 # include <client/mac/handler/exception_handler.h>
 #else
 # error Unsupported platform.
@@ -19,7 +15,7 @@ namespace crash_reporting
 #ifdef INFINIT_LINUX
   static
   bool
-  dump_callback(const MinidumpDescriptor& descriptor,
+  dump_callback(const google_breakpad::MinidumpDescriptor& descriptor,
                 void* context,
                 bool success)
 #elif INFINIT_MACOSX
@@ -48,7 +44,7 @@ namespace crash_reporting
                                             dump_callback,
                                             NULL,
                                             true,
-                                            -1)
+                                            -1);
 #elif defined(INFINIT_MACOSX)
     this->_exception_handler =
       new google_breakpad::ExceptionHandler(this->_dump_path,
