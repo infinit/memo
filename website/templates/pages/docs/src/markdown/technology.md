@@ -20,7 +20,7 @@ This layer is composed of modules to perform various operations such as HTTP cal
 In the Boost example, you will notice that there are a system of callbacks which quickly becomes confusing.
 
 **Boost Example** <a href="https://gist.github.com/mycure/60ae5d6f7d5bb3ee4ffa" target="_blank">(full code here)</a>
-```
+```cpp
 ....
 void do_read()
 {

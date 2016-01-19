@@ -1,7 +1,8 @@
 $(document).ready(function() {
 
   $('pre code').each(function(i, block) {
-    hljs.highlightBlock(block);
+    hljs.configure({ languages: ['bash', 'cpp'] });
+    hljs.initHighlighting();
   });
 
   $('a[href*=#]:not([href=#])').click(function() {
