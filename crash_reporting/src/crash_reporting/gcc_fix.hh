@@ -3,7 +3,7 @@
 /// Caveat: No warning/error if you try to use a function or constant not
 /// present your deployment target.
 
-#if defined(__GNUC__) && !defined(__clang__)
+#if defined(INFINIT_MACOSX) && defined(__GNUC__) && !defined(__clang__)
 # include <Availability.h>
 # ifdef __OSX_AVAILABLE_STARTING
 #  undef __OSX_AVAILABLE_STARTING
