@@ -293,8 +293,11 @@ static
 bool
 is_hidden_file(boost::filesystem::path const& path)
 {
-  if (path.filename().string()[0] == '.')
+  if (path.filename().string().front() == '.' ||
+      path.filename().string().back() == '~')
+  {
     return true;
+  }
   return false;
 }
 
