@@ -25,10 +25,11 @@
 #include <cryptography/rsa/KeyPair.hh>
 
 #include <reactor/filesystem.hh>
+#include <reactor/network/upnp.hh>
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
-#include <reactor/network/upnp.hh>
+#include <crash_reporting/CrashReporter.hh>
 
 #include <infinit/credentials/AWSCredentials.hh>
 #include <infinit/credentials/OAuthCredentials.hh>
@@ -339,12 +340,20 @@ namespace infinit
   {
     try
     {
+      std::string crash_url = elle::sprintf("%s/crash/report", beyond());
+      auto crash_reporter = crash_reporting::CrashReporter(crash_url);
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
         "main",
-        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg]
+        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg,
+         &crash_reporter]
         {
+          reactor::Thread crash_upload_thread("upload crashes",
+            [&crash_reporter]
+            {
+              crash_reporter.upload_existing();
+            });
 #ifdef INFINIT_LINUX
           // boost::filesystem uses the default locale, detect here if it
           // cant be instantiated.
@@ -400,6 +409,7 @@ namespace infinit
               if (vm.count("version"))
               {
                 std::cout << version << std::endl;
+                reactor::wait(crash_upload_thread);
                 throw elle::Exit(0);
               }
               bool help = vm.count("help");
@@ -427,6 +437,7 @@ namespace infinit
                 output << std::endl;
                 output << options;
                 output << std::endl;
+                reactor::wait(crash_upload_thread);
                 if (help)
                   throw elle::Exit(0);
                 else
@@ -450,14 +461,17 @@ namespace infinit
               catch (CommandLineError const&)
               {
                 mode->help(std::cerr);
+                reactor::wait(crash_upload_thread);
                 throw;
               }
             }
             catch (invalid_command_line_syntax const& e)
             {
+              reactor::wait(crash_upload_thread);
               throw elle::Error(
                 elle::sprintf("command line error: %s", e.what()));
             }
+            reactor::wait(crash_upload_thread);
           }
         });
       sched.run();
