@@ -94,8 +94,8 @@ def configure(cxx_toolkit = None,
     breakpad_sources += [
       'client/linux/crash_generation/crash_generation_client.cc',
       'client/linux/crash_generation/crash_generation_client.h',
-      'client/linux/dump_writer_common/thread_info.cc'
-      'client/linux/dump_writer_common/thread_info.h'
+      'client/linux/dump_writer_common/thread_info.cc',
+      'client/linux/dump_writer_common/thread_info.h',
       'client/linux/dump_writer_common/ucontext_reader.cc',
       'client/linux/dump_writer_common/ucontext_reader.h',
       'client/linux/handler/exception_handler.cc',
@@ -132,8 +132,8 @@ def configure(cxx_toolkit = None,
       'src/third_party/lss/linux_syscall_support.h',
     )
     breakpad_configure_args += [
-      'CFLAGS=-I%s' % drake.path_source('src'),
-      'CXXFLAGS=-I%s' % drake.path_source('src'),
+      'CFLAGS=-I../../../%s' % drake.path_source('src'),
+      'CXXFLAGS=-I../../../%s' % drake.path_source('src'),
     ]
     dump_syms_exe = drake.cxx.Executable('breakpad/bin/dump_syms')
   elif cxx_toolkit.os is drake.os.macos:
