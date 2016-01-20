@@ -18,9 +18,11 @@ with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
 class SymbolsGenerator(drake.Builder):
   def __init__(self,
                dump_syms_tool,
+               normalized_output_path,
                binary,
                output_file):
     self.__dump_syms_tool = dump_syms_tool
+    self.__normalized_output_path = normalized_output_path
     self.__binary = binary
     self.__output_file = output_file
     drake.Builder.__init__(
@@ -37,12 +39,35 @@ class SymbolsGenerator(drake.Builder):
   def binary_path(self):
     return str(self.__binary.path())
 
+  def sym_output_path(self, sym_file):
+    # Remove existing sym files if they exist.
+    existing_path = \
+      '%s/%s' % (self.__normalized_output_path, sym_file.path().basename())
+    import os
+    if os.path.exists(str(existing_path)):
+      import shutil
+      shutil.rmtree(str(existing_path))
+    res = None
+    with open(str(sym_file), 'r') as f:
+      line = f.readline()
+      uid = line.split(' ')[3]
+      name = line.split(' ')[4].strip()
+      res = '%s/%s/%s' % (self.__normalized_output_path, name, uid)
+      # Make directories if they don't exist.
+      os.makedirs(res, exist_ok = True)
+    return res
+    if res is None:
+      assert False
+
   def execute(self):
     out = self.__output_file
     self.cmd('Generating symbols file for %s' % self.__binary,
              [self.dump_syms_cmd, self.binary_path],
              redirect_stdout = out,
              throw = True)
+    # Copy file to normalized destination.
+    import shutil
+    shutil.copy(str(out), str(self.sym_output_path(out)))
     return True
 
   def __repr__(self):
