@@ -54,6 +54,14 @@ namespace crash_reporting
       ELLE_LOG("crash reporter disabled");
       return;
     }
+#ifndef INFINIT_PRODUCTION_BUILD
+    if (elle::os::getenv("INFINIT_CRASH_REPORTER_ENABLED", "") != "1")
+    {
+      ELLE_TRACE("crash reporter disabled, "
+                 "enable with INFINIT_CRASH_REPORTER_ENABLED=1");
+      return;
+    }
+#endif
 #ifdef INFINIT_LINUX
     google_breakpad::MinidumpDescriptor descriptor(this->_dump_path.string());
     this->_exception_handler =
