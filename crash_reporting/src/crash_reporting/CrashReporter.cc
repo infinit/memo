@@ -134,7 +134,7 @@ namespace crash_reporting
         {
           ELLE_DUMP("%s: removing uploaded crash dump: %s", *this, path);
           f.close();
-          // _remove_file(path);
+          _remove_file(path);
         }
         else
         {

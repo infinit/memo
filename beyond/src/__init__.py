@@ -192,7 +192,7 @@ class Beyond:
       with open('%s/client.txt' % temp_dir, 'rb') as crash_dump:
         self.__emailer.send_one(
           template = self.template('Internal/CrashReport'),
-          recipient_email = 'chris@infinit.io',
+          recipient_email = 'developers@infinit.io',
           recipient_name = 'Developers',
           variables = variables,
           files = [crash_dump],
