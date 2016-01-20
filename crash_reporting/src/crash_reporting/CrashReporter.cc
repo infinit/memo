@@ -46,12 +46,13 @@ namespace crash_reporting
   CrashReporter::CrashReporter(std::string crash_url)
     : _crash_url(std::move(crash_url))
     , _dump_path()
+    , _enabled(true)
     , _exception_handler(nullptr)
   {
-    this->_dump_path = this->_get_dump_path();
     if (elle::os::getenv("INFINIT_CRASH_REPORTER_ENABLED", "") == "0")
     {
       ELLE_LOG("crash reporter disabled");
+      this->_enabled = false;
       return;
     }
 #ifndef INFINIT_PRODUCTION_BUILD
@@ -59,9 +60,11 @@ namespace crash_reporting
     {
       ELLE_TRACE("crash reporter disabled, "
                  "enable with INFINIT_CRASH_REPORTER_ENABLED=1");
+      this->_enabled = false;
       return;
     }
 #endif
+    this->_dump_path = this->_get_dump_path();
 #ifdef INFINIT_LINUX
     google_breakpad::MinidumpDescriptor descriptor(this->_dump_path.string());
     this->_exception_handler =
@@ -87,6 +90,12 @@ namespace crash_reporting
   {
     if (this->_exception_handler != nullptr)
       delete this->_exception_handler;
+  }
+
+  bool
+  CrashReporter::enabled() const
+  {
+    return this->_enabled;
   }
 
   static
@@ -129,6 +138,8 @@ namespace crash_reporting
   void
   CrashReporter::upload_existing()
   {
+    if (!this->_enabled)
+      return;
     namespace fs = boost::filesystem;
     for (fs::directory_iterator it(this->_dump_path);
          it != fs::directory_iterator();

@@ -15,9 +15,10 @@ namespace crash_reporting
     CrashReporter(std::string crash_url);
     ~CrashReporter();
 
+    bool
+    enabled() const;
     void
     upload_existing();
-
     int32_t
     crashes_pending_upload();
 
@@ -27,6 +28,7 @@ namespace crash_reporting
 
     std::string _crash_url;
     boost::filesystem::path _dump_path;
+    bool _enabled;
     google_breakpad::ExceptionHandler* _exception_handler;
   };
 }
