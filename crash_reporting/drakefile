@@ -18,11 +18,9 @@ with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
 class SymbolsGenerator(drake.Builder):
   def __init__(self,
                dump_syms_tool,
-               normalized_directory,
                binary,
                output_file):
     self.__dump_syms_tool = dump_syms_tool
-    self.__normalized_directory = normalized_directory
     self.__binary = binary
     self.__output_file = output_file
     drake.Builder.__init__(
@@ -39,27 +37,12 @@ class SymbolsGenerator(drake.Builder):
   def binary_path(self):
     return str(self.__binary.path())
 
-  def output_folder(self, sym_file):
-    with open(str(sym_file), 'r') as f:
-      line = f.readline()
-      uid = line.split(' ')[3]
-      name = self.__binary.path().basename()
-      res = '%s/%s/%s' % (self.__normalized_directory, name, uid)
-      import os
-      os.makedirs(res, exist_ok = True)
-      return res
-    return None
-
   def execute(self):
     out = self.__output_file
     self.cmd('Generating symbols file for %s' % self.__binary,
              [self.dump_syms_cmd, self.binary_path],
              redirect_stdout = out,
              throw = True)
-    # We don't know what the unique ID will be until we've created the file.
-    # Copy them afterwards (with no checks) to the correct place.
-    import shutil
-    shutil.copy2(str(out), self.output_folder(out))
     return True
 
   def __repr__(self):
