@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+
+import argparse
+import shutil
+import os
+
+def parse_options():
+  parser = argparse.ArgumentParser(description = 'Organize breakpad symbol files')
+  parser.add_argument('-i', '--input',
+                      required = True,
+                      metavar = 'PATH',
+                      type = str,
+                      help = 'folder with .sym files')
+  parser.add_argument('-o', '--output',
+                      required = True,
+                      metavar = 'PATH',
+                      type = str,
+                      help = 'folder to output to')
+  return parser.parse_args()
+
+def parent_dir(path):
+  return os.path.abspath(os.path.join(path, os.pardir))
+
+def check_dirs(input_dir, output_dir):
+  if not os.path.exists(input_dir):
+    print('input does not exist: %s' % input_dir)
+    exit(1)
+  if not os.path.isdir(args.input):
+    print('input path is not a directory: %s' % input_dir)
+    exit(1)
+  output_parent_dir = parent_dir(output_dir)
+  if not os.path.isdir(output_parent_dir):
+    print('parent of output path is not a directory: %s' % output_parent_dir)
+    exit(1)
+
+def sym_output_path(output_dir, sym_file):
+  name, ext = os.path.splitext(sym_file)
+  if ext != '.sym':
+    return None
+  res = None
+  with open(str(sym_file), 'r') as f:
+    line = f.readline()
+    uid = line.split(' ')[3]
+    name = line.split(' ')[4].strip()
+    res = os.path.join(*[output_dir, name, uid])
+  return res
+
+args = parse_options()
+input_dir = args.input
+output_dir = args.output
+check_dirs(input_dir, output_dir)
+
+for subdir, dirs, files in os.walk(input_dir):
+  for f in files:
+    path = os.path.join(subdir, f)
+    out_path = sym_output_path(output_dir, path)
+    if out_path is not None:
+      if os.path.exists(os.path.join(out_path, f)):
+        tmp = os.path.join(out_path, f)
+        print('[WARNING] overwriting: %s' % tmp)
+        import stat
+        os.chmod(tmp, stat.S_IWRITE)
+      if not os.path.exists(out_path):
+        os.makedirs(out_path, exist_ok = True)
+      shutil.copy(path, out_path)
