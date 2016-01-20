@@ -735,11 +735,11 @@ namespace infinit
         cache,
         cache_size,
         cache_ttl
-        ? std::chrono::seconds(cache_ttl.get())
-        : boost::optional<std::chrono::seconds>(),
+          ? std::chrono::seconds(cache_ttl.get())
+          : boost::optional<std::chrono::seconds>(),
         cache_invalidation
-        ? std::chrono::seconds(cache_invalidation.get())
-        : boost::optional<std::chrono::seconds>(),
+          ? std::chrono::seconds(cache_invalidation.get())
+          : boost::optional<std::chrono::seconds>(),
         std::move(version));
     }
 

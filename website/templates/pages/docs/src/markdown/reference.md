@@ -237,7 +237,7 @@ In order to use Amazon S3, you must first have created an AWS user and an S3 buc
 The following creates a storage resource which uses a folder of an Amazon S3 bucket, specifying a name for the storage, the AWS account identifier, the region the bucket is in, the bucket's name and the folder to store the blocks in:
 
 ```
-$> infinit-storage --create --s3 --name s3 --aws-account s3-user --region eu-central-1 --bucket my-s3-bucket --bucket-folder blocks-folder
+$> infinit-storage --create --s3 --name s3 --account s3-user --region eu-central-1 --bucket my-s3-bucket --bucket-folder blocks-folder
 Created storage "s3".
 ```
 
