@@ -13,6 +13,8 @@ Groups support.
 - Support group ACL.
 - Add compatibility version to network configuration files.
 - Support reading when a minority of the quorum nodes are down.
+- Add `infinit-network --update` to change existing network attribute,
+  such as upgrading the compatibility version.
 
 ### Fixed
 
