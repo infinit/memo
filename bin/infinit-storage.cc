@@ -118,7 +118,7 @@ COMMAND(create)
     auto root = optional(args, "root");
     if (!root)
       root = name;
-    auto account_name = mandatory(args, "account", "Dropbox account");
+    auto account_name = mandatory(args, "dropbox-account", "Dropbox account");
     auto account = ifnt.credentials_dropbox(account_name);
     config =
       elle::make_unique<infinit::storage::DropboxStorageConfig>
@@ -138,7 +138,7 @@ COMMAND(create)
     auto root = optional(args, "root");
     if (!root)
       root = name;
-    auto account_name = mandatory(args, "account", "Google account");
+    auto account_name = mandatory(args, "google-account", "Google account");
     auto account = ifnt.credentials_google(account_name);
     config =
       elle::make_unique<infinit::storage::GoogleDriveStorageConfig>
@@ -152,7 +152,7 @@ COMMAND(create)
   {
     auto region = mandatory(args, "region", "AWS region");
     auto bucket = mandatory(args, "bucket", "S3 bucket");
-    auto account_name = mandatory(args, "account", "AWS account");
+    auto account_name = mandatory(args, "aws-account", "AWS account");
     auto root = optional(args, "bucket-folder");
     if (!root)
       root = elle::sprintf("%s_blocks", name);
@@ -256,16 +256,22 @@ main(int argc, char** argv)
       "where to store blocks (default: %s)",
       (infinit::root_dir() / "blocks/<name>")).c_str())
     ;
+  options_description google_storage_options("Google storage options");
+  google_storage_options.add_options()
+    ("google-account", value<std::string>(), "Google account to use")
+    ("root", value<std::string>(),
+      "where to store blocks in gdrive (default: .infinit)")
+    ;
   options_description dropbox_storage_options("Dropbox storage options");
   dropbox_storage_options.add_options()
-    ("account", value<std::string>(), "Dropbox account to use")
+    ("dropbox-account", value<std::string>(), "Dropbox account to use")
     ("root", value<std::string>(),
       "where to store blocks in Dropbox (default: .infinit)")
     ("token", value<std::string>(), "authentication token")
     ;
   options_description s3_options("Amazon S3 storage options");
   s3_options.add_options()
-    ("account", value<std::string>(), "AWS account to use")
+    ("aws-account", value<std::string>(), "AWS account to use")
     ("region", value<std::string>(), "AWS region to use")
     ("bucket", value<std::string>(), "S3 bucket to use")
     ("bucket-folder", value<std::string>(),
@@ -294,6 +300,7 @@ main(int argc, char** argv)
       {
         hidden_storage_types,
         dropbox_storage_options,
+        google_storage_options,
       }
     },
     {
