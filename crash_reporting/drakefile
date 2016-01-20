@@ -139,9 +139,12 @@ def configure(cxx_toolkit = None,
     breakpad_sources += drake.nodes(
       'src/third_party/lss/linux_syscall_support.h',
     )
+    import os
+    breakpad_include = (drake.Path(os.getcwd()) / drake.Drake.current.prefix \
+                     / drake.path_source('src')).canonize()
     breakpad_configure_args += [
-      'CFLAGS=-I../../../%s' % drake.path_source('src'),
-      'CXXFLAGS=-I../../../%s' % drake.path_source('src'),
+      'CFLAGS=-I%s' % breakpad_include,
+      'CXXFLAGS=-I%s' % breakpad_include,
     ]
     dump_syms_exe = drake.cxx.Executable('breakpad/bin/dump_syms')
   elif cxx_toolkit.os is drake.os.macos:
