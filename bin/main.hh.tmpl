@@ -349,11 +349,6 @@ namespace infinit
         [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg,
          &crash_reporter]
         {
-          reactor::Thread crash_upload_thread("upload crashes",
-            [&crash_reporter]
-            {
-              crash_reporter.upload_existing();
-            });
 #ifdef INFINIT_LINUX
           // boost::filesystem uses the default locale, detect here if it
           // cant be instantiated.
@@ -409,7 +404,6 @@ namespace infinit
               if (vm.count("version"))
               {
                 std::cout << version << std::endl;
-                reactor::wait(crash_upload_thread);
                 throw elle::Exit(0);
               }
               bool help = vm.count("help");
@@ -437,7 +431,6 @@ namespace infinit
                 output << std::endl;
                 output << options;
                 output << std::endl;
-                reactor::wait(crash_upload_thread);
                 if (help)
                   throw elle::Exit(0);
                 else
@@ -453,25 +446,35 @@ namespace infinit
               {
                 args.push_back(unrecognized);
               }
+              std::unique_ptr<reactor::Thread> crash_upload_thread;
+              if (crash_reporter.crashes_pending_upload())
+              {
+                crash_upload_thread.reset(new reactor::Thread("upload crashes",
+                  [&crash_reporter]
+                  {
+                    crash_reporter.upload_existing();
+                  }));
+              }
               try
               {
                 mode->action(parse_args(mode->options, args,
                              (positional_arg ? positional_arg.get() : "name")));
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
               }
               catch (CommandLineError const&)
               {
                 mode->help(std::cerr);
-                reactor::wait(crash_upload_thread);
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
                 throw;
               }
             }
             catch (invalid_command_line_syntax const& e)
             {
-              reactor::wait(crash_upload_thread);
               throw elle::Error(
                 elle::sprintf("command line error: %s", e.what()));
             }
-            reactor::wait(crash_upload_thread);
           }
         });
       sched.run();
