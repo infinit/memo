@@ -22,7 +22,7 @@ class SymbolsGenerator(drake.Builder):
                binary,
                output_file):
     self.__dump_syms_tool = dump_syms_tool
-    self.__normalized_output_path = normalized_output_path
+    self.__normalized_output_path = str(normalized_output_path)
     self.__binary = binary
     self.__output_file = output_file
     drake.Builder.__init__(
