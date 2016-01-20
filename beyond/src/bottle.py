@@ -458,12 +458,8 @@ class Bottle(bottle.Bottle):
       network.create()
       raise Response(201, {})
     except Network.Duplicate:
-      if network == self.network_from_name(owner = owner, name = name):
-        return {}
-      raise Response(409, {
-        'error': 'network/conflict',
-        'reason': 'network %r already exists' % name,
-      })
+      network.overwrite()
+      raise Response(200, {})
 
   def network_passports_get(self, owner, name):
     user = self.user_from_name(name = owner)

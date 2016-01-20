@@ -252,7 +252,7 @@ class Network(dict):
     self['owner'] = self.__owner['public_key']
     self.__short_name = name
     self['name'] = owner['name'] + '/' + self.__short_name
-    self['version'] = '0.3',
+    self['version'] = '0.3.7'
 
   @property
   def shortname(self):
