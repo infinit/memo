@@ -36,13 +36,17 @@ def check_dirs(input_dir, output_dir):
 def sym_output_path(output_dir, sym_file):
   name, ext = os.path.splitext(sym_file)
   if ext != '.sym':
+    print('[INFO] ignoring file: %s' % sym_file)
     return None
   res = None
-  with open(str(sym_file), 'r') as f:
-    line = f.readline()
-    uid = line.split(' ')[3]
-    name = line.split(' ')[4].strip()
-    res = os.path.join(*[output_dir, name, uid])
+  try:
+    with open(str(sym_file), 'r') as f:
+      line = f.readline()
+      uid = line.split(' ')[3]
+      name = line.split(' ')[4].strip()
+      res = os.path.join(*[output_dir, name, uid])
+  except Exception as e:
+    print('[ERROR] unable to read file (%s): %s' % (sym_file, e))
   return res
 
 args = parse_options()
@@ -57,7 +61,7 @@ for subdir, dirs, files in os.walk(input_dir):
     if out_path is not None:
       if os.path.exists(os.path.join(out_path, f)):
         tmp = os.path.join(out_path, f)
-        print('[WARNING] overwriting: %s' % tmp)
+        print('[INFO] overwriting: %s' % tmp)
         import stat
         os.chmod(tmp, stat.S_IWRITE)
       if not os.path.exists(out_path):
