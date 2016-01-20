@@ -454,6 +454,10 @@ def configure(
   binaries = []
   global installed_binaries
   installed_binaries = []
+  installed_symbols = []
+  debian_debug_dir = 'debian-debug'
+  debian_syms_dir = \
+    drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
   installed_libraries = []
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
@@ -474,9 +478,10 @@ def configure(
       installed_binaries.append(bin)
       bin_sym = drake.node('bin/symbols/%s.sym' % name)
       crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                       debian_syms_dir,
                                        bin,
                                        bin_sym)
-      bin_sym = drake.copy(bin_sym, '%s/symbols' % prefix, strip_prefix = True)
+      installed_symbols.append(bin_sym)
       rule_install << bin_sym
       def add_libraries(binary):
         installed_libraries.extend(binary.dynamic_libraries)
@@ -486,9 +491,10 @@ def configure(
   for lib in set(installed_libraries):
     lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
     crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                     debian_syms_dir,
                                      lib,
                                      lib_sym)
-    lib_sym = drake.copy(lib_sym, '%s/symbols' % prefix, strip_prefix = True)
+    installed_symbols.append(lib_sym)
     rule_install << lib_sym
 
   ## ----- ##
@@ -532,15 +538,28 @@ def configure(
       'version_major': git.version().split('.')[0],
       'version_minor': git.version().split('.')[1],
   }):
-    drake.node('control.tmpl')
+    drake.node('debian-packaging/release/control.tmpl')
+    drake.node('debian-packaging/debug/control.tmpl')
   debian_nodes = chain(
     debian_nodes,
-    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
+    drake.copy(drake.nodes('debian-packaging/release/control'),
+               'debian/DEBIAN',
+               strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
   rule_debian << drake.debian.Packager(
     'infinit_%s_amd64.deb' % git.description(),
     debian_nodes, 'debian').package
+
+  debian_debug_nodes = chain(
+    installed_symbols,
+    drake.copy(drake.nodes('debian-packaging/debug/control'),
+               '%s/DEBIAN' % debian_debug_dir,
+               strip_prefix = True),
+  )
+  rule_debian << drake.debian.Packager(
+    'infinit-debug-symbols-%s_0_amd64.deb' % git.description(),
+    debian_debug_nodes, debian_debug_dir).package
 
   ## ------ ##
   ## Beyond ##
