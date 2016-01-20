@@ -14,6 +14,8 @@
 # include <client/linux/handler/exception_handler.h>
 #elif defined(INFINIT_MACOSX)
 # include <crash_reporting/gcc_fix.hh>
+// FIXME: Adding `pragma GCC diagnostic ignored "-Wdeprecated"` does not work
+// for removing #import warnings.
 # include <client/mac/handler/exception_handler.h>
 #else
 # error Unsupported platform.
