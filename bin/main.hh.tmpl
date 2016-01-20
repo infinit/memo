@@ -472,6 +472,12 @@ namespace infinit
                   reactor::wait(*crash_upload_thread);
                 throw;
               }
+              catch (elle::Exception const&)
+              {
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
+                throw;
+              }
             }
             catch (invalid_command_line_syntax const& e)
             {
