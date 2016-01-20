@@ -248,8 +248,6 @@ COMMAND(export_)
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, owner);
   {
-    auto& dht = static_cast<infinit::model::doughnut::Configuration&>
-      (*network.model);
     infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
