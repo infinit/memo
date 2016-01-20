@@ -249,6 +249,7 @@ def configure(
     'resources/images/icons/keyboard@2x.png',
     'resources/images/icons/bracket-right.png',
     'resources/images/icons/bracket-right@2x.png',
+    'resources/images/icons/arrow-down.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
