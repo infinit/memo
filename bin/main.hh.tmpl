@@ -450,7 +450,8 @@ namespace infinit
                 args.push_back(unrecognized);
               }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
-              if (crash_reporter.crashes_pending_upload())
+              if (crash_reporter.enabled() &&
+                  crash_reporter.crashes_pending_upload())
               {
                 crash_upload_thread.reset(new reactor::Thread("upload crashes",
                   [&crash_reporter]
