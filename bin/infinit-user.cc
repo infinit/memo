@@ -365,10 +365,10 @@ upload_avatar(infinit::User& self,
 {
   boost::filesystem::ifstream icon;
   ifnt._open_read(icon, avatar_path, self.name, "icon");
-  std::istreambuf_iterator<char> end;
-  std::copy(std::istreambuf_iterator<char>(icon),
-            end,
-            std::ostreambuf_iterator<char>(data));
+  std::string s(
+    std::istreambuf_iterator<char>{icon},
+    std::istreambuf_iterator<char>{});
+  elle::ConstWeakBuffer data(s.data(), s.size());
   auto url = elle::sprintf("users/%s/avatar", self.name);
   beyond_push_data(url, "avatar", self.name, data, "image/jpeg", self);
   _save_avatar(self.name, data);
