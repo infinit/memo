@@ -258,12 +258,44 @@ COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
   auto network_name_ = optional(args, "name");
+  auto save = [&self] (infinit::NetworkDescriptor desc) {
+    try
+    {
+      auto network = ifnt.network_get(desc.name, self, false);
+      if (network.model)
+      {
+        auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
+          network.model.get()
+        );
+        infinit::Network updated_network(
+          desc.name,
+          elle::make_unique<infinit::model::doughnut::Configuration>(
+            d->id,
+            std::move(desc.consensus),
+            std::move(desc.overlay),
+            std::move(d->storage),
+            self.keypair(),
+            std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+            d->passport,
+            self.name,
+            d->port,
+            desc.version));
+        ifnt.network_save(updated_network, true);
+      }
+      else
+      {
+        ifnt.network_save(desc, true);
+      }
+    }
+    catch (MissingLocalResource const& e)
+    {
+      ifnt.network_save(desc);
+    }
+  };
   if (network_name_)
   {
     std::string network_name = ifnt.qualified_name(network_name_.get(), self);
-    auto desc =
-      beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
-    ifnt.network_save(std::move(desc));
+    save(beyond_fetch<infinit::NetworkDescriptor>("network", network_name));
   }
   else // Fetch all networks for self.
   {
@@ -281,8 +313,7 @@ COMMAND(fetch)
       try
       {
         elle::serialization::json::SerializerIn input(network_json, false);
-        auto desc = input.deserialize<infinit::NetworkDescriptor>();
-        ifnt.network_save(std::move(desc));
+        save(input.deserialize<infinit::NetworkDescriptor>());
       }
       catch (ResourceAlreadyFetched const& error)
       {}

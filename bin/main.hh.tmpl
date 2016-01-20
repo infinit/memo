@@ -974,13 +974,15 @@ namespace infinit
     }
 
     Network
-    network_get(std::string const& name_, User const& owner)
+    network_get(std::string const& name_,
+                User const& owner,
+                bool require_model = true)
     {
       auto name = qualified_name(name_, owner);
       boost::filesystem::ifstream f;
       this->_open_read(f, this->_network_path(name), name, "network");
       auto res = elle::serialization::json::deserialize<Network>(f, false);
-      if (!res.model)
+      if (!res.model && require_model)
       {
         throw elle::Error(
           elle::sprintf("this device is not yet linked to the network \"%s\" "
