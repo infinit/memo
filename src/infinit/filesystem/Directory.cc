@@ -823,21 +823,24 @@ namespace infinit
       {
         std::string value = key.substr(strlen("user.infinit.group.list."));
         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-        model::doughnut::Group g(*dn, value);
-        elle::json::Object o;
-        auto members = g.list_members();
-        elle::json::Array v;
-        for (auto const& m: members)
-          v.push_back(m->name());
-        o["members"] = v;
-        members = g.list_admins();
-        elle::json::Array va;
-        for (auto const& m: members)
-          va.push_back(m->name());
-        o["admins"] = va;
-        std::stringstream ss;
-        elle::json::write(ss, o, true);
-        return ss.str();
+        return umbrella([&]
+          {
+            model::doughnut::Group g(*dn, value);
+            elle::json::Object o;
+            auto members = g.list_members();
+            elle::json::Array v;
+            for (auto const& m: members)
+              v.push_back(m->name());
+            o["members"] = v;
+            members = g.list_admins();
+            elle::json::Array va;
+            for (auto const& m: members)
+              va.push_back(m->name());
+            o["admins"] = va;
+            std::stringstream ss;
+            elle::json::write(ss, o, true);
+            return ss.str();
+          });
       }
       else
         return Node::getxattr(key);
