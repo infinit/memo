@@ -713,7 +713,7 @@ namespace infinit
           _commit({OperationType::remove, value}, true);
         }
       }
-      else if (name == "user.infinit.group.make")
+      else if (name == "user.infinit.group.create")
       {
         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
         model::doughnut::Group g(*dn, value);
