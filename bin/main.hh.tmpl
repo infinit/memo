@@ -726,6 +726,7 @@ namespace infinit
       , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
+      , version(s.deserialize<elle::Version>("version"))
     {
       check_name(this->name);
     }
