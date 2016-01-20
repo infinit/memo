@@ -18,6 +18,9 @@ namespace crash_reporting
     void
     upload_existing();
 
+    int32_t
+    crashes_pending_upload();
+
   private:
     boost::filesystem::path
     _get_dump_path();

@@ -99,6 +99,23 @@ namespace crash_reporting
       ELLE_WARN("unable to remove crash dump (%s): %s", path, erc.message());
   }
 
+  int32_t
+  CrashReporter::crashes_pending_upload()
+  {
+    int32_t res = 0;
+    namespace fs = boost::filesystem;
+    for (fs::directory_iterator it(this->_dump_path);
+         it != fs::directory_iterator();
+         ++it)
+    {
+      if (_is_crash_report(it->path()))
+        res++;
+    }
+    ELLE_DEBUG("%s: %s %s awaiting upload",
+               *this, res, (res == 1 ? "crash" : "crashes"));
+    return res;
+  }
+
   void
   CrashReporter::upload_existing()
   {
