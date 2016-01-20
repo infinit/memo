@@ -21,12 +21,13 @@ namespace infinit
       : _version(version ? *version : default_version)
     {
       ELLE_TRACE("%s: compatibility version %s", *this, this->_version);
-      static elle::Version const version = elle::Version(
+      static elle::Version const current_version = elle::Version(
         INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
-      if (this->_version > version)
+      if (this->_version > current_version)
         throw elle::Error(
-          "compatibility version %s is too recent for infinit version %s",
-          this->_version, version);
+          elle::sprintf(
+            "compatibility version %s is too recent for infinit version %s",
+            this->_version, current_version));
     }
 
     template <>
