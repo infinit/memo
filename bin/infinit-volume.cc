@@ -311,10 +311,11 @@ COMMAND(run)
   if (fetch)
     beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
+  auto compatibility = optional(args, "compatibility-version");
   auto model = network.run(
     eps, true,
     cache, cache_size, cache_ttl, cache_invalidation,
-    flag(args, "async"));
+    flag(args, "async"), compatibility_version);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();

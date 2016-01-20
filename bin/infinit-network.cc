@@ -323,7 +323,9 @@ COMMAND(link_)
       self.keypair(),
       std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
       std::move(passport),
-      self.name));
+      self.name,
+      boost::optional<int>(),
+      desc.version));
   ifnt.network_save(network, true);
   report_action("linked", "device to network", network.name);
 }
@@ -397,7 +399,7 @@ COMMAND(run)
     cache = true;
   auto dht =
     network.run(eps, false, cache, cache_size, cache_ttl, cache_invalidation,
-                flag(args, "async"));
+                flag(args, "async"), compatibility_version);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
             && dht->local()->storage();

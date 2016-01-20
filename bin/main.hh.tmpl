@@ -58,7 +58,9 @@ beyond(bool help = false)
   return res;
 }
 
-static elle::Version version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+static const elle::Version version(
+  INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+static boost::optional<elle::Version> compatibility_version;
 
 class CommandLineError
   : public elle::Error
@@ -378,7 +380,8 @@ namespace infinit
             misc.add_options()
               ("help,h", "display the help")
               ("script,s", "silence all extraneous human friendly messages")
-              ("force-version,f", value<std::string>(), "force used version")
+              ("compatibility-version,f", value<std::string>(),
+               "force compatibility version")
               ("version,v", "display version")
             ;
             if (!disable_as_arg || !disable_as_arg.get())
@@ -398,12 +401,12 @@ namespace infinit
               auto parsed = parser.run();
               store(parsed, vm);
               notify(vm);
-              if (vm.count("force-version"))
-                version = elle::Version::from_string(
-                  vm["force-version"].as<std::string>());
+              if (vm.count("compatibility-version"))
+                compatibility_version = elle::Version::from_string(
+                  vm["compatibility-version"].as<std::string>());
               if (vm.count("version"))
               {
-                std::cout << version << std::endl;
+                std::cout << INFINIT_VERSION << std::endl;
                 throw elle::Exit(0);
               }
               bool help = vm.count("help");
@@ -661,13 +664,14 @@ namespace infinit
       s.serialize("consensus", this->consensus);
       s.serialize("overlay", this->overlay);
       s.serialize("owner", this->owner);
+      s.serialize("version", this->version);
     }
 
     std::string name;
     std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
     std::unique_ptr<overlay::Configuration> overlay;
     cryptography::rsa::PublicKey owner;
-    int replication_factor;
+    elle::Version version;
   };
 }
 
@@ -718,23 +722,25 @@ namespace infinit
         boost::optional<int> cache_size = {},
         boost::optional<int> cache_ttl = {},
         boost::optional<int> cache_invalidation = {},
-        bool async_writes = false)
+        bool async_writes = false,
+        boost::optional<elle::Version> version = {})
     {
+      ELLE_LOG("client version: %s", INFINIT_VERSION);
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
         hosts,
         client,
         p,
-        version,
         async_writes,
         cache,
         cache_size,
         cache_ttl
-          ? std::chrono::seconds(cache_ttl.get())
-          : boost::optional<std::chrono::seconds>(),
+        ? std::chrono::seconds(cache_ttl.get())
+        : boost::optional<std::chrono::seconds>(),
         cache_invalidation
-          ? std::chrono::seconds(cache_invalidation.get())
-          : boost::optional<std::chrono::seconds>());
+        ? std::chrono::seconds(cache_invalidation.get())
+        : boost::optional<std::chrono::seconds>(),
+        std::move(version));
     }
 
     inline

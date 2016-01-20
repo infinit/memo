@@ -204,9 +204,12 @@ main(int argc, char** argv)
 {
   options_description services_options("Services");
   services_options.add_options()
+    ("aws", "Amazon Web Services account credentials")
+    ;
+  options_description hidden_service_options("Hidden credential types");
+  hidden_service_options.add_options()
     ("dropbox", "Dropbox account credentials")
     ("google", "Google account credentials")
-    ("aws", "Amazon Web Services account credentials")
     ;
   options_description aws_options("AWS account options");
   aws_options.add_options()
@@ -221,6 +224,8 @@ main(int argc, char** argv)
       "SERVICE",
       {},
       {services_options, aws_options},
+      {},
+      {hidden_service_options},
     },
     {
       "fetch",
@@ -229,6 +234,8 @@ main(int argc, char** argv)
       "[SERVICE]",
       {},
       {services_options},
+      {},
+      {hidden_service_options},
     },
     {
       "list",
@@ -237,6 +244,8 @@ main(int argc, char** argv)
       "[SERVICE]",
       {},
       {services_options},
+      {},
+      {hidden_service_options},
     },
   };
   return infinit::main("Infinit third-party credentials utility",

@@ -465,10 +465,11 @@ class PairingInformation(metaclass = Entity,
 class Network(metaclass = Entity,
               insert = 'network_insert',
               update = 'network_update',
-              fields = fields('name', 'owner', 'consensus', 'overlay',
-                              passports = {},
-                              endpoints = {},
-                              storages = {})):
+              fields = fields(
+                'name', 'owner', 'consensus', 'overlay', 'version',
+                passports = {},
+                endpoints = {},
+                storages = {})):
 
   @property
   def id(self):

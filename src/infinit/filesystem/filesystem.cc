@@ -221,7 +221,7 @@ namespace infinit
       {
         try
         {
-          ELLE_DEBUG_SCOPE("fetch root boostrap block at %x", addr);
+          ELLE_DEBUG_SCOPE("fetch root bootstrap block at %x", addr);
           auto block = _block_store->fetch(addr);
           addr = Address::from_string(block->data().string().substr(2));
           break;

@@ -215,6 +215,11 @@ namespace infinit
                     ELLE_DUMP("drop removed block");
                     this->_cache.erase(address);
                   }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_TRACE("Fetch error on %x: %s", address, e);
+                    this->_cache.erase(address);
+                  }
                 }
                 else
                   break;

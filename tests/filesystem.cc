@@ -462,6 +462,8 @@ run_filesystem_dht(std::string const& store,
           }
           overlay["peers"] = v;
           model["overlay"] = std::move(overlay);
+          model["version"] =
+            elle::sprintf("%s.%s", INFINIT_MAJOR, INFINIT_MINOR);
         }
         r["model"] = model;
         std::string kps;
