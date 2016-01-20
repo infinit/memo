@@ -76,16 +76,38 @@ namespace infinit
       void utimens(const struct timespec tv[2]) override;
       void truncate(off_t new_size) override THROW_ISDIR;
       std::shared_ptr<rfs::Path> child(std::string const& name) override;
-      std::string getxattr(std::string const& key) override;
-      std::vector<std::string> listxattr() override;
-      void setxattr(std::string const& name, std::string const& value, int flags) override;
-      void removexattr(std::string const& name) override;
+
+    /*--------------------.
+    | Extended attributes |
+    `--------------------*/
+    public:
+      virtual
+      std::string
+      getxattr(std::string const& key) override;
+      virtual
+      void
+      setxattr(std::string const& name,
+               std::string const& value,
+               int flags) override;
+      virtual
+      std::vector<std::string>
+      listxattr() override;
+      virtual
+      void
+      removexattr(std::string const& name) override;
+
+    public:
       void cache_stats(CacheStats& append);
       void serialize(elle::serialization::Serializer&);
       bool allow_cache() override { return true;}
+
+    /*----------.
+    | Printable |
+    `----------*/
+    public:
       virtual
-        void
-        print(std::ostream& stream) const override;
+      void
+      print(std::ostream& stream) const override;
 
     private:
       void _fetch() override;
