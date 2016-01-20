@@ -53,7 +53,7 @@ namespace infinit
     std::string
     beyond()
     {
-      auto static const res = elle::os::getenv("INFINIT_BEYOND", "${beyond_host}");
+      auto static const res = elle::os::getenv("INFINIT_BEYOND", "https://beyond.infinit.io");
       return res;
     }
 
