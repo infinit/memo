@@ -19,8 +19,8 @@ templates = {
     'noop': 'Drive/Invitation',
     'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
   },
-  'Internal/CrashReport': {
-    'noop': 'Internal/CrashReport',
+  'Internal/Crash Report': {
+    'noop': 'Internal/Crash Report',
     'swu': 'tem_fu5GEE6jxByj2SB4zM6CrH',
   },
   'User/Welcome': {
@@ -187,11 +187,12 @@ class Beyond:
     variables = None
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
+      # Need to use .txt extension as otherwise SWU destroy the file.
       with open('%s/client.txt' % temp_dir, 'wb') as crash_dump:
         crash_dump.write(data.getvalue())
       with open('%s/client.txt' % temp_dir, 'rb') as crash_dump:
         self.__emailer.send_one(
-          template = self.template('Internal/CrashReport'),
+          template = self.template('Internal/Crash Report'),
           recipient_email = 'developers@infinit.io',
           recipient_name = 'Developers',
           variables = variables,
