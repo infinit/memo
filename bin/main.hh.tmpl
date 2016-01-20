@@ -705,6 +705,7 @@ namespace infinit
         bool async_writes = false,
         boost::optional<elle::Version> version = {})
     {
+      ELLE_LOG("client version: %s", INFINIT_VERSION);
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
         hosts,
