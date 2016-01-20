@@ -754,9 +754,17 @@ namespace infinit
         }
         else if (special->find("group.") == 0)
         {
-          special = special->substr(6);
           auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
             this->_owner.block_store());
+          if (dht->version() < elle::Version(0, 4, 0))
+          {
+            ELLE_WARN(
+              "drop group operation as network version %s is too old "
+              "(groups are available from 0.4.0)",
+              dht->version());
+            THROW_NOSYS;
+          }
+          special = special->substr(6);
           if (*special == "create")
           {
             model::doughnut::Group g(*dht, value);
