@@ -11,7 +11,7 @@ infinit::Infinit ifnt;
 
 static std::string _pair_salt = "5_C+m$:1Ex";
 
-using namespace boost::program_options;
+using boost::program_options::variables_map;
 
 std::string
 pairing_passphrase(variables_map const& args)
@@ -203,7 +203,9 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  boost::program_options::option_description option_passphrase = {
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionDescription option_passphrase = {
     "passphrase", value<std::string>(),
     "passphrase to secure identity (default: prompt for passphrase)"
   };

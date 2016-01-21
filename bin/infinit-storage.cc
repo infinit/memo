@@ -20,10 +20,7 @@ ELLE_LOG_COMPONENT("infinit-storage");
 
 #include <main.hh>
 
-using namespace boost::program_options;
-
 infinit::Infinit ifnt;
-
 
 static
 int64_t
@@ -240,36 +237,39 @@ COMMAND(delete_)
 int
 main(int argc, char** argv)
 {
-  options_description storage_types("Storage types");
+  program = argv[0];
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
     ("s3", "store data in using Amazon S3")
     ;
-  options_description hidden_storage_types("Hidden storage types");
+  Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
     ("dropbox", "store data in a Dropbox")
     ("google", "store data in a Google Drive")
     ;
-  options_description fs_storage_options("Filesystem storage options");
+  Mode::OptionsDescription fs_storage_options("Filesystem storage options");
   fs_storage_options.add_options()
     ("path", value<std::string>(), elle::sprintf(
       "where to store blocks (default: %s)",
       (infinit::root_dir() / "blocks/<name>")).c_str())
     ;
-  options_description google_storage_options("Google storage options");
+  Mode::OptionsDescription google_storage_options("Google storage options");
   google_storage_options.add_options()
     ("google-account", value<std::string>(), "Google account to use")
     ("root", value<std::string>(),
       "where to store blocks in gdrive (default: .infinit)")
     ;
-  options_description dropbox_storage_options("Dropbox storage options");
+  Mode::OptionsDescription dropbox_storage_options("Dropbox storage options");
   dropbox_storage_options.add_options()
     ("dropbox-account", value<std::string>(), "Dropbox account to use")
     ("root", value<std::string>(),
       "where to store blocks in Dropbox (default: .infinit)")
     ("token", value<std::string>(), "authentication token")
     ;
-  options_description s3_options("Amazon S3 storage options");
+  Mode::OptionsDescription s3_options("Amazon S3 storage options");
   s3_options.add_options()
     ("aws-account", value<std::string>(), "AWS account to use")
     ("region", value<std::string>(), "AWS region to use")
@@ -278,7 +278,6 @@ main(int argc, char** argv)
      "where to store blocks in the bucket (default: <name>_blocks)")
     ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
     ;
-  program = argv[0];
   Modes modes {
     {
       "create",

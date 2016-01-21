@@ -17,7 +17,7 @@ ELLE_LOG_COMPONENT("infinit-fsck");
 
 #include <main.hh>
 
-using namespace boost::program_options;
+using boost::program_options::variables_map;
 using infinit::model::Address;
 using infinit::model::MissingBlock;
 namespace ifs = infinit::filesystem;
@@ -32,7 +32,8 @@ struct BlockInfo
   bool accounted_for;
 };
 
-bool prompt(std::string const& what)
+bool
+prompt(std::string const& what)
 {
   std::cout << what << std::endl;
   while (true)
@@ -48,8 +49,9 @@ bool prompt(std::string const& what)
   }
 }
 
-void account_for(std::unordered_map<Address, BlockInfo>& blocks,
-                 Address addr, std::string const& info)
+void
+account_for(std::unordered_map<Address, BlockInfo>& blocks,
+            Address addr, std::string const& info)
 {
   auto it = blocks.find(addr);
   if (it == blocks.end())
@@ -61,8 +63,9 @@ void account_for(std::unordered_map<Address, BlockInfo>& blocks,
     it->second.accounted_for = true;
 }
 
-void fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
-          std::unordered_map<Address, BlockInfo>& blocks)
+void
+fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
+     std::unordered_map<Address, BlockInfo>& blocks)
 {
   typedef std::shared_ptr<reactor::filesystem::Path> PathPtr;
   // account for root block
@@ -347,7 +350,8 @@ void fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
 
 
 
-void check(variables_map const& args)
+void
+check(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
   auto blocklist_file = mandatory(args, "blocklist", "block list");
@@ -388,8 +392,12 @@ void check(variables_map const& args)
 }
 
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
+  program = argv[0];
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
   Modes modes {
     {
       "check",
@@ -400,7 +408,7 @@ int main(int argc, char** argv)
         { "name,n", value<std::string>(), "network name" },
         { "volume", value<std::string>(), "volume name" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
-            "peer to connect to (host:port)" },
+          "peer to connect to (host:port)" },
         { "async", bool_switch(), "use asynchronous operations" },
         option_cache,
         option_cache_size,
@@ -409,7 +417,8 @@ int main(int argc, char** argv)
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond()).c_str() },
         { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
-        {"blocklist,b", value<std::string>(), "file containing the list of block addresses"},
+        { "blocklist,b", value<std::string>(),
+          "file containing the list of block addresses" },
       },
     },
   };

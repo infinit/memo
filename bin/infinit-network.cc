@@ -16,8 +16,6 @@ ELLE_LOG_COMPONENT("infinit-network");
 
 #include <main.hh>
 
-using namespace boost::program_options;
-
 infinit::Infinit ifnt;
 
 static
@@ -477,25 +475,26 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-
-  options_description overlay_types_options("Overlay types");
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionsDescription overlay_types_options("Overlay types");
   overlay_types_options.add_options()
     ("kalimero", "use a Kalimero overlay network (default)")
     ("kelips", "use a Kelips overlay network")
     ("stonehenge", "use a Stonehenge overlay network")
     ("kademlia", "use a Kademlia overlay network")
     ;
-  options_description consensus_types_options("Consensus types");
+  Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
     ("paxos", "use Paxos consensus algorithm (default)")
     ("no-consensus", "use no consensus algorithm")
     ;
-  options_description stonehenge_options("Stonehenge options");
+  Mode::OptionsDescription stonehenge_options("Stonehenge options");
   stonehenge_options.add_options()
     ("peer", value<std::vector<std::string>>()->multitoken(),
      "hosts to connect to (host:port)")
     ;
-  options_description kelips_options("Kelips options");
+  Mode::OptionsDescription kelips_options("Kelips options");
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups (default: 1)")
@@ -504,7 +503,7 @@ main(int argc, char** argv)
     ("protocol", value<std::string>(),
       "RPC protocol to use: tcp,utp,all (default: all)")
     ;
-  options_description options("Infinit network utility");
+  Mode::OptionsDescription options("Infinit network utility");
   Modes modes {
     {
       "create",
@@ -513,7 +512,7 @@ main(int argc, char** argv)
       "--name NAME "
         "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
         "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
-        "[STORAGE...]",
+        "[--storage STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage", value<std::vector<std::string>>()->multitoken(),

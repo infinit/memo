@@ -2,8 +2,6 @@
 
 #include <elle/format/hexadecimal.hh>
 
-using namespace boost::program_options;
-
 void
 echo_mode(bool enable)
 {
@@ -44,7 +42,7 @@ read_passphrase(std::string const& prompt_text = "Passphrase")
 
 static
 std::string
-_password(variables_map const& args,
+_password(boost::program_options::variables_map const& args,
           std::string const& argument,
           std::string const& prompt_text = "Password")
 {

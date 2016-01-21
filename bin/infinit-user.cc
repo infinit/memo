@@ -12,9 +12,9 @@ ELLE_LOG_COMPONENT("infinit-user");
 
 infinit::Infinit ifnt;
 
-static std::string _hub_salt = "@a.Fl$4'x!";
+using boost::program_options::variables_map;
 
-using namespace boost::program_options;
+static std::string _hub_salt = "@a.Fl$4'x!";
 
 template <typename Super>
 struct UserView
@@ -410,18 +410,19 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  boost::program_options::option_description option_push_full =
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionDescription option_push_full =
     { "full", bool_switch(), "include private key in order "
       "to facilitate device pairing and fetching lost keys" };
-  boost::program_options::option_description option_push_password =
+  Mode::OptionDescription option_push_password =
     { "password", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Used with --full "
       "(default: prompt for password)", beyond(true)).c_str() };
-  boost::program_options::option_description option_fullname =
+  Mode::OptionDescription option_fullname =
     { "fullname", value<std::string>(), "user's fullname (optional)" };
-  boost::program_options::option_description option_avatar =
+  Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
-
   Modes modes {
     {
       "create",

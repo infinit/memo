@@ -509,12 +509,12 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
 }
 
 
-using namespace boost::program_options;
-
 infinit::Infinit ifnt;
 
+using boost::program_options::variables_map;
 
-void run(variables_map const& args)
+void
+run(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
@@ -544,6 +544,9 @@ void run(variables_map const& args)
 
 int main(int argc, char** argv)
 {
+  program = argv[0];
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
   Modes modes {
     {
       "run",

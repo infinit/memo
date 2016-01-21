@@ -5,8 +5,6 @@ ELLE_LOG_COMPONENT("infinit-credentials");
 
 #include <main.hh>
 
-using namespace boost::program_options;
-
 infinit::Infinit ifnt;
 
 static const boost::regex _aws_access_key_regex("[A-Z0-9]{20}");
@@ -79,7 +77,7 @@ struct Enabled
 };
 
 Enabled
-enabled(variables_map const& args)
+enabled(boost::program_options::variables_map const& args)
 {
   int aws = args.count("aws") ? 1 : 0;
   int dropbox = args.count("dropbox") ? 1 : 0;
@@ -202,20 +200,21 @@ COMMAND(list)
 int
 main(int argc, char** argv)
 {
-  options_description services_options("Services");
+  program = argv[0];
+  using boost::program_options::value;
+  Mode::OptionsDescription services_options("Services");
   services_options.add_options()
     ("aws", "Amazon Web Services account credentials")
     ;
-  options_description hidden_service_options("Hidden credential types");
+  Mode::OptionsDescription hidden_service_options("Hidden credential types");
   hidden_service_options.add_options()
     ("dropbox", "Dropbox account credentials")
     ("google", "Google account credentials")
     ;
-  options_description aws_options("AWS account options");
+  Mode::OptionsDescription aws_options("AWS account options");
   aws_options.add_options()
     ("account", value<std::string>(), "account name")
     ;
-  program = argv[0];
   Modes modes {
     {
       "add",

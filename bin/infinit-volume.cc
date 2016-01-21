@@ -22,13 +22,11 @@ ELLE_LOG_COMPONENT("infinit-volume");
 #include <main.hh>
 
 #ifdef INFINIT_WINDOWS
-#include <fcntl.h>
+# include <fcntl.h>
 #endif
 
-using namespace boost::program_options;
-options_description mode_options("Modes");
-
 infinit::Infinit ifnt;
+using boost::program_options::variables_map;
 
 static
 std::string
@@ -780,7 +778,9 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  std::vector<boost::program_options::option_description> options_run_mount = {
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  std::vector<Mode::OptionDescription> options_run_mount = {
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(),
       "where to mount the filesystem" },

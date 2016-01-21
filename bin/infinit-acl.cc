@@ -26,9 +26,6 @@ ELLE_LOG_COMPONENT("infinit-acl");
 
 infinit::Infinit ifnt;
 
-using namespace boost::program_options;
-options_description mode_options("Modes");
-
 static
 boost::filesystem::path
 file_xattrs_dir(std::string const& file)
@@ -368,6 +365,8 @@ COMMAND(group)
 int
 main(int argc, char** argv)
 {
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
   program = argv[0];
   Modes modes {
     {
@@ -406,7 +405,7 @@ main(int argc, char** argv)
       "group",
       "Group control",
       &group,
-      "[--user USERS] [OPTIONS...]",
+      "[--user USERS]",
       {
         { "name,n", value<std::string>(), "group name"},
         { "show,s", bool_switch(), "list group users and admins"},
