@@ -46,7 +46,7 @@
         <div class="header">
           <ul><li class="red"></li><li class="yellow"></li><li class="green"></li></ul>
         </div>
-<pre><code id="commands">$> infinit-storage --create --aws-s3 --name s3 --capacity 10TB
+<pre><code id="commands">$> infinit-storage --create --s3 --name s3 --capacity 10TB
 Created storage "s3".
 
 $> infinit-network --create --storage s3 --storage local --name hybrid-cloud
@@ -93,7 +93,7 @@ $> ​▎
 
       <div class="performance">
         <img src="${url('images/icons/rocket.png')}">
-        <h3>High Performance</h3>
+        <h3>Efficient</h3>
         <p>Benefit from a high-throughput network protocol for faster and on-demand data retrieval.</p>
       </div>
 
@@ -105,11 +105,11 @@ $> ​▎
 
       <div>
         <img src="${url('images/icons/globe.png')}">
-        <h3>Control</h3>
+        <h3>Flexible</h3>
         <p>Control your costs and the localisation of your data by selecting the storage resources &amp; providers involved in your infrastructure.</p>
       </div>
 
-      ## <div class="cta"><a class="button border black" href="${route('doc_overview')}">Learn More</a></div>
+      <div class="cta"><a class="button border black" href="${route('doc_overview')}">Learn More</a></div>
     </section>
   </div>
 
@@ -124,7 +124,7 @@ $> ​▎
       <p>Invite your non-tech-savvy colleagues to join drives you defined in your freshly created storage infrastructure.</p>
       <img src="${url('images/icons/platforms.png')}" alt="Available for Mac, Windows and Linux"><br>
 
-      ## <a class="button" href="#">Download for Mac</a>
+      <a class="button" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">Get Invitation</a>
     </div>
   </section>
 
@@ -150,13 +150,18 @@ $> ​▎
       <p>Provides a low-level virtual disk interface on top of the DHT, allowing for a hierarchical organization of files.</p>
     </div>
 
-    <!-- <a class="button border black" href="${route('doc_technology')}">More about our technology</a> -->
+    <a class="button border black" href="${route('doc_technology')}">More about our technology</a>
   </section>
 
 
   <section class="download" id="download">
     <p class="title">Start using Infinit now</p>
+    <p class="subtitle">Create your first infrastructure in a few minutes</p>
 
+    <a class="button big" href="${route('doc_get_started')}">Get Started</a>
+    <br><br><br><br><br><br>
+
+    <!--
     <div>
       <img src="${url('images/terminal-mini.png')}">
       <h4>Storage Infrastructure</h4>
@@ -178,6 +183,7 @@ $> ​▎
       <p>Integrate a pre-build branded cloud file storage service that will increase engagement and create a new revenue stream.</p>
       <a href="${route('solutions')}" class="button">Browse Solutions</a>
     </div>
+    -->
   </section>
 
   <section class="estimation">

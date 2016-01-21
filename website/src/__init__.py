@@ -51,6 +51,14 @@ class Website(bottle.Bottle):
       'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
+  @route('/faq', name = 'doc_faq')
+  @view('pages/faq.html')
+  def root(self):
+    return {
+      'title': 'FAQ',
+      'description': 'Frequently Asked Questions about how to use our file system, how it compares to others and more.',
+    }
+
   @route('/get-started', name = 'doc_get_started')
   @view('pages/docs/get_started.html')
   def root(self):
@@ -129,6 +137,14 @@ class Website(bottle.Bottle):
     return {
       'title': 'Roadmap',
       'description': 'Discover the next developments of the Infinit platform.',
+    }
+
+  @route('/documentation/changelog', name = 'doc_changelog')
+  @view('pages/docs/changelog.html')
+  def root(self):
+    return {
+      'title': 'Change Log',
+      'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
   @route('/open-source', name = 'opensource')
@@ -231,3 +247,7 @@ class Website(bottle.Bottle):
   @route('/robots.txt')
   def file(self):
     return static_file('robots.txt')
+
+  @route('/sitemap.xml')
+  def file(self):
+    return static_file('sitemap.xml')
