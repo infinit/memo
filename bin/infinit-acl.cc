@@ -335,11 +335,14 @@ COMMAND(group)
   auto adm_add = optional<std::vector<std::string>>(args, "admin-add");
   auto adm_rem = optional<std::vector<std::string>>(args, "admin-remove");
   bool create = flag(args, "create");
+  bool del = flag(args, "delete");
   bool fallback = flag(args, "fallback-xattrs");
   bool list = flag(args, "show");
   std::string path = mandatory<std::string>(args, "path", "path to filesystem");
   if (create)
     check(port_setxattr, path, "user.infinit.group.make", g, fallback);
+  if (del)
+    check(port_setxattr, path, "user.infinit.group.delete", g, fallback);
   if (add) for (auto const& u: *add)
     check(port_setxattr, path, "user.infinit.group.add", g + ":" + u , fallback);
   if (rem) for (auto const& u: *rem)
@@ -410,6 +413,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "group name"},
         { "show,s", bool_switch(), "list group users and admins"},
         { "create,c", bool_switch(), "create the group"},
+        { "delete,d", bool_switch(), "delete the group"},
         { "add,a", value<std::vector<std::string>>(), "users to add to group" },
         { "remove,r", value<std::vector<std::string>>(), "users to remove from group" },
         { "admin-add,A", value<std::vector<std::string>>(), "admins to add to group" },

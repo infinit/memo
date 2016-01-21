@@ -719,6 +719,12 @@ namespace infinit
         model::doughnut::Group g(*dn, value);
         g.create();
       }
+      else if (name == "user.infinit.group.delete")
+      {
+        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+        model::doughnut::Group g(*dn, value);
+        g.destroy();
+      }
       else if (name == "user.infinit.group.add")
       {
         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
