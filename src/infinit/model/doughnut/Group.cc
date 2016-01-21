@@ -103,7 +103,7 @@ namespace infinit
           this->_dht.remove(uaddr);
           this->_dht.remove(ruaddr);
           this->_dht.remove(this->_block->address(), this->_block->sign_remove());
-        }
+        });
       }
 
       cryptography::rsa::PublicKey
