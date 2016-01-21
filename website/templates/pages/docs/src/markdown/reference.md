@@ -476,11 +476,13 @@ everything is
 Access Control List
 --------------------------
 
-Having joined a volume does not necessarily mean that you have the required permissions to browse the files and directories in it. As in most file system, in order to access, edit and even delete a file, its owner must first grant you the permission to do so.
+Having joined a volume does not necessarily mean that you have the required permissions to browse the files and directories in it. As in most file system, in order to access, edit and/or delete a file, its owner must first grant you the permission to do so.
 
 Unlike many file systems, Infinit provides advanced decentralized (i.e. without relying on a centralized server) access control mechanisms that allow any user to manage permissions on his/her files and directories.
 
-Note that being the owner of a volume automatically grants you access to its root directory. It is then your responsibility to manage the permissions on the root directory for other users to use the volume.
+Being the owner of a volume automatically grants you access to its root directory. It is then your responsibility to manage the permissions on the root directory for other users to use the volume.
+
+Note that most access control actions use POSIX mechanisms such as standard permissions and extended attributes. In particular, the `infinit-acl` can be considered as a wrapper on top of extended attributes.
 
 ### Grant/revoke access ###
 
@@ -496,23 +498,30 @@ _**NOTE:** The infinit-acl binary provides additional options to better manage h
 
 Once the command has been run, Bob will be able to read and write files/directories in the root directory of Alice's 'shared' volume.
 
-### ACL inheritance ###
+#### Inheritance ####
 
-ACL inheritance is a mechanism that sets the ACL of newly created files and directories to the ACL of their parent directory.
-
-It can be enabled or disabled on a per-directory basis using _infinit-acl_:
+ACL inheritance is a mechanism that sets the ACL of newly created files and directories to the ACL of their parent directory. It can be enabled or disabled on a per-directory basis using the `--enable-inherit` and `--disable-inherit` options:
 
 ```
 $> infint-acl --set --path /mnt/shared --enable-inherit
 ```
 
-If ACL inheritance is disabled, newly created files and directories can only be accessed by the creating user.
+If ACL inheritance is disabled, newly created files and directories can only be accessed by their owner. If enabled, all the ACLs set on the parent directory are copied to the new object, including the inheritance flag for directories.
 
-If enabled, all the ACLs set on the parent directory are copied to the new object, including the inheritance flag for directories.
+#### World-readability/writability ####
 
-<!-- ### World-readable and World-writable files ###
+By default, files and directories can only be read/written by users present in the object's ACLs. It is possible to flag a file/directory as world-readable (everyone can read it) or world-writable (everyone can modify it).
 
-By default, files and directories can only be read/written by users present in the object ACLs. It is possible to flag any file/directory as world-readable or world-writable by setting the _o+r_ and _o+w_ POSIX permission flags using _chmod_ (or any other mean). -->
+The _chmod_ UNIX binary must be used to that effect. The following example sets a file as world-readable before making it world-writable as well. One can notice that the `ls -l` command displays a file as world-readable/write through the _others_ category (the last three `rwx` indicators).
+
+```
+$> ls -l /mnt/shared/awesome.txt
+-rw-------  1 alice  users     14B Jan 20 16:55 awesome.txt
+$> chmod o+r /mnt/shared/awesome.txt
+-rw----r--  1 alice  users     14B Jan 20 16:55 awesome.txt
+$> chmod o+w /mnt/shared/awesome.txt
+-rw----rw-  1 alice  users     14B Jan 20 16:55 awesome.txt
+```
 
 ### List permissions ###
 
@@ -525,32 +534,72 @@ $> infinit-acl --list --path /mnt/shared/awesome.txt
      bob: r
 ```
 
-### ACLs and POSIX file mode ###
+#### POSIX mode ####
 
-Since the Infinit access model is ACL based, the POSIX file mode as displayed by _ls -l_ differs from what you might expect in the following ways:
+Since the Infinit access model is ACL based, the POSIX file mode as displayed by _ls -l_ differs from what you might expect:
+
+```
+$> ls -l /mnt/shared/
+total 64
+drwx------  1 alice  staff     0B Jan 20 17:15 Engineering
+-rw-------  1 alice  staff    14B Jan 20 16:59 awesome.txt
+```
+
+Indeed, one must take into account that:
 
 - User and group IDs are set to the user who mounted the file system if he/she has read or write access to the file. Otherwise they are set to root. Changing them (using _chown_) has no effect.
-- User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations will be permitted on the file. Changing those flags has no effect.
-- User execute access mode can be set or cleared and is preserved.
-- Group modes are irrelevant and set to 0.
-- Other read/write access mode can be set to make the object readable/writable for all.
+- User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations the user having mounted the file system is allowed to perform. Changing those flags has no effect.
+- User execute access mode can be set or cleared and is preserved. Noteworthy is that this protection is not ensured at the network level through cryptographic mechanisms as it is the case for read and write. Instead, a flag is just set to indicate that the file is 'executable'.
+- Group modes are irrelevant and set to zero.
+- Others read/write access mode can be set to make the object readable/writable for all. See <a href="#world-readability-writability">World-readability/writability</a> for more information.
 
-### Groups ###
+### Create a group ###
 
-Infinit supports a concept of groups similar to what you might expect. A group is identified by it's unique name, and can be created by any user. It stores a list of group members, that can be users and other groups. This member list can be modified only by the user who created the group.
+Infinit supports the concept of group i.e a collection of users. Such groups ease the process of access control management by allowing a user to re-reference groups of users it has previously created/used.
 
-```
-$> infinit-acl --group --create --name all .
-$> infinit-acl --group --name all --add bob .
-$> infinit-acl --group --create --name engineering .
-$> infinit-acl --group --name all --add @engineering .
-```
-
-
-Once created, a group can be added to any object's ACLs using _infinit-acl_, by prefixing an _@_ to the group name:
+A group is identified by it's unique name, and can be created by any user in the network. It stores a list of group members that can be users and other groups, leading to hierarchical groups. This member list can be modified only by the users managing the group, by default only the user who created it. Below is shown an example of group creation:
 
 ```
-$> infinit-acl --set --mode rw --user @all --path some_file
+$> infinit-acl --group --create --name marketing --path .
+```
+
+_**NOTE**: The `--path` option must be provided for the infinit-acl to know which volume, hence network, you want the group to be created in. You can use the `--path` option to reference the volume's mountpoint or any of its files/folders._
+
+From that point, it is very easy to display information on a group through the `--show` action:
+
+```
+$> infinit-acl --group --show --name marketing --path .
+{"admins":["alice"],"members":["@marketing","alice"]}
+```
+
+_**NOTE**: Since the `--path .` option is provided last, it could simply be replaced by `.`: `infinit-acl --group --show --name marketing .`._
+
+Once created, a group can be added to any object's ACLs using _infinit-acl --set_. The process is similar to granting access to a user except that the group name must be prefixed with an '@':
+
+```
+$> infinit-acl --set --mode rw --user @all --path /mnt/shared/awesome.txt
+```
+
+### Add/remove group members ###
+
+Any group administrator can add and remove members through the `--add` and `--remove` options. In the example below, Alice first adds Bob as a member of her Marketing group. Then, Alice creates a group named 'marketing/tokyo' and adds it to her Marketing group.
+
+```
+$> infinit-acl --group --name marketing --add bob --path .
+$> infinit-acl --group --create --name marketing/tokyo --path .
+$> infinit-acl --group --name marketing --add @marketing/tokyo --path .
+```
+
+_**NOTE**: One can notice that groups are referenced by prepending the '@' symbol to the group name._
+
+### Add/remove group administrators ###
+
+A group can be administered by multiple users at once, increasing the flexibility of the group concept a bit more. To add/remove administrator to a group, simply rely on the `--admin-add` and `--admin-remove` actions:
+
+```
+$> infinit-acl --group --name marketing --admin-add bob --path .
+$> infinit-acl --group --show --name marketing --path .
+{"admins":["alice","bob"],"members":["@marketing","alice","bob"]}
 ```
 
 Device
