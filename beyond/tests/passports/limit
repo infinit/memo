@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+limit = 5
+with Beyond(beyond_args = {'limits': {'networks': {'passports': 5}}}) as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      user = User()
+      user.put(beyond)
+      network = Network('infinit', owner = user)
+      network.put(beyond, owner = user)
+      # last_invitee = None
+      def put_passport():
+        invitee = User()
+        invitee.put(beyond)
+        passport = Passport(network, invitee)
+        passport.put(beyond)
+        beyond.get('networks/%s/passports/%s' % (
+          network['name'], invitee['name']),
+                   auth = invitee.private_key)
+        return invitee
+
+      for _ in range(limit):
+        last_invitee = put_passport()
+      # Check adding the (limit + 1)th fails.
+      throws(lambda: put_passport(), 402)
+      # Pull a passport.
+      beyond.delete('networks/%s/passports/%s' % (
+        network['name'], last_invitee['name']),
+                  auth = user.private_key)
+      # Check adding the (limit)th works.
+      put_passport()
+      # Check ading the (limit + 1 )th fails.
+      throws(lambda: put_passport(), 402)
+
+  if __name__ == '__main__':
+    unittest.main()

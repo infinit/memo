@@ -503,6 +503,12 @@ class Bottle(bottle.Bottle):
     json = bottle.request.json
     passport = Passport(self.__beyond, **json)
     network.passports[invitee] = passport.json()
+    limit = self.__beyond.limits.get('networks', {}).get('passports', None)
+    if limit and len(network.passports) > limit:
+      raise Response(402, {
+        'error': 'account/payment_required',
+        'reason': 'You can not store more than %s passports' % limit
+      })
     network.save()
     raise Response(201, {})
 

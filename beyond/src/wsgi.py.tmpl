@@ -36,5 +36,10 @@ beyond = infinit.beyond.Beyond(
   gcs_app_secret = ${repr(google_app_secret)},
   validate_email_address = False,
   sendwithus_api_key = sendwithus_api_key,
+  limits = {
+    'networks': {
+      'passports': 30
+    }
+  }
 )
 application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
