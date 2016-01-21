@@ -14,6 +14,7 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/Remote.hh>
+#include <infinit/model/doughnut/DummyPeer.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 #include <infinit/model/doughnut/OKB.hh>
@@ -157,6 +158,8 @@ namespace infinit
               else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
                 return remote->propose(
                   q, this->_address, p);
+              else if (dynamic_cast<DummyPeer*>(&member))
+                throw reactor::network::Exception("Peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", member);
             });
           }
@@ -176,6 +179,8 @@ namespace infinit
               else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
                 return remote->accept(
                   q, this->_address, p, value);
+              else if (dynamic_cast<DummyPeer*>(&member))
+                throw reactor::network::Exception("Peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", member);
             });
           }

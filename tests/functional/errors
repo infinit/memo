@@ -18,6 +18,7 @@ with Infinit() as infinit:
       'bbkzp6ilGh+wS14KR6sp948jURYD7qDtdiluI78mlajzhEADuyTQIDAQAB'
     },
     'replication_factor': 1,
+    'version': '0.0.0'
   }
   infinit.run(['infinit-user', '--create', '--name', 'user'])
   infinit.run(['infinit-network', '--import'], input = descriptor)

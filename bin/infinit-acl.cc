@@ -340,7 +340,7 @@ COMMAND(group)
   bool list = flag(args, "show");
   std::string path = mandatory<std::string>(args, "path", "path to filesystem");
   if (create)
-    check(port_setxattr, path, "user.infinit.group.make", g, fallback);
+    check(port_setxattr, path, "user.infinit.group.create", g, fallback);
   if (del)
     check(port_setxattr, path, "user.infinit.group.delete", g, fallback);
   if (add) for (auto const& u: *add)

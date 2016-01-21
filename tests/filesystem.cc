@@ -88,7 +88,7 @@ std::string getxattr_(bfs::path p, std::string const& name)
 
 static int group_create(bfs::path p, std::string const& name)
 {
-  return setxattr(p.c_str(), "user.infinit.group.make", name.c_str(), name.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.create", name.c_str(), name.size(), 0 SXA_EXTRA);
 }
 static int group_add(bfs::path p, std::string const& gname, std::string const& uname)
 {

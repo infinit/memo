@@ -143,8 +143,6 @@ namespace infinit
           elle::WeakBuffer(buffer.mutable_contents() + size1, size - size1),
           size - size1, offset + size1);
       }
-      // scroll offset so that offset 0 is first fat block
-      offset -= File::first_block_size;
       // multi case
       total_size = _owner->_header.size;
       block_size = _owner->_header.block_size;
@@ -153,12 +151,16 @@ namespace infinit
         ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
         return 0;
       }
+      ELLE_DEBUG("past eof check: o=%s, ts=%s, required=%s",
+                 offset, total_size, size);
       if (signed(offset + size) > total_size)
       {
         ELLE_DEBUG("read past size end, reducing size from %s to %s", size,
             total_size - offset);
         size = total_size - offset;
       }
+      // scroll offset so that offset 0 is first fat block
+      offset -= File::first_block_size;
       off_t end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
       _owner->_last_read_block = start_block;

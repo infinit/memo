@@ -341,6 +341,11 @@ namespace infinit
         std::unordered_map<std::string, elle::Buffer> _challenges;
         std::unordered_map<Address,
           std::vector<Node::Member>> _peer_cache;
+        // node_id -> (lookup_thread, lookup_success)
+        std::unordered_map<Address,
+          std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
+        std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>
+          _bootstraper_threads;
       };
     }
   }

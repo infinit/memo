@@ -4,6 +4,34 @@
 ## [Unreleased]
 
 
+## [0.4.0] - 2016-01-21
+
+Groups support.
+
+### Added
+
+- Support group ACL.
+- Add compatibility version to network configuration files.
+- Support reading when a minority of the quorum nodes are down.
+- Add `infinit-network --update` to change existing network attribute,
+  such as upgrading the compatibility version.
+
+### Changed
+
+- Overwrite network on the hub with `infinit-network --push`, to be
+  able to push local updates.
+- Overwrite local network with `infinit-network --fetch`, to be able
+  to retreive updates.
+
+### Fixed
+
+- Set permissions on journal directories to 700 as it can contain
+  private keys.
+- Fix S3 storage in case of HTTP redirections.
+- Fix SEGV on shutdown in some rare cases.
+- Fix SEGV with ipv6 interfaces.
+
+
 ## [0.3.7] - 2016-01-11
 
 Small improvements and fixes.
@@ -42,7 +70,7 @@ performance improvement and S3 storage support.
 
 ### Changed
 
-- Set permissions on user configuration files to 066 as some contain
+- Set permissions on user configuration files to 700 as some contain
   private keys.
 
 ### Fixed
