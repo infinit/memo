@@ -6,9 +6,9 @@ import subprocess
 arch, osyst, comp = os.environ['BUILDFARM_NAME'].split('-')
 
 os.chdir('%s' % os.environ['DIR_BUILD'])
-jobs = int(os.environ['JOBS'])
+jobs = os.environ['JOBS']
 if osyst == 'osx':
-  jobs = min(2, jobs)
-print('Running', ['python3', 'drake', '-j', str(jobs), '//check'])
-if subprocess.call(['python3', 'drake', '-j', str(jobs), '//check']) != 0:
+  jobs = str(int(int(jobs) / 2))
+print('Running', ['python3', 'drake', '-j', jobs, '//check'])
+if subprocess.call(['python3', 'drake', '-j', jobs, '//check']) != 0:
   exit(1)
