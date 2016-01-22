@@ -251,6 +251,13 @@ def configure(
         package.fullname]
       sources = package.nodes
       self.__status = status
+      import os
+      env = {
+        'PYTHONPATH': ':'.join(map(str, chain(
+          package.pythonpath,
+          (str(p.path().dirname()) for p in plugins)))),
+        'PATH': os.environ['PATH'],
+      }
       if conf is not None:
         command.append('--rcfile=%s' % conf.path())
         sources.append(conf)
@@ -265,11 +272,7 @@ def configure(
         command = command,
         pretty = 'Lint %s' % package.name,
         stdout = status,
-        environment = {
-          'PYTHONPATH': ':'.join(map(str, chain(
-            package.pythonpath,
-            (str(p.path().dirname()) for p in plugins))))
-        })
+        environment = env)
 
     def execute(self):
       res = super().execute()
