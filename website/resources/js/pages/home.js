@@ -20,7 +20,7 @@ $(document).ready(function() {
       '<ins>0.5</ins><ins>\nMounting volume "company". \n\n</ins>' +
       '<mark>$></mark> <ins>2</ins>'+
 
-      'cp -R Engineering /mnt/company/'+
+      'cp -R Engineering/ /mnt/company/'+
       '<ins>0.5</ins><ins>\n\n' +
 
       '<mark>$></mark> ',
