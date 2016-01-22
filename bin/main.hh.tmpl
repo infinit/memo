@@ -1482,6 +1482,25 @@ namespace infinit
       return elle::cast<OAuthCredentials>::runtime(res);
     }
 
+    void
+    credentials_gcs_add(std::unique_ptr<Credentials> a)
+    {
+      this->credentials_add("gcs", std::move(a));
+    }
+
+    std::vector<std::unique_ptr<Credentials>>
+    credentials_gcs() const
+    {
+      return this->credentials("gcs");
+    }
+
+    std::unique_ptr<OAuthCredentials, std::default_delete<infinit::Credentials>>
+    credentials_gcs(std::string const& uid) const
+    {
+      auto res = this->credentials("gcs", uid);
+      return elle::cast<OAuthCredentials>::runtime(res);
+    }
+
     boost::filesystem::path
     _credentials_path(std::string const& service) const
     {

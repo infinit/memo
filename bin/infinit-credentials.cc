@@ -50,6 +50,12 @@ COMMAND(add)
               << beyond() << "/users/" << user.name
               << "/google-oauth" << std::endl;
   }
+  else if (args.count("gcs"))
+  {
+    std::cout << "Register your Google account with infinit by visiting "
+              << beyond() << "/users/" << user.name
+              << "/gcs-oauth" << std::endl;
+  }
   else if (args.count("aws"))
   {
     auto account = mandatory(args, "account", "account name");
@@ -73,6 +79,7 @@ struct Enabled
   bool aws;
   bool dropbox;
   bool google;
+  bool gcs;
   bool multi;
 };
 
@@ -82,10 +89,11 @@ enabled(boost::program_options::variables_map const& args)
   int aws = args.count("aws") ? 1 : 0;
   int dropbox = args.count("dropbox") ? 1 : 0;
   int google = args.count("google") ? 1 : 0;
-  if (!aws && !dropbox && !google)
-    aws = dropbox = google = 1;
+  int gcs = args.count("gcs") ? 1 : 0;
+  if (!aws && !dropbox && !google && !gcs)
+    aws = dropbox = google = gcs = 1;
   return Enabled {
-    bool(aws), bool(dropbox), bool(google), aws + dropbox + google > 1 };
+    bool(aws), bool(dropbox), bool(google), bool(gcs), aws + dropbox + google > 1 };
 }
 
 template <typename T>
@@ -132,6 +140,11 @@ COMMAND(fetch)
       user, "google", "Google Drive",
       [] (std::unique_ptr<infinit::OAuthCredentials> a)
       { ifnt.credentials_google_add(std::move(a)); });
+  if (e.gcs)
+    fetch_credentials<infinit::OAuthCredentials>(
+      user, "gcs", "Google cloud storage",
+      [] (std::unique_ptr<infinit::OAuthCredentials> a)
+      { ifnt.credentials_gcs_add(std::move(a)); });
   // FIXME: remove deleted ones
 }
 
@@ -166,6 +179,8 @@ SYMBOL(dropbox);
 SYMBOL(credentials_dropbox);
 SYMBOL(google);
 SYMBOL(credentials_google);
+SYMBOL(gcs);
+SYMBOL(credentials_gcs);
 
 template <typename Service, typename Fetch>
 void
@@ -195,6 +210,7 @@ COMMAND(list)
   list_(e, s::aws, s::credentials_aws, "AWS");
   list_(e, s::dropbox, s::credentials_dropbox, "Dropbox");
   list_(e, s::google, s::credentials_google, "Google");
+  list_(e, s::gcs, s::credentials_gcs, "gcs");
 }
 
 int
@@ -205,6 +221,7 @@ main(int argc, char** argv)
   Mode::OptionsDescription services_options("Services");
   services_options.add_options()
     ("aws", "Amazon Web Services account credentials")
+    ("gcs", "Google cloud storage credentials")
     ;
   Mode::OptionsDescription hidden_service_options("Hidden credential types");
   hidden_service_options.add_options()

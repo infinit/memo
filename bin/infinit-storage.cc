@@ -13,6 +13,7 @@
 
 #include <infinit/storage/Dropbox.hh>
 #include <infinit/storage/Filesystem.hh>
+#include <infinit/storage/GCS.hh>
 #include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/S3.hh>
 
@@ -145,6 +146,19 @@ COMMAND(create)
        self_user(ifnt, {}).name,
        std::move(capacity));
   }
+  if (args.count("gcs"))
+  {
+    auto root = optional(args, "gcs-root");
+    if (!root)
+      root = name;
+    auto bucket = mandatory(args, "gcs-bucket");
+    auto account_name = mandatory(args, "gcs-account");
+    auto account = ifnt.credentials_google(account_name);
+    config =
+      elle::make_unique<infinit::storage::GCSConfig>
+      (name, bucket, *root, self_user(ifnt, {}).name, account->refresh_token,
+       std::move(capacity));
+  }
   if (args.count("s3"))
   {
     auto region = mandatory(args, "region", "AWS region");
@@ -244,6 +258,7 @@ main(int argc, char** argv)
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
     ("s3", "store data in using Amazon S3")
+    ("gcs", "store data in Google cloud storage")
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
@@ -261,6 +276,13 @@ main(int argc, char** argv)
     ("google-account", value<std::string>(), "Google account to use")
     ("root", value<std::string>(),
       "where to store blocks in gdrive (default: .infinit)")
+    ;
+  Mode::OptionsDescription  gcs_options("Google cloud storage options");
+  gcs_options.add_options()
+    ("gcs-account", value<std::string>(), "Google account to use")
+    ("gcs-root", value<std::string>(),
+      "where to store blocks in bucket (default: .infinit)")
+    ("gcs-bucket", value<std::string>(), "bucket name")
     ;
   Mode::OptionsDescription dropbox_storage_options("Dropbox storage options");
   dropbox_storage_options.add_options()
@@ -294,6 +316,7 @@ main(int argc, char** argv)
         storage_types,
         fs_storage_options,
         s3_options,
+        gcs_options,
       },
       {},
       {
