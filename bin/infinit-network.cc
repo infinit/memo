@@ -550,7 +550,6 @@ main(int argc, char** argv)
     ("protocol", value<std::string>(),
       "RPC protocol to use: tcp,utp,all (default: all)")
     ;
-  Mode::OptionsDescription options("Infinit network utility");
   Modes modes {
     {
       "create",
@@ -559,7 +558,7 @@ main(int argc, char** argv)
       "--name NAME "
         "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
         "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
-        "[--storage STORAGE...]",
+        "[--storage STORAGE...]"
         "[OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created network name" },
