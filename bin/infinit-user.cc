@@ -95,8 +95,7 @@ COMMAND(fetch)
           fetch_avatar(name);
         }
         catch (elle::Error const&)
-        {
-        }
+        {}
       }
     };
     try
@@ -246,7 +245,8 @@ COMMAND(push)
 COMMAND(pull)
 {
   auto self = self_user(ifnt, args);
-  beyond_delete("user", self.name, self);
+  auto user = get_name(args);
+  beyond_delete("user", user, self);
 }
 
 COMMAND(delete_)
@@ -254,6 +254,23 @@ COMMAND(delete_)
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   auto path = ifnt._user_path(user.name);
+  if (user.private_key && (!flag(args, "force") || script_mode))
+  {
+    std::string res;
+    {
+      std::cout << "WARNING: You will no longer be able to access data, "
+                << std::endl
+                << "WARNING: volumes or networks for this user." << std::endl
+                << "WARNING: The user's private key will be lost, you will not"
+                << std::endl
+                << "WARNING: be able to pull the user from " << beyond(true)
+                << "." << std::endl << std::endl
+                << "Confirm the name of the user you would like to delete: ";
+      std::getline(std::cin, res);
+    }
+    if (res != user.name)
+      throw CommandLineError("Aborting...");
+  }
   bool ok = boost::filesystem::remove(path);
   if (ok)
     report_action("deleted", "user", user.name, std::string("locally"));
@@ -494,6 +511,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to delete (default: system user)" },
+        { "force", bool_switch(), "delete the user without any prompt" },
       },
     },
     {
