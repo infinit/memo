@@ -39,24 +39,24 @@ Usage: infinit-user MODE [OPTIONS...]
 Infinit user utility:
 
 Modes:
-  --create                    Create a user
-  --export                    Export a user so that it may be imported
-                              elsewhere
-  --fetch                     Fetch a user from the Hub
-  --import                    Import a user
-  --pull                      Remove a user from the Hub
-  --delete                    Delete a user locally
-  --push                      Push a user to the Hub
-  --signup                    Create and push a user to the Hub
-  --login                     Log the user to the Hub
-  --list                      List users
+  --create                     Create a user
+  --export                     Export a user so that it may be imported
+                               elsewhere
+  --fetch                      Fetch a user from the Hub
+  --import                     Import a user
+  --pull                       Remove a user from the Hub
+  --delete                     Delete a user locally
+  --push                       Push a user to the Hub
+  --signup                     Create and push a user to the Hub
+  --login                      Log the user to the Hub
+  --list                       List users
 
 Miscellaneous:
-  -h [ --help ]                  display the help
-  -s [ --script ]                silence all extraneous human friendly messages
-  -f [ --compatability-version ] arg  force used version
-  -v [ --version ]               display version
-  -a [ --as ] arg                user to run commands as (default: system user)
+  -h [ --help ]                Display the help
+  -s [ --script ]              Silence all extraneous human friendly messages
+  --compatibility-version arg  Force compatibility version
+  -v [ --version ]             Display version
+  -a [ --as ] arg              User to run commands as (default: system user)
 ```
 
 While the help when invoking the `--create` shows the options associated with creating a user:
@@ -68,16 +68,16 @@ Usage: infinit-user --create [OPTIONS...]
 Create a user:
 
 Create options:
-  -n [ --name ] arg      user name (default: system user)
+  -n [ --name ] arg      User name (default: system user)
   -k [ --key ] arg       RSA key pair in PEM format - e.g. your SSH key
                          (default: generate key pair)
-  --push-user            push the user to the Hub
-  -p [ --push ]          alias for --push-user
-  --email arg            valid email address (mandatory when using --push-user)
-  --fullname arg         user's fullname (optional)
-  --full                 include private key in order to facilitate device
+  --push-user            Push the user to the Hub
+  -p [ --push ]          Alias for --push-user
+  --email arg            Valid email address (mandatory when using --push-user)
+  --fullname arg         User's fullname (optional)
+  --full                 Include private key in order to facilitate device
                          pairing and fetching lost keys
-  --password arg         password to authenticate with the Hub. Used with
+  --password arg         Password to authenticate with the Hub. Used with
                          --full (default: prompt for password)
 ```
 
