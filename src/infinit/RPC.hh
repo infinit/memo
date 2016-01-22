@@ -224,9 +224,8 @@ namespace infinit
         elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
     }
 
-    RPCServer(Doughnut* doughnut = nullptr, boost::optional<elle::Version> const& version = {})
-      : _doughnut(doughnut)
-      , _version(version)
+    RPCServer(boost::optional<elle::Version> version = {})
+      : _version(version)
     {
     }
     ~RPCServer()
@@ -346,7 +345,6 @@ namespace infinit
     elle::serialization::Context _context;
     boost::optional<elle::Version> _version;
     std::unique_ptr<infinit::cryptography::SecretKey> _key;
-    infinit::model::doughnut::Doughnut* _doughnut;
     boost::signals2::signal<void(RPCServer*)> _destroying;
 
   };

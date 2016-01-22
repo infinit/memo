@@ -265,7 +265,7 @@ namespace infinit
         auto stored_challenge = std::make_shared<elle::Buffer>();
         typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
 
-        auto auth_syn = [this, &rpcs, stored_challenge, stored_passport] (Passport const& p)
+        auto auth_syn = [this, &rpcs, stored_challenge] (Passport const& p)
           -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
