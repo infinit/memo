@@ -1,3 +1,7 @@
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
 #include <elle/bench.hh>
 #include <elle/log.hh>
 
@@ -90,7 +94,38 @@ namespace infinit
     std::vector<Key>
     GCS::_list()
     {
-      throw elle::Error("Not implemented");
+      auto url = elle::sprintf(
+        "https://storage.googleapis.com/%s?prefix=%s", this->_bucket, this->_root);
+
+      std::vector<Key> result;
+      while (true)
+      {
+        auto r = this->_request(url, reactor::http::Method::GET, {});
+        using boost::property_tree::ptree;
+        ptree response;
+        read_xml(r, response);
+        for (auto const& base_element: response.get_child("ListBucketResult"))
+        {
+          if (base_element.first == "Contents")
+          {
+             std::string fname = base_element.second.get<std::string>("Key");
+             auto pos = fname.find("0x");
+             result.push_back(Key::from_string(fname.substr(pos+2)));
+          }
+        }
+        try
+        {
+          auto next = response.get<std::string>("NextMarker");
+          url = elle::sprintf(
+            "https://storage.googleapis.com/%s?prefix=%s&marker=%s",
+            this->_bucket, this->_root, next);
+        }
+        catch (std::exception const&)
+        {
+          break;
+        }
+      }
+      return result;
     }
 
     GCSConfig::GCSConfig(std::string const& name,
