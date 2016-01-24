@@ -14,6 +14,7 @@
 #include <infinit/storage/MissingKey.hh>
 #include <infinit/model/Address.hh>
 
+#include <elle/bench.hh>
 #include <elle/log.hh>
 #include <elle/factory.hh>
 
@@ -72,6 +73,11 @@ enum PacketType {
 #define SSH_FILEXFER_ATTR_EXTENDED      0x80000000
 
 ELLE_LOG_COMPONENT("infinit.fs.sftp");
+
+#define BENCH(name)                                      \
+  static elle::Bench bench("bench.sftp." name, 10000_sec); \
+  elle::Bench::BenchScope bs(bench)
+
 static std::unique_ptr<infinit::storage::Storage> make(std::vector<std::string> const& args)
 {
   return elle::make_unique<infinit::storage::SFTP>(args[0], args[1]);
@@ -399,6 +405,7 @@ namespace infinit
     elle::Buffer
     SFTP::_get(Key k) const
     {
+      BENCH("get");
       /*reactor::Lock lock(_sem);*/
       ELLE_TRACE("_get %x", k);
       std::string path = elle::sprintf("%s/%x", _path, k);
@@ -475,6 +482,7 @@ namespace infinit
     int
     SFTP::_erase(Key k)
     {
+      BENCH("erase");
       /*reactor::Lock lock(_sem);*/
       ELLE_TRACE("_erase %x", k);
       std::string path = elle::sprintf("%s/%x", _path, k);
@@ -496,6 +504,7 @@ namespace infinit
     int
     SFTP::_set(Key k, elle::Buffer const& value_, bool insert, bool update)
     {
+      BENCH("set");
       elle::Buffer value(value_.contents(), value_.size());
       /*reactor::Lock lock(_sem);*/
       ELLE_TRACE("_set %x of size %s", k, value.size());
@@ -601,8 +610,13 @@ namespace infinit
     }
 
     SFTPStorageConfig::
-      SFTPStorageConfig(std::string name, int64_t capacity)
+      SFTPStorageConfig(std::string const& name,
+                        std::string const& host,
+                        std::string const& path,
+                        boost::optional<int64_t> capacity)
       : StorageConfig(std::move(name), std::move(capacity))
+      , host(host)
+      , path(path)
     {}
 
     SFTPStorageConfig::

@@ -16,6 +16,7 @@
 #include <infinit/storage/GCS.hh>
 #include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/S3.hh>
+#include <infinit/storage/sftp.hh>
 
 ELLE_LOG_COMPONENT("infinit-storage");
 
@@ -177,6 +178,13 @@ COMMAND(create)
       flag(args, "reduced-redundancy"),
       std::move(capacity));
   }
+  if (args.count("ssh"))
+  {
+    auto host = mandatory(args, "ssh-host", "SSH remote host");
+    auto path = mandatory(args, "ssh-path", "Remote path to store into");
+    config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
+      name, host, path, capacity);
+  }
   if (!config)
     throw CommandLineError("storage type unspecified");
   if (args.count("output"))
@@ -259,6 +267,7 @@ main(int argc, char** argv)
     ("filesystem", "store data on a local filesystem")
     ("s3", "store data in using Amazon S3")
     ("gcs", "store data in Google cloud storage")
+    ("ssh", "store data over SSH")
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
@@ -300,6 +309,11 @@ main(int argc, char** argv)
      "where to store blocks in the bucket (default: <name>_blocks)")
     ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
     ;
+  Mode::OptionsDescription ssh_storage_options("SSH storage options");
+  ssh_storage_options.add_options()
+    ("ssh-host", value<std::string>(), "hostname to connect to")
+    ("ssh-path", value<std::string>(), "remote path to store blocks into")
+    ;
   Modes modes {
     {
       "create",
@@ -317,6 +331,7 @@ main(int argc, char** argv)
         fs_storage_options,
         s3_options,
         gcs_options,
+        ssh_storage_options,
       },
       {},
       {
