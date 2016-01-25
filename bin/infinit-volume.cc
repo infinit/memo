@@ -10,10 +10,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
-# if defined(__GNUC__) && !defined(__clang__)
-#  undef __OSX_AVAILABLE_STARTING
-#  define __OSX_AVAILABLE_STARTING(A, B)
-# endif
+# include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
 
@@ -327,8 +324,7 @@ COMMAND(run)
     {
       ELLE_DEBUG("Connect callback to log storage stat");
       model->local()->storage()->register_notifier([&] {
-        network.notify_storage(self,
-                               node_id);
+        network.notify_storage(self, node_id);
       });
 
       {
@@ -338,8 +334,7 @@ COMMAND(run)
             ELLE_LOG_COMPONENT("infinit-volume");
             ELLE_DEBUG(
               "Hourly notification to beyond with storage usage (periodic)");
-                network.notify_storage(self,
-                                       node_id);
+                network.notify_storage(self, node_id);
                 reactor::wait(updater, 60_min);
           }
         });
