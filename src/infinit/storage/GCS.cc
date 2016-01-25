@@ -18,7 +18,7 @@
 ELLE_LOG_COMPONENT("infinit.storage.GCS");
 
 
-#define BENCH(name)                                      \
+#define BENCH(name)                                       \
   static elle::Bench bench("bench.gcs." name, 10000_sec); \
   elle::Bench::BenchScope bs(bench)
 
@@ -37,14 +37,13 @@ namespace infinit
     }
 
     GCS::GCS(std::string const& name,
-          std::string const& bucket,
-          std::string const& root,
-          std::string const& refresh_token)
-    : GoogleAPI(name, refresh_token)
-    , _bucket(bucket)
-    , _root(root.empty() ? std::string(".infinit-storage") : root)
-    {
-    }
+             std::string const& bucket,
+             std::string const& root,
+             std::string const& refresh_token)
+      : GoogleAPI(name, refresh_token)
+      , _bucket(bucket)
+      , _root(root.empty() ? std::string(".infinit-storage") : root)
+    {}
 
     elle::Buffer
     GCS::_get(Key key) const
@@ -53,7 +52,10 @@ namespace infinit
       ELLE_DEBUG("get %x", key);
       std::string url = this->_url(key);
       auto r = this->_request(url,
-                              reactor::http::Method::GET, {}, {}, {StatusCode::Not_Found});
+                              reactor::http::Method::GET,
+                              reactor::http::Request::QueryDict(),
+                              {},
+                              {StatusCode::Not_Found});
       if (r.status() == StatusCode::Not_Found)
         throw MissingKey(key);
       else if (r.status() == StatusCode::OK)
@@ -65,6 +67,7 @@ namespace infinit
       else
         elle::unreachable();
     }
+
     int
     GCS::_set(Key key,
               elle::Buffer const& value,
@@ -76,9 +79,13 @@ namespace infinit
       std::string url = this->_url(key);
       auto r = this->_request(url,
                               reactor::http::Method::PUT,
-                              {}, {}, {}, value);
+                              reactor::http::Request::QueryDict(),
+                              {},
+                              {},
+                              value);
       return value.size();
     }
+
     int
     GCS::_erase(Key k)
     {
@@ -86,7 +93,9 @@ namespace infinit
       ELLE_DEBUG("erase %x", k);
       std::string url = this->_url(k);
       auto r = this->_request(url,
-                              reactor::http::Method::DELETE, {}, {},
+                              reactor::http::Method::DELETE,
+                              reactor::http::Request::QueryDict(),
+                              {},
                               {StatusCode::No_Content, StatusCode::Not_Found});
       return 0;
     }
@@ -94,13 +103,14 @@ namespace infinit
     std::vector<Key>
     GCS::_list()
     {
-      auto url = elle::sprintf(
-        "https://storage.googleapis.com/%s?prefix=%s", this->_bucket, this->_root);
-
+      auto url = elle::sprintf("https://storage.googleapis.com/%s?prefix=%s",
+                               this->_bucket, this->_root);
       std::vector<Key> result;
       while (true)
       {
-        auto r = this->_request(url, reactor::http::Method::GET, {});
+        auto r = this->_request(url,
+                                reactor::http::Method::GET,
+                                reactor::http::Request::QueryDict());
         using boost::property_tree::ptree;
         ptree response;
         read_xml(r, response);
@@ -141,12 +151,12 @@ namespace infinit
       , user_name(user_name)
     {}
 
-    GCSConfig::GCSConfig(
-        elle::serialization::SerializerIn& input)
+    GCSConfig::GCSConfig(elle::serialization::SerializerIn& input)
       : StorageConfig()
     {
       this->serialize(input);
     }
+
     void
     GCSConfig::serialize(elle::serialization::Serializer& s)
     {
@@ -161,11 +171,10 @@ namespace infinit
     GCSConfig::make()
     {
       return elle::make_unique<infinit::storage::GCS>(
-            this->user_name, this->bucket, this->root, this->refresh_token);
+        this->user_name, this->bucket, this->root, this->refresh_token);
     }
 
     static const elle::serialization::Hierarchy<StorageConfig>::
-    Register<GCSConfig> _register_GCSConfig(
-      "gcs");
+    Register<GCSConfig> _register_GCSConfig("gcs");
   }
 }
