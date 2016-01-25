@@ -73,13 +73,14 @@ def configure(
     'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/reference.md',
   )
-  changelog = drake.Node(
+  changelog = drake.node(
     'ChangeLog.html',
   )
   drake.markdown.Renderer(
     source = drake.Node('../ChangeLog'),
     target = changelog
   )
+
   class CopyAndCleanup(drake.Copy):
 
     def __init__(self, source, to, post_process):
@@ -105,15 +106,17 @@ def configure(
     def hash(self):
       return self.__replacements
 
-  def generate(nodes):
+  def copy_generated_pages(nodes):
     return drake.copy(
-      drake.nodes(*[m.path(True).with_extension('html') for m in nodes]),
+      nodes,
       'templates/pages/docs/generated',
       strip_prefix = True,
       builder = CopyAndCleanup
     )
 
-  generated = generate(markdown) + generate([changelog])
+  generated = copy_generated_pages(
+    drake.nodes(*[m.path(True).with_extension('html') for m in markdown])
+  ) + copy_generated_pages([changelog])
   templates = drake.nodes(
     'templates/base.html',
     'templates/pages/home.html',
@@ -302,6 +305,7 @@ def configure(
   else:
     python_version = '%s.%s' % sys.version_ivnfo[:2]
   python_prefix = drake.Path('lib/python%s' % python_version)
+
   def copy_sources(where, how = drake.copy):
     where = drake.Path(where) / python_prefix
     for node in how(sources,
