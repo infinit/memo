@@ -27,6 +27,7 @@ ELLE_LOG_COMPONENT("infinit-acl");
 infinit::Infinit ifnt;
 
 static const char admin_prefix = '^';
+static const char group_prefix = '@';
 
 static
 boost::filesystem::path
@@ -361,12 +362,22 @@ collate_users(OptVecStr const& combined,
   if (admins)
   {
     for (auto a: admins.get())
-      res.push_back(elle::sprintf("%s%s", admin_prefix, a));
+    {
+      if (a[0] == admin_prefix)
+        res.push_back(a);
+      else
+        res.push_back(elle::sprintf("%s%s", admin_prefix, a));
+    }
   }
   if (groups)
   {
     for (auto g: groups.get())
-      res.push_back(elle::sprintf("@%s", g));
+    {
+      if (g[0] == group_prefix)
+        res.push_back(g);
+      else
+        res.push_back(elle::sprintf("%s%s", group_prefix, g));
+    }
   }
   return res;
 }
@@ -437,7 +448,7 @@ COMMAND(group)
       }
       catch (elle::Error const& e)
       {
-        std::string type = obj[0] == '@' ? "group" : "user";
+        std::string type = obj[0] == group_prefix ? "group" : "user";
         throw elle::Error(elle::sprintf(
           "ensure that %s \"%s\" exists and path is in a volume", type, obj));
       }
@@ -454,7 +465,7 @@ COMMAND(group)
       }
       catch (elle::Error const& e)
       {
-        std::string type = obj[0] == '@' ? "group" : "user";
+        std::string type = obj[0] == group_prefix ? "group" : "user";
         throw elle::Error(elle::sprintf(
           "ensure that %s \"%s\" exists and path is in a volume", type, obj));
       }
@@ -509,8 +520,8 @@ main(int argc, char** argv)
       "--path PATHS [--user USERS]",
       {
         { "path,p", value<std::vector<std::string>>(), "paths" },
-        { "user,u", value<std::vector<std::string>>(),
-          "users and groups (prefix: @<group>)" },
+        { "user,u", value<std::vector<std::string>>(), elle::sprintf(
+          "users and groups (prefix: %s<group>)", group_prefix) },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
           "new files/folders inherit from their parent directory" },
@@ -539,7 +550,7 @@ main(int argc, char** argv)
           "add groups to group" },
         { "add", value<std::vector<std::string>>(), elle::sprintf(
           "add users, administrators and groups to group "
-          "(prefix: @<group>, %s<admin>)", admin_prefix) },
+          "(prefix: %s<group>, %s<admin>)", group_prefix, admin_prefix) },
         { "remove-user", value<std::vector<std::string>>(),
           "remove users from group" },
         { "remove-admin", value<std::vector<std::string>>(),
@@ -548,7 +559,7 @@ main(int argc, char** argv)
           "remove groups from group" },
         { "remove", value<std::vector<std::string>>(), elle::sprintf(
           "remove users, administrators and groups from group "
-          "(prefix: @<group>, %s<admin>)", admin_prefix) },
+          "(prefix: %s<group>, %s<admin>)", group_prefix, admin_prefix) },
         { "path,p", value<std::string>(), "a path within the volume" },
         fallback_option,
         verbose_option,
