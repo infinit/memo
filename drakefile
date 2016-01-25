@@ -26,20 +26,24 @@ with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
 def configure(
-  cxx_toolkit = None,
-  cxx_config = drake.cxx.Config(),
-  production_build = False,
-  beyond_host = 'https://beyond.infinit.io',
-  boost = None,
-  prefix = '/usr',
-  valgrind = None,
-  valgrind_tests = False,
-  python = None,
-  fuse = None,
-  codesign = False,
-  beyond = True,
-  symbols_out_dir = None,
+    cxx_toolkit = None,
+    cxx_config = drake.cxx.Config(),
+    production_build = False,
+    beyond_host = 'https://beyond.infinit.io',
+    boost = None,
+    prefix = '/usr',
+    valgrind = None,
+    valgrind_tests = False,
+    python = None,
+    python3 = None, # Alias for python
+    fuse = None,
+    codesign = False,
+    beyond = True,
+    symbols_out_dir = None,
 ):
+
+  if python3 is not None:
+    python = python3
 
   global rule_build, rule_check, rule_install, rule_tests
   rule_build = drake.Rule('build')
@@ -705,7 +709,7 @@ def configure(
     if valgrind_tests:
       runner = drake.valgrind.ValgrindRunner(
         exe = test,
-        valgrind = valgrind,
+        valgrind = elle.valgrind,
         env = env)
     else:
       runner = drake.Runner(exe = test, env = env)
