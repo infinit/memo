@@ -905,7 +905,10 @@ def user_credentials_google_refresh(self, username):
           }
           res = requests.post(google_url, params=query)
           if res.status_code != 200:
-            raise HTTPError(status=400)
+            raise Response(res.status_code, {
+                'error': 'credentials refresh failure',
+                'reason': res.text
+            })
           else:
             token = res.json()['access_token']
             account['token'] = token
