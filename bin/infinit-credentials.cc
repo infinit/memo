@@ -58,7 +58,7 @@ COMMAND(add)
   }
   else if (args.count("aws"))
   {
-    auto account = mandatory(args, "account", "account name");
+    auto account = mandatory(args, "name", "account name");
     std::cout << "Please enter your AWS credentials" << std::endl;
     std::string access_key_id =
       read_key("Access Key ID", _aws_access_key_regex);
@@ -230,7 +230,7 @@ main(int argc, char** argv)
     ;
   Mode::OptionsDescription aws_options("AWS account options");
   aws_options.add_options()
-    ("account", value<std::string>(), "account name")
+    ("name", value<std::string>(), "account name")
     ;
   Modes modes {
     {
