@@ -312,12 +312,14 @@ namespace infinit
       {
         template<typename T>
         elle::Buffer
-        serialize(T const& packet)
+        serialize(T const& packet, model::doughnut::Doughnut* dn = nullptr)
         {
           ELLE_ASSERT(&packet);
           elle::Buffer buf;
           elle::IOStream stream(buf.ostreambuf());
           Serializer::SerializerOut output(stream, false);
+          if (dn)
+            elle::unconst(output.context()).set(dn);
           auto ptr = &(packet::Packet&)packet;
           output.serialize_forward(ptr);
           return buf;
@@ -1176,7 +1178,7 @@ namespace infinit
           || (!key.first && _config.accept_plain)
           )
         {
-          b = packet::serialize(p);
+          b = packet::serialize(p, this->doughnut());
           send_key_request = _config.encrypt && !is_crypto;
         }
         else
@@ -1198,7 +1200,7 @@ namespace infinit
               elle::Bench::BenchScope bs(decrypt);
               ep.encrypt(*key.first, p);
             }
-            b = packet::serialize(ep);
+            b = packet::serialize(ep, this->doughnut());
           }
         }
         if (send_key_request)
@@ -1276,6 +1278,7 @@ namespace infinit
         std::unique_ptr<packet::Packet> packet;
         elle::IOStream stream(buf.istreambuf());
         Serializer::SerializerIn input(stream, false);
+        elle::unconst(input.context()).set(this->doughnut());
         try
         {
           input.serialize_forward(packet);
@@ -1353,7 +1356,6 @@ namespace infinit
           { // send a key request
             ELLE_DEBUG("%s: sending key request to %s", *this, source);
             packet::RequestKey rk(make_key_request());
-            elle::Buffer s = packet::serialize(rk);
             send(rk, source, p->sender);
             return;
           }

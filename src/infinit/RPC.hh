@@ -296,6 +296,7 @@ namespace infinit
           elle::IOStream outs(response.ostreambuf());
           {
             elle::serialization::binary::SerializerOut output(outs, versions, false);
+            output.set_context(this->_context);
             try
             {
               it->second->handle(input, output);
@@ -506,6 +507,7 @@ namespace infinit
         ELLE_DEBUG("build request")
         {
           elle::serialization::binary::SerializerOut output(outs, versions, false);
+          output.set_context(self._context);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
         }

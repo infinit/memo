@@ -220,6 +220,7 @@ namespace infinit
               AuthSyn(Passport const&, elle::Version const&);
               RPC<AuthSyn> auth_syn(
                 "auth_syn", *this->_channels, this->_doughnut.version());
+              auth_syn.set_context<Doughnut*>(&this->_doughnut);
               return auth_syn(this->_doughnut.passport(),
                                 this->_doughnut.version());
             }
@@ -315,6 +316,7 @@ namespace infinit
         {
           auto remove = make_rpc<void (Address, blocks::RemoveSignature)>
             ("remove");
+          remove.set_context<Doughnut*>(&this->_doughnut);
           remove(address, rs);
         }
         else

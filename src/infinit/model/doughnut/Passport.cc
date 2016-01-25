@@ -1,6 +1,10 @@
 #include <elle/serialization/json.hh>
+#include <elle/utils.hh>
 
 #include <infinit/model/doughnut/Passport.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+
+ELLE_LOG_COMPONENT("infinit.model.doughnut.Passport");
 
 namespace infinit
 {
@@ -38,14 +42,18 @@ namespace infinit
         , _allow_write(true)
         , _allow_storage(true)
       {
-        try
-        { // passports are transmited unversioned, no way to check except trying
-          _allow_write = s.deserialize<bool>("allow_write");
-          _allow_storage = s.deserialize<bool>("allow_storage");
-        }
-        catch (elle::Error const& e)
-        {
-        }
+        Doughnut* dn;
+        elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+        if (!dn || dn->version() >= elle::Version(0, 5, 0))
+          try
+          { // passports are transmited unversioned, no way to check except trying
+            _allow_write = s.deserialize<bool>("allow_write");
+            _allow_storage = s.deserialize<bool>("allow_storage");
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_LOG("Passport deserialization error, assuming older version.");
+          }
       }
 
       Passport::~Passport()
@@ -58,8 +66,17 @@ namespace infinit
         s.serialize("user", this->_user);
         s.serialize("network", this->_network);
         s.serialize("signature", this->_signature);
-        s.serialize("allow_write", this->_allow_write);
-        s.serialize("allow_storage", this->_allow_storage);
+        Doughnut* dn;
+        elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
+        if (!dn || dn->version() >= elle::Version(0, 5, 0))
+        {
+          ELLE_DEBUG("serialize in 5: %s", dn);
+          ELLE_DEBUG("%s", elle::Backtrace::current());
+          s.serialize("allow_write", this->_allow_write);
+          s.serialize("allow_storage", this->_allow_storage);
+        }
+	else
+	  ELLE_DEBUG("serialize in 4");
       }
 
       bool
