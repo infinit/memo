@@ -202,6 +202,8 @@ struct Mode
   std::string
   upper_fchar(std::string const& str)
   {
+    if (str.length() == 0)
+      return str;
     return elle::sprintf("%s%s", (char)toupper(str[0]), str.substr(1));
   }
 
@@ -298,7 +300,7 @@ struct Mode
     , visible_options(this->description)
   {
     Mode::OptionsDescription mode_options(
-      elle::sprintf("%s options", this->name));
+      elle::sprintf("%s options", upper_fchar(this->name)));
     for (auto const& option: options)
     {
       mode_options.add(
@@ -616,6 +618,19 @@ namespace infinit
 
   inline
   boost::filesystem::path
+  canonical_folder(boost::filesystem::path const& path, std::string const& desc)
+  {
+    if (!boost::filesystem::exists(path.parent_path()))
+    {
+      throw CommandLineError(elle::sprintf(
+        "parent directory of % does not exist: %s", desc, path.parent_path()));
+    }
+    boost::filesystem::create_directory(path);
+    return boost::filesystem::canonical(path);
+  }
+
+  inline
+  boost::filesystem::path
   home()
   {
     static auto const home = elle::os::getenv("INFINIT_HOME", "");
@@ -626,7 +641,7 @@ namespace infinit
       elle::system::home_directory() :
       boost::filesystem::path(xdg) :
       boost::filesystem::path(home);
-    return data;
+    return canonical_folder(data, "INFINIT_HOME or XDG_DATA_HOME");
   }
 
   inline
@@ -635,7 +650,7 @@ namespace infinit
   {
     static auto const data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
     if (!data_home.empty())
-      return data_home;
+      return canonical_folder(data_home, "INFINIT_DATA_HOME");
     static auto const res =
       home() / ".local" / "share" / "infinit" / "filesystem";
     return res;
@@ -647,7 +662,7 @@ namespace infinit
   {
     static auto const cache_home = elle::os::getenv("INFINIT_CACHE_HOME", "");
     if (!cache_home.empty())
-      return cache_home;
+      return canonical_folder(cache_home, "INFINIT_CACHE_HOME");
     static auto const res =
       home() / ".cache" / "infinit" / "filesystem";
     return res;
