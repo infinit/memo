@@ -29,7 +29,7 @@
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 <p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
-<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.0.9/osxfuse-3.0.9.dmg" class="button">Download OSXFUSE</a></p>
+<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.1.0/osxfuse-3.1.0.dmg" class="button">Download OSXFUSE</a></p>
 
 <em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/.</em>
 
