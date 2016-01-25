@@ -558,8 +558,7 @@ main(int argc, char** argv)
       "--name NAME "
         "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
         "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
-        "[--storage STORAGE...]"
-        "[OPTIONS...]",
+        "[--storage STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage", value<std::vector<std::string>>()->multitoken(),
@@ -583,7 +582,7 @@ main(int argc, char** argv)
       "update",
       "Update a network",
       &update,
-      "--name NAME [OPTIONS...]",
+      "--name NAME",
       {
         { "name,n", value<std::string>(), "network to update" },
         { "port", value<int>(), "port to listen on (default: random)" },
