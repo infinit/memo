@@ -8,7 +8,7 @@ Introduction
 
 ### Terminology ###
 
-The Infinit command-line tools are composed of several binaries, each dealing with a specific resource/object.
+The Infinit command-line tools are composed of several binaries, each dealing with a specific resource or object.
 
 A *user* represents the entity performing operations on files, directly or indirectly. Every user possesses an RSA key pair that is used to identify him/her. A user can create a *network* which represents the interconnection of computing resources that will compose the storage infrastructure. A *storage* is a storage resource, local or remote, that can be connected to a device to support part of the overall storage load. Finally, several *volumes* --- i.e. logical drives ---  can be created within a network.
 
@@ -189,7 +189,7 @@ The _infinit-credentials_ binary manages the credentials for your cloud services
 To add AWS credentials so that an Amazon S3 bucket can be used to store data, simply use the `--add` option specifying `aws`. Note that an Access Key ID and Secrect Access Key are used, not the user name and password:
 
 ```
-$> infinit-credentials --add --aws --account s3-user
+$> infinit-credentials --add --aws --name s3-user
 Please enter your AWS credentials
 Access Key ID: AKIAIOSFODNN7EXAMPLE
 Secret Access Key: ****************************************
@@ -237,7 +237,7 @@ In order to use Amazon S3, you must first have created an AWS user and an S3 buc
 The following creates a storage resource which uses a folder of an Amazon S3 bucket, specifying a name for the storage, the AWS account identifier, the region the bucket is in, the bucket's name and the folder to store the blocks in:
 
 ```
-$> infinit-storage --create --s3 --name s3 --aws-account s3-user --region eu-central-1 --bucket my-s3-bucket --bucket-folder blocks-folder
+$> infinit-storage --create --s3 --name s3 --account s3-user --region eu-central-1 --bucket my-s3-bucket --path blocks-folder
 Created storage "s3".
 ```
 
@@ -257,7 +257,7 @@ The network can be configured depending on the requirements of the storage infra
 The following creates a small storage network, relying on the Kelips overlay network with a replication factor of 3. In addition, the administrator decides to contribute two storage resources to the network on creation.
 
 ```
-$> infinit-network --create --as alice --kelips --k 1 --replication-factor 3 --storage local --storage s3 --name cluster
+$> infinit-network --create --as alice --kelips --k 1 --replication-factor 2 --storage local --storage s3 --name cluster
 Locally created network "alice/cluster".
 ```
 
@@ -476,13 +476,13 @@ everything is
 Access Control List
 --------------------------
 
-Having joined a volume does not necessarily mean that you have the required permissions to browse the files and directories in it. As in most file system, in order to access, edit and/or delete a file, its owner must first grant you the permission to do so.
+Having joined a volume does not mean that you have the required permissions to browse the files and directories in it. As with most file system, in order to access, edit and/or delete a file, the owner must first grant you the permission to do so.
 
-Unlike many file systems, Infinit provides advanced decentralized (i.e. without relying on a centralized server) access control mechanisms that allow any user to manage permissions on his/her files and directories.
+Unlike other file systems, Infinit provides advanced decentralized (i.e. without relying on a centralized server) access control mechanisms that allow any user to manage permissions on his/her files and directories.
 
-Being the owner of a volume automatically grants you access to its root directory. It is then your responsibility to manage the permissions on the root directory for other users to use the volume.
+The owner of a volume is automatically granted access to its root directory. It is then his/her responsibility to manage the permissions on the root directory for other users to use the volume.
 
-Note that most access control actions use POSIX mechanisms such as standard permissions and extended attributes. In particular, the `infinit-acl` can be considered as a wrapper on top of extended attributes.
+Note that most access control actions use POSIX mechanisms such as standard permissions and extended attributes. The `infinit-acl` utility can be considered as a wrapper on top of extended attributes which allows one to manipulate the ACL of an Infinit volume.
 
 ### Grant/revoke access ###
 
@@ -500,7 +500,7 @@ Once the command has been run, Bob will be able to read and write files/director
 
 #### Inheritance ####
 
-ACL inheritance is a mechanism that sets the ACL of newly created files and directories to the ACL of their parent directory. It can be enabled or disabled on a per-directory basis using the `--enable-inherit` and `--disable-inherit` options:
+ACL inheritance is a mechanism that sets the ACL of newly created files and directories to that of their parent directory. It can be enabled or disabled on a per-directory basis using the `--enable-inherit` and `--disable-inherit` options:
 
 ```
 $> infint-acl --set --path /mnt/shared --enable-inherit
@@ -512,7 +512,7 @@ If ACL inheritance is disabled, newly created files and directories can only be 
 
 By default, files and directories can only be read/written by users present in the object's ACLs. It is possible to flag a file/directory as world-readable (everyone can read it) or world-writable (everyone can modify it).
 
-The _chmod_ UNIX binary must be used to that effect. The following example sets a file as world-readable before making it world-writable as well. One can notice that the `ls -l` command displays a file as world-readable/write through the _others_ category (the last three `rwx` indicators).
+The _chmod_ UNIX binary must be used to set this. The following example sets a file as world-readable before making it world-writable as well. The `ls -l` command displays a file as world-readable/write through the _others_ category (the last three `rwx` indicators).
 
 ```
 $> ls -l /mnt/shared/awesome.txt
@@ -525,7 +525,7 @@ $> chmod o+w /mnt/shared/awesome.txt
 
 ### List permissions ###
 
-Every user with the volume descriptor and the right permissions can consult the Access Control List (ACL) associated with a file system object:
+Every user with the volume descriptor and read permissions can consult the Access Control List (ACL) associated with a file system object:
 
 ```
 $> infinit-acl --list --path /mnt/shared/awesome.txt
@@ -545,19 +545,19 @@ drwx------  1 alice  staff     0B Jan 20 17:15 Engineering
 -rw-------  1 alice  staff    14B Jan 20 16:59 awesome.txt
 ```
 
-Indeed, one must take into account that:
+One must take into account that:
 
 - User and group IDs are set to the user who mounted the file system if he/she has read or write access to the file. Otherwise they are set to root. Changing them (using _chown_) has no effect.
-- User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations the user having mounted the file system is allowed to perform. Changing those flags has no effect.
-- User execute access mode can be set or cleared and is preserved. Noteworthy is that this protection is not ensured at the network level through cryptographic mechanisms as it is the case for read and write. Instead, a flag is just set to indicate that the file is 'executable'.
+- User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations the user who mounted the file system is allowed to perform. Changing these flags has no effect.
+- User execute access mode can be set or cleared and is preserved. This flag is not ensured at the network level through cryptographic mechanisms. Instead, a flag is just set to indicate that the file is 'executable'.
 - Group modes are irrelevant and set to zero.
-- Others read/write access mode can be set to make the object readable/writable for all. See <a href="#world-readability-writability">World-readability/writability</a> for more information.
+- Others read/write access modes can be set to make the object readable/writable for all. See <a href="#world-readability-writability">World-readability/writability</a> for more information.
 
 ### Create a group ###
 
-Infinit supports the concept of group i.e a collection of users. Such groups ease the process of access control management by allowing a user to re-reference groups of users it has previously created/used.
+Infinit supports the concept of groups i.e a collection of users. Such groups ease the process of access control management by allowing a user to re-reference groups of users.
 
-A group is identified by it's unique name, and can be created by any user in the network. It stores a list of group members that can be users and other groups, leading to hierarchical groups. This member list can be modified only by the users managing the group, by default only the user who created it. Below is shown an example of group creation:
+Each group is identified by a unique name, and can be created by any user in the network. It stores a list of group members that can be users and other groups, resulting in hierarchical groups. A group's member list can be modified only by the users administrating the group. By default only the user who created it is the administrator of the group. Below is shown an example of group creation:
 
 ```
 $> infinit-acl --group --create --name marketing --path .
@@ -565,19 +565,17 @@ $> infinit-acl --group --create --name marketing --path .
 
 _**NOTE**: The `--path` option must be provided for the infinit-acl to know which volume, hence network, you want the group to be created in. You can use the `--path` option to reference the volume's mountpoint or any of its files/folders._
 
-From that point, it is very easy to display information on a group through the `--show` action:
+From that point, it is very easy to display information on a group using the `--show` action:
 
 ```
 $> infinit-acl --group --show --name marketing --path .
 {"admins":["alice"],"members":["@marketing","alice"]}
 ```
 
-_**NOTE**: Since the `--path .` option is provided last, it could simply be replaced by `.`: `infinit-acl --group --show --name marketing .`._
-
-Once created, a group can be added to any object's ACLs using _infinit-acl --set_. The process is similar to granting access to a user except that the group name must be prefixed with an '@':
+Once created, a group can be added to any object's ACLs using _infinit-acl --set_. The process is the same as granting access to a user except that the group name must be prefixed with an '@' character:
 
 ```
-$> infinit-acl --set --mode rw --user @all --path /mnt/shared/awesome.txt
+$> infinit-acl --set --mode rw --user @marketing --path /mnt/shared/awesome.txt
 ```
 
 ### Add/remove group members ###
@@ -585,21 +583,31 @@ $> infinit-acl --set --mode rw --user @all --path /mnt/shared/awesome.txt
 Any group administrator can add and remove members through the `--add` and `--remove` options. In the example below, Alice first adds Bob as a member of her Marketing group. Then, Alice creates a group named 'marketing/tokyo' and adds it to her Marketing group.
 
 ```
-$> infinit-acl --group --name marketing --add bob --path .
+$> infinit-acl --group --name marketing --add-user bob --path .
 $> infinit-acl --group --create --name marketing/tokyo --path .
-$> infinit-acl --group --name marketing --add @marketing/tokyo --path .
+$> infinit-acl --group --name marketing --add-group marketing/tokyo --path .
 ```
 
-_**NOTE**: One can notice that groups are referenced by prepending the '@' symbol to the group name._
+The 'marketing/tokyo' group could also be added or removed using the `--add` or `--remove` option and a '@' prefix before the group name:
+
+```
+$> infinit-acl --group --name --marketing --add @marketing/tokyo --path .
+```
 
 ### Add/remove group administrators ###
 
-A group can be administered by multiple users at once, increasing the flexibility of the group concept a bit more. To add/remove administrator to a group, simply rely on the `--admin-add` and `--admin-remove` actions:
+A group can be administered by multiple users at once, increasing the flexibility of the group concept a bit more. To add/remove administrator to a group, simply rely on the `--add-admin` and `--remove-admin` actions:
 
 ```
-$> infinit-acl --group --name marketing --admin-add bob --path .
+$> infinit-acl --group --name marketing --add-admin bob --path .
 $> infinit-acl --group --show --name marketing --path .
 {"admins":["alice","bob"],"members":["@marketing","alice","bob"]}
+```
+
+As before, administrators can be added and removed using the `--add` and `--remove` option with a '^' prefix:
+
+```
+$> infinit-acl --group --name marketing --add ^bob --path .
 ```
 
 Device
