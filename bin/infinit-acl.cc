@@ -26,6 +26,8 @@ ELLE_LOG_COMPONENT("infinit-acl");
 
 infinit::Infinit ifnt;
 
+static const char admin_prefix = '^';
+
 static
 boost::filesystem::path
 file_xattrs_dir(std::string const& file)
@@ -162,9 +164,16 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
       output << path << ":" << std::endl;
       if (dir_inherit)
       {
+#if defined(__GNUC__) && !defined(__clang__)
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
         output << "  inherit: "
                << (dir_inherit.get() ? "yes" : "no")
                << std::endl;
+#if defined(__GNUC__) && !defined(__clang__)
+# pragma GCC diagnostic pop
+#endif
       }
       elle::json::Json j = elle::json::read(ss);
       auto a = boost::any_cast<elle::json::Array>(j);
@@ -296,7 +305,7 @@ COMMAND(set)
   if (inherit && disinherit)
   {
     throw CommandLineError(
-      "either inherit or disable-inherit can be set, not both");
+      "set either inherit or disable-inherit, not both");
   }
   if (!inherit && !disinherit && mode.empty())
     throw CommandLineError("no operation specified");
@@ -327,41 +336,144 @@ COMMAND(set)
   }
 }
 
+typedef boost::optional<std::vector<std::string>> OptVecStr;
+
+static
+OptVecStr
+collate_users(OptVecStr const& combined,
+              OptVecStr const& users,
+              OptVecStr const& admins,
+              OptVecStr const& groups)
+{
+  if (!combined && !users && !admins && !groups)
+    return boost::none;
+  std::vector<std::string> res;
+  if (combined)
+  {
+    for (auto c: combined.get())
+      res.push_back(c);
+  }
+  if (users)
+  {
+    for (auto u: users.get())
+      res.push_back(u);
+  }
+  if (admins)
+  {
+    for (auto a: admins.get())
+      res.push_back(elle::sprintf("%s%s", admin_prefix, a));
+  }
+  if (groups)
+  {
+    for (auto g: groups.get())
+      res.push_back(elle::sprintf("@%s", g));
+  }
+  return res;
+}
+
+static
+std::string
+group_attr_name(std::string const& object, std::string const& action)
+{
+  if (!object.length())
+    throw CommandLineError("empty user or group name");
+  static std::string base = "user.infinit.group.";
+  std::string action_detail = object[0] == admin_prefix ? "admin" : "";
+  std::string res = elle::sprintf("%s%s%s", base, action, action_detail);
+  return res;
+}
+
+static
+std::string
+raw_name(std::string const& object)
+{
+  if (!object.length())
+    throw CommandLineError("empty user or group name");
+  return object[0] == admin_prefix ? object.substr(1) : object;
+}
+
 COMMAND(group)
 {
-  auto g = mandatory<std::string>(args, "name", "group name");
-  auto add = optional<std::vector<std::string>>(args, "add");
-  auto rem = optional<std::vector<std::string>>(args, "remove");
-  auto adm_add = optional<std::vector<std::string>>(args, "admin-add");
-  auto adm_rem = optional<std::vector<std::string>>(args, "admin-remove");
   bool create = flag(args, "create");
-  bool del = flag(args, "delete");
-  bool fallback = flag(args, "fallback-xattrs");
+  bool delete_ = flag(args, "delete");
   bool list = flag(args, "show");
-  std::string path = mandatory<std::string>(args, "path", "path to filesystem");
+  auto group = mandatory<std::string>(args, "name", "group name");
+  auto add_user = optional<std::vector<std::string>>(args, "add-user");
+  auto add_admin = optional<std::vector<std::string>>(args, "add-admin");
+  auto add_group = optional<std::vector<std::string>>(args, "add-group");
+  auto add = optional<std::vector<std::string>>(args, "add");
+  add = collate_users(add, add_user, add_admin, add_group);
+  auto rem_user = optional<std::vector<std::string>>(args, "remove-user");
+  auto rem_admin = optional<std::vector<std::string>>(args, "remove-admin");
+  auto rem_group = optional<std::vector<std::string>>(args, "remove-group");
+  auto rem = optional<std::vector<std::string>>(args, "remove");
+  rem = collate_users(rem, rem_user, rem_admin, rem_group);
+  int action_count = (create ? 1 : 0) + (delete_ ? 1 : 0) + (list ? 1 : 0)
+                   + (add ? 1 : 0) + (rem ? 1 : 0);
+  if (action_count == 0)
+    throw CommandLineError("no action specified");
+  if (action_count > 1)
+    throw CommandLineError("specify only one action at a time");
+  bool fallback = flag(args, "fallback-xattrs");
+  std::string path =
+    mandatory<std::string>(args, "path", "path in volume");
+  if (!boost::filesystem::exists(path))
+    throw elle::Error(elle::sprintf("path does not exist: %s", path));
+  // Need to perform group actions on a directory in the volume.
+  if (!boost::filesystem::is_directory(path))
+    path = boost::filesystem::path(path).parent_path().string();
   if (create)
-    check(port_setxattr, path, "user.infinit.group.create", g, fallback);
-  if (del)
-    check(port_setxattr, path, "user.infinit.group.delete", g, fallback);
-  if (add) for (auto const& u: *add)
-    check(port_setxattr, path, "user.infinit.group.add", g + ":" + u , fallback);
-  if (rem) for (auto const& u: *rem)
-    check(port_setxattr, path, "user.infinit.group.remove", g + ":" + u , fallback);
-  if (adm_add) for (auto const& u: *adm_add)
-    check(port_setxattr, path, "user.infinit.group.addadmin", g + ":" + u , fallback);
-  if (adm_rem) for (auto const& u: *adm_rem)
-    check(port_setxattr, path, "user.infinit.group.removeadmin", g + ":" + u , fallback);
+    check(port_setxattr, path, "user.infinit.group.create", group, fallback);
+  if (delete_)
+    check(port_setxattr, path, "user.infinit.group.delete", group, fallback);
+  if (add)
+  {
+    for (auto const& obj: add.get())
+    {
+      try
+      {
+        check(port_setxattr, path, group_attr_name(obj, "add"),
+              group + ":" + raw_name(obj), fallback);
+      }
+      catch (elle::Error const& e)
+      {
+        std::string type = obj[0] == '@' ? "group" : "user";
+        throw elle::Error(elle::sprintf(
+          "ensure that %s \"%s\" exists and path is in a volume", type, obj));
+      }
+    }
+  }
+  if (rem)
+  {
+    for (auto const& obj: rem.get())
+    {
+      try
+      {
+        check(port_setxattr, path, group_attr_name(obj, "remove"),
+              group + ":" + raw_name(obj), fallback);
+      }
+      catch (elle::Error const& e)
+      {
+        std::string type = obj[0] == '@' ? "group" : "user";
+        throw elle::Error(elle::sprintf(
+          "ensure that %s \"%s\" exists and path is in a volume", type, obj));
+      }
+    }
+  }
   if (list)
   {
     char res[16384];
-    int sz = port_getxattr(path, "user.infinit.group.list." + g, res, 16384, fallback);
-    if (sz >=0)
+    int sz = port_getxattr(
+      path, "user.infinit.group.list." + group, res, 16384, fallback);
+    if (sz >= 0)
     {
       res[sz] = 0;
       std::cout << res << std::endl;
     }
     else
-      throw std::runtime_error("group query failure");
+    {
+      throw elle::Error(elle::sprintf("unable to list group: %s", group));
+    }
   }
 }
 
@@ -371,6 +483,12 @@ main(int argc, char** argv)
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   program = argv[0];
+  Mode::OptionDescription fallback_option = {
+    "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
+    "if system xattrs are not suppported"
+  };
+  Mode::OptionDescription verbose_option = {
+    "verbose", bool_switch(), "verbose output" };
   Modes modes {
     {
       "list",
@@ -380,48 +498,60 @@ main(int argc, char** argv)
       {
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "recursive,R", bool_switch(), "list recursively" },
-        { "verbose", bool_switch(), "verbose output" },
-        { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
-          "if system xattrs are not suppported" },
+        fallback_option,
+        verbose_option,
       },
     },
     {
       "set",
       "Set ACL",
       &set,
-      "--path PATHS [--user USERS] [OPTIONS...]",
+      "--path PATHS [--user USERS]",
       {
         { "path,p", value<std::vector<std::string>>(), "paths" },
-        { "user,u", value<std::vector<std::string>>(), "users" },
+        { "user,u", value<std::vector<std::string>>(),
+          "users and groups (prefix: @<group>)" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
           "new files/folders inherit from their parent directory" },
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "apply recursively" },
-        { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
-          "if system xattrs are not suppported" },
-        { "verbose", bool_switch(), "verbose output" },
+        fallback_option,
+        verbose_option,
       },
     },
     {
       "group",
       "Group control",
       &group,
-      "[--user USERS]",
+      "--name NAME --path PATH",
       {
-        { "name,n", value<std::string>(), "group name"},
-        { "show,s", bool_switch(), "list group users and admins"},
-        { "create,c", bool_switch(), "create the group"},
-        { "delete,d", bool_switch(), "delete the group"},
-        { "add,a", value<std::vector<std::string>>(), "users to add to group" },
-        { "remove,r", value<std::vector<std::string>>(), "users to remove from group" },
-        { "admin-add,A", value<std::vector<std::string>>(), "admins to add to group" },
-        { "admin-remove,R", value<std::vector<std::string>>(), "admins to remove from group" },
-        { "fallback-xattrs", bool_switch(), "fallback to creating xattrs "
-          "folder if system xattrs are not suppported" },
-        { "verbose", bool_switch(), "verbose output" },
-        { "path,p", value<std::string>(), "path" },
+        { "name,n", value<std::string>(), "group name" },
+        { "create,c", bool_switch(), "create the group" },
+        { "show", bool_switch(), "list group users and administrators" },
+        { "delete,d", bool_switch(), "delete an existing group" },
+        { "add-user", value<std::vector<std::string>>(),
+          "add users to group" },
+        { "add-admin", value<std::vector<std::string>>(),
+          "add administrators to group" },
+        { "add-group", value<std::vector<std::string>>(),
+          "add groups to group" },
+        { "add", value<std::vector<std::string>>(), elle::sprintf(
+          "add users, administrators and groups to group "
+          "(prefix: @<group>, %s<admin>)", admin_prefix) },
+        { "remove-user", value<std::vector<std::string>>(),
+          "remove users from group" },
+        { "remove-admin", value<std::vector<std::string>>(),
+          "remove administrators from group" },
+        { "remove-group", value<std::vector<std::string>>(),
+          "remove groups from group" },
+        { "remove", value<std::vector<std::string>>(), elle::sprintf(
+          "remove users, administrators and groups from group "
+          "(prefix: @<group>, %s<admin>)", admin_prefix) },
+        { "path,p", value<std::string>(), "a path within the volume" },
+        fallback_option,
+        verbose_option,
       },
     }
   };
