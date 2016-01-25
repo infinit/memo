@@ -52,11 +52,11 @@ Modes:
   --list                      List users
 
 Miscellaneous:
-  -h [ --help ]               display the help
-  -s [ --script ]             silence all extraneous human friendly messages
-  -f [ --force-version ] arg  force used version
-  -v [ --version ]            display version
-  -a [ --as ] arg             user to run commands as (default: system user)
+  -h [ --help ]                  display the help
+  -s [ --script ]                silence all extraneous human friendly messages
+  -f [ --compatability-version ] arg  force used version
+  -v [ --version ]               display version
+  -a [ --as ] arg                user to run commands as (default: system user)
 ```
 
 While the help when invoking the `--create` shows the options associated with creating a user:

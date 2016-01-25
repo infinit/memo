@@ -18,7 +18,7 @@ namespace infinit
     {
       Paranoid::Paranoid(infinit::cryptography::rsa::KeyPair keys,
                          std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version)
+                         elle::Version version)
         : Model(std::move(version))
         , _keys(std::move(keys))
         , _storage(std::move(storage))
@@ -120,17 +120,22 @@ namespace infinit
         // std::unique_ptr instead since KeyPair is not copiable.
         std::unique_ptr<infinit::cryptography::rsa::KeyPair> keys;
 
-        ParanoidModelConfig(elle::serialization::SerializerIn& input,
-                            boost::optional<elle::Version> version)
-          : ModelConfig(nullptr, std::move(version))
+        ParanoidModelConfig(elle::serialization::SerializerIn& input)
+          : ModelConfig(input)
         {
-          this->serialize(input);
+          this->_serialize(input);
         }
 
         void
         serialize(elle::serialization::Serializer& s)
         {
           ModelConfig::serialize(s);
+          this->_serialize(s);
+        }
+
+        void
+        _serialize(elle::serialization::Serializer& s)
+        {
           s.serialize("keys", this->keys);
         }
 
@@ -138,8 +143,7 @@ namespace infinit
         std::unique_ptr<infinit::model::Model>
         make(overlay::NodeEndpoints const&,
              bool,
-             boost::filesystem::path const&,
-             boost::optional<elle::Version> version = {})
+             boost::filesystem::path const&)
         {
           if (!this->keys)
           {
@@ -151,7 +155,7 @@ namespace infinit
             this->keys->serialize(output);
           }
           return elle::make_unique<infinit::model::paranoid::Paranoid>(
-            std::move(*this->keys), this->storage->make(), version);
+            std::move(*this->keys), this->storage->make(), this->version);
         }
       };
 

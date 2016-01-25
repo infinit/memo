@@ -23,7 +23,7 @@ namespace infinit
     namespace faith
     {
       Faith::Faith(std::unique_ptr<storage::Storage> storage,
-                   boost::optional<elle::Version> version)
+                   elle::Version version)
         : Model(std::move(version))
         , _storage(std::move(storage))
       {}
@@ -83,9 +83,8 @@ namespace infinit
       {
       public:
         FaithModelConfig(elle::serialization::SerializerIn& input,
-                         boost::optional<elle::Version> version)
-          : ModelConfig(nullptr,
-                        std::move(version))
+                         elle::Version version)
+          : ModelConfig(nullptr, std::move(version))
         {
           this->serialize(input);
         }
@@ -100,11 +99,10 @@ namespace infinit
         std::unique_ptr<infinit::model::Model>
         make(overlay::NodeEndpoints const&,
              bool,
-             boost::filesystem::path const&,
-             boost::optional<elle::Version> version) override
+             boost::filesystem::path const&) override
         {
           return elle::make_unique<infinit::model::faith::Faith>(
-            this->storage->make(), version);
+            this->storage->make(), this->version);
         }
       };
 

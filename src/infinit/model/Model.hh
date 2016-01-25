@@ -120,9 +120,9 @@ namespace infinit
     {
       static constexpr char const* virtually_serializable_key = "type";
       std::unique_ptr<infinit::storage::StorageConfig> storage;
-      boost::optional<elle::Version> version;
+      elle::Version version;
       ModelConfig(std::unique_ptr<storage::StorageConfig> storage,
-                  boost::optional<elle::Version> version);
+                  elle::Version version);
       ModelConfig(elle::serialization::SerializerIn& s);
       void
       serialize(elle::serialization::Serializer& s) override;
@@ -130,8 +130,7 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       make(overlay::NodeEndpoints const& hosts,
            bool client,
-           boost::filesystem::path const& dir,
-           boost::optional<elle::Version> version = {}) = 0;
+           boost::filesystem::path const& dir) = 0;
       typedef infinit::serialization_tag serialization_tag;
     };
   }

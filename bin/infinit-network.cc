@@ -208,13 +208,36 @@ COMMAND(create)
     }
     if (aliased_flag(args, {"push-network", "push"}))
     {
-      infinit::NetworkDescriptor desc(
-        network.name,
-        std::move(network.dht()->consensus),
-        std::move(network.dht()->overlay),
-        std::move(*network.dht()->owner));
+      infinit::NetworkDescriptor desc(std::move(network));
       beyond_push("network", desc.name, desc, owner);
     }
+  }
+}
+
+COMMAND(update)
+{
+  auto name = mandatory(args, "name", "network name");
+  auto owner = self_user(ifnt, args);
+  auto network = ifnt.network_get(name, owner);
+  auto& dht = *network.dht();
+  if (auto port = optional<int>(args, "port"))
+    dht.port = port.get();
+  if (compatibility_version)
+    dht.version = compatibility_version.get();
+  if (args.count("output"))
+  {
+    auto output = get_output(args);
+    elle::serialization::json::serialize(network, *output, false);
+  }
+  else
+  {
+    ifnt.network_save(network, true);
+    report_updated("network", network.name);
+  }
+  if (aliased_flag(args, {"push-network", "push"}))
+  {
+    infinit::NetworkDescriptor desc(std::move(network));
+    beyond_push("network", desc.name, desc, owner);
   }
 }
 
@@ -225,11 +248,7 @@ COMMAND(export_)
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, owner);
   {
-    auto& dht = static_cast<infinit::model::doughnut::Configuration&>
-      (*network.model);
-    infinit::NetworkDescriptor desc(
-      network.name, std::move(dht.consensus),
-      std::move(dht.overlay), std::move(*dht.owner));
+    infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
   report_exported(*output, "network", network.name);
@@ -239,12 +258,44 @@ COMMAND(fetch)
 {
   auto self = self_user(ifnt, args);
   auto network_name_ = optional(args, "name");
+  auto save = [&self] (infinit::NetworkDescriptor desc) {
+    try
+    {
+      auto network = ifnt.network_get(desc.name, self, false);
+      if (network.model)
+      {
+        auto* d = dynamic_cast<infinit::model::doughnut::Configuration*>(
+          network.model.get()
+        );
+        infinit::Network updated_network(
+          desc.name,
+          elle::make_unique<infinit::model::doughnut::Configuration>(
+            d->id,
+            std::move(desc.consensus),
+            std::move(desc.overlay),
+            std::move(d->storage),
+            self.keypair(),
+            std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
+            d->passport,
+            self.name,
+            d->port,
+            desc.version));
+        ifnt.network_save(updated_network, true);
+      }
+      else
+      {
+        ifnt.network_save(desc, true);
+      }
+    }
+    catch (MissingLocalResource const& e)
+    {
+      ifnt.network_save(desc);
+    }
+  };
   if (network_name_)
   {
     std::string network_name = ifnt.qualified_name(network_name_.get(), self);
-    auto desc =
-      beyond_fetch<infinit::NetworkDescriptor>("network", network_name);
-    ifnt.network_save(std::move(desc));
+    save(beyond_fetch<infinit::NetworkDescriptor>("network", network_name));
   }
   else // Fetch all networks for self.
   {
@@ -262,8 +313,7 @@ COMMAND(fetch)
       try
       {
         elle::serialization::json::SerializerIn input(network_json, false);
-        auto desc = input.deserialize<infinit::NetworkDescriptor>();
-        ifnt.network_save(std::move(desc));
+        save(input.deserialize<infinit::NetworkDescriptor>());
       }
       catch (ResourceAlreadyFetched const& error)
       {}
@@ -323,7 +373,9 @@ COMMAND(link_)
       self.keypair(),
       std::make_shared<infinit::cryptography::rsa::PublicKey>(desc.owner),
       std::move(passport),
-      self.name));
+      self.name,
+      boost::optional<int>(),
+      desc.version));
   ifnt.network_save(network, true);
   report_action("linked", "device to network", network.name);
 }
@@ -342,10 +394,7 @@ COMMAND(push)
   {
     auto& dht = *network.dht();
     auto owner_uid = infinit::User::uid(*dht.owner);
-    infinit::NetworkDescriptor desc(network.name,
-                                    std::move(dht.consensus),
-                                    std::move(dht.overlay),
-                                    std::move(*dht.owner));
+    infinit::NetworkDescriptor desc(std::move(network));
     beyond_push("network", desc.name, desc, self);
   }
 }
@@ -397,7 +446,7 @@ COMMAND(run)
     cache = true;
   auto dht =
     network.run(eps, false, cache, cache_size, cache_ttl, cache_invalidation,
-                flag(args, "async"));
+                flag(args, "async"), compatibility_version);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
             && dht->local()->storage();
@@ -511,7 +560,8 @@ main(int argc, char** argv)
       "--name NAME "
         "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
         "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
-        "[STORAGE...]",
+        "[STORAGE...] "
+        "[OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created network name" },
         { "storage", value<std::vector<std::string>>()->multitoken(),
@@ -530,6 +580,22 @@ main(int argc, char** argv)
         stonehenge_options,
         kelips_options,
       },
+    },
+    {
+      "update",
+      "Update a network",
+      &update,
+      "--name NAME [OPTIONS...]",
+      {
+        { "name,n", value<std::string>(), "network to update" },
+        { "port", value<int>(), "port to listen on (default: random)" },
+        option_output("network"),
+        { "push-network", bool_switch(),
+            elle::sprintf("push the updated network to %s",
+                          beyond(true)).c_str() },
+        { "push,p", bool_switch(), "alias for --push-network" },
+      },
+      {},
     },
     {
       "export",

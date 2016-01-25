@@ -9,6 +9,13 @@ from utils import *
 
 from copy import deepcopy
 
+def compare(orig, new):
+  for k, value in orig.items():
+    if isinstance(value, dict):
+      compare(orig[k], new[k])
+    else:
+      assertEq(orig[k], new[k])
+
 with Beyond() as beyond:
 
   class Test(unittest.TestCase):
@@ -45,8 +52,7 @@ with Beyond() as beyond:
         assert 'invalid_format' in r['error']
       pass
 
-    def test_already_pushed(self):
-      # Test same already pushed
+    def test_repush(self):
       user = User()
       user.put(beyond)
       network = Network('infinit', owner = user)
@@ -54,11 +60,75 @@ with Beyond() as beyond:
       assertEq(res.status_code, 201)
       res = network.put(beyond, owner = user)
       assertEq(res.status_code, 200)
-      # Test conflict
-      network['owner'] = {
-         "rsa": "MIIBCgKCAQEAxzshG5cp+ky04RtzkjAHXHhBs1sPuNqotxL8rl0MH/jy/dMMkR38+0FAr8M/7bnquj9zHmEpKm3qczcd1kDqnKMbY5w8wgjanzhyLry4SRRQkMlRlEuT+Rgb88EAbXBPBpRGJ5dndkgQrCNALTzJOkt/7S8dJ4EiAMeAJOFEwwSb8nKeb1ciOGoACKOcbzQKjrtCZLK7xaHYvEcD7ztQlIWk8r8COPci2wGi92OYJdGXqNVDSBYS4MMzB8odTKZs25WaGvas8RQ0XlFYNZDP1Aj2vyWKGIjp/KMVjrXwhuJgtEzqbXdJFGf+10FcCJbYav63Hr4Z+9K76rGejFv6nQIDAQAB"
-      }
-      throws(lambda: network.put(beyond, owner = user), 409)
+
+    def _test_update(self, update, expected = 204):
+      user = User()
+      user.put(beyond)
+      network = Network('infinit', owner = user)
+      res = network.put(beyond, owner = user)
+      assertEq(res.status_code, 201)
+      original_network = beyond.get('networks/%s' % network['name']).json()
+      network.update(update)
+      new_network = None
+      if int(expected / 100) == 2:
+        res = network.put(beyond, owner = user)
+        assertEq(res.status_code, expected)
+        new_network = beyond.get('networks/%s' % network['name']).json()
+      else:
+        throws(lambda: network.put(beyond, owner = user), expected)
+        new_network = beyond.get('networks/%s' % network['name']).json()
+      return new_network
+
+    def test_update(self):
+      network = self._test_update(
+        {'consensus': {'type': 'paxos', 'replication-factor': 11}},
+        200)
+      assertEq(network['consensus']['replication-factor'], 11)
+      kelips = deepcopy(Network.kelips)
+      kelips['config']['query_get_retries'] = 50
+      network = self._test_update({'overlay': kelips}, 200)
+      assertEq(network['overlay']['config']['query_get_retries'], 50)
+      network = self._test_update({'version': '9.9.9'}, 200)
+      assertEq(network['version'], '9.9.9')
+      network = self._test_update({}, 200)
+
+    def test_passports_are_kept(self):
+      user, invitee = User(), User()
+      user.put(beyond), invitee.put(beyond)
+      network = Network('infinit', owner = user)
+      res = network.put(beyond, owner = user)
+      passport = Passport(network, invitee)
+      passport.put(beyond)
+      invitee_passport = beyond.get(
+        'networks/%s/passports/%s' % (network['name'], invitee['name']),
+        auth = invitee.private_key).json()
+      network['version'] = '0.1.5'
+      network.put(beyond, owner = user)
+      invitee_passport_2 = beyond.get(
+        'networks/%s/passports/%s' % (network['name'], invitee['name']),
+        auth = invitee.private_key).json()
+      compare(invitee_passport, invitee_passport_2)
+
+    def test_endpoints_are_kept(self):
+      user, invitee = User(), User()
+      user.put(beyond), invitee.put(beyond)
+      network = Network('infinit', owner = user)
+      res = network.put(beyond, owner = user)
+      passport = Passport(network, invitee)
+      passport.put(beyond)
+      invitee_passport = beyond.put(
+        'networks/%s/endpoints/%s/node_id' % (network['name'], invitee['name']),
+        auth = invitee.private_key,
+        json = {'stuff': 1}).json()
+      invitee_passport = beyond.get(
+        'networks/%s/endpoints' % network['name'],
+        auth = invitee.private_key).json()
+      network['version'] = '0.1.5'
+      network.put(beyond, owner = user)
+      invitee_passport_2 = beyond.get(
+        'networks/%s/endpoints' % network['name'],
+        auth = invitee.private_key).json()
+      compare(invitee_passport, invitee_passport_2)
 
   if __name__ == '__main__':
     unittest.main()

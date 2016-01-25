@@ -293,9 +293,9 @@ namespace infinit
         contact(Address address); // establish contact with peer and flush buffer
         void onPacket(reactor::network::Buffer buf, GossipEndpoint source);
         void process(elle::Buffer const& buf, GossipEndpoint source);
-        Contact&
+        Contact*
         get_or_make(Address address, bool observer,
-          std::vector<GossipEndpoint> endponits);
+          std::vector<GossipEndpoint> endpoints, bool make=true);
         Node::Member
         make_peer(PeerLocation pl);
         packet::RequestKey make_key_request();
@@ -341,6 +341,11 @@ namespace infinit
         std::unordered_map<std::string, elle::Buffer> _challenges;
         std::unordered_map<Address,
           std::vector<Node::Member>> _peer_cache;
+        // node_id -> (lookup_thread, lookup_success)
+        std::unordered_map<Address,
+          std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;
+        std::unordered_map<reactor::Thread*, reactor::Thread::unique_ptr>
+          _bootstraper_threads;
       };
     }
   }

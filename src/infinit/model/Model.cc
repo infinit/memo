@@ -21,6 +21,13 @@ namespace infinit
       : _version(version ? *version : default_version)
     {
       ELLE_TRACE("%s: compatibility version %s", *this, this->_version);
+      static elle::Version const current_version = elle::Version(
+        INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+      if (this->_version > current_version)
+        throw elle::Error(
+          elle::sprintf(
+            "compatibility version %s is too recent for infinit version %s",
+            this->_version, current_version));
     }
 
     template <>
@@ -152,7 +159,7 @@ namespace infinit
     }
 
     ModelConfig::ModelConfig(std::unique_ptr<storage::StorageConfig> storage_,
-                             boost::optional<elle::Version> version_)
+                             elle::Version version_)
       : storage(std::move(storage_))
       , version(std::move(version_))
     {}
@@ -166,7 +173,15 @@ namespace infinit
     ModelConfig::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("storage", this->storage);
-      s.serialize("version", this->version);
+      try
+      {
+        s.serialize("version", this->version);
+      }
+      catch (elle::Error)
+      {
+        // Oldest versions did not specify compatibility version.
+        this->version = elle::Version(0, 3, 0);
+      }
     }
   }
 }

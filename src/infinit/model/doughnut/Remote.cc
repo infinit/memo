@@ -212,9 +212,26 @@ namespace infinit
         {
           // challenge, token
           typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
-          RPC<std::pair<Challenge, std::unique_ptr<Passport>>(Passport const&)>
-            auth_syn("auth_syn", *this->_channels, this->_doughnut.version());
-          auto challenge_passport = auth_syn(this->_doughnut.passport());
+          auto challenge_passport = [&]
+          {
+            if (this->_doughnut.version() >= elle::Version(0, 4, 0))
+            {
+              typedef std::pair<Challenge, Passport*>
+              AuthSyn(Passport const&, elle::Version const&);
+              RPC<AuthSyn> auth_syn(
+                "auth_syn", *this->_channels, this->_doughnut.version());
+              return auth_syn(this->_doughnut.passport(),
+                                this->_doughnut.version());
+            }
+            else
+            {
+              typedef std::pair<Challenge, Passport*>
+              AuthSyn(Passport const&);
+              RPC<AuthSyn> auth_syn(
+                "auth_syn", *this->_channels, this->_doughnut.version());
+              return auth_syn(this->_doughnut.passport());
+            }
+          }();
           auto& remote_passport = challenge_passport.second;
           ELLE_ASSERT(remote_passport);
           if (!remote_passport->verify(*this->_doughnut.owner()))
