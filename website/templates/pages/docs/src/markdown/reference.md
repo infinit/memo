@@ -356,6 +356,11 @@ $> infinit-passport --create --as alice --network cluster --user bob
 Locally created passport "alice/cluster: bob".
 ```
 
+You can restrict the credentials given by this passport by using one of the following options:
+
+- `--deny-write`: Passport grants read-only access to the network.
+- `--deny-storage`: Passport does not allow user to contribute any storage.
+
 Now that the passport has been created, read the <a href="#distribute-a-passport">Distribute a passport</a> section to learn how to distribute it to the invited user.
 
 ### List the passports ###
