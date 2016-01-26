@@ -6,7 +6,7 @@ $(document).ready(function() {
       '<ins>0.5</ins><ins>\nCreated storage "s3". \n\n</ins>' +
       '<mark>$></mark> <ins>2</ins>'+
 
-      'infinit-network --create --storage s3 --storage local --name hybrid-cloud' +
+      'infinit-network --create --storage s3 --storage local-disk-1 --storage local&#8209;disk&#8209;2 --replication-factor 3 --name hybrid-cloud' +
       '<ins>0.5</ins><ins>\nCreated network "hybrid-cloud". \n\n</ins>' +
       '<mark>$></mark> <ins>2</ins>'+
 
