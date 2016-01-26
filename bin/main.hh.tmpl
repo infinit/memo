@@ -2227,6 +2227,7 @@ beyond_push(std::string const& where,
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
   auto payload_ = stream.str();
+  ELLE_LOG("pushing %s/%s with payload %s", type, name, payload_);
   elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
   beyond_push_data(
     where, type, name, payload, "application/json", self, report, beyond_error);
@@ -2388,6 +2389,7 @@ beyond_delete(std::string const& where,
   }
   else
   {
+    ELLE_LOG("HTTP response: %s", r.response());
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
                     r.status(), type, name));

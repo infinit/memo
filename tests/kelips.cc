@@ -29,6 +29,8 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
   std::vector<std::shared_ptr<imd::Doughnut>> res;
   iok::Configuration config;
   config.k = groups;
+  config.encrypt = true;
+  config.accept_plain = false;
   config.contact_timeout_ms = 1000;
   config.ping_interval_ms = 1000 / count / 3;
   config.ping_timeout_ms = 200;
@@ -38,7 +40,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
     std::unique_ptr<infinit::storage::Storage> s;
     boost::filesystem::create_directories(where / "store");
     s.reset(new infinit::storage::Filesystem(where / ("store" + std::to_string(n))));
-    infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp.k());
+    infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
     infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
     [&] (infinit::model::doughnut::Doughnut& dht)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
@@ -89,13 +91,15 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   ELLE_LOG("building observer");
   iok::Configuration config;
   config.k = groups;
+  config.encrypt = true;
+  config.accept_plain = false;
   infinit::overlay::NodeEndpoints endpoints;
   std::string ep = "127.0.0.1:"
     + std::to_string(root_node->local()->server_endpoint().port());
   std::vector<std::string> eps;
   eps.push_back(ep);
   endpoints.emplace(root_node->id(), eps);
-  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp.k());
+  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
   [&] (infinit::model::doughnut::Doughnut& dht)
   -> std::unique_ptr<imd::consensus::Consensus>

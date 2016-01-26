@@ -269,8 +269,7 @@ namespace infinit
           -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
-            bool verify = const_cast<Passport&>(p).verify(
-              *this->_doughnut.owner());
+            bool verify = this->_doughnut.verify(p, false, false, false);
             if (!verify)
             {
               ELLE_LOG("Passport validation failed");

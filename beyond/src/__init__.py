@@ -525,7 +525,9 @@ class Network(metaclass = Entity,
 class Passport(metaclass = Entity,
                fields = fields('user', 'network', 'signature',
                                allow_write = True,
-                               allow_storage = True)):
+                               allow_storage = True,
+                               allow_sign = False,
+                               certifier = False)):
   pass
 
 class Volume(metaclass = Entity,

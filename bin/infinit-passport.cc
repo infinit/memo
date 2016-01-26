@@ -15,15 +15,18 @@ COMMAND(create)
   auto user = ifnt.user_get(user_name);
   if (self.public_key != network.owner)
   {
-    throw elle::Error(
-      elle::sprintf("not owner of network \"%s\"", network_name));
+    std::cerr << "Notice: your key is not owner of the network, your passport "
+              << "with 'sign' permission enabled needs to be pushed to "
+              << "the network." << std::endl;
   }
   infinit::model::doughnut::Passport passport(
     user.public_key,
     network.name,
-    self.private_key.get(),
+    infinit::cryptography::rsa::KeyPair(self.public_key, self.private_key.get()),
+    self.public_key != network.owner,
     !flag(args, "deny-write"),
-    !flag(args, "deny-storage"));
+    !flag(args, "deny-storage"),
+    flag(args, "allow-sign"));
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -264,6 +267,7 @@ main(int argc, char** argv)
         { "push,p", bool_switch(), "alias for --push-passport" },
         { "deny-write", bool_switch(), "Deny write access to the user"},
         { "deny-storage", bool_switch(), "Deny contributing storage to the user"},
+        { "allow-sign", bool_switch(), "Allow signing passports"},
         option_output("passport"),
       },
     },

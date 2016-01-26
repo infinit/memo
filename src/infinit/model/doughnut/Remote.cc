@@ -235,7 +235,7 @@ namespace infinit
           }();
           auto& remote_passport = challenge_passport.second;
           ELLE_ASSERT(remote_passport);
-          if (!remote_passport->verify(*this->_doughnut.owner()))
+          if (!this->_doughnut.verify(*remote_passport, false, false, false))
           {
             auto msg = elle::sprintf(
               "passport validation failed for %s", this->id());

@@ -136,7 +136,7 @@ public:
                 boost::optional<elle::Version> v)
     : dht::Doughnut(
       infinit::model::Address::null, keys, keys->public_key(),
-      dht::Passport(keys->K(), "network", keys->k()),
+      dht::Passport(keys->K(), "network", *keys),
       [] (dht::Doughnut&)
       { return nullptr; },
       [] (dht::Doughnut&, infinit::model::Address, std::shared_ptr<dht::Local>)

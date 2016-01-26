@@ -172,11 +172,11 @@ private:
             elle::make_unique<dht::consensus::Consensus>(dht));
         };
     dht::Passport passport_a(
-      this->keys_a->K(), "network-name", this->keys_a->k());
+      this->keys_a->K(), "network-name", *this->keys_a);
     dht::Passport passport_b(
-      this->keys_b->K(), "network-name", this->keys_a->k());
+      this->keys_b->K(), "network-name", *this->keys_a);
     dht::Passport passport_c(
-      this->keys_c->K(), "network-name", this->keys_a->k());
+      this->keys_c->K(), "network-name", *this->keys_a);
     infinit::overlay::Stonehenge::Peers members;
     members.emplace_back(id_a);
     members.emplace_back(id_b);

@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+def run(mode):
+  with TemporaryDirectory() as tmp, Infinit() as owner, Infinit() as adm, Infinit() as user:
+    # Three users, adm is granted sign delegation and signs for user
+    owner.run('infinit-user --create owner')
+    adm.run('infinit-user --create adm')
+    user.run('infinit-user --create user')
+    
+    owner.run('infinit-storage --create storage --filesystem --path ' + tmp.dir)
+    owner.run('infinit-network --create network --kelips --storage storage --as owner --port 63199')
+    
+    uadm = adm.run('infinit-user --export adm')
+    uuser = user.run('infinit-user --export user')
+  
+    owner.run('infinit-user --import', input = uadm)
+    owner.run('infinit-user --import', input = uuser)
+    adm.run('infinit-user --import', input = uuser)
+    
+    net = owner.run('infinit-network --export --as owner network')
+    adm.run('infinit-network --import', input = net)
+    user.run('infinit-network --import', input = net)
+  
+    padm = owner.run('infinit-passport --create --as owner --user adm --network owner/network --allow-sign --output -')
+    adm.run('infinit-passport --import', input=padm)
+    puser = adm.run('infinit-passport --create --as adm --user user --network owner/network --output -')
+    user.run('infinit-passport --import', input=puser)
+  
+    adm.run('infinit-network --link --as adm owner/network')
+    user.run('infinit-network --link --as user owner/network')
+  
+    owner.run('infinit-volume --create vol --as owner --network network')
+    vol = owner.run('infinit-volume --export vol --as owner')
+    adm.run('infinit-volume --import', input=vol)
+    user.run('infinit-volume --import', input=vol)
+  
+    # READY!
+    # extract keys
+    with open(adm.dir + '/.local/share/infinit/filesystem/users/adm', 'r') as f:
+      j = json.loads(f.read())
+      adm_key = json.dumps(j['public_key'])
+    with open(user.dir + '/.local/share/infinit/filesystem/users/user', 'r') as f:
+      j = json.loads(f.read())
+      user_key = json.dumps(j['public_key'])
+    # Give write access
+    response = owner.run_script(user = 'owner', volume = 'vol', operation = 'setxattr',
+      name = 'user.infinit.auth.setrw',
+      path = '/',
+      value = adm_key)
+    assertEq(response['success'], True)
+    response = owner.run_script(user = 'owner', volume = 'vol', operation = 'setxattr',
+      name = 'user.infinit.auth.setrw',
+      path = '/',
+      value = user_key)
+    assertEq(response['success'], True)
+  
+    response = owner.run_script(user = 'owner', volume = 'vol', operation = 'mkdir', path='/beacon')
+    assertEq(response['success'], True)
+  
+    def run_volume():
+      owner.run(['infinit-volume', '--run', '--as', 'owner', 'vol'],
+        return_code = 118)
+    import threading
+    t = threading.Thread(target = run_volume)
+    t.start()
+    time.sleep(1)
+    # Try doing something with user, it will fail since the admin key is not pushed
+    res = None
+    def run_user():
+      global res
+      res = user.run_script(user = 'user', volume='owner/vol',
+        peer = '127.0.0.1:63199',
+        operation = 'list_directory',
+        path = '/')
+    tu = threading.Thread(target = run_user)
+    tu.start()
+    time.sleep(4)
+    assertEq(res, None)
+    user.process.kill()
+    
+    
+    if mode:
+      #Try the same thing with adm, registering its passport in the process
+      res = adm.run_script(user = 'adm', volume='owner/vol',
+          peer = '127.0.0.1:63199',
+          operation = 'list_directory',
+          path = '/')
+      assertEq(res['success'], True)
+      assertEq(res['entries'], ['beacon'])
+    else:
+      # register adm passport
+      # We need to kill and restart running volume because of fixed port
+      owner.process.kill()
+      time.sleep(1)
+      with open(adm.dir + '/.local/share/infinit/filesystem/passports/owner/network/adm', 'r') as f:
+        j = json.loads(f.read())
+        adm_passport = json.dumps(j)
+
+      owner.run_script(user = 'owner', volume = 'vol', operation = 'setxattr',
+        name = 'user.infinit.register.adm',
+        path = '/',
+        value = adm_passport)
+      t = threading.Thread(target = run_volume)
+      t.start()
+      time.sleep(1)
+    # and now again with user, should work since adm pushed the intermediate passport
+    res = user.run_script(user = 'user', volume='owner/vol',
+        peer = '127.0.0.1:63199',
+        operation = 'list_directory',
+        path = '/')
+    assertEq(res['success'], True)
+    assertEq(res['entries'], ['beacon'])
+    owner.process.kill()
+    t.join()
+
+run(True)
+run(False)

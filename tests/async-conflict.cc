@@ -27,7 +27,7 @@ std::unique_ptr<reactor::filesystem::FileSystem> make(
   boost::filesystem::create_directories(where / "store");
   boost::filesystem::create_directories(where / "async");
   s.reset(new infinit::storage::Filesystem(where / "store"));
-  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp.k());
+  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
     [&] (infinit::model::doughnut::Doughnut& dht)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>

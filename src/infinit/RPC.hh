@@ -304,7 +304,7 @@ namespace infinit
             catch (elle::Error const& e)
             {
               ELLE_WARN("%s: deserialization error: %s",
-                        *this, elle::exception_string());
+                        *this, e);
               throw;
             }
           }

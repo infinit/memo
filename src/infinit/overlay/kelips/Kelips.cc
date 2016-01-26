@@ -1364,11 +1364,16 @@ namespace infinit
         {
           ELLE_DEBUG("%s: processing key request from %s", *this, source);
           // validate passport
-          bool ok = p->passport.verify(*doughnut()->owner());
+          bool ok = doughnut()->verify(p->passport, false, false, false);
           if (!ok)
           {
             ELLE_WARN("%s: failed to validate passport from %s : %s",
               *this, source, p->sender);
+            // send an error reply
+            packet::KeyReply kr(doughnut()->passport());
+            kr.sender = _self;
+            kr.token = elle::Buffer("Failed to validate passport");
+            send(kr, source, p->sender);
             return;
           }
           // sign the challenge with our passport
@@ -1389,14 +1394,21 @@ namespace infinit
             infinit::cryptography::Mode::cbc);
           kr.token = std::move(p->token);
           kr.signed_challenge = std::move(signed_challenge);
+          ELLE_DEBUG("%s: sending keyreply to %s", *this, source);
           send(kr, source, p->sender);
           return;
         } // requestkey
         if (auto p = dynamic_cast<packet::KeyReply*>(packet.get()))
         {
           ELLE_DEBUG("%s: processing key reply from %s", *this, source);
+          if (p->encrypted_key.empty())
+          {
+            ELLE_WARN("%s: key exchange failed with %s: %s", *this, source,
+              p->token);
+            return;
+          }
           // validate passport
-          bool ok = p->passport.verify(*doughnut()->owner());
+          bool ok = doughnut()->verify(p->passport, false, false, false);
           if (!ok)
           {
             ELLE_WARN("%s: failed to validate passport from %s : %s",

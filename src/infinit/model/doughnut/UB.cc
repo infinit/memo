@@ -20,11 +20,21 @@ namespace infinit
       | Construction |
       `-------------*/
 
+      UB::UB(Doughnut* dn, std::string name, Passport const& passport, bool reverse)
+        : Super(reverse ? UB::hash_address(passport.user()) : UB::hash_address(name))
+        , _name(std::move(name))
+        , _key(passport.user())
+        , _reverse(reverse)
+        , _passport(passport)
+        , _doughnut(dn)
+      {}
+
       UB::UB(Doughnut* dn, std::string name, cryptography::rsa::PublicKey key, bool reverse)
         : Super(reverse ? UB::hash_address(key) : UB::hash_address(name))
         , _name(std::move(name))
         , _key(std::move(key))
         , _reverse(reverse)
+        , _passport()
         , _doughnut(dn)
       {}
 
@@ -33,6 +43,7 @@ namespace infinit
         , _name{other._name}
         , _key{other._key}
         , _reverse{other._reverse}
+        , _passport{other._passport}
         , _doughnut(other._doughnut)
       {}
 
@@ -85,6 +96,13 @@ namespace infinit
           auto reason = elle::sprintf("address %x invalid, expecting %x",
                                       this->address(), expected_address);
           ELLE_DUMP("%s: %s", *this, reason);
+          return blocks::ValidationResult::failure(reason);
+        }
+        if (this->_passport && this->_passport->user() != this->key())
+        {
+          auto reason = elle::sprintf("user key mismatch in passport: %s v s %s",
+                                      this->key(), this->_passport->user());
+          ELLE_DEBUG("%s: %s", *this, reason);
           return blocks::ValidationResult::failure(reason);
         }
         return blocks::ValidationResult::success();
@@ -145,6 +163,8 @@ namespace infinit
         , _reverse(input.deserialize<bool>("reverse"))
       {
         input.serialize_context<Doughnut*>(this->_doughnut);
+        if (version >= elle::Version(0, 5, 0))
+          input.serialize("passport", this->_passport);
       }
 
       void
@@ -152,15 +172,18 @@ namespace infinit
                     elle::Version const& version)
       {
         Super::serialize(s,version);
-        this->_serialize(s);
+        this->_serialize(s, version);
       }
 
       void
-      UB::_serialize(elle::serialization::Serializer& s)
+      UB::_serialize(elle::serialization::Serializer& s,
+                     elle::Version const& version)
       {
         s.serialize("name", this->_name);
         s.serialize("key", this->_key);
         s.serialize("reverse", this->_reverse);
+        if (version >= elle::Version(0, 5, 0))
+          s.serialize("passport", this->_passport);
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

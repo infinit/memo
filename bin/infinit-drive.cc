@@ -109,7 +109,8 @@ _create_passports(
       auto user = ifnt.user_get(invitee.first);
       auto pass = Passport(user.public_key,
                            drive.network,
-                           self.private_key.get());
+                           infinit::cryptography::rsa::KeyPair(
+                             self.public_key, self.private_key.get()));
       ifnt.passport_save(pass);
       new_passports.push_back(user.name);
       report_created("passport",

@@ -597,6 +597,7 @@ def configure(
           'errors',
           'single-user-two-devices-shared-storage',
           'passport-restrictions',
+          'passport-sign-delegate',
           #FIXME: 'flow',
           # Test clis.
           'main_cli',
