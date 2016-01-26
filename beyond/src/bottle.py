@@ -901,7 +901,7 @@ def user_credentials_google_refresh(self, username):
             'client_id':     getattr(beyond, '%s_app_key' % kind),
             'client_secret': getattr(beyond, '%s_app_secret' % kind),
             'refresh_token': account['refresh_token'],
-            'grant_type': '  refresh_token',
+            'grant_type':    'refresh_token',
           }
           res = requests.post(google_url, params = query)
           if res.status_code != 200:
