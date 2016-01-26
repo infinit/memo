@@ -30,7 +30,7 @@ namespace infinit
       std::unique_ptr<Block>
       operator() (Block& block,
                   Block& current,
-                  model::StoreMode mode)
+                  model::StoreMode mode) override
       {
         return current.clone();
       }
