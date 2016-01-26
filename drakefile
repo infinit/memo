@@ -38,6 +38,7 @@ def configure(
   fuse = None,
   codesign = False,
   beyond = True,
+  symbols_out_dir = None,
 ):
 
   global rule_build, rule_check, rule_install, rule_tests
@@ -500,6 +501,13 @@ def configure(
                                      lib_sym)
     installed_symbols.append(lib_sym)
     rule_install << lib_sym
+
+  if symbols_out_dir:
+    symbols_out_dir = '%s/%s' % (symbols_out_dir, git.description())
+    for symbol_file in installed_symbols:
+      rule_install << drake.copy(symbol_file,
+                                 symbols_out_dir,
+                                 strip_prefix = True)
 
   ## ----- ##
   ## Share ##
