@@ -306,7 +306,7 @@ COMMAND(set)
   if (inherit && disinherit)
   {
     throw CommandLineError(
-      "set either inherit or disable-inherit, not both");
+      "inherit and disable-inherit are exclusive");
   }
   if (!inherit && !disinherit && mode.empty())
     throw CommandLineError("no operation specified");
