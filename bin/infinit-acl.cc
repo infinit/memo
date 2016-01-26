@@ -30,6 +30,34 @@ static const char admin_prefix = '^';
 static const char group_prefix = '@';
 
 static
+bool
+is_admin(std::string const& obj)
+{
+  return obj.length() > 0 && obj[0] == admin_prefix;
+}
+
+static
+bool
+is_group(std::string const& obj)
+{
+  return obj.length() > 0 && obj[0] == group_prefix;
+}
+
+static
+std::string
+public_key_from_username(std::string const& username)
+{
+  auto user = ifnt.user_get(username);
+  elle::Buffer buf;
+  {
+    elle::IOStream ios(buf.ostreambuf());
+    elle::serialization::json::SerializerOut so(ios, false);
+    so.serialize_forward(user.public_key);
+  }
+  return buf.string();
+}
+
+static
 boost::filesystem::path
 file_xattrs_dir(std::string const& file)
 {
@@ -247,14 +275,7 @@ set_action(std::string const& path,
       {
         try
         {
-          auto user = ifnt.user_get(username);
-          elle::Buffer buf;
-          {
-            elle::IOStream ios(buf.ostreambuf());
-            elle::serialization::json::SerializerOut so(ios, false);
-            so.serialize_forward(user.public_key);
-          }
-          set_attribute(buf.string());
+          set_attribute(public_key_from_username(username));
         }
         catch (InvalidArgument const&)
         {
@@ -383,24 +404,47 @@ collate_users(OptVecStr const& combined,
 }
 
 static
-std::string
-group_attr_name(std::string const& object, std::string const& action)
+void
+group_add_remove(std::string const& path,
+                 std::string const& group,
+                 std::string const& object,
+                 std::string const& action,
+                 bool fallback)
 {
   if (!object.length())
     throw CommandLineError("empty user or group name");
-  static std::string base = "user.infinit.group.";
-  std::string action_detail = object[0] == admin_prefix ? "admin" : "";
-  std::string res = elle::sprintf("%s%s%s", base, action, action_detail);
-  return res;
-}
-
-static
-std::string
-raw_name(std::string const& object)
-{
-  if (!object.length())
-    throw CommandLineError("empty user or group name");
-  return object[0] == admin_prefix ? object.substr(1) : object;
+  static const std::string base = "user.infinit.group.";
+  std::string action_detail = is_admin(object) ? "admin" : "";
+  std::string attr = elle::sprintf("%s%s%s", base, action, action_detail);
+  auto set_attr = [&] (std::string const& identifier)
+    {
+      check(port_setxattr, path, attr, group + ":" + identifier, fallback);
+    };
+  std::string name = is_admin(object) ? object.substr(1) : object;
+  try
+  {
+    set_attr(name);
+  }
+  catch (elle::Error const& e)
+  {
+    if (is_group(object))
+    {
+      throw elle::Error(elle::sprintf(
+        "ensure group \"%s\" exists and path is in a volume", name.substr(1)));
+    }
+    else
+    {
+      try
+      {
+        set_attr(public_key_from_username(name));
+      }
+      catch (elle::Error const& e)
+      {
+        throw elle::Error(elle::sprintf(
+          "ensure user \"%s\" exists and path is in a volume", name));
+      }
+    }
+  }
 }
 
 COMMAND(group)
@@ -440,36 +484,12 @@ COMMAND(group)
   if (add)
   {
     for (auto const& obj: add.get())
-    {
-      try
-      {
-        check(port_setxattr, path, group_attr_name(obj, "add"),
-              group + ":" + raw_name(obj), fallback);
-      }
-      catch (elle::Error const& e)
-      {
-        std::string type = obj[0] == group_prefix ? "group" : "user";
-        throw elle::Error(elle::sprintf(
-          "ensure that %s \"%s\" exists and path is in a volume", type, obj));
-      }
-    }
+      group_add_remove(path, group, obj, "add", fallback);
   }
   if (rem)
   {
     for (auto const& obj: rem.get())
-    {
-      try
-      {
-        check(port_setxattr, path, group_attr_name(obj, "remove"),
-              group + ":" + raw_name(obj), fallback);
-      }
-      catch (elle::Error const& e)
-      {
-        std::string type = obj[0] == group_prefix ? "group" : "user";
-        throw elle::Error(elle::sprintf(
-          "ensure that %s \"%s\" exists and path is in a volume", type, obj));
-      }
-    }
+      group_add_remove(path, group, obj, "remove", fallback);
   }
   if (list)
   {
