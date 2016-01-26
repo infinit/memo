@@ -399,7 +399,7 @@ beyond_push(std::string const& where,
             T const& o,
             infinit::User const& self,
             bool report = true,
-            bool beyonderror = false); // FIXME: Remove when migration done.
+            bool beyond_error = false); // FIXME: Remove when migration done.
 
 namespace infinit
 {
@@ -2244,8 +2244,8 @@ beyond_push(std::string const& where,
             std::string const& name,
             T const& o,
             infinit::User const& self,
-            bool report = true,
-            bool beyond_error = false)
+            bool report,
+            bool beyond_error)
 {
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
