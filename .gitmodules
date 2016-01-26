@@ -1,6 +1,6 @@
 [submodule "elle"]
 	path = elle
-	url = git@gitlab.infinit.io:infinit/elle.git
+	url = git@git.infinit.io:elle.git
 [submodule "beyond/couchdb-python"]
 	path = beyond/couchdb-python
 	url = https://github.com/infinitdotio/couchdb-python.git
