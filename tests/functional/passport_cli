@@ -44,3 +44,34 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
     alice.run(['infinit-network', '--link',
                '--name', network,
                '--as', 'alice'])
+
+# Storing more than x passports.
+limit = 2
+with Beyond(beyond_args = {'limits': {'networks': {'passports': limit}}}) as beyond, Infinit(beyond) as bob:
+  bob.run(['infinit-user', '--signup',
+           '--name', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['infinit-network', '--create', '--push',
+           '--name', 'network',
+           '--as', 'bob'])
+  def push_passport(i):
+    user = Infinit(beyond)
+    user.__enter__()
+    name = 'invitee%d' % i
+    try:
+      user.run(['infinit-user', '--signup',
+                '--name', name, '--email', '%s@infinit.io' % name])
+      bob.run(['infinit-user', '--fetch', '--as', 'bob', '--name', name])
+      return bob.run(['infinit-passport', '--create', '--push',
+                      '--network', 'network',
+                      '--user', name,
+                      '--as', 'bob'])
+    finally:
+      user.__exit__()
+  for i in range(0, limit):
+    push_passport(i)
+  try:
+    push_passport(limit)
+    unreachable()
+  except Exception as e:
+    assert 'sales@infinit.sh' in e.args[0]
+    assert 'Payment Required' in e.args[0]

@@ -2167,6 +2167,14 @@ _beyond_push(reactor::http::Request& r,
       elle::sprintf(
         "%s \"%s\" already exists with a different key", type, name));
   }
+  else if (r.status() == reactor::http::StatusCode::Payment_Required)
+  {
+    throw elle::Error(
+      elle::sprintf(
+        "Pushing %s failed with status %s: Please contact sales@infinit.sh.",
+        type,
+        r.status()));
+  }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
     if (beyonderror)

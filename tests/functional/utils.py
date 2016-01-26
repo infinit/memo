@@ -146,8 +146,9 @@ class FakeGCS:
 
 class Beyond():
 
-  def __init__(self):
+  def __init__(self, beyond_args = {}):
     super().__init__()
+    self.__beyond_args = beyond_args
     self.__advance = timedelta()
     self.__server = bottle.WSGIRefServer(port = 0)
     self.__app = None
@@ -161,14 +162,18 @@ class Beyond():
     self.__datastore = \
       infinit.beyond.couchdb.CouchDBDatastore(couchdb)
     def run():
+      args = {
+        'dropbox_app_key': 'db_key',
+        'dropbox_app_secret': 'db_secret',
+        'google_app_key': 'google_key',
+        'google_app_secret': 'google_secret',
+        'gcs_app_key': 'google_key',
+        'gcs_app_secret': 'google_secret',
+      }
+      args.update(self.__beyond_args)
       self.__beyond = infinit.beyond.Beyond(
         datastore = self.__datastore,
-        dropbox_app_key = 'db_key',
-        dropbox_app_secret = 'db_secret',
-        google_app_key = 'google_key',
-        google_app_secret = 'google_secret',
-        gcs_app_key = 'google_key',
-        gcs_app_secret = 'google_secret',
+        **args
       )
       setattr(self.__beyond, '_Beyond__now', self.now)
       self.__app = infinit.beyond.bottle.Bottle(
