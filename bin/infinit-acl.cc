@@ -562,24 +562,24 @@ main(int argc, char** argv)
         { "create,c", bool_switch(), "create the group" },
         { "show", bool_switch(), "list group users and administrators" },
         { "delete,d", bool_switch(), "delete an existing group" },
-        { "add-user", value<std::vector<std::string>>(),
-          "add users to group" },
+        { "add-user", value<std::vector<std::string>>(), "add user to group" },
         { "add-admin", value<std::vector<std::string>>(),
-          "add administrators to group" },
+          "add administrator to group" },
         { "add-group", value<std::vector<std::string>>(),
-          "add groups to group" },
-        { "add", value<std::vector<std::string>>(), elle::sprintf(
+          "add group to group" },
+        { "add", value<std::vector<std::string>>()->multitoken(), elle::sprintf(
           "add users, administrators and groups to group "
           "(prefix: %s<group>, %s<admin>)", group_prefix, admin_prefix) },
         { "remove-user", value<std::vector<std::string>>(),
-          "remove users from group" },
+          "remove user from group" },
         { "remove-admin", value<std::vector<std::string>>(),
-          "remove administrators from group" },
+          "remove administrator from group" },
         { "remove-group", value<std::vector<std::string>>(),
-          "remove groups from group" },
-        { "remove", value<std::vector<std::string>>(), elle::sprintf(
-          "remove users, administrators and groups from group "
-          "(prefix: %s<group>, %s<admin>)", group_prefix, admin_prefix) },
+          "remove group from group" },
+        { "remove", value<std::vector<std::string>>()->multitoken(),
+          elle::sprintf("remove users, administrators and groups from group "
+                        "(prefix: %s<group>, %s<admin>)",
+                        group_prefix, admin_prefix) },
         { "path,p", value<std::string>(), "a path within the volume" },
         fallback_option,
         verbose_option,
