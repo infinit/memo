@@ -204,6 +204,15 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
 # pragma GCC diagnostic pop
 #endif
       }
+      struct stat st;
+      int res = stat(path.c_str(),&st);
+      if (res != 0)
+        perror(path.c_str());
+      else
+      {
+        if (st.st_mode & 06)
+          output << "  world: " << ((st.st_mode & 02) ? "rw" : "r") << std::endl;
+      }
       elle::json::Json j = elle::json::read(ss);
       auto a = boost::any_cast<elle::json::Array>(j);
       for (auto& li: a)
