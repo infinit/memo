@@ -38,7 +38,7 @@ def configure(
     python3 = None, # Alias for python
     fuse = None,
     codesign = False,
-    beyond = True,
+    beyond: bool = True,
     symbols_out_dir = None,
     website: bool = True,
 ):
