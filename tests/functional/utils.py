@@ -49,6 +49,8 @@ class Infinit(TemporaryDirectory):
   def version(self):
     return self.run(['infinit-volume', '--version'])[0]
   def run(self, args, input = None, return_code = 0, env = {}):
+    if isinstance(args, str):
+      args = args.split(' ')
     self.env = {
       'PATH': self.__infinit_root + '/bin' + ':bin:backend/bin:/bin:/usr/sbin',
       'INFINIT_HOME': self.dir,
@@ -106,10 +108,12 @@ class Infinit(TemporaryDirectory):
           _out.append('%s' % line);
       return _out
 
-  def run_script(self, user = None, volume='volume', seq = None, **kvargs):
+  def run_script(self, user = None, volume='volume', seq = None, peer = None, **kvargs):
     cmd = ['infinit-volume', '--run', volume]
     if user is not None:
       cmd += ['--as', user]
+    if peer is not None:
+       cmd += ['--peer', peer]
     response = self.run(cmd, input = seq or kvargs)
     return response
 

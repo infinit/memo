@@ -890,10 +890,12 @@ namespace infinit
 
     Volume(std::string name,
            boost::optional<std::string> mountpoint_,
-           std::string network_)
+           std::string network_,
+           boost::optional<std::string> default_permissions_)
       : name(std::move(name))
       , mountpoint(std::move(mountpoint_))
       , network(std::move(network_))
+      , default_permissions(std::move(default_permissions_))
     {
       check_name(this->name);
     }
@@ -911,6 +913,7 @@ namespace infinit
       if (s.out() && !this->mountpoint)
         s.serialize("mountpoint", this->mountpoint);
       s.serialize("network", this->network);
+      s.serialize("default_permissions", this->default_permissions);
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
@@ -970,6 +973,7 @@ namespace infinit
     std::string name;
     boost::optional<std::string> mountpoint;
     std::string network;
+    boost::optional<std::string> default_permissions;
   };
 
   struct Drive

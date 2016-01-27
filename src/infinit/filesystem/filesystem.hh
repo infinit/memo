@@ -47,6 +47,8 @@ namespace infinit
       ensure_permissions(model::blocks::Block const& block, bool r, bool w);
       std::pair<bool, bool>
       get_permissions(model::blocks::Block const& block);
+
+      boost::signals2::signal<void()> on_root_block_create;
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);

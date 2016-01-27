@@ -244,6 +244,7 @@ namespace infinit
                 dn.get(), dn->owner(), this->_volume_name + ".root", baddr);
               this->store_or_die(std::move(nb), model::STORE_INSERT);
             }
+            on_root_block_create();
             return mb;
           }
           reactor::sleep(1_sec);
