@@ -14,7 +14,7 @@
     <blockquote class="warning">In order to keep things simple, the examples below follow the same pattern: <strong>Alice</strong> is the user that sets the storage infrastructure up. In addition, Alice accesses a volume from her device A while allowing <strong>Bob</strong> and other users to access it as well from their devices: B, C etc.</blockquote>
 
 
-    <h2>Centralized on a single server without redundancy</h2>
+    <h2 id="centralized-single-server">Centralized on a single server without redundancy</h2>
 
     <p>In this configuration, all the data will be stored on a single server. While such an infrastructure can be deployed in a matter of minutes, it suffers some several limitations: with no redundancy, should the server crash, the data will become unavailable, temporarily or permanently depending on the nature of the failure. Such a configuration is similar to what services like ownCloud provide.</p>
 
@@ -63,7 +63,7 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
-    <h2>Distributed among several storage servers with redundancy</h2>
+    <h2 id="distributed-several-servers">Distributed among several storage servers with redundancy</h2>
 
     <img src="${url('images/schema-deployment-multi-servers.png')}" alt="Schema of Distributed among several storage servers with redundancy"><br>
 
@@ -121,7 +121,9 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     </div>
 
 
-    <h2>Distributed among client machines</h2>
+    <h2 id="distributed-client-machines">Distributed among client machines</h2>
+
+    <img src="${url('images/schema-decentralized.png')}" alt="Schema of Distributed among client machines"><br>
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#distributed-a" class="active">Client/Server A</a></li>
