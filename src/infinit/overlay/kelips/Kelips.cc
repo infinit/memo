@@ -28,6 +28,7 @@
 #include <reactor/Scope.hh>
 #include <reactor/exception.hh>
 #include <reactor/network/buffer.hh>
+#include <reactor/network/resolve.hh>
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
@@ -3568,9 +3569,9 @@ namespace infinit
               if (p == ep.npos)
                 throw std::runtime_error("missing ':'");
               auto addr = ep.substr(0, p);
-              auto port = std::stoi(ep.substr(p+1));
-              pl.second.push_back(RpcEndpoint(
-                boost::asio::ip::address::from_string(addr), port));
+              auto port = ep.substr(p+1);
+              auto endpoint = reactor::network::resolve_tcp(addr, port);
+              pl.second.push_back(endpoint);
             }
             catch(std::exception const& e)
             {
