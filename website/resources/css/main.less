@@ -593,7 +593,7 @@ body.pricing {
     pre {
       position: relative;
       code {
-        display: block; font-family: @monospace; background: #23241f;
+        display: block; font-family: @monospace; background: @terminalbg;
         padding: 15px 20px; border-radius: 5px; color: #f8f8f2;
         margin-left: 0; min-height: 48px;
       }
@@ -777,6 +777,13 @@ body.doc_comparisons {
   section.doc {
     table.centralized tr:nth-child(1) td { width: 4%;}
     table.centralized tr:nth-child(2n) td { background: #F9F9F9; }
+  }
+}
+
+
+body.doc_deployments {
+  section.doc {
+    img { margin: 0 auto; display: inherit;}
   }
 }
 
@@ -1135,5 +1142,32 @@ body.solutions {
   background-color: #8DCA09;
   border-color: #496805;
 }
+
+/*--------------.
+| Tabs          |
+`--------------*/
+
+ul.tabs { list-style-type: none !important; }
+ul.tabs li { float: left; margin: 0 !important; }
+ul.tabs a {
+  cursor: pointer; display: block; border-radius: 5px; padding: 6px 18px;
+  margin-right: 10px; background: darken(white, 4%);
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+
+  &:hover { background: darken(white, 7%); .transition(); }
+}
+
+ul.tabs a.active {
+  background: @terminalbg; color: darken(white, 10%);
+  &:hover { background: @terminalbg; }
+}
+
+.data-tabs-content .tabs-pane:first-child pre code { border-top-left-radius: 0 !important;}
+.tabs-pane { clear: both; }
+.tabs-pane pre { margin-top: 0; }
+
+.js-tabby .tabs-pane { display: none; visibility: hidden }
+.tabs-pane.active { display: block; visibility: visible }
+
 
 @import "responsive";

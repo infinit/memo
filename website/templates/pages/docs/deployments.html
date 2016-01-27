@@ -1,0 +1,159 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <%include file='menu.html'/>
+
+  <section class="doc">
+    <h1>Examples of Deployments</h1>
+
+    <p>Infinit can be set up to support a large variety of configurations, hence creating storage infrastructure with different tradeoffs between reliability, performance of access, cost etc.</p>
+
+    <p>The following provides you with some examples of deployments along with the commands one would need to use on the machines involved to set up such an environment.</p>
+
+    <blockquote class="warning">In order to keep things simple, the examples below follow the same pattern: <strong>Alice</strong> is the user that sets the storage infrastructure up. In addition, Alice accesses a volume from her device A while allowing <strong>Bob</strong> and other users to access it as well from their devices: B, C etc.</blockquote>
+
+
+    <h2>Centralized on a single server without redundancy</h2>
+
+    <p>In this configuration, all the data will be stored on a single server. While such an infrastructure can be deployed in a matter of minutes, it suffers some several limitations: with no redundancy, should the server crash, the data will become unavailable, temporarily or permanently depending on the nature of the failure. Such a configuration is similar to what services like ownCloud provide.</p>
+
+    <img src="${url('images/schema-deployment-one-server.png')}" alt="Schema of Centralized on a single server without redundancy"><br>
+
+    <p>Follow the setup configuration:</p>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#oneserver-a" class="active">Server</a></li>
+      <li><a data-tab href="#oneserver-b">Client A</a></li>
+      <li><a data-tab href="#oneserver-c">Client B</a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="oneserver-a">
+<pre><code>$> infinit-storage --create --filesystem --capacity 10GB --name local
+$> infinit-network --create --as alice --storage local --kelips --k 1 --replication-factor 1 --name cluster --push
+$> infinit-volume --create --as alice --network cluster --name shared --push
+
+$> infinit-user --fetch --name bob
+$> infinit-passport --create --as alice --network cluster --user bob --push
+
+$> infinit-network --run --as alice --name cluster --async --cache --publish
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="oneserver-b">
+<pre><code>$> infinit-network --fetch --as alice
+$> infinit-volume --fetch --as alice
+
+$> infinit-network --link --as alice --name cluster
+
+$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="oneserver-c">
+<pre><code>$> infinit-user --fetch --name alice
+
+$> infinit-network --fetch --as bob
+$> infinit-volume --fetch --as bob
+$> infinit-passport --fetch --as bob
+
+$> infinit-network --link --as bob --name alice/cluster
+
+$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+    </div>
+
+    <h2>Distributed among several storage servers with redundancy</h2>
+
+    <img src="${url('images/schema-deployment-multi-servers.png')}" alt="Schema of Distributed among several storage servers with redundancy"><br>
+
+    <p>Follow the setup configuration:</p>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#multiservers-1" class="active">Server 1</a></li>
+      <li><a data-tab href="#multiservers-2">Server 2 → N</a></li>
+      <li><a data-tab href="#multiservers-a">Client A</a></li>
+      <li><a data-tab href="#multiservers-b">Client B → X</a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="multiservers-1">
+<pre><code>$> infinit-storage --create --filesystem --capacity 10GB --name local
+$> infinit-network --create --as alice --storage local --kelips --k 1 --replication-factor 2 --name cluster --push
+$> infinit-volume --create --as alice --network cluster --name shared --push
+
+$> infinit-user --fetch --name bob
+$> infinit-passport --create --as alice --network cluster --user bob --push
+
+$> infinit-network --run --as alice --name cluster --async --cache --publish
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="multiservers-2">
+<pre><code>$> infinit-network --fetch --as alice
+
+$> infinit-storage --create --filesystem --capacity 10GB --name local
+$> infinit-network --link --as alice --name cluster --storage local
+
+$> infinit-network --run --as alice --name cluster --async --cache --publish
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="multiservers-a">
+<pre><code>$> infinit-network --fetch --as alice
+$> infinit-volume --fetch --as alice
+
+$> infinit-network --link --as alice --name cluster
+
+$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="multiservers-b">
+<pre><code>$> infinit-user --fetch --name alice
+
+$> infinit-network --fetch --as bob
+$> infinit-volume --fetch --as bob
+$> infinit-passport --fetch --as bob
+
+$> infinit-network --link --as bob --name alice/cluster
+
+$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+    </div>
+
+
+    <h2>Distributed among client machines</h2>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#distributed-a" class="active">Client/Server A</a></li>
+      <li><a data-tab href="#distributed-b">Client/Server B → X</a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="distributed-a">
+<pre><code>$> infinit-storage --create --filesystem --capacity 10GB --name local
+$> infinit-network --create --as alice --storage local --kelips --k 1 --replication-factor 5 --name cluster --push
+$> infinit-volume --create --as alice --network cluster --name shared --push
+
+$> infinit-user --fetch --name bob
+$> infinit-passport --create --as alice --network cluster --user bob --push
+
+$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="distributed-b">
+<pre><code>$> infinit-network --fetch --as alice
+
+$> infinit-network --fetch --as bob
+$> infinit-volume --fetch --as bob
+$> infinit-passport --fetch --as bob
+
+$> infinit-storage --create --filesystem --capacity 10GB --name local
+$> infinit-network --link --as bob --name alice/cluster --storage local
+
+$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+    </div>
+  <section>
+
+</%block>

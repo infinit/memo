@@ -124,6 +124,7 @@ def configure(
     'templates/pages/docs/get_started_windows.html',
     'templates/pages/docs/overview.html',
     'templates/pages/docs/technology.html',
+    'templates/pages/docs/deployments.html',
     'templates/pages/docs/comparisons.html',
     'templates/pages/docs/personal_cloud.html',
     'templates/pages/docs/decentralized_fs.html',
@@ -195,6 +196,10 @@ def configure(
     'resources/images/schema-dhash@2x.png',
     'resources/images/schema-encryption.png',
     'resources/images/schema-encryption@2x.png',
+    'resources/images/schema-deployment-one-server.png',
+    'resources/images/schema-deployment-one-server@2x.png',
+    'resources/images/schema-deployment-multi-servers.png',
+    'resources/images/schema-deployment-multi-servers@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
