@@ -84,7 +84,11 @@ Monokai Sublime style. Derived from Monokai by noformnocontent http://nn.mit-lic
 .css .unit,
 .hljs-option,
 .css .hljs-important {
-  color: #FF4185;
+
+}
+
+.hljs-option {
+  color: #FF9C73;
 }
 
 .hljs-function .hljs-keyword,
