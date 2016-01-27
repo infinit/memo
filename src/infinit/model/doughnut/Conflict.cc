@@ -26,17 +26,17 @@ namespace infinit
       | Serialization |
       `--------------*/
 
-      Conflict::Conflict(
-        elle::serialization::SerializerIn& input)
+      Conflict::Conflict(elle::serialization::SerializerIn& input)
         : Super(input)
       {
         this->_serialize(input);
       }
 
       void
-      Conflict::serialize(elle::serialization::Serializer& s)
+      Conflict::serialize(elle::serialization::Serializer& s,
+                          elle::Version const& v)
       {
-        Super::serialize(s);
+        Super::serialize(s, v);
         this->_serialize(s);
       }
 
