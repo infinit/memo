@@ -50,35 +50,35 @@ i386-jessie-gcc4:
     - jessie
     - gcc4
 
-x86_64-windows-mingw4:
-  stage: build
-  script:
-    - git submodule update --init --recursive
-    - git fetch origin --tags
-    - mkdir -p ../fs-build ../fs-install
-    - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 4 //build
-    - cd ../fs-build && python3 drake -j 4 //check
-    - cd ../fs-build && python3 drake -j 4 //install
-  tags:
-    - x86_64
-    - windows
-    - mingw4
+# x86_64-windows-mingw4:
+#   stage: build
+#   script:
+#     - git submodule update --init --recursive
+#     - git fetch origin --tags
+#     - mkdir -p ../fs-build ../fs-install
+#     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+#     - cd ../fs-build && python3 drake -j 4 //build
+#     - cd ../fs-build && python3 drake -j 4 //check
+#     - cd ../fs-build && python3 drake -j 4 //install
+#   tags:
+#     - x86_64
+#     - windows
+#     - mingw4
 
-i686-windows-mingw4:
-  stage: build
-  script:
-    - git submodule update --init --recursive
-    - git fetch origin --tags
-    - mkdir -p ../fs-build ../fs-install
-    - farm/configure --arch i686 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 4 //build
-    - cd ../fs-build && python3 drake -j 4 //check
-    - cd ../fs-build && python3 drake -j 4 //install
-  tags:
-    - i686
-    - windows
-    - mingw4
+# i686-windows-mingw4:
+#   stage: build
+#   script:
+#     - git submodule update --init --recursive
+#     - git fetch origin --tags
+#     - mkdir -p ../fs-build ../fs-install
+#     - farm/configure --arch i686 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+#     - cd ../fs-build && python3 drake -j 4 //build
+#     - cd ../fs-build && python3 drake -j 4 //check
+#     - cd ../fs-build && python3 drake -j 4 //install
+#   tags:
+#     - i686
+#     - windows
+#     - mingw4
 
 x86_64-osx-clang:
   stage: build
