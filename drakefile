@@ -40,6 +40,7 @@ def configure(
     codesign = False,
     beyond = True,
     symbols_out_dir = None,
+    website = True,
 ):
 
   if python3 is not None:
@@ -634,15 +635,16 @@ def configure(
         runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests
       rule_check << rule_functional_check
-    website = drake.include(
-      'website',
-      python = elle.python3,
-      prefix = prefix,
-      git = git,
-      bottle = bottle,
-      sendwithus = sendwithus,
-      PatchAndInstall = PatchAndInstall,
-    )
+    if website:
+      website = drake.include(
+        'website',
+        python = elle.python3,
+        prefix = prefix,
+        git = git,
+        bottle = bottle,
+        sendwithus = sendwithus,
+        PatchAndInstall = PatchAndInstall,
+      )
 
   ## ----- ##
   ## Tests ##

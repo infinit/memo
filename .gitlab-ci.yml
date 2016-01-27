@@ -27,9 +27,9 @@ x86_64-jessie-gcc4:
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 4 //build
-    - cd ../fs-build && python3 drake -j 4 //check
-    - cd ../fs-build && python3 drake -j 4 //install
+    - cd ../fs-build && python3 drake --website=false -j 4 //build
+    - cd ../fs-build && python3 drake --website=false -j 4 //check
+    - cd ../fs-build && python3 drake --website=false -j 4 //install
   tags:
     - x86_64
     - jessie
@@ -42,9 +42,9 @@ i386-jessie-gcc4:
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch i386 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 4 //build
-    - cd ../fs-build && python3 drake -j 4 //check
-    - cd ../fs-build && python3 drake -j 4 //install
+    - cd ../fs-build && python3 drake --website=false -j 4 //build
+    - cd ../fs-build && python3 drake --website=false -j 4 //check
+    - cd ../fs-build && python3 drake --website=false -j 4 //install
   tags:
     - i386
     - jessie
