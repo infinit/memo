@@ -70,7 +70,6 @@ def configure(
 
   markdown = drake.nodes(
     'templates/pages/docs/src/markdown/get_started.md',
-    'templates/pages/docs/src/markdown/overview.md',
     'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/reference.md',
   )
