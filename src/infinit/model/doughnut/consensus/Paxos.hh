@@ -71,6 +71,8 @@ namespace infinit
           typedef athena::paxos::Server<
             std::shared_ptr<blocks::Block>, int, Address>
           PaxosServer;
+          typedef elle::Option<std::shared_ptr<blocks::Block>,
+                               Paxos::PaxosClient::Quorum> Value;
 
           class RemotePeer
             : public doughnut::Remote
@@ -91,7 +93,7 @@ namespace infinit
             accept(PaxosServer::Quorum const& peers,
                    Address address,
                    PaxosClient::Proposal const& p,
-                   std::shared_ptr<blocks::Block> const& value);
+                   Value const& value);
             virtual
             std::pair<PaxosServer::Quorum,
                       std::unique_ptr<Paxos::PaxosClient::Accepted>>
@@ -120,7 +122,7 @@ namespace infinit
             accept(PaxosServer::Quorum peers,
                    Address address,
                    PaxosClient::Proposal const& p,
-                   std::shared_ptr<blocks::Block> const& value);
+                   Value const& value);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
