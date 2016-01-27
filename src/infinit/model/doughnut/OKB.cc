@@ -22,9 +22,20 @@ namespace infinit
   {
     namespace doughnut
     {
-      OKBHeader::OKBHeader(cryptography::rsa::KeyPair const& keys,
+      static
+      elle::Version
+      elle_serialization_version(Doughnut const& dht)
+      {
+        auto versions = elle::serialization::get_serialization_versions<
+          infinit::serialization_tag>(dht.version());
+        return versions.at(elle::type_info<elle::serialization_tag>());
+      }
+
+      OKBHeader::OKBHeader(Doughnut* dht,
+                           cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
-        : _owner_key(keys.public_key())
+        : _dht(dht)
+        , _owner_key(keys.public_key())
         , _signature()
       {
         if (salt)
@@ -38,23 +49,26 @@ namespace infinit
           _salt.append(&now, 8);
         }
         auto owner_key_buffer =
-          elle::serialization::json::serialize(this->_owner_key);
+          elle::serialization::json::serialize(
+            *this->_owner_key, elle_serialization_version(*this->_dht));
         owner_key_buffer.append(_salt.contents(), _salt.size());
         this->_signature = keys.k().sign(owner_key_buffer);
       }
 
       OKBHeader::OKBHeader(OKBHeader const& other)
-        : _salt(other._salt)
+        : _dht(other._dht)
+        , _salt(other._salt)
         , _owner_key(other._owner_key)
         , _signature(other._signature)
       {}
 
       Address
-      OKBHeader::hash_address(cryptography::rsa::PublicKey const& key,
+      OKBHeader::hash_address(Doughnut const& dht,
+                              cryptography::rsa::PublicKey const& key,
                               elle::Buffer const& salt)
       {
-        auto key_buffer =
-          elle::serialization::json::serialize(key);
+        auto key_buffer = elle::serialization::json::serialize(
+          key, elle_serialization_version(dht));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
@@ -63,7 +77,7 @@ namespace infinit
       Address
       OKBHeader::_hash_address() const
       {
-        return hash_address(*this->_owner_key, this->_salt);
+        return hash_address(*this->_dht, *this->_owner_key, this->_salt);
       }
 
       blocks::ValidationResult
@@ -82,10 +96,11 @@ namespace infinit
         }
         ELLE_DEBUG("%s: check owner key", *this)
         {
-          auto owner_key_buffer =
-            elle::serialization::json::serialize(*this->_owner_key);
+          auto owner_key_buffer = elle::serialization::json::serialize(
+            *this->_owner_key, elle_serialization_version(*this->_dht));
           owner_key_buffer.append(_salt.contents(), _salt.size());
-          if (!this->_owner_key->verify(this->OKBHeader::_signature, owner_key_buffer))
+          if (!this->_owner_key->verify(
+                this->OKBHeader::_signature, owner_key_buffer))
           {
             ELLE_DEBUG("%s: invalid owner key", *this);
             return blocks::ValidationResult::failure("invalid owner key");
@@ -101,6 +116,7 @@ namespace infinit
                        s.deserialize<cryptography::rsa::PublicKey>("key")))
         , _signature()
       {
+        s.serialize_context<Doughnut*>(this->_dht);
         s.serialize("owner", *this);
       }
 
@@ -127,7 +143,7 @@ namespace infinit
                               elle::Buffer data,
                               boost::optional<elle::Buffer> salt,
                               cryptography::rsa::KeyPair const& owner_keys)
-        : BaseOKB(OKBHeader(owner_keys, std::move(salt)),
+        : BaseOKB(OKBHeader(owner, owner_keys, std::move(salt)),
                   owner, std::move(data), owner_keys.private_key())
       {}
 

@@ -128,7 +128,7 @@ namespace infinit
           return *this->_block;
         ELLE_TRACE_SCOPE("%s: fetch block", *this);
         auto key = this->public_control_key();
-        auto addr = ACB::hash_address(key, group_block_key);
+        auto addr = ACB::hash_address(this->_dht, key, group_block_key);
         elle::unconst(this)->_block = elle::cast<GB>::runtime(
           this->_dht.fetch(addr));
         return *this->_block;

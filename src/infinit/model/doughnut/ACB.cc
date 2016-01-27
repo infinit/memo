@@ -59,6 +59,15 @@ namespace infinit
   {
     namespace doughnut
     {
+      static
+      elle::Version
+      elle_serialization_version(Doughnut const& dht)
+      {
+        auto versions = elle::serialization::get_serialization_versions<
+          infinit::serialization_tag>(dht.version());
+        return versions.at(elle::type_info<elle::serialization_tag>());
+      }
+
       /*---------.
       | ACLEntry |
       `---------*/
@@ -441,9 +450,10 @@ namespace infinit
           {
             try
             {
+              auto version = elle_serialization_version(*this->doughnut());
               if (model)
-                return
-                  model->make_user(elle::serialization::json::serialize(k));
+                return model->make_user(
+                  elle::serialization::json::serialize(k, version));
               else
                 return elle::make_unique<doughnut::User>(k, "");
             }
@@ -671,7 +681,9 @@ namespace infinit
             key = secret;
           }
           ELLE_DUMP("%s: new block secret: %s", *this, key.get());
-          auto secret_buffer = elle::serialization::json::serialize(key.get());
+          auto version = elle_serialization_version(*this->doughnut());
+          auto secret_buffer =
+            elle::serialization::json::serialize(key.get(), version);
           this->_owner_token = this->owner_key()->seal(secret_buffer);
           int idx = 0;
           for (auto& e: this->_acl_entries)

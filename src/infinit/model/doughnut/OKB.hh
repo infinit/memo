@@ -28,9 +28,11 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        OKBHeader(cryptography::rsa::KeyPair const& keys,
+        OKBHeader(Doughnut* dht,
+                  cryptography::rsa::KeyPair const& keys,
                   boost::optional<elle::Buffer> salt);
         OKBHeader(OKBHeader const& other);
+        ELLE_ATTRIBUTE(Doughnut*, dht);
 
       /*---------.
       | Contents |
@@ -59,7 +61,8 @@ namespace infinit
         serialize(elle::serialization::Serializer& s);
         static
         Address
-        hash_address(cryptography::rsa::PublicKey const& key,
+        hash_address(Doughnut const& dht,
+                     cryptography::rsa::PublicKey const& key,
                      elle::Buffer const& salt);
         typedef infinit::serialization_tag serialization_tag;
       };
