@@ -559,7 +559,7 @@ main(int argc, char** argv)
       "--name NAME "
         "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
         "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
-        "[--storage STORAGE...]",
+        "[--storage STORAGE...]"
         "[OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created network name" },
