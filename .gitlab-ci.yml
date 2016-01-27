@@ -119,7 +119,6 @@ website:
     - mkdir -p ../fs-build ../fs-website
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build && python3 drake -j 4 //website/build
-    - cd ../fs-build && python3 drake -j 4 //website/check
     - cd ../fs-build && python3 drake -j 4 //website/install --prefix=$(realpath ../fs-website)
   tags:
     - x86_64
