@@ -12,9 +12,9 @@ x86_64-trusty-gcc4:
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 1 //build
-    - cd ../fs-build && python3 drake -j 1 //check
-    - cd ../fs-build && python3 drake -j 1 //install
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
   tags:
     - x86_64
     - trusty
@@ -57,9 +57,9 @@ i386-jessie-gcc4:
 #     - git fetch origin --tags
 #     - mkdir -p ../fs-build ../fs-install
 #     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-#     - cd ../fs-build && python3 drake -j 4 //build
-#     - cd ../fs-build && python3 drake -j 4 //check
-#     - cd ../fs-build && python3 drake -j 4 //install
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
 #   tags:
 #     - x86_64
 #     - windows
@@ -72,9 +72,9 @@ i386-jessie-gcc4:
 #     - git fetch origin --tags
 #     - mkdir -p ../fs-build ../fs-install
 #     - farm/configure --arch i686 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-#     - cd ../fs-build && python3 drake -j 4 //build
-#     - cd ../fs-build && python3 drake -j 4 //check
-#     - cd ../fs-build && python3 drake -j 4 //install
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
 #   tags:
 #     - i686
 #     - windows
@@ -94,3 +94,33 @@ x86_64-osx-clang:
     - x86_64
     - osx
     - clang
+
+beyond:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-beyond
+    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake -j 4 //beyond/build
+    - cd ../fs-build && python3 drake -j 4 //beyond/check
+    - cd ../fs-build && python3 drake -j 4 //beyond/install --prefix=$(realpath ../fs-beyond)
+  tags:
+    - x86_64
+    - trusty
+    - gcc4
+
+website:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-website
+    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake -j 4 //website/build
+    - cd ../fs-build && python3 drake -j 4 //website/check
+    - cd ../fs-build && python3 drake -j 4 //website/install --prefix=$(realpath ../fs-website)
+  tags:
+    - x86_64
+    - trusty
+    - gcc4
