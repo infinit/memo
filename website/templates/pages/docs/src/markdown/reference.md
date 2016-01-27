@@ -551,7 +551,7 @@ Indeed, one must take into account that:
 - User read/write access mode (u+r and u+w) are set according to the ACLs, properly reflecting what operations the user having mounted the file system is allowed to perform. Changing those flags has no effect.
 - User execute access mode can be set or cleared and is preserved. Noteworthy is that this protection is not ensured at the network level through cryptographic mechanisms as it is the case for read and write. Instead, a flag is just set to indicate that the file is 'executable'.
 - Group modes are irrelevant and set to zero.
-- Others read/write access mode can be set to make the object readable/writable for all. See <a href="#world-readability-writability">World-readability/writability</a> for more information.
+- Others read/write access mode can be set to make the object readable/writable for all. See [World-readability/writability](#world-readability-writability) for more information.
 
 ### Create a group ###
 

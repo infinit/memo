@@ -558,14 +558,14 @@ body.pricing {
 
     p, li, p.note { line-height: 23px; font-size: 15px; }
     p.note, em { font-style: italic; color: #8C8C8C; }
-    p a { color: @infinitblue; .transition() }
+    p a, li a { color: @infinitblue; .transition() }
 
     p.title {
       font-family: @helvetica; font-weight: 300;font-size: 26px; line-height: 39px;
       width: 90%;
     }
 
-    p a:hover {
+    p a:hover, li a:hover {
       color: darken(@infinitblue, 10%);
       border-bottom: 2px solid darken(@infinitblue, 10%);
     }
