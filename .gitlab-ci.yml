@@ -106,6 +106,7 @@ beyond:
     - cd ../fs-build && python3 drake -j 4 //beyond/build
     - cd ../fs-build && python3 drake -j 4 //beyond/check
     - cd ../fs-build && python3 drake -j 4 //beyond/install --prefix=$(realpath ../fs-beyond)
+    - cd ../fs-build && python3 drake -j 4 //beyond/debian
   tags:
     - x86_64
     - trusty
@@ -120,6 +121,7 @@ website:
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build && python3 drake -j 4 //website/build
     - cd ../fs-build && python3 drake -j 4 //website/install --prefix=$(realpath ../fs-website)
+    - cd ../fs-build && python3 drake -j 4 //website/debian
   tags:
     - x86_64
     - trusty
