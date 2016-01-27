@@ -40,7 +40,7 @@ def configure(
     codesign = False,
     beyond = True,
     symbols_out_dir = None,
-    website = True,
+    website: bool = True,
 ):
 
   if python3 is not None:
