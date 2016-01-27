@@ -427,7 +427,7 @@ group_add_remove(std::string const& path,
   }
   catch (elle::Error const& e)
   {
-    if (is_group(object))
+    if (is_group(name))
     {
       throw elle::Error(elle::sprintf(
         "ensure group \"%s\" exists and path is in a volume", name.substr(1)));
