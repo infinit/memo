@@ -27,6 +27,8 @@ namespace infinit
   {
   public:
     virtual
+    ~RPCHandler() = default;
+    virtual
     void
     handle(elle::serialization::SerializerIn& input,
            elle::serialization::SerializerOut& output) = 0;
