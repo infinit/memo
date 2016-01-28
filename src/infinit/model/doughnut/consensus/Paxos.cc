@@ -668,20 +668,22 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Paxos::_fetch(Address address, boost::optional<int> local_version)
         {
+          typedef std::pair<PaxosServer::Quorum,
+                            std::unique_ptr<PaxosClient::Accepted>> FetchData;
           if (this->doughnut().version() < elle::Version(0, 5, 0))
           {
-            auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
+            auto peers =
+              this->_owners(address, this->_factor, overlay::OP_FETCH);
             return fetch_from_members(peers, address, std::move(local_version));
           }
           PaxosServer::Quorum quorum;
+          std::vector<FetchData> hits;
           while (true)
           {
+            hits.clear();
             auto peers = quorum.empty() ?
               this->_owners(address, this->_factor, overlay::OP_FETCH) :
               this->doughnut().overlay()->lookup_nodes(quorum);
-            typedef std::pair<PaxosServer::Quorum,
-                      std::unique_ptr<PaxosClient::Accepted>> FetchData;
-            std::vector<FetchData> hits;
             PaxosServer::Quorum my_quorum;
             for (auto peer: peers)
             {
@@ -722,26 +724,25 @@ namespace infinit
                 return a.second->proposal > b.second->proposal;
               });
             quorum = hits.front().first;
-            if (quorum != my_quorum)
-            {
+            if (quorum == my_quorum)
+              break;
+            else
               ELLE_DEBUG("outdated quorum, most recent: %s", quorum);
-              continue;
-            }
-            auto proposal = hits.front().second->proposal;
-            int count = 0;
-            for (auto const& a: hits)
-            {
-              if (a.first != quorum)
-                throw elle::Error("different quorums in quorum"); // FIXME
-              if (a.second->proposal != proposal)
-                throw elle::Error("different acceptations in quorum"); // FIXME
-              if (++count > signed(quorum.size()) / 2)
-                return a.second->
-                  value.get<std::shared_ptr<blocks::Block>>()->clone();
-            }
-            ELLE_TRACE("too few peers: %s", hits.size());
-            throw athena::paxos::TooFewPeers(hits.size(), quorum.size());
           }
+          auto proposal = hits.front().second->proposal;
+          int count = 0;
+          for (auto const& a: hits)
+          {
+            if (a.first != quorum)
+              throw elle::Error("different quorums in quorum"); // FIXME
+            if (a.second->proposal != proposal)
+              throw elle::Error("different acceptations in quorum"); // FIXME
+            if (++count > signed(quorum.size()) / 2)
+              return a.second->
+                value.get<std::shared_ptr<blocks::Block>>()->clone();
+          }
+          ELLE_TRACE("too few peers: %s", hits.size());
+          throw athena::paxos::TooFewPeers(hits.size(), quorum.size());
         }
 
         void
