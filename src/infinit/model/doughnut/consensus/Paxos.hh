@@ -154,6 +154,14 @@ namespace infinit
             ELLE_ATTRIBUTE(Addresses, addresses);
           };
 
+          /*-----.
+          | Stat |
+          `-----*/
+          public:
+            virtual
+            std::unique_ptr<Consensus::Stat>
+            stat(Address const& address) override;
+
           class Configuration
             : public consensus::Configuration
           {

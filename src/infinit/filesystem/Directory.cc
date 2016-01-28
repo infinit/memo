@@ -1,22 +1,24 @@
 #include <infinit/filesystem/Directory.hh>
+
+#include <sys/stat.h> // S_IMFT...
+
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
+#include <elle/serialization/binary.hh>
+#include <elle/serialization/json.hh>
+
 #include <reactor/exception.hh>
 
 #include <infinit/filesystem/File.hh>
+#include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/Unknown.hh>
-#include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/xattribute.hh>
-
-#include <elle/serialization/binary.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
-// #include <infinit/filesystem/FileHandle.hh>
 
-#include <sys/stat.h> // S_IMFT...
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -817,69 +819,113 @@ namespace infinit
     Directory::getxattr(std::string const& key)
     {
       ELLE_TRACE_SCOPE("%s: getxattr %s", *this, key);
-      if (key == "user.infinit.block")
+      if (auto special = xattr_special(key))
       {
-        if (this->_block)
-          return elle::sprintf("%x", this->_block->address());
-        else if (this->_parent)
+        if (key == "block")
         {
-          auto const& elem = this->_parent->_files.at(this->_name);
-          return elle::sprintf("%x", elem.second);
+          if (this->_block)
+            return elle::sprintf("%x", this->_block->address());
+          else if (this->_parent)
+          {
+            auto const& elem = this->_parent->_files.at(this->_name);
+            return elle::sprintf("%x", elem.second);
+          }
+          else
+            return "<ROOT>";
+        }
+        else if (special->find("blocks.") == 0)
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          auto blocks = special->substr(7);
+          auto dot = blocks.find(".");
+          if (dot == std::string::npos)
+          {
+            auto addr = model::Address::from_string(blocks);
+            auto block = this->_owner.block_store()->fetch(addr);
+            std::stringstream s;
+            elle::serialization::json::serialize(block, s);
+            return s.str();
+          }
+          else
+          {
+            auto addr = model::Address::from_string(blocks.substr(0, dot));
+            auto op = blocks.substr(dot + 1);
+            if (op == "nodes")
+            {
+              std::vector<model::Address> nodes;
+              // FIXME: hardcoded 3
+              for (auto n: dht->overlay()->lookup(addr, 3, overlay::OP_FETCH))
+                nodes.push_back(n->id());
+              std::stringstream s;
+              elle::serialization::json::serialize(nodes, s);
+              return s.str();
+            }
+            else if (op == "stat")
+            {
+              std::stringstream s;
+              elle::serialization::json::serialize(
+                dht->consensus()->stat(addr), s, false);
+              return s.str();
+            }
+            else
+              THROW_INVAL;
+          }
+        }
+        else if (key == "auth")
+        {
+          this->_fetch();
+          return perms_to_json(*this->_owner.block_store(), *this->_block);
+        }
+        else if (key == "auth.inherit")
+        {
+          this->_fetch();
+          return this->_inherit_auth ? "true" : "false";
+        }
+        else if (key == "sync")
+        {
+          auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          auto c = dn->consensus().get();
+          auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
+          if (!a)
+          {
+            auto cache = dynamic_cast<model::doughnut::consensus::Cache*>(c);
+            if (!cache)
+              return "no async";
+            a = dynamic_cast<model::doughnut::consensus::Async*>(
+              cache->backend().get());
+            if (!a)
+              return "no async behind cache";
+          }
+          a->sync();
+          return "ok";
+        }
+        else if (key.find("group.list.") == 0)
+        {
+          std::string value = key.substr(strlen("group.list."));
+          auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+          return umbrella([&]
+                          {
+                            model::doughnut::Group g(*dn, value);
+                            elle::json::Object o;
+                            auto members = g.list_members();
+                            elle::json::Array v;
+                            for (auto const& m: members)
+                              v.push_back(m->name());
+                            o["members"] = v;
+                            members = g.list_admins();
+                            elle::json::Array va;
+                            for (auto const& m: members)
+                              va.push_back(m->name());
+                            o["admins"] = va;
+                            std::stringstream ss;
+                            elle::json::write(ss, o, true);
+                            return ss.str();
+                          });
         }
         else
-          return "<ROOT>";
-      }
-      else if (key == "user.infinit.auth")
-      {
-        this->_fetch();
-        return perms_to_json(*this->_owner.block_store(), *this->_block);
-      }
-      else if (key == "user.infinit.auth.inherit")
-      {
-        this->_fetch();
-        return this->_inherit_auth ? "true" : "false";
-      }
-      else if (key == "user.infinit.sync")
-      {
-        auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-          this->_owner.block_store());
-        auto c = dn->consensus().get();
-        auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
-        if (!a)
-        {
-          auto cache = dynamic_cast<model::doughnut::consensus::Cache*>(c);
-          if (!cache)
-            return "no async";
-          a = dynamic_cast<model::doughnut::consensus::Async*>(
-            cache->backend().get());
-          if (!a)
-            return "no async behind cache";
-        }
-        a->sync();
-        return "ok";
-      }
-      else if (key.find("user.infinit.group.list.") == 0)
-      {
-        std::string value = key.substr(strlen("user.infinit.group.list."));
-        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-        return umbrella([&]
-          {
-            model::doughnut::Group g(*dn, value);
-            elle::json::Object o;
-            auto members = g.list_members();
-            elle::json::Array v;
-            for (auto const& m: members)
-              v.push_back(m->name());
-            o["members"] = v;
-            members = g.list_admins();
-            elle::json::Array va;
-            for (auto const& m: members)
-              va.push_back(m->name());
-            o["admins"] = va;
-            std::stringstream ss;
-            elle::json::write(ss, o, true);
-            return ss.str();
-          });
+          THROW_INVAL;
       }
       else
         return Node::getxattr(key);

@@ -677,6 +677,7 @@ namespace infinit
             std::vector<FetchData> hits;
             for (auto peer: peers)
             {
+              ELLE_DEBUG_SCOPE("contact %s", peer->id());
               try
               {
                 FetchData hit;
@@ -699,7 +700,7 @@ namespace infinit
               }
               catch (reactor::network::Exception const& e)
               {
-                ELLE_DEBUG("Network exception on %s: %s", peer, e);
+                ELLE_DEBUG("network exception on %s: %s", peer, e);
               }
             }
             ELLE_TRACE("Got %s hits", hits.size());
@@ -769,6 +770,81 @@ namespace infinit
         {
           s.serialize("chosen", this->chosen);
           s.serialize("paxos", this->paxos);
+        }
+
+        /*-----.
+        | Stat |
+        `-----*/
+
+        class Hit
+        {
+        public:
+          Hit(std::pair<Paxos::PaxosServer::Quorum,
+              std::unique_ptr<Paxos::PaxosClient::Accepted>> hit)
+            : _quorum(std::move(hit.first))
+            , _accepted(std::move(*hit.second))
+          {}
+
+          Hit()
+          {}
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("quorum", this->_quorum);
+            s.serialize("accepted", this->_accepted);
+          }
+
+          ELLE_ATTRIBUTE_R(Paxos::PaxosServer::Quorum, quorum);
+          ELLE_ATTRIBUTE_R(boost::optional<Paxos::PaxosClient::Accepted>, accepted);
+        };
+        typedef std::unordered_map<std::string, boost::optional<Hit>> Hits;
+
+        class PaxosStat
+          : public Consensus::Stat
+        {
+        public:
+          PaxosStat(Hits hits)
+            : _hits(std::move(hits))
+          {}
+
+          virtual
+          void
+          serialize(elle::serialization::Serializer& s) override
+          {
+            s.serialize("hits", this->_hits);
+          }
+
+          ELLE_ATTRIBUTE_R(Hits, hits);
+        };
+
+        std::unique_ptr<Consensus::Stat>
+        Paxos::stat(Address const& address)
+        {
+          ELLE_TRACE_SCOPE("%s: stat %s", *this, address);
+          // ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
+          auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
+          Hits hits;
+          for (auto peer: peers)
+          {
+            try
+            {
+              auto id = elle::sprintf("%s", peer->id());
+              if (auto local = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
+                hits.emplace(id, Hit(local->_fetch_paxos(address)));
+              else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
+                hits.emplace(id, Hit(remote->_fetch_paxos(address)));
+              else if (dynamic_cast<DummyPeer*>(peer.get()))
+                hits.emplace(id, boost::optional<Hit>());
+              else
+                ELLE_ABORT("invalid paxos peer: %s", *peer);
+            }
+            catch (reactor::network::Exception const& e)
+            {
+              ELLE_DEBUG("Network exception on %s: %s", peer, e);
+            }
+          }
+          return elle::make_unique<PaxosStat>(std::move(hits));
         }
 
         /*--------------.

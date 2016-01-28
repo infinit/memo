@@ -117,6 +117,7 @@ namespace infinit
                            int factor,
                            overlay::Operation op) const
         {
+          ELLE_DEBUG_SCOPE("search %s nodes for %s", factor, address);
           return this->doughnut().overlay()->lookup(address, factor, op);
         }
 
@@ -212,6 +213,20 @@ namespace infinit
           // so we have to return MissingBlock here.
           ELLE_TRACE("all %s peers failed fetching %x", attempt, address);
           throw MissingBlock(address);
+        }
+
+        /*-----.
+        | Stat |
+        `-----*/
+
+        void
+        Consensus::Stat::serialize(elle::serialization::Serializer& s)
+        {}
+
+        std::unique_ptr<Consensus::Stat>
+        Consensus::stat(Address const& address)
+        {
+          return elle::make_unique<Stat>();
         }
 
         /*--------.
