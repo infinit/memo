@@ -668,23 +668,32 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Paxos::_fetch(Address address, boost::optional<int> local_version)
         {
-          // FIXME: consult the quorum
-          if (this->doughnut().version() >= elle::Version(0, 5, 0))
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
           {
             auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
+            return fetch_from_members(peers, address, std::move(local_version));
+          }
+          PaxosServer::Quorum quorum;
+          while (true)
+          {
+            auto peers = quorum.empty() ?
+              this->_owners(address, this->_factor, overlay::OP_FETCH) :
+              this->doughnut().overlay()->lookup_nodes(quorum);
             typedef std::pair<PaxosServer::Quorum,
                       std::unique_ptr<PaxosClient::Accepted>> FetchData;
             std::vector<FetchData> hits;
+            PaxosServer::Quorum my_quorum;
             for (auto peer: peers)
             {
               ELLE_DEBUG_SCOPE("contact %s", peer->id());
+              my_quorum.emplace(peer->id());
               try
               {
                 FetchData hit;
-                if (auto local = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
-                  hit = local->_fetch_paxos(address);
-                else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
-                  hit = remote->_fetch_paxos(address);
+                if (auto l = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
+                  hit = l->_fetch_paxos(address);
+                else if (auto r = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
+                  hit = r->_fetch_paxos(address);
                 else if (dynamic_cast<DummyPeer*>(peer.get()))
                   ;
                 else
@@ -703,7 +712,7 @@ namespace infinit
                 ELLE_DEBUG("network exception on %s: %s", peer, e);
               }
             }
-            ELLE_TRACE("Got %s hits", hits.size());
+            ELLE_TRACE("got %s hits", hits.size());
             if (hits.empty())
               throw MissingBlock(address);
             // Reverse sort
@@ -712,39 +721,27 @@ namespace infinit
               {
                 return a.second->proposal > b.second->proposal;
               });
-            int same_quorum = 0;
+            quorum = hits.front().first;
+            if (quorum != my_quorum)
+            {
+              ELLE_DEBUG("outdated quorum, most recent: %s", quorum);
+              continue;
+            }
+            auto proposal = hits.front().second->proposal;
+            int count = 0;
             for (auto const& a: hits)
             {
-              if (a.first == hits.front().first)
-                ++same_quorum;
-              ELLE_DEBUG("  proposal %s, quorum %s", a.second->proposal, a.first);
+              if (a.first != quorum)
+                throw elle::Error("different quorums in quorum"); // FIXME
+              if (a.second->proposal != proposal)
+                throw elle::Error("different acceptations in quorum"); // FIXME
+              if (++count > signed(quorum.size()) / 2)
+                return a.second->
+                  value.get<std::shared_ptr<blocks::Block>>()->clone();
             }
-            bool ok_size = signed(hits.size()) > signed(hits.front().first.size()) / 2;
-            bool ok_same_quorum = same_quorum > signed(hits.front().first.size()) / 2;
-            if ( (ok_size && ok_same_quorum) || this->_lenient_fetch)
-            {
-              auto block = hits.front().second->
-                value.get<std::shared_ptr<blocks::Block>>();
-              if (auto mb =
-                  std::dynamic_pointer_cast<blocks::MutableBlock>(block))
-                if (local_version && *local_version == mb->version())
-                  return std::unique_ptr<blocks::Block>();
-              return block->clone();
-            }
-            else
-            {
-              ELLE_TRACE("Too few peers: %s peers, %s same quorum, %s quorum size",
-                         hits.size(), same_quorum, hits.front().first.size());
-              throw athena::paxos::TooFewPeers(same_quorum,
-                                               hits.front().first.size());
-            }
+            ELLE_TRACE("too few peers: %s", hits.size());
+            throw athena::paxos::TooFewPeers(hits.size(), quorum.size());
           }
-          else
-          {
-            auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
-            return fetch_from_members(peers, address, std::move(local_version));
-          }
-          elle::unreachable();
         }
 
         void
