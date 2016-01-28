@@ -637,6 +637,12 @@ class Drive(metaclass = Entity,
                    fields = fields('permissions', 'status', 'create_home')):
     statuses = ['pending', 'ok']
 
+    class AlreadyConfirmed(Exception):
+      pass
+
+    class NotInvited(Exception):
+      pass
+
     # XXX: Shouldn't work.
     def __init__(self, beyond, **json):
       super().__init__(beyond, **json)
@@ -647,14 +653,14 @@ class Drive(metaclass = Entity,
       confirm = not invitation
       if invitation:
         if invitee.name in drive.users and drive.users[invitee.name] == 'pending':
-          return
+          return False
         elif drive.users.get(invitee.name, None) == 'ok':
-          raise Exception("ALREADY CONFIRMED")
+          raise AlreadyConfirmed()
       if confirm:
         if invitee.name not in drive.users:
-          raise Exception("NOT INVITED")
+          raise NotInvited()
         elif drive.users.get(invitee.name, None) == 'ok':
-          return
+          return False
       drive.users[invitee.name] = self.json()
       drive.save()
       variables = {
@@ -679,3 +685,4 @@ class Drive(metaclass = Entity,
           recipient_name = owner.name,
           variables = variables
         )
+      return True
