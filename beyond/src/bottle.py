@@ -332,21 +332,19 @@ class Bottle(bottle.Bottle):
     email = json.get('email')
     if user.emails.get(email) == True:
       raise Response(410, {
-        'error': '',
-        'reason': ''
+        'error': 'user/email/alread_confirmed',
+        'reason': '\'%s\' as already been confirmed' % email
       })
-    print("emails", user.emails)
     if confirmation_code is None or user.emails.get(email) != confirmation_code:
       raise Response(404, {
-        'error': '',
-        'reason': ''
+        'error': 'user/email/XXX',
+        'reason': 'confirmation codes don\'t match.' # XXX
       })
     user.emails[email] = True
     user.save()
     raise Response(200, {})
 
   def user_send_confirmation_email(self, name, email = None):
-    print("===========")
     user = self.user_from_name(name = name)
     json = bottle.request.json
     email = email or json.get('email')
@@ -354,8 +352,8 @@ class Bottle(bottle.Bottle):
       user.send_confirmation_email(email)
     except Exception as e:
       raise Response(404, {
-        'error': '',
-        'reason': ''
+        'error': 'user/email/unknown',
+        'reason': 'unknown email address'
       })
     raise Response(200, {})
 
