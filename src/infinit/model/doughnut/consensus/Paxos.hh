@@ -36,6 +36,9 @@ namespace infinit
           Paxos(Doughnut& doughnut, int factor, bool lenient_fetch = false);
           ELLE_ATTRIBUTE_R(int, factor);
           ELLE_ATTRIBUTE_R(bool, lenient_fetch);
+        private:
+          struct _Details;
+          friend struct _Details;
 
         /*-------.
         | Blocks |

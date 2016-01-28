@@ -386,9 +386,11 @@ namespace infinit
               if (data.block)
               {
                 ELLE_DEBUG("loaded immutable block from storage");
-                return std::make_pair(PaxosServer::Quorum(),elle::make_unique<PaxosClient::Accepted>(
-                  PaxosClient::Proposal(-1, -1, this->doughnut().id()),
-                  std::shared_ptr<blocks::Block>(data.block)));
+                return std::make_pair(
+                  PaxosServer::Quorum(),
+                  elle::make_unique<PaxosClient::Accepted>(
+                    PaxosClient::Proposal(-1, -1, this->doughnut().id()),
+                    std::shared_ptr<blocks::Block>(data.block)));
               }
               else
               {
@@ -665,80 +667,150 @@ namespace infinit
           }
         }
 
+        class Hit
+        {
+        public:
+          Hit(Address node)
+            : _node(node)
+            , _quorum()
+            , _accepted()
+          {}
+
+          Hit(Address node,
+              std::pair<Paxos::PaxosServer::Quorum,
+                        std::unique_ptr<Paxos::PaxosClient::Accepted>> data)
+            : _node(node)
+            , _quorum(std::move(data.first))
+            , _accepted(data.second ?
+                        std::move(*data.second) :
+                        boost::optional<Paxos::PaxosClient::Accepted>())
+          {}
+
+          Hit()
+          {}
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("quorum", this->_quorum);
+            s.serialize("accepted", this->_accepted);
+          }
+
+          ELLE_ATTRIBUTE_R(model::Address, node);
+          ELLE_ATTRIBUTE_R(boost::optional<Paxos::PaxosServer::Quorum>,
+                           quorum);
+          ELLE_ATTRIBUTE_R(boost::optional<Paxos::PaxosClient::Accepted>,
+                           accepted);
+        };
+
+        struct Paxos::_Details
+        {
+          static
+          std::vector<Hit>
+          _multifetch_paxos(
+            Paxos& self,
+            Address address,
+            std::function<bool (blocks::Block const&)> const& found =
+              [] (blocks::Block const&) { return true; }
+            )
+          {
+            PaxosServer::Quorum quorum;
+            while (true)
+            {
+              auto peers = quorum.empty() ?
+                self._owners(address, self._factor, overlay::OP_FETCH) :
+                self.doughnut().overlay()->lookup_nodes(quorum);
+              PaxosServer::Quorum my_quorum;
+              std::vector<Hit> hits;
+              for (auto peer: peers)
+              {
+                ELLE_DEBUG_SCOPE("contact %s", peer->id());
+                my_quorum.emplace(peer->id());
+                try
+                {
+                  Hit hit;
+                  if (auto l = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
+                    hit = Hit(peer->id(), l->_fetch_paxos(address));
+                  else if (auto r = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
+                    hit = Hit(peer->id(), r->_fetch_paxos(address));
+                  else if (dynamic_cast<DummyPeer*>(peer.get()))
+                    hit = Hit(peer->id());
+                  else
+                    ELLE_ABORT("invalid paxos peer: %s", *peer);
+                  if (hit.accepted())
+                  {
+                    auto block = hit.accepted()->value.
+                      get<std::shared_ptr<blocks::Block>>();
+                    if (!found(*block))
+                      return hits;
+                    hits.push_back(std::move(hit));
+                  }
+                }
+                catch (reactor::network::Exception const& e)
+                {
+                  ELLE_DEBUG("network exception on %s: %s", peer, e);
+                }
+              }
+              ELLE_TRACE("got %s hits", hits.size());
+              if (hits.empty())
+                throw MissingBlock(address);
+              // Reverse sort
+              std::sort(
+                hits.begin(), hits.end(),
+                [] (Hit const& a, Hit const& b)
+                {
+                  if (!b.accepted())
+                    return true;
+                  if (!a.accepted())
+                    return false;
+                  return a.accepted()->proposal > b.accepted()->proposal;
+                });
+              if (!hits.front().quorum())
+                // Nobody has any value
+                return hits;
+              quorum = hits.front().quorum().get();
+              if (quorum == my_quorum)
+                return hits;
+              else
+                ELLE_DEBUG("outdated quorum, most recent: %s", quorum);
+            }
+          }
+        };
+
         std::unique_ptr<blocks::Block>
         Paxos::_fetch(Address address, boost::optional<int> local_version)
         {
-          typedef std::pair<PaxosServer::Quorum,
-                            std::unique_ptr<PaxosClient::Accepted>> FetchData;
           if (this->doughnut().version() < elle::Version(0, 5, 0))
           {
             auto peers =
               this->_owners(address, this->_factor, overlay::OP_FETCH);
             return fetch_from_members(peers, address, std::move(local_version));
           }
-          PaxosServer::Quorum quorum;
-          std::vector<FetchData> hits;
-          while (true)
-          {
-            hits.clear();
-            auto peers = quorum.empty() ?
-              this->_owners(address, this->_factor, overlay::OP_FETCH) :
-              this->doughnut().overlay()->lookup_nodes(quorum);
-            PaxosServer::Quorum my_quorum;
-            for (auto peer: peers)
+          std::unique_ptr<blocks::Block> immutable;
+          auto found = [&] (blocks::Block const& b)
             {
-              ELLE_DEBUG_SCOPE("contact %s", peer->id());
-              my_quorum.emplace(peer->id());
-              try
+              if (auto ib = dynamic_cast<blocks::ImmutableBlock const*>(&b))
               {
-                FetchData hit;
-                if (auto l = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
-                  hit = l->_fetch_paxos(address);
-                else if (auto r = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
-                  hit = r->_fetch_paxos(address);
-                else if (dynamic_cast<DummyPeer*>(peer.get()))
-                  ;
-                else
-                  ELLE_ABORT("invalid paxos peer: %s", *peer);
-                if (hit.second)
-                {
-                  auto block =
-                    hit.second->value.get<std::shared_ptr<blocks::Block>>();
-                  if (!dynamic_cast<blocks::MutableBlock*>(block.get()))
-                    return block->clone();
-                  hits.push_back(std::move(hit));
-                }
+                immutable = ib->clone();
+                return false;
               }
-              catch (reactor::network::Exception const& e)
-              {
-                ELLE_DEBUG("network exception on %s: %s", peer, e);
-              }
-            }
-            ELLE_TRACE("got %s hits", hits.size());
-            if (hits.empty())
-              throw MissingBlock(address);
-            // Reverse sort
-            std::sort(hits.begin(), hits.end(),
-              [] (FetchData const& a, FetchData const& b)
-              {
-                return a.second->proposal > b.second->proposal;
-              });
-            quorum = hits.front().first;
-            if (quorum == my_quorum)
-              break;
-            else
-              ELLE_DEBUG("outdated quorum, most recent: %s", quorum);
-          }
-          auto proposal = hits.front().second->proposal;
+              else
+                return true;
+          };
+          auto hits = _Details::_multifetch_paxos(*this, address, found);
+          if (immutable)
+            return immutable;
+          auto quorum = hits.front().quorum().get();
+          auto proposal = hits.front().accepted()->proposal;
           int count = 0;
           for (auto const& a: hits)
           {
-            if (a.first != quorum)
+            if (a.quorum().get() != quorum)
               throw elle::Error("different quorums in quorum"); // FIXME
-            if (a.second->proposal != proposal)
+            if (a.accepted()->proposal != proposal)
               throw elle::Error("different acceptations in quorum"); // FIXME
             if (++count > signed(quorum.size()) / 2)
-              return a.second->
+              return a.accepted()->
                 value.get<std::shared_ptr<blocks::Block>>()->clone();
           }
           ELLE_TRACE("too few peers: %s", hits.size());
@@ -774,28 +846,6 @@ namespace infinit
         | Stat |
         `-----*/
 
-        class Hit
-        {
-        public:
-          Hit(std::pair<Paxos::PaxosServer::Quorum,
-              std::unique_ptr<Paxos::PaxosClient::Accepted>> hit)
-            : _quorum(std::move(hit.first))
-            , _accepted(std::move(*hit.second))
-          {}
-
-          Hit()
-          {}
-
-          void
-          serialize(elle::serialization::Serializer& s)
-          {
-            s.serialize("quorum", this->_quorum);
-            s.serialize("accepted", this->_accepted);
-          }
-
-          ELLE_ATTRIBUTE_R(Paxos::PaxosServer::Quorum, quorum);
-          ELLE_ATTRIBUTE_R(boost::optional<Paxos::PaxosClient::Accepted>, accepted);
-        };
         typedef std::unordered_map<std::string, boost::optional<Hit>> Hits;
 
         class PaxosStat
@@ -821,28 +871,15 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: stat %s", *this, address);
           // ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
+          auto hits = _Details::_multifetch_paxos(*this, address);
           auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
-          Hits hits;
-          for (auto peer: peers)
+          Hits stat_hits;
+          for (auto& hit: hits)
           {
-            try
-            {
-              auto id = elle::sprintf("%s", peer->id());
-              if (auto local = dynamic_cast<Paxos::LocalPeer*>(peer.get()))
-                hits.emplace(id, Hit(local->_fetch_paxos(address)));
-              else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(peer.get()))
-                hits.emplace(id, Hit(remote->_fetch_paxos(address)));
-              else if (dynamic_cast<DummyPeer*>(peer.get()))
-                hits.emplace(id, boost::optional<Hit>());
-              else
-                ELLE_ABORT("invalid paxos peer: %s", *peer);
-            }
-            catch (reactor::network::Exception const& e)
-            {
-              ELLE_DEBUG("Network exception on %s: %s", peer, e);
-            }
+            auto node = elle::sprintf("%s", hit.node());
+            stat_hits.emplace(node, std::move(hit));
           }
-          return elle::make_unique<PaxosStat>(std::move(hits));
+          return elle::make_unique<PaxosStat>(std::move(stat_hits));
         }
 
         /*--------------.
