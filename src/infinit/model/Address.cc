@@ -5,6 +5,7 @@
 #include <elle/Buffer.hh>
 
 #include <cryptography/hash.hh>
+#include <cryptography/random.hh>
 
 namespace infinit
 {
@@ -69,27 +70,12 @@ namespace infinit
       return Address(v);
     }
 
-    static
-    boost::mt19937
-    random_generator()
-    {
-      boost::mt19937 ran;
-      return ran;
-    }
-
     Address
     Address::random()
     {
-      // Hash a UUID to get a random address.  Like using a deathstar to blow
-      // a mosquito and I like it.
-      static auto random = random_generator();
-      static boost::uuids::basic_random_generator<boost::mt19937> g(&random);
-      auto id = g();
-      auto hash = cryptography::hash(
-        elle::ConstWeakBuffer(id.data, id.static_size()),
-        cryptography::Oneway::sha256);
-      ELLE_ASSERT_GTE(hash.size(), sizeof(Address::Value));
-      return Address(hash.contents());
+      auto buf = cryptography::random::generate<elle::Buffer>(sizeof(Address::Value));
+      ELLE_ASSERT_GTE(buf.size(), sizeof(Address::Value));
+      return Address(buf.contents());
     }
 
     Address const Address::null;
