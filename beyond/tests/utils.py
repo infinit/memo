@@ -74,6 +74,8 @@ class Beyond:
       'dropbox_app_secret': 'db_secret',
       'google_app_key': 'google_key',
       'google_app_secret': 'google_secret',
+      'gcs_app_key': 'google_key',
+      'gcs_app_secret': 'google_secret',
       'sendwithus_api_key': None,
     }
     from copy import deepcopy

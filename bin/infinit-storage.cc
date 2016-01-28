@@ -13,8 +13,10 @@
 
 #include <infinit/storage/Dropbox.hh>
 #include <infinit/storage/Filesystem.hh>
+#include <infinit/storage/GCS.hh>
 #include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/S3.hh>
+#include <infinit/storage/sftp.hh>
 
 ELLE_LOG_COMPONENT("infinit-storage");
 
@@ -145,6 +147,19 @@ COMMAND(create)
        self_user(ifnt, {}).name,
        std::move(capacity));
   }
+  if (args.count("gcs"))
+  {
+    auto root = optional(args, "gcs-root");
+    if (!root)
+      root = name;
+    auto bucket = mandatory(args, "gcs-bucket");
+    auto account_name = mandatory(args, "gcs-account");
+    auto account = ifnt.credentials_google(account_name);
+    config =
+      elle::make_unique<infinit::storage::GCSConfig>
+      (name, bucket, *root, self_user(ifnt, {}).name, account->refresh_token,
+       std::move(capacity));
+  }
   if (args.count("s3"))
   {
     auto region = mandatory(args, "region", "AWS region");
@@ -162,6 +177,13 @@ COMMAND(create)
       std::move(aws_credentials),
       flag(args, "reduced-redundancy"),
       std::move(capacity));
+  }
+  if (args.count("ssh"))
+  {
+    auto host = mandatory(args, "ssh-host", "SSH remote host");
+    auto path = mandatory(args, "ssh-path", "Remote path to store into");
+    config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
+      name, host, path, capacity);
   }
   if (!config)
     throw CommandLineError("storage type unspecified");
@@ -244,6 +266,8 @@ main(int argc, char** argv)
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
     ("s3", "store data in using Amazon S3")
+    ("gcs", "store data in Google cloud storage")
+    ("ssh", "store data over SSH")
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
@@ -262,6 +286,13 @@ main(int argc, char** argv)
     ("root", value<std::string>(),
       "where to store blocks in gdrive (default: .infinit)")
     ;
+  Mode::OptionsDescription  gcs_options("Google cloud storage options");
+  gcs_options.add_options()
+    ("gcs-account", value<std::string>(), "Google account to use")
+    ("gcs-root", value<std::string>(),
+      "where to store blocks in bucket (default: .infinit)")
+    ("gcs-bucket", value<std::string>(), "bucket name")
+    ;
   Mode::OptionsDescription dropbox_storage_options("Dropbox storage options");
   dropbox_storage_options.add_options()
     ("dropbox-account", value<std::string>(), "Dropbox account to use")
@@ -277,6 +308,11 @@ main(int argc, char** argv)
     ("bucket-folder", value<std::string>(),
      "where to store blocks in the bucket (default: <name>_blocks)")
     ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
+    ;
+  Mode::OptionsDescription ssh_storage_options("SSH storage options");
+  ssh_storage_options.add_options()
+    ("ssh-host", value<std::string>(), "hostname to connect to")
+    ("ssh-path", value<std::string>(), "remote path to store blocks into")
     ;
   Modes modes {
     {
@@ -294,6 +330,8 @@ main(int argc, char** argv)
         storage_types,
         fs_storage_options,
         s3_options,
+        gcs_options,
+        ssh_storage_options,
       },
       {},
       {

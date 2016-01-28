@@ -26,6 +26,8 @@ def configure(
     dropbox_app_secret = 'gwca0vz648u0y6r',
     google_app_key = '798530033299-jiqlihdquc70r08ucthm3o1omp594ihm',
     google_app_secret = 'ufwn6w0hAT2MDuwOzfWxh4Sx',
+    gcs_app_key = '798530033299-phph23et2sptd7auhsif2d75hcqel4lg',
+    gcs_app_secret = 'abdwo588jVZO3zV8EUWlmx8o',
     name_regex = '^[-a-z0-9._]+$',
 ):
 
@@ -68,6 +70,9 @@ def configure(
       'google_app_key':
         '%s.apps.googleusercontent.com' % google_app_key,
       'google_app_secret': google_app_secret,
+      'gcs_app_key':
+        '%s.apps.googleusercontent.com' % gcs_app_key,
+      'gcs_app_secret': gcs_app_secret,
       'name_regex': name_regex,
   }):
     drake.node('beyond.tmpl')
@@ -251,6 +256,13 @@ def configure(
         package.fullname]
       sources = package.nodes
       self.__status = status
+      import os
+      env = {
+        'PYTHONPATH': ':'.join(map(str, chain(
+          package.pythonpath,
+          (str(p.path().dirname()) for p in plugins)))),
+        'PATH': os.environ['PATH'],
+      }
       if conf is not None:
         command.append('--rcfile=%s' % conf.path())
         sources.append(conf)
@@ -265,11 +277,7 @@ def configure(
         command = command,
         pretty = 'Lint %s' % package.name,
         stdout = status,
-        environment = {
-          'PYTHONPATH': ':'.join(map(str, chain(
-            package.pythonpath,
-            (str(p.path().dirname()) for p in plugins))))
-        })
+        environment = env)
 
     def execute(self):
       res = super().execute()

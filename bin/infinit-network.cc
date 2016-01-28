@@ -550,7 +550,6 @@ main(int argc, char** argv)
     ("protocol", value<std::string>(),
       "RPC protocol to use: tcp,utp,all (default: all)")
     ;
-  Mode::OptionsDescription options("Infinit network utility");
   Modes modes {
     {
       "create",

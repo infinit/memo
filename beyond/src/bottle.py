@@ -55,6 +55,19 @@ class Bottle(bottle.Bottle):
         'display_name': info['name'],
       },
     },
+    'gcs': {
+      'form_url': 'https://accounts.google.com/o/oauth2/auth',
+      'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
+      'params': {
+        'scope': 'https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+        'access_type': 'offline',
+      },
+      'info_url': 'https://www.googleapis.com/oauth2/v2/userinfo',
+      'info': lambda info: {
+        'uid': info['email'],
+        'display_name': info['name'],
+      },
+    },
   }
 
   def __init__(
@@ -807,7 +820,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       'redirect_uri': '%s/oauth/%s' % (self.host(), name),
       'state': username,
     }
-    if name == 'google':
+    if name == 'google' or name == 'gcs':
       params['approval_prompt'] = 'force'
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)
@@ -877,27 +890,30 @@ def user_credentials_google_refresh(self, username):
     beyond = self._Bottle__beyond
     user = beyond.user_get(name = username)
     refresh_token = bottle.request.query.refresh_token
-    for id, account in user.google_accounts.items():
-      google_account = user.google_accounts[id]
-      # https://developers.google.com/identity/protocols/OAuth2InstalledApp
-      # The associate google account.
-      if google_account['refresh_token'] == refresh_token:
-        google_url = "https://www.googleapis.com/oauth2/v3/token"
-        # Get a new token and update the db and the client
-        query = {
-          'client_id': beyond.google_app_key,
-          'client_secret': beyond.google_app_secret,
-          'refresh_token': google_account['refresh_token'],
-          'grant_type': 'refresh_token',
-        }
-        res = requests.post(google_url, params=query)
-        if res.status_code != 200:
-          raise HTTPError(status=400)
-        else:
-          token = res.json()['access_token']
-          user.google_accounts[id]['token'] = token
-          user.save()
-          return token
+    for kind in ['google', 'gcs']:
+      for id, account in getattr(user, '%s_accounts' % kind).items():
+        # https://developers.google.com/identity/protocols/OAuth2InstalledApp
+        # The associate google account.
+        if account['refresh_token'] == refresh_token:
+          google_url = "https://www.googleapis.com/oauth2/v3/token"
+          # Get a new token and update the db and the client
+          query = {
+            'client_id':     getattr(beyond, '%s_app_key' % kind),
+            'client_secret': getattr(beyond, '%s_app_secret' % kind),
+            'refresh_token': account['refresh_token'],
+            'grant_type': 'refresh_token',
+          }
+          res = requests.post(google_url, params=query)
+          if res.status_code != 200:
+            raise Response(res.status_code, {
+                'error': 'credentials refresh failure',
+                'reason': res.text
+            })
+          else:
+            token = res.json()['access_token']
+            account['token'] = token
+            user.save()
+            return token
   except User.NotFound:
     raise self._Bottle__user_not_found(username)
 

@@ -711,10 +711,16 @@ namespace infinit
               {
                 return a.second->proposal > b.second->proposal;
               });
+            int same_quorum = 0;
             for (auto const& a: hits)
-              ELLE_DEBUG("  %s", a.second->proposal);
-            if (signed(hits.size()) > signed(hits.front().first.size()) / 2
-              || this->_lenient_fetch)
+            {
+              if (a.first == hits.front().first)
+                ++same_quorum;
+              ELLE_DEBUG("  proposal %s, quorum %s", a.second->proposal, a.first);
+            }
+            bool ok_size = signed(hits.size()) > signed(hits.front().first.size()) / 2;
+            bool ok_same_quorum = same_quorum > signed(hits.front().first.size()) / 2;
+            if ( (ok_size && ok_same_quorum) || this->_lenient_fetch)
             {
               auto block = hits.front().second->
                 value.get<std::shared_ptr<blocks::Block>>();
@@ -725,8 +731,12 @@ namespace infinit
               return block->clone();
             }
             else
-              throw athena::paxos::TooFewPeers(hits.size(),
+            {
+              ELLE_TRACE("Too few peers: %s peers, %s same quorum, %s quorum size",
+                         hits.size(), same_quorum, hits.front().first.size());
+              throw athena::paxos::TooFewPeers(same_quorum,
                                                hits.front().first.size());
+            }
           }
           else
           {

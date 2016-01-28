@@ -1,6 +1,7 @@
 #include <das/model.hh>
 #include <das/serializer.hh>
 
+#include <elle/bench.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
@@ -14,6 +15,10 @@
 #include <string>
 
 ELLE_LOG_COMPONENT("infinit.storage.GoogleDrive");
+
+#define BENCH(name)                                      \
+  static elle::Bench bench("bench.gdrive." name, 10000_sec); \
+  elle::Bench::BenchScope bs(bench)
 
 struct Parent
 {
@@ -50,12 +55,6 @@ namespace infinit
 {
   namespace storage
   {
-    std::string
-    beyond()
-    {
-      auto static const res = elle::os::getenv("INFINIT_BEYOND", "https://beyond.infinit.io");
-      return res;
-    }
 
     /*
      * GoogleDrive
@@ -85,10 +84,8 @@ namespace infinit
     GoogleDrive::GoogleDrive(boost::filesystem::path root,
                              std::string refresh_token,
                              std::string name)
-      : _token{"unset_access_token"}
+      : GoogleAPI(name, refresh_token)
       , _root{std::move(root)}
-      , _refresh_token{refresh_token}
-      , _name{name}
     {
       std::string id = this->_exists(this->_root.string());
       if (id == "")
@@ -104,6 +101,7 @@ namespace infinit
     elle::Buffer
     GoogleDrive::_get(Key key) const
     {
+      BENCH("get");
       ELLE_DEBUG("get %x", key);
 
       using StatusCode = reactor::http::StatusCode;
@@ -139,6 +137,7 @@ namespace infinit
                       bool insert,
                       bool update)
     {
+      BENCH("set");
       using StatusCode = reactor::http::StatusCode;
       ELLE_DEBUG("set %x", key);
       if (insert)
@@ -171,6 +170,7 @@ namespace infinit
     int
     GoogleDrive::_erase(Key k)
     {
+      BENCH("erase");
       ELLE_DUMP("_erase");
       using Request = reactor::http::Request;
       using Method = reactor::http::Method;
@@ -214,45 +214,6 @@ namespace infinit
         return BlockStatus::missing;
       else
         return BlockStatus::exists;
-    }
-
-    reactor::http::Request
-    GoogleDrive::_request(std::string url,
-                          reactor::http::Method method,
-                          reactor::http::Request::QueryDict query,
-                          reactor::http::Request::Configuration conf,
-                          std::vector<reactor::http::StatusCode> expected_codes) const
-    {
-      ELLE_DUMP("_request %s", method);
-      using Request = reactor::http::Request;
-      using StatusCode = reactor::http::StatusCode;
-
-      expected_codes.push_back(StatusCode::OK);
-      unsigned attempt = 0;
-
-      conf.timeout(reactor::DurationOpt());
-      conf.header_add("Authorization", elle::sprintf("Bearer %s", this->_token));
-
-      while (true)
-      {
-        Request r{url, method, conf};
-        r.query_string(query);
-        r.finalize();
-
-        if (std::find(expected_codes.begin(), expected_codes.end(), r.status())
-            != expected_codes.end())
-          return r;
-        else if (r.status() == StatusCode::Forbidden
-                 || r.status() == StatusCode::Unauthorized)
-          const_cast<GoogleDrive*>(this)->_refresh();
-
-        ELLE_WARN("Unexpected google HTTP response: %s, attempt %s",
-                  r.status(),
-                  attempt + 1);
-        ELLE_DUMP("body: %s", r.response());
-        ++attempt;
-        reactor::sleep(delay(attempt));
-      }
     }
 
     reactor::http::Request
@@ -368,48 +329,6 @@ namespace infinit
       }
     }
 
-    void
-    GoogleDrive::_refresh()
-    {
-      ELLE_DUMP("_refresh");
-      using Configuration = reactor::http::Request::Configuration;
-      using Method = reactor::http::Method;
-      using Request = reactor::http::Request;
-      using StatusCode = reactor::http::StatusCode;
-
-      Configuration conf;
-      conf.timeout(reactor::DurationOpt());
-      unsigned attempt = 0;
-
-      reactor::http::Request::QueryDict query{
-        {"refresh_token", this->_refresh_token}};
-
-      while (true)
-      {
-        auto url = elle::sprintf("%s/users/%s/credentials/google/refresh",
-                                beyond(),
-                                this->_name);
-        Request r{url,
-                  Method::GET,
-                  conf};
-        r.query_string(query);
-        r.finalize();
-
-        if (r.status() == StatusCode::OK)
-        {
-          this->_token = r.response().string();
-          // FIXME: Update the conf file. Credentials or storage or both ?
-          break;
-        }
-
-        ELLE_WARN("Unexpected google HTTP status (refresh): %s, attempt %s",
-                  r.status(),
-                  attempt + 1);
-        ELLE_DUMP("body: %s", r.response());
-        reactor::sleep(delay(attempt++));
-      }
-    }
-
     std::string
     GoogleDrive::_exists(std::string file_name) const
     {
@@ -445,6 +364,7 @@ namespace infinit
           {
             auto f = boost::any_cast<elle::json::Object>(item);
             std::string id = boost::any_cast<std::string>(f["id"]);
+            ELLE_DEBUG("Resolved %s to %s", file_name, id);
             return id;
           }
           return "";
