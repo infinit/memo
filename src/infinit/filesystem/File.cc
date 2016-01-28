@@ -747,17 +747,7 @@ namespace infinit
     std::string
     File::getxattr(std::string const& key)
     {
-      if (key == "user.infinit.block")
-      {
-        if (_first_block)
-          return elle::sprintf("%x", _first_block->address());
-        else
-        {
-          auto const& elem = _parent->_files.at(_name);
-          return elle::sprintf("%x", elem.second);
-        }
-      }
-      else if (key == "user.infinit.fat")
+      if (key == "user.infinit.fat")
       {
         _fetch();
         std::stringstream res;

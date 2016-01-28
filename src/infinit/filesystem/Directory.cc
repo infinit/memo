@@ -5,7 +5,6 @@
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
-#include <elle/serialization/json.hh>
 
 #include <reactor/exception.hh>
 
@@ -819,60 +818,11 @@ namespace infinit
     Directory::getxattr(std::string const& key)
     {
       ELLE_TRACE_SCOPE("%s: getxattr %s", *this, key);
+      auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+        this->_owner.block_store());
       if (auto special = xattr_special(key))
       {
-        if (key == "block")
-        {
-          if (this->_block)
-            return elle::sprintf("%x", this->_block->address());
-          else if (this->_parent)
-          {
-            auto const& elem = this->_parent->_files.at(this->_name);
-            return elle::sprintf("%x", elem.second);
-          }
-          else
-            return "<ROOT>";
-        }
-        else if (special->find("blocks.") == 0)
-        {
-          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-            this->_owner.block_store());
-          auto blocks = special->substr(7);
-          auto dot = blocks.find(".");
-          if (dot == std::string::npos)
-          {
-            auto addr = model::Address::from_string(blocks);
-            auto block = this->_owner.block_store()->fetch(addr);
-            std::stringstream s;
-            elle::serialization::json::serialize(block, s);
-            return s.str();
-          }
-          else
-          {
-            auto addr = model::Address::from_string(blocks.substr(0, dot));
-            auto op = blocks.substr(dot + 1);
-            if (op == "nodes")
-            {
-              std::vector<model::Address> nodes;
-              // FIXME: hardcoded 3
-              for (auto n: dht->overlay()->lookup(addr, 3, overlay::OP_FETCH))
-                nodes.push_back(n->id());
-              std::stringstream s;
-              elle::serialization::json::serialize(nodes, s);
-              return s.str();
-            }
-            else if (op == "stat")
-            {
-              std::stringstream s;
-              elle::serialization::json::serialize(
-                dht->consensus()->stat(addr), s, false);
-              return s.str();
-            }
-            else
-              THROW_INVAL;
-          }
-        }
-        else if (key == "auth")
+        if (key == "auth")
         {
           this->_fetch();
           return perms_to_json(*this->_owner.block_store(), *this->_block);

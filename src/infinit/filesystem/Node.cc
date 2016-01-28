@@ -1,15 +1,17 @@
 #include <infinit/filesystem/Node.hh>
-#include <infinit/filesystem/Directory.hh>
-#include <infinit/filesystem/umbrella.hh>
 
-#include <infinit/model/blocks/ACLBlock.hh>
-#include <infinit/model/doughnut/NB.hh>
-#include <infinit/model/doughnut/ACB.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
+#include <sys/stat.h> // S_IMFT...
 
 #include <memory>
 
-#include <sys/stat.h> // S_IMFT...
+#include <elle/serialization/json.hh>
+
+#include <infinit/filesystem/Directory.hh>
+#include <infinit/filesystem/umbrella.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/NB.hh>
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -234,11 +236,99 @@ namespace infinit
       _commit();
     }
 
+    static
+    boost::optional<std::string>
+    xattr_special(std::string const& name)
+    {
+      if (name.find("infinit.") == 0)
+        return name.substr(8);
+      if (name.find("user.infinit.") == 0)
+        return name.substr(13);
+      return {};
+    }
+
+    static
+    std::string
+    getxattr_block(model::doughnut::Doughnut& dht,
+                   std::string const& op,
+                   model::Address const& addr)
+    {
+      if (op == "nodes")
+      {
+        std::vector<model::Address> nodes;
+        // FIXME: hardcoded 3
+        for (auto n: dht.overlay()->lookup(addr, 3, overlay::OP_FETCH))
+          nodes.push_back(n->id());
+        std::stringstream s;
+        elle::serialization::json::serialize(nodes, s);
+        return s.str();
+      }
+      else if (op == "stat")
+      {
+        std::stringstream s;
+        elle::serialization::json::serialize(
+          dht.consensus()->stat(addr), s, false);
+        return s.str();
+      }
+      else
+        THROW_INVAL;
+    }
+
     std::string
     Node::getxattr(std::string const& k)
     {
       ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: get attribute \"%s\"", *this, k);
+      auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+        this->_owner.block_store());
+      if (auto special = xattr_special(k))
+      {
+        auto block = this->_header_block();
+        if (*special == "block")
+        {
+          if (block)
+            return elle::sprintf("%x", block);
+          else if (this->_parent)
+          {
+            auto const& elem = this->_parent->_files.at(this->_name);
+            return elle::sprintf("%x", elem.second);
+          }
+          else
+            return "<ROOT>";
+        }
+        else if (special->find("block.") == 0)
+        {
+          auto op = special->substr(6);
+          if (block)
+            return getxattr_block(*dht, op, block->address());
+          else if (this->_parent)
+          {
+            auto const& elem = this->_parent->_files.at(this->_name);
+            return getxattr_block(*dht, op, elem.second);
+          }
+          else
+            return "<ROOT>";
+        }
+        else if (special->find("blocks.") == 0)
+        {
+          auto blocks = special->substr(7);
+          auto dot = blocks.find(".");
+          if (dot == std::string::npos)
+          {
+            auto addr = model::Address::from_string(blocks);
+            auto block = this->_owner.block_store()->fetch(addr);
+            std::stringstream s;
+            elle::serialization::json::serialize(block, s);
+            return s.str();
+          }
+          else
+          {
+            auto addr = model::Address::from_string(blocks.substr(0, dot));
+            auto op = blocks.substr(dot + 1);
+            return getxattr_block(*dht, op, addr);
+          }
+        }
+      }
       if (k.substr(0, strlen(overlay_info)) == overlay_info)
       {
         std::string okey = k.substr(strlen(overlay_info));
