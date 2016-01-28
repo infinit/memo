@@ -1151,15 +1151,15 @@ ul.tabs { list-style-type: none !important; }
 ul.tabs li { float: left; margin: 0 !important; }
 ul.tabs a {
   cursor: pointer; display: block; border-radius: 5px; padding: 6px 18px;
-  margin-right: 10px; background: darken(white, 4%);
+  margin-right: 10px; background: darken(white, 4%); color:@infinitblack !important;
   border-bottom-left-radius: 0; border-bottom-right-radius: 0;
 
-  &:hover { background: darken(white, 7%); .transition(); }
+  &:hover { background: darken(white, 7%); .transition(); border-bottom: 0px !important; }
 }
 
 ul.tabs a.active {
-  background: @terminalbg; color: darken(white, 10%);
-  &:hover { background: @terminalbg; }
+  background: @terminalbg; color: darken(white, 10%) !important;
+  &:hover { background: @terminalbg; border-bottom: 0px !important; }
 }
 
 .data-tabs-content .tabs-pane:first-child pre code { border-top-left-radius: 0 !important;}
