@@ -3178,10 +3178,16 @@ namespace infinit
           it = ntarget->find(address);
           if (it != ntarget->end())
           {
-            ELLE_TRACE("moving misplaced entry for %x", address);
-            target->insert(std::make_pair(address, std::move(it->second)));
-            ntarget->erase(address);
-            return &(*target)[address];
+            if (!observer)
+            {
+              ELLE_TRACE("moving misplaced entry for %x to %s", address,
+                target == &_state.observers ? "observers" : "storage nodes");
+              target->insert(std::make_pair(address, std::move(it->second)));
+              ntarget->erase(address);
+              return &(*target)[address];
+            }
+            else
+              return &it->second;
           }
         }
         if (!make)
