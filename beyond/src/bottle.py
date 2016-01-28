@@ -556,7 +556,10 @@ class Bottle(bottle.Bottle):
 
   def network_passport_delete(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
-    self.authenticate(user)
+    try:
+      self.authenticate(user)
+    except Exception:
+      self.authenticate(self.user_from_name(name = invitee))
     network = self.network_from_name(owner = owner, name = name)
     network.passports[invitee] = None
     network.save()
