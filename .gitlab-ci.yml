@@ -14,7 +14,7 @@ x86_64-trusty-gcc4:
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 1 //check
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
   tags:
     - x86_64
