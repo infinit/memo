@@ -381,16 +381,12 @@ class Drive(dict):
 
   def invite_many(self, hub, invitees, **kwargs):
     json = {}
-    print('Invitees:')
-    print(invitees)
     for invitee in invitees:
       json[invitee['name']] = {
         'status': 'pending',
         'create_home': False,
         'permissions': 'rw'
       }
-    print("Json")
-    print(json)
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations' % self['name'],
                    json = json,

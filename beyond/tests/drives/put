@@ -46,7 +46,6 @@ with Beyond() as beyond:
       for invitee in invitees:
         invitee.put(beyond)
         Passport(network, invitee).put(beyond)
-        print(invitee['name'])
         drive.invite(beyond, invitee['name'])
 
     def test_remove(self):
