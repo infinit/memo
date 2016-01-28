@@ -101,6 +101,16 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
+
+    # Email confirmation
+    self.route('/users/<name>/confirm_email', method = 'POST')(
+      self.user_confirm_email)
+    self.route('/users/<name>/send_confirmation_email', method = 'POST')(
+      self.user_send_confirmation_email)
+    self.route('/users/<name>/send_confirmation_email/<email>', method = 'POST')(
+      self.user_send_confirmation_email)
+
+    # Avatar
     self.route('/users/<name>/avatar', method = 'GET')(
       self.user_avatar_get)
     self.route('/users/<name>/avatar', method = 'PUT')(
@@ -314,6 +324,40 @@ class Bottle(bottle.Bottle):
           'reason': 'user %r already exists' % name,
           'id': name,
         })
+
+  def user_confirm_email(self, name):
+    user = self.user_from_name(name = name)
+    json = bottle.request.json
+    confirmation_code = json.get('confirmation_code')
+    email = json.get('email')
+    if user.emails.get(email) == True:
+      raise Response(410, {
+        'error': '',
+        'reason': ''
+      })
+    print("emails", user.emails)
+    if confirmation_code is None or user.emails.get(email) != confirmation_code:
+      raise Response(404, {
+        'error': '',
+        'reason': ''
+      })
+    user.emails[email] = True
+    user.save()
+    raise Response(200, {})
+
+  def user_send_confirmation_email(self, name, email = None):
+    print("===========")
+    user = self.user_from_name(name = name)
+    json = bottle.request.json
+    email = email or json.get('email')
+    try:
+      user.send_confirmation_email(email)
+    except Exception as e:
+      raise Response(404, {
+        'error': '',
+        'reason': ''
+      })
+    raise Response(200, {})
 
   def user_get(self, name):
     return self.user_from_name(name = name).json()

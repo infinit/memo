@@ -220,6 +220,7 @@ def configure(
       'oauth-dropbox',
       'emails',
       'users/avatar',
+      'users/email_confirmation',
       'users/put',
       'users/get',
       'users/pairing',

@@ -27,6 +27,10 @@ templates = {
     'noop': 'User/Welcome',
     'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
   },
+  'User/Confirmation Email': {
+    'noop': 'User/Confirmation Email',
+    'swu': 'tem_xxxx',
+  },
 }
 
 class Beyond:
@@ -244,6 +248,7 @@ class User:
                dropbox_accounts = None,
                google_accounts = None,
                gcs_accounts = None,
+               emails = {}
   ):
     self.__beyond = beyond
     self.__id = id
@@ -259,6 +264,11 @@ class User:
     self.__google_accounts_original = deepcopy(self.google_accounts)
     self.__gcs_accounts = gcs_accounts or {}
     self.__gcs_accounts_original = deepcopy(self.gcs_accounts)
+    self.__emails = emails
+    if self.__email:
+      if self.__email not in self.__emails:
+        self.__emails[self.__email] = True
+    self.__emails_original = deepcopy(self.emails)
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -272,24 +282,37 @@ class User:
       for (key, validator) in User.fields['optional']:
         if key in json and validator is not None:
           validator(json[key])
-    return User(beyond,
-                name = json['name'],
-                public_key = json['public_key'],
-                email = json.get('email', None),
-                fullname = json.get('fullname', None),
-                password_hash = json.get('password_hash', None),
-                private_key = json.get('private_key', None),
-                dropbox_accounts = json.get('dropbox_accounts', []),
-                google_accounts = json.get('google_accounts', []),
-                gcs_accounts = json.get('gcs_accounts', []),
+    return User(
+      beyond,
+      name = json['name'],
+      public_key = json['public_key'],
+      email = json.get('email', None),
+      fullname = json.get('fullname', None),
+      password_hash = json.get('password_hash', None),
+      private_key = json.get('private_key', None),
+      dropbox_accounts = json.get('dropbox_accounts', []),
+      google_accounts = json.get('google_accounts', []),
+      gcs_accounts = json.get('gcs_accounts', []),
+      emails = json.get('emails', {}),
     )
 
-  def json(self, private = False):
+  def json(self,
+           private = False,
+           hide_confirmation_codes = True):
     res = {
       'name': self.name,
       'public_key': self.public_key,
     }
     if private:
+      # Turn confirmations code into 'False'.
+      def filter_confirmation_codes(key):
+        if hide_confirmation_codes:
+          if self.emails[key] != True:
+            return (key, False)
+        else:
+          return (key, self.emails[key])
+      res['emails'] = dict(map(filter_confirmation_codes,
+                               self.emails))
       if self.email is not None:
         res['email'] = self.email
       if self.fullname is not None:
@@ -302,22 +325,52 @@ class User:
         res['gcs_accounts'] = self.gcs_accounts
       if self.private_key is not None:
         res['private_key'] = self.private_key
-      if self.private_key is not None:
+      if self.password_hash is not None:
         res['password_hash'] = self.password_hash
     return res
 
   def create(self):
+    from uuid import uuid4
+    if self.email:
+      self.__emails[self.email] = str(uuid4())
     self.__beyond._Beyond__datastore.user_insert(self)
     if self.email is not None:
       self.__beyond.emailer.send_one(
-        template = self.__beyond.template("User/Welcome"),
+        template = self.__beyond.template('User/Welcome'),
         recipient_email = self.email,
         recipient_name = self.name,
         variables = {
           'email': self.email,
           'name': self.name,
+          'confirmation_url': self.confirmation_url(self.email)
         }
-    )
+      )
+
+  def confirmation_code(self, email):
+    return self.__emails.get(email, None)
+
+  def confirmation_url(self, email):
+    assert self.confirmation_code(email) is not None
+    from urllib.parse import urlencode
+    return '/user/confirm_email_address?' + urlencode({
+      'name': self.name,
+      'confirmation_code': self.confirmation_code(email),
+      'email': email
+    })
+
+  def send_confirmation_email(self, email = None):
+    email = email or self.email
+    if email is not None:
+      self.__beyond.emailer.send_one(
+        template = self.__beyond.template('User/Confirmation Email'),
+        recipient_email = email,
+        recipient_name = self.name,
+        variables = {
+          'email': email,
+          'name': self.name,
+          'confirmation_url': self.confirmation_url(email)
+        }
+      )
 
   def save(self):
     diff = {}
@@ -330,10 +383,14 @@ class User:
     for id, account in self.gcs_accounts.items():
       if self.__gcs_accounts_original.get(id) != account:
         diff.setdefault('gcs_accounts', {})[id] = account
+    for email, confirmation in self.emails.items():
+      if self.__emails_original.get(email) != confirmation:
+        diff.setdefault('emails', {})[email] = confirmation
     self.__beyond._Beyond__datastore.user_update(self.name, diff)
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
     self.__google_accounts_original = dict(self.__google_accounts)
     self.__gcs_accounts_original = dict(self.__gcs_accounts)
+    self.__emails_original = dict(self.__gcs_accounts)
 
   @property
   def id(self):
@@ -348,6 +405,10 @@ class User:
   @property
   def email(self):
     return self.__email
+
+  @property
+  def emails(self):
+    return self.__emails
 
   @property
   def fullname(self):

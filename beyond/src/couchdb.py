@@ -167,7 +167,8 @@ class CouchDBDatastore:
   ## ---- ##
 
   def user_insert(self, user):
-    json = user.json(private = True)
+    json = user.json(private = True,
+                     hide_confirmation_codes = False)
     json['_id'] = json['name']
     try:
       self.__couchdb['users'].save(json)
@@ -184,11 +185,7 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 
-  def user_delete(self, name):
-    doc = self.__couchdb['users'][name]
-    self.__couchdb['users'].delete(doc)
-
-  def user_update(self, id, diff = None):
+  def user_update(self, id, diff = {}):
     args = {
       name: json.dumps(value)
       for name, value in diff.items()
@@ -202,6 +199,10 @@ class CouchDBDatastore:
       )
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
+
+  def user_delete(self, name):
+    doc = self.__couchdb['users'][name]
+    self.__couchdb['users'].delete(doc)
 
   def __rows_to_networks(self, rows):
     network_from_db = infinit.beyond.Network.from_json
@@ -253,7 +254,9 @@ class CouchDBDatastore:
       user.setdefault('google_accounts', {})[id] = account
     for id, account in update.get('gcs_accounts', {}).items():
       user.setdefault('gcs_accounts', {})[id] = account
-    return [user, {'json': json.dumps(user)}]
+    for email, confirmation in update.get('emails', {}).items():
+      user.setdefault('emails', {})[email] = confirmation
+    return [user, {'json': json.dumps(update)}]
 
   ## ------- ##
   ## Pairing ##
