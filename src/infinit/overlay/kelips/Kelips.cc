@@ -2212,8 +2212,12 @@ namespace infinit
         {
           addLocalResults(p, nullptr);
         }
+        auto const& fg_contacts = _state.contacts[fg];
         if (p->result.size() >= unsigned(p->count)
-          || _state.contacts[fg].empty())
+          || fg_contacts.empty()
+          || (fg_contacts.size() == 1
+              && fg_contacts.find(p->originAddress) != fg_contacts.end())
+            )
         { // We got the full result or we cant forward, send reply
           packet::GetFileReply res;
           res.sender = _self;
