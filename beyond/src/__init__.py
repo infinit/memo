@@ -162,6 +162,12 @@ class Beyond:
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)
 
+  def users_by_email(self, email):
+    users = self.__datastore.users_by_email(email = email)
+    if len(users) == 0:
+      raise User.NotFound()
+    return [User.from_json(self, u) for u in users]
+
   def user_delete(self, name):
     return self.__datastore.user_delete(name = name)
 

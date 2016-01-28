@@ -100,7 +100,10 @@ class CouchDBDatastore:
     self.__couchdb = db
     self.__design('users',
                   updates = [('update', self.__user_update)],
-                  views = [('per_name', self.__user_per_name)])
+                  views = [
+                    ('per_name', self.__user_per_name),
+                    ('per_email', self.__user_per_email),
+                  ])
     self.__design('pairing',
                   updates = [],
                   views = [])
@@ -185,6 +188,19 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 
+  def __user_per_email(user):
+    for email, confirmation in user.get('emails', {}).items():
+      yield email, user
+    if 'email' in user and user['email'] not in user.get('emails', {}).keys():
+      yield user['email'], user
+
+  def users_by_email(self, email):
+    rows = self.__couchdb['users'].view('beyond/per_email', key = email)
+    return [r.value for r in rows]
+
+  def __user_per_name(user):
+    yield user['name'], user
+
   def user_update(self, id, diff = {}):
     args = {
       name: json.dumps(value)
@@ -199,6 +215,29 @@ class CouchDBDatastore:
       )
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
+
+  def __user_update(user, req):
+    if user is None:
+      return [
+        None,
+        {
+          'code': 404,
+        }
+      ]
+    import json
+    update = {
+      name: json.loads(value)
+      for name, value in req['query'].items()
+    }
+    for id, account in update.get('dropbox_accounts', {}).items():
+      user.setdefault('dropbox_accounts', {})[id] = account
+    for id, account in update.get('google_accounts', {}).items():
+      user.setdefault('google_accounts', {})[id] = account
+    for id, account in update.get('gcs_accounts', {}).items():
+      user.setdefault('gcs_accounts', {})[id] = account
+    for email, confirmation in update.get('emails', {}).items():
+      user.setdefault('emails', {})[email] = confirmation
+    return [user, {'json': json.dumps(update)}]
 
   def user_delete(self, name):
     doc = self.__couchdb['users'][name]
@@ -231,32 +270,6 @@ class CouchDBDatastore:
     if len(rows) > 0:
       res = rows[0].value
     return res
-
-  def __user_per_name(user):
-    yield user['name'], user
-
-  def __user_update(user, req):
-    if user is None:
-      return [
-        None,
-        {
-          'code': 404,
-        }
-      ]
-    import json
-    update = {
-      name: json.loads(value)
-      for name, value in req['query'].items()
-    }
-    for id, account in update.get('dropbox_accounts', {}).items():
-      user.setdefault('dropbox_accounts', {})[id] = account
-    for id, account in update.get('google_accounts', {}).items():
-      user.setdefault('google_accounts', {})[id] = account
-    for id, account in update.get('gcs_accounts', {}).items():
-      user.setdefault('gcs_accounts', {})[id] = account
-    for email, confirmation in update.get('emails', {}).items():
-      user.setdefault('emails', {})[email] = confirmation
-    return [user, {'json': json.dumps(update)}]
 
   ## ------- ##
   ## Pairing ##

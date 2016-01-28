@@ -304,6 +304,14 @@ class Bottle(bottle.Bottle):
         raise self.__user_not_found(name)
       return None
 
+  def users_from_email(self, email, throws = True):
+    try:
+      return self.__beyond.users_by_email(email)
+    except User.NotFound as e:
+      if throws:
+        raise self.__user_not_found(email)
+      return None
+
   def user_put(self, name):
     try:
       json = bottle.request.json

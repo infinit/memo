@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+import unittest
+
+from utils import *
+import bottle
+
+def function(beyond, email):
+  return {'emails': [u.json() for u in beyond.app.users_from_email(email)]}
+
+with Beyond(validate_email_address = False) as beyond:
+
+  beyond.app.route('/users/by_email/<email>')(lambda email: function(beyond, email))
+
+  def users_from_email(email):
+    return beyond.get('users/by_email/%s' % email).json()['emails']
+
+  class Test(unittest.TestCase):
+
+    def test_all(self):
+      throws(lambda: beyond.get('users/by_email/foo@infinit.io'), 404)
+
+    def test_foo(self):
+      u = User()
+      u.put(beyond)
+      beyond.get('users/by_email/%s' % u['email'])
+
+    def test_emails_no_emails(self):
+      h1 = User()
+      n1 = User()
+      del n1['email']
+      h2 = User()
+      n2 = User()
+      del n2['email']
+      for u in [h1, n1, h2, n2]:
+        u.put(beyond)
+      res = users_from_email(h1['email'])
+      assertEq(len(res), 1)
+      g1 = res[0]
+      res = users_from_email(h2['email'])
+      assertEq(len(res), 1)
+      g2 = res[0]
+      assertEq(h1['name'], g1['name'])
+      assertEq(h2['name'], g2['name'])
+
+    def test_many_people_with_the_same_email_address(self):
+      u1 = User()
+      u2 = User()
+      u2['email'] = u1['email']
+      u1.put(beyond)
+      u2.put(beyond)
+      users = users_from_email(u2['email'])
+      assertEq(len(users), 2)
+
+  if __name__ == '__main__':
+    unittest.main()
