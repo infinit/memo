@@ -40,7 +40,7 @@ bottle.Bottle.host = host
 
 class Beyond:
 
-  def __init__(self, beyond_args = {}):
+  def __init__(self, **beyond_args):
     super().__init__()
     self.__app = None
     self.__advance = timedelta()

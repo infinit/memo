@@ -10,7 +10,7 @@ from utils import *
 from copy import deepcopy
 
 limit = 5
-with Beyond(beyond_args = {'limits': {'networks': {'passports': 5}}}) as beyond:
+with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
 
   class Test(unittest.TestCase):
 
