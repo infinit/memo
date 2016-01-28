@@ -2433,7 +2433,7 @@ namespace infinit
         }
         else
         {
-          kelipsGet(file, n, op == infinit::overlay::OP_FETCH, -1, false, yield);
+          kelipsGet(file, n, false, -1, false, yield);
         }
       }
 
