@@ -4,9 +4,6 @@ ELLE_LOG_COMPONENT("infinit-passport");
 
 #include <main.hh>
 
-using namespace boost::program_options;
-options_description mode_options("Modes");
-
 infinit::Infinit ifnt;
 
 COMMAND(create)
@@ -248,6 +245,8 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
   Modes modes {
     {
       "create",

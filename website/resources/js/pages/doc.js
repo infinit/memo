@@ -1,7 +1,8 @@
 $(document).ready(function() {
 
   $('pre code').each(function(i, block) {
-    hljs.highlightBlock(block);
+    hljs.configure({ languages: ['bash', 'cpp'] });
+    hljs.initHighlighting();
   });
 
   $('a[href*=#]:not([href=#])').click(function() {
@@ -17,7 +18,7 @@ $(document).ready(function() {
     }
   });
 
-  if ($('body').hasClass('documentation')) {
+  if ($('body').hasClass('documentation') || $('body').hasClass('opensource')) {
 
     var a = function () {
       var height = $(window).scrollTop();
@@ -58,7 +59,11 @@ $(document).ready(function() {
   }
 
 
-  if ($('body').hasClass('doc_get_started')) {
+  if ($('body').hasClass('doc_get_started') ) {
+
+    $('a.button').click(function() {
+      ga('send', 'event', 'download', $(this).text(), navigator.userAgent);
+    });
 
     var winHeight = $(window).height(),
         docHeight = $(document).height(),

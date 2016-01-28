@@ -12,9 +12,9 @@ ELLE_LOG_COMPONENT("infinit-user");
 
 infinit::Infinit ifnt;
 
-static std::string _hub_salt = "@a.Fl$4'x!";
+using boost::program_options::variables_map;
 
-using namespace boost::program_options;
+static std::string _hub_salt = "@a.Fl$4'x!";
 
 template <typename Super>
 struct UserView
@@ -95,8 +95,7 @@ COMMAND(fetch)
           fetch_avatar(name);
         }
         catch (elle::Error const&)
-        {
-        }
+        {}
       }
     };
     try
@@ -246,7 +245,8 @@ COMMAND(push)
 COMMAND(pull)
 {
   auto self = self_user(ifnt, args);
-  beyond_delete("user", self.name, self);
+  auto user = get_name(args);
+  beyond_delete("user", user, self);
 }
 
 COMMAND(delete_)
@@ -254,6 +254,23 @@ COMMAND(delete_)
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   auto path = ifnt._user_path(user.name);
+  if (user.private_key && (!flag(args, "force") || script_mode))
+  {
+    std::string res;
+    {
+      std::cout << "WARNING: You will no longer be able to access data, "
+                << std::endl
+                << "WARNING: volumes or networks for this user." << std::endl
+                << "WARNING: The user's private key will be lost, you will not"
+                << std::endl
+                << "WARNING: be able to pull the user from " << beyond(true)
+                << "." << std::endl << std::endl
+                << "Confirm the name of the user you would like to delete: ";
+      std::getline(std::cin, res);
+    }
+    if (res != user.name)
+      throw CommandLineError("Aborting...");
+  }
   bool ok = boost::filesystem::remove(path);
   if (ok)
     report_action("deleted", "user", user.name, std::string("locally"));
@@ -410,18 +427,19 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  boost::program_options::option_description option_push_full =
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionDescription option_push_full =
     { "full", bool_switch(), "include private key in order "
       "to facilitate device pairing and fetching lost keys" };
-  boost::program_options::option_description option_push_password =
+  Mode::OptionDescription option_push_password =
     { "password", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Used with --full "
       "(default: prompt for password)", beyond(true)).c_str() };
-  boost::program_options::option_description option_fullname =
+  Mode::OptionDescription option_fullname =
     { "fullname", value<std::string>(), "user's fullname (optional)" };
-  boost::program_options::option_description option_avatar =
+  Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
-
   Modes modes {
     {
       "create",
@@ -493,6 +511,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to delete (default: system user)" },
+        { "force", bool_switch(), "delete the user without any prompt" },
       },
     },
     {

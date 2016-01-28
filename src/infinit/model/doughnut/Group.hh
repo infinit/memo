@@ -56,6 +56,8 @@ namespace infinit
         group_keys();
         std::vector<cryptography::rsa::PublicKey>
         group_public_keys();
+        void
+        destroy();
       private:
         void _stack_push();
         cryptography::rsa::KeyPair _control_key();

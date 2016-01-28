@@ -25,10 +25,11 @@
 #include <cryptography/rsa/KeyPair.hh>
 
 #include <reactor/filesystem.hh>
+#include <reactor/network/upnp.hh>
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
-#include <reactor/network/upnp.hh>
+#include <crash_reporting/CrashReporter.hh>
 
 #include <infinit/credentials/AWSCredentials.hh>
 #include <infinit/credentials/OAuthCredentials.hh>
@@ -43,7 +44,7 @@
 
 std::string program;
 
-#define COMMAND(name) static void name(variables_map const& args)
+#define COMMAND(name) static void name(boost::program_options::variables_map const& args)
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
 
@@ -57,7 +58,9 @@ beyond(bool help = false)
   return res;
 }
 
-static elle::Version version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+static const elle::Version version(
+  INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
+static boost::optional<elle::Version> compatibility_version;
 
 class CommandLineError
   : public elle::Error
@@ -195,12 +198,90 @@ DAS_MODEL_SERIALIZE(Storages);
 
 struct Mode
 {
+  static
+  std::string
+  upper_fchar(std::string const& str)
+  {
+    return elle::sprintf("%s%s", (char)toupper(str[0]), str.substr(1));
+  }
+
+  class OptionDescription
+    : public boost::program_options::option_description
+  {
+  public:
+    OptionDescription(std::string const& name,
+                      boost::program_options::value_semantic const* s,
+                      std::string const& description)
+      : boost::program_options::option_description(
+          name.c_str(), s, upper_fchar(description).c_str())
+    {}
+  };
+
+  class OptionsDescription;
+
+  class OptionsDescriptionEasyInit
+    : boost::program_options::options_description_easy_init
+  {
+  public:
+    OptionsDescriptionEasyInit(OptionsDescription* owner)
+      : boost::program_options::options_description_easy_init(owner)
+      , my_owner(owner)
+    {}
+
+    OptionsDescriptionEasyInit&
+    operator()(std::string const& name,
+               std::string const& description)
+    {
+      boost::shared_ptr<boost::program_options::option_description> d(
+        new boost::program_options::option_description(
+          name.c_str(),
+          new boost::program_options::untyped_value(true),
+          upper_fchar(description).c_str()));
+
+      my_owner->add(d);
+      return *this;
+    }
+
+    OptionsDescriptionEasyInit&
+    operator()(std::string const& name,
+               boost::program_options::value_semantic const* s,
+               std::string const& description)
+    {
+      boost::shared_ptr<boost::program_options::option_description> d(
+        new boost::program_options::option_description(
+          name.c_str(),
+          s,
+          upper_fchar(description).c_str()));
+      my_owner->add(d);
+      return *this;
+    }
+
+    private:
+      boost::program_options::options_description* my_owner;
+  };
+
+  class OptionsDescription
+    : public boost::program_options::options_description
+  {
+  public:
+    OptionsDescription(std::string const& desc)
+      : boost::program_options::options_description(desc)
+    {}
+
+    OptionsDescriptionEasyInit
+    add_options()
+    {
+      return OptionsDescriptionEasyInit(this);
+    }
+  };
+
   typedef
     std::function<void (boost::program_options::variables_map const&)> Action;
   typedef
-    std::vector<boost::program_options::option_description> Options;
+    std::vector<OptionDescription> Options;
   typedef
-    std::vector<boost::program_options::options_description> OptionsVector;
+    std::vector<OptionsDescription> OptionsVector;
+
   Mode(std::string name_,
        std::string description_,
        Action action_,
@@ -216,22 +297,24 @@ struct Mode
     , options(this->description)
     , visible_options(this->description)
   {
-    boost::program_options::options_description mode_options(
-      elle::sprintf("%s%s options",
-                    (char)toupper(this->name[0]),
-                    this->name.substr(1)));
+    Mode::OptionsDescription mode_options(
+      elle::sprintf("%s options", this->name));
     for (auto const& option: options)
+    {
       mode_options.add(
         boost::shared_ptr<boost::program_options::option_description>
         (new boost::program_options::option_description(std::move(option))));
+    }
     this->_add_options(mode_options);
     for (auto const& extra: extra_options)
       this->_add_options(extra);
     boost::program_options::options_description hidden;
     for (auto const& option: hidden_options)
+    {
       hidden.add(
         boost::shared_ptr<boost::program_options::option_description>
         (new boost::program_options::option_description(std::move(option))));
+    }
     this->_add_options(hidden, false);
     for (auto const& extra: hidden_extra_options)
       this->_add_options(extra, false);
@@ -293,10 +376,28 @@ static
 bool
 is_hidden_file(boost::filesystem::path const& path)
 {
-  if (path.filename().string()[0] == '.')
+  if (path.filename().string().front() == '.' ||
+      path.filename().string().back() == '~')
+  {
     return true;
+  }
   return false;
 }
+
+namespace infinit
+{
+  struct User;
+}
+
+template <typename T>
+void
+beyond_push(std::string const& where,
+            std::string const& type,
+            std::string const& name,
+            T const& o,
+            infinit::User const& self,
+            bool report = true,
+            bool beyonderror = false); // FIXME: Remove when migration done.
 
 namespace infinit
 {
@@ -336,11 +437,14 @@ namespace infinit
   {
     try
     {
+      std::string crash_url = elle::sprintf("%s/crash/report", beyond());
+      auto crash_reporter = crash_reporting::CrashReporter(crash_url);
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
         "main",
-        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg]
+        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg,
+         &crash_reporter]
         {
 #ifdef INFINIT_LINUX
           // boost::filesystem uses the default locale, detect here if it
@@ -360,18 +464,19 @@ namespace infinit
 #endif
           ELLE_TRACE("parse command line")
           {
-            using namespace boost::program_options;
-            options_description mode_options("Modes");
+            using boost::program_options::value;
+            Mode::OptionsDescription mode_options("Modes");
             for (auto const& mode: modes)
-              mode_options.add_options()(mode.name.c_str(),
-                                         mode.description.c_str());
-            options_description options(desc);
+              mode_options.add_options()(mode.name,
+                                         mode.description);
+            Mode::OptionsDescription options(desc);
             options.add(mode_options);
-            options_description misc("Miscellaneous");
+            Mode::OptionsDescription misc("Miscellaneous");
             misc.add_options()
               ("help,h", "display the help")
               ("script,s", "silence all extraneous human friendly messages")
-              ("force-version,f", value<std::string>(), "force used version")
+              ("compatibility-version", value<std::string>(),
+               "force compatibility version")
               ("version,v", "display version")
             ;
             if (!disable_as_arg || !disable_as_arg.get())
@@ -382,21 +487,22 @@ namespace infinit
               ;
             }
             options.add(misc);
-            variables_map vm;
+            boost::program_options::variables_map vm;
             try
             {
-              auto parser = command_line_parser(argc, argv);
+              auto parser =
+                boost::program_options::command_line_parser(argc, argv);
               parser.options(options);
               parser.allow_unregistered();
               auto parsed = parser.run();
               store(parsed, vm);
               notify(vm);
-              if (vm.count("force-version"))
-                version = elle::Version::from_string(
-                  vm["force-version"].as<std::string>());
+              if (vm.count("compatibility-version"))
+                compatibility_version = elle::Version::from_string(
+                  vm["compatibility-version"].as<std::string>());
               if (vm.count("version"))
               {
-                std::cout << version << std::endl;
+                std::cout << INFINIT_VERSION << std::endl;
                 throw elle::Exit(0);
               }
               bool help = vm.count("help");
@@ -435,22 +541,44 @@ namespace infinit
                 return;
               }
               for (auto const& unrecognized:
-                     collect_unrecognized(parsed.options, include_positional))
+                     boost::program_options::collect_unrecognized(
+                       parsed.options,
+                       boost::program_options::include_positional))
               {
                 args.push_back(unrecognized);
+              }
+              std::unique_ptr<reactor::Thread> crash_upload_thread;
+              if (crash_reporter.enabled() &&
+                  crash_reporter.crashes_pending_upload())
+              {
+                crash_upload_thread.reset(new reactor::Thread("upload crashes",
+                  [&crash_reporter]
+                  {
+                    crash_reporter.upload_existing();
+                  }));
               }
               try
               {
                 mode->action(parse_args(mode->options, args,
                              (positional_arg ? positional_arg.get() : "name")));
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
               }
               catch (CommandLineError const&)
               {
                 mode->help(std::cerr);
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
+                throw;
+              }
+              catch (elle::Exception const&)
+              {
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
                 throw;
               }
             }
-            catch (invalid_command_line_syntax const& e)
+            catch (boost::program_options::invalid_command_line_syntax const& e)
             {
               throw elle::Error(
                 elle::sprintf("command line error: %s", e.what()));
@@ -608,61 +736,6 @@ namespace infinit
     boost::optional<std::string> password_hash;
   };
 
-  struct NetworkDescriptor
-  {
-    NetworkDescriptor(
-      std::string name_,
-      std::unique_ptr<model::doughnut::consensus::Configuration> consensus_,
-      std::unique_ptr<overlay::Configuration> overlay_,
-      cryptography::rsa::PublicKey owner_)
-      : name(std::move(name_))
-      , consensus(std::move(consensus_))
-      , overlay(std::move(overlay_))
-      , owner(std::move(owner_))
-    {
-      check_name(this->name);
-    }
-
-    NetworkDescriptor(elle::serialization::SerializerIn& s)
-      : name(s.deserialize<std::string>("name"))
-      , consensus(s.deserialize<std::unique_ptr<
-                  model::doughnut::consensus::Configuration>>("consensus"))
-      , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
-                ("overlay"))
-      , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-    {
-      check_name(this->name);
-    }
-
-    void
-    serialize(elle::serialization::Serializer& s)
-    {
-      s.serialize("name", this->name);
-      s.serialize("consensus", this->consensus);
-      s.serialize("overlay", this->overlay);
-      s.serialize("owner", this->owner);
-    }
-
-    std::string name;
-    std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
-    std::unique_ptr<overlay::Configuration> overlay;
-    cryptography::rsa::PublicKey owner;
-    int replication_factor;
-  };
-}
-
-template <typename T>
-void
-beyond_push(std::string const& where,
-            std::string const& type,
-            std::string const& name,
-            T const& o,
-            infinit::User const& self,
-            bool report = true,
-            bool beyonderror = false); // FIXME: Remove when migration done.
-
-namespace infinit
-{
   struct Network
   {
     Network(std::string name, std::unique_ptr<model::ModelConfig> model)
@@ -698,14 +771,15 @@ namespace infinit
         boost::optional<int> cache_size = {},
         boost::optional<int> cache_ttl = {},
         boost::optional<int> cache_invalidation = {},
-        bool async_writes = false)
+        bool async_writes = false,
+        boost::optional<elle::Version> version = {})
     {
+      ELLE_LOG("client version: %s", INFINIT_VERSION);
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
         hosts,
         client,
         p,
-        version,
         async_writes,
         cache,
         cache_size,
@@ -714,7 +788,8 @@ namespace infinit
           : boost::optional<std::chrono::seconds>(),
         cache_invalidation
           ? std::chrono::seconds(cache_invalidation.get())
-          : boost::optional<std::chrono::seconds>());
+          : boost::optional<std::chrono::seconds>(),
+        std::move(version));
     }
 
     inline
@@ -736,6 +811,62 @@ namespace infinit
 
     std::string name;
     std::unique_ptr<model::ModelConfig> model;
+  };
+
+  struct NetworkDescriptor
+  {
+    NetworkDescriptor(
+      std::string name_,
+      std::unique_ptr<model::doughnut::consensus::Configuration> consensus_,
+      std::unique_ptr<overlay::Configuration> overlay_,
+      cryptography::rsa::PublicKey owner_,
+      elle::Version version_)
+      : name(std::move(name_))
+      , consensus(std::move(consensus_))
+      , overlay(std::move(overlay_))
+      , owner(std::move(owner_))
+      , version(std::move(version_))
+    {
+      check_name(this->name);
+    }
+
+    NetworkDescriptor(elle::serialization::SerializerIn& s)
+      : name(s.deserialize<std::string>("name"))
+      , consensus(s.deserialize<std::unique_ptr<
+                  model::doughnut::consensus::Configuration>>("consensus"))
+      , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
+                ("overlay"))
+      , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
+      , version(s.deserialize<elle::Version>("version"))
+    {
+      check_name(this->name);
+    }
+
+    NetworkDescriptor(Network&& network)
+      : name(std::move(network.name))
+      , consensus(std::move(network.dht()->consensus))
+      , overlay(std::move(network.dht()->overlay))
+      , owner(std::move(*network.dht()->owner))
+      , version(std::move(network.dht()->version))
+    {
+      check_name(this->name);
+    }
+
+    void
+    serialize(elle::serialization::Serializer& s)
+    {
+      s.serialize("name", this->name);
+      s.serialize("consensus", this->consensus);
+      s.serialize("overlay", this->overlay);
+      s.serialize("owner", this->owner);
+      s.serialize("version", this->version);
+    }
+
+    std::string name;
+    std::unique_ptr<model::doughnut::consensus::Configuration> consensus;
+    std::unique_ptr<overlay::Configuration> overlay;
+    cryptography::rsa::PublicKey owner;
+    elle::Version version;
   };
 
   struct Volume
@@ -954,13 +1085,15 @@ namespace infinit
     }
 
     Network
-    network_get(std::string const& name_, User const& owner)
+    network_get(std::string const& name_,
+                User const& owner,
+                bool require_model = true)
     {
       auto name = qualified_name(name_, owner);
       boost::filesystem::ifstream f;
       this->_open_read(f, this->_network_path(name), name, "network");
       auto res = elle::serialization::json::deserialize<Network>(f, false);
-      if (!res.model)
+      if (!res.model && require_model)
       {
         throw elle::Error(
           elle::sprintf("this device is not yet linked to the network \"%s\" "
@@ -1030,13 +1163,7 @@ namespace infinit
         {
           try
           {
-            auto network = this->network_get(name_, owner);
-            return NetworkDescriptor{
-              network.name,
-              std::move(network.dht()->consensus),
-              std::move(network.dht()->overlay),
-              std::move(*network.dht()->owner)
-            };
+            return NetworkDescriptor(this->network_get(name_, owner));
           }
           catch (elle::Error const&)
           {}
@@ -1046,11 +1173,11 @@ namespace infinit
     }
 
     void
-    network_save(NetworkDescriptor const& network)
+    network_save(NetworkDescriptor const& network, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_network_path(network.name),
-                        network.name, "network", false);
+                        network.name, "network", overwrite);
       elle::serialization::json::SerializerOut s(f, false, true);
       s.serialize_forward(network);
     }
@@ -1352,6 +1479,25 @@ namespace infinit
     credentials_google(std::string const& uid) const
     {
       auto res = this->credentials("google", uid);
+      return elle::cast<OAuthCredentials>::runtime(res);
+    }
+
+    void
+    credentials_gcs_add(std::unique_ptr<Credentials> a)
+    {
+      this->credentials_add("gcs", std::move(a));
+    }
+
+    std::vector<std::unique_ptr<Credentials>>
+    credentials_gcs() const
+    {
+      return this->credentials("gcs");
+    }
+
+    std::unique_ptr<OAuthCredentials, std::default_delete<infinit::Credentials>>
+    credentials_gcs(std::string const& uid) const
+    {
+      auto res = this->credentials("gcs", uid);
       return elle::cast<OAuthCredentials>::runtime(res);
     }
 
@@ -1739,10 +1885,10 @@ aliased_flag(boost::program_options::variables_map const& vm,
   return false;
 }
 
-boost::program_options::option_description
+Mode::OptionDescription
 option_output(std::string const& item)
 {
-  return boost::program_options::option_description(
+  return Mode::OptionDescription(
     "output,o", boost::program_options::value<std::string>(),
     elle::sprintf("file to write the %s to (default: stdout)", item).c_str());
 }
@@ -1769,10 +1915,10 @@ get_output(boost::program_options::variables_map const& args)
     (&std::cout, [] (std::ostream*) {});
 }
 
-boost::program_options::option_description
+Mode::OptionDescription
 option_input(std::string const& item)
 {
-  return boost::program_options::option_description(
+  return Mode::OptionDescription(
     "input,i", boost::program_options::value<std::string>(),
     elle::sprintf("file to read the %s from (default: stdin)", item).c_str());
 }
@@ -1850,6 +1996,12 @@ void
 report_created(std::string const& type, std::string const& name)
 {
   report_action("created", type, name, std::string("locally"));
+}
+
+void
+report_updated(std::string const& type, std::string const& name)
+{
+  report_action("updated", type, name, std::string("locally"));
 }
 
 void
@@ -2383,14 +2535,14 @@ namespace infinit
   }
 }
 
-boost::program_options::option_description option_cache(
+Mode::OptionDescription option_cache(
   "cache", boost::program_options::bool_switch(), "enable block cache");
-boost::program_options::option_description option_cache_size(
+Mode::OptionDescription option_cache_size(
   "cache-size", boost::program_options::value<int>(),
   "maximum block cache size in bytes (default: 64 MB)");
-boost::program_options::option_description option_cache_ttl(
+Mode::OptionDescription option_cache_ttl(
   "cache-ttl", boost::program_options::value<int>(),
   "block cache time-to-live in seconds (default: 5 minutes)");
-boost::program_options::option_description option_cache_invalidation(
+Mode::OptionDescription option_cache_invalidation(
   "cache-invalidation", boost::program_options::value<int>(),
   "block cache invalidation time in seconds (default: 15 seconds)");

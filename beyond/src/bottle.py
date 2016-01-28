@@ -55,6 +55,19 @@ class Bottle(bottle.Bottle):
         'display_name': info['name'],
       },
     },
+    'gcs': {
+      'form_url': 'https://accounts.google.com/o/oauth2/auth',
+      'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
+      'params': {
+        'scope': 'https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+        'access_type': 'offline',
+      },
+      'info_url': 'https://www.googleapis.com/oauth2/v2/userinfo',
+      'info': lambda info: {
+        'uid': info['email'],
+        'display_name': info['name'],
+      },
+    },
   }
 
   def __init__(
@@ -65,7 +78,7 @@ class Bottle(bottle.Bottle):
   ):
     super().__init__(catchall = not production)
     self.__beyond = beyond
-    self.__ban_list = ['demo']
+    self.__ban_list = ['demo', 'root', 'admin']
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
     self.install(JsongoPlugin())
@@ -160,6 +173,8 @@ class Bottle(bottle.Bottle):
       self.drive_icon_put)
     self.route('/drives/<owner>/<name>/icon', method = 'DELETE')(
       self.drive_icon_delete)
+    # Crash reports
+    self.route('/crash/report', method = 'PUT')(self.crash_report_put)
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -183,18 +198,27 @@ class Bottle(bottle.Bottle):
   def authenticate(self, user):
     if user.name in self.__ban_list:
       raise Response(403, {
-        'error': 'restricted',
-        'reason': 'This user cannot perform any operation'
+        'error': 'user/forbidden',
+        'reason': 'this user cannot perform any operation'
       })
     remote_signature_raw = bottle.request.headers.get('infinit-signature')
     if remote_signature_raw is None:
-      raise Response(401, 'Missing signature header')
+      raise Response(401, {
+        'error': 'user/unauthorized',
+        'reason': 'authentication required',
+      })
     request_time = bottle.request.headers.get('infinit-time')
     if request_time is None:
-      raise Response(400, 'Missing time header')
-    if abs(time.time() - int(request_time)) > 300: # UTC
-      raise Response(401, 'Time too far away: got %s, current %s' % \
-                     (request_time, time.time()))
+      raise Response(400, {
+        'error': 'user/unauthorized',
+        'reason': 'missing time header',
+      })
+    delay = abs(time.time() - int(request_time)) # UTC
+    if delay > 300:
+      raise Response(401, {
+        'error': 'user/unauthorized',
+        'reason': 'too late: request was issued %ss ago' % delay,
+      })
     rawk = user.public_key['rsa']
     der = base64.b64decode(rawk.encode('latin-1'))
     k = Crypto.PublicKey.RSA.importKey(der)
@@ -207,7 +231,10 @@ class Bottle(bottle.Bottle):
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
     try:
       if not verifier.verify(local_hash, remote_signature_crypted):
-        raise Response(403, 'Authentication error')
+        raise Response(403, {
+          'error': 'user/unauthorized',
+          'reason': 'invalid authentication',
+        })
     # XXX: Sometimes, verify fails if the keys used differ, raising:
     # > ValueError('Plaintext to large')
     # This happens ONLY if the keys are different so we can consider it as an
@@ -215,7 +242,10 @@ class Bottle(bottle.Bottle):
     # To reproduce, remove this try block and run 'tests/auth'.
     except ValueError as e:
       if e.args[0] == 'Plaintext too large':
-        raise Response(403, 'Authentication error')
+        raise Response(403, {
+          'error': 'user/unauthorized',
+          'reason': 'invalid authentication',
+        })
       raise
     pass
 
@@ -340,7 +370,10 @@ class Bottle(bottle.Bottle):
   def login(self, name):
     json = bottle.request.json
     if 'password_hash' not in json:
-      raise Response(400, 'Missing password_hash')
+      raise Response(401, {
+        'error': 'user/unauthorized',
+        'reason': 'missing password hash',
+      })
     try:
       user = self.__beyond.user_get(name)
       if user.password_hash is None:
@@ -440,12 +473,8 @@ class Bottle(bottle.Bottle):
       network.create()
       raise Response(201, {})
     except Network.Duplicate:
-      if network == self.network_from_name(owner = owner, name = name):
-        return {}
-      raise Response(409, {
-        'error': 'network/conflict',
-        'reason': 'network %r already exists' % name,
-      })
+      network.overwrite()
+      raise Response(200, {})
 
   def network_passports_get(self, owner, name):
     user = self.user_from_name(name = owner)
@@ -582,6 +611,7 @@ class Bottle(bottle.Bottle):
   ## ----- ##
   ## Drive ##
   ## ----- ##
+
   def __drive_integrity(self, drive, passport = None):
     drive = drive.json()
     try:
@@ -591,13 +621,19 @@ class Bottle(bottle.Bottle):
       network = self.network_from_name(owner = network_owner,
                                        name = network_name)
     except IndexError:
-      raise Response(400, 'Invalid network name')
+      raise Response(400, {
+        'error': 'drive/invalid',
+        'reason': 'invalid network name',
+      })
     try:
       # Make sure volume exists.
       self.volume_from_name(owner = drive['volume'].split('/')[0],
                             name = drive['volume'].split('/')[1])
     except IndexError:
-      raise Response(400, 'Invalid volume name')
+      raise Response(400, {
+        'error': 'volume/invalid',
+        'reason': 'invalid volume name',
+      })
     if passport is not None:
       self.network_passport_get(owner = network_owner,
                                 name = network_name,
@@ -700,6 +736,13 @@ class Bottle(bottle.Bottle):
   def __drive_icon_manipulate(self, name, f):
     return f('users', '%s/icon' % name)
 
+  ## ------------ ##
+  ## Crash Report ##
+  ## ------------ ##
+  def crash_report_put(self):
+    self.__beyond.crash_report_send(bottle.request.body)
+    return {}
+
   ## --- ##
   ## GCS ##
   ## --- ##
@@ -777,7 +820,7 @@ for name, conf in Bottle._Bottle__oauth_services.items():
       'redirect_uri': '%s/oauth/%s' % (self.host(), name),
       'state': username,
     }
-    if name == 'google':
+    if name == 'google' or name == 'gcs':
       params['approval_prompt'] = 'force'
     params.update(conf.get('params', {}))
     req = requests.Request('GET', conf['form_url'], params = params)
@@ -847,27 +890,30 @@ def user_credentials_google_refresh(self, username):
     beyond = self._Bottle__beyond
     user = beyond.user_get(name = username)
     refresh_token = bottle.request.query.refresh_token
-    for id, account in user.google_accounts.items():
-      google_account = user.google_accounts[id]
-      # https://developers.google.com/identity/protocols/OAuth2InstalledApp
-      # The associate google account.
-      if google_account['refresh_token'] == refresh_token:
-        google_url = "https://www.googleapis.com/oauth2/v3/token"
-        # Get a new token and update the db and the client
-        query = {
-          'client_id': beyond.google_app_key,
-          'client_secret': beyond.google_app_secret,
-          'refresh_token': google_account['refresh_token'],
-          'grant_type': 'refresh_token',
-        }
-        res = requests.post(google_url, params=query)
-        if res.status_code != 200:
-          raise HTTPError(status=400)
-        else:
-          token = res.json()['access_token']
-          user.google_accounts[id]['token'] = token
-          user.save()
-          return token
+    for kind in ['google', 'gcs']:
+      for id, account in getattr(user, '%s_accounts' % kind).items():
+        # https://developers.google.com/identity/protocols/OAuth2InstalledApp
+        # The associate google account.
+        if account['refresh_token'] == refresh_token:
+          google_url = "https://www.googleapis.com/oauth2/v3/token"
+          # Get a new token and update the db and the client
+          query = {
+            'client_id':     getattr(beyond, '%s_app_key' % kind),
+            'client_secret': getattr(beyond, '%s_app_secret' % kind),
+            'refresh_token': account['refresh_token'],
+            'grant_type': 'refresh_token',
+          }
+          res = requests.post(google_url, params=query)
+          if res.status_code != 200:
+            raise Response(res.status_code, {
+                'error': 'credentials refresh failure',
+                'reason': res.text
+            })
+          else:
+            token = res.json()['access_token']
+            account['token'] = token
+            user.save()
+            return token
   except User.NotFound:
     raise self._Bottle__user_not_found(username)
 

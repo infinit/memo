@@ -19,10 +19,14 @@ templates = {
     'noop': 'Drive/Invitation',
     'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
   },
+  'Internal/Crash Report': {
+    'noop': 'Internal/Crash Report',
+    'swu': 'tem_fu5GEE6jxByj2SB4zM6CrH',
+  },
   'User/Welcome': {
     'noop': 'User/Welcome',
     'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
-  }
+  },
 }
 
 class Beyond:
@@ -34,6 +38,8 @@ class Beyond:
       dropbox_app_secret,
       google_app_key,
       google_app_secret,
+      gcs_app_key,
+      gcs_app_secret,
       sendwithus_api_key = None,
       validate_email_address = True,
   ):
@@ -43,6 +49,8 @@ class Beyond:
     self.__dropbox_app_secret = dropbox_app_secret
     self.__google_app_key    = google_app_key
     self.__google_app_secret = google_app_secret
+    self.__gcs_app_key    = gcs_app_key
+    self.__gcs_app_secret = gcs_app_secret
     self.__validate_email_address = validate_email_address
     if sendwithus_api_key is not None:
       self.__emailer = emailer.SendWithUs(sendwithus_api_key)
@@ -82,6 +90,14 @@ class Beyond:
   @property
   def google_app_secret(self):
     return self.__google_app_secret
+
+  @property
+  def gcs_app_key(self):
+    return self.__gcs_app_key
+
+  @property
+  def gcs_app_secret(self):
+    return self.__gcs_app_secret
 
   @property
   def validate_email_address(self):
@@ -175,6 +191,26 @@ class Beyond:
     return self.__datastore.drive_delete(
         owner = owner, name = name)
 
+  ## ------------ ##
+  ## Crash Report ##
+  ## ------------ ##
+
+  def crash_report_send(self, data):
+    variables = None
+    import tempfile
+    with tempfile.TemporaryDirectory() as temp_dir:
+      # Need to use .txt extension as otherwise SWU destroy the file.
+      with open('%s/client.txt' % temp_dir, 'wb') as crash_dump:
+        crash_dump.write(data.getvalue())
+      with open('%s/client.txt' % temp_dir, 'rb') as crash_dump:
+        self.__emailer.send_one(
+          template = self.template('Internal/Crash Report'),
+          recipient_email = 'developers@infinit.io',
+          recipient_name = 'Developers',
+          variables = variables,
+          files = [crash_dump],
+        )
+
 class User:
   fields = {
     'mandatory': [
@@ -186,6 +222,7 @@ class User:
       ('dropbox_accounts', None),
       ('fullname', None),
       ('google_accounts', None),
+      ('gcs_accounts', None),
       ('password_hash', None),
       ('private_key', None),
     ]
@@ -206,6 +243,7 @@ class User:
                private_key = None,
                dropbox_accounts = None,
                google_accounts = None,
+               gcs_accounts = None,
   ):
     self.__beyond = beyond
     self.__id = id
@@ -219,6 +257,8 @@ class User:
     self.__dropbox_accounts_original = deepcopy(self.dropbox_accounts)
     self.__google_accounts = google_accounts or {}
     self.__google_accounts_original = deepcopy(self.google_accounts)
+    self.__gcs_accounts = gcs_accounts or {}
+    self.__gcs_accounts_original = deepcopy(self.gcs_accounts)
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -241,6 +281,7 @@ class User:
                 private_key = json.get('private_key', None),
                 dropbox_accounts = json.get('dropbox_accounts', []),
                 google_accounts = json.get('google_accounts', []),
+                gcs_accounts = json.get('gcs_accounts', []),
     )
 
   def json(self, private = False):
@@ -257,6 +298,8 @@ class User:
         res['dropbox_accounts'] = self.dropbox_accounts
       if self.google_accounts is not None:
         res['google_accounts'] = self.google_accounts
+      if self.gcs_accounts is not None:
+        res['gcs_accounts'] = self.gcs_accounts
       if self.private_key is not None:
         res['private_key'] = self.private_key
       if self.private_key is not None:
@@ -284,9 +327,13 @@ class User:
     for id, account in self.google_accounts.items():
       if self.__google_accounts_original.get(id) != account:
         diff.setdefault('google_accounts', {})[id] = account
+    for id, account in self.gcs_accounts.items():
+      if self.__gcs_accounts_original.get(id) != account:
+        diff.setdefault('gcs_accounts', {})[id] = account
     self.__beyond._Beyond__datastore.user_update(self.name, diff)
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
     self.__google_accounts_original = dict(self.__google_accounts)
+    self.__gcs_accounts_original = dict(self.__gcs_accounts)
 
   @property
   def id(self):
@@ -326,6 +373,10 @@ class User:
   def google_accounts(self):
     return self.__google_accounts
 
+  @property
+  def gcs_accounts(self):
+    return self.__gcs_accounts
+
   def __eq__(self, other):
     if self.name != other.name or self.public_key != other.public_key:
       return False
@@ -347,8 +398,7 @@ class Entity(type):
         if v is None:
           v = default
         setattr(self, '_%s__%s' % (name, f), v)
-        if isinstance(v, dict):
-          setattr(self, '_%s__%s_original' % (name, f), deepcopy(v))
+        setattr(self, '_%s__%s_original' % (name, f), deepcopy(v))
       if kwargs:
         raise TypeError(
           '__init__() got an unexpected keyword argument %r' %
@@ -389,17 +439,27 @@ class Entity(type):
         diff = {}
         for field in fields:
           v = getattr(self, field)
+          original_field = '_%s__%s_original' % (self.__class__.__name__, field)
+          original = getattr(self, original_field)
           if isinstance(v, dict):
-            original_field = \
-              '_%s__%s_original' % (self.__class__.__name__, field)
-            original = getattr(self, original_field)
             for k, v in v.items():
               if original.get(k) != v:
                 diff.setdefault(field, {})[k] = v
             setattr(self, original_field, deepcopy(v))
+          elif original != v:
+            diff[field] = v
         updater = getattr(self.__beyond._Beyond__datastore, update)
         updater(self.id, diff)
       content['save'] = save
+    def overwrite(self):
+      diff = {
+        field: getattr(self, field) for field in fields
+      }
+      del diff['name']
+      updater = getattr(self.__beyond._Beyond__datastore, update)
+      updater(self.id, diff)
+      return diff
+    content['overwrite'] = overwrite
     # Properties
     def make_getter(f):
       return lambda self: getattr(self, '_%s__%s' % (name, f))
@@ -441,10 +501,12 @@ class PairingInformation(metaclass = Entity,
 class Network(metaclass = Entity,
               insert = 'network_insert',
               update = 'network_update',
-              fields = fields('name', 'owner', 'consensus', 'overlay',
-                              passports = {},
-                              endpoints = {},
-                              storages = {})):
+              fields = fields(
+                'name', 'owner', 'consensus', 'overlay',
+                version = '0.3.0',
+                passports = {},
+                endpoints = {},
+                storages = {})):
 
   @property
   def id(self):

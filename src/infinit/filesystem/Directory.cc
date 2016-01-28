@@ -626,140 +626,30 @@ namespace infinit
       Node::chown(uid, gid);
     }
 
-    void Directory::removexattr(std::string const& k)
-    {
-      Node::removexattr(k);
-    }
-
     void
     Directory::utimens(const struct timespec tv[2])
     {
       Node::utimens(tv);
     }
 
-    std::vector<std::string> Directory::listxattr()
+    /*--------------------.
+    | Extended attributes |
+    `--------------------*/
+
+    static
+    boost::optional<std::string>
+    xattr_special(std::string const& name)
     {
-      ELLE_TRACE("directory listxattr");
-      _fetch();
-      std::vector<std::string> res;
-      for (auto const& a: _header.xattrs)
-        res.push_back(a.first);
-      return res;
+      if (name.find("infinit.") == 0)
+        return name.substr(8);
+      if (name.find("user.infinit.") == 0)
+        return name.substr(13);
+      return {};
     }
 
-    void Directory::setxattr(std::string const& name, std::string const& value, int flags)
-    {
-      ELLE_TRACE("directory setxattr %s", name);
-      _fetch();
-      if (name == "user.infinit.auth.inherit")
-      {
-        bool on = !(value == "0" || value == "false" || value=="");
-        _inherit_auth = on;
-        _commit({OperationType::update, on ? "/inherit" : "/disinherit"});
-      }
-      else if (name.find("user.infinit.auth.") == 0)
-      {
-        set_permissions(name.substr(strlen("user.infinit.auth.")), value,
-                        _block->address());
-        _block.reset();
-      }
-      else if (name == "user.infinit.fsck.deref")
-      {
-        _files.erase(value);
-        _commit({OperationType::remove, value}, true);
-      }
-      else if (name == "user.infinit.fsck.ref")
-      {
-        auto p1 = value.find_first_of(':');
-        auto p2 = value.find_last_of(':');
-        if (p1 == p2 || p1 != 1)
-          THROW_INVAL;
-        EntryType type;
-        if (value[0] == 'd')
-          type = EntryType::directory;
-        else if (value[0] == 'f')
-          type = EntryType::file;
-        else
-          type = EntryType::symlink;
-        std::string ename = value.substr(p1+1, p2 - p1 - 1);
-        Address eaddr = Address::from_string(value.substr(p2+1));
-        _files[ename] = std::make_pair(type, eaddr);
-        _commit({OperationType::insert, ename}, true);
-      }
-      else if (name == "user.infinit.fsck.rmblock")
-      {
-        umbrella([&] {
-            this->_owner.block_store()->remove(Address::from_string(value));
-        });
-      }
-      else if (name == "user.infinit.fsck.unlink")
-      {
-        auto it = _files.find(value);
-        if (it == _files.end())
-          THROW_NOENT;
-        auto c = child(value);
-        auto f = dynamic_cast<File*>(c.get());
-        if (!f)
-          THROW_ISDIR;
-        try
-        {
-          f->unlink();
-        }
-        catch(std::exception const& e)
-        {
-          ELLE_WARN("%s: unlink of %s failed with %s, forcibly remove from parent",
-                    *this, value, e.what());
-          _files.erase(value);
-          _commit({OperationType::remove, value}, true);
-        }
-      }
-      else if (name == "user.infinit.group.make")
-      {
-        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-        model::doughnut::Group g(*dn, value);
-        g.create();
-      }
-      else if (name == "user.infinit.group.add")
-      {
-        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-        auto sep = value.find_first_of(':');
-        auto gn = value.substr(0, sep);
-        auto userdata = value.substr(sep+1);
-        model::doughnut::Group g(*dn, gn);
-        g.add_member(elle::Buffer(userdata.data(), userdata.size()));
-      }
-      else if (name == "user.infinit.group.remove")
-      {
-         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-         auto sep = value.find_first_of(':');
-         auto gn = value.substr(0, sep);
-         auto userdata = value.substr(sep+1);
-         model::doughnut::Group g(*dn, gn);
-         g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
-      }
-      else if (name == "user.infinit.group.addadmin")
-      {
-        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-        auto sep = value.find_first_of(':');
-        auto gn = value.substr(0, sep);
-        auto userdata = value.substr(sep+1);
-        model::doughnut::Group g(*dn, gn);
-        g.add_admin(elle::Buffer(userdata.data(), userdata.size()));
-      }
-      else if (name == "user.infinit.group.removeadmin")
-      {
-         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-         auto sep = value.find_first_of(':');
-         auto gn = value.substr(0, sep);
-         auto userdata = value.substr(sep+1);
-         model::doughnut::Group g(*dn, gn);
-         g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
-      }
-      else
-        Node::setxattr(name, value, flags);
-    }
-
-    static std::string perms_to_json(model::Model& model, ACLBlock& block)
+    static
+    std::string
+    perms_to_json(model::Model& model, ACLBlock& block)
     {
       auto perms = block.list_permissions(model);
       elle::json::Array v;
@@ -776,16 +666,164 @@ namespace infinit
       return ss.str();
     }
 
+    std::vector<std::string>
+    Directory::listxattr()
+    {
+      ELLE_TRACE_SCOPE("%s: listxattr", *this);
+      this->_fetch();
+      std::vector<std::string> res;
+      for (auto const& a: _header.xattrs)
+        res.push_back(a.first);
+      return res;
+    }
+
+    void
+    Directory::setxattr(std::string const& name,
+                        std::string const& value,
+                        int flags)
+    {
+      ELLE_TRACE_SCOPE("%s: setxattr %s", *this, name);
+      this->_fetch();
+      if (auto special = xattr_special(name))
+      {
+        ELLE_DEBUG("handle special xattr %s", *special);
+        if (*special == "auth.inherit")
+        {
+          bool on = !(value == "0" || value == "false" || value=="");
+          this->_inherit_auth = on;
+          this->_commit(
+            {OperationType::update, on ? "/inherit" : "/disinherit"});
+        }
+        else if (special->find("auth.") == 0)
+        {
+          auto perms = special->substr(5);
+          ELLE_DEBUG("set permissions %s", perms);
+          set_permissions(perms, value, this->_block->address());
+          this->_block.reset();
+        }
+        else if (*special == "fsck.deref")
+        {
+          this->_files.erase(value);
+          this->_commit({OperationType::remove, value}, true);
+        }
+        else if (*special == "fsck.ref")
+        {
+          auto p1 = value.find_first_of(':');
+          auto p2 = value.find_last_of(':');
+          if (p1 == p2 || p1 != 1)
+            THROW_INVAL;
+          EntryType type;
+          if (value[0] == 'd')
+            type = EntryType::directory;
+          else if (value[0] == 'f')
+            type = EntryType::file;
+          else
+            type = EntryType::symlink;
+          std::string ename = value.substr(p1+1, p2 - p1 - 1);
+          Address eaddr = Address::from_string(value.substr(p2+1));
+          this->_files[ename] = std::make_pair(type, eaddr);
+          this->_commit({OperationType::insert, ename}, true);
+        }
+        else if (*special == "fsck.rmblock")
+        {
+          umbrella([&] {
+              this->_owner.block_store()->remove(Address::from_string(value));
+          });
+        }
+        else if (*special == "fsck.unlink")
+        {
+          auto it = _files.find(value);
+          if (it == _files.end())
+            THROW_NOENT;
+          auto c = child(value);
+          auto f = dynamic_cast<File*>(c.get());
+          if (!f)
+            THROW_ISDIR;
+          try
+          {
+            f->unlink();
+          }
+          catch(std::exception const& e)
+          {
+            ELLE_WARN(
+              "%s: unlink of %s failed with %s, forcibly remove from parent",
+              *this, value, e.what());
+            this->_files.erase(value);
+            this->_commit({OperationType::remove, value}, true);
+          }
+        }
+        else if (special->find("group.") == 0)
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          if (dht->version() < elle::Version(0, 4, 0))
+          {
+            ELLE_WARN(
+              "drop group operation as network version %s is too old "
+              "(groups are available from 0.4.0)",
+              dht->version());
+            THROW_NOSYS;
+          }
+          special = special->substr(6);
+          if (*special == "create")
+          {
+            model::doughnut::Group g(*dht, value);
+            g.create();
+          }
+          else if (name == "delete")
+          {
+            model::doughnut::Group g(*dht, value);
+            g.destroy();
+          }
+          else if (*special == "add")
+          {
+            auto sep = value.find_first_of(':');
+            auto gn = value.substr(0, sep);
+            auto userdata = value.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.add_member(elle::Buffer(userdata.data(), userdata.size()));
+          }
+          else if (*special == "remove")
+          {
+            auto sep = value.find_first_of(':');
+            auto gn = value.substr(0, sep);
+            auto userdata = value.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.remove_member(elle::Buffer(userdata.data(), userdata.size()));
+          }
+          else if (*special == "addadmin")
+          {
+            auto sep = value.find_first_of(':');
+            auto gn = value.substr(0, sep);
+            auto userdata = value.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.add_admin(elle::Buffer(userdata.data(), userdata.size()));
+          }
+          else if (*special == "removeadmin")
+          {
+            auto sep = value.find_first_of(':');
+            auto gn = value.substr(0, sep);
+            auto userdata = value.substr(sep+1);
+            model::doughnut::Group g(*dht, gn);
+            g.remove_admin(elle::Buffer(userdata.data(), userdata.size()));
+          }
+        }
+      }
+      else
+        Node::setxattr(name, value, flags);
+    }
+
     std::string
     Directory::getxattr(std::string const& key)
     {
+      ELLE_TRACE_SCOPE("%s: getxattr %s", *this, key);
       if (key == "user.infinit.block")
       {
-        if (_block)
-          return elle::sprintf("%x", _block->address());
-        else if (_parent)
+        if (this->_block)
+          return elle::sprintf("%x", this->_block->address());
+        else if (this->_parent)
         {
-          auto const& elem = _parent->_files.at(_name);
+          auto const& elem = this->_parent->_files.at(this->_name);
           return elle::sprintf("%x", elem.second);
         }
         else
@@ -793,17 +831,18 @@ namespace infinit
       }
       else if (key == "user.infinit.auth")
       {
-        _fetch();
-        return perms_to_json(*_owner.block_store(), *_block);
+        this->_fetch();
+        return perms_to_json(*this->_owner.block_store(), *this->_block);
       }
       else if (key == "user.infinit.auth.inherit")
       {
-        _fetch();
-        return _inherit_auth ? "true" : "false";
+        this->_fetch();
+        return this->_inherit_auth ? "true" : "false";
       }
       else if (key == "user.infinit.sync")
       {
-        auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(_owner.block_store());
+        auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+          this->_owner.block_store());
         auto c = dn->consensus().get();
         auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
         if (!a)
@@ -823,25 +862,37 @@ namespace infinit
       {
         std::string value = key.substr(strlen("user.infinit.group.list."));
         auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-        model::doughnut::Group g(*dn, value);
-        elle::json::Object o;
-        auto members = g.list_members();
-        elle::json::Array v;
-        for (auto const& m: members)
-          v.push_back(m->name());
-        o["members"] = v;
-        members = g.list_admins();
-        elle::json::Array va;
-        for (auto const& m: members)
-          va.push_back(m->name());
-        o["admins"] = va;
-        std::stringstream ss;
-        elle::json::write(ss, o, true);
-        return ss.str();
+        return umbrella([&]
+          {
+            model::doughnut::Group g(*dn, value);
+            elle::json::Object o;
+            auto members = g.list_members();
+            elle::json::Array v;
+            for (auto const& m: members)
+              v.push_back(m->name());
+            o["members"] = v;
+            members = g.list_admins();
+            elle::json::Array va;
+            for (auto const& m: members)
+              va.push_back(m->name());
+            o["admins"] = va;
+            std::stringstream ss;
+            elle::json::write(ss, o, true);
+            return ss.str();
+          });
       }
       else
         return Node::getxattr(key);
     }
+
+    void Directory::removexattr(std::string const& k)
+    {
+      this->Node::removexattr(k);
+    }
+
+    /*----------.
+    | Printable |
+    `----------*/
 
     void
     Directory::print(std::ostream& stream) const

@@ -8,9 +8,9 @@ ELLE_LOG_COMPONENT("infinit-drive");
 
 #include <main.hh>
 
-using namespace boost::program_options;
-
 infinit::Infinit ifnt;
+
+using boost::program_options::variables_map;
 
 static
 void
@@ -486,9 +486,11 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  boost::program_options::option_description option_description =
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionDescription option_description =
     { "description,d", value<std::string>(), "created drive description" };
-  boost::program_options::option_description option_icon =
+  Mode::OptionDescription option_icon =
     { "icon,i", value<std::string>(), "path to an image to use as icon"};
   Modes modes {
     {

@@ -69,6 +69,7 @@ class SendWithUs(Base):
                sender_name = None,
                reply_to = None,
                variables = None,
+               files = None,
                ):
     return self.__send_one(self.__template(template),
                            recipient_email,
@@ -77,6 +78,7 @@ class SendWithUs(Base):
                            sender_name,
                            reply_to,
                            variables,
+                           files,
                            self.__swu,
                          )
 
@@ -88,6 +90,7 @@ class SendWithUs(Base):
                  sender_name,
                  reply_to,
                  variables,
+                 files,
                  swu,
                ):
     sender = None
@@ -109,6 +112,7 @@ class SendWithUs(Base):
       recipient = recipient,
       sender = sender,
       email_data = variables,
+      files = files,
     )
 
   def send_template(self, template, recipients):

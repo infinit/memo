@@ -285,9 +285,8 @@ namespace infinit
         Passport passport_,
         boost::optional<std::string> name_,
         boost::optional<int> port_,
-        boost::optional<elle::Version> version)
-        : ModelConfig(std::move(storage),
-                      std::move(version))
+        elle::Version version)
+        : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
         , overlay(std::move(overlay_))
@@ -330,10 +329,9 @@ namespace infinit
       std::unique_ptr<infinit::model::Model>
       Configuration::make(overlay::NodeEndpoints const& hosts,
                           bool client,
-                          boost::filesystem::path const& dir,
-                          boost::optional<elle::Version> version)
+                          boost::filesystem::path const& dir)
       {
-        return this->make(hosts, client, dir, version, false, false);
+        return this->make(hosts, client, dir, false, false);
       }
 
       std::unique_ptr<Doughnut>
@@ -341,12 +339,12 @@ namespace infinit
         overlay::NodeEndpoints const& hosts,
         bool client,
         boost::filesystem::path const& p,
-        boost::optional<elle::Version> version,
         bool async,
         bool cache,
         boost::optional<int> cache_size,
         boost::optional<std::chrono::seconds> cache_ttl,
-        boost::optional<std::chrono::seconds> cache_invalidation)
+        boost::optional<std::chrono::seconds> cache_invalidation,
+        boost::optional<elle::Version> version)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -384,7 +382,7 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version);
+            version ? version.get() : this->version);
         else
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
@@ -396,7 +394,7 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version);
+            version ? version.get() : this->version);
         return dht;
       }
 

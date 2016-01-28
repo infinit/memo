@@ -15,7 +15,7 @@ cfg.enable_optimization()
 
 with drake.Drake('../..') as d:
   d.run(
-    python = '/usr/local/Cellar/python3/3.4.3/Frameworks/Python.framework/Versions/3.4/',
+    python = '/usr/local/Cellar/python3/3.5.1/Frameworks/Python.framework/Versions/3.5/',
     cxx_toolkit = tk,
     cxx_config = cfg,
   )

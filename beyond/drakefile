@@ -26,6 +26,8 @@ def configure(
     dropbox_app_secret = 'gwca0vz648u0y6r',
     google_app_key = '798530033299-jiqlihdquc70r08ucthm3o1omp594ihm',
     google_app_secret = 'ufwn6w0hAT2MDuwOzfWxh4Sx',
+    gcs_app_key = '798530033299-phph23et2sptd7auhsif2d75hcqel4lg',
+    gcs_app_secret = 'abdwo588jVZO3zV8EUWlmx8o',
     name_regex = '^[-a-z0-9._]+$',
 ):
 
@@ -68,6 +70,9 @@ def configure(
       'google_app_key':
         '%s.apps.googleusercontent.com' % google_app_key,
       'google_app_secret': google_app_secret,
+      'gcs_app_key':
+        '%s.apps.googleusercontent.com' % gcs_app_key,
+      'gcs_app_secret': gcs_app_secret,
       'name_regex': name_regex,
   }):
     drake.node('beyond.tmpl')
@@ -156,7 +161,8 @@ def configure(
     yield drake.touch(where / python_prefix / 'infinit/__init__.py')
   build = drake.Rule('build')
   built = list(install_nodes(where = '.', how = copy_python))
-  package = drake.python.Package('beyond', python_prefix, built)
+  package = drake.python.Package('beyond', python_prefix, built,
+                                 fullname = 'infinit.beyond')
   build << built
 
   install = drake.Rule('install')
@@ -203,6 +209,10 @@ def configure(
 
   rule_check = drake.Rule('check')
   test_utils = drake.Node('tests/utils.py')
+  path = ':'.join(
+    map(lambda x: str(x),
+        [drake.path_build(python_prefix),
+         test_utils.path().dirname()]))
   for test_name in [
       'auth',
       'demo',
@@ -229,12 +239,60 @@ def configure(
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)
     test.dependencies_add([test_utils])
-    path = ':'.join(
-      map(lambda x: str(x),
-          [drake.path_build(python_prefix), test_utils.path().dirname()]))
     runner = drake.Runner(
       exe = test,
       env = {
         'PYTHONPATH': path,
       })
+    runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
+
+  class Linter(drake.ShellCommand):
+
+    def __init__(self, package, status, plugins = [], conf = None):
+      command = [
+        'pylint', '--reports=n',
+        '--msg-template={path}:{line}:{column}: {msg}',
+        package.fullname]
+      sources = package.nodes
+      self.__status = status
+      import os
+      env = {
+        'PYTHONPATH': ':'.join(map(str, chain(
+          package.pythonpath,
+          (str(p.path().dirname()) for p in plugins)))),
+        'PATH': os.environ['PATH'],
+      }
+      if conf is not None:
+        command.append('--rcfile=%s' % conf.path())
+        sources.append(conf)
+      for plugin in plugins:
+        sources.append(plugin)
+        command += ['--load-plugins',
+                    plugin.path().basename().without_last_extension()]
+      drake.ShellCommand.__init__(
+        self,
+        sources,
+        [status],
+        command = command,
+        pretty = 'Lint %s' % package.name,
+        stdout = status,
+        environment = env)
+
+    def execute(self):
+      res = super().execute()
+      if not res:
+        with open(str(self.__status.path()), 'r') as f:
+          for line in f:
+            print('%s: %s' % (self.command[0], line), end = '')
+      return res
+
+  pylintrc = drake.node('.pylintrc')
+  pylint_checkers = drake.nodes('tests/lint/beyond-lint.py')
+  pylint_status = drake.node('tests/lint.status')
+  pylint_runner = Linter(
+    package = package,
+    status = pylint_status,
+    conf = pylintrc,
+    plugins = pylint_checkers)
+  rule_check << pylint_status

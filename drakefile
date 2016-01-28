@@ -26,18 +26,18 @@ with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
 def configure(
-    cxx_toolkit = None,
-    cxx_config = drake.cxx.Config(),
-    production_build = False,
-    beyond_host = 'https://beyond.infinit.io',
-    boost = None,
-    prefix = '/usr',
-    valgrind = None,
-    valgrind_tests = False,
-    python = None,
-    fuse = None,
-    codesign = False,
-    beyond = True,
+  cxx_toolkit = None,
+  cxx_config = drake.cxx.Config(),
+  production_build = False,
+  beyond_host = 'https://beyond.infinit.io',
+  boost = None,
+  prefix = '/usr',
+  valgrind = None,
+  valgrind_tests = False,
+  python = None,
+  fuse = None,
+  codesign = False,
+  beyond = True,
 ):
 
   global rule_build, rule_check, rule_install, rule_tests
@@ -301,6 +301,10 @@ def configure(
     'src/infinit/storage/Dropbox.hh',
     'src/infinit/storage/Filesystem.cc',
     'src/infinit/storage/Filesystem.hh',
+    'src/infinit/storage/GCS.cc',
+    'src/infinit/storage/GCS.hh',
+    'src/infinit/storage/GoogleAPI.cc',
+    'src/infinit/storage/GoogleAPI.hh',
     'src/infinit/storage/GoogleDrive.cc',
     'src/infinit/storage/GoogleDrive.hh',
     'src/infinit/storage/InsufficientSpace.cc',
@@ -361,6 +365,12 @@ def configure(
     cxx_config_infinit)
   rule_build << infinit_lib
 
+  crash_reporting = drake.include('crash_reporting',
+                                  cxx_toolkit = cxx_toolkit,
+                                  cxx_config = cxx_config)
+  crash_reporter_lib = drake.copy(crash_reporting.library, 'lib',
+                                  strip_prefix = True)
+
   ## -------- ##
   ## Binaries ##
   ## -------- ##
@@ -376,6 +386,7 @@ def configure(
   bin_cxx_config = drake.cxx.Config(cxx_config)
   bin_cxx_config += elle.das.config
   bin_cxx_config.add_local_include_path('bin')
+  bin_cxx_config.add_local_include_path('crash_reporting/src')
   bin_cxx_config.lib_path_runtime('../lib')
   if not windows:
     bin_cxx_config.library_add(
@@ -447,6 +458,11 @@ def configure(
   binaries = []
   global installed_binaries
   installed_binaries = []
+  installed_symbols = []
+  debian_debug_dir = 'debian-debug'
+  debian_syms_dir = \
+    drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
+  installed_libraries = []
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
@@ -455,7 +471,8 @@ def configure(
         infinit_lib,
         elle_lib,
         reactor_lib,
-        cryptography_lib
+        cryptography_lib,
+        crash_reporter_lib,
       ] + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
@@ -463,6 +480,26 @@ def configure(
     binaries.append(bin)
     if install:
       installed_binaries.append(bin)
+      bin_sym = drake.node('bin/symbols/%s.sym' % name)
+      crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                       debian_syms_dir,
+                                       bin,
+                                       bin_sym)
+      installed_symbols.append(bin_sym)
+      rule_install << bin_sym
+      def add_libraries(binary):
+        installed_libraries.extend(binary.dynamic_libraries)
+        for lib in binary.dynamic_libraries:
+          add_libraries(lib)
+      add_libraries(bin)
+  for lib in set(installed_libraries):
+    lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
+    crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                     debian_syms_dir,
+                                     lib,
+                                     lib_sym)
+    installed_symbols.append(lib_sym)
+    rule_install << lib_sym
 
   ## ----- ##
   ## Share ##
@@ -505,15 +542,28 @@ def configure(
       'version_major': git.version().split('.')[0],
       'version_minor': git.version().split('.')[1],
   }):
-    drake.node('control.tmpl')
+    drake.node('debian-packaging/release/control.tmpl')
+    drake.node('debian-packaging/debug/control.tmpl')
   debian_nodes = chain(
     debian_nodes,
-    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
+    drake.copy(drake.nodes('debian-packaging/release/control'),
+               'debian/DEBIAN',
+               strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
   rule_debian << drake.debian.Packager(
     'infinit_%s_amd64.deb' % git.description(),
     debian_nodes, 'debian').package
+
+  debian_debug_nodes = chain(
+    installed_symbols,
+    drake.copy(drake.nodes('debian-packaging/debug/control'),
+               '%s/DEBIAN' % debian_debug_dir,
+               strip_prefix = True),
+  )
+  rule_debian << drake.debian.Packager(
+    'infinit-debug-symbols-%s_0_amd64.deb' % git.description(),
+    debian_debug_nodes, debian_debug_dir).package
 
   ## ------ ##
   ## Beyond ##

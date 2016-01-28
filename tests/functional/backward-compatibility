@@ -83,7 +83,7 @@ for p in sys.argv[1:]:
       'infinit-volume', '--run',
       'volume',
       '--as', 'user',
-      '--force-version', old_version,
+      '--compatibility-version', old_version,
       '--peer', '127.0.0.1:63198',
     ],
     input = [

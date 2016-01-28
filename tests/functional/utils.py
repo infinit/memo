@@ -117,9 +117,9 @@ def assertEq(a, b):
   if a != b:
     raise AssertionError('%r != %r' % (a, b))
 
-def assertEq(a, b):
-  if a != b:
-    raise AssertionError('%r != %r' % (a, b))
+def assertNeq(a, b):
+  if a == b:
+    raise AssertionError('%r == %r' % (a, b))
 
 def assertIn(a, b):
   if a not in b:
@@ -167,6 +167,8 @@ class Beyond():
         dropbox_app_secret = 'db_secret',
         google_app_key = 'google_key',
         google_app_secret = 'google_secret',
+        gcs_app_key = 'google_key',
+        gcs_app_secret = 'google_secret',
       )
       setattr(self.__beyond, '_Beyond__now', self.now)
       self.__app = infinit.beyond.bottle.Bottle(

@@ -74,6 +74,8 @@ class Beyond:
       'dropbox_app_secret': 'db_secret',
       'google_app_key': 'google_key',
       'google_app_secret': 'google_secret',
+      'gcs_app_key': 'google_key',
+      'gcs_app_secret': 'google_secret',
       'sendwithus_api_key': None,
     }
     from copy import deepcopy
@@ -155,7 +157,7 @@ def throws(function, expected = None, json = True):
     assert False
   except requests.exceptions.HTTPError as e:
     if expected:
-      assert e.response.status_code == expected
+      assertEq(e.response.status_code, expected)
     if not json:
       return e.response
     response = e.response.json()
@@ -237,7 +239,7 @@ class Network(dict):
         'bootstrap_other_target': 12,
         'new_threshold': 5,
         'contacts_group': 3
-      }
+      },
     }
   }
   paxos = {
@@ -252,6 +254,7 @@ class Network(dict):
     self['owner'] = self.__owner['public_key']
     self.__short_name = name
     self['name'] = owner['name'] + '/' + self.__short_name
+    self['version'] = '0.3.7'
 
   @property
   def shortname(self):
@@ -466,4 +469,5 @@ network = {
     'rsa': 'MIIBCAKCAQEAq1pXuFI8l8MopHufZ4S3fe+WoR5wgeaPtZhw9IFuHZ+3F7V7fCzy76gKp5EPz5sk2Dowd90d+TuEUjUUkI0fRLJipRPjo2reFsuOAZ244ee/NLtG601vQUS/sV8ow2QZEAoNAiNZQGr4jEqvmjIB+rwOmx9eUgs887KjUYlX+wH5984EAr/qd62VddYXga8o4T2QX4GlYik/s/yKm0dlCQgZXQPYM5Wogv6KluGdLFKBaNc2HYkGEArZE51sATRcDOSQcycg2sGuwfL/LfClsCkx2LSYjJh9qkiBNUsAg+LeRt/9Hv3S32tcMszCph3nSX5u+1yz8VURHjVGh9ptAwIBIw=='
   },
   'name': 'mefyl/infinit',
+  'version': '0.3',
 }

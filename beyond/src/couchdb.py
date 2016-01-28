@@ -251,6 +251,8 @@ class CouchDBDatastore:
       user.setdefault('dropbox_accounts', {})[id] = account
     for id, account in update.get('google_accounts', {}).items():
       user.setdefault('google_accounts', {})[id] = account
+    for id, account in update.get('gcs_accounts', {}).items():
+      user.setdefault('gcs_accounts', {})[id] = account
     return [user, {'json': json.dumps(user)}]
 
   ## ------- ##
@@ -367,6 +369,10 @@ class CouchDBDatastore:
           u[node] = endpoints
     for user, node in update.get('storages', {}).items():
       network.setdefault('storages', {})[user] = node
+    for field in ['passports', 'endpoints', 'storages']:
+      if field in update:
+        del update[field]
+    network.update(update)
     return [network, {'json': json.dumps(update)}]
 
   def __networks_per_invitee_name_map(network):

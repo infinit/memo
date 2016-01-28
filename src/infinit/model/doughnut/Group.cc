@@ -90,6 +90,22 @@ namespace infinit
         });
       }
 
+      void
+      Group::destroy()
+      {
+        infinit::filesystem::umbrella([&] {
+          if (_name.empty())
+            throw elle::Error("Group destruction needs group name as input");
+          public_control_key();
+          block();
+          auto uaddr = UB::hash_address(this->_name);
+          auto ruaddr = UB::hash_address(*this->_public_control_key);
+          this->_dht.remove(uaddr);
+          this->_dht.remove(ruaddr);
+          this->_dht.remove(this->_block->address(), this->_block->sign_remove());
+        });
+      }
+
       cryptography::rsa::PublicKey
       Group::public_control_key() const
       {

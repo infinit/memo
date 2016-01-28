@@ -1,6 +1,7 @@
 import drake
 import drake.cxx
 import drake.debian
+import drake.markdown
 import sys
 
 from itertools import chain
@@ -67,10 +68,58 @@ def configure(
     'src/httpagentparser.py',
   )
 
+  markdown = drake.nodes(
+    'templates/pages/docs/src/markdown/get_started.md',
+    'templates/pages/docs/src/markdown/overview.md',
+    'templates/pages/docs/src/markdown/technology.md',
+    'templates/pages/docs/src/markdown/reference.md',
+  )
+  changelog = drake.Node(
+    'ChangeLog.html',
+  )
+  drake.markdown.Renderer(
+    source = drake.Node('../ChangeLog'),
+    target = changelog
+  )
+  class CopyAndCleanup(drake.Copy):
+
+    def __init__(self, source, to, post_process):
+      assert post_process is None
+      super().__init__(source = source,
+                       to = to,
+                       post_process = lambda x: self.replace(x)
+      )
+      self.__replacements = {
+        '<code>--': '<code>&#8209;&#8209;',
+        '&quot;': '\"'
+      }
+
+    def replace(self, target):
+      import fileinput
+      with fileinput.input([str(target)], inplace = True) as f:
+        for line in f:
+          for base, replacement in self.__replacements.items():
+            line = line.replace(base, replacement)
+          print(line, end='')
+      return True
+
+    def hash(self):
+      return self.__replacements
+
+  def generate(nodes):
+    return drake.copy(
+      drake.nodes(*[m.path(True).with_extension('html') for m in nodes]),
+      'templates/pages/docs/generated',
+      strip_prefix = True,
+      builder = CopyAndCleanup
+    )
+
+  generated = generate(markdown) + generate([changelog])
   templates = drake.nodes(
     'templates/base.html',
     'templates/pages/home.html',
     'templates/pages/drive.html',
+    'templates/pages/faq.html',
     'templates/pages/docs/menu.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
@@ -81,21 +130,18 @@ def configure(
     'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
+    'templates/pages/docs/changelog.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
     'templates/pages/about.html',
     'templates/pages/contact.html',
     'templates/pages/legal.html',
-
-    'templates/pages/docs/src/html/get_started.html',
-    'templates/pages/docs/src/html/overview.html',
-    'templates/pages/docs/src/html/technology.html',
-    'templates/pages/docs/src/html/reference.html',
-  )
+  ) + generated
 
   resources = drake.nodes(
     'resources/robots.txt',
+    'resources/sitemap.xml',
 
     'resources/images/favicon@2x.png',
     'resources/images/logo.png',
@@ -201,6 +247,9 @@ def configure(
     'resources/images/icons/control@2x.png',
     'resources/images/icons/keyboard.png',
     'resources/images/icons/keyboard@2x.png',
+    'resources/images/icons/bracket-right.png',
+    'resources/images/icons/bracket-right@2x.png',
+    'resources/images/icons/arrow-down.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',

@@ -18,8 +18,6 @@
 #include <infinit/model/doughnut/UB.hh>
 #include <infinit/version.hh>
 
-ELLE_LOG_COMPONENT("backward_compatibility");
-
 static
 boost::filesystem::path
 root()

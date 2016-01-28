@@ -218,11 +218,14 @@ namespace infinit
         {
           std::unique_ptr<model::User> user;
           if (ommit_names)
-            user.reset(new doughnut::User(*this->owner_key(), ""));
+            user.reset(new doughnut::User(key.first, ""));
           else
             user = this->doughnut()->make_user(
-              elle::serialization::json::serialize(key.second));
-          res.emplace_back(std::move(user));
+              elle::serialization::json::serialize(key.first));
+          if (!user)
+            ELLE_TRACE("Failed to create user from key %x", key.first);
+          else
+            res.emplace_back(std::move(user));
         }
         return res;
       }

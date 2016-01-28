@@ -3,6 +3,7 @@
 #include <infinit/storage/S3.hh>
 
 #include <elle/log.hh>
+#include <elle/bench.hh>
 #include <elle/serialization/json/SerializerIn.hh>
 #include <aws/S3.hh>
 
@@ -12,6 +13,10 @@
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.storage.S3");
+
+#define BENCH(name)                                      \
+  static elle::Bench bench("bench.s3store." name, 10000_sec); \
+  elle::Bench::BenchScope bs(bench)
 
 namespace infinit
 {
@@ -31,9 +36,10 @@ namespace infinit
     elle::Buffer
     S3::_get(Key key) const
     {
+      BENCH("get");
       try
       {
-        return this->_storage->get_object(elle::sprintf("%x", key));
+        return this->_storage->get_object(elle::sprintf("%x", key).substr(2));
       }
       catch (aws::AWSException const& e)
       {
@@ -45,7 +51,7 @@ namespace infinit
           }
           catch (aws::FileNotFound const& e)
           {
-            ELLE_WARN("unable to GET block: %s", e);
+            ELLE_TRACE("unable to GET block: %s", e);
             throw MissingKey(key);
           }
         }
@@ -59,13 +65,14 @@ namespace infinit
     int
     S3::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
+      BENCH("set");
       if (!insert && !update)
         throw elle::Error("neither inserting nor updating");
       if (!insert || !update)
         throw elle::Error("only update and insert are supported");
       // FIXME: Use multipart upload for blocks bigger than 5 MiB.
       this->_storage->put_object(value,
-                                 elle::sprintf("%x", key),
+                                 elle::sprintf("%x", key).substr(2),
                                  aws::RequestQuery(),
                                  !this->reduced_redundancy());
       return 0;
@@ -76,7 +83,7 @@ namespace infinit
     {
       try
       {
-        this->_storage->delete_object(elle::sprintf("%x", key));
+        this->_storage->delete_object(elle::sprintf("%x", key).substr(2));
       }
       catch (aws::AWSException const& e)
       {
@@ -109,9 +116,8 @@ namespace infinit
       {
         try
         {
-          // Remove the 0x from the block file name.
           res.push_back(
-            infinit::model::Address::from_string(pair.first.substr(2)));
+            infinit::model::Address::from_string(pair.first));
         }
         catch (elle::Error const& e)
         {

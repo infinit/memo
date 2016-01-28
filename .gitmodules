@@ -10,3 +10,6 @@
 [submodule "sendwithus_python"]
 	path = sendwithus_python
 	url = https://github.com/mefyl/sendwithus_python.git
+[submodule "crash_reporting/breakpad"]
+	path = crash_reporting/breakpad
+	url = https://chromium.googlesource.com/breakpad/breakpad

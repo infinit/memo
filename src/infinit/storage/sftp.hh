@@ -42,7 +42,10 @@ namespace infinit
     struct SFTPStorageConfig
       : public StorageConfig
     {
-      SFTPStorageConfig(std::string name, int64_t capacity = 0);
+      SFTPStorageConfig(std::string const& name,
+                        std::string const& host,
+                        std::string const& path,
+                        boost::optional<int64_t> capacity = {});
       SFTPStorageConfig(elle::serialization::SerializerIn& in);
 
       virtual
