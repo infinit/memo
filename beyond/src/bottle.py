@@ -547,6 +547,12 @@ class Bottle(bottle.Bottle):
     json = bottle.request.json
     passport = Passport(self.__beyond, **json)
     network.passports[invitee] = passport.json()
+    limit = self.__beyond.limits.get('networks', {}).get('passports', None)
+    if limit and len(network.passports) > limit:
+      raise Response(402, {
+        'error': 'account/payment_required',
+        'reason': 'You can not store more than %s passports' % limit
+      })
     network.save()
     raise Response(201, {})
 
@@ -945,13 +951,15 @@ def user_credentials_google_refresh(self, username):
             'client_id':     getattr(beyond, '%s_app_key' % kind),
             'client_secret': getattr(beyond, '%s_app_secret' % kind),
             'refresh_token': account['refresh_token'],
-            'grant_type': 'refresh_token',
+            'grant_type':    'refresh_token',
           }
-          res = requests.post(google_url, params=query)
+          res = requests.post(google_url, params = query)
           if res.status_code != 200:
-            raise Response(res.status_code, {
-                'error': 'credentials refresh failure',
-                'reason': res.text
+            # Should forward the actual code received from Google
+            # (res.status_code) but the linter doesn't like this.
+            raise Response(400, {
+              'error': 'credentials/refresh_failure',
+              'reason': res.text
             })
           else:
             token = res.json()['access_token']

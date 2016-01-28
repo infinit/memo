@@ -7,7 +7,7 @@ import sys
 from itertools import chain
 
 ROOT = os.path.dirname(os.path.realpath(__file__))
-PYTHONPATH = ROOT + '/lib/python%s.%s' % sys.version_info[0:2]
+PYTHONPATH = ROOT + '/../lib/python%s.%s' % sys.version_info[0:2]
 sys.path.insert(0, PYTHONPATH)
 os.environ['PYTHONPATH'] = '%s:%s' % (PYTHONPATH, os.environ.get('PYTHONPATH', ''))
 

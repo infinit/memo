@@ -440,6 +440,10 @@ main(int argc, char** argv)
     { "fullname", value<std::string>(), "user's fullname (optional)" };
   Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
+  Mode::OptionDescription option_key =
+    {"key,k", value<std::string>(),
+      "RSA key pair in PEM format - e.g. your SSH key "
+      "(default: generate key pair)" };
   Modes modes {
     {
       "create",
@@ -448,9 +452,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key "
-          "(default: generate key pair)" },
+        option_key,
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-user" },
@@ -533,15 +535,13 @@ main(int argc, char** argv)
       "signup",
       elle::sprintf("Create and push a user to %s", beyond(true)).c_str(),
       &signup_,
-      {},
+      "--email EMAIL",
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
         { "email,n", value<std::string>(), "valid email address" },
         option_fullname,
         option_avatar,
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key "
-          "(default: generate key pair)" },
+        option_key,
         option_push_full,
         option_push_password,
       },
@@ -555,7 +555,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
         { "password", value<std::string>(), elle::sprintf(
-          "password to authenticate with %s (default: prompt) for password",
+          "password to authenticate with %s (default: prompt)",
           beyond(true)).c_str() },
       },
     },

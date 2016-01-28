@@ -3,6 +3,7 @@
 
 #include <reactor/FDStream.hh>
 
+#include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -10,10 +11,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
-# if defined(__GNUC__) && !defined(__clang__)
-#  undef __OSX_AVAILABLE_STARTING
-#  define __OSX_AVAILABLE_STARTING(A, B)
-# endif
+# include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
 
@@ -41,6 +39,7 @@ COMMAND(create)
   auto name = volume_name(args, owner);
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
+  auto default_permissions = optional(args, "default-permissions");
   std::vector<std::string> hosts;
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
@@ -49,7 +48,11 @@ COMMAND(create)
     for (auto const& h: hosts)
       eps[elle::UUID()].push_back(h);
   }
-  infinit::Volume volume(name, mountpoint, network.name);
+  if (default_permissions && *default_permissions!= "r"
+      && *default_permissions!= "rw")
+    throw elle::Error("default-permissions must be 'r' or 'rw'");
+  infinit::Volume volume(name, mountpoint, network.name,
+    default_permissions);
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -327,8 +330,7 @@ COMMAND(run)
     {
       ELLE_DEBUG("Connect callback to log storage stat");
       model->local()->storage()->register_notifier([&] {
-        network.notify_storage(self,
-                               node_id);
+        network.notify_storage(self, node_id);
       });
 
       {
@@ -338,8 +340,7 @@ COMMAND(run)
             ELLE_LOG_COMPONENT("infinit-volume");
             ELLE_DEBUG(
               "Hourly notification to beyond with storage usage (periodic)");
-                network.notify_storage(self,
-                                       node_id);
+                network.notify_storage(self, node_id);
                 reactor::wait(updater, 60_min);
           }
         });
@@ -355,6 +356,25 @@ COMMAND(run)
                          , optional(args, "mount-icon")
 #endif
                          );
+    if (volume.default_permissions && !volume.default_permissions->empty())
+    {
+      auto ops = dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get());
+      ops->on_root_block_create.connect([&] {
+          ELLE_DEBUG("root_block hook triggered");
+          auto path = fs->path("/");
+          int mode = 0700;
+          if (*volume.default_permissions == "rw")
+            mode |= 06;
+          else if (*volume.default_permissions == "r")
+            mode |= 04;
+          else
+          {
+            ELLE_WARN("Unexpected default permissions %s", *volume.default_permissions);
+            return;
+          }
+          path->chmod(mode);
+      });
+    }
 #ifdef INFINIT_MACOSX
     auto add_to_sidebar = flag(args, "finder-sidebar");
     if (add_to_sidebar && mountpoint)
@@ -822,6 +842,8 @@ main(int argc, char** argv)
         { "push-volume", bool_switch(),
           elle::sprintf("push the volume to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-volume" },
+        { "default-permissions,d", value<std::string>(),
+          "Default permissions(r, rw), defaults to none"},
       },
     },
     {

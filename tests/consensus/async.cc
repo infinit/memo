@@ -187,6 +187,6 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(fetch_disk_queued), 0, 5);
-  suite.add(BOOST_TEST_CASE(fetch_disk_queued_multiple), 0, 5);
+  suite.add(BOOST_TEST_CASE(fetch_disk_queued), 0, 10);
+  suite.add(BOOST_TEST_CASE(fetch_disk_queued_multiple), 0, 10);
 }

@@ -138,7 +138,7 @@ namespace infinit
       public:
         virtual
         void
-        print(std::ostream& ouptut) const;
+        print(std::ostream& ouptut) const override;
       };
     }
   }

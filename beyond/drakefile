@@ -231,6 +231,7 @@ def configure(
       'volumes/put',
       'volumes/get',
       'volumes/delete',
+      'passports/limit',
       'passports/put',
       'drives/put',
       'drives/icons',

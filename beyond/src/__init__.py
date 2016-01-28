@@ -46,6 +46,7 @@ class Beyond:
       gcs_app_secret,
       sendwithus_api_key = None,
       validate_email_address = True,
+      limits = {}
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
@@ -55,11 +56,16 @@ class Beyond:
     self.__google_app_secret = google_app_secret
     self.__gcs_app_key    = gcs_app_key
     self.__gcs_app_secret = gcs_app_secret
+    self.__limits = limits
     self.__validate_email_address = validate_email_address
     if sendwithus_api_key is not None:
       self.__emailer = emailer.SendWithUs(sendwithus_api_key)
     else:
       self.__emailer = emailer.NoOp()
+
+  @property
+  def limits(self):
+    return self.__limits
 
   @property
   def now(self):
@@ -593,7 +599,8 @@ class Passport(metaclass = Entity,
 
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
-             fields = fields('name', 'network')):
+             fields = fields('name', 'network',
+                             default_permissions = '')):
 
   @property
   def id(self):

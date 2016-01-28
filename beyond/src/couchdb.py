@@ -335,6 +335,10 @@ class CouchDBDatastore:
       )
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
+    except couchdb.http.ServerError as e:
+      if e.args[0][0] == 402:
+        raise infinit.beyond.Network.PaymentRequired()
+      raise e
 
   def networks_volumes_fetch(self, networks):
     rows = self.__couchdb['volumes'].view(

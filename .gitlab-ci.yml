@@ -1,0 +1,132 @@
+stages:
+  - build
+
+variables:
+  PYTHONUNBUFFERED: "1"
+  LC_ALL: "C.UTF-8"
+
+x86_64-trusty-gcc4:
+  stage: build
+  script:
+    - apt-get install -y libjpeg-dev zlib1g-dev
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-install
+    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
+  tags:
+    - x86_64
+    - trusty
+    - gcc4
+
+x86_64-jessie-gcc4:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-install
+    - farm/configure --arch x86_64 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
+  tags:
+    - x86_64
+    - jessie
+    - gcc4
+
+# i386-jessie-gcc4:
+#   stage: build
+#   script:
+#     - git submodule update --init --recursive
+#     - git fetch origin --tags
+#     - mkdir -p ../fs-build ../fs-install
+#     - farm/configure --arch i386 --os jessie --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
+#   tags:
+#     - i386
+#     - jessie
+#     - gcc4
+
+# x86_64-windows-mingw4:
+#   stage: build
+#   script:
+#     - git submodule update --init --recursive
+#     - git fetch origin --tags
+#     - mkdir -p ../fs-build ../fs-install
+#     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
+#   tags:
+#     - x86_64
+#     - windows
+#     - mingw4
+
+# i686-windows-mingw4:
+#   stage: build
+#   script:
+#     - git submodule update --init --recursive
+#     - git fetch origin --tags
+#     - mkdir -p ../fs-build ../fs-install
+#     - farm/configure --arch i686 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
+#     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
+#   tags:
+#     - i686
+#     - windows
+#     - mingw4
+
+x86_64-osx-clang:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-install
+    - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake -j 4 //build
+    - cd ../fs-build && python3 drake -j 4 //check
+    - cd ../fs-build && python3 drake -j 4 //install
+  tags:
+    - x86_64
+    - osx
+    - clang
+
+beyond:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-beyond
+    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake -j 4 //beyond/build
+    - cd ../fs-build && python3 drake -j 4 //beyond/check
+    - cd ../fs-build && python3 drake -j 4 //beyond/install --prefix=$(realpath ../fs-beyond)
+    - cd ../fs-build && python3 drake -j 4 //beyond/debian
+    - scp ../fs-build/beyond/infinit-beyond_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io make
+  tags:
+    - x86_64
+    - trusty
+    - gcc4
+
+website:
+  stage: build
+  script:
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-website
+    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
+    - cd ../fs-build && python3 drake -j 4 //website/build
+    - cd ../fs-build && python3 drake -j 4 //website/install --prefix=$(realpath ../fs-website)
+    - cd ../fs-build && python3 drake -j 4 //website/debian
+    - scp ../fs-build/website/infinit-sh_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io make
+  tags:
+    - x86_64
+    - trusty
+    - gcc4

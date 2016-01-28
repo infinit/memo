@@ -53,7 +53,7 @@ namespace infinit
       std::unique_ptr<Block>
       operator() (Block& block,
                   Block& current,
-                  model::StoreMode mode)
+                  model::StoreMode mode) override
       {
         ELLE_TRACE("ACLConflictResolver: replaying set_permissions on new block.");
         std::unique_ptr<model::User> user = _model->make_user(

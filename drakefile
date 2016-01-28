@@ -26,19 +26,25 @@ with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
 
 def configure(
-  cxx_toolkit = None,
-  cxx_config = drake.cxx.Config(),
-  production_build = False,
-  beyond_host = 'https://beyond.infinit.io',
-  boost = None,
-  prefix = '/usr',
-  valgrind = None,
-  valgrind_tests = False,
-  python = None,
-  fuse = None,
-  codesign = False,
-  beyond = True,
+    cxx_toolkit = None,
+    cxx_config = drake.cxx.Config(),
+    production_build = False,
+    beyond_host = 'https://beyond.infinit.io',
+    boost = None,
+    prefix = '/usr',
+    valgrind = None,
+    valgrind_tests = False,
+    python = None,
+    python3 = None, # Alias for python
+    fuse = None,
+    codesign = False,
+    beyond: bool = True,
+    symbols_out_dir = None,
+    website: bool = True,
 ):
+
+  if python3 is not None:
+    python = python3
 
   global rule_build, rule_check, rule_install, rule_tests
   rule_build = drake.Rule('build')
@@ -501,6 +507,13 @@ def configure(
     installed_symbols.append(lib_sym)
     rule_install << lib_sym
 
+  if symbols_out_dir:
+    symbols_out_dir = '%s/%s' % (symbols_out_dir, git.description())
+    for symbol_file in installed_symbols:
+      rule_install << drake.copy(symbol_file,
+                                 symbols_out_dir,
+                                 strip_prefix = True)
+
   ## ----- ##
   ## Share ##
   ## ----- ##
@@ -623,15 +636,16 @@ def configure(
         runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests
       rule_check << rule_functional_check
-    website = drake.include(
-      'website',
-      python = elle.python3,
-      prefix = prefix,
-      git = git,
-      bottle = bottle,
-      sendwithus = sendwithus,
-      PatchAndInstall = PatchAndInstall,
-    )
+    if website:
+      website = drake.include(
+        'website',
+        python = elle.python3,
+        prefix = prefix,
+        git = git,
+        bottle = bottle,
+        sendwithus = sendwithus,
+        PatchAndInstall = PatchAndInstall,
+      )
 
   ## ----- ##
   ## Tests ##
@@ -699,7 +713,7 @@ def configure(
     if valgrind_tests:
       runner = drake.valgrind.ValgrindRunner(
         exe = test,
-        valgrind = valgrind,
+        valgrind = elle.valgrind,
         env = env)
     else:
       runner = drake.Runner(exe = test, env = env)

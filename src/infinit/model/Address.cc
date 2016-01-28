@@ -69,12 +69,22 @@ namespace infinit
       return Address(v);
     }
 
+    static
+    boost::mt19937
+    random_generator()
+    {
+      boost::mt19937 ran;
+      return ran;
+    }
+
     Address
     Address::random()
     {
       // Hash a UUID to get a random address.  Like using a deathstar to blow
       // a mosquito and I like it.
-      auto id = boost::uuids::basic_random_generator<boost::mt19937>()();
+      static auto random = random_generator();
+      static boost::uuids::basic_random_generator<boost::mt19937> g(&random);
+      auto id = g();
       auto hash = cryptography::hash(
         elle::ConstWeakBuffer(id.data, id.static_size()),
         cryptography::Oneway::sha256);

@@ -39,7 +39,7 @@ namespace infinit
       BENCH("get");
       try
       {
-        return this->_storage->get_object(elle::sprintf("%x", key).substr(2));
+        return this->_storage->get_object(elle::sprintf("%x", key));
       }
       catch (aws::AWSException const& e)
       {
@@ -72,7 +72,7 @@ namespace infinit
         throw elle::Error("only update and insert are supported");
       // FIXME: Use multipart upload for blocks bigger than 5 MiB.
       this->_storage->put_object(value,
-                                 elle::sprintf("%x", key).substr(2),
+                                 elle::sprintf("%x", key),
                                  aws::RequestQuery(),
                                  !this->reduced_redundancy());
       return 0;
@@ -83,7 +83,7 @@ namespace infinit
     {
       try
       {
-        this->_storage->delete_object(elle::sprintf("%x", key).substr(2));
+        this->_storage->delete_object(elle::sprintf("%x", key));
       }
       catch (aws::AWSException const& e)
       {
@@ -117,7 +117,7 @@ namespace infinit
         try
         {
           res.push_back(
-            infinit::model::Address::from_string(pair.first));
+            infinit::model::Address::from_string(pair.first.substr(2)));
         }
         catch (elle::Error const& e)
         {
