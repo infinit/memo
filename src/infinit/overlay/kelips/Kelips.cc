@@ -2506,9 +2506,6 @@ namespace infinit
             auto r = std::make_shared<PendingRequest>();
             r->startTime = now();
             r->barrier.close();
-            auto ir =
-              this->_pending_requests.insert(std::make_pair(req.request_id, r));
-            ELLE_ASSERT(ir.second);
             // Select target node
             auto it = random_from(_state.contacts[fg], _gen);
             if (it == _state.contacts[fg].end())
@@ -2518,6 +2515,9 @@ namespace infinit
               ELLE_TRACE("no contact to forward GET to");
               continue;
             }
+            auto ir =
+              this->_pending_requests.insert(std::make_pair(req.request_id, r));
+            ELLE_ASSERT(ir.second);
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
             send(req, it->second);
             reactor::wait(r->barrier,
