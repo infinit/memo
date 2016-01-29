@@ -437,7 +437,7 @@ main(int argc, char** argv)
       "password to authenticate with %s. Used with --full "
       "(default: prompt for password)", beyond(true)).c_str() };
   Mode::OptionDescription option_fullname =
-    { "fullname", value<std::string>(), "user's fullname (optional)" };
+    { "fullname", value<std::string>(), "fullname of user (optional)" };
   Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
   Mode::OptionDescription option_key =

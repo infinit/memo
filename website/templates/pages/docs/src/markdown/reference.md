@@ -74,7 +74,7 @@ Create options:
   --push-user            Push the user to the Hub
   -p [ --push ]          Alias for --push-user
   --email arg            Valid email address (mandatory when using --push-user)
-  --fullname arg         User's fullname (optional)
+  --fullname arg         Fullname of user (optional)
   --full                 Include private key in order to facilitate device
                          pairing and fetching lost keys
   --password arg         Password to authenticate with the Hub. Used with
