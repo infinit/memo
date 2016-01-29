@@ -17,7 +17,7 @@ with Beyond() as beyond:
       user.put(beyond)
       assert 'User/Welcome' in emailer.get(user['email'])
       email = emailer.get_specifics(user['email'], 'User/Welcome').pop()
-      params = url_parameters(email['confirmation_url'])
+      params = url_parameters('?' + email['url_parameters'])
       del params['name']
       throws(
         lambda: beyond.post(
@@ -54,10 +54,12 @@ with Beyond() as beyond:
         user['name'], user['email']))
       confirm_2 = emailer.get_specifics(
         user['email'], 'User/Confirmation Email').pop()
-      assertEq(url_parameters(welcome['confirmation_url']),
-               url_parameters(confirm_1['confirmation_url']))
-      assertEq(url_parameters(confirm_1['confirmation_url']),
-               url_parameters(confirm_2['confirmation_url']))
+      assert len(url_parameters('?' + welcome['url_parameters']).keys()) > 1
+
+      assertEq(url_parameters('?' + welcome['url_parameters']),
+               url_parameters('?' + confirm_1['url_parameters']))
+      assertEq(url_parameters('?' + confirm_1['url_parameters']),
+               url_parameters('?' + confirm_2['url_parameters']))
 
   if __name__ == '__main__':
     unittest.main()

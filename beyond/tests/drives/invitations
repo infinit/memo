@@ -29,7 +29,7 @@ def push_and_confirm(beyond, email, user = None):
   user.put(beyond)
   welcome = beyond.emailer.get_specifics(
     user['email'], 'User/Welcome').pop()
-  params = url_parameters(welcome['confirmation_url'])
+  params = url_parameters('?' + welcome['url_parameters'])
   del params['name']
   res = beyond.post(
     'users/%s/confirm_email' % user['name'], json = params).json()

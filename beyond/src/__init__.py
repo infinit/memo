@@ -443,17 +443,17 @@ class User:
         variables = {
           'email': self.email,
           'name': self.name,
-          'confirmation_url': self.confirmation_url(self.email)
+          'url_parameters': self.url_parameters(self.email)
         }
       )
 
   def confirmation_code(self, email):
     return self.__emails.get(email, None)
 
-  def confirmation_url(self, email):
+  def url_parameters(self, email):
     assert self.confirmation_code(email) is not None
     from urllib.parse import urlencode
-    return '/users/confirm_email?' + urlencode({
+    return urlencode({
       'name': self.name,
       'confirmation_code': self.confirmation_code(email),
       'email': email
@@ -469,7 +469,7 @@ class User:
         variables = {
           'email': email,
           'name': self.name,
-          'confirmation_url': self.confirmation_url(email)
+          'url_parameters': self.url_parameters(email)
         }
       )
 
