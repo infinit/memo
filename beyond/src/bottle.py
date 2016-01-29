@@ -4,7 +4,6 @@ import datetime
 import hashlib
 import json
 import time
-import subprocess
 
 import Crypto.Hash.SHA
 import Crypto.Hash.SHA256
@@ -358,65 +357,7 @@ class Bottle(bottle.Bottle):
     # Look for plain invites.
     drives = self.__beyond.user_drives_get(name = email)
     if len(drives):
-      try:
-        beyond = self.user_from_name('hub', throws = False)
-        if beyond is None: raise Exception('Unknown user \'hub\'')
-        import tempfile
-        import json
-        with tempfile.TemporaryDirectory() as directory:
-          env = {
-            'INFINIT_DATA_HOME': str(directory),
-            'INFINIT_USER': 'hub',
-          }
-          import os
-          path = os.environ.get('INFINIT_BINARIES', '/opt/infinit/bin/')
-          def import_data(type, data):
-            args = [path + 'infinit-%s' % type, '--import', '-s']
-            try:
-              process = subprocess.Popen(
-                args,
-                env = env,
-                stdin = subprocess.PIPE)
-              input = (json.dumps(data) + '\n').encode('utf-8')
-              out, err = process.communicate(input = input, timeout = 1)
-              process.wait(1)
-            except Exception:
-              raise Exception('impossible to import %s \'%s\'',
-                              type, data['name'])
-          import_data('user', user.json())
-          import_data('user', beyond.json(private = True))
-          for drive in drives:
-            print('drive', drive.name)
-            network = self.network_from_name(*drive.network.split('/'),
-                                             throws = False)
-            if network is None:
-              raise Exception('Unkown netork \'%s\'' % drive.network)
-            print('network', network.name)
-            import_data('network', network.json())
-            subprocess.check_call(
-              [
-                path + 'infinit-passport', '--create',
-                '--user', user.name,
-                '--network', network.name,
-                '--as', 'hub'
-              ],
-              env = env)
-            output = subprocess.check_output(
-              [
-                path + 'infinit-passport', '--export',
-                '--user', user.name,
-                '--network', network.name
-              ],
-              env = env)
-            import json
-            passport = json.loads(output.decode('ascii'))
-            network.passports[user.name] = passport
-            network.save()
-            drive.users[user.name] = drive.users[email]
-            drive.users[email] = None
-            drive.save()
-      except Exception as e:
-        errors.append(e.args[0])
+      errors = self.__beyond.process_invitations(user, email, drives)
     raise Response(200, {
       'errors': errors
     })

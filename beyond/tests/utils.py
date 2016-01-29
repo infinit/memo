@@ -226,10 +226,9 @@ class User(dict):
     self.__password = random_sequence(50) if password is None else password
     self.__password_hash = password_hash(self.__password)
     import os
-    path = os.environ.get('INFINIT_BINARIES', '/opt/infinit/bin/')
     import subprocess
     output = subprocess.check_output(
-      [path + 'infinit-user', '--create',
+      [infinit.beyond.binary_path + 'infinit-user', '--create',
        '--name', self['name'],
        '--output', '-'])
     import json

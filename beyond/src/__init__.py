@@ -1,6 +1,7 @@
 import base64
 import cryptography
 import requests
+import subprocess
 
 import infinit.beyond.version
 
@@ -8,6 +9,26 @@ from infinit.beyond import validation, emailer
 
 from copy import deepcopy
 from itertools import chain
+
+## -------- ##
+## Binaries ##
+## -------- ##
+def find_binaries():
+  import os
+  paths = []
+  if os.environ.get('INFINIT_BINARIES'):
+    paths.append(os.environ.get('INFINIT_BINARIES'))
+  paths += os.environ.get('PATH', '').split(':') + ['/opt/infinit/bin/']
+  for path in paths:
+    path = path + '/' if not path.endswith('/') else path
+    try:
+      if subprocess.check_call([path + 'infinit-user', '--version']) == 0:
+        return path
+    except:
+      pass
+
+binary_path = find_binaries()
+assert binary_path is not None
 
 # Email templates.
 templates = {
@@ -215,6 +236,71 @@ class Beyond:
   def drive_delete(self, owner, name):
     return self.__datastore.drive_delete(
         owner = owner, name = name)
+
+  def process_invitations(self, user, email, drives):
+    errors = []
+    try:
+      try:
+        beyond = self.user_get('hub')
+      except User.NotFound:
+        raise Exception('Unknown user \'hub\'')
+      import tempfile
+      with tempfile.TemporaryDirectory() as directory:
+        env = {
+          'INFINIT_DATA_HOME': str(directory),
+          'INFINIT_USER': 'hub',
+        }
+        import os
+        import json
+        def import_data(type, data):
+          args = [binary_path + 'infinit-%s' % type, '--import', '-s']
+          try:
+            process = subprocess.Popen(
+              args,
+              env = env,
+              stdin = subprocess.PIPE)
+            input = (json.dumps(data) + '\n').encode('utf-8')
+            out, err = process.communicate(input = input, timeout = 1)
+            process.wait(1)
+          except Exception:
+            raise Exception('impossible to import %s \'%s\'',
+                            type, data['name'])
+        import_data('user', user.json())
+        import_data('user', beyond.json(private = True))
+        for drive in drives:
+          try:
+            try:
+              network = self.network_get(*drive.network.split('/'))
+            except Network.NotFound:
+              raise Exception('Unkown netork \'%s\'' % drive.network)
+            import_data('network', network.json())
+            subprocess.check_call(
+              [
+                binary_path + 'infinit-passport', '--create',
+                '--user', user.name,
+                '--network', network.name,
+                '--as', 'hub'
+              ],
+              env = env)
+            output = subprocess.check_output(
+              [
+                binary_path + 'infinit-passport', '--export',
+                '--user', user.name,
+                '--network', network.name
+              ],
+              env = env)
+            import json
+            passport = json.loads(output.decode('ascii'))
+            network.passports[user.name] = passport
+            network.save()
+            drive.users[user.name] = drive.users[email]
+            drive.users[email] = None
+            drive.save()
+          except BaseException as e:
+            errors.append(e.args[0])
+    except BaseException as e:
+      errors.append(e.args[0])
+    return errors
 
   ## ------------ ##
   ## Crash Report ##
