@@ -469,11 +469,13 @@ def configure(
   debian_syms_dir = \
     drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
   installed_libraries = []
+  bin_version = drake.node('bin/version.cc')
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
       'bin/%s' % name, [
         source,
+        bin_version,
         infinit_lib,
         elle_lib,
         reactor_lib,

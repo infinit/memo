@@ -40,7 +40,8 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Async.hh>
 #include <infinit/storage/Cache.hh>
-#include <infinit/version.hh>
+
+#include "version.hh"
 
 std::string program;
 
@@ -58,8 +59,6 @@ beyond(bool help = false)
   return res;
 }
 
-static const elle::Version version(
-  INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
 static boost::optional<elle::Version> compatibility_version;
 
 class CommandLineError
@@ -504,7 +503,7 @@ namespace infinit
                   vm["compatibility-version"].as<std::string>());
               if (vm.count("version"))
               {
-                std::cout << INFINIT_VERSION << std::endl;
+                std::cout << version_describe << std::endl;
                 throw elle::Exit(0);
               }
               bool help = vm.count("help");
@@ -789,7 +788,7 @@ namespace infinit
         bool async_writes = false,
         boost::optional<elle::Version> version = {})
     {
-      ELLE_LOG("client version: %s", INFINIT_VERSION);
+      ELLE_LOG("client version: %s", version_describe);
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
         hosts,
