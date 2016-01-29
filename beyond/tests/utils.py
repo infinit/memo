@@ -169,11 +169,20 @@ def assertEq(a, b):
   if a != b:
     raise AssertionError('%r != %r' % (a, b))
 
+def assertIn(o, container):
+  if o not in container:
+    raise AssertionError('%r not in %r' % (o, container))
+
 def random_sequence(count = 10):
   from random import SystemRandom
   import string
   return ''.join(SystemRandom().choice(
     string.ascii_lowercase + string.digits) for _ in range(count))
+
+def random_email(domain = None):
+  if domain is None:
+    domain = 'infinit.io'
+  return random_sequence(10) + '@' + domain
 
 def password_hash(password):
   salt = 'z^$P;:`a~F'
@@ -221,33 +230,45 @@ class User(dict):
 class Network(dict):
   kelips = {
     'type': 'kelips',
-    'config': {
-      'query_get_retries': 30,
-      'file_timeout_ms': 120000,
-      'k': 1,
-      'ping_interval_ms': 1000,
-      'query_put_insert_ttl': 3,
-      'query_get_ttl': 10,
-      'gossip': {
-        'other_target': 3,
-        'interval_ms': 2000,
-        'group_target': 3,
-        'bootstrap_group_target': 12,
-        'old_threshold_ms': 40000,
-        'contacts_other': 3,
-        'files': 6,
-        'bootstrap_other_target': 12,
-        'new_threshold': 5,
-        'contacts_group': 3
-      },
-    }
+    'query_get_retries': 30,
+    'accept_plain': False,
+    'bootstrap_nodes': [ ],
+    'contact_timeout_ms': 120000,
+    'encrypt': True,
+    'file_timeout_ms': 120000,
+    'k': 1,
+    'max_other_contacts': 6,
+    'node_id': 'SVyRYERs4s675ceW/Jt/hlBSfvWrjwZwwp+lhXJVq7Y=',
+    'ping_interval_ms': 1000,
+    'ping_timeout_ms': 1000,
+    'query_get_retries': 1000,
+    'query_get_ttl': 120000,
+    'query_put_insert_ttl': 3,
+    'query_put_retries': 12,
+    'query_put_ttl': 10,
+    'query_timeout_ms': 1000,
+    'rpc_protocol': 'all',
+    'wait': 0,
+    'gossip': {
+      'other_target': 3,
+      'interval_ms': 2000,
+      'group_target': 3,
+      'bootstrap_group_target': 12,
+      'old_threshold_ms': 40000,
+      'contacts_other': 3,
+      'files': 6,
+      'bootstrap_other_target': 12,
+      'new_threshold': 5,
+      'contacts_group': 3
+    },
   }
   paxos = {
     'type': 'paxos',
     'replication-factor': 3,
   }
 
-  def __init__(self, name, owner):
+  def __init__(self, owner, name = None):
+    name = name or 'network_' + random_sequence()
     self.__owner = owner
     self['overlay'] = Network.kelips
     self['consensus'] = Network.paxos
@@ -316,7 +337,8 @@ class Statistics(dict):
 
 class Volume(dict):
 
-  def __init__(self, name, network, owner = None):
+  def __init__(self, network, owner = None, name = None):
+    name = name or 'volume_' + random_sequence()
     self.__short_name = name
     self.__network = network
     self.__owner = owner or self.network.owner
@@ -345,7 +367,8 @@ class Drive(dict):
       self['status'] = status
       self['create_home'] = create_home
 
-  def __init__(self, name, volume, description = "Lorem ipsum", members = {}):
+  def __init__(self, volume, description = "Lorem ipsum", members = {}, name = None):
+    name = name or 'drive_' + random_sequence()
     self.__short_name = name
     self.__volume = volume
     self['name'] = volume.network.owner['name'] + '/' + self.__short_name

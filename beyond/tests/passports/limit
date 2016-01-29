@@ -17,7 +17,7 @@ with Beyond(limits = {'networks': {'passports': 5}}) as beyond:
     def test_normal(self):
       user = User()
       user.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(name = 'infinit', owner = user)
       network.put(beyond, owner = user)
       # last_invitee = None
       def put_passport():

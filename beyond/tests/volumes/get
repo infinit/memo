@@ -16,9 +16,9 @@ with Beyond() as beyond:
     def test_normal(self):
       user = User()
       user.put(beyond)
-      network = Network('server1,server2', owner = user)
+      network = Network(name = 'server1,server2', owner = user)
       network.put(beyond)
-      volume = Volume('business', network = network)
+      volume = Volume(name = 'business', network = network)
       throws(lambda: beyond.get('volumes/%s' % volume['name']),
              404,
              json = False)

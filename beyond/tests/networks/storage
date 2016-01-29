@@ -16,7 +16,7 @@ with Beyond() as beyond:
     def test_normal(self):
       alice = User()
       alice.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(owner = alice)
       network.put(beyond, owner = alice)
       stat = Statistics(
         network, capacity = 3000000, usage = 10000)
@@ -27,7 +27,7 @@ with Beyond() as beyond:
     def test_overwrite(self):
       alice = User()
       alice.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(owner = alice)
       network.put(beyond, owner = alice)
       stat = Statistics(network, capacity = 3000000, usage = 10000)
       stat.put(beyond, alice)
@@ -41,7 +41,7 @@ with Beyond() as beyond:
     def test_capacity_none(self):
       alice = User()
       alice.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(owner = alice)
       network.put(beyond, owner = alice)
       stat = Statistics(network, capacity = None, usage = 10000)
       stat.put(beyond, alice)
@@ -50,7 +50,7 @@ with Beyond() as beyond:
     def test_unknown_network(self):
       alice = User()
       alice.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(owner = alice)
       stat = Statistics(network, capacity = None, usage = 10000)
       throws(lambda: stat.put(beyond, alice), expected = 404)
       throws(lambda: beyond.get('networks/%s/stat' % network['name']),
@@ -59,7 +59,7 @@ with Beyond() as beyond:
     def test_one_user_multiple_devices(self):
       alice = User()
       alice.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(owner = alice)
       network.put(beyond, owner = alice)
       stat1 = Statistics(network, capacity = 3000000, usage = 10000)
       stat1.put(beyond, alice)
@@ -75,7 +75,7 @@ with Beyond() as beyond:
     def test_two_users_multiple_devices(self):
       alice, bob = User(), User()
       alice.put(beyond), bob.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(owner = alice)
       network.put(beyond, owner = alice)
       passport = Passport(network, bob)
       passport.put(beyond)

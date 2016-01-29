@@ -17,9 +17,9 @@ with Beyond() as beyond:
       demo_user.put(beyond)
       # Push infinit.
       infinit_user.put(beyond)
-      demo_network = Network('demo', infinit_user)
+      demo_network = Network(name = 'demo', owner = infinit_user)
       demo_network.put(beyond)
-      demo_volume = Volume('demo', demo_network)
+      demo_volume = Volume(name = 'demo', network = demo_network)
       demo_volume.put(beyond)
       Passport(demo_network, demo_user).put(beyond)
 
@@ -42,9 +42,9 @@ with Beyond() as beyond:
              expected = 403, json = False)
 
       # Pushing stuff.
-      net = Network('osef', demo_user)
+      net = Network(name = 'osef', owner = demo_user)
       throws(lambda: net.put(beyond), expected = 403, json = False)
-      vol = Volume('Pirate', network = demo_network, owner = demo_user)
+      vol = Volume(name = 'Pirate', network = demo_network, owner = demo_user)
       throws(lambda: vol.put(beyond), expected = 403, json = False)
 
 

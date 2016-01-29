@@ -46,11 +46,11 @@ with Beyond() as beyond:
         assert key in email
 
     def create_drive(user):
-      n = Network('network', owner = user)
+      n = Network(name = 'network', owner = user)
       n.put(beyond)
-      v = Volume('volume', network = n)
+      v = Volume(name = 'volume', network = n)
       v.put(beyond)
-      d = Drive('Coucou', volume = v, description = "Lorem")
+      d = Drive(name = 'Coucou', volume = v, description = "Lorem")
       d.put(beyond)
       return n, v, d
 
