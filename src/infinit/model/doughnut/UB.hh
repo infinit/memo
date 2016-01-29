@@ -38,10 +38,11 @@ namespace infinit
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         static
         Address
-        hash_address(std::string const& name);
+        hash_address(std::string const& name, elle::Version const& version);
         static
         Address
-        hash_address(cryptography::rsa::PublicKey const& key);
+        hash_address(cryptography::rsa::PublicKey const& key,
+                     elle::Version const& version);
 
       /*-------.
       | Clone  |

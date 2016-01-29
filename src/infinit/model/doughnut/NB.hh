@@ -48,7 +48,8 @@ namespace infinit
         static
         Address
         address(infinit::cryptography::rsa::PublicKey const& owner,
-                std::string const& name);
+                std::string const& name,
+                elle::Version const& version);
         using Super::address;
 
       /*-------.

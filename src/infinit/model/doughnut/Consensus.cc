@@ -84,21 +84,46 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
                            *this, address, local_version);
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
+            return this->_fetch(address.unflagged(), local_version);
           try
           {
             return this->_fetch(address, local_version);
           }
-          catch (storage::MissingKey const&)
+          catch (MissingBlock const&)
           {
             auto uaddr = address.unflagged();
             if (uaddr != address)
             {
               ELLE_TRACE("%s: retrying with unflagged address %s", *this, uaddr);
-              // NOTE: that would be a nice spot to upgrade the block
-              return this->_fetch(uaddr, local_version);
+              auto block = this->_fetch(uaddr, local_version);
+              auto rblock = block->clone();
+              block->validate();
+              if (block->address() != address)
+              {
+                ELLE_LOG("%s: block update aborted: expected %s, got %s",
+                         *this, address, block->address());
+                return block;
+              }
+              ELLE_ASSERT(block->address() == address);
+              try
+              {
+                // Ensure we will be allowed to make the remove before doing anything
+                auto rsign = rblock->sign_remove();
+                this->_store(block->clone(), STORE_INSERT, {});
+                this->_remove(uaddr, rsign);
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: block upgrade failed: %s", *this, e);
+              }
+              return block;
             }
             else
+            {
+              ELLE_TRACE("%s: no second chance", *this);
               throw;
+            }
           }
         }
 

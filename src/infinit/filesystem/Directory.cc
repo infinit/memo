@@ -224,7 +224,7 @@ namespace infinit
                          std::string const& name,
                          Address address)
       : Node(owner, parent, name)
-      , _address(address)
+      , _address(address.value(), model::flags::mutable_block)
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
       , _prefetching(false)
     {}

@@ -30,8 +30,8 @@ namespace infinit
       typedef uint8_t Flags;
       static const int flag_byte = 31;
       Address();
-      Address(Value bytes);
-      Address(Value bytes, Flags flags);
+      Address(Value const bytes);
+      Address(Value const bytes, Flags flags);
       Address(elle::UUID const& id);
       bool
       operator ==(Address const& rhs) const;

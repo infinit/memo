@@ -216,7 +216,7 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
       Address addr =
-        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root");
+        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root", dn->version());
       while (true)
       {
         try

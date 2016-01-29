@@ -69,7 +69,7 @@ namespace infinit
         infinit::filesystem::umbrella([&] {
             try
             {
-              auto block = this->_dht.fetch(UB::hash_address(_name));
+              auto block = this->_dht.fetch(UB::hash_address(_name, this->_dht.version()));
               if (block)
                 throw elle::Error(elle::sprintf("Group %s already exists", _name));
             }
@@ -98,8 +98,8 @@ namespace infinit
             throw elle::Error("Group destruction needs group name as input");
           public_control_key();
           block();
-          auto uaddr = UB::hash_address(this->_name);
-          auto ruaddr = UB::hash_address(*this->_public_control_key);
+          auto uaddr = UB::hash_address(this->_name, this->_dht.version());
+          auto ruaddr = UB::hash_address(*this->_public_control_key, this->_dht.version());
           this->_dht.remove(uaddr);
           this->_dht.remove(ruaddr);
           this->_dht.remove(this->_block->address(), this->_block->sign_remove());
@@ -113,7 +113,7 @@ namespace infinit
           return *_public_control_key;
         ELLE_TRACE_SCOPE("%s: fetch", *this);
         auto ub = elle::cast<UB>::runtime(
-          this->_dht.fetch(UB::hash_address(_name)));
+          this->_dht.fetch(UB::hash_address(_name, this->_dht.version())));
         elle::unconst(this)->_public_control_key.emplace(ub->key());
         elle::unconst(this)->_stack_push();
         ELLE_DEBUG("public_control_key for %s is %s",

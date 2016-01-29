@@ -174,7 +174,7 @@ namespace infinit
       {
         THROW_NOENT;
       }
-      Address addr = it->second.second;
+      Address addr = Address(it->second.second.value(), model::flags::mutable_block);
       if (!_first_block)
         _first_block = elle::cast<MutableBlock>::runtime(
           _owner.fetch_or_die(addr, {}, this));
@@ -237,7 +237,7 @@ namespace infinit
       if (!_first_block)
       {
         ELLE_DEBUG("re-fetching first_block");
-         Address addr = _parent->_files.find(_name)->second.second;
+         Address addr = Address(_parent->_files.find(_name)->second.second. value(), model::flags::mutable_block);
         _first_block = elle::cast<MutableBlock>::runtime(
           _owner.fetch_or_die(addr));
       }
@@ -313,7 +313,8 @@ namespace infinit
       else
       {
         ELLE_TRACE("Fetching %s", index);
-        b = AnyBlock(_owner.fetch_or_die(_fat[index].first), _fat[index].second);
+        b = AnyBlock(_owner.fetch_or_die(
+          Address(_fat[index].first.value(), model::flags::immutable_block)), _fat[index].second);
         is_new = false;
       }
 

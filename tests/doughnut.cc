@@ -44,6 +44,9 @@ NAMED_ARGUMENT(storage_b);
 NAMED_ARGUMENT(storage_c);
 NAMED_ARGUMENT(make_overlay);
 NAMED_ARGUMENT(make_consensus);
+NAMED_ARGUMENT(version_a);
+NAMED_ARGUMENT(version_b);
+NAMED_ARGUMENT(version_c);
 
 class DHTs
 {
@@ -54,15 +57,18 @@ public:
     namespace ph = std::placeholders;
     elle::named::prototype(
       paxos = true,
-      ::keys_a = infinit::cryptography::rsa::keypair::generate(2048),
-      ::keys_b = infinit::cryptography::rsa::keypair::generate(2048),
-      ::keys_c = infinit::cryptography::rsa::keypair::generate(2048),
+      ::keys_a = infinit::cryptography::rsa::keypair::generate(512),
+      ::keys_b = infinit::cryptography::rsa::keypair::generate(512),
+      ::keys_c = infinit::cryptography::rsa::keypair::generate(512),
       id_a = infinit::model::Address::random(),
       id_b = infinit::model::Address::random(),
       id_c = infinit::model::Address::random(),
       storage_a = nullptr,
       storage_b = nullptr,
       storage_c = nullptr,
+      version_a = boost::optional<elle::Version>(),
+      version_b = boost::optional<elle::Version>(),
+      version_c = boost::optional<elle::Version>(),
       make_overlay =
       [] (int,
           infinit::model::Address id,
@@ -78,7 +84,8 @@ public:
         -> std::unique_ptr<dht::consensus::Consensus>
       {
         return c;
-      }).call([this] (bool paxos,
+      }
+      ).call([this] (bool paxos,
                       infinit::cryptography::rsa::KeyPair keys_a,
                       infinit::cryptography::rsa::KeyPair keys_b,
                       infinit::cryptography::rsa::KeyPair keys_c,
@@ -88,6 +95,9 @@ public:
                       std::unique_ptr<storage::Storage> storage_a,
                       std::unique_ptr<storage::Storage> storage_b,
                       std::unique_ptr<storage::Storage> storage_c,
+                      boost::optional<elle::Version> version_a,
+                      boost::optional<elle::Version> version_b,
+                      boost::optional<elle::Version> version_c,
                       std::function<
                         std::unique_ptr<infinit::overlay::Stonehenge>(
                           int,
@@ -109,6 +119,9 @@ public:
                             std::move(storage_a),
                             std::move(storage_b),
                             std::move(storage_c) ,
+                            version_a,
+                            version_b,
+                            version_c,
                             std::move(make_overlay),
                             std::move(make_consensus));
               }, std::forward<Args>(args)...);
@@ -133,6 +146,9 @@ private:
        std::unique_ptr<storage::Storage> storage_a,
        std::unique_ptr<storage::Storage> storage_b,
        std::unique_ptr<storage::Storage> storage_c,
+       boost::optional<elle::Version> version_a,
+       boost::optional<elle::Version> version_b,
+       boost::optional<elle::Version> version_c,
        std::function<
          std::unique_ptr<infinit::overlay::Stonehenge>(
            int,
@@ -209,7 +225,8 @@ private:
           return make_overlay(0, id, members, std::move(local), d);
         }),
       boost::optional<int>(),
-      std::move(storage_a));
+      std::move(storage_a),
+      version_a);
     this->dht_b = std::make_shared<dht::Doughnut>(
       id_b,
       this->keys_b,
@@ -224,7 +241,8 @@ private:
           return make_overlay(1, id, members, std::move(local), d);
         }),
       boost::optional<int>(),
-      std::move(storage_b));
+      std::move(storage_b),
+      version_b);
     this->dht_c = std::make_shared<dht::Doughnut>(
       id_c,
       this->keys_c,
@@ -239,7 +257,8 @@ private:
           return make_overlay(2, id, members, std::move(local), d);
         }),
       boost::optional<int>(),
-      std::move(storage_c));
+      std::move(storage_c),
+      version_c);
     for (auto* stonehenge: stonehenges)
       for (auto& peer: stonehenge->peers())
       {
@@ -407,7 +426,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   {
     ELLE_LOG("other: fetch NB");
     auto fetched =
-      dhts.dht_b->fetch(dht::NB::address(dhts.keys_a->K(), "blockname"));
+      dhts.dht_b->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version()));
     BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
     auto nb = elle::cast<dht::NB>::runtime(fetched);
     BOOST_CHECK(nb);
@@ -420,10 +439,10 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
   }
   // remove and remove protection
   BOOST_CHECK_THROW(dhts.dht_a->remove(
-    dht::NB::address(dhts.keys_a->K(), "blockname"), {}), std::exception);
+    dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_a->version()), {}), std::exception);
   BOOST_CHECK_THROW(dhts.dht_b->remove(
-    dht::NB::address(dhts.keys_a->K(), "blockname")), std::exception);
-  dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname"));
+    dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version())), std::exception);
+  dhts.dht_a->remove(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_a->version()));
 }
 
 ELLE_TEST_SCHEDULED(UB, (bool, paxos))
@@ -437,7 +456,7 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
     dhta->store(uba);
     dhta->store(ubarev);
   }
-  auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K()));
+  auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version()));
   BOOST_CHECK(ruba);
   auto* uba = dynamic_cast<dht::UB*>(ruba.get());
   BOOST_CHECK(uba);
@@ -491,9 +510,9 @@ noop(storage::Storage*)
 
 ELLE_TEST_SCHEDULED(restart, (bool, paxos))
 {
-  auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
-  auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
-  auto keys_c = infinit::cryptography::rsa::keypair::generate(2048);
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(512);
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(512);
+  auto keys_c = infinit::cryptography::rsa::keypair::generate(512);
   auto id_a = infinit::model::Address::random();
   auto id_b = infinit::model::Address::random();
   auto id_c = infinit::model::Address::random();
@@ -735,6 +754,110 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   }
 }
 
+ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
+{
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(512);
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(512);
+  auto keys_c = infinit::cryptography::rsa::keypair::generate(512);
+  auto id_a = infinit::model::Address::random();
+  auto id_b = infinit::model::Address::random();
+  auto id_c = infinit::model::Address::random();
+  storage::Memory::Blocks blocks_a;
+  storage::Memory::Blocks blocks_b;
+  storage::Memory::Blocks blocks_c;
+  infinit::model::Address chbaddr;
+  infinit::model::Address acbaddr;
+  elle::Buffer data("\\_o<", 4);
+  {
+    DHTs dhts(
+      paxos,
+      keys_a,
+      keys_b,
+      keys_c,
+      id_a,
+      id_b,
+      id_c,
+      elle::make_unique<storage::Memory>(blocks_a),
+      elle::make_unique<storage::Memory>(blocks_b),
+      elle::make_unique<storage::Memory>(blocks_c),
+
+      elle::Version(0, 4, 0),
+      elle::Version(0, 4, 0),
+      elle::Version(0, 4, 0)
+      );
+    auto& dhta = dhts.dht_a;
+    auto& dhtb = dhts.dht_b;
+    // UB
+    dht::UB uba(dhta.get(), "a", dhta->keys().K());
+    dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
+    dhta->store(uba);
+    dhta->store(ubarev);
+    auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version()));
+    BOOST_CHECK(ruba);
+    // NB
+    auto nb = elle::make_unique<dht::NB>(
+      dhta.get(), dhts.keys_a->public_key(), "blockname",
+      elle::Buffer("blockdata", 9));
+    dhta->store(*nb);
+    auto fetched =
+      dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version()));
+    BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
+    // CHB
+    auto chb = dhta->make_block<infinit::model::blocks::ImmutableBlock>(data);
+    chbaddr = chb->address();
+    dhta->store(*chb);
+    BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
+    // ACB
+    auto acb = dhta->make_block<infinit::model::blocks::ACLBlock>();
+    acb->data(elle::Buffer(data));
+    ELLE_LOG("owner: store ACB")
+    dhta->store(*acb);
+    fetched = dhta->fetch(acb->address());
+    acbaddr = acb->address();
+    BOOST_CHECK_EQUAL(fetched->data(), data);
+  }
+  {
+    DHTs dhts(
+      paxos,
+      keys_a,
+      keys_b,
+      keys_c,
+      id_a,
+      id_b,
+      id_c,
+      elle::make_unique<storage::Memory>(blocks_a),
+      elle::make_unique<storage::Memory>(blocks_b),
+      elle::make_unique<storage::Memory>(blocks_c),
+
+      elle::Version(0, 5, 0),
+      elle::Version(0, 5, 0),
+      elle::Version(0, 5, 0)
+      );
+    auto& dhta = dhts.dht_a;
+    auto& dhtb = dhts.dht_b;
+    // UB
+    std::unique_ptr<infinit::model::blocks::Block> ruba;
+    BOOST_CHECK_NO_THROW(
+      ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version())));
+    BOOST_CHECK(ruba);
+    // NB
+    std::unique_ptr<infinit::model::blocks::Block> fetched;
+    BOOST_CHECK_NO_THROW(fetched =
+      dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version())));
+    BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
+    // CHB
+    BOOST_CHECK_NO_THROW({BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);});
+    BOOST_CHECK_NO_THROW({BOOST_CHECK_EQUAL(dhta->fetch(
+      infinit::model::Address(chbaddr.value(), infinit::model::flags::immutable_block))
+      ->data(), data);})
+    // ACB
+    BOOST_CHECK_NO_THROW(fetched = dhta->fetch(acbaddr));
+    BOOST_CHECK_EQUAL(fetched->data(), data);
+    BOOST_CHECK_NO_THROW(fetched = dhta->fetch(infinit::model::Address(acbaddr.value(), infinit::model::flags::mutable_block)));
+    BOOST_CHECK_EQUAL(fetched->data(), data);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -761,6 +884,7 @@ ELLE_TEST_SUITE()
   TEST(restart);
   TEST(cache);
   TEST(serialize);
+  TEST(flags_backward);
 #undef TEST
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
 }

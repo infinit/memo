@@ -17,14 +17,14 @@ namespace infinit
       this->_overwritten_value = this->_value[flag_byte];
     }
 
-    Address::Address(Value value)
+    Address::Address(Value const value)
       : _value()
     {
       ::memcpy(this->_value, value, sizeof(Value));
       this->_overwritten_value = this->_value[flag_byte];
     }
 
-    Address::Address(Value value, Flags flags)
+    Address::Address(Value const value, Flags flags)
       : _value()
     {
       ::memcpy(this->_value, value, sizeof(Value));

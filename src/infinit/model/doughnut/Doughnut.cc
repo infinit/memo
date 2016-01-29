@@ -89,7 +89,7 @@ namespace infinit
             try
             {
               ELLE_TRACE_SCOPE("%s: check user block", *this);
-              auto block = this->fetch(UB::hash_address(name));
+              auto block = this->fetch(UB::hash_address(name, this->version()));
               ELLE_DEBUG("%s: user block for %s already present at %x",
                          *this, name, block->address());
               auto ub = elle::cast<UB>::runtime(block);
@@ -97,7 +97,7 @@ namespace infinit
                 throw elle::Error(
                   elle::sprintf(
                     "user block exists at %s(%x) with different key",
-                    name, UB::hash_address(name)));
+                    name, UB::hash_address(name, this->version())));
             }
             catch (MissingBlock const&)
             {
@@ -110,7 +110,7 @@ namespace infinit
             try
             {
               ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
-              auto block = this->fetch(UB::hash_address(this->keys().K()));
+              auto block = this->fetch(UB::hash_address(this->keys().K(), this->version()));
               ELLE_DEBUG("%s: user reverse block for %s already present at %x",
                          *this, name, block->address());
               auto ub = elle::cast<UB>::runtime(block);
@@ -119,7 +119,7 @@ namespace infinit
                   elle::sprintf(
                     "user reverse block exists at %s(%x) "
                     "with different name: %s",
-                    name, UB::hash_address(this->keys().K()), ub->name()));
+                    name, UB::hash_address(this->keys().K(), this->version()), ub->name()));
             }
             catch(MissingBlock const&)
             {
@@ -199,7 +199,7 @@ namespace infinit
           cryptography::rsa::PublicKey pub(s);
           try
           {
-            auto block = this->fetch(UB::hash_address(pub));
+            auto block = this->fetch(UB::hash_address(pub, this->version()));
             auto ub = elle::cast<UB>::runtime(block);
             return elle::make_unique<doughnut::User>
               (ub->key(), ub->name());
@@ -229,7 +229,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: fetch user from name", *this);
           try
           {
-            auto block = this->fetch(UB::hash_address(data.string()));
+            auto block = this->fetch(UB::hash_address(data.string(), this->version()));
             auto ub = elle::cast<UB>::runtime(block);
             return elle::make_unique<doughnut::User>
               (ub->key(), data.string());
