@@ -19,6 +19,10 @@ templates = {
     'noop': 'Drive/Invitation',
     'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
   },
+  'Drive/Plain Invitation': {
+    'noop': 'Drive/Plain Invitation',
+    'swu': 'tem_xxxx',
+  },
   'Internal/Crash Report': {
     'noop': 'Internal/Crash Report',
     'swu': 'tem_fu5GEE6jxByj2SB4zM6CrH',
@@ -112,6 +116,11 @@ class Beyond:
   @property
   def validate_email_address(self):
     return self.__validate_email_address
+
+  def is_email(self, email):
+    import re
+    email_validator = re.compile('[^@]+@[^@]+\.[^@]+')
+    return email_validator.match(email) is not None
 
   ## ------- ##
   ## Pairing ##
@@ -643,39 +652,45 @@ class Drive(metaclass = Entity,
     class NotInvited(Exception):
       pass
 
-    # XXX: Shouldn't work.
-    def __init__(self, beyond, **json):
-      super().__init__(beyond, **json)
-      if self['status'] not in statuses:
-        raise exceptions.InvalidFormat('invitation', status)
-
+    # XXX: Check that status in in statuses.
     def save(self, beyond, drive, owner, invitee, invitation):
       confirm = not invitation
+      plain = not isinstance(invitee, User)
+      if plain:
+        assert invitation
+        assert beyond.is_email(invitee)
+      key = invitee if plain else invitee.name
+      email = invitee if plain else invitee.email
       if invitation:
-        if invitee.name in drive.users and drive.users[invitee.name] == 'pending':
+        if key in drive.users and drive.users[key] == 'pending':
           return False
-        elif drive.users.get(invitee.name, None) == 'ok':
+        elif drive.users.get(key, None) == 'ok':
           raise AlreadyConfirmed()
       if confirm:
-        if invitee.name not in drive.users:
+        if key not in drive.users:
           raise NotInvited()
-        elif drive.users.get(invitee.name, None) == 'ok':
+        elif drive.users.get(key, None) == 'ok':
           return False
-      drive.users[invitee.name] = self.json()
+      drive.users[key] = self.json()
       drive.save()
       variables = {
         'owner': { x: getattr(owner, x) for x in ['name', 'email'] },
-        'invitee': { x: getattr(invitee, x) for x in ['name', 'email'] },
         'drive': { x: getattr(drive, x) for x in ['name', 'description'] },
       }
+      if plain:
+        variables['invitee'] = { 'email': email }
+      else:
+        variables['invitee'] = { x: getattr(invitee, x) for x in ['name', 'email'] }
+        variables['invitee']['avatar'] = '/users/%s/avatar' % key
+
       variables['owner']['avatar'] = '/users/%s/avatar' % owner.name
-      variables['invitee']['avatar'] = '/users/%s/avatar' % invitee.name
       variables['drive']['icon'] = '/drives/%s/icon' % drive.name
-      if invitation and invitee.email is not None:
+      if invitation and email is not None:
+        template = "Drive/Invitation" if not plain else "Drive/Plain Invitation"
         beyond.emailer.send_one(
-          template = beyond.template("Drive/Invitation"),
-          recipient_email = invitee.email,
-          recipient_name = invitee.name,
+          template = beyond.template(template),
+          recipient_email = email,
+          recipient_name = key,
           variables = variables
         )
       if confirm and owner.email is not None:
