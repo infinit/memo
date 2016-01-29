@@ -94,7 +94,7 @@ x86_64-osx-clang:
     - cd ../fs-build && python3 drake -j 4 //build
     - cd ../fs-build && python3 drake -j 4 //check
     - cd ../fs-build && python3 drake -j 4 //install
-    - GIT_DIR=../fs/.git git describe --exact-match HEAD && cd ../fs-build && python3 drake -j 4 //symbols --prefix /Users/infinit/filesystem-symbols
+    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then cd ../fs-build && python3 drake -j 4 //symbols --prefix /Users/infinit/filesystem-symbols; fi
   tags:
     - x86_64
     - osx
