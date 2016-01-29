@@ -1,0 +1,107 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+import urllib.parse
+
+from utils import *
+
+from copy import deepcopy
+
+def setup(beyond, user = None):
+  if user is None:
+    user = User()
+    user.put(beyond)
+  network = Network(owner = user)
+  network.put(beyond)
+  volume = Volume(network = network)
+  volume.put(beyond)
+  drive = Drive(volume = volume,
+                description = "Hyperdrive!")
+  drive.put(beyond)
+  print('network', network['name'])
+  print('drive', drive['name'])
+  return user, network, volume, drive
+
+def push_and_confirm(beyond, email, user = None):
+  user = User(email = email)
+  user.put(beyond)
+  welcome = beyond.emailer.get_specifics(
+    user['email'], 'User/Welcome').pop()
+  params = url_parameters(welcome['confirmation_url'])
+  del params['name']
+  res = beyond.post(
+    'users/%s/confirm_email' % user['name'], json = params).json()
+  return user, res
+
+with Beyond() as beyond:
+
+  beyond.emailer = Emailer()
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      user, network, volume, drive = setup(beyond)
+      email = random_email()
+      drive.invite(beyond, email)
+      bob, _ = push_and_confirm(beyond, email)
+      drives = beyond.get('users/%s/drives' % bob['name'],
+                          auth = bob.private_key).json()['drives']
+      assertEq(len(drives), 1)
+      passports = beyond.get('users/%s/passports' % bob['name'],
+                             auth = bob.private_key).json()['passports']
+      assertEq(len(passports), 1)
+
+    def test_multiple_invitations(self):
+      user, _, _, drive = setup(beyond)
+      _, _, _, drive1 = setup(beyond, user)
+      _, _, _, drive2 = setup(beyond, user)
+      email1 = random_email()
+      email2 = random_email()
+      drive.invite(beyond, email1)
+      drive.invite(beyond, email2)
+      drive1.invite(beyond, email1)
+      drive2.invite(beyond, email2)
+      u1, _ = push_and_confirm(beyond, email1)
+      u2, _ = push_and_confirm(beyond, email2)
+      for u in [u1, u2]:
+        for entities in ['passports', 'drives']:
+          assertEq(len(beyond.get('users/%s/%s' % (u['name'], entities),
+                                  auth = u.private_key).json()[entities]),
+                   2)
+
+    def test_drive_deleted(self):
+      user, network, volume, drive = setup(beyond)
+      email = random_email()
+      drive.invite(beyond, email)
+      beyond.delete('drives/%s' % drive['name'],
+                    auth = user.private_key)
+      bob, _ = push_and_confirm(beyond, email)
+      drives = beyond.get('users/%s/drives' % bob['name'],
+                          auth = bob.private_key).json()['drives']
+      assertEq(len(drives), 0)
+      passports = beyond.get('users/%s/passports' % bob['name'],
+                             auth = bob.private_key).json()['passports']
+      assertEq(len(passports), 0)
+
+    def test_network_deleted(self):
+      user, network, volume, drive = setup(beyond)
+      email = random_email()
+      drive.invite(beyond, email)
+      beyond.delete('networks/%s' % network['name'],
+                    auth = user.private_key)
+      bob, confirmation = push_and_confirm(beyond, email)
+      assertEq(len(confirmation['errors']), 1)
+      assertIn(network['name'], confirmation['errors'][0])
+
+    def test_delete(self):
+      user, network, volume, drive = setup(beyond)
+      email = random_email()
+      drive.invite(beyond, email)
+      beyond.delete('drives/%s/invitations/%s' % (
+        drive['name'], email),
+                    auth = user.private_key)
+
+  if __name__ == '__main__':
+    unittest.main()

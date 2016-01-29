@@ -236,6 +236,7 @@ def configure(
       'passports/put',
       'drives/put',
       'drives/icons',
+      'drives/invitations',
       # Higher level.
       'users/register_login',
   ]:
