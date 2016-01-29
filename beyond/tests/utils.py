@@ -49,6 +49,8 @@ class Beyond:
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
     self.__beyond_args = beyond_args
+    # Automatically add a 'hub' user.
+    self.__beyond_user = User(name = 'hub')
 
     setattr(self, 'get',
             lambda url, **kw: self.request(url = url, method = 'GET', **kw))
@@ -92,6 +94,7 @@ class Beyond:
     setattr(self.__beyond, '_Beyond__now', self.now)
     self.__app = infinit.beyond.bottle.Bottle(self.__beyond)
     self.__app.__enter__()
+    self.__beyond_user.put(self, opt_out = False)
     return self
 
   @property
@@ -222,13 +225,18 @@ class User(dict):
     self['email'] = self['name'] + '@infinit.io' if email is None else email
     self.__password = random_sequence(50) if password is None else password
     self.__password_hash = password_hash(self.__password)
+    import os
+    path = os.environ.get('INFINIT_BINARIES', '/opt/infinit/bin/')
+    import subprocess
+    output = subprocess.check_output(
+      [path + 'infinit-user', '--create',
+       '--name', self['name'],
+       '--output', '-'])
+    import json
+    user = json.loads(''.join(output.decode('ascii').split('\n')[1:]))
     # Keys.
-    from Crypto.PublicKey import RSA
-    key = RSA.generate(2048, e=65537)
-    def cleanup(key):
-      return ''.join(key.decode('ascii').split('\n')[1:-1])
-    self['public_key'] = {'rsa': cleanup(key.publickey().exportKey("PEM"))}
-    self.__private_key = {'rsa': cleanup(key.exportKey("PEM"))}
+    self['public_key'] = user['public_key']
+    self.__private_key = user['private_key']
 
   @property
   def private_key(self):
