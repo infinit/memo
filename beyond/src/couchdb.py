@@ -523,10 +523,10 @@ class CouchDBDatastore:
     except couchdb.ResourceConflict:
       raise infinit.beyond.Drive.Duplicate()
 
-  def user_drives_fetch(self, user):
+  def user_drives_fetch(self, name):
     drive_from_db = partial(infinit.beyond.Drive.from_json, self.beyond)
     rows = self.__couchdb['drives'].view('beyond/per_member_name',
-                                         key = user.name)
+                                         key = name)
     return list(map(lambda x: drive_from_db(x.value), rows))
 
   def __drives_per_member_map(drive):

@@ -180,8 +180,8 @@ class Beyond:
     networks = self.__datastore.user_networks_fetch(user = user)
     return self.__datastore.networks_volumes_fetch(networks = networks)
 
-  def user_drives_get(self, user):
-    return self.__datastore.user_drives_fetch(user = user)
+  def user_drives_get(self, name):
+    return self.__datastore.user_drives_fetch(name = name)
 
   ## ------ ##
   ## Volume ##

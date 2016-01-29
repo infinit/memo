@@ -414,7 +414,7 @@ class Bottle(bottle.Bottle):
   def user_drives_get(self, name):
     user = self.user_from_name(name = name)
     self.authenticate(user)
-    drives = self.__beyond.user_drives_get(user = user)
+    drives = self.__beyond.user_drives_get(name = user.name)
     return {'drives': list(map(lambda d: d.json(), drives))}
 
   def login(self, name):
