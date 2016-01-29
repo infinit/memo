@@ -204,7 +204,8 @@ create_(std::string const& name,
 COMMAND(create)
 {
   bool push = aliased_flag(args, {"push-user", "push"});
-  auto output = get_output(args);
+  auto has_output = optional(args, "output");
+  auto output = has_output ? get_output(args) : nullptr;
   if (!push)
   {
     if (flag(args, "full") || flag(args, "password"))
