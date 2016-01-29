@@ -512,8 +512,11 @@ class CouchDBDatastore:
       for name, value in req['query'].items()
     }
     for user, value in update.get('users', {}).items():
-      drive.setdefault('users', {})[user] = value
-
+      if value is None and user in update.get('users', {}):
+        del drive['users'][user]
+      else:
+        drive.setdefault('users', {})[user] = value
+    update.pop('users', None)
     return [drive, {'json': json.dumps(update)}]
 
   def drive_delete(self, owner, name):
