@@ -347,7 +347,19 @@ That’s it, you’ve created a filesystem that you quickly connected to with tw
 4. Go Further
 ------------------
 
-You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Just keep in mind that the storage infrastructure presented in this guide is very sensitive to computers disconnecting, possibly rendering files inaccessible. Please take a look at the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.
+You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Just keep in mind that the storage infrastructure presented in this guide is very sensitive to computers disconnecting, possibly rendering files inaccessible. Please take a look at the <a href="${route('doc_deployments')}">examples of deployments</a> or the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.
+
+<div>
+  <a class="go_deployments" href="${route('doc_deployments')}">
+    <img src="${url('images/icons/network.png')}">
+    <span>→ Deployments Examples</span>
+  </a>
+
+  <a class="go_reference" href="${route('doc_reference')}">
+    <img src="${url('images/icons/code.png')}">
+    <span>→ Reference Documentation</span>
+  </a>
+</div>
 
 <a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Join our Facebook Group</a>
 
