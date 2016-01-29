@@ -224,10 +224,13 @@ namespace infinit
                          std::string const& name,
                          Address address)
       : Node(owner, parent, name)
-      , _address(address.value(), model::flags::mutable_block)
+      , _address(address.unflagged().value(), model::flags::mutable_block)
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
       , _prefetching(false)
-    {}
+    {
+      ELLE_TRACE("%s: created with address %s{%x}", *this,
+                 this->_address, (unsigned int)address.overwritten_value());
+    }
 
     void
     Directory::_fetch()

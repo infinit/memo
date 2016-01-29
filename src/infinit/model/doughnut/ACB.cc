@@ -834,11 +834,15 @@ namespace infinit
           return blocks::ValidationResult::failure("Signature is not a mutable block");
         if (!mb->deleted())
           return blocks::ValidationResult::failure("Block not marked for deletion");
+        // FIXME: calling validate can change our address, and make
+        // the validate(other) below fail
         auto isvalid = rs.block->validate();
         if (!isvalid)
           return isvalid;
+
         if (this->version() >= mb->version())
           return blocks::ValidationResult::conflict("Invalid version");
+
         isvalid = dynamic_cast<const blocks::Block*>(this)->validate(*mb);
         if (!isvalid)
           return isvalid;

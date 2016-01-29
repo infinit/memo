@@ -82,6 +82,18 @@ with TemporaryDirectory() as tmp, Infinit() as owner:
     assertEq(res[4]['content'], 'barbar')
     assertEq(res[5]['content'], 'barbar')
     assertEq(res[6]['target'], 'f2')
+
+    res = owner.run_script(user = 'owner', seq = [
+        {'operation': 'unlink', 'path': 'f2'},
+        {'operation': 'unlink', 'path': 'f4'},
+        {'operation': 'unlink', 'path': 'dir1/f1'},
+        {'operation': 'unlink', 'path': 'dir1/f3'},
+        {'operation': 'rmdir', 'path': 'dir1'},
+    ])
+    print(res)
+    for r in res:
+      assertEq(r['success'], True)
+
     print('\n'.join(sorted(files(tmp.dir))))
 
   except Exception as e:

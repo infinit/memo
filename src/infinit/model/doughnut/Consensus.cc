@@ -99,6 +99,9 @@ namespace infinit
             {
               ELLE_TRACE("%s: retrying with unflagged address %s", *this, uaddr);
               auto block = this->_fetch(uaddr, local_version);
+              return block;
+              // Replace old address with new in storage
+              /*
               auto rblock = block->clone();
               block->validate();
               if (block->address() != address)
@@ -112,6 +115,8 @@ namespace infinit
               {
                 // Ensure we will be allowed to make the remove before doing anything
                 auto rsign = rblock->sign_remove();
+                if (rsign.block)
+                  ELLE_LOG("DAMMIT %s %s", rblock->address(), rsign.block->address());
                 this->_store(block->clone(), STORE_INSERT, {});
                 this->_remove(uaddr, rsign);
               }
@@ -120,6 +125,7 @@ namespace infinit
                 ELLE_LOG("%s: block upgrade failed: %s", *this, e);
               }
               return block;
+              */
             }
             else
             {

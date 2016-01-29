@@ -100,7 +100,9 @@ namespace infinit
       Block::_validate(Block const& new_block) const
       {
         if (this->address() != new_block.address())
-          return ValidationResult::failure("Addresses do not match");
+          return ValidationResult::failure(
+            elle::sprintf("Addresses do not match (old %s new %s)",
+              this->address(), new_block.address()));
         return ValidationResult::success();
       }
 
