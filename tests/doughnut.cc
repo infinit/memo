@@ -45,6 +45,13 @@ NAMED_ARGUMENT(storage_c);
 NAMED_ARGUMENT(make_overlay);
 NAMED_ARGUMENT(make_consensus);
 
+static
+int
+key_size()
+{
+  return RUNNING_ON_VALGRIND ? 512 : 2048;
+}
+
 class DHTs
 {
 public:
@@ -54,9 +61,9 @@ public:
     namespace ph = std::placeholders;
     elle::named::prototype(
       paxos = true,
-      ::keys_a = infinit::cryptography::rsa::keypair::generate(2048),
-      ::keys_b = infinit::cryptography::rsa::keypair::generate(2048),
-      ::keys_c = infinit::cryptography::rsa::keypair::generate(2048),
+      ::keys_a = infinit::cryptography::rsa::keypair::generate(key_size()),
+      ::keys_b = infinit::cryptography::rsa::keypair::generate(key_size()),
+      ::keys_c = infinit::cryptography::rsa::keypair::generate(key_size()),
       id_a = infinit::model::Address::random(),
       id_b = infinit::model::Address::random(),
       id_c = infinit::model::Address::random(),
@@ -491,9 +498,9 @@ noop(storage::Storage*)
 
 ELLE_TEST_SCHEDULED(restart, (bool, paxos))
 {
-  auto keys_a = infinit::cryptography::rsa::keypair::generate(2048);
-  auto keys_b = infinit::cryptography::rsa::keypair::generate(2048);
-  auto keys_c = infinit::cryptography::rsa::keypair::generate(2048);
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_c = infinit::cryptography::rsa::keypair::generate(key_size());
   auto id_a = infinit::model::Address::random();
   auto id_b = infinit::model::Address::random();
   auto id_c = infinit::model::Address::random();
