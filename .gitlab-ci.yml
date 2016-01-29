@@ -94,6 +94,7 @@ x86_64-osx-clang:
     - cd ../fs-build && python3 drake -j 4 //build
     - cd ../fs-build && python3 drake -j 4 //check
     - cd ../fs-build && python3 drake -j 4 //install
+    - git describe --exact-match HEAD && cd ../fs-build && python3 drake -j 4 //symbols --prefix /Users/infinit/filesystem-symbols
   tags:
     - x86_64
     - osx
