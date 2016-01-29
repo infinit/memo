@@ -52,8 +52,11 @@ class Infinit(TemporaryDirectory):
     self.env = {
       'PATH': self.__infinit_root + '/bin' + ':bin:backend/bin:/bin:/usr/sbin',
       'INFINIT_HOME': self.dir,
-      'INFINIT_RDV': ''
+      'INFINIT_RDV': '',
+      'INFINIT_BACKTRACE': '1',
     }
+    if os.environ.get('ELLE_LOG_LEVEL'):
+      self.env['ELLE_LOG_LEVEL'] = os.environ.get('ELLE_LOG_LEVEL')
     if self.__beyond is not None:
       self.env['INFINIT_BEYOND'] = self.__beyond.domain
     self.env.update(env)
@@ -93,6 +96,8 @@ class Infinit(TemporaryDirectory):
       raise Exception('command failed with code %s: %s (reason: %s)' % \
                       (process.returncode, pretty, reason))
     out = out.decode('utf-8')
+    self.last_out = out
+    self.last_err = err.decode('utf-8')
     try:
       return json.loads(out)
     except:

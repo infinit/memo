@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+def files(d):
+  res = list()
+  for root, subdirs, files in os.walk(d):
+    res += files
+  return res
+
+with TemporaryDirectory() as tmp, Infinit() as owner:
+  try:
+    owner.run('infinit-user --create owner')
+    owner.run('infinit-storage --create storage --filesystem --path ' + tmp.dir)
+    owner.run('infinit-network --create network --as owner --storage storage')
+    owner.run('infinit-volume --create volume --as owner --network network')
+
+    owner.run('infinit-network --update --as owner --name network --compatibility-version 0.4.0')
+    res = owner.run_script(user = 'owner', seq = [
+        {'operation': 'mkdir', 'path': 'dir1'},
+        {'operation': 'write_file', 'path': 'dir1/f1', 'content': 'foobar'},
+        {'operation': 'write_file', 'path': 'f2', 'content': 'foobar'},
+        {'operation': 'symlink', 'path': 's1', 'target': 'f2'},
+    ])
+    print(res)
+    for r in res:
+      assertEq(r['success'], True)
+    res = owner.run_script(user = 'owner', seq = [
+        {'operation': 'list_directory', 'path': '/'},
+        {'operation': 'list_directory', 'path': 'dir1'},
+        {'operation': 'read_file', 'path': '/f2'},
+        {'operation': 'read_file', 'path': '/dir1/f1'},
+        {'operation': 'readlink', 'path': 's1'},
+    ])
+    assertEq(sorted(res[0]['entries']), ['dir1', 'f2', 's1'])
+    assertEq(sorted(res[1]['entries']), ['f1'])
+    assertEq(res[2]['content'], 'foobar')
+    assertEq(res[3]['content'], 'foobar')
+    assertEq(res[4]['target'], 'f2')
+
+    #Switch to 0.5.0
+    owner.run('infinit-network --update --as owner --name network --compatibility-version 0.5.0')
+    res = owner.run_script(user = 'owner', seq = [
+        {'operation': 'list_directory', 'path': ''},
+        {'operation': 'list_directory', 'path': 'dir1'},
+        {'operation': 'read_file', 'path': '/f2'},
+        {'operation': 'read_file', 'path': '/dir1/f1'},
+        {'operation': 'readlink', 'path': 's1'},
+    ])
+    print(owner.last_err)
+    print(res)
+    assertEq(sorted(res[0]['entries']), ['dir1', 'f2', 's1'])
+    assertEq(sorted(res[1]['entries']), ['f1'])
+    assertEq(res[2]['content'], 'foobar')
+    assertEq(res[3]['content'], 'foobar')
+    assertEq(res[4]['target'], 'f2')
+
+    res = owner.run_script(user = 'owner', seq = [
+        {'operation': 'write_file', 'path': 'dir1/f1', 'content': 'barbar'},
+        {'operation': 'write_file', 'path': 'f2', 'content': 'barbar'},
+        {'operation': 'mkdir', 'path': 'dir2'},
+        {'operation': 'write_file', 'path': 'dir1/f3', 'content': 'barbar'},
+        {'operation': 'write_file', 'path': 'f4', 'content': 'barbar'},
+      ])
+    print(res)
+    for r in res:
+      assertEq(r['success'], True)
+    res = owner.run_script(user = 'owner', seq = [
+        {'operation': 'list_directory', 'path': ''},
+        {'operation': 'list_directory', 'path': 'dir1'},
+        {'operation': 'read_file', 'path': '/f2'},
+        {'operation': 'read_file', 'path': '/dir1/f1'},
+        {'operation': 'read_file', 'path': '/f4'},
+        {'operation': 'read_file', 'path': '/dir1/f3'},
+        {'operation': 'readlink', 'path': 's1'},
+    ])
+    print(res)
+    assertEq(sorted(res[0]['entries']), ['dir1', 'dir2', 'f2', 'f4', 's1'])
+    assertEq(sorted(res[1]['entries']), ['f1', 'f3'])
+    assertEq(res[2]['content'], 'barbar')
+    assertEq(res[3]['content'], 'barbar')
+    assertEq(res[4]['content'], 'barbar')
+    assertEq(res[5]['content'], 'barbar')
+    assertEq(res[6]['target'], 'f2')
+    print('\n'.join(sorted(files(tmp.dir))))
+
+  except Exception as e:
+    print(owner.last_out)
+    print(owner.last_err)
+    raise e

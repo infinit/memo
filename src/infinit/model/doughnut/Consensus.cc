@@ -82,8 +82,10 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
-                           *this, address, local_version);
+          ELLE_TRACE_SCOPE("%s: fetch %s{%x} (local version: %s)",
+                           *this, address,
+                           (unsigned int)address.overwritten_value(),
+                           local_version);
           if (this->doughnut().version() < elle::Version(0, 5, 0))
             return this->_fetch(address.unflagged(), local_version);
           try
@@ -115,7 +117,7 @@ namespace infinit
               }
               catch (elle::Error const& e)
               {
-                ELLE_TRACE("%s: block upgrade failed: %s", *this, e);
+                ELLE_LOG("%s: block upgrade failed: %s", *this, e);
               }
               return block;
             }

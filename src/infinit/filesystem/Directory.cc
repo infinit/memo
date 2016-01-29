@@ -238,7 +238,10 @@ namespace infinit
     void
     Directory::_fetch(std::unique_ptr<ACLBlock> block)
     {
-      ELLE_TRACE_SCOPE("%s: fetch block", *this);
+      ELLE_TRACE_SCOPE("%s: fetch block, addr = %s{%x}",
+                       *this,
+                       this->_address,
+                       (unsigned int)this->_address.overwritten_value());
       if (block)
         this->_block = std::move(block);
       else if (this->_block)

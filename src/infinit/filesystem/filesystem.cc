@@ -223,7 +223,11 @@ namespace infinit
         {
           ELLE_DEBUG_SCOPE("fetch root bootstrap block at %x", addr);
           auto block = _block_store->fetch(addr);
-          addr = Address::from_string(block->data().string().substr(2));
+          addr = Address(
+            Address::from_string(block->data().string().substr(2)).value(),
+            model::flags::mutable_block);
+          ELLE_DEBUG_SCOPE("fetch root block at %x({%x}", addr,
+                           (unsigned int)addr.overwritten_value());
           break;
         }
         catch (model::MissingBlock const& e)
