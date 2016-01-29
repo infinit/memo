@@ -16,12 +16,22 @@ namespace infinit
   {
     using namespace std::rel_ops;
 
+    namespace flags
+    {
+      static const uint8_t block_kind = 1;
+      static const uint8_t mutable_block = 0;
+      static const uint8_t immutable_block = 1;
+    }
+
     class Address
     {
     public:
       typedef uint8_t Value[32];
+      typedef uint8_t Flags;
+      static const int flag_byte = 31;
       Address();
       Address(Value bytes);
+      Address(Value bytes, Flags flags);
       Address(elle::UUID const& id);
       bool
       operator ==(Address const& rhs) const;
@@ -30,6 +40,10 @@ namespace infinit
       bool
       operator <(Address const& rhs) const;
       ELLE_ATTRIBUTE_R(Value, value);
+      ELLE_ATTRIBUTE_R(uint8_t, overwritten_value);
+      Address unflagged() const; ///< Return initial address not masked by flags
+      Flags  flags() const;
+      bool mutable_block() const; ///< True if flags contain mutable_block
       friend
       std::ostream&
       operator << (std::ostream& out, Address const& k);

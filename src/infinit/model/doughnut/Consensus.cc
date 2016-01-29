@@ -2,6 +2,7 @@
 
 #include <elle/os/environ.hh>
 
+#include <infinit/storage/MissingKey.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -83,7 +84,22 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
                            *this, address, local_version);
-          return this->_fetch(address, std::move(local_version));
+          try
+          {
+            return this->_fetch(address, local_version);
+          }
+          catch (storage::MissingKey const&)
+          {
+            auto uaddr = address.unflagged();
+            if (uaddr != address)
+            {
+              ELLE_TRACE("%s: retrying with unflagged address %s", *this, uaddr);
+              // NOTE: that would be a nice spot to upgrade the block
+              return this->_fetch(uaddr, local_version);
+            }
+            else
+              throw;
+          }
         }
 
         std::unique_ptr<blocks::Block>

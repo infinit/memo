@@ -14,12 +14,22 @@ namespace infinit
       : _value()
     {
       memset(this->_value, 0, sizeof(Address::Value));
+      this->_overwritten_value = this->_value[flag_byte];
     }
 
     Address::Address(Value value)
       : _value()
     {
       ::memcpy(this->_value, value, sizeof(Value));
+      this->_overwritten_value = this->_value[flag_byte];
+    }
+
+    Address::Address(Value value, Flags flags)
+      : _value()
+    {
+      ::memcpy(this->_value, value, sizeof(Value));
+      this->_overwritten_value = this->_value[flag_byte];
+      this->_value[flag_byte] = flags;
     }
 
     Address::Address(elle::UUID const& id)
@@ -27,6 +37,27 @@ namespace infinit
                   elle::ConstWeakBuffer(id.data, id.static_size()),
                   infinit::cryptography::Oneway::sha256).contents())
     {}
+
+    Address
+    Address::unflagged() const
+    {
+      Value v;
+      ::memcpy(v, this->_value, sizeof(Value));
+      v[flag_byte] = this->_overwritten_value;
+      return v;
+    }
+
+    Address::Flags
+    Address::flags() const
+    {
+      return this->_value[flag_byte];
+    }
+
+    bool
+    Address::mutable_block() const
+    {
+      return (flags() & model::flags::block_kind) == flags::mutable_block;
+    }
 
     bool
     Address::operator ==(Address const& rhs) const

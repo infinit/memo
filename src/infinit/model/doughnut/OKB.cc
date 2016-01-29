@@ -37,6 +37,7 @@ namespace infinit
         : _dht(dht)
         , _owner_key(keys.public_key())
         , _signature()
+        , _doughnut(dht)
       {
         if (salt)
           this->_salt = std::move(salt.get());
@@ -60,6 +61,7 @@ namespace infinit
         , _salt(other._salt)
         , _owner_key(other._owner_key)
         , _signature(other._signature)
+        , _doughnut(other._doughnut)
       {}
 
       Address
@@ -72,7 +74,9 @@ namespace infinit
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
-        return Address(hash.contents());
+        return dht.version() >= elle::Version(0, 5, 0)
+          ? Address(hash.contents(), flags::mutable_block)
+          : Address(hash.contents());
       }
       Address
       OKBHeader::_hash_address() const
@@ -83,10 +87,12 @@ namespace infinit
       blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
+        Address expected_address;
         ELLE_DEBUG("%s: check address", *this)
         {
-          auto expected_address = this->_hash_address();
-          if (address != expected_address)
+          expected_address = this->_hash_address();
+          if (address != expected_address
+            && address != expected_address.unflagged())
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
                                         address, expected_address);
@@ -144,20 +150,18 @@ namespace infinit
                               boost::optional<elle::Buffer> salt,
                               cryptography::rsa::KeyPair const& owner_keys)
         : BaseOKB(OKBHeader(owner, owner_keys, std::move(salt)),
-                  owner, std::move(data), owner_keys.private_key())
+                  std::move(data), owner_keys.private_key())
       {}
 
       template <typename Block>
       BaseOKB<Block>::BaseOKB(
         OKBHeader header,
-        Doughnut* owner,
         elle::Buffer data,
         std::shared_ptr<cryptography::rsa::PrivateKey> owner_key)
         : Super(header._hash_address())
         , OKBHeader(std::move(header))
         , _version(-1)
         , _signature()
-        , _doughnut(owner)
         , _owner_private_key(std::move(owner_key))
         , _data_plain()
         , _data_decrypted(true)
@@ -171,7 +175,6 @@ namespace infinit
         , OKBHeader(other)
         , _version{other._version}
         , _signature(other._signature)
-        , _doughnut{other._doughnut}
         , _owner_private_key(other._owner_private_key)
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
@@ -370,6 +373,9 @@ namespace infinit
             return blocks::ValidationResult::failure("invalid signature");
           }
         }
+        // Upgrade from unmasked address if required, *after* checking signature
+        if (this->_doughnut->version() >= elle::Version(0, 5, 0))
+          elle::unconst(this)->_address = this->_hash_address();
         return blocks::ValidationResult::success();
       }
 
@@ -403,7 +409,6 @@ namespace infinit
                               elle::Version const& version)
         : Super(s, version)
         , OKBHeader(s, version)
-        , _doughnut(nullptr)
         , _owner_private_key()
         , _data_plain()
         , _data_decrypted(false)

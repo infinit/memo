@@ -67,7 +67,7 @@ namespace infinit
         virtual
         elle::Buffer const&
         data() const;
-        ELLE_ATTRIBUTE_R(Address, address);
+        ELLE_ATTRIBUTE_R(Address, address, protected);
         elle::Buffer
         take_data();
 

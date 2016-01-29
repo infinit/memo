@@ -44,6 +44,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>,
                          owner_key);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
+        ELLE_ATTRIBUTE_R(Doughnut*, doughnut, protected);
       protected:
         Address
         _hash_address() const;
@@ -95,11 +96,9 @@ namespace infinit
       protected:
         typedef reactor::BackgroundFuture<elle::Buffer> SignFuture;
         ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
-        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
       private:
         BaseOKB(OKBHeader header,
-                Doughnut* owner,
                 elle::Buffer data,
                 std::shared_ptr<cryptography::rsa::PrivateKey> owner_key);
 
