@@ -33,28 +33,22 @@ assert binary_path is not None
 # Email templates.
 templates = {
   'Drive/Joined': {
-    'noop': 'Drive/Joined',
     'swu': 'tem_RFSDrp7nzCbsBRSUts7MsU',
   },
   'Drive/Invitation': {
-    'noop': 'Drive/Invitation',
     'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
   },
   'Drive/Plain Invitation': {
-    'noop': 'Drive/Plain Invitation',
-    'swu': 'tem_xxxx',
+    'swu': 'tem_j8r5aDLJ6v3CTveMahtauX',
   },
   'Internal/Crash Report': {
-    'noop': 'Internal/Crash Report',
     'swu': 'tem_fu5GEE6jxByj2SB4zM6CrH',
   },
   'User/Welcome': {
-    'noop': 'User/Welcome',
     'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
   },
   'User/Confirmation Email': {
-    'noop': 'User/Confirmation Email',
-    'swu': 'tem_xxxx',
+    'swu': 'tem_j8r5aDLJ6v3CTveMahtauX',
   },
 }
 
@@ -112,7 +106,7 @@ class Beyond:
     if isinstance(self.__emailer, emailer.SendWithUs):
       return templates[name]['swu']
     else:
-      return templates[name]['noop']
+      return name
 
   @property
   def dropbox_app_secret(self):
