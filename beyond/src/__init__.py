@@ -373,7 +373,7 @@ class User:
   def confirmation_url(self, email):
     assert self.confirmation_code(email) is not None
     from urllib.parse import urlencode
-    return '/user/confirm_email_address?' + urlencode({
+    return '/users/confirm_email?' + urlencode({
       'name': self.name,
       'confirmation_code': self.confirmation_code(email),
       'email': email
