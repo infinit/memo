@@ -204,6 +204,7 @@ create_(std::string const& name,
 COMMAND(create)
 {
   bool push = aliased_flag(args, {"push-user", "push"});
+  auto output = get_output(args);
   if (!push)
   {
     if (flag(args, "full") || flag(args, "password"))
@@ -218,8 +219,16 @@ COMMAND(create)
                                optional(args, "key"),
                                optional(args, "email"),
                                optional(args, "fullname"));
-  ifnt.user_save(user);
-  report_action("generated", "user", name, std::string("locally"));
+  if (output)
+  {
+    ifnt.user_save(user, *output);
+    report_exported(*output, "user", user.name);
+  }
+  else
+  {
+    ifnt.user_save(user);
+    report_action("generated", "user", name, std::string("locally"));
+  }
   if (push)
     _push(args, user, false);
 }
@@ -461,6 +470,7 @@ main(int argc, char** argv)
         option_fullname,
         option_push_full,
         option_push_password,
+        option_output("user"),
       },
     },
     {

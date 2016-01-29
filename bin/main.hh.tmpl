@@ -1246,14 +1246,22 @@ namespace infinit
     }
 
     void
-    user_save(User const& user, bool overwrite = false)
+    user_save(User const& user,
+              std::ostream& output)
+    {
+      elle::serialization::json::SerializerOut s(output, false, true);
+      s.serialize_forward(user);
+    }
+
+    void
+    user_save(User const& user,
+              bool overwrite = false)
     {
       auto path = this->_user_path(user.name);
       boost::filesystem::ofstream f;
       this->_open_write(
         f, path, user.name, "user", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(user);
+      user_save(user, f);
       boost::filesystem::permissions(path,
         boost::filesystem::remove_perms
         | boost::filesystem::others_all | boost::filesystem::group_all);
