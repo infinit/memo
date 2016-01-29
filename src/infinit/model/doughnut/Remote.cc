@@ -216,7 +216,7 @@ namespace infinit
           {
             if (this->_doughnut.version() >= elle::Version(0, 4, 0))
             {
-              typedef std::pair<Challenge, Passport*>
+              typedef std::pair<Challenge, std::unique_ptr<Passport>>
               AuthSyn(Passport const&, elle::Version const&);
               RPC<AuthSyn> auth_syn(
                 "auth_syn", *this->_channels, this->_doughnut.version());
@@ -225,7 +225,7 @@ namespace infinit
             }
             else
             {
-              typedef std::pair<Challenge, Passport*>
+              typedef std::pair<Challenge, std::unique_ptr<Passport>>
               AuthSyn(Passport const&);
               RPC<AuthSyn> auth_syn(
                 "auth_syn", *this->_channels, this->_doughnut.version());
