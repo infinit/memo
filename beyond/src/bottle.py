@@ -339,13 +339,14 @@ class Bottle(bottle.Bottle):
     user = self.user_from_name(name = name)
     json = bottle.request.json
     confirmation_code = json.get('confirmation_code')
-    email = json.get('email')
+    email = json.get('email', user.email)
     if user.emails.get(email) == True:
       raise Response(410, {
         'error': 'user/email/alread_confirmed',
         'reason': '\'%s\' as already been confirmed' % email
       })
-    if confirmation_code is None or user.emails.get(email) != confirmation_code:
+    if email is None or confirmation_code is None or \
+       user.emails.get(email) != confirmation_code:
       raise Response(404, {
         'error': 'user/email/XXX',
         'reason': 'confirmation codes don\'t match.' # XXX
