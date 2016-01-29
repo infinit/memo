@@ -7,6 +7,7 @@ import bottle
 import requests
 import threading
 
+import urllib.parse
 from functools import partial
 from itertools import chain
 from datetime import timedelta
@@ -150,6 +151,28 @@ class Beyond:
   @property
   def host(self):
     return 'http://127.0.0.1:%s' % self.__app.port
+
+class Emailer:
+
+  def __init__(self):
+    self.emails = {}
+
+  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
+    self.__store(template, recipient_email, variables)
+
+  def __store(self, template, recipient_email, variables):
+    self.get_specifics(recipient_email, template).append(variables)
+
+  def get(self, email):
+    return self.emails.setdefault(email, {})
+
+  def get_specifics(self, email, template):
+    return self.get(email).setdefault(template, [])
+
+def url_parameters(url):
+  params = urllib.parse.parse_qs(
+    urllib.parse.urlparse(url).query)
+  return {x: params[x][0] for x in params.keys()}
 
 def throws(function, expected = None, json = True):
   try:

@@ -3,31 +3,8 @@
 import infinit.beyond.bottle
 
 import unittest
-import urllib.parse
 
 from utils import *
-
-class Emailer:
-
-  def __init__(self):
-    self.emails = {}
-
-  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
-    self.__store(template, recipient_email, variables)
-
-  def __store(self, template, recipient_email, variables):
-    self.get_specifics(recipient_email, template).append(variables)
-
-  def get(self, email):
-    return self.emails.setdefault(email, {})
-
-  def get_specifics(self, email, template):
-    return self.get(email).setdefault(template, [])
-
-def parameters(url):
-  params = urllib.parse.parse_qs(
-    urllib.parse.urlparse(url).query)
-  return {x: params[x][0] for x in params.keys()}
 
 with Beyond() as beyond:
 
@@ -40,7 +17,7 @@ with Beyond() as beyond:
       user.put(beyond)
       assert 'User/Welcome' in emailer.get(user['email'])
       email = emailer.get_specifics(user['email'], 'User/Welcome').pop()
-      params = parameters(email['confirmation_url'])
+      params = url_parameters(email['confirmation_url'])
       del params['name']
       throws(
         lambda: beyond.post(
@@ -77,10 +54,10 @@ with Beyond() as beyond:
         user['name'], user['email']))
       confirm_2 = emailer.get_specifics(
         user['email'], 'User/Confirmation Email').pop()
-      assertEq(parameters(welcome['confirmation_url']),
-               parameters(confirm_1['confirmation_url']))
-      assertEq(parameters(confirm_1['confirmation_url']),
-               parameters(confirm_2['confirmation_url']))
+      assertEq(url_parameters(welcome['confirmation_url']),
+               url_parameters(confirm_1['confirmation_url']))
+      assertEq(url_parameters(confirm_1['confirmation_url']),
+               url_parameters(confirm_2['confirmation_url']))
 
   if __name__ == '__main__':
     unittest.main()

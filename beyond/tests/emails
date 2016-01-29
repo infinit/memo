@@ -7,29 +7,6 @@ import urllib.parse
 
 from utils import *
 
-_print = print
-def print(*args, **kwargs):
-  import sys
-  kwargs['file'] = sys.stderr
-  _print(*args, **kwargs)
-
-class Emailer:
-
-  def __init__(self):
-    self.emails = {}
-
-  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
-    self.__store(template, recipient_email, variables)
-
-  def __store(self, template, recipient_email, variables):
-    self.get_specifics(recipient_email, template).append(variables)
-
-  def get(self, email):
-    return self.emails.setdefault(email, {})
-
-  def get_specifics(self, email, template):
-    return self.get(email).setdefault(template, [])
-
 # XXX: Test the right send with us template is called.
 with Beyond() as beyond:
 
