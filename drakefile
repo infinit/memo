@@ -18,6 +18,7 @@ installed_binaries = []
 rule_build = None
 rule_check = None
 rule_install = None
+rule_symbols = None
 rule_tests = None
 
 name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
@@ -39,17 +40,17 @@ def configure(
     fuse = None,
     codesign = False,
     beyond: bool = True,
-    symbols_out_dir = None,
     website: bool = True,
 ):
 
   if python3 is not None:
     python = python3
 
-  global rule_build, rule_check, rule_install, rule_tests
+  global rule_build, rule_check, rule_install, rule_symbols, rule_tests
   rule_build = drake.Rule('build')
   rule_check = drake.Rule('check')
   rule_install = drake.Rule('install')
+  rule_symbols = drake.Rule('symbols')
   rule_tests = drake.Rule('tests')
   rule_functional_tests = drake.Rule('functional/tests')
   rule_functional_check = drake.Rule('functional/check')
@@ -494,7 +495,6 @@ def configure(
                                        bin,
                                        bin_sym)
       installed_symbols.append(bin_sym)
-      rule_install << bin_sym
       def add_libraries(binary):
         installed_libraries.extend(binary.dynamic_libraries)
         for lib in binary.dynamic_libraries:
@@ -507,14 +507,11 @@ def configure(
                                      lib,
                                      lib_sym)
     installed_symbols.append(lib_sym)
-    rule_install << lib_sym
 
-  if symbols_out_dir:
-    symbols_out_dir = '%s/%s' % (symbols_out_dir, git.description())
-    for symbol_file in installed_symbols:
-      rule_install << drake.copy(symbol_file,
-                                 symbols_out_dir,
-                                 strip_prefix = True)
+  if prefix:
+    symbols_dir = '%s/%s' % (prefix, git.version())
+    for s in installed_symbols:
+      rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
   ## ----- ##
   ## Share ##
