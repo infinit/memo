@@ -29,6 +29,7 @@ def configure(
     gcs_app_key = '798530033299-phph23et2sptd7auhsif2d75hcqel4lg',
     gcs_app_secret = 'abdwo588jVZO3zV8EUWlmx8o',
     name_regex = '^[-a-z0-9._]+$',
+    binaries = []
 ):
 
   global build, install, package, rule_check, tests
@@ -159,7 +160,9 @@ def configure(
     yield how(cryptography_python_module,
               where / python_prefix, strip_prefix = True)
     yield drake.touch(where / python_prefix / 'infinit/__init__.py')
+
   build = drake.Rule('build')
+  build << binaries
   built = list(install_nodes(where = '.', how = copy_python))
   package = drake.python.Package('beyond', python_prefix, built,
                                  fullname = 'infinit.beyond')
@@ -242,12 +245,21 @@ def configure(
   ]:
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)
+    test.dependencies_add(binaries)
     test.dependencies_add([test_utils])
+    env = {
+      'PYTHONPATH': path,
+    }
+    import os
+    if binaries:
+      binary = binaries[0]
+      env['PATH'] = str(drake.path_build(binary.path(True).dirname(),
+                                         absolute = True))
+      env['PATH'] += ':' + os.environ['PATH']
     runner = drake.Runner(
       exe = test,
-      env = {
-        'PYTHONPATH': path,
-      })
+      env = env
+    )
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 

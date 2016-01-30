@@ -604,6 +604,7 @@ def configure(
         bottle = bottle,
         PatchAndInstall = PatchAndInstall,
         name_regex = name_regex,
+        binaries = installed_binaries,
       )
       rule_check << beyond.rule_check
       for test_name in [
@@ -626,12 +627,18 @@ def configure(
         rule_functional_tests << test
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
+        env = {
+          'PYTHONPATH':
+          drake.path_build('beyond/lib/python%s' % elle.python3.version)
+        }
+        env['PATH'] = str(
+          drake.path_build(installed_binaries[0].path(True).dirname(),
+                           absolute = True))
+        env['PATH'] += ':' + os.environ['PATH']
         runner = drake.Runner(
           exe = test,
-          env = {
-            'PYTHONPATH':
-              drake.path_build('beyond/lib/python%s' % elle.python3.version)
-          })
+          env = env
+        )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests
