@@ -9,23 +9,24 @@
 
     <p>Infinit can be set up to support a large variety of configurations, hence creating storage infrastructure with different tradeoffs between reliability, performance of access, cost etc.</p>
 
-    <p>The following provides you with some examples of deployments along with the commands one would need to use on the machines involved to set up such an environment.</p>
+    <p>The following provides you with some examples of deployments along with the commands one would need to enter on the machines involved in the infrastructure.</p>
 
-    <blockquote class="warning">In order to keep things simple, the examples below follow the same pattern: <strong>Alice</strong> is the user that sets the storage infrastructure up. In addition, Alice accesses a volume from her device A while allowing <strong>Bob</strong> and other users to access it as well from their devices: B, C etc.</blockquote>
+    <blockquote class="warning">In order to keep things simple, the examples below follow the same pattern: <strong>Alice</strong> is the user that sets the storage infrastructure up. Alice accesses a volume from her device A while allowing <strong>Bob</strong> and other users to access it from their respective devices: B, C etc.</blockquote>
 
 
-    <h2 id="centralized-single-server">Centralized on a single server without redundancy</h2>
+    <h2 id="centralized-single-server">Single server</h2>
 
-    <p>In this configuration, all the data will be stored on a single server. While such an infrastructure can be deployed in a matter of minutes, it suffers some several limitations: with no redundancy, should the server crash, the data will become unavailable, temporarily or permanently depending on the nature of the failure. Such a configuration is similar to what services like ownCloud provide.</p>
+    <p>In this configuration, data is stored at a <strong>centralized</strong> location. Since there is a single server involved, the files are <strong>not replicated</strong>. As a result, the availability of the infrastructure cannot be guaranteed. Indeed, would the server fail, all the files would be made inaccessible to the users, temporarily or permanently depending on the failure.</p>
+    <p>This durability/availability limitation should be avoided by involving more servers. However, in some very specific cases, you may want to set up such an infrastructure, to store non-critical data for instance. Note that such a deployment is similar to what other services such as OwnCloud and Pydio provide.</p>
 
-    <img src="${url('images/schema-deployment-one-server.png')}" alt="Schema of Centralized on a single server without redundancy"><br>
+    <img src="${url('images/schema-deployment-one-server.png')}" alt="Illustration of a centralized infrastructure i.e a single server without redundancy"><br>
 
-    <p>Follow the setup configuration:</p>
+    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.):</p>
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#oneserver-a" class="active">Server</a></li>
       <li><a data-tab href="#oneserver-b">Client A</a></li>
-      <li><a data-tab href="#oneserver-c">Client B</a></li>
+      <li><a data-tab href="#oneserver-c">Client B → X</a></li>
     </ul>
 
     <div data-tabs-content class="data-tabs-content">
@@ -63,11 +64,14 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
-    <h2 id="distributed-several-servers">Distributed among several storage servers with redundancy</h2>
+    <h2 id="distributed-several-servers">Multiple servers</h2>
 
-    <img src="${url('images/schema-deployment-multi-servers.png')}" alt="Schema of Distributed among several storage servers with redundancy"><br>
+    <p>This deployment is more reliable than the previous one as it relies on several servers to distribute the storage load so as to <strong>tolerate failures</strong>. In many ways, such a deployment is similar to other systems in the way they are designed: MooseFS, HDFS, XtreemFS and even Dropbox (with the servers reprensenting the underlying object store i.e AWS S3). Such systems are designed to scale within the boundaries of a trusted server infrastructure e.g a controlled data center.</p>
+    <p>The major constraint with this deployment comes from the fact that the servers may not be able to absorb the load of requests coming from the clients. As such, should there be too many clients and not enough servers, those would act as a bottleneck to the whole system. Even worse, should one of the servers fail, the impacted clients would redirect their requests to the remaining servers, overcharging them further and risking to produce a <a href="https://en.wikipedia.org/wiki/Cascading_failure">cascading failure</a>.
 
-    <p>Follow the setup configuration:</p>
+    <img src="${url('images/schema-deployment-multi-servers.png')}" alt="Figure illustrating a storage infrastructure composed of a set of servers with redundancy"><br>
+
+    <p>Follow the steps below to set up such an infrastructure. Note that a replication factor of 2 has been chosen but can be adapted according to your needs and the number of servers involved:</p>
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#multiservers-1" class="active">Server 1</a></li>
@@ -120,10 +124,15 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
+    <h2 id="distributed-client-machines">Clients/Servers</h2>
 
-    <h2 id="distributed-client-machines">Distributed among client machines</h2>
+    <p>This deployment addresses the limitations of the previous ones by distributing the storage load, hence the requests, between a large number of nodes. Indeed, by making use of the unused storage capacity on several client machines, those devices can also act as servers for the other clients.</p>
+    <p>As a result, such a <strong>highly-scalable</strong> distributed deployment, also known as decentralized, can support a large number of clients (by inherently providing a proportinal number of servers), hence removing single points of failure and bottlenecks. The scalability nature of such a deployment also ensures <strong>fault tolerance</strong> as the system will automatically detect failing servers and transparently rebalance the impacted blocks so as to maintain the replication factor defined at the network creation.</p>
 
-    <img src="${url('images/schema-decentralized.png')}" alt="Schema of Distributed among client machines"><br>
+    <img src="${url('images/schema-decentralized.png')}" alt="Illustration of a decentralized environment on which storage capacities from several client machines are aggregated into a peer-to-peer storage infrastructure"><br>
+
+    <p>Noteworthy is that the replication factor you define can drastically change the infrastructure's behavior. For instance, should you set the replication factor to equal the number of storage nodes in the network, all the blocks of all the files would be replicated on every machine acting as a server (i.e contributing storage capacity). Such a configuration would be equivalent to Bitorrent Sync. Even though having all the files on your machine at any time is interesting for accessibility, it also consumes a lot of your local storage capacity.</p>
+    <p>Alternatively, you could set up a replication factor high enough for all the files to be available even if some of the machines are turned off without requiring all the computers to store a replica of all the files. Depending on the volatily of the nodes, the replication factor could be 3, 5, 7 or even more. Note however that it must never exceeds the number of storage nodes in your infrastructure.</p>
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#distributed-a" class="active">Client/Server A</a></li>
@@ -156,6 +165,50 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
 </code></pre>
       </div>
     </div>
+
+    <!--
+    <h2 id="distributed-client-clouds">Clients/Servers & Clouds</h2>
+
+    <p>XXX</p>
+    <p>This deployment is more reliable than the previous one as it relies on several servers to distribute the storage load so as to <strong>tolerate failures</strong>. In many ways, such a deployment is similar to other systems in the way they are designed: MooseFS, HDFS, XtreemFS and even Dropbox (with the servers reprensenting the underlying object store i.e AWS S3). Such systems are designed to scale within the boundaries of a trusted server infrastructure e.g a controlled data center.</p>
+    <p>The major constraint with this deployment comes from the fact that the servers may not be able to absorb the load of requests coming from the clients. As such, should there be too many clients and not enough servers, those would act as a bottleneck to the whole system. Even worse, should one of the servers fail, the impacted clients would redirect their requests to the remaining servers, overcharging them further and risking to produce a <a href="https://en.wikipedia.org/wiki/Cascading_failure">cascading failure</a>.
+
+    <p>Follow the steps below to set up such an infrastructure. Note that a replication factor of 2 has been chosen but can be adapted according to your needs and the number of servers involved:</p>
+
+    <img src="${url('images/schema-decentralized.png')}" alt="Illustration of a decentralized environment on which storage capacities from several client machines are aggregated into a peer-to-peer storage infrastructure"><br>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#distributed-a" class="active">Client/Server A</a></li>
+      <li><a data-tab href="#distributed-b">Client/Server B → X</a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="distributed-a">
+<pre><code>$> infinit-storage --create --filesystem --capacity 10GB --name local
+$> infinit-network --create --as alice --storage local --kelips --k 1 --replication-factor 5 --name cluster --push
+$> infinit-volume --create --as alice --network cluster --name shared --push
+
+$> infinit-user --fetch --name bob
+$> infinit-passport --create --as alice --network cluster --user bob --push
+
+$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="distributed-b">
+<pre><code>$> infinit-network --fetch --as alice
+
+$> infinit-network --fetch --as bob
+$> infinit-volume --fetch --as bob
+$> infinit-passport --fetch --as bob
+
+$> infinit-storage --create --filesystem --capacity 10GB --name local
+$> infinit-network --link --as bob --name alice/cluster --storage local
+
+$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+    </div>
+  -->
   <section>
 
 </%block>
