@@ -65,7 +65,8 @@ class Beyond:
       gcs_app_secret,
       sendwithus_api_key = None,
       validate_email_address = True,
-      limits = {}
+      limits = {},
+      delegate_user = 'the-hub',
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
@@ -81,6 +82,7 @@ class Beyond:
       self.__emailer = emailer.SendWithUs(sendwithus_api_key)
     else:
       self.__emailer = emailer.NoOp()
+    self.__delegate_user = delegate_user
 
   @property
   def limits(self):
@@ -138,6 +140,10 @@ class Beyond:
       return True
     except exceptions.InvalidFormat as e:
       return False
+
+  @property
+  def delegate_user(self):
+    return self.__delegate_user
 
   ## ------- ##
   ## Pairing ##
@@ -237,14 +243,14 @@ class Beyond:
     errors = []
     try:
       try:
-        beyond = self.user_get('hub')
+        beyond = self.user_get(self.delegate_user)
       except User.NotFound:
-        raise Exception('Unknown user \'hub\'')
+        raise Exception('Unknown user \'%s\'' % self.delegate_user)
       import tempfile
       with tempfile.TemporaryDirectory() as directory:
         env = {
           'INFINIT_DATA_HOME': str(directory),
-          'INFINIT_USER': 'hub',
+          'INFINIT_USER': self.delegate_user,
         }
         import os
         import json
@@ -275,7 +281,7 @@ class Beyond:
                 binary_path + 'infinit-passport', '--create',
                 '--user', user.name,
                 '--network', network.name,
-                '--as', 'hub'
+                '--as', self.delegate_user,
               ],
               env = env)
             output = subprocess.check_output(

@@ -179,16 +179,7 @@ class Beyond():
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
     self.__gcs = FakeGCS()
-    self.__hub_user = {
-      "email": "hun@infini.io",
-      "name": "hub",
-      "private_key": {
-        "rsa": "MIIEowIBAAKCAQEAspp/p8TnTRLao+KeBnz1tvlAC3UKAjXOmfyVJw0Lpe29mxbnAq3uUD8Um5t5jHwYX3P8r+FOL83Yt41Y+dkbWM3hQoYA2Et4ypDRUQ3k+ku6kNHkRhRY9nmAhHM9L8C5VlcYQG197mN/+h9sS1EarYV/BawY4VIcEj7z65Xv6Z0YYvEgjLXjlDmUPEg1wZOA2mcx8RcTyhvok5sl7WWO0J00sZSFqTHCFpZFiBY49cCax2+EuXMdlqlcnKZvWtQVQc5JR4T1vccx+TJUM3JeZpKNAVCI9von2CxXaqCaDwN3D9B6V7cgFW8j+PSSQFjri2341/zkK37IkicJAi/vqQIDAQABAoIBACdc/b2QHBpUiXONQp7Tc6Q8Eu1zgh0ylrJBhO3yZhrP5vYDei6Q/vEYtgYFoihgQU7oVUy+L2lByP3LXUzTmL9dwMPUnOMO3zRl7nwav9iaUCgS2mjHm0PXS4fljhq0MyTgVSv99b9QlqgdvNRsr6CGx5QMdf9TBXTQAxptFU87Ph5O8KrX8wgmFcWqSNEPh6yT9fhl9E0KxkuWh0x2zf8NpsUrBP1CQRhJsxtraTLfKTy8OowVYcx9mHAj4MHg2LVqjRn/QXN4IPdyU5wHMKk95Tf8sLByn0lAfiYM0SMUjy428ueY01WTl0+sN4lSJkHJ7Oz8fajMWeIQhm+wmrECgYEA1/nGE5XndPH82idwXcauGIWTW/jIJAI2VoqHHl7CW0Jw4Q1AeyyJB+3Tu+lUjNwTHDgq0fEjXyup1Hv2diPZecoiw/UWDqMHGawN9JXz/V6ro56eQN3jAuwg15Xig36CtEw8Ay9NdnD7pK/9h8vGsmtqwH3BR0qFR5PX33PE4VMCgYEA07O6/A9BCQpKYB7ovlPu9xxm5Y907HdyqYfSrz2RXP7m0VvXp18cB+KqqCfkipj/ckv2qAA/ng6P/43b+6o5li5g0wM83GwJ0UXIFeoClcTKXlP8x531eVwP58nFsDHUKd3F7hLdmBbAizVV6WQqKFL7g/H+K9mjCTW0vskQn5MCgYAjo/1S+BblDpX6bi212/aY51olAE4O2yqaZ2va0Cpkovc7vFMawIOwgkfBp8SjJiIlMwOl95QtvWfeP8KxRkM6POg1zDkimzatvt3iseg8tKXAb4mQDM3Miqj0yrBBoNvy4u24XNL8q7JrP/unsDIO+Xj5YQdHO335DOW/4zvnLwKBgQCD+Ch59LBgCFAw91OzQfNXjBcAx5rlxdhuokLOBx1U0XnlzND0fy+kIsKrrKKlW5byEzShqfX+e6l8b1xQ196qJiMpp30LEzZThKKkNoqB/nkAsG6FqYxaqO8pWPipS4asypkWPiBxLM2+efMiWNSG6qPrrrD5eORPW3Fe9UwtjQKBgFHLxxn0SX34IBTdQrNFmP4oUK2CW7s86S7XvfzPxgbTj1nAhooJBfjp6OuKPdKlvGKueEwJ+w4ZMPPU8cnXQpSLU2Amifz5LU0vwphAd+Lw2rK878ku1PZSHJPddqbKcpr/swOm0frRWt8jY8RKzADpqmVRZebUleuDmJZ5d25H"
-      },
-      "public_key": {
-        "rsa": "MIIBCgKCAQEAspp/p8TnTRLao+KeBnz1tvlAC3UKAjXOmfyVJw0Lpe29mxbnAq3uUD8Um5t5jHwYX3P8r+FOL83Yt41Y+dkbWM3hQoYA2Et4ypDRUQ3k+ku6kNHkRhRY9nmAhHM9L8C5VlcYQG197mN/+h9sS1EarYV/BawY4VIcEj7z65Xv6Z0YYvEgjLXjlDmUPEg1wZOA2mcx8RcTyhvok5sl7WWO0J00sZSFqTHCFpZFiBY49cCax2+EuXMdlqlcnKZvWtQVQc5JR4T1vccx+TJUM3JeZpKNAVCI9von2CxXaqCaDwN3D9B6V7cgFW8j+PSSQFjri2341/zkK37IkicJAi/vqQIDAQAB"
-      }
-    }
+    self.__hub_delegate_user = None
 
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
@@ -233,12 +224,22 @@ class Beyond():
       raise Exception("Server is already dead")
     # Register hub user.
     import requests
+    self.__hub_delegate_user = {
+      'email': 'hub@infini.io',
+      'name': self.__beyond.delegate_user,
+      'private_key': {
+        'rsa': 'MIIEowIBAAKCAQEAspp/p8TnTRLao+KeBnz1tvlAC3UKAjXOmfyVJw0Lpe29mxbnAq3uUD8Um5t5jHwYX3P8r+FOL83Yt41Y+dkbWM3hQoYA2Et4ypDRUQ3k+ku6kNHkRhRY9nmAhHM9L8C5VlcYQG197mN/+h9sS1EarYV/BawY4VIcEj7z65Xv6Z0YYvEgjLXjlDmUPEg1wZOA2mcx8RcTyhvok5sl7WWO0J00sZSFqTHCFpZFiBY49cCax2+EuXMdlqlcnKZvWtQVQc5JR4T1vccx+TJUM3JeZpKNAVCI9von2CxXaqCaDwN3D9B6V7cgFW8j+PSSQFjri2341/zkK37IkicJAi/vqQIDAQABAoIBACdc/b2QHBpUiXONQp7Tc6Q8Eu1zgh0ylrJBhO3yZhrP5vYDei6Q/vEYtgYFoihgQU7oVUy+L2lByP3LXUzTmL9dwMPUnOMO3zRl7nwav9iaUCgS2mjHm0PXS4fljhq0MyTgVSv99b9QlqgdvNRsr6CGx5QMdf9TBXTQAxptFU87Ph5O8KrX8wgmFcWqSNEPh6yT9fhl9E0KxkuWh0x2zf8NpsUrBP1CQRhJsxtraTLfKTy8OowVYcx9mHAj4MHg2LVqjRn/QXN4IPdyU5wHMKk95Tf8sLByn0lAfiYM0SMUjy428ueY01WTl0+sN4lSJkHJ7Oz8fajMWeIQhm+wmrECgYEA1/nGE5XndPH82idwXcauGIWTW/jIJAI2VoqHHl7CW0Jw4Q1AeyyJB+3Tu+lUjNwTHDgq0fEjXyup1Hv2diPZecoiw/UWDqMHGawN9JXz/V6ro56eQN3jAuwg15Xig36CtEw8Ay9NdnD7pK/9h8vGsmtqwH3BR0qFR5PX33PE4VMCgYEA07O6/A9BCQpKYB7ovlPu9xxm5Y907HdyqYfSrz2RXP7m0VvXp18cB+KqqCfkipj/ckv2qAA/ng6P/43b+6o5li5g0wM83GwJ0UXIFeoClcTKXlP8x531eVwP58nFsDHUKd3F7hLdmBbAizVV6WQqKFL7g/H+K9mjCTW0vskQn5MCgYAjo/1S+BblDpX6bi212/aY51olAE4O2yqaZ2va0Cpkovc7vFMawIOwgkfBp8SjJiIlMwOl95QtvWfeP8KxRkM6POg1zDkimzatvt3iseg8tKXAb4mQDM3Miqj0yrBBoNvy4u24XNL8q7JrP/unsDIO+Xj5YQdHO335DOW/4zvnLwKBgQCD+Ch59LBgCFAw91OzQfNXjBcAx5rlxdhuokLOBx1U0XnlzND0fy+kIsKrrKKlW5byEzShqfX+e6l8b1xQ196qJiMpp30LEzZThKKkNoqB/nkAsG6FqYxaqO8pWPipS4asypkWPiBxLM2+efMiWNSG6qPrrrD5eORPW3Fe9UwtjQKBgFHLxxn0SX34IBTdQrNFmP4oUK2CW7s86S7XvfzPxgbTj1nAhooJBfjp6OuKPdKlvGKueEwJ+w4ZMPPU8cnXQpSLU2Amifz5LU0vwphAd+Lw2rK878ku1PZSHJPddqbKcpr/swOm0frRWt8jY8RKzADpqmVRZebUleuDmJZ5d25H'
+      },
+      'public_key': {
+        'rsa': 'MIIBCgKCAQEAspp/p8TnTRLao+KeBnz1tvlAC3UKAjXOmfyVJw0Lpe29mxbnAq3uUD8Um5t5jHwYX3P8r+FOL83Yt41Y+dkbWM3hQoYA2Et4ypDRUQ3k+ku6kNHkRhRY9nmAhHM9L8C5VlcYQG197mN/+h9sS1EarYV/BawY4VIcEj7z65Xv6Z0YYvEgjLXjlDmUPEg1wZOA2mcx8RcTyhvok5sl7WWO0J00sZSFqTHCFpZFiBY49cCax2+EuXMdlqlcnKZvWtQVQc5JR4T1vccx+TJUM3JeZpKNAVCI9von2CxXaqCaDwN3D9B6V7cgFW8j+PSSQFjri2341/zkK37IkicJAi/vqQIDAQAB'
+      }
+    }
     kwargs = {
       'headers': {'Content-Type': 'application/json'},
-      'data': json.dumps(self.__hub_user)
+      'data': json.dumps(self.hub_delegate_user)
     }
     res = requests.request(
-      url = '%s/users/%s' % (self.domain, self.__hub_user['name']),
+      url = '%s/users/%s' % (self.domain, self.hub_delegate_user['name']),
       method = 'PUT',
       **kwargs)
     res.raise_for_status()
@@ -254,6 +255,10 @@ class Beyond():
   @emailer.setter
   def emailer(self, emailer):
     setattr(self.__beyond, '_Beyond__emailer', emailer)
+
+  @property
+  def hub_delegate_user(self):
+    return self.__hub_delegate_user
 
   @property
   def domain(self):

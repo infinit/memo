@@ -30,6 +30,7 @@ def configure(
     gcs_app_secret = 'abdwo588jVZO3zV8EUWlmx8o',
     email_regex = '^[^@]+@[^@]+\.[^@]+$',
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
+    delegate_user = 'the-hub',
     backend = []
 ):
 
@@ -79,6 +80,7 @@ def configure(
       'gcs_app_secret': gcs_app_secret,
       'email_regex': email_regex,
       'name_regex': name_regex,
+      'delegate_user': delegate_user,
   }):
     drake.node('beyond.tmpl')
     drake.node('src/wsgi.py.tmpl')

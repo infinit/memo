@@ -199,14 +199,46 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
            '--push'])
   emails = ['alice@infinit.io', 'serge@infinit.io', 'eve@infinit.io']
   # Doesn't work because you don't have 'hub's passport' locally.
-  # bob.run(['infinit-drive', '--invite',
-  #          '--name', 'drive',
-  #          '--email', emails[0],
-  #          '--push'], return_code = 1)
+  try:
+    bob.run(['infinit-drive', '--invite',
+             '--name', 'drive',
+             '--as', 'user',
+             '--email', emails[0],
+             '--push'])
+    unreachable()
+  except Exception as e:
+    assertIn(
+      'you must create a passport for "%s"' % beyond.hub_delegate_user['name'],
+      e.args[0]
+    )
   bob.run(['infinit-user', '--fetch',
            '--as', 'user',
-           '--name', 'hub'])
-
+           '--name', beyond.hub_delegate_user['name']])
+  bob.run(['infinit-passport', '--create',
+           '--as', 'user',
+           '--network', 'network',
+           '--user', beyond.hub_delegate_user['name']])
+  # Still doesn't work because the passport is not '--allow-sign'
+  try:
+    bob.run(['infinit-drive', '--invite',
+             '--name', 'drive',
+             '--as', 'user',
+             '--email', emails[0],
+             '--push'])
+    unreachable()
+  except Exception as e:
+    assertIn(
+      'Missing --allow-sign flag for %s' % beyond.hub_delegate_user['name'],
+      e.args[0])
+  bob.run(['infinit-passport', '--delete',
+           '--as', 'user',
+           '--network', 'network',
+           '--user', beyond.hub_delegate_user['name']])
+  bob.run(['infinit-passport', '--create',
+           '--as', 'user',
+           '--network', 'network',
+           '--allow-sign',
+           '--user', beyond.hub_delegate_user['name']])
   def register(email):
     name = email.split('@')[0]
     with Infinit(beyond = beyond) as invitee:
