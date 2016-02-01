@@ -104,16 +104,14 @@ COMMAND(push)
   beyond_push("volume", name, volume, owner);
 }
 
-static void
-pull(variables_map const& args)
+COMMAND(pull)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   beyond_delete("volume", name, owner);
 }
 
-static void
-delete_(variables_map const& args)
+COMMAND(delete_)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
@@ -815,12 +813,12 @@ main(int argc, char** argv)
     option_cache_ttl,
     option_cache_invalidation,
     { "fetch-endpoints", bool_switch(),
-      elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
+      elle::sprintf("fetch endpoints from %s", beyond(true)) },
     { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
       "peer to connect to (host:port)" },
     { "push-endpoints", bool_switch(),
-      elle::sprintf("push endpoints to %s", beyond(true)).c_str() },
+      elle::sprintf("push endpoints to %s", beyond(true)) },
     { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
@@ -840,10 +838,10 @@ main(int argc, char** argv)
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
         { "push-volume", bool_switch(),
-          elle::sprintf("push the volume to %s", beyond(true)).c_str() },
+          elle::sprintf("push the volume to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-volume" },
         { "default-permissions,d", value<std::string>(),
-          "Default permissions(r, rw), defaults to none"},
+          "default permissions(r, rw), defaults to none"},
       },
     },
     {
@@ -858,7 +856,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a volume from %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch a volume from %s", beyond(true)),
       &fetch,
       "",
       {
@@ -880,7 +878,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a volume to %s", beyond(true)).c_str(),
+      elle::sprintf("Push a volume to %s", beyond(true)),
       &push,
       "--name VOLUME",
       {
@@ -912,7 +910,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a volume from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a volume from %s", beyond(true)),
       &pull,
       "--name VOLUME",
       {
