@@ -119,6 +119,12 @@ def configure(
     'templates/pages/home.html',
     'templates/pages/drive.html',
     'templates/pages/faq.html',
+    'templates/pages/opensource.html',
+    'templates/pages/pricing.html',
+    'templates/pages/solutions.html',
+    'templates/pages/about.html',
+    'templates/pages/contact.html',
+    'templates/pages/legal.html',
     'templates/pages/docs/menu.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
@@ -131,12 +137,7 @@ def configure(
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
     'templates/pages/docs/changelog.html',
-    'templates/pages/opensource.html',
-    'templates/pages/pricing.html',
-    'templates/pages/solutions.html',
-    'templates/pages/about.html',
-    'templates/pages/contact.html',
-    'templates/pages/legal.html',
+    'templates/pages/users/confirm_email.html',
   ) + generated
 
   resources = drake.nodes(
@@ -254,6 +255,10 @@ def configure(
     'resources/images/icons/bracket-right.png',
     'resources/images/icons/bracket-right@2x.png',
     'resources/images/icons/arrow-down.png',
+    'resources/images/icons/email-confirmed.png',
+    'resources/images/icons/email-confirmed@2x.png',
+    'resources/images/icons/email-unconfirmed.png',
+    'resources/images/icons/email-unconfirmed@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',

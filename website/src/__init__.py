@@ -244,6 +244,17 @@ class Website(bottle.Bottle):
         return {}
     return {}
 
+  @route('/users/confirm_email', name = 'confirm_email')
+  @view('pages/users/confirm_email.html')
+  def root(self):
+
+    #todo
+
+    return {
+      'title': 'Confirm Email',
+      'description': 'Confirm your email and start using Infinit.',
+    }
+
   @route('/css/<path:path>')
   @route('/fonts/<path:path>')
   @route('/images/<path:path>')
