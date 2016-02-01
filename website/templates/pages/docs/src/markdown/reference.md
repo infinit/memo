@@ -71,11 +71,11 @@ Create options:
   -n [ --name ] arg      User name (default: system user)
   -k [ --key ] arg       RSA key pair in PEM format - e.g. your SSH key
                          (default: generate key pair)
-  --push-user            push the user to the Hub
-  -p [ --push ]          alias for --push-user
-  --email arg            valid email address (mandatory when using --push-user)
-  --fullname arg         fullname of the user (optional)
-  --full                 include private key in order to facilitate device
+  --push-user            Push the user to the Hub
+  -p [ --push ]          Alias for --push-user
+  --email arg            Valid email address (mandatory when using --push-user)
+  --fullname arg         Fullname of the user (optional)
+  --full                 Include private key in order to facilitate device
                          pairing and fetching lost keys
   --password arg         Password to authenticate with the Hub. Used with
                          --full (default: prompt for password)
