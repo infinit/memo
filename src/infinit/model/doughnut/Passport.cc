@@ -62,7 +62,8 @@ namespace infinit
           }
           catch (elle::Error const& e)
           {
-            ELLE_LOG("Passport deserialization error, assuming older version");
+            ELLE_TRACE(
+              "Passport deserialization error, assuming older version");
           }
       }
 
