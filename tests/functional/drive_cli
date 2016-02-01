@@ -129,9 +129,6 @@ with Beyond() as beyond,\
   for name in ['god1', 'god2', 'god3']:
     users += ['--user', name]
 
-  # Invite a couple of users without pushing.
-  bob.run(['infinit-drive', '--as', 'bob',
-           '--invite', 'employees'] + users)
   # They do not have passports.
   bob.run(['infinit-drive', '--as', 'bob',
            '--invite', 'employees',
