@@ -810,8 +810,14 @@ namespace infinit
             if (a.accepted()->proposal != proposal)
               throw elle::Error("different acceptations in quorum"); // FIXME
             if (++count > signed(quorum.size()) / 2)
-              return a.accepted()->
-                value.get<std::shared_ptr<blocks::Block>>()->clone();
+            {
+              auto block = a.accepted()->
+                value.get<std::shared_ptr<blocks::Block>>();
+              auto mblock = dynamic_cast<blocks::MutableBlock*>(block.get());
+              if (mblock && local_version && mblock->version() == *local_version)
+                return {};
+              return block->clone();
+            }
           }
           ELLE_TRACE("too few peers: %s", hits.size());
           throw athena::paxos::TooFewPeers(hits.size(), quorum.size());
