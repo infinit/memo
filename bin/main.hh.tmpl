@@ -164,7 +164,8 @@ void
 not_found(std::string const& name,
           std::string const& type)
 {
-  std::cerr << elle::sprintf("%s %s not found on %s", type, name, beyond(true))
+  std::cerr << elle::sprintf("%s %s not found on %s, ensure it has been pushed",
+                             type, name, beyond(true))
             << std::endl;
 }
 
