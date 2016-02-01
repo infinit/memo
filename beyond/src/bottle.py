@@ -817,7 +817,7 @@ class Bottle(bottle.Bottle):
         continue
       invitee = self.__user_from_name_or_email(name, throws = False)
       if invitee is None:
-        raise self.__not_found('user', user)
+        raise self.__not_found('user', name)
       invitees[name] = invitee
       if isinstance(invitees[name], User):
         self.__drive_integrity(drive, passport = name)
