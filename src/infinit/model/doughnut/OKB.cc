@@ -51,7 +51,7 @@ namespace infinit
         }
         auto owner_key_buffer =
           elle::serialization::json::serialize(
-            *this->_owner_key, elle_serialization_version(*this->_dht));
+            *this->_owner_key, elle::Version(0,0,0));
         owner_key_buffer.append(_salt.contents(), _salt.size());
         this->_signature = keys.k().sign(owner_key_buffer);
       }
@@ -70,7 +70,7 @@ namespace infinit
                               elle::Buffer const& salt)
       {
         auto key_buffer = elle::serialization::json::serialize(
-          key, elle_serialization_version(dht));
+          key, elle::Version(0,0,0));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
@@ -103,7 +103,7 @@ namespace infinit
         ELLE_DEBUG("%s: check owner key", *this)
         {
           auto owner_key_buffer = elle::serialization::json::serialize(
-            *this->_owner_key, elle_serialization_version(*this->_dht));
+            *this->_owner_key, elle::Version(0, 0, 0));
           owner_key_buffer.append(_salt.contents(), _salt.size());
           if (!this->_owner_key->verify(
                 this->OKBHeader::_signature, owner_key_buffer))
