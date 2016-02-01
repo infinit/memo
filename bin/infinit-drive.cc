@@ -8,6 +8,8 @@ ELLE_LOG_COMPONENT("infinit-drive");
 
 #include <main.hh>
 
+#include <email.hh>
+
 infinit::Infinit ifnt;
 
 using boost::program_options::variables_map;
@@ -83,62 +85,48 @@ COMMAND(create)
 }
 
 static
-std::vector<std::string>
-_create_passports(
-  std::unordered_map<std::string, infinit::Drive::User> const& invitees,
-  std::string const& owner,
-  infinit::Drive const& drive)
+void
+push_passport(infinit::Network const& network,
+              infinit::Passport const& passport,
+              infinit::User const& user,
+              infinit::User const& owner)
 {
-  using Passport = infinit::model::doughnut::Passport;
-
-  std::vector<std::string> new_passports;
-  auto self = ifnt.user_get(owner);
-  for (auto const& invitee: invitees)
-  {
-    if (invitee.first == owner)
-      continue;
-
-    try
-    {
-      ifnt.passport_get(drive.network, invitee.first);
-      /* If it exists, then do nothing. */
-    }
-    catch(MissingLocalResource const& e)
-    {
-      // Generate passport for this user.
-      auto user = ifnt.user_get(invitee.first);
-      auto pass = Passport(user.public_key,
-                           drive.network,
-                           infinit::cryptography::rsa::KeyPair(
-                             self.public_key, self.private_key.get()));
-      ifnt.passport_save(pass);
-      new_passports.push_back(user.name);
-      report_created("passport",
-                     elle::sprintf("%s: %s", drive.network, invitee.first));
-    }
-  }
-
-  return new_passports;
+  auto url = elle::sprintf("networks/%s/passports/%s", network.name, user.name);
+  beyond_push(url,
+              "passport",
+              elle::sprintf("%s: %s", network.name, user.name),
+              passport,
+              owner);
 }
 
 static
 void
-_push_passports(infinit::Drive const& drive,
-                std::vector<std::string> const& users,
-                infinit::User const& owner)
+create_passport(infinit::User const& user,
+                infinit::Network const& network,
+                infinit::User const& owner,
+                bool push)
 {
-  for (auto const& user: users)
+  ELLE_TRACE_SCOPE("create_passport");
+  try
   {
-    if (user == owner.name)
-      continue;
-
-    auto passport = ifnt.passport_get(drive.network, user);
-    beyond_push(
-      elle::sprintf("networks/%s/passports/%s", drive.network, user),
-      "passport",
-      elle::sprintf("%s: %s", drive.network, user),
-      passport,
-      owner);
+    auto passport = ifnt.passport_get(network.name, user.name);
+    ELLE_DEBUG("passport (%s: %s) found", network.name, user.name);
+    if (push)
+      push_passport(network, passport, user, owner);
+  }
+  catch (MissingResource const& e)
+  {
+    auto passport = infinit::Passport(
+      user.public_key,
+      network.name,
+      infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                          owner.private_key.get()));
+    ELLE_DEBUG("passport (%s: %s) created", network.name, user.name);
+    ifnt.passport_save(passport);
+    report_created("passport",
+                   elle::sprintf("%s: %s", network.name, user.name));
+    if (push)
+      push_passport(network, passport, user, owner);
   }
 }
 
@@ -148,7 +136,8 @@ _push_passports(infinit::Drive const& drive,
  */
 static
 void
-_update_local_json(infinit::Drive& drive,
+_update_local_json(
+  infinit::Drive& drive,
   std::unordered_map<std::string, infinit::Drive::User> const& invitations)
 {
   for (auto const& invitation: invitations)
@@ -174,23 +163,22 @@ COMMAND(invite)
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
   auto home = flag(args, "home");
-  std::string permissions{"rw"};
+  auto emails = optional<std::vector<std::string>>(args, "email");
+  auto users = optional<std::vector<std::string>>(args, "user");
+  bool push = aliased_flag(args, { "push-invitations", "push" });
+  ELLE_DEBUG("push: %s", push);
+  if (!emails && !users && !push)
+    throw CommandLineError("specify users using --user and/or --email");
+  bool generate_passports = flag(args, "passports");
+  ELLE_DEBUG("generate passports: %s", generate_passports);
+  if (emails)
   {
-    auto o = optional(args, "permissions");
-    if (o)
-      permissions = *o;
+    for (auto const& email: emails.get())
+      valid_email(email);
   }
-
-  auto users_count = args.count("user");
-  auto users = [&] {
-    if (users_count == 0)
-      return std::vector<std::string>();
-    return args["user"].as<std::vector<std::string>>();
-  }();
 
   if (aliased_flag(args, { "fetch", "fetch-drive" }))
   {
-    // First sync the drive from beyond.
     try
     {
       auto url = elle::sprintf("/drives/%s", name);
@@ -201,98 +189,81 @@ COMMAND(invite)
     {
       if (e.what() != std::string("drive/not_found"))
         throw e;
-
       // The drive has not been pushed yet. No need to sync.
     }
   }
 
   auto drive = ifnt.drive_get(name);
-  std::vector<std::string> new_passport_users;
+  auto volume = ifnt.volume_get(drive.volume);
+  auto network = ifnt.network_get(drive.network, owner);
+  auto permissions =
+    volume.default_permissions ? volume.default_permissions.get() : "none";
+
   std::unordered_map<std::string, infinit::Drive::User> invitees;
-
-  // If at least one --user is specified.
-  if (args.count("user") > 0)
+  if (!users && !emails)
   {
-    for (auto const& user: users)
-      invitees[user] = {permissions, "pending", home};
-
-    if (flag(args, "passports"))
-      new_passport_users = _create_passports(invitees, owner.name, drive);
-
-    _update_local_json(drive, std::move(invitees));
+    for (auto const& u: drive.users)
+      invitees[u.first] = u.second;
   }
-  else if (flag(args, "passports"))
+  if (users)
   {
-    for (auto const& user: drive.users)
-      if (user.second.status == "pending")
-        invitees[user.first] = user.second;
-
-    new_passport_users = _create_passports(invitees, owner.name, drive);
+    for (auto const& user_name: users.get())
+      invitees[user_name] = {permissions, "pending", home};
+  }
+  if (emails)
+  {
+    for (auto const& email: emails.get())
+      invitees[email] = {permissions, "pending", home};
   }
 
-  if (aliased_flag(args, { "push-invitations", "push" }))
+  for (auto const& invitee: invitees)
   {
-    if (flag(args, "passports"))
-      _push_passports(drive, new_passport_users, owner);
-
-    // Only used if it invites only one user.
-    std::string url = [&] {
-      if (users.size() == 1)
-      {
-        ELLE_DEBUG("Invite one user");
-        return elle::sprintf("drives/%s/invitations/%s", name, users.front());
-      }
-      else
-      {
-        ELLE_DEBUG("Invite many users");
-        return elle::sprintf("drives/%s/invitations", name);
-      }
-    }();
-
-    ELLE_DUMP("url: %s", url);
-
-    try
+    // Email invitees do not need passports.
+    if (valid_email(invitee.first))
+      continue;
+    auto user = ifnt.user_get(invitee.first);
+    if (generate_passports)
     {
-      if (users.size() == 1)
-      {
-        auto const& user = users.front();
-        auto data = drive.users[user];
-        ELLE_DEBUG("data: %s", data);
-        beyond_push(url, "invitation", elle::sprintf("%s: %s", name, user),
-                    data, owner, true, true);
-      }
-      else
-      {
-        auto user_names = [users] {
-          std::string res;
-          for (auto const& user: users)
-            res += elle::sprintf("%s, ", user);
-          return res.substr(0, res.size() - 2);
-        };
-        beyond_push(url, "invitations",
-                    elle::sprintf("%s: %s", name, user_names()),
-                    drive.users, owner, true, true);
-      }
+      create_passport(user, network, owner, push);
     }
-    catch (MissingResource const& e)
+    else
     {
-      if (e.what() == std::string("user/not_found"))
-        not_found("NAME", "User");
-      else if (e.what() == std::string("drive/not_found"))
-        not_found(name, "Drive");
-      else if (e.what() == std::string("passport/not_found"))
-        not_found("NAME", "Passport");
-      throw;
+      // Ensure that the user has a passport.
+      auto passport = ifnt.passport_get(network.name, user.name);
+      if (push)
+        push_passport(network, passport, user, owner);
     }
-    catch (BeyondError const& e)
+  }
+
+  if (users || emails)
+    _update_local_json(drive, invitees);
+
+  if (push)
+  {
+    auto url = elle::sprintf("drives/%s/invitations", drive.name);
+    for (auto const& invitee: invitees)
     {
-      if (e.error() == std::string("user/not_found"))
-        not_found(e.name_opt(), "User");
-      else if (e.error() == std::string("drive/not_found"))
-        not_found(e.name_opt(), "Drive");
-      else if (e.error() == std::string("passport/not_found"))
-        not_found(e.name_opt(), "Passport");
-      throw;
+      try
+      {
+        beyond_push(
+          elle::sprintf("drives/%s/invitations/%s",drive.name, invitee.first),
+          "invitation",
+          elle::sprintf("%s: %s", drive.name, invitee.first),
+          drive.users[invitee.first],
+          owner,
+          true,
+          true);
+      }
+      catch (BeyondError const& e)
+      {
+        if (e.error() == std::string("user/not_found"))
+          not_found(e.name_opt(), "User");
+        else if (e.error() == std::string("drive/not_found"))
+          not_found(e.name_opt(), "Drive");
+        else if (e.error() == std::string("passport/not_found"))
+          not_found(e.name_opt(), "Passport");
+        throw;
+      }
     }
   }
 }
@@ -503,7 +474,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "created drive name" },
         { "network,N", value<std::string>(), "associated network name" },
-        { "volume,v", value<std::string>(), "associated volume name" },
+        { "volume,V", value<std::string>(), "associated volume name" },
         option_description,
         option_icon,
         { "push-drive", bool_switch(),
@@ -519,10 +490,13 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "drive to invite the user to" },
         { "user,u", value<std::vector<std::string>>()->multitoken(),
-          "users to invite to the drive" },
+          "existing users to invite to the drive via user name" },
+        { "email,e", value<std::vector<std::string>>()->multitoken(),
+          "new users to invite to the drive via email" },
         { "fetch-drive", bool_switch(), "update local drive descriptor" },
         { "fetch,f", bool_switch(), "alias for --fetch-drive" },
-        { "push-drive", bool_switch(), "update remote drive descriptor" },
+        { "push-invitations", bool_switch(),
+          "update remote drive descriptor and send invitations" },
         { "push,p", bool_switch(), "alias for --push-invitations" },
         { "passports", bool_switch(), "create passports for each invitee" },
       },
