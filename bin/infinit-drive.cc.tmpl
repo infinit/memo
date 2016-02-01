@@ -280,6 +280,10 @@ COMMAND(invite)
       {
         if (e.error() == std::string("user/not_found"))
           not_found(e.name_opt(), "User");
+        else if (e.error() == std::string("network/not_found"))
+          not_found(e.name_opt(), "Network");
+        else if (e.error() == std::string("volume/not_found"))
+          not_found(e.name_opt(), "Volume");
         else if (e.error() == std::string("drive/not_found"))
           not_found(e.name_opt(), "Drive");
         else if (e.error() == std::string("passport/not_found"))
