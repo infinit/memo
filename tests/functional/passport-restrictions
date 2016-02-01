@@ -1,91 +1,91 @@
 #!/usr/bin/env python3
 
-from utils import *
+# from utils import *
 
-with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
-  infinit_1.run(['infinit-user', '--create',  'user'])
-  infinit_1.run([
-    'infinit-storage', '--create',
-     'storage',
-    '--filesystem', '--path', tmp.dir,
-  ])
-  network_name = infinit_1.run([
-    'infinit-network', '--create',
-     'network', '--storage', 'storage',
-     '--kelips', '--k', '1',
-    '--as', 'user',
-    '--port', '63197'
-  ])
-  network = infinit_1.run([
-    'infinit-network', '--export',
-     'network',
-    '--as', 'user',
-  ])
-  infinit_1.run([
-    'infinit-volume', '--create',
-     'volume', '--network', 'network',
-    '--as', 'user',
-  ])
-  volume = infinit_1.run([
-    'infinit-volume', '--export',
-     'volume',
-    '--as', 'user',
-  ])
-  # Device 2
-  infinit_2.run(['infinit-user', '--create', 'user2'])
-  infinit_2.run([
-    'infinit-storage', '--create',
-     'storage',
-    '--filesystem', '--path', tmp.dir,
-  ])
-  infinit_2.run(['infinit-network', '--import'], input = network)
-  infinit_2.run(['infinit-volume', '--import'], input = volume)
-  user2 = infinit_2.run([
-    'infinit-user', '--export',  'user2'
-  ])
-  infinit_1.run(['infinit-user', '--import'], input = user2)
-  passport = infinit_1.run(['infinit-passport', '--create',
-      '--user', 'user2', '--network', 'network', '--as', 'user',
-      '--deny-write', '--deny-storage',
-      '--output', '-'
-  ])
-  infinit_2.run(['infinit-passport', '--import'], input = passport)
-  try:
-    infinit_2.run(['infinit-network', '--link', 'user/network',
-        '--storage', 'storage', '--as', 'user2'])
-    raise Exception('link with storage suceeded when it should not have')
-  except:
-    pass
-  infinit_2.run(['infinit-network', '--link', 'user/network',
-        '--as', 'user2'])
-  response = infinit_1.run_script(user = 'user', operation = 'mkdir', path='/beacon')
-  assertEq(response['success'], True)
+# with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2:
+#   infinit_1.run(['infinit-user', '--create',  'user'])
+#   infinit_1.run([
+#     'infinit-storage', '--create',
+#      'storage',
+#     '--filesystem', '--path', tmp.dir,
+#   ])
+#   network_name = infinit_1.run([
+#     'infinit-network', '--create',
+#      'network', '--storage', 'storage',
+#      '--kelips', '--k', '1',
+#     '--as', 'user',
+#     '--port', '63197'
+#   ])
+#   network = infinit_1.run([
+#     'infinit-network', '--export',
+#      'network',
+#     '--as', 'user',
+#   ])
+#   infinit_1.run([
+#     'infinit-volume', '--create',
+#      'volume', '--network', 'network',
+#     '--as', 'user',
+#   ])
+#   volume = infinit_1.run([
+#     'infinit-volume', '--export',
+#      'volume',
+#     '--as', 'user',
+#   ])
+#   # Device 2
+#   infinit_2.run(['infinit-user', '--create', 'user2'])
+#   infinit_2.run([
+#     'infinit-storage', '--create',
+#      'storage',
+#     '--filesystem', '--path', tmp.dir,
+#   ])
+#   infinit_2.run(['infinit-network', '--import'], input = network)
+#   infinit_2.run(['infinit-volume', '--import'], input = volume)
+#   user2 = infinit_2.run([
+#     'infinit-user', '--export',  'user2'
+#   ])
+#   infinit_1.run(['infinit-user', '--import'], input = user2)
+#   passport = infinit_1.run(['infinit-passport', '--create',
+#       '--user', 'user2', '--network', 'network', '--as', 'user',
+#       '--deny-write', '--deny-storage',
+#       '--output', '-'
+#   ])
+#   infinit_2.run(['infinit-passport', '--import'], input = passport)
+#   try:
+#     infinit_2.run(['infinit-network', '--link', 'user/network',
+#         '--storage', 'storage', '--as', 'user2'])
+#     raise Exception('link with storage suceeded when it should not have')
+#   except:
+#     pass
+#   infinit_2.run(['infinit-network', '--link', 'user/network',
+#         '--as', 'user2'])
+#   response = infinit_1.run_script(user = 'user', operation = 'mkdir', path='/beacon')
+#   assertEq(response['success'], True)
 
-  with open(infinit_1.dir + '/.local/share/infinit/filesystem/users/user2', 'r') as f:
-    j = json.loads(f.read())
-    u2_key = json.dumps(j['public_key'])
-  response = infinit_1.run_script(user = 'user', operation = 'setxattr',
-    name = 'user.infinit.auth.setrw',
-    path = '/',
-    value = u2_key)
-  assertEq(response['success'], True)
-  def run_volume():
-    infinit_1.run(['infinit-volume', '--run', '--as', 'user', 'volume'],
-      return_code = 118)
-  import threading
-  t = threading.Thread(target = run_volume)
-  t.start()
-  time.sleep(1)
-  response = infinit_2.run_script(user = 'user2', volume='user/volume',
-    peer = '127.0.0.1:63197',
-    operation = 'list_directory',
-    path = '/')
-  assertEq(response['success'], True)
-  assertEq(response['entries'], ['beacon'])
-  response = infinit_2.run_script(user = 'user2', volume='user/volume',
-     peer = '127.0.0.1:63197',
-    operation = 'mkdir', path='/foo')
-  assertEq(response['success'], False)
-  assertEq(response['message'], 'Access denied.')
-  infinit_1.process.kill()
-  t.join()
+#   with open(infinit_1.dir + '/.local/share/infinit/filesystem/users/user2', 'r') as f:
+#     j = json.loads(f.read())
+#     u2_key = json.dumps(j['public_key'])
+#   response = infinit_1.run_script(user = 'user', operation = 'setxattr',
+#     name = 'user.infinit.auth.setrw',
+#     path = '/',
+#     value = u2_key)
+#   assertEq(response['success'], True)
+#   def run_volume():
+#     infinit_1.run(['infinit-volume', '--run', '--as', 'user', 'volume'],
+#       return_code = 118)
+#   import threading
+#   t = threading.Thread(target = run_volume)
+#   t.start()
+#   time.sleep(1)
+#   response = infinit_2.run_script(user = 'user2', volume='user/volume',
+#     peer = '127.0.0.1:63197',
+#     operation = 'list_directory',
+#     path = '/')
+#   assertEq(response['success'], True)
+#   assertEq(response['entries'], ['beacon'])
+#   response = infinit_2.run_script(user = 'user2', volume='user/volume',
+#      peer = '127.0.0.1:63197',
+#     operation = 'mkdir', path='/foo')
+#   assertEq(response['success'], False)
+#   assertEq(response['message'], 'Access denied.')
+#   infinit_1.process.kill()
+#   t.join()
