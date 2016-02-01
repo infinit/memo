@@ -63,7 +63,7 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
-    <h2 id="distributed">Distributed (several servers)</h2>
+    <h2 id="distributed">Distributed (multiple servers)</h2>
 
     <p>This deployment is more reliable than the previous one as it relies on several servers to <strong>distribute the storage load</strong> so as to <strong>tolerate failures</strong>. In many ways, such a deployment is similar to other systems in the way they are designed: MooseFS, HDFS, XtreemFS and even Dropbox (with the servers reprensenting the underlying object store i.e AWS S3). Such systems are designed to scale within the boundaries of a trusted server infrastructure e.g a controlled data center.</p>
     <p>The major constraint with this deployment comes from the fact that the servers may not be able to absorb the load of requests coming from the clients. As such, should there be too many clients and not enough servers, those would act as a <strong>bottleneck</strong> to the whole system. Even worse, should one of the servers fail, the impacted clients would redirect their requests to the remaining servers, overcharging them further and risking to produce a <a href="https://en.wikipedia.org/wiki/Cascading_failure">cascading failure</a>.
