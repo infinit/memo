@@ -56,6 +56,8 @@ class Infinit(TemporaryDirectory):
       'INFINIT_HOME': self.dir,
       'INFINIT_RDV': ''
     }
+    if 'ELLE_LOG_LEVEL' in os.environ:
+      self.env['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
       self.env['INFINIT_BEYOND'] = self.__beyond.domain
     self.env.update(env)
