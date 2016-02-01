@@ -184,7 +184,15 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'About Infinit',
-      'description': 'Learn about the company and people behind Infinit',
+      'description': 'Learn about the company and people behind Infinit.',
+    }
+
+  @route('/press', name = 'press')
+  @view('pages/press.html')
+  def root(self):
+    return {
+      'title': 'Press Releases',
+      'description': 'See all our press releases and download our press kit.',
     }
 
   @route('/contact', name = 'contact')

@@ -125,6 +125,7 @@ def configure(
     'templates/pages/about.html',
     'templates/pages/contact.html',
     'templates/pages/legal.html',
+    'templates/pages/press.html',
     'templates/pages/docs/menu.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
