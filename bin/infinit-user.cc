@@ -8,6 +8,8 @@
 ELLE_LOG_COMPONENT("infinit-user");
 
 #include <main.hh>
+
+#include <email.hh>
 #include <password.hh>
 
 infinit::Infinit ifnt;
@@ -124,6 +126,8 @@ void
 _push(variables_map const& args, infinit::User& user, bool atomic)
 {
   auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   bool user_updated = false;
   if (!user.email && !email)
   {
@@ -216,9 +220,12 @@ COMMAND(create)
     }
   }
   auto name = get_name(args);
+  auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               optional(args, "email"),
+                               email,
                                optional(args, "fullname"));
   if (output)
   {
@@ -294,9 +301,12 @@ COMMAND(delete_)
 COMMAND(signup_)
 {
   auto name = get_name(args);
+  auto email = mandatory(args, "email");
+  if (!valid_email(email))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               mandatory(args, "email"),
+                               email,
                                optional(args, "fullname"));
   try
   {

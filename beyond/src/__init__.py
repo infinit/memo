@@ -48,7 +48,7 @@ templates = {
     'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
   },
   'User/Confirmation Email': {
-    'swu': 'tem_j8r5aDLJ6v3CTveMahtauX',
+    'swu': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
   },
 }
 
@@ -133,9 +133,11 @@ class Beyond:
     return self.__validate_email_address
 
   def is_email(self, email):
-    import re
-    email_validator = re.compile('[^@]+@[^@]+\.[^@]+')
-    return email_validator.match(email) is not None
+    try:
+      validation.Email('user', 'email')(email)
+      return True
+    except exceptions.InvalidFormat as e:
+      return False
 
   ## ------- ##
   ## Pairing ##
@@ -320,7 +322,7 @@ class User:
   fields = {
     'mandatory': [
       ('name', validation.Name('user', 'name')),
-      ('email', validation.Email('user')),
+      ('email', validation.Email('user', 'email')),
       ('public_key', None),
     ],
     'optional': [
