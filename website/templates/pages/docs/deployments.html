@@ -23,9 +23,9 @@
     <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.):</p>
 
     <ul data-tabs class="tabs">
-      <li><a data-tab href="#oneserver-a" class="active">Server</a></li>
-      <li><a data-tab href="#oneserver-b">Client A</a></li>
-      <li><a data-tab href="#oneserver-c">Client B → X</a></li>
+      <li><a data-tab href="#oneserver-a" class="active">Server <span>(Alice)</span></a></li>
+      <li><a data-tab href="#oneserver-b">Client A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#oneserver-c">Client B → X <span>(Bob)</span></a></li>
     </ul>
 
     <div data-tabs-content class="data-tabs-content">
@@ -73,10 +73,10 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     <p>Follow the steps below to set up such an infrastructure. Note that a replication factor of 2 has been chosen but can be adapted according to your needs and the number of servers involved:</p>
 
     <ul data-tabs class="tabs">
-      <li><a data-tab href="#multiservers-1" class="active">Server 1</a></li>
-      <li><a data-tab href="#multiservers-2">Server 2 → N</a></li>
-      <li><a data-tab href="#multiservers-a">Client A</a></li>
-      <li><a data-tab href="#multiservers-b">Client B → X</a></li>
+      <li><a data-tab href="#multiservers-1" class="active">Server 1 <span>(Alice)</span></a></li>
+      <li><a data-tab href="#multiservers-2">Server 2 → N <span>(Alice)</span></a></li>
+      <li><a data-tab href="#multiservers-a">Client A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#multiservers-b">Client B → X <span>(Bob)</span></a></li>
     </ul>
 
     <div data-tabs-content class="data-tabs-content">
@@ -131,14 +131,14 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     <p>Noteworthy is that the replication factor you define can drastically change the infrastructure's behavior. For instance, should you set the replication factor to equal the number of storage nodes in the network, all the blocks of all the files would be replicated on every machine acting as a server (i.e contributing storage capacity). Such a configuration would be equivalent to Bitorrent Sync. Even though having all the files on your machine at any time is interesting for accessibility, it also consumes a lot of storage capacity on every user's computer.</p>
     <p>Alternatively, you can set up a replication factor high enough for all the files to be available even if some of the machines are turned off without requiring all the computers to store a replica for all the files in the system. Depending on the volatily of the nodes, the replication factor could be set up to 3, 5 or even more. Note however that the replication factor must never exceeds the number of storage nodes in the storage infrastructure.</p>
 
-    <img src="${url('images/schema-decentralized.png')}" alt="Illustration of a decentralized environment on which storage capacities from several client machines are aggregated into a peer-to-peer storage infrastructure"><br>
+    <img src="${url('images/schema-decentralized-s3.png')}" alt="Illustration of a decentralized environment on which storage capacities from several client machines are aggregated into a peer-to-peer storage infrastructure"><br>
 
     <p>Follow the instructions below to set up such an infrastructure. Noteworthy is that the example below is composed mostly of nodes contributed storage capacity from the local disk while a machine (device B) contributes storage from both its local disk and a public cloud provider, in this case AWS S3.</p>
 
     <ul data-tabs class="tabs">
-      <li><a data-tab href="#distributed-a" class="active">Client/Server A</a></li>
-      <li><a data-tab href="#distributed-b">Client/Server B</a></li>
-      <li><a data-tab href="#distributed-c">Server C</a></li>
+      <li><a data-tab href="#distributed-a" class="active">Client/Server A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#distributed-b">Client/Server B <span>(Bob)</span></a></li>
+      <li><a data-tab href="#distributed-c">Server C </a></li>
       <li><a data-tab href="#distributed-d">Client/Server D → X</a></li>
     </ul>
 
