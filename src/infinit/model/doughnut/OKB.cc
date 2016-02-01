@@ -374,8 +374,10 @@ namespace infinit
           }
         }
         // Upgrade from unmasked address if required, *after* checking signature
+        /*
         if (this->_doughnut->version() >= elle::Version(0, 5, 0))
           elle::unconst(this)->_address = this->_hash_address();
+          */
         return blocks::ValidationResult::success();
       }
 

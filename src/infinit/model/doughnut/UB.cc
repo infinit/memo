@@ -93,8 +93,10 @@ namespace infinit
           ELLE_DUMP("%s: %s", *this, reason);
           return blocks::ValidationResult::failure(reason);
         }
+        /*
         if (this->_doughnut->version() >= elle::Version(0, 5, 0))
           elle::unconst(this)->_address = expected_address; // upgrade from unmasked if required
+        */
         return blocks::ValidationResult::success();
       }
 
