@@ -5,8 +5,9 @@ import json
 import random
 import string
 import os
+import itertools
 
- # Creating and inviting.
+# Creating and inviting.
 with Beyond() as beyond,\
      Infinit(beyond = beyond) as bob,\
      Infinit(beyond = beyond) as alice,\
@@ -175,3 +176,86 @@ with Beyond() as beyond,\
   bob.run('infinit-drive --fetch')
   l = bob.run('infinit-drive --list')
   assert l[0] == 'bob/bob-drive: ok'
+
+with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+
+  bob.run(['infinit-user', '--signup',
+           '--name', 'user',
+           '--email', 'bob@infinit.io'])
+  bob.run(['infinit-network', '--create',
+           '--name', 'network',
+           '--as', 'user',
+           '--push'])
+  bob.run(['infinit-volume', '--create',
+           '--name', 'volume',
+           '--network', 'network',
+           '--as', 'user',
+           '--push'])
+  bob.run(['infinit-drive', '--create',
+           '--name', 'drive',
+           '--volume', 'volume',
+           '--network', 'network',
+           '--as', 'user',
+           '--push'])
+  emails = ['alice@infinit.io', 'serge@infinit.io', 'eve@infinit.io']
+  # Doesn't work because you don't have 'hub's passport' locally.
+  # bob.run(['infinit-drive', '--invite',
+  #          '--name', 'drive',
+  #          '--email', emails[0],
+  #          '--push'], return_code = 1)
+  bob.run(['infinit-user', '--fetch',
+           '--as', 'user',
+           '--name', 'hub'])
+
+  def register(email):
+    name = email.split('@')[0]
+    with Infinit(beyond = beyond) as invitee:
+      invitee.run(['infinit-user', '--signup',
+                   '--name', name,
+                   '--email', email])
+      welcome = beyond.emailer.get_specifics(
+        email, 'User/Welcome').pop()
+      import urllib.parse
+      code = urllib.parse.parse_qs(
+        urllib.parse.urlparse(
+          '?' + welcome['url_parameters']
+        ).query)['confirmation_code'][0]
+      # Confirm email.
+      import requests
+      print(code)
+      kwargs = {
+        'headers': {'Content-Type': 'application/json'},
+        'data': json.dumps({
+          'confirmation_code': code,
+        })
+      }
+      invitee.run(['infinit-passport', '--fetch', '--as', name])
+      assertEq(
+        len(invitee.run(['infinit-passport', '--list', '--as', name])),
+        0)
+      res = requests.request(
+        url = '%s/users/%s/confirm_email' % (beyond.domain, name),
+        method = 'POST',
+        **kwargs)
+      res.raise_for_status()
+      invitee.run(['infinit-passport', '--fetch', '--as', name])
+      assertEq(
+        len(invitee.run(['infinit-passport', '--list', '--as', name])),
+        1)
+
+  # One invitation
+  email = emails.pop()
+  bob.run(['infinit-drive', '--invite',
+           '--name', 'drive',
+           '--as', 'user',
+           '--email', email,
+           '--push'])
+  register(email)
+  # Send all invitations at once.
+  bob.run(['infinit-drive', '--invite',
+           '--name', 'drive',
+           '--as', 'user',
+           '--push'] +
+          list(itertools.chain(*itertools.product(['--email'], emails))))
+  for email in emails:
+    register(email)
