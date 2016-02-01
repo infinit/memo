@@ -419,7 +419,86 @@ namespace infinit
         Paxos::LocalPeer::_fetch(Address address,
                                  boost::optional<int> local_version) const
         {
-          ELLE_ABORT("plain fetch called on a paxos consensus");
+          if (this->doughnut().version() >= elle::Version(0, 5, 0))
+            throw elle::Error("_fetch called on PAXOS consensus");
+          // pre-0.5.0 RPC left for backward compatibility
+          ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
+          auto decision = this->_addresses.find(address);
+          if (decision == this->_addresses.end())
+            try
+            {
+              elle::serialization::Context context;
+              context.set<Doughnut*>(&this->doughnut());
+              auto data =
+                elle::serialization::binary::deserialize<BlockOrPaxos>(
+                  this->storage()->get(address), true, context);
+              if (data.block)
+              {
+                ELLE_DEBUG("loaded immutable block from storage");
+                return std::unique_ptr<blocks::Block>(data.block);
+              }
+              else
+              {
+                ELLE_DEBUG("loaded mutable block from storage");
+                decision = const_cast<LocalPeer*>(this)->_addresses.emplace(
+                  address, std::move(*data.paxos)).first;
+              }
+            }
+            catch (storage::MissingKey const& e)
+            {
+              ELLE_TRACE("missing block %x", address);
+              throw MissingBlock(e.key());
+            }
+          else
+            ELLE_DEBUG("mutable block already loaded");
+          auto& paxos = decision->second.paxos;
+          if (auto highest = paxos.highest_accepted_value())
+          {
+            auto version = highest->proposal.version;
+            if (decision->second.chosen == version
+              && highest->value.is<std::shared_ptr<blocks::Block>>())
+            {
+              ELLE_DEBUG("return already chosen mutable block");
+              return highest->value.get<std::shared_ptr<blocks::Block>>()
+                ->clone();
+            }
+            else
+            {
+              ELLE_TRACE_SCOPE(
+                "finalize running Paxos for version %s (last chosen %s)"
+                , version, decision->second.chosen);
+              auto block = highest->value;
+              Paxos::PaxosClient::Peers peers =
+                lookup_nodes(
+                  this->doughnut(), paxos.quorum(), address);
+              if (peers.empty())
+                throw elle::Error(
+                  elle::sprintf("No peer available for fetch %x", address));
+              Paxos::PaxosClient client(uid(this->doughnut().keys().K()),
+                                        std::move(peers));
+              auto chosen = client.choose(version, block);
+              // FIXME: factor with the end of doughnut::Local::store
+              ELLE_DEBUG("%s: store chosen block", *this)
+              unconst(decision->second).chosen = version;
+              {
+                this->storage()->set(
+                  address,
+                  elle::serialization::binary::serialize(
+                    BlockOrPaxos(const_cast<Decision*>(&decision->second))),
+                  true, true);
+              }
+              // ELLE_ASSERT(block.unique());
+              // FIXME: Don't clone, it's useless, find a way to steal
+              // ownership from the shared_ptr.
+              return block.get<std::shared_ptr<blocks::Block>>()->clone();
+            }
+          }
+          else
+          {
+            ELLE_TRACE("%s: block has running Paxos but no value: %x",
+                       *this, address);
+            throw MissingBlock(address);
+          }
         }
 
         void
