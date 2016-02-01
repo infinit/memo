@@ -67,8 +67,8 @@ namespace infinit
 
         struct BlockOrPaxos
         {
-          BlockOrPaxos(blocks::Block* b)
-            : block(b)
+          BlockOrPaxos(blocks::Block& b)
+            : block(&b)
             , paxos()
           {}
 
@@ -82,8 +82,8 @@ namespace infinit
             this->serialize(s);
           }
 
-          blocks::Block* block;
-          Paxos::LocalPeer::Decision* paxos;
+          std::unique_ptr<blocks::Block> block;
+          std::unique_ptr<Paxos::LocalPeer::Decision> paxos;
 
           void
           serialize(elle::serialization::Serializer& s)
@@ -277,11 +277,12 @@ namespace infinit
                 Decision(PaxosServer(this->id(), peers))).first;
             }
           auto res = decision->second.paxos.propose(std::move(peers), p);
+          BlockOrPaxos data(&decision->second);
           this->storage()->set(
             address,
-            elle::serialization::binary::serialize(
-              BlockOrPaxos(&decision->second)),
+            elle::serialization::binary::serialize(data),
             true, true);
+          data.paxos.release();
           return res;
         }
 
@@ -309,10 +310,12 @@ namespace infinit
           auto res = paxos.accept(std::move(peers), p, value);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
+            BlockOrPaxos data(&decision);
             this->storage()->set(
               address,
-              elle::serialization::binary::serialize(BlockOrPaxos(&decision)),
+              elle::serialization::binary::serialize(data),
               true, true);
+            data.paxos.release();
           }
           on_store(*value, STORE_ANY);
           return std::move(res);
@@ -382,7 +385,7 @@ namespace infinit
               if (data.block)
               {
                 ELLE_DEBUG("loaded immutable block from storage");
-                return std::unique_ptr<blocks::Block>(data.block);
+                return std::move(data.block);
               }
               else
               {
@@ -425,11 +428,12 @@ namespace infinit
               ELLE_DEBUG("%s: store chosen block", *this)
               unconst(decision->second).chosen = version;
               {
+                BlockOrPaxos data(const_cast<Decision*>(&decision->second));
                 this->storage()->set(
                   address,
-                  elle::serialization::binary::serialize(
-                    BlockOrPaxos(const_cast<Decision*>(&decision->second))),
+                  elle::serialization::binary::serialize(data),
                   true, true);
+                data.paxos.release();
               }
               // ELLE_ASSERT(block.unique());
               // FIXME: Don't clone, it's useless, find a way to steal
@@ -462,10 +466,6 @@ namespace infinit
             typename elle::serialization::binary::SerializerIn input(s);
             input.set_context<Doughnut*>(&this->doughnut());
             auto stored = input.deserialize<BlockOrPaxos>();
-            elle::SafeFinally cleanup([&] {
-                  delete stored.block;
-                  delete stored.paxos;
-            });
             if (!stored.block)
               ELLE_WARN("No block, cannot validate update");
             else
@@ -479,11 +479,15 @@ namespace infinit
             }
           }
           catch (storage::MissingKey const&)
-          {
-          }
+          {}
           elle::Buffer data =
-            elle::serialization::binary::serialize(
-              BlockOrPaxos(const_cast<blocks::Block*>(&block)));
+            [&]
+            {
+              BlockOrPaxos b(const_cast<blocks::Block&>(block));
+              auto res = elle::serialization::binary::serialize(b);
+              b.block.release();
+              return res;
+            }();
           this->storage()->set(block.address(), data,
                               mode == STORE_ANY || mode == STORE_INSERT,
                               mode == STORE_ANY || mode == STORE_UPDATE);
@@ -523,20 +527,16 @@ namespace infinit
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
-              elle::SafeFinally cleanup([&] {
-                  delete stored.block;
-                  delete stored.paxos;
-              });
               if (!stored.block)
                 ELLE_WARN("No paxos and no block, cannot validate removal");
               else
               {
-                auto previous = stored.block;
-                auto valres = previous->validate_remove(rs);
+                auto& previous = *stored.block;
+                auto valres = previous.validate_remove(rs);
                 ELLE_TRACE("Immutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
-                    throw Conflict(valres.reason(), previous->clone());
+                    throw Conflict(valres.reason(), previous.clone());
                   else
                     throw ValidationFailed(valres.reason());
               }
