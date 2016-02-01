@@ -782,7 +782,8 @@ body.doc_roadmap {
 
 body.doc_changelog {
   section.doc h3 { font-size: 1.2em; margin-top: 15px;}
-  section.doc h2#unreleased { display: none; }
+  section.doc h2#unreleased,
+  section.doc h2#-unreleased- { display: none; }
 }
 
 
@@ -1173,6 +1174,7 @@ ul.tabs a {
   margin-right: 10px; background: darken(white, 4%); color:@infinitblack !important;
   border-bottom-left-radius: 0; border-bottom-right-radius: 0;
 
+  span { opacity: 0.5; font-size: 12px; }
   &:hover { background: darken(white, 7%); .transition(); border-bottom: 0px !important; }
 }
 

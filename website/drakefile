@@ -167,6 +167,8 @@ def configure(
     'resources/images/schema-distributed@2x.png',
     'resources/images/schema-decentralized.png',
     'resources/images/schema-decentralized@2x.png',
+    'resources/images/schema-decentralized-s3.png',
+    'resources/images/schema-decentralized-s3@2x.png',
     'resources/images/schema-technology.png',
     'resources/images/schema-technology@2x.png',
     'resources/images/desktop-client.png',
