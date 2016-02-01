@@ -644,7 +644,7 @@ def configure(
         test.dependencies_add(beyond.package.nodes)
         env = {
           'PYTHONPATH':
-            drake.path_build('beyond/lib/python%s' % elle.python3.version),
+            str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
           'PATH': ':'.join([
             str(drake.path_build(installed_binaries[0].path(True).dirname(),
                                  absolute = True)),
