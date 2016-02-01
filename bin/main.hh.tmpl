@@ -981,12 +981,12 @@ namespace infinit
     {
       User() = default;
 
-      User(std::string permissions_,
-           std::string status_,
-           bool create_home_)
-        : permissions{permissions_}
-        , status{status_}
-        , create_home{create_home_}
+      User(std::string const& permissions,
+           std::string const& status,
+           bool create_home)
+        : permissions(permissions)
+        , status(status)
+        , create_home(create_home)
       {}
 
       void
@@ -1245,14 +1245,22 @@ namespace infinit
     }
 
     void
-    user_save(User const& user, bool overwrite = false)
+    user_save(User const& user,
+              std::ostream& output)
+    {
+      elle::serialization::json::SerializerOut s(output, false, true);
+      s.serialize_forward(user);
+    }
+
+    void
+    user_save(User const& user,
+              bool overwrite = false)
     {
       auto path = this->_user_path(user.name);
       boost::filesystem::ofstream f;
       this->_open_write(
         f, path, user.name, "user", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(user);
+      user_save(user, f);
       boost::filesystem::permissions(path,
         boost::filesystem::remove_perms
         | boost::filesystem::others_all | boost::filesystem::group_all);
@@ -2253,6 +2261,7 @@ beyond_push(std::string const& where,
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
   auto payload_ = stream.str();
+  ELLE_TRACE("pushing %s/%s with payload %s", type, name, payload_);
   elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
   beyond_push_data(
     where, type, name, payload, "application/json", self, report, beyond_error);
@@ -2414,6 +2423,7 @@ beyond_delete(std::string const& where,
   }
   else
   {
+    ELLE_LOG("HTTP response: %s", r.response());
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
                     r.status(), type, name));

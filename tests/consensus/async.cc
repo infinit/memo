@@ -114,7 +114,7 @@ public:
     : dht::Doughnut(
       id, std::make_shared<infinit::cryptography::rsa::KeyPair>(keys),
       keys.public_key(),
-      infinit::model::doughnut::Passport(keys.K(), "network", keys.k()),
+      infinit::model::doughnut::Passport(keys.K(), "network", keys),
       [] (dht::Doughnut&)
       { return nullptr; },
       [] (dht::Doughnut&, infinit::model::Address, std::shared_ptr<dht::Local>)
@@ -131,7 +131,7 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued)
   auto a1 = infinit::model::Address::random();
   auto a2 = infinit::model::Address::random();
   auto keys = infinit::cryptography::rsa::keypair::generate(1024);
-  infinit::model::doughnut::Passport passport(keys.K(), "network", keys.k());
+  infinit::model::doughnut::Passport passport(keys.K(), "network", keys);
   DummyDoughnut dht;
   {
     dht::consensus::Async async(

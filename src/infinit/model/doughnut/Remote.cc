@@ -220,6 +220,7 @@ namespace infinit
               AuthSyn(Passport const&, elle::Version const&);
               RPC<AuthSyn> auth_syn(
                 "auth_syn", *this->_channels, this->_doughnut.version());
+              auth_syn.set_context<Doughnut*>(&this->_doughnut);
               return auth_syn(this->_doughnut.passport(),
                                 this->_doughnut.version());
             }
@@ -234,10 +235,17 @@ namespace infinit
           }();
           auto& remote_passport = challenge_passport.second;
           ELLE_ASSERT(remote_passport);
-          if (!remote_passport->verify(*this->_doughnut.owner()))
+          if (!this->_doughnut.verify(*remote_passport, false, false, false))
           {
             auto msg = elle::sprintf(
               "passport validation failed for %s", this->id());
+            ELLE_WARN("%s", msg);
+            throw elle::Error(msg);
+          }
+          if (!remote_passport->allow_storage())
+          {
+            auto msg = elle::sprintf(
+              "%s: Peer passport disallows storage", *this);
             ELLE_WARN("%s", msg);
             throw elle::Error(msg);
           }
@@ -308,6 +316,7 @@ namespace infinit
         {
           auto remove = make_rpc<void (Address, blocks::RemoveSignature)>
             ("remove");
+          remove.set_context<Doughnut*>(&this->_doughnut);
           remove(address, rs);
         }
         else

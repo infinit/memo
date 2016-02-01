@@ -250,6 +250,7 @@ namespace infinit
         output.serialize("data", _data);
       }
       _first_block->data(serdata);
+      auto address = _first_block->address();
       try
       {
         if (final_flush && _parent)
@@ -271,7 +272,7 @@ namespace infinit
       catch(elle::Error const& e)
       {
         ELLE_WARN("unexpected exception storing %x: %s",
-          this->_first_block->address(), e);
+          address, e);
         throw rfs::Error(EIO, e.what());
       }
       this->_first_block_new = false;
@@ -571,6 +572,8 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: open", *this);
       bool needw = (flags & O_ACCMODE) != O_RDONLY;
       bool needr = (flags & O_ACCMODE) != O_WRONLY;
+      if (_owner.read_only() && needw)
+        throw rfs::Error(EACCES, "Access denied.");
       if (flags & O_TRUNC)
         truncate(0);
       else

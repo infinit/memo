@@ -40,6 +40,7 @@ beyond = infinit.beyond.Beyond(
     'networks': {
       'passports': 30
     }
-  }
+  },
+  delegate_user = ${delegate_user},
 )
 application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)

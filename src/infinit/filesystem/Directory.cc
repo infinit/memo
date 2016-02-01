@@ -10,10 +10,12 @@
 #include <infinit/filesystem/xattribute.hh>
 
 #include <elle/serialization/binary.hh>
+#include <elle/serialization/json.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Group.hh>
+#include <infinit/model/doughnut/UB.hh>
 // #include <infinit/filesystem/FileHandle.hh>
 
 #include <sys/stat.h> // S_IMFT...
@@ -701,6 +703,18 @@ namespace infinit
           set_permissions(perms, value, this->_block->address());
           this->_block.reset();
         }
+        else if (special->find("register.") == 0)
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          auto name = special->substr(9);
+          std::stringstream s(value);
+          auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
+          model::doughnut::UB ub(dht.get(), name, p, false);
+          model::doughnut::UB rub(dht.get(), name, p, true);
+          this->_owner.block_store()->store(ub);
+          this->_owner.block_store()->store(rub);
+        }
         else if (*special == "fsck.deref")
         {
           this->_files.erase(value);
@@ -770,7 +784,7 @@ namespace infinit
             model::doughnut::Group g(*dht, value);
             g.create();
           }
-          else if (name == "delete")
+          else if (*special == "delete")
           {
             model::doughnut::Group g(*dht, value);
             g.destroy();

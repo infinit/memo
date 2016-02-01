@@ -517,6 +517,19 @@ COMMAND(group)
   }
 }
 
+COMMAND(register_)
+{
+  auto user_name = mandatory<std::string>(args, "user", "user name");
+  auto network_name = mandatory<std::string>(args, "network", "network name");
+  auto path = mandatory<std::string>(args, "path", "path to mountpoint");
+  auto user = ifnt.user_get(user_name);
+  auto passport = ifnt.passport_get(network_name, user_name);
+  bool fallback = flag(args, "fallback-xattrs");
+  std::stringstream output;
+  elle::serialization::json::serialize(passport, output, false);
+  check(port_setxattr, path, "user.infinit.register." + user_name, output.str(), fallback);
+}
+
 int
 main(int argc, char** argv)
 {
@@ -592,6 +605,19 @@ main(int argc, char** argv)
         { "path,p", value<std::string>(), "a path within the volume" },
         fallback_option,
         verbose_option,
+      },
+    },
+    {
+      "register",
+      "Register user's passport to the network",
+      &register_,
+      "--user USER --network NETWORK --path PATH_TO_MOUNTPOINT",
+      {
+        { "user,u", value<std::string>(), "user to register"},
+        { "path,p", value<std::string>(), "path to mountpoint" },
+        { "network,n", value<std::string>(), "name of the network"},
+        { "fallback-xattrs", bool_switch(), "fallback to alternate xattr mode "
+          "if system xattrs are not suppported" },
       },
     }
   };

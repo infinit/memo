@@ -8,6 +8,8 @@
 ELLE_LOG_COMPONENT("infinit-user");
 
 #include <main.hh>
+
+#include <email.hh>
 #include <password.hh>
 
 infinit::Infinit ifnt;
@@ -124,6 +126,8 @@ void
 _push(variables_map const& args, infinit::User& user, bool atomic)
 {
   auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   bool user_updated = false;
   if (!user.email && !email)
   {
@@ -204,6 +208,8 @@ create_(std::string const& name,
 COMMAND(create)
 {
   bool push = aliased_flag(args, {"push-user", "push"});
+  auto has_output = optional(args, "output");
+  auto output = has_output ? get_output(args) : nullptr;
   if (!push)
   {
     if (flag(args, "full") || flag(args, "password"))
@@ -214,12 +220,23 @@ COMMAND(create)
     }
   }
   auto name = get_name(args);
+  auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               optional(args, "email"),
+                               email,
                                optional(args, "fullname"));
-  ifnt.user_save(user);
-  report_action("generated", "user", name, std::string("locally"));
+  if (output)
+  {
+    ifnt.user_save(user, *output);
+    report_exported(*output, "user", user.name);
+  }
+  else
+  {
+    ifnt.user_save(user);
+    report_action("generated", "user", name, std::string("locally"));
+  }
   if (push)
     _push(args, user, false);
 }
@@ -284,9 +301,12 @@ COMMAND(delete_)
 COMMAND(signup_)
 {
   auto name = get_name(args);
+  auto email = mandatory(args, "email");
+  if (!valid_email(email))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               mandatory(args, "email"),
+                               email,
                                optional(args, "fullname"));
   try
   {
@@ -461,6 +481,7 @@ main(int argc, char** argv)
         option_fullname,
         option_push_full,
         option_push_password,
+        option_output("user"),
       },
     },
     {

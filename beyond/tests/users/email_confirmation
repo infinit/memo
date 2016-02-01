@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+
+import infinit.beyond.bottle
+
+import unittest
+
+from utils import *
+
+with Beyond() as beyond:
+
+  class Test(unittest.TestCase):
+
+    def test_normal(self):
+      emailer = Emailer()
+      user = User()
+      beyond.emailer = emailer
+      user.put(beyond)
+      assert 'User/Welcome' in emailer.get(user['email'])
+      email = emailer.get_specifics(user['email'], 'User/Welcome').pop()
+      params = url_parameters('?' + email['url_parameters'])
+      del params['name']
+      throws(
+        lambda: beyond.post(
+          'users/%s/confirm_email' % user['name'], json = {}),
+        404)
+      beyond.post('users/%s/confirm_email' % user['name'], json = params)
+      throws(
+        lambda: beyond.post(
+          'users/%s/confirm_email' % user['name'], json = params),
+        410)
+
+    def test_emails(self):
+      bob = User()
+      bob.put(beyond, opt_out = False)
+      b = beyond.get('users/%s' % bob['name']).json()
+      assert 'emails' not in b
+      b = beyond.post('users/%s/login' % bob['name'], json = {
+        'password_hash': bob.password_hash
+      }).json()
+      assert 'emails' in b
+      assertEq(b['emails'][bob['email']], False)
+
+    def test_sending_confirmation_email(self):
+      emailer = Emailer()
+      user = User()
+      beyond.emailer = emailer
+      user.put(beyond)
+      assert 'User/Welcome' in emailer.get(user['email'])
+      welcome = emailer.get_specifics(user['email'], 'User/Welcome').pop()
+      beyond.post('users/%s/send_confirmation_email' % user['name'])
+      confirm_1 = emailer.get_specifics(
+        user['email'], 'User/Confirmation Email').pop()
+      beyond.post('users/%s/send_confirmation_email/%s' % (
+        user['name'], user['email']))
+      confirm_2 = emailer.get_specifics(
+        user['email'], 'User/Confirmation Email').pop()
+      assert len(url_parameters('?' + welcome['url_parameters']).keys()) > 1
+
+      assertEq(url_parameters('?' + welcome['url_parameters']),
+               url_parameters('?' + confirm_1['url_parameters']))
+      assertEq(url_parameters('?' + confirm_1['url_parameters']),
+               url_parameters('?' + confirm_2['url_parameters']))
+
+  if __name__ == '__main__':
+    unittest.main()

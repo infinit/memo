@@ -8,6 +8,7 @@
 # include <infinit/model/blocks/ImmutableBlock.hh>
 
 # include <infinit/model/doughnut/Doughnut.hh>
+# include <infinit/model/doughnut/Passport.hh>
 
 namespace infinit
 {
@@ -29,12 +30,17 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        UB(Doughnut* dht, std::string name, cryptography::rsa::PublicKey key,
+        UB(Doughnut* dht, std::string name,
+           Passport const& passport,
+           bool reverse = false);
+        UB(Doughnut* dht, std::string name,
+           cryptography::rsa::PublicKey key,
            bool reverse = false);
         UB(UB const& other);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(bool, reverse);
+        ELLE_ATTRIBUTE_R(boost::optional<Passport>, passport);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         static
         Address
@@ -81,7 +87,8 @@ namespace infinit
         serialize(elle::serialization::Serializer& s,
                   elle::Version const& version) override;
         void
-        _serialize(elle::serialization::Serializer& input);
+        _serialize(elle::serialization::Serializer& input,
+                   elle::Version const& version);
       };
     }
   }

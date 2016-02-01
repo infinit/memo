@@ -101,11 +101,17 @@ namespace infinit
             }
             catch (MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(this, name, this->keys().K());
+              auto user = elle::make_unique<UB>(this, name, this->passport());
               ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
                                *this, user->address(), name);
-
-              this->store(std::move(user));
+              try
+              {
+                this->store(std::move(user));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to store user block: %s", *this, e);
+              }
             }
             try
             {
@@ -123,10 +129,17 @@ namespace infinit
             }
             catch(MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(this, name, this->keys().K(), true);
+              auto user = elle::make_unique<UB>(this, name, this->passport(), true);
               ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
                                user->address());
-              this->store(std::move(user));
+              try
+              {
+                this->store(std::move(user));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to store reverse user block: %s", *this, e);
+              }
             }
           };
         _user_init.reset(new reactor::Thread(
@@ -270,6 +283,53 @@ namespace infinit
       Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
         this->_consensus->remove(address, std::move(rs));
+      }
+
+      bool
+      Doughnut::verify(Passport const& passport,
+                         bool require_write,
+                         bool require_storage,
+                         bool require_sign)
+      {
+        ELLE_TRACE_SCOPE("%s: validating passport %s",
+                         *this, passport.user());
+        if (  (require_write && !passport.allow_write())
+           || (require_storage && !passport.allow_storage())
+           || (require_sign && !passport.allow_sign())
+         )
+        {
+          ELLE_TRACE("%s: passport permissions mismatch", *this);
+          return false;
+        }
+        if (!passport.certifier() || *passport.certifier() == *this->owner())
+        {
+          ELLE_TRACE("%s: validating with owner key", *this);
+          return passport.verify(*this->owner());
+        }
+        if (!passport.verify(*passport.certifier()))
+        {
+          ELLE_TRACE("%s: validating with certifier key %x", *this,
+                     *passport.certifier());
+          return false;
+        }
+        // fetch passport for certifier
+        try
+        {
+          auto block = this->fetch(UB::hash_address(*passport.certifier()));
+          auto ub = elle::cast<UB>::runtime(block);
+          if (!ub->passport())
+          {
+            ELLE_TRACE("%s: certifier RUB does not contain a passport", *this);
+            return false;
+          }
+          return verify(*ub->passport(), false, false, true);
+        }
+        catch (elle::Exception const& e)
+        {
+          ELLE_TRACE("%s: exception fetching/validating: %s",
+                     *this, e);
+          return false;
+        }
       }
 
       Configuration::~Configuration()

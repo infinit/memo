@@ -187,7 +187,7 @@ COMMAND(create)
       infinit::model::doughnut::Passport(
         owner.public_key,
         ifnt.qualified_name(name, owner),
-        owner.private_key.get()),
+        infinit::cryptography::rsa::KeyPair(owner.public_key, owner.private_key.get())),
       owner.name,
       std::move(port),
       version);
@@ -354,13 +354,17 @@ COMMAND(link_)
     if (self.public_key == desc.owner)
     {
       return infinit::Passport(
-        self.public_key, desc.name, self.private_key.get());
+        self.public_key, desc.name,
+        infinit::cryptography::rsa::KeyPair(self.public_key, self.private_key.get()));
     }
     return ifnt.passport_get(desc.name, self.name);
   }();
-  bool ok = passport.verify(desc.owner);
+  bool ok = passport.verify(
+    passport.certifier() ? *passport.certifier() : desc.owner);
   if (!ok)
     throw elle::Error("passport signature is invalid");
+  if (storage && !passport.allow_storage())
+    throw elle::Error("passport does not allow storage");
   infinit::Network network(
     desc.name,
     elle::make_unique<infinit::model::doughnut::Configuration>(

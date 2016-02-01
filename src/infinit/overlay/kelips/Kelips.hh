@@ -278,11 +278,12 @@ namespace infinit
         pickOutsideTargets();
         std::vector<Address>
         pickGroupTargets();
-        infinit::cryptography::SecretKey*
+        std::pair<infinit::cryptography::SecretKey*, bool>
         getKey(Address const& a);
         void
         setKey(Address const& a,
-               infinit::cryptography::SecretKey sk);
+               infinit::cryptography::SecretKey sk,
+               bool observer);
         void
         process_update(SerState const& s);
         void
@@ -321,7 +322,9 @@ namespace infinit
           _pending_requests;
         /// Addresses for which we accepted a put.
         std::vector<Address> _promised_files;
-        std::unordered_map<Address, infinit::cryptography::SecretKey> _keys;
+        // address -> (isObserver, key)
+        std::unordered_map<Address,
+          std::pair<infinit::cryptography::SecretKey, bool>> _keys;
         /// Bootstrap pending auth.
         std::vector<GossipEndpoint> _pending_bootstrap_endpoints;
         std::vector<Address> _pending_bootstrap_address;

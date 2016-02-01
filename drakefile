@@ -21,7 +21,10 @@ rule_install = None
 rule_symbols = None
 rule_tests = None
 
+email_regex = '^[^@]+@[^@]+\.[^@]+$'
 name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
+
+beyond_delegate_user = 'the-hub'
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -382,11 +385,19 @@ def configure(
   ## Binaries ##
   ## -------- ##
 
+  def cpp_str_escape(string):
+    from json import dumps
+    return dumps(string).strip('"')
+
   with drake.templating.Context(content = {
+      'beyond_delegate_user': beyond_delegate_user,
       'beyond_host': beyond_host,
+      'email_regex': cpp_str_escape(email_regex),
       'name_regex': name_regex,
   }):
     drake.node('bin/main.hh.tmpl')
+    drake.node('bin/email.hh.tmpl')
+    drake.node('bin/infinit-drive.cc.tmpl')
 
   drake.node('bin/password.hh')
 
@@ -602,13 +613,19 @@ def configure(
         git = git,
         bottle = bottle,
         PatchAndInstall = PatchAndInstall,
+        email_regex = email_regex,
         name_regex = name_regex,
+        backend = {
+          'binaries': installed_binaries,
+          'debian': rule_debian
+        }
       )
       rule_check << beyond.rule_check
       for test_name in [
           'errors',
           'single-user-two-devices-shared-storage',
-          'default-permissions',
+          'passport-restrictions',
+          'passport-sign-delegate',
           #FIXME: 'flow',
           # Test clis.
           'main_cli',
@@ -624,12 +641,19 @@ def configure(
         rule_functional_tests << test
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
+        env = {
+          'PYTHONPATH':
+            str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
+          'PATH': ':'.join([
+            str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                 absolute = True)),
+            os.environ.get('PATH', '')
+          ])
+        }
         runner = drake.Runner(
           exe = test,
-          env = {
-            'PYTHONPATH':
-              drake.path_build('beyond/lib/python%s' % elle.python3.version)
-          })
+          env = env
+        )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests

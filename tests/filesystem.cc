@@ -271,7 +271,7 @@ static void make_nodes(std::string store, int node_count,
         s.reset(new infinit::storage::Filesystem(tmp));
       }
       auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-      infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner.k());
+      infinit::model::doughnut::Passport passport(kp.K(), "testnet", owner);
       infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
         [paxos] (infinit::model::doughnut::Doughnut& dht)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
@@ -358,7 +358,7 @@ run_filesystem_dht(std::string const& store,
         //auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         //keys.push_back(kp.K());
         keys.push_back(owner_keys.K());
-        infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys.k());
+        infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys);
         ELLE_TRACE("instantiating dougnut...");
         infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
           [paxos] (infinit::model::doughnut::Doughnut& dht)
@@ -473,7 +473,7 @@ run_filesystem_dht(std::string const& store,
           kps = serialize(kp);
         std::string owner_ser = serialize(owner_keys.K());
         infinit::model::doughnut::Passport passport(
-          i == 0 ? owner_keys.K() : kp.K(), "testnet", owner_keys.k());
+          i == 0 ? owner_keys.K() : kp.K(), "testnet", owner_keys);
         std::string passport_ser = serialize(passport);
         std::stringstream ss;
         elle::json::write(ss, r, true);

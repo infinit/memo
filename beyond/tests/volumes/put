@@ -16,9 +16,9 @@ with Beyond() as beyond:
     def test_normal(self):
       user = User()
       user.put(beyond)
-      network = Network('server1,server2', owner = user)
+      network = Network(name = 'server1,server2', owner = user)
       network.put(beyond)
-      volume = Volume('business', network = network)
+      volume = Volume(name = 'business', network = network)
       throws(lambda: beyond.get('volumes/%s' % volume['name']),
              404,
              json = False)
@@ -31,9 +31,9 @@ with Beyond() as beyond:
       # Test same already pushed
       user = User()
       user.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(owner = user)
       network.put(beyond)
-      volume = Volume('stuff', network = network)
+      volume = Volume(name = 'stuff', network = network)
       res = volume.put(beyond)
       assertEq(res.status_code, 201)
       res = volume.put(beyond)
@@ -48,11 +48,11 @@ with Beyond() as beyond:
       demo = User(name = 'demo')
       demo.put(beyond)
       # Create network as infinit.
-      network = Network('share', owner = infinit)
+      network = Network(name = 'share', owner = infinit)
       network.put(beyond)
       # Invite demo.
       Passport(network, demo).put(beyond)
-      volume = Volume('stuff', network = network, owner = demo)
+      volume = Volume(name = 'stuff', network = network, owner = demo)
       throws(lambda: volume.put(beyond, owner = demo),
              expected = 403,
              json = False)

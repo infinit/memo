@@ -41,7 +41,6 @@ namespace infinit
         : Super(std::move(id))
         , _storage(std::move(storage))
         , _doughnut(dht)
-        , _rpcs(dht.version())
       {
         if (p == Protocol::tcp || p == Protocol::all)
         {
@@ -207,34 +206,54 @@ namespace infinit
       }
 
       void
+      Local::_require_auth(RPCServer& rpcs, bool write_op)
+      {
+        static bool disable = getenv("INFINIT_RPC_DISABLE_CRYPTO");
+        if (disable)
+          return;
+        if (!rpcs._key)
+          throw elle::Error("Authentication required");
+        if (write_op && !this->_passports.at(&rpcs).allow_write())
+          throw elle::Error("Write permission denied.");
+      }
+
+      void
       Local::_register_rpcs(RPCServer& rpcs)
       {
+        rpcs._destroying.connect([this] ( RPCServer* rpcs)
+          {
+            this->_passports.erase(rpcs);
+          });
         rpcs.add("store",
                  std::function<void (blocks::Block const& data, StoreMode)>(
-                   [this] (blocks::Block const& block, StoreMode mode)
+                   [this,&rpcs] (blocks::Block const& block, StoreMode mode)
                    {
+                     this->_require_auth(rpcs, true);
                      return this->store(block, mode);
                    }));
         rpcs.add("fetch",
                  std::function<
                    std::unique_ptr<blocks::Block> (Address,
                                                    boost::optional<int>)>(
-                  [this] (Address address, boost::optional<int> local_version)
+                  [this, &rpcs] (Address address, boost::optional<int> local_version)
                   {
+                    this->_require_auth(rpcs, false);
                     return this->fetch(address, local_version);
                   }));
         if (this->_doughnut.version() >= elle::Version(0, 4, 0))
           rpcs.add("remove",
                   std::function<void (Address address, blocks::RemoveSignature)>(
-                    [this] (Address address, blocks::RemoveSignature rs)
+                    [this, &rpcs] (Address address, blocks::RemoveSignature rs)
                     {
+                      this->_require_auth(rpcs, true);
                       this->remove(address, rs);
                     }));
         else
           rpcs.add("remove",
                   std::function<void (Address address)>(
-                  [this] (Address address)
+                  [this, &rpcs] (Address address)
                     {
+                      this->_require_auth(rpcs, true);
                       this->remove(address, {});
                     }));
         rpcs.add("ping",
@@ -243,30 +262,25 @@ namespace infinit
                   {
                     return i;
                   }));
+        auto stored_challenge = std::make_shared<elle::Buffer>();
         typedef std::pair<elle::Buffer, elle::Buffer> Challenge;
 
-        auto auth_syn = [this] (Passport const& p)
+        auto auth_syn = [this, &rpcs, stored_challenge] (Passport const& p)
           -> std::pair<Challenge, Passport*>
           {
             ELLE_TRACE("%s: authentication syn", *this);
-            bool verify = const_cast<Passport&>(p).verify(
-              *this->_doughnut.owner());
+            bool verify = this->_doughnut.verify(p, false, false, false);
             if (!verify)
             {
               ELLE_LOG("Passport validation failed");
               throw elle::Error("Passport validation failed");
             }
-            // Generate and store a challenge to ensure remote owns the
-            // passport.
-            auto challenge =
-              infinit::cryptography::random::generate<elle::Buffer>(128);
-            auto token =
-              infinit::cryptography::random::generate<elle::Buffer>(128);
-            this->_challenges.insert(
-              std::make_pair(token.string(),
-                             std::make_pair(challenge, std::move(p))));
+            // generate and store a challenge to ensure remote owns the passport
+            auto challenge = infinit::cryptography::random::generate<elle::Buffer>(128);
+            *stored_challenge = std::move(challenge);
+            this->_passports.insert(std::make_pair(&rpcs, p));
             return std::make_pair(
-              std::make_pair(challenge, token),
+              std::make_pair(*stored_challenge, elle::Buffer()), // we no longuer need token
               const_cast<Passport*>(&_doughnut.passport()));
           };
         if (this->_doughnut.version() >= elle::Version(0, 4, 0))
@@ -298,25 +312,20 @@ namespace infinit
         }
         rpcs.add("auth_ack", std::function<bool(elle::Buffer const&,
           elle::Buffer const&, elle::Buffer const&)>(
-          [this](elle::Buffer const& enc_key,
-                 elle::Buffer const& token,
+          [this, &rpcs, stored_challenge](
+                 elle::Buffer const& enc_key,
+                 elle::Buffer const& /*token*/,
                  elle::Buffer const& signed_challenge) -> bool
           {
-            ELLE_TRACE("%s: authentication acknowledgment", *this);
-            auto it = this->_challenges.find(token.string());
-            if (it == this->_challenges.end())
-            {
-              ELLE_LOG("Challenge token does not exist.");
-              throw elle::Error("challenge token does not exist");
-            }
-            auto& stored_challenge = it->second.first;
-            auto& peer_passport = it->second.second;
-            bool ok = peer_passport.user().verify(
+            ELLE_TRACE("auth_ack, dn=%s", this->_doughnut);
+            if (stored_challenge->empty())
+              throw elle::Error("auth_syn must be called before auth_ack");
+            auto& passport = this->_passports.at(&rpcs);
+            bool ok = passport.user().verify(
               signed_challenge,
-              stored_challenge,
+              *stored_challenge,
               infinit::cryptography::rsa::Padding::pss,
               infinit::cryptography::Oneway::sha256);
-            this->_challenges.erase(it);
             if (!ok)
             {
               ELLE_LOG("Challenge verification failed");
@@ -326,7 +335,7 @@ namespace infinit
               enc_key,
               infinit::cryptography::Cipher::aes256,
               infinit::cryptography::Mode::cbc);
-            _rpcs._key.Get().reset(new infinit::cryptography::SecretKey(
+            rpcs._key.reset(new infinit::cryptography::SecretKey(
               std::move(password)));
             return true;
           }));
@@ -335,7 +344,6 @@ namespace infinit
       void
       Local::_serve(std::function<std::unique_ptr<std::iostream> ()> accept)
       {
-        this->_register_rpcs(_rpcs);
         elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
         {
           while (true)
@@ -346,8 +354,11 @@ namespace infinit
               name,
               [this, socket]
               {
-                _rpcs.set_context<Doughnut*>(&this->_doughnut);
-                _rpcs.serve(**socket);
+                RPCServer rpcs(this->_doughnut.version());
+                this->_register_rpcs(rpcs);
+                this->on_connect(rpcs);
+                rpcs.set_context<Doughnut*>(&this->_doughnut);
+                rpcs.serve(**socket);
               });
           }
         };

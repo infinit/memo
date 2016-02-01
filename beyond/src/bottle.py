@@ -101,6 +101,16 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
+
+    # Email confirmation
+    self.route('/users/<name>/confirm_email', method = 'POST')(
+      self.user_confirm_email)
+    self.route('/users/<name>/send_confirmation_email', method = 'POST')(
+      self.user_send_confirmation_email)
+    self.route('/users/<name>/send_confirmation_email/<email>', method = 'POST')(
+      self.user_send_confirmation_email)
+
+    # Avatar
     self.route('/users/<name>/avatar', method = 'GET')(
       self.user_avatar_get)
     self.route('/users/<name>/avatar', method = 'PUT')(
@@ -167,6 +177,8 @@ class Bottle(bottle.Bottle):
                method = 'PUT')(self.drive_invitation_put)
     self.route('/drives/<owner>/<name>/invitations',
                method = 'PUT')(self.drive_invitations_put)
+    self.route('/drives/<owner>/<name>/invitations/<user>',
+               method = 'DELETE')(self.drive_invitation_delete)
     self.route('/drives/<owner>/<name>/icon', method = 'GET')(
       self.drive_icon_get)
     self.route('/drives/<owner>/<name>/icon', method = 'PUT')(
@@ -294,6 +306,14 @@ class Bottle(bottle.Bottle):
         raise self.__user_not_found(name)
       return None
 
+  def users_from_email(self, email, throws = True):
+    try:
+      return self.__beyond.users_by_email(email)
+    except User.NotFound as e:
+      if throws:
+        raise self.__user_not_found(email)
+      return []
+
   def user_put(self, name):
     try:
       json = bottle.request.json
@@ -314,6 +334,46 @@ class Bottle(bottle.Bottle):
           'reason': 'user %r already exists' % name,
           'id': name,
         })
+
+  def user_confirm_email(self, name):
+    user = self.user_from_name(name = name)
+    json = bottle.request.json
+    confirmation_code = json.get('confirmation_code')
+    email = json.get('email', user.email)
+    if user.emails.get(email) == True:
+      raise Response(410, {
+        'error': 'user/email/alread_confirmed',
+        'reason': '\'%s\' as already been confirmed' % email
+      })
+    if email is None or confirmation_code is None or \
+       user.emails.get(email) != confirmation_code:
+      raise Response(404, {
+        'error': 'user/email/XXX',
+        'reason': 'confirmation codes don\'t match.' # XXX
+      })
+    user.emails[email] = True
+    user.save()
+    errors = []
+    # Look for plain invites.
+    drives = self.__beyond.user_drives_get(name = email)
+    if len(drives):
+      errors = self.__beyond.process_invitations(user, email, drives)
+    raise Response(200, {
+      'errors': errors
+    })
+
+  def user_send_confirmation_email(self, name, email = None):
+    user = self.user_from_name(name = name)
+    json = bottle.request.json
+    email = email or json.get('email')
+    try:
+      user.send_confirmation_email(email)
+    except Exception as e:
+      raise Response(404, {
+        'error': 'user/email/unknown',
+        'reason': 'unknown email address'
+      })
+    raise Response(200, {})
 
   def user_get(self, name):
     return self.user_from_name(name = name).json()
@@ -364,7 +424,7 @@ class Bottle(bottle.Bottle):
   def user_drives_get(self, name):
     user = self.user_from_name(name = name)
     self.authenticate(user)
-    drives = self.__beyond.user_drives_get(user = user)
+    drives = self.__beyond.user_drives_get(name = user.name)
     return {'drives': list(map(lambda d: d.json(), drives))}
 
   def login(self, name):
@@ -514,7 +574,10 @@ class Bottle(bottle.Bottle):
 
   def network_passport_delete(self, owner, name, invitee):
     user = self.user_from_name(name = owner)
-    self.authenticate(user)
+    try:
+      self.authenticate(user)
+    except Exception:
+      self.authenticate(self.user_from_name(name = invitee))
     network = self.network_from_name(owner = owner, name = name)
     network.passports[invitee] = None
     network.save()
@@ -678,46 +741,114 @@ class Bottle(bottle.Bottle):
   def drive_get(self, owner, name):
     return self.drive_from_name(owner, name).json()
 
-  def drive_invitation_put(self, owner, name, user):
-    drive_owner = self.user_from_name(name = owner)
-    invitee = self.user_from_name(name = user)
-    as_owner = True
+  def __drive_invitation_put(self, drive, owner, invitee, invitation,
+                             **body):
+    key = invitee.name if isinstance(invitee, User) else invitee
+    i = Drive.Invitation(self.__beyond, **body)
     try:
-      self.authenticate(drive_owner)
-    except Exception:
+      return i.save(beyond = self._Bottle__beyond,
+                    drive = drive,
+                    owner = owner,
+                    invitee = invitee,
+                    invitation = invitation)
+    except Drive.Invitation.AlreadyConfirmed:
+      raise Response(409, {
+        'error': 'drive/invitation/conflict',
+        'reason': '%s\'s invitation already confirmed' % key,
+      })
+    except Drive.Invitation.NotInvited:
+      raise Response(404, {
+        'error': 'drive/invitation/not_found',
+        'reason': 'you have not been invited to this drive',
+      })
+
+  # XXX: Do something better.
+  def __user_from_name_or_email(self, user, throws = True):
+    if self.__beyond.is_email(user):
+      users = self.users_from_email(email = user, throws = throws)
+      if len(users) == 0:
+        return None
+      return users[0] # Handle more than one user.
+    else:
+      return self.user_from_name(name = user, throws = throws)
+
+  def drive_invitation_put(self, owner, name, user):
+    as_owner = None
+    owner = self.user_from_name(name = owner)
+    invitee = self.__user_from_name_or_email(user, throws = False)
+    if self.__beyond.is_email(user):
+      if invitee is None:
+        as_owner = True
+        invitee = user
+    if invitee is None:
+      raise self.__not_found('user', user)
+    try:
+      self.authenticate(owner)
+      as_owner = True
+    except Exception as e:
+      if as_owner is not None:
+        raise e
       as_owner = False
       self.authenticate(invitee)
-    drive = self.drive_from_name(owner = owner, name = name)
-    self.__drive_integrity(drive, passport = user)
+    drive = self.drive_from_name(owner = owner.name, name = name)
+    self.__drive_integrity(
+      drive,
+      passport = invitee.name if isinstance(invitee, User) else None)
     json = bottle.request.json
-    invitation = Drive.Invitation(self.__beyond, **json)
-    invitation.save(beyond = self._Bottle__beyond,
-                    drive = drive,
-                    owner = drive_owner,
-                    invitee = invitee,
-                    invitation = as_owner)
-    raise Response(201, {}) # FIXME: 200 if existed
+    if self.__drive_invitation_put(
+      drive = drive,
+      owner = owner,
+      invitation = as_owner,
+      invitee = invitee,
+      **json):
+      raise Response(201, {}) # FIXME: 200 if existed
+    else:
+      raise Response(200, {}) # FIXME: 200 if existed
 
   def drive_invitations_put(self, owner, name):
     owner = self.user_from_name(name = owner)
-    as_owner = True
-    try:
-      self.authenticate(owner)
-    except Exception:
-      raise Response(401, { "error": "user/not_authorized" })
+    self.authenticate(owner)
     drive = self.drive_from_name(owner = owner.name, name = name)
     json = bottle.request.json
+    # Use 2 separate loops so you don't put anything before checks are done.
+    invitees = {}
     for name, value in json.items():
       if name == owner.name:
         continue
-      self.__drive_integrity(drive, passport = name)
-      invitation = Drive.Invitation(self.__beyond, **value)
-      invitation.save(beyond = self._Bottle__beyond,
-                      drive = drive,
-                      owner = owner,
-                      invitee = self.user_from_name(name = name),
-                      invitation = as_owner)
+      invitee = self.__user_from_name_or_email(name, throws = False)
+      if invitee is None:
+        raise self.__not_found('user', name)
+      invitees[name] = invitee
+      if isinstance(invitees[name], User):
+        self.__drive_integrity(drive, passport = name)
+    for name, value in json.items():
+      if name == owner.name:
+        continue
+      self.__drive_invitation_put(
+        drive = drive,
+        owner = owner,
+        invitee = invitees[name],
+        invitation = True,
+        **value)
     raise Response(201, {}) # FIXME: 200 if existed
+
+  def drive_invitation_delete(self, owner, name, user):
+    owner = self.user_from_name(name = owner)
+    drive = self.drive_from_name(owner = owner.name, name = name)
+    if self.__beyond.is_email(user) and user in drive.users:
+      self.authenticate(owner)
+      drive.users[user] = None
+    elif user in drive.users:
+      try:
+        self.authenticate(owner)
+      except:
+        user = self.user_from_name(name = owner)
+        self.authenticate(user)
+      drive.users[user.name] = None
+    else:
+      raise self.__not_found('invitation', user)
+    drive.save()
+    raise Response(200, {})
 
   def __qualified_name(self, owner, name):
     return '%s/%s' % (owner, name)
