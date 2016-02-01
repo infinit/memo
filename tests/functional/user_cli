@@ -115,7 +115,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
     alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'foo@'])
     unreachable()
   except Exception as e:
-    assertIn('email address is invalid', e.args[0])
+    assertIn('invalid email address', e.args[0])
   # Create is not atomic, so 'alice' will be created after that.
   try:
     alice.run(['infinit-user', '--create', '--name', 'alice', '--push'])
