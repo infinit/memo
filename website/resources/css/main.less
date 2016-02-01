@@ -508,7 +508,7 @@ body.drive {
 `----------------*/
 
 body.documentation, body.legal, body.contact, body.opensource, body.solutions,
-body.pricing {
+body.pricing, body.press {
 
   // header { position: fixed; width: 100%;}
   // .content { padding-top: 80px; }
@@ -526,7 +526,7 @@ body.pricing {
 
 
   #sidebar {
-    padding-left: 8%; width: 10%; float: left; margin-top: 20px;
+    padding-left: 8%; width: 10%; float: left; margin-top: 10px;
     margin-bottom: 30px;
   }
 
@@ -558,14 +558,14 @@ body.pricing {
 
     p, li, p.note { line-height: 23px; font-size: 15px; }
     p.note, em { font-style: italic; color: #8C8C8C; }
-    p a { color: @infinitblue; .transition() }
+    p a, li a { color: @infinitblue; .transition() }
 
     p.title {
       font-family: @helvetica; font-weight: 300;font-size: 26px; line-height: 39px;
       width: 90%;
     }
 
-    p a:hover {
+    p a:hover, li a:hover {
       color: darken(@infinitblue, 10%);
       border-bottom: 2px solid darken(@infinitblue, 10%);
     }
@@ -593,7 +593,7 @@ body.pricing {
     pre {
       position: relative;
       code {
-        display: block; font-family: @monospace; background: #23241f;
+        display: block; font-family: @monospace; background: @terminalbg;
         padding: 15px 20px; border-radius: 5px; color: #f8f8f2;
         margin-left: 0; min-height: 48px;
       }
@@ -677,6 +677,19 @@ body.doc_get_started {
     h3#download-and-install-infinit-s-dependencies + p { margin-top: 5px; }
     h3#download-and-install-the-infinit-command-line-tools + p { margin-top: 18px; }
 
+    a.go_deployments, a.go_reference {
+      float: left; display: block; background: darken(white, 5%); padding: 25px 40px;
+      border-radius: 5px; margin: 10px 30px 10px 0; text-align: center; .transition();
+      font-family: @helvetica; font-size: 18px; font-weight: 300;
+
+      img { height: 40px; width: auto; margin-bottom: 5px; }
+      span { display: block; }
+      &:hover { background: darken(white, 8%)}
+    }
+
+    a.go_reference img { height: 32px; margin-bottom: 9px; margin-top: 4px;}
+
+    a.icon-facebook { clear: both;}
     a.icon-facebook, a.icon-twitter, a.icon-slack {
       float: left; width: 33%; text-align: center; margin-top: 20px;
       &:hover { border-bottom: 0; }
@@ -769,7 +782,8 @@ body.doc_roadmap {
 
 body.doc_changelog {
   section.doc h3 { font-size: 1.2em; margin-top: 15px;}
-  section.doc h2#unreleased { display: none; }
+  section.doc h2#unreleased,
+  section.doc h2#-unreleased- { display: none; }
 }
 
 
@@ -777,6 +791,13 @@ body.doc_comparisons {
   section.doc {
     table.centralized tr:nth-child(1) td { width: 4%;}
     table.centralized tr:nth-child(2n) td { background: #F9F9F9; }
+  }
+}
+
+
+body.doc_deployments {
+  section.doc {
+    img { margin: 0 auto; display: inherit;}
   }
 }
 
@@ -815,6 +836,12 @@ body.legal {
 
 body.contact, body.pricing {
   section.doc { margin-top: 30px; padding: 0 15% 100px 15%; width: 70%; }
+}
+
+body.confirm_email {
+  section.doc {
+    padding: 0 10%; width: 80%; text-align:center; min-height: 400px; margin-top: 80px;
+  }
 }
 
 
@@ -1135,5 +1162,33 @@ body.solutions {
   background-color: #8DCA09;
   border-color: #496805;
 }
+
+/*--------------.
+| Tabs          |
+`--------------*/
+
+ul.tabs { list-style-type: none !important; }
+ul.tabs li { float: left; margin: 0 !important; }
+ul.tabs a {
+  cursor: pointer; display: block; border-radius: 5px; padding: 6px 18px;
+  margin-right: 10px; background: darken(white, 4%); color:@infinitblack !important;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+
+  span { opacity: 0.5; font-size: 12px; }
+  &:hover { background: darken(white, 7%); .transition(); border-bottom: 0px !important; }
+}
+
+ul.tabs a.active {
+  background: @terminalbg; color: darken(white, 10%) !important;
+  &:hover { background: @terminalbg; border-bottom: 0px !important; }
+}
+
+.data-tabs-content .tabs-pane:first-child pre code { border-top-left-radius: 0 !important;}
+.tabs-pane { clear: both; }
+.tabs-pane pre { margin-top: 0; }
+
+.js-tabby .tabs-pane { display: none; visibility: hidden }
+.tabs-pane.active { display: block; visibility: visible }
+
 
 @import "responsive";

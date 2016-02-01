@@ -1,0 +1,209 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <%include file='menu.html'/>
+
+  <section class="doc">
+    <h1>Examples of Deployments</h1>
+
+    <p>Infinit can be set up to support a large variety of configurations, hence creating storage infrastructure with different tradeoffs between reliability, performance of access, cost etc.</p>
+
+    <p>The following provides you with some examples of deployments along with the commands one would need to enter on the machines involved in the infrastructure. Hopefully, these will give you enough information to adapt those deployments according to your needs.</p>
+
+    <blockquote class="warning">In order to keep things simple, the examples below follow the same pattern: <strong>Alice</strong> is the user that sets the storage infrastructure up. Alice accesses a volume from her device A while allowing <strong>Bob</strong> and other users to access it from their respective devices: B, C etc.</blockquote>
+
+    <h2 id="centralized">Centralized (single server)</h2>
+
+    <p>In this configuration, data is stored at a <strong>centralized</strong> location. Since there is a single server involved, the files are <strong>not replicated</strong>. As a result, the availability of the infrastructure cannot be guaranteed. Indeed, would the server fail, all the files would be made inaccessible to the users; temporarily or permanently depending on the failure. This component is referred to as a <strong>single point of failure</strong>.</p>
+    <p>This durability/availability limitation should be avoided by involving more servers. However, in some very specific cases, you may want to set up such an infrastructure, to store short-lived non-critical data for instance. Note that such a deployment is similar to what services such as OwnCloud, Pydio or a simple WebDAV service provide.</p>
+
+    <img src="${url('images/schema-deployment-one-server.png')}" alt="Illustration of a centralized infrastructure i.e a single server without redundancy"><br>
+
+    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.):</p>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#oneserver-a" class="active">Server <span>(Alice)</span></a></li>
+      <li><a data-tab href="#oneserver-b">Client A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#oneserver-c">Client B → X <span>(Bob)</span></a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="oneserver-a">
+<pre><code>$> infinit-storage --create --filesystem --capacity 100GB --name local
+$> infinit-network --create --as alice --storage local --kelips --replication-factor 1 --name cluster --push
+$> infinit-volume --create --as alice --network cluster --name shared --push
+
+$> infinit-user --fetch --name bob
+$> infinit-passport --create --as alice --network cluster --user bob --push
+
+$> infinit-network --run --as alice --name cluster --async --cache --publish
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="oneserver-b">
+<pre><code>$> infinit-network --fetch --as alice
+$> infinit-volume --fetch --as alice
+
+$> infinit-network --link --as alice --name cluster
+
+$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="oneserver-c">
+<pre><code>$> infinit-user --fetch --name alice
+
+$> infinit-network --fetch --as bob
+$> infinit-volume --fetch --as bob
+$> infinit-passport --fetch --as bob
+
+$> infinit-network --link --as bob --name alice/cluster
+
+$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+    </div>
+
+    <h2 id="distributed">Distributed (multiple servers)</h2>
+
+    <p>This deployment is more reliable than the previous one as it relies on several servers to <strong>distribute the storage load</strong> so as to <strong>tolerate failures</strong>. In many ways, such a deployment is similar to other systems in the way they are designed: MooseFS, HDFS, XtreemFS and even Dropbox (with the servers reprensenting the underlying object store i.e AWS S3). Such systems are designed to scale within the boundaries of a trusted server infrastructure e.g a controlled data center.</p>
+    <p>The major constraint with this deployment comes from the fact that the servers may not be able to absorb the load of requests coming from the clients. As such, should there be too many clients and not enough servers, those would act as a <strong>bottleneck</strong> to the whole system. Even worse, should one of the servers fail, the impacted clients would redirect their requests to the remaining servers, overcharging them further and risking to produce a <a href="https://en.wikipedia.org/wiki/Cascading_failure">cascading failure</a>.
+
+    <img src="${url('images/schema-deployment-multi-servers.png')}" alt="Figure illustrating a storage infrastructure composed of a set of servers with redundancy"><br>
+
+    <p>Follow the steps below to set up such an infrastructure. Note that a replication factor of 2 has been chosen but can be adapted according to your needs and the number of servers involved:</p>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#multiservers-1" class="active">Server 1 <span>(Alice)</span></a></li>
+      <li><a data-tab href="#multiservers-2">Server 2 → N <span>(Alice)</span></a></li>
+      <li><a data-tab href="#multiservers-a">Client A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#multiservers-b">Client B → X <span>(Bob)</span></a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="multiservers-1">
+<pre><code>$> infinit-storage --create --filesystem --capacity 20GB --name local
+$> infinit-network --create --as alice --storage local --kelips --replication-factor 2 --name cluster --push
+$> infinit-volume --create --as alice --network cluster --name shared --push
+
+$> infinit-user --fetch --name bob
+$> infinit-passport --create --as alice --network cluster --user bob --push
+
+$> infinit-network --run --as alice --name cluster --async --cache --publish
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="multiservers-2">
+<pre><code>$> infinit-network --fetch --as alice
+
+$> infinit-storage --create --filesystem --capacity 50GB --name local
+$> infinit-network --link --as alice --name cluster --storage local
+
+$> infinit-network --run --as alice --name cluster --async --cache --publish
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="multiservers-a">
+<pre><code>$> infinit-network --fetch --as alice
+$> infinit-volume --fetch --as alice
+
+$> infinit-network --link --as alice --name cluster
+
+$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="multiservers-b">
+<pre><code>$> infinit-user --fetch --name alice
+
+$> infinit-network --fetch --as bob
+$> infinit-volume --fetch --as bob
+$> infinit-passport --fetch --as bob
+
+$> infinit-network --link --as bob --name alice/cluster
+
+$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+    </div>
+
+    <h2 id="decentralized">Decentralized (all servers)</h2>
+
+    <p>This deployment addresses the limitations of the previous ones by distributing the storage load, hence the requests, between a large number of nodes. Indeed, by making use of the unused storage capacity on several machines, those end-user devices can also act as servers for the other clients.</p>
+    <p>As a result, such a <strong>highly-scalable</strong> distributed deployment, also known as decentralized, can support a large number of clients, hence removing single points of failure and bottlenecks. The scalability nature of such a deployment also ensures <strong>fault tolerance</strong> as the system automatically detects failing servers and transparently rebalance the impacted blocks so as to maintain the replication factor.</p>
+
+    <p>Noteworthy is that the replication factor you define can drastically change the infrastructure's behavior. For instance, should you set the replication factor to equal the number of storage nodes in the network, all the blocks of all the files would be replicated on every machine acting as a server (i.e contributing storage capacity). Such a configuration would be equivalent to Bitorrent Sync. Even though having all the files on your machine at any time is interesting for accessibility, it also consumes a lot of storage capacity on every user's computer.</p>
+    <p>Alternatively, you can set up a replication factor high enough for all the files to be available even if some of the machines are turned off without requiring all the computers to store a replica for all the files in the system. Depending on the volatily of the nodes, the replication factor could be set up to 3, 5 or even more. Note however that the replication factor must never exceeds the number of storage nodes in the storage infrastructure.</p>
+
+    <img src="${url('images/schema-decentralized-s3.png')}" alt="Illustration of a decentralized environment on which storage capacities from several client machines are aggregated into a peer-to-peer storage infrastructure"><br>
+
+    <p>Follow the instructions below to set up such an infrastructure. Noteworthy is that the example below is composed mostly of nodes contributed storage capacity from the local disk while a machine (device B) contributes storage from both its local disk and a public cloud provider, in this case AWS S3.</p>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#distributed-a" class="active">Client/Server A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#distributed-b">Client/Server B <span>(Bob)</span></a></li>
+      <li><a data-tab href="#distributed-c">Server C </a></li>
+      <li><a data-tab href="#distributed-d">Client/Server D → X</a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="distributed-a">
+<pre><code>$> infinit-storage --create --filesystem --capacity 15GB --name local
+$> infinit-network --create --as alice --storage local --kelips --replication-factor 5 --name cluster --push
+$> infinit-volume --create --as alice --network cluster --name shared --push
+
+$> infinit-user --fetch --name bob
+$> infinit-user --fetch --name charlie
+$> infinit-user --fetch --name dave
+
+$> infinit-passport --create --as alice --network cluster --user bob --push
+$> infinit-passport --create --as alice --network cluster --user charlie --push
+$> infinit-passport --create --as alice --network cluster --user dave --push
+
+$> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="distributed-b">
+<pre><code>$> infinit-user --fetch --name alice
+
+$> infinit-network --fetch --as bob
+$> infinit-volume --fetch --as bob
+$> infinit-passport --fetch --as bob
+
+$> infinit-storage --create --filesystem --capacity 20GB --name local
+$> infinit-credentials --add --aws --account aws
+Access Key ID: ********
+Secret Access Key: ********
+$> infinit-storage --create --s3 --account aws --region eu-central-1 --bucket bob --folder alice.cluster --capacity 100GB --name s3
+
+$> infinit-network --link --as bob --name alice/cluster --storage local --storage s3
+
+$> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="distributed-c">
+<pre><code>$> infinit-user --fetch --name alice
+
+$> infinit-network --fetch --as charlie
+$> infinit-volume --fetch --as charlie
+$> infinit-passport --fetch --as charlie
+
+$> infinit-storage --create --filesystem --capacity 30GB --name local
+$> infinit-network --link --as charlie --name alice/cluster --storage local
+
+$> infinit-network --run --as charlie --name alice/cluster --async --cache --publish
+</code></pre>
+      </div>
+      <div data-tabs-pane class="tabs-pane" id="distributed-d">
+<pre><code>$> infinit-user --fetch --name alice
+
+$> infinit-network --fetch --as dave
+$> infinit-volume --fetch --as dave
+$> infinit-passport --fetch --as dave
+
+$> infinit-storage --create --filesystem --capacity 50GB --name local
+$> infinit-network --link --as dave --name alice/cluster --storage local
+
+$> infinit-volume --mount --as dave --name alice/shared --async --cache --publish --mountpoint mnt/shared/
+</code></pre>
+      </div>
+    </div>
+  <section>
+
+</%block>

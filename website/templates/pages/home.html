@@ -49,7 +49,7 @@
 <pre><code id="commands">$> infinit-storage --create --s3 --name s3 --capacity 10TB
 Created storage "s3".
 
-$> infinit-network --create --storage s3 --storage local --name hybrid-cloud
+$> infinit-network --create --storage s3 --storage local&#8209;disk&#8209;1 --storage local&#8209;disk&#8209;2 --replication-factor 3 --name hybrid-cloud
 Created network "hybrid-cloud".
 
 $> infinit-volume --create --network hybrid-cloud --name company
@@ -60,7 +60,7 @@ Created volume "company".
 $> infinit-volume --mount --name company --ountpoint /mnt/company/
 Mounting volume "company".
 
-$> cp -R Engineering /mnt/company/
+$> cp -R Engineering/ /mnt/company/
 
 $> ​▎
 </code></pre>
@@ -74,7 +74,7 @@ $> ​▎
       <p class="title">Infinit is deployed once and evolves along with your needs</p>
 
       <div>
-        <img src="${url('images/icons/scalable.png')}">
+        <img src="${url('images/icons/scalable-yellow.png')}">
         <h3>Scalable</h3>
         <p>Scales on demand according to your business requirements, from 1GB to petabytes and beyond.</p>
       </div>

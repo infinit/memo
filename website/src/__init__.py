@@ -99,28 +99,36 @@ class Website(bottle.Bottle):
       'description': 'Discover the different layers composing the Infinit technology, from the reactor, the distributed hash table up to the file system.',
     }
 
-  @route('/documentation/comparisons', name = 'doc_comparisons')
-  @view('pages/docs/comparisons.html')
-  def root(self):
-    return {
-      'title': 'Comparison Between Infinit and Other File Systems',
-      'description': 'Compare the Infinit file system against existing centralized, distributed and decentralized file systems.',
-    }
+  # @route('/documentation/comparisons', name = 'doc_comparisons')
+  # @view('pages/docs/comparisons.html')
+  # def root(self):
+  #   return {
+  #     'title': 'Comparison Between Infinit and Other File Systems',
+  #     'description': 'Compare the Infinit file system against existing centralized, distributed and decentralized file systems.',
+  #   }
 
-  @route('/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
-  @view('pages/docs/personal_cloud.html')
-  def root(self):
-    return {
-      'title': 'Unlimited Personal Drive with Infinit',
-      'description': 'Create a personal drive of unlimited capacity by aggregating the storage resources from various cloud services.',
-    }
+  # @route('/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
+  # @view('pages/docs/personal_cloud.html')
+  # def root(self):
+  #   return {
+  #     'title': 'Unlimited Personal Drive with Infinit',
+  #     'description': 'Create a personal drive of unlimited capacity by aggregating the storage resources from various cloud services.',
+  #   }
 
-  @route('/deployments/decentralized-collaborative-file-system', name = 'doc_deployment_file_system')
-  @view('pages/docs/decentralized_fs.html')
+  # @route('/deployments/decentralized-collaborative-file-system', name = 'doc_deployment_file_system')
+  # @view('pages/docs/decentralized_fs.html')
+  # def root(self):
+  #   return {
+  #     'title': 'Decentralized Collaborative File System with Infinit',
+  #     'description': 'Create a private or hybrid cloud storage infrastructure by relying on cloud storage resources or commodity on-premise hardware.',
+  # }
+
+  @route('/documentation/deployments', name = 'doc_deployments')
+  @view('pages/docs/deployments.html')
   def root(self):
     return {
-      'title': 'Decentralized Collaborative File System with Infinit',
-      'description': 'Create a private or hybrid cloud storage infrastructure by relying on cloud storage resources or commodity on-premise hardware.',
+      'title': 'Examples of Deployments with Infinit',
+      'description': 'Discover how Infinit can be used to deploy various types of storage infrastructure.',
     }
 
   @route('/documentation/reference', name = 'doc_reference')
@@ -176,7 +184,15 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'About Infinit',
-      'description': 'Learn about the company and people behind Infinit',
+      'description': 'Learn about the company and people behind Infinit.',
+    }
+
+  @route('/press', name = 'press')
+  @view('pages/press.html')
+  def root(self):
+    return {
+      'title': 'Press Releases',
+      'description': 'See all our press releases and download our press kit.',
     }
 
   @route('/contact', name = 'contact')
@@ -235,6 +251,17 @@ class Website(bottle.Bottle):
       else:
         return {}
     return {}
+
+  @route('/users/confirm_email', name = 'confirm_email')
+  @view('pages/users/confirm_email.html')
+  def root(self):
+
+    #todo
+
+    return {
+      'title': 'Confirm Email',
+      'description': 'Confirm your email and start using Infinit.',
+    }
 
   @route('/css/<path:path>')
   @route('/fonts/<path:path>')

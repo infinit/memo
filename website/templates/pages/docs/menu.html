@@ -10,6 +10,16 @@
       <a href="${route('doc_technology')}">Technology</a>
     </li>
 
+    <li ${'class="active"' if request.route.name == 'doc_deployments' else ''}>
+      <a href="${route('doc_deployments')}">Examples</a>
+
+      <ul>
+        <li><a href="${route('doc_deployments')}#centralized">Single Server</a></li>
+        <li><a href="${route('doc_deployments')}#distributed">Multiple Servers</a></li>
+        <li><a href="${route('doc_deployments')}#decentralized">Client Machines</a></li>
+      </ul>
+    </li>
+
     ## <li ${'class="active"' if request.route.name == 'doc_comparisons' else ''}>
     ##   <a href="${route('doc_comparisons')}">Comparisons</a>
     ## </li>
