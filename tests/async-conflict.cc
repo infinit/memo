@@ -140,7 +140,8 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs->path("/")->list_directory([&](std::string const&, struct stat*)
     { ++count;});
   BOOST_CHECK_EQUAL(count, 3);
-  reactor::sleep(100_ms); // prefetcher threads
+  // FIXME: Get rid of those sleeps !
+  reactor::sleep(valgrind(100_ms)); // prefetcher threads
   fs.reset();
 
   ELLE_LOG("conflict dir");
@@ -158,7 +159,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   BOOST_CHECK_EQUAL(root_count(fs), 5);
-  reactor::sleep(100_ms);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 
   ELLE_LOG("conflict dir 2");
@@ -176,7 +177,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   BOOST_CHECK_EQUAL(root_count(fs), 6);
-  reactor::sleep(100_ms);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 
   ELLE_LOG("conflict file");
@@ -197,7 +198,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   struct stat st;
   fs->path("/")->child("samefile")->stat(&st);
   BOOST_CHECK_EQUAL(st.st_size, 3);
-  reactor::sleep(100_ms);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 
   ELLE_LOG("ACL conflict");
@@ -222,7 +223,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   std::stringstream sauth(auth);
   auto jauth = elle::json::read(sauth);
   BOOST_CHECK_EQUAL(boost::any_cast<elle::json::Array>(jauth).size(), 1);
-  reactor::sleep(100_ms);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 }
 
