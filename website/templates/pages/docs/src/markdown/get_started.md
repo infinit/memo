@@ -352,7 +352,7 @@ You can now invite other users to join the network, to contribute additional sto
 <div>
   <a class="go_deployments" href="${route('doc_deployments')}">
     <img src="${url('images/icons/network.png')}">
-    <span>→ Deployments Examples</span>
+    <span>→ Deployment Examples</span>
   </a>
 
   <a class="go_reference" href="${route('doc_reference')}">
