@@ -616,7 +616,10 @@ def configure(
         PatchAndInstall = PatchAndInstall,
         email_regex = email_regex,
         name_regex = name_regex,
-        binaries = installed_binaries,
+        backend = {
+          'binaries': installed_binaries,
+          'debian': rule_debian
+        }
       )
       rule_check << beyond.rule_check
       for test_name in [
@@ -641,12 +644,13 @@ def configure(
         test.dependencies_add(beyond.package.nodes)
         env = {
           'PYTHONPATH':
-          drake.path_build('beyond/lib/python%s' % elle.python3.version)
+            drake.path_build('beyond/lib/python%s' % elle.python3.version),
+          'PATH': ':'.join([
+            str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                 absolute = True)),
+            os.environ.get('PATH', '')
+          ])
         }
-        env['PATH'] = str(
-          drake.path_build(installed_binaries[0].path(True).dirname(),
-                           absolute = True))
-        env['PATH'] += ':' + os.environ['PATH']
         runner = drake.Runner(
           exe = test,
           env = env

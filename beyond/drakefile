@@ -30,10 +30,12 @@ def configure(
     gcs_app_secret = 'abdwo588jVZO3zV8EUWlmx8o',
     email_regex = '^[^@]+@[^@]+\.[^@]+$',
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
-    binaries = [],
+    backend = []
 ):
 
   global build, install, package, rule_check, tests
+
+  binaries = backend.get('binaries', [])
 
   class PythonCopy(drake.Copy):
 
@@ -207,6 +209,8 @@ def configure(
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),
     debian_nodes, 'debian').package
+  if backend.get('debian'):
+    debian << backend.get('debian')
 
   ## ----- ##
   ## Check ##
@@ -250,14 +254,15 @@ def configure(
     test.dependencies_add(binaries)
     test.dependencies_add([test_utils])
     env = {
-      'PYTHONPATH': path,
+      'PYTHONPATH': str(path),
     }
     import os
-    if binaries:
-      binary = binaries[0]
-      env['PATH'] = str(drake.path_build(binary.path(True).dirname(),
-                                         absolute = True))
-      env['PATH'] += ':' + os.environ['PATH']
+    if len(binaries):
+      env['PATH'] = ':'.join([
+        str(drake.path_build(binaries[0].path(True).dirname(),
+                             absolute = True)),
+        os.environ.get('PATH', '')
+      ])
     runner = drake.Runner(
       exe = test,
       env = env
