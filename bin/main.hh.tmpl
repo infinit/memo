@@ -982,12 +982,12 @@ namespace infinit
     {
       User() = default;
 
-      User(std::string permissions_,
-           std::string status_,
-           bool create_home_)
-        : permissions{permissions_}
-        , status{status_}
-        , create_home{create_home_}
+      User(std::string const& permissions,
+           std::string const& status,
+           bool create_home)
+        : permissions(permissions)
+        , status(status)
+        , create_home(create_home)
       {}
 
       void
@@ -2262,7 +2262,7 @@ beyond_push(std::string const& where,
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
   auto payload_ = stream.str();
-  ELLE_LOG("pushing %s/%s with payload %s", type, name, payload_);
+  ELLE_TRACE("pushing %s/%s with payload %s", type, name, payload_);
   elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
   beyond_push_data(
     where, type, name, payload, "application/json", self, report, beyond_error);
