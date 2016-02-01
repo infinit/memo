@@ -216,6 +216,8 @@ def configure(
     'resources/images/icons/lock@2x.png',
     'resources/images/icons/scalable.png',
     'resources/images/icons/scalable@2x.png',
+    'resources/images/icons/scalable-yellow.png',
+    'resources/images/icons/scalable-yellow@2x.png',
     'resources/images/icons/fault.png',
     'resources/images/icons/fault@2x.png',
     'resources/images/icons/idea.png',
