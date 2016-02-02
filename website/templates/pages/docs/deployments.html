@@ -145,7 +145,7 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     <div data-tabs-content class="data-tabs-content">
       <div data-tabs-pane class="tabs-pane active" id="distributed-a">
 <pre><code>$> infinit-storage --create --filesystem --capacity 15GB --name local
-$> infinit-network --create --as alice --storage local --kelips --replication-factor 5 --name cluster --push
+$> infinit-network --create --as alice --storage local --kelips --replication-factor 3 --name cluster --push
 $> infinit-volume --create --as alice --network cluster --name shared --push
 
 $> infinit-user --fetch --name bob
