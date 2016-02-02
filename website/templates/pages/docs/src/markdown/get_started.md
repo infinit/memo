@@ -77,7 +77,9 @@ gpg:               imported: 1  (RSA: 1)
 <pre><code>$> sudo apt-get update
 ...
 Reading package lists... Done
-$> sudo apt-get install infinit
+</code></pre>
+
+<pre><code>$> sudo apt-get install infinit
 Reading package lists... Done
 Building dependency tree
 Reading state information... Done

@@ -15,7 +15,24 @@
     % elif os() == "Windows":
       <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
     % else:
-      <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-drive-setup-0.1.6.run" class="button">Download</a>
+      <a href="#install-linux" class="button linux_popup">Download</a>
+
+      <div id="install-linux" class="popup mfp-hide">
+        <h2>Linux Installation</h2>
+        <p>Import the public key used by the package management system.</p>
+        <pre><code>$> sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
+        </code></pre>
+
+        <p>Then add the repository locally:</p>
+        <pre><code>$> sudo add-apt-repository "deb https://debian.infinit.sh/ trusty main"
+        </code></pre>
+
+        <p>Update your local list of packages and install the command-line tools as you would any other package:</p>
+        <pre><code>$> sudo apt-get update</code></pre>
+
+        <p>Install <em>infinit-desktop</em>:
+        <pre><code>$> sudo apt-get install infinit-desktop</code></pre>
+      </div>
     % endif
 
     <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac and Linux"></p>
@@ -51,7 +68,7 @@
     % elif os() == "Windows":
       <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
     % else:
-      <a href="https://storage.googleapis.com/sh_infinit_releases/linux64/infinit-drive-setup-0.1.6.run" class="button">Download</a>
+      <a href="#install-linux" class="button linux_popup">Download</a>
     % endif
 
     <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac and Linux"></p>
