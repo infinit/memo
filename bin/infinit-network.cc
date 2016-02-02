@@ -580,7 +580,7 @@ main(int argc, char** argv)
         "[--storage STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
-        { "storage", value<std::vector<std::string>>()->multitoken(),
+        { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
