@@ -5,6 +5,14 @@ import os
 
 from infinit.website.utils import route, static_file, view
 
+def error(code, reason = ''):
+  bottle.response.status = code
+  if not reason:
+    reason = requests.status_codes._codes.get(code, '')[0]
+  return {
+    'reason': reason
+  }
+
 class Website(bottle.Bottle):
 
   def __init__(self):
@@ -210,8 +218,7 @@ class Website(bottle.Bottle):
   def root(self):
     fields = ['first_name', 'last_name', 'email', 'message']
     if not all(bottle.request.forms.get(field) for field in fields):
-      bottle.response.status = 400
-      return {}
+      return error(400)
     else:
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
@@ -220,8 +227,7 @@ class Website(bottle.Bottle):
           f: bottle.request.forms.get(f) for f in ['first_name', 'last_name', 'email', 'message', 'phone', 'company', 'country'] if bottle.request.forms.get(f)
         })
       if response.status_code // 100 != 2:
-        bottle.response.status = 503
-        return {}
+        return error(503)
       else:
         return {}
 
@@ -236,10 +242,8 @@ class Website(bottle.Bottle):
   @route('/slack', name = 'slack', method = 'POST')
   def root(self):
     email = bottle.request.forms.get('email')
-
     if not email:
-      bottle.response.status = 400
-      return {}
+      return error(400, reason = 'missing mandatory email')
     else:
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
@@ -258,12 +262,12 @@ class Website(bottle.Bottle):
   @route('/users/confirm_email', name = 'confirm_email', method = 'GET')
   @view('pages/users/confirm_email.html')
   def root(self):
+    for field in ['name', 'confirmation_code']:
+      if bottle.request.params.get(field) is None:
+        return error(400, 'missing mandatory %s' % field)
     email = bottle.request.params.get('email')
     confirmation_code = bottle.request.params.get('confirmation_code')
     name = bottle.request.params.get('name')
-    if name is None or confirmation_code is None:
-      bottle.response.status = 400
-      return {}
     url = '%s/users/%s/confirm_email' % (self.__hub, name)
     if email is not None:
       import urllib.parse
@@ -277,8 +281,8 @@ class Website(bottle.Bottle):
       headers = {'Content-Type': 'application/json'},
     )
     if (response.status_code // 100 != 2 and response.status_code != 410):
-      bottle.response.status = response.status_code
-      return {}
+      return error(response.status_code,
+                   reason = 'server error %s' % response.status_code)
     errors = []
     try:
       errors = response.json()['errors']
