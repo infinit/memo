@@ -98,11 +98,19 @@ namespace infinit
                    PaxosClient::Proposal const& p,
                    Value const& value);
             virtual
-            std::pair<PaxosServer::Quorum,
-                      std::unique_ptr<Paxos::PaxosClient::Accepted>>
-            _fetch_paxos(Address address);
+            void
+            confirm(PaxosServer::Quorum const& peers,
+                    Address address,
+                    PaxosClient::Proposal const& p);
+            virtual
+            boost::optional<PaxosClient::Accepted>
+            get(PaxosServer::Quorum const& peers, Address address);
           };
 
+          /*----------.
+          | LocalPeer |
+          `----------*/
+        public:
           class LocalPeer
             : public doughnut::Local
           {
@@ -112,9 +120,7 @@ namespace infinit
               : doughnut::Local(std::forward<Args>(args) ...)
               , _factor(factor)
             {}
-
             ELLE_ATTRIBUTE_R(int, factor);
-
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,
@@ -126,6 +132,15 @@ namespace infinit
                    Address address,
                    PaxosClient::Proposal const& p,
                    Value const& value);
+            virtual
+            void
+            confirm(PaxosServer::Quorum peers,
+                    Address address,
+                    PaxosClient::Proposal const& p);
+            virtual
+            boost::optional<PaxosClient::Accepted>
+            get(PaxosServer::Quorum peers,
+                Address address);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
@@ -142,9 +157,6 @@ namespace infinit
               int chosen;
               PaxosServer paxos;
             };
-            std::pair<PaxosServer::Quorum,
-                      std::unique_ptr<Paxos::PaxosClient::Accepted>>
-            _fetch_paxos(Address address);
           protected:
             virtual
             std::unique_ptr<blocks::Block>
@@ -155,32 +167,35 @@ namespace infinit
             _register_rpcs(RPCServer& rpcs) override;
             typedef elle::unordered_map<Address, Decision> Addresses;
             ELLE_ATTRIBUTE(Addresses, addresses);
+          private:
+            Decision&
+            _load(Address address,
+                  boost::optional<PaxosServer::Quorum> peers = {});
           };
 
-          /*-----.
-          | Stat |
-          `-----*/
-          public:
-            virtual
-            std::unique_ptr<Consensus::Stat>
-            stat(Address const& address) override;
+        /*-----.
+        | Stat |
+        `-----*/
+        public:
+          virtual
+          std::unique_ptr<Consensus::Stat>
+          stat(Address const& address) override;
 
+        /*--------------.
+        | Configuration |
+        `--------------*/
+        public:
           class Configuration
             : public consensus::Configuration
           {
-          /*--------.
-          | Factory |
-          `--------*/
+          // Factory
           public:
             Configuration(int replication_factor);
             virtual
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;
             ELLE_ATTRIBUTE_R(int, replication_factor);
-
-          /*--------------.
-          | Serialization |
-          `--------------*/
+          // Serialization
           public:
             Configuration(elle::serialization::SerializerIn& s);
             virtual

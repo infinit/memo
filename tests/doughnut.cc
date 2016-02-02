@@ -650,19 +650,22 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
     elle::Buffer data("cached", 6);
     block->data(elle::Buffer(data));
     auto addr = block->address();
-    ELLE_LOG("store block");
-    dhts.dht_a->store(*block);
-    auto fetched = dhts.dht_a->fetch(addr);
-    ELLE_LOG("fetch block");
+    ELLE_LOG("store block")
+      dhts.dht_a->store(*block);
+    auto fetched = [&]
+      {
+        ELLE_LOG("fetch block")
+          return dhts.dht_a->fetch(addr);
+      }();
     BOOST_CHECK_EQUAL(block->data(), fetched->data());
-    ELLE_LOG("fetch cached block");
-    BOOST_CHECK(!dhts.dht_a->fetch(addr, block->version()));
-    ELLE_LOG("clear cache");
-    cache->clear();
-    ELLE_LOG("fetch cached block");
-    BOOST_CHECK(!dhts.dht_a->fetch(addr, block->version()));
-    ELLE_LOG("fetch block");
-    BOOST_CHECK_EQUAL(dhts.dht_a->fetch(addr)->data(), block->data());
+    ELLE_LOG("fetch cached block")
+      BOOST_CHECK(!dhts.dht_a->fetch(addr, block->version()));
+    ELLE_LOG("clear cache")
+      cache->clear();
+    ELLE_LOG("fetch cached block")
+      BOOST_CHECK(!dhts.dht_a->fetch(addr, block->version()));
+    ELLE_LOG("fetch block")
+      BOOST_CHECK_EQUAL(dhts.dht_a->fetch(addr)->data(), block->data());
   }
 }
 
@@ -780,7 +783,6 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
       elle::make_unique<storage::Memory>(blocks_a),
       elle::make_unique<storage::Memory>(blocks_b),
       elle::make_unique<storage::Memory>(blocks_c),
-
       elle::Version(0, 4, 0),
       elle::Version(0, 4, 0),
       elle::Version(0, 4, 0)
@@ -788,33 +790,44 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     auto& dhta = dhts.dht_a;
     auto& dhtb = dhts.dht_b;
     // UB
-    dht::UB uba(dhta.get(), "a", dhta->keys().K());
-    dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
-    dhta->store(uba);
-    dhta->store(ubarev);
-    auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version()));
-    BOOST_CHECK(ruba);
+    ELLE_LOG("store UB")
+    {
+      dht::UB uba(dhta.get(), "a", dhta->keys().K());
+      dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
+      dhta->store(uba);
+      dhta->store(ubarev);
+      auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version()));
+      BOOST_CHECK(ruba);
+    }
     // NB
-    auto nb = elle::make_unique<dht::NB>(
-      dhta.get(), dhts.keys_a->public_key(), "blockname",
-      elle::Buffer("blockdata", 9));
-    dhta->store(*nb);
-    auto fetched =
-      dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version()));
-    BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
+    ELLE_LOG("store NB")
+    {
+      auto nb = elle::make_unique<dht::NB>(
+        dhta.get(), dhts.keys_a->public_key(), "blockname",
+        elle::Buffer("blockdata", 9));
+      dhta->store(*nb);
+      auto fetched =
+        dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version()));
+      BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
+    }
     // CHB
-    auto chb = dhta->make_block<infinit::model::blocks::ImmutableBlock>(data);
-    chbaddr = chb->address();
-    dhta->store(*chb);
-    BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
+    ELLE_LOG("store CHB")
+    {
+      auto chb = dhta->make_block<infinit::model::blocks::ImmutableBlock>(data);
+      chbaddr = chb->address();
+      dhta->store(*chb);
+      BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
+    }
     // ACB
-    auto acb = dhta->make_block<infinit::model::blocks::ACLBlock>();
-    acb->data(elle::Buffer(data));
-    ELLE_LOG("owner: store ACB")
-    dhta->store(*acb);
-    fetched = dhta->fetch(acb->address());
-    acbaddr = acb->address();
-    BOOST_CHECK_EQUAL(fetched->data(), data);
+    ELLE_LOG("store ACB")
+    {
+      auto acb = dhta->make_block<infinit::model::blocks::ACLBlock>();
+      acb->data(elle::Buffer(data));
+      dhta->store(*acb);
+      acbaddr = acb->address();
+      auto fetched = dhta->fetch(acb->address());
+      BOOST_CHECK_EQUAL(fetched->data(), data);
+    }
   }
   {
     DHTs dhts(
@@ -828,33 +841,48 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
       elle::make_unique<storage::Memory>(blocks_a),
       elle::make_unique<storage::Memory>(blocks_b),
       elle::make_unique<storage::Memory>(blocks_c),
-
       elle::Version(0, 5, 0),
       elle::Version(0, 5, 0),
-      elle::Version(0, 5, 0)
-      );
+      elle::Version(0, 5, 0));
     auto& dhta = dhts.dht_a;
     auto& dhtb = dhts.dht_b;
     // UB
-    std::unique_ptr<infinit::model::blocks::Block> ruba;
-    BOOST_CHECK_NO_THROW(
-      ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version())));
-    BOOST_CHECK(ruba);
+    ELLE_LOG("fetch UB with wrong address")
+    {
+      std::unique_ptr<infinit::model::blocks::Block> ruba;
+      BOOST_CHECK_NO_THROW(
+        ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version())));
+      BOOST_CHECK(ruba);
+    }
     // NB
-    std::unique_ptr<infinit::model::blocks::Block> fetched;
-    BOOST_CHECK_NO_THROW(fetched =
-      dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version())));
-    BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
+    ELLE_LOG("fetch NB with wrong address")
+    {
+      std::unique_ptr<infinit::model::blocks::Block> fetched;
+      BOOST_CHECK_NO_THROW(
+        fetched =
+        dhtb->fetch(
+          dht::NB::address(dhts.keys_a->K(), "blockname",
+                           dhts.dht_b->version())));
+      BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
+    }
     // CHB
-    BOOST_CHECK_NO_THROW({BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);});
-    BOOST_CHECK_NO_THROW({BOOST_CHECK_EQUAL(dhta->fetch(
-      infinit::model::Address(chbaddr.value(), infinit::model::flags::immutable_block))
-      ->data(), data);})
+    ELLE_LOG("fetch CHB with wrong address")
+    {
+      std::unique_ptr<infinit::model::blocks::Block> fetched;
+      BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
+      infinit::model::Address addr(
+        chbaddr.value(), infinit::model::flags::immutable_block);
+      BOOST_CHECK_EQUAL(dhta->fetch(addr)->data(), data);
+    }
     // ACB
-    BOOST_CHECK_NO_THROW(fetched = dhta->fetch(acbaddr));
-    BOOST_CHECK_EQUAL(fetched->data(), data);
-    BOOST_CHECK_NO_THROW(fetched = dhta->fetch(infinit::model::Address(acbaddr.value(), infinit::model::flags::mutable_block)));
-    BOOST_CHECK_EQUAL(fetched->data(), data);
+    ELLE_LOG("fetch ACB with wrong address")
+    {
+      std::unique_ptr<infinit::model::blocks::Block> fetched;
+      BOOST_CHECK_NO_THROW(fetched = dhta->fetch(acbaddr));
+      BOOST_CHECK_EQUAL(fetched->data(), data);
+      BOOST_CHECK_NO_THROW(fetched = dhta->fetch(infinit::model::Address(acbaddr.value(), infinit::model::flags::mutable_block)));
+      BOOST_CHECK_EQUAL(fetched->data(), data);
+    }
   }
 }
 

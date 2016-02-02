@@ -98,34 +98,7 @@ namespace infinit
             if (uaddr != address)
             {
               ELLE_TRACE("%s: retrying with unflagged address %s", *this, uaddr);
-              auto block = this->_fetch(uaddr, local_version);
-              return block;
-              // Replace old address with new in storage
-              /*
-              auto rblock = block->clone();
-              block->validate();
-              if (block->address() != address)
-              {
-                ELLE_LOG("%s: block update aborted: expected %s, got %s",
-                         *this, address, block->address());
-                return block;
-              }
-              ELLE_ASSERT(block->address() == address);
-              try
-              {
-                // Ensure we will be allowed to make the remove before doing anything
-                auto rsign = rblock->sign_remove();
-                if (rsign.block)
-                  ELLE_LOG("DAMMIT %s %s", rblock->address(), rsign.block->address());
-                this->_store(block->clone(), STORE_INSERT, {});
-                this->_remove(uaddr, rsign);
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_LOG("%s: block upgrade failed: %s", *this, e);
-              }
-              return block;
-              */
+              return this->_fetch(uaddr, local_version);
             }
             else
             {
@@ -252,6 +225,7 @@ namespace infinit
               ELLE_TRACE_SCOPE("fetch from %s", *peer);
               return peer->fetch(address, local_version);
             }
+            // FIXME: get rid of that
             catch (elle::Error const& e)
             {
               ELLE_TRACE("attempt fetching %s from %s failed: %s",

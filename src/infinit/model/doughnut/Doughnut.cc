@@ -256,14 +256,7 @@ namespace infinit
                        boost::optional<int> local_version) const
       {
         std::unique_ptr<blocks::Block> res;
-        try
-        {
-          return this->_consensus->fetch(address, std::move(local_version));
-        }
-        catch (infinit::storage::MissingKey const&)
-        {
-          return nullptr;
-        }
+        return this->_consensus->fetch(address, std::move(local_version));
       }
 
       void

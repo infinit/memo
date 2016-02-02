@@ -41,6 +41,7 @@ namespace infinit
       operator <(Address const& rhs) const;
       ELLE_ATTRIBUTE_R(Value, value);
       ELLE_ATTRIBUTE_R(uint8_t, overwritten_value);
+      ELLE_ATTRIBUTE_R(bool, flagged);
       Address unflagged() const; ///< Return initial address not masked by flags
       Flags  flags() const;
       bool mutable_block() const; ///< True if flags contain mutable_block

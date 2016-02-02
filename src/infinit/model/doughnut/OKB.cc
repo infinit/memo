@@ -74,10 +74,11 @@ namespace infinit
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
+        Address res(hash.contents(), flags::mutable_block);
         return dht.version() >= elle::Version(0, 5, 0)
-          ? Address(hash.contents(), flags::mutable_block)
-          : Address(hash.contents());
+          ? res : res.unflagged();
       }
+
       Address
       OKBHeader::_hash_address() const
       {

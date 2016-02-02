@@ -266,9 +266,8 @@ namespace infinit
         }
         else
           hash = cryptography::hash(stream, cryptography::Oneway::sha256);
-        return version >= elle::Version(0, 5, 0) ?
-          Address(hash.contents(), flags::immutable_block)
-          : Address(hash.contents());
+        Address addr(hash.contents(), flags::immutable_block);
+        return version >= elle::Version(0, 5, 0) ? addr : addr.unflagged();
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::
