@@ -273,16 +273,19 @@ class Website(bottle.Bottle):
       import urllib.parse
       url += '/%s' % urllib.parse.quote_plus(email)
     import json
-    response = requests.post(
-      url = url,
-      data = json.dumps({
-        'confirmation_code': confirmation_code
-      }),
+    try:
+      response = requests.post(
+        url = url,
+        data = json.dumps({
+          'confirmation_code': confirmation_code
+        }),
       headers = {'Content-Type': 'application/json'},
-    )
-    if (response.status_code // 100 != 2 and response.status_code != 410):
-      return error(response.status_code,
-                   reason = 'server error %s' % response.status_code)
+      )
+      if (response.status_code // 100 != 2 and response.status_code != 410):
+        return error(response.status_code,
+                     reason = 'server error %s' % response.status_code)
+    except requests.exceptions.ConnectionError:
+      return error(503)
     errors = []
     try:
       errors = response.json()['errors']
