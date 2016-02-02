@@ -104,7 +104,9 @@ namespace infinit
                     PaxosClient::Proposal const& p);
             virtual
             boost::optional<PaxosClient::Accepted>
-            get(PaxosServer::Quorum const& peers, Address address);
+            get(PaxosServer::Quorum const& peers,
+                Address address,
+                boost::optional<int> local_version);
           };
 
           /*----------.
@@ -140,7 +142,8 @@ namespace infinit
             virtual
             boost::optional<PaxosClient::Accepted>
             get(PaxosServer::Quorum peers,
-                Address address);
+                Address address,
+                boost::optional<int> local_version);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;

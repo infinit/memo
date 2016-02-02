@@ -132,10 +132,12 @@ namespace infinit
           : public Paxos::PaxosClient::Peer
         {
         public:
-          Peer(overlay::Overlay::Member member, Address address)
+          Peer(overlay::Overlay::Member member, Address address,
+               boost::optional<int> local_version = {})
             : Paxos::PaxosClient::Peer(member->id())
             , _member(std::move(member))
             , _address(address)
+            , _local_version(local_version)
           {}
 
           virtual
@@ -208,12 +210,10 @@ namespace infinit
             return network_exception_to_unavailable([&] {
               if (auto local =
                   dynamic_cast<Paxos::LocalPeer*>(this->_member.get()))
-                return local->get(
-                  q, this->_address);
+                return local->get(q, this->_address, this->_local_version);
               else if (auto remote =
                        dynamic_cast<Paxos::RemotePeer*>(this->_member.get()))
-                return remote->get(
-                  q, this->_address);
+                return remote->get(q, this->_address, this->_local_version);
               else if (dynamic_cast<DummyPeer*>(this->_member.get()))
                 throw reactor::network::Exception("Peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", *this->_member);
@@ -222,7 +222,7 @@ namespace infinit
 
           ELLE_ATTRIBUTE_R(overlay::Overlay::Member, member);
           ELLE_ATTRIBUTE(Address, address);
-          ELLE_ATTRIBUTE(int, version);
+          ELLE_ATTRIBUTE(boost::optional<int>, local_version);
         };
 
         /*-----------.
@@ -278,14 +278,15 @@ namespace infinit
 
         boost::optional<Paxos::PaxosClient::Accepted>
         Paxos::RemotePeer::get(PaxosServer::Quorum const& peers,
-                               Address address)
+                               Address address,
+                               boost::optional<int> local_version)
         {
           return network_exception_to_unavailable([&] {
             auto get = make_rpc<boost::optional<PaxosClient::Accepted>(
               PaxosServer::Quorum,
-              Address)>("get");
+              Address, boost::optional<int>)>("get");
             get.set_context<Doughnut*>(&this->_doughnut);
-            return get(peers, address);
+            return get(peers, address, local_version);
           });
         }
 
@@ -404,10 +405,23 @@ namespace infinit
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
-        Paxos::LocalPeer::get(PaxosServer::Quorum peers, Address address)
+        Paxos::LocalPeer::get(PaxosServer::Quorum peers, Address address,
+                              boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: get %s", *this, address);
-          return this->_load(address).paxos.get(peers);
+          auto res = this->_load(address).paxos.get(peers);
+          // Honor local_version
+          if (local_version && res &&
+              res->value.template is<std::shared_ptr<blocks::Block>>())
+          {
+            auto& block =
+              res->value.template get<std::shared_ptr<blocks::Block>>();
+            auto mb = std::dynamic_pointer_cast<blocks::MutableBlock>(block);
+            ELLE_ASSERT(mb);
+            if (mb->version() == *local_version)
+              block.reset();
+          }
+          return res;
         }
 
         void
@@ -442,8 +456,8 @@ namespace infinit
             "get",
             std::function<
             boost::optional<Paxos::PaxosClient::Accepted>(
-              PaxosServer::Quorum, Address)>
-            (std::bind(&LocalPeer::get, this, ph::_1, ph::_2)));
+              PaxosServer::Quorum, Address, boost::optional<int>)>
+            (std::bind(&LocalPeer::get, this, ph::_1, ph::_2, ph::_3)));
         }
 
         template <typename T>
@@ -859,7 +873,8 @@ namespace infinit
                                       this->_factor, overlay::OP_FETCH);
           PaxosClient::Peers peers;
           for (auto peer: owners)
-            peers.push_back(elle::make_unique<Peer>(peer, address));
+            peers.push_back(elle::make_unique<Peer>(
+                              peer, address, local_version));
           while (true)
           {
             try
@@ -869,8 +884,11 @@ namespace infinit
                 Paxos::PaxosClient client(
                   uid(this->doughnut().keys().K()), std::move(peers));
                 if (auto res = client.get())
-                  // FIXME: steal ownership
-                  return res.get()->clone();
+                  if (*res)
+                    // FIXME: steal ownership
+                    return res.get()->clone();
+                  else
+                    return {}; // local_version matched
                 else
                   throw MissingBlock(address);
               }
