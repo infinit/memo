@@ -1,5 +1,6 @@
 import bottle
 import sendwithus
+import requests
 import os
 
 from infinit.website.utils import route, static_file, view
@@ -254,12 +255,35 @@ class Website(bottle.Bottle):
         return {}
     return {}
 
-  @route('/users/confirm_email', name = 'confirm_email')
+  @route('/users/confirm_email', name = 'confirm_email', method = 'GET')
   @view('pages/users/confirm_email.html')
   def root(self):
-
-    #todo
-
+    email = bottle.request.params.get('email')
+    confirmation_code = bottle.request.params.get('confirmation_code')
+    name = bottle.request.params.get('name')
+    if name is None or confirmation_code is None:
+      bottle.response.status = 400
+      return {}
+    url = '%s/users/%s/confirm_email' % (self.__hub, name)
+    if email is not None:
+      import urllib.parse
+      url += '/%s' % urllib.parse.quote_plus(email)
+    import json
+    response = requests.post(
+      url = url,
+      data = json.dumps({
+        'confirmation_code': confirmation_code
+      }),
+      headers = {'Content-Type': 'application/json'},
+    )
+    if (response.status_code // 100 != 2 and response.status_code != 410):
+      bottle.response.status = response.status_code
+      return {}
+    errors = []
+    try:
+      errors = response.json()['errors']
+    except Exception:
+      pass
     return {
       'title': 'Confirm Email',
       'description': 'Confirm your email and start using Infinit.',
