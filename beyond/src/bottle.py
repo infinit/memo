@@ -103,6 +103,8 @@ class Bottle(bottle.Bottle):
     # Email confirmation
     self.route('/users/<name>/confirm_email',
                method = 'POST')(self.user_confirm_email)
+    self.route('/users/<name>/confirm_email/<email>',
+               method = 'POST')(self.user_confirm_email)
     self.route('/users/<name>/send_confirmation_email',
                method = 'POST')(self.user_send_confirmation_email)
     self.route('/users/<name>/send_confirmation_email/<email>',
@@ -331,11 +333,11 @@ class Bottle(bottle.Bottle):
           'id': name,
         })
 
-  def user_confirm_email(self, name):
+  def user_confirm_email(self, name, email = None):
     user = self.user_from_name(name = name)
     json = bottle.request.json
     confirmation_code = json.get('confirmation_code')
-    email = json.get('email', user.email)
+    email = email or user.email
     if user.emails.get(email) == True:
       raise Response(410, {
         'error': 'user/email/alread_confirmed',
@@ -344,8 +346,8 @@ class Bottle(bottle.Bottle):
     if email is None or confirmation_code is None or \
        user.emails.get(email) != confirmation_code:
       raise Response(404, {
-        'error': 'user/email/XXX',
-        'reason': 'confirmation codes don\'t match.' # XXX
+        'error': 'user/email/confirmation_failed',
+        'reason': 'confirmation codes don\'t match'
       })
     user.emails[email] = True
     user.save()
