@@ -29,7 +29,9 @@
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
-#include <crash_reporting/CrashReporter.hh>
+#ifndef INFINIT_WINDOWS
+# include <crash_reporting/CrashReporter.hh>
+#endif
 
 #include <infinit/credentials/AWSCredentials.hh>
 #include <infinit/credentials/OAuthCredentials.hh>
@@ -443,13 +445,18 @@ namespace infinit
       std::string crash_url =
         elle::sprintf("%s/crash/report",
                       crash_host.length() ? crash_host : beyond());
+#ifndef INFINIT_WINDOWS
       auto crash_reporter = crash_reporting::CrashReporter(crash_url);
+#endif
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
         "main",
-        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg,
-         &crash_reporter]
+        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg
+#ifndef INFINIT_WINDOWS
+         ,&crash_reporter
+#endif
+         ]
         {
 #ifdef INFINIT_LINUX
           // boost::filesystem uses the default locale, detect here if it
@@ -553,6 +560,7 @@ namespace infinit
                 args.push_back(unrecognized);
               }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
+#ifndef INFINIT_WINDOWS
               if (crash_reporter.enabled() &&
                   crash_reporter.crashes_pending_upload())
               {
@@ -562,6 +570,7 @@ namespace infinit
                     crash_reporter.upload_existing();
                   }));
               }
+#endif
               try
               {
                 mode->action(parse_args(mode->options, args,

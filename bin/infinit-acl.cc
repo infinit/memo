@@ -1,5 +1,5 @@
 #include <sys/types.h>
-
+#include <sys/stat.h>
 #ifdef INFINIT_LINUX
 # include <attr/xattr.h>
 #elif defined(INFINIT_MACOSX)
@@ -22,6 +22,10 @@ ELLE_LOG_COMPONENT("infinit-acl");
 # define SXA_EXTRA ,0
 #else
 # define SXA_EXTRA
+#endif
+
+#ifdef INFINIT_WINDOWS
+# undef stat
 #endif
 
 infinit::Infinit ifnt;
@@ -205,7 +209,7 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
 #endif
       }
       struct stat st;
-      int res = stat(path.c_str(),&st);
+      int res = ::stat(path.c_str(),&st);
       if (res != 0)
         perror(path.c_str());
       else

@@ -2,6 +2,10 @@
 
 #include <sys/stat.h> // S_IMFT...
 
+#ifdef INFINIT_WINDOWS
+#undef stat
+#endif
+
 #include <memory>
 
 #include <elle/serialization/json.hh>
@@ -13,10 +17,6 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
-
-#ifdef INFINIT_WINDOWS
-#undef stat
-#endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Node");
 
@@ -383,10 +383,20 @@ namespace infinit
       st->st_mtime = this->_header.mtime;
       st->st_ctime = this->_header.ctime;
       st->st_nlink = this->_header.links;
-      st->st_uid   = getuid();
+      st->st_uid   =
+      #ifdef INFINIT_WINDOWS
+        0;
+      #else
+        getuid();
+      #endif
       auto block = _header_block();
       if (!acl_preserver || !block)
-        st->st_gid   = getgid();
+        st->st_gid   =
+      #ifdef INFINIT_WINDOWS
+        0;
+      #else
+        getgid();
+      #endif
       else
       {
         acl_save[gid_position] = block->clone();

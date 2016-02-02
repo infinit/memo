@@ -474,7 +474,11 @@ COMMAND(run)
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
   if (auto port_file = optional(args, "port-file"))
     port_to_file(dht->local()->server_endpoint().port(), port_file.get());
-  static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
+  static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+    ,SIGQUIT
+#endif
+  };
   for (auto signal: signals)
     reactor::scheduler().signal_handle(
     signal,

@@ -1,7 +1,5 @@
 #include <infinit/filesystem/Directory.hh>
 
-#include <sys/stat.h> // S_IMFT...
-
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
@@ -9,8 +7,8 @@
 
 #include <reactor/exception.hh>
 
-#include <infinit/filesystem/File.hh>
 #include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/File.hh>
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/Unknown.hh>
 #include <infinit/filesystem/xattribute.hh>

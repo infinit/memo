@@ -16,7 +16,9 @@
 #include <infinit/storage/GCS.hh>
 #include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/S3.hh>
+#ifndef INFINIT_WINDOWS
 #include <infinit/storage/sftp.hh>
+#endif
 
 ELLE_LOG_COMPONENT("infinit-storage");
 
@@ -180,6 +182,7 @@ COMMAND(create)
        self_user(ifnt, {}).name,
        std::move(capacity));
   }
+#ifndef INFINIT_WINDOWS
   else if (args.count("ssh"))
   {
     auto host = mandatory(args, "ssh-host", "SSH remote host");
@@ -187,6 +190,7 @@ COMMAND(create)
     config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
       name, host, path, capacity);
   }
+#endif
   if (!config)
     throw CommandLineError("storage type unspecified");
   if (args.count("output"))
@@ -269,7 +273,9 @@ main(int argc, char** argv)
     ("filesystem", "store data on a local filesystem")
     ("gcs", "store data in Google cloud storage")
     ("s3", "store data in using Amazon S3")
+#ifndef INFINIT_WINDOWS
     ("ssh", "store data over SSH")
+#endif
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
@@ -315,7 +321,9 @@ main(int argc, char** argv)
       {
         storage_types,
         s3_options,
+#ifndef INFINIT_WINDOWS
         ssh_storage_options,
+#endif
       },
       {},
       {

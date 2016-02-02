@@ -311,7 +311,11 @@ COMMAND(run)
     option_opt<int>(args, option_cache_invalidation.long_name());
   if (cache_size || cache_ttl || cache_invalidation)
     cache = true;
-  static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
+  static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+  , SIGQUIT
+#endif
+  };
   for (auto signal: signals)
     reactor::scheduler().signal_handle(
       signal,

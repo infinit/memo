@@ -4,6 +4,9 @@
 # include <infinit/model/doughnut/fwd.hh>
 # include <infinit/model/doughnut/Peer.hh>
 # include <infinit/overlay/Overlay.hh>
+# ifdef stat
+#  undef stat
+# endif
 
 namespace infinit
 {
