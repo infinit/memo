@@ -580,7 +580,7 @@ namespace infinit
                 throw;
               }
             }
-            catch (boost::program_options::invalid_command_line_syntax const& e)
+            catch (boost::program_options::error_with_option_name const& e)
             {
               throw elle::Error(
                 elle::sprintf("command line error: %s", e.what()));
