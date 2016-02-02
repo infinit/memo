@@ -846,7 +846,7 @@ main(int argc, char** argv)
       "--name VOLUME --network NETWORK [--mountpoint PATH]",
       {
         { "name,n", value<std::string>(), "created volume name" },
-        { "network", value<std::string>(), "underlying network to use" },
+        { "network,N", value<std::string>(), "underlying network to use" },
         { "mountpoint,m", value<std::string>(),
           "default location to mount the volume (optional)" },
         option_output("volume"),
@@ -856,7 +856,7 @@ main(int argc, char** argv)
           elle::sprintf("push the volume to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-volume" },
         { "default-permissions,d", value<std::string>(),
-          "default permissions(r, rw), defaults to none"},
+          "default permissions (optional: r,rw)"},
       },
     },
     {
