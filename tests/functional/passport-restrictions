@@ -72,27 +72,29 @@ with TemporaryDirectory() as tmp, \
     path = '/',
     value = u2_key)
   assertEq(response['success'], True)
+  portfile = '%s/portfile' % tmp
+  def peer():
+    with open(portfile, 'r') as f:
+      return '127.0.0.1:%s' % int(f.readline())
   def run_volume():
     infinit_1.run([
       'infinit-volume', '--run', '--as', 'user', 'volume',
-      '--port-file', 'portfile'],
+      '--port-file', portfile],
       return_code = 118)
   import threading
   t = threading.Thread(target = run_volume)
   t.start()
   time.sleep(1)
-  with open('portfile', 'r') as f:
-    peer = '127.0.0.1:%s' % int(f.readline())
   response = infinit_2.run_script(
     user = 'user2', volume = 'user/volume',
-    peer = peer,
+    peer = peer(),
     operation = 'list_directory',
     path = '/')
   assertEq(response['success'], True)
   assertEq(response['entries'], ['beacon'])
   response = infinit_2.run_script(
     user = 'user2', volume = 'user/volume', operation = 'mkdir', path = '/foo',
-    peer = peer)
+    peer = peer())
   assertEq(response['success'], False)
   assertEq(response['message'], 'Access denied.')
   infinit_1.process.kill()

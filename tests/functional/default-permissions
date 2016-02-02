@@ -32,28 +32,29 @@ def run(perms):
     response = owner.run_script(
       user = 'owner', operation = 'mkdir', path = '/beacon')
     assertEq(response['success'], True)
-
+    portfile = '%s/portfile' % tmp
+    def peer():
+      with open(portfile, 'r') as f:
+        return '127.0.0.1:%s' % int(f.readline())
     def run_volume():
       owner.run([
         'infinit-volume', '--run', '--as', 'owner', 'volume',
-        '--port-file', 'portfile'],
+        '--port-file', portfile],
         return_code = 118)
     import threading
     t = threading.Thread(target = run_volume)
     t.start()
     time.sleep(1)
-    with open('portfile', 'r') as f:
-      peer = '127.0.0.1:%s' % int(f.readline())
     res = user.run_script(
       user = 'user', volume = 'owner/volume', operation = 'list_directory',
       path = '/',
-      peer = peer)
+      peer = peer())
     assertEq(res['success'], True)
     assertEq(res['entries'], ['beacon'])
     res = user.run_script(
       user = 'user', volume = 'owner/volume', operation = 'mkdir',
       path = '/foo',
-      peer = peer)
+      peer = peer())
     if perms == 'rw':
       assertEq(res['success'], True)
     else:
