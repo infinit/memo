@@ -92,31 +92,27 @@ class Bottle(bottle.Bottle):
       self.route('/users/<username>/%s-oauth' % s)(
         getattr(self, 'oauth_%s_get' % s))
       self.route('/users/<username>/credentials/%s' % s,
-                 method = 'GET')(
-        getattr(self, 'user_%s_credentials_get' % s))
+                 method = 'GET')(getattr(self, 'user_%s_credentials_get' % s))
     self.route('/users/<username>/credentials/google/refresh',
-               method = 'GET')(
-    getattr(self, 'user_credentials_google_refresh'))
+               method = 'GET')(getattr(self, 'user_credentials_google_refresh'))
     # User
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
 
     # Email confirmation
-    self.route('/users/<name>/confirm_email', method = 'POST')(
-      self.user_confirm_email)
-    self.route('/users/<name>/send_confirmation_email', method = 'POST')(
-      self.user_send_confirmation_email)
-    self.route('/users/<name>/send_confirmation_email/<email>', method = 'POST')(
-      self.user_send_confirmation_email)
+    self.route('/users/<name>/confirm_email',
+               method = 'POST')(self.user_confirm_email)
+    self.route('/users/<name>/send_confirmation_email',
+               method = 'POST')(self.user_send_confirmation_email)
+    self.route('/users/<name>/send_confirmation_email/<email>',
+               method = 'POST')(self.user_send_confirmation_email)
 
     # Avatar
-    self.route('/users/<name>/avatar', method = 'GET')(
-      self.user_avatar_get)
-    self.route('/users/<name>/avatar', method = 'PUT')(
-      self.user_avatar_put)
-    self.route('/users/<name>/avatar', method = 'DELETE')(
-      self.user_avatar_delete)
+    self.route('/users/<name>/avatar', method = 'GET')(self.user_avatar_get)
+    self.route('/users/<name>/avatar', method = 'PUT')(self.user_avatar_put)
+    self.route('/users/<name>/avatar',
+               method = 'DELETE')(self.user_avatar_delete)
     self.route('/users/<name>/networks',
                method = 'GET')(self.user_networks_get)
     self.route('/users/<name>/passports',
