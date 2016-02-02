@@ -24,6 +24,9 @@ ELLE_LOG_COMPONENT("infinit-volume");
 #endif
 
 infinit::Infinit ifnt;
+
+#include <endpoint_file.hh>
+
 using boost::program_options::variables_map;
 
 static
@@ -278,12 +281,22 @@ COMMAND(run)
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
   infinit::overlay::NodeEndpoints eps;
-  std::vector<std::string> hosts;
   if (args.count("peer"))
   {
-    hosts = args["peer"].as<std::vector<std::string>>();
-    for (auto const& h: hosts)
-      eps[infinit::model::Address::null].push_back(h);
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& obj: peers)
+    {
+      auto file_eps = endpoints_from_file(obj);
+      if (file_eps.size())
+      {
+        for (auto const& ep: file_eps)
+          eps[infinit::model::Address::null].push_back(ep);
+      }
+      else
+      {
+        eps[infinit::model::Address::null].push_back(obj);
+      }
+    }
   }
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
@@ -319,8 +332,10 @@ COMMAND(run)
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
   boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint = {};
-  if (push)
+  if (model->local())
     local_endpoint = model->local()->server_endpoint();
+  if (auto port_file = optional(args, "port-file"))
+    port_to_file(local_endpoint.get().port(), port_file.get());
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
@@ -800,8 +815,7 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {
     { "name", value<std::string>(), "volume name" },
-    { "mountpoint,m", value<std::string>(),
-      "where to mount the filesystem" },
+    { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
 #ifdef INFINIT_MACOSX
     { "mount-name", value<std::string>(), "name of mounted volume" },
     { "mount-icon", value<std::string>(), "icon for mounted volume" },
@@ -816,12 +830,13 @@ main(int argc, char** argv)
       elle::sprintf("fetch endpoints from %s", beyond(true)) },
     { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
-      "peer to connect to (host:port)" },
+      "peer address or file with list of peer addresses (host:port)" },
     { "push-endpoints", bool_switch(),
       elle::sprintf("push endpoints to %s", beyond(true)) },
     { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
+    { "port-file", value<std::string>(), "write node listening port to file" },
   };
   Modes modes {
     {

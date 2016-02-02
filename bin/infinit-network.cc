@@ -18,6 +18,8 @@ ELLE_LOG_COMPONENT("infinit-network");
 
 infinit::Infinit ifnt;
 
+#include <endpoint_file.hh>
+
 static
 bool
 _one(bool seen)
@@ -430,9 +432,20 @@ COMMAND(run)
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
   {
-    auto hosts = args["peer"].as<std::vector<std::string>>();
-    for (auto const& h: hosts)
-      eps[infinit::model::Address()].push_back(h);
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& obj: peers)
+    {
+      auto file_eps = endpoints_from_file(obj);
+      if (file_eps.size())
+      {
+        for (auto const& ep: file_eps)
+          eps[infinit::model::Address::null].push_back(ep);
+      }
+      else
+      {
+        eps[infinit::model::Address::null].push_back(obj);
+      }
+    }
   }
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
@@ -454,6 +467,8 @@ COMMAND(run)
             && dht->local()->storage();
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
+  if (auto port_file = optional(args, "port-file"))
+    port_to_file(dht->local()->server_endpoint().port(), port_file.get());
   static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
   for (auto signal: signals)
     reactor::scheduler().signal_handle(
@@ -682,7 +697,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to run" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
-          "peer to connect to (host:port)" },
+          "peer address or file with list of peer addresses (host:port)" },
         { "async", bool_switch(), "use asynchronous operations" },
         option_cache,
         option_cache_size,
@@ -696,6 +711,8 @@ main(int argc, char** argv)
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
+        { "port-file", value<std::string>(),
+          "write node listening port to file" },
       },
     },
     {
