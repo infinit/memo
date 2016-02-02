@@ -140,8 +140,7 @@ def configure(cxx_toolkit = None,
       'src/third_party/lss/linux_syscall_support.h',
     )
     import os
-    breakpad_include = (drake.Path(os.getcwd()) / drake.Drake.current.prefix \
-                     / drake.path_source('src')).canonize()
+    breakpad_include = (drake.Path(os.getcwd()) / drake.path_source('src')).canonize()
     breakpad_configure_args += [
       'CFLAGS=-I%s' % breakpad_include,
       'CXXFLAGS=-I%s' % breakpad_include,
