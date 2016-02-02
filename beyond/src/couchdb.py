@@ -52,7 +52,7 @@ port = %(port)s
 file = %(root)s/db.log
 
 [query_servers]
-python=python -m couchdb
+python=python3 -m couchdb
 ''' % {'root': self.__dir, 'port': self.__port},
             file = f)
     try:
