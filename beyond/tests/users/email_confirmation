@@ -10,24 +10,35 @@ with Beyond() as beyond:
 
   class Test(unittest.TestCase):
 
-    def test_normal(self):
+    def _test_confirm(self, specific):
       emailer = Emailer()
       user = User()
       beyond.emailer = emailer
       user.put(beyond)
       assert 'User/Welcome' in emailer.get(user['email'])
       email = emailer.get_specifics(user['email'], 'User/Welcome').pop()
+      confirmation_url = 'users/%s/confirm_email' % user['name']
+      confirmed_url = 'users/%s/email_confirmed' % user['name']
       params = url_parameters('?' + email['url_parameters'])
       del params['name']
-      throws(
-        lambda: beyond.post(
-          'users/%s/confirm_email' % user['name'], json = {}),
-        404)
-      beyond.post('users/%s/confirm_email' % user['name'], json = params)
-      throws(
-        lambda: beyond.post(
-          'users/%s/confirm_email' % user['name'], json = params),
-        410)
+      if specific:
+        email = params['email']
+        confirmation_url += '/%s' % urllib.parse.quote_plus(params['email'])
+        confirmed_url += '/%s' % urllib.parse.quote_plus(params['email'])
+      del params['email']
+      throws(lambda: beyond.get(confirmed_url, json = {}), 404)
+      throws(lambda: beyond.post(confirmation_url, json = {}), 404)
+      throws(lambda: beyond.get(confirmed_url, json = {}), 404)
+      beyond.post(confirmation_url, json = params)
+      beyond.get(confirmed_url, json = {})
+      throws(lambda: beyond.post(confirmation_url, json = params), 410)
+      beyond.get(confirmed_url, json = {})
+
+    def test_normal(self):
+      self._test_confirm(False)
+
+    def test_specific_email(self):
+      self._test_confirm(True)
 
     def test_emails(self):
       bob = User()

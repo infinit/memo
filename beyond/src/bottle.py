@@ -105,6 +105,10 @@ class Bottle(bottle.Bottle):
                method = 'POST')(self.user_confirm_email)
     self.route('/users/<name>/confirm_email/<email>',
                method = 'POST')(self.user_confirm_email)
+    self.route('/users/<name>/email_confirmed',
+               method = 'GET')(self.user_email_confirmed)
+    self.route('/users/<name>/email_confirmed/<email>',
+               method = 'GET')(self.user_email_confirmed)
     self.route('/users/<name>/send_confirmation_email',
                method = 'POST')(self.user_send_confirmation_email)
     self.route('/users/<name>/send_confirmation_email/<email>',
@@ -359,6 +363,17 @@ class Bottle(bottle.Bottle):
     raise Response(200, {
       'errors': errors
     })
+
+  def user_email_confirmed(self, name, email = None):
+    user = self.user_from_name(name = name)
+    email = email or user.email
+    if user.emails.get(email) == True:
+      raise Response(204, {})
+    else:
+      raise Response(404, {
+        'error': 'user/email/unconfirmed',
+        'reason': 'email not confirmed',
+      })
 
   def user_send_confirmation_email(self, name, email = None):
     user = self.user_from_name(name = name)
