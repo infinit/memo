@@ -79,7 +79,7 @@ namespace infinit
       ValidationResult
       Block::validate() const
       {
-        ELLE_DEBUG_SCOPE("%s: validate", *this);
+        ELLE_TRACE_SCOPE("%s: validate", *this);
         return this->_validate();
       }
 
@@ -92,7 +92,8 @@ namespace infinit
       ValidationResult
       Block::validate(Block const& new_block) const
       {
-        ELLE_DEBUG_SCOPE("%s: validate %s", *this, new_block);
+        ELLE_TRACE_SCOPE("%s: validate against previous block %s",
+                         *this, new_block);
         return this->_validate(new_block);
       }
 
