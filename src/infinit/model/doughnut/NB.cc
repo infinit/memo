@@ -109,7 +109,7 @@ namespace infinit
       NB::_validate() const
       {
         Address expected_address;
-        ELLE_TRACE("%s: check address", *this)
+        ELLE_DEBUG("%s: check address", *this)
         {
           expected_address = NB::address(*this->owner(), this->name(),
                                          this->_doughnut->version());
@@ -122,7 +122,7 @@ namespace infinit
             return blocks::ValidationResult::failure(reason);
           }
         }
-        ELLE_TRACE("%s: check signature", *this)
+        ELLE_DEBUG("%s: check signature", *this)
         {
           auto signed_data = this->_data_sign();
           if (!this->_owner->verify(this->signature(), signed_data))
