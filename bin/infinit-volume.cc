@@ -331,11 +331,13 @@ COMMAND(run)
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
-  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint = {};
+  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
   if (model->local())
+  {
     local_endpoint = model->local()->server_endpoint();
-  if (auto port_file = optional(args, "port-file"))
-    port_to_file(local_endpoint.get().port(), port_file.get());
+    if (auto port_file = optional(args, "port-file"))
+      port_to_file(local_endpoint.get().port(), port_file.get());
+  }
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
@@ -767,7 +769,7 @@ COMMAND(run)
       reactor::wait(*fs);
     }
   };
-  if (push)
+  if (local_endpoint && push)
   {
     elle::With<InterfacePublisher>(
       network, self, node_id, local_endpoint.get().port()) << [&]
