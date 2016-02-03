@@ -30,7 +30,7 @@ def configure(
     gcs_app_secret = 'abdwo588jVZO3zV8EUWlmx8o',
     email_regex = '^[^@]+@[^@]+\.[^@]+$',
     name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
-    delegate_user = 'the-hub',
+    delegate_user = 'hub',
     backend = []
 ):
 

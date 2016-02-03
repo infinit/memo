@@ -66,7 +66,7 @@ class Beyond:
       sendwithus_api_key = None,
       validate_email_address = True,
       limits = {},
-      delegate_user = 'the-hub',
+      delegate_user = 'hub',
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self

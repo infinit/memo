@@ -24,7 +24,7 @@ rule_tests = None
 email_regex = '^[^@]+@[^@]+\.[^@]+$'
 name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
 
-beyond_delegate_user = 'the-hub'
+beyond_delegate_user = 'hub'
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
