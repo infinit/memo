@@ -895,26 +895,19 @@ namespace infinit
               else
               {
                 std::unique_ptr<blocks::Block> res;
-                for_each_parallel(
-                  peers,
-                  [&] (std::unique_ptr<PaxosClient::Peer> const& peer,
-                       reactor::Scope& scope)
+                for (auto const& peer: peers)
+                {
+                  try
                   {
-                    try
-                    {
-                      res = static_cast<Peer*>(peer.get())->member()->
+                    return static_cast<Peer*>(peer.get())->member()->
                         fetch(address, local_version);
-                      scope.terminate_now();
-                    }
-                    catch (elle::Error const& e)
-                    {
-                      ELLE_TRACE("error fetching from %s: %s", *peer, e.what());
-                    }
-                  });
-                if (res)
-                  return res;
-                else
-                  throw MissingBlock(address);
+                  }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_TRACE("error fetching from %s: %s", *peer, e.what());
+                  }
+                }
+                throw  MissingBlock(address);
               }
             }
             catch (Paxos::PaxosServer::WrongQuorum const& e)
