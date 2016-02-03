@@ -50,15 +50,18 @@ namespace infinit
     elle::Buffer
     Filesystem::_get(Key key) const
     {
-      ELLE_TRACE("get %x", key);
       boost::filesystem::ifstream input(this->_path(key), std::ios::binary);
       if (!input.good())
+      {
+        ELLE_DEBUG("unable to open for reading: %s", this->_path(key));
         throw MissingKey(key);
+      }
       elle::Buffer res;
       elle::IOStream output(res.ostreambuf());
       std::copy(std::istreambuf_iterator<char>(input),
                 std::istreambuf_iterator<char>(),
                 std::ostreambuf_iterator<char>(output));
+      ELLE_DUMP("content: %s", res);
       return res;
     }
 
