@@ -27,6 +27,9 @@ class TemporaryDirectory:
   def __exit__(self, *args, **kwargs):
     shutil.rmtree(self.__dir)
 
+  def __str__(self):
+    return str(self.__dir)
+
   @property
   def dir(self):
     return self.__dir
