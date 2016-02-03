@@ -33,22 +33,22 @@ assert binary_path is not None
 # Email templates.
 templates = {
   'Drive/Joined': {
-    'swu': 'tem_RFSDrp7nzCbsBRSUts7MsU',
+    'swu': ('tem_RFSDrp7nzCbsBRSUts7MsU', )
   },
   'Drive/Invitation': {
-    'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
+    'swu': ('tem_UwwStKnWCWNU5VP4HBS7Xj', )
   },
   'Drive/Plain Invitation': {
-    'swu': 'tem_j8r5aDLJ6v3CTveMahtauX',
+    'swu': ('tem_j8r5aDLJ6v3CTveMahtauX', )
   },
   'Internal/Crash Report': {
-    'swu': 'tem_fu5GEE6jxByj2SB4zM6CrH',
+    'swu': ('tem_fu5GEE6jxByj2SB4zM6CrH', )
   },
   'User/Welcome': {
-    'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
+    'swu': ('tem_Jsd948JkLqhBQs3fgGZSsS', 'ver_W9nDEtV4KzxWyrLtZDcAWE')
   },
   'User/Confirmation Email': {
-    'swu': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
+    'swu': ('tem_b6ZtsWVHKzv4PUBDU7WTZj', )
   },
 }
 
@@ -106,9 +106,18 @@ class Beyond:
 
   def template(self, name):
     if isinstance(self.__emailer, emailer.SendWithUs):
-      return templates[name]['swu']
+      template = templates[name]['swu']
+      import sys
+      print(template, file = sys.stderr)
+      return {
+        'template': template[0],
+        'version':  template[1] if len(template) > 1 else None,
+      }
     else:
-      return name
+      return {
+        'template': name,
+        'version': None,
+      }
 
   @property
   def dropbox_app_secret(self):
@@ -317,11 +326,11 @@ class Beyond:
         crash_dump.write(data.getvalue())
       with open('%s/client.txt' % temp_dir, 'rb') as crash_dump:
         self.__emailer.send_one(
-          template = self.template('Internal/Crash Report'),
           recipient_email = 'developers@infinit.io',
           recipient_name = 'Developers',
           variables = variables,
           files = [crash_dump],
+          **self.template('Internal/Crash Report')
         )
 
 class User:
@@ -445,14 +454,14 @@ class User:
     self.__beyond._Beyond__datastore.user_insert(self)
     if self.email is not None:
       self.__beyond.emailer.send_one(
-        template = self.__beyond.template('User/Welcome'),
         recipient_email = self.email,
         recipient_name = self.name,
         variables = {
           'email': self.email,
           'name': self.name,
           'url_parameters': self.url_parameters(self.email)
-        }
+        },
+        **self.__beyond.template('User/Welcome')
       )
 
   def confirmation_code(self, email):
@@ -471,14 +480,14 @@ class User:
     email = email or self.email
     if email is not None:
       self.__beyond.emailer.send_one(
-        template = self.__beyond.template('User/Confirmation Email'),
         recipient_email = email,
         recipient_name = self.name,
         variables = {
           'email': email,
           'name': self.name,
           'url_parameters': self.url_parameters(email)
-        }
+        },
+        **self.__beyond.template('User/Confirmation Email')
       )
 
   def save(self):
@@ -776,16 +785,16 @@ class Drive(metaclass = Entity,
       if invitation and email is not None:
         template = "Drive/Invitation" if not plain else "Drive/Plain Invitation"
         beyond.emailer.send_one(
-          template = beyond.template(template),
           recipient_email = email,
           recipient_name = key,
-          variables = variables
+          variables = variables,
+          **beyond.template(template)
         )
       if confirm and owner.email is not None:
         beyond.emailer.send_one(
-          template = beyond.template("Drive/Joined"),
           recipient_email = owner.email,
           recipient_name = owner.name,
-          variables = variables
+          variables = variables,
+          **beyond.template("Drive/Joined")
         )
       return True
