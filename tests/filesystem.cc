@@ -661,24 +661,35 @@ test_filesystem(bool dht,
   bfs::file_size(mount / "foo", erc);
   BOOST_CHECK_EQUAL(true, !!erc);
 
-  char buffer[16384];
-  //truncate
+  ELLE_LOG("truncate")
   {
-    bfs::ofstream ofs(mount / "tt");
-    for (int i=0; i<100; ++i)
-      ofs.write(buffer, 16384);
+    char buffer[16384];
+    ELLE_LOG("write massive file")
+    {
+      bfs::ofstream ofs(mount / "tt");
+      for (int i=0; i<100; ++i)
+        ofs.write(buffer, 16384);
+    }
+    int tfd = open( (mount / "tt").c_str(), O_RDWR);
+    ELLE_LOG("truncate file")
+      BOOST_CHECK_EQUAL(ftruncate(tfd, 0), 0);
+    ELLE_LOG("successive writes")
+    {
+      BOOST_CHECK_EQUAL(write(tfd, buffer, 16384), 16384);;
+      BOOST_CHECK_EQUAL(write(tfd, buffer, 12288), 12288);
+      BOOST_CHECK_EQUAL(write(tfd, buffer, 3742), 3742);
+    }
+    ELLE_LOG("truncate file")
+    {
+      BOOST_CHECK_EQUAL(ftruncate(tfd, 32414), 0);
+      BOOST_CHECK_EQUAL(ftruncate(tfd, 32413), 0);
+    }
+    close(tfd);
+    ELLE_LOG("check file size")
+      BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
+    bfs::remove(mount / "tt");
   }
-  int tfd = open( (mount / "tt").c_str(), O_RDWR);
-  BOOST_CHECK_EQUAL(ftruncate(tfd, 0), 0);
-  BOOST_CHECK_EQUAL(write(tfd, buffer, 16384), 16384);;
-  BOOST_CHECK_EQUAL(write(tfd, buffer, 12288), 12288);
-  BOOST_CHECK_EQUAL(write(tfd, buffer, 3742), 3742);
-  BOOST_CHECK_EQUAL(ftruncate(tfd, 32414), 0);
-  BOOST_CHECK_EQUAL(ftruncate(tfd, 32413), 0);
-  close(tfd);
-  BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
 
-  bfs::remove(mount / "tt");
   struct stat st;
   // hardlink
 #ifndef INFINIT_MACOSX
