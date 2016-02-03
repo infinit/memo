@@ -439,7 +439,10 @@ namespace infinit
   {
     try
     {
-      std::string crash_url = elle::sprintf("%s/crash/report", beyond());
+      std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
+      std::string crash_url =
+        elle::sprintf("%s/crash/report",
+                      crash_host.length() ? crash_host : beyond());
       auto crash_reporter = crash_reporting::CrashReporter(crash_url);
       reactor::Scheduler sched;
       reactor::Thread main_thread(
