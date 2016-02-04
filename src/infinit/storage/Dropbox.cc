@@ -24,16 +24,23 @@ namespace infinit
     Dropbox::~Dropbox()
     {}
 
+    static
+    std::string
+    _key_str(Key key)
+    {
+      return elle::sprintf("%x", key).substr(2);
+    }
+
     boost::filesystem::path
     Dropbox::_path(Key key) const
     {
-      return this->_root / elle::sprintf("%x", key);
+      return this->_root / _key_str(key);
     }
 
     elle::Buffer
     Dropbox::_get(Key key) const
     {
-      ELLE_DEBUG("get %x", key);
+      ELLE_DEBUG("get %s", _key_str(key));
       try
       {
         ELLE_DEBUG("get path: %s", this->_path(key));
@@ -51,7 +58,7 @@ namespace infinit
                   bool insert,
                   bool update)
     {
-      ELLE_DEBUG("set %x", key);
+      ELLE_DEBUG("set %s", _key_str(key));
       if (insert)
       {
         auto insertion =
@@ -73,7 +80,7 @@ namespace infinit
     int
     Dropbox::_erase(Key key)
     {
-      ELLE_DEBUG("erase %x", key);
+      ELLE_DEBUG("erase %s", _key_str(key));
       try
       {
         this->_dropbox.delete_(this->_path(key));
@@ -90,26 +97,36 @@ namespace infinit
     std::vector<Key>
     Dropbox::_list()
     {
-      auto metadata = this->_dropbox.metadata("/" + this->_root.string());
-      std::vector<Key> res;
-      if (!metadata.is_dir)
-        throw elle::Error(".infinit is not a directory");
-      if  (!metadata.contents)
-        return res;
-      for (auto const& entry: metadata.contents.get())
+      try
       {
-        // /.infinit/0xFOO -> FOO
-        std::string address = entry.path.substr(entry.path.find_last_of('/')+3);
-        res.push_back(model::Address::from_string(address));
+        auto metadata = this->_dropbox.metadata("/" + this->_root.string());
+        std::vector<Key> res;
+        if (!metadata.is_dir)
+        {
+          throw elle::Error(
+            elle::sprintf("%s is not a directory", this->_root.string()));
+        }
+        if  (!metadata.contents)
+          return res;
+        for (auto const& entry: metadata.contents.get())
+        {
+          std::string address =
+            entry.path.substr(entry.path.find_last_of('/') + 1);
+          res.push_back(model::Address::from_string(address));
+        }
+        return res;
       }
-      return res;
+      catch (dropbox::NoSuchFile const& e)
+      {
+        return {};
+      }
     }
 
     BlockStatus
     Dropbox::_status(Key k)
     {
       boost::filesystem::path p("/" + this->_root.string());
-      p = p / elle::sprintf("%x", k);
+      p = p / _key_str(k);
       try
       {
         auto metadata = this->_dropbox.local_metadata(p);
@@ -118,7 +135,7 @@ namespace infinit
       }
       catch (dropbox::NoSuchFile const &)
       {
-        ELLE_DEBUG("status check on %x: %s", p, "missing");
+        ELLE_DEBUG("status check on %s: %s", p, "missing");
         return BlockStatus::missing;
       }
     }
