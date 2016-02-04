@@ -22,14 +22,6 @@ namespace infinit
   {
     namespace doughnut
     {
-      static
-      elle::Version
-      elle_serialization_version(Doughnut const& dht)
-      {
-        auto versions = elle::serialization::get_serialization_versions<
-          infinit::serialization_tag>(dht.version());
-        return versions.at(elle::type_info<elle::serialization_tag>());
-      }
 
       OKBHeader::OKBHeader(Doughnut* dht,
                            cryptography::rsa::KeyPair const& keys,
