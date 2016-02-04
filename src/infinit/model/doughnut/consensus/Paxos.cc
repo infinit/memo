@@ -867,8 +867,7 @@ namespace infinit
               }
               catch (Paxos::PaxosServer::WrongQuorum const& e)
               {
-                ELLE_TRACE("%s: %s instead of %s",
-                           e.what(), e.effective(), e.expected());
+                ELLE_TRACE("%s", e.what());
                 peers = lookup_nodes(
                   this->doughnut(), e.expected(), b->address());
                 peers_id.clear();
