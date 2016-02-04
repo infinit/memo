@@ -487,7 +487,6 @@ namespace infinit
         Paxos::LocalPeer::_fetch(Address address,
                                  boost::optional<int> local_version) const
         {
-          ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
           if (this->doughnut().version() >= elle::Version(0, 5, 0))
           {
             elle::serialization::Context context;
@@ -732,12 +731,14 @@ namespace infinit
                 elle::sprintf("No peer available for store %x", b->address()));
             // FIXME: client is persisted on conflict resolution, hence the
             // round number is kept and won't start at 0.
+            // Keep retrying with new quorums
             while (true)
             {
               try
               {
                 Paxos::PaxosClient client(
                   uid(this->doughnut().keys().K()), std::move(peers));
+                // Keep resolving conflicts and retrying
                 while (true)
                 {
                   auto version =
@@ -875,22 +876,39 @@ namespace infinit
           for (auto peer: owners)
             peers.push_back(elle::make_unique<Peer>(
                               peer, address, local_version));
+          if (peers.empty())
+          {
+            ELLE_TRACE("could not find any owner for %s", address);
+            throw MissingBlock(address);
+          }
+          else
+            ELLE_DEBUG("owners: %s", peers);
           while (true)
           {
             try
             {
               if (address.mutable_block())
               {
+                ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
                   uid(this->doughnut().keys().K()), std::move(peers));
                 if (auto res = client.get())
                   if (*res)
+                  {
                     // FIXME: steal ownership
+                    ELLE_DEBUG("received new block");
                     return res.get()->clone();
+                  }
                   else
+                  {
+                    ELLE_DEBUG("local version is the most recent");
                     return {}; // local_version matched
+                  }
                 else
+                {
+                  ELLE_DEBUG("no value1 can be retreived");
                   throw MissingBlock(address);
+                }
               }
               else
               {
@@ -921,9 +939,73 @@ namespace infinit
         }
 
         void
+        Paxos::rebalance(Address address)
+        {
+          ELLE_TRACE_SCOPE("%s: rebalance %s", *this, address);
+          ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
+          PaxosServer::Quorum q;
+          int version = 0;
+          auto owners =
+            this->_owners(address, this->_factor, overlay::OP_FETCH);
+          PaxosClient::Peers peers;
+          for (auto peer: owners)
+            peers.push_back(elle::make_unique<Peer>(peer, address));
+          Paxos::PaxosClient client(
+            uid(this->doughnut().keys().K()), std::move(peers));
+          try
+          {
+            auto last = client.get_quorum();
+            q = last.second;
+            // FIXME: Couldn't we operate on MutableBlocks directly in Paxos ?
+            if (last.first)
+              version = std::dynamic_pointer_cast<blocks::MutableBlock>(
+                *last.first)->version();
+          }
+          catch (Paxos::PaxosServer::WrongQuorum const& e)
+          {
+            q = e.expected();
+          }
+          // FIXME: handle immutable block errors
+          ELLE_DEBUG("quorum: %s", q);
+          if (signed(q.size()) == this->_factor)
+          {
+            ELLE_TRACE("block is already well balanced (%s replicas)",
+                       this->_factor);
+            return;
+          }
+          PaxosServer::Quorum new_q;
+          for (auto const& owner: this->_owners(
+                 address, this->_factor, overlay::OP_INSERT_OR_UPDATE))
+            new_q.emplace(owner->id());
+          // Make sure we didn't lose a previous owner because of the overlay
+          // failing to look it up.
+          for (auto const& owner: q)
+            new_q.emplace(owner);
+          // FIXME
+          new_q.emplace(Address::from_string("a7d974a33053961e50d624783f7ba7d93c1daa018b694c6a32abb6197a54a588"));
+          if (new_q == q)
+          {
+            ELLE_TRACE("unable to find any new owner");
+            return;
+          }
+          ELLE_DEBUG("rebalance block to: %s", new_q)
+            try
+            {
+              // FIXME: version is the last *value* version, there could have
+              // been a quorum since then in which case this will fail.
+              client.choose(version + 1, new_q);
+              ELLE_TRACE("successfully rebalanced to %s nodes", new_q.size());
+            }
+            catch (elle::Error const&)
+            {
+              ELLE_WARN("rebalancing failed: %s", elle::exception_string());
+            }
+        }
+
+        void
         Paxos::_remove(Address address, blocks::RemoveSignature rs)
         {
-          this->remove_many(address, std::move(rs), _factor);
+          this->remove_many(address, std::move(rs), this->_factor);
         }
 
         Paxos::LocalPeer::Decision::Decision(PaxosServer paxos)

@@ -43,6 +43,9 @@ namespace infinit
         /*-------.
         | Blocks |
         `-------*/
+        public:
+          void
+          rebalance(Address address);
         protected:
           virtual
           void
