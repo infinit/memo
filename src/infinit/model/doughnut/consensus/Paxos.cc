@@ -745,6 +745,48 @@ namespace infinit
           this->_addresses.erase(address);
         }
 
+        static
+        std::shared_ptr<blocks::Block>
+        resolve(blocks::Block& b,
+                blocks::Block& newest,
+                StoreMode mode,
+                ConflictResolver* resolver)
+        {
+          if (newest == b)
+          {
+            ELLE_DEBUG("Paxos chose another block version, which "
+                       "happens to be the same as ours");
+            return nullptr;
+          }
+          ELLE_DEBUG_SCOPE("Paxos chose another block value");
+          if (resolver)
+          {
+            ELLE_TRACE_SCOPE("chosen block differs, run conflict resolution");
+            auto resolved = (*resolver)(b, newest, mode);
+            if (resolved)
+            {
+              ELLE_DEBUG_SCOPE("seal resolved block");
+              resolved->seal();
+              return std::shared_ptr<blocks::Block>(resolved.release());
+            }
+            else
+            {
+              ELLE_TRACE("resolution failed");
+              // FIXME: useless clone, find a way to steal ownership
+              throw infinit::model::doughnut::Conflict(
+                "Paxos chose a different value", newest.clone());
+            }
+          }
+          else
+          {
+            ELLE_TRACE("chosen block differs, signal conflict");
+            // FIXME: useless clone, find a way to steal ownership
+            throw infinit::model::doughnut::Conflict(
+              "Paxos chose a different value",
+              newest.clone());
+          }
+        }
+
         void
         Paxos::_store(std::unique_ptr<blocks::Block> inblock,
                       StoreMode mode,
@@ -815,40 +857,8 @@ namespace infinit
                     {
                       auto block =
                         chosen->value.get<std::shared_ptr<blocks::Block>>();
-                      if (*block == *b)
-                      {
-                        ELLE_DEBUG("Paxos chose another block version, which "
-                                   "happens to be the same as ours");
+                      if (!(b = resolve(*b, *block, mode, resolver.get())))
                         break;
-                      }
-                      ELLE_DEBUG_SCOPE("Paxos chose another block value");
-                      if (resolver)
-                      {
-                        ELLE_TRACE_SCOPE(
-                          "chosen block differs, run conflict resolution");
-                        auto resolved = (*resolver)(*b, *block, mode);
-                        if (resolved)
-                        {
-                          ELLE_DEBUG_SCOPE("seal resolved block");
-                          resolved->seal();
-                          b.reset(resolved.release());
-                        }
-                        else
-                        {
-                          ELLE_TRACE("resolution failed");
-                          // FIXME: useless clone, find a way to steal ownership
-                          throw infinit::model::doughnut::Conflict(
-                            "Paxos chose a different value", block->clone());
-                        }
-                      }
-                      else
-                      {
-                        ELLE_TRACE("chosen block differs, signal conflict");
-                        // FIXME: useless clone, find a way to steal ownership
-                        throw infinit::model::doughnut::Conflict(
-                          "Paxos chose a different value",
-                          block->clone());
-                      }
                     }
                   }
                   else
