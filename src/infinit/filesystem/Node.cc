@@ -12,6 +12,7 @@
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/NB.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -209,6 +210,16 @@ namespace infinit
     }
 
     static auto const overlay_info = "user.infinit.overlay.";
+    static
+    boost::optional<std::string>
+    xattr_special(std::string const& name)
+    {
+      if (name.find("infinit.") == 0)
+        return name.substr(8);
+      if (name.find("user.infinit.") == 0)
+        return name.substr(13);
+      return {};
+    }
 
     void
     Node::setxattr(std::string const& k, std::string const& v, int flags)
@@ -216,6 +227,32 @@ namespace infinit
       ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: set attribute \"%s\"", *this, k);
       ELLE_DUMP("value: %s", elle::ConstWeakBuffer(v));
+      if (auto special = xattr_special(k))
+      {
+        auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+          this->_owner.block_store());
+        auto block = this->_header_block();
+        Address addr;
+        if (block)
+          addr = block->address();
+        else if (this->_parent)
+        {
+          auto const& elem = this->_parent->_files.at(this->_name);
+          addr = elem.second;
+        }
+        if (*special == "block.rebalance")
+        {
+          if (this->_owner.block_store()->version() < elle::Version(0, 5, 0))
+            THROW_NOSYS;
+          if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
+                dht->consensus().get()))
+          {
+            paxos->rebalance(addr);
+            return;
+          }
+        }
+        throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
+      }
       /* Drop quarantine flags, preventing the files from being opened.
       * https://github.com/osxfuse/osxfuse/issues/162
       */
@@ -234,17 +271,6 @@ namespace infinit
       _header.xattrs[k] = elle::Buffer(v.data(), v.size());
       _header.ctime = time(nullptr);
       _commit();
-    }
-
-    static
-    boost::optional<std::string>
-    xattr_special(std::string const& name)
-    {
-      if (name.find("infinit.") == 0)
-        return name.substr(8);
-      if (name.find("user.infinit.") == 0)
-        return name.substr(13);
-      return {};
     }
 
     static
@@ -287,7 +313,7 @@ namespace infinit
         if (*special == "block")
         {
           if (block)
-            return elle::sprintf("%x", block);
+            return elle::sprintf("%x", block->address());
           else if (this->_parent)
           {
             auto const& elem = this->_parent->_files.at(this->_name);
