@@ -152,7 +152,7 @@ namespace infinit
         using Super::seal;
         // Seal with a specific secret key.
         void
-        seal(cryptography::SecretKey const& key);
+        seal(boost::optional<int> version, cryptography::SecretKey const& key);
       protected:
         virtual
         blocks::ValidationResult
@@ -162,9 +162,10 @@ namespace infinit
         _validate(blocks::Block const& new_block) const override;
         virtual
         void
-        _seal() override;
+        _seal(boost::optional<int> version) override;
         void
-        _seal(boost::optional<cryptography::SecretKey const&> key);
+        _seal(boost::optional<int> version,
+              boost::optional<cryptography::SecretKey const&> key);
         class OwnerSignature
           : public Super::OwnerSignature
         {

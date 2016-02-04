@@ -73,7 +73,7 @@ namespace infinit
       `-----------*/
 
       void
-      UB::_seal()
+      UB::_seal(boost::optional<int>)
       {}
 
       // FIXME: factor with CHB

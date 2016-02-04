@@ -78,7 +78,7 @@ namespace infinit
       `-----------*/
 
       void
-      NB::_seal()
+      NB::_seal(boost::optional<int>)
       {
         if (this->_keys)
           ELLE_ASSERT_EQ(this->_keys->K(), *this->owner());

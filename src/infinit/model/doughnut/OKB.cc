@@ -304,7 +304,7 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseOKB<Block>::_seal()
+      BaseOKB<Block>::_seal(boost::optional<int> version)
       {
         if (this->_data_changed)
         {
@@ -314,9 +314,11 @@ namespace infinit
             this->doughnut()->keys().K().seal(this->_data_plain);
           ELLE_DUMP("%s: encrypted data: %s", *this, encrypted);
           this->Block::data(std::move(encrypted));
-          this->_seal_okb();
+          this->_seal_okb(version);
           this->_data_changed = false;
         }
+        else if (version)
+          this->_seal_okb(version);
         else
           ELLE_DEBUG("%s: data didn't change", *this);
       }
@@ -329,10 +331,13 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseOKB<Block>::_seal_okb(bool bump_version)
+      BaseOKB<Block>::_seal_okb(boost::optional<int> version, bool bump_version)
       {
-        if (bump_version)
-          ++this->_version; // FIXME: idempotence in case the write fails ?
+        if (version)
+          this->_version = *version;
+        else
+          if (bump_version)
+            ++this->_version; // FIXME: idempotence in case the write fails ?
         if (!this->_owner_private_key)
           throw elle::Error("attempting to seal an unowned OKB");
         this->_signature =

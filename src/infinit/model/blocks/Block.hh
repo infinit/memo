@@ -79,7 +79,7 @@ namespace infinit
       `-----------*/
       public:
         void
-        seal();
+        seal(boost::optional<int> version = {});
         ValidationResult
         validate() const;
         ValidationResult
@@ -93,7 +93,7 @@ namespace infinit
       protected:
         virtual
         void
-        _seal();
+        _seal(boost::optional<int> version);
         virtual
         ValidationResult
         _validate() const;

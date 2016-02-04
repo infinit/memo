@@ -613,21 +613,23 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseACB<Block>::seal(cryptography::SecretKey const& key)
+      BaseACB<Block>::seal(boost::optional<int> version,
+                           cryptography::SecretKey const& key)
       {
-        this->_seal(key);
+        this->_seal(version, key);
       }
 
       template <typename Block>
       void
-      BaseACB<Block>::_seal()
+      BaseACB<Block>::_seal(boost::optional<int> version)
       {
-        this->_seal({});
+        this->_seal(version, {});
       }
 
       template <typename Block>
       void
-      BaseACB<Block>::_seal(boost::optional<cryptography::SecretKey const&> key)
+      BaseACB<Block>::_seal(boost::optional<int> version,
+                            boost::optional<cryptography::SecretKey const&> key)
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
@@ -647,7 +649,6 @@ namespace infinit
           }
           Super::_seal_okb();
           if (!data_changed)
-            // FIXME: idempotence in case the write fails ?
             ++this->_data_version;
         }
         else
@@ -656,7 +657,7 @@ namespace infinit
         {
           static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
-          ++this->_data_version; // FIXME: idempotence in case the write fails ?
+          ++this->_data_version;
           ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
                            *this, this->_data_version);
           if (this->owner_private_key())
@@ -730,8 +731,10 @@ namespace infinit
           ELLE_DEBUG("%s: data didn't change", *this);
         // Even if only the ACL was changed, we need to re-sign because the ACL
         // address is part of the signature.
-        if (acl_changed || data_changed)
+        if (acl_changed || data_changed || version)
         {
+          if (version)
+            this->_data_version = *version;
           if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
           ELLE_DEBUG_SCOPE("%s: sign data", *this);
@@ -751,7 +754,7 @@ namespace infinit
         }
         if (!this->_signature->running()
           && this->_signature->value() == elle::Buffer())
-          this->_seal_okb(false);
+          this->_seal_okb({}, false);
       }
 
       template <typename Block>

@@ -66,14 +66,14 @@ namespace infinit
       `-----------*/
 
       void
-      Block::seal()
+      Block::seal(boost::optional<int> version)
       {
         ELLE_DEBUG_SCOPE("%s: seal", *this);
-        this->_seal();
+        this->_seal(version);
       }
 
       void
-      Block::_seal()
+      Block::_seal(boost::optional<int> version)
       {}
 
       ValidationResult

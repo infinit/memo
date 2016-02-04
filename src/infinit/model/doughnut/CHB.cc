@@ -59,7 +59,7 @@ namespace infinit
       `-----------*/
 
       void
-      CHB::_seal()
+      CHB::_seal(boost::optional<int>)
       {}
 
       blocks::ValidationResult

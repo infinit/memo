@@ -138,9 +138,9 @@ namespace infinit
       protected:
         virtual
         void
-        _seal() override;
+        _seal(boost::optional<int> version) override;
         void
-        _seal_okb(bool bump_version = true);
+        _seal_okb(boost::optional<int> version = {}, bool bump_version = true);
         virtual
         blocks::ValidationResult
         _validate() const override;
