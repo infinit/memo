@@ -172,7 +172,7 @@ class Emailer:
 
 class Beyond():
 
-  def __init__(self, beyond_args = {}):
+  def __init__(self, beyond_args = {}, disable_authentication = False):
     super().__init__()
     self.__beyond_args = beyond_args
     self.__advance = timedelta()
@@ -183,6 +183,7 @@ class Beyond():
     self.__datastore = None
     self.__gcs = FakeGCS()
     self.__hub_delegate_user = None
+    self.__disable_authentication = disable_authentication
 
   def __enter__(self):
     couchdb = self.__couchdb.__enter__()
@@ -207,6 +208,8 @@ class Beyond():
         beyond = self.__beyond,
         gcs = self.__gcs
       )
+      if self.__disable_authentication:
+        self.__app.authenticate = lambda x: None
       self.emailer = Emailer()
       try:
         bottle.run(app = self.__app,
