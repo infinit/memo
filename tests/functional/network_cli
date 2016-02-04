@@ -90,3 +90,66 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   del e0['version']
   del e1['version']
   assertEq(e0, e1)
+
+def setup(beyond, bob, alice):
+  bob.run(['infinit-user', '--signup',  'bob', '--email', 'bob@infinit.io'])
+  alice.run(['infinit-user', '--signup',  'alice', '--email', 'alice@infinit.io'])
+  bob.run(['infinit-user', '--fetch', '--name', 'alice'])
+  # Create network.
+  bob.run(['infinit-network', '--create', '--name', 'n', '--as', 'bob', '--kelips', '--push', '--port', '8181'])
+  bob.run(['infinit-passport', '--create', '--push', '--network', 'n', '--user', 'alice', '--as', 'bob'])
+  # Fetch networks & passports.
+  alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+
+# Make sure passports are kept after updating.
+with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
+     Infinit(beyond = beyond) as alice:
+  setup(beyond, bob, alice)
+  assertEq(len(alice.run(['infinit-passport', '--list', '--as', 'alice'])),
+           1)
+  alice.run(['infinit-passport', '--delete', '--user', 'alice', '--network', 'bob/n', '--as', 'alice'])
+  assertEq(len(alice.run(['infinit-passport', '--list', '--as', 'alice'])),
+           0)
+  bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', '9.9.9', '--as', 'bob', '--push'])
+  alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
+  assertEq(len(alice.run(['infinit-passport', '--list', '--as', 'alice'])),
+           1)
+
+# Make sure endpoints and stats are kept after updating.
+for field, body in [
+    ('stat', {'capacity': 100, 'usage': 1000}),
+    ('endpoints', {'stuff':  [{'host': '127.0.0.1', 'port': 8080}]})
+]:
+  with Beyond(disable_authentication = True) as beyond, Infinit(beyond = beyond) as bob, \
+       Infinit(beyond = beyond) as alice:
+    setup(beyond, bob, alice)
+    # Bypass the binaries.
+    import requests
+    requests.put(
+      '%s/networks/bob/n/%s/alice/node' % (beyond.domain, field),
+      headers = {
+        'Content-Type': 'application/json',
+      },
+      data = json.dumps(body)).raise_for_status()
+    initial_res = requests.get(
+      '%s/networks/bob/n/%s' % (beyond.domain, field),
+      headers = {
+        'Content-Type': 'application/json',
+      }).json()
+    if field == 'endpoints':
+      assertIn('alice', initial_res)
+    else:
+      assertIn('usage', initial_res)
+      assertIn('capacity', initial_res)
+    bob.run(['infinit-network', '--update',
+             '--name', 'n',
+             '--compatibility-version', '9.9.9',
+             '--as', 'bob',
+             '--push'])
+    res = requests.get(
+      '%s/networks/bob/n/%s' % (beyond.domain, field),
+      headers = {
+        'Content-Type': 'application/json',
+      }).json()
+    assertEq(res, initial_res)
