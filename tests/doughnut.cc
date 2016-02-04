@@ -30,20 +30,24 @@
 ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
 
 namespace dht = infinit::model::doughnut;
-namespace storage = infinit::storage;
+using namespace infinit::storage;
 
 NAMED_ARGUMENT(paxos);
+NAMED_ARGUMENT(keys);
 NAMED_ARGUMENT(keys_a);
 NAMED_ARGUMENT(keys_b);
 NAMED_ARGUMENT(keys_c);
+NAMED_ARGUMENT(id);
 NAMED_ARGUMENT(id_a);
 NAMED_ARGUMENT(id_b);
 NAMED_ARGUMENT(id_c);
+NAMED_ARGUMENT(storage);
 NAMED_ARGUMENT(storage_a);
 NAMED_ARGUMENT(storage_b);
 NAMED_ARGUMENT(storage_c);
 NAMED_ARGUMENT(make_overlay);
 NAMED_ARGUMENT(make_consensus);
+NAMED_ARGUMENT(version);
 NAMED_ARGUMENT(version_a);
 NAMED_ARGUMENT(version_b);
 NAMED_ARGUMENT(version_c);
@@ -92,9 +96,9 @@ public:
                       infinit::model::Address id_a,
                       infinit::model::Address id_b,
                       infinit::model::Address id_c,
-                      std::unique_ptr<storage::Storage> storage_a,
-                      std::unique_ptr<storage::Storage> storage_b,
-                      std::unique_ptr<storage::Storage> storage_c,
+                      std::unique_ptr<Storage> storage_a,
+                      std::unique_ptr<Storage> storage_b,
+                      std::unique_ptr<Storage> storage_c,
                       boost::optional<elle::Version> version_a,
                       boost::optional<elle::Version> version_b,
                       boost::optional<elle::Version> version_c,
@@ -143,9 +147,9 @@ private:
        infinit::model::Address id_a,
        infinit::model::Address id_b,
        infinit::model::Address id_c,
-       std::unique_ptr<storage::Storage> storage_a,
-       std::unique_ptr<storage::Storage> storage_b,
-       std::unique_ptr<storage::Storage> storage_c,
+       std::unique_ptr<Storage> storage_a,
+       std::unique_ptr<Storage> storage_b,
+       std::unique_ptr<Storage> storage_c,
        boost::optional<elle::Version> version_a,
        boost::optional<elle::Version> version_b,
        boost::optional<elle::Version> version_c,
@@ -167,11 +171,11 @@ private:
     this->keys_c =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_c));
     if (!storage_a)
-      storage_a = elle::make_unique<storage::Memory>();
+      storage_a = elle::make_unique<Memory>();
     if (!storage_b)
-      storage_b = elle::make_unique<storage::Memory>();
+      storage_b = elle::make_unique<Memory>();
     if (!storage_c)
-      storage_c = elle::make_unique<storage::Memory>();
+      storage_c = elle::make_unique<Memory>();
     dht::Doughnut::ConsensusBuilder consensus;
     if (paxos)
       consensus =
@@ -276,6 +280,202 @@ private:
         else
           ELLE_ABORT("unknown doughnut id: %s", peer.id);
       }
+  }
+};
+
+class Overlay
+  : public infinit::overlay::Overlay
+{
+public:
+  typedef infinit::overlay::Overlay Super;
+
+  Overlay(infinit::model::doughnut::Doughnut* d,
+          std::shared_ptr< infinit::model::doughnut::Local> local,
+          infinit::model::Address id)
+    : Super(d, local, id)
+  {
+    if (local)
+      local->on_store.connect(
+        [this] (infinit::model::blocks::Block const& block,
+                infinit::model::StoreMode)
+        {
+          this->_blocks.emplace(block.address());
+        });
+    this->_peers.emplace_back(this);
+  }
+
+  static
+  std::unique_ptr<Overlay>
+  make(infinit::model::doughnut::Doughnut& d,
+       infinit::model::Address id,
+       std::shared_ptr<infinit::model::doughnut::Local> local)
+  {
+    return elle::make_unique<Overlay>(&d, local, id);
+  }
+
+  void
+  connect(Overlay& other)
+  {
+    this->_peers.emplace_back(&other);
+    other._peers.emplace_back(this);
+  }
+
+protected:
+  virtual
+  reactor::Generator<Member>
+  _lookup(infinit::model::Address address,
+          int n,
+          infinit::overlay::Operation op) const override
+  {
+    bool write = op == infinit::overlay::OP_INSERT ||
+      op == infinit::overlay::OP_INSERT_OR_UPDATE;
+    ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %s",
+                     *this, n, write ? " new" : "", address);
+    return reactor::generator<Overlay::Member>(
+      [=]
+      (reactor::Generator<Overlay::Member>::yielder const& yield)
+      {
+        int count = n;
+        if (write)
+          for (auto& peer: this->_peers)
+          {
+            if (count == 0)
+              return;
+            if (peer->local())
+            {
+              yield(peer->local());
+              --count;
+            }
+          }
+        else
+          for (auto* peer: this->_peers)
+          {
+            if (count == 0)
+              return;
+            if (contains(peer->_blocks, address))
+            {
+              yield(peer->local());
+              --count;
+            }
+          }
+      });
+  }
+
+  virtual
+  Member
+  _lookup_node(infinit::model::Address id) override
+  {
+    for (auto* peer: this->_peers)
+      if (peer->local() && peer->local()->id() == id)
+        return peer->local();
+    return nullptr;
+  }
+
+  ELLE_ATTRIBUTE_RX(std::vector<Overlay*>, peers);
+  ELLE_ATTRIBUTE(std::unordered_set<infinit::model::Address>, blocks);
+};
+
+class DHT
+{
+public:
+  template <typename ... Args>
+  DHT(Args&& ... args)
+  {
+    namespace ph = std::placeholders;
+    elle::named::prototype(
+      paxos = true,
+      ::keys = infinit::cryptography::rsa::keypair::generate(512),
+      id = infinit::model::Address::random(),
+      storage = nullptr,
+      version = boost::optional<elle::Version>(),
+      make_overlay = &Overlay::make,
+      make_consensus =
+      [] (std::unique_ptr<dht::consensus::Consensus> c)
+        -> std::unique_ptr<dht::consensus::Consensus>
+      {
+        return c;
+      }
+      ).call([this] (bool paxos,
+                     infinit::cryptography::rsa::KeyPair keys,
+                     infinit::model::Address id,
+                     std::unique_ptr<Storage> storage,
+                     boost::optional<elle::Version> version,
+                     std::function<
+                     std::unique_ptr<infinit::overlay::Overlay>(
+                       infinit::model::doughnut::Doughnut& d,
+                       infinit::model::Address id,
+                       std::shared_ptr< infinit::model::doughnut::Local> local)>
+                       make_overlay,
+                     std::function<
+                     std::unique_ptr<dht::consensus::Consensus>(
+                       std::unique_ptr<dht::consensus::Consensus>
+                       )> make_consensus)
+             {
+               this-> init(paxos,
+                            std::move(keys),
+                            id,
+                            std::move(storage),
+                            version,
+                            std::move(make_consensus));
+              }, std::forward<Args>(args)...);
+  }
+
+  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys;
+  std::shared_ptr<dht::Doughnut> dht;
+  Overlay* overlay;
+
+private:
+  void
+  init(bool paxos,
+       infinit::cryptography::rsa::KeyPair keys,
+       infinit::model::Address id,
+       std::unique_ptr<Storage> storage,
+       boost::optional<elle::Version> version,
+       std::function<
+         std::unique_ptr<dht::consensus::Consensus>(
+           std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
+  {
+    this->keys =
+      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys));
+    if (!storage)
+      storage = elle::make_unique<Memory>();
+    dht::Doughnut::ConsensusBuilder consensus;
+    if (paxos)
+      consensus =
+        [&] (dht::Doughnut& dht)
+        {
+          return make_consensus(
+            elle::make_unique<dht::consensus::Paxos>(dht, 3));
+        };
+    else
+      consensus =
+        [&] (dht::Doughnut& dht)
+        {
+          return make_consensus(
+            elle::make_unique<dht::consensus::Consensus>(dht));
+        };
+    dht::Passport passport(
+      this->keys->K(), "network-name", this->keys->k());
+    auto make_overlay =
+      [this] (
+        infinit::model::doughnut::Doughnut& d,
+        infinit::model::Address id,
+        std::shared_ptr<infinit::model::doughnut::Local> local)
+      {
+        auto res = Overlay::make(d, std::move(id), std::move(local));
+        this->overlay = res.get();
+        return res;
+      };
+    this->dht = std::make_shared<dht::Doughnut>(
+      id,
+      this->keys,
+      this->keys->public_key(),
+      passport,
+      consensus,
+      infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
+      boost::optional<int>(),
+      std::move(storage),
+      version);
   }
 };
 
@@ -505,7 +705,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
 }
 
 void
-noop(storage::Storage*)
+noop(Storage*)
 {}
 
 ELLE_TEST_SCHEDULED(restart, (bool, paxos))
@@ -516,9 +716,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   auto id_a = infinit::model::Address::random();
   auto id_b = infinit::model::Address::random();
   auto id_c = infinit::model::Address::random();
-  storage::Memory::Blocks storage_a;
-  storage::Memory::Blocks storage_b;
-  storage::Memory::Blocks storage_c;
+  Memory::Blocks storage_a;
+  Memory::Blocks storage_b;
+  Memory::Blocks storage_c;
   // std::unique_ptr<infinit::model::blocks::ImmutableBlock> iblock;
   std::unique_ptr<infinit::model::blocks::MutableBlock> mblock;
   ELLE_LOG("store blocks")
@@ -531,9 +731,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
       id_a,
       id_b,
       id_c,
-      elle::make_unique<storage::Memory>(storage_a),
-      elle::make_unique<storage::Memory>(storage_b),
-      elle::make_unique<storage::Memory>(storage_c)
+      elle::make_unique<Memory>(storage_a),
+      elle::make_unique<Memory>(storage_b),
+      elle::make_unique<Memory>(storage_c)
       );
     // iblock =
     //   dhts.dht_a->make_block<infinit::model::blocks::ImmutableBlock>(
@@ -554,9 +754,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
       id_a,
       id_b,
       id_c,
-      elle::make_unique<storage::Memory>(storage_a),
-      elle::make_unique<storage::Memory>(storage_b),
-      elle::make_unique<storage::Memory>(storage_c)
+      elle::make_unique<Memory>(storage_a),
+      elle::make_unique<Memory>(storage_b),
+      elle::make_unique<Memory>(storage_c)
       );
     // auto ifetched = dhts.dht_a->fetch(iblock->address());
     // BOOST_CHECK_EQUAL(iblock->data(), ifetched->data());
@@ -765,9 +965,9 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
   auto id_a = infinit::model::Address::random();
   auto id_b = infinit::model::Address::random();
   auto id_c = infinit::model::Address::random();
-  storage::Memory::Blocks blocks_a;
-  storage::Memory::Blocks blocks_b;
-  storage::Memory::Blocks blocks_c;
+  Memory::Blocks blocks_a;
+  Memory::Blocks blocks_b;
+  Memory::Blocks blocks_c;
   infinit::model::Address chbaddr;
   infinit::model::Address acbaddr;
   elle::Buffer data("\\_o<", 4);
@@ -780,9 +980,9 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
       id_a,
       id_b,
       id_c,
-      elle::make_unique<storage::Memory>(blocks_a),
-      elle::make_unique<storage::Memory>(blocks_b),
-      elle::make_unique<storage::Memory>(blocks_c),
+      elle::make_unique<Memory>(blocks_a),
+      elle::make_unique<Memory>(blocks_b),
+      elle::make_unique<Memory>(blocks_c),
       elle::Version(0, 4, 0),
       elle::Version(0, 4, 0),
       elle::Version(0, 4, 0)
@@ -838,9 +1038,9 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
       id_a,
       id_b,
       id_c,
-      elle::make_unique<storage::Memory>(blocks_a),
-      elle::make_unique<storage::Memory>(blocks_b),
-      elle::make_unique<storage::Memory>(blocks_c),
+      elle::make_unique<Memory>(blocks_a),
+      elle::make_unique<Memory>(blocks_b),
+      elle::make_unique<Memory>(blocks_c),
       elle::Version(0, 5, 0),
       elle::Version(0, 5, 0),
       elle::Version(0, 5, 0));
@@ -886,6 +1086,46 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
   }
 }
 
+namespace rebalancing
+{
+  ELLE_TEST_SCHEDULED(extend_and_write)
+  {
+    DHT dht_a;
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b;
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    auto b1 = dht_a.dht->make_block<infinit::model::blocks::MutableBlock>();
+    ELLE_LOG("write block to quorum of 1")
+    {
+      b1->data(std::string("extend_and_write 1"));
+      dht_a.dht->store(*b1);
+    }
+    dht_b.overlay->connect(*dht_a.overlay);
+    auto size =
+      [] (reactor::Generator<std::shared_ptr<dht::Peer>> const& g)
+      {
+        int res = 0;
+        for (auto const& m: elle::unconst(g))
+          ++res;
+        return res;
+      };
+    auto op = infinit::overlay::OP_FETCH;
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 1u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 1u);
+    auto paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+    ELLE_LOG("rebalance block to quorum of 2")
+      paxos_a.rebalance(b1->address());
+    ELLE_LOG("write block to quorum of 2")
+    {
+      b1->data(std::string("extend_and_write 1 bis"));
+      dht_a.dht->store(*b1);
+    }
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 2u);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -915,4 +1155,10 @@ ELLE_TEST_SUITE()
   TEST(flags_backward);
 #undef TEST
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
+  {
+    boost::unit_test::test_suite* rebalancing = BOOST_TEST_SUITE("rebalancing");
+    paxos->add(rebalancing);
+    using namespace rebalancing;
+    rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, 1);
+  }
 }
