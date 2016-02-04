@@ -137,18 +137,16 @@ namespace infinit
     {
     public:
       DirectoryConflictResolver(elle::serialization::SerializerIn& s)
+      : _owner(nullptr)
       {
         serialize(s);
       }
       DirectoryConflictResolver(DirectoryConflictResolver&& b)
       : _path(b._path)
       , _owner(b._owner)
-      , _owner_allocated(b._owner_allocated)
       , _op(b._op)
       , _wptr(b._wptr)
       {
-        b._owner_allocated = false;
-        b._owner = nullptr;
       }
 
       DirectoryConflictResolver()
@@ -160,19 +158,12 @@ namespace infinit
                                 std::weak_ptr<Directory> wd)
         : _path(p)
         , _owner(owner)
-        , _owner_allocated(false)
         , _op(op)
         , _wptr(wd)
       {}
 
       ~DirectoryConflictResolver()
       {
-        if (_owner_allocated)
-        {
-          std::shared_ptr<infinit::model::Model> b = _owner->block_store();
-          new std::shared_ptr<infinit::model::Model>(b);
-          delete _owner;
-        }
       }
 
       std::unique_ptr<Block>
@@ -194,14 +185,6 @@ namespace infinit
         s.serialize("optarget", _op.target);
         s.serialize("opaddr", _op.address);
         s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
-        if (s.in())
-        {
-          infinit::model::Model* model = nullptr;
-          const_cast<elle::serialization::Context&>(s.context()).get(model);
-          ELLE_ASSERT(model);
-          _owner_allocated = true;
-          _owner = new FileSystem("", std::shared_ptr<model::Model>(model));
-        }
       }
 
       boost::filesystem::path _path;
