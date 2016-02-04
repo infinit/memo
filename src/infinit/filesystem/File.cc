@@ -748,45 +748,52 @@ namespace infinit
     std::string
     File::getxattr(std::string const& key)
     {
-      if (key == "user.infinit.fat")
+      if (auto special = xattr_special(key))
       {
-        _fetch();
-        std::stringstream res;
-        res <<  "total_size: "  << _header.size  << "\n";
-        for (int i=0; i < signed(_fat.size()); ++i)
+        if (*special == "fat")
         {
-          res << i << ": " << _fat[i].first << "\n";
+          _fetch();
+          std::stringstream res;
+          res <<  "total_size: "  << _header.size  << "\n";
+          for (int i=0; i < signed(_fat.size()); ++i)
+          {
+            res << i << ": " << _fat[i].first << "\n";
+          }
+          return res.str();
         }
-        return res.str();
+        else if (*special == "auth")
+        {
+          Address addr = _parent->_files.at(_name).second;
+          auto block = _owner.fetch_or_die(addr);
+          return perms_to_json(*_owner.block_store(), dynamic_cast<ACLBlock&>(*block));
+        }
       }
-      else if (key == "user.infinit.auth")
-      {
-        Address addr = _parent->_files.at(_name).second;
-        auto block = _owner.fetch_or_die(addr);
-        return perms_to_json(*_owner.block_store(), dynamic_cast<ACLBlock&>(*block));
-      }
-      else
-        return Node::getxattr(key);
+      return Node::getxattr(key);
     }
 
     void
     File::setxattr(std::string const& name, std::string const& value, int flags)
     {
       ELLE_TRACE("file setxattr %s", name);
-      if (name.find("user.infinit.auth.") == 0)
+      if (auto special = xattr_special(name))
       {
-        set_permissions(name.substr(strlen("user.infinit.auth.")), value,
-                        _parent->_files.at(_name).second);
+        ELLE_DEBUG("found special %s", *special);
+        if (special->find("auth.") == 0)
+        {
+          set_permissions(special->substr(strlen("auth.")), value,
+                          _parent->_files.at(_name).second);
+          return;
+        }
+        else if (*special == "fsck.nullentry")
+        {
+          int idx = std::stoi(value);
+          _fat[idx] = std::make_pair(model::Address::null, "");
+          _fat_changed = true;
+          _commit_first(false);
+          return;
+        }
       }
-      else if (name == "user.infinit.fsck.nullentry")
-      {
-        int idx = std::stoi(value);
-        _fat[idx] = std::make_pair(model::Address::null, "");
-        _fat_changed = true;
-        _commit_first(false);
-      }
-      else
-        Node::setxattr(name, value, flags);
+      Node::setxattr(name, value, flags);
     }
 
     std::shared_ptr<rfs::Path>

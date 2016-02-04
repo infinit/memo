@@ -210,16 +210,6 @@ namespace infinit
     }
 
     static auto const overlay_info = "user.infinit.overlay.";
-    static
-    boost::optional<std::string>
-    xattr_special(std::string const& name)
-    {
-      if (name.find("infinit.") == 0)
-        return name.substr(8);
-      if (name.find("user.infinit.") == 0)
-        return name.substr(13);
-      return {};
-    }
 
     void
     Node::setxattr(std::string const& k, std::string const& v, int flags)
@@ -468,6 +458,7 @@ namespace infinit
                           std::string const& userkey,
                           Address self_address)
     {
+      ELLE_TRACE("set_permissions(%s, %s, %s)", flags, userkey, self_address);
       std::pair<bool, bool> perms = parse_flags(flags);
       std::unique_ptr<infinit::model::User> user =
         umbrella([&] {return _get_user(userkey);}, EINVAL);
@@ -500,5 +491,16 @@ namespace infinit
           _owner.block_store().get(), perms.first, perms.second, userkey
         ));
     }
+
+    boost::optional<std::string>
+    xattr_special(std::string const& name)
+    {
+      if (name.find("infinit.") == 0)
+        return name.substr(8);
+      if (name.find("user.infinit.") == 0)
+        return name.substr(13);
+      return {};
+    }
+
   }
 }

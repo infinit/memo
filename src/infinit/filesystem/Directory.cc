@@ -627,17 +627,6 @@ namespace infinit
     `--------------------*/
 
     static
-    boost::optional<std::string>
-    xattr_special(std::string const& name)
-    {
-      if (name.find("infinit.") == 0)
-        return name.substr(8);
-      if (name.find("user.infinit.") == 0)
-        return name.substr(13);
-      return {};
-    }
-
-    static
     std::string
     perms_to_json(model::Model& model, ACLBlock& block)
     {
