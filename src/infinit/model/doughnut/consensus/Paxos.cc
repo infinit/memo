@@ -766,7 +766,6 @@ namespace infinit
             if (resolved)
             {
               ELLE_DEBUG_SCOPE("seal resolved block");
-              resolved->seal();
               return std::shared_ptr<blocks::Block>(resolved.release());
             }
             else
@@ -811,7 +810,7 @@ namespace infinit
               elle::unreachable();
           }
           auto owners = this->_owners(b->address(), this->_factor, op);
-          if (dynamic_cast<blocks::MutableBlock*>(b.get()))
+          if (auto mb = dynamic_cast<blocks::MutableBlock*>(b.get()))
           {
             // FIXME: this voids the whole "query on the fly" optimisation
             Paxos::PaxosClient::Peers peers;
@@ -840,8 +839,7 @@ namespace infinit
                 // Keep resolving conflicts and retrying
                 while (true)
                 {
-                  auto version =
-                    dynamic_cast<blocks::MutableBlock*>(b.get())->version();
+                  auto version = mb->version();
                   boost::optional<Paxos::PaxosServer::Accepted> chosen;
                   ELLE_DEBUG("run Paxos for version %s", version)
                     chosen = client.choose(version, b);
@@ -851,6 +849,16 @@ namespace infinit
                     {
                       auto const& q = chosen->value.get<PaxosServer::Quorum>();
                       ELLE_DEBUG_SCOPE("Paxos elected another quorum: %s", q);
+                      // FIXME: don't systematically fetch
+                      if (auto value = client.get())
+                      {
+                        auto mvalue = std::dynamic_pointer_cast<
+                          blocks::MutableBlock>(*value);
+                        if (mvalue->version() > mb->version() - 1)
+                          if (!(b = resolve(*b, *mvalue, mode, resolver.get())))
+                            break;
+                      }
+                      b->seal(chosen->proposal.version + 1);
                       throw Paxos::PaxosServer::WrongQuorum(q, peers_id);
                     }
                     else
@@ -859,6 +867,7 @@ namespace infinit
                         chosen->value.get<std::shared_ptr<blocks::Block>>();
                       if (!(b = resolve(*b, *block, mode, resolver.get())))
                         break;
+                      b->seal(chosen->proposal.version + 1);
                     }
                   }
                   else
