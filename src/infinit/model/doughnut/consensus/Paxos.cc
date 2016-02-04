@@ -1049,14 +1049,12 @@ namespace infinit
           }
           PaxosServer::Quorum new_q;
           for (auto const& owner: this->_owners(
-                 address, this->_factor, overlay::OP_INSERT_OR_UPDATE))
+                 address, this->_factor, overlay::OP_INSERT))
             new_q.emplace(owner->id());
           // Make sure we didn't lose a previous owner because of the overlay
           // failing to look it up.
           for (auto const& owner: q)
             new_q.emplace(owner);
-          // FIXME
-          new_q.emplace(Address::from_string("a7d974a33053961e50d624783f7ba7d93c1daa018b694c6a32abb6197a54a588"));
           if (new_q == q)
           {
             ELLE_TRACE("unable to find any new owner");
