@@ -549,7 +549,10 @@ namespace infinit
             // FIXME: this will trigger the retry with an immutable block type
             // in Consensus::fetch
             if (!data.block)
+            {
+              ELLE_TRACE("%s: fetch: no data block", *this);
               throw MissingBlock(address);
+            }
             return std::unique_ptr<blocks::Block>(data.block);
           }
           // Backward compatibility pre-0.5.0
@@ -937,11 +940,12 @@ namespace infinit
           }
           else
             ELLE_DEBUG("owners: %s", peers);
+          bool reverse_mutable = false;
           while (true)
           {
             try
             {
-              if (address.mutable_block())
+              if (address.mutable_block()^reverse_mutable)
               {
                 ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
@@ -979,7 +983,14 @@ namespace infinit
                     ELLE_TRACE("error fetching from %s: %s", *peer, e.what());
                   }
                 }
-                throw  MissingBlock(address);
+                if (reverse_mutable)
+                  throw  MissingBlock(address);
+                else
+                {
+                  ELLE_TRACE("Retrying as a mutable block")
+                  reverse_mutable = true;
+                  continue;
+                }
               }
             }
             catch (Paxos::PaxosServer::WrongQuorum const& e)
