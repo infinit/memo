@@ -175,8 +175,17 @@ namespace infinit
                   q, this->_address, p, value);
               else if (auto remote =
                        dynamic_cast<Paxos::RemotePeer*>(this->_member.get()))
-                return remote->accept(
-                  q, this->_address, p, value);
+                {
+                  if (value.is<std::shared_ptr<blocks::Block>>()
+                      || remote->doughnut().version() >= elle::Version(0, 5, 0))
+                    return remote->accept(
+                      q, this->_address, p, value);
+                  else
+                  {
+                    ELLE_TRACE("unmanageable accept on non-block value");
+                    throw reactor::network::Exception("Peer unavailable");
+                  }
+                }
               else if (dynamic_cast<DummyPeer*>(this->_member.get()))
                 throw reactor::network::Exception("Peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", *this->_member);
@@ -192,10 +201,18 @@ namespace infinit
             return network_exception_to_unavailable([&] {
               if (auto local =
                   dynamic_cast<Paxos::LocalPeer*>(this->_member.get()))
-                return local->confirm(q, this->_address, p);
+              {
+                if (local->doughnut().version() >= elle::Version(0, 5, 0))
+                  local->confirm(q, this->_address, p);
+                return;
+              }
               else if (auto remote =
                        dynamic_cast<Paxos::RemotePeer*>(this->_member.get()))
-                return remote->confirm(q, this->_address, p);
+              {
+                if (remote->doughnut().version() >= elle::Version(0, 5, 0))
+                  remote->confirm(q, this->_address, p);
+                return;
+              }
               else if (dynamic_cast<DummyPeer*>(this->_member.get()))
                 throw reactor::network::Exception("Peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", *this->_member);
@@ -251,13 +268,27 @@ namespace infinit
                                   Value const& value)
         {
           return network_exception_to_unavailable([&] {
-            auto accept = make_rpc<Paxos::PaxosClient::Proposal (
-              PaxosServer::Quorum peers,
-              Address,
-              Paxos::PaxosClient::Proposal const&,
-              Value const&)>("accept");
-            accept.set_context<Doughnut*>(&this->_doughnut);
-            return accept(peers, address, p, value);
+            if (this->doughnut().version() < elle::Version(0, 5, 0))
+            {
+              ELLE_ASSERT(value.is<std::shared_ptr<blocks::Block>>());
+              auto accept = make_rpc<Paxos::PaxosClient::Proposal (
+                PaxosServer::Quorum peers,
+                Address,
+                Paxos::PaxosClient::Proposal const&,
+                std::shared_ptr<blocks::Block>)>("accept");
+              accept.set_context<Doughnut*>(&this->_doughnut);
+              return accept(peers, address, p, value.get<std::shared_ptr<blocks::Block>>());
+            }
+            else
+            {
+              auto accept = make_rpc<Paxos::PaxosClient::Proposal (
+                PaxosServer::Quorum peers,
+                Address,
+                Paxos::PaxosClient::Proposal const&,
+                Value const&)>("accept");
+              accept.set_context<Doughnut*>(&this->_doughnut);
+              return accept(peers, address, p, value);
+            }
           });
         }
 
@@ -304,6 +335,7 @@ namespace infinit
           else
             try
             {
+              ELLE_TRACE("%s: decision for %s not in cache", *this, address);
               auto buffer = this->storage()->get(address);
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
@@ -319,10 +351,12 @@ namespace infinit
             }
             catch (storage::MissingKey const& e)
             {
+              ELLE_TRACE("%s: missingkey reloading decision", *this);
               if (peers)
                 return this->_addresses.emplace(
                   address,
-                  Decision(PaxosServer(this->id(), *peers))).first->second;
+                  Decision(PaxosServer(this->id(),
+                                       *peers,elle_serialization_version(this->doughnut().version())))).first->second;
               else
                 throw MissingBlock(e.key());
             }
@@ -340,7 +374,8 @@ namespace infinit
           this->storage()->set(
             address,
             elle::serialization::binary::serialize(
-              BlockOrPaxos(&decision)),
+              BlockOrPaxos(&decision),
+              this->doughnut().version()),
             true, true);
           return res;
         }
@@ -378,7 +413,8 @@ namespace infinit
             ELLE_DEBUG_SCOPE("store accepted paxos");
             this->storage()->set(
               address,
-              elle::serialization::binary::serialize(BlockOrPaxos(&decision)),
+              elle::serialization::binary::serialize(BlockOrPaxos(&decision),
+                   this->doughnut().version()),
               true, true);
           }
           if (block)
@@ -399,7 +435,8 @@ namespace infinit
             ELLE_DEBUG_SCOPE("store accepted paxos");
             this->storage()->set(
               address,
-              elle::serialization::binary::serialize(BlockOrPaxos(&decision)),
+              elle::serialization::binary::serialize(BlockOrPaxos(&decision),
+                this->doughnut().version()),
               true, true);
           }
         }
@@ -408,7 +445,7 @@ namespace infinit
         Paxos::LocalPeer::get(PaxosServer::Quorum peers, Address address,
                               boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: get %s", *this, address);
+          ELLE_TRACE_SCOPE("%s: get %s, q=%s", *this, address, peers);
           auto res = this->_load(address).paxos.get(peers);
           // Honor local_version
           if (local_version && res &&
@@ -421,6 +458,7 @@ namespace infinit
             if (mb->version() == *local_version)
               block.reset();
           }
+          ELLE_DEBUG("%s: returning %s", *this, res);
           return res;
         }
 
@@ -436,15 +474,29 @@ namespace infinit
               PaxosServer::Quorum, Address,
               Paxos::PaxosClient::Proposal const&)>
             (std::bind(&LocalPeer::propose, this, ph::_1, ph::_2, ph::_3)));
-          rpcs.add(
-            "accept",
-            std::function<
-            Paxos::PaxosClient::Proposal(
-              PaxosServer::Quorum, Address,
-              Paxos::PaxosClient::Proposal const& p,
-              Value const& value)>
-            (std::bind(&LocalPeer::accept,
-                       this, ph::_1, ph::_2, ph::_3, ph::_4)));
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
+            rpcs.add(
+              "accept",
+              std::function<
+              Paxos::PaxosClient::Proposal(
+                PaxosServer::Quorum, Address,
+                Paxos::PaxosClient::Proposal const& p,
+		std::shared_ptr<blocks::Block> const& b)>
+              ([this] (PaxosServer::Quorum q, Address a,
+                       Paxos::PaxosClient::Proposal const& p,
+                       std::shared_ptr<blocks::Block> const& b) -> Paxos::PaxosClient::Proposal {
+                return this->accept(q, a, p, std::move(b));
+              }));
+          else
+            rpcs.add(
+              "accept",
+              std::function<
+              Paxos::PaxosClient::Proposal(
+                PaxosServer::Quorum, Address,
+                Paxos::PaxosClient::Proposal const& p,
+                Value const& value)>
+              (std::bind(&LocalPeer::accept,
+                         this, ph::_1, ph::_2, ph::_3, ph::_4)));
           rpcs.add(
             "confirm",
             std::function<
@@ -562,7 +614,8 @@ namespace infinit
                 this->storage()->set(
                   address,
                   elle::serialization::binary::serialize(
-                    BlockOrPaxos(const_cast<Decision*>(&decision->second))),
+                    BlockOrPaxos(const_cast<Decision*>(&decision->second)),
+                    this->doughnut().version()),
                   true, true);
               }
               // ELLE_ASSERT(block.unique());
@@ -617,7 +670,8 @@ namespace infinit
           }
           elle::Buffer data =
             elle::serialization::binary::serialize(
-              BlockOrPaxos(const_cast<blocks::Block*>(&block)));
+              BlockOrPaxos(const_cast<blocks::Block*>(&block)),
+              this->doughnut().version());
           this->storage()->set(block.address(), data,
                               mode == STORE_ANY || mode == STORE_INSERT,
                               mode == STORE_ANY || mode == STORE_UPDATE);
