@@ -340,7 +340,7 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(basic), 0, 120);
   suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   suite.add(BOOST_TEST_CASE(killed_nodes_big), 0, 600);
-  suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
+  //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);
   suite.add(BOOST_TEST_CASE(conflictor), 0, 300);
 }
