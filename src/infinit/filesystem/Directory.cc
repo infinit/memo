@@ -777,7 +777,7 @@ namespace infinit
             model::doughnut::Group g(*dht, value);
             g.create();
           }
-          else if (name == "delete")
+          else if (*special == "delete")
           {
             model::doughnut::Group g(*dht, value);
             g.destroy();
@@ -828,17 +828,17 @@ namespace infinit
         this->_owner.block_store());
       if (auto special = xattr_special(key))
       {
-        if (key == "auth")
+        if (*special == "auth")
         {
           this->_fetch();
           return perms_to_json(*this->_owner.block_store(), *this->_block);
         }
-        else if (key == "auth.inherit")
+        else if (*special == "auth.inherit")
         {
           this->_fetch();
           return this->_inherit_auth ? "true" : "false";
         }
-        else if (key == "sync")
+        else if (*special == "sync")
         {
           auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
             this->_owner.block_store());
@@ -857,9 +857,9 @@ namespace infinit
           a->sync();
           return "ok";
         }
-        else if (key.find("group.list.") == 0)
+        else if (special->find("group.list.") == 0)
         {
-          std::string value = key.substr(strlen("group.list."));
+          std::string value = special->substr(strlen("group.list."));
           auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
           return umbrella([&]
                           {
