@@ -29,6 +29,7 @@
 
 ELLE_LOG_COMPONENT("infinit.model.doughnut.test");
 
+namespace blocks = infinit::model::blocks;
 namespace dht = infinit::model::doughnut;
 using namespace infinit::storage;
 
@@ -296,7 +297,7 @@ public:
   {
     if (local)
       local->on_store.connect(
-        [this] (infinit::model::blocks::Block const& block,
+        [this] (blocks::Block const& block,
                 infinit::model::StoreMode)
         {
           this->_blocks.emplace(block.address());
@@ -485,7 +486,7 @@ ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
   auto& dht = *dhts.dht_a;
   {
     elle::Buffer data("\\_o<", 4);
-    auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(data);
+    auto block = dht.make_block<blocks::ImmutableBlock>(data);
     auto addr = block->address();
     dht.store(*block);
     ELLE_LOG("fetch block")
@@ -500,7 +501,7 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
   DHTs dhts(paxos);
   auto& dht = *dhts.dht_a;
   {
-    auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
+    auto block = dht.make_block<blocks::MutableBlock>();
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
     auto addr = block->address();
@@ -525,15 +526,15 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
   auto& dht = *dhts.dht_c;
   {
     elle::Buffer data("\\_o<", 4);
-    auto block = dht.make_block<infinit::model::blocks::ImmutableBlock>(data);
-    std::vector<std::unique_ptr<infinit::model::blocks::ImmutableBlock>> blocks_;
+    auto block = dht.make_block<blocks::ImmutableBlock>(data);
+    std::vector<std::unique_ptr<blocks::ImmutableBlock>> blocks_;
     for (int i = 0; i < 10; ++i)
     {
       auto s = elle::sprintf("\\_o< %d", i);
       elle::Buffer data(elle::sprintf(s).c_str(),
                         (int)std::strlen(s.c_str()));
       blocks_.push_back(
-          std::move(dht.make_block<infinit::model::blocks::ImmutableBlock>(data)));
+          std::move(dht.make_block<blocks::ImmutableBlock>(data)));
     }
     ELLE_LOG("store block")
     dht.store(*block);
@@ -547,7 +548,7 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
       dht.remove(block->address());
   }
   {
-    auto block = dht.make_block<infinit::model::blocks::MutableBlock>();
+    auto block = dht.make_block<blocks::MutableBlock>();
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
     ELLE_LOG("store block")
@@ -568,7 +569,7 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
 ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
 {
   DHTs dhts(paxos);
-  auto block = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+  auto block = dhts.dht_a->make_block<blocks::ACLBlock>();
   elle::Buffer data("\\_o<", 4);
   block->data(elle::Buffer(data));
   ELLE_LOG("owner: store ACB")
@@ -577,7 +578,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
     BOOST_CHECK_THROW(fetched->data(), elle::Error);
-    auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
+    auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-(", 3));
     ELLE_LOG("other: stored edited ACB")
       BOOST_CHECK_THROW(dhts.dht_b->store(*acb), dht::ValidationFailed);
@@ -590,7 +591,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
     BOOST_CHECK_EQUAL(fetched->data(), "\\_o<");
-    auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
+    auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-(", 3));
     ELLE_LOG("other: stored edited ACB")
       BOOST_CHECK_THROW(dhts.dht_b->store(*acb), dht::ValidationFailed);
@@ -603,7 +604,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
     BOOST_CHECK_EQUAL(fetched->data(), "\\_o<");
-    auto acb = elle::cast<infinit::model::blocks::ACLBlock>::runtime(fetched);
+    auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-)", 3));
     ELLE_LOG("other: stored edited ACB")
       dhts.dht_b->store(*acb);
@@ -670,37 +671,64 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
   dhtb->store(ubf);
 }
 
+class AppendConflictResolver
+  : public infinit::model::ConflictResolver
+{
+  virtual
+  std::unique_ptr<blocks::Block>
+  operator () (blocks::Block& old,
+               blocks::Block& current,
+               infinit::model::StoreMode mode)
+  {
+    auto res = std::dynamic_pointer_cast<blocks::MutableBlock>(current.clone());
+    res->data([] (elle::Buffer& data) { data.append("B", 1); });
+    return std::unique_ptr<blocks::Block>(res.release());
+  }
+
+  virtual
+  void
+  serialize(elle::serialization::Serializer& s) override
+  {}
+};
+
 ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
 {
   DHTs dhts(paxos);
-  std::unique_ptr<infinit::model::blocks::ACLBlock> block_alice;
+  std::unique_ptr<blocks::ACLBlock> block_alice;
   ELLE_LOG("alice: create block")
   {
-    block_alice = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
-    block_alice->data(elle::Buffer("alice_1", 7));
+    block_alice = dhts.dht_a->make_block<blocks::ACLBlock>();
+    block_alice->data(elle::Buffer("A", 1));
     block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"), true, true);
   }
   ELLE_LOG("alice: store block")
     dhts.dht_a->store(*block_alice);
   std::unique_ptr<
-    infinit::model::blocks::ACLBlock,
-    std::default_delete<infinit::model::blocks::Block>> block_bob;
+    blocks::ACLBlock,
+    std::default_delete<blocks::Block>> block_bob;
   ELLE_LOG("bob: fetch block");
   {
-    block_bob = std::static_pointer_cast<infinit::model::blocks::ACLBlock>
+    block_bob = std::static_pointer_cast<blocks::ACLBlock>
       (dhts.dht_b->fetch(block_alice->address()));
-    BOOST_CHECK_EQUAL(block_bob->data(), "alice_1");
+    BOOST_CHECK_EQUAL(block_bob->data(), "A");
   }
   ELLE_LOG("alice: modify block")
   {
-    block_alice->data(elle::Buffer("alice_2", 7));
+    block_alice->data(elle::Buffer("AA", 2));
     dhts.dht_a->store(*block_alice);
   }
   ELLE_LOG("bob: modify block")
   {
-    block_bob->data(elle::Buffer("bob_1", 5));
+    block_bob->data(elle::Buffer("AB", 2));
     BOOST_CHECK_THROW(dhts.dht_b->store(*block_bob),
                       infinit::model::doughnut::Conflict);
+    dhts.dht_b->store(*block_bob, infinit::model::STORE_ANY,
+                      elle::make_unique<AppendConflictResolver>());
+  }
+  ELLE_LOG("alice: fetch block")
+  {
+    BOOST_CHECK_EQUAL(
+      dhts.dht_a->fetch(block_alice->address())->data(), "AAB");
   }
 }
 
@@ -719,8 +747,8 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   Memory::Blocks storage_a;
   Memory::Blocks storage_b;
   Memory::Blocks storage_c;
-  // std::unique_ptr<infinit::model::blocks::ImmutableBlock> iblock;
-  std::unique_ptr<infinit::model::blocks::MutableBlock> mblock;
+  // std::unique_ptr<blocks::ImmutableBlock> iblock;
+  std::unique_ptr<blocks::MutableBlock> mblock;
   ELLE_LOG("store blocks")
   {
     DHTs dhts(
@@ -736,11 +764,11 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
       elle::make_unique<Memory>(storage_c)
       );
     // iblock =
-    //   dhts.dht_a->make_block<infinit::model::blocks::ImmutableBlock>(
+    //   dhts.dht_a->make_block<blocks::ImmutableBlock>(
     //     elle::Buffer("immutable", 9));
     // dhts.dht_a->store(*iblock);
     mblock =
-      dhts.dht_a->make_block<infinit::model::blocks::MutableBlock>(
+      dhts.dht_a->make_block<blocks::MutableBlock>(
         elle::Buffer("mutable", 7));
     dhts.dht_a->store(*mblock);
   }
@@ -817,7 +845,7 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
         return elle::make_unique<infinit::overlay::Stonehenge>(
           id, peers, std::move(local), &d);
     });
-  auto block = dhts.dht_a->make_block<infinit::model::blocks::MutableBlock>();
+  auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
   {
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
@@ -846,7 +874,7 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
       });
   // Check a null block is never stored in cache.
   {
-    auto block = dhts.dht_a->make_block<infinit::model::blocks::MutableBlock>();
+    auto block = dhts.dht_a->make_block<blocks::MutableBlock>();
     elle::Buffer data("cached", 6);
     block->data(elle::Buffer(data));
     auto addr = block->address();
@@ -869,9 +897,9 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
   }
 }
 
-static std::unique_ptr<infinit::model::blocks::Block>
+static std::unique_ptr<blocks::Block>
 cycle(infinit::model::doughnut::Doughnut& dht,
-      std::unique_ptr<infinit::model::blocks::Block> b)
+      std::unique_ptr<blocks::Block> b)
 {
   elle::Buffer buf;
   {
@@ -887,7 +915,7 @@ cycle(infinit::model::doughnut::Doughnut& dht,
   sin.set_context<infinit::model::doughnut::Doughnut*>(&dht);
   sin.set_context(infinit::model::doughnut::ACBDontWaitForSignature{});
   sin.set_context(infinit::model::doughnut::OKBDontWaitForSignature{});
-  auto res = sin.deserialize<std::unique_ptr<infinit::model::blocks::Block>>();
+  auto res = sin.deserialize<std::unique_ptr<blocks::Block>>();
   res->seal();
   return res;
 }
@@ -896,7 +924,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
 { // test serialization used by async
   DHTs dhts(paxos);
   {
-    auto b =  dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    auto b =  dhts.dht_a->make_block<blocks::ACLBlock>();
     b->data(elle::Buffer("foo"));
     b->seal();
     auto addr = b->address();
@@ -906,7 +934,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     BOOST_CHECK_EQUAL(cb->data(), elle::Buffer("foo"));
   }
   { // wait for signature
-    auto b =  dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    auto b =  dhts.dht_a->make_block<blocks::ACLBlock>();
     b->data(elle::Buffer("foo"));
     b->seal();
     reactor::sleep(100_ms);
@@ -917,14 +945,14 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     BOOST_CHECK_EQUAL(cb->data(), elle::Buffer("foo"));
   }
   { // block we dont own
-    auto block_alice = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    auto block_alice = dhts.dht_a->make_block<blocks::ACLBlock>();
     block_alice->data(elle::Buffer("alice_1", 7));
     block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"), true, true);
     auto addr = block_alice->address();
     dhts.dht_a->store(std::move(block_alice));
     auto block_bob = dhts.dht_b->fetch(addr);
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("alice_1"));
-    dynamic_cast<infinit::model::blocks::MutableBlock*>(block_bob.get())->data(
+    dynamic_cast<blocks::MutableBlock*>(block_bob.get())->data(
       elle::Buffer("bob_1"));
     block_bob->seal();
     block_bob = cycle(*dhts.dht_b, std::move(block_bob));
@@ -940,14 +968,14 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
       g.add_member(dht::User(dhts.keys_b->K(), "bob"));
       gkey.reset(new infinit::cryptography::rsa::PublicKey(g.public_control_key()));
     }
-    auto block_alice = dhts.dht_a->make_block<infinit::model::blocks::ACLBlock>();
+    auto block_alice = dhts.dht_a->make_block<blocks::ACLBlock>();
     block_alice->data(elle::Buffer("alice_1", 7));
     block_alice->set_permissions(dht::User(*gkey, "@g"), true, true);
     auto addr = block_alice->address();
     dhts.dht_a->store(std::move(block_alice));
     auto block_bob = dhts.dht_b->fetch(addr);
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("alice_1"));
-    dynamic_cast<infinit::model::blocks::MutableBlock*>(block_bob.get())->data(
+    dynamic_cast<blocks::MutableBlock*>(block_bob.get())->data(
       elle::Buffer("bob_1"));
     block_bob->seal();
     block_bob = cycle(*dhts.dht_b, std::move(block_bob));
@@ -1013,7 +1041,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     // CHB
     ELLE_LOG("store CHB")
     {
-      auto chb = dhta->make_block<infinit::model::blocks::ImmutableBlock>(data);
+      auto chb = dhta->make_block<blocks::ImmutableBlock>(data);
       chbaddr = chb->address();
       dhta->store(*chb);
       BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
@@ -1021,7 +1049,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     // ACB
     ELLE_LOG("store ACB")
     {
-      auto acb = dhta->make_block<infinit::model::blocks::ACLBlock>();
+      auto acb = dhta->make_block<blocks::ACLBlock>();
       acb->data(elle::Buffer(data));
       dhta->store(*acb);
       acbaddr = acb->address();
@@ -1049,7 +1077,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     // UB
     ELLE_LOG("fetch UB with wrong address")
     {
-      std::unique_ptr<infinit::model::blocks::Block> ruba;
+      std::unique_ptr<blocks::Block> ruba;
       BOOST_CHECK_NO_THROW(
         ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version())));
       BOOST_CHECK(ruba);
@@ -1057,7 +1085,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     // NB
     ELLE_LOG("fetch NB with wrong address")
     {
-      std::unique_ptr<infinit::model::blocks::Block> fetched;
+      std::unique_ptr<blocks::Block> fetched;
       BOOST_CHECK_NO_THROW(
         fetched =
         dhtb->fetch(
@@ -1068,7 +1096,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     // CHB
     ELLE_LOG("fetch CHB with wrong address")
     {
-      std::unique_ptr<infinit::model::blocks::Block> fetched;
+      std::unique_ptr<blocks::Block> fetched;
       BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
       infinit::model::Address addr(
         chbaddr.value(), infinit::model::flags::immutable_block);
@@ -1077,7 +1105,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     // ACB
     ELLE_LOG("fetch ACB with wrong address")
     {
-      std::unique_ptr<infinit::model::blocks::Block> fetched;
+      std::unique_ptr<blocks::Block> fetched;
       BOOST_CHECK_NO_THROW(fetched = dhta->fetch(acbaddr));
       BOOST_CHECK_EQUAL(fetched->data(), data);
       BOOST_CHECK_NO_THROW(fetched = dhta->fetch(infinit::model::Address(acbaddr.value(), infinit::model::flags::mutable_block)));
@@ -1094,7 +1122,7 @@ namespace rebalancing
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     DHT dht_b;
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
-    auto b1 = dht_a.dht->make_block<infinit::model::blocks::MutableBlock>();
+    auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
     ELLE_LOG("write block to quorum of 1")
     {
       b1->data(std::string("extend_and_write 1"));
