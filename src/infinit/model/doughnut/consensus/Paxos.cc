@@ -764,10 +764,7 @@ namespace infinit
             ELLE_TRACE_SCOPE("chosen block differs, run conflict resolution");
             auto resolved = (*resolver)(b, newest, mode);
             if (resolved)
-            {
-              ELLE_DEBUG_SCOPE("seal resolved block");
               return std::shared_ptr<blocks::Block>(resolved.release());
-            }
             else
             {
               ELLE_TRACE("resolution failed");
@@ -859,7 +856,8 @@ namespace infinit
                           if (!(b = resolve(*b, *mvalue, mode, resolver.get())))
                             break;
                       }
-                      b->seal(chosen->proposal.version + 1);
+                      ELLE_DEBUG("seal resolved block")
+                        b->seal(chosen->proposal.version + 1);
                       throw Paxos::PaxosServer::WrongQuorum(q, peers_id);
                     }
                     else
@@ -868,7 +866,8 @@ namespace infinit
                         chosen->value.get<std::shared_ptr<blocks::Block>>();
                       if (!(b = resolve(*b, *block, mode, resolver.get())))
                         break;
-                      b->seal(chosen->proposal.version + 1);
+                      ELLE_DEBUG("seal resolved block")
+                        b->seal(chosen->proposal.version + 1);
                     }
                   }
                   else
