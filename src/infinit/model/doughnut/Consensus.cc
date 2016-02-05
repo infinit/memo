@@ -70,11 +70,19 @@ namespace infinit
             catch (Conflict const& c)
             {
               if (!resolver)
+              {
+                ELLE_TRACE("fatal conflict: %s", c);
                 throw;
+              }
+              ELLE_DEBUG_SCOPE("resolve conflict: %s", c);
               nb = (*resolver)(*block, *c.current(), mode);
               if (!nb)
+              {
+                ELLE_TRACE("conflict resolution failed: %s", c);
                 throw;
-              nb->seal();
+              }
+              ELLE_DEBUG("seal resolved block: %s", c)
+                nb->seal();
             }
           }
         }
