@@ -159,7 +159,7 @@ struct TestSet
     , rub(new dht::UB(&dht, "USERNAME", keys->K(), true))
   {
     chb->seal();
-    acb->seal(secret);
+    acb->seal({}, secret);
     okb->seal();
     nb->seal();
     ub->seal();
