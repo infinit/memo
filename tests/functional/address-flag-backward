@@ -99,4 +99,4 @@ with TemporaryDirectory() as tmp, Infinit() as owner:
   except Exception as e:
     print(owner.last_out)
     print(owner.last_err)
-    raise e
+    raise

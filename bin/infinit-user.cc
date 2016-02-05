@@ -8,6 +8,8 @@
 ELLE_LOG_COMPONENT("infinit-user");
 
 #include <main.hh>
+
+#include <email.hh>
 #include <password.hh>
 
 infinit::Infinit ifnt;
@@ -124,6 +126,8 @@ void
 _push(variables_map const& args, infinit::User& user, bool atomic)
 {
   auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   bool user_updated = false;
   if (!user.email && !email)
   {
@@ -204,6 +208,8 @@ create_(std::string const& name,
 COMMAND(create)
 {
   bool push = aliased_flag(args, {"push-user", "push"});
+  auto has_output = optional(args, "output");
+  auto output = has_output ? get_output(args) : nullptr;
   if (!push)
   {
     if (flag(args, "full") || flag(args, "password"))
@@ -214,12 +220,23 @@ COMMAND(create)
     }
   }
   auto name = get_name(args);
+  auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               optional(args, "email"),
+                               email,
                                optional(args, "fullname"));
-  ifnt.user_save(user);
-  report_action("generated", "user", name, std::string("locally"));
+  if (output)
+  {
+    ifnt.user_save(user, *output);
+    report_exported(*output, "user", user.name);
+  }
+  else
+  {
+    ifnt.user_save(user);
+    report_action("generated", "user", name, std::string("locally"));
+  }
   if (push)
     _push(args, user, false);
 }
@@ -284,9 +301,12 @@ COMMAND(delete_)
 COMMAND(signup_)
 {
   auto name = get_name(args);
+  auto email = mandatory(args, "email");
+  if (!valid_email(email))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               mandatory(args, "email"),
+                               email,
                                optional(args, "fullname"));
   try
   {
@@ -437,9 +457,13 @@ main(int argc, char** argv)
       "password to authenticate with %s. Used with --full "
       "(default: prompt for password)", beyond(true)).c_str() };
   Mode::OptionDescription option_fullname =
-    { "fullname", value<std::string>(), "user's fullname (optional)" };
+    { "fullname", value<std::string>(), "fullname of user (optional)" };
   Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
+  Mode::OptionDescription option_key =
+    {"key,k", value<std::string>(),
+      "RSA key pair in PEM format - e.g. your SSH key "
+      "(default: generate key pair)" };
   Modes modes {
     {
       "create",
@@ -448,9 +472,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key "
-          "(default: generate key pair)" },
+        option_key,
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-user" },
@@ -459,6 +481,7 @@ main(int argc, char** argv)
         option_fullname,
         option_push_full,
         option_push_password,
+        option_output("user"),
       },
     },
     {
@@ -533,15 +556,13 @@ main(int argc, char** argv)
       "signup",
       elle::sprintf("Create and push a user to %s", beyond(true)).c_str(),
       &signup_,
-      {},
+      "--email EMAIL",
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
         { "email,n", value<std::string>(), "valid email address" },
         option_fullname,
         option_avatar,
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key "
-          "(default: generate key pair)" },
+        option_key,
         option_push_full,
         option_push_password,
       },
@@ -555,7 +576,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
         { "password", value<std::string>(), elle::sprintf(
-          "password to authenticate with %s (default: prompt) for password",
+          "password to authenticate with %s (default: prompt)",
           beyond(true)).c_str() },
       },
     },

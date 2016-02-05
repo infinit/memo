@@ -29,7 +29,7 @@
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 <p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
-<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.0.9/osxfuse-3.0.9.dmg" class="button">Download OSXFUSE</a></p>
+<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.1.0/osxfuse-3.1.0.dmg" class="button">Download OSXFUSE</a></p>
 
 <em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/.</em>
 
@@ -77,7 +77,9 @@ gpg:               imported: 1  (RSA: 1)
 <pre><code>$> sudo apt-get update
 ...
 Reading package lists... Done
-$> sudo apt-get install infinit
+</code></pre>
+
+<pre><code>$> sudo apt-get install infinit
 Reading package lists... Done
 Building dependency tree
 Reading state information... Done
@@ -347,7 +349,19 @@ That’s it, you’ve created a filesystem that you quickly connected to with tw
 4. Go Further
 ------------------
 
-You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Just keep in mind that the storage infrastructure presented in this guide is very sensitive to computers disconnecting, possibly rendering files inaccessible. Please take a look at the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.
+You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Take a look at the <a href="${route('doc_deployments')}">examples of deployments</a> or the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.
+
+<div>
+  <a class="go_deployments" href="${route('doc_deployments')}">
+    <img src="${url('images/icons/network.png')}">
+    <span>→ Deployment Examples</span>
+  </a>
+
+  <a class="go_reference" href="${route('doc_reference')}">
+    <img src="${url('images/icons/code.png')}">
+    <span>→ Reference Documentation</span>
+  </a>
+</div>
 
 <a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Join our Facebook Group</a>
 

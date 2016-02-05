@@ -12,13 +12,10 @@
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/storage/Storage.hh>
-#include <infinit/version.hh>
+
+#include "version.hh"
 
 ELLE_LOG_COMPONENT("doughnode");
-
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
 
 struct Config
 {
@@ -73,7 +70,7 @@ parse_options(int argc, char** argv, Config& cfg, boost::filesystem::path & p)
   }
   elle::Version version = vm.count("force-version")
     ? elle::Version::from_string(vm["force-version"].as<std::string>())
-    : INFINIT_ELLE_VERSION;
+    : version;
   if (vm.count("help"))
   {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;

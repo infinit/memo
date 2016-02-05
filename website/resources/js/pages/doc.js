@@ -5,7 +5,7 @@ $(document).ready(function() {
     hljs.initHighlighting();
   });
 
-  $('a[href*=#]:not([href=#])').click(function() {
+  $('a[href*=#]:not([href=#]):not([data-tab])').click(function() {
     if (location.pathname.replace(/^\//,'') === this.pathname.replace(/^\//,'') && location.hostname === this.hostname) {
       var target = $(this.hash);
       target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
@@ -60,7 +60,6 @@ $(document).ready(function() {
 
 
   if ($('body').hasClass('doc_get_started') ) {
-
     $('a.button').click(function() {
       ga('send', 'event', 'download', $(this).text(), navigator.userAgent);
     });
@@ -94,6 +93,10 @@ $(document).ready(function() {
         tooltip.hide();
       }
     });
+  }
+
+  if ($('body').hasClass('doc_deployments')) {
+    tabby.init();
   }
 
 });

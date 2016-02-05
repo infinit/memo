@@ -40,7 +40,8 @@
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Async.hh>
 #include <infinit/storage/Cache.hh>
-#include <infinit/version.hh>
+
+#include "version.hh"
 
 std::string program;
 
@@ -58,8 +59,6 @@ beyond(bool help = false)
   return res;
 }
 
-static const elle::Version version(
-  INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
 static boost::optional<elle::Version> compatibility_version;
 
 class CommandLineError
@@ -165,7 +164,8 @@ void
 not_found(std::string const& name,
           std::string const& type)
 {
-  std::cerr << elle::sprintf("%s %s not found on %s", type, name, beyond(true))
+  std::cerr << elle::sprintf("%s %s not found on %s, ensure it has been pushed",
+                             type, name, beyond(true))
             << std::endl;
 }
 
@@ -202,6 +202,8 @@ struct Mode
   std::string
   upper_fchar(std::string const& str)
   {
+    if (str.length() == 0)
+      return str;
     return elle::sprintf("%s%s", (char)toupper(str[0]), str.substr(1));
   }
 
@@ -291,14 +293,14 @@ struct Mode
        Options hidden_options = {},
        OptionsVector hidden_extra_options = {})
     : name(std::move(name_))
-    , description(std::move(description_))
+    , description(std::move(upper_fchar(description_)))
     , action(std::move(action_))
-    , help_complement(std::move(help))
+    , help_complement(std::move(upper_fchar(help)))
     , options(this->description)
     , visible_options(this->description)
   {
     Mode::OptionsDescription mode_options(
-      elle::sprintf("%s options", this->name));
+      elle::sprintf("%s options", upper_fchar(this->name)));
     for (auto const& option: options)
     {
       mode_options.add(
@@ -397,7 +399,7 @@ beyond_push(std::string const& where,
             T const& o,
             infinit::User const& self,
             bool report = true,
-            bool beyonderror = false); // FIXME: Remove when migration done.
+            bool beyond_error = false); // FIXME: Remove when migration done.
 
 namespace infinit
 {
@@ -437,7 +439,10 @@ namespace infinit
   {
     try
     {
-      std::string crash_url = elle::sprintf("%s/crash/report", beyond());
+      std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
+      std::string crash_url =
+        elle::sprintf("%s/crash/report",
+                      crash_host.length() ? crash_host : beyond());
       auto crash_reporter = crash_reporting::CrashReporter(crash_url);
       reactor::Scheduler sched;
       reactor::Thread main_thread(
@@ -502,7 +507,7 @@ namespace infinit
                   vm["compatibility-version"].as<std::string>());
               if (vm.count("version"))
               {
-                std::cout << INFINIT_VERSION << std::endl;
+                std::cout << version_describe << std::endl;
                 throw elle::Exit(0);
               }
               bool help = vm.count("help");
@@ -578,7 +583,7 @@ namespace infinit
                 throw;
               }
             }
-            catch (boost::program_options::invalid_command_line_syntax const& e)
+            catch (boost::program_options::error_with_option_name const& e)
             {
               throw elle::Error(
                 elle::sprintf("command line error: %s", e.what()));
@@ -616,6 +621,19 @@ namespace infinit
 
   inline
   boost::filesystem::path
+  canonical_folder(boost::filesystem::path const& path, std::string const& desc)
+  {
+    if (!boost::filesystem::exists(path.parent_path()))
+    {
+      throw CommandLineError(elle::sprintf(
+        "parent directory of % does not exist: %s", desc, path.parent_path()));
+    }
+    boost::filesystem::create_directory(path);
+    return boost::filesystem::canonical(path);
+  }
+
+  inline
+  boost::filesystem::path
   home()
   {
     static auto const home = elle::os::getenv("INFINIT_HOME", "");
@@ -626,7 +644,7 @@ namespace infinit
       elle::system::home_directory() :
       boost::filesystem::path(xdg) :
       boost::filesystem::path(home);
-    return data;
+    return canonical_folder(data, "INFINIT_HOME or XDG_DATA_HOME");
   }
 
   inline
@@ -635,7 +653,7 @@ namespace infinit
   {
     static auto const data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
     if (!data_home.empty())
-      return data_home;
+      return canonical_folder(data_home, "INFINIT_DATA_HOME");
     static auto const res =
       home() / ".local" / "share" / "infinit" / "filesystem";
     return res;
@@ -647,7 +665,7 @@ namespace infinit
   {
     static auto const cache_home = elle::os::getenv("INFINIT_CACHE_HOME", "");
     if (!cache_home.empty())
-      return cache_home;
+      return canonical_folder(cache_home, "INFINIT_CACHE_HOME");
     static auto const res =
       home() / ".cache" / "infinit" / "filesystem";
     return res;
@@ -774,7 +792,7 @@ namespace infinit
         bool async_writes = false,
         boost::optional<elle::Version> version = {})
     {
-      ELLE_LOG("client version: %s", INFINIT_VERSION);
+      ELLE_LOG("client version: %s", version_describe);
       boost::filesystem::path p = root_dir() / "cache" / name;
       return this->dht()->make(
         hosts,
@@ -875,10 +893,12 @@ namespace infinit
 
     Volume(std::string name,
            boost::optional<std::string> mountpoint_,
-           std::string network_)
+           std::string network_,
+           boost::optional<std::string> default_permissions_)
       : name(std::move(name))
       , mountpoint(std::move(mountpoint_))
       , network(std::move(network_))
+      , default_permissions(std::move(default_permissions_))
     {
       check_name(this->name);
     }
@@ -896,6 +916,7 @@ namespace infinit
       if (s.out() && !this->mountpoint)
         s.serialize("mountpoint", this->mountpoint);
       s.serialize("network", this->network);
+      s.serialize("default_permissions", this->default_permissions);
     }
 
     std::unique_ptr<reactor::filesystem::FileSystem>
@@ -955,6 +976,7 @@ namespace infinit
     std::string name;
     boost::optional<std::string> mountpoint;
     std::string network;
+    boost::optional<std::string> default_permissions;
   };
 
   struct Drive
@@ -963,12 +985,12 @@ namespace infinit
     {
       User() = default;
 
-      User(std::string permissions_,
-           std::string status_,
-           bool create_home_)
-        : permissions{permissions_}
-        , status{status_}
-        , create_home{create_home_}
+      User(std::string const& permissions,
+           std::string const& status,
+           bool create_home)
+        : permissions(permissions)
+        , status(status)
+        , create_home(create_home)
       {}
 
       void
@@ -1227,14 +1249,22 @@ namespace infinit
     }
 
     void
-    user_save(User const& user, bool overwrite = false)
+    user_save(User const& user,
+              std::ostream& output)
+    {
+      elle::serialization::json::SerializerOut s(output, false, true);
+      s.serialize_forward(user);
+    }
+
+    void
+    user_save(User const& user,
+              bool overwrite = false)
     {
       auto path = this->_user_path(user.name);
       boost::filesystem::ofstream f;
       this->_open_write(
         f, path, user.name, "user", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(user);
+      user_save(user, f);
       boost::filesystem::permissions(path,
         boost::filesystem::remove_perms
         | boost::filesystem::others_all | boost::filesystem::group_all);
@@ -2152,6 +2182,14 @@ _beyond_push(reactor::http::Request& r,
       elle::sprintf(
         "%s \"%s\" already exists with a different key", type, name));
   }
+  else if (r.status() == reactor::http::StatusCode::Payment_Required)
+  {
+    throw elle::Error(
+      elle::sprintf(
+        "Pushing %s failed with status %s: Please contact sales@infinit.sh.",
+        type,
+        r.status()));
+  }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
     if (beyonderror)
@@ -2221,12 +2259,13 @@ beyond_push(std::string const& where,
             std::string const& name,
             T const& o,
             infinit::User const& self,
-            bool report = true,
-            bool beyond_error = false)
+            bool report,
+            bool beyond_error)
 {
   std::stringstream stream;
   elle::serialization::json::serialize(o, stream, false);
   auto payload_ = stream.str();
+  ELLE_TRACE("pushing %s/%s with payload %s", type, name, payload_);
   elle::ConstWeakBuffer payload{payload_.data(), payload_.size()};
   beyond_push_data(
     where, type, name, payload, "application/json", self, report, beyond_error);
@@ -2388,6 +2427,7 @@ beyond_delete(std::string const& where,
   }
   else
   {
+    ELLE_LOG("HTTP response: %s", r.response());
     throw elle::Error(
       elle::sprintf("unexpected HTTP error %s deleting %s \"%s\"",
                     r.status(), type, name));

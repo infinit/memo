@@ -36,7 +36,8 @@ run(variables_map const& args)
     hosts, true, cache,
     cache_size, cache_ttl, cache_invalidation, flag(args, "async"));
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-    args["volume"].as<std::string>(), std::move(model));
+    args["volume"].as<std::string>(),
+    std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));
   new infinit::smb::SMBServer(std::move(fs));
   reactor::sleep();
 }

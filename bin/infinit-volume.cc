@@ -3,6 +3,7 @@
 
 #include <reactor/FDStream.hh>
 
+#include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -10,10 +11,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
-# if defined(__GNUC__) && !defined(__clang__)
-#  undef __OSX_AVAILABLE_STARTING
-#  define __OSX_AVAILABLE_STARTING(A, B)
-# endif
+# include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
 
@@ -26,6 +24,9 @@ ELLE_LOG_COMPONENT("infinit-volume");
 #endif
 
 infinit::Infinit ifnt;
+
+#include <endpoint_file.hh>
+
 using boost::program_options::variables_map;
 
 static
@@ -41,6 +42,7 @@ COMMAND(create)
   auto name = volume_name(args, owner);
   auto mountpoint = optional(args, "mountpoint");
   auto network = ifnt.network_get(mandatory(args, "network"), owner);
+  auto default_permissions = optional(args, "default-permissions");
   std::vector<std::string> hosts;
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
@@ -49,7 +51,11 @@ COMMAND(create)
     for (auto const& h: hosts)
       eps[elle::UUID()].push_back(h);
   }
-  infinit::Volume volume(name, mountpoint, network.name);
+  if (default_permissions && *default_permissions!= "r"
+      && *default_permissions!= "rw")
+    throw elle::Error("default-permissions must be 'r' or 'rw'");
+  infinit::Volume volume(name, mountpoint, network.name,
+    default_permissions);
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -101,16 +107,14 @@ COMMAND(push)
   beyond_push("volume", name, volume, owner);
 }
 
-static void
-pull(variables_map const& args)
+COMMAND(pull)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   beyond_delete("volume", name, owner);
 }
 
-static void
-delete_(variables_map const& args)
+COMMAND(delete_)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
@@ -277,12 +281,22 @@ COMMAND(run)
   auto self = self_user(ifnt, args);
   auto name = volume_name(args, self);
   infinit::overlay::NodeEndpoints eps;
-  std::vector<std::string> hosts;
   if (args.count("peer"))
   {
-    hosts = args["peer"].as<std::vector<std::string>>();
-    for (auto const& h: hosts)
-      eps[infinit::model::Address::null].push_back(h);
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& obj: peers)
+    {
+      auto file_eps = endpoints_from_file(obj);
+      if (file_eps.size())
+      {
+        for (auto const& ep: file_eps)
+          eps[infinit::model::Address::null].push_back(ep);
+      }
+      else
+      {
+        eps[infinit::model::Address::null].push_back(obj);
+      }
+    }
   }
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
@@ -317,9 +331,13 @@ COMMAND(run)
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
-  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint = {};
-  if (push)
+  boost::optional<reactor::network::TCPServer::EndPoint> local_endpoint;
+  if (model->local())
+  {
     local_endpoint = model->local()->server_endpoint();
+    if (auto port_file = optional(args, "port-file"))
+      port_to_file(local_endpoint.get().port(), port_file.get());
+  }
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
@@ -327,8 +345,7 @@ COMMAND(run)
     {
       ELLE_DEBUG("Connect callback to log storage stat");
       model->local()->storage()->register_notifier([&] {
-        network.notify_storage(self,
-                               node_id);
+        network.notify_storage(self, node_id);
       });
 
       {
@@ -338,8 +355,7 @@ COMMAND(run)
             ELLE_LOG_COMPONENT("infinit-volume");
             ELLE_DEBUG(
               "Hourly notification to beyond with storage usage (periodic)");
-                network.notify_storage(self,
-                                       node_id);
+                network.notify_storage(self, node_id);
                 reactor::wait(updater, 60_min);
           }
         });
@@ -355,6 +371,25 @@ COMMAND(run)
                          , optional(args, "mount-icon")
 #endif
                          );
+    if (volume.default_permissions && !volume.default_permissions->empty())
+    {
+      auto ops = dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get());
+      ops->on_root_block_create.connect([&] {
+          ELLE_DEBUG("root_block hook triggered");
+          auto path = fs->path("/");
+          int mode = 0700;
+          if (*volume.default_permissions == "rw")
+            mode |= 06;
+          else if (*volume.default_permissions == "r")
+            mode |= 04;
+          else
+          {
+            ELLE_WARN("Unexpected default permissions %s", *volume.default_permissions);
+            return;
+          }
+          path->chmod(mode);
+      });
+    }
 #ifdef INFINIT_MACOSX
     auto add_to_sidebar = flag(args, "finder-sidebar");
     if (add_to_sidebar && mountpoint)
@@ -734,7 +769,7 @@ COMMAND(run)
       reactor::wait(*fs);
     }
   };
-  if (push)
+  if (local_endpoint && push)
   {
     elle::With<InterfacePublisher>(
       network, self, node_id, local_endpoint.get().port()) << [&]
@@ -782,8 +817,7 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   std::vector<Mode::OptionDescription> options_run_mount = {
     { "name", value<std::string>(), "volume name" },
-    { "mountpoint,m", value<std::string>(),
-      "where to mount the filesystem" },
+    { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
 #ifdef INFINIT_MACOSX
     { "mount-name", value<std::string>(), "name of mounted volume" },
     { "mount-icon", value<std::string>(), "icon for mounted volume" },
@@ -795,15 +829,16 @@ main(int argc, char** argv)
     option_cache_ttl,
     option_cache_invalidation,
     { "fetch-endpoints", bool_switch(),
-      elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
+      elle::sprintf("fetch endpoints from %s", beyond(true)) },
     { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
     { "peer", value<std::vector<std::string>>()->multitoken(),
-      "peer to connect to (host:port)" },
+      "peer address or file with list of peer addresses (host:port)" },
     { "push-endpoints", bool_switch(),
-      elle::sprintf("push endpoints to %s", beyond(true)).c_str() },
+      elle::sprintf("push endpoints to %s", beyond(true)) },
     { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
+    { "port-file", value<std::string>(), "write node listening port to file" },
   };
   Modes modes {
     {
@@ -813,15 +848,17 @@ main(int argc, char** argv)
       "--name VOLUME --network NETWORK [--mountpoint PATH]",
       {
         { "name,n", value<std::string>(), "created volume name" },
-        { "network", value<std::string>(), "underlying network to use" },
+        { "network,N", value<std::string>(), "underlying network to use" },
         { "mountpoint,m", value<std::string>(),
           "default location to mount the volume (optional)" },
         option_output("volume"),
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer to connect to (host:port)" },
         { "push-volume", bool_switch(),
-          elle::sprintf("push the volume to %s", beyond(true)).c_str() },
+          elle::sprintf("push the volume to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-volume" },
+        { "default-permissions,d", value<std::string>(),
+          "default permissions (optional: r,rw)"},
       },
     },
     {
@@ -836,7 +873,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a volume from %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch a volume from %s", beyond(true)),
       &fetch,
       "",
       {
@@ -858,7 +895,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a volume to %s", beyond(true)).c_str(),
+      elle::sprintf("Push a volume to %s", beyond(true)),
       &push,
       "--name VOLUME",
       {
@@ -890,7 +927,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a volume from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a volume from %s", beyond(true)),
       &pull,
       "--name VOLUME",
       {

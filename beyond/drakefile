@@ -28,10 +28,15 @@ def configure(
     google_app_secret = 'ufwn6w0hAT2MDuwOzfWxh4Sx',
     gcs_app_key = '798530033299-phph23et2sptd7auhsif2d75hcqel4lg',
     gcs_app_secret = 'abdwo588jVZO3zV8EUWlmx8o',
-    name_regex = '^[-a-z0-9._]+$',
+    email_regex = '^[^@]+@[^@]+\.[^@]+$',
+    name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$',
+    delegate_user = 'hub',
+    backend = []
 ):
 
   global build, install, package, rule_check, tests
+
+  binaries = backend.get('binaries', [])
 
   class PythonCopy(drake.Copy):
 
@@ -73,7 +78,9 @@ def configure(
       'gcs_app_key':
         '%s.apps.googleusercontent.com' % gcs_app_key,
       'gcs_app_secret': gcs_app_secret,
+      'email_regex': email_regex,
       'name_regex': name_regex,
+      'delegate_user': delegate_user,
   }):
     drake.node('beyond.tmpl')
     drake.node('src/wsgi.py.tmpl')
@@ -159,7 +166,9 @@ def configure(
     yield how(cryptography_python_module,
               where / python_prefix, strip_prefix = True)
     yield drake.touch(where / python_prefix / 'infinit/__init__.py')
+
   build = drake.Rule('build')
+  build << binaries
   built = list(install_nodes(where = '.', how = copy_python))
   package = drake.python.Package('beyond', python_prefix, built,
                                  fullname = 'infinit.beyond')
@@ -202,6 +211,8 @@ def configure(
   debian << drake.debian.Packager(
     'infinit-beyond_%s_amd64.deb' % git.description(),
     debian_nodes, 'debian').package
+  if backend.get('debian'):
+    debian << backend.get('debian')
 
   ## ----- ##
   ## Check ##
@@ -220,6 +231,8 @@ def configure(
       'oauth-dropbox',
       'emails',
       'users/avatar',
+      'users/emails',
+      'users/email_confirmation',
       'users/put',
       'users/get',
       'users/pairing',
@@ -230,20 +243,32 @@ def configure(
       'volumes/put',
       'volumes/get',
       'volumes/delete',
+      'passports/limit',
       'passports/put',
       'drives/put',
       'drives/icons',
+      'drives/invitations',
       # Higher level.
       'users/register_login',
   ]:
     test = drake.node('tests/%s' % test_name)
     test.dependencies_add(built)
+    test.dependencies_add(binaries)
     test.dependencies_add([test_utils])
+    env = {
+      'PYTHONPATH': str(path),
+    }
+    import os
+    if len(binaries):
+      env['PATH'] = ':'.join([
+        str(drake.path_build(binaries[0].path(True).dirname(),
+                             absolute = True)),
+        os.environ.get('PATH', '')
+      ])
     runner = drake.Runner(
       exe = test,
-      env = {
-        'PYTHONPATH': path,
-      })
+      env = env
+    )
     runner.reporting = drake.Runner.Reporting.on_failure
     rule_check << runner.status
 

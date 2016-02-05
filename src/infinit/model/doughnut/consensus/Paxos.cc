@@ -67,8 +67,8 @@ namespace infinit
 
         struct BlockOrPaxos
         {
-          BlockOrPaxos(blocks::Block* b)
-            : block(b)
+          BlockOrPaxos(blocks::Block& b)
+            : block(&b)
             , paxos()
           {}
 
@@ -82,8 +82,8 @@ namespace infinit
             this->serialize(s);
           }
 
-          blocks::Block* block;
-          Paxos::LocalPeer::Decision* paxos;
+          std::unique_ptr<blocks::Block> block;
+          std::unique_ptr<Paxos::LocalPeer::Decision> paxos;
 
           void
           serialize(elle::serialization::Serializer& s)
@@ -371,12 +371,12 @@ namespace infinit
                            *this, address, p);
           auto& decision = this->_load(address, peers);
           auto res = decision.paxos.propose(std::move(peers), p);
+          BlockOrPaxos data(&decision);
           this->storage()->set(
             address,
-            elle::serialization::binary::serialize(
-              BlockOrPaxos(&decision),
-              this->doughnut().version()),
+            elle::serialization::binary::serialize(data),
             true, true);
+          data.paxos.release();
           return res;
         }
 
@@ -411,11 +411,13 @@ namespace infinit
           auto res = paxos.accept(std::move(peers), p, value);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
+            BlockOrPaxos data(&decision);
             this->storage()->set(
               address,
-              elle::serialization::binary::serialize(BlockOrPaxos(&decision),
-                   this->doughnut().version()),
+              elle::serialization::binary::serialize(
+                data, this->doughnut().version()),
               true, true);
+            data.paxos.release();
           }
           if (block)
             on_store(*block, STORE_ANY);
@@ -433,11 +435,13 @@ namespace infinit
           decision.paxos.confirm(peers, p);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
+            BlockOrPaxos data(&decision);
             this->storage()->set(
               address,
-              elle::serialization::binary::serialize(BlockOrPaxos(&decision),
-                this->doughnut().version()),
+              elle::serialization::binary::serialize(
+                data, this->doughnut().version()),
               true, true);
+            data.paxos.release();
           }
         }
 
@@ -472,8 +476,13 @@ namespace infinit
             std::function<
             boost::optional<Paxos::PaxosClient::Accepted>(
               PaxosServer::Quorum, Address,
-              Paxos::PaxosClient::Proposal const&)>
-            (std::bind(&LocalPeer::propose, this, ph::_1, ph::_2, ph::_3)));
+              Paxos::PaxosClient::Proposal const&)> (
+                [this, &rpcs](PaxosServer::Quorum q, Address a,
+                              Paxos::PaxosClient::Proposal const& p)
+                {
+                  this->_require_auth(rpcs, true);
+                  return this->propose(std::move(q), a, p);
+                }));
           if (this->doughnut().version() < elle::Version(0, 5, 0))
             rpcs.add(
               "accept",
@@ -482,9 +491,12 @@ namespace infinit
                 PaxosServer::Quorum, Address,
                 Paxos::PaxosClient::Proposal const& p,
 		std::shared_ptr<blocks::Block> const& b)>
-              ([this] (PaxosServer::Quorum q, Address a,
-                       Paxos::PaxosClient::Proposal const& p,
-                       std::shared_ptr<blocks::Block> const& b) -> Paxos::PaxosClient::Proposal {
+              ([this, &rpcs] (PaxosServer::Quorum q, Address a,
+                              Paxos::PaxosClient::Proposal const& p,
+                              std::shared_ptr<blocks::Block> const& b)
+               -> Paxos::PaxosClient::Proposal
+              {
+                this->_require_auth(rpcs, true);
                 return this->accept(q, a, p, std::move(b));
               }));
           else
@@ -492,11 +504,18 @@ namespace infinit
               "accept",
               std::function<
               Paxos::PaxosClient::Proposal(
-                PaxosServer::Quorum, Address,
+                PaxosServer::Quorum,
+                Address,
                 Paxos::PaxosClient::Proposal const& p,
                 Value const& value)>
-              (std::bind(&LocalPeer::accept,
-                         this, ph::_1, ph::_2, ph::_3, ph::_4)));
+              ([this, &rpcs](PaxosServer::Quorum q,
+                             Address a,
+                             Paxos::PaxosClient::Proposal const& p,
+                             Value const& value)
+               {
+                 this->_require_auth(rpcs, true);
+                 return this->accept(std::move(q), a, p, value);
+               }));
           rpcs.add(
             "confirm",
             std::function<
@@ -553,7 +572,7 @@ namespace infinit
               ELLE_TRACE("%s: fetch: no data block", *this);
               throw MissingBlock(address);
             }
-            return std::unique_ptr<blocks::Block>(data.block);
+            return std::move(data.block);
           }
           // Backward compatibility pre-0.5.0
           auto decision = this->_addresses.find(address);
@@ -568,7 +587,7 @@ namespace infinit
               if (data.block)
               {
                 ELLE_DEBUG("loaded immutable block from storage");
-                return std::unique_ptr<blocks::Block>(data.block);
+                return std::move(data.block);
               }
               else
               {
@@ -614,12 +633,14 @@ namespace infinit
               ELLE_DEBUG("%s: store chosen block", *this)
               unconst(decision->second).chosen = version;
               {
+                BlockOrPaxos data(const_cast<Decision*>(&decision->second));
                 this->storage()->set(
                   address,
                   elle::serialization::binary::serialize(
-                    BlockOrPaxos(const_cast<Decision*>(&decision->second)),
+                    data,
                     this->doughnut().version()),
                   true, true);
+                data.paxos.release();
               }
               // ELLE_ASSERT(block.unique());
               // FIXME: Don't clone, it's useless, find a way to steal
@@ -652,10 +673,6 @@ namespace infinit
             typename elle::serialization::binary::SerializerIn input(s);
             input.set_context<Doughnut*>(&this->doughnut());
             auto stored = input.deserialize<BlockOrPaxos>();
-            elle::SafeFinally cleanup([&] {
-                  delete stored.block;
-                  delete stored.paxos;
-            });
             if (!stored.block)
               ELLE_WARN("No block, cannot validate update");
             else
@@ -669,12 +686,16 @@ namespace infinit
             }
           }
           catch (storage::MissingKey const&)
-          {
-          }
+          {}
           elle::Buffer data =
-            elle::serialization::binary::serialize(
-              BlockOrPaxos(const_cast<blocks::Block*>(&block)),
-              this->doughnut().version());
+            [&]
+            {
+              BlockOrPaxos b(const_cast<blocks::Block&>(block));
+              auto res = elle::serialization::binary::serialize(
+                b, this->doughnut().version());
+              b.block.release();
+              return res;
+            }();
           this->storage()->set(block.address(), data,
                               mode == STORE_ANY || mode == STORE_INSERT,
                               mode == STORE_ANY || mode == STORE_UPDATE);
@@ -714,20 +735,16 @@ namespace infinit
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
-              elle::SafeFinally cleanup([&] {
-                  delete stored.block;
-                  delete stored.paxos;
-              });
               if (!stored.block)
                 ELLE_WARN("No paxos and no block, cannot validate removal");
               else
               {
-                auto previous = stored.block;
-                auto valres = previous->validate_remove(rs);
+                auto& previous = *stored.block;
+                auto valres = previous.validate_remove(rs);
                 ELLE_TRACE("Immutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
-                    throw Conflict(valres.reason(), previous->clone());
+                    throw Conflict(valres.reason(), previous.clone());
                   else
                     throw ValidationFailed(valres.reason());
               }

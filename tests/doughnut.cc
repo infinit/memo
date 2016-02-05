@@ -53,6 +53,13 @@ NAMED_ARGUMENT(version_a);
 NAMED_ARGUMENT(version_b);
 NAMED_ARGUMENT(version_c);
 
+static
+int
+key_size()
+{
+  return RUNNING_ON_VALGRIND ? 512 : 2048;
+}
+
 class DHTs
 {
 public:
@@ -62,9 +69,9 @@ public:
     namespace ph = std::placeholders;
     elle::named::prototype(
       paxos = true,
-      ::keys_a = infinit::cryptography::rsa::keypair::generate(512),
-      ::keys_b = infinit::cryptography::rsa::keypair::generate(512),
-      ::keys_c = infinit::cryptography::rsa::keypair::generate(512),
+      ::keys_a = infinit::cryptography::rsa::keypair::generate(key_size()),
+      ::keys_b = infinit::cryptography::rsa::keypair::generate(key_size()),
+      ::keys_c = infinit::cryptography::rsa::keypair::generate(key_size()),
       id_a = infinit::model::Address::random(),
       id_b = infinit::model::Address::random(),
       id_c = infinit::model::Address::random(),
@@ -193,11 +200,11 @@ private:
             elle::make_unique<dht::consensus::Consensus>(dht));
         };
     dht::Passport passport_a(
-      this->keys_a->K(), "network-name", this->keys_a->k());
+      this->keys_a->K(), "network-name", *this->keys_a);
     dht::Passport passport_b(
-      this->keys_b->K(), "network-name", this->keys_a->k());
+      this->keys_b->K(), "network-name", *this->keys_a);
     dht::Passport passport_c(
-      this->keys_c->K(), "network-name", this->keys_a->k());
+      this->keys_c->K(), "network-name", *this->keys_a);
     infinit::overlay::Stonehenge::Peers members;
     members.emplace_back(id_a);
     members.emplace_back(id_b);
@@ -456,7 +463,7 @@ private:
             elle::make_unique<dht::consensus::Consensus>(dht));
         };
     dht::Passport passport(
-      this->keys->K(), "network-name", this->keys->k());
+      this->keys->K(), "network-name", *this->keys);
     auto make_overlay =
       [this] (
         infinit::model::doughnut::Doughnut& d,
@@ -657,7 +664,7 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
     dhta->store(uba);
     dhta->store(ubarev);
   }
-  auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version()));
+  auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), *dhta));
   BOOST_CHECK(ruba);
   auto* uba = dynamic_cast<dht::UB*>(ruba.get());
   BOOST_CHECK(uba);
@@ -738,9 +745,9 @@ noop(Storage*)
 
 ELLE_TEST_SCHEDULED(restart, (bool, paxos))
 {
-  auto keys_a = infinit::cryptography::rsa::keypair::generate(512);
-  auto keys_b = infinit::cryptography::rsa::keypair::generate(512);
-  auto keys_c = infinit::cryptography::rsa::keypair::generate(512);
+  auto keys_a = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_b = infinit::cryptography::rsa::keypair::generate(key_size());
+  auto keys_c = infinit::cryptography::rsa::keypair::generate(key_size());
   auto id_a = infinit::model::Address::random();
   auto id_b = infinit::model::Address::random();
   auto id_c = infinit::model::Address::random();
@@ -1024,7 +1031,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
       dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
       dhta->store(uba);
       dhta->store(ubarev);
-      auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version()));
+      auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), *dhta));
       BOOST_CHECK(ruba);
     }
     // NB
@@ -1035,7 +1042,8 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
         elle::Buffer("blockdata", 9));
       dhta->store(*nb);
       auto fetched =
-        dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname", dhts.dht_b->version()));
+        dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname",
+                                     dhts.dht_b->version()));
       BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
     }
     // CHB
@@ -1079,7 +1087,7 @@ ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
     {
       std::unique_ptr<blocks::Block> ruba;
       BOOST_CHECK_NO_THROW(
-        ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), dhta->version())));
+        ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), *dhta)));
       BOOST_CHECK(ruba);
     }
     // NB

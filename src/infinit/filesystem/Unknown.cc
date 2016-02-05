@@ -30,7 +30,7 @@ namespace infinit
       std::unique_ptr<Block>
       operator() (Block& block,
                   Block& current,
-                  model::StoreMode mode)
+                  model::StoreMode mode) override
       {
         return current.clone();
       }
@@ -52,6 +52,8 @@ namespace infinit
     Unknown::mkdir(mode_t mode)
     {
       ELLE_TRACE_SCOPE("%s: make directory", *this);
+      if (_owner.read_only())
+        throw rfs::Error(EACCES, "Access denied.");
       auto b = this->_owner.block_store()->
         make_block<infinit::model::blocks::ACLBlock>();
       auto address = b->address();
@@ -81,6 +83,8 @@ namespace infinit
     Unknown::create(int flags, mode_t mode)
     {
       ELLE_ASSERT_EQ(signed(mode & S_IFMT), S_IFREG);
+      if (_owner.read_only())
+        throw rfs::Error(EACCES, "Access denied.");
       if (!_owner.single_mount())
         _parent->_fetch();
       if (_parent->_files.find(_name) != _parent->_files.end())

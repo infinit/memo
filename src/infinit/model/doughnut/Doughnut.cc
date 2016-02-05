@@ -88,8 +88,9 @@ namespace infinit
           {
             try
             {
+              auto const addr = UB::hash_address(name, *this);
               ELLE_TRACE_SCOPE("%s: check user block", *this);
-              auto block = this->fetch(UB::hash_address(name, this->version()));
+              auto block = this->fetch(addr);
               ELLE_DEBUG("%s: user block for %s already present at %x",
                          *this, name, block->address());
               auto ub = elle::cast<UB>::runtime(block);
@@ -97,20 +98,27 @@ namespace infinit
                 throw elle::Error(
                   elle::sprintf(
                     "user block exists at %s(%x) with different key",
-                    name, UB::hash_address(name, this->version())));
+                    name, addr));
             }
             catch (MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(this, name, this->keys().K());
+              auto user = elle::make_unique<UB>(this, name, this->passport());
               ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
                                *this, user->address(), name);
-
-              this->store(std::move(user));
+              try
+              {
+                this->store(std::move(user));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to store user block: %s", *this, e);
+              }
             }
             try
             {
+              auto const addr = UB::hash_address(this->keys().K(), *this);
               ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
-              auto block = this->fetch(UB::hash_address(this->keys().K(), this->version()));
+              auto block = this->fetch(addr);
               ELLE_DEBUG("%s: user reverse block for %s already present at %x",
                          *this, name, block->address());
               auto ub = elle::cast<UB>::runtime(block);
@@ -119,14 +127,21 @@ namespace infinit
                   elle::sprintf(
                     "user reverse block exists at %s(%x) "
                     "with different name: %s",
-                    name, UB::hash_address(this->keys().K(), this->version()), ub->name()));
+                    name, addr, ub->name()));
             }
             catch(MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(this, name, this->keys().K(), true);
+              auto user = elle::make_unique<UB>(this, name, this->passport(), true);
               ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
                                user->address());
-              this->store(std::move(user));
+              try
+              {
+                this->store(std::move(user));
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_TRACE("%s: failed to store reverse user block: %s", *this, e);
+              }
             }
           };
         _user_init.reset(new reactor::Thread(
@@ -199,7 +214,7 @@ namespace infinit
           cryptography::rsa::PublicKey pub(s);
           try
           {
-            auto block = this->fetch(UB::hash_address(pub, this->version()));
+            auto block = this->fetch(UB::hash_address(pub, *this));
             auto ub = elle::cast<UB>::runtime(block);
             return elle::make_unique<doughnut::User>
               (ub->key(), ub->name());
@@ -229,7 +244,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: fetch user from name", *this);
           try
           {
-            auto block = this->fetch(UB::hash_address(data.string(), this->version()));
+            auto block = this->fetch(UB::hash_address(data.string(), *this));
             auto ub = elle::cast<UB>::runtime(block);
             return elle::make_unique<doughnut::User>
               (ub->key(), data.string());
@@ -263,6 +278,54 @@ namespace infinit
       Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
         this->_consensus->remove(address, std::move(rs));
+      }
+
+      bool
+      Doughnut::verify(Passport const& passport,
+                         bool require_write,
+                         bool require_storage,
+                         bool require_sign)
+      {
+        ELLE_TRACE_SCOPE("%s: validating passport %s",
+                         *this, passport.user());
+        if (  (require_write && !passport.allow_write())
+           || (require_storage && !passport.allow_storage())
+           || (require_sign && !passport.allow_sign())
+         )
+        {
+          ELLE_TRACE("%s: passport permissions mismatch", *this);
+          return false;
+        }
+        if (!passport.certifier() || *passport.certifier() == *this->owner())
+        {
+          ELLE_TRACE("%s: validating with owner key", *this);
+          return passport.verify(*this->owner());
+        }
+        if (!passport.verify(*passport.certifier()))
+        {
+          ELLE_TRACE("%s: validating with certifier key %x", *this,
+                     *passport.certifier());
+          return false;
+        }
+        // fetch passport for certifier
+        try
+        {
+          auto const addr = UB::hash_address(*passport.certifier(), *this);
+          auto block = this->fetch(addr);
+          auto ub = elle::cast<UB>::runtime(block);
+          if (!ub->passport())
+          {
+            ELLE_TRACE("%s: certifier RUB does not contain a passport", *this);
+            return false;
+          }
+          return verify(*ub->passport(), false, false, true);
+        }
+        catch (elle::Exception const& e)
+        {
+          ELLE_TRACE("%s: exception fetching/validating: %s",
+                     *this, e);
+          return false;
+        }
       }
 
       Configuration::~Configuration()

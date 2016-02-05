@@ -27,7 +27,8 @@
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
-#include <infinit/version.hh>
+
+#include "version.hh"
 
 ELLE_LOG_COMPONENT("infinit");
 
@@ -98,12 +99,12 @@ parse_options(int argc, char** argv, Config& cfg,
     std::cout << std::endl;
     std::cout << options;
     std::cout << std::endl;
-    std::cout << "Infinit v" << INFINIT_VERSION << std::endl;
+    std::cout << "Infinit " << version_describe << std::endl;
     exit(0); // XXX: use Exit exception
   }
   if (vm.count("version"))
   {
-    std::cout << INFINIT_VERSION << std::endl;
+    std::cout << version_describe << std::endl;
     exit(0); // XXX: use Exit exception
   }
   if (vm.count("config") != 0)

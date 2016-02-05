@@ -1,0 +1,10 @@
+#include <boost/regex.hpp>
+
+static
+bool
+valid_email(std::string const& candidate)
+{
+  static const boost::regex email_regex("${email_regex}");
+  boost::smatch str_matches;
+  return boost::regex_match(candidate, str_matches, email_regex);
+}

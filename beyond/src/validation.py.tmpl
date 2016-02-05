@@ -24,11 +24,7 @@ class Name(Validator):
 
 class Email(Validator):
 
-  def __init__(self, object):
-    super().__init__(object, 'email')
-
   def __call__(self, email):
     import re
-    validator = re.compile('^[^@]+@[^@]+\.[^@]+$')
-    if validator.match(email) is None:
+    if re.compile(${repr(email_regex)}).match(email) is None:
       raise InvalidFormat(self.field.object, self.field.name)

@@ -70,17 +70,17 @@ def configure(
 
   markdown = drake.nodes(
     'templates/pages/docs/src/markdown/get_started.md',
-    'templates/pages/docs/src/markdown/overview.md',
     'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/reference.md',
   )
-  changelog = drake.Node(
+  changelog = drake.node(
     'ChangeLog.html',
   )
   drake.markdown.Renderer(
     source = drake.Node('../ChangeLog'),
     target = changelog
   )
+
   class CopyAndCleanup(drake.Copy):
 
     def __init__(self, source, to, post_process):
@@ -106,37 +106,42 @@ def configure(
     def hash(self):
       return self.__replacements
 
-  def generate(nodes):
+  def copy_generated_pages(nodes):
     return drake.copy(
-      drake.nodes(*[m.path(True).with_extension('html') for m in nodes]),
+      nodes,
       'templates/pages/docs/generated',
       strip_prefix = True,
       builder = CopyAndCleanup
     )
 
-  generated = generate(markdown) + generate([changelog])
+  generated = copy_generated_pages(
+    drake.nodes(*[m.path(True).with_extension('html') for m in markdown])
+  ) + copy_generated_pages([changelog])
   templates = drake.nodes(
     'templates/base.html',
     'templates/pages/home.html',
     'templates/pages/drive.html',
     'templates/pages/faq.html',
-    'templates/pages/docs/menu.html',
-    'templates/pages/docs/get_started.html',
-    'templates/pages/docs/get_started_windows.html',
-    'templates/pages/docs/overview.html',
-    'templates/pages/docs/technology.html',
-    'templates/pages/docs/comparisons.html',
-    'templates/pages/docs/personal_cloud.html',
-    'templates/pages/docs/decentralized_fs.html',
-    'templates/pages/docs/reference.html',
-    'templates/pages/docs/roadmap.html',
-    'templates/pages/docs/changelog.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
     'templates/pages/about.html',
     'templates/pages/contact.html',
     'templates/pages/legal.html',
+    'templates/pages/press.html',
+    'templates/pages/docs/menu.html',
+    'templates/pages/docs/get_started.html',
+    'templates/pages/docs/get_started_windows.html',
+    'templates/pages/docs/overview.html',
+    'templates/pages/docs/technology.html',
+    'templates/pages/docs/deployments.html',
+    'templates/pages/docs/comparisons.html',
+    'templates/pages/docs/personal_cloud.html',
+    'templates/pages/docs/decentralized_fs.html',
+    'templates/pages/docs/reference.html',
+    'templates/pages/docs/roadmap.html',
+    'templates/pages/docs/changelog.html',
+    'templates/pages/users/confirm_email.html',
   ) + generated
 
   resources = drake.nodes(
@@ -162,6 +167,8 @@ def configure(
     'resources/images/schema-distributed@2x.png',
     'resources/images/schema-decentralized.png',
     'resources/images/schema-decentralized@2x.png',
+    'resources/images/schema-decentralized-s3.png',
+    'resources/images/schema-decentralized-s3@2x.png',
     'resources/images/schema-technology.png',
     'resources/images/schema-technology@2x.png',
     'resources/images/desktop-client.png',
@@ -196,6 +203,10 @@ def configure(
     'resources/images/schema-dhash@2x.png',
     'resources/images/schema-encryption.png',
     'resources/images/schema-encryption@2x.png',
+    'resources/images/schema-deployment-one-server.png',
+    'resources/images/schema-deployment-one-server@2x.png',
+    'resources/images/schema-deployment-multi-servers.png',
+    'resources/images/schema-deployment-multi-servers@2x.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
@@ -207,6 +218,8 @@ def configure(
     'resources/images/icons/lock@2x.png',
     'resources/images/icons/scalable.png',
     'resources/images/icons/scalable@2x.png',
+    'resources/images/icons/scalable-yellow.png',
+    'resources/images/icons/scalable-yellow@2x.png',
     'resources/images/icons/fault.png',
     'resources/images/icons/fault@2x.png',
     'resources/images/icons/idea.png',
@@ -250,6 +263,10 @@ def configure(
     'resources/images/icons/bracket-right.png',
     'resources/images/icons/bracket-right@2x.png',
     'resources/images/icons/arrow-down.png',
+    'resources/images/icons/email-confirmed.png',
+    'resources/images/icons/email-confirmed@2x.png',
+    'resources/images/icons/email-unconfirmed.png',
+    'resources/images/icons/email-unconfirmed@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
@@ -292,6 +309,7 @@ def configure(
   else:
     python_version = '%s.%s' % sys.version_ivnfo[:2]
   python_prefix = drake.Path('lib/python%s' % python_version)
+
   def copy_sources(where, how = drake.copy):
     where = drake.Path(where) / python_prefix
     for node in how(sources,

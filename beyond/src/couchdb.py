@@ -52,7 +52,7 @@ port = %(port)s
 file = %(root)s/db.log
 
 [query_servers]
-python=python -m couchdb
+python=python3 -m couchdb
 ''' % {'root': self.__dir, 'port': self.__port},
             file = f)
     try:
@@ -100,7 +100,10 @@ class CouchDBDatastore:
     self.__couchdb = db
     self.__design('users',
                   updates = [('update', self.__user_update)],
-                  views = [('per_name', self.__user_per_name)])
+                  views = [
+                    ('per_name', self.__user_per_name),
+                    ('per_email', self.__user_per_email),
+                  ])
     self.__design('pairing',
                   updates = [],
                   views = [])
@@ -167,7 +170,8 @@ class CouchDBDatastore:
   ## ---- ##
 
   def user_insert(self, user):
-    json = user.json(private = True)
+    json = user.json(private = True,
+                     hide_confirmation_codes = False)
     json['_id'] = json['name']
     try:
       self.__couchdb['users'].save(json)
@@ -184,11 +188,20 @@ class CouchDBDatastore:
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 
-  def user_delete(self, name):
-    doc = self.__couchdb['users'][name]
-    self.__couchdb['users'].delete(doc)
+  def __user_per_email(user):
+    for email, confirmation in user.get('emails', {}).items():
+      yield email, user
+    if 'email' in user and user['email'] not in user.get('emails', {}).keys():
+      yield user['email'], user
 
-  def user_update(self, id, diff = None):
+  def users_by_email(self, email):
+    rows = self.__couchdb['users'].view('beyond/per_email', key = email)
+    return [r.value for r in rows]
+
+  def __user_per_name(user):
+    yield user['name'], user
+
+  def user_update(self, id, diff = {}):
     args = {
       name: json.dumps(value)
       for name, value in diff.items()
@@ -202,6 +215,33 @@ class CouchDBDatastore:
       )
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
+
+  def __user_update(user, req):
+    if user is None:
+      return [
+        None,
+        {
+          'code': 404,
+        }
+      ]
+    import json
+    update = {
+      name: json.loads(value)
+      for name, value in req['query'].items()
+    }
+    for id, account in update.get('dropbox_accounts', {}).items():
+      user.setdefault('dropbox_accounts', {})[id] = account
+    for id, account in update.get('google_accounts', {}).items():
+      user.setdefault('google_accounts', {})[id] = account
+    for id, account in update.get('gcs_accounts', {}).items():
+      user.setdefault('gcs_accounts', {})[id] = account
+    for email, confirmation in update.get('emails', {}).items():
+      user.setdefault('emails', {})[email] = confirmation
+    return [user, {'json': json.dumps(update)}]
+
+  def user_delete(self, name):
+    doc = self.__couchdb['users'][name]
+    self.__couchdb['users'].delete(doc)
 
   def __rows_to_networks(self, rows):
     network_from_db = infinit.beyond.Network.from_json
@@ -230,30 +270,6 @@ class CouchDBDatastore:
     if len(rows) > 0:
       res = rows[0].value
     return res
-
-  def __user_per_name(user):
-    yield user['name'], user
-
-  def __user_update(user, req):
-    if user is None:
-      return [
-        None,
-        {
-          'code': 404,
-        }
-      ]
-    import json
-    update = {
-      name: json.loads(value)
-      for name, value in req['query'].items()
-    }
-    for id, account in update.get('dropbox_accounts', {}).items():
-      user.setdefault('dropbox_accounts', {})[id] = account
-    for id, account in update.get('google_accounts', {}).items():
-      user.setdefault('google_accounts', {})[id] = account
-    for id, account in update.get('gcs_accounts', {}).items():
-      user.setdefault('gcs_accounts', {})[id] = account
-    return [user, {'json': json.dumps(user)}]
 
   ## ------- ##
   ## Pairing ##
@@ -332,6 +348,10 @@ class CouchDBDatastore:
       )
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.Network.NotFound()
+    except couchdb.http.ServerError as e:
+      if e.args[0][0] == 402:
+        raise infinit.beyond.Network.PaymentRequired()
+      raise e
 
   def networks_volumes_fetch(self, networks):
     rows = self.__couchdb['volumes'].view(
@@ -492,8 +512,11 @@ class CouchDBDatastore:
       for name, value in req['query'].items()
     }
     for user, value in update.get('users', {}).items():
-      drive.setdefault('users', {})[user] = value
-
+      if value is None and user in update.get('users', {}):
+        del drive['users'][user]
+      else:
+        drive.setdefault('users', {})[user] = value
+    update.pop('users', None)
     return [drive, {'json': json.dumps(update)}]
 
   def drive_delete(self, owner, name):
@@ -503,10 +526,10 @@ class CouchDBDatastore:
     except couchdb.ResourceConflict:
       raise infinit.beyond.Drive.Duplicate()
 
-  def user_drives_fetch(self, user):
+  def user_drives_fetch(self, name):
     drive_from_db = partial(infinit.beyond.Drive.from_json, self.beyond)
     rows = self.__couchdb['drives'].view('beyond/per_member_name',
-                                         key = user.name)
+                                         key = name)
     return list(map(lambda x: drive_from_db(x.value), rows))
 
   def __drives_per_member_map(drive):

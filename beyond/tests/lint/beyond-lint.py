@@ -31,15 +31,16 @@ class BeyondChecker(BaseChecker):
                          args = 'Response not passed two arguments',
                          node = node)
         return
-      code = node.args[0]
-      if not isinstance(code, astroid.Const):
-        raise Exception('status code is not a literal integer')
-      elif not isinstance(code.value, int):
-        raise Exception('status code is not an integer')
-      else:
-        code = code.value
-      value = node.args[1]
       try:
+        code = node.args[0]
+        value = code
+        if not isinstance(code, astroid.Const):
+          raise Exception('status code is not a literal integer')
+        elif not isinstance(code.value, int):
+          raise Exception('status code is not an integer')
+        else:
+          code = code.value
+        value = node.args[1]
         if isinstance(value, astroid.Const) and \
            not isinstance(value, astroid.Dict):
           raise Exception('value is not a dictionary')

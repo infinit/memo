@@ -13,7 +13,7 @@ namespace infinit
       class ImmutableBlock;
       class MutableBlock;
       class ValidationResult;
-      class RemoveSignature;
+      struct RemoveSignature;
     }
   }
 }
