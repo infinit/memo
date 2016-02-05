@@ -810,7 +810,7 @@ namespace infinit
               elle::unreachable();
           }
           auto owners = this->_owners(b->address(), this->_factor, op);
-          if (auto mb = dynamic_cast<blocks::MutableBlock*>(b.get()))
+          if (dynamic_cast<blocks::MutableBlock*>(b.get()))
           {
             // FIXME: this voids the whole "query on the fly" optimisation
             Paxos::PaxosClient::Peers peers;
@@ -839,6 +839,7 @@ namespace infinit
                 // Keep resolving conflicts and retrying
                 while (true)
                 {
+                  auto mb = dynamic_cast<blocks::MutableBlock*>(b.get());
                   auto version = mb->version();
                   boost::optional<Paxos::PaxosServer::Accepted> chosen;
                   ELLE_DEBUG("run Paxos for version %s", version)
