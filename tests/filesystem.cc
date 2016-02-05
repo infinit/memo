@@ -1108,16 +1108,26 @@ test_conflicts(bool paxos)
   ELLE_LOG("file create/write conflict")
   {
     int fd0, fd1;
-    fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+    ELLE_LOG("open file 0")
+      fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
     BOOST_CHECK(fd0 != -1);
-    fd1 = open((m1 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+    ELLE_LOG("open file 1")
+      fd1 = open((m1 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
     BOOST_CHECK(fd1 != -1);
-    BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
-    BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
-    BOOST_CHECK_EQUAL(close(fd0), 0);
-    BOOST_CHECK_EQUAL(close(fd1), 0);
-    BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
-    BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
+    ELLE_LOG("write to file 0")
+      BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
+
+    ELLE_LOG("write to file 1")
+      BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
+    ELLE_LOG("close file 0")
+      BOOST_CHECK_EQUAL(close(fd0), 0);
+    ::sleep(2);
+    ELLE_LOG("close file 1")
+      BOOST_CHECK_EQUAL(close(fd1), 0);
+    ELLE_LOG("read file 0")
+      BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
+    ELLE_LOG("read file 1")
+      BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
   }
   // FIXME: This needs cache to be enabled ; restore when cache is moved up to
   // Model instead of the consensus and the 'infinit' binary accepts --cache.
