@@ -11,6 +11,7 @@
 #include <infinit/storage/Storage.hh>
 
 #ifdef INFINIT_MACOSX
+# define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 # include <crash_reporting/gcc_fix.hh>
 # include <CoreServices/CoreServices.h>
 #endif
