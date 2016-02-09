@@ -37,17 +37,18 @@ namespace infinit
            cryptography::rsa::PublicKey key,
            bool reverse = false);
         UB(UB const& other);
+        static
+        Address
+        hash_address(std::string const& name, Doughnut const& dht);
+        static
+        Address
+        hash_address(cryptography::rsa::PublicKey const& key,
+                     Doughnut const& dht);
         ELLE_ATTRIBUTE_R(std::string, name);
         ELLE_ATTRIBUTE_R(cryptography::rsa::PublicKey, key);
         ELLE_ATTRIBUTE_R(bool, reverse);
         ELLE_ATTRIBUTE_R(boost::optional<Passport>, passport);
         ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
-        static
-        Address
-        hash_address(std::string const& name);
-        static
-        Address
-        hash_address(cryptography::rsa::PublicKey const& key);
 
       /*-------.
       | Clone  |
@@ -63,7 +64,7 @@ namespace infinit
       protected:
         virtual
         void
-        _seal() override;
+        _seal(boost::optional<int> version) override;
         virtual
         blocks::ValidationResult
         _validate() const override;

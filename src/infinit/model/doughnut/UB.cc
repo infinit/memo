@@ -21,7 +21,9 @@ namespace infinit
       `-------------*/
 
       UB::UB(Doughnut* dn, std::string name, Passport const& passport, bool reverse)
-        : Super(reverse ? UB::hash_address(passport.user()) : UB::hash_address(name))
+        : Super(reverse
+                ? UB::hash_address(passport.user(), *dn)
+                : UB::hash_address(name, *dn))
         , _name(std::move(name))
         , _key(passport.user())
         , _reverse(reverse)
@@ -30,7 +32,8 @@ namespace infinit
       {}
 
       UB::UB(Doughnut* dn, std::string name, cryptography::rsa::PublicKey key, bool reverse)
-        : Super(reverse ? UB::hash_address(key) : UB::hash_address(name))
+        : Super(reverse ?
+                UB::hash_address(key, *dn) : UB::hash_address(name, *dn))
         , _name(std::move(name))
         , _key(std::move(key))
         , _reverse(reverse)
@@ -48,20 +51,25 @@ namespace infinit
       {}
 
       Address
-      UB::hash_address(std::string const& name)
+      UB::hash_address(std::string const& name, Doughnut const& dht)
       {
         auto hash = cryptography::hash (elle::sprintf("UB/%s", name),
                                         cryptography::Oneway::sha256);
-        return Address(hash.contents());
+        return dht.version() >= elle::Version(0, 5, 0)
+          ? Address(hash.contents(), flags::immutable_block)
+          : Address(hash.contents());
       }
 
       Address
-      UB::hash_address(cryptography::rsa::PublicKey const& key)
+      UB::hash_address(cryptography::rsa::PublicKey const& key,
+                       Doughnut const& dht)
       {
         auto buf = cryptography::rsa::publickey::der::encode(key);
         auto hash = cryptography::hash (elle::sprintf("RUB/%s", buf),
                                         cryptography::Oneway::sha256);
-        return Address(hash.contents());
+        return dht.version() >= elle::Version(0, 5, 0)
+          ? Address(hash.contents(), flags::immutable_block)
+          : Address(hash.contents());
       }
 
       /*-------.
@@ -79,7 +87,7 @@ namespace infinit
       `-----------*/
 
       void
-      UB::_seal()
+      UB::_seal(boost::optional<int>)
       {}
 
       // FIXME: factor with CHB
@@ -88,10 +96,11 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
         auto expected_address = this->reverse() ?
-          UB::hash_address(this->key())
-          : UB::hash_address(this->name());
+          UB::hash_address(this->key(), *this->_doughnut)
+          : UB::hash_address(this->name(), *this->_doughnut);
 
-        if (this->address() != expected_address)
+        if (this->address() != expected_address
+          && this->address() != expected_address.unflagged())
         {
           auto reason = elle::sprintf("address %x invalid, expecting %x",
                                       this->address(), expected_address);

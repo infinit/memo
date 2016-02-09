@@ -18,9 +18,10 @@ namespace infinit
     }
 
     void
-    MissingBlock::serialize(elle::serialization::Serializer& s)
+    MissingBlock::serialize(elle::serialization::Serializer& s,
+                            elle::Version const& v)
     {
-      Super::serialize(s);
+      Super::serialize(s, v);
       s.serialize("address", _address);
     }
 

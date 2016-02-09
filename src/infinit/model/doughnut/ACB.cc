@@ -441,9 +441,10 @@ namespace infinit
           {
             try
             {
+              auto version = elle_serialization_version(this->doughnut()->version());
               if (model)
-                return
-                  model->make_user(elle::serialization::json::serialize(k));
+                return model->make_user(
+                  elle::serialization::json::serialize(k, version));
               else
                 return elle::make_unique<doughnut::User>(k, "");
             }
@@ -612,21 +613,23 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseACB<Block>::seal(cryptography::SecretKey const& key)
+      BaseACB<Block>::seal(boost::optional<int> version,
+                           cryptography::SecretKey const& key)
       {
-        this->_seal(key);
+        this->_seal(version, key);
       }
 
       template <typename Block>
       void
-      BaseACB<Block>::_seal()
+      BaseACB<Block>::_seal(boost::optional<int> version)
       {
-        this->_seal({});
+        this->_seal(version, {});
       }
 
       template <typename Block>
       void
-      BaseACB<Block>::_seal(boost::optional<cryptography::SecretKey const&> key)
+      BaseACB<Block>::_seal(boost::optional<int> version,
+                            boost::optional<cryptography::SecretKey const&> key)
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
@@ -646,7 +649,6 @@ namespace infinit
           }
           Super::_seal_okb();
           if (!data_changed)
-            // FIXME: idempotence in case the write fails ?
             ++this->_data_version;
         }
         else
@@ -655,7 +657,7 @@ namespace infinit
         {
           static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
-          ++this->_data_version; // FIXME: idempotence in case the write fails ?
+          ++this->_data_version;
           ELLE_TRACE_SCOPE("%s: data changed, seal version %s",
                            *this, this->_data_version);
           if (this->owner_private_key())
@@ -671,7 +673,9 @@ namespace infinit
             key = secret;
           }
           ELLE_DUMP("%s: new block secret: %s", *this, key.get());
-          auto secret_buffer = elle::serialization::json::serialize(key.get());
+          auto version = elle_serialization_version(this->doughnut()->version());
+          auto secret_buffer =
+            elle::serialization::json::serialize(key.get(), version);
           this->_owner_token = this->owner_key()->seal(secret_buffer);
           int idx = 0;
           for (auto& e: this->_acl_entries)
@@ -727,8 +731,10 @@ namespace infinit
           ELLE_DEBUG("%s: data didn't change", *this);
         // Even if only the ACL was changed, we need to re-sign because the ACL
         // address is part of the signature.
-        if (acl_changed || data_changed)
+        if (acl_changed || data_changed || version)
         {
+          if (version)
+            this->_data_version = *version;
           if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
           ELLE_DEBUG_SCOPE("%s: sign data", *this);
@@ -748,7 +754,7 @@ namespace infinit
         }
         if (!this->_signature->running()
           && this->_signature->value() == elle::Buffer())
-          this->_seal_okb(false);
+          this->_seal_okb({}, false);
       }
 
       template <typename Block>
@@ -822,11 +828,15 @@ namespace infinit
           return blocks::ValidationResult::failure("Signature is not a mutable block");
         if (!mb->deleted())
           return blocks::ValidationResult::failure("Block not marked for deletion");
+        // FIXME: calling validate can change our address, and make
+        // the validate(other) below fail
         auto isvalid = rs.block->validate();
         if (!isvalid)
           return isvalid;
+
         if (this->version() >= mb->version())
           return blocks::ValidationResult::conflict("Invalid version");
+
         isvalid = dynamic_cast<const blocks::Block*>(this)->validate(*mb);
         if (!isvalid)
           return isvalid;

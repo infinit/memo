@@ -87,7 +87,7 @@ int root_count(std::unique_ptr<reactor::filesystem::FileSystem>& fs)
 ELLE_TEST_SCHEDULED(async_cache)
 {
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = infinit::cryptography::rsa::keypair::generate(2048);
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
   elle::SafeFinally cleanup_path([&] {
       boost::filesystem::remove_all(path);
@@ -207,7 +207,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   fs = make(path, true, 10, kp);
   // queue a attr change
-  fs->path("/")->child("samefile")->setxattr("infinit.auth.rw",
+  fs->path("/")->child("samefile")->setxattr("infinit.auth.setrw",
     std::string((const char*)pub2.contents(), pub2.size()), 0);
   fs.reset();
   // write same file in the same dir
@@ -222,7 +222,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   auto auth = fs->path("/")->child("samefile")->getxattr("user.infinit.auth");
   std::stringstream sauth(auth);
   auto jauth = elle::json::read(sauth);
-  BOOST_CHECK_EQUAL(boost::any_cast<elle::json::Array>(jauth).size(), 1);
+  BOOST_CHECK_EQUAL(boost::any_cast<elle::json::Array>(jauth).size(), 2);
   reactor::sleep(valgrind(100_ms));
   fs.reset();
 }

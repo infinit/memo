@@ -218,14 +218,18 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
       Address addr =
-        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root");
+        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root", dn->version());
       while (true)
       {
         try
         {
           ELLE_DEBUG_SCOPE("fetch root bootstrap block at %x", addr);
           auto block = _block_store->fetch(addr);
-          addr = Address::from_string(block->data().string().substr(2));
+          addr = Address(
+            Address::from_string(block->data().string().substr(2)).value(),
+            model::flags::mutable_block);
+          ELLE_DEBUG_SCOPE("fetch root block at %x({%x}", addr,
+                           (unsigned int)addr.overwritten_value());
           break;
         }
         catch (model::MissingBlock const& e)

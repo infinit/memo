@@ -661,24 +661,35 @@ test_filesystem(bool dht,
   bfs::file_size(mount / "foo", erc);
   BOOST_CHECK_EQUAL(true, !!erc);
 
-  char buffer[16384];
-  //truncate
+  ELLE_LOG("truncate")
   {
-    bfs::ofstream ofs(mount / "tt");
-    for (int i=0; i<100; ++i)
-      ofs.write(buffer, 16384);
+    char buffer[16384];
+    ELLE_LOG("write massive file")
+    {
+      bfs::ofstream ofs(mount / "tt");
+      for (int i=0; i<100; ++i)
+        ofs.write(buffer, 16384);
+    }
+    int tfd = open( (mount / "tt").c_str(), O_RDWR);
+    ELLE_LOG("truncate file")
+      BOOST_CHECK_EQUAL(ftruncate(tfd, 0), 0);
+    ELLE_LOG("successive writes")
+    {
+      BOOST_CHECK_EQUAL(write(tfd, buffer, 16384), 16384);;
+      BOOST_CHECK_EQUAL(write(tfd, buffer, 12288), 12288);
+      BOOST_CHECK_EQUAL(write(tfd, buffer, 3742), 3742);
+    }
+    ELLE_LOG("truncate file")
+    {
+      BOOST_CHECK_EQUAL(ftruncate(tfd, 32414), 0);
+      BOOST_CHECK_EQUAL(ftruncate(tfd, 32413), 0);
+    }
+    close(tfd);
+    ELLE_LOG("check file size")
+      BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
+    bfs::remove(mount / "tt");
   }
-  int tfd = open( (mount / "tt").c_str(), O_RDWR);
-  BOOST_CHECK_EQUAL(ftruncate(tfd, 0), 0);
-  BOOST_CHECK_EQUAL(write(tfd, buffer, 16384), 16384);;
-  BOOST_CHECK_EQUAL(write(tfd, buffer, 12288), 12288);
-  BOOST_CHECK_EQUAL(write(tfd, buffer, 3742), 3742);
-  BOOST_CHECK_EQUAL(ftruncate(tfd, 32414), 0);
-  BOOST_CHECK_EQUAL(ftruncate(tfd, 32413), 0);
-  close(tfd);
-  BOOST_CHECK_EQUAL(bfs::file_size(mount / "tt"), 32413);
 
-  bfs::remove(mount / "tt");
   struct stat st;
   // hardlink
 #ifndef INFINIT_MACOSX
@@ -1097,16 +1108,26 @@ test_conflicts(bool paxos)
   ELLE_LOG("file create/write conflict")
   {
     int fd0, fd1;
-    fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+    ELLE_LOG("open file 0")
+      fd0 = open((m0 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
     BOOST_CHECK(fd0 != -1);
-    fd1 = open((m1 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
+    ELLE_LOG("open file 1")
+      fd1 = open((m1 / "file").string().c_str(), O_CREAT|O_RDWR, 0644);
     BOOST_CHECK(fd1 != -1);
-    BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
-    BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
-    BOOST_CHECK_EQUAL(close(fd0), 0);
-    BOOST_CHECK_EQUAL(close(fd1), 0);
-    BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
-    BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
+    ELLE_LOG("write to file 0")
+      BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
+
+    ELLE_LOG("write to file 1")
+      BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
+    ELLE_LOG("close file 0")
+      BOOST_CHECK_EQUAL(close(fd0), 0);
+    ::sleep(2);
+    ELLE_LOG("close file 1")
+      BOOST_CHECK_EQUAL(close(fd1), 0);
+    ELLE_LOG("read file 0")
+      BOOST_CHECK_EQUAL(read(m0/"file"), "bar");
+    ELLE_LOG("read file 1")
+      BOOST_CHECK_EQUAL(read(m1/"file"), "bar");
   }
   // FIXME: This needs cache to be enabled ; restore when cache is moved up to
   // Model instead of the consensus and the 'infinit' binary accepts --cache.

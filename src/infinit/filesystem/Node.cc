@@ -1,15 +1,18 @@
 #include <infinit/filesystem/Node.hh>
-#include <infinit/filesystem/Directory.hh>
-#include <infinit/filesystem/umbrella.hh>
 
-#include <infinit/model/blocks/ACLBlock.hh>
-#include <infinit/model/doughnut/NB.hh>
-#include <infinit/model/doughnut/ACB.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
+#include <sys/stat.h> // S_IMFT...
 
 #include <memory>
 
-#include <sys/stat.h> // S_IMFT...
+#include <elle/serialization/json.hh>
+
+#include <infinit/filesystem/Directory.hh>
+#include <infinit/filesystem/umbrella.hh>
+#include <infinit/model/blocks/ACLBlock.hh>
+#include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
+#include <infinit/model/doughnut/NB.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -214,6 +217,32 @@ namespace infinit
       ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: set attribute \"%s\"", *this, k);
       ELLE_DUMP("value: %s", elle::ConstWeakBuffer(v));
+      if (auto special = xattr_special(k))
+      {
+        auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+          this->_owner.block_store());
+        auto block = this->_header_block();
+        Address addr;
+        if (block)
+          addr = block->address();
+        else if (this->_parent)
+        {
+          auto const& elem = this->_parent->_files.at(this->_name);
+          addr = elem.second;
+        }
+        if (*special == "block.rebalance")
+        {
+          if (this->_owner.block_store()->version() < elle::Version(0, 5, 0))
+            THROW_NOSYS;
+          if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
+                dht->consensus().get()))
+          {
+            paxos->rebalance(addr);
+            return;
+          }
+        }
+        throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
+      }
       /* Drop quarantine flags, preventing the files from being opened.
       * https://github.com/osxfuse/osxfuse/issues/162
       */
@@ -234,11 +263,88 @@ namespace infinit
       _commit();
     }
 
+    static
+    std::string
+    getxattr_block(model::doughnut::Doughnut& dht,
+                   std::string const& op,
+                   model::Address const& addr)
+    {
+      if (op == "nodes")
+      {
+        std::vector<model::Address> nodes;
+        // FIXME: hardcoded 3
+        for (auto n: dht.overlay()->lookup(addr, 3, overlay::OP_FETCH))
+          nodes.push_back(n->id());
+        std::stringstream s;
+        elle::serialization::json::serialize(nodes, s);
+        return s.str();
+      }
+      else if (op == "stat")
+      {
+        std::stringstream s;
+        elle::serialization::json::serialize(
+          dht.consensus()->stat(addr), s, false);
+        return s.str();
+      }
+      else
+        THROW_INVAL;
+    }
+
     std::string
     Node::getxattr(std::string const& k)
     {
       ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: get attribute \"%s\"", *this, k);
+      auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+        this->_owner.block_store());
+      if (auto special = xattr_special(k))
+      {
+        auto block = this->_header_block();
+        if (*special == "block")
+        {
+          if (block)
+            return elle::sprintf("%x", block->address());
+          else if (this->_parent)
+          {
+            auto const& elem = this->_parent->_files.at(this->_name);
+            return elle::sprintf("%x", elem.second);
+          }
+          else
+            return "<ROOT>";
+        }
+        else if (special->find("block.") == 0)
+        {
+          auto op = special->substr(6);
+          if (block)
+            return getxattr_block(*dht, op, block->address());
+          else if (this->_parent)
+          {
+            auto const& elem = this->_parent->_files.at(this->_name);
+            return getxattr_block(*dht, op, elem.second);
+          }
+          else
+            return "<ROOT>";
+        }
+        else if (special->find("blocks.") == 0)
+        {
+          auto blocks = special->substr(7);
+          auto dot = blocks.find(".");
+          if (dot == std::string::npos)
+          {
+            auto addr = model::Address::from_string(blocks);
+            auto block = this->_owner.block_store()->fetch(addr);
+            std::stringstream s;
+            elle::serialization::json::serialize(block, s);
+            return s.str();
+          }
+          else
+          {
+            auto addr = model::Address::from_string(blocks.substr(0, dot));
+            auto op = blocks.substr(dot + 1);
+            return getxattr_block(*dht, op, addr);
+          }
+        }
+      }
       if (k.substr(0, strlen(overlay_info)) == overlay_info)
       {
         std::string okey = k.substr(strlen(overlay_info));
@@ -352,6 +458,7 @@ namespace infinit
                           std::string const& userkey,
                           Address self_address)
     {
+      ELLE_TRACE("set_permissions(%s, %s, %s)", flags, userkey, self_address);
       std::pair<bool, bool> perms = parse_flags(flags);
       std::unique_ptr<infinit::model::User> user =
         umbrella([&] {return _get_user(userkey);}, EINVAL);
@@ -384,5 +491,16 @@ namespace infinit
           _owner.block_store().get(), perms.first, perms.second, userkey
         ));
     }
+
+    boost::optional<std::string>
+    xattr_special(std::string const& name)
+    {
+      if (name.find("infinit.") == 0)
+        return name.substr(8);
+      if (name.find("user.infinit.") == 0)
+        return name.substr(13);
+      return {};
+    }
+
   }
 }

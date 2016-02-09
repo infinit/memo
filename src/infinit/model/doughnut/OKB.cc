@@ -22,10 +22,14 @@ namespace infinit
   {
     namespace doughnut
     {
-      OKBHeader::OKBHeader(cryptography::rsa::KeyPair const& keys,
+
+      OKBHeader::OKBHeader(Doughnut* dht,
+                           cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
-        : _owner_key(keys.public_key())
+        : _dht(dht)
+        , _owner_key(keys.public_key())
         , _signature()
+        , _doughnut(dht)
       {
         if (salt)
           this->_salt = std::move(salt.get());
@@ -38,41 +42,50 @@ namespace infinit
           _salt.append(&now, 8);
         }
         auto owner_key_buffer =
-          elle::serialization::json::serialize(this->_owner_key);
+          elle::serialization::json::serialize(
+            *this->_owner_key, elle::Version(0,0,0));
         owner_key_buffer.append(_salt.contents(), _salt.size());
         this->_signature = keys.k().sign(owner_key_buffer);
       }
 
       OKBHeader::OKBHeader(OKBHeader const& other)
-        : _salt(other._salt)
+        : _dht(other._dht)
+        , _salt(other._salt)
         , _owner_key(other._owner_key)
         , _signature(other._signature)
+        , _doughnut(other._doughnut)
       {}
 
       Address
-      OKBHeader::hash_address(cryptography::rsa::PublicKey const& key,
+      OKBHeader::hash_address(Doughnut const& dht,
+                              cryptography::rsa::PublicKey const& key,
                               elle::Buffer const& salt)
       {
-        auto key_buffer =
-          elle::serialization::json::serialize(key);
+        auto key_buffer = elle::serialization::json::serialize(
+          key, elle::Version(0,0,0));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
-        return Address(hash.contents());
+        Address res(hash.contents(), flags::mutable_block);
+        return dht.version() >= elle::Version(0, 5, 0)
+          ? res : res.unflagged();
       }
+
       Address
       OKBHeader::_hash_address() const
       {
-        return hash_address(*this->_owner_key, this->_salt);
+        return hash_address(*this->_dht, *this->_owner_key, this->_salt);
       }
 
       blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
+        Address expected_address;
         ELLE_DEBUG("%s: check address", *this)
         {
-          auto expected_address = this->_hash_address();
-          if (address != expected_address)
+          expected_address = this->_hash_address();
+          if (address != expected_address
+            && address != expected_address.unflagged())
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
                                         address, expected_address);
@@ -82,10 +95,11 @@ namespace infinit
         }
         ELLE_DEBUG("%s: check owner key", *this)
         {
-          auto owner_key_buffer =
-            elle::serialization::json::serialize(*this->_owner_key);
+          auto owner_key_buffer = elle::serialization::json::serialize(
+            *this->_owner_key, elle::Version(0, 0, 0));
           owner_key_buffer.append(_salt.contents(), _salt.size());
-          if (!this->_owner_key->verify(this->OKBHeader::_signature, owner_key_buffer))
+          if (!this->_owner_key->verify(
+                this->OKBHeader::_signature, owner_key_buffer))
           {
             ELLE_DEBUG("%s: invalid owner key", *this);
             return blocks::ValidationResult::failure("invalid owner key");
@@ -101,6 +115,7 @@ namespace infinit
                        s.deserialize<cryptography::rsa::PublicKey>("key")))
         , _signature()
       {
+        s.serialize_context<Doughnut*>(this->_dht);
         s.serialize("owner", *this);
       }
 
@@ -127,21 +142,19 @@ namespace infinit
                               elle::Buffer data,
                               boost::optional<elle::Buffer> salt,
                               cryptography::rsa::KeyPair const& owner_keys)
-        : BaseOKB(OKBHeader(owner_keys, std::move(salt)),
-                  owner, std::move(data), owner_keys.private_key())
+        : BaseOKB(OKBHeader(owner, owner_keys, std::move(salt)),
+                  std::move(data), owner_keys.private_key())
       {}
 
       template <typename Block>
       BaseOKB<Block>::BaseOKB(
         OKBHeader header,
-        Doughnut* owner,
         elle::Buffer data,
         std::shared_ptr<cryptography::rsa::PrivateKey> owner_key)
         : Super(header._hash_address())
         , OKBHeader(std::move(header))
         , _version(-1)
         , _signature()
-        , _doughnut(owner)
         , _owner_private_key(std::move(owner_key))
         , _data_plain()
         , _data_decrypted(true)
@@ -155,7 +168,6 @@ namespace infinit
         , OKBHeader(other)
         , _version{other._version}
         , _signature(other._signature)
-        , _doughnut{other._doughnut}
         , _owner_private_key(other._owner_private_key)
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
@@ -292,7 +304,7 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseOKB<Block>::_seal()
+      BaseOKB<Block>::_seal(boost::optional<int> version)
       {
         if (this->_data_changed)
         {
@@ -302,9 +314,11 @@ namespace infinit
             this->doughnut()->keys().K().seal(this->_data_plain);
           ELLE_DUMP("%s: encrypted data: %s", *this, encrypted);
           this->Block::data(std::move(encrypted));
-          this->_seal_okb();
+          this->_seal_okb(version);
           this->_data_changed = false;
         }
+        else if (version)
+          this->_seal_okb(version);
         else
           ELLE_DEBUG("%s: data didn't change", *this);
       }
@@ -317,10 +331,13 @@ namespace infinit
 
       template <typename Block>
       void
-      BaseOKB<Block>::_seal_okb(bool bump_version)
+      BaseOKB<Block>::_seal_okb(boost::optional<int> version, bool bump_version)
       {
-        if (bump_version)
-          ++this->_version; // FIXME: idempotence in case the write fails ?
+        if (version)
+          this->_version = *version;
+        else
+          if (bump_version)
+            ++this->_version; // FIXME: idempotence in case the write fails ?
         if (!this->_owner_private_key)
           throw elle::Error("attempting to seal an unowned OKB");
         this->_signature =
@@ -354,6 +371,11 @@ namespace infinit
             return blocks::ValidationResult::failure("invalid signature");
           }
         }
+        // Upgrade from unmasked address if required, *after* checking signature
+        /*
+        if (this->_doughnut->version() >= elle::Version(0, 5, 0))
+          elle::unconst(this)->_address = this->_hash_address();
+          */
         return blocks::ValidationResult::success();
       }
 
@@ -387,7 +409,6 @@ namespace infinit
                               elle::Version const& version)
         : Super(s, version)
         , OKBHeader(s, version)
-        , _doughnut(nullptr)
         , _owner_private_key()
         , _data_plain()
         , _data_decrypted(false)

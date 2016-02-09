@@ -2249,8 +2249,12 @@ namespace infinit
         {
           addLocalResults(p, nullptr);
         }
+        auto const& fg_contacts = _state.contacts[fg];
         if (p->result.size() >= unsigned(p->count)
-          || _state.contacts[fg].empty())
+          || fg_contacts.empty()
+          || (fg_contacts.size() == 1
+              && fg_contacts.find(p->originAddress) != fg_contacts.end())
+            )
         { // We got the full result or we cant forward, send reply
           packet::GetFileReply res;
           res.sender = _self;
@@ -2470,7 +2474,7 @@ namespace infinit
         }
         else
         {
-          kelipsGet(file, n, op == infinit::overlay::OP_FETCH, -1, false, yield);
+          kelipsGet(file, n, false, -1, false, yield);
         }
       }
 
@@ -2543,9 +2547,6 @@ namespace infinit
             auto r = std::make_shared<PendingRequest>();
             r->startTime = now();
             r->barrier.close();
-            auto ir =
-              this->_pending_requests.insert(std::make_pair(req.request_id, r));
-            ELLE_ASSERT(ir.second);
             // Select target node
             auto it = random_from(_state.contacts[fg], _gen);
             if (it == _state.contacts[fg].end())
@@ -2555,6 +2556,9 @@ namespace infinit
               ELLE_TRACE("no contact to forward GET to");
               continue;
             }
+            auto ir =
+              this->_pending_requests.insert(std::make_pair(req.request_id, r));
+            ELLE_ASSERT(ir.second);
             ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
             send(req, it->second);
             reactor::wait(r->barrier,
@@ -3215,10 +3219,16 @@ namespace infinit
           it = ntarget->find(address);
           if (it != ntarget->end())
           {
-            ELLE_TRACE("moving misplaced entry for %x", address);
-            target->insert(std::make_pair(address, std::move(it->second)));
-            ntarget->erase(address);
-            return &(*target)[address];
+            if (!observer)
+            {
+              ELLE_TRACE("moving misplaced entry for %x to %s", address,
+                target == &_state.observers ? "observers" : "storage nodes");
+              target->insert(std::make_pair(address, std::move(it->second)));
+              ntarget->erase(address);
+              return &(*target)[address];
+            }
+            else
+              return &it->second;
           }
         }
         if (!make)

@@ -52,6 +52,9 @@ namespace infinit
       ELLE_ATTRIBUTE_R(FileHeader, header, protected);
       friend class FileSystem;
     };
+
+    boost::optional<std::string>
+    xattr_special(std::string const& name);
   }
 }
 

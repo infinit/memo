@@ -39,7 +39,7 @@ namespace infinit
       protected:
         virtual
         void
-        _seal() override;
+        _seal(boost::optional<int> version) override;
         virtual
         blocks::ValidationResult
         _validate() const override;

@@ -88,8 +88,9 @@ namespace infinit
           {
             try
             {
+              auto const addr = UB::hash_address(name, *this);
               ELLE_TRACE_SCOPE("%s: check user block", *this);
-              auto block = this->fetch(UB::hash_address(name));
+              auto block = this->fetch(addr);
               ELLE_DEBUG("%s: user block for %s already present at %x",
                          *this, name, block->address());
               auto ub = elle::cast<UB>::runtime(block);
@@ -97,7 +98,7 @@ namespace infinit
                 throw elle::Error(
                   elle::sprintf(
                     "user block exists at %s(%x) with different key",
-                    name, UB::hash_address(name)));
+                    name, addr));
             }
             catch (MissingBlock const&)
             {
@@ -115,8 +116,9 @@ namespace infinit
             }
             try
             {
+              auto const addr = UB::hash_address(this->keys().K(), *this);
               ELLE_TRACE_SCOPE("%s: check user reverse block", *this);
-              auto block = this->fetch(UB::hash_address(this->keys().K()));
+              auto block = this->fetch(addr);
               ELLE_DEBUG("%s: user reverse block for %s already present at %x",
                          *this, name, block->address());
               auto ub = elle::cast<UB>::runtime(block);
@@ -125,7 +127,7 @@ namespace infinit
                   elle::sprintf(
                     "user reverse block exists at %s(%x) "
                     "with different name: %s",
-                    name, UB::hash_address(this->keys().K()), ub->name()));
+                    name, addr, ub->name()));
             }
             catch(MissingBlock const&)
             {
@@ -212,7 +214,7 @@ namespace infinit
           cryptography::rsa::PublicKey pub(s);
           try
           {
-            auto block = this->fetch(UB::hash_address(pub));
+            auto block = this->fetch(UB::hash_address(pub, *this));
             auto ub = elle::cast<UB>::runtime(block);
             return elle::make_unique<doughnut::User>
               (ub->key(), ub->name());
@@ -242,7 +244,7 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: fetch user from name", *this);
           try
           {
-            auto block = this->fetch(UB::hash_address(data.string()));
+            auto block = this->fetch(UB::hash_address(data.string(), *this));
             auto ub = elle::cast<UB>::runtime(block);
             return elle::make_unique<doughnut::User>
               (ub->key(), data.string());
@@ -269,14 +271,7 @@ namespace infinit
                        boost::optional<int> local_version) const
       {
         std::unique_ptr<blocks::Block> res;
-        try
-        {
-          return this->_consensus->fetch(address, std::move(local_version));
-        }
-        catch (infinit::storage::MissingKey const&)
-        {
-          return nullptr;
-        }
+        return this->_consensus->fetch(address, std::move(local_version));
       }
 
       void
@@ -315,7 +310,8 @@ namespace infinit
         // fetch passport for certifier
         try
         {
-          auto block = this->fetch(UB::hash_address(*passport.certifier()));
+          auto const addr = UB::hash_address(*passport.certifier(), *this);
+          auto block = this->fetch(addr);
           auto ub = elle::cast<UB>::runtime(block);
           if (!ub->passport())
           {

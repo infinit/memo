@@ -24,7 +24,7 @@ namespace infinit
              std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
              std::string name,
              elle::Buffer data)
-        : Super(NB::address(*owner, name), std::move(data))
+        : Super(NB::address(*owner, name, doughnut->version()), std::move(data))
         , _doughnut(std::move(doughnut))
         , _owner(std::move(owner))
         , _name(std::move(name))
@@ -34,7 +34,7 @@ namespace infinit
              infinit::cryptography::rsa::KeyPair keys,
              std::string name,
              elle::Buffer data)
-        : Super(NB::address(keys.K(), name), std::move(data))
+        : Super(NB::address(keys.K(), name, doughnut->version()), std::move(data))
         , _doughnut(std::move(doughnut))
         , _keys(std::move(keys))
         , _owner(this->_keys->public_key())
@@ -52,13 +52,15 @@ namespace infinit
 
       Address
       NB::address(infinit::cryptography::rsa::PublicKey const& owner,
-                       std::string const& name)
+                  std::string const& name, elle::Version const& version)
       {
         auto der = cryptography::rsa::publickey::der::encode(owner);
         auto hash = cryptography::hash(
           elle::sprintf("NB/%s/%s", std::move(der), name),
           cryptography::Oneway::sha256);
-        return Address(hash.contents());
+        return version >= elle::Version(0, 5, 0)
+          ? Address(hash.contents(), flags::immutable_block)
+          : Address(hash.contents());
       }
 
       /*-------.
@@ -76,7 +78,7 @@ namespace infinit
       `-----------*/
 
       void
-      NB::_seal()
+      NB::_seal(boost::optional<int>)
       {
         if (this->_keys)
           ELLE_ASSERT_EQ(this->_keys->K(), *this->owner());
@@ -106,10 +108,13 @@ namespace infinit
       blocks::ValidationResult
       NB::_validate() const
       {
-        ELLE_TRACE("%s: check address", *this)
+        Address expected_address;
+        ELLE_DEBUG("%s: check address", *this)
         {
-          auto expected_address = NB::address(*this->owner(), this->name());
-          if (this->address() != expected_address)
+          expected_address = NB::address(*this->owner(), this->name(),
+                                         this->_doughnut->version());
+          if (this->address() != expected_address
+            && this->address() != expected_address.unflagged())
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
                                         this->address(), expected_address);
@@ -117,7 +122,7 @@ namespace infinit
             return blocks::ValidationResult::failure(reason);
           }
         }
-        ELLE_TRACE("%s: check signature", *this)
+        ELLE_DEBUG("%s: check signature", *this)
         {
           auto signed_data = this->_data_sign();
           if (!this->_owner->verify(this->signature(), signed_data))
@@ -126,6 +131,10 @@ namespace infinit
             return blocks::ValidationResult::failure("invalid signature");
           }
         }
+        /*
+         if (this->_doughnut->version() >= elle::Version(0, 5, 0))
+          elle::unconst(this)->_address = expected_address; // upgrade from unmasked if required
+        */
         return blocks::ValidationResult::success();
       }
 

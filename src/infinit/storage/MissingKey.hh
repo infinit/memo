@@ -17,7 +17,8 @@ namespace infinit
       MissingKey(Key key);
       MissingKey(elle::serialization::SerializerIn& input);
       void
-      serialize(elle::serialization::Serializer& s) override;
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override;
       ELLE_ATTRIBUTE_R(Key, key);
     };
   }

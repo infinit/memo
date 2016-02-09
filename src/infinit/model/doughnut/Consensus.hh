@@ -64,6 +64,21 @@ namespace infinit
                   int factor,
                   overlay::Operation op) const;
 
+        /*-----.
+        | Stat |
+        `-----*/
+        public:
+          class Stat
+          {
+          public:
+            virtual
+            void
+            serialize(elle::serialization::Serializer& s);
+          };
+          virtual
+          std::unique_ptr<Stat>
+          stat(Address const& address);
+
         /*--------.
         | Factory |
         `--------*/

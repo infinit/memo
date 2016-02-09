@@ -34,9 +34,10 @@ namespace infinit
     }
 
     void
-    InsufficientSpace::serialize(elle::serialization::Serializer& s)
+    InsufficientSpace::serialize(elle::serialization::Serializer& s,
+                                 elle::Version const& v)
     {
-      Super::serialize(s);
+      Super::serialize(s, v);
       s.serialize("delta", _delta);
       s.serialize("usage", _usage);
       s.serialize("capacity", _capacity);
