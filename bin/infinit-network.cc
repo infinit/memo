@@ -46,6 +46,29 @@ one(Args&& ... args)
   return _one(false, std::forward<Args>(args)...);
 }
 
+static
+std::unique_ptr<infinit::storage::StorageConfig>
+storage_configuration(boost::program_options::variables_map const& args)
+{
+  std::unique_ptr<infinit::storage::StorageConfig> storage;
+  auto storage_count = args.count("storage");
+  if (storage_count > 0)
+  {
+    auto storages = args["storage"].as<std::vector<std::string>>();
+    std::vector<std::unique_ptr<infinit::storage::StorageConfig>> backends;
+    for (auto const& storage: storages)
+      backends.emplace_back(ifnt.storage_get(storage));
+    if (backends.size() == 1)
+      storage = std::move(backends[0]);
+    else
+    {
+      storage.reset(
+        new infinit::storage::StripStorageConfig(std::move(backends)));
+    }
+  }
+  return storage;
+}
+
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "network name");
@@ -129,22 +152,7 @@ COMMAND(create)
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-  auto storage_count = args.count("storage");
-  if (storage_count > 0)
-  {
-    auto storages = args["storage"].as<std::vector<std::string>>();
-    std::vector<std::unique_ptr<infinit::storage::StorageConfig>> backends;
-    for (auto const& storage: storages)
-      backends.emplace_back(ifnt.storage_get(storage));
-    if (backends.size() == 1)
-      storage = std::move(backends[0]);
-    else
-    {
-      storage.reset(
-        new infinit::storage::StripStorageConfig(std::move(backends)));
-    }
-  }
+  auto storage = storage_configuration(args);
   // Consensus
   std::unique_ptr<
     infinit::model::doughnut::consensus::Configuration> consensus_config;
@@ -335,10 +343,7 @@ COMMAND(link_)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
-  auto storage_name = optional(args, "storage");
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-  if (storage_name)
-    storage = ifnt.storage_get(storage_name.get());
+  auto storage = storage_configuration(args);
   auto desc = [&] () -> infinit::NetworkDescriptor
   {
     try
@@ -652,7 +657,8 @@ main(int argc, char** argv)
       {},
       // Hidden options.
       {
-        { "storage", value<std::string>(), "storage to contribute (optional)" },
+        { "storage", value<std::vector<std::string>>()->multitoken(),
+          "storage to contribute (optional)" },
       },
 
     },
