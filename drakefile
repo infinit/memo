@@ -145,6 +145,7 @@ def configure(
                          strip_prefix = True)
     elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
                           strip_prefix = True)
+    dokan_lib = None
   else:
     dropbox_lib = elle.dropbox.lib_static
     cryptography_lib = elle.cryptography.lib_static
@@ -152,6 +153,7 @@ def configure(
     reactor_lib = elle.reactor.lib_static
     aws_lib = elle.aws.library
     elle_lib = elle.elle.lib_static
+    dokan_lib = elle.reactor.dokan_lib
 
   athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
                           strip_prefix = True)
@@ -426,6 +428,8 @@ def configure(
     bin_cxx_config.lib('dbghelp')
     bin_cxx_config.lib('iphlpapi')
     bin_cxx_config.lib('crypt32')
+    bin_cxx_config.library_add(
+      drake.copy(dokan_lib, 'bin', True))
     bin_cxx_config.library_add(elle.boost.program_options_static)
     bin_cxx_config.library_add(elle.boost.regex_static)
     bin_cxx_config.use_whole_archive()
