@@ -1,4 +1,5 @@
 #include <elle/test.hh>
+#include <elle/os/environ.hh>
 #include <elle/json/json.hh>
 #include <elle/serialization/json.hh>
 
@@ -12,6 +13,14 @@
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <cstdlib>
+
+#ifdef INFINIT_WINDOWS
+# undef stat
+#endif
 
 ELLE_LOG_COMPONENT("test");
 
@@ -332,8 +341,8 @@ ELLE_TEST_SCHEDULED(killed_nodes_k2)
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
-  setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
-  setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
+  elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
+  elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, 120);
   suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);

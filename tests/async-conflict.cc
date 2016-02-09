@@ -1,5 +1,6 @@
 #include <elle/test.hh>
 #include <elle/json/json.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 
 #include <infinit/filesystem/filesystem.hh>
@@ -10,6 +11,14 @@
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <cstdlib>
+
+#ifdef INFINIT_WINDOWS
+# undef stat
+#endif
 
 ELLE_LOG_COMPONENT("test");
 
@@ -115,7 +124,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   BOOST_CHECK_EQUAL(std::string(buf), "bar");
 
   ELLE_LOG("basic journal");
-  setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   fs.reset();
   fs = make(path, true, 10, kp);
   handle = fs->path("/")->child("foo2")->create(O_RDWR, 0666 | S_IFREG);
@@ -126,7 +135,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   handle->close();
   handle.reset();
   fs->path("/")->child("dir")->mkdir(777 | S_IFDIR);
-  unsetenv("INFINIT_ASYNC_NOPOP");
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   fs.reset();
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -145,7 +154,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs.reset();
 
   ELLE_LOG("conflict dir");
-  setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   fs = make(path, true, 10, kp);
   // queue a file creation
   writefile(fs, "file", "foo");
@@ -154,7 +163,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, false, 0, kp);
   writefile(fs, "file2", "bar");
   fs.reset();
-  unsetenv("INFINIT_ASYNC_NOPOP");
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   // restart with async which will dequeue
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -163,7 +172,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs.reset();
 
   ELLE_LOG("conflict dir 2");
-  setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   fs = make(path, true, 10, kp);
   // queue a file creation
   writefile(fs, "samefile", "foo");
@@ -172,7 +181,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, false, 0, kp);
   writefile(fs, "samefile", "bar");
   fs.reset();
-  unsetenv("INFINIT_ASYNC_NOPOP");
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   // restart with async which will dequeue
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -181,7 +190,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs.reset();
 
   ELLE_LOG("conflict file");
-  setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   fs = make(path, true, 10, kp);
   // queue a file creation
   writefile(fs, "samefile", "foo");
@@ -190,7 +199,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, false, 0, kp);
   writefile(fs, "samefile", "bar");
   fs.reset();
-  unsetenv("INFINIT_ASYNC_NOPOP");
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   // restart with async which will dequeue
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
@@ -204,7 +213,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   ELLE_LOG("ACL conflict");
   auto kp2 = infinit::cryptography::rsa::keypair::generate(1024);
   auto pub2 = elle::serialization::json::serialize(kp2.K());
-    setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   fs = make(path, true, 10, kp);
   // queue a attr change
   fs->path("/")->child("samefile")->setxattr("infinit.auth.setrw",
@@ -214,7 +223,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, false, 0, kp);
   writefile(fs, "samefile", "bar");
   fs.reset();
-  unsetenv("INFINIT_ASYNC_NOPOP");
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
   // restart with async which will dequeue
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");

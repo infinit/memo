@@ -699,6 +699,7 @@ def configure(
       link = False)
     cxx_config_tests.library_add(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
+    cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
   else:
     cxx_config_tests.lib('shlwapi')
     cxx_config_tests.lib('ws2_32')
@@ -710,8 +711,11 @@ def configure(
     cxx_config_tests.library_add(elle.boost.filesystem_static)
     cxx_config_tests.library_add(elle.boost.program_options_static)
     cxx_config_tests.library_add(elle.boost.system_static)
-    cxx_config_tests.library_add(elle.boost.test_static)
+    cxx_config_tests.library_add(
+      drake.copy(dokan_lib, 'tests', True))
     cxx_config_tests.use_whole_archive()
+    cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
+    cxx_config_tests.library_add(elle.boost.test_static)
   tests_names = [
     ('backward-compatibility', []),
     ('consensus/async', []),
@@ -736,7 +740,7 @@ def configure(
         protocol_lib,
       ],
       cxx_toolkit,
-      cxx_config_tests)
+      test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
     test.dependencies_add(dependencies)
     rule_tests << test
     env = {'SOURCE_DIR': drake.path_source()}
