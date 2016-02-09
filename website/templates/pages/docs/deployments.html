@@ -20,27 +20,27 @@
 
     <img src="${url('images/schema-deployment-one-server.png')}" alt="Illustration of a centralized infrastructure i.e a single server without redundancy"><br>
 
-    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.):</p>
+    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.). Note that for Bob and subsequent users to be able to list/edit the volume's root directory, Alice would need to grant them access to do so through the <em>infinit-acl</em> binary.</p>
 
     <ul data-tabs class="tabs">
-      <li><a data-tab href="#oneserver-a" class="active">Server <span>(Alice)</span></a></li>
-      <li><a data-tab href="#oneserver-b">Client A <span>(Alice)</span></a></li>
-      <li><a data-tab href="#oneserver-c">Client B → X <span>(Bob)</span></a></li>
+      <li><a data-tab href="#centralized-server" class="active">Server <span>(Alice)</span></a></li>
+      <li><a data-tab href="#centralized-client-a">Client A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#centralized-client-b-x">Client B → X <span>(Bob)</span></a></li>
     </ul>
 
     <div data-tabs-content class="data-tabs-content">
-      <div data-tabs-pane class="tabs-pane active" id="oneserver-a">
+      <div data-tabs-pane class="tabs-pane active" id="centralized-server">
 <pre><code>$> infinit-storage --create --filesystem --capacity 100GB --name local
 $> infinit-network --create --as alice --storage local --kelips --replication-factor 1 --name cluster --push
 $> infinit-volume --create --as alice --network cluster --name shared --push
 
-$> infinit-user --fetch --name bob
+$> infinit-user --fetch --as alice --name bob
 $> infinit-passport --create --as alice --network cluster --user bob --push
 
 $> infinit-network --run --as alice --name cluster --async --cache --publish
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="oneserver-b">
+      <div data-tabs-pane class="tabs-pane" id="centralized-client-a">
 <pre><code>$> infinit-network --fetch --as alice
 $> infinit-volume --fetch --as alice
 
@@ -49,8 +49,8 @@ $> infinit-network --link --as alice --name cluster
 $> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="oneserver-c">
-<pre><code>$> infinit-user --fetch --name alice
+      <div data-tabs-pane class="tabs-pane" id="centralized-client-b-x">
+<pre><code>$> infinit-user --fetch --as bob --name alice
 
 $> infinit-network --fetch --as bob
 $> infinit-volume --fetch --as bob
@@ -73,25 +73,25 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     <p>Follow the steps below to set up such an infrastructure. Note that a replication factor of 2 has been chosen but can be adapted according to your needs and the number of servers involved:</p>
 
     <ul data-tabs class="tabs">
-      <li><a data-tab href="#multiservers-1" class="active">Server 1 <span>(Alice)</span></a></li>
-      <li><a data-tab href="#multiservers-2">Server 2 → N <span>(Alice)</span></a></li>
-      <li><a data-tab href="#multiservers-a">Client A <span>(Alice)</span></a></li>
-      <li><a data-tab href="#multiservers-b">Client B → X <span>(Bob)</span></a></li>
+      <li><a data-tab href="#distributed-server-1" class="active">Server 1 <span>(Alice)</span></a></li>
+      <li><a data-tab href="#distributed-server-2-n">Server 2 → N <span>(Alice)</span></a></li>
+      <li><a data-tab href="#distributed-client-a">Client A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#distributed-client-b-x">Client B → X <span>(Bob)</span></a></li>
     </ul>
 
     <div data-tabs-content class="data-tabs-content">
-      <div data-tabs-pane class="tabs-pane active" id="multiservers-1">
+      <div data-tabs-pane class="tabs-pane active" id="distributed-server-1">
 <pre><code>$> infinit-storage --create --filesystem --capacity 20GB --name local
 $> infinit-network --create --as alice --storage local --kelips --replication-factor 2 --name cluster --push
 $> infinit-volume --create --as alice --network cluster --name shared --push
 
-$> infinit-user --fetch --name bob
+$> infinit-user --fetch --as alice --name bob
 $> infinit-passport --create --as alice --network cluster --user bob --push
 
 $> infinit-network --run --as alice --name cluster --async --cache --publish
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="multiservers-2">
+      <div data-tabs-pane class="tabs-pane" id="distributed-server-2-n">
 <pre><code>$> infinit-network --fetch --as alice
 
 $> infinit-storage --create --filesystem --capacity 50GB --name local
@@ -100,7 +100,7 @@ $> infinit-network --link --as alice --name cluster --storage local
 $> infinit-network --run --as alice --name cluster --async --cache --publish
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="multiservers-a">
+      <div data-tabs-pane class="tabs-pane" id="distributed-client-a">
 <pre><code>$> infinit-network --fetch --as alice
 $> infinit-volume --fetch --as alice
 
@@ -109,8 +109,8 @@ $> infinit-network --link --as alice --name cluster
 $> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="multiservers-b">
-<pre><code>$> infinit-user --fetch --name alice
+      <div data-tabs-pane class="tabs-pane" id="distributed-client-b-x">
+<pre><code>$> infinit-user --fetch --as bob --name alice
 
 $> infinit-network --fetch --as bob
 $> infinit-volume --fetch --as bob
@@ -136,21 +136,21 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
     <p>Follow the instructions below to set up such an infrastructure. Noteworthy is that the example below is composed mostly of nodes contributing storage capacity from the local disk while a machine (server C) contributes storage from both its local disk and a public cloud provider, in this case AWS S3. Also, while most devices (A, D ... X) contribute storage and access the volume, some nodes operate as a client or server only (B and C).</p>
 
     <ul data-tabs class="tabs">
-      <li><a data-tab href="#distributed-a" class="active">Client/Server A <span>(Alice)</span></a></li>
-      <li><a data-tab href="#distributed-b">Client B <span>(Bob)</span></a></li>
-      <li><a data-tab href="#distributed-c">Server C <span>(Charlie)</span></a></li>
-      <li><a data-tab href="#distributed-d">Client/Server D → X <span>(Dave)</span></a></li>
+      <li><a data-tab href="#decentralized-node-a" class="active">Client/Server A <span>(Alice)</span></a></li>
+      <li><a data-tab href="#decentralized-node-b">Client B <span>(Bob)</span></a></li>
+      <li><a data-tab href="#decentralized-node-c">Server C <span>(Charlie)</span></a></li>
+      <li><a data-tab href="#decentralized-node-d-x">Client/Server D → X <span>(Dave)</span></a></li>
     </ul>
 
     <div data-tabs-content class="data-tabs-content">
-      <div data-tabs-pane class="tabs-pane active" id="distributed-a">
+      <div data-tabs-pane class="tabs-pane active" id="decentralized-node-a">
 <pre><code>$> infinit-storage --create --filesystem --capacity 15GB --name local
 $> infinit-network --create --as alice --storage local --kelips --replication-factor 3 --name cluster --push
 $> infinit-volume --create --as alice --network cluster --name shared --push
 
-$> infinit-user --fetch --name bob
-$> infinit-user --fetch --name charlie
-$> infinit-user --fetch --name dave
+$> infinit-user --fetch --as alice --name bob
+$> infinit-user --fetch --as alice --name charlie
+$> infinit-user --fetch --as alice --name dave
 
 $> infinit-passport --create --as alice --network cluster --user bob --push
 $> infinit-passport --create --as alice --network cluster --user charlie --push
@@ -159,8 +159,8 @@ $> infinit-passport --create --as alice --network cluster --user dave --push
 $> infinit-volume --mount --as alice --name shared --async --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="distributed-b">
-<pre><code>$> infinit-user --fetch --name alice
+      <div data-tabs-pane class="tabs-pane" id="decentralized-node-b">
+<pre><code>$> infinit-user --fetch --as bob --name alice
 
 $> infinit-network --fetch --as bob
 $> infinit-volume --fetch --as bob
@@ -171,8 +171,8 @@ $> infinit-network --link --as bob --name alice/cluster
 $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish --mountpoint mnt/shared/
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="distributed-c">
-<pre><code>$> infinit-user --fetch --name alice
+      <div data-tabs-pane class="tabs-pane" id="decentralized-node-c">
+<pre><code>$> infinit-user --fetch --as charlie --name alice
 
 $> infinit-network --fetch --as charlie
 $> infinit-volume --fetch --as charlie
@@ -188,8 +188,8 @@ $> infinit-network --link --as charlie --name alice/cluster --storage local --st
 $> infinit-network --run --as charlie --name alice/cluster --async --cache --publish
 </code></pre>
       </div>
-      <div data-tabs-pane class="tabs-pane" id="distributed-d">
-<pre><code>$> infinit-user --fetch --name alice
+      <div data-tabs-pane class="tabs-pane" id="decentralized-node-d-x">
+<pre><code>$> infinit-user --fetch --as dave --name alice
 
 $> infinit-network --fetch --as dave
 $> infinit-volume --fetch --as dave
