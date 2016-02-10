@@ -688,8 +688,6 @@ namespace infinit
               this->_editor = idx;
               sign_key = this->doughnut()->keys().private_key();
             }
-            else
-              ELLE_DEBUG("we are not editor %s", idx);
             ++idx;
           }
           for (auto& e: this->_acl_group_entries)
