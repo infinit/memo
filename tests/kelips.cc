@@ -27,7 +27,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
           int count = 10, int groups = 1, int replication_factor = 3,
           bool paxos_lenient = false)
 {
-  ELLE_LOG("building and running %s nodes", count);
+  ELLE_LOG_SCOPE("building and running %s nodes", count);
   endpoints.clear();
   std::vector<std::shared_ptr<imd::Doughnut>> res;
   iok::Configuration config;
@@ -90,7 +90,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
               bool cache, bool async,
               bool paxos_lenient)
 {
-  ELLE_LOG("building observer");
+  ELLE_LOG_SCOPE("building observer");
   iok::Configuration config;
   config.k = groups;
   config.encrypt = true;
