@@ -77,7 +77,6 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
       eps.push_back(ep);
       endpoints.emplace(dn->id(), eps);
     }
-    reactor::sleep(500_ms);
   }
   return res;
 }
@@ -136,7 +135,6 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     std::unique_ptr<infinit::storage::Storage>());
   auto ops = elle::make_unique<infinit::filesystem::FileSystem>("volume", dn);
   auto fs = elle::make_unique<reactor::filesystem::FileSystem>(std::move(ops), true);
-  reactor::sleep(500_ms);
   ELLE_LOG("Returning observer");
   return fs;
 }
