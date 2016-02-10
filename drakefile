@@ -146,6 +146,8 @@ def configure(
     elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
                           strip_prefix = True)
     dokan_lib = None
+    athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
+                            strip_prefix = True)
   else:
     dropbox_lib = elle.dropbox.lib_static
     cryptography_lib = elle.cryptography.lib_static
@@ -154,9 +156,8 @@ def configure(
     aws_lib = elle.aws.library
     elle_lib = elle.elle.lib_static
     dokan_lib = elle.reactor.dokan_lib
+    athena_lib = elle.athena.lib_static
 
-  athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
-                          strip_prefix = True)
 
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
@@ -360,11 +361,14 @@ def configure(
     cxx_config_infinit.lib('dbghelp')
     cxx_config_infinit.lib('iphlpapi')
     cxx_config_infinit.lib('crypt32')
-    libtype = drake.cxx.StaticLib
+    libtype = drake.cxx.DynLib
+    extra_libs = [dokan_lib]
+    cxx_config_infinit.use_whole_archive()
   else:
+    extra_libs = []
     libtype = drake.cxx.DynLib
   infinit_lib = libtype(
-    'lib/infinit',
+    (windows and 'bin' or 'lib') + '/infinit',
     infinit_sources + [athena_lib,
                        cryptography_lib,
                        aws_lib,
@@ -372,7 +376,7 @@ def configure(
                        dropbox_lib,
                        reactor_lib,
                        elle_lib
-                       ],
+                       ] + extra_libs,
     cxx_toolkit,
     cxx_config_infinit)
   rule_build << infinit_lib
@@ -432,7 +436,8 @@ def configure(
       drake.copy(dokan_lib, 'bin', True))
     bin_cxx_config.library_add(elle.boost.program_options_static)
     bin_cxx_config.library_add(elle.boost.regex_static)
-    bin_cxx_config.use_whole_archive()
+    bin_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
+    #bin_cxx_config.use_whole_archive()
   # Ship libstdc++
   additional_libs = []
   if linux:
@@ -468,7 +473,7 @@ def configure(
     ('infinit-network', [], True),
     ('infinit-passport', [], True),
     ('infinit-smb', [], False),
-    ('infinit-storage', [aws_lib], True),
+    ('infinit-storage', (not windows) and [aws_lib] or [], True),
     ('infinit-user', [], True),
     ('infinit-volume', [], True),
     ('infinit-webdav', [], False),
@@ -479,6 +484,9 @@ def configure(
   if not windows:
     binaries_config.append(('sshfs', [], False))
     additional_libs.append(crash_reporter_lib)
+    additional_libs += [elle_lib, reactor_lib, cryptography_lib]
+  else:
+    pass
   binaries = []
   global installed_binaries
   installed_binaries = []
@@ -495,9 +503,6 @@ def configure(
         source,
         bin_version,
         infinit_lib,
-        elle_lib,
-        reactor_lib,
-        cryptography_lib,
       ] + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
@@ -525,7 +530,7 @@ def configure(
                                        lib,
                                        lib_sym)
       installed_symbols.append(lib_sym)
-    
+
     if prefix:
       symbols_dir = '%s/%s' % (prefix, git.version())
       for s in installed_symbols:
