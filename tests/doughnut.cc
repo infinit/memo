@@ -1195,6 +1195,6 @@ ELLE_TEST_SUITE()
     boost::unit_test::test_suite* rebalancing = BOOST_TEST_SUITE("rebalancing");
     paxos->add(rebalancing);
     using namespace rebalancing;
-    rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, 1);
+    rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(1));
   }
 }
