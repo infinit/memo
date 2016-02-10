@@ -1,3 +1,4 @@
+#include <elle/filesystem/TemporaryDirectory.hh>
 #include <elle/test.hh>
 
 #include <infinit/filesystem/filesystem.hh>
@@ -180,27 +181,25 @@ readfile(rfs::FileSystem& fs,
 
 ELLE_TEST_SCHEDULED(basic)
 {
-  auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
-  elle::SafeFinally cleanup([&]
-    {
-      boost::filesystem::remove_all(tmp);
-    });
-  auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-  auto nodes = run_nodes(tmp, kp);
-  auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
-  writefile(*fs, "test1", "foo");
-  writefile(*fs, "test2", std::string(32000, 'a'));
-  BOOST_CHECK_EQUAL(readfile(*fs, "test1"), "foo");
-  BOOST_CHECK_EQUAL(readfile(*fs, "test2"), std::string(32000, 'a'));
-  // reset all
-  ELLE_LOG("teardown");
-  fs.reset();
-  nodes.clear();
-  nodes = run_nodes(tmp, kp);
-  fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
-  BOOST_CHECK_EQUAL(readfile(*fs, "test1"), "foo");
-  BOOST_CHECK_EQUAL(readfile(*fs, "test2"), std::string(32000, 'a'));
-  ELLE_LOG("teardown");
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  ELLE_LOG("write files")
+  {
+    auto nodes = run_nodes(tmp, kp);
+    auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
+    writefile(*fs, "test1", "foo");
+    writefile(*fs, "test2", std::string(32000, 'a'));
+    BOOST_CHECK_EQUAL(readfile(*fs, "test1"), "foo");
+    BOOST_CHECK_EQUAL(readfile(*fs, "test2"), std::string(32000, 'a'));
+  }
+  ELLE_LOG("read files")
+  {
+    auto nodes = run_nodes(tmp, kp);
+    auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
+    BOOST_CHECK_EQUAL(readfile(*fs, "test1"), "foo");
+    BOOST_CHECK_EQUAL(readfile(*fs, "test2"), std::string(32000, 'a'));
+  }
 }
 
 ELLE_TEST_SCHEDULED(conflictor)
