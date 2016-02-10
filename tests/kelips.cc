@@ -34,9 +34,9 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
   config.k = groups;
   config.encrypt = true;
   config.accept_plain = false;
-  config.contact_timeout_ms = 1000;
-  config.ping_interval_ms = 1000 / count / 3;
-  config.ping_timeout_ms = 500;
+  config.contact_timeout_ms = valgrind(1000,20);
+  config.ping_interval_ms = valgrind(1000, 10) / count / 3;
+  config.ping_timeout_ms = valgrind(500, 20);
   for (int n=0; n<count; ++n)
   {
     std::unique_ptr<infinit::storage::Storage> s;
@@ -184,7 +184,7 @@ ELLE_TEST_SCHEDULED(basic)
   auto kp = infinit::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
-    auto nodes = run_nodes(tmp, kp);
+    auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
     auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
     writefile(*fs, "test1", "foo");
     writefile(*fs, "test2", std::string(32000, 'a'));
@@ -193,7 +193,7 @@ ELLE_TEST_SCHEDULED(basic)
   }
   ELLE_LOG("read files")
   {
-    auto nodes = run_nodes(tmp, kp);
+    auto nodes = run_nodes(tmp, kp, 10 / valgrind(1, 2));
     auto fs = make_observer(nodes.front(), tmp, kp, 1, 3, false, false, false);
     BOOST_CHECK_EQUAL(readfile(*fs, "test1"), "foo");
     BOOST_CHECK_EQUAL(readfile(*fs, "test2"), std::string(32000, 'a'));
