@@ -42,6 +42,7 @@ $(document).ready(function() {
         attributeName: 'category',
         limit: 10,
         operator: 'or',
+        autoHideContainer: false,
         cssClasses: {
           active: 'active'
         }

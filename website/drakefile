@@ -211,6 +211,7 @@ def configure(
     'resources/images/schema-deployment-multi-servers.png',
     'resources/images/schema-deployment-multi-servers@2x.png',
     'resources/images/schema-cover.png',
+    'resources/images/terminal.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',
@@ -273,6 +274,10 @@ def configure(
     'resources/images/icons/email-unconfirmed@2x.png',
     'resources/images/icons/search.png',
     'resources/images/icons/delete.png',
+    'resources/images/icons/comparison.png',
+    'resources/images/icons/comparison@2x.png',
+    'resources/images/icons/idea-clean.png',
+    'resources/images/icons/idea-clean@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
