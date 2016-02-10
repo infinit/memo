@@ -300,7 +300,7 @@ def configure(
         sources,
         [status],
         command = command,
-        pretty = 'Lint %s' % package.name,
+        pretty = 'Lint %s' % package.name(),
         stdout = status,
         environment = env)
 
