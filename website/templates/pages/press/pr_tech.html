@@ -1,0 +1,41 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <%include file='resources.html'/>
+
+  <section class="doc">
+    <h1>Press Release</h1>
+
+    <h2>The Docker of storage has arrived, meet Infinit</h2>
+    <p>Software-based, decentralized storage infrastructure for devops</p>
+
+
+    <h3>Quick Pitch</h3>
+    <p>Infinit allows DevOps to unify various storage resources, such as servers, NAS, clouds, etc., into a single, decentralized file system using scriptable command line tools.</p><br>
+
+    <h4>New York, NY: 16 February 2016</h4>
+
+    <p>Techstars alumnus, <a href="https://infinit.sh">Infinit</a>, has launched its second product, a decentralized file system, dubbed the Docker of storage. Just as Docker allows applications to be deployed programmatically, Infinit makes it possible for devops to aggregate storage resources from various devices via command line into a flexible and controlled peer-to-peer file system. </p>
+
+    <p>In aggregating various storage resources including the cloud (AWS S3, Google Cloud Storage, etc.), local servers, computers, network attached storage, or virtually any other device, an Infinit brings complete transparency to sysadmins regarding the location of the data stored, and gives them a simple way to scale (up/out) infrastructure.</p>
+
+    <p>Built specifically for developers, Infinit’s command line tools are straightforward and quick to learn. Developers can use the tools to write scripts for how the nodes of the peer-to-peer storage network behave and how its participating users interact with it, similar to the popular command line tools for Amazon Web Services.</p>
+
+    <p>Infinit has been built to function as a completely free, decentralized system, which requires a modest degree of manual intervention. However the company, inspired by the models of Docker and Github, also offers its own hub setup. This premium version of Infinit simplifies myriad aspects of maintaining the network and managing its users, while providing additional functionalities like system notifications, advanced monitoring, etc.</p>
+
+    <p>Infinit plans to open source each layer of its file system as they become more stable and modular enough to be used more widely by the community. The company has already begun open sourcing parts of its codebase, which can be found on <a href="https://infinit.sh/open-source">their site</a>.</p>
+
+    <p>To address the increasing demand for secure storage solutions, files stored through an Infinit file system are split into small blocks, which are then encrypted locally using a unique key before being distributed across the storage network. When a file is accessed by a user, the file’s blocks are reassembled on the user’s computer by downloading the composing blocks from multiple sources in parallel, hence providing performance gains, meaning that audio and video can be streamed.</p>
+
+    <p>This innovative approach to storage provides fault tolerance, avoiding bottlenecks or single points of failure; should a server fail, the system automatically detects the issue and heals itself by reproducing missing replicas and rebalancing the blocks between the remaining storage nodes.</p>
+
+    <p>Although Infinit is made for developers and focuses heavily on command line tools, applications are available for Mac and Linux for non-technical users, with a Windows version on the way. The applications allow users to log into Infinit and access drives to which they have been invited by the administrator.</p>
+
+    <p>Infinit is a software-only, hardware agnostic product that targets medium to large companies through an easily deployable solution that replaces clunky, old and overly expensive products from companies like Netapp and EMC. Many clients have begun using the product to aggregate storage resources across multiple geographic locations, resulting in a decrease in the latency associated with accessing data remotely, but also to adopt an extra layer of security and reliability thanks to Infinit’s redundancy mechanism. But Infinit is also used by startups that encounter issues with Dropbox or Google Drive. Unlike Dropbox, Infinit doesn’t fill up local storage resources because files and folders do not need to be synced to a local device. And unlike Google Drive, Infinit provides a single, common hierarchical organization for all users.</p>
+
+    <h3>About Infinit</h3>
+    <p>Infinit International Inc. (<a href="http://www.infinit.one">infinit.one</a>) is a company with offices in New York City and Paris providing medium and large businesses with modern and secure file management products. For more information, please visit <a href="http://www.infinit.one">infinit.one</a> or email <a href="mailto:press@infinit.one">press@infinit.io</a>.</p>
+  <section>
+
+</%block>

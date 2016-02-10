@@ -32,6 +32,10 @@
       <link rel="canonical" href="https://infinit.sh${route('doc_get_started')}" />
     % endif
 
+    % if 'press' in request.route.name:
+      <link rel="canonical" href="https://infinit.sh/press" />
+    % endif
+
     <link rel="icon" type="image/png" href="${url('images/favicon@2x.png')}" />
     <link rel="stylesheet" href="http://cdn.jsdelivr.net/instantsearch.js/1/instantsearch.min.css">
     <link rel="stylesheet" type="text/css" media="all" href="${url('css/main.min.css')}" />
@@ -52,7 +56,7 @@
           <a ${'class="active"' if request.route.name[:4] == 'doc_' and request.route.name[:15] != 'doc_get_started' and request.route.name != 'doc_faq' else ''} href="${route('doc_overview')}">Documentation</a>
         </li>
         <li>
-          <a ${'class="active"' if request.route.name == 'doc_faq' else ''} href="${route('doc_faq')}">FAQ</a>
+          <a ${'class="active"' if request.route.name == 'faq' else ''} href="${route('faq')}">FAQ</a>
         </li>
       </ul>
     </header>
