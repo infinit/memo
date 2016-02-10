@@ -1,11 +1,9 @@
 #include <elle/test.hh>
-#include <elle/json/json.hh>
-#include <elle/serialization/json.hh>
 
 #include <infinit/filesystem/filesystem.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/overlay/kelips/Kelips.hh>
 #include <infinit/storage/Filesystem.hh>
@@ -142,9 +140,10 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
   return fs;
 }
 
-void writefile(rfs::FileSystem& fs,
-               std::string const& name,
-               std::string const& content)
+void
+writefile(rfs::FileSystem& fs,
+          std::string const& name,
+          std::string const& content)
 {
   auto handle = fs.path("/")->child(name)->create(O_RDWR, 0666 | S_IFREG);
   handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
@@ -153,9 +152,10 @@ void writefile(rfs::FileSystem& fs,
   handle.reset();
 }
 
-void appendfile(rfs::FileSystem& fs,
-               std::string const& name,
-               std::string const& content)
+void
+appendfile(rfs::FileSystem& fs,
+           std::string const& name,
+           std::string const& content)
 {
   auto handle = fs.path("/")->child(name)->open(O_RDWR, 0666 | S_IFREG);
   struct stat st;
@@ -166,8 +166,9 @@ void appendfile(rfs::FileSystem& fs,
   handle.reset();
 }
 
-std::string readfile(rfs::FileSystem& fs,
-              std::string const& name)
+std::string
+readfile(rfs::FileSystem& fs,
+         std::string const& name)
 {
   auto handle = fs.path("/")->child(name)->open(O_RDONLY, S_IFREG);
   std::string res(32768, 0);
