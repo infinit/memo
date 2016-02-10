@@ -267,6 +267,8 @@ def configure(
     'resources/images/icons/email-confirmed@2x.png',
     'resources/images/icons/email-unconfirmed.png',
     'resources/images/icons/email-unconfirmed@2x.png',
+    'resources/images/icons/search.png',
+    'resources/images/icons/delete.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
