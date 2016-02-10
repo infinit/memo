@@ -204,13 +204,13 @@ $> export PATH=$PWD/bin/:$PATH
 
 ### Create a user
 
-The first step consists of creating a user on the Hub. All the commands that follow use the user name ‘bob’ but you should **pick your own unique user name**:
+The first step consists of creating a user on the Hub. All the commands that follow use the user name ‘alice’ but you should **pick your own unique user name**:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-user --signup --name bob --email bob@company.com --fullname "Bob"
+<code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
 Generating RSA keypair.
-Remotely pushed user "bob".
+Remotely pushed user "alice".
 </code></pre>
 
 ### Create a storage resource
@@ -231,13 +231,13 @@ Created storage "local".
 
 Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.
 
-The _infinit-network_ command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the ‘local’ storage resource is used but you could plug as many as you like. Obviously, you need to substitute 'bob' with your username:
+The _infinit-network_ command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the ‘local’ storage resource is used but you could plug as many as you like. Obviously, you need to substitute 'alice' with your username:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-network --create --as bob --storage local --kelips --name my-network --push
-Locally created network "bob/my-network".
-Remotely pushed network "bob/my-network".
+<code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
+Locally created network "alice/my-network".
+Remotely pushed network "alice/my-network".
 </code></pre>
 
 *__NOTE__: The `--push` option is used to publish the created network (likewise for other objects) onto the Hub for it to be easily fetched on another device or shared with other users.*
@@ -248,9 +248,9 @@ The last step on this device consists of creating a logical volume to store and 
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --create --as bob --network my-network --name my-volume --push
-Locally created volume "bob/my-volume".
-Remotely pushed volume "bob/my-volume".
+<code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
+Locally created volume "alice/my-volume".
+Remotely pushed volume "alice/my-volume".
 </code></pre>
 
 That’s it, you’ve created a volume named ‘my-volume’ i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named ‘my-network’, currently composed of a single computer with a single storage resource.
@@ -261,11 +261,11 @@ Let’s access this volume by mounting it as easily as any other filesystem:
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-volume --mount --as bob --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
-Fetched endpoints for "bob/my-network".
-Running network "bob/my-network".
-Remotely pushed endpoints for "bob/my-network".
-Running volume "bob/my-volume".
+<code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
+Fetched endpoints for "alice/my-network".
+Running network "alice/my-network".
+Remotely pushed endpoints for "alice/my-network".
+Running volume "alice/my-volume".
 </code></pre>
 
 _**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait until the end of the guide to stop this process though._
@@ -289,9 +289,9 @@ Let’s transmit the user’s identity to the other device. Note that it will be
 
 <pre>
 <div><span>Device A</span></div>
-<code>$> infinit-device --transmit --user --as bob
+<code>$> infinit-device --transmit --user --as alice
 Passphrase: ********
-Transmitted user identity for "bob".
+Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
 </code></pre>
 
@@ -299,9 +299,9 @@ Now let’s move to device B. First, you need to download, install and configure
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-device --receive --user --name bob
+<code>$> infinit-device --receive --user --name alice
 Passphrase: ********
-Received user identity for "bob".
+Received user identity for "alice".
 </code></pre>
 
 _**NOTE**: The pairing process may have expired on device A. If so, please try again and enter the passphrase on device B in order to retrieve your user identity before the counter runs down._
@@ -310,28 +310,28 @@ The next steps consist of fetching the resources that you previously pushed on t
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --fetch --as bob --name my-network
-Fetched network "bob/my-network".
-$> infinit-volume --fetch --as bob --name my-volume
-Fetched volume "bob/my-volume".
+<code>$> infinit-network --fetch --as alice --name my-network
+Fetched network "alice/my-network".
+$> infinit-volume --fetch --as alice --name my-volume
+Fetched volume "alice/my-volume".
 </code></pre>
 
 Let’s link this device to the ‘my-network’ network you created on device A.
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-network --link --as bob --name my-network
-Linked device to network "bob/my-network".
+<code>$> infinit-network --link --as alice --name my-network
+Linked device to network "alice/my-network".
 </code></pre>
 
 Finally, the volume can be mounted on device B as simply as on device A:
 
 <pre class="alternate">
 <div><span>Device B</span></div>
-<code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume2/ --as bob --name my-volume --async --cache --publish
-Fetch endpoints for "bob/my-network".
-Running network “bob/my-network”.
-Running volume "bob/my-volume".
+<code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume2/ --as alice --name my-volume --async --cache --publish
+Fetch endpoints for "alice/my-network".
+Running network “alice/my-network”.
+Running volume "alice/my-volume".
 </code></pre>
 
 It is now time to check if the file you created on device A is synchronized with device B:

@@ -2,59 +2,44 @@
 
 <%block name="content">
 
-  <nav id="sidebar">
-    <div id="menu-anchor"></div>
+  <h1>Frequently Asked Questions</h1>
 
-    <ul class="menu">
-      <li class="notice">
-        <span>Have any other questions or feedback?</span> <br><br>
-        Please tell us here: <br>
-        <a href="http://help.infinit.sh">help.infinit.sh</a><br><br>
+  <main>
+    <section class="filters">
+      <div id="category" class="facet"></div>
+    </section>
 
-        Or just come talk to us:
-        <a class="icon-twitter" href="https://twitter.com/infinit_sh">Twitter</a><br>
-        <a class="icon-facebook" href="https://www.facebook.com/groups/1518536058464674/">Facebook Group</a><br>
-        <a class="icon-slack" href="#slack">Slack Community</a><br>
-        <a class="icon-infinit" href="http://webchat.freenode.net/?channels=infinit">IRC</a><br>
-      </li>
-    </ul>
-  </nav>
+    <section class="search">
+      <div id="search-input"></div>
+      <div id="search-input-icon"></div>
+    </section>
 
-  <section class="doc">
-    <h1 id="faq">FAQ</h1>
+    <section class="questions">
+      <div id="stats"></div>
 
-    <h2 id="what-can-i-build-with-infinit">What type of infrastructure can I build with Infinit?</h2>
-    <p>Infinit is designed to be as flexible as possible, allowing you to build the ideal infrastructure for your needs, be it a simple NAS, storage used across multiple sites or a completely decentralized storage.</p>
+      <div id="hits"></div>
 
-    <p>Have a look at our <a href="${route('doc_deployments')}">examples of deployments</a>.</p>
+      <div id="pagination"></div>
+    </section>
+  </main>
 
-    <h2 id="how-does-infinit-differ-from-dropbox-google-drive-and-bittorrent-sync">How does Infinit differ from Dropbox, Google Drive and BitTorrent Sync?</h2>
-    <p>Infinit offers system administrators complete control over where their data is stored and how their data storage infrastructure works.</p>
+  <script type="text/html" id="hit-template">
+    <div class="hit">
+      <div class="hit-content">
+        <h2 class="hit-question">{{{_highlightResult.question.value}}} <span>{{{category}}}</span></h2>
+        <p class="hit-answer">{{{_highlightResult.answer.value}}}</p>
+      </div>
+    </div>
+  </script>
 
-    <p>These other solutions clone the same data on each computers, meaning it will always consume your local storage and limit your ability to interact with a large number of files. Also, they don't encrypt files locally and you cannot add cloud storage to create hybrid infrastructure.</p>
-
-    <h2 id="how-does-infinit-differ-from-ipfs">How does Infinit differ from IPFS?</h2>
-    <p>The goals of the two projects are quite different. IPFS aims to be used to build a peer-to-peer worldwide content platform rather than be a file system. As such it lacks several fundamental file system features such as user permissions. The goal of Infinit is to be a POSIX-compliant file system.</p>
-
-    <h2 id="where-is-the-open-source-code">Where is the open source code?</h2>
-    <p>You can find the code that we have open sourced <a href="${route('opensource')}">here</a>. We plan to open source all the client code for the file system but we would like to do so responsibly. We want to ensure that the code is of high quality and modular enough to be used in other projects.</p>
-
-    <h2 id="what-encryption-does-infinit-use-">What encryption does Infinit use?</h2>
-    <p>Infinit uses a mix of RSA and AES encryption. RSA is used for signing data and encrypting AES keys which are used for encrypting block data and communications between nodes.</p>
-
-    <h2 id="what-platforms-does-infinit-support-">What platforms does Infinit support?</h2>
-    <p>Currently Infinit supports Linux and OS X but we have plans for Windows in our <a href="${route('doc_roadmap')}">roadmap</a>. If you would like us to support other platforms, <a href="http://help.infinit.sh">let us know!</a></p>
-
-    <h2 id="what-research-is-infinit-based-on-">What research is Infinit based on?</h2>
-    <p>Infinit is based on the PhD thesis of Julien Quintard (co-founder and CEO of the company): <a target="_blank" href="https://www.repository.cam.ac.uk/bitstream/handle/1810/243442/thesis.pdf?sequence=1">"Towards a worldwide storage infrastructure"</a>.</p>
-
-    <h2 id="hat-protocols-does-infinit-use-to-communicate-">What protocols does Infinit use to communicate?</h2>
-    <p>Infinit can be configured to use either TCP or UDP (<a href="https://en.wikipedia.org/wiki/Micro_Transport_Protocol">µTP</a>). By default, it tries to use UDP using UPnP and NAT hole punching where necessary as this is better suited to transferring large amounts of data.</p>
-
-    <h2 id="which-cloud-storage-providers-does-infinit-support-">Which cloud storage providers does Infinit support?</h2>
-    <p>Currently Infinit supports Amazon S3 and Google Cloud Storage with Backblaze B2 <a href="${route('roadmap')}">planned</a>. Please <a href="http://help.infinit.sh">let us know</a> what else you would like us to support.</p>
-
-  </section>
-
+  <script type="text/html" id="no-results-template">
+    <div id="no-results-message">
+      <div class="hit">
+        <h2>No results.</h2>
+        <p>We didn't find any results for the search <em>"{{query}}"</em>.</p>
+        <a href="${route('doc_faq')}#" class='clear-all'>Clear search</a>
+      </div>
+    </div>
+  </script>
 
 </%block>
