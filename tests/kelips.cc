@@ -337,7 +337,7 @@ ELLE_TEST_SUITE()
   setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
   setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(basic), 0, 120);
+  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(16));
   suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   suite.add(BOOST_TEST_CASE(killed_nodes_big), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
