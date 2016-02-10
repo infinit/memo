@@ -317,18 +317,22 @@ ELLE_TEST_SCHEDULED(killed_nodes)
 {
   test_kill_nodes(5, 1, 3, 1, true, false);
 }
+
 ELLE_TEST_SCHEDULED(killed_nodes_big)
 {
   test_kill_nodes(10, 1, 5, 2, true, false);
 }
-ELLE_TEST_SCHEDULED(killed_nodes_half_lenient)
-{
-  test_kill_nodes(5, 1, 2, 1, false, true);
-}
+
+// ELLE_TEST_SCHEDULED(killed_nodes_half_lenient)
+// {
+//   test_kill_nodes(5, 1, 2, 1, false, true);
+// }
+
 ELLE_TEST_SCHEDULED(killed_nodes_k2)
 {
   test_kill_nodes(15, 3, 3, 1, true, false);
 }
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
