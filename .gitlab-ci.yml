@@ -33,7 +33,6 @@ x86_64-jessie-gcc4:
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //debian
     - scp ../fs-build/infinit_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
-    - ssh debian@debian.infinit.io make
   tags:
     - x86_64
     - jessie
@@ -112,7 +111,6 @@ beyond:
     - cd ../fs-build && python3 drake -j 4 //beyond/install --prefix=$(realpath ../fs-beyond)
     - cd ../fs-build && python3 drake -j 4 //beyond/debian
     - scp ../fs-build/beyond/infinit-beyond_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
-    - ssh debian@debian.infinit.io make
   tags:
     - x86_64
     - trusty
@@ -129,7 +127,6 @@ website:
     - cd ../fs-build && python3 drake -j 4 //website/install --prefix=$(realpath ../fs-website)
     - cd ../fs-build && python3 drake -j 4 //website/debian
     - scp ../fs-build/website/infinit-sh_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
-    - ssh debian@debian.infinit.io make
   tags:
     - x86_64
     - trusty
