@@ -131,6 +131,7 @@ def configure(
     'templates/pages/press/pr_tech.html',
     'templates/pages/press/pr_storage.html',
     'templates/pages/press/resources.html',
+    'templates/pages/press/investors.html',
     'templates/pages/docs/menu.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
