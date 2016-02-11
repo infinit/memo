@@ -94,10 +94,11 @@ x86_64-osx-clang:
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 4 //build
-    - cd ../fs-build && python3 drake -j 4 //check
-    - cd ../fs-build && python3 drake -j 4 //install
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then cd ../fs-build && python3 drake -j 4 --prefix=/Users/infinit/filesystem-symbols //symbols; fi
+    - cd ../fs-build
+    - python3 drake -j 4 //build
+    - python3 drake -j 4 //check
+    - python3 drake -j 4 //install
+    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then python3 drake -j 4 --prefix=/Users/infinit/filesystem-symbols //symbols; fi
   tags:
     - x86_64
     - osx
