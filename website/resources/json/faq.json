@@ -1,0 +1,92 @@
+[
+  {
+    "category": "general",
+    "popularity": 10,
+    "question": "What type of infrastructure can I build with Infinit?",
+    "answer" : "<p>Infinit is designed to be as flexible as possible, allowing you to build the ideal infrastructure for your needs, be it a simple NAS, storage used across multiple sites or a completely decentralized storage.</p> <p>Have a look at our <a href=\"/documentation/deployments\">examples of deployments.</a></p>"
+  },
+  {
+    "category": "comparisons",
+    "popularity": 7,
+    "question": "How does Infinit differ from Dropbox, Google Drive and BitTorrent Sync?",
+    "answer" : "<p>Infinit offers system administrators complete control over where their data is stored and how their data storage infrastructure works.</p><p>These other solutions clone the same data on each computers, meaning it will always consume your local storage and limit your ability to interact with a large number of files. Also, they don't encrypt files locally and you cannot add cloud storage to create hybrid infrastructure.</p>"
+  },
+  {
+    "category": "comparisons",
+    "popularity": 0,
+    "question": "How does Infinit differ from IPFS?",
+    "answer" : "<p>The goals of the two projects are quite different. IPFS aims to be used to build a peer-to-peer worldwide content platform rather than be a file system. As such it lacks several fundamental file system features such as user permissions. The goal of Infinit is to be a POSIX-compliant file system.</p>"
+  },
+  {
+    "category": "comparisons",
+    "popularity": 0,
+    "question": "How does Infinit differ from GlusterFS or HAMMER2?",
+    "answer" : "<p>Both use a master/slave system for the data replication rather than a completely decentralised system like ours. Also their storage resources are local storage only, so they trust every nodes.</p><p>With Infinit, since you can create hybrid infrastructures, for example with a local storage and a cloud storage (S3, GCS...), we consider that every node can fail (a cloud you don't control) or be malicious, so our data replication has byzantine fault tolerance.</p> <p>Since everything is decentralised (data and metadata) and that no hypothesis are made on nodes, there's no single point of failure.</p>"
+  },
+  {
+    "category": "comparisons",
+    "popularity": 0,
+    "question": "How does Infinit differ from Tahoe-LaFS?",
+    "answer" : "<p>We share a lot of similarities. Our main differences concerns accessibility and usability. We want to make it really easy to setup an infrastructure for any developer.</p>"
+  },
+  {
+    "category": "general",
+    "popularity": 0,
+    "question": "Is it free? What's your business model?",
+    "answer" : "<p>Infinit is free to use for networks with less then 30 users — see our <a href=\"/pricing\">pricing page</a>. We also provide <a href=\"/solutions\">solutions</a> for large enterprises.</p>"
+  },
+  {
+    "category": "general",
+    "popularity": 8,
+    "question": "Do you have performance benchmarks?",
+    "answer" : "<p>Our performances will necessarily vary depending on the type of infrastructure you create (how many nodes, where are they located, is it local storage or cloud storage, etc). But since all operations are made asynchronously, the experience looks like a native file system.</p> <p>We're working on getting a full benchmark. In the meantime, we have a single command line that allows you to mount our test drive in our <a href=\"/get-started\">Get Started guide</a>, try it!</p>"
+  },
+  {
+    "category": "technology",
+    "popularity": 0,
+    "question": "What's the &laquo; Hub &raquo;?",
+    "answer" : "<p>All the tasks you're doing with the Infinit command line tools are done locally by default. You can then push them to the Hub so it will be easier to retrieve it from other devices or for other users. Learn more in our <a href=\"/documentation/reference#hub\">documentation</a>.</p>"
+  },
+  {
+    "category": ["general", "security"],
+    "popularity": 9,
+    "question": "Where is the open source code?",
+    "answer" : "<p>You can find the code that we have open sourced <a href=\"/open-source\">here</a>. We plan to open source all the client code for the file system but we would like to do so responsibly. We want to ensure that the code is of high quality and modular enough to be used in other projects.</p>"
+  },
+  {
+    "category": "security",
+    "popularity": 8,
+    "question": "What encryption does Infinit use?",
+    "answer" : "<p>Infinit uses a mix of RSA and AES encryption. Each user has a pair of keys (RSA 2048 bit) which are used for authentication, signing of block metadata and for communicating symmetric keys (AES 256 bit). The symmetric keys are used to encrypt the block data as well as for communication between nodes.</p>"
+  },
+  {
+    "category": "technology",
+    "popularity": 0,
+    "question": "Does Infinit handle data replication/redundancy?",
+    "answer" : "<p>Yes. You can define a replication factor when creating a network, see our <a href=\"/documentation/reference#network\">documentation</a>.</p>"
+  },
+  {
+    "category": "general",
+    "popularity": 7,
+    "question": "What platforms does Infinit support?",
+    "answer" : "<p>Currently Infinit supports Linux and OS X but we have plans for Windows in <a href=\"/documentation/roadmap\">our roadmap</a>.</p> <p>We're also considering supporting FreeBSD or Raspberry Pi. You can upvote or tell us what other platforms you want us to support <a href=\"http://help.infinit.sh\">here</a>!</p>"
+  },
+  {
+    "category": "technology",
+    "popularity": 0,
+    "question": "What research is Infinit based on?",
+    "answer" : "<p>Infinit is based on the PhD thesis of Julien Quintard (co-founder and CEO of the company): \"Towards a worldwide storage infrastructure\".</p>"
+  },
+  {
+    "category": "technology",
+    "popularity": 0,
+    "question": "What protocols does Infinit use to communicate and for networking?",
+    "answer" : "<p>Infinit can be configured to use either TCP or UDP (µTP). By default, it tries to use UDP using UPnP and NAT hole punching where necessary as this is better suited to transferring large amounts of data.</p>"
+  },
+  {
+    "category": "technology",
+    "popularity": 0,
+    "question": "Which cloud storage providers does Infinit support?",
+    "answer" : "<p>Currently Infinit supports Amazon S3 and Google Cloud Storage with Backblaze B2 planned.</p> <p>Some users asked us to support Amazon Cloud Drive or IPFS, please <a href=\"http://help.infinit.sh\">upvote/tell us here</a> what else you would like us to support.</p>"
+  }
+]
