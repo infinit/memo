@@ -602,7 +602,7 @@ namespace infinit
           if (f->_first_block)
             cs.size += f->_first_block->data().size();
           for (auto& b: f->_blocks)
-            cs.size += b.second.block.data().size();
+            cs.size += b.second.block->data().size();
         }
       }
     }

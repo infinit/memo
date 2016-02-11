@@ -286,13 +286,13 @@ namespace infinit
      _fetch();
     }
 
-    AnyBlock*
+    std::shared_ptr<AnyBlock>
     File::_block_at(int index, bool create)
     {
       ELLE_ASSERT_GTE(index, 0);
       auto it = _blocks.find(index);
       if (it != _blocks.end())
-        return &it->second.block;
+        return it->second.block;
       if (_fat.size() <= unsigned(index))
       {
         ELLE_TRACE("%s: block_at(%s) out of range", *this, index);
@@ -320,12 +320,12 @@ namespace infinit
       }
 
       auto inserted = _blocks.insert(std::make_pair(index,
-        File::CacheEntry{AnyBlock(std::move(b)), false}));
+        File::CacheEntry{std::make_shared<AnyBlock>(std::move(b)), false}));
       inserted.first->second.ready.open();
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
       inserted.first->second.new_block = is_new;
-      return &inserted.first->second.block;
+      return inserted.first->second.block;
     }
 
     void
@@ -370,9 +370,10 @@ namespace infinit
             --self->_prefetchers_count;
             return;
           }
-          auto b = AnyBlock(std::move(bl), key);
+          ELLE_TRACE("Prefetcher inserting value at %s", idx);
+          auto b = std::make_shared<AnyBlock>(std::move(bl), key);
           self->_blocks[idx].last_use = std::chrono::system_clock::now();
-          self->_blocks[idx].block = std::move(b);
+          self->_blocks[idx].block = b;
           self->_blocks[idx].ready.open();
           --self->_prefetchers_count;
           self->_check_prefetch();
@@ -536,7 +537,7 @@ namespace infinit
           auto it = _blocks.find(i);
           if (it != _blocks.end())
           {
-            it->second.block.data([&](elle::Buffer& buf) {
+            it->second.block->data([&](elle::Buffer& buf) {
                 if (buf.size() > targetsize)
                   buf.size(targetsize);
             });
@@ -630,9 +631,9 @@ namespace infinit
     {
       bool fat_change = false;
       auto it = _blocks.find(id);
-      Address prev = it->second.block.address();
+      Address prev = it->second.block->address();
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
-      Address addr = it->second.block.crypt_store(*_owner.block_store(),
+      Address addr = it->second.block->crypt_store(*_owner.block_store(),
         it->second.new_block? model::STORE_INSERT : model::STORE_ANY,
         key);
       if (addr != prev)
@@ -702,7 +703,7 @@ namespace infinit
           {
             int id = it->first;
             ELLE_TRACE("starting async flusher for %s", id);
-            auto ab = std::make_shared<AnyBlock>(std::move(it->second.block));
+            auto ab = it->second.block;
             bool new_block = it->second.new_block;
             _flushers.emplace_back(
               new reactor::Thread("flusher", [this, id, ab, new_block] {

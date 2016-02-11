@@ -169,28 +169,30 @@ namespace infinit
       if (start_block == end_block)
       { // single block case
         off_t block_offset = offset - (off_t)start_block * (off_t)block_size;
-        auto const& it = _owner->_blocks.find(start_block);
-        AnyBlock* block = nullptr;
+        auto it = _owner->_blocks.find(start_block);
+        std::shared_ptr<AnyBlock> block;
         if (it != _owner->_blocks.end())
         {
-          ELLE_DEBUG("obtained block %s : %x from cache, with %s bytes",
-                     start_block, it->second.block.address(),
-                     it->second.block.data().size());
+          ELLE_DEBUG("obtained block %s from cache", start_block);
           reactor::wait(it->second.ready);
-          block = &it->second.block;
+          ELLE_DEBUG("block at %x", it->second.block.get());
+          ELLE_DEBUG("block %x with %s bytes",
+                     it->second.block->address(),
+                     it->second.block->data().size());
+          block = it->second.block;
           it->second.last_use = std::chrono::system_clock::now();
         }
         else
         {
           block = _owner->_block_at(start_block, false);
-          if (block == nullptr)
+          if (!block)
           {
             if (_owner->_rw_handle_count == 0)
             { // attempt a fetch
               _owner->_fetch();
               block = _owner->_block_at(start_block, false);
             }
-            if (block == nullptr)
+            if (!block)
             {
               // block would have been allocated: sparse file?
               memset(buffer.mutable_contents(), 0, size);
@@ -297,18 +299,18 @@ namespace infinit
     {
       auto const block_size = this->_owner->_header.block_size;
       auto const size = buffer.size();
-      AnyBlock* block;
+      std::shared_ptr<AnyBlock> block;
       auto const it = this->_owner->_blocks.find(block_idx);
       if (it != this->_owner->_blocks.end())
       {
-        block = &it->second.block;
+        block = it->second.block;
         it->second.dirty = true;
         it->second.last_use = std::chrono::system_clock::now();
       }
       else
       {
         block = this->_owner->_block_at(block_idx, true);
-        ELLE_ASSERT(block != nullptr);
+        ELLE_ASSERT(block);
         this->_owner->check_cache();
         auto const it = this->_owner->_blocks.find(block_idx);
         ELLE_ASSERT(it != this->_owner->_blocks.end());
