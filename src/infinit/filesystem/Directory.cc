@@ -1,22 +1,26 @@
 #include <infinit/filesystem/Directory.hh>
+
+#include <sys/stat.h> // S_IMFT...
+
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
+#include <elle/serialization/binary.hh>
+#include <elle/serialization/json.hh>
+
 #include <reactor/exception.hh>
 
 #include <infinit/filesystem/File.hh>
+#include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/Symlink.hh>
 #include <infinit/filesystem/Unknown.hh>
-#include <infinit/filesystem/Node.hh>
 #include <infinit/filesystem/xattribute.hh>
 
-#include <elle/serialization/binary.hh>
-#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Async.hh>
 #include <infinit/model/doughnut/Cache.hh>
+#include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
-// #include <infinit/filesystem/FileHandle.hh>
+#include <infinit/model/doughnut/UB.hh>
 
-#include <sys/stat.h> // S_IMFT...
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -135,18 +139,16 @@ namespace infinit
     {
     public:
       DirectoryConflictResolver(elle::serialization::SerializerIn& s)
+      : _owner(nullptr)
       {
         serialize(s);
       }
       DirectoryConflictResolver(DirectoryConflictResolver&& b)
       : _path(b._path)
       , _owner(b._owner)
-      , _owner_allocated(b._owner_allocated)
       , _op(b._op)
       , _wptr(b._wptr)
       {
-        b._owner_allocated = false;
-        b._owner = nullptr;
       }
 
       DirectoryConflictResolver()
@@ -158,19 +160,12 @@ namespace infinit
                                 std::weak_ptr<Directory> wd)
         : _path(p)
         , _owner(owner)
-        , _owner_allocated(false)
         , _op(op)
         , _wptr(wd)
       {}
 
       ~DirectoryConflictResolver()
       {
-        if (_owner_allocated)
-        {
-          std::shared_ptr<infinit::model::Model> b = _owner->block_store();
-          new std::shared_ptr<infinit::model::Model>(b);
-          delete _owner;
-        }
       }
 
       std::unique_ptr<Block>
@@ -192,14 +187,6 @@ namespace infinit
         s.serialize("optarget", _op.target);
         s.serialize("opaddr", _op.address);
         s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
-        if (s.in())
-        {
-          infinit::model::Model* model = nullptr;
-          const_cast<elle::serialization::Context&>(s.context()).get(model);
-          ELLE_ASSERT(model);
-          _owner_allocated = true;
-          _owner = new FileSystem("", std::shared_ptr<model::Model>(model));
-        }
       }
 
       boost::filesystem::path _path;
@@ -223,10 +210,13 @@ namespace infinit
                          std::string const& name,
                          Address address)
       : Node(owner, parent, name)
-      , _address(address)
+      , _address(address.unflagged().value(), model::flags::mutable_block)
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
       , _prefetching(false)
-    {}
+    {
+      ELLE_TRACE("%s: created with address %s{%x}", *this,
+                 this->_address, (unsigned int)address.overwritten_value());
+    }
 
     void
     Directory::_fetch()
@@ -237,7 +227,10 @@ namespace infinit
     void
     Directory::_fetch(std::unique_ptr<ACLBlock> block)
     {
-      ELLE_TRACE_SCOPE("%s: fetch block", *this);
+      ELLE_TRACE_SCOPE("%s: fetch block, addr = %s{%x}",
+                       *this,
+                       this->_address,
+                       (unsigned int)this->_address.overwritten_value());
       if (block)
         this->_block = std::move(block);
       else if (this->_block)
@@ -637,17 +630,6 @@ namespace infinit
     `--------------------*/
 
     static
-    boost::optional<std::string>
-    xattr_special(std::string const& name)
-    {
-      if (name.find("infinit.") == 0)
-        return name.substr(8);
-      if (name.find("user.infinit.") == 0)
-        return name.substr(13);
-      return {};
-    }
-
-    static
     std::string
     perms_to_json(model::Model& model, ACLBlock& block)
     {
@@ -700,6 +682,18 @@ namespace infinit
           ELLE_DEBUG("set permissions %s", perms);
           set_permissions(perms, value, this->_block->address());
           this->_block.reset();
+        }
+        else if (special->find("register.") == 0)
+        {
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          auto name = special->substr(9);
+          std::stringstream s(value);
+          auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
+          model::doughnut::UB ub(dht.get(), name, p, false);
+          model::doughnut::UB rub(dht.get(), name, p, true);
+          this->_owner.block_store()->store(ub);
+          this->_owner.block_store()->store(rub);
         }
         else if (*special == "fsck.deref")
         {
@@ -770,6 +764,11 @@ namespace infinit
             model::doughnut::Group g(*dht, value);
             g.create();
           }
+          else if (*special == "delete")
+          {
+            model::doughnut::Group g(*dht, value);
+            g.destroy();
+          }
           else if (*special == "add")
           {
             auto sep = value.find_first_of(':');
@@ -812,67 +811,64 @@ namespace infinit
     Directory::getxattr(std::string const& key)
     {
       ELLE_TRACE_SCOPE("%s: getxattr %s", *this, key);
-      if (key == "user.infinit.block")
+      auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+        this->_owner.block_store());
+      if (auto special = xattr_special(key))
       {
-        if (this->_block)
-          return elle::sprintf("%x", this->_block->address());
-        else if (this->_parent)
+        if (*special == "auth")
         {
-          auto const& elem = this->_parent->_files.at(this->_name);
-          return elle::sprintf("%x", elem.second);
+          this->_fetch();
+          return perms_to_json(*this->_owner.block_store(), *this->_block);
+        }
+        else if (*special == "auth.inherit")
+        {
+          this->_fetch();
+          return this->_inherit_auth ? "true" : "false";
+        }
+        else if (*special == "sync")
+        {
+          auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          auto c = dn->consensus().get();
+          auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
+          if (!a)
+          {
+            auto cache = dynamic_cast<model::doughnut::consensus::Cache*>(c);
+            if (!cache)
+              return "no async";
+            a = dynamic_cast<model::doughnut::consensus::Async*>(
+              cache->backend().get());
+            if (!a)
+              return "no async behind cache";
+          }
+          a->sync();
+          return "ok";
+        }
+        else if (special->find("group.list.") == 0)
+        {
+          std::string value = special->substr(strlen("group.list."));
+          auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
+          return umbrella([&]
+                          {
+                            model::doughnut::Group g(*dn, value);
+                            elle::json::Object o;
+                            auto members = g.list_members();
+                            elle::json::Array v;
+                            for (auto const& m: members)
+                              v.push_back(m->name());
+                            o["members"] = v;
+                            members = g.list_admins();
+                            elle::json::Array va;
+                            for (auto const& m: members)
+                              va.push_back(m->name());
+                            o["admins"] = va;
+                            std::stringstream ss;
+                            elle::json::write(ss, o, true);
+                            return ss.str();
+                          });
         }
         else
-          return "<ROOT>";
-      }
-      else if (key == "user.infinit.auth")
-      {
-        this->_fetch();
-        return perms_to_json(*this->_owner.block_store(), *this->_block);
-      }
-      else if (key == "user.infinit.auth.inherit")
-      {
-        this->_fetch();
-        return this->_inherit_auth ? "true" : "false";
-      }
-      else if (key == "user.infinit.sync")
-      {
-        auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-          this->_owner.block_store());
-        auto c = dn->consensus().get();
-        auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
-        if (!a)
-        {
-          auto cache = dynamic_cast<model::doughnut::consensus::Cache*>(c);
-          if (!cache)
-            return "no async";
-          a = dynamic_cast<model::doughnut::consensus::Async*>(
-            cache->backend().get());
-          if (!a)
-            return "no async behind cache";
-        }
-        a->sync();
-        return "ok";
-      }
-      else if (key.find("user.infinit.group.list.") == 0)
-      {
-        std::string value = key.substr(strlen("user.infinit.group.list."));
-        auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(
-          this->_owner.block_store());
-        model::doughnut::Group g(*dn, value);
-        elle::json::Object o;
-        auto members = g.list_members();
-        elle::json::Array v;
-        for (auto const& m: members)
-          v.push_back(m->name());
-        o["members"] = v;
-        members = g.list_admins();
-        elle::json::Array va;
-        for (auto const& m: members)
-          va.push_back(m->name());
-        o["admins"] = va;
-        std::stringstream ss;
-        elle::json::write(ss, o, true);
-        return ss.str();
+          THROW_INVAL;
       }
       else
         return Node::getxattr(key);

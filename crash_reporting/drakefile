@@ -1,0 +1,299 @@
+import drake
+import drake.cxx
+
+lib_dynamic = None
+lib_static = None
+library = None
+
+dump_syms_exe = None
+rule_tools = None
+
+with open(str(drake.path_source('../elle/drake-utils.py')), 'r') as f:
+  exec(f.read(), globals(), globals())
+
+## ------------ ##
+## Dump Symbols ##
+## ------------ ##
+
+class SymbolsGenerator(drake.Builder):
+  def __init__(self,
+               dump_syms_tool,
+               normalized_output_path,
+               binary,
+               output_file):
+    self.__dump_syms_tool = dump_syms_tool
+    self.__normalized_output_path = str(normalized_output_path)
+    self.__binary = binary
+    self.__output_file = output_file
+    drake.Builder.__init__(
+      self,
+      [self.__dump_syms_tool, self.__binary],
+      [self.__output_file],
+    )
+
+  @property
+  def dump_syms_cmd(self):
+    return str(self.__dump_syms_tool.path())
+
+  @property
+  def binary_path(self):
+    return str(self.__binary.path())
+
+  def sym_output_path(self, sym_file):
+    # Remove existing sym files if they exist.
+    existing_path = \
+      '%s/%s' % (self.__normalized_output_path, sym_file.path().basename())
+    import os
+    if os.path.exists(str(existing_path)):
+      import shutil
+      shutil.rmtree(str(existing_path))
+    res = None
+    with open(str(sym_file), 'r') as f:
+      line = f.readline()
+      uid = line.split(' ')[3]
+      name = line.split(' ')[4].strip()
+      res = '%s/%s/%s' % (self.__normalized_output_path, name, uid)
+      # Make directories if they don't exist.
+      os.makedirs(res, exist_ok = True)
+    return res
+    if res is None:
+      assert False
+
+  def execute(self):
+    out = self.__output_file
+    self.cmd('Generating symbols file for %s' % self.__binary,
+             [self.dump_syms_cmd, self.binary_path],
+             redirect_stdout = out,
+             throw = True)
+    # Copy file to normalized destination.
+    import shutil
+    shutil.copy(str(out), str(self.sym_output_path(out)))
+    return True
+
+  def __repr__(self):
+    return 'SymbolsGenerator(%s)' % self.__binary
+
+  def __str__(self):
+    return 'SymbolsGenerator(%s)' % self.__binary
+
+def configure(cxx_toolkit = None,
+              cxx_config = drake.cxx.Config()):
+  global lib_dynamic, lib_static, library
+  global dump_syms_exe, rule_tools
+
+  rule_tools = drake.Rule('tools')
+
+  ## -------- ##
+  ## Breakpad ##
+  ## -------- ##
+
+  local_cxx_config = drake.cxx.Config(cxx_config)
+  local_cxx_config.add_local_include_path('breakpad/src')
+  breakpad_sources = [
+    'client/minidump_file_writer.cc',
+    'minidump_file_writer.h',
+    'common/md5.cc',
+    'common/md5.h',
+    'common/string_conversion.cc',
+    'common/string_conversion.h',
+  ]
+  breakpad_configure_args = []
+  if cxx_toolkit.os is drake.os.linux:
+    breakpad_sources += [
+      'client/linux/crash_generation/crash_generation_client.cc',
+      'client/linux/crash_generation/crash_generation_client.h',
+      'client/linux/dump_writer_common/thread_info.cc',
+      'client/linux/dump_writer_common/thread_info.h',
+      'client/linux/dump_writer_common/ucontext_reader.cc',
+      'client/linux/dump_writer_common/ucontext_reader.h',
+      'client/linux/handler/exception_handler.cc',
+      'client/linux/handler/exception_handler.h',
+      'client/linux/handler/minidump_descriptor.cc',
+      'client/linux/handler/minidump_descriptor.h',
+      'client/linux/log/log.cc',
+      'client/linux/log/log.h',
+      'client/linux/microdump_writer/microdump_writer.cc',
+      'client/linux/microdump_writer/microdump_writer.h',
+      'client/linux/minidump_writer/linux_dumper.cc',
+      'client/linux/minidump_writer/linux_dumper.h',
+      'client/linux/minidump_writer/linux_ptrace_dumper.cc',
+      'client/linux/minidump_writer/linux_ptrace_dumper.h',
+      'client/linux/minidump_writer/minidump_writer.cc',
+      'client/linux/minidump_writer/minidump_writer.h',
+      'common/linux/elfutils.cc',
+      'common/linux/elfutils.h',
+      'common/linux/file_id.cc',
+      'common/linux/file_id.h',
+      'common/linux/guid_creator.cc',
+      'common/linux/guid_creator.h',
+      'common/linux/linux_libc_support.cc',
+      'common/linux/linux_libc_support.h',
+      'common/linux/memory_mapped_file.cc',
+      'common/linux/memory_mapped_file.h',
+      'common/linux/safe_readlink.cc',
+      'common/linux/safe_readlink.h',
+    ]
+    breakpad_sources = \
+      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, breakpad_sources)))
+    # File is not in repo unless you use Google's tools.
+    breakpad_sources += drake.nodes(
+      'src/third_party/lss/linux_syscall_support.h',
+    )
+    import os
+    breakpad_include = (drake.Path(os.getcwd()) / drake.path_source('src')).canonize()
+    breakpad_configure_args += [
+      'CFLAGS=-I%s' % breakpad_include,
+      'CXXFLAGS=-I%s' % breakpad_include,
+    ]
+    dump_syms_exe = drake.cxx.Executable('breakpad/bin/dump_syms')
+  elif cxx_toolkit.os is drake.os.macos:
+    breakpad_sources += [
+      'client/mac/crash_generation/crash_generation_client.cc',
+      'client/mac/crash_generation/crash_generation_client.h',
+      'client/mac/handler/breakpad_nlist_64.cc',
+      'client/mac/handler/breakpad_nlist_64.h',
+      'client/mac/handler/dynamic_images.cc',
+      'client/mac/handler/dynamic_images.h',
+      'client/mac/handler/exception_handler.cc',
+      'client/mac/handler/exception_handler.h',
+      'client/mac/handler/minidump_generator.cc',
+      'client/mac/handler/minidump_generator.h',
+      'client/mac/handler/protected_memory_allocator.cc',
+      'client/mac/handler/protected_memory_allocator.h',
+      'common/mac/bootstrap_compat.cc',
+      'common/mac/bootstrap_compat.h',
+      'common/mac/file_id.cc',
+      'common/mac/file_id.h',
+      'common/mac/MachIPC.mm',
+      'common/mac/MachIPC.h',
+      'common/mac/macho_id.cc',
+      'common/mac/macho_id.h',
+      'common/mac/macho_utilities.cc',
+      'common/mac/macho_utilities.h',
+      'common/mac/macho_walker.cc',
+      'common/mac/macho_walker.h',
+      'common/mac/string_utilities.cc',
+      'common/mac/string_utilities.h',
+    ]
+    local_cxx_config.framework_add('CoreFoundation')
+    local_cxx_config.framework_add('CoreServices')
+    breakpad_sources = \
+      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, breakpad_sources)))
+    # Fix build with GCC.
+    if cxx_toolkit.kind is drake.cxx.GccToolkit.Kind.gcc:
+      local_cxx_config.flag('-include')
+      local_cxx_config.flag('crash_reporting/gcc_fix.hh')
+
+    # The dump_syms tool is built with Xcode on Mac. Rather do it manually.
+    dump_syms_sources = [
+      'common/dwarf_cfi_to_module.cc',
+      'common/dwarf_cfi_to_module.h',
+      'common/dwarf_cu_to_module.cc',
+      'common/dwarf_cu_to_module.h',
+      'common/dwarf_line_to_module.cc',
+      'common/dwarf_line_to_module.h',
+      'common/language.cc',
+      'common/language.h',
+      'common/md5.cc',
+      'common/md5.h',
+      'common/module.cc',
+      'common/module.h',
+      'common/stabs_reader.cc',
+      'common/stabs_reader.h',
+      'common/stabs_to_module.cc',
+      'common/stabs_to_module.h',
+      'common/dwarf/bytereader.cc',
+      'common/dwarf/bytereader.h',
+      'common/dwarf/dwarf2diehandler.cc',
+      'common/dwarf/dwarf2diehandler.h',
+      'common/dwarf/dwarf2reader.cc',
+      'common/dwarf/dwarf2reader.h',
+      'common/mac/arch_utilities.cc',
+      'common/mac/arch_utilities.h',
+      'common/mac/dump_syms.cc',
+      'common/mac/dump_syms.h',
+      'common/mac/file_id.cc',
+      'common/mac/file_id.h',
+      'common/mac/macho_id.cc',
+      'common/mac/macho_id.h',
+      'common/mac/macho_reader.cc',
+      'common/mac/macho_reader.h',
+      'common/mac/macho_utilities.cc',
+      'common/mac/macho_utilities.h',
+      'common/mac/macho_walker.cc',
+      'common/mac/macho_walker.h',
+      'tools/mac/dump_syms/dump_syms_tool.cc',
+    ]
+    dump_syms_sources = \
+      drake.nodes(*list(map(lambda f: 'breakpad/src/%s' % f, dump_syms_sources)))
+    dump_syms_cxx_config = drake.cxx.Config(cxx_config)
+    dump_syms_cxx_config.flag('-DHAVE_MACH_O_NLIST_H')
+    dump_syms_cxx_config.framework_add('CoreFoundation')
+    dump_syms_cxx_config.add_local_include_path('breakpad/src')
+    dump_syms_exe = drake.cxx.Executable(
+      'breakpad/bin/dump_syms',
+      dump_syms_sources,
+      cxx_toolkit,
+      dump_syms_cxx_config,
+    )
+
+  # Use our own UTF conversion file which adds guards for C++.
+  breakpad_sources += drake.nodes(
+    'src/common/convert_UTF.cc',
+    'src/common/convert_UTF.h',
+  )
+
+  breakpad_configure = drake.node('breakpad/configure')
+  breakpad_configure_args += [
+    '--prefix=%s' % str(drake.path_root() / drake.path_build('breakpad')),
+    'CC=%s' % cxx_toolkit.c,
+    'CXX=%s' % cxx_toolkit.cxx,
+  ]
+  breakpad_targets = [
+    drake.cxx.Executable('breakpad/bin/minidump_stackwalk'),
+    drake.cxx.Executable('breakpad/bin/minidump_dump'),
+    drake.cxx.Executable('breakpad/bin/microdump_stackwalk'),
+  ]
+  if cxx_toolkit.os is drake.os.linux:
+    breakpad_targets += [
+      dump_syms_exe,
+      drake.cxx.Executable('breakpad/bin/dump_syms_mac'),
+    ]
+  GNUBuilder(
+    cxx_toolkit,
+    configure = breakpad_configure,
+    configure_args = breakpad_configure_args,
+    sources = drake.nodes('breakpad/configure'),
+    targets = breakpad_targets,
+    build_args = ['install-binPROGRAMS'],
+    working_directory = drake.path_build('breakpad/build'),
+  )
+
+  rule_tools << dump_syms_exe
+
+  ## -------------- ##
+  ## Crash Reporter ##
+  ## -------------- ##
+
+  local_cxx_config.add_local_include_path('src')
+  sources = drake.nodes(
+    'src/crash_reporting/CrashReporter.cc',
+    'src/crash_reporting/CrashReporter.hh',
+    'src/crash_reporting/fwd.hh',
+  )
+
+  lib_dynamic = drake.cxx.DynLib(
+    'lib/crashreporter',
+    breakpad_sources + sources,
+    cxx_toolkit,
+    local_cxx_config)
+  lib_static = drake.cxx.StaticLib(
+    'lib/crashreporter',
+    breakpad_sources + sources,
+    cxx_toolkit,
+    local_cxx_config)
+
+  if cxx_toolkit.os in [drake.os.windows]:
+    library = lib_static
+  else:
+    library = lib_dynamic

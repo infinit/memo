@@ -27,6 +27,8 @@ namespace infinit
   {
   public:
     virtual
+    ~RPCHandler() = default;
+    virtual
     void
     handle(elle::serialization::SerializerIn& input,
            elle::serialization::SerializerOut& output) = 0;
@@ -224,10 +226,14 @@ namespace infinit
         elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
     }
 
-    RPCServer(boost::optional<elle::Version> const& version = {})
+    RPCServer(boost::optional<elle::Version> version = {})
       : _version(version)
-    {}
-
+    {
+    }
+    ~RPCServer()
+    {
+      _destroying(this);
+    }
     void
     serve(std::iostream& s)
     {
@@ -247,8 +253,8 @@ namespace infinit
           auto channel = channels.accept();
           auto request = channel.read();
           ELLE_DEBUG("Processing one request, key=%s, len=%s data=%x",
-            !!this->_key.Get(), request.size(), request);
-          bool had_key = !!_key.Get();
+            !!this->_key, request.size(), request);
+          bool had_key = !!_key;
           if (had_key)
           {
             try
@@ -257,13 +263,13 @@ namespace infinit
               elle::Bench::BenchScope bs(bench);
               if (request.size() > 262144)
               {
-                auto key = this->_key.Get().get();
+                auto key = this->_key.get();
                 reactor::background([&] {
                     request = key->decipher(request);
                 });
               }
               else
-                request = this->_key.Get()->decipher(request);
+                request = this->_key->decipher(request);
               ELLE_DEBUG("Wrote %s plain bytes", request.size());
             }
             catch(std::exception const& e)
@@ -292,6 +298,7 @@ namespace infinit
           elle::IOStream outs(response.ostreambuf());
           {
             elle::serialization::binary::SerializerOut output(outs, versions, false);
+            output.set_context(this->_context);
             try
             {
               it->second->handle(input, output);
@@ -299,7 +306,7 @@ namespace infinit
             catch (elle::Error const& e)
             {
               ELLE_WARN("%s: deserialization error: %s",
-                        *this, elle::exception_string());
+                        *this, e);
               throw;
             }
           }
@@ -311,14 +318,14 @@ namespace infinit
             elle::Bench::BenchScope bs(bench);
             if (response.size() >= 262144)
             {
-              auto key = this->_key.Get().get();
+              auto key = this->_key.get();
               reactor::background([&] {
                   response = key->encipher(
                     elle::ConstWeakBuffer(response.contents(), response.size()));
               });
             }
             else
-              response = _key.Get()->encipher(
+              response = _key->encipher(
                 elle::ConstWeakBuffer(response.contents(), response.size()));
           }
           channel.write(response);
@@ -339,8 +346,9 @@ namespace infinit
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
-    reactor::LocalStorage<std::unique_ptr<infinit::cryptography::SecretKey>> _key;
     boost::optional<elle::Version> _version;
+    std::unique_ptr<infinit::cryptography::SecretKey> _key;
+    boost::signals2::signal<void(RPCServer*)> _destroying;
 
   };
 
@@ -501,6 +509,7 @@ namespace infinit
         ELLE_DEBUG("build request")
         {
           elle::serialization::binary::SerializerOut output(outs, versions, false);
+          output.set_context(self._context);
           output.serialize("procedure", self.name());
           call_arguments(0, output, args...);
         }

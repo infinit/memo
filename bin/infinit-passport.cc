@@ -4,9 +4,6 @@ ELLE_LOG_COMPONENT("infinit-passport");
 
 #include <main.hh>
 
-using namespace boost::program_options;
-options_description mode_options("Modes");
-
 infinit::Infinit ifnt;
 
 COMMAND(create)
@@ -18,19 +15,27 @@ COMMAND(create)
   auto user = ifnt.user_get(user_name);
   if (self.public_key != network.owner)
   {
-    throw elle::Error(
-      elle::sprintf("not owner of network \"%s\"", network_name));
+    std::cerr << "NOTICE: your key is not that of the owner of the network. "
+              << std::endl
+              << "A passport for you with the 'sign' permission needs to be "
+              << std::endl
+              << "pushed to the network using infinit-acl --register"
+              << std::endl;
   }
   infinit::model::doughnut::Passport passport(
     user.public_key,
     network.name,
-    self.private_key.get());
+    infinit::cryptography::rsa::KeyPair(self.public_key,
+                                        self.private_key.get()),
+    self.public_key != network.owner,
+    !flag(args, "deny-write"),
+    !flag(args, "deny-storage"),
+    flag(args, "allow-sign"));
   if (args.count("output"))
   {
     auto output = get_output(args);
     elle::serialization::json::serialize(passport, *output, false);
-    report_action_output(
-      *output, "wrote", "passport for", network.name);
+    report_action_output(*output, "wrote", "passport for", network.name);
   }
   else
   {
@@ -248,6 +253,8 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
   Modes modes {
     {
       "create",
@@ -259,8 +266,11 @@ main(int argc, char** argv)
           "network to create the passport to" },
         { "user,u", value<std::string>(), "user to create the passport for" },
         { "push-passport", bool_switch(),
-          elle::sprintf("push the passport to %s", beyond(true)).c_str() },
+          elle::sprintf("push the passport to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-passport" },
+        { "deny-write", bool_switch(), "deny write access to the user"},
+        { "deny-storage", bool_switch(), "deny contributing storage to the user"},
+        { "allow-sign", bool_switch(), "allow signing passports"},
         option_output("passport"),
       },
     },
@@ -277,8 +287,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a user's network passport from %s",
-                    beyond(true)).c_str(),
+      elle::sprintf("Fetch a user's network passport from %s", beyond(true)),
       &fetch,
       "[--network NETWORK --user USER]",
       {
@@ -299,8 +308,7 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a user's network passport to %s",
-                    beyond(true)).c_str(),
+      elle::sprintf("Push a user's network passport to %s", beyond(true)),
       &push,
       "--network NETWORK --user USER",
       {
@@ -310,8 +318,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a user's network passport from %s",
-                    beyond(true)).c_str(),
+      elle::sprintf("Remove a user's network passport from %s", beyond(true)),
       &pull,
       "--network NETWORK --user USER",
       {

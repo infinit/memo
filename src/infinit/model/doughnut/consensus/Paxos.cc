@@ -67,8 +67,8 @@ namespace infinit
 
         struct BlockOrPaxos
         {
-          BlockOrPaxos(blocks::Block* b)
-            : block(b)
+          BlockOrPaxos(blocks::Block& b)
+            : block(&b)
             , paxos()
           {}
 
@@ -82,8 +82,8 @@ namespace infinit
             this->serialize(s);
           }
 
-          blocks::Block* block;
-          Paxos::LocalPeer::Decision* paxos;
+          std::unique_ptr<blocks::Block> block;
+          std::unique_ptr<Paxos::LocalPeer::Decision> paxos;
 
           void
           serialize(elle::serialization::Serializer& s)
@@ -99,10 +99,14 @@ namespace infinit
         | Construction |
         `-------------*/
 
-        Paxos::Paxos(Doughnut& doughnut, int factor)
+        Paxos::Paxos(Doughnut& doughnut, int factor, bool lenient_fetch)
           : Super(doughnut)
           , _factor(factor)
-        {}
+          , _lenient_fetch(lenient_fetch)
+        {
+          if (getenv("INFINIT_PAXOS_LENIENT_FETCH"))
+            _lenient_fetch = true;
+        }
 
         /*--------.
         | Factory |
@@ -128,39 +132,32 @@ namespace infinit
           : public Paxos::PaxosClient::Peer
         {
         public:
-          Peer(reactor::Generator<overlay::Overlay::Member>& members,
-               Address address)
-            : _members(&members)
-            , _member()
-            , _address(address)
-          {}
-
-          Peer(overlay::Overlay::Member member,
-               Address address)
-            : _members(nullptr)
+          Peer(overlay::Overlay::Member member, Address address,
+               boost::optional<int> local_version = {})
+            : Paxos::PaxosClient::Peer(member->id())
             , _member(std::move(member))
             , _address(address)
-          {
-            ELLE_ASSERT(this->_member);
-          }
+            , _local_version(local_version)
+          {}
 
           virtual
           boost::optional<Paxos::PaxosClient::Accepted>
           propose(Paxos::PaxosClient::Quorum const& q,
-                  Paxos::PaxosClient::Proposal const& p)
+                  Paxos::PaxosClient::Proposal const& p) override
           {
             BENCH("propose");
-            auto& member = this->member();
             return network_exception_to_unavailable([&] {
-              if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
+              if (auto local =
+                  dynamic_cast<Paxos::LocalPeer*>(this->_member.get()))
                 return local->propose(
                   q, this->_address, p);
-              else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
+              else if (auto remote =
+                       dynamic_cast<Paxos::RemotePeer*>(this->_member.get()))
                 return remote->propose(
                   q, this->_address, p);
-              else if (dynamic_cast<DummyPeer*>(&member))
+              else if (dynamic_cast<DummyPeer*>(this->_member.get()))
                 throw reactor::network::Exception("Peer unavailable");
-              ELLE_ABORT("invalid paxos peer: %s", member);
+              ELLE_ABORT("invalid paxos peer: %s", *this->_member);
             });
           }
 
@@ -168,44 +165,81 @@ namespace infinit
           Paxos::PaxosClient::Proposal
           accept(Paxos::PaxosClient::Quorum const& q,
                  Paxos::PaxosClient::Proposal const& p,
-                 std::shared_ptr<blocks::Block> const& value)
+                 Paxos::Value const& value) override
           {
             BENCH("accept");
-            auto& member = this->member();
             return network_exception_to_unavailable([&] {
-              if (auto local = dynamic_cast<Paxos::LocalPeer*>(&member))
+              if (auto local =
+                  dynamic_cast<Paxos::LocalPeer*>(this->_member.get()))
                 return local->accept(
                   q, this->_address, p, value);
-              else if (auto remote = dynamic_cast<Paxos::RemotePeer*>(&member))
-                return remote->accept(
-                  q, this->_address, p, value);
-              else if (dynamic_cast<DummyPeer*>(&member))
+              else if (auto remote =
+                       dynamic_cast<Paxos::RemotePeer*>(this->_member.get()))
+                {
+                  if (value.is<std::shared_ptr<blocks::Block>>()
+                      || remote->doughnut().version() >= elle::Version(0, 5, 0))
+                    return remote->accept(
+                      q, this->_address, p, value);
+                  else
+                  {
+                    ELLE_TRACE("unmanageable accept on non-block value");
+                    throw reactor::network::Exception("Peer unavailable");
+                  }
+                }
+              else if (dynamic_cast<DummyPeer*>(this->_member.get()))
                 throw reactor::network::Exception("Peer unavailable");
-              ELLE_ABORT("invalid paxos peer: %s", member);
+              ELLE_ABORT("invalid paxos peer: %s", *this->_member);
             });
           }
 
-          infinit::model::doughnut::Peer&
-          member()
+          virtual
+          void
+          confirm(Paxos::PaxosClient::Quorum const& q,
+                  Paxos::PaxosClient::Proposal const& p) override
           {
-            if (!this->_member)
-              try
+            BENCH("confirm");
+            return network_exception_to_unavailable([&] {
+              if (auto local =
+                  dynamic_cast<Paxos::LocalPeer*>(this->_member.get()))
               {
-                ELLE_ASSERT(this->_members);
-                this->_member = this->_members->next();
+                if (local->doughnut().version() >= elle::Version(0, 5, 0))
+                  local->confirm(q, this->_address, p);
+                return;
               }
-              catch (reactor::Generator<overlay::Overlay::Member>::End const&)
+              else if (auto remote =
+                       dynamic_cast<Paxos::RemotePeer*>(this->_member.get()))
               {
-                std::throw_with_nested(Unavailable());
+                if (remote->doughnut().version() >= elle::Version(0, 5, 0))
+                  remote->confirm(q, this->_address, p);
+                return;
               }
-            return *this->_member;
+              else if (dynamic_cast<DummyPeer*>(this->_member.get()))
+                throw reactor::network::Exception("Peer unavailable");
+              ELLE_ABORT("invalid paxos peer: %s", *this->_member);
+            });
           }
 
-          ELLE_ATTRIBUTE(reactor::Generator<overlay::Overlay::Member>*,
-                         members);
-          ELLE_ATTRIBUTE(overlay::Overlay::Member, member);
+          virtual
+          boost::optional<Paxos::PaxosClient::Accepted>
+          get(Paxos::PaxosClient::Quorum const& q) override
+          {
+            BENCH("get");
+            return network_exception_to_unavailable([&] {
+              if (auto local =
+                  dynamic_cast<Paxos::LocalPeer*>(this->_member.get()))
+                return local->get(q, this->_address, this->_local_version);
+              else if (auto remote =
+                       dynamic_cast<Paxos::RemotePeer*>(this->_member.get()))
+                return remote->get(q, this->_address, this->_local_version);
+              else if (dynamic_cast<DummyPeer*>(this->_member.get()))
+                throw reactor::network::Exception("Peer unavailable");
+              ELLE_ABORT("invalid paxos peer: %s", *this->_member);
+            });
+          }
+
+          ELLE_ATTRIBUTE_R(overlay::Overlay::Member, member);
           ELLE_ATTRIBUTE(Address, address);
-          ELLE_ATTRIBUTE(int, version);
+          ELLE_ATTRIBUTE(boost::optional<int>, local_version);
         };
 
         /*-----------.
@@ -231,22 +265,102 @@ namespace infinit
         Paxos::RemotePeer::accept(PaxosServer::Quorum const& peers,
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p,
-                                  std::shared_ptr<blocks::Block> const& value)
+                                  Value const& value)
         {
           return network_exception_to_unavailable([&] {
-            auto accept = make_rpc<Paxos::PaxosClient::Proposal (
-              PaxosServer::Quorum peers,
+            if (this->doughnut().version() < elle::Version(0, 5, 0))
+            {
+              ELLE_ASSERT(value.is<std::shared_ptr<blocks::Block>>());
+              auto accept = make_rpc<Paxos::PaxosClient::Proposal (
+                PaxosServer::Quorum peers,
+                Address,
+                Paxos::PaxosClient::Proposal const&,
+                std::shared_ptr<blocks::Block>)>("accept");
+              accept.set_context<Doughnut*>(&this->_doughnut);
+              return accept(peers, address, p, value.get<std::shared_ptr<blocks::Block>>());
+            }
+            else
+            {
+              auto accept = make_rpc<Paxos::PaxosClient::Proposal (
+                PaxosServer::Quorum peers,
+                Address,
+                Paxos::PaxosClient::Proposal const&,
+                Value const&)>("accept");
+              accept.set_context<Doughnut*>(&this->_doughnut);
+              return accept(peers, address, p, value);
+            }
+          });
+        }
+
+        void
+        Paxos::RemotePeer::confirm(PaxosServer::Quorum const& peers,
+                                   Address address,
+                                   PaxosClient::Proposal const& p)
+        {
+          return network_exception_to_unavailable([&] {
+            auto confirm = make_rpc<void(
+              PaxosServer::Quorum,
               Address,
-              Paxos::PaxosClient::Proposal const&,
-              std::shared_ptr<blocks::Block> const&)>("accept");
-            accept.set_context<Doughnut*>(&this->_doughnut);
-            return accept(peers, address, p, value);
+              PaxosClient::Proposal const&)>("confirm");
+            confirm.set_context<Doughnut*>(&this->_doughnut);
+            return confirm(peers, address, p);
+          });
+        }
+
+        boost::optional<Paxos::PaxosClient::Accepted>
+        Paxos::RemotePeer::get(PaxosServer::Quorum const& peers,
+                               Address address,
+                               boost::optional<int> local_version)
+        {
+          return network_exception_to_unavailable([&] {
+            auto get = make_rpc<boost::optional<PaxosClient::Accepted>(
+              PaxosServer::Quorum,
+              Address, boost::optional<int>)>("get");
+            get.set_context<Doughnut*>(&this->_doughnut);
+            return get(peers, address, local_version);
           });
         }
 
         /*----------.
         | LocalPeer |
         `----------*/
+
+        Paxos::LocalPeer::Decision&
+        Paxos::LocalPeer::_load(Address address,
+                                boost::optional<PaxosServer::Quorum> peers)
+        {
+          auto decision = this->_addresses.find(address);
+          if (decision != this->_addresses.end())
+            return decision->second;
+          else
+            try
+            {
+              ELLE_TRACE("%s: decision for %s not in cache", *this, address);
+              auto buffer = this->storage()->get(address);
+              elle::serialization::Context context;
+              context.set<Doughnut*>(&this->doughnut());
+              auto stored =
+                elle::serialization::binary::deserialize<BlockOrPaxos>(
+                  buffer, true, context);
+              if (!stored.paxos)
+                // FIXME: this will trigger the retry with a mutable block
+                // type in Consensus::fetch
+                throw MissingBlock(address);
+              return this->_addresses.emplace(
+                address, std::move(*stored.paxos)).first->second;
+            }
+            catch (storage::MissingKey const& e)
+            {
+              ELLE_TRACE("%s: missingkey reloading decision", *this);
+              if (peers)
+                return this->_addresses.emplace(
+                  address,
+                  Decision(PaxosServer(this->id(),
+                                       *peers,elle_serialization_version(this->doughnut().version())))).first->second;
+              else
+                throw MissingBlock(e.key());
+            }
+        }
 
         boost::optional<Paxos::PaxosClient::Accepted>
         Paxos::LocalPeer::propose(PaxosServer::Quorum peers,
@@ -255,33 +369,14 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: get proposal at %s: %s",
                            *this, address, p);
-          auto decision = this->_addresses.find(address);
-          if (decision == this->_addresses.end())
-            try
-            {
-              auto buffer = this->storage()->get(address);
-              elle::serialization::Context context;
-              context.set<Doughnut*>(&this->doughnut());
-              auto stored =
-                elle::serialization::binary::deserialize<BlockOrPaxos>(
-                  buffer, true, context);
-              if (!stored.paxos)
-                throw elle::Error("running Paxos on an immutable block");
-              decision = this->_addresses.emplace(
-                address, std::move(*stored.paxos)).first;
-            }
-            catch (storage::MissingKey const&)
-            {
-              decision = this->_addresses.emplace(
-                address,
-                Decision(PaxosServer(this->id(), peers))).first;
-            }
-          auto res = decision->second.paxos.propose(std::move(peers), p);
+          auto& decision = this->_load(address, peers);
+          auto res = decision.paxos.propose(std::move(peers), p);
+          BlockOrPaxos data(&decision);
           this->storage()->set(
             address,
-            elle::serialization::binary::serialize(
-              BlockOrPaxos(&decision->second)),
+            elle::serialization::binary::serialize(data),
             true, true);
+          data.paxos.release();
           return res;
         }
 
@@ -289,33 +384,86 @@ namespace infinit
         Paxos::LocalPeer::accept(PaxosServer::Quorum peers,
                                  Address address,
                                  Paxos::PaxosClient::Proposal const& p,
-                                 std::shared_ptr<blocks::Block> const& value)
+                                 Value const& value)
         {
           ELLE_TRACE_SCOPE("%s: accept at %s: %s",
                            *this, address, p);
           // FIXME: factor with validate in doughnut::Local::store
-          ELLE_DEBUG("validate block")
-            if (auto res = value->validate()); else
-              throw ValidationFailed(res.reason());
-          auto& decision = this->_addresses.at(address);
-          auto& paxos = decision.paxos;
-          if (auto highest = paxos.highest_accepted())
+          std::shared_ptr<blocks::Block> block;
+          if (value.is<std::shared_ptr<blocks::Block>>())
+            block = value.get<std::shared_ptr<blocks::Block>>();
+          if (block)
           {
-            auto& val = highest->value;
-            auto valres = val->validate(*value);
-            if (!valres)
-              throw Conflict("peer validation failed", value->clone());
+            ELLE_DEBUG("validate block")
+              if (auto res = block->validate()); else
+                throw ValidationFailed(res.reason());
           }
+          auto& decision = this->_load(address);
+          auto& paxos = decision.paxos;
+          if (block)
+            if (auto highest = paxos.highest_accepted_value())
+            {
+              auto& val = highest->value.get<std::shared_ptr<blocks::Block>>();
+              auto valres = val->validate(*block);
+              if (!valres)
+                throw Conflict("peer validation failed", block->clone());
+            }
           auto res = paxos.accept(std::move(peers), p, value);
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
+            BlockOrPaxos data(&decision);
             this->storage()->set(
               address,
-              elle::serialization::binary::serialize(BlockOrPaxos(&decision)),
+              elle::serialization::binary::serialize(
+                data, this->doughnut().version()),
               true, true);
+            data.paxos.release();
           }
-          on_store(*value, STORE_ANY);
+          if (block)
+            on_store(*block, STORE_ANY);
           return std::move(res);
+        }
+
+        void
+        Paxos::LocalPeer::confirm(PaxosServer::Quorum peers,
+                                  Address address,
+                                  Paxos::PaxosClient::Proposal const& p)
+        {
+          ELLE_TRACE_SCOPE("%s: confirm %s at proposal %s",
+                           *this, address, p);
+          auto& decision = this->_load(address);
+          decision.paxos.confirm(peers, p);
+          {
+            ELLE_DEBUG_SCOPE("store accepted paxos");
+            BlockOrPaxos data(&decision);
+            this->storage()->set(
+              address,
+              elle::serialization::binary::serialize(
+                data, this->doughnut().version()),
+              true, true);
+            data.paxos.release();
+          }
+        }
+
+        boost::optional<Paxos::PaxosClient::Accepted>
+        Paxos::LocalPeer::get(PaxosServer::Quorum peers, Address address,
+                              boost::optional<int> local_version)
+        {
+          ELLE_TRACE_SCOPE("%s: get %s, q=%s", *this, address, peers);
+          auto res = this->_load(address).paxos.get(peers);
+          // Honor local_version
+          if (local_version && res &&
+              res->value.template is<std::shared_ptr<blocks::Block>>())
+          {
+            auto& block =
+              res->value.template get<std::shared_ptr<blocks::Block>>();
+            auto mb = std::dynamic_pointer_cast<blocks::MutableBlock>(block);
+            ELLE_ASSERT(mb);
+            if (mb->version() == *local_version)
+              block.reset();
+          }
+          ELLE_DEBUG("%s: returning %s", *this, res);
+          return res;
         }
 
         void
@@ -328,18 +476,59 @@ namespace infinit
             std::function<
             boost::optional<Paxos::PaxosClient::Accepted>(
               PaxosServer::Quorum, Address,
-              Paxos::PaxosClient::Proposal const&)>
-            (std::bind(&LocalPeer::propose,
-                       this, ph::_1, ph::_2, ph::_3)));
+              Paxos::PaxosClient::Proposal const&)> (
+                [this, &rpcs](PaxosServer::Quorum q, Address a,
+                              Paxos::PaxosClient::Proposal const& p)
+                {
+                  this->_require_auth(rpcs, true);
+                  return this->propose(std::move(q), a, p);
+                }));
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
+            rpcs.add(
+              "accept",
+              std::function<
+              Paxos::PaxosClient::Proposal(
+                PaxosServer::Quorum, Address,
+                Paxos::PaxosClient::Proposal const& p,
+		std::shared_ptr<blocks::Block> const& b)>
+              ([this, &rpcs] (PaxosServer::Quorum q, Address a,
+                              Paxos::PaxosClient::Proposal const& p,
+                              std::shared_ptr<blocks::Block> const& b)
+               -> Paxos::PaxosClient::Proposal
+              {
+                this->_require_auth(rpcs, true);
+                return this->accept(q, a, p, std::move(b));
+              }));
+          else
+            rpcs.add(
+              "accept",
+              std::function<
+              Paxos::PaxosClient::Proposal(
+                PaxosServer::Quorum,
+                Address,
+                Paxos::PaxosClient::Proposal const& p,
+                Value const& value)>
+              ([this, &rpcs](PaxosServer::Quorum q,
+                             Address a,
+                             Paxos::PaxosClient::Proposal const& p,
+                             Value const& value)
+               {
+                 this->_require_auth(rpcs, true);
+                 return this->accept(std::move(q), a, p, value);
+               }));
           rpcs.add(
-            "accept",
+            "confirm",
             std::function<
-            Paxos::PaxosClient::Proposal(
+            void(
               PaxosServer::Quorum, Address,
-              Paxos::PaxosClient::Proposal const& p,
-              std::shared_ptr<blocks::Block> const& value)>
-            (std::bind(&LocalPeer::accept,
-                       this, ph::_1, ph::_2, ph::_3, ph::_4)));
+              Paxos::PaxosClient::Proposal const&)>
+            (std::bind(&LocalPeer::confirm, this, ph::_1, ph::_2, ph::_3)));
+          rpcs.add(
+            "get",
+            std::function<
+            boost::optional<Paxos::PaxosClient::Accepted>(
+              PaxosServer::Quorum, Address, boost::optional<int>)>
+            (std::bind(&LocalPeer::get, this, ph::_1, ph::_2, ph::_3)));
         }
 
         template <typename T>
@@ -369,7 +558,23 @@ namespace infinit
         Paxos::LocalPeer::_fetch(Address address,
                                  boost::optional<int> local_version) const
         {
-          ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
+          if (this->doughnut().version() >= elle::Version(0, 5, 0))
+          {
+            elle::serialization::Context context;
+            context.set<Doughnut*>(&this->doughnut());
+            auto data =
+              elle::serialization::binary::deserialize<BlockOrPaxos>(
+                this->storage()->get(address), true, context);
+            // FIXME: this will trigger the retry with an immutable block type
+            // in Consensus::fetch
+            if (!data.block)
+            {
+              ELLE_TRACE("%s: fetch: no data block", *this);
+              throw MissingBlock(address);
+            }
+            return std::move(data.block);
+          }
+          // Backward compatibility pre-0.5.0
           auto decision = this->_addresses.find(address);
           if (decision == this->_addresses.end())
             try
@@ -382,7 +587,7 @@ namespace infinit
               if (data.block)
               {
                 ELLE_DEBUG("loaded immutable block from storage");
-                return std::unique_ptr<blocks::Block>(data.block);
+                return std::move(data.block);
               }
               else
               {
@@ -399,42 +604,48 @@ namespace infinit
           else
             ELLE_DEBUG("mutable block already loaded");
           auto& paxos = decision->second.paxos;
-          if (auto highest = paxos.highest_accepted())
+          if (auto highest = paxos.highest_accepted_value())
           {
             auto version = highest->proposal.version;
-            if (decision->second.chosen == version)
+            if (decision->second.chosen == version
+              && highest->value.is<std::shared_ptr<blocks::Block>>())
             {
               ELLE_DEBUG("return already chosen mutable block");
-              return highest->value->clone();
+              return highest->value.get<std::shared_ptr<blocks::Block>>()
+                ->clone();
             }
             else
             {
               ELLE_TRACE_SCOPE(
-                "finalize running Paxos for version %s", version);
+                "finalize running Paxos for version %s (last chosen %s)"
+                , version, decision->second.chosen);
               auto block = highest->value;
               Paxos::PaxosClient::Peers peers =
                 lookup_nodes(
-                  this->doughnut(), paxos.quorum(), block->address());
+                  this->doughnut(), paxos.quorum_initial(), address);
               if (peers.empty())
                 throw elle::Error(
-                  elle::sprintf("No peer available for fetch %x", block->address()));
+                  elle::sprintf("No peer available for fetch %x", address));
               Paxos::PaxosClient client(uid(this->doughnut().keys().K()),
                                         std::move(peers));
-              auto chosen = client.choose(paxos.quorum(), version, block);
+              auto chosen = client.choose(version, block);
               // FIXME: factor with the end of doughnut::Local::store
               ELLE_DEBUG("%s: store chosen block", *this)
               unconst(decision->second).chosen = version;
               {
+                BlockOrPaxos data(const_cast<Decision*>(&decision->second));
                 this->storage()->set(
                   address,
                   elle::serialization::binary::serialize(
-                    BlockOrPaxos(const_cast<Decision*>(&decision->second))),
+                    data,
+                    this->doughnut().version()),
                   true, true);
+                data.paxos.release();
               }
               // ELLE_ASSERT(block.unique());
               // FIXME: Don't clone, it's useless, find a way to steal
               // ownership from the shared_ptr.
-              return block->clone();
+              return block.get<std::shared_ptr<blocks::Block>>()->clone();
             }
           }
           else
@@ -462,10 +673,6 @@ namespace infinit
             typename elle::serialization::binary::SerializerIn input(s);
             input.set_context<Doughnut*>(&this->doughnut());
             auto stored = input.deserialize<BlockOrPaxos>();
-            elle::SafeFinally cleanup([&] {
-                  delete stored.block;
-                  delete stored.paxos;
-            });
             if (!stored.block)
               ELLE_WARN("No block, cannot validate update");
             else
@@ -479,11 +686,16 @@ namespace infinit
             }
           }
           catch (storage::MissingKey const&)
-          {
-          }
+          {}
           elle::Buffer data =
-            elle::serialization::binary::serialize(
-              BlockOrPaxos(const_cast<blocks::Block*>(&block)));
+            [&]
+            {
+              BlockOrPaxos b(const_cast<blocks::Block&>(block));
+              auto res = elle::serialization::binary::serialize(
+                b, this->doughnut().version());
+              b.block.release();
+              return res;
+            }();
           this->storage()->set(block.address(), data,
                               mode == STORE_ANY || mode == STORE_INSERT,
                               mode == STORE_ANY || mode == STORE_UPDATE);
@@ -501,14 +713,14 @@ namespace infinit
             {
               auto& decision = this->_addresses.at(address);
               auto& paxos = decision.paxos;
-              if (auto highest = paxos.highest_accepted())
+              if (auto highest = paxos.highest_accepted_value())
               {
-                auto& val = highest->value;
-                auto valres = val->validate_remove(rs);
+                auto& v = highest->value.get<std::shared_ptr<blocks::Block>>();
+                auto valres = v->validate_remove(rs);
                 ELLE_TRACE("mutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
-                    throw Conflict(valres.reason(), val->clone());
+                    throw Conflict(valres.reason(), v->clone());
                   else
                     throw ValidationFailed(valres.reason());
               }
@@ -523,20 +735,16 @@ namespace infinit
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
-              elle::SafeFinally cleanup([&] {
-                  delete stored.block;
-                  delete stored.paxos;
-              });
               if (!stored.block)
                 ELLE_WARN("No paxos and no block, cannot validate removal");
               else
               {
-                auto previous = stored.block;
-                auto valres = previous->validate_remove(rs);
+                auto& previous = *stored.block;
+                auto valres = previous.validate_remove(rs);
                 ELLE_TRACE("Immutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
-                    throw Conflict(valres.reason(), previous->clone());
+                    throw Conflict(valres.reason(), previous.clone());
                   else
                     throw ValidationFailed(valres.reason());
               }
@@ -552,6 +760,44 @@ namespace infinit
           }
           on_remove(address);
           this->_addresses.erase(address);
+        }
+
+        static
+        std::shared_ptr<blocks::Block>
+        resolve(blocks::Block& b,
+                blocks::Block& newest,
+                StoreMode mode,
+                ConflictResolver* resolver)
+        {
+          if (newest == b)
+          {
+            ELLE_DEBUG("Paxos chose another block version, which "
+                       "happens to be the same as ours");
+            return nullptr;
+          }
+          ELLE_DEBUG_SCOPE("Paxos chose another block value");
+          if (resolver)
+          {
+            ELLE_TRACE_SCOPE("chosen block differs, run conflict resolution");
+            auto resolved = (*resolver)(b, newest, mode);
+            if (resolved)
+              return std::shared_ptr<blocks::Block>(resolved.release());
+            else
+            {
+              ELLE_TRACE("resolution failed");
+              // FIXME: useless clone, find a way to steal ownership
+              throw infinit::model::doughnut::Conflict(
+                "Paxos chose a different value", newest.clone());
+            }
+          }
+          else
+          {
+            ELLE_TRACE("chosen block differs, signal conflict");
+            // FIXME: useless clone, find a way to steal ownership
+            throw infinit::model::doughnut::Conflict(
+              "Paxos chose a different value",
+              newest.clone());
+          }
         }
 
         void
@@ -597,48 +843,48 @@ namespace infinit
                 elle::sprintf("No peer available for store %x", b->address()));
             // FIXME: client is persisted on conflict resolution, hence the
             // round number is kept and won't start at 0.
+            // Keep retrying with new quorums
             while (true)
             {
               try
               {
                 Paxos::PaxosClient client(
                   uid(this->doughnut().keys().K()), std::move(peers));
+                // Keep resolving conflicts and retrying
                 while (true)
                 {
-                  auto version =
-                    dynamic_cast<blocks::MutableBlock*>(b.get())->version();
-                  boost::optional<std::shared_ptr<blocks::Block>> chosen;
+                  auto mb = dynamic_cast<blocks::MutableBlock*>(b.get());
+                  auto version = mb->version();
+                  boost::optional<Paxos::PaxosServer::Accepted> chosen;
                   ELLE_DEBUG("run Paxos for version %s", version)
-                    chosen = client.choose(peers_id, version, b);
-                  if (chosen && *chosen.get() != *b)
+                    chosen = client.choose(version, b);
+                  if (chosen)
                   {
-                    if (resolver)
+                    if (chosen->value.is<PaxosServer::Quorum>())
                     {
-                      ELLE_TRACE_SCOPE(
-                        "chosen block differs, run conflict resolution");
-                      auto block = (*resolver)(*b, *chosen.get(), mode);
-                      if (block)
+                      auto const& q = chosen->value.get<PaxosServer::Quorum>();
+                      ELLE_DEBUG_SCOPE("Paxos elected another quorum: %s", q);
+                      // FIXME: don't systematically fetch
+                      if (auto value = client.get())
                       {
-                        ELLE_DEBUG_SCOPE("seal resolved block");
-                        block->seal();
-                        b.reset(block.release());
+                        auto mvalue = std::dynamic_pointer_cast<
+                          blocks::MutableBlock>(*value);
+                        if (mvalue->version() > mb->version() - 1)
+                          if (!(b = resolve(*b, *mvalue, mode, resolver.get())))
+                            break;
                       }
-                      else
-                      {
-                        ELLE_TRACE("resolution failed");
-                        // FIXME: useless clone, find a way to steal ownership
-                        throw infinit::model::doughnut::Conflict(
-                          "Paxos chose a different value",
-                          chosen.get()->clone());
-                      }
+                      ELLE_DEBUG("seal resolved block")
+                        b->seal(chosen->proposal.version + 1);
+                      throw Paxos::PaxosServer::WrongQuorum(q, peers_id);
                     }
                     else
                     {
-                      ELLE_TRACE("chosen block differs, signal conflict");
-                      // FIXME: useless clone, find a way to steal ownership
-                      throw infinit::model::doughnut::Conflict(
-                        "Paxos chose a different value",
-                        chosen.get()->clone());
+                      auto block =
+                        chosen->value.get<std::shared_ptr<blocks::Block>>();
+                      if (!(b = resolve(*b, *block, mode, resolver.get())))
+                        break;
+                      ELLE_DEBUG("seal resolved block")
+                        b->seal(chosen->proposal.version + 1);
                     }
                   }
                   else
@@ -647,13 +893,12 @@ namespace infinit
               }
               catch (Paxos::PaxosServer::WrongQuorum const& e)
               {
-                ELLE_TRACE("%s: %s instead of %s",
-                           e.what(), e.effective(), e.expected());
+                ELLE_TRACE("%s", e.what());
                 peers = lookup_nodes(
                   this->doughnut(), e.expected(), b->address());
                 peers_id.clear();
                 for (auto const& peer: peers)
-                  peers_id.insert(static_cast<Peer&>(*peer).member().id());
+                  peers_id.insert(static_cast<Peer&>(*peer).id());
                 continue;
               }
               break;
@@ -672,18 +917,193 @@ namespace infinit
           }
         }
 
+        class Hit
+        {
+        public:
+          Hit(Address node)
+            : _node(node)
+            , _quorum()
+            , _accepted()
+          {}
+
+          Hit(Address node,
+              std::pair<Paxos::PaxosServer::Quorum,
+                        std::unique_ptr<Paxos::PaxosClient::Accepted>> data)
+            : _node(node)
+            , _quorum(std::move(data.first))
+            , _accepted(data.second ?
+                        std::move(*data.second) :
+                        boost::optional<Paxos::PaxosClient::Accepted>())
+          {}
+
+          Hit()
+          {}
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("quorum", this->_quorum);
+            s.serialize("accepted", this->_accepted);
+          }
+
+          ELLE_ATTRIBUTE_R(model::Address, node);
+          ELLE_ATTRIBUTE_R(boost::optional<Paxos::PaxosServer::Quorum>,
+                           quorum);
+          ELLE_ATTRIBUTE_R(boost::optional<Paxos::PaxosClient::Accepted>,
+                           accepted);
+        };
+
         std::unique_ptr<blocks::Block>
         Paxos::_fetch(Address address, boost::optional<int> local_version)
         {
-          // FIXME: consult the quorum
-          auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
-          return fetch_from_members(peers, address, std::move(local_version));
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
+          {
+            auto peers =
+              this->_owners(address, this->_factor, overlay::OP_FETCH);
+            return fetch_from_members(peers, address, std::move(local_version));
+          }
+          auto owners = this->_owners(address,
+                                      this->_factor, overlay::OP_FETCH);
+          PaxosClient::Peers peers;
+          for (auto peer: owners)
+            peers.push_back(elle::make_unique<Peer>(
+                              peer, address, local_version));
+          if (peers.empty())
+          {
+            ELLE_TRACE("could not find any owner for %s", address);
+            throw MissingBlock(address);
+          }
+          else
+            ELLE_DEBUG("owners: %s", peers);
+          bool reverse_mutable = false;
+          while (true)
+          {
+            try
+            {
+              if (address.mutable_block()^reverse_mutable)
+              {
+                ELLE_DEBUG_SCOPE("run paxos");
+                Paxos::PaxosClient client(
+                  uid(this->doughnut().keys().K()), std::move(peers));
+                if (auto res = client.get())
+                  if (*res)
+                  {
+                    // FIXME: steal ownership
+                    ELLE_DEBUG("received new block");
+                    return res.get()->clone();
+                  }
+                  else
+                  {
+                    ELLE_DEBUG("local version is the most recent");
+                    return {}; // local_version matched
+                  }
+                else
+                {
+                  ELLE_DEBUG("no value1 can be retreived");
+                  throw MissingBlock(address);
+                }
+              }
+              else
+              {
+                std::unique_ptr<blocks::Block> res;
+                for (auto const& peer: peers)
+                {
+                  try
+                  {
+                    return static_cast<Peer*>(peer.get())->member()->
+                        fetch(address, local_version);
+                  }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_TRACE("error fetching from %s: %s", *peer, e.what());
+                  }
+                }
+                if (reverse_mutable)
+                  throw  MissingBlock(address);
+                else
+                {
+                  ELLE_TRACE("Retrying as a mutable block")
+                  reverse_mutable = true;
+                  continue;
+                }
+              }
+            }
+            catch (Paxos::PaxosServer::WrongQuorum const& e)
+            {
+              // FIXME: in some situation, even with a wrong quorum, we can have
+              // a valid reduce (e.g. if we miss one host but have a majority)
+              ELLE_DEBUG("%s", e.what());
+              peers = lookup_nodes(this->doughnut(), e.expected(), address);
+            }
+          }
+        }
+
+        void
+        Paxos::rebalance(Address address)
+        {
+          ELLE_TRACE_SCOPE("%s: rebalance %s", *this, address);
+          ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
+          PaxosServer::Quorum q;
+          int version = 0;
+          auto owners =
+            this->_owners(address, this->_factor, overlay::OP_FETCH);
+          PaxosClient::Peers peers;
+          for (auto peer: owners)
+            peers.push_back(elle::make_unique<Peer>(peer, address));
+          Paxos::PaxosClient client(
+            uid(this->doughnut().keys().K()), std::move(peers));
+          try
+          {
+            auto last = client.get_quorum();
+            q = last.second;
+            // FIXME: Couldn't we operate on MutableBlocks directly in Paxos ?
+            if (last.first)
+              version = std::dynamic_pointer_cast<blocks::MutableBlock>(
+                *last.first)->version();
+          }
+          catch (Paxos::PaxosServer::WrongQuorum const& e)
+          {
+            q = e.expected();
+          }
+          // FIXME: handle immutable block errors
+          ELLE_DEBUG("quorum: %s", q);
+          if (signed(q.size()) == this->_factor)
+          {
+            ELLE_TRACE("block is already well balanced (%s replicas)",
+                       this->_factor);
+            return;
+          }
+          PaxosServer::Quorum new_q;
+          for (auto const& owner: this->_owners(
+                 address, this->_factor, overlay::OP_INSERT))
+            new_q.emplace(owner->id());
+          // Make sure we didn't lose a previous owner because of the overlay
+          // failing to look it up.
+          for (auto const& owner: q)
+            new_q.emplace(owner);
+          if (new_q == q)
+          {
+            ELLE_TRACE("unable to find any new owner");
+            return;
+          }
+          ELLE_DEBUG("rebalance block to: %s", new_q)
+            try
+            {
+              // FIXME: version is the last *value* version, there could have
+              // been a quorum since then in which case this will fail.
+              client.choose(version + 1, new_q);
+              ELLE_TRACE("successfully rebalanced to %s nodes", new_q.size());
+            }
+            catch (elle::Error const&)
+            {
+              ELLE_WARN("rebalancing failed: %s", elle::exception_string());
+            }
         }
 
         void
         Paxos::_remove(Address address, blocks::RemoveSignature rs)
         {
-          this->remove_many(address, std::move(rs), _factor);
+          this->remove_many(address, std::move(rs), this->_factor);
         }
 
         Paxos::LocalPeer::Decision::Decision(PaxosServer paxos)
@@ -703,6 +1123,47 @@ namespace infinit
         {
           s.serialize("chosen", this->chosen);
           s.serialize("paxos", this->paxos);
+        }
+
+        /*-----.
+        | Stat |
+        `-----*/
+
+        typedef std::unordered_map<std::string, boost::optional<Hit>> Hits;
+
+        class PaxosStat
+          : public Consensus::Stat
+        {
+        public:
+          PaxosStat(Hits hits)
+            : _hits(std::move(hits))
+          {}
+
+          virtual
+          void
+          serialize(elle::serialization::Serializer& s) override
+          {
+            s.serialize("hits", this->_hits);
+          }
+
+          ELLE_ATTRIBUTE_R(Hits, hits);
+        };
+
+        std::unique_ptr<Consensus::Stat>
+        Paxos::stat(Address const& address)
+        {
+          ELLE_TRACE_SCOPE("%s: stat %s", *this, address);
+          // // ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
+          // auto hits = _Details::_multifetch_paxos(*this, address);
+          // auto peers = this->_owners(address, this->_factor, overlay::OP_FETCH);
+          // Hits stat_hits;
+          // for (auto& hit: hits)
+          // {
+          //   auto node = elle::sprintf("%s", hit.node());
+          //   stat_hits.emplace(node, std::move(hit));
+          // }
+          // return elle::make_unique<PaxosStat>(std::move(stat_hits));
+          return Super::stat(address);
         }
 
         /*--------------.
@@ -737,5 +1198,14 @@ namespace infinit
         Register<Paxos::Configuration> _register_Configuration("paxos");
       }
     }
+  }
+}
+
+namespace athena
+{
+  namespace paxos
+  {
+    static const elle::serialization::Hierarchy<elle::Exception>::
+    Register<TooFewPeers> _register_serialization;
   }
 }

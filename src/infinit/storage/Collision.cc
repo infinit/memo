@@ -10,17 +10,21 @@ namespace infinit
       : Super(elle::sprintf("collision on key: %s", key))
       , _key(key)
     {}
+
     Collision::Collision(elle::serialization::SerializerIn& input)
-    : Super(input)
+      : Super(input)
     {
       input.serialize("key", _key);
     }
+
     void
-    Collision::serialize(elle::serialization::Serializer& s)
+    Collision::serialize(elle::serialization::Serializer& s,
+                         elle::Version const& v)
     {
-      Super::serialize(s);
+      Super::serialize(s, v);
       s.serialize("key", _key);
     }
+
     static const elle::serialization::Hierarchy<elle::Exception>::
     Register<Collision> _register_serialization;
   }

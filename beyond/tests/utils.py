@@ -7,6 +7,7 @@ import bottle
 import requests
 import threading
 
+import urllib.parse
 from functools import partial
 from itertools import chain
 from datetime import timedelta
@@ -40,7 +41,7 @@ bottle.Bottle.host = host
 
 class Beyond:
 
-  def __init__(self, beyond_args = {}):
+  def __init__(self, **beyond_args):
     super().__init__()
     self.__app = None
     self.__advance = timedelta()
@@ -74,6 +75,8 @@ class Beyond:
       'dropbox_app_secret': 'db_secret',
       'google_app_key': 'google_key',
       'google_app_secret': 'google_secret',
+      'gcs_app_key': 'google_key',
+      'gcs_app_secret': 'google_secret',
       'sendwithus_api_key': None,
     }
     from copy import deepcopy
@@ -89,6 +92,8 @@ class Beyond:
     setattr(self.__beyond, '_Beyond__now', self.now)
     self.__app = infinit.beyond.bottle.Bottle(self.__beyond)
     self.__app.__enter__()
+    self.__beyond_user = User(name = self.__beyond.delegate_user)
+    self.__beyond_user.put(self, opt_out = False)
     return self
 
   @property
@@ -115,7 +120,7 @@ class Beyond:
         kwargs['headers'] = {'Content-Type': 'application/json'}
       kwargs.setdefault('headers', {}).update(extra_headers)
       if auth is not None:
-        der = base64.b64decode(auth.encode('utf-8'))
+        der = base64.b64decode(auth['rsa'].encode('utf-8'))
         k = RSA.importKey(der)
         data = kwargs['data']
         if not isinstance(data, bytes):
@@ -149,6 +154,28 @@ class Beyond:
   def host(self):
     return 'http://127.0.0.1:%s' % self.__app.port
 
+class Emailer:
+
+  def __init__(self):
+    self.emails = {}
+
+  def send_one(self, template, recipient_email, variables = {}, *args, **kwargs):
+    self.__store(template, recipient_email, variables)
+
+  def __store(self, template, recipient_email, variables):
+    self.get_specifics(recipient_email, template).append(variables)
+
+  def get(self, email):
+    return self.emails.setdefault(email, {})
+
+  def get_specifics(self, email, template):
+    return self.get(email).setdefault(template, [])
+
+def url_parameters(url):
+  params = urllib.parse.parse_qs(
+    urllib.parse.urlparse(url).query)
+  return {x: params[x][0] for x in params.keys()}
+
 def throws(function, expected = None, json = True):
   try:
     function()
@@ -167,11 +194,20 @@ def assertEq(a, b):
   if a != b:
     raise AssertionError('%r != %r' % (a, b))
 
+def assertIn(o, container):
+  if o not in container:
+    raise AssertionError('%r not in %r' % (o, container))
+
 def random_sequence(count = 10):
   from random import SystemRandom
   import string
   return ''.join(SystemRandom().choice(
     string.ascii_lowercase + string.digits) for _ in range(count))
+
+def random_email(domain = None):
+  if domain is None:
+    domain = 'infinit.io'
+  return random_sequence(10) + '@' + domain
 
 def password_hash(password):
   salt = 'z^$P;:`a~F'
@@ -188,17 +224,17 @@ class User(dict):
     self['email'] = self['name'] + '@infinit.io' if email is None else email
     self.__password = random_sequence(50) if password is None else password
     self.__password_hash = password_hash(self.__password)
+    import os
+    import subprocess
+    output = subprocess.check_output(
+      [infinit.beyond.binary_path + 'infinit-user', '--create',
+       '--name', self['name'],
+       '--output', '-'])
+    import json
+    user = json.loads(''.join(output.decode('ascii').split('\n')[1:]))
     # Keys.
-    from Crypto.PublicKey import RSA
-    key = RSA.generate(2048, e=65537)
-    def cleanup(key):
-      import re
-      r = re.compile('-+(BEGIN)?(END)? (RSA )?(PUBLIC)?(PRIVATE)? KEY-+')
-      key = key.decode('ascii').replace('\n', '')
-      res = r.sub('', key)
-      return res
-    self['public_key'] = {'rsa': cleanup(key.publickey().exportKey("PEM"))}
-    self.__private_key = cleanup(key.exportKey("PEM"))
+    self['public_key'] = user['public_key']
+    self.__private_key = user['private_key']
 
   @property
   def private_key(self):
@@ -219,33 +255,45 @@ class User(dict):
 class Network(dict):
   kelips = {
     'type': 'kelips',
-    'config': {
-      'query_get_retries': 30,
-      'file_timeout_ms': 120000,
-      'k': 1,
-      'ping_interval_ms': 1000,
-      'query_put_insert_ttl': 3,
-      'query_get_ttl': 10,
-      'gossip': {
-        'other_target': 3,
-        'interval_ms': 2000,
-        'group_target': 3,
-        'bootstrap_group_target': 12,
-        'old_threshold_ms': 40000,
-        'contacts_other': 3,
-        'files': 6,
-        'bootstrap_other_target': 12,
-        'new_threshold': 5,
-        'contacts_group': 3
-      },
-    }
+    'query_get_retries': 30,
+    'accept_plain': False,
+    'bootstrap_nodes': [ ],
+    'contact_timeout_ms': 120000,
+    'encrypt': True,
+    'file_timeout_ms': 120000,
+    'k': 1,
+    'max_other_contacts': 6,
+    'node_id': 'SVyRYERs4s675ceW/Jt/hlBSfvWrjwZwwp+lhXJVq7Y=',
+    'ping_interval_ms': 1000,
+    'ping_timeout_ms': 1000,
+    'query_get_retries': 1000,
+    'query_get_ttl': 120000,
+    'query_put_insert_ttl': 3,
+    'query_put_retries': 12,
+    'query_put_ttl': 10,
+    'query_timeout_ms': 1000,
+    'rpc_protocol': 'all',
+    'wait': 0,
+    'gossip': {
+      'other_target': 3,
+      'interval_ms': 2000,
+      'group_target': 3,
+      'bootstrap_group_target': 12,
+      'old_threshold_ms': 40000,
+      'contacts_other': 3,
+      'files': 6,
+      'bootstrap_other_target': 12,
+      'new_threshold': 5,
+      'contacts_group': 3
+    },
   }
   paxos = {
     'type': 'paxos',
     'replication-factor': 3,
   }
 
-  def __init__(self, name, owner):
+  def __init__(self, owner, name = None):
+    name = name or 'network_' + random_sequence()
     self.__owner = owner
     self['overlay'] = Network.kelips
     self['consensus'] = Network.paxos
@@ -276,6 +324,8 @@ class Passport(dict):
     self.__invitee = invitee
     self['user'] = invitee['public_key']
     self['signature'] = signature
+    self['allow_write'] = True
+    self['allow_storage'] = True
 
   @property
   def network(self):
@@ -312,7 +362,8 @@ class Statistics(dict):
 
 class Volume(dict):
 
-  def __init__(self, name, network, owner = None):
+  def __init__(self, network, owner = None, name = None):
+    name = name or 'volume_' + random_sequence()
     self.__short_name = name
     self.__network = network
     self.__owner = owner or self.network.owner
@@ -341,7 +392,8 @@ class Drive(dict):
       self['status'] = status
       self['create_home'] = create_home
 
-  def __init__(self, name, volume, description = "Lorem ipsum", members = {}):
+  def __init__(self, volume, description = "Lorem ipsum", members = {}, name = None):
+    name = name or 'drive_' + random_sequence()
     self.__short_name = name
     self.__volume = volume
     self['name'] = volume.network.owner['name'] + '/' + self.__short_name
@@ -377,16 +429,12 @@ class Drive(dict):
 
   def invite_many(self, hub, invitees, **kwargs):
     json = {}
-    print('Invitees:')
-    print(invitees)
     for invitee in invitees:
       json[invitee['name']] = {
         'status': 'pending',
         'create_home': False,
         'permissions': 'rw'
       }
-    print("Json")
-    print(json)
     owner = self.volume.network.owner
     return hub.put('drives/%s/invitations' % self['name'],
                    json = json,
@@ -406,7 +454,7 @@ class Drive(dict):
     for invitee in invitees:
       self.accept(hub, invitee, **kwargs)
 
-mefyl_priv = 'MIIEpAIBAAKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQABAoIBAADxmSB5tVRWrGGL6q4kOIWxTGb5hU8llApZgKEhdLFjSsvFZIzFYYjrab9iLRroQgw/tMENLdBy7AWtcZWZ6J8SAP/QJ7KQJ9XdR34hG5xViIRG1VS19W3Ve+RROcynZwkyYMkG4Gp+/z5MhsVk1IdAbO5b1IhrQbc8CLB/dpdqwcicWqiR6t3mc5HkQ4mDOBSjrU11voiv8dIc0G6aOWEpqzoTYw7ewxoXugezmJnkOsObRWno2OZO83IVFXEmAjMe73+jhPKPbMD7WcT7ktKynPfFYh2kTrkhDDaTTs4I2UBCP6UlUaAt3IPFIZEJXCGplRTOldL3W+VEuTcXpZECgYEA58zLVUhgqFkpvxI7unu6ijjvLipgsBefbDseKfuHTHx9T7Unb2ESHW551e5lF5yuRmCjE2vJXFCQidyq0mwbhAaQK4PWuea5+RrPmYDpOQP3kQQAfsOrwauQR6sX2HxxIWwYcet4bO2dDEOOgN8d7fS6DpWw8yYSqiiUrXMAdPkCgYEA13rzCpXGzFU6H2pBmfamXFR56q0J+bmNanXMZ044UPyNdVYhJ8hFqs0bRjjR9QiHxg9/94Cfer7VKQePlxVh3JTduZQUcANXXowyFi6wLzmVABaM55jEDE0WkZcOIYMZIJWka92AsHP7ODp8QR752zC3Qwn48RlN3clzC7dfPScCgYEA5r0oZqNefBYNhUKMLCy/2pmkFStgBcnuCxmqBBZ6bvu47aAhOjDBjISNSRQ+k0uG+010538y+O7FgkYj0MSGe1zhJD/ffjwbQcmbf20gO34kcLkwGP+EOIwkWgMJAJmXL7Lffn7r6Fp7K1sQPl5a96TVlHETrGZoy/MLVMEWYlkCgYAqYZpP6KmTIugtqZ6Bg8uwuUTJbYNaxK4V1FmBsBbPhvzjqS8YPgHF2FWW+DIDecwKnp3Stk+nusT+LuiFFMWMtxLtHzzt0xpqFDT9u+0XPMIbpFPOcXON39Oiiw1SdhCJIiWWuZhIHGe65XXu8QK/o9NHsjxuX0W7a5XfJg/rXQKBgQDEo+kYUAW6JM2tod+4OxF8+s7q1E7fzZ7jgACoNzJ0RJVW9hGAlUhuXRkHIjnnhd2mDqYry7KNA5kvIS+oSH+wKjIpB6ZiBOhvgjww16LE6+aDoSLqmgwfHh2T2LpNfsc2UupCDp5W7jI4LPGbStiAeMLTtXU/XQ35Ov1BMWXN8g=='
+mefyl_priv = {'rsa': 'MIIEpAIBAAKCAQEAwxxSboENxD303yFLJq74qXHxry5CwoihdLqILuhwIEpx6yfUhgA/O7fbfroiyv5ZPfv268G1ZyfzkB+07qGxpg6XrPHgRvKX1ugPrH9i4W21jMzOXrg9NTq7MioWg8wQoqf11B483mpjkfwEx/ShlI5HsxaGQg0HqjICC23m3l7HpyX2A8R6L9vE68zRcJEGvatFXlGfqsxXJBqnbc/AgsWiHLz9H4HA2OuehJdlEHs4uNjDMhJGoXJr2ihC7hFxq7CdrvLnwf1oIdd94sDSQFL1jYLPXZYOHzrpGv+FLUqwuxMy5gQ8eJmirjXUs7yqegGqxVmk5ROzQN1QCFgm7wIDAQABAoIBAADxmSB5tVRWrGGL6q4kOIWxTGb5hU8llApZgKEhdLFjSsvFZIzFYYjrab9iLRroQgw/tMENLdBy7AWtcZWZ6J8SAP/QJ7KQJ9XdR34hG5xViIRG1VS19W3Ve+RROcynZwkyYMkG4Gp+/z5MhsVk1IdAbO5b1IhrQbc8CLB/dpdqwcicWqiR6t3mc5HkQ4mDOBSjrU11voiv8dIc0G6aOWEpqzoTYw7ewxoXugezmJnkOsObRWno2OZO83IVFXEmAjMe73+jhPKPbMD7WcT7ktKynPfFYh2kTrkhDDaTTs4I2UBCP6UlUaAt3IPFIZEJXCGplRTOldL3W+VEuTcXpZECgYEA58zLVUhgqFkpvxI7unu6ijjvLipgsBefbDseKfuHTHx9T7Unb2ESHW551e5lF5yuRmCjE2vJXFCQidyq0mwbhAaQK4PWuea5+RrPmYDpOQP3kQQAfsOrwauQR6sX2HxxIWwYcet4bO2dDEOOgN8d7fS6DpWw8yYSqiiUrXMAdPkCgYEA13rzCpXGzFU6H2pBmfamXFR56q0J+bmNanXMZ044UPyNdVYhJ8hFqs0bRjjR9QiHxg9/94Cfer7VKQePlxVh3JTduZQUcANXXowyFi6wLzmVABaM55jEDE0WkZcOIYMZIJWka92AsHP7ODp8QR752zC3Qwn48RlN3clzC7dfPScCgYEA5r0oZqNefBYNhUKMLCy/2pmkFStgBcnuCxmqBBZ6bvu47aAhOjDBjISNSRQ+k0uG+010538y+O7FgkYj0MSGe1zhJD/ffjwbQcmbf20gO34kcLkwGP+EOIwkWgMJAJmXL7Lffn7r6Fp7K1sQPl5a96TVlHETrGZoy/MLVMEWYlkCgYAqYZpP6KmTIugtqZ6Bg8uwuUTJbYNaxK4V1FmBsBbPhvzjqS8YPgHF2FWW+DIDecwKnp3Stk+nusT+LuiFFMWMtxLtHzzt0xpqFDT9u+0XPMIbpFPOcXON39Oiiw1SdhCJIiWWuZhIHGe65XXu8QK/o9NHsjxuX0W7a5XfJg/rXQKBgQDEo+kYUAW6JM2tod+4OxF8+s7q1E7fzZ7jgACoNzJ0RJVW9hGAlUhuXRkHIjnnhd2mDqYry7KNA5kvIS+oSH+wKjIpB6ZiBOhvgjww16LE6+aDoSLqmgwfHh2T2LpNfsc2UupCDp5W7jI4LPGbStiAeMLTtXU/XQ35Ov1BMWXN8g=='}
 
 mefyl = {
   'name': 'mefyl',

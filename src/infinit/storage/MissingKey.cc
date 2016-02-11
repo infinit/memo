@@ -10,17 +10,21 @@ namespace infinit
       : Super(elle::sprintf("missing key: %x", key))
       , _key(key)
     {}
+
     MissingKey::MissingKey(elle::serialization::SerializerIn& input)
-    : Super(input)
+      : Super(input)
     {
       input.serialize("key", _key);
     }
+
     void
-    MissingKey::serialize(elle::serialization::Serializer& s)
+    MissingKey::serialize(elle::serialization::Serializer& s,
+                          elle::Version const& v)
     {
-      Super::serialize(s);
+      Super::serialize(s, v);
       s.serialize("key", _key);
     }
+
     static const elle::serialization::Hierarchy<elle::Exception>::
     Register<MissingKey> _register_serialization;
   }

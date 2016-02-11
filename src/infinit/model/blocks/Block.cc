@@ -66,20 +66,20 @@ namespace infinit
       `-----------*/
 
       void
-      Block::seal()
+      Block::seal(boost::optional<int> version)
       {
         ELLE_DEBUG_SCOPE("%s: seal", *this);
-        this->_seal();
+        this->_seal(version);
       }
 
       void
-      Block::_seal()
+      Block::_seal(boost::optional<int> version)
       {}
 
       ValidationResult
       Block::validate() const
       {
-        ELLE_DEBUG_SCOPE("%s: validate", *this);
+        ELLE_TRACE_SCOPE("%s: validate", *this);
         return this->_validate();
       }
 
@@ -92,7 +92,8 @@ namespace infinit
       ValidationResult
       Block::validate(Block const& new_block) const
       {
-        ELLE_DEBUG_SCOPE("%s: validate %s", *this, new_block);
+        ELLE_TRACE_SCOPE("%s: validate against previous block %s",
+                         *this, new_block);
         return this->_validate(new_block);
       }
 
@@ -100,7 +101,9 @@ namespace infinit
       Block::_validate(Block const& new_block) const
       {
         if (this->address() != new_block.address())
-          return ValidationResult::failure("Addresses do not match");
+          return ValidationResult::failure(
+            elle::sprintf("Addresses do not match (old %s new %s)",
+              this->address(), new_block.address()));
         return ValidationResult::success();
       }
 

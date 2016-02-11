@@ -69,7 +69,8 @@ namespace infinit
         infinit::filesystem::umbrella([&] {
             try
             {
-              auto block = this->_dht.fetch(UB::hash_address(_name));
+              auto block =
+                this->_dht.fetch(UB::hash_address(_name, this->_dht));
               if (block)
                 throw elle::Error(elle::sprintf("Group %s already exists", _name));
             }
@@ -90,6 +91,22 @@ namespace infinit
         });
       }
 
+      void
+      Group::destroy()
+      {
+        infinit::filesystem::umbrella([&] {
+          if (_name.empty())
+            throw elle::Error("Group destruction needs group name as input");
+          public_control_key();
+          block();
+          auto addr = UB::hash_address(this->_name, this->_dht);
+          auto raddr = UB::hash_address(*this->_public_control_key, this->_dht);
+          this->_dht.remove(addr);
+          this->_dht.remove(raddr);
+          this->_dht.remove(this->_block->address(), this->_block->sign_remove());
+        });
+      }
+
       cryptography::rsa::PublicKey
       Group::public_control_key() const
       {
@@ -97,7 +114,7 @@ namespace infinit
           return *_public_control_key;
         ELLE_TRACE_SCOPE("%s: fetch", *this);
         auto ub = elle::cast<UB>::runtime(
-          this->_dht.fetch(UB::hash_address(_name)));
+          this->_dht.fetch(UB::hash_address(_name, this->_dht)));
         elle::unconst(this)->_public_control_key.emplace(ub->key());
         elle::unconst(this)->_stack_push();
         ELLE_DEBUG("public_control_key for %s is %s",
@@ -112,7 +129,7 @@ namespace infinit
           return *this->_block;
         ELLE_TRACE_SCOPE("%s: fetch block", *this);
         auto key = this->public_control_key();
-        auto addr = ACB::hash_address(key, group_block_key);
+        auto addr = ACB::hash_address(this->_dht, key, group_block_key);
         elle::unconst(this)->_block = elle::cast<GB>::runtime(
           this->_dht.fetch(addr));
         return *this->_block;

@@ -43,6 +43,8 @@ class SendWithUs(Base):
   def __load_templates(self):
     templates = json.loads(self.__swu.templates().content.decode())
     self.__templates = dict((t['id'], t) for t in templates)
+    for _, template in self.__templates.items():
+      template['versions'] = dict((v['id'], v) for v in template['versions'])
 
   def __execute(self, batch):
     r = batch.execute()
@@ -54,12 +56,16 @@ class SendWithUs(Base):
       raise Exception('%s: request failed' % self)
     return r
 
-  def __template(self, name):
-    if name not in self.__templates:
+  def __template(self, template, version = None):
+    if template not in self.__templates:
       self.__load_templates()
-    if name not in self.__templates:
-      raise Exception('no such template: %s' % name)
-    return self.__templates[name]['id']
+    if template not in self.__templates:
+      raise Exception('no such template \'%s\'' % template)
+    template = self.__templates[template]
+    if version is not None and version not in template['versions']:
+      raise Exception(
+        'no such version \'%s\' of template \'%s\'' % (version, template['id']))
+    return template['id'], template['versions'].get(version, {}).get('name', None)
 
   def send_one(self,
                template,
@@ -69,14 +75,19 @@ class SendWithUs(Base):
                sender_name = None,
                reply_to = None,
                variables = None,
+               files = None,
+               version = None,
                ):
-    return self.__send_one(self.__template(template),
+    template, version = self.__template(template, version)
+    return self.__send_one(template,
                            recipient_email,
                            recipient_name,
                            sender_email,
                            sender_name,
                            reply_to,
                            variables,
+                           files,
+                           version,
                            self.__swu,
                          )
 
@@ -88,6 +99,8 @@ class SendWithUs(Base):
                  sender_name,
                  reply_to,
                  variables,
+                 files,
+                 version,
                  swu,
                ):
     sender = None
@@ -109,10 +122,12 @@ class SendWithUs(Base):
       recipient = recipient,
       sender = sender,
       email_data = variables,
+      files = files,
+      email_version_name = version,
     )
 
-  def send_template(self, template, recipients):
-    template = self.__template(template)
+  def send_template(self, template, recipients, version = None):
+    template, version = self.__template(template, version)
     swu = self.__swu.start_batch()
     for recipient in recipients:
       email = recipient['email']
@@ -131,7 +146,9 @@ class SendWithUs(Base):
         sender_email = sender_email,
         reply_to = reply_to,
         variables = recipient['vars'],
-        swu = swu)
+        version = version,
+        swu = swu
+      )
       if swu.command_length() >= 100:
         self.__execute(swu)
     if swu.command_length() > 0:

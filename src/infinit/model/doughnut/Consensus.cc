@@ -2,6 +2,7 @@
 
 #include <elle/os/environ.hh>
 
+#include <infinit/storage/MissingKey.hh>
 #include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
@@ -69,11 +70,19 @@ namespace infinit
             catch (Conflict const& c)
             {
               if (!resolver)
+              {
+                ELLE_TRACE("fatal conflict: %s", c);
                 throw;
+              }
+              ELLE_DEBUG_SCOPE("resolve conflict: %s", c);
               nb = (*resolver)(*block, *c.current(), mode);
               if (!nb)
+              {
+                ELLE_TRACE("conflict resolution failed: %s", c);
                 throw;
-              nb->seal();
+              }
+              ELLE_DEBUG("seal resolved block: %s", c)
+                nb->seal();
             }
           }
         }
@@ -81,9 +90,30 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
-                           *this, address, local_version);
-          return this->_fetch(address, std::move(local_version));
+          ELLE_TRACE_SCOPE("%s: fetch %s{%x} (local version: %s)",
+                           *this, address,
+                           (unsigned int)address.overwritten_value(),
+                           local_version);
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
+            return this->_fetch(address.unflagged(), local_version);
+          try
+          {
+            return this->_fetch(address, local_version);
+          }
+          catch (MissingBlock const&)
+          {
+            auto uaddr = address.unflagged();
+            if (uaddr != address)
+            {
+              ELLE_TRACE("%s: retrying with unflagged address %s", *this, uaddr);
+              return this->_fetch(uaddr, local_version);
+            }
+            else
+            {
+              ELLE_TRACE("%s: no second chance", *this);
+              throw;
+            }
+          }
         }
 
         std::unique_ptr<blocks::Block>
@@ -117,6 +147,7 @@ namespace infinit
                            int factor,
                            overlay::Operation op) const
         {
+          ELLE_DEBUG_SCOPE("search %s nodes for %s", factor, address);
           return this->doughnut().overlay()->lookup(address, factor, op);
         }
 
@@ -202,6 +233,7 @@ namespace infinit
               ELLE_TRACE_SCOPE("fetch from %s", *peer);
               return peer->fetch(address, local_version);
             }
+            // FIXME: get rid of that
             catch (elle::Error const& e)
             {
               ELLE_TRACE("attempt fetching %s from %s failed: %s",
@@ -212,6 +244,20 @@ namespace infinit
           // so we have to return MissingBlock here.
           ELLE_TRACE("all %s peers failed fetching %x", attempt, address);
           throw MissingBlock(address);
+        }
+
+        /*-----.
+        | Stat |
+        `-----*/
+
+        void
+        Consensus::Stat::serialize(elle::serialization::Serializer& s)
+        {}
+
+        std::unique_ptr<Consensus::Stat>
+        Consensus::stat(Address const& address)
+        {
+          return elle::make_unique<Stat>();
         }
 
         /*--------.

@@ -1,6 +1,7 @@
 import base64
 import cryptography
 import requests
+import subprocess
 
 import infinit.beyond.version
 
@@ -9,20 +10,46 @@ from infinit.beyond import validation, emailer
 from copy import deepcopy
 from itertools import chain
 
+## -------- ##
+## Binaries ##
+## -------- ##
+def find_binaries():
+  import os
+  paths = []
+  if os.environ.get('INFINIT_BINARIES'):
+    paths.append(os.environ.get('INFINIT_BINARIES'))
+  paths += os.environ.get('PATH', '').split(':') + ['/opt/infinit/bin/']
+  for path in paths:
+    path = path + '/' if not path.endswith('/') else path
+    try:
+      if subprocess.check_call([path + 'infinit-user', '--version']) == 0:
+        return path
+    except:
+      pass
+
+binary_path = find_binaries()
+assert binary_path is not None
+
 # Email templates.
 templates = {
   'Drive/Joined': {
-    'noop': 'Drive/Joined',
-    'swu': 'tem_RFSDrp7nzCbsBRSUts7MsU',
+    'swu': ('tem_RFSDrp7nzCbsBRSUts7MsU', )
   },
   'Drive/Invitation': {
-    'noop': 'Drive/Invitation',
-    'swu': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
+    'swu': ('tem_UwwStKnWCWNU5VP4HBS7Xj', )
+  },
+  'Drive/Plain Invitation': {
+    'swu': ('tem_j8r5aDLJ6v3CTveMahtauX', )
+  },
+  'Internal/Crash Report': {
+    'swu': ('tem_fu5GEE6jxByj2SB4zM6CrH', )
   },
   'User/Welcome': {
-    'noop': 'User/Welcome',
-    'swu': 'tem_Jsd948JkLqhBQs3fgGZSsS',
-  }
+    'swu': ('tem_Jsd948JkLqhBQs3fgGZSsS', 'ver_W9nDEtV4KzxWyrLtZDcAWE')
+  },
+  'User/Confirmation Email': {
+    'swu': ('tem_b6ZtsWVHKzv4PUBDU7WTZj', )
+  },
 }
 
 class Beyond:
@@ -34,8 +61,12 @@ class Beyond:
       dropbox_app_secret,
       google_app_key,
       google_app_secret,
+      gcs_app_key,
+      gcs_app_secret,
       sendwithus_api_key = None,
       validate_email_address = True,
+      limits = {},
+      delegate_user = 'hub',
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
@@ -43,11 +74,19 @@ class Beyond:
     self.__dropbox_app_secret = dropbox_app_secret
     self.__google_app_key    = google_app_key
     self.__google_app_secret = google_app_secret
+    self.__gcs_app_key    = gcs_app_key
+    self.__gcs_app_secret = gcs_app_secret
+    self.__limits = limits
     self.__validate_email_address = validate_email_address
     if sendwithus_api_key is not None:
       self.__emailer = emailer.SendWithUs(sendwithus_api_key)
     else:
       self.__emailer = emailer.NoOp()
+    self.__delegate_user = delegate_user
+
+  @property
+  def limits(self):
+    return self.__limits
 
   @property
   def now(self):
@@ -67,9 +106,18 @@ class Beyond:
 
   def template(self, name):
     if isinstance(self.__emailer, emailer.SendWithUs):
-      return templates[name]['swu']
+      template = templates[name]['swu']
+      import sys
+      print(template, file = sys.stderr)
+      return {
+        'template': template[0],
+        'version':  template[1] if len(template) > 1 else None,
+      }
     else:
-      return templates[name]['noop']
+      return {
+        'template': name,
+        'version': None,
+      }
 
   @property
   def dropbox_app_secret(self):
@@ -84,8 +132,27 @@ class Beyond:
     return self.__google_app_secret
 
   @property
+  def gcs_app_key(self):
+    return self.__gcs_app_key
+
+  @property
+  def gcs_app_secret(self):
+    return self.__gcs_app_secret
+
+  @property
   def validate_email_address(self):
     return self.__validate_email_address
+
+  def is_email(self, email):
+    try:
+      validation.Email('user', 'email')(email)
+      return True
+    except exceptions.InvalidFormat as e:
+      return False
+
+  @property
+  def delegate_user(self):
+    return self.__delegate_user
 
   ## ------- ##
   ## Pairing ##
@@ -136,6 +203,12 @@ class Beyond:
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)
 
+  def users_by_email(self, email):
+    users = self.__datastore.users_by_email(email = email)
+    if len(users) == 0:
+      raise User.NotFound()
+    return [User.from_json(self, u) for u in users]
+
   def user_delete(self, name):
     return self.__datastore.user_delete(name = name)
 
@@ -148,8 +221,8 @@ class Beyond:
     networks = self.__datastore.user_networks_fetch(user = user)
     return self.__datastore.networks_volumes_fetch(networks = networks)
 
-  def user_drives_get(self, user):
-    return self.__datastore.user_drives_fetch(user = user)
+  def user_drives_get(self, name):
+    return self.__datastore.user_drives_fetch(name = name)
 
   ## ------ ##
   ## Volume ##
@@ -175,17 +248,103 @@ class Beyond:
     return self.__datastore.drive_delete(
         owner = owner, name = name)
 
+  def process_invitations(self, user, email, drives):
+    errors = []
+    try:
+      try:
+        beyond = self.user_get(self.delegate_user)
+      except User.NotFound:
+        raise Exception('Unknown user \'%s\'' % self.delegate_user)
+      import tempfile
+      with tempfile.TemporaryDirectory() as directory:
+        env = {
+          'INFINIT_DATA_HOME': str(directory),
+          'INFINIT_USER': self.delegate_user,
+        }
+        import os
+        import json
+        def import_data(type, data):
+          args = [binary_path + 'infinit-%s' % type, '--import', '-s']
+          try:
+            process = subprocess.Popen(
+              args,
+              env = env,
+              stdin = subprocess.PIPE)
+            input = (json.dumps(data) + '\n').encode('utf-8')
+            out, err = process.communicate(input = input, timeout = 1)
+            process.wait(1)
+          except Exception:
+            raise Exception('impossible to import %s \'%s\'',
+                            type, data['name'])
+        import_data('user', user.json())
+        import_data('user', beyond.json(private = True))
+        for drive in drives:
+          try:
+            try:
+              network = self.network_get(*drive.network.split('/'))
+            except Network.NotFound:
+              raise Exception('Unkown netork \'%s\'' % drive.network)
+            import_data('network', network.json())
+            subprocess.check_call(
+              [
+                binary_path + 'infinit-passport', '--create',
+                '--user', user.name,
+                '--network', network.name,
+                '--as', self.delegate_user,
+              ],
+              env = env)
+            output = subprocess.check_output(
+              [
+                binary_path + 'infinit-passport', '--export',
+                '--user', user.name,
+                '--network', network.name
+              ],
+              env = env)
+            import json
+            passport = json.loads(output.decode('ascii'))
+            network.passports[user.name] = passport
+            network.save()
+            drive.users[user.name] = drive.users[email]
+            drive.users[email] = None
+            drive.save()
+          except BaseException as e:
+            errors.append(e.args[0])
+    except BaseException as e:
+      errors.append(e.args[0])
+    return errors
+
+  ## ------------ ##
+  ## Crash Report ##
+  ## ------------ ##
+
+  def crash_report_send(self, data):
+    variables = None
+    import tempfile
+    with tempfile.TemporaryDirectory() as temp_dir:
+      # Need to use .txt extension as otherwise SWU destroy the file.
+      with open('%s/client.txt' % temp_dir, 'wb') as crash_dump:
+        crash_dump.write(data.getvalue())
+      with open('%s/client.txt' % temp_dir, 'rb') as crash_dump:
+        self.__emailer.send_one(
+          recipient_email = 'developers@infinit.io',
+          recipient_name = 'Developers',
+          variables = variables,
+          files = [crash_dump],
+          **self.template('Internal/Crash Report')
+        )
+
 class User:
   fields = {
     'mandatory': [
       ('name', validation.Name('user', 'name')),
-      ('email', validation.Email('user')),
+      ('email', validation.Email('user', 'email')),
       ('public_key', None),
     ],
     'optional': [
       ('dropbox_accounts', None),
       ('fullname', None),
       ('google_accounts', None),
+      ('gcs_accounts', None),
       ('password_hash', None),
       ('private_key', None),
     ]
@@ -206,6 +365,8 @@ class User:
                private_key = None,
                dropbox_accounts = None,
                google_accounts = None,
+               gcs_accounts = None,
+               emails = {}
   ):
     self.__beyond = beyond
     self.__id = id
@@ -219,6 +380,13 @@ class User:
     self.__dropbox_accounts_original = deepcopy(self.dropbox_accounts)
     self.__google_accounts = google_accounts or {}
     self.__google_accounts_original = deepcopy(self.google_accounts)
+    self.__gcs_accounts = gcs_accounts or {}
+    self.__gcs_accounts_original = deepcopy(self.gcs_accounts)
+    self.__emails = emails
+    if self.__email:
+      if self.__email not in self.__emails:
+        self.__emails[self.__email] = True
+    self.__emails_original = deepcopy(self.emails)
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -232,23 +400,37 @@ class User:
       for (key, validator) in User.fields['optional']:
         if key in json and validator is not None:
           validator(json[key])
-    return User(beyond,
-                name = json['name'],
-                public_key = json['public_key'],
-                email = json.get('email', None),
-                fullname = json.get('fullname', None),
-                password_hash = json.get('password_hash', None),
-                private_key = json.get('private_key', None),
-                dropbox_accounts = json.get('dropbox_accounts', []),
-                google_accounts = json.get('google_accounts', []),
+    return User(
+      beyond,
+      name = json['name'],
+      public_key = json['public_key'],
+      email = json.get('email', None),
+      fullname = json.get('fullname', None),
+      password_hash = json.get('password_hash', None),
+      private_key = json.get('private_key', None),
+      dropbox_accounts = json.get('dropbox_accounts', []),
+      google_accounts = json.get('google_accounts', []),
+      gcs_accounts = json.get('gcs_accounts', []),
+      emails = json.get('emails', {}),
     )
 
-  def json(self, private = False):
+  def json(self,
+           private = False,
+           hide_confirmation_codes = True):
     res = {
       'name': self.name,
       'public_key': self.public_key,
     }
     if private:
+      # Turn confirmations code into 'False'.
+      def filter_confirmation_codes(key):
+        if hide_confirmation_codes:
+          if self.emails[key] != True:
+            return (key, False)
+        else:
+          return (key, self.emails[key])
+      res['emails'] = dict(map(filter_confirmation_codes,
+                               self.emails))
       if self.email is not None:
         res['email'] = self.email
       if self.fullname is not None:
@@ -257,24 +439,56 @@ class User:
         res['dropbox_accounts'] = self.dropbox_accounts
       if self.google_accounts is not None:
         res['google_accounts'] = self.google_accounts
+      if self.gcs_accounts is not None:
+        res['gcs_accounts'] = self.gcs_accounts
       if self.private_key is not None:
         res['private_key'] = self.private_key
-      if self.private_key is not None:
+      if self.password_hash is not None:
         res['password_hash'] = self.password_hash
     return res
 
   def create(self):
+    from uuid import uuid4
+    if self.email:
+      self.__emails[self.email] = str(uuid4())
     self.__beyond._Beyond__datastore.user_insert(self)
     if self.email is not None:
       self.__beyond.emailer.send_one(
-        template = self.__beyond.template("User/Welcome"),
         recipient_email = self.email,
         recipient_name = self.name,
         variables = {
           'email': self.email,
           'name': self.name,
-        }
-    )
+          'url_parameters': self.url_parameters(self.email)
+        },
+        **self.__beyond.template('User/Welcome')
+      )
+
+  def confirmation_code(self, email):
+    return self.__emails.get(email, None)
+
+  def url_parameters(self, email):
+    assert self.confirmation_code(email) is not None
+    from urllib.parse import urlencode
+    return urlencode({
+      'name': self.name,
+      'confirmation_code': self.confirmation_code(email),
+      'email': email
+    })
+
+  def send_confirmation_email(self, email = None):
+    email = email or self.email
+    if email is not None:
+      self.__beyond.emailer.send_one(
+        recipient_email = email,
+        recipient_name = self.name,
+        variables = {
+          'email': email,
+          'name': self.name,
+          'url_parameters': self.url_parameters(email)
+        },
+        **self.__beyond.template('User/Confirmation Email')
+      )
 
   def save(self):
     diff = {}
@@ -284,9 +498,17 @@ class User:
     for id, account in self.google_accounts.items():
       if self.__google_accounts_original.get(id) != account:
         diff.setdefault('google_accounts', {})[id] = account
+    for id, account in self.gcs_accounts.items():
+      if self.__gcs_accounts_original.get(id) != account:
+        diff.setdefault('gcs_accounts', {})[id] = account
+    for email, confirmation in self.emails.items():
+      if self.__emails_original.get(email) != confirmation:
+        diff.setdefault('emails', {})[email] = confirmation
     self.__beyond._Beyond__datastore.user_update(self.name, diff)
     self.__dropbox_accounts_original = dict(self.__dropbox_accounts)
     self.__google_accounts_original = dict(self.__google_accounts)
+    self.__gcs_accounts_original = dict(self.__gcs_accounts)
+    self.__emails_original = dict(self.__gcs_accounts)
 
   @property
   def id(self):
@@ -301,6 +523,10 @@ class User:
   @property
   def email(self):
     return self.__email
+
+  @property
+  def emails(self):
+    return self.__emails
 
   @property
   def fullname(self):
@@ -325,6 +551,10 @@ class User:
   @property
   def google_accounts(self):
     return self.__google_accounts
+
+  @property
+  def gcs_accounts(self):
+    return self.__gcs_accounts
 
   def __eq__(self, other):
     if self.name != other.name or self.public_key != other.public_key:
@@ -472,12 +702,17 @@ class Network(metaclass = Entity,
     pass
 
 class Passport(metaclass = Entity,
-               fields = fields('user', 'network', 'signature')):
+               fields = fields('user', 'network', 'signature',
+                               allow_write = True,
+                               allow_storage = True,
+                               allow_sign = False,
+                               certifier = False)):
   pass
 
 class Volume(metaclass = Entity,
              insert = 'volume_insert',
-             fields = fields('name', 'network')):
+             fields = fields('name', 'network',
+                             default_permissions = '')):
 
   @property
   def id(self):
@@ -508,45 +743,58 @@ class Drive(metaclass = Entity,
                    fields = fields('permissions', 'status', 'create_home')):
     statuses = ['pending', 'ok']
 
-    # XXX: Shouldn't work.
-    def __init__(self, beyond, **json):
-      super().__init__(beyond, **json)
-      if self['status'] not in statuses:
-        raise exceptions.InvalidFormat('invitation', status)
+    class AlreadyConfirmed(Exception):
+      pass
 
+    class NotInvited(Exception):
+      pass
+
+    # XXX: Check that status in in statuses.
     def save(self, beyond, drive, owner, invitee, invitation):
       confirm = not invitation
+      plain = not isinstance(invitee, User)
+      if plain:
+        assert invitation
+        assert beyond.is_email(invitee)
+      key = invitee if plain else invitee.name
+      email = invitee if plain else invitee.email
       if invitation:
-        if invitee.name in drive.users and drive.users[invitee.name] == 'pending':
-          return
-        elif drive.users.get(invitee.name, None) == 'ok':
-          raise Exception("ALREADY CONFIRMED")
+        if key in drive.users and drive.users[key] == 'pending':
+          return False
+        elif drive.users.get(key, None) == 'ok':
+          raise AlreadyConfirmed()
       if confirm:
-        if invitee.name not in drive.users:
-          raise Exception("NOT INVITED")
-        elif drive.users.get(invitee.name, None) == 'ok':
-          return
-      drive.users[invitee.name] = self.json()
+        if key not in drive.users:
+          raise NotInvited()
+        elif drive.users.get(key, None) == 'ok':
+          return False
+      drive.users[key] = self.json()
       drive.save()
       variables = {
         'owner': { x: getattr(owner, x) for x in ['name', 'email'] },
-        'invitee': { x: getattr(invitee, x) for x in ['name', 'email'] },
         'drive': { x: getattr(drive, x) for x in ['name', 'description'] },
       }
+      if plain:
+        variables['invitee'] = { 'email': email }
+      else:
+        variables['invitee'] = { x: getattr(invitee, x) for x in ['name', 'email'] }
+        variables['invitee']['avatar'] = '/users/%s/avatar' % key
+
       variables['owner']['avatar'] = '/users/%s/avatar' % owner.name
-      variables['invitee']['avatar'] = '/users/%s/avatar' % invitee.name
       variables['drive']['icon'] = '/drives/%s/icon' % drive.name
-      if invitation and invitee.email is not None:
+      if invitation and email is not None:
+        template = "Drive/Invitation" if not plain else "Drive/Plain Invitation"
         beyond.emailer.send_one(
-          template = beyond.template("Drive/Invitation"),
-          recipient_email = invitee.email,
-          recipient_name = invitee.name,
-          variables = variables
+          recipient_email = email,
+          recipient_name = key,
+          variables = variables,
+          **beyond.template(template)
         )
       if confirm and owner.email is not None:
         beyond.emailer.send_one(
-          template = beyond.template("Drive/Joined"),
           recipient_email = owner.email,
           recipient_name = owner.name,
-          variables = variables
+          variables = variables,
+          **beyond.template("Drive/Joined")
         )
+      return True

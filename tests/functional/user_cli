@@ -115,7 +115,7 @@ with Beyond() as b, Infinit(beyond = b) as alice, Infinit(beyond = b) as alice2:
     alice.run(['infinit-user', '--signup', '--name', 'alice', '--email', 'foo@'])
     unreachable()
   except Exception as e:
-    assertIn('email address is invalid', e.args[0])
+    assertIn('invalid email address', e.args[0])
   # Create is not atomic, so 'alice' will be created after that.
   try:
     alice.run(['infinit-user', '--create', '--name', 'alice', '--push'])
@@ -176,3 +176,37 @@ with Beyond() as b, Infinit(beyond = b) as bob, Infinit(beyond = b) as alice:
                'saṃskṛtam', 'it\'s', 'white space', '"ok"', 'o"k', 'x' * 129,
              ]:
     create_with_name_throw(name)
+
+# Deleting users.
+with Beyond() as b, Infinit(beyond = b) as alice:
+  alice.run(['infinit-user', '--create', '--name', 'alice'])
+  # Test prompt for deleting a user.
+  alice.run(['infinit-user', '--create', '--name', 'bob'])
+  try:
+    alice.run(['infinit-user', '--delete', '--name', 'bob'], input = 'alice')
+    unreachable()
+  except Exception as e:
+    pass
+  alice.run(['infinit-user', '--delete', '--name', 'bob'], input = 'bob')
+  # Test deleting user with --force and then deleting a user with only a public
+  # key.
+  alice.run(
+    ['infinit-user', '--create', '--name', 'eve', '--email', 'eve@infinit.io'])
+  alice.run(['infinit-user', '--push', '--name', 'eve'])
+  alice.run(['infinit-user', '--delete', '--force', 'eve'])
+  alice.run(['infinit-user', '--fetch', '--name', 'eve'])
+  alice.run(['infinit-user', '--delete', 'eve'])
+
+# Pulling users.
+with Beyond() as b, Infinit(beyond = b) as alice:
+  alice.run(['infinit-user', '--create', '--name', 'alice'])
+  alice.run(['infinit-user', '--create', '--name', 'bob'])
+  alice.run(
+    ['infinit-user', '--push', '--name', 'bob', '--email', 'bob@infinit.io'])
+  # In the future, we may have a chain of trust allowing a user to pull another.
+  try:
+    alice.run(['infinit-user', '--pull', '--name', 'bob'])
+    unreachable()
+  except Exception as e:
+    pass
+  alice.run(['infinit-user', '--pull', '--as', 'bob', '--name', 'bob'])

@@ -48,7 +48,8 @@ namespace infinit
         static
         Address
         address(infinit::cryptography::rsa::PublicKey const& owner,
-                std::string const& name);
+                std::string const& name,
+                elle::Version const& version);
         using Super::address;
 
       /*-------.
@@ -65,7 +66,7 @@ namespace infinit
       protected:
         virtual
         void
-        _seal() override;
+        _seal(boost::optional<int> version) override;
         virtual
         blocks::ValidationResult
         _validate() const override;

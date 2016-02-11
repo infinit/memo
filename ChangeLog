@@ -4,7 +4,7 @@
 ## [Unreleased]
 
 
-## [0.4.0]
+## [0.4.0] - 2016-01-21
 
 Groups support.
 
@@ -15,6 +15,13 @@ Groups support.
 - Support reading when a minority of the quorum nodes are down.
 - Add `infinit-network --update` to change existing network attribute,
   such as upgrading the compatibility version.
+
+### Changed
+
+- Overwrite network on the hub with `infinit-network --push`, to be
+  able to push local updates.
+- Overwrite local network with `infinit-network --fetch`, to be able
+  to retreive updates.
 
 ### Fixed
 

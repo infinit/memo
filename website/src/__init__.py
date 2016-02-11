@@ -1,7 +1,17 @@
 import bottle
 import sendwithus
+import requests
+import os
 
 from infinit.website.utils import route, static_file, view
+
+def error(code, reason = ''):
+  bottle.response.status = code
+  if not reason:
+    reason = requests.status_codes._codes.get(code, '')[0]
+  return {
+    'reason': reason
+  }
 
 class Website(bottle.Bottle):
 
@@ -10,6 +20,7 @@ class Website(bottle.Bottle):
     self.install(bottle.CertificationPlugin())
     route.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
+    self.__hub = os.environ.get('INFINIT_BEYOND', 'https://infinit.sh')
 
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
@@ -216,8 +227,7 @@ class Website(bottle.Bottle):
   def root(self):
     fields = ['first_name', 'last_name', 'email', 'message']
     if not all(bottle.request.forms.get(field) for field in fields):
-      bottle.response.status = 400
-      return {}
+      return error(400)
     else:
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
@@ -226,8 +236,7 @@ class Website(bottle.Bottle):
           f: bottle.request.forms.get(f) for f in ['first_name', 'last_name', 'email', 'message', 'phone', 'company', 'country'] if bottle.request.forms.get(f)
         })
       if response.status_code // 100 != 2:
-        bottle.response.status = 503
-        return {}
+        return error(503)
       else:
         return {}
 
@@ -242,10 +251,8 @@ class Website(bottle.Bottle):
   @route('/slack', name = 'slack', method = 'POST')
   def root(self):
     email = bottle.request.forms.get('email')
-
     if not email:
-      bottle.response.status = 400
-      return {}
+      return error(400, reason = 'missing mandatory email')
     else:
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
@@ -261,12 +268,38 @@ class Website(bottle.Bottle):
         return {}
     return {}
 
-  @route('/users/confirm_email', name = 'confirm_email')
+  @route('/users/confirm_email', name = 'confirm_email', method = 'GET')
   @view('pages/users/confirm_email.html')
   def root(self):
-
-    #todo
-
+    for field in ['name', 'confirmation_code']:
+      if bottle.request.params.get(field) is None:
+        return error(400, 'missing mandatory %s' % field)
+    email = bottle.request.params.get('email')
+    confirmation_code = bottle.request.params.get('confirmation_code')
+    name = bottle.request.params.get('name')
+    url = '%s/users/%s/confirm_email' % (self.__hub, name)
+    if email is not None:
+      import urllib.parse
+      url += '/%s' % urllib.parse.quote_plus(email)
+    import json
+    try:
+      response = requests.post(
+        url = url,
+        data = json.dumps({
+          'confirmation_code': confirmation_code
+        }),
+      headers = {'Content-Type': 'application/json'},
+      )
+      if (response.status_code // 100 != 2 and response.status_code != 410):
+        return error(response.status_code,
+                     reason = 'server error %s' % response.status_code)
+    except requests.exceptions.ConnectionError:
+      return error(503)
+    errors = []
+    try:
+      errors = response.json()['errors']
+    except Exception:
+      pass
     return {
       'title': 'Confirm Email',
       'description': 'Confirm your email and start using Infinit.',

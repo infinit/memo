@@ -33,12 +33,19 @@ namespace infinit
         | Construction |
         `-------------*/
         public:
-          Paxos(Doughnut& doughnut, int factor);
+          Paxos(Doughnut& doughnut, int factor, bool lenient_fetch = false);
           ELLE_ATTRIBUTE_R(int, factor);
+          ELLE_ATTRIBUTE_R(bool, lenient_fetch);
+        private:
+          struct _Details;
+          friend struct _Details;
 
         /*-------.
         | Blocks |
         `-------*/
+        public:
+          void
+          rebalance(Address address);
         protected:
           virtual
           void
@@ -70,6 +77,8 @@ namespace infinit
           typedef athena::paxos::Server<
             std::shared_ptr<blocks::Block>, int, Address>
           PaxosServer;
+          typedef elle::Option<std::shared_ptr<blocks::Block>,
+                               Paxos::PaxosClient::Quorum> Value;
 
           class RemotePeer
             : public doughnut::Remote
@@ -90,9 +99,23 @@ namespace infinit
             accept(PaxosServer::Quorum const& peers,
                    Address address,
                    PaxosClient::Proposal const& p,
-                   std::shared_ptr<blocks::Block> const& value);
+                   Value const& value);
+            virtual
+            void
+            confirm(PaxosServer::Quorum const& peers,
+                    Address address,
+                    PaxosClient::Proposal const& p);
+            virtual
+            boost::optional<PaxosClient::Accepted>
+            get(PaxosServer::Quorum const& peers,
+                Address address,
+                boost::optional<int> local_version);
           };
 
+          /*----------.
+          | LocalPeer |
+          `----------*/
+        public:
           class LocalPeer
             : public doughnut::Local
           {
@@ -102,9 +125,7 @@ namespace infinit
               : doughnut::Local(std::forward<Args>(args) ...)
               , _factor(factor)
             {}
-
             ELLE_ATTRIBUTE_R(int, factor);
-
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,
@@ -115,7 +136,17 @@ namespace infinit
             accept(PaxosServer::Quorum peers,
                    Address address,
                    PaxosClient::Proposal const& p,
-                   std::shared_ptr<blocks::Block> const& value);
+                   Value const& value);
+            virtual
+            void
+            confirm(PaxosServer::Quorum peers,
+                    Address address,
+                    PaxosClient::Proposal const& p);
+            virtual
+            boost::optional<PaxosClient::Accepted>
+            get(PaxosServer::Quorum peers,
+                Address address,
+                boost::optional<int> local_version);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
@@ -142,24 +173,35 @@ namespace infinit
             _register_rpcs(RPCServer& rpcs) override;
             typedef elle::unordered_map<Address, Decision> Addresses;
             ELLE_ATTRIBUTE(Addresses, addresses);
+          private:
+            Decision&
+            _load(Address address,
+                  boost::optional<PaxosServer::Quorum> peers = {});
           };
 
+        /*-----.
+        | Stat |
+        `-----*/
+        public:
+          virtual
+          std::unique_ptr<Consensus::Stat>
+          stat(Address const& address) override;
+
+        /*--------------.
+        | Configuration |
+        `--------------*/
+        public:
           class Configuration
             : public consensus::Configuration
           {
-          /*--------.
-          | Factory |
-          `--------*/
+          // Factory
           public:
             Configuration(int replication_factor);
             virtual
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;
             ELLE_ATTRIBUTE_R(int, replication_factor);
-
-          /*--------------.
-          | Serialization |
-          `--------------*/
+          // Serialization
           public:
             Configuration(elle::serialization::SerializerIn& s);
             virtual

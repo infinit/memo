@@ -5,6 +5,7 @@
 #include <elle/Buffer.hh>
 
 #include <cryptography/hash.hh>
+#include <cryptography/random.hh>
 
 namespace infinit
 {
@@ -12,14 +13,30 @@ namespace infinit
   {
     Address::Address()
       : _value()
+      , _overwritten_value()
+      , _flagged(true)
     {
       memset(this->_value, 0, sizeof(Address::Value));
+      this->_overwritten_value = this->_value[flag_byte];
     }
 
-    Address::Address(Value value)
+    Address::Address(Value const value)
       : _value()
+      , _overwritten_value()
+      , _flagged(true)
     {
       ::memcpy(this->_value, value, sizeof(Value));
+      this->_overwritten_value = this->_value[flag_byte];
+    }
+
+    Address::Address(Value const value, Flags flags)
+      : _value()
+      , _overwritten_value()
+      , _flagged(true)
+    {
+      ::memcpy(this->_value, value, sizeof(Value));
+      this->_overwritten_value = this->_value[flag_byte];
+      this->_value[flag_byte] = flags;
     }
 
     Address::Address(elle::UUID const& id)
@@ -27,6 +44,33 @@ namespace infinit
                   elle::ConstWeakBuffer(id.data, id.static_size()),
                   infinit::cryptography::Oneway::sha256).contents())
     {}
+
+    Address
+    Address::unflagged() const
+    {
+      if (!this->_flagged)
+        return *this;
+      Value v;
+      ::memcpy(v, this->_value, sizeof(Value));
+      v[flag_byte] = this->_overwritten_value;
+      Address res(v);
+      res._flagged = false;
+      res._overwritten_value = this->_value[flag_byte];
+      return res;
+    }
+
+    Address::Flags
+    Address::flags() const
+    {
+      return this->_flagged ?
+        this->_value[flag_byte] : this->_overwritten_value;
+    }
+
+    bool
+    Address::mutable_block() const
+    {
+      return (flags() & model::flags::block_kind) == flags::mutable_block;
+    }
 
     bool
     Address::operator ==(Address const& rhs) const
@@ -72,14 +116,9 @@ namespace infinit
     Address
     Address::random()
     {
-      // Hash a UUID to get a random address.  Like using a deathstar to blow
-      // a mosquito and I like it.
-      auto id = boost::uuids::basic_random_generator<boost::mt19937>()();
-      auto hash = cryptography::hash(
-        elle::ConstWeakBuffer(id.data, id.static_size()),
-        cryptography::Oneway::sha256);
-      ELLE_ASSERT_GTE(hash.size(), sizeof(Address::Value));
-      return Address(hash.contents());
+      auto buf = cryptography::random::generate<elle::Buffer>(sizeof(Address::Value));
+      ELLE_ASSERT_GTE(buf.size(), sizeof(Address::Value));
+      return Address(buf.contents());
     }
 
     Address const Address::null;

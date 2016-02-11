@@ -28,9 +28,11 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        OKBHeader(cryptography::rsa::KeyPair const& keys,
+        OKBHeader(Doughnut* dht,
+                  cryptography::rsa::KeyPair const& keys,
                   boost::optional<elle::Buffer> salt);
         OKBHeader(OKBHeader const& other);
+        ELLE_ATTRIBUTE(Doughnut*, dht);
 
       /*---------.
       | Contents |
@@ -42,6 +44,7 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>,
                          owner_key);
         ELLE_ATTRIBUTE_R(elle::Buffer, signature);
+        ELLE_ATTRIBUTE_R(Doughnut*, doughnut, protected);
       protected:
         Address
         _hash_address() const;
@@ -59,7 +62,8 @@ namespace infinit
         serialize(elle::serialization::Serializer& s);
         static
         Address
-        hash_address(cryptography::rsa::PublicKey const& key,
+        hash_address(Doughnut const& dht,
+                     cryptography::rsa::PublicKey const& key,
                      elle::Buffer const& salt);
         typedef infinit::serialization_tag serialization_tag;
       };
@@ -92,11 +96,9 @@ namespace infinit
       protected:
         typedef reactor::BackgroundFuture<elle::Buffer> SignFuture;
         ELLE_ATTRIBUTE(std::shared_ptr<SignFuture>, signature, protected);
-        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
         friend class Doughnut;
       private:
         BaseOKB(OKBHeader header,
-                Doughnut* owner,
                 elle::Buffer data,
                 std::shared_ptr<cryptography::rsa::PrivateKey> owner_key);
 
@@ -136,9 +138,9 @@ namespace infinit
       protected:
         virtual
         void
-        _seal() override;
+        _seal(boost::optional<int> version) override;
         void
-        _seal_okb(bool bump_version = true);
+        _seal_okb(boost::optional<int> version = {}, bool bump_version = true);
         virtual
         blocks::ValidationResult
         _validate() const override;

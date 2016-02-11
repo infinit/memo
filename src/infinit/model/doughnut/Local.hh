@@ -74,6 +74,8 @@ namespace infinit
           void (Address, std::unique_ptr<blocks::Block>&)> on_fetch;
         boost::signals2::signal<
           void (Address)> on_remove;
+        boost::signals2::signal<
+          void (RPCServer&)> on_connect;
       protected:
         virtual
         std::unique_ptr<blocks::Block>
@@ -91,9 +93,6 @@ namespace infinit
         ELLE_ATTRIBUTE_RX(std::unique_ptr<reactor::network::UTPServer>, utp_server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, utp_server_thread);
         ELLE_ATTRIBUTE(reactor::Barrier, server_barrier);
-        ELLE_ATTRIBUTE_RX(RPCServer, rpcs);
-        std::unordered_map<std::string, std::pair<elle::Buffer, Passport>>
-          _challenges;
       protected:
         virtual
         void
@@ -104,7 +103,9 @@ namespace infinit
         _serve_tcp();
         void
         _serve_utp();
-
+        void
+        _require_auth(RPCServer& rpcs, bool write_op);
+        std::unordered_map<RPCServer*, Passport> _passports;
       /*----------.
       | Printable |
       `----------*/

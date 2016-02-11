@@ -213,7 +213,7 @@ namespace infinit
         Async::_load_op(boost::filesystem::path const& p, bool signature)
         {
           boost::filesystem::ifstream is(p, std::ios::binary);
-          elle::serialization::binary::SerializerIn sin(is, false);
+          elle::serialization::binary::SerializerIn sin(is);
           sin.set_context<Model*>(&this->doughnut()); // FIXME: needed ?
           sin.set_context<Doughnut*>(&this->doughnut());
           sin.set_context(ACBDontWaitForSignature{});
@@ -248,7 +248,7 @@ namespace infinit
             auto path =
               boost::filesystem::path(_journal_dir) / std::to_string(op.index);
             boost::filesystem::ofstream os(path, std::ios::binary);
-            elle::serialization::binary::SerializerOut sout(os, false);
+            elle::serialization::binary::SerializerOut sout(os);
             sout.set_context(ACBDontWaitForSignature{});
             sout.set_context(OKBDontWaitForSignature{});
             sout.serialize_forward(op);

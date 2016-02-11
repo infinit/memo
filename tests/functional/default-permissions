@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+def run(perms):
+  with TemporaryDirectory() as tmp, Infinit() as owner, Infinit() as user:
+    owner.run(['infinit-user', '--create', 'owner'])
+    user.run(['infinit-user', '--create', 'user'])
+
+    owner.run(['infinit-storage', '--create', 'storage', '--filesystem',
+                '--path', tmp.dir])
+    owner.run(['infinit-network', '--create', 'network', '--kelips',
+               '--storage', 'storage',
+               '--as', 'owner'])
+    owner.run(['infinit-volume', '--create', 'volume', '--network', 'network',
+               '--as', 'owner',
+               '--default-permissions', perms])
+
+    uuser = user.run(['infinit-user', '--export', 'user'])
+    owner.run(['infinit-user', '--import'], input = uuser)
+    net = owner.run(['infinit-network', '--export', '--as', 'owner', 'network'])
+    user.run(['infinit-network', '--import'], input = net)
+    vol = owner.run(['infinit-volume', '--export', 'volume', '--as', 'owner'])
+    user.run(['infinit-volume', '--import'], input = vol)
+    puser = owner.run(['infinit-passport', '--create', '--as', 'owner',
+                       '--user', 'user',
+                       '--network', 'owner/network',
+                       '--output', '-'])
+    user.run(['infinit-passport', '--import'], input = puser)
+    user.run(['infinit-network', '--link', '--as', 'user', 'owner/network'])
+
+    response = owner.run_script(
+      user = 'owner', operation = 'mkdir', path = '/beacon')
+    assertEq(response['success'], True)
+    portfile = '%s/portfile' % tmp
+    def peer():
+      with open(portfile, 'r') as f:
+        return '127.0.0.1:%s' % int(f.readline())
+    def run_volume():
+      owner.run([
+        'infinit-volume', '--run', '--as', 'owner', 'volume',
+        '--port-file', portfile],
+        return_code = 118)
+    import threading
+    t = threading.Thread(target = run_volume)
+    t.start()
+    time.sleep(1)
+    res = user.run_script(
+      user = 'user', volume = 'owner/volume', operation = 'list_directory',
+      path = '/',
+      peer = peer())
+    assertEq(res['success'], True)
+    assertEq(res['entries'], ['beacon'])
+    res = user.run_script(
+      user = 'user', volume = 'owner/volume', operation = 'mkdir',
+      path = '/foo',
+      peer = peer())
+    if perms == 'rw':
+      assertEq(res['success'], True)
+    else:
+      assertEq(res['success'], False)
+    owner.process.kill()
+    t.join()
+run('r')
+run('rw')

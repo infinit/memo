@@ -509,12 +509,12 @@ HTTPReply webdav(HTTPQuery const& q, reactor::filesystem::FileSystem& fs)
 }
 
 
-using namespace boost::program_options;
-
 infinit::Infinit ifnt;
 
+using boost::program_options::variables_map;
 
-void run(variables_map const& args)
+void
+run(variables_map const& args)
 {
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
@@ -535,7 +535,8 @@ void run(variables_map const& args)
     hosts, true, cache, cache_size, cache_ttl, cache_invalidation,
     flag(args, "async"));
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
-    args["volume"].as<std::string>(), std::move(model));
+    args["volume"].as<std::string>(),
+    std::shared_ptr<infinit::model::doughnut::Doughnut>(model.release()));
   reactor::filesystem::FileSystem rfs(std::move(fs), true);
 
   WebServer ws([&](HTTPQuery const& q) {return webdav(q, rfs);});
@@ -544,6 +545,9 @@ void run(variables_map const& args)
 
 int main(int argc, char** argv)
 {
+  program = argv[0];
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
   Modes modes {
     {
       "run",

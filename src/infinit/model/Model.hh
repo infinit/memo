@@ -37,6 +37,7 @@ namespace infinit
       : public elle::serialization::VirtuallySerializable<false>
     {
     public:
+      typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<blocks::Block>
       operator () (blocks::Block& old,

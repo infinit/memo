@@ -42,6 +42,7 @@ def view(name):
       name,
       template_lookup = [lookup],
       request = bottle.request,
+      response = bottle.response,
       route = find_route,
       url = url,
       os = detect_os,

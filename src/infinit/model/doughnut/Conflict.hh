@@ -37,7 +37,8 @@ namespace infinit
         Conflict(elle::serialization::SerializerIn& input);
         virtual
         void
-        serialize(elle::serialization::Serializer& s) override;
+        serialize(elle::serialization::Serializer& s,
+                  elle::Version const&) override;
       private:
         void
         _serialize(elle::serialization::Serializer& s);

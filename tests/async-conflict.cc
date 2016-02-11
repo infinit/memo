@@ -27,7 +27,7 @@ std::unique_ptr<reactor::filesystem::FileSystem> make(
   boost::filesystem::create_directories(where / "store");
   boost::filesystem::create_directories(where / "async");
   s.reset(new infinit::storage::Filesystem(where / "store"));
-  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp.k());
+  infinit::model::doughnut::Passport passport(kp.K(), "testnet", kp);
   infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
     [&] (infinit::model::doughnut::Doughnut& dht)
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
@@ -87,7 +87,7 @@ int root_count(std::unique_ptr<reactor::filesystem::FileSystem>& fs)
 ELLE_TEST_SCHEDULED(async_cache)
 {
   auto path = bfs::temp_directory_path() / bfs::unique_path();
-  auto kp = infinit::cryptography::rsa::keypair::generate(2048);
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
   elle::SafeFinally cleanup_path([&] {
       boost::filesystem::remove_all(path);
@@ -140,7 +140,8 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs->path("/")->list_directory([&](std::string const&, struct stat*)
     { ++count;});
   BOOST_CHECK_EQUAL(count, 3);
-  reactor::sleep(100_ms); // prefetcher threads
+  // FIXME: Get rid of those sleeps !
+  reactor::sleep(valgrind(100_ms)); // prefetcher threads
   fs.reset();
 
   ELLE_LOG("conflict dir");
@@ -158,7 +159,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   BOOST_CHECK_EQUAL(root_count(fs), 5);
-  reactor::sleep(100_ms);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 
   ELLE_LOG("conflict dir 2");
@@ -176,7 +177,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   fs = make(path, true, 10, kp);
   BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
   BOOST_CHECK_EQUAL(root_count(fs), 6);
-  reactor::sleep(100_ms);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 
   ELLE_LOG("conflict file");
@@ -197,7 +198,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   struct stat st;
   fs->path("/")->child("samefile")->stat(&st);
   BOOST_CHECK_EQUAL(st.st_size, 3);
-  reactor::sleep(100_ms);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 
   ELLE_LOG("ACL conflict");
@@ -206,7 +207,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     setenv("INFINIT_ASYNC_NOPOP", "1", 1);
   fs = make(path, true, 10, kp);
   // queue a attr change
-  fs->path("/")->child("samefile")->setxattr("infinit.auth.rw",
+  fs->path("/")->child("samefile")->setxattr("infinit.auth.setrw",
     std::string((const char*)pub2.contents(), pub2.size()), 0);
   fs.reset();
   // write same file in the same dir
@@ -221,8 +222,8 @@ ELLE_TEST_SCHEDULED(async_cache)
   auto auth = fs->path("/")->child("samefile")->getxattr("user.infinit.auth");
   std::stringstream sauth(auth);
   auto jauth = elle::json::read(sauth);
-  BOOST_CHECK_EQUAL(boost::any_cast<elle::json::Array>(jauth).size(), 1);
-  reactor::sleep(100_ms);
+  BOOST_CHECK_EQUAL(boost::any_cast<elle::json::Array>(jauth).size(), 2);
+  reactor::sleep(valgrind(100_ms));
   fs.reset();
 }
 

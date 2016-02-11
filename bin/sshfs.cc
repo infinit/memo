@@ -1,18 +1,16 @@
-#include <infinit/storage/sftp.hh>
-#include <infinit/storage/Crypt.hh>
 #include <reactor/filesystem.hh>
-#include <reactor/thread.hh>
 #include <reactor/scheduler.hh>
+#include <reactor/thread.hh>
 
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/faith/Faith.hh>
+#include <infinit/storage/Crypt.hh>
+#include <infinit/storage/sftp.hh>
 #include <infinit/version.hh>
 
-reactor::filesystem::FileSystem* fs;
+#include "version.hh"
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
+reactor::filesystem::FileSystem* fs;
 
 
 static void sig_int()
@@ -33,8 +31,8 @@ void main_scheduled(int argc, char** argv)
     storage = elle::make_unique<infinit::storage::Crypt>
       (std::move(storage), argv[5], true);
   auto faith =
-    elle::make_unique<infinit::model::faith::Faith>(std::move(storage),
-                                                    INFINIT_ELLE_VERSION);
+    elle::make_unique<infinit::model::faith::Faith>(
+      std::move(storage), version);
   auto fsops = elle:: make_unique<infinit::filesystem::FileSystem>
     ("default-volume", std::move(faith));
   fs = new reactor::filesystem::FileSystem(std::move(fsops), true);

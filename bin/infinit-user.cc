@@ -8,13 +8,15 @@
 ELLE_LOG_COMPONENT("infinit-user");
 
 #include <main.hh>
+
+#include <email.hh>
 #include <password.hh>
 
 infinit::Infinit ifnt;
 
-static std::string _hub_salt = "@a.Fl$4'x!";
+using boost::program_options::variables_map;
 
-using namespace boost::program_options;
+static std::string _hub_salt = "@a.Fl$4'x!";
 
 template <typename Super>
 struct UserView
@@ -95,8 +97,7 @@ COMMAND(fetch)
           fetch_avatar(name);
         }
         catch (elle::Error const&)
-        {
-        }
+        {}
       }
     };
     try
@@ -125,6 +126,8 @@ void
 _push(variables_map const& args, infinit::User& user, bool atomic)
 {
   auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   bool user_updated = false;
   if (!user.email && !email)
   {
@@ -205,6 +208,8 @@ create_(std::string const& name,
 COMMAND(create)
 {
   bool push = aliased_flag(args, {"push-user", "push"});
+  auto has_output = optional(args, "output");
+  auto output = has_output ? get_output(args) : nullptr;
   if (!push)
   {
     if (flag(args, "full") || flag(args, "password"))
@@ -215,12 +220,23 @@ COMMAND(create)
     }
   }
   auto name = get_name(args);
+  auto email = optional(args, "email");
+  if (email && !valid_email(email.get()))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               optional(args, "email"),
+                               email,
                                optional(args, "fullname"));
-  ifnt.user_save(user);
-  report_action("generated", "user", name, std::string("locally"));
+  if (output)
+  {
+    ifnt.user_save(user, *output);
+    report_exported(*output, "user", user.name);
+  }
+  else
+  {
+    ifnt.user_save(user);
+    report_action("generated", "user", name, std::string("locally"));
+  }
   if (push)
     _push(args, user, false);
 }
@@ -246,7 +262,8 @@ COMMAND(push)
 COMMAND(pull)
 {
   auto self = self_user(ifnt, args);
-  beyond_delete("user", self.name, self);
+  auto user = get_name(args);
+  beyond_delete("user", user, self);
 }
 
 COMMAND(delete_)
@@ -254,6 +271,23 @@ COMMAND(delete_)
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
   auto path = ifnt._user_path(user.name);
+  if (user.private_key && (!flag(args, "force") || script_mode))
+  {
+    std::string res;
+    {
+      std::cout << "WARNING: You will no longer be able to access data, "
+                << std::endl
+                << "WARNING: volumes or networks for this user." << std::endl
+                << "WARNING: The user's private key will be lost, you will not"
+                << std::endl
+                << "WARNING: be able to pull the user from " << beyond(true)
+                << "." << std::endl << std::endl
+                << "Confirm the name of the user you would like to delete: ";
+      std::getline(std::cin, res);
+    }
+    if (res != user.name)
+      throw CommandLineError("Aborting...");
+  }
   bool ok = boost::filesystem::remove(path);
   if (ok)
     report_action("deleted", "user", user.name, std::string("locally"));
@@ -267,9 +301,12 @@ COMMAND(delete_)
 COMMAND(signup_)
 {
   auto name = get_name(args);
+  auto email = mandatory(args, "email");
+  if (!valid_email(email))
+    throw CommandLineError("invalid email address");
   infinit::User user = create_(name,
                                optional(args, "key"),
-                               mandatory(args, "email"),
+                               email,
                                optional(args, "fullname"));
   try
   {
@@ -410,18 +447,23 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-  boost::program_options::option_description option_push_full =
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionDescription option_push_full =
     { "full", bool_switch(), "include private key in order "
       "to facilitate device pairing and fetching lost keys" };
-  boost::program_options::option_description option_push_password =
+  Mode::OptionDescription option_push_password =
     { "password", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Used with --full "
       "(default: prompt for password)", beyond(true)).c_str() };
-  boost::program_options::option_description option_fullname =
-    { "fullname", value<std::string>(), "user's fullname (optional)" };
-  boost::program_options::option_description option_avatar =
+  Mode::OptionDescription option_fullname =
+    { "fullname", value<std::string>(), "fullname of user (optional)" };
+  Mode::OptionDescription option_avatar =
     { "avatar", value<std::string>(), "path to an image to use as avatar" };
-
+  Mode::OptionDescription option_key =
+    {"key,k", value<std::string>(),
+      "RSA key pair in PEM format - e.g. your SSH key "
+      "(default: generate key pair)" };
   Modes modes {
     {
       "create",
@@ -430,9 +472,7 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key "
-          "(default: generate key pair)" },
+        option_key,
         { "push-user", bool_switch(),
           elle::sprintf("push the user to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-user" },
@@ -441,6 +481,7 @@ main(int argc, char** argv)
         option_fullname,
         option_push_full,
         option_push_password,
+        option_output("user"),
       },
     },
     {
@@ -493,6 +534,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to delete (default: system user)" },
+        { "force", bool_switch(), "delete the user without any prompt" },
       },
     },
     {
@@ -514,15 +556,13 @@ main(int argc, char** argv)
       "signup",
       elle::sprintf("Create and push a user to %s", beyond(true)).c_str(),
       &signup_,
-      {},
+      "--email EMAIL",
       {
         { "name,n", value<std::string>(), "user name (default: system user)" },
         { "email,n", value<std::string>(), "valid email address" },
         option_fullname,
         option_avatar,
-        { "key,k", value<std::string>(),
-          "RSA key pair in PEM format - e.g. your SSH key "
-          "(default: generate key pair)" },
+        option_key,
         option_push_full,
         option_push_password,
       },
@@ -536,7 +576,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(),
           "user name (default: system user)" },
         { "password", value<std::string>(), elle::sprintf(
-          "password to authenticate with %s (default: prompt) for password",
+          "password to authenticate with %s (default: prompt)",
           beyond(true)).c_str() },
       },
     },

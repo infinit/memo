@@ -16,7 +16,7 @@ with Beyond() as beyond:
     def test_normal(self):
       user = User()
       user.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(name = 'infinit', owner = user)
       network.put(beyond, owner = user)
       beyond.delete('networks/%s' % network['name'],
                     auth = user.private_key)
@@ -24,7 +24,7 @@ with Beyond() as beyond:
     def test_push_passport_and_delete(self):
       alice, bob = User(), User()
       alice.put(beyond), bob.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(name = 'infinit', owner = alice)
       network.put(beyond)
       passport = Passport(network, bob)
       passport.put(beyond)
@@ -34,7 +34,7 @@ with Beyond() as beyond:
     def test_push_pull_push_pull(self):
       user = User()
       user.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(name = 'infinit', owner = user)
       for i in range(0, 10):
         network.put(beyond, owner = user)
         beyond.delete('networks/%s' % network['name'],
@@ -43,7 +43,7 @@ with Beyond() as beyond:
     def test_authentication(self):
       user = User()
       user.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(name = 'infinit', owner = user)
       network.put(beyond, owner = user)
       throws(lambda: beyond.delete('networks/%s' % network['name']),
              json = False,
@@ -52,7 +52,7 @@ with Beyond() as beyond:
     def test_deleting_someone_else_network(self):
       alice, bob = User(), User()
       alice.put(beyond), bob.put(beyond)
-      network = Network('infinit', owner = alice)
+      network = Network(name = 'infinit', owner = alice)
       network.put(beyond, owner = alice)
       throws(lambda: beyond.delete('networks/%s' % network['name'],
                                    auth = bob.private_key),

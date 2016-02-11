@@ -32,12 +32,11 @@ with Beyond() as beyond:
     def test_normal(self):
       user = User()
       user.put(beyond)
-      network = Network('network', owner = user)
+      network = Network(owner = user)
       network.put(beyond)
-      volume = Volume('business', network = network)
+      volume = Volume(network = network)
       volume.put(beyond)
-      drive = Drive('business',
-                    volume = volume,
+      drive = Drive(volume = volume,
                     description = "Hyperdrive!")
       drive.put(beyond)
       assertEq(getattr(beyond.app, '_Bottle__gcs'), None)

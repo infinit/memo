@@ -13,6 +13,9 @@ namespace infinit
     static elle::unordered_map<
       elle::Version, elle::serialization::Serializer::Versions> dependencies;
   };
+
+  elle::Version
+  elle_serialization_version(elle::Version const& infinit_version);
 }
 
 #endif

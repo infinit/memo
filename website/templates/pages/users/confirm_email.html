@@ -3,13 +3,14 @@
 <%block name="content">
 
   <section class="doc">
-    % if True:
+    % if response.status_code == 200:
       <img src="${url('images/icons/email-confirmed.png')}">
       <h2>Your email has been confirmed.</h2>
       <p>You can now close this window and start using Infinit!</p>
     % else:
       <img src="${url('images/icons/email-unconfirmed.png')}">
       <h2>We couldn't confirm your email.</h2>
+      <p>reason: ${reason}</p>
       <p>Please try again later or <a href="https://twitter.com/infinit_sh">reach out to us</a> if you continue experiencing this problem.</p>
     % endif
   </section>

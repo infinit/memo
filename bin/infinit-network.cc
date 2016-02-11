@@ -16,9 +16,9 @@ ELLE_LOG_COMPONENT("infinit-network");
 
 #include <main.hh>
 
-using namespace boost::program_options;
-
 infinit::Infinit ifnt;
+
+#include <endpoint_file.hh>
 
 static
 bool
@@ -44,6 +44,29 @@ bool
 one(Args&& ... args)
 {
   return _one(false, std::forward<Args>(args)...);
+}
+
+static
+std::unique_ptr<infinit::storage::StorageConfig>
+storage_configuration(boost::program_options::variables_map const& args)
+{
+  std::unique_ptr<infinit::storage::StorageConfig> storage;
+  auto storage_count = args.count("storage");
+  if (storage_count > 0)
+  {
+    auto storages = args["storage"].as<std::vector<std::string>>();
+    std::vector<std::unique_ptr<infinit::storage::StorageConfig>> backends;
+    for (auto const& storage: storages)
+      backends.emplace_back(ifnt.storage_get(storage));
+    if (backends.size() == 1)
+      storage = std::move(backends[0]);
+    else
+    {
+      storage.reset(
+        new infinit::storage::StripStorageConfig(std::move(backends)));
+    }
+  }
+  return storage;
 }
 
 COMMAND(create)
@@ -129,22 +152,7 @@ COMMAND(create)
   {
     overlay_config.reset(new infinit::overlay::KalimeroConfiguration());
   }
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-  auto storage_count = args.count("storage");
-  if (storage_count > 0)
-  {
-    auto storages = args["storage"].as<std::vector<std::string>>();
-    std::vector<std::unique_ptr<infinit::storage::StorageConfig>> backends;
-    for (auto const& storage: storages)
-      backends.emplace_back(ifnt.storage_get(storage));
-    if (backends.size() == 1)
-      storage = std::move(backends[0]);
-    else
-    {
-      storage.reset(
-        new infinit::storage::StripStorageConfig(std::move(backends)));
-    }
-  }
+  auto storage = storage_configuration(args);
   // Consensus
   std::unique_ptr<
     infinit::model::doughnut::consensus::Configuration> consensus_config;
@@ -189,7 +197,7 @@ COMMAND(create)
       infinit::model::doughnut::Passport(
         owner.public_key,
         ifnt.qualified_name(name, owner),
-        owner.private_key.get()),
+        infinit::cryptography::rsa::KeyPair(owner.public_key, owner.private_key.get())),
       owner.name,
       std::move(port),
       version);
@@ -335,10 +343,7 @@ COMMAND(link_)
 {
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
-  auto storage_name = optional(args, "storage");
-  std::unique_ptr<infinit::storage::StorageConfig> storage;
-  if (storage_name)
-    storage = ifnt.storage_get(storage_name.get());
+  auto storage = storage_configuration(args);
   auto desc = [&] () -> infinit::NetworkDescriptor
   {
     try
@@ -356,13 +361,17 @@ COMMAND(link_)
     if (self.public_key == desc.owner)
     {
       return infinit::Passport(
-        self.public_key, desc.name, self.private_key.get());
+        self.public_key, desc.name,
+        infinit::cryptography::rsa::KeyPair(self.public_key, self.private_key.get()));
     }
     return ifnt.passport_get(desc.name, self.name);
   }();
-  bool ok = passport.verify(desc.owner);
+  bool ok = passport.verify(
+    passport.certifier() ? *passport.certifier() : desc.owner);
   if (!ok)
     throw elle::Error("passport signature is invalid");
+  if (storage && !passport.allow_storage())
+    throw elle::Error("passport does not allow storage");
   infinit::Network network(
     desc.name,
     elle::make_unique<infinit::model::doughnut::Configuration>(
@@ -428,9 +437,20 @@ COMMAND(run)
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
   {
-    auto hosts = args["peer"].as<std::vector<std::string>>();
-    for (auto const& h: hosts)
-      eps[infinit::model::Address()].push_back(h);
+    auto peers = args["peer"].as<std::vector<std::string>>();
+    for (auto const& obj: peers)
+    {
+      auto file_eps = endpoints_from_file(obj);
+      if (file_eps.size())
+      {
+        for (auto const& ep: file_eps)
+          eps[infinit::model::Address::null].push_back(ep);
+      }
+      else
+      {
+        eps[infinit::model::Address::null].push_back(obj);
+      }
+    }
   }
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
@@ -452,6 +472,8 @@ COMMAND(run)
             && dht->local()->storage();
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
+  if (auto port_file = optional(args, "port-file"))
+    port_to_file(dht->local()->server_endpoint().port(), port_file.get());
   static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
   for (auto signal: signals)
     reactor::scheduler().signal_handle(
@@ -524,25 +546,26 @@ int
 main(int argc, char** argv)
 {
   program = argv[0];
-
-  options_description overlay_types_options("Overlay types");
+  using boost::program_options::value;
+  using boost::program_options::bool_switch;
+  Mode::OptionsDescription overlay_types_options("Overlay types");
   overlay_types_options.add_options()
     ("kalimero", "use a Kalimero overlay network (default)")
     ("kelips", "use a Kelips overlay network")
     ("stonehenge", "use a Stonehenge overlay network")
     ("kademlia", "use a Kademlia overlay network")
     ;
-  options_description consensus_types_options("Consensus types");
+  Mode::OptionsDescription consensus_types_options("Consensus types");
   consensus_types_options.add_options()
     ("paxos", "use Paxos consensus algorithm (default)")
     ("no-consensus", "use no consensus algorithm")
     ;
-  options_description stonehenge_options("Stonehenge options");
+  Mode::OptionsDescription stonehenge_options("Stonehenge options");
   stonehenge_options.add_options()
     ("peer", value<std::vector<std::string>>()->multitoken(),
      "hosts to connect to (host:port)")
     ;
-  options_description kelips_options("Kelips options");
+  Mode::OptionsDescription kelips_options("Kelips options");
   kelips_options.add_options()
     ("nodes", value<int>(), "estimate of the total number of nodes")
     ("k", value<int>(), "number of groups (default: 1)")
@@ -551,7 +574,6 @@ main(int argc, char** argv)
     ("protocol", value<std::string>(),
       "RPC protocol to use: tcp,utp,all (default: all)")
     ;
-  options_description options("Infinit network utility");
   Modes modes {
     {
       "create",
@@ -560,11 +582,10 @@ main(int argc, char** argv)
       "--name NAME "
         "[OVERLAY-TYPE OVERLAY-OPTIONS...] "
         "[CONSENSUS-TYPE CONSENSUS-OPTIONS...] "
-        "[STORAGE...] "
-        "[OPTIONS...]",
+        "[--storage STORAGE...]",
       {
         { "name,n", value<std::string>(), "created network name" },
-        { "storage", value<std::vector<std::string>>()->multitoken(),
+        { "storage,S", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
@@ -585,7 +606,7 @@ main(int argc, char** argv)
       "update",
       "Update a network",
       &update,
-      "--name NAME [OPTIONS...]",
+      "--name NAME",
       {
         { "name,n", value<std::string>(), "network to update" },
         { "port", value<int>(), "port to listen on (default: random)" },
@@ -636,7 +657,8 @@ main(int argc, char** argv)
       {},
       // Hidden options.
       {
-        { "storage", value<std::string>(), "storage to contribute (optional)" },
+        { "storage", value<std::vector<std::string>>()->multitoken(),
+          "storage to contribute (optional)" },
       },
 
     },
@@ -681,7 +703,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(), "network to run" },
         { "peer", value<std::vector<std::string>>()->multitoken(),
-          "peer to connect to (host:port)" },
+          "peer address or file with list of peer addresses (host:port)" },
         { "async", bool_switch(), "use asynchronous operations" },
         option_cache,
         option_cache_size,
@@ -695,6 +717,8 @@ main(int argc, char** argv)
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
+        { "port-file", value<std::string>(),
+          "write node listening port to file" },
       },
     },
     {

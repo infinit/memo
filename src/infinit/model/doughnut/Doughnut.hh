@@ -57,6 +57,11 @@ namespace infinit
         keys() const;
         std::shared_ptr<cryptography::rsa::KeyPair>
         keys_shared() const;
+        bool
+        verify(Passport const& passport,
+               bool require_write,
+               bool require_storage,
+               bool require_sign);
         ELLE_ATTRIBUTE_R(Address, id);
         ELLE_ATTRIBUTE(std::shared_ptr<cryptography::rsa::KeyPair>, keys);
         ELLE_ATTRIBUTE_R(std::shared_ptr<cryptography::rsa::PublicKey>, owner);

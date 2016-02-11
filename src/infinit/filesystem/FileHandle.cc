@@ -370,7 +370,7 @@ namespace infinit
     void
     FileHandle::fsync(int datasync)
     {
-      ELLE_LOG("%s: fsync", *this);
+      ELLE_TRACE_SCOPE("%s: fsync", *this);
     }
 
     void

@@ -3,6 +3,7 @@
 #include <infinit/storage/S3.hh>
 
 #include <elle/log.hh>
+#include <elle/bench.hh>
 #include <elle/serialization/json/SerializerIn.hh>
 #include <aws/S3.hh>
 
@@ -12,6 +13,10 @@
 #include <infinit/storage/MissingKey.hh>
 
 ELLE_LOG_COMPONENT("infinit.storage.S3");
+
+#define BENCH(name)                                      \
+  static elle::Bench bench("bench.s3store." name, 10000_sec); \
+  elle::Bench::BenchScope bs(bench)
 
 namespace infinit
 {
@@ -31,6 +36,7 @@ namespace infinit
     elle::Buffer
     S3::_get(Key key) const
     {
+      BENCH("get");
       try
       {
         return this->_storage->get_object(elle::sprintf("%x", key));
@@ -59,6 +65,7 @@ namespace infinit
     int
     S3::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
+      BENCH("set");
       if (!insert && !update)
         throw elle::Error("neither inserting nor updating");
       if (!insert || !update)
@@ -109,7 +116,6 @@ namespace infinit
       {
         try
         {
-          // Remove the 0x from the block file name.
           res.push_back(
             infinit::model::Address::from_string(pair.first.substr(2)));
         }

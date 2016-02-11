@@ -18,9 +18,13 @@ installed_binaries = []
 rule_build = None
 rule_check = None
 rule_install = None
+rule_symbols = None
 rule_tests = None
 
+email_regex = '^[^@]+@[^@]+\.[^@]+$'
 name_regex = '^[-a-z0-9_][-a-z0-9._]{0,127}$'
+
+beyond_delegate_user = 'hub'
 
 with open(str(drake.path_source('elle/drake-utils.py')), 'r') as f:
   exec(f.read(), globals(), globals())
@@ -35,15 +39,21 @@ def configure(
     valgrind = None,
     valgrind_tests = False,
     python = None,
+    python3 = None, # Alias for python
     fuse = None,
     codesign = False,
-    beyond = True,
+    beyond: bool = True,
+    website: bool = True,
 ):
 
-  global rule_build, rule_check, rule_install, rule_tests
+  if python3 is not None:
+    python = python3
+
+  global rule_build, rule_check, rule_install, rule_symbols, rule_tests
   rule_build = drake.Rule('build')
   rule_check = drake.Rule('check')
   rule_install = drake.Rule('install')
+  rule_symbols = drake.Rule('symbols')
   rule_tests = drake.Rule('tests')
   rule_functional_tests = drake.Rule('functional/tests')
   rule_functional_check = drake.Rule('functional/check')
@@ -301,6 +311,10 @@ def configure(
     'src/infinit/storage/Dropbox.hh',
     'src/infinit/storage/Filesystem.cc',
     'src/infinit/storage/Filesystem.hh',
+    'src/infinit/storage/GCS.cc',
+    'src/infinit/storage/GCS.hh',
+    'src/infinit/storage/GoogleAPI.cc',
+    'src/infinit/storage/GoogleAPI.hh',
     'src/infinit/storage/GoogleDrive.cc',
     'src/infinit/storage/GoogleDrive.hh',
     'src/infinit/storage/InsufficientSpace.cc',
@@ -361,21 +375,36 @@ def configure(
     cxx_config_infinit)
   rule_build << infinit_lib
 
+  crash_reporting = drake.include('crash_reporting',
+                                  cxx_toolkit = cxx_toolkit,
+                                  cxx_config = cxx_config)
+  crash_reporter_lib = drake.copy(crash_reporting.library, 'lib',
+                                  strip_prefix = True)
+
   ## -------- ##
   ## Binaries ##
   ## -------- ##
 
+  def cpp_str_escape(string):
+    from json import dumps
+    return dumps(string).strip('"')
+
   with drake.templating.Context(content = {
+      'beyond_delegate_user': beyond_delegate_user,
       'beyond_host': beyond_host,
+      'email_regex': cpp_str_escape(email_regex),
       'name_regex': name_regex,
   }):
     drake.node('bin/main.hh.tmpl')
+    drake.node('bin/email.hh.tmpl')
+    drake.node('bin/infinit-drive.cc.tmpl')
 
   drake.node('bin/password.hh')
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
   bin_cxx_config += elle.das.config
   bin_cxx_config.add_local_include_path('bin')
+  bin_cxx_config.add_local_include_path('crash_reporting/src')
   bin_cxx_config.lib_path_runtime('../lib')
   if not windows:
     bin_cxx_config.library_add(
@@ -447,15 +476,23 @@ def configure(
   binaries = []
   global installed_binaries
   installed_binaries = []
+  installed_symbols = []
+  debian_debug_dir = 'debian-debug'
+  debian_syms_dir = \
+    drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
+  installed_libraries = []
+  bin_version = drake.node('bin/version.cc')
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
       'bin/%s' % name, [
         source,
+        bin_version,
         infinit_lib,
         elle_lib,
         reactor_lib,
-        cryptography_lib
+        cryptography_lib,
+        crash_reporter_lib,
       ] + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
@@ -463,6 +500,29 @@ def configure(
     binaries.append(bin)
     if install:
       installed_binaries.append(bin)
+      bin_sym = drake.node('bin/symbols/%s.sym' % name)
+      crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                       debian_syms_dir,
+                                       bin,
+                                       bin_sym)
+      installed_symbols.append(bin_sym)
+      def add_libraries(binary):
+        installed_libraries.extend(binary.dynamic_libraries)
+        for lib in binary.dynamic_libraries:
+          add_libraries(lib)
+      add_libraries(bin)
+  for lib in set(installed_libraries):
+    lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
+    crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                     debian_syms_dir,
+                                     lib,
+                                     lib_sym)
+    installed_symbols.append(lib_sym)
+
+  if prefix:
+    symbols_dir = '%s/%s' % (prefix, git.version())
+    for s in installed_symbols:
+      rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
   ## ----- ##
   ## Share ##
@@ -505,15 +565,28 @@ def configure(
       'version_major': git.version().split('.')[0],
       'version_minor': git.version().split('.')[1],
   }):
-    drake.node('control.tmpl')
+    drake.node('debian-packaging/release/control.tmpl')
+    drake.node('debian-packaging/debug/control.tmpl')
   debian_nodes = chain(
     debian_nodes,
-    drake.copy(drake.nodes('control'), 'debian/DEBIAN'),
+    drake.copy(drake.nodes('debian-packaging/release/control'),
+               'debian/DEBIAN',
+               strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
   rule_debian << drake.debian.Packager(
     'infinit_%s_amd64.deb' % git.description(),
     debian_nodes, 'debian').package
+
+  debian_debug_nodes = chain(
+    installed_symbols,
+    drake.copy(drake.nodes('debian-packaging/debug/control'),
+               '%s/DEBIAN' % debian_debug_dir,
+               strip_prefix = True),
+  )
+  rule_debian << drake.debian.Packager(
+    'infinit-debug-symbols-%s_0_amd64.deb' % git.description(),
+    debian_debug_nodes, debian_debug_dir).package
 
   ## ------ ##
   ## Beyond ##
@@ -540,12 +613,20 @@ def configure(
         git = git,
         bottle = bottle,
         PatchAndInstall = PatchAndInstall,
+        email_regex = email_regex,
         name_regex = name_regex,
+        backend = {
+          'binaries': installed_binaries,
+          'debian': rule_debian
+        }
       )
       rule_check << beyond.rule_check
       for test_name in [
+          'address-flag-backward',
           'errors',
           'single-user-two-devices-shared-storage',
+          'passport-restrictions',
+          'passport-sign-delegate',
           #FIXME: 'flow',
           # Test clis.
           'main_cli',
@@ -561,25 +642,33 @@ def configure(
         rule_functional_tests << test
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
+        env = {
+          'PYTHONPATH':
+            str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
+          'PATH': ':'.join([
+            str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                 absolute = True)),
+            os.environ.get('PATH', '')
+          ])
+        }
         runner = drake.Runner(
           exe = test,
-          env = {
-            'PYTHONPATH':
-              drake.path_build('beyond/lib/python%s' % elle.python3.version)
-          })
+          env = env
+        )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure
       rule_tests << rule_functional_tests
       rule_check << rule_functional_check
-    website = drake.include(
-      'website',
-      python = elle.python3,
-      prefix = prefix,
-      git = git,
-      bottle = bottle,
-      sendwithus = sendwithus,
-      PatchAndInstall = PatchAndInstall,
-    )
+    if website:
+      website = drake.include(
+        'website',
+        python = elle.python3,
+        prefix = prefix,
+        git = git,
+        bottle = bottle,
+        sendwithus = sendwithus,
+        PatchAndInstall = PatchAndInstall,
+      )
 
   ## ----- ##
   ## Tests ##
@@ -644,10 +733,17 @@ def configure(
     test.dependencies_add(dependencies)
     rule_tests << test
     env = {'SOURCE_DIR': drake.path_source()}
-    if valgrind_tests:
+    #  _____ _____  ____  __ _____
+    # |  ___|_ _\ \/ /  \/  | ____|
+    # | |_   | | \  /| |\/| |  _|
+    # |  _|  | | /  \| |  | | |___
+    # |_|   |___/_/\_\_|  |_|_____|
+    #
+    # Really, really do run these tests on valgrind !!!
+    if valgrind_tests and test_name not in ['filesystem', 'kelips']:
       runner = drake.valgrind.ValgrindRunner(
         exe = test,
-        valgrind = valgrind,
+        valgrind = elle.valgrind,
         env = env)
     else:
       runner = drake.Runner(exe = test, env = env)

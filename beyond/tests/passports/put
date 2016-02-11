@@ -16,7 +16,7 @@ with Beyond() as beyond:
     def test_normal(self):
       user = User()
       user.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(name = 'infinit', owner = user)
       invitee = User()
       invitee.put(beyond)
       network.put(beyond, owner = user)
@@ -33,7 +33,7 @@ with Beyond() as beyond:
       invitee = User()
       invitee.put(beyond)
       for i in range(0, count):
-        network = Network('infinit-%r' % i, owner = user)
+        network = Network(name = 'infinit-%r' % i, owner = user)
         network.put(beyond, owner = user)
         passport = Passport(network, invitee)
         passport.put(beyond)
@@ -46,7 +46,7 @@ with Beyond() as beyond:
       user.put(beyond)
       evil.put(beyond)
       invitee.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(name = 'infinit', owner = user)
       network.put(beyond, owner = user)
       passport = Passport(network, invitee)
       try:
@@ -60,7 +60,7 @@ with Beyond() as beyond:
       user.put(beyond), invitee.put(beyond)
       networks = {}
       for i in range(10):
-        network = Network('infinit%r' % i, owner = user)
+        network = Network(name = 'infinit%r' % i, owner = user)
         network.put(beyond, owner = user)
         networks[i] = network
       for i in range(0, 10, 2):
@@ -73,7 +73,7 @@ with Beyond() as beyond:
       def populate(invite):
         user, invitee = User(), User()
         user.put(beyond), invitee.put(beyond)
-        network = Network('infinit', owner = user)
+        network = Network(name ='infinit', owner = user)
         network.put(beyond, owner = user)
         if invite:
           passport = Passport(network, invitee)
@@ -87,9 +87,9 @@ with Beyond() as beyond:
     def test_owning_a_network_and_being_invited_to_another(self):
       A, B = User(), User()
       A.put(beyond), B.put(beyond)
-      network_a = Network('infinit', owner = A)
+      network_a = Network(name = 'infinit', owner = A)
       network_a.put(beyond)
-      network_b = Network('infinit', owner = B)
+      network_b = Network(name = 'infinit', owner = B)
       network_b.put(beyond)
       Passport(network_a, B).put(beyond)
       Passport(network_b, A).put(beyond)
@@ -99,7 +99,7 @@ with Beyond() as beyond:
     def test_authorisation_get(self):
       user = User()
       user.put(beyond)
-      network = Network('infinit', owner = user)
+      network = Network(name = 'infinit', owner = user)
       network.put(beyond, owner = user)
       invitee = User()
       invitee.put(beyond)

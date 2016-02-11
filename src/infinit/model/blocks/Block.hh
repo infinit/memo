@@ -20,6 +20,7 @@ namespace infinit
     {
       struct RemoveSignature
       {
+        typedef infinit::serialization_tag serialization_tag;
         RemoveSignature();
         RemoveSignature(RemoveSignature const& other);
         RemoveSignature(RemoveSignature && other);
@@ -67,7 +68,7 @@ namespace infinit
         virtual
         elle::Buffer const&
         data() const;
-        ELLE_ATTRIBUTE_R(Address, address);
+        ELLE_ATTRIBUTE_R(Address, address, protected);
         elle::Buffer
         take_data();
 
@@ -79,7 +80,7 @@ namespace infinit
       `-----------*/
       public:
         void
-        seal();
+        seal(boost::optional<int> version = {});
         ValidationResult
         validate() const;
         ValidationResult
@@ -93,7 +94,7 @@ namespace infinit
       protected:
         virtual
         void
-        _seal();
+        _seal(boost::optional<int> version);
         virtual
         ValidationResult
         _validate() const;

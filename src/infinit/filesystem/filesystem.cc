@@ -52,6 +52,8 @@ namespace infinit
       , _single_mount(false)
       , _volume_name(volume_name)
     {
+      _read_only = !dynamic_cast<model::doughnut::Doughnut*>(_block_store.get())
+        ->passport().allow_write();
 #ifndef INFINIT_WINDOWS
       reactor::scheduler().signal_handle
         (SIGUSR1, [this] { this->print_cache_stats();});
@@ -216,14 +218,18 @@ namespace infinit
       auto dn =
         std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
       Address addr =
-        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root");
+        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root", dn->version());
       while (true)
       {
         try
         {
           ELLE_DEBUG_SCOPE("fetch root bootstrap block at %x", addr);
           auto block = _block_store->fetch(addr);
-          addr = Address::from_string(block->data().string().substr(2));
+          addr = Address(
+            Address::from_string(block->data().string().substr(2)).value(),
+            model::flags::mutable_block);
+          ELLE_DEBUG_SCOPE("fetch root block at %x({%x}", addr,
+                           (unsigned int)addr.overwritten_value());
           break;
         }
         catch (model::MissingBlock const& e)
@@ -244,6 +250,7 @@ namespace infinit
                 dn.get(), dn->owner(), this->_volume_name + ".root", baddr);
               this->store_or_die(std::move(nb), model::STORE_INSERT);
             }
+            on_root_block_create();
             return mb;
           }
           reactor::sleep(1_sec);
