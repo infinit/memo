@@ -1,7 +1,6 @@
 import bottle
 import cryptography
 import datetime
-import hashlib
 import json
 import time
 
@@ -10,7 +9,9 @@ import Crypto.Hash.SHA256
 import Crypto.PublicKey
 import Crypto.Signature.PKCS1_v1_5
 
+from base64 import b64decode, b64encode
 from copy import deepcopy
+from hashlib import sha256
 from requests import Request, Session
 from functools import partial
 
@@ -59,7 +60,12 @@ class Bottle(bottle.Bottle):
       'form_url': 'https://accounts.google.com/o/oauth2/auth',
       'exchange_url': 'https://www.googleapis.com/oauth2/v3/token',
       'params': {
-        'scope': 'https://www.googleapis.com/auth/devstorage.read_write https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+        'scope': ' '.join(
+          'https://www.googleapis.com/auth/%s' % p for p in [
+            'devstorage.read_write',
+            'userinfo.email',
+            'userinfo.profile',
+          ]),
         'access_type': 'offline',
       },
       'info_url': 'https://www.googleapis.com/oauth2/v2/userinfo',
@@ -91,10 +97,10 @@ class Bottle(bottle.Bottle):
       self.route('/oauth/%s' % s)(getattr(self, 'oauth_%s' % s))
       self.route('/users/<username>/%s-oauth' % s)(
         getattr(self, 'oauth_%s_get' % s))
-      self.route('/users/<username>/credentials/%s' % s,
-                 method = 'GET')(getattr(self, 'user_%s_credentials_get' % s))
-    self.route('/users/<username>/credentials/google/refresh',
-               method = 'GET')(getattr(self, 'user_credentials_google_refresh'))
+      self.route('/users/<username>/credentials/%s' % s) \
+        (getattr(self, 'user_%s_credentials_get' % s))
+    self.route('/users/<username>/credentials/google/refresh') \
+      (self.user_credentials_google_refresh)
     # User
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
@@ -115,8 +121,10 @@ class Bottle(bottle.Bottle):
                method = 'POST')(self.user_send_confirmation_email)
 
     # Avatar
-    self.route('/users/<name>/avatar', method = 'GET')(self.user_avatar_get)
-    self.route('/users/<name>/avatar', method = 'PUT')(self.user_avatar_put)
+    self.route('/users/<name>/avatar', method = 'GET') \
+      (self.user_avatar_get)
+    self.route('/users/<name>/avatar', method = 'PUT') \
+      (self.user_avatar_put)
     self.route('/users/<name>/avatar',
                method = 'DELETE')(self.user_avatar_delete)
     self.route('/users/<name>/networks',
@@ -215,8 +223,8 @@ class Bottle(bottle.Bottle):
         'error': 'user/forbidden',
         'reason': 'this user cannot perform any operation'
       })
-    remote_signature_raw = bottle.request.headers.get('infinit-signature')
-    if remote_signature_raw is None:
+    signature_raw = bottle.request.headers.get('infinit-signature')
+    if signature_raw is None:
       raise Response(401, {
         'error': 'user/unauthorized',
         'reason': 'authentication required',
@@ -234,26 +242,30 @@ class Bottle(bottle.Bottle):
         'reason': 'too late: request was issued %ss ago' % delay,
       })
     rawk = user.public_key['rsa']
-    der = base64.b64decode(rawk.encode('latin-1'))
+    der = b64decode(rawk.encode('latin-1'))
     k = Crypto.PublicKey.RSA.importKey(der)
-    to_sign = bottle.request.method + ';' + bottle.request.path[1:] + ';'
-    to_sign += base64.b64encode(
-      hashlib.sha256(bottle.request.body.getvalue()).digest()).decode('utf-8') + ";"
-    to_sign += request_time
+    body_hash = sha256(bottle.request.body.getvalue()).digest()
+    body_hash = b64encode(body_hash).decode('utf-8')
+    to_sign = ';'.join([
+      bottle.request.method,
+      bottle.request.path[1:],
+      body_hash,
+      request_time,
+      ])
     local_hash = Crypto.Hash.SHA256.new(to_sign.encode('utf-8'))
-    remote_signature_crypted = base64.b64decode(remote_signature_raw.encode('utf-8'))
+    signature_crypted = b64decode(signature_raw.encode('utf-8'))
     verifier = Crypto.Signature.PKCS1_v1_5.new(k)
     try:
-      if not verifier.verify(local_hash, remote_signature_crypted):
+      if not verifier.verify(local_hash, signature_crypted):
         raise Response(403, {
           'error': 'user/unauthorized',
           'reason': 'invalid authentication',
         })
     # XXX: Sometimes, verify fails if the keys used differ, raising:
     # > ValueError('Plaintext to large')
-    # This happens ONLY if the keys are different so we can consider it as an
-    # AuthenticationError.
-    # To reproduce, remove this try block and run 'tests/auth'.
+    # This happens ONLY if the keys are different so we can consider
+    # it as an AuthenticationError.  To reproduce, remove this try
+    # block and run 'tests/auth'.
     except ValueError as e:
       if e.args[0] == 'Plaintext too large':
         raise Response(403, {
@@ -322,7 +334,8 @@ class Bottle(bottle.Bottle):
       self.__ensure_names_match('user', name, json)
       if 'private_key' in json:
         json['private_key'] = self.encrypt_key(json['private_key'])
-      user = User.from_json(self.__beyond, json, check_integrity = True)
+      user = User.from_json(self.__beyond, json,
+                            check_integrity = True)
       user.create()
       raise Response(201, {})
     except User.Duplicate:
@@ -473,8 +486,8 @@ class Bottle(bottle.Bottle):
     user = self.user_from_name(name = name)
     self.authenticate(user)
     json = bottle.request.json
-    # XXX: This should be in __init__.py but metaclasses make it difficult to
-    # extend with specific behaviour.
+    # XXX: This should be in __init__.py but metaclasses make it
+    # difficult to extend with specific behaviour.
     json['expiration'] = self.__beyond.now + datetime.timedelta(
       seconds = json.get('lifespan', 5) * 60)
     if 'lifespan' in json:
@@ -486,11 +499,11 @@ class Bottle(bottle.Bottle):
 
   def get_pairing_information(self, name):
     user = self.user_from_name(name = name)
-    paring_passphrase_hash = \
-      bottle.request.headers.get('infinit-pairing-passphrase-hash', '')
+    paring_passphrase_hash = bottle.request.headers.get(
+      'infinit-pairing-passphrase-hash', '')
     try:
-      pairing = \
-        self.__beyond.pairing_information_get(user.name, paring_passphrase_hash)
+      pairing = self.__beyond.pairing_information_get(
+        user.name, paring_passphrase_hash)
     except PairingInformation.NotFound:
       raise self.__not_found('pairing_information', user.name)
     except ValueError as e:
@@ -576,7 +589,8 @@ class Bottle(bottle.Bottle):
     json = bottle.request.json
     passport = Passport(self.__beyond, **json)
     network.passports[invitee] = passport.json()
-    limit = self.__beyond.limits.get('networks', {}).get('passports', None)
+    limit = self.__beyond.limits.get(
+      'networks', {}).get('passports', None)
     if limit and len(network.passports) > limit:
       raise Response(402, {
         'error': 'account/payment_required',
@@ -648,7 +662,8 @@ class Bottle(bottle.Bottle):
       if not 'capacity' in json or json['capacity'] == None:
         json['capacity'] = 0
       stats = Network.Statistics(self.__beyond, **json)
-      network.storages.setdefault(user.name, {})[node_id] = stats.json()
+      network.storages.setdefault(
+        user.name, {})[node_id] = stats.json()
       network.save()
       raise Response(201, {}) # FIXME: 200 if existed
     except Network.NotFound:
@@ -670,7 +685,6 @@ class Bottle(bottle.Bottle):
   def volume_put(self, owner, name):
     user = self.user_from_name(name = owner)
     self.authenticate(user)
-    # network = self.network_from_name(owner = owner, name = network)
     try:
       json = bottle.request.json
       volume = Volume(self.__beyond, **json)
@@ -823,7 +837,8 @@ class Bottle(bottle.Bottle):
     self.authenticate(owner)
     drive = self.drive_from_name(owner = owner.name, name = name)
     json = bottle.request.json
-    # Use 2 separate loops so you don't put anything before checks are done.
+    # Use 2 separate loops so you don't put anything before checks are
+    # done.
     invitees = {}
     for name, value in json.items():
       if name == owner.name:
@@ -906,7 +921,8 @@ class Bottle(bottle.Bottle):
 
   @staticmethod
   def content_type(image):
-    from PIL import JpegImagePlugin, PngImagePlugin, GifImagePlugin, TiffImagePlugin
+    from PIL import \
+      JpegImagePlugin, PngImagePlugin, GifImagePlugin, TiffImagePlugin
     if isinstance(image, JpegImagePlugin.JpegImageFile):
       return 'image/jpeg'
     elif isinstance(image, PngImagePlugin.PngImageFile):
