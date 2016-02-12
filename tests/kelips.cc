@@ -267,7 +267,6 @@ void test_kill_nodes(int node_count, int k, int replication, int kill, bool over
     std::cerr << "\r" << i << "                ";
     BOOST_CHECK_EQUAL(readfile(*fs, "foo" + std::to_string(i)), "foo");
   }
-
   ELLE_LOG("write new files");
   // WRITE
   if (replication - kill > replication / 2)
@@ -316,11 +315,6 @@ ELLE_TEST_SCHEDULED(killed_nodes)
   test_kill_nodes(5, 1, 3, 1, true, false);
 }
 
-ELLE_TEST_SCHEDULED(killed_nodes_big)
-{
-  test_kill_nodes(10, 1, 5, 2, true, false);
-}
-
 // ELLE_TEST_SCHEDULED(killed_nodes_half_lenient)
 // {
 //   test_kill_nodes(5, 1, 2, 1, false, true);
@@ -339,7 +333,6 @@ ELLE_TEST_SUITE()
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(16));
   suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
-  suite.add(BOOST_TEST_CASE(killed_nodes_big), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);
   suite.add(BOOST_TEST_CASE(conflictor), 0, 300);
