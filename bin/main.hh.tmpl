@@ -621,54 +621,59 @@ namespace infinit
 
   inline
   boost::filesystem::path
-  canonical_folder(boost::filesystem::path const& path, std::string const& desc)
+  canonical_folder(boost::filesystem::path const& path)
   {
-    if (!boost::filesystem::exists(path.parent_path()))
-    {
-      throw CommandLineError(elle::sprintf(
-        "parent directory of % does not exist: %s", desc, path.parent_path()));
-    }
-    boost::filesystem::create_directory(path);
-    return boost::filesystem::canonical(path);
+    create_directories(path);
+    return canonical(path);
   }
 
   inline
   boost::filesystem::path
   home()
   {
-    static auto const home = elle::os::getenv("INFINIT_HOME", "");
-    static auto const xdg = elle::os::getenv("XDG_DATA_HOME", "");
-    static auto const data =
-      home.empty() ?
-      xdg.empty() ?
-      elle::system::home_directory() :
-      boost::filesystem::path(xdg) :
-      boost::filesystem::path(home);
-    return canonical_folder(data, "INFINIT_HOME or XDG_DATA_HOME");
+    static auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
+    return infinit_home.empty() ? elle::system::home_directory() : infinit_home;
   }
 
   inline
   boost::filesystem::path
-  root_dir()
+  _xdg_home(std::string const& type, std::string const& def)
   {
-    static auto const data_home = elle::os::getenv("INFINIT_DATA_HOME", "");
-    if (!data_home.empty())
-      return canonical_folder(data_home, "INFINIT_DATA_HOME");
-    static auto const res =
-      home() / ".local" / "share" / "infinit" / "filesystem";
-    return res;
+    auto const infinit = elle::os::getenv("INFINIT_" + type + "_HOME", "");
+    auto const xdg = elle::os::getenv("XDG_" + type + "_HOME", "");
+    static auto const dir =
+      !infinit.empty() ? infinit :
+      !xdg.empty() ? xdg :
+      home() / def / "infinit/filesystem";
+    return canonical_folder(dir);
   }
 
   inline
   boost::filesystem::path
-  cache_dir()
+  xdg_cache_home()
   {
-    static auto const cache_home = elle::os::getenv("INFINIT_CACHE_HOME", "");
-    if (!cache_home.empty())
-      return canonical_folder(cache_home, "INFINIT_CACHE_HOME");
-    static auto const res =
-      home() / ".cache" / "infinit" / "filesystem";
-    return res;
+    return _xdg_home("CACHE", ".cache");
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_config_home()
+  {
+    return _xdg_home("CONFIG", ".config");
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_data_home()
+  {
+    return _xdg_home("DATA", ".local/share");
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_state_home()
+  {
+    return _xdg_home("STATE", ".local/state");
   }
 
   struct User
@@ -793,7 +798,7 @@ namespace infinit
         boost::optional<elle::Version> version = {})
     {
       ELLE_LOG("client version: %s", version_describe);
-      boost::filesystem::path p = root_dir() / "cache" / name;
+      boost::filesystem::path p = xdg_state_home() / "cache" / name;
       return this->dht()->make(
         hosts,
         client,
@@ -1304,7 +1309,7 @@ namespace infinit
     boost::filesystem::path
     _user_avatar_path() const
     {
-      auto root = cache_dir() / "avatars";
+      auto root = xdg_cache_home() / "avatars";
       create_directories(root);
       return root;
     }
@@ -1534,7 +1539,7 @@ namespace infinit
     boost::filesystem::path
     _credentials_path(std::string const& service) const
     {
-      auto root = root_dir() / "credentials" / service;
+      auto root = xdg_data_home() / "credentials" / service;
       create_directories(root);
       return root;
     }
@@ -1548,7 +1553,7 @@ namespace infinit
     boost::filesystem::path
     _network_path() const
     {
-      auto root = root_dir() / "networks";
+      auto root = xdg_data_home() / "networks";
       create_directories(root);
       return root;
     }
@@ -1562,7 +1567,7 @@ namespace infinit
     boost::filesystem::path
     _passport_path() const
     {
-      auto root = root_dir() / "passports";
+      auto root = xdg_data_home() / "passports";
       create_directories(root);
       return root;
     }
@@ -1576,7 +1581,7 @@ namespace infinit
     boost::filesystem::path
     _storage_path() const
     {
-      auto root = root_dir() / "storages";
+      auto root = xdg_data_home() / "storages";
       create_directories(root);
       return root;
     }
@@ -1590,7 +1595,7 @@ namespace infinit
     boost::filesystem::path
     _user_path() const
     {
-      auto root = root_dir() / "users";
+      auto root = xdg_data_home() / "users";
       create_directories(root);
       return root;
     }
@@ -1604,7 +1609,7 @@ namespace infinit
     boost::filesystem::path
     _volume_path() const
     {
-      auto root = root_dir() / "volumes";
+      auto root = xdg_data_home() / "volumes";
       create_directories(root);
       return root;
     }
@@ -1653,7 +1658,7 @@ namespace infinit
     boost::filesystem::path
     _drive_path() const
     {
-      auto root = root_dir() / "drives";
+      auto root = xdg_data_home() / "drives";
       create_directories(root);
       return root;
     }
@@ -1661,9 +1666,7 @@ namespace infinit
     boost::filesystem::path
     _drive_path(std::string const& name) const
     {
-      auto root = root_dir() / "drives";
-      create_directories(root);
-      return root / name;
+      return this->_drive_path() / name;
     }
 
     void
@@ -1699,7 +1702,7 @@ namespace infinit
     boost::filesystem::path
     _drive_icon_path() const
     {
-      auto root = cache_dir() / "icons";
+      auto root = xdg_cache_home() / "icons";
       create_directories(root);
       return root;
     }
