@@ -15,6 +15,8 @@ from itertools import chain
 ## Binaries ##
 ## -------- ##
 
+os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
+
 def find_binaries():
   for path in chain(
       os.environ.get('PATH', '').split(':'),
