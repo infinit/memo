@@ -305,6 +305,10 @@ def configure(
     'resources/images/logos/infinit.png',
     'resources/images/logos/infinit@2x.png',
 
+    'resources/scripts/centralized.sh',
+    'resources/scripts/distributed.sh',
+    'resources/scripts/decentralized.sh',
+
     'resources/fonts/icons.eot',
     'resources/fonts/icons.svg',
     'resources/fonts/icons.ttf',

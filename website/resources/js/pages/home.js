@@ -37,12 +37,11 @@ $(document).ready(function() {
     $(window).scroll(function () {
       if ($(window).scrollTop() > 700 && !has_reach_terminal) {
         has_reach_terminal = true;
-        // launchTerminal();
+        launchTerminal();
       }
     });
 
     if (window.location.hash === '#slack') {
-      // $('#slack').magnificPopup('open');
       $.magnificPopup.open({
         items: { src: '#slack'},
         type: 'inline'
@@ -50,6 +49,23 @@ $(document).ready(function() {
 
       $('#slack').show();
     }
+
+    var client = algoliasearch("2BTFITEL0N", "f27772a74737b4bb66eb0999104830d2");
+    var index = client.initIndex('infinit_sh_faq');
+    autocomplete('#search', { hint: false }, [
+      {
+        source: autocomplete.sources.hits(index, { hitsPerPage: 5 }),
+        displayKey: 'question',
+        templates: {
+          suggestion: function(suggestion) {
+            return suggestion._highlightResult.question.value;
+          }
+        }
+      }
+    ]).on('autocomplete:selected', function(event, suggestion, dataset) {
+      var query = $('#search').val();
+      window.location.href = "/faq?q=" + query;
+    });
   }
 
 });

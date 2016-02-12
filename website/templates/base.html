@@ -139,7 +139,15 @@
       </div>
     </footer>
 
-    <script src="//cdn.jsdelivr.net/instantsearch.js/1/instantsearch.min.js"></script>
+    % if 'faq' in request.route.name:
+      <script src="//cdn.jsdelivr.net/instantsearch.js/1/instantsearch.min.js"></script>
+    %endif
+
+    % if 'home' in request.route.name:
+      <script src="//cdn.jsdelivr.net/algoliasearch/3/algoliasearch.min.js"></script>
+      <script src="//cdn.jsdelivr.net/autocomplete.js/0/autocomplete.min.js"></script>
+    %endif
+
     <script type="text/javascript" src="${url('js/scripts.min.js')}"></script>
     <link href='https://fonts.googleapis.com/css?family=Ubuntu+Mono' rel='stylesheet' type='text/css'>
 

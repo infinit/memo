@@ -420,26 +420,53 @@ body.home {
     .button { margin-top: 20px; }
   }
 
-  section.download {
-    background: #F9F9F9; padding-top: 40px; text-align: center;
+  section.encore {
+    background: #F9F9F9; text-align: center; font-size: 0.8em; padding:0 7%;
+
+    div.get_started, div.search_faq {
+      width: 40%; margin: 70px 5% 70px 5%; float: left;
+    }
+
+    div.search_faq { padding: 0 5%; width: 30% }
+
+    input {
+      border: 2px solid #E2E2E2; border-radius: 4px; font-size: 16px;
+      padding: 15px; width: 100%;
+    }
+
+    input, input:focus { transition: border-color .3s ease-in; outline: 0; }
+    input:focus { border-color: darken(#E2E2E2, 15%); }
+
     p.title {
       text-align: center; margin-bottom: 5px; font-family: @sourcesans; font-weight: bold;
+      font-size: 25px; margin-bottom: 0;
     }
-    p.subtitle { margin-top: 0; }
+
+    p.subtitle { margin-top: 0; font-size: 20px; }
+    p.subtitle a { color: @infinitblue; }
     &:after { display: table; clear: both; content: ''; }
 
-    div:last-child img { margin-bottom: 8px;}
+    .algolia-autocomplete { width: 100%; }
+    .algolia-autocomplete .aa-input,
+    .algolia-autocomplete .aa-hint { width: 100%; }
 
-    div { width: 25%; float: left; padding: 30px 4% 120px 4%; text-align: center; }
-    div img { max-width: 250px; }
-    div h4 { margin-bottom: 0; font-size: 18px; }
-    div p { font-size: 15px; color: darken(@infinitgray, 10%); margin-top: 5px; }
-    div .button { margin-top: 15px; }
-    div span {
-      background: lighten(@infinitgray, 20%); border-radius: 4px; padding: 2px 6px;
-      color: lighten(#333, 35%);
-      font-size: 12px; display: inline-block; margin: 5px 0;
+    .algolia-autocomplete .aa-hint { color: @infinitblack; }
+    .algolia-autocomplete .aa-dropdown-menu {
+      width: 100%; background-color: #fff; border: 2px solid #e2e2e2;
+      border-top: 1px solid #e2e2e2;
+      border-top: none; margin-top: -3px;
     }
+    .algolia-autocomplete .aa-dropdown-menu .aa-suggestion {
+      cursor: pointer; padding: 8px 15px; font-size: 14px; text-align: left;
+
+    }
+    .algolia-autocomplete .aa-dropdown-menu .aa-suggestion.aa-cursor {
+      background-color: #f5f5f5;
+    }
+    .algolia-autocomplete .aa-dropdown-menu .aa-suggestion em {
+       background: #FFFFBE; font-style: normal;
+    }
+
   }
 }
 
@@ -600,10 +627,10 @@ body.pricing, body.press {
       position: relative;
       code {
         display: block; font-family: @monospace; background: @terminalbg;
-        padding: 15px 20px; border-radius: 5px; color: #f8f8f2;
+        padding: 15px 50px 15px 20px; border-radius: 5px; color: #f8f8f2;
         margin-left: 0; min-height: 48px;
       }
-      &.alternate code { background: #2B3F63}
+      &.alternate code { background: #2B3F63; }
     }
 
     pre > div {
@@ -719,7 +746,7 @@ body.faq {
     margin-top: 70px;
 
     input {
-      background: #FFFFFF; border: 2px solid #E2E2E2; border-radius: 4px;;
+      background: #FFFFFF; border: 2px solid #E2E2E2; border-radius: 4px;
       font-size: 17px; width: 70%; margin: 0 15%;
     }
 
@@ -807,13 +834,21 @@ body.faq {
 
     .hit {
       border-bottom: 1px solid #DFDFDF; padding: 25px 0 15px 0;
-      h2 { font-size: 19px; margin: 0; font-weight: 500; }
+      h2 { font-size: 19px; margin: 0; font-weight: 600; }
       p { font-size: 15px; line-height: 22px; color: #999FAA; margin: 0 0 10px 0; }
       h2 em, p em { background: #FFFFBE; font-style: normal;}
       h2 span {
         font-size: 10px; text-transform: uppercase; color:white;
         padding: 2px 5px; border-radius: 3px; background: #FFD795;
         margin-top: -3px; display: inline-block;
+      }
+      a {
+        color: @infinitblue; .transition();
+
+        &:hover {
+          color: darken(@infinitblue, 10%);
+          border-bottom: 2px solid darken(@infinitblue, 10%);
+        }
       }
     }
   }
@@ -1175,6 +1210,7 @@ body.opensource {
     .card:nth-child(2n+1) { clear: both; }
     .repo-card .content p { font-size: 13px; font-family: @sourcesans; }
 
+    .card.user footer { display: none; }
     .card.soon .github-card {
       border-radius: 5px; padding: 8px 11px 0; position: relative;
       min-height: 143px; border: 1px solid #D6D6D6; width: 325px;

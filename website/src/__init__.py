@@ -309,6 +309,7 @@ class Website(bottle.Bottle):
   @route('/fonts/<path:path>')
   @route('/images/<path:path>')
   @route('/js/<path:path>')
+  @route('/scripts/<path:path>')
   def images(self, path):
     d = bottle.request.urlparts.path.split('/')[1]
     return static_file('%s/%s' % (d,  path))

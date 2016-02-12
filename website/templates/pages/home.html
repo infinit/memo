@@ -124,7 +124,7 @@ $> ​▎
       <p>Invite your non-tech-savvy colleagues to join drives you defined in your freshly created storage infrastructure.</p>
       <img src="${url('images/icons/platforms.png')}" alt="Available for Mac, Windows and Linux"><br>
 
-      <a class="button" href="${route('drive')}">See Infinit Drive</a>
+      <a class="button" href="${route('drive')}">Discover Infinit Drive</a>
     </div>
   </section>
 
@@ -154,13 +154,22 @@ $> ​▎
   </section>
 
 
-  <section class="download" id="download">
-    <p class="title">Start using Infinit now</p>
-    <p class="subtitle">Create your first infrastructure in a few minutes</p>
+  <section class="encore">
 
-    <a class="button big" href="${route('doc_get_started')}">Get Started</a>
-    <br><br><br><br><br><br>
+    <div class="get_started">
+      <p class="title">Start using Infinit now</p>
+      <p class="subtitle">Create your first infrastructure in a few minutes</p>
 
+      <a class="button big" href="${route('doc_get_started')}">Get Started</a>
+      <br><br><br><br><br><br>
+    </div>
+
+    <div class="search_faq">
+      <p class="title">Have more questions?</p>
+      <p class="subtitle">Search an answer in our <a href="${route('faq')}">FAQ</a></p>
+
+      <input type="text" id="search" placeholder="Search FAQ..." />
+    </div>
     <!--
     <div>
       <img src="${url('images/terminal-mini.png')}">

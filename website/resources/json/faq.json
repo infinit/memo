@@ -62,7 +62,7 @@
   {
     "category": "technology",
     "popularity": 0,
-    "question": "Does Infinit handle data replication/redundancy?",
+    "question": "Does Infinit handle data redundancy i.e replication?",
     "answer" : "<p>Yes. You can define a replication factor when creating a network, see our <a href=\"/documentation/reference#network\">documentation</a>.</p>"
   },
   {
@@ -80,7 +80,7 @@
   {
     "category": "technology",
     "popularity": 0,
-    "question": "What protocols does Infinit use to communicate and for networking?",
+    "question": "What networking protocols does Infinit use to communicate?",
     "answer" : "<p>Infinit can be configured to use either TCP or UDP (µTP). By default, it tries to use UDP using UPnP and NAT hole punching where necessary as this is better suited to transferring large amounts of data.</p>"
   },
   {
