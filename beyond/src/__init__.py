@@ -162,10 +162,10 @@ class Beyond:
     json = self.__datastore.pairing_fetch(owner)
     pairing = PairingInformation.from_json(self, json)
     if passphrase_hash != pairing.passphrase_hash:
-      raise ValueError("passphrase_hash")
+      raise ValueError('passphrase_hash')
     self.pairing_information_delete(owner)
     if self.now > pairing.expiration:
-      raise exceptions.NoLongerAvailable("%s pairing information" % owner)
+      raise exceptions.NoLongerAvailable('%s pairing information' % owner)
     return pairing
 
   def pairing_information_delete(self, owner):
@@ -175,7 +175,7 @@ class Beyond:
     json = self.__datastore.pairing_fetch(owner)
     pairing = PairingInformation.from_json(self, json)
     if self.now > pairing.expiration:
-      raise exceptions.NoLongerAvailable("%s pairing information" % owner)
+      raise exceptions.NoLongerAvailable('%s pairing information' % owner)
     return True
 
   ## ------- ##
@@ -783,7 +783,7 @@ class Drive(metaclass = Entity,
       variables['owner']['avatar'] = '/users/%s/avatar' % owner.name
       variables['drive']['icon'] = '/drives/%s/icon' % drive.name
       if invitation and email is not None:
-        template = "Drive/Invitation" if not plain else "Drive/Plain Invitation"
+        template = 'Drive/Invitation' if not plain else 'Drive/Plain Invitation'
         beyond.emailer.send_one(
           recipient_email = email,
           recipient_name = key,
@@ -795,6 +795,6 @@ class Drive(metaclass = Entity,
           recipient_email = owner.email,
           recipient_name = owner.name,
           variables = variables,
-          **beyond.template("Drive/Joined")
+          **beyond.template('Drive/Joined')
         )
       return True
