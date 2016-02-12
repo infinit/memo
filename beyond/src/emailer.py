@@ -44,15 +44,18 @@ class SendWithUs(Base):
     templates = json.loads(self.__swu.templates().content.decode())
     self.__templates = dict((t['id'], t) for t in templates)
     for _, template in self.__templates.items():
-      template['versions'] = dict((v['id'], v) for v in template['versions'])
+      template['versions'] = \
+        dict((v['id'], v) for v in template['versions'])
 
   def __execute(self, batch):
     r = batch.execute()
     if r.status_code != 200:
       try:
-        print('%s: send with us status code: %s' % (self, r.json()), file = sys.stderr)
+        print('%s: send with us status code: %s' % (self, r.json()),
+              file = sys.stderr)
       except Exception as e:
-        print('%s: non-JSON response (%s): %s' % (self, e, r.text), file = sys.stderr)
+        print('%s: non-JSON response (%s): %s' % (self, e, r.text),
+              file = sys.stderr)
       raise Exception('%s: request failed' % self)
     return r
 
@@ -63,9 +66,10 @@ class SendWithUs(Base):
       raise Exception('no such template \'%s\'' % template)
     template = self.__templates[template]
     if version is not None and version not in template['versions']:
-      raise Exception(
-        'no such version \'%s\' of template \'%s\'' % (version, template['id']))
-    return template['id'], template['versions'].get(version, {}).get('name', None)
+      raise Exception('no such version \'%s\' of template \'%s\'' % \
+                      (version, template['id']))
+    version = template['versions'].get(version, {})
+    return template['id'], version.get('name', None)
 
   def send_one(self,
                template,

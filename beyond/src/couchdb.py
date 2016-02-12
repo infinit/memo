@@ -110,17 +110,23 @@ class CouchDBDatastore:
     self.__design('networks',
                   updates = [('update', self.__network_update)],
                   views = [
-                    ('per_invitee_name', self.__networks_per_invitee_name_map),
-                    ('per_owner_key', self.__networks_per_owner_key_map),
-                    ('per_user_key', self.__networks_per_user_key_map)
+                    ('per_invitee_name',
+                     self.__networks_per_invitee_name_map),
+                    ('per_owner_key',
+                     self.__networks_per_owner_key_map),
+                    ('per_user_key',
+                     self.__networks_per_user_key_map)
                   ],
                   views_with_reduce = [
-                    ('stat_view', self.__network_stat_map, self.__network_stat_reduce)
+                    ('stat_view',
+                     self.__network_stat_map,
+                     self.__network_stat_reduce),
                   ])
     self.__design('volumes',
                   updates = [('update', self.__volume_update)],
                   views = [
-                    ('per_network_id', self.__volumes_per_network_id_map),
+                    ('per_network_id',
+                     self.__volumes_per_network_id_map),
                   ])
     self.__design('drives',
                   updates = [('update', self.__drive_update)],
