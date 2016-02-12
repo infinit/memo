@@ -1,5 +1,6 @@
 import base64
 import cryptography
+import os
 import requests
 import subprocess
 
@@ -13,22 +14,26 @@ from itertools import chain
 ## -------- ##
 ## Binaries ##
 ## -------- ##
+
 def find_binaries():
-  import os
-  paths = []
-  if os.environ.get('INFINIT_BINARIES'):
-    paths.append(os.environ.get('INFINIT_BINARIES'))
-  paths += os.environ.get('PATH', '').split(':') + ['/opt/infinit/bin/']
-  for path in paths:
-    path = path + '/' if not path.endswith('/') else path
+  for path in chain(
+      os.environ.get('PATH', '').split(':'),
+      ['/opt/infinit/bin', os.environ.get('INFINIT_BINARIES')],
+  ):
+    if not path:
+      continue
+    if not path.endswith('/'):
+      path += '/'
     try:
-      if subprocess.check_call([path + 'infinit-user', '--version']) == 0:
-        return path
-    except:
+      subprocess.check_call([path + 'infinit-user', '--version'])
+      return path
+    except FileNotFoundError:
       pass
+    except subprocess.CalledProcessError:
+      pass
+  raise Exception('unable to find infinit-user binary')
 
 binary_path = find_binaries()
-assert binary_path is not None
 
 # Email templates.
 templates = {
