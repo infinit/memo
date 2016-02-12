@@ -38,22 +38,23 @@ binary_path = find_binaries()
 # Email templates.
 templates = {
   'Drive/Joined': {
-    'swu': ('tem_RFSDrp7nzCbsBRSUts7MsU', )
+    'template': 'tem_RFSDrp7nzCbsBRSUts7MsU',
   },
   'Drive/Invitation': {
-    'swu': ('tem_UwwStKnWCWNU5VP4HBS7Xj', )
+    'template': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
   },
   'Drive/Plain Invitation': {
-    'swu': ('tem_j8r5aDLJ6v3CTveMahtauX', )
+    'template': 'tem_j8r5aDLJ6v3CTveMahtauX',
   },
   'Internal/Crash Report': {
-    'swu': ('tem_fu5GEE6jxByj2SB4zM6CrH', )
+    'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
   },
   'User/Welcome': {
-    'swu': ('tem_Jsd948JkLqhBQs3fgGZSsS', 'ver_W9nDEtV4KzxWyrLtZDcAWE')
+    'template': 'tem_Jsd948JkLqhBQs3fgGZSsS',
+    'version': 'ver_W9nDEtV4KzxWyrLtZDcAWE',
   },
   'User/Confirmation Email': {
-    'swu': ('tem_b6ZtsWVHKzv4PUBDU7WTZj', )
+    'template': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
   },
 }
 
@@ -111,13 +112,7 @@ class Beyond:
 
   def template(self, name):
     if isinstance(self.__emailer, emailer.SendWithUs):
-      template = templates[name]['swu']
-      import sys
-      print(template, file = sys.stderr)
-      return {
-        'template': template[0],
-        'version':  template[1] if len(template) > 1 else None,
-      }
+      return templates[name]
     else:
       return {
         'template': name,
