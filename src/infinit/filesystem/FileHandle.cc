@@ -258,6 +258,7 @@ namespace infinit
       _owner->_header.mtime = time(nullptr);
       if (offset < signed(File::first_block_size))
       { // write on first block
+        this->_owner->_fat_changed = true;
         auto wend = std::min(uint64_t(size + offset), File::first_block_size);
         if (_owner->_data.size() < wend)
         {
