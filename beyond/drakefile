@@ -220,8 +220,6 @@ def configure(
     drake.copy(
       drake.nodes('etc/nginx/sites-available/beyond',
                   'etc/rsyslog.d/10-infinit.conf',
-                  'etc/ssl/beyond.crt',
-                  'etc/ssl/private/beyond.key',
                   'etc/uwsgi/apps-available/beyond.xml',
                   'usr/share/ca-certificates/extra/infinit.crt'),
       'debian',
