@@ -241,6 +241,16 @@ namespace infinit
             return;
           }
         }
+        if (special->find("auth_others") == 0)
+        {
+          bool r = v.find("r") != std::string::npos;
+          bool w = v.find("w") != std::string::npos;
+          umbrella([&] {
+              block->set_world_permissions(r, w);
+              _commit();
+          }, EACCES);
+          return;
+        }
         throw rfs::Error(ENOATTR, "no such attribute", elle::Backtrace());
       }
       /* Drop quarantine flags, preventing the files from being opened.

@@ -242,6 +242,7 @@ void
 set_action(std::string const& path,
            std::vector<std::string> users,
            std::string const& mode,
+           std::string const& omode,
            bool inherit,
            bool disinherit,
            bool verbose,
@@ -266,6 +267,20 @@ set_action(std::string const& path,
         ELLE_ERR("setattr (inherit) on %s failed: %s", path,
                  elle::exception_string());
       }
+    }
+  }
+  if (!omode.empty())
+  {
+    try
+    {
+      check(port_setxattr, path, "user.infinit.auth_others", omode,
+            fallback_xattrs);
+    }
+    catch (InvalidArgument const&)
+    {
+      ELLE_ERR("setattr (omode: %s) on %s failed: %s", omode, path,
+               elle::exception_string());
+      throw;
     }
   }
   if (!mode.empty())
@@ -301,6 +316,30 @@ set_action(std::string const& path,
   }
 }
 
+COMMAND(set_xattr)
+{
+  auto path = mandatory<std::string>(args, "path", "target file/folder");
+  auto name = mandatory<std::string>(args, "name", "attribute name");
+  auto value = mandatory<std::string>(args, "value", "attribute value");
+  port_setxattr(path, name, value, true);
+}
+
+COMMAND(get_xattr)
+{
+  auto path = mandatory<std::string>(args, "path", "target file/folder");
+  auto name = mandatory<std::string>(args, "name", "attribute name");
+  char result[16384];
+  int res = port_getxattr(path, name, result, 16383, true);
+  if (res < 0)
+    perror("getxattr");
+  else
+  {
+    result[res] = 0;
+    std::cout << result << std::endl;
+  }
+}
+
+
 COMMAND(list)
 {
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
@@ -322,12 +361,20 @@ COMMAND(set)
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
   if (paths.empty())
     throw CommandLineError("missing path argument");
+  std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
+  auto omode_ = optional(args, "others-mode");
+  auto omode = omode_? omode_.get() : "";
+  auto it = std::find(allowed_modes.begin(), allowed_modes.end(), omode);
+  if (it == allowed_modes.end())
+  {
+    throw CommandLineError(
+      elle::sprintf("mode must be one of: %s", allowed_modes));
+  }
   auto users_ = optional<std::vector<std::string>>(args, "user");
   auto users = users_ ? users_.get() : std::vector<std::string>();
-  std::vector<std::string> allowed_modes = {"r", "w", "rw", "none", ""};
   auto mode_ = optional(args, "mode");
   auto mode = mode_ ? mode_.get() : "";
-  auto it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
+  it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
   if (it == allowed_modes.end())
   {
     throw CommandLineError(
@@ -342,7 +389,7 @@ COMMAND(set)
     throw CommandLineError(
       "inherit and disable-inherit are exclusive");
   }
-  if (!inherit && !disinherit && mode.empty())
+  if (!inherit && !disinherit && mode.empty() && omode.empty())
     throw CommandLineError("no operation specified");
   std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
   mode = modes_map[it - allowed_modes.begin()];
@@ -362,11 +409,11 @@ COMMAND(set)
   }
   for (auto const& path: paths)
   {
-    set_action(path, users, mode, inherit, disinherit, verbose, fallback);
+    set_action(path, users, mode, omode, inherit, disinherit, verbose, fallback);
     if (recursive)
     {
       recursive_action(
-        set_action, path, users, mode, inherit, disinherit, verbose, fallback);
+        set_action, path, users, mode, omode, inherit, disinherit, verbose, fallback);
     }
   }
 }
@@ -563,6 +610,27 @@ main(int argc, char** argv)
       },
     },
     {
+      "set-xattr",
+      "Set an extended attribute",
+      &set_xattr,
+      "--path PATH --name NAME --value VALUE",
+      {
+        {"name,n", value<std::string>(), "attribute name"},
+        {"value,s", value<std::string>(), "attribute value"},
+        {"path,p", value<std::string>(), "Target file or directory"},
+      },
+    },
+    {
+      "get-xattr",
+      "Get an extended attribute",
+      &get_xattr,
+      "--path PATH --name NAME",
+      {
+        {"name,n", value<std::string>(), "attribute name"},
+        {"path,p", value<std::string>(), "Target file or directory"},
+      },
+    },
+    {
       "set",
       "Set ACL",
       &set,
@@ -572,6 +640,7 @@ main(int argc, char** argv)
         { "user,u", value<std::vector<std::string>>(), elle::sprintf(
           "users and groups (prefix: %s<group>)", group_prefix) },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
+        { "others-mode,o", value<std::string>(), "access mode for everybody: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
           "new files/folders inherit from their parent directory" },
         { "disable-inherit", bool_switch(),
