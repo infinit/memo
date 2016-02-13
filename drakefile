@@ -733,17 +733,16 @@ def configure(
   ]
   if not windows:
     tests_names.append(('filesystem', binaries))
+    tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+  else:
+    tests_extra_libs = []
   for test_name, dependencies in tests_names:
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
         drake.node('tests/%s.cc' % test_name),
-        infinit_lib,
-        elle_lib,
-        cryptography_lib,
-        reactor_lib,
-        protocol_lib,
-      ],
+        infinit_lib
+      ] + tests_extra_libs,
       cxx_toolkit,
       test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
     test.dependencies_add(dependencies)
