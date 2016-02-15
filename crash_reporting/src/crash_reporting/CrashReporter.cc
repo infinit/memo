@@ -50,21 +50,6 @@ namespace crash_reporting
     , _exception_handler(nullptr)
     , _dumps_path(std::move(dumps_path))
   {
-    if (elle::os::getenv("INFINIT_CRASH_REPORTER_ENABLED", "") == "0")
-    {
-      ELLE_LOG("crash reporter disabled");
-      this->_enabled = false;
-      return;
-    }
-#ifndef INFINIT_PRODUCTION_BUILD
-    if (elle::os::getenv("INFINIT_CRASH_REPORTER_ENABLED", "") != "1")
-    {
-      ELLE_TRACE("crash reporter disabled, "
-                 "enable with INFINIT_CRASH_REPORTER_ENABLED=1");
-      this->_enabled = false;
-      return;
-    }
-#endif
 #ifdef INFINIT_LINUX
     google_breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());
     this->_exception_handler =
@@ -186,28 +171,6 @@ namespace crash_reporting
       {
         ELLE_TRACE("%s: unable to complete upload of %s: %s", *this, path, e);
       }
-    }
-  }
-
-  static
-  void
-  _ensure_folder(boost::filesystem::path const& path)
-  {
-    namespace fs = boost::filesystem;
-    boost::system::error_code erc;
-    if (fs::exists(path) && !fs::is_directory(path))
-      ELLE_ABORT("%s exists and is not a directory", path);
-    fs::create_directories(path, erc);
-    if (!fs::exists(path) || erc)
-    {
-      std::string reason = erc ? erc.message() : "unknown error";
-      ELLE_ABORT("%s cannot be created: %s", path, reason);
-    }
-    fs::permissions(path, fs::add_perms | fs::owner_write, erc);
-    if (erc)
-    {
-      ELLE_ABORT("unable to add write permission for owner on %s: %s",
-                 path, erc.message());
     }
   }
 }

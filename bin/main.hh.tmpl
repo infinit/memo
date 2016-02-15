@@ -433,7 +433,11 @@ namespace infinit
   boost::filesystem::path
   canonical_folder(boost::filesystem::path const& path)
   {
+    if (exists(path) && !is_directory(path))
+      throw elle::Error(elle::sprintf("not a directory: %s", path));
     create_directories(path);
+    permissions(
+      path, boost::filesystem::add_perms | boost::filesystem::owner_write);
     return canonical(path);
   }
 
@@ -497,11 +501,23 @@ namespace infinit
     try
     {
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
-      std::string crash_url =
-        elle::sprintf("%s/crash/report",
-                      crash_host.length() ? crash_host : beyond());
-      auto crash_reporter = crash_reporting::CrashReporter(
-        crash_url, xdg_cache_home() / "crashes");
+      std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
+#ifdef INFINIT_PRODUCTION_BUILD
+      bool const production_build = true;
+#else
+      bool const production_build = false;
+#endif
+      // FIXME: reenable crash reporter
+      // if (production_build &&
+      //     elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
+      //     elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
+      // {
+      //   std::string crash_url =
+      //     elle::sprintf("%s/crash/report",
+      //     crash_host.length() ? crash_host : beyond());
+      //   crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
+      //   crash_url, xdg_cache_home() / "crashes");
+      // }
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
@@ -611,13 +627,12 @@ namespace infinit
                 args.push_back(unrecognized);
               }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
-              if (crash_reporter.enabled() &&
-                  crash_reporter.crashes_pending_upload())
+              if (crash_reporter && crash_reporter->crashes_pending_upload())
               {
                 crash_upload_thread.reset(new reactor::Thread("upload crashes",
                   [&crash_reporter]
                   {
-                    crash_reporter.upload_existing();
+                    crash_reporter->upload_existing();
                   }));
               }
               try
