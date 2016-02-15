@@ -43,11 +43,12 @@ namespace crash_reporting
     return success;
   }
 
-  CrashReporter::CrashReporter(std::string crash_url)
+  CrashReporter::CrashReporter(std::string crash_url,
+                               boost::filesystem::path dumps_path)
     : _crash_url(std::move(crash_url))
-    , _dump_path()
     , _enabled(true)
     , _exception_handler(nullptr)
+    , _dumps_path(std::move(dumps_path))
   {
     if (elle::os::getenv("INFINIT_CRASH_REPORTER_ENABLED", "") == "0")
     {
@@ -64,9 +65,8 @@ namespace crash_reporting
       return;
     }
 #endif
-    this->_dump_path = this->_get_dump_path();
 #ifdef INFINIT_LINUX
-    google_breakpad::MinidumpDescriptor descriptor(this->_dump_path.string());
+    google_breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());
     this->_exception_handler =
       new google_breakpad::ExceptionHandler(descriptor,
                                             NULL,
@@ -76,7 +76,7 @@ namespace crash_reporting
                                             -1);
 #elif defined(INFINIT_MACOSX)
     this->_exception_handler =
-      new google_breakpad::ExceptionHandler(this->_dump_path.string(),
+      new google_breakpad::ExceptionHandler(this->_dumps_path.string(),
                                             NULL,
                                             dump_callback,
                                             NULL,
@@ -123,7 +123,7 @@ namespace crash_reporting
   {
     int32_t res = 0;
     namespace fs = boost::filesystem;
-    for (fs::directory_iterator it(this->_dump_path);
+    for (fs::directory_iterator it(this->_dumps_path);
          it != fs::directory_iterator();
          ++it)
     {
@@ -141,7 +141,7 @@ namespace crash_reporting
     if (!this->_enabled)
       return;
     namespace fs = boost::filesystem;
-    for (fs::directory_iterator it(this->_dump_path);
+    for (fs::directory_iterator it(this->_dumps_path);
          it != fs::directory_iterator();
          ++it)
     {
@@ -209,33 +209,5 @@ namespace crash_reporting
       ELLE_ABORT("unable to add write permission for owner on %s: %s",
                  path, erc.message());
     }
-  }
-
-  boost::filesystem::path
-  CrashReporter::_get_dump_path()
-  {
-    namespace fs = boost::filesystem;
-    std::string dump_str = elle::os::getenv("INFINIT_CRASH_DUMP_PATH", "");
-    if (!dump_str.empty())
-    {
-      fs::path dump_path(dump_str);
-      if (!fs::exists(dump_path.parent_path()))
-        ELLE_ABORT("parent path does not exist: %s", dump_path.parent_path());
-      _ensure_folder(dump_path);
-      return dump_path;
-    }
-    std::string ifnt_home = elle::os::getenv("INFINIT_HOME", "");
-    std::string xdg_home = elle::os::getenv("XDG_DATA_HOME", "");
-    fs::path home =
-      ifnt_home.empty() ?
-      xdg_home.empty() ?
-      elle::system::home_directory() :
-      fs::path(xdg_home) :
-      fs::path(ifnt_home);
-    if (!fs::exists(home))
-      ELLE_ABORT("home directory does not exist: %s", home);
-    auto res = home / ".state" / "infinit" / "crash_dumps";
-    _ensure_folder(res);
-    return res;
   }
 }

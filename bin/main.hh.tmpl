@@ -429,6 +429,63 @@ namespace infinit
       throw CommandLineError(elle::sprintf(error_message, test_name));
   }
 
+  inline
+  boost::filesystem::path
+  canonical_folder(boost::filesystem::path const& path)
+  {
+    create_directories(path);
+    return canonical(path);
+  }
+
+  inline
+  boost::filesystem::path
+  home()
+  {
+    static auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
+    return infinit_home.empty() ? elle::system::home_directory() : infinit_home;
+  }
+
+  inline
+  boost::filesystem::path
+  _xdg_home(std::string const& type, std::string const& def)
+  {
+    auto const infinit = elle::os::getenv("INFINIT_" + type + "_HOME", "");
+    auto const xdg = elle::os::getenv("XDG_" + type + "_HOME", "");
+    static auto const dir =
+      !infinit.empty() ? infinit :
+      !xdg.empty() ? xdg :
+      home() / def / "infinit/filesystem";
+    return canonical_folder(dir);
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_cache_home()
+  {
+    return _xdg_home("CACHE", ".cache");
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_config_home()
+  {
+    return _xdg_home("CONFIG", ".config");
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_data_home()
+  {
+    return _xdg_home("DATA", ".local/share");
+  }
+
+  inline
+  boost::filesystem::path
+  xdg_state_home()
+  {
+    return _xdg_home("STATE", ".local/state");
+  }
+
   int
   main(std::string desc,
        Modes const& modes,
@@ -443,7 +500,8 @@ namespace infinit
       std::string crash_url =
         elle::sprintf("%s/crash/report",
                       crash_host.length() ? crash_host : beyond());
-      auto crash_reporter = crash_reporting::CrashReporter(crash_url);
+      auto crash_reporter = crash_reporting::CrashReporter(
+        crash_url, xdg_cache_home() / "crashes");
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
@@ -617,63 +675,6 @@ namespace infinit
       return 1;
     }
     return 0;
-  }
-
-  inline
-  boost::filesystem::path
-  canonical_folder(boost::filesystem::path const& path)
-  {
-    create_directories(path);
-    return canonical(path);
-  }
-
-  inline
-  boost::filesystem::path
-  home()
-  {
-    static auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
-    return infinit_home.empty() ? elle::system::home_directory() : infinit_home;
-  }
-
-  inline
-  boost::filesystem::path
-  _xdg_home(std::string const& type, std::string const& def)
-  {
-    auto const infinit = elle::os::getenv("INFINIT_" + type + "_HOME", "");
-    auto const xdg = elle::os::getenv("XDG_" + type + "_HOME", "");
-    static auto const dir =
-      !infinit.empty() ? infinit :
-      !xdg.empty() ? xdg :
-      home() / def / "infinit/filesystem";
-    return canonical_folder(dir);
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_cache_home()
-  {
-    return _xdg_home("CACHE", ".cache");
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_config_home()
-  {
-    return _xdg_home("CONFIG", ".config");
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_data_home()
-  {
-    return _xdg_home("DATA", ".local/share");
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_state_home()
-  {
-    return _xdg_home("STATE", ".local/state");
   }
 
   struct User
