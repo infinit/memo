@@ -503,9 +503,9 @@ namespace infinit
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
       std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
 #ifdef INFINIT_PRODUCTION_BUILD
-      bool const production_build = true;
+      // bool const production_build = true;
 #else
-      bool const production_build = false;
+      // bool const production_build = false;
 #endif
       // FIXME: reenable crash reporter
       // if (production_build &&
