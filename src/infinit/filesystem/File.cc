@@ -316,8 +316,10 @@ namespace infinit
       else
       {
         ELLE_TRACE("Fetching %s", index);
-        b = AnyBlock(_owner.fetch_or_die(
-          Address(_fat[index].first.value(), model::flags::immutable_block)), _fat[index].second);
+        Address flagged(this->_fat[index].first.value(),
+                        model::flags::immutable_block);
+        b = AnyBlock(this->_owner.fetch_or_die(flagged.unflagged()),
+                     this->_fat[index].second);
         is_new = false;
       }
 
@@ -365,7 +367,8 @@ namespace infinit
           std::unique_ptr<model::blocks::Block> bl;
           try
           {
-            bl = self->_owner.fetch_or_die(addr);
+            Address flagged(addr.value(), model::flags::immutable_block);
+            bl = self->_owner.fetch_or_die(flagged.unflagged());
           }
           catch (elle::Error const& e)
           {
