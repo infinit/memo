@@ -322,7 +322,7 @@ namespace infinit
               return res;
             }
           }
-          return this->_backend->fetch(address);
+          return this->_backend->fetch(address, local_version);
         }
 
         void
