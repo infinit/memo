@@ -451,7 +451,7 @@ namespace infinit
   {
     auto const infinit = elle::os::getenv("INFINIT_" + type + "_HOME", "");
     auto const xdg = elle::os::getenv("XDG_" + type + "_HOME", "");
-    static auto const dir =
+    auto const dir =
       !infinit.empty() ? infinit :
       !xdg.empty() ? xdg :
       home() / def / "infinit/filesystem";
