@@ -90,30 +90,11 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %s{%x} (local version: %s)",
-                           *this, address,
-                           (unsigned int)address.overwritten_value(),
-                           local_version);
+          ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
+                           *this, address, local_version);
           if (this->doughnut().version() < elle::Version(0, 5, 0))
-            return this->_fetch(address.unflagged(), local_version);
-          try
-          {
             return this->_fetch(address, local_version);
-          }
-          catch (MissingBlock const&)
-          {
-            auto uaddr = address.unflagged();
-            if (uaddr != address)
-            {
-              ELLE_TRACE("%s: retrying with unflagged address %s", *this, uaddr);
-              return this->_fetch(uaddr, local_version);
-            }
-            else
-            {
-              ELLE_TRACE("%s: no second chance", *this);
-              throw;
-            }
-          }
+          return this->_fetch(address, local_version);
         }
 
         std::unique_ptr<blocks::Block>

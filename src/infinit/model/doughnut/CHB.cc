@@ -68,8 +68,7 @@ namespace infinit
         ELLE_DEBUG_SCOPE("%s: validate", *this);
         auto expected_address = CHB::_hash_address(this->data(), this->_owner,
           this->_salt, this->_doughnut->version());
-        if (this->address() != expected_address
-          && this->address() != expected_address.unflagged())
+        if (!equal_unflagged(this->address(), expected_address))
         {
           auto reason =
             elle::sprintf("address %x invalid, expecting %x",
@@ -115,7 +114,7 @@ namespace infinit
       elle::Buffer
       CHB::_make_salt()
       {
-        return elle::Buffer(Address::random().value(),
+        return elle::Buffer(Address::random(0).value(), // FIXME
                             sizeof(Address::Value));
       }
 
@@ -266,8 +265,8 @@ namespace infinit
         }
         else
           hash = cryptography::hash(stream, cryptography::Oneway::sha256);
-        Address addr(hash.contents(), flags::immutable_block);
-        return version >= elle::Version(0, 5, 0) ? addr : addr.unflagged();
+        return Address(hash.contents(), flags::immutable_block,
+                       version >= elle::Version(0, 5, 0));
       }
 
       static const elle::serialization::Hierarchy<blocks::Block>::

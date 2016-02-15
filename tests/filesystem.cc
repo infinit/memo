@@ -256,7 +256,7 @@ static void make_nodes(std::string store, int node_count,
   nodes_sched = &s;
   reactor::Thread t(s, "nodes", [&] {
     for (int i = 0; i < node_count; ++i)
-      peers.emplace_back(infinit::model::Address::random());
+      peers.emplace_back(infinit::model::Address::random(0)); // FIXME
     for (int i = 0; i < node_count; ++i)
     {
       // Create storage
@@ -381,7 +381,7 @@ run_filesystem_dht(std::string const& store,
           };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
-          infinit::model::Address::random(),
+          infinit::model::Address::random(0), // FIXME
           "testnet",
           std::make_shared<infinit::cryptography::rsa::KeyPair>(owner_keys),
           owner_keys.public_key(),
@@ -426,7 +426,7 @@ run_filesystem_dht(std::string const& store,
         keys.push_back(kp.K());
         model["id"] = elle::format::base64::encode(
           elle::ConstWeakBuffer(
-            infinit::model::Address::random().value(),
+            infinit::model::Address::random(0).value(), // FIXME
             sizeof(infinit::model::Address::Value))).string();
 
         model["keys"] = "@KEYS@"; // placeholder, lolilol

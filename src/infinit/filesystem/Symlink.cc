@@ -27,10 +27,14 @@ namespace infinit
     void
     Symlink::_fetch()
     {
-      auto addr = _parent->_files.at(_name).second;
-      _block = elle::cast<MutableBlock>::runtime(_owner.fetch_or_die(addr));
+      auto addr = Address(
+        this->_parent->_files.at(this->_name).second.value(),
+        model::flags::mutable_block, true);
+      this->_block = std::dynamic_pointer_cast<MutableBlock>(
+        this->_owner.fetch_or_die(addr));
       umbrella([&] {
-          _header = elle::serialization::binary::deserialize<FileHeader>(_block->data());
+          this->_header = elle::serialization::binary::deserialize<FileHeader>(
+            this->_block->data());
       });
     }
 

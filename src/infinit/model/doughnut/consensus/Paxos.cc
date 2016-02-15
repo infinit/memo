@@ -986,12 +986,10 @@ namespace infinit
           }
           else
             ELLE_DEBUG("owners: %s", peers);
-          bool reverse_mutable = false;
           while (true)
-          {
             try
             {
-              if (address.mutable_block()^reverse_mutable)
+              if (address.mutable_block())
               {
                 ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
@@ -1029,14 +1027,7 @@ namespace infinit
                     ELLE_TRACE("error fetching from %s: %s", *peer, e.what());
                   }
                 }
-                if (reverse_mutable)
-                  throw  MissingBlock(address);
-                else
-                {
-                  ELLE_TRACE("Retrying as a mutable block")
-                  reverse_mutable = true;
-                  continue;
-                }
+                throw  MissingBlock(address);
               }
             }
             catch (Paxos::PaxosServer::WrongQuorum const& e)
@@ -1046,7 +1037,6 @@ namespace infinit
               ELLE_DEBUG("%s", e.what());
               peers = lookup_nodes(this->doughnut(), e.expected(), address);
             }
-          }
         }
 
         void

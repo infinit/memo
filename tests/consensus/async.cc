@@ -105,7 +105,7 @@ class DummyDoughnut
 {
 public:
   DummyDoughnut()
-    : DummyDoughnut(infinit::model::Address::random(),
+    : DummyDoughnut(infinit::model::Address::random(0), // FIXME
                     infinit::cryptography::rsa::keypair::generate(1024))
   {}
 
@@ -128,8 +128,8 @@ public:
 ELLE_TEST_SCHEDULED(fetch_disk_queued)
 {
   elle::filesystem::TemporaryDirectory d;
-  auto a1 = infinit::model::Address::random();
-  auto a2 = infinit::model::Address::random();
+  auto a1 = infinit::model::Address::random(0); // FIXME
+  auto a2 = infinit::model::Address::random(0); // FIXME
   auto keys = infinit::cryptography::rsa::keypair::generate(1024);
   infinit::model::doughnut::Passport passport(keys.K(), "network", keys);
   DummyDoughnut dht;
@@ -158,7 +158,7 @@ ELLE_TEST_SCHEDULED(fetch_disk_queued_multiple)
 {
   DummyDoughnut dht;
   elle::filesystem::TemporaryDirectory d;
-  auto a1 = infinit::model::Address::random();
+  auto a1 = infinit::model::Address::random(0); // FIXME
   {
     auto scu = elle::make_unique<SyncedConsensus>(dht);
     auto& sc = *scu;

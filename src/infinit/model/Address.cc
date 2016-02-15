@@ -13,30 +13,26 @@ namespace infinit
   {
     Address::Address()
       : _value()
-      , _overwritten_value()
-      , _flagged(true)
+      , _mutable_block(true)
     {
       memset(this->_value, 0, sizeof(Address::Value));
-      this->_overwritten_value = this->_value[flag_byte];
     }
 
-    Address::Address(Value const value)
+    Address::Address(Value const v)
       : _value()
-      , _overwritten_value()
-      , _flagged(true)
+      , _mutable_block(
+        (v[flag_byte] & flags::block_kind) == flags::mutable_block)
     {
-      ::memcpy(this->_value, value, sizeof(Value));
-      this->_overwritten_value = this->_value[flag_byte];
+      ::memcpy(this->_value, v, sizeof(Value));
     }
 
-    Address::Address(Value const value, Flags flags)
+    Address::Address(Value const value, Flags flags, bool combine)
       : _value()
-      , _overwritten_value()
-      , _flagged(true)
+      , _mutable_block((flags & flags::block_kind) == flags::mutable_block)
     {
       ::memcpy(this->_value, value, sizeof(Value));
-      this->_overwritten_value = this->_value[flag_byte];
-      this->_value[flag_byte] = flags;
+      if (combine)
+        this->_value[flag_byte] = flags;
     }
 
     Address::Address(elle::UUID const& id)
@@ -44,33 +40,6 @@ namespace infinit
                   elle::ConstWeakBuffer(id.data, id.static_size()),
                   infinit::cryptography::Oneway::sha256).contents())
     {}
-
-    Address
-    Address::unflagged() const
-    {
-      if (!this->_flagged)
-        return *this;
-      Value v;
-      ::memcpy(v, this->_value, sizeof(Value));
-      v[flag_byte] = this->_overwritten_value;
-      Address res(v);
-      res._flagged = false;
-      res._overwritten_value = this->_value[flag_byte];
-      return res;
-    }
-
-    Address::Flags
-    Address::flags() const
-    {
-      return this->_flagged ?
-        this->_value[flag_byte] : this->_overwritten_value;
-    }
-
-    bool
-    Address::mutable_block() const
-    {
-      return (flags() & model::flags::block_kind) == flags::mutable_block;
-    }
 
     bool
     Address::operator ==(Address const& rhs) const
@@ -114,11 +83,12 @@ namespace infinit
     }
 
     Address
-    Address::random()
+    Address::random(Flags flags)
     {
-      auto buf = cryptography::random::generate<elle::Buffer>(sizeof(Address::Value));
+      auto buf =
+        cryptography::random::generate<elle::Buffer>(sizeof(Address::Value));
       ELLE_ASSERT_GTE(buf.size(), sizeof(Address::Value));
-      return Address(buf.contents());
+      return Address(buf.contents(), flags, true);
     }
 
     Address const Address::null;
@@ -127,6 +97,15 @@ namespace infinit
     hash_value(Address const& address)
     {
       return std::hash<Address>()(address);
+    }
+
+    bool
+    equal_unflagged(Address const& lhs, Address const& rhs)
+    {
+      static_assert(
+        Address::flag_byte == 31,
+        "this implementation is valid only if byte flag is the rightmost one");
+      return memcmp(lhs.value(), rhs.value(), sizeof(Address::Value) - 1) == 0;
     }
   }
 }

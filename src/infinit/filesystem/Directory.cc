@@ -210,12 +210,11 @@ namespace infinit
                          std::string const& name,
                          Address address)
       : Node(owner, parent, name)
-      , _address(address.unflagged().value(), model::flags::mutable_block)
+      , _address(Address(address.value(), model::flags::mutable_block, false))
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
       , _prefetching(false)
     {
-      ELLE_TRACE("%s: created with address %s{%x}", *this,
-                 this->_address, (unsigned int)address.overwritten_value());
+      ELLE_TRACE("%s: created with address %s", *this, this->_address);
     }
 
     void
@@ -227,17 +226,15 @@ namespace infinit
     void
     Directory::_fetch(std::unique_ptr<ACLBlock> block)
     {
-      ELLE_TRACE_SCOPE("%s: fetch block, addr = %s{%x}",
-                       *this,
-                       this->_address,
-                       (unsigned int)this->_address.overwritten_value());
+      ELLE_TRACE_SCOPE("%s: fetch block: %s", *this, this->_address);
       if (block)
         this->_block = std::move(block);
       else if (this->_block)
       {
         auto block =
           elle::cast<ACLBlock>::runtime(
-            this->_owner.fetch_or_die(this->_address, this->_block->version(), this));
+            this->_owner.fetch_or_die(this->_address,
+                                      this->_block->version(), this));
         if (block)
           this->_block = std::move(block);
       }
@@ -315,9 +312,10 @@ namespace infinit
           output.serialize_forward(*this);
         }
         ELLE_DUMP("content: %s", data);
-        if (!_block)
+        if (!this->_block)
           ELLE_DEBUG("fetch root block")
-            _block = elle::cast<ACLBlock>::runtime(_owner.fetch_or_die(_address));
+            this->_block = elle::cast<ACLBlock>::runtime(
+              this->_owner.fetch_or_die(this->_address));
         _block->data(data);
         this->_push_changes(op);
         clean_cache.abort();
@@ -395,8 +393,8 @@ namespace infinit
           case EntryType::file:
             return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
           case EntryType::directory:
-            return std::shared_ptr<rfs::Path>(new Directory(self, _owner, name,
-                it->second.second));
+            return std::shared_ptr<rfs::Path>(
+              new Directory(self, _owner, name, it->second.second));
           default:
             return {};
           }

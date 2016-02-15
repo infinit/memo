@@ -164,38 +164,37 @@ namespace infinit
     void
     File::_fetch()
     {
-      if ((_rw_handle_count && _first_block)  || !_parent)
+      if ((this->_rw_handle_count && this->_first_block)  || !_parent)
       {
         ELLE_DEBUG("%s: bypassing fetch: w_handle=%s, first_block=%s parent=%s",
                    *this, _rw_handle_count, !!_first_block, !!_parent);
         return;
       }
-      _parent->_fetch();
-      auto it = _parent->_files.find(_name);
-      if (it == _parent->_files.end())
-      {
+      this->_parent->_fetch();
+      auto it = this->_parent->_files.find(_name);
+      if (it == this->_parent->_files.end())
         THROW_NOENT;
-      }
-      Address addr = Address(it->second.second.value(), model::flags::mutable_block);
-      if (!_first_block)
-        _first_block = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr, {}, this));
+      Address addr = model::Address(
+        it->second.second.value(), model::flags::mutable_block, false);
+      if (!this->_first_block)
+        this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
+          this->_owner.fetch_or_die(addr, {}, this));
       else
       {
         auto res = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr, _first_block->version(), this));
+          this->_owner.fetch_or_die(addr, _first_block->version(), this));
         if (res)
-          _first_block = std::move(res);
+          this->_first_block = std::move(res);
         else
           return;
       }
       bool empty = false;
       elle::SafeFinally remove_undecoded_first_block([&] {
-          _first_block.reset();
+          this->_first_block.reset();
       });
       elle::IOStream is(
         umbrella([&] {
-            auto& d = _first_block->data();
+            auto& d = this->_first_block->data();
             ELLE_DUMP("block data: %s", d);
             empty = d.empty();
             return d.istreambuf();
@@ -236,12 +235,14 @@ namespace infinit
     File::_commit_first(bool final_flush)
     {
       ELLE_DEBUG("commit_first, final=%s", final_flush);
-      if (!_first_block)
+      if (!this->_first_block)
       {
         ELLE_DEBUG("re-fetching first_block");
-         Address addr = Address(_parent->_files.find(_name)->second.second. value(), model::flags::mutable_block);
-        _first_block = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr));
+        Address addr = Address(
+          this->_parent->_files.find(_name)->second.second.value(),
+          model::flags::mutable_block, false);
+        this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
+          this->_owner.fetch_or_die(addr));
       }
       elle::Buffer serdata;
       {
@@ -316,10 +317,9 @@ namespace infinit
       else
       {
         ELLE_TRACE("Fetching %s", index);
-        Address flagged(this->_fat[index].first.value(),
-                        model::flags::immutable_block);
-        b = AnyBlock(this->_owner.fetch_or_die(flagged.unflagged()),
-                     this->_fat[index].second);
+        Address addr(this->_fat[index].first.value(),
+                     model::flags::immutable_block, false);
+        b = AnyBlock(this->_owner.fetch_or_die(addr), this->_fat[index].second);
         is_new = false;
       }
 
@@ -360,15 +360,15 @@ namespace infinit
       inserted.first->second.dirty = false;
       inserted.first->second.new_block = false;
       auto self = std::dynamic_pointer_cast<File>(shared_from_this());
-      auto addr = _fat[idx].first;
+      auto addr = Address(this->_fat[idx].first.value(),
+                          model::flags::immutable_block, false);
       auto key = _fat[idx].second;
       ++_prefetchers_count;
       new reactor::Thread("prefetcher", [self, addr, idx, key] {
           std::unique_ptr<model::blocks::Block> bl;
           try
           {
-            Address flagged(addr.value(), model::flags::immutable_block);
-            bl = self->_owner.fetch_or_die(flagged.unflagged());
+            bl = self->_owner.fetch_or_die(addr);
           }
           catch (elle::Error const& e)
           {

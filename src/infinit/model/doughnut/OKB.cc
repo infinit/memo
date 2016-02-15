@@ -66,9 +66,8 @@ namespace infinit
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
-        Address res(hash.contents(), flags::mutable_block);
-        return dht.version() >= elle::Version(0, 5, 0)
-          ? res : res.unflagged();
+        return Address(hash.contents(), flags::mutable_block,
+                       dht.version() >= elle::Version(0, 5, 0));
       }
 
       Address
@@ -84,8 +83,7 @@ namespace infinit
         ELLE_DEBUG("%s: check address", *this)
         {
           expected_address = this->_hash_address();
-          if (address != expected_address
-            && address != expected_address.unflagged())
+          if (!equal_unflagged(address, expected_address))
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
                                         address, expected_address);

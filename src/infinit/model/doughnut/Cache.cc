@@ -87,13 +87,6 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
           static elle::Bench bench_hit("cache.hit", 10_sec);
           auto hit = this->_cache.find(address);
-          if (hit == this->_cache.end())
-          {
-            hit = this->_cache.find(address.unflagged());
-            if (hit != this->_cache.end())
-              ELLE_DEBUG("unflagged cache hit: %s{%x}",
-                         address, (unsigned int)address.overwritten_value());
-          }
           if (hit != this->_cache.end())
           {
             ELLE_DEBUG("cache hit");

@@ -125,7 +125,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
     return config.make(id, endpoints, local, &dht);
   };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
-    infinit::model::Address::random(),
+    infinit::model::Address::random(0), // FIXME
     std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
     kp.public_key(),
     passport,
