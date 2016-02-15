@@ -51,6 +51,9 @@ templates = {
   'Internal/Crash Report': {
     'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
   },
+  'Internal/Passport Generation Error': {
+    'templte': 'tem_LdEi9v8WrTACa8BNUhoSte',
+  },
   'User/Welcome': {
     'template': 'tem_Jsd948JkLqhBQs3fgGZSsS',
     'version': 'ver_W9nDEtV4KzxWyrLtZDcAWE',
@@ -288,7 +291,7 @@ class Beyond:
             try:
               network = self.network_get(*drive.network.split('/'))
             except Network.NotFound:
-              raise Exception('Unkown netork \'%s\'' % drive.network)
+              raise Exception('Unkown network \'%s\'' % drive.network)
             import_data('network', network.json())
             subprocess.check_call(
               [
@@ -313,9 +316,20 @@ class Beyond:
             drive.users[email] = None
             drive.save()
           except BaseException as e:
-            errors.append(e.args[0])
+            errors.append(str(e))
     except BaseException as e:
-      errors.append(e.args[0])
+      errors.append(str(e))
+    if len(errors) > 0:
+      self.__emailer.send_one(
+        recipient_email = 'developers+passport_generation@infinit.sh',
+        recipient_name = 'Developers',
+        variables = {
+          'user': user.name,
+          'email': email,
+          'errors': ' | '.join(errors),
+        },
+        **self.template('Internal/Passport Generation Error')
+      )
     return errors
 
   ## ------------ ##
