@@ -621,7 +621,6 @@ def configure(
         }
       )
       for test_name in [
-          'address-flag-backward',
           'errors',
           'single-user-two-devices-shared-storage',
           'passport-restrictions',
