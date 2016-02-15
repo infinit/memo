@@ -175,6 +175,8 @@ namespace infinit
         {
           ELLE_DEBUG("obtained block %s from cache", start_block);
           reactor::wait(it->second.ready);
+          if (!it->second.block) // FIXME
+            throw rfs::Error(EIO, elle::sprintf("lookahead failed"));
           ELLE_DEBUG("block at %x", it->second.block.get());
           ELLE_DEBUG("block %x with %s bytes",
                      it->second.block->address(),

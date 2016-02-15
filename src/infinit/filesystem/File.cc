@@ -371,6 +371,7 @@ namespace infinit
           {
             ELLE_TRACE("Prefetcher error fetching %x: %s", addr, e);
             --self->_prefetchers_count;
+            self->_blocks[idx].ready.open();
             return;
           }
           ELLE_TRACE("Prefetcher inserting value at %s", idx);
