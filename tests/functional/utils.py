@@ -54,12 +54,15 @@ class Infinit(TemporaryDirectory):
   def run(self, args, input = None, return_code = 0, env = {}):
     if isinstance(args, str):
       args = args.split(' ')
+    args[0] += os.environ.get('EXE_EXT', '')
     self.env = {
       'PATH': self.__infinit_root + '/bin' + ':bin:backend/bin:/bin:/usr/sbin',
       'INFINIT_HOME': self.dir,
       'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',
     }
+    if 'WINEDEBUG' in os.environ:
+        self.env['WINEDEBUG'] = os.environ['WINEDEBUG']
     if 'ELLE_LOG_LEVEL' in os.environ:
       self.env['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
