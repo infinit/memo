@@ -2,6 +2,7 @@
   <plugin>python3</plugin>
   <plugin>syslog</plugin>
   <pythonpath>/opt/infinit/beyond/lib/python3.4</pythonpath>
+  <env>INFINIT_CRASH_REPORTER=0</env>
   <module>infinit.beyond.wsgi</module>
   <master/>
   <processes>4</processes>
