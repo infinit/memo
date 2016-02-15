@@ -268,6 +268,8 @@ def configure(
     'resources/images/icons/keyboard@2x.png',
     'resources/images/icons/bracket-right.png',
     'resources/images/icons/bracket-right@2x.png',
+    'resources/images/icons/bracket-down.png',
+    'resources/images/icons/bracket-down@2x.png',
     'resources/images/icons/arrow-down.png',
     'resources/images/icons/email-confirmed.png',
     'resources/images/icons/email-confirmed@2x.png',
@@ -279,6 +281,8 @@ def configure(
     'resources/images/icons/comparison@2x.png',
     'resources/images/icons/idea-clean.png',
     'resources/images/icons/idea-clean@2x.png',
+    'resources/images/icons/add.png',
+    'resources/images/icons/add@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',

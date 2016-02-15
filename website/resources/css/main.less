@@ -1064,16 +1064,16 @@ body.pricing {
   }
 
   .plan {
-    float: left; width: 26%; padding: 0 3% 100px 3%; text-align: left; position: relative;
+    float: left; width: 30%; padding: 0 1% 100px 1%; text-align: left; position: relative;
     border-radius: 5px; border-right: 1px solid #f2f2f2;
   }
   .plan h2 {
-    font-size: 22px; margin: 0 auto 15px auto; padding-top: 0; text-align: center;
-    border-bottom: 2px solid @infinitblack; padding-bottom: 17px; width: 70%;
-    margin-top: 20px !important;
+    font-size: 22px; margin: 0 auto 15px auto; padding-top: 0;
+    border-bottom: 2px solid @infinitblack; width: 75%;
+    margin-top: 20px !important; margin-bottom: 20px; padding: 0 3% 17px 3%;
   }
   .plan h2 img { margin-top: -5px; margin-right: 8px; vertical-align: bottom;}
-  .plan p { margin: 7px 0; clear: both; text-align: center;  }
+  .plan p { margin: 7px 0; clear: both; padding-left: 11%;  }
   .plan p.big { font-size: 16px; line-height: 24px;}
   .plan p span { color: @infinitgray; }
   .plan p span.badge {
@@ -1081,11 +1081,11 @@ body.pricing {
     text-transform: uppercase; font-size: 10px; margin-left: 3px; font-weight: bold;
   }
   .plan hr {
-    width: 50%; border: none; height: 1px; background: lighten(@infinitgray, 15%);
-    display: block; margin: 10px auto 15px auto;
+    width: 70%; border: none; height: 1px; background: lighten(@infinitgray, 15%);
+    display: block; margin: 15px 0 15px 10%;
   }
   .plan p.price {
-    position: absolute; top:540px; width: 80%; text-align: center;
+    position: absolute; top:480px; width: 80%;
     font-family: @helvetica; font-weight: 300; font-size: 23px; margin-bottom: 50px;
     span { display: inline-block; margin-top: 26px; font-size: 18px; }
   }
@@ -1098,28 +1098,34 @@ body.pricing {
 
   section.estimation {
     text-align: center; min-height: 400px; width: 60%; padding: 50px 20% 100px 20%;
-    background: #F9F9F9; margin-top: 60px;
+    background: #F9F9F9; margin: 60px auto 0 auto;
 
     h2 { font-size: 2em; margin-bottom: 0;}
     p.subtitle { margin-bottom: 50px;}
 
-    .price, .controls {   padding: 0 5%; float: left; width: 39%;  }
-    .price { width: 25%; }
+    .controls {  padding: 0 5%; width: 100%; }
 
     .controls {
-      margin-bottom: 30px;
+      margin-bottom: 20px;
 
-      label { font-size: 17px; font-weight: bold; }
+      label {
+        font-size: 17px; font-weight: bold; vertical-align: super;
+         width: 100px; display: inline-block;
+      }
       select { float: left; }
 
-      table { width: 100%; }
-      table tr td { padding: 15px 0; }
-      table tr td:first-child { text-align: left; width: 95px;}
+      table, table tr td  { width: 100%; text-align: center; }
+      tr.users td, tr.storage td { padding-bottom: 25px; }
+      tr.storage td { position: relative;}
+
+      .slider { max-width: 150px; min-height: 24px; }
+      .slider, .select-style { display: inline-block;}
 
       .select-style {
         padding: 0; margin: 0; border: 1px solid #ccc; width: 200px;
         border-radius: 3px; overflow: hidden; background-color: #fff;
         background: #fff url("../images/icons/arrow-down.png") no-repeat 94% 50%;
+        position: absolute; left: 68%; top: -1px;
       }
 
       .select-style select {
@@ -1129,18 +1135,27 @@ body.pricing {
       }
 
       .select-style select:focus { outline: none;}
+
+      .add_storage {
+        td { position: relative;}
+        a {
+          position: absolute; bottom: 24px; right: 0;
+          opacity: 1; .transition();
+          &:hover { opacity: 0.7 }
+        }
+      }
     }
 
     .bracket {
-      .at2x('../images/icons/bracket-right.png', 33px, 151px);
-      width: 33px; height: 151px; float: left; margin-top: 7px;
+      .at2x('../images/icons/bracket-down.png', 151px, 33px);
+      width: 151px; height: 33px; margin: 20px auto 30px auto;
     }
 
     .price {
-      padding-top: 35px; font-size: 25px; font-family: @helvetica;
+      padding-top: 0px; font-size: 34px; font-family: @helvetica;
       padding-bottom: 70px;
 
-      span, p { font-weight: 300; }
+      span, p { font-weight: 200; }
       p.free { display: none;}
       p.free, p.infinit { margin-bottom: 0px;  margin-top: 31px; }
       p.comparison { margin-top: 10px; }

@@ -15,22 +15,13 @@
       <hr>
       <p>On-premise, public, private <br>or hybrid infrastructure</p>
       <p>Unlimited volumes</p>
-      <p>
-        Encryption <br>
-        <span>(in-transit and at-rest)</span>
-      </p>
+      <p>Encryption <span>(in-transit and at-rest)</span></p>
       <p>Read/write access control</p>
       <p>Unlimited storage capacity*</p>
       <p>Unlimited number of devices per user</p>
       <p>Unlimited file size</p>
-      <p>
-        Desktop apps<br>
-        <span>(Windows, Mac, Linux)</span>
-      </p>
-      <p>
-        Mobile apps <span class="badge">soon</span><br>
-        <span>(iOS, Android)</span>
-      </p>
+      <p>Desktop apps <span>(Windows, Mac, Linux)</span></p>
+      <p>Mobile apps  <span>(iOS, Android)</span> <span class="badge">soon</span></p>
       <p class="price">
         Free<br>
         <a href="${route('doc_get_started')}" class="button">Get Started</a>
@@ -85,13 +76,20 @@
     <h2>Estimate Cost</h2>
     <p class="subtitle">Choose the number of users and the storage capacity you need.</p>
 
-    <div class="controls">
-      <table>
-      <tr>
-        <td><label for="storage">Storage</label></td>
+    <table class="controls">
+      <tr class="users">
         <td>
+          <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 300" data-slider-step="1" value="30">
+          <label for="usersInput" id="usersLabel"><span>30</span> users</label>
+        </td>
+      </tr>
+      <tr class="storage">
+        <td>
+          <input type="text" name="capacity" class="capacityInput">
+          <label class="capacityLabel"><span>1</span> TB</label>
+
           <div class="select-style">
-            <select id="storageSelect">
+            <select class="storageSelect">
               <option style="background-image:url(${url('images/icons/rocket.png')});" selected data-price="0.06">Amazon S3</option>
               <option data-price="0.01">Backblaze Z2</option>
               <option data-price="0.052">Google Cloud Storage</option>
@@ -99,22 +97,17 @@
               <option data-price="0.06">Microsoft Azure Storage</option>
               <option data-price="0.08">SoftLayer Object Storage</option>
             </select>
-          </option>
+          </div>
         </td>
+        <tr class="add_storage">
+          <td>
+            <a href="#"><img src="${url('images/icons/add.png')}"></a>
+          </td>
+        </tr>
       </tr>
-      <tr>
-        <td><label for="capacityInput" id="capacityLabel"><span>1</span> TB</label></td>
-        <td>
-          <input type="text" name="capacity" id="capacityInput" data-slider="true" data-slider-range="0, 100" data-slider-step="1" value="1">
-        </td>
-      </tr>
-      <tr>
-        <td><label for="usersInput" id="usersLabel"><span>30</span> users</label></td>
-        <td><input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 300" data-slider-step="1" value="30"></td>
-      </tr>
-      </table>
-    </div>
+    </table>
 
+    <div class="spacer"></div>
     <div class="bracket"></div>
 
     <div class="price">
