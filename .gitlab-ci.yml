@@ -101,6 +101,7 @@ x86_64-osx-clang:
     - python3 drake -j 4 //install
     - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then python3 drake -j 4 --prefix=/Users/infinit/filesystem-symbols //symbols; fi
     - gtar -cvjf /tmp/infinit-$(GIT_DIR=../fs/.git git describe).tbz -C ../fs-install . --show-transformed-names --transform "s,^\\./,infinit-$(GIT_DIR=../fs/.git git describe)/,"
+    - cd ../fs-build && python3 drake -j 4 //beyond/check
   tags:
     - x86_64
     - osx

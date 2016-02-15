@@ -620,7 +620,6 @@ def configure(
           'debian': rule_debian
         }
       )
-      rule_check << beyond.rule_check
       for test_name in [
           'address-flag-backward',
           'errors',
