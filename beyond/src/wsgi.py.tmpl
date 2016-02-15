@@ -25,6 +25,6 @@ beyond = infinit.beyond.Beyond(
       'passports': 30
     }
   },
-  delegate_user = ${delegate_user},
+  delegate_user = ${repr(delegate_user)},
 )
 application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)
