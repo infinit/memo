@@ -20,7 +20,7 @@ class Website(bottle.Bottle):
     self.install(bottle.CertificationPlugin())
     route.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
-    self.__hub = os.environ.get('INFINIT_BEYOND', 'https://infinit.sh')
+    self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.io')
 
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
