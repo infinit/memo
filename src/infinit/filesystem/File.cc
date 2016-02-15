@@ -32,8 +32,10 @@ namespace infinit
   {
 
     const uint64_t File::first_block_size = 16384;
-    static const int lookahead_blocks = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
-    static const int max_lookahead_threads = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
+    static const int lookahead_blocks =
+      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
+    static const int max_lookahead_threads =
+      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
 
     class FileConflictResolver
       : public model::ConflictResolver
@@ -290,8 +292,8 @@ namespace infinit
     File::_block_at(int index, bool create)
     {
       ELLE_ASSERT_GTE(index, 0);
-      auto it = _blocks.find(index);
-      if (it != _blocks.end())
+      auto it = this->_blocks.find(index);
+      if (it != this->_blocks.end())
         return it->second.block;
       if (_fat.size() <= unsigned(index))
       {
@@ -319,7 +321,7 @@ namespace infinit
         is_new = false;
       }
 
-      auto inserted = _blocks.insert(std::make_pair(index,
+      auto inserted = this->_blocks.insert(std::make_pair(index,
         File::CacheEntry{std::make_shared<AnyBlock>(std::move(b)), false}));
       inserted.first->second.ready.open();
       inserted.first->second.last_use = std::chrono::system_clock::now();
@@ -338,7 +340,7 @@ namespace infinit
       {
         if (nidx >= signed(_fat.size()))
           break;
-        if (_blocks.find(nidx) == _blocks.end())
+        if (this->_blocks.find(nidx) == this->_blocks.end())
         {
           _prefetch(nidx);
           break;
@@ -350,7 +352,8 @@ namespace infinit
     File::_prefetch(int idx)
     {
       ELLE_TRACE("Prefetching %s", idx);
-      auto inserted = _blocks.insert(std::make_pair(idx, File::CacheEntry{}));
+      auto inserted =
+        this->_blocks.insert(std::make_pair(idx, File::CacheEntry{}));
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false;
       inserted.first->second.new_block = false;
@@ -534,8 +537,8 @@ namespace infinit
         else if (signed(offset + _header.block_size) >= new_size)
         { // maybe truncate the block
           auto targetsize = new_size - offset;
-          auto it = _blocks.find(i);
-          if (it != _blocks.end())
+          auto it = this->_blocks.find(i);
+          if (it != this->_blocks.end())
           {
             it->second.block->data([&](elle::Buffer& buf) {
                 if (buf.size() > targetsize)
@@ -630,7 +633,7 @@ namespace infinit
     File::_flush_block(int id)
     {
       bool fat_change = false;
-      auto it = _blocks.find(id);
+      auto it = this->_blocks.find(id);
       Address prev = it->second.block->address();
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
       Address addr = it->second.block->crypt_store(*_owner.block_store(),
@@ -681,9 +684,9 @@ namespace infinit
           }
         }
       }
-      while (_blocks.size() > unsigned(cache_size))
+      while (this->_blocks.size() > unsigned(cache_size))
       {
-        auto it = std::min_element(_blocks.begin(), _blocks.end(),
+        auto it = std::min_element(this->_blocks.begin(), this->_blocks.end(),
           [](Elem const& a, Elem const& b) -> bool
           {
             return a.second.last_use < b.second.last_use;
@@ -695,7 +698,7 @@ namespace infinit
           {
             _fat_changed = _flush_block(it->first) || _fat_changed;
           }
-          _blocks.erase(it);
+          this->_blocks.erase(it);
         }
         else
         {
@@ -725,7 +728,7 @@ namespace infinit
                 }
             }, reactor::Thread::managed = true));
           }
-          _blocks.erase(it);
+          this->_blocks.erase(it);
         }
       }
       bool prev = _fat_changed;
