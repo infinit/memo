@@ -1274,9 +1274,11 @@ namespace infinit
       this->_open_write(
         f, path, user.name, "user", overwrite);
       user_save(user, f);
+#ifndef INFINIT_WINDOWS
       boost::filesystem::permissions(path,
         boost::filesystem::remove_perms
         | boost::filesystem::others_all | boost::filesystem::group_all);
+#endif
     }
 
     User
