@@ -44,9 +44,15 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
   config.k = groups;
   config.encrypt = true;
   config.accept_plain = false;
-  config.contact_timeout_ms = 1000;
-  config.ping_interval_ms = 1000 / count / 3;
-  config.ping_timeout_ms = 500;
+  int factor =
+#ifdef INFINIT_WINDOWS
+    5;
+#else
+    1;
+#endif
+  config.contact_timeout_ms = factor * 1000;
+  config.ping_interval_ms = factor * 1000 / count / 3;
+  config.ping_timeout_ms = factor * 500;
   for (int n=0; n<count; ++n)
   {
     std::unique_ptr<infinit::storage::Storage> s;
