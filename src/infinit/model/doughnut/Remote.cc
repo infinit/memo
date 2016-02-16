@@ -340,7 +340,7 @@ namespace infinit
         else if (this->_utp_socket)
           elle::fprintf(stream, "%s(%s)", name, *this->_utp_socket);
         else
-          elle::fprintf(stream, "%s(%s)", name, this);
+          elle::fprintf(stream, "%s(%s)", name, (void*)(this));
       }
     }
   }
