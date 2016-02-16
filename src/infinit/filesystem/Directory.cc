@@ -445,7 +445,9 @@ namespace infinit
               std::unique_ptr<model::blocks::Block> block;
               try
               {
-                block = model->fetch(e.address);
+                Address addr(e.address.value(),
+                             model::flags::mutable_block, false);
+                block = model->fetch(addr);
                 if (block && e.is_dir && e.level +1 < prefetch_depth)
                 {
                   Directory d(self, self->_owner, "", e.address);
