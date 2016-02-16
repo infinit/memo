@@ -87,6 +87,6 @@
     "category": "technology",
     "popularity": 0,
     "question": "Which cloud storage providers does Infinit support?",
-    "answer" : "<p>Currently Infinit supports Amazon S3 and Google Cloud Storage with Backblaze B2 planned.</p> <p>Some users asked us to support Amazon Cloud Drive or IPFS, please <a href=\"http://help.infinit.sh\">upvote/tell us here</a> what else you would like us to support.</p>"
+    "answer" : "<p>Currently Infinit supports Amazon S3 and Google Cloud Storage. We have plan to support Dropbox, Google Drive and Backblaze as storage resource — see our <a href=\"/documentation/roadmap\">roadmap</a>.</p> <p>Some users also asked us to support Amazon Cloud Drive or IPFS, please <a href=\"http://help.infinit.sh\">upvote/tell us here</a> what else you would like us to support.</p>"
   }
 ]
