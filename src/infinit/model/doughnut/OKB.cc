@@ -420,7 +420,8 @@ namespace infinit
         , _data_decrypted(false)
       {
         this->_serialize(s, version);
-        if (*this->owner_key() == this->doughnut()->keys().K())
+        if (this->doughnut() &&
+            *this->owner_key() == this->doughnut()->keys().K())
           this->_owner_private_key = this->doughnut()->keys().private_key();
 
       }
@@ -442,7 +443,6 @@ namespace infinit
                                  elle::Version const& version)
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
-        ELLE_ASSERT(this->_doughnut);
         s.serialize("version", this->_version);
         if (!this->_signature)
           this->_signature = std::make_shared<SignFuture>();
