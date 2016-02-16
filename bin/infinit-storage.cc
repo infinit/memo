@@ -116,9 +116,9 @@ COMMAND(create)
   {
     auto path = optional(args, "path");
     if (!path)
-      path = (infinit::root_dir() / "blocks" / name).string();
+      path = (infinit::xdg_data_home() / "blocks" / name).string();
     else
-      path = infinit::canonical_folder(*path, "block storage path").string();
+      path = infinit::canonical_folder(*path).string();
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
         (name, std::move(*path), std::move(capacity));
@@ -294,7 +294,7 @@ main(int argc, char** argv)
     "\n  S3: <name>_blocks"
     // "\n  Dropbox: .infinit_<name>"
     // "\n  Google Drive: .infinit_<name>"
-    ")", (infinit::root_dir() / "blocks/<name>"));
+    ")", (infinit::xdg_data_home() / "blocks/<name>"));
   Modes modes {
     {
       "create",

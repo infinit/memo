@@ -68,22 +68,34 @@ namespace infinit
         struct BlockOrPaxos
         {
           BlockOrPaxos(blocks::Block& b)
-            : block(&b)
+            : block(&b, [] (blocks::Block*) {})
             , paxos()
           {}
 
           BlockOrPaxos(Paxos::LocalPeer::Decision* p)
             : block(nullptr)
-            , paxos(p)
+            , paxos(p, [] (Paxos::LocalPeer::Decision*) {})
           {}
 
           BlockOrPaxos(elle::serialization::SerializerIn& s)
+            : block(nullptr,
+                    [] (blocks::Block* p)
+                    {
+                      std::default_delete<blocks::Block>()(p);
+                    })
+            , paxos(nullptr,
+                    [] (Paxos::LocalPeer::Decision* p)
+                    {
+                      std::default_delete<Paxos::LocalPeer::Decision>()(p);
+                    })
           {
             this->serialize(s);
           }
 
-          std::unique_ptr<blocks::Block> block;
-          std::unique_ptr<Paxos::LocalPeer::Decision> paxos;
+          std::unique_ptr<blocks::Block,
+                          std::function<void(blocks::Block*)>> block;
+          std::unique_ptr<Paxos::LocalPeer::Decision,
+                          std::function<void(Paxos::LocalPeer::Decision*)>> paxos;
 
           void
           serialize(elle::serialization::Serializer& s)
@@ -376,7 +388,6 @@ namespace infinit
             address,
             elle::serialization::binary::serialize(data),
             true, true);
-          data.paxos.release();
           return res;
         }
 
@@ -572,7 +583,7 @@ namespace infinit
               ELLE_TRACE("%s: fetch: no data block", *this);
               throw MissingBlock(address);
             }
-            return std::move(data.block);
+            return std::unique_ptr<blocks::Block>(data.block.release());
           }
           // Backward compatibility pre-0.5.0
           auto decision = this->_addresses.find(address);
@@ -587,7 +598,7 @@ namespace infinit
               if (data.block)
               {
                 ELLE_DEBUG("loaded immutable block from storage");
-                return std::move(data.block);
+                return std::unique_ptr<blocks::Block>(data.block.release());
               }
               else
               {
@@ -975,12 +986,10 @@ namespace infinit
           }
           else
             ELLE_DEBUG("owners: %s", peers);
-          bool reverse_mutable = false;
           while (true)
-          {
             try
             {
-              if (address.mutable_block()^reverse_mutable)
+              if (address.mutable_block())
               {
                 ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
@@ -1018,14 +1027,7 @@ namespace infinit
                     ELLE_TRACE("error fetching from %s: %s", *peer, e.what());
                   }
                 }
-                if (reverse_mutable)
-                  throw  MissingBlock(address);
-                else
-                {
-                  ELLE_TRACE("Retrying as a mutable block")
-                  reverse_mutable = true;
-                  continue;
-                }
+                throw  MissingBlock(address);
               }
             }
             catch (Paxos::PaxosServer::WrongQuorum const& e)
@@ -1035,7 +1037,6 @@ namespace infinit
               ELLE_DEBUG("%s", e.what());
               peers = lookup_nodes(this->doughnut(), e.expected(), address);
             }
-          }
         }
 
         void

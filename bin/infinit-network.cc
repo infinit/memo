@@ -188,7 +188,7 @@ COMMAND(create)
     port = args["port"].as<int>();
   auto dht =
     elle::make_unique<infinit::model::doughnut::Configuration>(
-      infinit::model::Address::random(),
+      infinit::model::Address::random(0), // FIXME
       std::move(consensus_config),
       std::move(overlay_config),
       std::move(storage),
@@ -375,7 +375,7 @@ COMMAND(link_)
   infinit::Network network(
     desc.name,
     elle::make_unique<infinit::model::doughnut::Configuration>(
-      infinit::model::Address::random(),
+      infinit::model::Address::random(0), // FIXME
       std::move(desc.consensus),
       std::move(desc.overlay),
       std::move(storage),

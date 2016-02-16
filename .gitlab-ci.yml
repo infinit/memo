@@ -20,6 +20,8 @@ x86_64-trusty-gcc4:
     - x86_64
     - trusty
     - gcc4
+  except:
+    - feature/website
 
 x86_64-jessie-gcc4:
   stage: build
@@ -37,6 +39,8 @@ x86_64-jessie-gcc4:
     - x86_64
     - jessie
     - gcc4
+  except:
+    - feature/website
 
 # i386-jessie-gcc4:
 #   stage: build
@@ -88,16 +92,22 @@ x86_64-osx-clang:
   script:
     - git submodule update --init --recursive
     - git fetch origin --tags
-    - mkdir -p ../fs-build ../fs-install
+    - mkdir -p ../fs-build
     - farm/configure --arch x86_64 --os osx --compiler clang --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 4 //build
-    - cd ../fs-build && python3 drake -j 4 //check
-    - cd ../fs-build && python3 drake -j 4 //install
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then cd ../fs-build && python3 drake -j 4 //symbols --prefix /Users/infinit/filesystem-symbols; fi
+    - cd ../fs-build
+    - python3 drake -j 4 //build
+    - python3 drake -j 4 //check
+    - rm -rf ../fs-install && mkdir -p ../fs-install
+    - python3 drake -j 4 //install
+    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then python3 drake -j 4 --prefix=/Users/infinit/filesystem-symbols //symbols; fi
+    - gtar -cvjf /tmp/infinit-$(GIT_DIR=../fs/.git git describe).tbz -C ../fs-install . --show-transformed-names --transform "s,^\\./,infinit-$(GIT_DIR=../fs/.git git describe)/,"
+    - cd ../fs-build && python3 drake -j 4 //beyond/check
   tags:
     - x86_64
     - osx
     - clang
+  except:
+    - feature/website
 
 beyond:
   stage: build
@@ -115,6 +125,8 @@ beyond:
     - x86_64
     - trusty
     - gcc4
+  except:
+    - feature/website
 
 website:
   stage: build
@@ -131,3 +143,5 @@ website:
     - x86_64
     - trusty
     - gcc4
+  only:
+    - feature/website

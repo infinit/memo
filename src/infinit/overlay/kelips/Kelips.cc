@@ -2564,8 +2564,11 @@ namespace infinit
             reactor::wait(r->barrier,
               boost::posix_time::milliseconds(_config.query_timeout_ms));
             if (!r->barrier.opened())
+            {
               ELLE_LOG("%s: get request on %s timeout (try %s)",
                         *this, file, i);
+              this->_pending_requests.erase(ir.first);
+            }
             else
             {
               ELLE_DEBUG("request %s (%s) gave %s results",
@@ -2618,7 +2621,6 @@ namespace infinit
           auto r = std::make_shared<PendingRequest>();
           r->startTime = now();
           r->barrier.close();
-          _pending_requests[req.request_id] = r;
           elle::Buffer buf = serialize(req);
           // Select target node
           auto it = random_from(_state.contacts[fg], _gen);
@@ -2640,6 +2642,7 @@ namespace infinit
             else
               return results;
           }
+          _pending_requests[req.request_id] = r;
           ELLE_DEBUG("%s: put request %s(%s)", *this, i, req.request_id);
           send(req, it->second);
           reactor::wait(r->barrier,
@@ -2647,6 +2650,7 @@ namespace infinit
           if (!r->barrier.opened())
           {
             ELLE_LOG("%s: Timeout on PUT attempt %s", *this, i);
+            _pending_requests.erase(req.request_id);
           }
           else
           {
