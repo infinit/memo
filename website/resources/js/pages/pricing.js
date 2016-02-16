@@ -55,10 +55,11 @@ $(document).ready(function() {
   });
 
   function bindSlider(element) {
+    console.log(element.find('.capacityLabel span').text());
     element.find('.capacityInput').simpleSlider({
       range: [0, 100],
       step: 1,
-      value: 1,
+      value: parseInt(element.find('.capacityLabel span').text()),
       highlight: true
     });
 
@@ -67,6 +68,7 @@ $(document).ready(function() {
 
     element.find('.slider').css('min-height', '24px');
     element.find('.dragger').css({'margin-top': '-10px', 'margin-left': '-10px'});
+    element.find('.remove').css('display', 'block');
 
     element.find('.capacityInput').bind("slider:changed", function (event, data) {
       element.find('.capacityLabel span').text(data.value);
