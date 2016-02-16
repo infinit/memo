@@ -349,6 +349,10 @@ That’s it, you’ve created a filesystem that you quickly connected to with tw
 4. Go Further
 ------------------
 
+<blockquote class="warning">
+<strong>Notice:</strong> Some features may not be entirely developed yet, please have a look at <a href="${route('doc_roadmap')}">our roadmap</a> to follow our advancement. You can also subscribe to <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">our newsletter</a> to get notified of our upcoming features.
+</blockquote>
+
 You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Take a look at the <a href="${route('doc_deployments')}">examples of deployments</a> or the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.
 
 <div>

@@ -1110,7 +1110,7 @@ body.pricing {
 
       label {
         font-size: 17px; font-weight: bold; vertical-align: super;
-         width: 100px; display: inline-block;
+         width: 100px; display: inline-block; text-align: right;
       }
       select { float: left; }
 
@@ -1118,11 +1118,14 @@ body.pricing {
       tr.users td, tr.storage td { padding-bottom: 25px; }
       tr.storage td { position: relative;}
 
-      .slider { max-width: 150px; min-height: 24px; }
+      .slider {
+        max-width: 150px; min-height: 24px;
+        margin-left: 0 !important; margin-right: 0 !important;
+      }
       .slider, .select-style { display: inline-block;}
 
       .select-style {
-        padding: 0; margin: 0; border: 1px solid #ccc; width: 200px;
+        padding: 0; margin: 0; border: 1px solid #ccc; width: 172px;
         border-radius: 3px; overflow: hidden; background-color: #fff;
         background: #fff url("../images/icons/arrow-down.png") no-repeat 94% 50%;
         position: absolute; left: 68%; top: -1px;
@@ -1139,8 +1142,8 @@ body.pricing {
       .add_storage {
         td { position: relative;}
         a {
-          position: absolute; bottom: 24px; right: 0;
-          opacity: 1; .transition();
+          position: absolute; bottom: 25px; right: 39px;
+          opacity: 1; .transition(); outline: none;
           &:hover { opacity: 0.7 }
         }
       }
@@ -1231,9 +1234,33 @@ body.opensource {
       background: #f7f7f7;
 
       img { float: left; margin-top: 4px; margin-right: 12px; }
+
+      a { width: 100%; color: #707070; text-shadow: 0 1px 0 #fff;}
+      a:hover span {
+        color: #fff;
+        text-decoration: none;
+        background-color: #3072b3;
+        background-image: -webkit-linear-gradient(#599bdc,#3072b3);
+        background-image: -moz-linear-gradient(#599bdc,#3072b3);
+        background-image: -ms-linear-gradient(#599bdc,#3072b3);
+        background-image: linear-gradient(#599bdc,#3072b3);
+        border-color: #518cc6 #518cc6 #2a65a0;
+        text-shadow: 0 -1px 0 rgba(0,0,0,.25);
+      }
+
       span {
         display: block; float: right; margin-top: 8px; background: #6D6D6D;
-        padding: 3px 6px; border-radius: 3px; color: white;
+        padding: 3px 6px; border-radius: 3px; color: white; margin-left: 10px;
+
+        &.star {
+          border: 1px solid #d4d4d4; background-color: #e6e6e6; font-weight: bold;
+          color: #707070; font-family: @helvetica; font-size: 12px;
+          padding: 4px 8px 4px 7px;
+          background-image: -webkit-linear-gradient(#fafafa,#eaeaea);
+          background-image: -moz-linear-gradient(#fafafa,#eaeaea);
+          background-image: -ms-linear-gradient(#fafafa,#eaeaea);
+          background-image: linear-gradient(#fafafa,#eaeaea);
+        }
       }
       strong {
         font-size: 18px; font-family: @helvetica; margin-top: 7px;
