@@ -1103,15 +1103,14 @@ body.pricing {
     h2 { font-size: 2em; margin-bottom: 0;}
     p.subtitle { margin-bottom: 50px;}
 
-    .controls {  padding: 0 5%; width: 100%; }
-
     .controls {
-      margin-bottom: 20px;
+      margin-bottom: 20px; width: 650px;
 
       label {
         font-size: 17px; font-weight: bold; vertical-align: super;
-         width: 100px; display: inline-block; text-align: right;
+        width: 80px; display: inline-block; text-align: left; margin-left: 20px;
       }
+
       select { float: left; }
 
       table, table tr td  { width: 100%; text-align: center; }
@@ -1128,7 +1127,7 @@ body.pricing {
         padding: 0; margin: 0; border: 1px solid #ccc; width: 172px;
         border-radius: 3px; overflow: hidden; background-color: #fff;
         background: #fff url("../images/icons/arrow-down.png") no-repeat 94% 50%;
-        position: absolute; left: 68%; top: -1px;
+        position: absolute; left: 67%; top: -1px;
       }
 
       .select-style select {
@@ -1137,21 +1136,22 @@ body.pricing {
         -webkit-appearance: none; -moz-appearance: none; appearance: none;
       }
 
-      .select-style select:focus { outline: none;}
-
-      .add_storage {
-        td { position: relative;}
+      tr.storage td {
         a {
-          position: absolute; bottom: 25px; right: 39px;
+          position: absolute; bottom: 25px; right: 0;
           opacity: 1; .transition(); outline: none;
           &:hover { opacity: 0.7 }
         }
+        a.add { right: -30px; }
       }
+
+
+      .select-style select:focus { outline: none;}
     }
 
     .bracket {
-      .at2x('../images/icons/bracket-down.png', 151px, 33px);
-      width: 151px; height: 33px; margin: 20px auto 30px auto;
+      .at2x('../images/icons/bracket-down.png', 249px, 50px);
+      width: 249px; height: 50px; margin: 20px auto 30px auto;
     }
 
     .price {
@@ -1408,8 +1408,7 @@ body.solutions {
 }
 
 .slider > .highlight-track {
-  background-color: #8DCA09;
-  border-color: #496805;
+  background-color: #252d3b;
 }
 
 /*--------------.

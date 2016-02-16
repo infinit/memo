@@ -79,7 +79,7 @@
     <table class="controls">
       <tr class="users">
         <td>
-          <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 300" data-slider-step="1" value="30">
+          <input type="text" name="users" id="usersInput" data-slider="true" data-slider-range="1, 300" data-slider-step="1" value="30" data-slider-highlight="true">
           <label for="usersInput" id="usersLabel"><span>30</span> users</label>
         </td>
       </tr>
@@ -99,12 +99,11 @@
               <option data-price="0.05">On-Premise</option>
             </select>
           </div>
+
+          <a class="remove" href="#"><img src="${url('images/icons/remove.png')}"></a>
+          <a class="add" href="#"><img src="${url('images/icons/add.png')}"></a>
         </td>
         <tr class="add_storage">
-          <td>
-            <a class="remove" href="#" style="display:none;"><img src="${url('images/icons/remove.png')}"></a>
-            <a class="add" href="#"><img src="${url('images/icons/add.png')}"></a>
-          </td>
         </tr>
       </tr>
     </table>

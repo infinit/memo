@@ -16,7 +16,6 @@ $(document).ready(function() {
     if (current_users >= max_users) {
       price =  price_per_user * 12 * current_users;
     }
-    console.log('price', price);
 
     // all storage price
     $.each($('tr.storage'), function(i, element) {
@@ -24,9 +23,7 @@ $(document).ready(function() {
       var price_per_gb = $(element).find('.storageSelect option:selected').attr('data-price');
 
       price_storage += current_storage * 1000 * price_per_gb;
-      console.log('storage', current_storage, price_per_gb);
     });
-
 
     // full price
     price += price_storage;
@@ -53,7 +50,7 @@ $(document).ready(function() {
     updatePrice();
   });
 
-  $('.storageSelect').on('change', function() {
+  $('table.controls').on('change', '.storageSelect', function() {
     updatePrice();
   });
 
@@ -61,7 +58,8 @@ $(document).ready(function() {
     element.find('.capacityInput').simpleSlider({
       range: [0, 100],
       step: 1,
-      value: 1
+      value: 1,
+      highlight: true
     });
 
     // remove duplicated slider - hacky
@@ -71,17 +69,12 @@ $(document).ready(function() {
     element.find('.dragger').css({'margin-top': '-10px', 'margin-left': '-10px'});
 
     element.find('.capacityInput').bind("slider:changed", function (event, data) {
-      console.log(data);
       element.find('.capacityLabel span').text(data.value);
-      updatePrice();
-    });
-
-    element.find('.storageSelect').on('change', function() {
       updatePrice();
     });
   }
 
-  $('.add_storage a').on('click', function(event) {
+  $('table.controls').on('click', 'tr.storage a.add', function() {
     event.preventDefault();
     var new_element;
 
@@ -94,6 +87,13 @@ $(document).ready(function() {
     hasAddedStorage = true;
     bindSlider(new_element);
     $('tr.add_storage').before(new_element);
+    updatePrice();
+  });
+
+  $('table.controls').on('click', 'tr.storage a.remove', function() {
+    event.preventDefault();
+    console.log($(this).parent().parent());
+    $(this).parent().parent().remove();
     updatePrice();
   });
 
