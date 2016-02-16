@@ -874,11 +874,8 @@ namespace infinit
                             return ss.str();
                           });
         }
-        else
-          THROW_INVAL;
       }
-      else
-        return Node::getxattr(key);
+      return Node::getxattr(key);
     }
 
     void Directory::removexattr(std::string const& k)
