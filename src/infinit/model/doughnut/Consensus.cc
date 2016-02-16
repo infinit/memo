@@ -262,7 +262,8 @@ namespace infinit
         void
         Consensus::print(std::ostream& output) const
         {
-          elle::fprintf(output, "%s(%x)", elle::type_info(*this), this);
+          elle::fprintf(output, "%s(%x)",
+                        elle::type_info(*this), (void*)(this));
         }
 
         /*--------------.
