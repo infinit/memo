@@ -834,9 +834,7 @@ namespace infinit
         }
         else if (*special == "sync")
         {
-          auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-            this->_owner.block_store());
-          auto c = dn->consensus().get();
+          auto c = dht->consensus().get();
           auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
           if (!a)
           {
@@ -854,25 +852,25 @@ namespace infinit
         else if (special->find("group.list.") == 0)
         {
           std::string value = special->substr(strlen("group.list."));
-          auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-          return umbrella([&]
-                          {
-                            model::doughnut::Group g(*dn, value);
-                            elle::json::Object o;
-                            auto members = g.list_members();
-                            elle::json::Array v;
-                            for (auto const& m: members)
-                              v.push_back(m->name());
-                            o["members"] = v;
-                            members = g.list_admins();
-                            elle::json::Array va;
-                            for (auto const& m: members)
-                              va.push_back(m->name());
-                            o["admins"] = va;
-                            std::stringstream ss;
-                            elle::json::write(ss, o, true);
-                            return ss.str();
-                          });
+          return umbrella(
+            [&]
+            {
+              model::doughnut::Group g(*dht, value);
+              elle::json::Object o;
+              auto members = g.list_members();
+              elle::json::Array v;
+              for (auto const& m: members)
+                v.push_back(m->name());
+              o["members"] = v;
+              members = g.list_admins();
+              elle::json::Array va;
+              for (auto const& m: members)
+                va.push_back(m->name());
+              o["admins"] = va;
+              std::stringstream ss;
+              elle::json::write(ss, o, true);
+              return ss.str();
+            });
         }
       }
       return Node::getxattr(key);
