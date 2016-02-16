@@ -773,7 +773,10 @@ COMMAND(run)
         catch (elle::Error const& e)
         {
 #ifdef INFINIT_WINDOWS
-            return; // assume EOF
+           // Something is outputing a ",'" garbage on stdout if we just
+           // return, which breaks the tests
+           exit(0);
+           return; // assume EOF
 #endif
           ELLE_LOG("bronk on op %s: %s", op, e);
           elle::serialization::json::SerializerOut response(std::cout);
