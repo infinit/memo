@@ -29,7 +29,7 @@ namespace infinit
     {
       auto addr = Address(
         this->_parent->_files.at(this->_name).second.value(),
-        model::flags::mutable_block, true);
+        model::flags::mutable_block, false);
       this->_block = std::dynamic_pointer_cast<MutableBlock>(
         this->_owner.fetch_or_die(addr));
       umbrella([&] {
