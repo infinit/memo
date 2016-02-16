@@ -405,6 +405,7 @@ namespace infinit
 
     struct PrefetchEntry
     {
+      std::string name;
       Address address;
       int level;
       bool is_dir;
@@ -421,20 +422,25 @@ namespace infinit
       if (_prefetching || !nthreads)
         return;
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
-      for (auto const& f: _files)
-        files->push_back(PrefetchEntry{ f.second.second, 0,
-                           f.second.first == EntryType::directory});
-      _prefetching = true;
+      for (auto const& f: this->_files)
+        files->push_back(
+          PrefetchEntry{f.first, f.second.second, 0,
+                        f.second.first == EntryType::directory});
+      this->_prefetching = true;
       auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
       auto model = _owner.block_store();
       auto running = std::make_shared<int>(nthreads);
-      for (int i=0; i<nthreads; ++i)
-        new reactor::Thread("prefetcher", [self, files, model, running] {
+      for (int i = 0; i < nthreads; ++i)
+        new reactor::Thread(
+          elle::sprintf("prefetcher %s", i),
+          [self, files, model, running]
+          {
             int nf = 0;
             while (!files->empty())
             {
               ++nf;
               auto e = files->back();
+              ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
               files->pop_back();
               std::unique_ptr<model::blocks::Block> block;
               try
@@ -445,8 +451,9 @@ namespace infinit
                   Directory d(self, self->_owner, "", e.address);
                   d._fetch(elle::cast<ACLBlock>::runtime(block));
                   for (auto const& f: d._files)
-                    files->push_back(PrefetchEntry{ f.second.second, e.level+1,
-                      f.second.first == EntryType::directory});
+                    files->push_back(
+                      PrefetchEntry{f.first, f.second.second, e.level+1,
+                                    f.second.first == EntryType::directory});
                 }
               }
               catch(elle::Error const& e)

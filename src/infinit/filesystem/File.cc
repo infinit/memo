@@ -353,7 +353,7 @@ namespace infinit
     void
     File::_prefetch(int idx)
     {
-      ELLE_TRACE("Prefetching %s", idx);
+      ELLE_TRACE("%s: prefetch index %s", *this, idx);
       auto inserted =
         this->_blocks.insert(std::make_pair(idx, File::CacheEntry{}));
       inserted.first->second.last_use = std::chrono::system_clock::now();
