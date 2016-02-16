@@ -940,7 +940,6 @@ namespace infinit
         , _world_writable(false)
         , _deleted(false)
       {
-        ELLE_DEBUG("serialize, bv=%s, dv=%s", version, this->doughnut()->version());
         this->_serialize(input, version);
       }
 
