@@ -308,8 +308,6 @@ main(int argc, char** argv)
         option_output("storage"),
         { "account", value<std::string>(),
           "account name when using a cloud service" },
-        { "bucket", value<std::string>(),
-          "bucket to use when using GCS or S3" },
         { "path", value<std::string>(), default_locations },
       },
       {
