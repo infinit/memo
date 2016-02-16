@@ -283,6 +283,8 @@ def configure(
     'resources/images/icons/idea-clean@2x.png',
     'resources/images/icons/add.png',
     'resources/images/icons/add@2x.png',
+    'resources/images/icons/remove.png',
+    'resources/images/icons/remove@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
