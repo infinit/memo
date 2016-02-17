@@ -109,7 +109,7 @@ class Infinit(TemporaryDirectory):
       return json.loads(out)
     except:
       _out = []
-      for line in out.split('\n'):
+      for line in out.split(os.environ.get('EXE_EXT', '') and '\r\n' or '\n'):
         if len(line) == 0:
           continue
         try:
