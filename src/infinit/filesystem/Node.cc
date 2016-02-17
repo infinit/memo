@@ -230,7 +230,18 @@ namespace infinit
           auto const& elem = this->_parent->_files.at(this->_name);
           addr = elem.second;
         }
-        if (*special == "block.rebalance")
+        if (*special == "block.nodes")
+        {
+          auto ids = elle::serialization::json::deserialize<
+            std::unordered_set<model::Address>>(v);
+          if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
+                dht->consensus().get()))
+          {
+            paxos->rebalance(addr, ids);
+            return;
+          }
+        }
+        else if (*special == "block.rebalance")
         {
           if (this->_owner.block_store()->version() < elle::Version(0, 5, 0))
             THROW_NOSYS;
