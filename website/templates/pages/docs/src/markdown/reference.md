@@ -189,7 +189,7 @@ The _infinit-credentials_ binary manages the credentials for your cloud services
 To add AWS credentials so that an Amazon S3 bucket can be used to store data, simply use the `--add` option specifying `aws`. Note that an Access Key ID and Secrect Access Key are used, not the user name and password:
 
 ```
-$> infinit-credentials --add --aws --name s3-user
+$> infinit-credentials --add --aws --account s3-user
 Please enter your AWS credentials
 Access Key ID: AKIAIOSFODNN7EXAMPLE
 Secret Access Key: ****************************************
