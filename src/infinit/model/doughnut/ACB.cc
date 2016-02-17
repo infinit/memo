@@ -163,16 +163,6 @@ namespace infinit
         , _sign_key(other._sign_key)
       {}
 
-      /*-------.
-      | Clone  |
-      `-------*/
-      template <typename Block>
-      std::unique_ptr<blocks::Block>
-      BaseACB<Block>::clone() const
-      {
-        return std::unique_ptr<blocks::Block>(new Self(*this));
-      }
-
       /*--------.
       | Content |
       `--------*/

@@ -22,7 +22,6 @@ namespace infinit
   {
     namespace doughnut
     {
-
       OKBHeader::OKBHeader(Doughnut* dht,
                            cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
@@ -170,16 +169,6 @@ namespace infinit
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
       {}
-
-      /*-------.
-      | Clone  |
-      `-------*/
-      template <typename Block>
-      std::unique_ptr<blocks::Block>
-      BaseOKB<Block>::clone() const
-      {
-        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this));
-      }
 
       /*--------.
       | Content |
@@ -415,7 +404,6 @@ namespace infinit
         if (this->doughnut() &&
             *this->owner_key() == this->doughnut()->keys().K())
           this->_owner_private_key = this->doughnut()->keys().private_key();
-
       }
 
       template <typename Block>
