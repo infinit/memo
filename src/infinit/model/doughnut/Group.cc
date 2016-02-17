@@ -130,8 +130,20 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: fetch block", *this);
         auto key = this->public_control_key();
         auto addr = ACB::hash_address(this->_dht, key, group_block_key);
-        elle::unconst(this)->_block = elle::cast<GB>::runtime(
-          this->_dht.fetch(addr));
+        try
+        {
+          elle::unconst(this)->_block = elle::cast<GB>::runtime(
+            this->_dht.fetch(addr));
+        }
+        catch (MissingBlock const&)
+        {
+          ELLE_TRACE("Missing group block, trying unflagged");
+          auto old_addr = ACB::hash_address(this->_dht, key, group_block_key, true);
+          if (addr == old_addr)
+            throw;
+          elle::unconst(this)->_block = elle::cast<GB>::runtime(
+            this->_dht.fetch(old_addr));
+        }
         return *this->_block;
       }
 
