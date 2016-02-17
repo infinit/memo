@@ -367,8 +367,13 @@ You can now invite other users to join the network, to contribute additional sto
   </a>
 </div>
 
-<a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Join our Facebook Group</a>
+### Any question, feedback ?
 
-<a href="#slack" class="icon-slack">Ask us something on Slack</a>
+Come talk to us! Whether you encounter a problem setting up your infrastructure, have a question or just to give us some feedback, we're never too far away:
 
-<a href="https://twitter.com/infinit_sh" class="icon-twitter">Follow us on Twitter</a>
+* <a href="https://reddit.com/r/infinit" class="icon-reddit">Reddit /r/infinit</a>
+* <a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Facebook Group</a>
+* <a href="#slack" class="icon-slack">Slack Community</a>
+* <a href="http://webchat.freenode.net/?channels=infinit" class="icon-infinit">IRC Channel</a>
+* <a href="https://twitter.com/infinit_sh" class="icon-twitter">Twitter</a>
+

@@ -21,7 +21,7 @@
     "category": "comparisons",
     "popularity": 0,
     "question": "How does Infinit differ from GlusterFS or HAMMER2?",
-    "answer" : "<p>Both use a master/slave system for the data replication rather than a completely decentralised system like ours. Also their storage resources are local storage only, so they trust every nodes.</p><p>With Infinit, since you can create hybrid infrastructures, for example with a local storage and a cloud storage (S3, GCS...), we consider that every node can fail (a cloud you don't control) or be malicious, so our data replication has byzantine fault tolerance.</p> <p>Since everything is decentralised (data and metadata) and that no hypothesis are made on nodes, there's no single point of failure.</p>"
+    "answer" : "<p>Both use a master/slave system for the data replication rather than a completely decentralised system like ours. Also their storage resources are local storage only, so they trust every node.</p><p>With Infinit, since you can create hybrid infrastructures, for example with a local storage and a cloud storage (S3, GCS...), we consider that every node can fail (a cloud you don't control) or be malicious, so our data replication has byzantine fault tolerance.</p> <p>Since everything is decentralised (data and metadata) and that no hypothesis are made on nodes, there's no single point of failure.</p>"
   },
   {
     "category": "comparisons",

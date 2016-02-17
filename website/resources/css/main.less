@@ -217,6 +217,7 @@ footer nav > ul > li {
     ul.social { margin-top: 13px; }
     ul.social li { float: left; margin-right: 15px; margin-bottom: 5px;}
 
+    a.icon-reddit:before { margin-right: 5px; }
     a {
       color: @infinitgrey;
       transition: color 0.3s; outline: none;
@@ -717,7 +718,7 @@ body.doc_get_started {
       float: left; display: block; background: darken(white, 5%); padding: 25px 3%;
       border-radius: 5px; text-align: center; .transition();
       font-family: @helvetica; font-size: 18px; font-weight: 300;
-      width: 41%; margin: 10px 3%;
+      width: 41%; margin: 10px 3% 30px 3%;
 
       img { height: 40px; width: auto; margin-bottom: 5px; }
       span { display: block; }
@@ -729,11 +730,16 @@ body.doc_get_started {
 
     a.go_reference img { height: 32px; margin-bottom: 9px; margin-top: 4px;}
 
-    a.icon-facebook { clear: both;}
-    a.icon-facebook, a.icon-twitter, a.icon-slack {
-      float: left; width: 33%; text-align: center; margin-top: 20px; margin-bottom: 40px;
-      &:hover { border-bottom: 0; }
-    }
+    h3:last-child { clear: both; }
+    ul:last-child { list-style-type: none; }
+    ul:last-child li { margin-left: 0; font-size: 16px; margin: 15px 20px 15px 0;}
+    ul:last-child li a:before { margin-right: 6px;}
+    ul:last-child li a.icon-reddit:before { margin-right: 9px; margin-left: 0;}
+    // a.icon-facebook { clear: both;}
+    // a.icon-facebook, a.icon-twitter, a.icon-slack {
+    //   float: left; width: 33%; text-align: center; margin-top: 20px; margin-bottom: 40px;
+    //   &:hover { border-bottom: 0; }
+    // }
   }
 }
 
@@ -1009,7 +1015,7 @@ body.press {
         border-radius: 5px;
       }
 
-      h1 span { font-size: 14px; color: @infinitred; display: inline-block; float: right;}
+      h1 span { font-size: 14px; display: inline-block; float: right;}
       h2 { margin: 0px 0 10px 0 !important; }
 
       p.subtitle {
@@ -1226,6 +1232,8 @@ body.contact, body.solutions {
 `--------------*/
 
 body.opensource {
+
+  #sidebar ul.menu a.icon-reddit:before { margin-right: 6px; margin-left: 0px;}
   section.doc {
 
     .projects { width: 120%; }
