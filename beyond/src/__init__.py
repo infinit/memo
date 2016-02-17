@@ -1,6 +1,7 @@
 import base64
 import requests
 import subprocess
+import os
 
 import infinit.beyond.version
 
@@ -8,6 +9,9 @@ from infinit.beyond import validation, emailer
 
 from copy import deepcopy
 from itertools import chain
+
+
+exe_ext = os.environ.get('EXE_EXT', '')
 
 ## -------- ##
 ## Binaries ##
@@ -17,11 +21,11 @@ def find_binaries():
   paths = []
   if os.environ.get('INFINIT_BINARIES'):
     paths.append(os.environ.get('INFINIT_BINARIES'))
-  paths += os.environ.get('PATH', '').split(':') + ['/opt/infinit/bin/']
+  paths += os.environ.get('PATH', '').split(':') + ['bin/', '/opt/infinit/bin/']
   for path in paths:
     path = path + '/' if not path.endswith('/') else path
     try:
-      if subprocess.check_call([path + 'infinit-user', '--version']) == 0:
+      if subprocess.check_call([path + 'infinit-user' + exe_ext, '--version']) == 0:
         return path
     except:
       pass

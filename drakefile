@@ -663,6 +663,8 @@ def configure(
             os.environ.get('PATH', '')
           ])
         }
+        if cxx_toolkit.os == drake.os.windows:
+          env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
           exe = test,
           env = env
