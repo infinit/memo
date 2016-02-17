@@ -1,5 +1,4 @@
 import base64
-import cryptography
 import requests
 import subprocess
 
@@ -512,8 +511,10 @@ class User:
 
   @property
   def id(self):
-    der = base64.b64decode(self.public_key['rsa'].encode('latin-1'))
-    id = base64.urlsafe_b64encode(cryptography.hash(der))[0:8]
+    import hashlib
+    der = base64.b64decode(self.public_key['rsa']) # .encode('latin-1'))
+    sha = hashlib.sha256(der).digest()
+    id = base64.urlsafe_b64encode(sha)[0:8]
     return id.decode('latin-1')
 
   @property

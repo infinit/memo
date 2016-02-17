@@ -163,8 +163,9 @@ def configure(
               where / python_prefix, strip_prefix = True)
     yield how(drake.node('beyond'),
               where / 'bin', strip_prefix = True)
-    yield how(cryptography_python_module,
-              where / python_prefix, strip_prefix = True)
+    if cryptography_python_module:
+      yield how(cryptography_python_module,
+                where / python_prefix, strip_prefix = True)
     yield drake.touch(where / python_prefix / 'infinit/__init__.py')
 
   build = drake.Rule('build')
