@@ -61,13 +61,21 @@ namespace infinit
                               cryptography::rsa::PublicKey const& key,
                               elle::Buffer const& salt)
       {
+        return hash_address(key, salt, dht.version());
+      }
+
+      Address
+      OKBHeader::hash_address(cryptography::rsa::PublicKey const& key,
+                              elle::Buffer const& salt,
+                              elle::Version const& compatibility_version)
+      {
         auto key_buffer = elle::serialization::json::serialize(
           key, elle::Version(0,0,0));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
         return Address(hash.contents(), flags::mutable_block,
-                       dht.version() >= elle::Version(0, 5, 0));
+                       compatibility_version >= elle::Version(0, 5, 0));
       }
 
       Address
