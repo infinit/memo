@@ -497,6 +497,8 @@ namespace infinit
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<OKB> _register_okb_serialization("OKB");
+      static const elle::TypeInfo::RegisterAbbrevation
+      _okb_abbr("BaseOKB<infinit::model::blocks::MutableBlock>", "OKB");
     }
   }
 }
