@@ -3,6 +3,7 @@
 #include <boost/uuid/random_generator.hpp>
 
 #include <elle/Buffer.hh>
+#include <elle/format/hexadecimal.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/random.hh>
@@ -62,7 +63,17 @@ namespace infinit
     std::ostream&
     operator << (std::ostream& out, Address const& k)
     {
-      out << elle::ConstWeakBuffer(k._value, sizeof(k._value));
+      bool fixed = out.flags() & std::ios::fixed;
+      if (!fixed)
+        out << elle::ConstWeakBuffer(k._value, sizeof(k._value));
+      else
+      {
+        out << "0x";
+        out << elle::format::hexadecimal::encode(
+          elle::ConstWeakBuffer(k._value, 4));
+        out << elle::format::hexadecimal::encode(
+          elle::ConstWeakBuffer(k._value + Address::flag_byte, 1));
+      }
       return out;
     }
 
