@@ -328,6 +328,23 @@ public:
     other._peers.emplace_back(this);
   }
 
+  void
+  disconnect(Overlay& other)
+  {
+    for (auto it = this->_peers.begin(); it != this->_peers.end(); ++it)
+      if (*it == &other)
+      {
+        this->_peers.erase(it);
+        break;
+      }
+    for (auto it = other._peers.begin(); it != other._peers.end(); ++it)
+      if (*it == this)
+      {
+        other._peers.erase(it);
+        break;
+      }
+  }
+
 protected:
   virtual
   reactor::Generator<Member>
@@ -337,7 +354,7 @@ protected:
   {
     bool write = op == infinit::overlay::OP_INSERT ||
       op == infinit::overlay::OP_INSERT_OR_UPDATE;
-    ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %s",
+    ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      *this, n, write ? " new" : "", address);
     return reactor::generator<Overlay::Member>(
       [=]
@@ -376,7 +393,7 @@ protected:
     for (auto* peer: this->_peers)
       if (peer->local() && peer->local()->id() == id)
         return peer->local();
-    return nullptr;
+    throw elle::Error(elle::sprintf("no such node: %s", id));
   }
 
   ELLE_ATTRIBUTE_RX(std::vector<Overlay*>, peers);
@@ -1033,6 +1050,55 @@ namespace rebalancing
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 2u);
   }
+
+  ELLE_TEST_SCHEDULED(shrink_and_write)
+  {
+    DHT dht_a;
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b;
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    dht_b.overlay->connect(*dht_a.overlay);
+    auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to quorum of 2")
+    {
+      b1->data(std::string("shrink_kill_and_write 1"));
+      dht_a.dht->store(*b1);
+    }
+    auto paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+    ELLE_LOG("rebalance block to quorum of 1")
+      paxos_a.rebalance(b1->address(), {dht_a.dht->id()});
+    ELLE_LOG("write block to quorum of 1")
+    {
+      b1->data(std::string("extend_and_write 2"));
+      dht_a.dht->store(*b1);
+    }
+  }
+
+  ELLE_TEST_SCHEDULED(shrink_kill_and_write)
+  {
+    DHT dht_a;
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b;
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    dht_b.overlay->connect(*dht_a.overlay);
+    auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to quorum of 2")
+    {
+      b1->data(std::string("shrink_kill_and_write 1"));
+      dht_a.dht->store(*b1);
+    }
+    auto paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+    ELLE_LOG("rebalance block to quorum of 1")
+      paxos_a.rebalance(b1->address(), {dht_a.dht->id()});
+    dht_b.overlay->disconnect(*dht_a.overlay);
+    ELLE_LOG("write block to quorum of 1")
+    {
+      b1->data(std::string("extend_and_write 2"));
+      dht_a.dht->store(*b1);
+    }
+  }
 }
 
 ELLE_TEST_SUITE()
@@ -1068,5 +1134,7 @@ ELLE_TEST_SUITE()
     paxos->add(rebalancing);
     using namespace rebalancing;
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
   }
 }
