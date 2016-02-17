@@ -30,6 +30,16 @@ namespace infinit
               return nullptr;
         return res;
       }
+
+      /*----------.
+      | Printable |
+      `----------*/
+
+      void
+      Peer::print(std::ostream& stream) const
+      {
+        elle::fprintf(stream, "%f(%f)", elle::type_info(*this), this->id());
+      }
     }
   }
 }

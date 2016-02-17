@@ -106,14 +106,6 @@ namespace infinit
         void
         _require_auth(RPCServer& rpcs, bool write_op);
         std::unordered_map<RPCServer*, Passport> _passports;
-      /*----------.
-      | Printable |
-      `----------*/
-      public:
-        /// Print pretty representation to \a stream.
-        virtual
-        void
-        print(std::ostream& stream) const override;
       };
     }
   }
