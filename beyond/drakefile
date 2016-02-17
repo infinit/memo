@@ -246,6 +246,7 @@ def configure(
   for test_name in [
       'auth',
       'demo',
+      'entity',
       'full-flow',
       'oauth-dropbox',
       'emails',

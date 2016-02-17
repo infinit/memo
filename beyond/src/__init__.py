@@ -610,16 +610,19 @@ class Entity(type):
       }
     content['json'] = json
     def from_json(beyond, json):
-      missing = next((m for m in fields if m not in json), None)
+      missing = next((f for f, d in fields.items()
+                      if json.get(f) is None and fields[f] is None),
+                     None)
       if missing is not None:
         raise Exception(
           'missing mandatory JSON key for '
           '%s: %s' % (self.__name__, missing))
-      json = {
+      body = deepcopy(fields)
+      body.update({
         k: v
         for k, v in json.items() if k in fields
-      }
-      return self_type(beyond, **json)
+      })
+      return self_type(beyond, **body)
     content['from_json'] = from_json
     # Create
     if insert:

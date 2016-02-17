@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+
+from infinit.beyond.bottle import Entity
+
+import unittest
+
+from utils import *
+
+class Test(unittest.TestCase):
+
+  def test_missing_field(self):
+
+    class Foo(metaclass = Entity,
+              fields = {
+                'name': None,
+                'id': None
+              }):
+      pass
+    try:
+      Foo.from_json(None, {'id': 31})
+    except Exception as e:
+      assertIn('missing mandatory JSON key', e.args[0])
+      assertIn('name', e.args[0])
+
+  def test_optional_field_added(self):
+
+    class Foo(metaclass = Entity,
+              fields = {
+                'name': None,
+                'with_default': 4242
+              }):
+      pass
+
+    f = Foo.from_json(None, {'name': 'castor'})
+    assertEq(f.name, 'castor')
+    assertEq(f.with_default, 4242)
+
+    f = Foo.from_json(None, {'name': 'polux', 'with_default': 3131})
+    assertEq(f.name, 'polux')
+    assertEq(f.with_default, 3131)
+
+  def test_field_removed(self):
+
+    class Foo(metaclass = Entity,
+              fields = {
+                'name': None,
+              }):
+      pass
+
+    f = Foo.from_json(None, {'name': 'tapoue', 'old': True})
+    assertEq(f.name, 'tapoue')
+    assert not hasattr(f, 'old')
+
+if __name__ == '__main__':
+  unittest.main()
