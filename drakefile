@@ -719,10 +719,11 @@ def configure(
     cxx_config_tests.library_add(
       drake.copy(dokan_lib, 'tests', True))
     cxx_config_tests.use_whole_archive()
-    cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
-    cxx_config_tests.library_add(elle.boost.test_static)
     cxx_config_tests.define('ELLE_SERIALIZATION_USE_DLL')
     cxx_config_tests.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
+
+    cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
+    cxx_config_tests.library_add(elle.boost.test_static)
   tests_names = [
     ('backward-compatibility', []),
     ('consensus/async', []),
