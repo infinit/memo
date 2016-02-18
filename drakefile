@@ -707,6 +707,7 @@ def configure(
     cxx_config_tests.library_add(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
+    infinit_lib_tests = infinit_lib
   else:
     cxx_config_tests.lib('shlwapi')
     cxx_config_tests.lib('ws2_32')
@@ -726,6 +727,10 @@ def configure(
 
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
     cxx_config_tests.library_add(elle.boost.test_static)
+    infinit_lib_tests = drake.copy(infinit_lib, 'tests',
+                                   strip_prefix = True)
+    infinit_lib_tests_consensus = drake.copy(infinit_lib, 'tests/consensus',
+                                             strip_prefix = True)
   tests_names = [
     ('backward-compatibility', []),
     ('consensus/async', []),
@@ -742,11 +747,12 @@ def configure(
   else:
     tests_extra_libs = []
   for test_name, dependencies in tests_names:
+    ifnt_lib = test_name == 'consensus/async' and infinit_lib_tests_consensus or infinit_lib_tests
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
         drake.node('tests/%s.cc' % test_name),
-        infinit_lib
+        ifnt_lib
       ] + tests_extra_libs,
       cxx_toolkit,
       test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
