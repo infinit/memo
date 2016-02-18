@@ -1,0 +1,43 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <%include file='resources.html'/>
+
+  <section class="doc">
+    <h1>Press Release <span>(Embargo on Feb 16 at 9am EST)</span></h1>
+
+    <div class="article">
+        <h2>Infinit: a software-defined storage solution to deploy scalable, hybrid cloud infrastructure</h2>
+        <p class="subtitle">Unify your on-premise and cloud storage resources into a single, fault-tolerant and scalable file system (https://infinit.sh)</p>
+    </div>
+
+
+    <h3>Quick Pitch</h3>
+    <p>Infinit lets IT managers deploy flexible and secure software-based storage infrastructure by aggregating on-premise and cloud storage resources into hybrid cloud environments.</p><br>
+
+    <h4>New York, NY: 16 February 2016</h4>
+
+    <p>Techstars alumnus, <a href="https://infinit.sh">Infinit</a>, has launched its second product, a decentralized file storage platform, making it possible for IT managers to aggregate storage resources across on-premise servers and the cloud into a flexible, secure, fault-tolerant and scalable file system.</p>
+
+    <p>In aggregating various storage resources including the cloud (AWS S3, Google Cloud Storage, etc.), local servers, computers, network attached storage, or virtually any other device, Infinit brings complete transparency to IT managers regarding the location of the data stored while offering a POSIX-compliant file system interface.</p>
+
+    <p>Infinit is designed to be molded to a company’s storage needs. IT managers rely on Infinit's command-line tools for monitoring and administering their infrastructure, which evolves according to modifications such as load changes, failures, the number of users, the location of nodes and several other parameters.</p>
+
+    <p>The company has its eyes set on heterogeneous storage environments ranging from the consolidation of several NAS systems and geo-replication for multi-site businesses to the creation of hybrid cloud storage environments for enterprises. These organizations can thus benefit from cost reductions if they choose to use the cloud, without putting their data at risk. In addition, because of this increasing demand for secure storage solutions, files stored through an Infinit file system are split into small blocks, which are then encrypted locally using a unique key before being distributed across the pre-defined storage infrastructure. When a file is accessed by a user, the file is reassembled on the user’s computer by downloading the composing blocks from multiple sources in parallel, hence providing performance gains, meaning that audio and video can be streamed for example.</p>
+
+    <p>This innovative approach to storage provides for an extremely fault-tolerant system. IT managers are able to set a replication factor to ensure redundancy across the storage infrastructure. Should a server fail, the system automatically detects the issue and heals itself by reproducing missing replicas and rebalancing blocks between the storage nodes. And unlike existing systems, the infrastructure is managed in a completely decentralized way. Without metadata servers, Infinit avoids bottlenecks and single points of failure.</p>
+
+    <p>Infinit’s goal is to disrupt legacy storage solutions from companies like NetApp and EMC that rely on an arcane model of locking in customers with expensive and unscalable vendor-specific hardware. In contrast, Infinit is a software-defined solution that makes the product entirely hardware agnostic, with the potential to reduce the total cost of ownership for a storage system by more than 70%. This approach not only makes Infinit adaptable to any company’s storage needs and policies, but also drastically reduces the costs, setup time and complexity associated with adopting a custom storage solution. Because Infinit is an all-in-one solution, it combines traditional products from a traditional storage platform and a backup system to a cloud gateway (multi-cloud) and a high-availability solution, like Veeam.</p>
+
+    <p>While most traditional solutions take weeks or months to set up, Infinit makes deploying a complex storage infrastructure ranging from private, on-premise configurations to public or hybrid  clouds, a matter of just a few hours. Users that rely heavily on NAS or internal servers are now able to easily consolidate their storage into one coherent volume, rather than interacting with several, individual devices that are treated independently.</p>
+
+    <p>Many of Infinit’s first corporate customers adopted the solution because of advantages in aggregating on-premise servers across multiple geographic locations. Infinit replicates data between sites meaning employees are guaranteed access to the same files regardless of their location. IT managers also benefit from an extra layer of security thanks to Infinit’s client-side encryption, which ensures the safe transit of the data and encryption at-rest once the data is stored in the file system.</p>
+
+    <p>Infinit plans to open source each layer of its file system as they become more stable and modular enough to be used in other products. The company has already begun open sourcing parts of its codebase, which can be found on <a href="https://infinit.sh/open-source">their site</a>. Infinit can be downloaded from <a href="https://infinit.sh">infinit.sh</a>.</p>
+
+    <h3>About Infinit</h3>
+    <p>Infinit International Inc. (<a href="http://www.infinit.one">infinit.one</a>) is a company with offices in New York City and Paris providing medium and large businesses with modern and secure file management products. For more information, please visit <a href="http://www.infinit.one">infinit.one</a> or email <a href="mailto:press@infinit.one">press@infinit.one</a>.</p>
+  <section>
+
+</%block>

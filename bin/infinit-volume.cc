@@ -311,19 +311,22 @@ COMMAND(run)
     option_opt<int>(args, option_cache_invalidation.long_name());
   if (cache_size || cache_ttl || cache_invalidation)
     cache = true;
-  static const std::vector<int> signals = {SIGINT, SIGTERM
+  if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+  {
+    static const std::vector<int> signals = {SIGINT, SIGTERM
 #ifndef INFINIT_WINDOWS
-  , SIGQUIT
+    , SIGQUIT
 #endif
-  };
-  for (auto signal: signals)
-    reactor::scheduler().signal_handle(
-      signal,
-      [&]
-      {
-        ELLE_TRACE("terminating");
-        reactor::scheduler().terminate();
-      });
+    };
+    for (auto signal: signals)
+      reactor::scheduler().signal_handle(
+        signal,
+        [&]
+        {
+          ELLE_TRACE("terminating");
+          reactor::scheduler().terminate();
+        });
+  }
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);

@@ -66,7 +66,7 @@ namespace infinit
          * @param create: if true, allow creation of a new block as needed
          *                else returns nullptr if creation was required
          */
-      AnyBlock* _block_at(int index, bool create);
+      std::shared_ptr<AnyBlock> _block_at(int index, bool create);
 
       void _ensure_first_block();
       void _fetch() override;
@@ -79,7 +79,7 @@ namespace infinit
       void _check_prefetch();
       struct CacheEntry
       {
-        AnyBlock block;
+        std::shared_ptr<AnyBlock> block;
         bool dirty;
         std::chrono::system_clock::time_point last_use;
         bool new_block;

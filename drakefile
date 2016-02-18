@@ -633,10 +633,7 @@ def configure(
         }
       )
 
-      if cxx_toolkit.os != drake.os.windows:
-        rule_check << beyond.rule_check
       for test_name in [
-          'address-flag-backward',
           'errors',
           'single-user-two-devices-shared-storage',
           'passport-restrictions',
@@ -755,7 +752,14 @@ def configure(
     test.dependencies_add(dependencies)
     rule_tests << test
     env = {'SOURCE_DIR': drake.path_source()}
-    if valgrind_tests:
+    #  _____ _____  ____  __ _____
+    # |  ___|_ _\ \/ /  \/  | ____|
+    # | |_   | | \  /| |\/| |  _|
+    # |  _|  | | /  \| |  | | |___
+    # |_|   |___/_/\_\_|  |_|_____|
+    #
+    # Really, really do run these tests on valgrind !!!
+    if valgrind_tests and test_name not in ['filesystem', 'kelips']:
       runner = drake.valgrind.ValgrindRunner(
         exe = test,
         valgrind = elle.valgrind,

@@ -256,7 +256,7 @@ static void make_nodes(std::string store, int node_count,
   nodes_sched = &s;
   reactor::Thread t(s, "nodes", [&] {
     for (int i = 0; i < node_count; ++i)
-      peers.emplace_back(infinit::model::Address::random());
+      peers.emplace_back(infinit::model::Address::random(0)); // FIXME
     for (int i = 0; i < node_count; ++i)
     {
       // Create storage
@@ -381,7 +381,7 @@ run_filesystem_dht(std::string const& store,
           };
         std::unique_ptr<infinit::model::Model> model =
         elle::make_unique<infinit::model::doughnut::Doughnut>(
-          infinit::model::Address::random(),
+          infinit::model::Address::random(0), // FIXME
           "testnet",
           std::make_shared<infinit::cryptography::rsa::KeyPair>(owner_keys),
           owner_keys.public_key(),
@@ -426,7 +426,7 @@ run_filesystem_dht(std::string const& store,
         keys.push_back(kp.K());
         model["id"] = elle::format::base64::encode(
           elle::ConstWeakBuffer(
-            infinit::model::Address::random().value(),
+            infinit::model::Address::random(0).value(), // FIXME
             sizeof(infinit::model::Address::Value))).string();
 
         model["keys"] = "@KEYS@"; // placeholder, lolilol
@@ -1477,8 +1477,8 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
   BOOST_CHECK_EQUAL(directory_count(base1), 1);
   BOOST_CHECK(can_access(base0 / "rm"));
-  std::string block = getxattr_(base0 / "rm", "user.infinit.block");
-  block = block.substr(2);
+  std::string block = getxattr_(base0 / "rm", "user.infinit.block.address");
+  block = block.substr(3, block.size()-5);
   BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", block), 0);
   BOOST_CHECK(!can_access(base0 / "rm", true, false, EIO));
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
@@ -1487,8 +1487,8 @@ test_acl(bool paxos)
 
   write(base0 / "rm2", "foo");
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
-  block = getxattr_(base0 / "rm2", "user.infinit.block");
-  block = block.substr(2);
+  block = getxattr_(base0 / "rm2", "user.infinit.block.address");
+  block = block.substr(3, block.size()-5);
   BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", block), -1);
   BOOST_CHECK(can_access(base0 / "rm2", true));
   bfs::remove(base0 / "rm2");

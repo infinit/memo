@@ -41,6 +41,7 @@
 ELLE_LOG_COMPONENT("infinit.filesystem");
 
 namespace rfs = reactor::filesystem;
+namespace dht = infinit::model::doughnut;
 
 namespace infinit
 {
@@ -215,25 +216,44 @@ namespace infinit
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
-      auto dn =
-        std::dynamic_pointer_cast<model::doughnut::Doughnut>(_block_store);
-      Address addr =
-        model::doughnut::NB::address(*dn->owner(), _volume_name + ".root", dn->version());
+      bool migrate = true;
+      auto dn = std::dynamic_pointer_cast<dht::Doughnut>(this->_block_store);
+      auto const bootstrap_name = this->_volume_name + ".root";
+      Address addr = dht::NB::address(
+        *dn->owner(), bootstrap_name, dn->version());
       while (true)
       {
         try
         {
           ELLE_DEBUG_SCOPE("fetch root bootstrap block at %x", addr);
-          auto block = _block_store->fetch(addr);
+          auto block = this->_block_store->fetch(addr);
           addr = Address(
             Address::from_string(block->data().string().substr(2)).value(),
-            model::flags::mutable_block);
-          ELLE_DEBUG_SCOPE("fetch root block at %x({%x}", addr,
-                           (unsigned int)addr.overwritten_value());
+            model::flags::mutable_block,
+            false);
+          ELLE_DEBUG_SCOPE("fetch root block at %x", addr);
           break;
         }
         catch (model::MissingBlock const& e)
         {
+          if (migrate)
+            try
+            {
+              migrate = false;
+              Address old_addr = dht::NB::address(
+                *dn->owner(), bootstrap_name, elle::Version(0, 4, 0));
+              auto old = std::dynamic_pointer_cast<dht::NB>(
+                this->_block_store->fetch(old_addr));
+              ELLE_LOG_SCOPE(
+                "migrate old bootstrap block from %s to %s", old_addr, addr);
+              auto nb = elle::make_unique<dht::NB>(
+                dn.get(), dn->owner(), bootstrap_name,
+                old->data(), old->signature());
+              this->store_or_die(std::move(nb), model::STORE_INSERT);
+              continue;
+            }
+            catch (model::MissingBlock const&)
+            {}
           if (*dn->owner() == dn->keys().K())
           {
             std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
@@ -246,8 +266,8 @@ namespace infinit
             }
             ELLE_TRACE("create missing root bootstrap block")
             {
-              auto nb = elle::make_unique<model::doughnut::NB>(
-                dn.get(), dn->owner(), this->_volume_name + ".root", baddr);
+              auto nb = elle::make_unique<dht::NB>(
+                dn.get(), dn->owner(), bootstrap_name, baddr);
               this->store_or_die(std::move(nb), model::STORE_INSERT);
             }
             on_root_block_create();

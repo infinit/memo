@@ -118,9 +118,9 @@ COMMAND(create)
   {
     auto path = optional(args, "path");
     if (!path)
-      path = (infinit::root_dir() / "blocks" / name).string();
+      path = (infinit::xdg_data_home() / "blocks" / name).string();
     else
-      path = infinit::canonical_folder(*path, "block storage path").string();
+      path = infinit::canonical_folder(*path).string();
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
         (name, std::move(*path), std::move(capacity));
@@ -284,10 +284,11 @@ main(int argc, char** argv)
     ;
   Mode::OptionsDescription s3_options("Amazon S3 storage options");
   s3_options.add_options()
-    ("region", value<std::string>(), "AWS region to use")
+    ("account", value<std::string>(), "S3 account name to use")
     ("bucket", value<std::string>(), "S3 bucket to use")
     ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
-    ;
+    ("region", value<std::string>(), "AWS region to use")
+  ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");
   ssh_storage_options.add_options()
     ("ssh-host", value<std::string>(), "hostname to connect to")
@@ -300,7 +301,7 @@ main(int argc, char** argv)
     "\n  S3: <name>_blocks"
     // "\n  Dropbox: .infinit_<name>"
     // "\n  Google Drive: .infinit_<name>"
-    ")", (infinit::root_dir() / "blocks/<name>"));
+    ")", (infinit::xdg_data_home() / "blocks/<name>"));
   Modes modes {
     {
       "create",
@@ -312,10 +313,6 @@ main(int argc, char** argv)
         { "capacity,c", value<std::string>(), "limit the storage capacity, "
           "use: B,kB,kiB,GB,GiB,TB,TiB (optional)" },
         option_output("storage"),
-        { "account", value<std::string>(),
-          "account name when using a cloud service" },
-        { "bucket", value<std::string>(),
-          "bucket to use when using GCS or S3" },
         { "path", value<std::string>(), default_locations },
       },
       {

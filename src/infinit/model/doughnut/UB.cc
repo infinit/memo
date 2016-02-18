@@ -55,9 +55,8 @@ namespace infinit
       {
         auto hash = cryptography::hash (elle::sprintf("UB/%s", name),
                                         cryptography::Oneway::sha256);
-        return dht.version() >= elle::Version(0, 5, 0)
-          ? Address(hash.contents(), flags::immutable_block)
-          : Address(hash.contents());
+        return Address(hash.contents(), flags::immutable_block,
+                       dht.version() >= elle::Version(0, 5, 0));
       }
 
       Address
@@ -67,9 +66,8 @@ namespace infinit
         auto buf = cryptography::rsa::publickey::der::encode(key);
         auto hash = cryptography::hash (elle::sprintf("RUB/%s", buf),
                                         cryptography::Oneway::sha256);
-        return dht.version() >= elle::Version(0, 5, 0)
-          ? Address(hash.contents(), flags::immutable_block)
-          : Address(hash.contents());
+        return Address(hash.contents(), flags::immutable_block,
+                       dht.version() >= elle::Version(0, 5, 0));
       }
 
       /*-------.
@@ -99,8 +97,7 @@ namespace infinit
           UB::hash_address(this->key(), *this->_doughnut)
           : UB::hash_address(this->name(), *this->_doughnut);
 
-        if (this->address() != expected_address
-          && this->address() != expected_address.unflagged())
+        if (!equal_unflagged(this->address(), expected_address))
         {
           auto reason = elle::sprintf("address %x invalid, expecting %x",
                                       this->address(), expected_address);

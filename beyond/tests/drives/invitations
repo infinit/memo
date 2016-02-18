@@ -53,6 +53,27 @@ with Beyond() as beyond:
                              auth = bob.private_key).json()['passports']
       assertEq(len(passports), 1)
 
+    def test_errors(self):
+      user, network, volume, drive = setup(beyond)
+      email = random_email()
+      drive.invite(beyond, email)
+      # Remove network.
+      beyond.delete('networks/%s' % network['name'],
+                    auth = user.private_key)
+      bob, _ = push_and_confirm(beyond, email)
+      # Because something went wrong, user has no drives and no passports.
+      drives = beyond.get('users/%s/drives' % bob['name'],
+                          auth = bob.private_key).json()['drives']
+      assertEq(len(drives), 0)
+      passports = beyond.get('users/%s/passports' % bob['name'],
+                             auth = bob.private_key).json()['passports']
+      assertEq(len(passports), 0)
+      emails = beyond.emailer.get_specifics(
+        'developers+passport_generation@infinit.sh',
+        'Internal/Passport Generation Error')
+      assertEq(len(emails), 1)
+      assertIn('Unkown network', emails[0]['errors'])
+
     def test_multiple_invitations(self):
       user, _, _, drive = setup(beyond)
       _, _, _, drive1 = setup(beyond, user)

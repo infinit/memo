@@ -1,6 +1,7 @@
 [MESSAGES CONTROL]
 disable=all
-enable=bad-indentation, beyond-bad-error
+enable=bad-indentation, beyond-bad-error, line-too-long
 
 [FORMAT]
 indent-string="  "
+max-line-length=80

@@ -64,7 +64,8 @@ namespace infinit
         Address
         hash_address(Doughnut const& dht,
                      cryptography::rsa::PublicKey const& key,
-                     elle::Buffer const& salt);
+                     elle::Buffer const& salt,
+                     bool old_address = false);
         typedef infinit::serialization_tag serialization_tag;
       };
 

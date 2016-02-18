@@ -208,12 +208,11 @@ namespace infinit
                          std::string const& name,
                          Address address)
       : Node(owner, parent, name)
-      , _address(address.unflagged().value(), model::flags::mutable_block)
+      , _address(Address(address.value(), model::flags::mutable_block, false))
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
       , _prefetching(false)
     {
-      ELLE_TRACE("%s: created with address %s{%x}", *this,
-                 this->_address, (unsigned int)address.overwritten_value());
+      ELLE_TRACE("%s: created with address %s", *this, this->_address);
     }
 
     void
@@ -225,17 +224,15 @@ namespace infinit
     void
     Directory::_fetch(std::unique_ptr<ACLBlock> block)
     {
-      ELLE_TRACE_SCOPE("%s: fetch block, addr = %s{%x}",
-                       *this,
-                       this->_address,
-                       (unsigned int)this->_address.overwritten_value());
+      ELLE_TRACE_SCOPE("%s: fetch block: %s", *this, this->_address);
       if (block)
         this->_block = std::move(block);
       else if (this->_block)
       {
         auto block =
           elle::cast<ACLBlock>::runtime(
-            this->_owner.fetch_or_die(this->_address, this->_block->version(), this));
+            this->_owner.fetch_or_die(this->_address,
+                                      this->_block->version(), this));
         if (block)
           this->_block = std::move(block);
       }
@@ -313,9 +310,10 @@ namespace infinit
           output.serialize_forward(*this);
         }
         ELLE_DUMP("content: %s", data);
-        if (!_block)
+        if (!this->_block)
           ELLE_DEBUG("fetch root block")
-            _block = elle::cast<ACLBlock>::runtime(_owner.fetch_or_die(_address));
+            this->_block = elle::cast<ACLBlock>::runtime(
+              this->_owner.fetch_or_die(this->_address));
         _block->data(data);
         this->_push_changes(op);
         clean_cache.abort();
@@ -393,8 +391,8 @@ namespace infinit
           case EntryType::file:
             return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
           case EntryType::directory:
-            return std::shared_ptr<rfs::Path>(new Directory(self, _owner, name,
-                it->second.second));
+            return std::shared_ptr<rfs::Path>(
+              new Directory(self, _owner, name, it->second.second));
           default:
             return {};
           }
@@ -405,6 +403,7 @@ namespace infinit
 
     struct PrefetchEntry
     {
+      std::string name;
       Address address;
       int level;
       bool is_dir;
@@ -421,32 +420,40 @@ namespace infinit
       if (_prefetching || !nthreads)
         return;
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
-      for (auto const& f: _files)
-        files->push_back(PrefetchEntry{ f.second.second, 0,
-                           f.second.first == EntryType::directory});
-      _prefetching = true;
+      for (auto const& f: this->_files)
+        files->push_back(
+          PrefetchEntry{f.first, f.second.second, 0,
+                        f.second.first == EntryType::directory});
+      this->_prefetching = true;
       auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
       auto model = _owner.block_store();
       auto running = std::make_shared<int>(nthreads);
-      for (int i=0; i<nthreads; ++i)
-        new reactor::Thread("prefetcher", [self, files, model, running] {
+      for (int i = 0; i < nthreads; ++i)
+        new reactor::Thread(
+          elle::sprintf("prefetcher %s", i),
+          [self, files, model, running]
+          {
             int nf = 0;
             while (!files->empty())
             {
               ++nf;
               auto e = files->back();
+              ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
               files->pop_back();
               std::unique_ptr<model::blocks::Block> block;
               try
               {
-                block = model->fetch(e.address);
+                Address addr(e.address.value(),
+                             model::flags::mutable_block, false);
+                block = model->fetch(addr);
                 if (block && e.is_dir && e.level +1 < prefetch_depth)
                 {
                   Directory d(self, self->_owner, "", e.address);
                   d._fetch(elle::cast<ACLBlock>::runtime(block));
                   for (auto const& f: d._files)
-                    files->push_back(PrefetchEntry{ f.second.second, e.level+1,
-                      f.second.first == EntryType::directory});
+                    files->push_back(
+                      PrefetchEntry{f.first, f.second.second, e.level+1,
+                                    f.second.first == EntryType::directory});
                 }
               }
               catch(elle::Error const& e)
@@ -600,7 +607,7 @@ namespace infinit
           if (f->_first_block)
             cs.size += f->_first_block->data().size();
           for (auto& b: f->_blocks)
-            cs.size += b.second.block.data().size();
+            cs.size += b.second.block->data().size();
         }
       }
     }
@@ -825,9 +832,7 @@ namespace infinit
         }
         else if (*special == "sync")
         {
-          auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-            this->_owner.block_store());
-          auto c = dn->consensus().get();
+          auto c = dht->consensus().get();
           auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
           if (!a)
           {
@@ -845,31 +850,28 @@ namespace infinit
         else if (special->find("group.list.") == 0)
         {
           std::string value = special->substr(strlen("group.list."));
-          auto dn = std::dynamic_pointer_cast<infinit::model::doughnut::Doughnut>(_owner.block_store());
-          return umbrella([&]
-                          {
-                            model::doughnut::Group g(*dn, value);
-                            elle::json::Object o;
-                            auto members = g.list_members();
-                            elle::json::Array v;
-                            for (auto const& m: members)
-                              v.push_back(m->name());
-                            o["members"] = v;
-                            members = g.list_admins();
-                            elle::json::Array va;
-                            for (auto const& m: members)
-                              va.push_back(m->name());
-                            o["admins"] = va;
-                            std::stringstream ss;
-                            elle::json::write(ss, o, true);
-                            return ss.str();
-                          });
+          return umbrella(
+            [&]
+            {
+              model::doughnut::Group g(*dht, value);
+              elle::json::Object o;
+              auto members = g.list_members();
+              elle::json::Array v;
+              for (auto const& m: members)
+                v.push_back(m->name());
+              o["members"] = v;
+              members = g.list_admins();
+              elle::json::Array va;
+              for (auto const& m: members)
+                va.push_back(m->name());
+              o["admins"] = va;
+              std::stringstream ss;
+              elle::json::write(ss, o, true);
+              return ss.str();
+            });
         }
-        else
-          THROW_INVAL;
       }
-      else
-        return Node::getxattr(key);
+      return Node::getxattr(key);
     }
 
     void Directory::removexattr(std::string const& k)

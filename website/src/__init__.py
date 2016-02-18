@@ -20,7 +20,7 @@ class Website(bottle.Bottle):
     self.install(bottle.CertificationPlugin())
     route.apply(self)
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
-    self.__hub = os.environ.get('INFINIT_BEYOND', 'https://infinit.sh')
+    self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.io')
 
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
@@ -62,7 +62,7 @@ class Website(bottle.Bottle):
       'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/faq', name = 'doc_faq')
+  @route('/faq', name = 'faq')
   @view('pages/faq.html')
   def root(self):
     return {
@@ -199,11 +199,20 @@ class Website(bottle.Bottle):
     }
 
   @route('/press', name = 'press')
-  @view('pages/press.html')
+  @route('/press/tech', name = 'press')
+  @view('pages/press/pr_tech.html')
   def root(self):
     return {
       'title': 'Press Releases',
-      'description': 'See all our press releases and download our press kit.',
+      'description': 'See all our tech related press releases and download our press kit.',
+    }
+
+  @route('/press/storage', name = 'press')
+  @view('pages/press/pr_storage.html')
+  def root(self):
+    return {
+      'title': 'Press Releases',
+      'description': 'See all our storage related press releases and download our press kit.',
     }
 
   @route('/contact', name = 'contact')

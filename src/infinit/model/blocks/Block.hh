@@ -20,6 +20,7 @@ namespace infinit
     {
       struct RemoveSignature
       {
+        typedef infinit::serialization_tag serialization_tag;
         RemoveSignature();
         RemoveSignature(RemoveSignature const& other);
         RemoveSignature(RemoveSignature && other);

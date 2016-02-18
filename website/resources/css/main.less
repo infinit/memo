@@ -661,7 +661,7 @@ body.pricing, body.press {
 }
 
 
-body.doc_faq, body.opensource {
+body.opensource {
   nav#sidebar {
     a {
       font-family: @sourcesans; margin-top: 5px; display: block; margin-top: 7px;
@@ -701,6 +701,127 @@ body.doc_get_started {
       &:hover { border-bottom: 0; }
     }
   }
+}
+
+
+body.faq {
+  .content { min-height: 500px;}
+
+  h1 { text-align: center; margin-top: 40px; margin-bottom: 0px;}
+
+  main { margin: 0 15%; }
+
+  #search-input {
+    margin-top: 70px;
+
+    input {
+      background: #FFFFFF; border: 2px solid #E2E2E2; border-radius: 4px;;
+      font-size: 17px; width: 70%; margin: 0 15%;
+    }
+
+    input, input:focus {
+      transition: border-color .3s ease-in; outline: 0;
+    }
+
+    input:focus { border-color: darken(#E2E2E2, 15%); }
+    input::-webkit-input-placeholder,
+    input:-moz-placeholder,
+    input:-ms-input-placeholder { font-weight: 100; color: #B2B2B2;}
+  }
+
+  #search-input-icon {
+    position: relative;
+
+    &:before {
+      position: absolute; right: 14%; bottom: 15px; width: 20px; height: 20px;
+      content: ''; cursor: default;
+      background: url('../images/icons/search.png') no-repeat;
+    }
+  }
+
+  #search-input-icon.empty:before {
+    cursor: pointer;
+    background-image: url('../images/icons/delete.png');
+  }
+
+  // #clear {
+  //   margin: 0 0 0 15%; width: 14%; float: left; text-align: center;
+  //   a { display: block; width: 100%; margin-bottom: 40px; outline: none;}
+  // }
+
+  #category {
+    margin: 0 15%; width: 75%; margin-top: -35px;
+
+    .ais-menu--list .ais-menu--item {
+      float: left; width: 18%; margin: 0 3%;
+
+      .ais-menu--count { display: none; }
+    }
+
+    .ais-menu--list {
+      > div:nth-child(1) a {
+        background: url('../images/icons/idea-clean@2x.png');
+        background-size: 28px 50px;
+        background-position: center 8px;
+        background-repeat: no-repeat;
+      }
+      > div:nth-child(2) a {
+        background: url('../images/icons/code@2x.png');
+        background-size: 55px 42px;
+        background-position: center 14px;
+        background-repeat: no-repeat;
+      }
+      > div:nth-child(3) a {
+        background: url('../images/icons/comparison@2x.png');
+        background-size: 69px 46px;
+        background-position: center 12px;
+        background-repeat: no-repeat;
+      }
+      > div:nth-child(4) a {
+        background: url('../images/icons/lock@2x.png');
+        background-size: 41px 54px;
+        background-position: center 3px;
+        background-repeat: no-repeat;
+      }
+
+      .ais-menu--item__active a,
+      .ais-menu--item a:hover { opacity: 1;  }
+    }
+  }
+
+  #clear a, #category .ais-menu--item a {
+    padding: 70px 0 40px 0; text-transform: uppercase; font-size: 12px;
+    opacity: 0.5; text-align: center; width: 100%; display: block;
+    font-weight: 600;
+    -webkit-transition: opacity 0.2s;
+    -moz-transition: opacity 0.2s;
+    transition: opacity 0.2s;
+  }
+
+  #hits {
+    margin-bottom: 120px; margin-top: 30px;
+
+    .hit {
+      border-bottom: 1px solid #DFDFDF; padding: 25px 0 15px 0;
+      h2 { font-size: 19px; margin: 0; font-weight: 500; }
+      p { font-size: 15px; color: #999FAA; margin: 0 0 10px 0; }
+      h2 em, p em { background: #FFFFBE; font-style: normal;}
+      h2 span {
+        font-size: 10px; text-transform: uppercase; color:white;
+        padding: 2px 5px; border-radius: 3px; background: #FFD795;
+        margin-top: -3px; display: inline-block;
+      }
+    }
+  }
+
+  #no-results-message {
+    .hit {
+      border-bottom: none; text-align: center;
+      h2 { font-weight: bold; margin-bottom: 10px;}
+    }
+  }
+
+  #stats, #pagination { display: none; }
 }
 
 
@@ -831,6 +952,44 @@ body.legal {
         font-family: @sourcesans; font-weight: normal; color: lighten(gray, 15%);
       }
       a { color: @infinitred; }
+    }
+  }
+}
+
+
+body.press {
+  .content {
+    section.doc {
+      float: none; padding-left: 12%;
+
+      div.article {
+        background: #F3F3F3; padding: 20px; text-align: center; margin-top: 40px;
+        border-radius: 5px;
+      }
+
+      h1 span { font-size: 14px; color: @infinitred; display: inline-block; float: right;}
+      h2 { margin: 0px 0 10px 0 !important; }
+
+      p.subtitle {
+        font-size: 17px; color: gray; font-family: @helvetica;
+        font-weight: 300; margin: 0; text-align: center;
+      }
+
+      p { text-align: justify; }
+    }
+
+    #sidebar {
+      float: right; margin-right: 12%; padding-left: 0; width: auto;
+      padding: 0px 40px 30px 50px !important; border-radius: 5px;
+      border-left: 1px solid #f5f5f5;
+
+      ul.menu { position: relative;}
+      img {
+        display: block; margin-top: 20px; max-width: 200px;
+        border: 1px solid lighten(gray, 30%); border-radius: 3px;
+        background: white;
+      }
+      p { color: lighten(gray, 20%); font-style: italic; margin: 0; margin-top: 5px;}
     }
   }
 }

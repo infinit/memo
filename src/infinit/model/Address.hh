@@ -31,7 +31,7 @@ namespace infinit
       static const int flag_byte = 31;
       Address();
       Address(Value const bytes);
-      Address(Value const bytes, Flags flags);
+      Address(Value const bytes, Flags flags, bool combine);
       Address(elle::UUID const& id);
       bool
       operator ==(Address const& rhs) const;
@@ -39,12 +39,6 @@ namespace infinit
       operator !=(Address const& rhs) const;
       bool
       operator <(Address const& rhs) const;
-      ELLE_ATTRIBUTE_R(Value, value);
-      ELLE_ATTRIBUTE_R(uint8_t, overwritten_value);
-      ELLE_ATTRIBUTE_R(bool, flagged);
-      Address unflagged() const; ///< Return initial address not masked by flags
-      Flags  flags() const;
-      bool mutable_block() const; ///< True if flags contain mutable_block
       friend
       std::ostream&
       operator << (std::ostream& out, Address const& k);
@@ -53,11 +47,13 @@ namespace infinit
       from_string(std::string const& repr);
       static
       Address
-      random();
+      random(Flags flags);
       static Address const null;
     private:
       friend
       struct elle::serialization::Serialize<infinit::model::Address>;
+      ELLE_ATTRIBUTE_R(Value, value);
+      ELLE_ATTRIBUTE_R(bool, mutable_block);
     };
 
     std::ostream&
@@ -65,6 +61,10 @@ namespace infinit
 
     std::size_t
     hash_value(Address const& address);
+
+    /// Compare excluding flag byte, for backward compatibility
+    bool
+    equal_unflagged(Address const& lhs, Address const& rhs);
   }
 }
 

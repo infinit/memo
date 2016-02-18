@@ -56,6 +56,7 @@ namespace infinit
         public:
           struct Op
           {
+            typedef infinit::serialization_tag serialization_tag;
             Op() = default;
             Op(Address addr_,
                std::unique_ptr<blocks::Block>&& block_,
