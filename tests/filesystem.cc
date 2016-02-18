@@ -1477,8 +1477,8 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
   BOOST_CHECK_EQUAL(directory_count(base1), 1);
   BOOST_CHECK(can_access(base0 / "rm"));
-  std::string block = getxattr_(base0 / "rm", "user.infinit.block");
-  block = block.substr(2);
+  std::string block = getxattr_(base0 / "rm", "user.infinit.block.address");
+  block = block.substr(3, block.size()-5);
   BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", block), 0);
   BOOST_CHECK(!can_access(base0 / "rm", true, false, EIO));
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
@@ -1487,8 +1487,8 @@ test_acl(bool paxos)
 
   write(base0 / "rm2", "foo");
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
-  block = getxattr_(base0 / "rm2", "user.infinit.block");
-  block = block.substr(2);
+  block = getxattr_(base0 / "rm2", "user.infinit.block.address");
+  block = block.substr(3, block.size()-5);
   BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", block), -1);
   BOOST_CHECK(can_access(base0 / "rm2", true));
   bfs::remove(base0 / "rm2");
