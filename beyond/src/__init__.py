@@ -274,7 +274,7 @@ class Beyond:
         import os
         import json
         def import_data(type, data):
-          args = [binary_path + 'infinit-%s' % type, '--import', '-s']
+          args = [binary_path + 'infinit-%s%s' % (type, exe_ext), '--import', '-s']
           try:
             process = subprocess.Popen(
               args,
@@ -297,7 +297,7 @@ class Beyond:
             import_data('network', network.json())
             subprocess.check_call(
               [
-                binary_path + 'infinit-passport', '--create',
+                binary_path + 'infinit-passport' + exe_ext, '--create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
@@ -305,7 +305,7 @@ class Beyond:
               env = env)
             output = subprocess.check_output(
               [
-                binary_path + 'infinit-passport', '--export',
+                binary_path + 'infinit-passport' + exe_ext, '--export',
                 '--user', user.name,
                 '--network', network.name
               ],
