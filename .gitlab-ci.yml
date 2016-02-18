@@ -127,6 +127,7 @@ beyond:
 website:
   stage: build
   script:
+    - pip3 install mistune
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-website
