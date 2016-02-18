@@ -53,6 +53,15 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const = 0;
+
+      /*----------.
+      | Printable |
+      `----------*/
+      public:
+        /// Print pretty representation to \a stream.
+        virtual
+        void
+        print(std::ostream& stream) const override;
       };
     }
   }

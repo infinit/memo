@@ -456,6 +456,8 @@ namespace infinit
 
       static const elle::serialization::Hierarchy<ModelConfig>::
       Register<Configuration> _register_Configuration("doughnut");
+      static const elle::TypeInfo::RegisterAbbrevation
+      _dht_abbr("infinit::model::doughnut", "dht");
     }
   }
 }

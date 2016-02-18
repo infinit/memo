@@ -382,7 +382,7 @@ namespace infinit
     FileHandle::print(std::ostream& stream) const
     {
       elle::fprintf(stream, "FileHandle(%x, \"%s\")",
-                    this, this->_owner->_name);
+                    (void*)(this), this->_owner->_name);
     }
   }
 }

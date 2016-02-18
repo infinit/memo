@@ -128,7 +128,7 @@ namespace infinit
                            int factor,
                            overlay::Operation op) const
         {
-          ELLE_DEBUG_SCOPE("search %s nodes for %s", factor, address);
+          ELLE_DEBUG_SCOPE("search %s nodes for %f", factor, address);
           return this->doughnut().overlay()->lookup(address, factor, op);
         }
 
@@ -262,7 +262,8 @@ namespace infinit
         void
         Consensus::print(std::ostream& output) const
         {
-          elle::fprintf(output, "%s(%x)", elle::type_info(*this), this);
+          elle::fprintf(output,
+                        "%f(%x)", elle::type_info(*this), (void*)(this));
         }
 
         /*--------------.

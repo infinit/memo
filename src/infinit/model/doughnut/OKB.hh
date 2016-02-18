@@ -182,9 +182,7 @@ namespace infinit
       | Clonable |
       `---------*/
       public:
-        virtual
-        std::unique_ptr<blocks::Block>
-        clone() const override;
+        ELLE_CLONABLE();
 
       /*--------------.
       | Serialization |
