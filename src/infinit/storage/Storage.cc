@@ -54,7 +54,14 @@ namespace infinit
           _base_usage -_usage, _step);
         ELLE_DEBUG("%s: update Beyond (if --push provided) with usage = %s",
           *this, _usage);
-        this->_on_storage_size_change();
+        try
+        {
+          this->_on_storage_size_change();
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("Error notifying storage size change: %s", e);
+        }
         _base_usage = _usage;
       }
 
