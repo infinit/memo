@@ -282,7 +282,7 @@ namespace infinit
     {
       if (op == "address")
       {
-        return elle::serialization::json::serialize(addr).string();
+        return elle::serialization::json::serialize(elle::sprintf("%x", addr)).string();
       }
       else if (op == "nodes")
       {
