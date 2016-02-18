@@ -429,7 +429,7 @@ body.home {
     background: #F9F9F9; text-align: center; font-size: 0.8em; padding:0 7%;
 
     div.get_started, div.search_faq {
-      width: 40%; margin: 70px 5% 70px 5%; float: left;
+      width: 40%; margin: 70px 5% 40px 5%; float: left;
     }
 
     div.search_faq { padding: 0 5%; width: 30% }
@@ -470,7 +470,17 @@ body.home {
     .algolia-autocomplete .aa-dropdown-menu .aa-suggestion em {
        background: #FFFFBE; font-style: normal;
     }
+  }
 
+  section.press {
+    background: #F9F9F9; text-align: center;
+
+    img {
+      margin:0 2% 100px 2%; filter: grayscale(100%);  -webkit-filter: grayscale(1);
+      opacity: 0.4; .transition();
+    }
+    a.siliconangle img { vertical-align: bottom;  }
+    a:hover img { opacity: 1; filter:none; -webkit-filter: none; }
   }
 }
 

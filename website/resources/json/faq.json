@@ -7,7 +7,7 @@
   },
   {
     "category": "comparisons",
-    "popularity": 7,
+    "popularity": 9,
     "question": "How does Infinit differ from Dropbox, Google Drive and BitTorrent Sync?",
     "answer" : "<p>Infinit offers system administrators complete control over where their data is stored and how their data storage infrastructure works.</p><p>These other solutions clone the same data on each computers, meaning it will always consume your local storage and limit your ability to interact with a large number of files. Also, they don't encrypt files locally and you cannot add cloud storage to create hybrid infrastructure.</p>"
   },
@@ -49,7 +49,7 @@
   },
   {
     "category": ["general", "security"],
-    "popularity": 9,
+    "popularity": 8,
     "question": "Where is the open source code?",
     "answer" : "<p>You can find the code that we have open sourced <a href=\"/open-source\">here</a>. We plan to open source all the client code for the file system but we would like to do so responsibly. We want to ensure that the code is of high quality and modular enough to be used in other projects.</p>"
   },
@@ -69,7 +69,7 @@
     "category": "general",
     "popularity": 7,
     "question": "What platforms does Infinit support?",
-    "answer" : "<p>Currently Infinit supports Linux and OS X but we have plans for Windows in <a href=\"/documentation/roadmap\">our roadmap</a>.</p> <p>We're also considering supporting FreeBSD or Raspberry Pi. You can upvote or tell us what other platforms you want us to support <a href=\"http://help.infinit.sh\">here</a>!</p>"
+    "answer" : "<p>Currently Infinit supports Linux and OS X but we have plans for Windows and mobile (iPhone, Android), check <a href=\"/documentation/roadmap\">our roadmap</a>.</p> <p>We're also considering supporting FreeBSD, CentOS or Raspberry Pi. You can upvote or tell us what other platforms you want us to support <a href=\"http://help.infinit.sh\">here</a>!</p>"
   },
   {
     "category": "technology",

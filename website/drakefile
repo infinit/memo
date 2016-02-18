@@ -310,6 +310,12 @@ def configure(
     'resources/images/logos/osxfuse@2x.png',
     'resources/images/logos/infinit.png',
     'resources/images/logos/infinit@2x.png',
+    'resources/images/logos/techcrunch.png',
+    'resources/images/logos/techcrunch@2x.png',
+    'resources/images/logos/siliconangle.png',
+    'resources/images/logos/siliconangle@2x.png',
+    'resources/images/logos/infoworld.png',
+    'resources/images/logos/infoworld@2x.png',
 
     'resources/scripts/centralized.sh',
     'resources/scripts/distributed.sh',
