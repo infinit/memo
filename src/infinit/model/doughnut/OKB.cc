@@ -59,8 +59,7 @@ namespace infinit
       Address
       OKBHeader::hash_address(Doughnut const& dht,
                               cryptography::rsa::PublicKey const& key,
-                              elle::Buffer const& salt,
-                              bool old_address)
+                              elle::Buffer const& salt)
       {
         auto key_buffer = elle::serialization::json::serialize(
           key, elle::Version(0,0,0));
@@ -68,7 +67,7 @@ namespace infinit
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
         return Address(hash.contents(), flags::mutable_block,
-                       dht.version() >= elle::Version(0, 5, 0) && !old_address);
+                       dht.version() >= elle::Version(0, 5, 0));
       }
 
       Address
