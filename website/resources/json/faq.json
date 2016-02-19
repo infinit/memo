@@ -21,7 +21,7 @@
     "category": "comparisons",
     "popularity": 0,
     "question": "How does Infinit differ from GlusterFS or HAMMER2?",
-    "answer" : "<p>Both use a master/slave system for the data replication rather than a completely decentralised system like ours. Also their storage resources are local storage only, so they trust every node.</p><p>With Infinit, since you can create hybrid infrastructures, for example with a local storage and a cloud storage (S3, GCS...), we consider that every node can fail (a cloud you don't control) or be malicious, so our data replication has byzantine fault tolerance.</p> <p>Since everything is decentralised (data and metadata) and that no hypothesis are made on nodes, there's no single point of failure.</p>"
+    "answer" : "<p>Their storage resources are local storage only, so they trust every node. With Infinit, since you can create hybrid infrastructures, for example with a local storage and a cloud storage (S3, GCS...), we consider that every node can fail (a cloud you don't control) or be malicious, so our data replication has byzantine fault tolerance.</p> <p>Since everything is decentralised (data and metadata) and that no hypothesis are made on nodes, there's no single point of failure.</p>"
   },
   {
     "category": "comparisons",
@@ -33,7 +33,7 @@
     "category": "general",
     "popularity": 0,
     "question": "Is it free? What's your business model?",
-    "answer" : "<p>Infinit is free to use for networks with less then 30 users — see our <a href=\"/pricing\">pricing page</a>. We also provide <a href=\"/solutions\">solutions</a> for large enterprises.</p>"
+    "answer" : "<p>Infinit is free to use for networks with less then 30 users — see our <a href=\"/pricing\">pricing page</a>.</p>"
   },
   {
     "category": "general",

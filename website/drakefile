@@ -276,6 +276,7 @@ def configure(
     'resources/images/icons/email-unconfirmed.png',
     'resources/images/icons/email-unconfirmed@2x.png',
     'resources/images/icons/search.png',
+    'resources/images/icons/search@2x.png',
     'resources/images/icons/delete.png',
     'resources/images/icons/comparison.png',
     'resources/images/icons/comparison@2x.png',
