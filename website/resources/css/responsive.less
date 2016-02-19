@@ -45,11 +45,19 @@
       li.connect ul li { padding-left: 0; }
     }
   }
+
+  body.faq {
+    main { margin: 0 5%;}
+    .filters { width: 100%; margin:0; }
+    #search-input input { width: 86%; margin: 0 5%; padding: 14px 2%; }
+  }
+
 }
 
 @media (max-width:600px) {
   header {
-    ul { display: none; }
+    ul li { display: none; }
+    ul li:last-child { display: block; }
   }
 
   body.home {
@@ -79,6 +87,10 @@
       img { margin-bottom: 40px;}
       a:first-child img { margin-bottom: 10px; }
     }
+  }
+
+  body.faq {
+    .filters { display: none; }
   }
 
   body.drive {
