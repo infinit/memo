@@ -285,6 +285,8 @@ def configure(
     'resources/images/icons/add@2x.png',
     'resources/images/icons/remove.png',
     'resources/images/icons/remove@2x.png',
+    'resources/images/icons/fire.png',
+    'resources/images/icons/fire@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
@@ -329,6 +331,7 @@ def configure(
     'resources/css/normalize.css',
     'resources/css/main.min.css',
 
+    'resources/js/instantsearch.min.js',
     'resources/js/scripts.min.js',
   )
 

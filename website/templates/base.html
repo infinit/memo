@@ -141,7 +141,8 @@
     </footer>
 
     % if 'faq' in request.route.name:
-      <script src="//cdn.jsdelivr.net/instantsearch.js/1/instantsearch.min.js"></script>
+      <script src="http://twitter.github.com/hogan.js/builds/3.0.1/hogan-3.0.1.js"></script>
+      <script type="text/javascript" src="${url('js/instantsearch.min.js')}"></script>
     %endif
 
     % if 'home' in request.route.name:

@@ -6,7 +6,13 @@
 
   <main>
     <section class="filters">
-      <div id="category" class="facet"></div>
+      <div class="facets">
+        <div class="popular"></div>
+        <div class="general"></div>
+        <div class="technology"></div>
+        <div class="comparisons"></div>
+        <div class="security"></div>
+      </div>
     </section>
 
     <section class="search">
@@ -22,6 +28,15 @@
       <div id="pagination"></div>
     </section>
   </main>
+
+  <script id="single-facet-template" type="text/template">
+    <div class="facet {{#active}}active{{/active}}">
+      <a href="#">
+        <img src="/images/icons/{{icon_name}}.png" alt="{{label}}">
+        <span class="label">{{label}}</span>
+      </a>
+    </div>
+  </script>
 
   <script type="text/html" id="hit-template">
     <div class="hit">

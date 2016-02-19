@@ -799,53 +799,44 @@ body.faq {
   //   a { display: block; width: 100%; margin-bottom: 40px; outline: none;}
   // }
 
-  #category {
+  .filters {
     margin: 0 15%; width: 75%; margin-top: -35px;
 
-    .ais-menu--list .ais-menu--item {
-      float: left; width: 18%; margin: 0 3%;
-
-      .ais-menu--count { display: none; }
+    .general img {width: 28px; height: 50px; }
+    .popular {
+      .facet { margin-top: 4px; margin-right: 1%; }
+      img { width: 41px; height: 50px; }
     }
-
-    .ais-menu--list {
-      > div:nth-child(1) a {
-        background: url('../images/icons/idea-clean@2x.png');
-        background-size: 28px 50px;
-        background-position: center 8px;
-        background-repeat: no-repeat;
-      }
-      > div:nth-child(2) a {
-        background: url('../images/icons/code@2x.png');
-        background-size: 55px 42px;
-        background-position: center 14px;
-        background-repeat: no-repeat;
-      }
-      > div:nth-child(3) a {
-        background: url('../images/icons/comparison@2x.png');
-        background-size: 69px 46px;
-        background-position: center 12px;
-        background-repeat: no-repeat;
-      }
-      > div:nth-child(4) a {
-        background: url('../images/icons/lock@2x.png');
-        background-size: 41px 54px;
-        background-position: center 3px;
-        background-repeat: no-repeat;
-      }
-
-      .ais-menu--item__active a,
-      .ais-menu--item a:hover { opacity: 1;  }
+    .technology {
+      .facet  { margin-top: 8px;}
+      img { width: 55px; height: 42px; }
+    }
+    .comparisons {
+      .facet { margin-top: 4px; margin-left: 5%}
+      img { width: 69px; height: 46px;}
+    }
+    .security {
+      .facet { margin-top:-4px; }
+      img { width: 41px; height: 54px; }
     }
   }
 
-  #clear a, #category .ais-menu--item a {
-    padding: 70px 0 40px 0; text-transform: uppercase; font-size: 12px;
-    opacity: 0.5; text-align: center; width: 100%; display: block;
+  .ais-menu--item__active a,
+  .ais-menu--item a:hover { opacity: 1;  }
+
+  .facet {
+    float: left; width: 13%; margin: 0 3%;
+    padding: 5px 0 40px 0; text-transform: uppercase; font-size: 12px;
+    opacity: 0.5; text-align: center; display: block;
     font-weight: 600;
     -webkit-transition: opacity 0.2s;
     -moz-transition: opacity 0.2s;
     transition: opacity 0.2s;
+    filter: grayscale(100%);  -webkit-filter: grayscale(1);
+    a { outline: none;}
+    span { display: block; margin-top: 5px;  }
+    .ais-menu--count { display: none; }
+    &.active, &:hover { opacity: 1; filter: none;  -webkit-filter: none;}
   }
 
   #hits {
