@@ -20,7 +20,7 @@ namespace infinit
     Model::Model(boost::optional<elle::Version> version)
       : _version(version ? *version : default_version)
     {
-      ELLE_TRACE("%s: compatibility version %s", *this, this->_version);
+      ELLE_LOG("%s: compatibility version %s", *this, this->_version);
       static elle::Version const current_version = elle::Version(
         INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
       if (this->_version > current_version)
