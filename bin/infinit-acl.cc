@@ -378,6 +378,8 @@ COMMAND(set)
   }
   if (!mode.empty() && users.empty())
     throw CommandLineError("must specify user when setting mode");
+  if (!users.empty() && mode.empty())
+    throw CommandLineError("must specify a mode for users");
   bool inherit = flag(args, "enable-inherit");
   bool disinherit = flag(args, "disable-inherit");
   if (inherit && disinherit)
