@@ -989,7 +989,7 @@ namespace infinit
                   }
                 else
                 {
-                  ELLE_DEBUG("no value can be retreived");
+                  ELLE_DEBUG("no value can be retrieved");
                   throw MissingBlock(address);
                 }
               }
