@@ -490,6 +490,23 @@ namespace infinit
     return _xdg_home("STATE", ".local/state");
   }
 
+  inline
+  void
+  check_broken_locale()
+  {
+    try
+    {
+      std::locale locale("");
+    }
+    catch (std::exception const& e)
+    {
+      ELLE_WARN(
+        "Something is wrong with your locale settings, overriding: %s",
+        e.what());
+      setenv("LC_ALL", "C", 1);
+    }
+  }
+
   int
   main(std::string desc,
        Modes const& modes,
@@ -529,17 +546,7 @@ namespace infinit
           // boost::filesystem uses the default locale, detect here if it
           // cant be instantiated.
           // Not required on OS X, see: boost/libs/filesystem/src/path.cpp:819
-          try
-          {
-            std::locale locale("");
-          }
-          catch (std::exception const& e)
-          {
-            ELLE_WARN(
-              "Something is wrong with your locale settings, overriding: %s",
-              e.what());
-            setenv("LC_ALL", "C", 1);
-          }
+          check_broken_locale();
 #endif
           ELLE_TRACE("parse command line")
           {
