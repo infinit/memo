@@ -337,7 +337,7 @@ namespace infinit
           else
             try
             {
-              ELLE_TRACE("%s: decision for %f not in cache", *this, address);
+              ELLE_TRACE("%s: load paxos %f from storage", *this, address);
               auto buffer = this->storage()->get(address);
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
