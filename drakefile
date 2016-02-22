@@ -417,6 +417,7 @@ def configure(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
     if cxx_toolkit.os is drake.os.macos:
       bin_cxx_config.framework_add('CoreServices')
+      bin_cxx_config.flag('-headerpad_max_install_names')
   else:
     bin_cxx_config.lib('shlwapi')
     bin_cxx_config.lib('ws2_32')
