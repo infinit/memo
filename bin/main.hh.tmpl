@@ -827,6 +827,7 @@ namespace infinit
         boost::optional<int> cache_ttl = {},
         boost::optional<int> cache_invalidation = {},
         bool async_writes = false,
+        boost::optional<uint64_t> disk_cache_size = {},
         boost::optional<elle::Version> version = {})
     {
       ELLE_LOG("client version: %s", version_describe);
@@ -844,6 +845,7 @@ namespace infinit
         cache_invalidation
           ? std::chrono::seconds(cache_invalidation.get())
           : boost::optional<std::chrono::seconds>(),
+        disk_cache_size,
         std::move(version));
     }
 
@@ -2623,3 +2625,6 @@ Mode::OptionDescription option_cache_ttl(
 Mode::OptionDescription option_cache_invalidation(
   "cache-invalidation", boost::program_options::value<int>(),
   "block cache invalidation time in seconds (default: 15 seconds)");
+Mode::OptionDescription option_cache_disk_cache_size(
+  "disk-cache-size", boost::program_options::value<uint64_t>(),
+  "size of disk-cache for immutable data in bytes (default: 64MB)");
