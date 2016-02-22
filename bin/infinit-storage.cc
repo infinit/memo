@@ -268,6 +268,7 @@ main(int argc, char** argv)
   program = argv[0];
   using boost::program_options::value;
   using boost::program_options::bool_switch;
+  infinit::check_broken_locale();
   Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
