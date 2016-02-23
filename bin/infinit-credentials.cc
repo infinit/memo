@@ -107,7 +107,8 @@ fetch_credentials(infinit::User const& user,
   // FIXME: Workaround for using std::unique_ptr.
   // Remove when serialization does not require copy.
   auto res = beyond_fetch_json(
-    where, elle::sprintf("\"%s\" credentials for", name), user.name, user);
+    where, elle::sprintf("\"%s\" credentials for", pretty), user.name, user,
+    Headers{}, false);
   auto root = boost::any_cast<elle::json::Object>(res);
   auto credentials_vec =
       boost::any_cast<std::vector<elle::json::Json>>(root["credentials"]);
@@ -142,7 +143,7 @@ COMMAND(fetch)
       { ifnt.credentials_google_add(std::move(a)); });
   if (e.gcs)
     fetch_credentials<infinit::OAuthCredentials>(
-      user, "gcs", "Google cloud storage",
+      user, "gcs", "Google Cloud Storage",
       [] (std::unique_ptr<infinit::OAuthCredentials> a)
       { ifnt.credentials_gcs_add(std::move(a)); });
   // FIXME: remove deleted ones
