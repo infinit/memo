@@ -8,7 +8,6 @@ variables:
 x86_64-trusty-gcc4:
   stage: build
   script:
-    - apt-get install -y libjpeg-dev zlib1g-dev
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
