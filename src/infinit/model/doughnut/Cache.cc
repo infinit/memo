@@ -88,7 +88,7 @@ namespace infinit
         void
         Cache::_remove(Address address, blocks::RemoveSignature rs)
         {
-          ELLE_TRACE_SCOPE("%s: remove %s", *this, address);
+          ELLE_TRACE_SCOPE("%s: remove %f", this, address);
           if (this->_cache.erase(address) > 0)
             ELLE_DEBUG("drop block from cache");
           else
@@ -99,7 +99,7 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Cache::_fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
+          ELLE_TRACE_SCOPE("%s: fetch %f", this, address);
           static elle::Bench bench_hit("bench.cache.ram.hit", 1000_sec);
           static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000_sec);
           auto hit = this->_cache.find(address);
@@ -118,7 +118,6 @@ namespace infinit
           }
           else
           {
-
             bench_hit.add(0);
             // try disk cache
             auto disk_hit = this->_disk_cache.find(address);
@@ -164,7 +163,7 @@ namespace infinit
         {
           static elle::Bench bench("bench.cache.store", 10000_sec);
           elle::Bench::BenchScope bs(bench);
-          ELLE_TRACE_SCOPE("%s: store %s", *this, block->address());
+          ELLE_TRACE_SCOPE("%s: store %f", this, block->address());
           auto mb = dynamic_cast<blocks::MutableBlock*>(block.get());
           std::unique_ptr<blocks::Block> cloned;
           {
