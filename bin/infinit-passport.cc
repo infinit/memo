@@ -30,7 +30,7 @@ COMMAND(create)
     self.public_key != network.owner,
     !flag(args, "deny-write"),
     !flag(args, "deny-storage"),
-    flag(args, "allow-sign"));
+    flag(args, "allow-create-passport"));
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -268,9 +268,11 @@ main(int argc, char** argv)
         { "push-passport", bool_switch(),
           elle::sprintf("push the passport to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-passport" },
-        { "deny-write", bool_switch(), "deny write access to the user"},
-        { "deny-storage", bool_switch(), "deny contributing storage to the user"},
-        { "allow-sign", bool_switch(), "allow signing passports"},
+        { "deny-write", bool_switch(), "deny user write access to the network"},
+        { "deny-storage", bool_switch(),
+          "deny user ability to contribute storage to the network"},
+        { "allow-create-passport", bool_switch(),
+          "allow user to create passports for network"},
         option_output("passport"),
       },
     },

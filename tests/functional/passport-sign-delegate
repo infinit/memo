@@ -30,7 +30,7 @@ def run(mode):
         'infinit-passport', '--create', '--as', 'owner',
         '--user', 'adm',
         '--network', 'owner/network',
-        '--allow-sign',
+        '--allow-create-passport',
         '--output', '-'])
       adm.run(['infinit-passport', '--import'], input = padm)
       puser = adm.run([
