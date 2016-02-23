@@ -99,7 +99,8 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Cache::_fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %f", this, address);
+          ELLE_TRACE_SCOPE("%s: fetch %f (local_version: %s)",
+                           this, address, local_version);
           static elle::Bench bench_hit("bench.cache.ram.hit", 1000_sec);
           static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000_sec);
           auto hit = this->_cache.find(address);
@@ -112,8 +113,16 @@ namespace infinit
             if (local_version)
               if (auto mb =
                   dynamic_cast<blocks::MutableBlock*>(hit->block().get()))
-                if (mb->version() == local_version.get())
+              {
+                auto version = mb->version();
+                if (version == local_version.get())
+                {
+                  ELLE_DEBUG("cached version is the same: %s", version);
                   return nullptr;
+                }
+                else
+                  ELLE_DEBUG("cached version is more recent: %s", version);
+              }
             return hit->block()->clone();
           }
           else
