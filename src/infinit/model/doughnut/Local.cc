@@ -375,16 +375,6 @@ namespace infinit
       {
         this->_serve([this] { return this->_utp_server->accept(); });
       }
-
-      /*----------.
-      | Printable |
-      `----------*/
-
-      void
-      Local::print(std::ostream& stream) const
-      {
-        elle::fprintf(stream, "%s(%s)", elle::type_info(*this), this->id());
-      }
     }
   }
 }

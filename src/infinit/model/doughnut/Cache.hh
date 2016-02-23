@@ -30,7 +30,10 @@ namespace infinit
           Cache(std::unique_ptr<Consensus> backend,
                 boost::optional<int> cache_size = {},
                 boost::optional<std::chrono::seconds> cache_invalidation = {},
-                boost::optional<std::chrono::seconds> cache_ttl = {});
+                boost::optional<std::chrono::seconds> cache_ttl = {},
+                boost::optional<boost::filesystem::path> disk_cache_path = {},
+                boost::optional<uint64_t> disk_cache_size = {}
+                );
           ~Cache();
 
         /*--------.
@@ -72,6 +75,8 @@ namespace infinit
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);
           ELLE_ATTRIBUTE_R(int, cache_size);
+          ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, disk_cache_path);
+          ELLE_ATTRIBUTE_R(uint64_t, disk_cache_size);
           class CachedBlock
           {
           public:
@@ -88,6 +93,7 @@ namespace infinit
             bool
             operator ()(CachedBlock const& lhs, CachedBlock const& rhs) const;
           };
+
           typedef bmi::multi_index_container<
             CachedBlock,
             bmi::indexed_by<
@@ -100,11 +106,37 @@ namespace infinit
                   CachedBlock,
                   clock::time_point const&, &CachedBlock::last_used> >,
               bmi::ordered_non_unique<
-                bmi::identity<CachedBlock>,
-                LastFetch>
+                bmi::const_mem_fun<
+                  CachedBlock,
+                  clock::time_point const&, &CachedBlock::last_fetched> >
             > > BlockCache;
           ELLE_ATTRIBUTE(BlockCache, cache);
+          class CachedCHB
+          {
+          public:
+            CachedCHB(Address address, uint64_t size, clock::time_point last_used);
+            ELLE_ATTRIBUTE_R(Address, address);
+            ELLE_ATTRIBUTE_R(uint64_t, size);
+            ELLE_ATTRIBUTE_RW(clock::time_point, last_used);
+          };
+          typedef bmi::multi_index_container<
+            CachedCHB,
+            bmi::indexed_by<
+              bmi::hashed_unique<
+                bmi::const_mem_fun<
+                  CachedCHB,
+                  Address const&, &CachedCHB::address> >,
+              bmi::ordered_non_unique<
+                bmi::const_mem_fun<
+                  CachedCHB,
+                  clock::time_point const&, &CachedCHB::last_used> >
+          > > CHBDiskCache;
+          ELLE_ATTRIBUTE(CHBDiskCache, disk_cache);
+          ELLE_ATTRIBUTE(uint64_t, disk_cache_used);
           ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, cleanup_thread);
+        private:
+          void _load_disk_cache();
+          void _disk_cache_push(std::unique_ptr<blocks::Block>& block);
         };
       }
     }

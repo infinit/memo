@@ -417,6 +417,7 @@ def configure(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
     if cxx_toolkit.os is drake.os.macos:
       bin_cxx_config.framework_add('CoreServices')
+      bin_cxx_config.flag('-headerpad_max_install_names')
   else:
     bin_cxx_config.lib('shlwapi')
     bin_cxx_config.lib('ws2_32')
@@ -457,6 +458,7 @@ def configure(
     ('generatekeys', [], False),
     ('infinit', [], False),
     ('infinit-acl', [], True),
+    ('infinit-block', [], False),
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
     ('infinit-drive', [], True),
@@ -620,9 +622,7 @@ def configure(
           'debian': rule_debian
         }
       )
-      rule_check << beyond.rule_check
       for test_name in [
-          'address-flag-backward',
           'errors',
           'single-user-two-devices-shared-storage',
           'passport-restrictions',

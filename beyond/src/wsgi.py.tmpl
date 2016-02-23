@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long
+
 import couchdb
 import infinit.beyond
 import infinit.beyond.bottle
@@ -5,27 +7,9 @@ import infinit.beyond.couchdb
 import infinit.beyond.gcs
 
 datastore = infinit.beyond.couchdb.CouchDBDatastore(couchdb.Server())
-gcs_login = '798530033299-s9b7qmrc99trk8uid53giuvus1o74cif@developer.gserviceaccount.com'
-gcs_key = bytes('''-----BEGIN PRIVATE KEY-----
-MIICdwIBADANBgkqhkiG9w0BAQEFAASCAmEwggJdAgEAAoGBALCm3D3cHlKYRygk
-vRgesY39WUGeUN/sCBsVaxMuga1bCAZ6fVoh58pQEmeBpkjaVdtB0nz9ZBVoeDtR
-PcfafaUW+UFXjRf2rJ3MoJ/J72mccSD08sjVX3Q9U5iydYhjZEx3uwhUcaHG6+Rq
-f4xhb/49jfFmDJ/9zCopsiPBJQgfAgMBAAECgYEAqxgByrxOdirdCGmE6D6aM+8E
-qwReSnL+atT0zzBFExVPEY9Dp6+dI5soKC4vUvJ9I45+AucdL4ruoG0QTGg3NbjC
-XCD88TL2UdSog/xxHAQ37EvnoPwK6v04FZHdm94eXkJMQzpf9pP8EyVEaXZWb8Uw
-2MDPGluTWgkUKZitkLECQQDjuLBFwtU9rdDZB3G00P3hMXuvomPPEHRvdpvwbxLG
-WX1XNPG1FlBbQhyBgUIVATn9sU28df7kANqhhnEthXY3AkEAxpaoR0rtZzPIt4c4
-3PQm+mclxxEUZozrRnO/t6bDc/wGvI7C69wIu4UI8j4zFtRRuC2qCDaTorXibFRb
-PKEJWQJAY8eNFUQlg30hwbbNT9kzJPU1qOOSsCwZmK1z7on8xAR6MzfzoNFCLHpv
-Wx90ARgkfNCvqyBYqzbklVn/RV7xSQJBAJluCPGb+DPGFIuHU+2STRMl4lAc6BAb
-TCOQhk0T8OqJi4LfIcYsqCqJLFJMsBgxTjnoPfg+gm4x7JAZ1KvRF3ECQFcwSrNV
-cun1SplfUKZQZywA8ueUU/ZuGj/XXwopPR5LgWW7sgkwdCklQUPjcecWEZFy/ODl
-e9FGZj7sEHpPuDE=
------END PRIVATE KEY-----
-''', 'UTF-8')
-sendwithus_api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d'
-gcs = infinit.beyond.gcs.GCS(login = gcs_login, key = gcs_key)
-
+gcs = infinit.beyond.gcs.GCS(
+  login = ${repr(gcs_login)},
+  key = bytes(${repr(gcs_key)}, 'UTF-8'))
 beyond = infinit.beyond.Beyond(
   datastore = datastore,
   dropbox_app_key = ${repr(dropbox_app_key)},
@@ -35,12 +19,12 @@ beyond = infinit.beyond.Beyond(
   gcs_app_key = ${repr(google_app_key)},
   gcs_app_secret = ${repr(google_app_secret)},
   validate_email_address = False,
-  sendwithus_api_key = sendwithus_api_key,
+  sendwithus_api_key = ${repr(sendwithus_api_key)},
   limits = {
     'networks': {
       'passports': 30
     }
   },
-  delegate_user = ${delegate_user},
+  delegate_user = ${repr(delegate_user)},
 )
 application = infinit.beyond.bottle.Bottle(beyond, gcs = gcs)

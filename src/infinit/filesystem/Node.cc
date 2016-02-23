@@ -230,7 +230,18 @@ namespace infinit
           auto const& elem = this->_parent->_files.at(this->_name);
           addr = elem.second;
         }
-        if (*special == "block.rebalance")
+        if (*special == "block.nodes")
+        {
+          auto ids = elle::serialization::json::deserialize<
+            std::unordered_set<model::Address>>(v);
+          if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
+                dht->consensus().get()))
+          {
+            paxos->rebalance(addr, ids);
+            return;
+          }
+        }
+        else if (*special == "block.rebalance")
         {
           if (this->_owner.block_store()->version() < elle::Version(0, 5, 0))
             THROW_NOSYS;
@@ -269,7 +280,11 @@ namespace infinit
                    std::string const& op,
                    model::Address const& addr)
     {
-      if (op == "nodes")
+      if (op == "address")
+      {
+        return elle::serialization::json::serialize(elle::sprintf("%x", addr)).string();
+      }
+      else if (op == "nodes")
       {
         std::vector<model::Address> nodes;
         // FIXME: hardcoded 3
@@ -299,18 +314,16 @@ namespace infinit
         this->_owner.block_store());
       if (auto special = xattr_special(k))
       {
-        auto block = this->_header_block();
+        model::blocks::Block* block = this->_header_block();
         if (*special == "block")
         {
-          if (block)
-            return elle::sprintf("%x", block->address());
-          else if (this->_parent)
+          if (!block)
           {
-            auto const& elem = this->_parent->_files.at(this->_name);
-            return elle::sprintf("%x", elem.second);
+            this->_fetch();
+            block = this->_header_block();
+            ELLE_ASSERT(block);
           }
-          else
-            return "<ROOT>";
+          return elle::serialization::json::serialize(block).string();
         }
         else if (special->find("block.") == 0)
         {

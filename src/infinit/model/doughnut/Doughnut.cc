@@ -400,6 +400,7 @@ namespace infinit
         boost::optional<int> cache_size,
         boost::optional<std::chrono::seconds> cache_ttl,
         boost::optional<std::chrono::seconds> cache_invalidation,
+        boost::optional<uint64_t> disk_cache_size,
         boost::optional<elle::Version> version)
       {
         Doughnut::ConsensusBuilder consensus =
@@ -414,7 +415,10 @@ namespace infinit
                 std::move(consensus),
                 std::move(cache_size),
                 std::move(cache_invalidation),
-                std::move(cache_ttl));
+                std::move(cache_ttl),
+                p / "cache",
+                std::move(disk_cache_size)
+                );
             return std::move(consensus);
           };
         Doughnut::OverlayBuilder overlay =
@@ -456,6 +460,8 @@ namespace infinit
 
       static const elle::serialization::Hierarchy<ModelConfig>::
       Register<Configuration> _register_Configuration("doughnut");
+      static const elle::TypeInfo::RegisterAbbrevation
+      _dht_abbr("infinit::model::doughnut", "dht");
     }
   }
 }

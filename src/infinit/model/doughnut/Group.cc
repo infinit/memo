@@ -129,10 +129,28 @@ namespace infinit
           return *this->_block;
         ELLE_TRACE_SCOPE("%s: fetch block", *this);
         auto key = this->public_control_key();
-        auto addr = ACB::hash_address(this->_dht, key, group_block_key);
-        elle::unconst(this)->_block = elle::cast<GB>::runtime(
-          this->_dht.fetch(addr));
-        return *this->_block;
+        try
+        {
+          auto addr = ACB::hash_address(this->_dht, key, group_block_key);
+          elle::unconst(this)->_block = elle::cast<GB>::runtime(
+            this->_dht.fetch(addr));
+          return *this->_block;
+        }
+        catch (MissingBlock const&)
+        {
+          ELLE_TRACE_SCOPE("missing group block, retry with pre 0.5 address");
+          try
+          {
+            auto addr = ACB::hash_address(key, group_block_key,
+                                          elle::Version(0, 4, 0));
+            elle::unconst(this)->_block = elle::cast<GB>::runtime(
+              this->_dht.fetch(addr));
+            return *this->_block;
+          }
+          catch (MissingBlock const&)
+          {}
+          throw;
+        }
       }
 
       cryptography::rsa::KeyPair

@@ -20,7 +20,7 @@ namespace infinit
     Model::Model(boost::optional<elle::Version> version)
       : _version(version ? *version : default_version)
     {
-      ELLE_TRACE("%s: compatibility version %s", *this, this->_version);
+      ELLE_LOG("%s: compatibility version %s", *this, this->_version);
       static elle::Version const current_version = elle::Version(
         INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR);
       if (this->_version > current_version)
@@ -43,7 +43,8 @@ namespace infinit
     Model::_make_mutable_block() const
     {
       ELLE_TRACE_SCOPE("%s: create block", *this);
-      return this->_construct_block<blocks::MutableBlock>(Address::random());
+      return this->_construct_block<blocks::MutableBlock>(
+        Address::random(flags::mutable_block));
     }
 
     template <>
@@ -57,8 +58,8 @@ namespace infinit
     Model::_make_immutable_block(elle::Buffer data, Address owner) const
     {
       ELLE_TRACE_SCOPE("%s: create block", *this);
-      return this->_construct_block<blocks::ImmutableBlock>(Address::random(),
-                                                            std::move(data));
+      return this->_construct_block<blocks::ImmutableBlock>(
+        Address::random(flags::immutable_block), std::move(data));
     }
 
     template <>
@@ -82,13 +83,15 @@ namespace infinit
     Model::_make_acl_block() const
     {
       ELLE_TRACE_SCOPE("%s: create ACL block", *this);
-      return this->_construct_block<blocks::ACLBlock>(Address::random());
+      return this->_construct_block<blocks::ACLBlock>(
+        Address::random(flags::mutable_block));
     }
 
     std::unique_ptr<blocks::GroupBlock>
     Model::_make_group_block() const
     {
-      return this->_construct_block<blocks::GroupBlock>(Address::random());
+      return this->_construct_block<blocks::GroupBlock>(
+        Address::random(flags::mutable_block));
     }
 
     std::unique_ptr<User>

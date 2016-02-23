@@ -1,5 +1,6 @@
 import base64
 import cryptography
+import os
 import requests
 import subprocess
 
@@ -13,42 +14,52 @@ from itertools import chain
 ## -------- ##
 ## Binaries ##
 ## -------- ##
+
+os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
+
 def find_binaries():
-  import os
-  paths = []
-  if os.environ.get('INFINIT_BINARIES'):
-    paths.append(os.environ.get('INFINIT_BINARIES'))
-  paths += os.environ.get('PATH', '').split(':') + ['/opt/infinit/bin/']
-  for path in paths:
-    path = path + '/' if not path.endswith('/') else path
+  for path in chain(
+      os.environ.get('PATH', '').split(':'),
+      ['/opt/infinit/bin', os.environ.get('INFINIT_BINARIES')],
+  ):
+    if not path:
+      continue
+    if not path.endswith('/'):
+      path += '/'
     try:
-      if subprocess.check_call([path + 'infinit-user', '--version']) == 0:
-        return path
-    except:
+      subprocess.check_call([path + 'infinit-user', '--version'])
+      return path
+    except FileNotFoundError:
       pass
+    except subprocess.CalledProcessError:
+      pass
+  raise Exception('unable to find infinit-user binary')
 
 binary_path = find_binaries()
-assert binary_path is not None
 
 # Email templates.
 templates = {
   'Drive/Joined': {
-    'swu': ('tem_RFSDrp7nzCbsBRSUts7MsU', )
+    'template': 'tem_RFSDrp7nzCbsBRSUts7MsU',
   },
   'Drive/Invitation': {
-    'swu': ('tem_UwwStKnWCWNU5VP4HBS7Xj', )
+    'template': 'tem_UwwStKnWCWNU5VP4HBS7Xj',
   },
   'Drive/Plain Invitation': {
-    'swu': ('tem_j8r5aDLJ6v3CTveMahtauX', )
+    'template': 'tem_j8r5aDLJ6v3CTveMahtauX',
   },
   'Internal/Crash Report': {
-    'swu': ('tem_fu5GEE6jxByj2SB4zM6CrH', )
+    'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
+  },
+  'Internal/Passport Generation Error': {
+    'templte': 'tem_LdEi9v8WrTACa8BNUhoSte',
   },
   'User/Welcome': {
-    'swu': ('tem_Jsd948JkLqhBQs3fgGZSsS', 'ver_W9nDEtV4KzxWyrLtZDcAWE')
+    'template': 'tem_Jsd948JkLqhBQs3fgGZSsS',
+    'version': 'ver_W9nDEtV4KzxWyrLtZDcAWE',
   },
   'User/Confirmation Email': {
-    'swu': ('tem_b6ZtsWVHKzv4PUBDU7WTZj', )
+    'template': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
   },
 }
 
@@ -106,13 +117,7 @@ class Beyond:
 
   def template(self, name):
     if isinstance(self.__emailer, emailer.SendWithUs):
-      template = templates[name]['swu']
-      import sys
-      print(template, file = sys.stderr)
-      return {
-        'template': template[0],
-        'version':  template[1] if len(template) > 1 else None,
-      }
+      return templates[name]
     else:
       return {
         'template': name,
@@ -162,10 +167,11 @@ class Beyond:
     json = self.__datastore.pairing_fetch(owner)
     pairing = PairingInformation.from_json(self, json)
     if passphrase_hash != pairing.passphrase_hash:
-      raise ValueError("passphrase_hash")
+      raise ValueError('passphrase_hash')
     self.pairing_information_delete(owner)
     if self.now > pairing.expiration:
-      raise exceptions.NoLongerAvailable("%s pairing information" % owner)
+      raise exceptions.NoLongerAvailable(
+        '%s pairing information' % owner)
     return pairing
 
   def pairing_information_delete(self, owner):
@@ -175,7 +181,8 @@ class Beyond:
     json = self.__datastore.pairing_fetch(owner)
     pairing = PairingInformation.from_json(self, json)
     if self.now > pairing.expiration:
-      raise exceptions.NoLongerAvailable("%s pairing information" % owner)
+      raise exceptions.NoLongerAvailable(
+        '%s pairing information' % owner)
     return True
 
   ## ------- ##
@@ -189,11 +196,11 @@ class Beyond:
   def network_delete(self, owner, name):
     return self.__datastore.network_delete(owner = owner, name = name)
 
-  def network_volumes_get(self, network):
-    return self.__datastore.networks_volumes_fetch(networks = [network])
+  def network_volumes_get(self, name):
+    return self.__datastore.networks_volumes_fetch(networks = [name])
 
-  def network_stats_get(self, network):
-    return self.__datastore.network_stats_fetch(network = network)
+  def network_stats_get(self, name):
+    return self.__datastore.network_stats_fetch(network = name)
 
   ## ---- ##
   ## User ##
@@ -216,10 +223,11 @@ class Beyond:
     return self.__datastore.user_networks_fetch(user = user)
 
   def user_volumes_get(self, user):
-    # XXX: This requires two requests as we cannot combine results across
-    # databases.
+    # XXX: This requires two requests as we cannot combine results
+    # across databases.
     networks = self.__datastore.user_networks_fetch(user = user)
-    return self.__datastore.networks_volumes_fetch(networks = networks)
+    return self.__datastore.networks_volumes_fetch(
+      networks = networks)
 
   def user_drives_get(self, name):
     return self.__datastore.user_drives_fetch(name = name)
@@ -283,7 +291,7 @@ class Beyond:
             try:
               network = self.network_get(*drive.network.split('/'))
             except Network.NotFound:
-              raise Exception('Unkown netork \'%s\'' % drive.network)
+              raise Exception('Unkown network \'%s\'' % drive.network)
             import_data('network', network.json())
             subprocess.check_call(
               [
@@ -308,9 +316,20 @@ class Beyond:
             drive.users[email] = None
             drive.save()
           except BaseException as e:
-            errors.append(e.args[0])
+            errors.append(str(e))
     except BaseException as e:
-      errors.append(e.args[0])
+      errors.append(str(e))
+    if len(errors) > 0:
+      self.__emailer.send_one(
+        recipient_email = 'developers+passport_generation@infinit.sh',
+        recipient_name = 'Developers',
+        variables = {
+          'user': user.name,
+          'email': email,
+          'errors': ' | '.join(errors),
+        },
+        **self.template('Internal/Passport Generation Error')
+      )
     return errors
 
   ## ------------ ##
@@ -591,16 +610,19 @@ class Entity(type):
       }
     content['json'] = json
     def from_json(beyond, json):
-      missing = next((m for m in fields if m not in json), None)
+      missing = next((f for f, d in fields.items()
+                      if json.get(f) is None and fields[f] is None),
+                     None)
       if missing is not None:
         raise Exception(
           'missing mandatory JSON key for '
           '%s: %s' % (self.__name__, missing))
-      json = {
+      body = deepcopy(fields)
+      body.update({
         k: v
         for k, v in json.items() if k in fields
-      }
-      return self_type(beyond, **json)
+      })
+      return self_type(beyond, **body)
     content['from_json'] = from_json
     # Create
     if insert:
@@ -609,7 +631,8 @@ class Entity(type):
                         if getattr(self, f) is None and d is None),
                        None)
         if missing is not None:
-          raise exceptions.MissingField(type(self).__name__.lower(), missing)
+          raise exceptions.MissingField(
+            type(self).__name__.lower(), missing)
         getattr(self.__beyond._Beyond__datastore, insert)(self)
       content['create'] = create
     # Save
@@ -618,7 +641,8 @@ class Entity(type):
         diff = {}
         for field in fields:
           v = getattr(self, field)
-          original_field = '_%s__%s_original' % (self.__class__.__name__, field)
+          original_field = '_%s__%s_original' % (
+            self.__class__.__name__, field)
           original = getattr(self, original_field)
           if isinstance(v, dict):
             for k, v in v.items():
@@ -663,15 +687,17 @@ class Entity(type):
                update = None,
                fields = []):
     for f in fields:
-      content[f] = property(lambda self: getattr(self, '_%s__%s' % (name, f)))
+      content[f] = property(
+        lambda self: getattr(self, '_%s__%s' % (name, f)))
     type.__init__(self, name, superclasses, content)
 
 def fields(*args, **kwargs):
   return dict(chain(((k, None) for k in args), kwargs.items()))
 
-class PairingInformation(metaclass = Entity,
-                         insert = 'pairing_insert',
-                         fields = fields('name', 'passphrase_hash', 'data', 'expiration')):
+class PairingInformation(
+    metaclass = Entity,
+    insert = 'pairing_insert',
+    fields = fields('name', 'passphrase_hash', 'data', 'expiration')):
 
   @property
   def id(self):
@@ -692,8 +718,10 @@ class Network(metaclass = Entity,
     return self.name
 
   def __eq__(self, other):
-    if self.name != other.name or self.owner != other.owner or \
-        self.consensus != other.consensus or self.overlay != other.overlay:
+    if self.name != other.name or \
+       self.owner != other.owner or \
+       self.consensus != other.consensus or \
+       self.overlay != other.overlay:
       return False
     return True
 
@@ -723,24 +751,28 @@ class Volume(metaclass = Entity,
       return False
     return True
 
-class Drive(metaclass = Entity,
-            insert = 'drive_insert',
-            update = 'drive_update',
-            fields = fields('name', 'owner', 'network', 'volume', 'description',
-                            users = {})):
+class Drive(
+    metaclass = Entity,
+    insert = 'drive_insert',
+    update = 'drive_update',
+    fields = fields('name', 'owner', 'network',
+                    'volume', 'description', users = {})):
 
   @property
   def id(self):
     return self.name
 
   def __eq__(self, other):
-    if self.name != other.name or self.network != other.network or \
-        self.volume != other.volume or self.description != other.description:
+    if self.name != other.name or \
+       self.network != other.network or \
+       self.volume != other.volume or \
+       self.description != other.description:
       return False
     return True
 
-  class Invitation(metaclass = Entity,
-                   fields = fields('permissions', 'status', 'create_home')):
+  class Invitation(
+      metaclass = Entity,
+      fields = fields('permissions', 'status', 'create_home')):
     statuses = ['pending', 'ok']
 
     class AlreadyConfirmed(Exception):
@@ -771,19 +803,23 @@ class Drive(metaclass = Entity,
       drive.users[key] = self.json()
       drive.save()
       variables = {
-        'owner': { x: getattr(owner, x) for x in ['name', 'email'] },
-        'drive': { x: getattr(drive, x) for x in ['name', 'description'] },
+        'owner': {
+          x: getattr(owner, x) for x in ['name', 'email'] },
+        'drive':
+        { x: getattr(drive, x) for x in ['name', 'description'] },
       }
       if plain:
         variables['invitee'] = { 'email': email }
       else:
-        variables['invitee'] = { x: getattr(invitee, x) for x in ['name', 'email'] }
+        variables['invitee'] = {
+          x: getattr(invitee, x) for x in ['name', 'email'] }
         variables['invitee']['avatar'] = '/users/%s/avatar' % key
 
       variables['owner']['avatar'] = '/users/%s/avatar' % owner.name
       variables['drive']['icon'] = '/drives/%s/icon' % drive.name
       if invitation and email is not None:
-        template = "Drive/Invitation" if not plain else "Drive/Plain Invitation"
+        template = \
+          'Drive/%sInvitation' % ('' if not plain else 'Plain ')
         beyond.emailer.send_one(
           recipient_email = email,
           recipient_name = key,
@@ -795,6 +831,6 @@ class Drive(metaclass = Entity,
           recipient_email = owner.email,
           recipient_name = owner.name,
           variables = variables,
-          **beyond.template("Drive/Joined")
+          **beyond.template('Drive/Joined')
         )
       return True

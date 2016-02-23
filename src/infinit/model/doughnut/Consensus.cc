@@ -90,30 +90,11 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %s{%x} (local version: %s)",
-                           *this, address,
-                           (unsigned int)address.overwritten_value(),
-                           local_version);
+          ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
+                           *this, address, local_version);
           if (this->doughnut().version() < elle::Version(0, 5, 0))
-            return this->_fetch(address.unflagged(), local_version);
-          try
-          {
             return this->_fetch(address, local_version);
-          }
-          catch (MissingBlock const&)
-          {
-            auto uaddr = address.unflagged();
-            if (uaddr != address)
-            {
-              ELLE_TRACE("%s: retrying with unflagged address %s", *this, uaddr);
-              return this->_fetch(uaddr, local_version);
-            }
-            else
-            {
-              ELLE_TRACE("%s: no second chance", *this);
-              throw;
-            }
-          }
+          return this->_fetch(address, local_version);
         }
 
         std::unique_ptr<blocks::Block>
@@ -147,7 +128,7 @@ namespace infinit
                            int factor,
                            overlay::Operation op) const
         {
-          ELLE_DEBUG_SCOPE("search %s nodes for %s", factor, address);
+          ELLE_DEBUG_SCOPE("search %s nodes for %f", factor, address);
           return this->doughnut().overlay()->lookup(address, factor, op);
         }
 
@@ -281,7 +262,8 @@ namespace infinit
         void
         Consensus::print(std::ostream& output) const
         {
-          elle::fprintf(output, "%s(%x)", elle::type_info(*this), this);
+          elle::fprintf(output,
+                        "%f(%x)", elle::type_info(*this), (void*)(this));
         }
 
         /*--------------.

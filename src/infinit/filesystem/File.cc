@@ -32,8 +32,10 @@ namespace infinit
   {
 
     const uint64_t File::first_block_size = 16384;
-    static const int lookahead_blocks = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
-    static const int max_lookahead_threads = std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
+    static const int lookahead_blocks =
+      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
+    static const int max_lookahead_threads =
+      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
 
     class FileConflictResolver
       : public model::ConflictResolver
@@ -162,38 +164,37 @@ namespace infinit
     void
     File::_fetch()
     {
-      if ((_rw_handle_count && _first_block)  || !_parent)
+      if ((this->_rw_handle_count && this->_first_block)  || !_parent)
       {
         ELLE_DEBUG("%s: bypassing fetch: w_handle=%s, first_block=%s parent=%s",
                    *this, _rw_handle_count, !!_first_block, !!_parent);
         return;
       }
-      _parent->_fetch();
-      auto it = _parent->_files.find(_name);
-      if (it == _parent->_files.end())
-      {
+      this->_parent->_fetch();
+      auto it = this->_parent->_files.find(_name);
+      if (it == this->_parent->_files.end())
         THROW_NOENT;
-      }
-      Address addr = Address(it->second.second.value(), model::flags::mutable_block);
-      if (!_first_block)
-        _first_block = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr, {}, this));
+      Address addr = model::Address(
+        it->second.second.value(), model::flags::mutable_block, false);
+      if (!this->_first_block)
+        this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
+          this->_owner.fetch_or_die(addr, {}, this));
       else
       {
         auto res = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr, _first_block->version(), this));
+          this->_owner.fetch_or_die(addr, _first_block->version(), this));
         if (res)
-          _first_block = std::move(res);
+          this->_first_block = std::move(res);
         else
           return;
       }
       bool empty = false;
       elle::SafeFinally remove_undecoded_first_block([&] {
-          _first_block.reset();
+          this->_first_block.reset();
       });
       elle::IOStream is(
         umbrella([&] {
-            auto& d = _first_block->data();
+            auto& d = this->_first_block->data();
             ELLE_DUMP("block data: %s", d);
             empty = d.empty();
             return d.istreambuf();
@@ -234,12 +235,14 @@ namespace infinit
     File::_commit_first(bool final_flush)
     {
       ELLE_DEBUG("commit_first, final=%s", final_flush);
-      if (!_first_block)
+      if (!this->_first_block)
       {
         ELLE_DEBUG("re-fetching first_block");
-         Address addr = Address(_parent->_files.find(_name)->second.second. value(), model::flags::mutable_block);
-        _first_block = elle::cast<MutableBlock>::runtime(
-          _owner.fetch_or_die(addr));
+        Address addr = Address(
+          this->_parent->_files.find(_name)->second.second.value(),
+          model::flags::mutable_block, false);
+        this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
+          this->_owner.fetch_or_die(addr));
       }
       elle::Buffer serdata;
       {
@@ -286,13 +289,13 @@ namespace infinit
      _fetch();
     }
 
-    AnyBlock*
+    std::shared_ptr<AnyBlock>
     File::_block_at(int index, bool create)
     {
       ELLE_ASSERT_GTE(index, 0);
-      auto it = _blocks.find(index);
-      if (it != _blocks.end())
-        return &it->second.block;
+      auto it = this->_blocks.find(index);
+      if (it != this->_blocks.end())
+        return it->second.block;
       if (_fat.size() <= unsigned(index))
       {
         ELLE_TRACE("%s: block_at(%s) out of range", *this, index);
@@ -314,18 +317,19 @@ namespace infinit
       else
       {
         ELLE_TRACE("Fetching %s", index);
-        b = AnyBlock(_owner.fetch_or_die(
-          Address(_fat[index].first.value(), model::flags::immutable_block)), _fat[index].second);
+        Address addr(this->_fat[index].first.value(),
+                     model::flags::immutable_block, false);
+        b = AnyBlock(this->_owner.fetch_or_die(addr), this->_fat[index].second);
         is_new = false;
       }
 
-      auto inserted = _blocks.insert(std::make_pair(index,
-        File::CacheEntry{AnyBlock(std::move(b)), false}));
+      auto inserted = this->_blocks.insert(std::make_pair(index,
+        File::CacheEntry{std::make_shared<AnyBlock>(std::move(b)), false}));
       inserted.first->second.ready.open();
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
       inserted.first->second.new_block = is_new;
-      return &inserted.first->second.block;
+      return inserted.first->second.block;
     }
 
     void
@@ -338,7 +342,7 @@ namespace infinit
       {
         if (nidx >= signed(_fat.size()))
           break;
-        if (_blocks.find(nidx) == _blocks.end())
+        if (this->_blocks.find(nidx) == this->_blocks.end())
         {
           _prefetch(nidx);
           break;
@@ -349,13 +353,15 @@ namespace infinit
     void
     File::_prefetch(int idx)
     {
-      ELLE_TRACE("Prefetching %s", idx);
-      auto inserted = _blocks.insert(std::make_pair(idx, File::CacheEntry{}));
+      ELLE_TRACE("%s: prefetch index %s", *this, idx);
+      auto inserted =
+        this->_blocks.insert(std::make_pair(idx, File::CacheEntry{}));
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false;
       inserted.first->second.new_block = false;
       auto self = std::dynamic_pointer_cast<File>(shared_from_this());
-      auto addr = _fat[idx].first;
+      auto addr = Address(this->_fat[idx].first.value(),
+                          model::flags::immutable_block, false);
       auto key = _fat[idx].second;
       ++_prefetchers_count;
       new reactor::Thread("prefetcher", [self, addr, idx, key] {
@@ -368,11 +374,13 @@ namespace infinit
           {
             ELLE_TRACE("Prefetcher error fetching %x: %s", addr, e);
             --self->_prefetchers_count;
+            self->_blocks[idx].ready.open();
             return;
           }
-          auto b = AnyBlock(std::move(bl), key);
+          ELLE_TRACE("Prefetcher inserting value at %s", idx);
+          auto b = std::make_shared<AnyBlock>(std::move(bl), key);
           self->_blocks[idx].last_use = std::chrono::system_clock::now();
-          self->_blocks[idx].block = std::move(b);
+          self->_blocks[idx].block = b;
           self->_blocks[idx].ready.open();
           --self->_prefetchers_count;
           self->_check_prefetch();
@@ -533,10 +541,10 @@ namespace infinit
         else if (signed(offset + _header.block_size) >= new_size)
         { // maybe truncate the block
           auto targetsize = new_size - offset;
-          auto it = _blocks.find(i);
-          if (it != _blocks.end())
+          auto it = this->_blocks.find(i);
+          if (it != this->_blocks.end())
           {
-            it->second.block.data([&](elle::Buffer& buf) {
+            it->second.block->data([&](elle::Buffer& buf) {
                 if (buf.size() > targetsize)
                   buf.size(targetsize);
             });
@@ -629,10 +637,10 @@ namespace infinit
     File::_flush_block(int id)
     {
       bool fat_change = false;
-      auto it = _blocks.find(id);
-      Address prev = it->second.block.address();
+      auto it = this->_blocks.find(id);
+      Address prev = it->second.block->address();
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
-      Address addr = it->second.block.crypt_store(*_owner.block_store(),
+      Address addr = it->second.block->crypt_store(*_owner.block_store(),
         it->second.new_block? model::STORE_INSERT : model::STORE_ANY,
         key);
       if (addr != prev)
@@ -680,9 +688,9 @@ namespace infinit
           }
         }
       }
-      while (_blocks.size() > unsigned(cache_size))
+      while (this->_blocks.size() > unsigned(cache_size))
       {
-        auto it = std::min_element(_blocks.begin(), _blocks.end(),
+        auto it = std::min_element(this->_blocks.begin(), this->_blocks.end(),
           [](Elem const& a, Elem const& b) -> bool
           {
             return a.second.last_use < b.second.last_use;
@@ -694,7 +702,7 @@ namespace infinit
           {
             _fat_changed = _flush_block(it->first) || _fat_changed;
           }
-          _blocks.erase(it);
+          this->_blocks.erase(it);
         }
         else
         {
@@ -702,7 +710,7 @@ namespace infinit
           {
             int id = it->first;
             ELLE_TRACE("starting async flusher for %s", id);
-            auto ab = std::make_shared<AnyBlock>(std::move(it->second.block));
+            auto ab = it->second.block;
             bool new_block = it->second.new_block;
             _flushers.emplace_back(
               new reactor::Thread("flusher", [this, id, ab, new_block] {
@@ -724,7 +732,7 @@ namespace infinit
                 }
             }, reactor::Thread::managed = true));
           }
-          _blocks.erase(it);
+          this->_blocks.erase(it);
         }
       }
       bool prev = _fat_changed;

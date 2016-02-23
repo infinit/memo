@@ -22,7 +22,6 @@ namespace infinit
   {
     namespace doughnut
     {
-
       OKBHeader::OKBHeader(Doughnut* dht,
                            cryptography::rsa::KeyPair const& keys,
                            boost::optional<elle::Buffer> salt)
@@ -61,14 +60,21 @@ namespace infinit
                               cryptography::rsa::PublicKey const& key,
                               elle::Buffer const& salt)
       {
+        return hash_address(key, salt, dht.version());
+      }
+
+      Address
+      OKBHeader::hash_address(cryptography::rsa::PublicKey const& key,
+                              elle::Buffer const& salt,
+                              elle::Version const& compatibility_version)
+      {
         auto key_buffer = elle::serialization::json::serialize(
           key, elle::Version(0,0,0));
         key_buffer.append(salt.contents(), salt.size());
         auto hash =
           cryptography::hash(key_buffer, cryptography::Oneway::sha256);
-        Address res(hash.contents(), flags::mutable_block);
-        return dht.version() >= elle::Version(0, 5, 0)
-          ? res : res.unflagged();
+        return Address(hash.contents(), flags::mutable_block,
+                       compatibility_version >= elle::Version(0, 5, 0));
       }
 
       Address
@@ -84,8 +90,7 @@ namespace infinit
         ELLE_DEBUG("%s: check address", *this)
         {
           expected_address = this->_hash_address();
-          if (address != expected_address
-            && address != expected_address.unflagged())
+          if (!equal_unflagged(address, expected_address))
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
                                         address, expected_address);
@@ -172,16 +177,6 @@ namespace infinit
         , _data_plain{other._data_plain}
         , _data_decrypted{other._data_decrypted}
       {}
-
-      /*-------.
-      | Clone  |
-      `-------*/
-      template <typename Block>
-      std::unique_ptr<blocks::Block>
-      BaseOKB<Block>::clone() const
-      {
-        return std::unique_ptr<blocks::Block>(new BaseOKB<Block>(*this));
-      }
 
       /*--------.
       | Content |
@@ -414,9 +409,9 @@ namespace infinit
         , _data_decrypted(false)
       {
         this->_serialize(s, version);
-        if (*this->owner_key() == this->doughnut()->keys().K())
+        if (this->doughnut() &&
+            *this->owner_key() == this->doughnut()->keys().K())
           this->_owner_private_key = this->doughnut()->keys().private_key();
-
       }
 
       template <typename Block>
@@ -436,7 +431,6 @@ namespace infinit
                                  elle::Version const& version)
       {
         s.serialize_context<Doughnut*>(this->_doughnut);
-        ELLE_ASSERT(this->_doughnut);
         s.serialize("version", this->_version);
         if (!this->_signature)
           this->_signature = std::make_shared<SignFuture>();
@@ -511,6 +505,8 @@ namespace infinit
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<OKB> _register_okb_serialization("OKB");
+      static const elle::TypeInfo::RegisterAbbrevation
+      _okb_abbr("BaseOKB<infinit::model::blocks::MutableBlock>", "OKB");
     }
   }
 }

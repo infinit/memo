@@ -23,22 +23,27 @@ namespace infinit
       NB::NB(Doughnut* doughnut,
              std::shared_ptr<infinit::cryptography::rsa::PublicKey> owner,
              std::string name,
-             elle::Buffer data)
+             elle::Buffer data,
+             elle::Buffer signature)
         : Super(NB::address(*owner, name, doughnut->version()), std::move(data))
         , _doughnut(std::move(doughnut))
+        , _keys()
         , _owner(std::move(owner))
         , _name(std::move(name))
+        , _signature(std::move(signature))
       {}
 
       NB::NB(Doughnut* doughnut,
              infinit::cryptography::rsa::KeyPair keys,
              std::string name,
-             elle::Buffer data)
+             elle::Buffer data,
+             elle::Buffer signature)
         : Super(NB::address(keys.K(), name, doughnut->version()), std::move(data))
         , _doughnut(std::move(doughnut))
         , _keys(std::move(keys))
         , _owner(this->_keys->public_key())
         , _name(std::move(name))
+        , _signature(std::move(signature))
       {}
 
       NB::NB(NB const& other)
@@ -58,9 +63,8 @@ namespace infinit
         auto hash = cryptography::hash(
           elle::sprintf("NB/%s/%s", std::move(der), name),
           cryptography::Oneway::sha256);
-        return version >= elle::Version(0, 5, 0)
-          ? Address(hash.contents(), flags::immutable_block)
-          : Address(hash.contents());
+        return Address(hash.contents(), flags::immutable_block,
+                       version >= elle::Version(0, 5, 0));
       }
 
       /*-------.
@@ -80,6 +84,8 @@ namespace infinit
       void
       NB::_seal(boost::optional<int>)
       {
+        if (!this->_signature.empty())
+          return;
         if (this->_keys)
           ELLE_ASSERT_EQ(this->_keys->K(), *this->owner());
         else
@@ -113,8 +119,7 @@ namespace infinit
         {
           expected_address = NB::address(*this->owner(), this->name(),
                                          this->_doughnut->version());
-          if (this->address() != expected_address
-            && this->address() != expected_address.unflagged())
+          if (!equal_unflagged(this->address(), expected_address))
           {
             auto reason = elle::sprintf("address %x invalid, expecting %x",
                                         this->address(), expected_address);

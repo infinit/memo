@@ -309,17 +309,22 @@ COMMAND(run)
     option_opt<int>(args, option_cache_ttl.long_name());
   boost::optional<int> cache_invalidation =
     option_opt<int>(args, option_cache_invalidation.long_name());
-  if (cache_size || cache_ttl || cache_invalidation)
+  boost::optional<uint64_t> disk_cache_size =
+    option_opt<uint64_t>(args, option_cache_disk_cache_size.long_name());
+  if (cache_size || cache_ttl || cache_invalidation || disk_cache_size)
     cache = true;
-  static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
-  for (auto signal: signals)
-    reactor::scheduler().signal_handle(
-      signal,
-      [&]
-      {
-        ELLE_TRACE("terminating");
-        reactor::scheduler().terminate();
-      });
+  if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
+  {
+    static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
+    for (auto signal: signals)
+      reactor::scheduler().signal_handle(
+        signal,
+        [&]
+        {
+          ELLE_TRACE("terminating");
+          reactor::scheduler().terminate();
+        });
+  }
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);
@@ -328,7 +333,7 @@ COMMAND(run)
   auto model = network.run(
     eps, true,
     cache, cache_size, cache_ttl, cache_invalidation,
-    flag(args, "async"), compatibility_version);
+    flag(args, "async"), disk_cache_size, compatibility_version);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
@@ -829,6 +834,7 @@ main(int argc, char** argv)
     option_cache_size,
     option_cache_ttl,
     option_cache_invalidation,
+    option_cache_disk_cache_size,
     { "fetch-endpoints", bool_switch(),
       elle::sprintf("fetch endpoints from %s", beyond(true)) },
     { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },

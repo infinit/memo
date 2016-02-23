@@ -72,9 +72,9 @@ public:
       ::keys_a = infinit::cryptography::rsa::keypair::generate(key_size()),
       ::keys_b = infinit::cryptography::rsa::keypair::generate(key_size()),
       ::keys_c = infinit::cryptography::rsa::keypair::generate(key_size()),
-      id_a = infinit::model::Address::random(),
-      id_b = infinit::model::Address::random(),
-      id_c = infinit::model::Address::random(),
+      id_a = infinit::model::Address::random(0), // FIXME
+      id_b = infinit::model::Address::random(0), // FIXME
+      id_c = infinit::model::Address::random(0), // FIXME
       storage_a = nullptr,
       storage_b = nullptr,
       storage_c = nullptr,
@@ -328,6 +328,23 @@ public:
     other._peers.emplace_back(this);
   }
 
+  void
+  disconnect(Overlay& other)
+  {
+    for (auto it = this->_peers.begin(); it != this->_peers.end(); ++it)
+      if (*it == &other)
+      {
+        this->_peers.erase(it);
+        break;
+      }
+    for (auto it = other._peers.begin(); it != other._peers.end(); ++it)
+      if (*it == this)
+      {
+        other._peers.erase(it);
+        break;
+      }
+  }
+
 protected:
   virtual
   reactor::Generator<Member>
@@ -337,7 +354,7 @@ protected:
   {
     bool write = op == infinit::overlay::OP_INSERT ||
       op == infinit::overlay::OP_INSERT_OR_UPDATE;
-    ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %s",
+    ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      *this, n, write ? " new" : "", address);
     return reactor::generator<Overlay::Member>(
       [=]
@@ -376,7 +393,7 @@ protected:
     for (auto* peer: this->_peers)
       if (peer->local() && peer->local()->id() == id)
         return peer->local();
-    return nullptr;
+    throw elle::Error(elle::sprintf("no such node: %s", id));
   }
 
   ELLE_ATTRIBUTE_RX(std::vector<Overlay*>, peers);
@@ -393,7 +410,7 @@ public:
     elle::named::prototype(
       paxos = true,
       ::keys = infinit::cryptography::rsa::keypair::generate(512),
-      id = infinit::model::Address::random(),
+      id = infinit::model::Address::random(0), // FIXME
       storage = nullptr,
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
@@ -513,17 +530,17 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
     block->data(elle::Buffer(data));
     auto addr = block->address();
     ELLE_LOG("store mutable block")
-    dht.store(*block);
+      dht.store(*block);
     elle::Buffer updated(">o_/", 4);
     block->data(elle::Buffer(updated));
     ELLE_LOG("fetch block")
-    ELLE_ASSERT_EQ(dht.fetch(addr)->data(), data);
+      ELLE_ASSERT_EQ(dht.fetch(addr)->data(), data);
     ELLE_LOG("store updated mutable block")
-    dht.store(*block);
+      dht.store(*block);
     ELLE_LOG("fetch block")
-    ELLE_ASSERT_EQ(dht.fetch(addr)->data(), updated);
+      ELLE_ASSERT_EQ(dht.fetch(addr)->data(), updated);
     ELLE_LOG("remove block")
-    dht.remove(addr);
+      dht.remove(addr);
   }
 }
 
@@ -748,9 +765,9 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
   auto keys_a = infinit::cryptography::rsa::keypair::generate(key_size());
   auto keys_b = infinit::cryptography::rsa::keypair::generate(key_size());
   auto keys_c = infinit::cryptography::rsa::keypair::generate(key_size());
-  auto id_a = infinit::model::Address::random();
-  auto id_b = infinit::model::Address::random();
-  auto id_c = infinit::model::Address::random();
+  auto id_a = infinit::model::Address::random(0); // FIXME
+  auto id_b = infinit::model::Address::random(0); // FIXME
+  auto id_c = infinit::model::Address::random(0); // FIXME
   Memory::Blocks storage_a;
   Memory::Blocks storage_b;
   Memory::Blocks storage_c;
@@ -992,136 +1009,6 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   }
 }
 
-ELLE_TEST_SCHEDULED(flags_backward, (bool, paxos))
-{
-  auto keys_a = infinit::cryptography::rsa::keypair::generate(512);
-  auto keys_b = infinit::cryptography::rsa::keypair::generate(512);
-  auto keys_c = infinit::cryptography::rsa::keypair::generate(512);
-  auto id_a = infinit::model::Address::random();
-  auto id_b = infinit::model::Address::random();
-  auto id_c = infinit::model::Address::random();
-  Memory::Blocks blocks_a;
-  Memory::Blocks blocks_b;
-  Memory::Blocks blocks_c;
-  infinit::model::Address chbaddr;
-  infinit::model::Address acbaddr;
-  elle::Buffer data("\\_o<", 4);
-  {
-    DHTs dhts(
-      paxos,
-      keys_a,
-      keys_b,
-      keys_c,
-      id_a,
-      id_b,
-      id_c,
-      elle::make_unique<Memory>(blocks_a),
-      elle::make_unique<Memory>(blocks_b),
-      elle::make_unique<Memory>(blocks_c),
-      elle::Version(0, 4, 0),
-      elle::Version(0, 4, 0),
-      elle::Version(0, 4, 0)
-      );
-    auto& dhta = dhts.dht_a;
-    auto& dhtb = dhts.dht_b;
-    // UB
-    ELLE_LOG("store UB")
-    {
-      dht::UB uba(dhta.get(), "a", dhta->keys().K());
-      dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
-      dhta->store(uba);
-      dhta->store(ubarev);
-      auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), *dhta));
-      BOOST_CHECK(ruba);
-    }
-    // NB
-    ELLE_LOG("store NB")
-    {
-      auto nb = elle::make_unique<dht::NB>(
-        dhta.get(), dhts.keys_a->public_key(), "blockname",
-        elle::Buffer("blockdata", 9));
-      dhta->store(*nb);
-      auto fetched =
-        dhtb->fetch(dht::NB::address(dhts.keys_a->K(), "blockname",
-                                     dhts.dht_b->version()));
-      BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
-    }
-    // CHB
-    ELLE_LOG("store CHB")
-    {
-      auto chb = dhta->make_block<blocks::ImmutableBlock>(data);
-      chbaddr = chb->address();
-      dhta->store(*chb);
-      BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
-    }
-    // ACB
-    ELLE_LOG("store ACB")
-    {
-      auto acb = dhta->make_block<blocks::ACLBlock>();
-      acb->data(elle::Buffer(data));
-      dhta->store(*acb);
-      acbaddr = acb->address();
-      auto fetched = dhta->fetch(acb->address());
-      BOOST_CHECK_EQUAL(fetched->data(), data);
-    }
-  }
-  {
-    DHTs dhts(
-      paxos,
-      keys_a,
-      keys_b,
-      keys_c,
-      id_a,
-      id_b,
-      id_c,
-      elle::make_unique<Memory>(blocks_a),
-      elle::make_unique<Memory>(blocks_b),
-      elle::make_unique<Memory>(blocks_c),
-      elle::Version(0, 5, 0),
-      elle::Version(0, 5, 0),
-      elle::Version(0, 5, 0));
-    auto& dhta = dhts.dht_a;
-    auto& dhtb = dhts.dht_b;
-    // UB
-    ELLE_LOG("fetch UB with wrong address")
-    {
-      std::unique_ptr<blocks::Block> ruba;
-      BOOST_CHECK_NO_THROW(
-        ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), *dhta)));
-      BOOST_CHECK(ruba);
-    }
-    // NB
-    ELLE_LOG("fetch NB with wrong address")
-    {
-      std::unique_ptr<blocks::Block> fetched;
-      BOOST_CHECK_NO_THROW(
-        fetched =
-        dhtb->fetch(
-          dht::NB::address(dhts.keys_a->K(), "blockname",
-                           dhts.dht_b->version())));
-      BOOST_CHECK_EQUAL(fetched->data(), "blockdata");
-    }
-    // CHB
-    ELLE_LOG("fetch CHB with wrong address")
-    {
-      std::unique_ptr<blocks::Block> fetched;
-      BOOST_CHECK_EQUAL(dhta->fetch(chbaddr)->data(), data);
-      infinit::model::Address addr(
-        chbaddr.value(), infinit::model::flags::immutable_block);
-      BOOST_CHECK_EQUAL(dhta->fetch(addr)->data(), data);
-    }
-    // ACB
-    ELLE_LOG("fetch ACB with wrong address")
-    {
-      std::unique_ptr<blocks::Block> fetched;
-      BOOST_CHECK_NO_THROW(fetched = dhta->fetch(acbaddr));
-      BOOST_CHECK_EQUAL(fetched->data(), data);
-      BOOST_CHECK_NO_THROW(fetched = dhta->fetch(infinit::model::Address(acbaddr.value(), infinit::model::flags::mutable_block)));
-      BOOST_CHECK_EQUAL(fetched->data(), data);
-    }
-  }
-}
-
 namespace rebalancing
 {
   ELLE_TEST_SCHEDULED(extend_and_write)
@@ -1142,7 +1029,10 @@ namespace rebalancing
       {
         int res = 0;
         for (auto const& m: elle::unconst(g))
+        {
+          (void)m;
           ++res;
+        }
         return res;
       };
     auto op = infinit::overlay::OP_FETCH;
@@ -1159,6 +1049,55 @@ namespace rebalancing
     }
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 2u);
+  }
+
+  ELLE_TEST_SCHEDULED(shrink_and_write)
+  {
+    DHT dht_a;
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b;
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    dht_b.overlay->connect(*dht_a.overlay);
+    auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to quorum of 2")
+    {
+      b1->data(std::string("shrink_kill_and_write 1"));
+      dht_a.dht->store(*b1);
+    }
+    auto paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+    ELLE_LOG("rebalance block to quorum of 1")
+      paxos_a.rebalance(b1->address(), {dht_a.dht->id()});
+    ELLE_LOG("write block to quorum of 1")
+    {
+      b1->data(std::string("extend_and_write 2"));
+      dht_a.dht->store(*b1);
+    }
+  }
+
+  ELLE_TEST_SCHEDULED(shrink_kill_and_write)
+  {
+    DHT dht_a;
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b;
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    dht_b.overlay->connect(*dht_a.overlay);
+    auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to quorum of 2")
+    {
+      b1->data(std::string("shrink_kill_and_write 1"));
+      dht_a.dht->store(*b1);
+    }
+    auto paxos_a =
+      dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+    ELLE_LOG("rebalance block to quorum of 1")
+      paxos_a.rebalance(b1->address(), {dht_a.dht->id()});
+    dht_b.overlay->disconnect(*dht_a.overlay);
+    ELLE_LOG("write block to quorum of 1")
+    {
+      b1->data(std::string("extend_and_write 2"));
+      dht_a.dht->store(*b1);
+    }
   }
 }
 
@@ -1188,7 +1127,6 @@ ELLE_TEST_SUITE()
   TEST(restart);
   TEST(cache);
   TEST(serialize);
-  TEST(flags_backward);
 #undef TEST
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
   {
@@ -1196,5 +1134,7 @@ ELLE_TEST_SUITE()
     paxos->add(rebalancing);
     using namespace rebalancing;
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
   }
 }

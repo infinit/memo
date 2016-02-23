@@ -147,6 +147,7 @@ namespace infinit
              boost::optional<int> cach_size = {},
              boost::optional<std::chrono::seconds> cache_ttl = {},
              boost::optional<std::chrono::seconds> cache_invalidation = {},
+             boost::optional<uint64_t> disk_cache_size = {},
              boost::optional<elle::Version> version = {});
       };
     }

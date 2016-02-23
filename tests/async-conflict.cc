@@ -49,7 +49,7 @@ std::unique_ptr<reactor::filesystem::FileSystem> make(
           return elle::make_unique<infinit::overlay::Kalimero>(&dht, id, local);
         };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
-    infinit::model::Address::random(),
+    infinit::model::Address::random(0), // FIXME
     std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
     kp.public_key(),
     passport,

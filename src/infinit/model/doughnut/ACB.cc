@@ -163,16 +163,6 @@ namespace infinit
         , _sign_key(other._sign_key)
       {}
 
-      /*-------.
-      | Clone  |
-      `-------*/
-      template <typename Block>
-      std::unique_ptr<blocks::Block>
-      BaseACB<Block>::clone() const
-      {
-        return std::unique_ptr<blocks::Block>(new Self(*this));
-      }
-
       /*--------.
       | Content |
       `--------*/
@@ -688,8 +678,6 @@ namespace infinit
               this->_editor = idx;
               sign_key = this->doughnut()->keys().private_key();
             }
-            else
-              ELLE_DEBUG("we are not editor %s", idx);
             ++idx;
           }
           for (auto& e: this->_acl_group_entries)
@@ -942,7 +930,6 @@ namespace infinit
         , _world_writable(false)
         , _deleted(false)
       {
-        ELLE_DEBUG("serialize, bv=%s, dv=%s", version, this->doughnut()->version());
         this->_serialize(input, version);
       }
 
@@ -1045,6 +1032,8 @@ namespace infinit
 
       static const elle::serialization::Hierarchy<blocks::Block>::
       Register<ACB> _register_okb_serialization("ACB");
+      static const elle::TypeInfo::RegisterAbbrevation
+      _acb_abbr("BaseACB<infinit::model::blocks::ACLBlock>", "ACB");
     }
   }
 }
