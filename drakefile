@@ -721,8 +721,6 @@ def configure(
     cxx_config_tests.library_add(elle.boost.filesystem_static)
     cxx_config_tests.library_add(elle.boost.program_options_static)
     cxx_config_tests.library_add(elle.boost.system_static)
-    cxx_config_tests.library_add(
-      drake.copy(dokan_lib, 'tests', True))
     cxx_config_tests.use_whole_archive()
     cxx_config_tests.define('ELLE_SERIALIZATION_USE_DLL')
     cxx_config_tests.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
@@ -732,6 +730,9 @@ def configure(
     infinit_lib_tests = drake.copy(infinit_lib, 'tests',
                                    strip_prefix = True)
     infinit_lib_tests_consensus = drake.copy(infinit_lib, 'tests/consensus',
+                                             strip_prefix = True)
+    dokan_lib_tests = drake.copy(dokan_lib, 'tests', strip_prefix = True)
+    dokan_lib_tests_consensus = drake.copy(dokan_lib, 'tests/consensus',
                                              strip_prefix = True)
   tests_names = [
     ('backward-compatibility', []),
@@ -750,6 +751,11 @@ def configure(
     tests_extra_libs = []
   for test_name, dependencies in tests_names:
     ifnt_lib = test_name == 'consensus/async' and infinit_lib_tests_consensus or infinit_lib_tests
+    if windows:
+      if test_name == 'consensus/async':
+        tests_extra_libs += [dokan_lib_tests_consensus]
+      else:
+        tests_extra_libs += [dokan_lib_tests]
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
