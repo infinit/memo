@@ -33,13 +33,16 @@ class GCS:
     credentials.refresh(httplib2.Http())
     return credentials.access_token
 
-  def __headers(self, content_length = 0, content_type = None):
+  def __headers(self, content_length = 0, content_type = None,
+                public = False):
     headers = {
       'Authorization' : 'Bearer ' + self.__credentials(),
       'Content-Length': content_length,
     }
     if content_type is not None:
       headers['Content-Type'] = content_type
+    if public:
+      headers['x-goog-acl'] = 'public-read'
     return headers
 
   def __url(self, bucket, path = ''):
@@ -59,17 +62,21 @@ class GCS:
                  expiration,
                  method,
                  content_type = None,
-                 content_length = None):
+                 content_length = None,
+                 headers = None,
+  ):
     expiration = datetime.datetime.now() + expiration
     expiration = int(time.mktime(expiration.timetuple()))
     path = urllib.parse.quote(path)
-    resource = '/%s/%s' % (self.__bucket(bucket), path)
-    signature_string = '%s\n%s\n%s\n%s\n%s' % (
-      method,
-      '', content_type if content_type is not None else '',
-      expiration,
-      resource,
-    )
+    chunks = []
+    chunks.append(method)
+    chunks.append('') # MD5, optional
+    chunks.append(content_type or '')
+    for k, v in header.items or {}:
+      chunks.append('%s:%s' % (k, v))
+    chunks.append(expiration)
+    chunk.append('/%s/%s' % (self.__bucket(bucket), path))
+    signature_string = '\n'.join(chunks)
     shahash = SHA256.new(signature_string.encode('utf-8'))
     private_key = RSA.importKey(self.__key, passphrase='notasecret')
     signer = PKCS1_v1_5.new(private_key)
@@ -85,21 +92,33 @@ class GCS:
                                    path, params)
     return url
 
-  def upload(self, bucket, path, data, content_type = None):
+  def upload(self, bucket, path, data,
+             content_type = None,
+             public = False,
+             verify = True):
     self.__request(
       requests.put,
       self.__url(bucket, path),
       headers = self.__headers(content_length = len(data),
-                               content_type = content_type),
+                               content_type = content_type,
+                               public = public),
       data = data,
+      verify = verify,
     )
 
   def upload_url(self, bucket, path, expiration,
                  content_type = None,
-                 content_length = None):
+                 content_length = None,
+                 public = False):
+    headers = None
+    if public:
+      headers = {
+        'x-goog-acl': 'public-read',
+      }
     return self.__sign_url(bucket, path, expiration, 'PUT',
                            content_type = content_type,
-                           content_length = content_length)
+                           content_length = content_length,
+                           headers = headers)
 
   def download_url(self, bucket, path, expiration,
                    content_type = None,
