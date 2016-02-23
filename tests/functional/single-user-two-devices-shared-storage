@@ -16,7 +16,8 @@ with TemporaryDirectory() as tmp, Infinit() as infinit_1, Infinit() as infinit_2
   ])
   network_name = infinit_1.run([
     'infinit-network', '--create',
-     'network', '--storage', 'storage',
+    'network', '--storage', 'storage',
+    '--no-consensus',
     '--as', 'user',
   ])
   network = infinit_1.run([

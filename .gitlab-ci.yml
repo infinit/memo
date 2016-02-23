@@ -13,9 +13,11 @@ x86_64-trusty-gcc4:
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
     - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j 1 //check
-    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
+    - cd ../fs-build && python3 drake --website=false -j 4 //build //beyond/build
+    - cd ../fs-build && python3 drake --website=false -j 1 //check //beyond/check
+    - cd ../fs-build && python3 drake --website=false -j 4 //install //beyond/install
+    - cd ../fs-build && python3 drake -j 4 //beyond/debian
+    - scp ../fs-build/beyond/infinit-beyond_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
   tags:
     - x86_64
     - trusty
@@ -106,25 +108,6 @@ x86_64-osx-clang:
     - x86_64
     - osx
     - clang
-  except:
-    - feature/website
-
-beyond:
-  stage: build
-  script:
-    - git submodule update --init --recursive
-    - git fetch origin --tags
-    - mkdir -p ../fs-build ../fs-beyond
-    - farm/configure --arch x86_64 --os trusty --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
-    - cd ../fs-build && python3 drake -j 4 //beyond/build
-    - cd ../fs-build && python3 drake -j 4 //beyond/check
-    - cd ../fs-build && python3 drake -j 4 //beyond/install --prefix=$(realpath ../fs-beyond)
-    - cd ../fs-build && python3 drake -j 4 //beyond/debian
-    - scp ../fs-build/beyond/infinit-beyond_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
-  tags:
-    - x86_64
-    - trusty
-    - gcc4
   except:
     - feature/website
 

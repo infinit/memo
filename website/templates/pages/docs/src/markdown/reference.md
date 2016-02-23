@@ -196,7 +196,27 @@ Secret Access Key: ****************************************
 Locally stored AWS credentials "s3-user".
 ```
 
-_**IMPORTANT**: AWS credentials are only ever stored locally and cannot be pushed to the Hub. Never use the AWS root user. Always create a specific user, giving the user the minimum required permissions._
+_**IMPORTANT**: AWS credentials are only ever stored locally and cannot be pushed to the Hub. Never use the AWS root user. Always create a specific user, giving the user the <a href="#iam-policy" class="href iam_policy">minimum required permissions</a>._
+
+<div id="iam-policy" class="popup mfp-hide">
+  <h2>Setting the Bucket Permissions</h2>
+  <p>In order to ensure that your user has the minimum required permissions for Infinit to work, you should create a new <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html" target="_blank"><strong>IAM policy</strong></a> for the user.</p>
+  <p>Using the AWS console, open "Identity and Access Management". From there you can create a new policy using the JSON shown below. Ensure that you correctly set the <em>bucket-name</em>.</p>
+  <pre><code>{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+          "Effect": "Allow",
+          "Action": "s3:*",
+          "Resource": [
+              "arn:aws:s3:::bucket-name",
+              "arn:aws:s3:::bucket-name/*"
+          ]
+      }
+  ]
+}
+  </code></pre>
+</div>
 
 ### List credentials ###
 
@@ -240,6 +260,8 @@ The following creates a storage resource which uses a folder of an Amazon S3 buc
 $> infinit-storage --create --s3 --name s3 --account s3-user --region eu-central-1 --bucket my-s3-bucket --path blocks-folder
 Created storage "s3".
 ```
+
+_**IMPORTANT**: The AWS user requires the correct <a href="#iam-policy" class="href iam_policy">permissions</a> for the S3 bucket, otherwise you will encounter `PermissionDenied` errors when mounting the volume. You can set the correct permissions at any time._
 
 The list of supported cloud services is continually evolving and can be seen by using `--create --help`. Enterprise storage solutions such as <a href="https://cloud.google.com/storage">Google Cloud Storage</a> and <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported. If you would like any others, [let us know](http://infinit-sh.uservoice.com).
 

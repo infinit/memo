@@ -28,6 +28,14 @@ namespace infinit
         public:
           typedef Paxos Self;
           typedef Consensus Super;
+          typedef
+          athena::paxos::Client<std::shared_ptr<blocks::Block>, int, Address>
+          PaxosClient;
+          typedef athena::paxos::Server<
+            std::shared_ptr<blocks::Block>, int, Address>
+          PaxosServer;
+          typedef elle::Option<std::shared_ptr<blocks::Block>,
+                               Paxos::PaxosClient::Quorum> Value;
 
         /*-------------.
         | Construction |
@@ -46,6 +54,8 @@ namespace infinit
         public:
           void
           rebalance(Address address);
+          void
+          rebalance(Address address, PaxosClient::Quorum const& ids);
         protected:
           virtual
           void
@@ -58,6 +68,18 @@ namespace infinit
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
+          void
+          _rebalance(PaxosClient& client, Address address);
+          void
+          _rebalance(PaxosClient& client,
+                     Address address,
+                     PaxosClient::Quorum const& ids,
+                     int version);
+        private:
+          PaxosClient
+          _client(Address const& addr);
+          std::pair<PaxosServer::Quorum, int>
+          _latest(PaxosClient& client);
 
         /*--------.
         | Factory |
@@ -71,15 +93,6 @@ namespace infinit
         | Peer |
         `-----*/
         public:
-          typedef
-          athena::paxos::Client<std::shared_ptr<blocks::Block>, int, Address>
-          PaxosClient;
-          typedef athena::paxos::Server<
-            std::shared_ptr<blocks::Block>, int, Address>
-          PaxosServer;
-          typedef elle::Option<std::shared_ptr<blocks::Block>,
-                               Paxos::PaxosClient::Quorum> Value;
-
           class RemotePeer
             : public doughnut::Remote
           {
@@ -208,6 +221,21 @@ namespace infinit
             void
             serialize(elle::serialization::Serializer& s) override;
           };
+        };
+
+        struct BlockOrPaxos
+        {
+          BlockOrPaxos(blocks::Block& b);
+          BlockOrPaxos(Paxos::LocalPeer::Decision* p);
+          BlockOrPaxos(elle::serialization::SerializerIn& s);
+          std::unique_ptr<
+            blocks::Block, std::function<void(blocks::Block*)>> block;
+          std::unique_ptr<
+            Paxos::LocalPeer::Decision,
+            std::function<void(Paxos::LocalPeer::Decision*)>> paxos;
+          void
+          serialize(elle::serialization::Serializer& s);
+          typedef infinit::serialization_tag serialization_tag;
         };
       }
     }

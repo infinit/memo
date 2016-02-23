@@ -47,6 +47,51 @@ is_group(std::string const& obj)
   return obj.length() > 0 && obj[0] == group_prefix;
 }
 
+typedef boost::optional<std::vector<std::string>> OptVecStr;
+
+static
+OptVecStr
+collate_users(OptVecStr const& combined,
+              OptVecStr const& users,
+              OptVecStr const& admins,
+              OptVecStr const& groups)
+{
+  if (!combined && !users && !admins && !groups)
+    return boost::none;
+  std::vector<std::string> res;
+  if (combined)
+  {
+    for (auto c: combined.get())
+      res.push_back(c);
+  }
+  if (users)
+  {
+    for (auto u: users.get())
+      res.push_back(u);
+  }
+  if (admins)
+  {
+    for (auto a: admins.get())
+    {
+      if (a[0] == admin_prefix)
+        res.push_back(a);
+      else
+        res.push_back(elle::sprintf("%s%s", admin_prefix, a));
+    }
+  }
+  if (groups)
+  {
+    for (auto g: groups.get())
+    {
+      if (g[0] == group_prefix)
+        res.push_back(g);
+      else
+        res.push_back(elle::sprintf("%s%s", group_prefix, g));
+    }
+  }
+  return res;
+}
+
 static
 std::string
 public_key_from_username(std::string const& username)
@@ -371,7 +416,9 @@ COMMAND(set)
       elle::sprintf("mode must be one of: %s", allowed_modes));
   }
   auto users_ = optional<std::vector<std::string>>(args, "user");
-  auto users = users_ ? users_.get() : std::vector<std::string>();
+  auto groups = optional<std::vector<std::string>>(args, "group");
+  auto combined = collate_users(users_, boost::none, boost::none, groups);
+  auto users = combined ? combined.get() : std::vector<std::string>();
   auto mode_ = optional(args, "mode");
   auto mode = mode_ ? mode_.get() : "";
   it = std::find(allowed_modes.begin(), allowed_modes.end(), mode);
@@ -382,6 +429,8 @@ COMMAND(set)
   }
   if (!mode.empty() && users.empty())
     throw CommandLineError("must specify user when setting mode");
+  if (!users.empty() && mode.empty())
+    throw CommandLineError("must specify a mode for users");
   bool inherit = flag(args, "enable-inherit");
   bool disinherit = flag(args, "disable-inherit");
   if (inherit && disinherit)
@@ -416,51 +465,6 @@ COMMAND(set)
         set_action, path, users, mode, omode, inherit, disinherit, verbose, fallback);
     }
   }
-}
-
-typedef boost::optional<std::vector<std::string>> OptVecStr;
-
-static
-OptVecStr
-collate_users(OptVecStr const& combined,
-              OptVecStr const& users,
-              OptVecStr const& admins,
-              OptVecStr const& groups)
-{
-  if (!combined && !users && !admins && !groups)
-    return boost::none;
-  std::vector<std::string> res;
-  if (combined)
-  {
-    for (auto c: combined.get())
-      res.push_back(c);
-  }
-  if (users)
-  {
-    for (auto u: users.get())
-      res.push_back(u);
-  }
-  if (admins)
-  {
-    for (auto a: admins.get())
-    {
-      if (a[0] == admin_prefix)
-        res.push_back(a);
-      else
-        res.push_back(elle::sprintf("%s%s", admin_prefix, a));
-    }
-  }
-  if (groups)
-  {
-    for (auto g: groups.get())
-    {
-      if (g[0] == group_prefix)
-        res.push_back(g);
-      else
-        res.push_back(elle::sprintf("%s%s", group_prefix, g));
-    }
-  }
-  return res;
 }
 
 static
@@ -639,6 +643,7 @@ main(int argc, char** argv)
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "user,u", value<std::vector<std::string>>(), elle::sprintf(
           "users and groups (prefix: %s<group>)", group_prefix) },
+        { "group", value<std::vector<std::string>>(), "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "others-mode,o", value<std::string>(), "access mode for everybody: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
