@@ -39,6 +39,7 @@ ELLE_TEST_SCHEDULED(memory)
   BOOST_CHECK_THROW(r.cache.fetch(addr), infinit::model::MissingBlock);
   auto okb = r.dht.make_block<infinit::model::blocks::MutableBlock>(
     elle::Buffer("data", 4));
+  okb->seal(1);
   r.instrument.add(*okb);
   BOOST_CHECK_EQUAL(r.cache.fetch(okb->address())->data(), okb->data());
   r.instrument.fetched().connect(
@@ -47,6 +48,8 @@ ELLE_TEST_SCHEDULED(memory)
       BOOST_FAIL(elle::sprintf("block %f should have been cached", addr));
     });
   BOOST_CHECK_EQUAL(r.cache.fetch(okb->address())->data(), okb->data());
+  BOOST_CHECK(!r.cache.fetch(okb->address(), 1));
+  BOOST_CHECK(r.cache.fetch(okb->address(), 0));
 }
 
 ELLE_TEST_SCHEDULED(disk)
