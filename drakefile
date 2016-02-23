@@ -708,6 +708,7 @@ def configure(
   tests_names = [
     ('backward-compatibility', []),
     ('consensus/async', []),
+    ('consensus/cache', []),
     ('doughnut', []),
     ('faith', []),
     ('rpc', []),
