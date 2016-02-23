@@ -152,14 +152,11 @@ namespace infinit
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
             {
-              if (dynamic_cast<blocks::MutableBlock*>(res.get()))
-              {
-                this->_cache.emplace(res->clone());
-              }
-              else if (_disk_cache_size)
-              {
+              if (this->_disk_cache_size &&
+                  dynamic_cast<blocks::ImmutableBlock*>(res.get()))
                 this->_disk_cache_push(res);
-              }
+              else
+                this->_cache.emplace(res->clone());
             }
             return res;
           }
