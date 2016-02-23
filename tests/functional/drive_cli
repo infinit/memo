@@ -218,7 +218,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
            '--as', 'user',
            '--network', 'network',
            '--user', beyond.hub_delegate_user['name']])
-  # Still doesn't work because the passport is not '--allow-sign'
+  # Still doesn't work because the passport is not '--allow-create-passport'
   try:
     bob.run(['infinit-drive', '--invite',
              '--name', 'drive',
@@ -227,9 +227,8 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
              '--push'])
     unreachable()
   except Exception as e:
-    assertIn(
-      'Missing --allow-sign flag for %s' % beyond.hub_delegate_user['name'],
-      e.args[0])
+    assertIn('Missing --allow-create-passport flag for %s' %
+             beyond.hub_delegate_user['name'], e.args[0])
   bob.run(['infinit-passport', '--delete',
            '--as', 'user',
            '--network', 'network',
@@ -237,7 +236,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   bob.run(['infinit-passport', '--create',
            '--as', 'user',
            '--network', 'network',
-           '--allow-sign',
+           '--allow-create-passport',
            '--user', beyond.hub_delegate_user['name']])
   def register(email):
     name = email.split('@')[0]

@@ -109,7 +109,7 @@ try:
     from infinit.beyond.gcs import GCS
     gcs = GCS(login = gcs_login,
               key = gcs_key,
-              bucket_ns = 'dev')
+              bucket_ns = 'sh_infinit_beyond_dev')
   else:
     gcs = None
   with infinit.beyond.couchdb.CouchDB(

@@ -702,7 +702,7 @@ class AppendConflictResolver
   std::unique_ptr<blocks::Block>
   operator () (blocks::Block& old,
                blocks::Block& current,
-               infinit::model::StoreMode mode)
+               infinit::model::StoreMode mode) override
   {
     auto res = std::dynamic_pointer_cast<blocks::MutableBlock>(current.clone());
     res->data([] (elle::Buffer& data) { data.append("B", 1); });

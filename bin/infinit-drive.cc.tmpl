@@ -216,8 +216,8 @@ COMMAND(invite)
     static const std::string beyond_user_name = "${beyond_delegate_user}";
     static const std::string error_msg = elle::sprintf(
       "ERROR: In order to invite users by email, you must create a passport "
-      "for \"%s\"\nwith the --allow-sign option.\nYou must then add the user "
-      "to the DHT using infinit-acl --register\n\n", beyond_user_name);
+      "for \"%s\"\nwith the --allow-create-passport option.\nYou must then add "
+      "the user to the DHT using infinit-acl --register\n\n", beyond_user_name);
     try
     {
       auto delegate_passport =
@@ -226,7 +226,8 @@ COMMAND(invite)
       {
         elle::fprintf(std::cerr, error_msg);
         throw elle::Error(
-          elle::sprintf("Missing --allow-sign flag for %s", beyond_user_name));
+          elle::sprintf("Missing --allow-create-passport flag for %s",
+                        beyond_user_name));
       }
     }
     catch (MissingResource const& e)
