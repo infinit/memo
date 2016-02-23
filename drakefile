@@ -708,6 +708,7 @@ def configure(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
     infinit_lib_tests = infinit_lib
+    infinit_lib_tests_consensus = infinit_lib
   else:
     cxx_config_tests.lib('shlwapi')
     cxx_config_tests.lib('ws2_32')
