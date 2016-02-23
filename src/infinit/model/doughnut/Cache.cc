@@ -338,12 +338,13 @@ namespace infinit
           }
         }
 
-        Cache::CachedCHB::CachedCHB(Address address, uint64_t size, clock::time_point last_used)
-        : _address(address)
-        , _size(size)
-        , _last_used(last_used)
-        {
-        }
+        Cache::CachedCHB::CachedCHB(Address address,
+                                    uint64_t size,
+                                    clock::time_point last_used)
+          : _address(address)
+          , _size(size)
+          , _last_used(last_used)
+        {}
 
         Cache::CachedBlock::CachedBlock(std::unique_ptr<blocks::Block> block)
           : _block(std::move(block))
