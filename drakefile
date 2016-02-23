@@ -709,6 +709,7 @@ def configure(
     ('backward-compatibility', []),
     ('consensus/async', []),
     ('consensus/cache', []),
+    ('bandwidth', []),
     ('doughnut', []),
     ('faith', []),
     ('rpc', []),
