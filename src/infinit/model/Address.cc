@@ -94,12 +94,18 @@ namespace infinit
     }
 
     Address
-    Address::random(Flags flags)
+    Address::random()
     {
       auto buf =
         cryptography::random::generate<elle::Buffer>(sizeof(Address::Value));
       ELLE_ASSERT_GTE(buf.size(), sizeof(Address::Value));
-      return Address(buf.contents(), flags, true);
+      return Address(buf.contents());
+    }
+
+    Address
+    Address::random(Flags flags)
+    {
+      return Address(Address::random().value(), flags, true);
     }
 
     Address const Address::null;
