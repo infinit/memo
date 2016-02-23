@@ -378,10 +378,10 @@ $> infinit-passport --create --as alice --network cluster --user bob
 Locally created passport "alice/cluster: bob".
 ```
 
-You can restrict the credentials given by this passport by using one of the following options:
+You can restrict the network permissions given by a passport by creating it with the following options:
 
-- `--deny-write`: Passport grants read-only access to the network.
-- `--deny-storage`: Passport does not allow user to contribute any storage.
+- `--deny-write`: Passport grants read-only access to the network. Note that this option supersedes the ACL of a volume and that a storage node with this flag will not be able to rebalance blocks.
+- `--deny-storage`: Passport does not allow user to contribute any storage to the network.
 
 Now that the passport has been created, read the <a href="#distribute-a-passport">Distribute a passport</a> section to learn how to distribute it to the invited user.
 
@@ -426,6 +426,21 @@ alice/cluster: bob
 
 That's it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.
 
+### Create a delegate passport ###
+
+A special type of passport can be created which allows a user to create passports for the network. This is done in two steps. The first is to create the passport with the `--allow-sign` flag.
+
+```
+$> infinit-passport --create --as alice --network cluster --user bob --allow-sign --push
+Locally created passport "alice/cluster: bob".
+```
+
+The second is to *register* the user's public key. This can only be done once you have created a volume on the network as you will be required to mount the volume and use the `infinit-acl` binary to register the user.
+
+```
+$> infinit-acl --register --network cluster --user bob --path /path/to/mountpoint
+```
+
 Volume
 ----------
 
@@ -443,6 +458,10 @@ Locally created volume "alice/shared".
 ```
 
 _**NOTE**: You may have noticed that the name of the network is sometimes prepended with the username of its owner e.g "alice/cluster". This fully-qualified name distinguishes objects that you own from the ones that you don't. When manipulating objects of which you are the owner, you will not need to use the fully-qualified name as the command-line tools will automatically search in the user's namespace._
+
+#### Default permissions ####
+
+A volume can be created with _default permissions_ of either read-only or read-write. These permissions apply to anyone who has a passport for the network. The one exception to this is if a user has a passport with the `deny write` flag, they will not be able to write to read-write volumes.
 
 ### Publish a volume ###
 
@@ -771,7 +790,7 @@ Locally created drive "alice/workspace".
 Remotely pushed drive "alice/workspace".
 ```
 
-Note that the `--push` option is included to publish the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-users">inviting</a> to join.
+Note that the `--push` option is included to publish the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-existing-users">inviting</a> to join.
 
 ### List the drives ###
 
@@ -784,7 +803,7 @@ $> infinit-drive --list
 alice/workspace: ok
 ```
 
-### Invite users ###
+### Invite existing users ###
 
 It is now time to invite users to join the drive you've created for them.
 
@@ -813,6 +832,38 @@ Remotely pushed invitations "alice/workspace: bob, charlie".
 ```
 
 Without any `--user` specified the `--invite` command will push each pending invitations to the Hub, sending the notification emails as a consequence.
+
+### Invite new users ###
+
+Inviting people who have not yet created a user is complex as the process of generating the user's key pair is deferred.
+
+To ensure that invited users have access to the drive immediately, you will need to either have created a volume with read-write [default permissions](#default-permissions) or mount the volume and set [world read-write permissions](#world-readability-writability).
+
+The next step is to [create a delegate passport](#create-a-delegate-passport) for the Hub. This will allow the Hub to create passports for users to access your network when they sign up.
+
+```
+$> infinit-user --fetch --as alice --name hub
+Fetched user "hub".
+$> infinit-passport --create --as alice --network cluster --user hub --allow-sign --push
+Locally created passport "alice/cluster: hub".
+Remotely pushed passport "alice/cluster: hub".
+```
+
+The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the `infinit-acl` binary can be used to write the block.
+
+```
+$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
+...
+$> infinit-acl --register --network cluster --user hub --path /mnt/shared/
+```
+
+The user can now be invited using their email address. They will receive an email asking them to install the graphical client and sign up. Note that the Hub will only generate their passport once they have confirmed their email address.
+
+```
+$> infinit-drive --invite --as alice --name --workspace --email new_user@infinit.sh --push
+Locally created invitation "alice/workspace: new_user@infinit.sh".
+Remotely pushed invitation "alice/workspace: new_user@infinit.sh".
+```
 
 ### Join a drive ###
 
