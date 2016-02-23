@@ -58,6 +58,18 @@ $(document).ready(function() {
     $(window).scroll(a);
   }
 
+  if ($('body').hasClass('doc_reference')) {
+    $('.iam_policy').magnificPopup({
+      type:'inline',
+      midClick: true,
+      mainClass: 'mfp-fade'
+    });
+
+    $('.iam_policy').click(function() {
+      $('#iam-policy').show();
+    });
+  }
+
 
   if ($('body').hasClass('doc_get_started') ) {
     $('a.button').click(function() {
