@@ -17,9 +17,10 @@ class GCS:
   def __init__(self, login, key, bucket_ns = None):
     self.__login = login
     self.__key = key
-    self.__bucket_ns = 'sh_infinit_beyond_'
     if bucket_ns is not None:
-      self.__bucket_ns += bucket_ns + '_'
+      self.__bucket_ns = bucket_ns + '_'
+    else:
+      self.__bucket_ns = ''
 
   def __bucket(self, name):
     return self.__bucket_ns + name
