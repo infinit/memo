@@ -6,7 +6,7 @@
 
 ## [0.5.0]
 
-Rebalancing and passport delegation.
+Rebalancing protocol and passport delegation.
 
 ### Added
 
@@ -22,12 +22,16 @@ Rebalancing and passport delegation.
   file.
 - Resolve hostnames passed to `--peer` options.
 - Add `--port-file` to output endpoints listened on to a file.
+- Add `infinit-block`, an debug utility to pretty print a block from
+  the disk.
+- Always show network compatibilty version in the logs.
 
 ### Changed
 
 - Ask confirmation in `infinit-user --delete`.
 - Replace `--account` with `--name` in `infinit-credential` to be
   consistent with other command line tools.
+- Greatly compact the log output.
 
 ### Fixed
 

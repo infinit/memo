@@ -141,6 +141,7 @@ def configure(
   python_prefix = drake.Path('lib/python%s' % python.version)
   oauth2client = drake.PythonModule(
     'oauth2client', python_prefix,
+    version = '1.5.2', # Upgrade to the new stable.
     dependencies = [
       'httplib2',
       'httplib2-0.9.2-py3.4.egg-info',
@@ -245,6 +246,7 @@ def configure(
   for test_name in [
       'auth',
       'demo',
+      'entity',
       'full-flow',
       'oauth-dropbox',
       'emails',
