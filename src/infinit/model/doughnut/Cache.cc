@@ -220,8 +220,7 @@ namespace infinit
           auto sz = boost::filesystem::file_size(path);
           this->_disk_cache.emplace(CachedCHB{block->address(), sz, now()});
           this->_disk_cache_used += sz;
-          ELLE_DEBUG("Adding %s to disk cache for %s, total %s",
-                     path, sz, this->_disk_cache_used);
+          ELLE_DEBUG("add %f to disk cache (%s bytes)", block->address(), sz);
           while (this->_disk_cache_used > this->_disk_cache_size)
           {
             ELLE_ASSERT(!this->_disk_cache.empty());
@@ -247,6 +246,7 @@ namespace infinit
         {
           if (!this->_disk_cache_path)
             return;
+          ELLE_TRACE_SCOPE("%s: reload disk cache", this);
           int count = 0;
           for (auto it = boost::filesystem::directory_iterator(*this->_disk_cache_path);
               it != boost::filesystem::directory_iterator();
@@ -258,8 +258,8 @@ namespace infinit
             this->_disk_cache_used += sz;
             ++count;
           }
-          ELLE_TRACE("Indexed %s blocks from %s totalling %s bytes",
-                     count, *this->_disk_cache_path, this->_disk_cache_used);
+          ELLE_TRACE("loaded %s blocks totalling %s bytes",
+                     count, this->_disk_cache_used);
         }
 
         void
