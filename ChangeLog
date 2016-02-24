@@ -11,7 +11,6 @@ Rebalancing protocol and passport delegation.
 ### Added
 
 - Add dynamic block rebalancing.
-- Support Google Cloud Storage as storage backend.
 - Enable to disable writing to the DHT or acting as storage when
   signing a passport for a node.
 - Enable to delegate further passport signature when signing a
@@ -22,8 +21,6 @@ Rebalancing protocol and passport delegation.
   file.
 - Resolve hostnames passed to `--peer` options.
 - Add `--port-file` to output endpoints listened on to a file.
-- Add `infinit-block`, an debug utility to pretty print a block from
-  the disk.
 - Always show network compatibilty version in the logs.
 
 ### Changed
