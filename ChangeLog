@@ -1,7 +1,19 @@
 # Change Log
 
 
-## [Unreleased]
+## [0.5.1] - 2016-02-25
+
+Hotfix for AWS s3 storage in us-east-1 region.
+
+### Added
+
+- Add `infinit-block`, a debug utility to pretty print a block from
+  the disk.
+
+### Fixed
+
+- Fix AWS S3 storage on us-east-1 region.
+- Fix Google cloud storage and Google drive credentials mixup.
 
 
 ## [0.5.0] - 2016-02-23
