@@ -602,6 +602,7 @@ def configure(
       drake.nodes(
         'sendwithus_python/sendwithus/__init__.py',
         'sendwithus_python/sendwithus/encoder.py',
+        'sendwithus_python/sendwithus/exceptions.py',
         'sendwithus_python/sendwithus/version.py',
       ),
     )
