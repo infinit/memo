@@ -158,7 +158,7 @@ COMMAND(create)
   {
     auto root = optional(args, "path");
     if (!root)
-      root = elle::sprintf(".infinit_%s", name);
+      root = elle::sprintf("storage_%s", name);
     auto account_name = mandatory(args, "account", "Dropbox account");
     auto account = ifnt.credentials_dropbox(account_name);
     config =
@@ -183,7 +183,7 @@ COMMAND(create)
   else if (args.count("ssh"))
   {
     auto host = mandatory(args, "ssh-host", "SSH remote host");
-    auto path = mandatory(args, "ssh-path", "Remote path to store into");
+    auto path = mandatory(args, "path", "Remote path to store into");
     config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
       name, host, path, capacity);
   }
@@ -277,24 +277,26 @@ main(int argc, char** argv)
     ("dropbox", "store data in a Dropbox")
     ("google-drive", "store data in a Google Drive")
     ;
+  Mode::OptionsDescription cloud_options("Cloud storage options");
+  cloud_options.add_options()
+    ("account", value<std::string>(), "account name to use")
+    ("bucket", value<std::string>(), "bucket to use")
+  ;
   Mode::OptionsDescription s3_options("Amazon S3 storage options");
   s3_options.add_options()
-    ("account", value<std::string>(), "S3 account name to use")
-    ("bucket", value<std::string>(), "S3 bucket to use")
     ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
     ("region", value<std::string>(), "AWS region to use")
   ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");
   ssh_storage_options.add_options()
     ("ssh-host", value<std::string>(), "hostname to connect to")
-    ("ssh-path", value<std::string>(), "remote path to store blocks into")
     ;
   std::string default_locations = elle::sprintf(
     "folder where blocks are stored (default:"
     "\n  filesystem: %s"
     "\n  GCS: <name>_blocks"
     "\n  S3: <name>_blocks"
-    // "\n  Dropbox: .infinit_<name>"
+    // "\n  Dropbox: storage_<name>"
     // "\n  Google Drive: .infinit_<name>"
     ")", (infinit::xdg_data_home() / "blocks/<name>"));
   Modes modes {
@@ -312,6 +314,7 @@ main(int argc, char** argv)
       },
       {
         storage_types,
+        cloud_options,
         s3_options,
         ssh_storage_options,
       },
