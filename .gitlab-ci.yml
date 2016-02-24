@@ -8,6 +8,7 @@ variables:
 x86_64-trusty-gcc4:
   stage: build
   script:
+    - git submodule sync
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
@@ -27,6 +28,7 @@ x86_64-trusty-gcc4:
 x86_64-jessie-gcc4:
   stage: build
   script:
+    - git submodule sync
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
@@ -46,6 +48,7 @@ x86_64-jessie-gcc4:
 # i386-jessie-gcc4:
 #   stage: build
 #   script:
+#     - git submodule sync
 #     - git submodule update --init --recursive
 #     - git fetch origin --tags
 #     - mkdir -p ../fs-build ../fs-install
@@ -61,6 +64,7 @@ x86_64-jessie-gcc4:
 # x86_64-windows-mingw4:
 #   stage: build
 #   script:
+#     - git submodule sync
 #     - git submodule update --init --recursive
 #     - git fetch origin --tags
 #     - mkdir -p ../fs-build ../fs-install
@@ -76,6 +80,7 @@ x86_64-jessie-gcc4:
 # i686-windows-mingw4:
 #   stage: build
 #   script:
+#     - git submodule sync
 #     - git submodule update --init --recursive
 #     - git fetch origin --tags
 #     - mkdir -p ../fs-build ../fs-install
@@ -91,6 +96,7 @@ x86_64-jessie-gcc4:
 x86_64-osx-clang:
   stage: build
   script:
+    - git submodule sync
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build
@@ -113,6 +119,7 @@ x86_64-osx-clang:
 website:
   stage: build
   script:
+    - git submodule sync
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-website
