@@ -520,21 +520,21 @@ namespace infinit
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
       std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
 #ifdef INFINIT_PRODUCTION_BUILD
-      // bool const production_build = true;
+      bool const production_build = true;
 #else
-      // bool const production_build = false;
+      bool const production_build = false;
 #endif
-      // FIXME: reenable crash reporter
-      // if (production_build &&
-      //     elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
-      //     elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
-      // {
-      //   std::string crash_url =
-      //     elle::sprintf("%s/crash/report",
-      //     crash_host.length() ? crash_host : beyond());
-      //   crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
-      //   crash_url, xdg_cache_home() / "crashes");
-      // }
+      if (production_build &&
+          elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
+          elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
+      {
+        std::string crash_url =
+          elle::sprintf("%s/crash/report",
+          crash_host.length() ? crash_host : beyond());
+        auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+        crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
+          crash_url, dumps_path);
+      }
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
