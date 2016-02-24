@@ -623,7 +623,26 @@ def configure(
           'debian': rule_debian
         }
       )
+      crash_test_libs = drake.copy([
+          crash_reporter_lib,
+          cryptography_lib,
+          elle_lib,
+          reactor_lib,
+        ] + additional_libs,
+        'tests/functional/lib', True)
+      crash_test_libs += drake.copy([
+          elle.boost.program_options_dynamic,
+          elle.boost.filesystem_dynamic,
+          elle.boost.regex_dynamic,
+        ], 'tests/functional/lib', True)
+      crash_test_bin = drake.cxx.Executable(
+        'tests/functional/bin/crasher', [
+          drake.node('tests/functional/bin/crasher.cc')
+        ] + crash_test_libs,
+        cxx_toolkit,
+        bin_cxx_config)
       for test_name in [
+          'crash-reporter',
           'errors',
           'single-user-two-devices-shared-storage',
           'passport-restrictions',
@@ -641,6 +660,7 @@ def configure(
       ]:
         test = drake.node('tests/functional/%s' % test_name)
         rule_functional_tests << test
+        test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
         env = {
@@ -648,6 +668,8 @@ def configure(
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
           'PATH': ':'.join([
             str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                 absolute = True)),
+            str(drake.path_build(crash_test_bin.path(True).dirname(),
                                  absolute = True)),
             os.environ.get('PATH', '')
           ])
