@@ -211,7 +211,7 @@ COMMAND(list)
   list_(e, s::aws, s::credentials_aws, "AWS");
   list_(e, s::dropbox, s::credentials_dropbox, "Dropbox");
   list_(e, s::google, s::credentials_google, "Google");
-  list_(e, s::gcs, s::credentials_gcs, "gcs");
+  list_(e, s::gcs, s::credentials_gcs, "GCS");
 }
 
 int
@@ -222,7 +222,7 @@ main(int argc, char** argv)
   Mode::OptionsDescription services_options("Services");
   services_options.add_options()
     ("aws", "Amazon Web Services account credentials")
-    ("gcs", "Google cloud storage credentials")
+    ("gcs", "Google Cloud Storage credentials")
     ;
   Mode::OptionsDescription hidden_service_options("Hidden credential types");
   hidden_service_options.add_options()
