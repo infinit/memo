@@ -130,7 +130,7 @@ COMMAND(create)
       root = elle::sprintf("%s_blocks", name);
     auto bucket = mandatory(args, "bucket");
     auto account_name = mandatory(args, "account");
-    auto account = ifnt.credentials_google(account_name);
+    auto account = ifnt.credentials_gcs(account_name);
     config =
       elle::make_unique<infinit::storage::GCSConfig>
       (name, bucket, *root, self_user(ifnt, {}).name, account->refresh_token,
