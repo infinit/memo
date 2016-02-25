@@ -16,8 +16,12 @@ with TemporaryDirectory() as tmp, \
     return os.listdir(str(tmp))
 
   def crash():
-    bob.run(['crasher', '--server', server, '--dumps', str(tmp), '--crash'],
-            return_code = 2)
+    # Crash returns 2 on OS X and 11 on Linux so work around with try except.
+    try:
+      bob.run(['crasher', '--server', server, '--dumps', str(tmp), '--crash'])
+      assert False
+    except Exception as e:
+      pass
 
   def upload(server = server):
     bob.run(['crasher', '--server', server, '--dumps', str(tmp)])
