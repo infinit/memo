@@ -1029,7 +1029,10 @@ namespace rebalancing
       {
         int res = 0;
         for (auto const& m: elle::unconst(g))
+        {
+          (void)m;
           ++res;
+        }
         return res;
       };
     auto op = infinit::overlay::OP_FETCH;
