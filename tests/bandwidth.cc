@@ -11,13 +11,14 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.bandwidth-test");
 
 ELLE_TEST_SCHEDULED(bazillion_small_files)
 {
-  DHT server_a;
-  DHT server_b;
-  DHT server_c;
+  auto k = infinit::cryptography::rsa::keypair::generate(512);
+  DHT server_a(owner = k);
+  DHT server_b(owner = k);
+  DHT server_c(owner = k);
   server_a.overlay->connect(*server_b.overlay);
   server_a.overlay->connect(*server_c.overlay);
   server_b.overlay->connect(*server_c.overlay);
-  DHT client(storage = nullptr);
+  DHT client(keys = k, storage = nullptr);
   client.overlay->connect(*server_a.overlay);
   client.overlay->connect(*server_b.overlay);
   client.overlay->connect(*server_c.overlay);
@@ -35,6 +36,7 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
     memset(contents.mutable_contents(), 0xfd, contents.size());
     handle->write(contents, contents.size(), 0);
     handle->close();
+    root->child(elle::sprintf("%04s", i))->unlink();
   }
 }
 

@@ -34,6 +34,19 @@ namespace blocks = infinit::model::blocks;
 namespace dht = infinit::model::doughnut;
 using namespace infinit::storage;
 
+NAMED_ARGUMENT(keys_a);
+NAMED_ARGUMENT(keys_b);
+NAMED_ARGUMENT(keys_c);
+NAMED_ARGUMENT(id_a);
+NAMED_ARGUMENT(id_b);
+NAMED_ARGUMENT(id_c);
+NAMED_ARGUMENT(storage_a);
+NAMED_ARGUMENT(storage_b);
+NAMED_ARGUMENT(storage_c);
+NAMED_ARGUMENT(version_a);
+NAMED_ARGUMENT(version_b);
+NAMED_ARGUMENT(version_c);
+
 static
 int
 key_size()

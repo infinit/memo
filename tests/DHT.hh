@@ -123,23 +123,12 @@ protected:
 
 NAMED_ARGUMENT(paxos);
 NAMED_ARGUMENT(keys);
-NAMED_ARGUMENT(keys_a);
-NAMED_ARGUMENT(keys_b);
-NAMED_ARGUMENT(keys_c);
+NAMED_ARGUMENT(owner);
 NAMED_ARGUMENT(id);
-NAMED_ARGUMENT(id_a);
-NAMED_ARGUMENT(id_b);
-NAMED_ARGUMENT(id_c);
 NAMED_ARGUMENT(storage);
-NAMED_ARGUMENT(storage_a);
-NAMED_ARGUMENT(storage_b);
-NAMED_ARGUMENT(storage_c);
 NAMED_ARGUMENT(make_overlay);
 NAMED_ARGUMENT(make_consensus);
 NAMED_ARGUMENT(version);
-NAMED_ARGUMENT(version_a);
-NAMED_ARGUMENT(version_b);
-NAMED_ARGUMENT(version_c);
 
 class DHT
 {
@@ -150,7 +139,8 @@ public:
     namespace ph = std::placeholders;
     elle::named::prototype(
       paxos = true,
-      ::keys = infinit::cryptography::rsa::keypair::generate(512),
+      keys = infinit::cryptography::rsa::keypair::generate(512),
+      owner = boost::optional<infinit::cryptography::rsa::KeyPair>(),
       id = infinit::model::Address::random(0), // FIXME
       storage = elle::make_unique<infinit::storage::Memory>(),
       version = boost::optional<elle::Version>(),
@@ -163,6 +153,7 @@ public:
       }
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
+                     boost::optional<infinit::cryptography::rsa::KeyPair> owner,
                      infinit::model::Address id,
                      std::unique_ptr<infinit::storage::Storage> storage,
                      boost::optional<elle::Version> version,
@@ -178,22 +169,23 @@ public:
                        )> make_consensus)
              {
                this-> init(paxos,
-                            std::move(keys),
-                            id,
-                            std::move(storage),
-                            version,
-                            std::move(make_consensus));
-              }, std::forward<Args>(args)...);
+                           keys,
+                           owner ? *owner : keys,
+                           id,
+                           std::move(storage),
+                           version,
+                           std::move(make_consensus));
+             }, std::forward<Args>(args)...);
   }
 
-  std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys;
   std::shared_ptr<dht::Doughnut> dht;
   Overlay* overlay;
 
 private:
   void
   init(bool paxos,
-       infinit::cryptography::rsa::KeyPair keys,
+       infinit::cryptography::rsa::KeyPair keys_,
+       infinit::cryptography::rsa::KeyPair owner,
        infinit::model::Address id,
        std::unique_ptr<infinit::storage::Storage> storage,
        boost::optional<elle::Version> version,
@@ -201,8 +193,8 @@ private:
          std::unique_ptr<dht::consensus::Consensus>(
            std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
   {
-    this->keys =
-      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys));
+    auto keys =
+      std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
     dht::Doughnut::ConsensusBuilder consensus;
     if (paxos)
       consensus =
@@ -218,8 +210,7 @@ private:
           return make_consensus(
             elle::make_unique<dht::consensus::Consensus>(dht));
         };
-    dht::Passport passport(
-      this->keys->K(), "network-name", *this->keys);
+    dht::Passport passport(keys->K(), "network-name", owner);
     auto make_overlay =
       [this] (
         infinit::model::doughnut::Doughnut& d,
@@ -232,8 +223,8 @@ private:
       };
     this->dht = std::make_shared<dht::Doughnut>(
       id,
-      this->keys,
-      this->keys->public_key(),
+      keys,
+      owner.public_key(),
       passport,
       consensus,
       infinit::model::doughnut::Doughnut::OverlayBuilder(make_overlay),
