@@ -78,8 +78,8 @@ struct Enabled
 {
   bool aws;
   bool dropbox;
-  bool google;
   bool gcs;
+  bool google;
   bool multi;
 };
 
@@ -88,12 +88,14 @@ enabled(boost::program_options::variables_map const& args)
 {
   int aws = args.count("aws") ? 1 : 0;
   int dropbox = args.count("dropbox") ? 1 : 0;
-  int google = args.count("google") ? 1 : 0;
   int gcs = args.count("gcs") ? 1 : 0;
-  if (!aws && !dropbox && !google && !gcs)
-    aws = dropbox = google = gcs = 1;
+  int google = args.count("google") ? 1 : 0;
+  if (!aws && !dropbox && !gcs && !google)
+    aws = dropbox = gcs = google = 1;
   return Enabled {
-    bool(aws), bool(dropbox), bool(google), bool(gcs), aws + dropbox + google > 1 };
+    bool(aws), bool(dropbox), bool(gcs), bool(google),
+    aws + dropbox + gcs + google > 1
+  };
 }
 
 template <typename T>
@@ -125,7 +127,10 @@ fetch_credentials(infinit::User const& user,
 COMMAND(fetch)
 {
   auto e = enabled(args);
-  if (((!e.dropbox && !e.google) || (e.dropbox ^ e.google)) && e.aws)
+  bool fetch_all = false;
+  if (e.aws && e.dropbox && e.gcs && e.google)
+    fetch_all = true;
+  if (e.aws && !fetch_all)
   {
     throw CommandLineError(elle::sprintf("AWS credentials are not stored on %s",
                            beyond(true)));
@@ -136,16 +141,21 @@ COMMAND(fetch)
       user, "dropbox", "Dropbox",
       [] (std::unique_ptr<infinit::OAuthCredentials> a)
       { ifnt.credentials_dropbox_add(std::move(a)); });
-  if (e.google)
-    fetch_credentials<infinit::OAuthCredentials>(
-      user, "google", "Google Drive",
-      [] (std::unique_ptr<infinit::OAuthCredentials> a)
-      { ifnt.credentials_google_add(std::move(a)); });
   if (e.gcs)
     fetch_credentials<infinit::OAuthCredentials>(
       user, "gcs", "Google Cloud Storage",
       [] (std::unique_ptr<infinit::OAuthCredentials> a)
       { ifnt.credentials_gcs_add(std::move(a)); });
+  if (e.google)
+    fetch_credentials<infinit::OAuthCredentials>(
+      user, "google", "Google Drive",
+      [] (std::unique_ptr<infinit::OAuthCredentials> a)
+      { ifnt.credentials_google_add(std::move(a)); });
+  if (!script_mode && fetch_all)
+  {
+    std::cout << "INFO: AWS credentials are not stored on " << beyond(true)
+              << " and so were not fetched" << std::endl;
+  }
   // FIXME: remove deleted ones
 }
 
@@ -178,10 +188,10 @@ SYMBOL(aws);
 SYMBOL(credentials_aws);
 SYMBOL(dropbox);
 SYMBOL(credentials_dropbox);
-SYMBOL(google);
-SYMBOL(credentials_google);
 SYMBOL(gcs);
 SYMBOL(credentials_gcs);
+SYMBOL(google);
+SYMBOL(credentials_google);
 
 template <typename Service, typename Fetch>
 void
@@ -212,6 +222,32 @@ COMMAND(list)
   list_(e, s::dropbox, s::credentials_dropbox, "Dropbox");
   list_(e, s::google, s::credentials_google, "Google");
   list_(e, s::gcs, s::credentials_gcs, "GCS");
+}
+
+COMMAND(delete_)
+{
+  auto account = mandatory(args, "name", "account name");
+  std::string service = "";
+  if (args.count("aws"))
+    service = "aws";
+  else if (args.count("dropbox"))
+    service = "dropbox";
+  else if (args.count("gcs"))
+    service = "gcs";
+  else if (args.count("google"))
+    service = "google";
+  if (service.empty())
+    throw CommandLineError("specify a service");
+  auto path = ifnt._credentials_path(service, account);
+  if (boost::filesystem::remove(path))
+  {
+    report_action("deleted", "credentials", account, std::string("locally"));
+  }
+  else
+  {
+    throw elle::Error(
+      elle::sprintf("File for credentials could not be deleted: %s", path));
+  }
 }
 
 int
@@ -263,6 +299,16 @@ main(int argc, char** argv)
       {services_options},
       {},
       {hidden_service_options},
+    },
+    {
+      "delete",
+      "Delete credentials locally",
+      &delete_,
+      "SERVICE --name NAME",
+      {
+        { "name,n", value<std::string>(), "account name" },
+      },
+      {services_options},
     },
   };
   return infinit::main("Infinit third-party credentials utility",
