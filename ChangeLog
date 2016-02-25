@@ -1,7 +1,7 @@
 # Change Log
 
 
-## [0.5.1] - 2016-02-25
+## [0.5.2] - 2016-02-25
 
 Hotfix for AWS s3 storage in us-east-1 region.
 
@@ -16,6 +16,11 @@ Hotfix for AWS s3 storage in us-east-1 region.
 - Fix Google cloud storage and Google drive credentials mixup.
 - Fixed some logs and error messages where only the first character of
   some strings was displayed.
+
+
+## [0.5.1] - YANKED
+
+Skipped release because of unrecognized version in RPCs.
 
 
 ## [0.5.0] - 2016-02-23
