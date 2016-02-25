@@ -1,34 +1,49 @@
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include <elle/printf.hh>
 #include <elle/serialization/binary.hh>
-#include <elle/serialization/json.hh>
 
-#include <reactor/scheduler.hh>
+ELLE_LOG_COMPONENT("infinit-block");
 
-#include <infinit/model/doughnut/consensus/Paxos.hh>
+#include <main.hh>
+
+infinit::Infinit ifnt;
+
+COMMAND(deserialize)
+{
+  auto paths =
+    mandatory<std::vector<std::string>>(args, "path", "path to block");
+  auto output = get_output(args);
+  for (auto const& path: paths)
+  {
+    boost::filesystem::ifstream f(path);
+    if (!f.good())
+    {
+      throw elle::Error(
+        elle::sprintf("unable to open for reading: %s", path));
+    }
+    elle::serialization::Context ctx;
+    ctx.set<infinit::model::doughnut::Doughnut*>(nullptr);
+    auto block = elle::serialization::binary::deserialize<
+      infinit::model::doughnut::consensus::BlockOrPaxos>(f, true, ctx);
+    elle::serialization::json::serialize(block, *output);
+  }
+}
 
 int
 main(int argc, char** argv)
 {
-  reactor::Scheduler sched;
-  reactor::Thread t(
-    sched, "infinit-block",
-    [&]
+  program = argv[0];
+  using boost::program_options::value;
+  Modes modes {
     {
-      for (int i = 1; i < argc; ++i)
+      "deserialize",
+      "Deserialized block",
+      &deserialize,
+      "--path PATHS",
       {
-        boost::filesystem::ifstream f(argv[i]);
-        if (!f.good())
-          throw elle::Error(
-            elle::sprintf("unable to open for reading: %s", argv[i]));
-        elle::serialization::Context ctx;
-        ctx.set<infinit::model::doughnut::Doughnut*>(nullptr);
-        auto block = elle::serialization::binary::deserialize<
-          infinit::model::doughnut::consensus::BlockOrPaxos>(f, true, ctx);
-        elle::serialization::json::serialize(block, std::cout);
-      }
-    });
-  sched.run();
+        { "path,p", value<std::vector<std::string>>(), "paths to blocks" },
+        option_output("block"),
+      },
+    },
+  };
+  return infinit::main("Infinit block debug utility", modes, argc, argv,
+                       std::string("path"));
 }
