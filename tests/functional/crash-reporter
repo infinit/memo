@@ -21,6 +21,8 @@ with TemporaryDirectory() as tmp, \
       bob.run(['crasher', '--server', server, '--dumps', str(tmp), '--crash'])
       assert False
     except Exception as e:
+      from time import sleep
+      sleep(2)
       pass
 
   def upload(server = server):
