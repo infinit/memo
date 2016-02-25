@@ -17,6 +17,7 @@
 #include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Group.hh>
+#include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/doughnut/UB.hh>
 
 
@@ -274,16 +275,28 @@ namespace infinit
     }
 
     void
-      Directory::statfs(struct statvfs * st)
+    Directory::statfs(struct statvfs * st)
+    {
+      memset(st, 0, sizeof(struct statvfs));
+      st->f_bsize = 32768;
+      st->f_frsize = 32768;
+      st->f_blocks = 1000000000;
+      st->f_bavail = 1000000000;
+      st->f_bfree = 1000000000;
+      st->f_fsid = 1;
+      auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+        this->_owner.block_store());
+      if (dht->local())
       {
-        memset(st, 0, sizeof(struct statvfs));
-        st->f_bsize = 32768;
-        st->f_frsize = 32768;
-        st->f_blocks = 1000000;
-        st->f_bavail = 1000000;
-        st->f_bfree = 1000000;
-        st->f_fsid = 1;
+        auto& storage = dht->local()->storage();
+        if (storage)
+        {
+          if (storage->capacity())
+            st->f_blocks = *storage->capacity() / 32768;
+          st->f_bavail = st->f_bfree = st->f_blocks - storage->usage() / 32768;
+        }
       }
+    }
 
     void
     Directory::_commit()
