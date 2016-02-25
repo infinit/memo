@@ -16,7 +16,7 @@ ELLE_TEST_SCHEDULED(move)
   reactor::network::TCPServer server;
   server.listen();
 
-  reactor::Thread server_thread(
+  reactor::Thread::unique_ptr server_thread(new reactor::Thread(
     "server",
     [&]
     {
@@ -27,7 +27,7 @@ ELLE_TEST_SCHEDULED(move)
               [] (int a, std::unique_ptr<int> b)
               { return elle::make_unique<int>(a + *b); }));
       s.serve(*socket);
-    });
+    }));
 
   reactor::network::TCPSocket stream("127.0.0.1", server.port());
   infinit::protocol::Serializer serializer(stream, false);
@@ -40,10 +40,8 @@ ELLE_TEST_SCHEDULED(move)
   }
   catch (std::exception const& e)
   {
-    ELLE_ERR("exception: %s", e.what());
-    BOOST_CHECK(false);
+    BOOST_FAIL(elle::sprintf("RPC exception: %s", e.what()));
   }
-  server_thread.terminate_now();
 }
 
 ELLE_TEST_SUITE()
