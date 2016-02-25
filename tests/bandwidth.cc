@@ -36,7 +36,7 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
     memset(contents.mutable_contents(), 0xfd, contents.size());
     handle->write(contents, contents.size(), 0);
     handle->close();
-    root->child(elle::sprintf("%04s", i))->unlink();
+    // root->child(elle::sprintf("%04s", i))->unlink();
   }
 }
 
