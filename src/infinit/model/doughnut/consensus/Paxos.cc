@@ -397,16 +397,17 @@ namespace infinit
           if (block)
           {
             ELLE_DEBUG("validate block")
-              if (auto res = block->validate()); else
+              if (auto res = block->validate(this->doughnut())); else
                 throw ValidationFailed(res.reason());
           }
           auto& decision = this->_load(address);
           auto& paxos = decision.paxos;
           if (block)
-            if (auto highest = paxos.highest_accepted_value())
+            if (auto previous = paxos.current_value())
             {
-              auto& val = highest->value.get<std::shared_ptr<blocks::Block>>();
-              auto valres = val->validate(*block);
+              auto valres = previous->value.
+                template get<std::shared_ptr<blocks::Block>>()->
+                validate(this->doughnut(), *block);
               if (!valres)
                 throw Conflict("peer validation failed", block->clone());
             }
@@ -431,6 +432,7 @@ namespace infinit
                                   Address address,
                                   Paxos::PaxosClient::Proposal const& p)
         {
+          BENCH("confirm.local");
           ELLE_TRACE_SCOPE("%s: confirm %f at proposal %s",
                            *this, address, p);
           auto& decision = this->_load(address);
@@ -438,11 +440,14 @@ namespace infinit
           {
             ELLE_DEBUG_SCOPE("store accepted paxos");
             BlockOrPaxos data(&decision);
-            this->storage()->set(
-              address,
-              elle::serialization::binary::serialize(
-                data, this->doughnut().version()),
-              true, true);
+            auto ser = [&]
+            {
+              BENCH("confirm.storage");
+              auto res = elle::serialization::binary::serialize(
+                data, this->doughnut().version());
+              return res;
+            }();
+            this->storage()->set(address, ser, true, true);
             data.paxos.release();
           }
         }
@@ -607,7 +612,7 @@ namespace infinit
           else
             ELLE_DEBUG("mutable block already loaded");
           auto& paxos = decision->second.paxos;
-          if (auto highest = paxos.highest_accepted_value())
+          if (auto highest = paxos.current_value())
           {
             auto version = highest->proposal.version;
             if (decision->second.chosen == version
@@ -664,7 +669,7 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: store %f", *this, block);
           ELLE_DEBUG("%s: validate block", *this)
-            if (auto res = block.validate()); else
+            if (auto res = block.validate(this->doughnut())); else
               throw ValidationFailed(res.reason());
           if (!dynamic_cast<blocks::ImmutableBlock const*>(&block))
             throw ValidationFailed("bypassing Paxos for a non-immutable block");
@@ -680,7 +685,7 @@ namespace infinit
               ELLE_WARN("No block, cannot validate update");
             else
             {
-              auto vr = stored.block->validate(block);
+              auto vr = stored.block->validate(this->doughnut(), block);
               if (!vr)
                 if (vr.conflict())
                   throw Conflict(vr.reason(), stored.block->clone());
@@ -716,10 +721,10 @@ namespace infinit
             {
               auto& decision = this->_addresses.at(address);
               auto& paxos = decision.paxos;
-              if (auto highest = paxos.highest_accepted_value())
+              if (auto highest = paxos.current_value())
               {
                 auto& v = highest->value.get<std::shared_ptr<blocks::Block>>();
-                auto valres = v->validate_remove(rs);
+                auto valres = v->validate_remove(this->doughnut(), rs);
                 ELLE_TRACE("mutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
@@ -743,7 +748,7 @@ namespace infinit
               else
               {
                 auto& previous = *stored.block;
-                auto valres = previous.validate_remove(rs);
+                auto valres = previous.validate_remove(this->doughnut(), rs);
                 ELLE_TRACE("Immutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
@@ -902,10 +907,7 @@ namespace infinit
             elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
             {
               for (auto owner: owners)
-                scope.run_background(
-                  "store block",
-                  [&, owner] { owner->store(*b, STORE_ANY); });
-              reactor::wait(scope);
+                  owner->store(*b, STORE_ANY);
             };
           }
         }
