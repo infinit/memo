@@ -209,8 +209,9 @@ COMMAND(list)
   for (auto const& storage: storages)
   {
     std::cout << storage->name << ": "
-      << (storage->capacity ? pretty_print(*storage->capacity) : "")
-      << std::endl;
+              << (storage->capacity ? pretty_print(storage->capacity.get())
+                                    : "unlimited")
+              << std::endl;
   }
 }
 
