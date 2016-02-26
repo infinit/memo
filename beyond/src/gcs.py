@@ -63,7 +63,7 @@ class GCS:
                  method,
                  content_type = None,
                  content_length = None,
-                 headers = None,
+                 headers = {},
   ):
     expiration = datetime.datetime.now() + expiration
     expiration = int(time.mktime(expiration.timetuple()))
@@ -72,7 +72,7 @@ class GCS:
     chunks.append(method)
     chunks.append('') # MD5, optional
     chunks.append(content_type or '')
-    for k, v in headers.items or {}:
+    for k, v in headers.items() or {}:
       chunks.append('%s:%s' % (k, v))
     chunks.append(expiration)
     chunk.append('/%s/%s' % (self.__bucket(bucket), path))
@@ -110,7 +110,7 @@ class GCS:
                  content_type = None,
                  content_length = None,
                  public = False):
-    headers = None
+    headers = {}
     if public:
       headers = {
         'x-goog-acl': 'public-read',
