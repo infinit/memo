@@ -350,7 +350,7 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
-      BaseOKB<Block>::_validate() const
+      BaseOKB<Block>::_validate(Model const& model) const
       {
         if (auto res = static_cast<OKBHeader const*>
             (this)->validate(this->address())); else

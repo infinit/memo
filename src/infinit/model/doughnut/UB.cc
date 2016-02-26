@@ -90,7 +90,7 @@ namespace infinit
 
       // FIXME: factor with CHB
       blocks::ValidationResult
-      UB::_validate() const
+      UB::_validate(Model const& model) const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
         auto expected_address = this->reverse() ?
@@ -115,10 +115,11 @@ namespace infinit
       }
 
       blocks::RemoveSignature
-      UB::_sign_remove() const
+      UB::_sign_remove(Model& model) const
       {
-        auto& keys = this->_doughnut->keys();
-        if (keys.K() != this->_key && keys.K() != *this->_doughnut->owner())
+        auto const& dht = dynamic_cast<Doughnut const&>(model);
+        auto& keys = dht.keys();
+        if (keys.K() != this->_key && keys.K() != *dht.owner())
           throw elle::Error("Only block owner and network owner can delete UB");
         auto to_sign = elle::serialization::binary::serialize((Block*)elle::unconst(this));
         auto signature = keys.k().sign(to_sign);
@@ -129,22 +130,24 @@ namespace infinit
       }
 
       blocks::ValidationResult
-      UB::_validate_remove(blocks::RemoveSignature const& sig) const
+      UB::_validate_remove(Model& model,
+                           blocks::RemoveSignature const& sig) const
       {
+        auto const& dht = dynamic_cast<Doughnut const&>(model);
         if (!sig.signature_key || !sig.signature)
           return blocks::ValidationResult::failure("Missing key or signature");
         auto to_sign = elle::serialization::binary::serialize((Block*)elle::unconst(this));
         bool ok = sig.signature_key->verify(*sig.signature, to_sign);
         if (!ok)
           return blocks::ValidationResult::failure("Invalid signature");
-        if (*sig.signature_key != *this->_doughnut->owner()
-          && *sig.signature_key != this->_key)
+        if (*sig.signature_key != *dht.owner()
+            && *sig.signature_key != this->_key)
           return blocks::ValidationResult::failure("Unauthorized signing key");
         return blocks::ValidationResult::success();
       }
 
       blocks::ValidationResult
-      UB::_validate(const Block& new_block) const
+      UB::_validate(Model const& model, const Block& new_block) const
       {
         auto ub = dynamic_cast<const UB*>(&new_block);
         if (ub)

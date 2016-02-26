@@ -29,7 +29,7 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   int const max = std::stoi(elle::os::getenv("ITERATIONS", "100"));
   for (int i = 0; i < max; ++i)
   {
-    elle::printf("%4s / %s\n", i, max);
+    ELLE_LOG_SCOPE("%4s / %s\n", i, max);
     auto file = root->child(elle::sprintf("%04s", i));
     auto handle = file->create(O_RDWR, 0666 | S_IFREG);
     elle::Buffer contents(100 * 1024);

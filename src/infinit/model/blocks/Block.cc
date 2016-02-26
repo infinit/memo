@@ -77,28 +77,28 @@ namespace infinit
       {}
 
       ValidationResult
-      Block::validate() const
+      Block::validate(Model const& model) const
       {
         ELLE_TRACE_SCOPE("%s: validate", *this);
-        return this->_validate();
+        return this->_validate(model);
       }
 
       ValidationResult
-      Block::_validate() const
+      Block::_validate(Model const&) const
       {
         return ValidationResult::success();
       }
 
       ValidationResult
-      Block::validate(Block const& new_block) const
+      Block::validate(Model const& model, Block const& new_block) const
       {
         ELLE_TRACE_SCOPE("%s: validate against previous block %s",
                          *this, new_block);
-        return this->_validate(new_block);
+        return this->_validate(model, new_block);
       }
 
       ValidationResult
-      Block::_validate(Block const& new_block) const
+      Block::_validate(Model const&, Block const& new_block) const
       {
         if (this->address() != new_block.address())
           return ValidationResult::failure(
@@ -117,25 +117,27 @@ namespace infinit
       {}
 
       RemoveSignature
-      Block::sign_remove() const
+      Block::sign_remove(Model& model) const
       {
-        return _sign_remove();
+        return this->_sign_remove(model);
       }
 
       RemoveSignature
-      Block::_sign_remove() const
+      Block::_sign_remove(Model&) const
       {
         return RemoveSignature();
       }
 
       ValidationResult
-      Block::validate_remove(RemoveSignature const & sig) const
+      Block::validate_remove(Model& model,
+                             RemoveSignature const & sig) const
       {
-        return _validate_remove(sig);
+        return this->_validate_remove(model, sig);
       }
 
       ValidationResult
-      Block::_validate_remove(RemoveSignature const& sig) const
+      Block::_validate_remove(Model& model,
+                              RemoveSignature const& sig) const
       {
         return ValidationResult::success();
       }

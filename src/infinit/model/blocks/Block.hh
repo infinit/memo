@@ -82,34 +82,36 @@ namespace infinit
         void
         seal(boost::optional<int> version = {});
         ValidationResult
-        validate() const;
+        validate(Model const& model) const;
         ValidationResult
-        validate(const Block& new_block) const;
+        validate(Model const& model, const Block& new_block) const;
         void
         stored(); // called right after a successful store
+        /// Generate signature for removal request.
         RemoveSignature
-        sign_remove() const; // generate signature for removal request
+        sign_remove(Model& model) const;
         ValidationResult
-        validate_remove(RemoveSignature const& sig) const;
+        validate_remove(Model& model, RemoveSignature const& sig) const;
       protected:
         virtual
         void
         _seal(boost::optional<int> version);
         virtual
         ValidationResult
-        _validate() const;
+        _validate(Model const& model) const;
         virtual
         ValidationResult
-        _validate(const Block& new_block) const;
+        _validate(Model const& model, const Block& new_block) const;
         virtual
         void
         _stored();
         virtual
         RemoveSignature
-        _sign_remove() const;
+        _sign_remove(Model& model) const;
         virtual
         ValidationResult
-        _validate_remove(RemoveSignature const& sig) const;
+        _validate_remove(Model& model,
+                         RemoveSignature const& sig) const;
 
       /*--------------.
       | Serialization |

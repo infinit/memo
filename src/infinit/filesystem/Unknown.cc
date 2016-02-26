@@ -82,6 +82,7 @@ namespace infinit
     std::unique_ptr<rfs::Handle>
     Unknown::create(int flags, mode_t mode)
     {
+      ELLE_TRACE_SCOPE("%s: create", this);
       ELLE_ASSERT_EQ(signed(mode & S_IFMT), S_IFREG);
       if (_owner.read_only())
         throw rfs::Error(EACCES, "Access denied.");

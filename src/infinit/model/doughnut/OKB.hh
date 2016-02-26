@@ -148,7 +148,7 @@ namespace infinit
         _seal_okb(boost::optional<int> version = {}, bool bump_version = true);
         virtual
         blocks::ValidationResult
-        _validate() const override;
+        _validate(Model const& model) const override;
       protected:
         class OwnerSignature
         {

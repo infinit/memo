@@ -21,8 +21,13 @@ namespace infinit
       | Construction |
       `-------------*/
       public:
-        CHB(Doughnut* d, elle::Buffer data, Address owner = Address::null);
-        CHB(Doughnut* d, elle::Buffer data, elle::Buffer salt, Address owner = Address::null);
+        CHB(Doughnut* d,
+            elle::Buffer data,
+            Address owner = Address::null);
+        CHB(Doughnut* d,
+            elle::Buffer data,
+            elle::Buffer salt,
+            Address owner = Address::null);
         CHB(CHB const& other);
 
       /*---------.
@@ -42,7 +47,7 @@ namespace infinit
         _seal(boost::optional<int> version) override;
         virtual
         blocks::ValidationResult
-        _validate() const override;
+        _validate(Model const& model) const override;
 
       /*--------------.
       | Serialization |
@@ -56,10 +61,11 @@ namespace infinit
       protected:
         virtual
         blocks::RemoveSignature
-        _sign_remove() const override;
+        _sign_remove(Model& model) const override;
         virtual
         blocks::ValidationResult
-        _validate_remove(blocks::RemoveSignature const& sig) const override;
+        _validate_remove(Model& model,
+                         blocks::RemoveSignature const& sig) const override;
 
       /*--------.
       | Details |
@@ -75,7 +81,6 @@ namespace infinit
                       elle::Version const& version);
         ELLE_ATTRIBUTE(elle::Buffer, salt);
         ELLE_ATTRIBUTE_R(Address, owner); // owner ACB address or null
-        ELLE_ATTRIBUTE_R(Doughnut*, doughnut);
       };
     }
   }
