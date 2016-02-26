@@ -233,7 +233,7 @@ Once you have done this, you will need to fetch the credentials from the Hub.
 
 ```
 $> infinit-credentials --fetch
-Fetched Google Cloud Storage credentials alice@infinit.sh (alice)
+Fetched Google Cloud Storage credentials alice@company.com (alice)
 ```
 
 ### List credentials ###
@@ -245,7 +245,7 @@ $> infinit-credentials --list
 AWS:
   AKIAIOSFODNN7EXAMPLE: s3-user
 GCS:
-  alice@infinit.sh: Alice
+  alice@company.com: Alice
 ```
 
 Storage
@@ -292,7 +292,7 @@ In order to use GCS, you will first have to have created a GCS bucket and ensure
 The following creates a storage resource which uses a folder of a GCS bucket, specifying a name for the storage, the GCS account identifier, the bucket's name and the folder to store the blocks in:
 
 ```
-$> infinit-storage --create --gcs --name gcs --account alice@infinit.sh --bucket my-gcs-bucket --path blocks-folder
+$> infinit-storage --create --gcs --name gcs --account alice@company.com --bucket my-gcs-bucket --path blocks-folder
 Created storage "gcs".
 ```
 
@@ -893,9 +893,9 @@ $> infinit-acl --register --network cluster --user hub --path /mnt/shared/
 The user can now be invited using their email address. They will receive an email asking them to install the graphical client and sign up. Note that the Hub will only generate their passport once they have confirmed their email address.
 
 ```
-$> infinit-drive --invite --as alice --name --workspace --email new_user@infinit.sh --push
-Locally created invitation "alice/workspace: new_user@infinit.sh".
-Remotely pushed invitation "alice/workspace: new_user@infinit.sh".
+$> infinit-drive --invite --as alice --name --workspace --email dave@company.com --push
+Locally created invitation "alice/workspace: dave@company.com".
+Remotely pushed invitation "alice/workspace: dave@company.com".
 ```
 
 ### Join a drive ###
