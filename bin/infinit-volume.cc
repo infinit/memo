@@ -376,8 +376,10 @@ COMMAND(run)
     auto mountpoint = optional(args, "mountpoint");
     auto fs = volume.run(std::move(model),
                          mountpoint
-#ifdef INFINIT_MACOSX
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
+#endif
+#ifdef INFINIT_MACOSX
                          , optional(args, "mount-icon")
 #endif
                          );
@@ -850,8 +852,10 @@ main(int argc, char** argv)
   std::vector<Mode::OptionDescription> options_run_mount = {
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
-#ifdef INFINIT_MACOSX
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
     { "mount-name", value<std::string>(), "name of mounted volume" },
+#endif
+#ifdef INFINIT_MACOSX
     { "mount-icon", value<std::string>(), "icon for mounted volume" },
     { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
 #endif
