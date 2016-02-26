@@ -72,7 +72,7 @@ class GCS:
     chunks.append(method)
     chunks.append('') # MD5, optional
     chunks.append(content_type or '')
-    for k, v in header.items or {}:
+    for k, v in headers.items or {}:
       chunks.append('%s:%s' % (k, v))
     chunks.append(expiration)
     chunk.append('/%s/%s' % (self.__bucket(bucket), path))
