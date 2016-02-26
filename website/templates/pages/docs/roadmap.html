@@ -24,6 +24,14 @@
       <div class="step">
         <hr>
         <div class="desc">
+          <h2>Heterogeneous storage contributions</h2>
+          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <hr>
+        <div class="desc">
           <h2>Locking</h2>
           <p>Allow applications to lock file system objects to prevent other user/applications to use them.</p>
         </div>
@@ -32,24 +40,24 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2>Garbage collecting</h2>
-          <p>Operations in a decentralized file system may lead to unreferenced blocks consuming storage capacity, also known as orphan blocks. Such blocks should be deleted from time to time through a garbage collecting mechanism.</p>
+          <h2>Backblaze B2 storage resource</h2>
+          <p>Allow Backblaze B2 service to be used as a block storage resource.</p>
+        </div>
+      </div>
+
+       <div class="step">
+        <hr>
+        <div class="desc">
+          <h2>Scale up/down</h2>
+          <p>Allow to attach additional/detach storage resources and/or increase/decrease the storage capacity contributions from a device to an existing network, without incurring any interruption of service.</p>
         </div>
       </div>
 
       <div class="step">
         <hr>
         <div class="desc">
-          <h2>Google Drive storage resource</h2>
-          <p>Allow Google Drive to be used as a block storage resource.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2>Dropbox storage resource</h2>
-          <p>Allow Dropbox to be used as a block storage resource.</p>
+          <h2>Windows SMB/NFS integrations</h2>
+          <p>Provide an NFS/SMB integration server to easily integrate in existing production environments.</p>
         </div>
       </div>
 
@@ -70,7 +78,27 @@
       </div>
 
       <div class="step">
+        <div class="date">
+          May <br><span>2016</span>
+        </div>
+        <div class="desc">
+          <h2>Versioning</h2>
+          <p>Allow users to explore and roll-back to a previous version of a file.</p>
+        </div>
+      </div>
+
+      <div class="step">
         <hr>
+        <div class="desc">
+          <h2>Dropbox storage resource</h2>
+          <p>Allow Dropbox to be used as a block storage resource.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="date">
+          Apr <br><span>2016</span>
+        </div>
         <div class="desc">
           <h2>LDAP</h2>
           <p>Integrate with LDAP to retrieve the users, groups and permissions in an existing organization.</p>
@@ -80,38 +108,33 @@
       <div class="step">
         <hr>
         <div class="desc">
-          <h2>Heterogeneous storage contributions</h2>
-          <p>Balance the data while taking into account that some storage resources have more capacity than others.</p>
+          <h2>Google Drive storage resource</h2>
+          <p>Allow Google Drive to be used as a block storage resource.</p>
         </div>
       </div>
+
       <div class="step">
         <div class="date">
           Mar <br><span>2016</span>
         </div>
         <div class="desc">
-          <h2>Manual local caching</h2>
-          <p>Allow the end-user to specify which hierarchies of files and directories to keep local at any time for offline access.</p>
-        </div>
-      </div>
-      <div class="step">
-        <hr>
-        <div class="desc">
           <h2>Windows native file system integration</h2>
           <p>Provide a native interface for Windows operating systems to mount Infinit file systems.</p>
         </div>
       </div>
+
       <div class="step">
-        <div class="date">
-          Feb <br><span>2016</span>
-        </div>
+        <hr>
         <div class="desc">
-          <h2>Backblaze B2 storage resource</h2>
-          <p>Allow Backblaze B2 service to be used as a block storage resource.</p>
+          <h2>Dynamic rebalancing</h2>
+          <p>Dynamically rebalancing some blocks to another nodes following the fault of a storage node in order to maintain the replication factor defined by the network administrator.</p>
         </div>
       </div>
 
       <div class="step soon">
-        <hr>
+        <div class="date">
+          Feb <br><span>2016</span>
+        </div>
         <div class="desc">
           <h2>Google Cloud Storage storage resource</h2>
           <p>Allow Google Cloud Storage to be used as a block storage resource.</p>
@@ -126,22 +149,6 @@
         </div>
       </div>
 
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2>Scale up/down</h2>
-          <p>Allow to attach additional/detach storage resources and/or increase/decrease the storage capacity contributions from a device to an existing network, without incurring any interruption of service.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2>Windows SMB/NFS integrations</h2>
-          <p>Provide an NFS/SMB integration server to easily integrate in existing production environments.</p>
-        </div>
-      </div>
-
       <div class="step soon">
         <div class="date">
           Jan <br><span>2016</span>
@@ -149,14 +156,6 @@
         <div class="desc">
           <h2>Storage contribution limit</h2>
           <p>Allow one to specify the storage capacity to allocate when creating a storage.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2>Versioning</h2>
-          <p>Allow users to explore and roll-back to a previous version of a file.</p>
         </div>
       </div>
 
@@ -181,14 +180,6 @@
         <div class="desc">
           <h2>Storage load network-wide balancing</h2>
           <p>Support distributing the blocks across several storage nodes that contribute storage capacity through one or more storage resources.</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <hr>
-        <div class="desc">
-          <h2>Dynamic rebalancing</h2>
-          <p>Dynamically rebalancing some blocks to another nodes following the fault of a storage node in order to maintain the replication factor defined by the network administrator.</p>
         </div>
       </div>
 
