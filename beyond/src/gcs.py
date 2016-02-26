@@ -72,10 +72,10 @@ class GCS:
     chunks.append(method)
     chunks.append('') # MD5, optional
     chunks.append(content_type or '')
-    for k, v in headers.items() or {}:
+    for k, v in headers.items():
       chunks.append('%s:%s' % (k, v))
-    chunks.append(expiration)
-    chunk.append('/%s/%s' % (self.__bucket(bucket), path))
+    chunks.append(str(expiration))
+    chunks.append('/%s/%s' % (self.__bucket(bucket), path))
     signature_string = '\n'.join(chunks)
     shahash = SHA256.new(signature_string.encode('utf-8'))
     private_key = RSA.importKey(self.__key, passphrase='notasecret')
