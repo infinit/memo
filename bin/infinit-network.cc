@@ -481,6 +481,11 @@ COMMAND(run)
     ,SIGQUIT
 #endif
   };
+#ifndef INFINIT_WINDOWS
+  if (flag(args, "daemon"))
+    if (daemon(0, 1))
+      perror("daemon:");
+#endif
   for (auto signal: signals)
     reactor::scheduler().signal_handle(
     signal,
@@ -726,6 +731,9 @@ main(int argc, char** argv)
           "alias for --fetch-endpoints --push-endpoints" },
         { "port-file", value<std::string>(),
           "write node listening port to file" },
+#ifndef INFINIT_WINDOWS
+        { "daemon,d", bool_switch(), "run as a background daemon"},
+#endif
       },
     },
     {

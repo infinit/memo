@@ -313,6 +313,11 @@ COMMAND(run)
     option_opt<uint64_t>(args, option_cache_disk_cache_size.long_name());
   if (cache_size || cache_ttl || cache_invalidation || disk_cache_size)
     cache = true;
+#ifndef INFINIT_WINDOWS
+  if (flag(args, "daemon"))
+    if (daemon(0, 1))
+      perror("daemon:");
+#endif
   if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
   {
     static const std::vector<int> signals = {SIGINT, SIGTERM
@@ -862,6 +867,9 @@ main(int argc, char** argv)
     { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
 #endif
     { "async", bool_switch(), "use asynchronous operations" },
+#ifndef INFINIT_WINDOWS
+    { "daemon,d", bool_switch(), "run as a background daemon"},
+#endif
     option_cache,
     option_cache_size,
     option_cache_ttl,
