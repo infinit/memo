@@ -274,7 +274,8 @@ class Beyond:
         import os
         import json
         def import_data(type, data):
-          args = [binary_path + 'infinit-%s%s' % (type, exe_ext), '--import', '-s']
+          args = [binary_path + 'infinit-%s%s' % (type, exe_ext),
+                  '--import', '-s']
           try:
             process = subprocess.Popen(
               args,
