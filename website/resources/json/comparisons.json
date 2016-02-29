@@ -1,0 +1,48 @@
+{
+  "infinit": {
+    "name": "Infinit",
+    "description": "Description.",
+    "properties": {
+      "architecture": "file",
+      "interface": "POSIX File System",
+      "model": "decentralized",
+      "environment": "controlled",
+      "redundancy": "replication",
+      "fault_tolerance": "byzantine",
+      "scalability": "heterogeneous",
+      "security": "In-Transit & At-Rest",
+      "interoperability": "applications"
+    }
+  },
+  "aws-s3": {
+    "name": "AWS S3",
+    "description": "Amazon S3 (Simple Storage Service) is an online file storage web service offered by Amazon Web Services. Amazon S3 provides storage through web services interfaces (REST, SOAP, and BitTorrent).",
+    "properties": {
+      "architecture": "object",
+      "interface": "API",
+      "model": "Unknown (proprietary)",
+      "environment": "",
+      "redundancy": "Unknown (proprietary)",
+      "fault_tolerance": "Unknown (proprietary)",
+      "scalability": "",
+      "security": "In-Transit",
+      "interoperability": "protocol"
+    },
+    "wikipedia": "https://en.wikipedia.org/wiki/Amazon_S3"
+  },
+  "glusterfs": {
+    "name": "GlusterFS",
+    "description": "GlusterFS is a scale-out network-attached storage file system. It has found applications including cloud computing, streaming media services, and content delivery networks. GlusterFS was developed originally by Gluster, Inc., then by Red Hat, Inc., after their purchase of Gluster in 2011.",
+    "properties": {
+      "architecture": "file",
+      "interface": "POSIX File System",
+      "model": "decentralized",
+      "environment": "controlled",
+      "redundancy": "Unknown (proprietary)",
+      "fault_tolerance": "Unknown (proprietary)",
+      "scalability": "",
+      "security": "In-Transit"
+    },
+    "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
+  }
+}

@@ -134,7 +134,7 @@ def configure(
     'templates/pages/solutions.html',
 
     'templates/pages/docs/changelog.html',
-    'templates/pages/docs/comparisons.html',
+    'templates/pages/docs/comparison.html',
     'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/deployments.html',
     'templates/pages/docs/filesystem.html',
@@ -337,6 +337,10 @@ def configure(
     'resources/images/logos/siliconangle@2x.png',
     'resources/images/logos/infoworld.png',
     'resources/images/logos/infoworld@2x.png',
+    'resources/images/logos/glusterfs.png',
+    'resources/images/logos/glusterfs@2x.png',
+    'resources/images/logos/aws-s3.png',
+    'resources/images/logos/aws-s3@2x.png',
 
     'resources/scripts/centralized.sh',
     'resources/scripts/distributed.sh',
@@ -347,10 +351,13 @@ def configure(
     'resources/fonts/icons.ttf',
     'resources/fonts/icons.woff',
 
+    'resources/json/comparisons.json',
+
     'resources/css/normalize.css',
     'resources/css/main.min.css',
 
     'resources/js/instantsearch.min.js',
+    'resources/js/switchery.min.js',
     'resources/js/scripts.min.js',
   )
 

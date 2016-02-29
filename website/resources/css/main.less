@@ -963,17 +963,37 @@ body.doc_changelog {
 }
 
 
-body.doc_comparisons {
+body.doc_comparison {
   section.doc {
-    table.centralized tr:nth-child(1) td { width: 4%;}
-    table.centralized tr:nth-child(2n) td { background: #F9F9F9; }
+    img.competitor.big { float: right; max-height: 60px; margin-top: -11px;}
+    .filters { margin: 30px 0;}
+    .property {
+      width: 46%; margin:20px 2%; float: left;text-align: left;
+      box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.17); border-radius: 3px;
+      min-height: 200px;
+
+      &.same { display: none; }
+
+      h2 {
+        margin: 0; padding: 0; font-size: 14px; padding: 10px 20px; margin-bottom: 20px;
+        border-bottom:1px solid #E7E7E7; text-transform: uppercase;
+      }
+      div.competitor, div.infinit {
+        padding: 0 20px;
+        img {width: 20px; height: auto; vertical-align: sub;}
+      }
+      div.infinit { color: @infinitred; margin-top: 7px;}
+      div.infinit img { margin: 0 2px; width: 16px; height: 15px; }
+      p { font-size: 14px; line-height: 19px; }
+    }
+    h3 { clear: both; margin-top: 50px;}
   }
 }
 
 
 body.doc_deployments {
   section.doc {
-    img { margin: 0 auto; display: inherit;}
+    img { margin: 0 auto; display: inherit;  }
   }
 }
 
@@ -1453,6 +1473,64 @@ ul.tabs a.active {
 
 .js-tabby .tabs-pane { display: none; visibility: hidden }
 .tabs-pane.active { display: block; visibility: visible }
+
+/*--------------.
+| Switcher      |
+`--------------*/
+
+.switchery {
+  background-color: #fff;
+  border: 1px solid #dfdfdf;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-block;
+  height: 30px;
+  position: relative;
+  vertical-align: middle;
+  width: 50px;
+
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  box-sizing: content-box;
+  background-clip: content-box;
+}
+
+.switchery > small {
+  background: #fff;
+  border-radius: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  height: 30px;
+  position: absolute;
+  top: 0;
+  width: 30px;
+}
+
+/* Switchery sizes. */
+
+.switchery-small {
+  border-radius: 20px;
+  height: 20px;
+  width: 33px;
+}
+
+.switchery-small > small {
+  height: 20px;
+  width: 20px;
+}
+
+.switchery-large {
+  border-radius: 40px;
+  height: 40px;
+  width: 66px;
+}
+
+.switchery-large > small {
+  height: 40px;
+  width: 40px;
+}
 
 
 @import "responsive";

@@ -51,9 +51,12 @@ def view(name):
     )(f)
   return res
 
+def resources_path():
+  return '%s/share/infinit/website/resources' % PREFIX
+
 def static_file(path):
   return bottle.static_file(
-    path, root = '%s/share/infinit/website/resources' % PREFIX)
+    path, root = resources_path())
 
 class Routes:
 

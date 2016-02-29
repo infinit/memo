@@ -2,8 +2,9 @@ import bottle
 import sendwithus
 import requests
 import os
+import json
 
-from infinit.website.utils import route, static_file, view
+from infinit.website.utils import resources_path, route, static_file, view
 
 def error(code, reason = ''):
   bottle.response.status = code
@@ -110,30 +111,6 @@ class Website(bottle.Bottle):
       'description': 'Discover the different layers composing the Infinit technology, from the reactor, the distributed hash table up to the file system.',
     }
 
-  # @route('/documentation/comparisons', name = 'doc_comparisons')
-  # @view('pages/docs/comparisons.html')
-  # def root(self):
-  #   return {
-  #     'title': 'Comparison Between Infinit and Other File Systems',
-  #     'description': 'Compare the Infinit file system against existing centralized, distributed and decentralized file systems.',
-  #   }
-
-  # @route('/deployments/unlimited-personal-drive', name = 'doc_deployment_personal_cloud')
-  # @view('pages/docs/personal_cloud.html')
-  # def root(self):
-  #   return {
-  #     'title': 'Unlimited Personal Drive with Infinit',
-  #     'description': 'Create a personal drive of unlimited capacity by aggregating the storage resources from various cloud services.',
-  #   }
-
-  # @route('/deployments/decentralized-collaborative-file-system', name = 'doc_deployment_file_system')
-  # @view('pages/docs/decentralized_fs.html')
-  # def root(self):
-  #   return {
-  #     'title': 'Decentralized Collaborative File System with Infinit',
-  #     'description': 'Create a private or hybrid cloud storage infrastructure by relying on cloud storage resources or commodity on-premise hardware.',
-  # }
-
   @route('/documentation/deployments', name = 'doc_deployments')
   @view('pages/docs/deployments.html')
   def root(self):
@@ -188,6 +165,21 @@ class Website(bottle.Bottle):
     return {
       'title': 'Amazon S3 Storage',
       'description': 'Create a storage resource that uses an Amazon S3 bucket.',
+    }
+
+  @route('/documentation/comparison/', name = 'doc_comparisons')
+  @route('/documentation/comparison/<path:path>', name = 'doc_comparison')
+  @view('pages/docs/comparison.html')
+  def root(self, path):
+    file = resources_path() + '/json/comparisons.json'
+    with open(file) as json_file:
+      json_data = json.load(json_file)
+    return {
+      'title': json_data[path]['name'] + ' Comparison',
+      'description': 'Compare Infinit with the other file storage solutions on the market.',
+      'competitor': json_data[path],
+      'competitor_name': path,
+      'infinit': json_data['infinit']
     }
 
   @route('/open-source', name = 'opensource')
@@ -333,6 +325,7 @@ class Website(bottle.Bottle):
   @route('/fonts/<path:path>')
   @route('/images/<path:path>')
   @route('/js/<path:path>')
+  @route('/json/<path:path>')
   @route('/scripts/<path:path>')
   def images(self, path):
     d = bottle.request.urlparts.path.split('/')[1]

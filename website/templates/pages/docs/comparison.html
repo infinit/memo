@@ -1,0 +1,59 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <%include file='menu.html'/>
+
+  <section class="doc">
+    <img class="competitor big" src="${url('images/logos/' + competitor_name + '.png')}" alt="${competitor['name']} logo">
+    <h1>${competitor['name']}</h1>
+    <p>${competitor['description']}</p>
+
+    <h3>Comparison</h3>
+    <div class="filters">
+      <input type="checkbox" class="js-switch" checked />
+      <label for="switcher">display only differences with Infinit</label>
+    </div>
+
+    % for property, value in competitor['properties'].items():
+      <div class="property ${'same' if value == infinit["properties"][property] else ''}">
+        <h2>${property}</h2>
+        <div class="competitor">
+          <img src="${url('images/logos/' + competitor_name + '.png')}" alt="${competitor['name']} logo">
+          <span>
+            <% value = value.capitalize() if len(value.split()) == 1 else value %>
+            ${value if (value) else 'Not Applicable'}
+          </span>
+        </div>
+        <div class="infinit">
+          <img src="${url('images/logos/infinit.png')}" alt="${competitor['name']} logo">
+          <span>
+            <%
+              value_infinit = infinit['properties'][property]
+              value_infinit = value_infinit.capitalize() if len(value_infinit.split()) == 1 else value_infinit
+            %>
+            ${value_infinit}
+          </span>
+
+          % if (value == 'Object'):
+            <p class="note">
+            Object-based storage architectures manage data as objects. File-based solutions store data as file hierarchy. <a class="open-popup" href="#oject-file">Read more.</a>
+            </p>
+            <div class="popup" id="object-file">
+              Object-based storage architectures manage data as objects. File-based solutions however, store data as file hierarchy, often providing an access control mechanism for multi-user environments to control which files/directories can be seen/edited by other users/groups. Finally, another architecture exists, known as block, which manages data as blocks within sectors and tracks i.e very much like a raw hard disk drive. <br> <br> Object storage is mostly used to store application-specific data such as Netflix's movies. File storage solutions however are used for humans to store and collaborate around files organized through a hierarchical system."
+            </div>
+          % endif
+
+        </div>
+        <span>
+      </div>
+    % endfor
+
+    <h3>Links</h3>
+    <ul>
+      <li><a href="${competitor['wikipedia']}">Wikipedia</a></li>
+    </ul>
+  </section>
+
+
+</%block>

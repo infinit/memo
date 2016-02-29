@@ -111,4 +111,28 @@ $(document).ready(function() {
     tabby.init();
   }
 
+  if ($('body').hasClass('doc_comparison')) {
+    var elem = document.querySelector('.js-switch');
+    var switcher = new Switchery(elem, { color: "#252d3b"});
+
+    elem.onchange = function() {
+      console.log(elem.checked);
+      if (elem.checked) {
+        $('.property.same').hide();
+      } else {
+        $('.property.same').show();
+      }
+    };
+
+    $('.popup').magnificPopup({
+      type:'inline',
+      midClick: true,
+      mainClass: 'mfp-fade'
+    });
+
+    $('.open-popup').click(function() {
+      $(this.attr('href')).show();
+    });
+  }
+
 });
