@@ -5,6 +5,8 @@
 
 #include <infinit/model/MissingBlock.hh>
 
+#include <boost/filesystem/fstream.hpp>
+
 #include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
@@ -20,6 +22,7 @@
 
 #include <cryptography/hash.hh>
 
+#include <infinit/utility.hh>
 #include <infinit/model/Address.hh>
 #include <infinit/model/blocks/MutableBlock.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
@@ -216,6 +219,11 @@ namespace infinit
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
+      auto root_block_cache_dir = xdg_state_home() / this->_volume_name;
+      if (!boost::filesystem::exists(root_block_cache_dir))
+        boost::filesystem::create_directories(root_block_cache_dir);
+      auto root_block_cache_path = root_block_cache_dir / "root_block";
+      ELLE_TRACE("root block cache is at %s", root_block_cache_path);
       bool migrate = true;
       auto dn = std::dynamic_pointer_cast<dht::Doughnut>(this->_block_store);
       auto const bootstrap_name = this->_volume_name + ".root";
@@ -256,25 +264,39 @@ namespace infinit
             {}
           if (*dn->owner() == dn->keys().K())
           {
-            std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
-            auto saddr = elle::sprintf("%x", mb->address());
-            elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
-            ELLE_TRACE("create missing root block")
+            if (boost::filesystem::exists(root_block_cache_path))
             {
-              auto cpy = mb->clone();
-              this->store_or_die(std::move(cpy), model::STORE_INSERT);
+              ELLE_TRACE("root block marker is set, refusing to recreate");
             }
-            ELLE_TRACE("create missing root bootstrap block")
+            else
             {
-              auto nb = elle::make_unique<dht::NB>(
-                dn.get(), dn->owner(), bootstrap_name, baddr);
-              this->store_or_die(std::move(nb), model::STORE_INSERT);
+              std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
+              auto saddr = elle::sprintf("%x", mb->address());
+              elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
+              ELLE_TRACE("create missing root block")
+              {
+                auto cpy = mb->clone();
+                this->store_or_die(std::move(cpy), model::STORE_INSERT);
+              }
+              ELLE_TRACE("create missing root bootstrap block")
+              {
+                auto nb = elle::make_unique<dht::NB>(
+                  dn.get(), dn->owner(), bootstrap_name, baddr);
+                this->store_or_die(std::move(nb), model::STORE_INSERT);
+              }
+              on_root_block_create();
+              boost::filesystem::ofstream ofs(root_block_cache_path);
+              ofs << saddr;
+              return mb;
             }
-            on_root_block_create();
-            return mb;
           }
           reactor::sleep(1_sec);
         }
+      }
+      if (!boost::filesystem::exists(root_block_cache_path))
+      {
+        boost::filesystem::ofstream ofs(root_block_cache_path);
+        ofs << elle::sprintf("%x", addr);
       }
       return elle::cast<MutableBlock>::runtime(fetch_or_die(addr));
     }

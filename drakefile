@@ -197,6 +197,7 @@ def configure(
   infinit_sources = drake.nodes(
     'src/infinit/RPC.hh',
     'src/infinit/RPC.hxx',
+    'src/infinit/utility.hh',
     'src/infinit/credentials/AWSCredentials.cc',
     'src/infinit/credentials/AWSCredentials.hh',
     'src/infinit/credentials/Credentials.cc',
