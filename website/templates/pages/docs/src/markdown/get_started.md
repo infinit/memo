@@ -1,13 +1,28 @@
-﻿Get Started
+﻿
+<div><%
+  if "mac" in request.path:
+    osname="mac"
+  elif "linux" in request.path:
+    osname="linux"
+  elif "windows" in request.path:
+    osname="windows"
+  elif os() == "Macintosh":
+    osname="mac"
+  elif os() == "Windows":
+    osname="windows"
+  else:
+    osname="linux"
+
+%></div>
+
+Get Started
 =========
 
 <div>
-% if os() == "Windows":
-<blockquote class="warning">
-<strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
-</blockquote>
+% if osname == "windows":
+<p><em>The following is written for users of Windows. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_linux')}">Linux</a> guide.</em></p>
 
-% elif "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+% elif osname == "mac":
 <p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
 
 % else:
@@ -26,14 +41,14 @@
 <img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE">
 
 <div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+% if osname == "mac":
 <p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
 <p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.1.0/osxfuse-3.1.0.dmg" class="button">Download OSXFUSE</a></p>
 
 <em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/.</em>
 
-% else:
+% elif osname == "linux":
 
 <p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use <code>apt-get</code>:</p>
 
@@ -42,17 +57,29 @@
 <pre><code>$> sudo apt-get install fuse
 </code></pre>
 
+% else:
+<p> Infinit relies on <a href="https://github.com/dokan-dev/dokany">dokany</a> to create filesystems in userland. You will need to install it from the link below:</p>
+<p><a href="https://github.com/dokan-dev/dokany/releases/download/v1.0.0-RC1/DokanSetup.exe" class="button">Download DOKANY</a></p>
+
+<em><strong>NOTE</strong>: Infinit currently requires a 64bit version of Windows 7 or Windows 8.</em>
 % endif
 </div>
 
 ### Download and install the Infinit command-line tools
 
 <div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+% if osname == "mac":
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
 <p>Click the link below to download the Infinit command-line tools:</p>
 
 <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
+" class="button">Download Command Line Tools</a>
+
+% elif osname == "windows":
+<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/windows/Infinit-windows-${tarball_version}.zip
 " class="button">Download Command Line Tools</a>
 
 % else:
@@ -111,11 +138,16 @@ Setting up infinit (${tarball_version}) ...
 </div>
 
 <br>
+<div>
+% if osname == "mac" or osname == "linux":
 
 Next, open your terminal and extract the Infinit tarball:
 
+% endif
+</div>
+
 <div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+% if osname == "mac":
 
 <pre><code>$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 Infinit-x86_64-osx-clang3-${tarball_version}/
@@ -127,6 +159,10 @@ Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-user
 Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-volume
 ...
 </code></pre>
+
+% elif osname == "windows":
+
+<p>Extract the downloaded zip file to some directory.</p>
 
 % else:
 
@@ -153,7 +189,8 @@ Now that you’ve extracted the tarball, take a look. The extracted directory co
 * The `share/infinit/filesystem/test/` subdirectory is provided for you to quickly test the command-line tools, see below.
 
 <div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+% if osname != "windows":
+% if osname == "mac":
 <pre><code>$> cd Infinit-x86_64-osx-clang3-${tarball_version}/
 % else:
 <pre><code>$> cd Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
@@ -161,6 +198,7 @@ Now that you’ve extracted the tarball, take a look. The extracted directory co
 $> ls
 bin/    lib/    share/
 </code></pre>
+% endif
 </div>
 
 2. Basic Test

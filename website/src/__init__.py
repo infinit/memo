@@ -87,7 +87,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/get-started/windows', name = 'doc_get_started_windows')
-  @view('pages/docs/get_started_windows.html')
+  @view('pages/docs/get_started.html')
   def root(self):
     return {
       'title': 'Get Started with Infinit - Windows Guide',
@@ -99,7 +99,7 @@ class Website(bottle.Bottle):
   def root(self):
     return {
       'title': 'Get Started with Infinit - Linux Guide',
-      'description': 'A step by step guide for Windows to getting started with the Infinit file system platform.',
+      'description': 'A step by step guide for linux to getting started with the Infinit file system platform.',
     }
 
   @route('/documentation/technology', name = 'doc_technology')
