@@ -5,7 +5,6 @@
 
 Hotfix for AWS s3 storage in us-east-1 region.
 
-=======
 ### Added
 
 - Add `infinit-block`, a debug utility to pretty print a block from
