@@ -166,6 +166,14 @@ class Website(bottle.Bottle):
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
+  @route('/documentation/storages/gcs', name = 'doc_storages_gcs')
+  @view('pages/docs/gcs.html')
+  def roote(self):
+    return {
+      'title': 'Google Cloud Storage',
+      'description': 'Create a storage resource that uses GCS bucket.',
+    }
+
   @route('/documentation/storages/s3', name = 'doc_storages_s3')
   @view('pages/docs/s3.html')
   def roote(self):
