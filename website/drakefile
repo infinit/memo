@@ -69,10 +69,11 @@ def configure(
   )
 
   markdown = drake.nodes(
-    'templates/pages/docs/src/markdown/s3.md',
+    'templates/pages/docs/src/markdown/gcs.md',
     'templates/pages/docs/src/markdown/get_started.md',
-    'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/reference.md',
+    'templates/pages/docs/src/markdown/s3.md',
+    'templates/pages/docs/src/markdown/technology.md',
   )
   changelog = drake.node(
     'ChangeLog.html',
@@ -135,6 +136,7 @@ def configure(
     'templates/pages/docs/comparisons.html',
     'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/deployments.html',
+    'templates/pages/docs/gcs.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
     'templates/pages/docs/menu.html',
@@ -219,6 +221,9 @@ def configure(
     'resources/images/schema-deployment-multi-servers@2x.png',
     'resources/images/schema-cover.png',
     'resources/images/terminal.png',
+
+    'resources/images/docs/gcs/create-bucket.png',
+    'resources/images/docs/gcs/oauth-permissions.png',
 
     'resources/images/docs/s3/attach-policy.png',
     'resources/images/docs/s3/create-bucket.png',
