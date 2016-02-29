@@ -458,7 +458,7 @@ def configure(
     ('generatekeys', [], False),
     ('infinit', [], False),
     ('infinit-acl', [], True),
-    ('infinit-block', [], False),
+    ('infinit-block', [], True),
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
     ('infinit-drive', [], True),

@@ -221,8 +221,14 @@ namespace infinit
               RPC<AuthSyn> auth_syn(
                 "auth_syn", *this->_channels, this->_doughnut.version());
               auth_syn.set_context<Doughnut*>(&this->_doughnut);
-              return auth_syn(this->_doughnut.passport(),
-                                this->_doughnut.version());
+              auto version = this->_doughnut.version();
+              // 0.5.0 compares the full version for compatibility instead of
+              // dropping the subminor component. Always set it to 0.
+              auto subminor =
+                version >= elle::Version(0, 6, 0) ? version.subminor() : 0;
+              return auth_syn(
+                this->_doughnut.passport(),
+                elle::Version(version.major(), version.minor(), subminor));
             }
             else
             {
