@@ -1,6 +1,28 @@
 # Change Log
 
 
+## [0.5.3] - 2016-02-29
+
+Hotfix for disk performances.
+
+### Added
+
+- Implement `statfs` system call.
+
+### Changed
+
+- Rename `--allow-sign` to `--allow-create-passport` in `infinit-passport`.
+- Tidy up `infinit-block` CLI interface to look like other binaries.
+
+### Fixed
+
+- Drop older Paxos version to avoid linear growth of blocks with
+  revisions, fixing disk hammering issues with folders of thousands of
+  files.
+- Use the GCS credentials instead of Google drive credentials to
+  authenticate to GCS.
+
+
 ## [0.5.2] - 2016-02-25
 
 Hotfix for AWS s3 storage in us-east-1 region.
