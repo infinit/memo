@@ -166,6 +166,14 @@ class Website(bottle.Bottle):
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
+  @route('/documentation/storages/filesystem', name = 'doc_storages_filesystem')
+  @view('pages/docs/filesystem.html')
+  def roote(self):
+    return {
+      'title': 'Filesystem storage',
+      'description': 'Create a storage resource that uses a local filesystem folder.',
+    }
+
   @route('/documentation/storages/gcs', name = 'doc_storages_gcs')
   @view('pages/docs/gcs.html')
   def roote(self):

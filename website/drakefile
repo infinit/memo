@@ -69,6 +69,7 @@ def configure(
   )
 
   markdown = drake.nodes(
+    'templates/pages/docs/src/markdown/filesystem.md',
     'templates/pages/docs/src/markdown/gcs.md',
     'templates/pages/docs/src/markdown/get_started.md',
     'templates/pages/docs/src/markdown/reference.md',
@@ -136,6 +137,7 @@ def configure(
     'templates/pages/docs/comparisons.html',
     'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/deployments.html',
+    'templates/pages/docs/filesystem.html',
     'templates/pages/docs/gcs.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
