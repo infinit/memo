@@ -206,24 +206,42 @@ bin/    lib/    share/
 
 For you to quickly (through a single command) try Infinit out, the following is going to let you **mount an existing volume** and access files through a mount point. Don’t worry, this file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.
 
-Run the _infinit-volume_ command by prefixing it with the environment variable `INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home` to tell the command where to look for the configuration files required for this test.
+Run the _infinit-volume_ command by prefixing it with the environment variable `${demo_home}` to tell the command where to look for the configuration files required for this test.
 
 ```
-$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+$> INFINIT_DATA_HOME=${demo_home} ./bin/infinit-volume${exe} --mount --as demo --name infinit/demo --mountpoint ${demo_mountpoint} --publish --cache
 ```
 
 _**NOTE**: You can stop this test volume by hitting `CTRL^C` or by interrupting the infinit-volume process._
 
-This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `~/mnt-demo/`.
+This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `${demo_mountpoint}`.
 
-Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `~/mnt-demo/` as you would any other POSIX-compliant filesystem.
+Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `${demo_mountpoint}` as you would any other POSIX-compliant filesystem.
 
 Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.
 
 ```
-$> ls ~/mnt-demo/
+$> ${ls_command} ${demo_mountpoint}
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
+
+<div>
+% if osname == "windows":
+</div>
+
+<em><strong>NOTE</strong>: You must specify an unused drive letter as the mount point argument, mounting to an arbitrary
+path is not supported.</em>
+
+You can also browse the files from an explorer window.
+
+<em><strong>NOTE</strong>: If the new drive does not
+appear automatically in the `my PC` virtual directory, try entering `z:` in the
+url bar of explorer. If this fails with an error, open the start menu, select `run command`,
+and enter at the prompt `explorer z:`.</em>
+
+<div>
+% endif
+</div>
 
 3. Create Infrastructure
 -------------------------------
@@ -237,7 +255,12 @@ It is now time for you to **create your own storage infrastructure**. What follo
 First, add the `bin/` directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:
 
 ```
+
+% if osname == "windows":
+$> set PATH=c:/path_to_infinit/bin;%PATH%
+% else:
 $> export PATH=$PWD/bin/:$PATH
+%endif
 ```
 
 ### Create a user
