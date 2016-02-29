@@ -357,7 +357,6 @@ def configure(
     'resources/css/main.min.css',
 
     'resources/js/instantsearch.min.js',
-    'resources/js/switchery.min.js',
     'resources/js/scripts.min.js',
   )
 
