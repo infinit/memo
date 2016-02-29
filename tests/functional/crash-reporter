@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+
+from utils import *
+
+with TemporaryDirectory() as tmp, \
+     Beyond() as beyond, \
+     Infinit(beyond = beyond) as bob:
+  server = '%s/crash/report' % beyond.domain
+  email = 'developers@infinit.io'
+  template = 'Internal/Crash Report'
+
+  def report_emails():
+    return beyond.emailer.get_specifics(email, template)
+
+  def dumps():
+    return os.listdir(str(tmp))
+
+  def crash():
+    # Crash returns 2 on OS X and 11 on Linux so work around with try except.
+    try:
+      bob.run(['crasher', '--server', server, '--dumps', str(tmp), '--crash'])
+      assert False
+    except Exception as e:
+      from time import sleep
+      sleep(2)
+      pass
+
+  def upload(server = server):
+    bob.run(['crasher', '--server', server, '--dumps', str(tmp)])
+
+  # Nothing uploaded as there are no crashes.
+  upload()
+  assertEq(len(report_emails()), 0)
+
+  # Crash and then upload
+  crash()
+  assertEq(len(dumps()), 1)
+  upload()
+  assertEq(len(report_emails()), 1)
+  assertEq(len(dumps()), 0)
+
+  # Crash twice, upload all
+  crash()
+  crash()
+  assertEq(len(dumps()), 2)
+  upload()
+  assertEq(len(report_emails()), 3)
+  assertEq(len(dumps()), 0)
+
+  # Unable to upload, then upload
+  crash()
+  assertEq(len(dumps()), 1)
+  upload(server = beyond.domain)
+  assertEq(len(dumps()), 1)
+  upload()
+  assertEq(len(dumps()), 0)
+  assertEq(len(report_emails()), 4)

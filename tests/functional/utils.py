@@ -55,7 +55,7 @@ class Infinit(TemporaryDirectory):
       args = args.split(' ')
     args[0] += os.environ.get('EXE_EXT', '')
     self.env = {
-      'PATH': self.__infinit_root + '/bin' + ':bin:backend/bin:/bin:/usr/sbin',
+      'PATH': os.environ['PATH'],
       'INFINIT_HOME': self.dir,
       'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',

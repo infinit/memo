@@ -132,7 +132,7 @@ COMMAND(create)
       root = elle::sprintf("%s_blocks", name);
     auto bucket = mandatory(args, "bucket");
     auto account_name = mandatory(args, "account");
-    auto account = ifnt.credentials_google(account_name);
+    auto account = ifnt.credentials_gcs(account_name);
     config =
       elle::make_unique<infinit::storage::GCSConfig>
       (name, bucket, *root, self_user(ifnt, {}).name, account->refresh_token,
@@ -160,7 +160,7 @@ COMMAND(create)
   {
     auto root = optional(args, "path");
     if (!root)
-      root = elle::sprintf(".infinit_%s", name);
+      root = elle::sprintf("storage_%s", name);
     auto account_name = mandatory(args, "account", "Dropbox account");
     auto account = ifnt.credentials_dropbox(account_name);
     config =
@@ -186,7 +186,7 @@ COMMAND(create)
   else if (args.count("ssh"))
   {
     auto host = mandatory(args, "ssh-host", "SSH remote host");
-    auto path = mandatory(args, "ssh-path", "Remote path to store into");
+    auto path = mandatory(args, "path", "Remote path to store into");
     config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
       name, host, path, capacity);
   }
@@ -213,8 +213,9 @@ COMMAND(list)
   for (auto const& storage: storages)
   {
     std::cout << storage->name << ": "
-      << (storage->capacity ? pretty_print(*storage->capacity) : "")
-      << std::endl;
+              << (storage->capacity ? pretty_print(storage->capacity.get())
+                                    : "unlimited")
+              << std::endl;
   }
 }
 
@@ -272,7 +273,7 @@ main(int argc, char** argv)
   Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
-    ("gcs", "store data in Google cloud storage")
+    ("gcs", "store data in Google Cloud Storage")
     ("s3", "store data in using Amazon S3")
 #ifndef INFINIT_WINDOWS
     ("ssh", "store data over SSH")
@@ -283,24 +284,26 @@ main(int argc, char** argv)
     ("dropbox", "store data in a Dropbox")
     ("google-drive", "store data in a Google Drive")
     ;
+  Mode::OptionsDescription cloud_options("Cloud storage options");
+  cloud_options.add_options()
+    ("account", value<std::string>(), "account name to use")
+    ("bucket", value<std::string>(), "bucket to use")
+  ;
   Mode::OptionsDescription s3_options("Amazon S3 storage options");
   s3_options.add_options()
-    ("account", value<std::string>(), "S3 account name to use")
-    ("bucket", value<std::string>(), "S3 bucket to use")
     ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
     ("region", value<std::string>(), "AWS region to use")
   ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");
   ssh_storage_options.add_options()
     ("ssh-host", value<std::string>(), "hostname to connect to")
-    ("ssh-path", value<std::string>(), "remote path to store blocks into")
     ;
   std::string default_locations = elle::sprintf(
     "folder where blocks are stored (default:"
     "\n  filesystem: %s"
     "\n  GCS: <name>_blocks"
     "\n  S3: <name>_blocks"
-    // "\n  Dropbox: .infinit_<name>"
+    // "\n  Dropbox: storage_<name>"
     // "\n  Google Drive: .infinit_<name>"
     ")", (infinit::xdg_data_home() / "blocks/<name>"));
   Modes modes {
@@ -318,6 +321,7 @@ main(int argc, char** argv)
       },
       {
         storage_types,
+        cloud_options,
         s3_options,
 #ifndef INFINIT_WINDOWS
         ssh_storage_options,

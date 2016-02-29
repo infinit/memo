@@ -68,7 +68,7 @@ parse_options(int argc, char** argv, Config& cfg, boost::filesystem::path & p)
   {
     throw elle::Error(elle::sprintf("command line error: %s", e.what()));
   }
-  elle::Version version = vm.count("force-version")
+  elle::Version version_ = vm.count("force-version")
     ? elle::Version::from_string(vm["force-version"].as<std::string>())
     : version;
   if (vm.count("help"))
@@ -77,12 +77,12 @@ parse_options(int argc, char** argv, Config& cfg, boost::filesystem::path & p)
     std::cout << std::endl;
     std::cout << options;
     std::cout << std::endl;
-    std::cout << "Infinit v" << version << std::endl;
+    std::cout << "Infinit v" << version_ << std::endl;
     throw elle::Exit(0);
   }
   if (vm.count("version"))
   {
-    std::cout << version << std::endl;
+    std::cout << version_ << std::endl;
     throw elle::Exit(0);
   }
   if (vm.count("config") != 0)

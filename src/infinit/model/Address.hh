@@ -47,6 +47,9 @@ namespace infinit
       from_string(std::string const& repr);
       static
       Address
+      random();
+      static
+      Address
       random(Flags flags);
       static Address const null;
     private:

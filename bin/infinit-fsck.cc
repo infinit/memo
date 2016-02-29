@@ -124,7 +124,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
         account_for(blocks, e.second.second, "directory entry");
         try
         {
-          auto v = block->validate();
+          auto v = block->validate(*dn);
           if (!v)
           {
             if (prompt(elle::sprintf("Validation failed for %s/%s : %s, delete entry?",
@@ -211,7 +211,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
       try
       {
         auto block = dn->fetch(b.first);
-        auto val = block->validate();
+        auto val = block->validate(*dn);
         if (!val)
         {
           ELLE_WARN("Validation failed for unaccounted %x: %s",

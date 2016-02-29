@@ -485,12 +485,12 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
-      BaseACB<Block>::_validate() const
+      BaseACB<Block>::_validate(Model const& model) const
       {
         if (this->_is_local)
           return blocks::ValidationResult::success();
         ELLE_DEBUG("%s: validate owner part", *this)
-          if (auto res = Super::_validate()); else
+          if (auto res = Super::_validate(model)); else
             return res;
         if (this->_world_writable)
           return blocks::ValidationResult::success();
@@ -564,9 +564,10 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
-      BaseACB<Block>::_validate(blocks::Block const& new_block) const
+      BaseACB<Block>::_validate(Model const& model,
+                                blocks::Block const& new_block) const
       {
-        auto supval = Block::_validate(new_block);
+        auto supval = Block::_validate(model, new_block);
         if (!supval)
           return supval;
         auto acb = dynamic_cast<Self const*>(&new_block);
@@ -792,7 +793,7 @@ namespace infinit
 
       template<typename Block>
       model::blocks::RemoveSignature
-      BaseACB<Block>::_sign_remove() const
+      BaseACB<Block>::_sign_remove(Model& model) const
       {
         auto res = this->clone();
         auto acb = dynamic_cast<Self*>(res.get());
@@ -807,7 +808,8 @@ namespace infinit
 
       template<typename Block>
       blocks::ValidationResult
-      BaseACB<Block>::_validate_remove(blocks::RemoveSignature const& rs) const
+      BaseACB<Block>::_validate_remove(Model& model,
+                                       blocks::RemoveSignature const& rs) const
       {
         if (!rs.block)
           return blocks::ValidationResult::failure("Expected a block in RemoveSignature");
@@ -818,16 +820,16 @@ namespace infinit
           return blocks::ValidationResult::failure("Block not marked for deletion");
         // FIXME: calling validate can change our address, and make
         // the validate(other) below fail
-        auto isvalid = rs.block->validate();
-        if (!isvalid)
-          return isvalid;
+        auto valid = rs.block->validate(model);
+        if (!valid)
+          return valid;
 
         if (this->version() >= mb->version())
           return blocks::ValidationResult::conflict("Invalid version");
 
-        isvalid = dynamic_cast<const blocks::Block*>(this)->validate(*mb);
-        if (!isvalid)
-          return isvalid;
+        valid = dynamic_cast<const blocks::Block*>(this)->validate(model, *mb);
+        if (!valid)
+          return valid;
         return blocks::ValidationResult::success();
       }
 

@@ -46,7 +46,7 @@ namespace crash_reporting
   CrashReporter::CrashReporter(std::string crash_url,
                                boost::filesystem::path dumps_path)
     : _crash_url(std::move(crash_url))
-    , _enabled(false)
+    , _enabled(true)
     , _exception_handler(nullptr)
     , _dumps_path(std::move(dumps_path))
   {

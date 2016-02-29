@@ -94,7 +94,7 @@ namespace infinit
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         ELLE_DEBUG("%s: validate block", *this)
-          if (auto res = block.validate()); else
+          if (auto res = block.validate(this->doughnut())); else
             throw ValidationFailed(res.reason());
         try
         {
@@ -115,7 +115,7 @@ namespace infinit
                               mblock->version(), mprevious->version()),
                 std::move(previous));
           }
-          auto vr = previous->validate(block);
+          auto vr = previous->validate(this->doughnut(), block);
           if (!vr)
             if (vr.conflict())
               throw Conflict(vr.reason(), std::move(previous));
@@ -172,7 +172,7 @@ namespace infinit
             typename elle::serialization::binary::SerializerIn input(s);
             input.set_context<Doughnut*>(&this->_doughnut);
             auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
-            auto val = previous->validate_remove(rs);
+            auto val = previous->validate_remove(this->doughnut(), rs);
             if (!val)
               if (val.conflict())
                 throw Conflict(val.reason(), previous->clone());
@@ -292,7 +292,10 @@ namespace infinit
               [this, auth_syn] (Passport const& p, elle::Version const& v)
                 -> std::pair<Challenge, Passport*>
               {
-                if (v != this->_doughnut.version())
+                auto dht_version = this->_doughnut.version();
+                auto version =
+                  elle::Version(dht_version.major(), dht_version.minor(), 0);
+                if (v != version)
                   throw elle::Error(
                     elle::sprintf("invalid version %s, we use %s",
                                   v, this->_doughnut.version()));

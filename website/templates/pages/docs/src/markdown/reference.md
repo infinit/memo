@@ -180,13 +180,15 @@ bob: public key only
 Credentials
 ---------------
 
-The _infinit-credentials_ binary manages the credentials for your cloud services. Cloud services, such as Amazon S3 and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.
+The _infinit-credentials_ binary manages the credentials for your cloud services. Cloud services, such as Amazon Web Services, Google Cloud Storage and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.
 
 *__NOTE__: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>.*
 
 ### Add credentials ###
 
-To add AWS credentials so that an Amazon S3 bucket can be used to store data, simply use the `--add` option specifying `aws`. Note that an Access Key ID and Secrect Access Key are used, not the user name and password:
+#### Amazon Web Services account ####
+
+To add AWS credentials so that an Amazon Simple Storage Service (S3) bucket can be used to store data, simply use the `--add` option specifying `--aws`. Note that an Access Key ID and Secrect Access Key are used, not the user name and password:
 
 ```
 $> infinit-credentials --add --aws --name s3-user
@@ -218,6 +220,22 @@ _**IMPORTANT**: AWS credentials are only ever stored locally and cannot be pushe
   </code></pre>
 </div>
 
+#### Google Cloud Storage account ####
+
+To add Google Cloud Storage credentials so that a GCS bucket can be used to store data, use the `--add` option specifying `--gcs`. You will be required to navigate to the [OAuth](https://en.wikipedia.org/wiki/OAuth) link provided in the command line to give Infinit access to your GCS account.
+
+```
+$> infinit-credentials --add --gcs
+Register your Google account with infinit by visiting https://beyond.infinit.io/users/alice/gcs-oauth
+```
+
+Once you have done this, you will need to fetch the credentials from the Hub.
+
+```
+$> infinit-credentials --fetch
+Fetched Google Cloud Storage credentials alice@company.com (alice)
+```
+
 ### List credentials ###
 
 At any point, you can list your local credentials using the `--list` option:
@@ -226,6 +244,8 @@ At any point, you can list your local credentials using the `--list` option:
 $> infinit-credentials --list
 AWS:
   AKIAIOSFODNN7EXAMPLE: s3-user
+GCS:
+  alice@company.com: Alice
 ```
 
 Storage
@@ -252,6 +272,8 @@ You can create a storage on top of a cloud service API. In order to do this, you
 
 You can then specify the type of cloud service you want your storage to rely upon along with the cloud service account identifier. Cloud service identifiers can be retrieved when <a href="#list-credentials">listing your credentials</a>.
 
+#### S3 ####
+
 In order to use Amazon S3, you must first have created an AWS user and an S3 bucket. Ensure that the user has permissions to read and write in the bucket.
 
 The following creates a storage resource which uses a folder of an Amazon S3 bucket, specifying a name for the storage, the AWS account identifier, the region the bucket is in, the bucket's name and the folder to store the blocks in:
@@ -263,7 +285,18 @@ Created storage "s3".
 
 _**IMPORTANT**: The AWS user requires the correct <a href="#iam-policy" class="href iam_policy">permissions</a> for the S3 bucket, otherwise you will encounter `PermissionDenied` errors when mounting the volume. You can set the correct permissions at any time._
 
-The list of supported cloud services is continually evolving and can be seen by using `--create --help`. Enterprise storage solutions such as <a href="https://cloud.google.com/storage">Google Cloud Storage</a> and <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported. If you would like any others, [let us know](http://infinit-sh.uservoice.com).
+#### GCS ####
+
+In order to use GCS, you will first have to have created a GCS bucket and ensure that the user you added with `infinit-credentials` has access to it.
+
+The following creates a storage resource which uses a folder of a GCS bucket, specifying a name for the storage, the GCS account identifier, the bucket's name and the folder to store the blocks in:
+
+```
+$> infinit-storage --create --gcs --name gcs --account alice@company.com --bucket my-gcs-bucket --path blocks-folder
+Created storage "gcs".
+```
+
+The list of supported cloud services is continually evolving and can be seen by using `--create --help`. Enterprise storage solutions such as <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported. If you would like any others, [let us know](http://infinit-sh.uservoice.com).
 
 Network
 -----------
@@ -378,10 +411,10 @@ $> infinit-passport --create --as alice --network cluster --user bob
 Locally created passport "alice/cluster: bob".
 ```
 
-You can restrict the credentials given by this passport by using one of the following options:
+You can restrict the network permissions given by a passport by creating it with the following options:
 
-- `--deny-write`: Passport grants read-only access to the network.
-- `--deny-storage`: Passport does not allow user to contribute any storage.
+- `--deny-write`: Passport grants read-only access to the network. Note that this option supersedes the ACL of a volume and that a storage node with this flag will not be able to rebalance blocks.
+- `--deny-storage`: Passport does not allow user to contribute any storage to the network.
 
 Now that the passport has been created, read the <a href="#distribute-a-passport">Distribute a passport</a> section to learn how to distribute it to the invited user.
 
@@ -426,6 +459,21 @@ alice/cluster: bob
 
 That's it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.
 
+### Create a delegate passport ###
+
+A special type of passport can be created which allows a user to create passports for the network. This is done in two steps. The first is to create the passport with the `--allow-create-passport` flag.
+
+```
+$> infinit-passport --create --as alice --network cluster --user bob --allow-create-passport --push
+Locally created passport "alice/cluster: bob".
+```
+
+The second is to *register* the user's public key. This can only be done once you have created a volume on the network as you will be required to mount the volume and use the `infinit-acl` binary to register the user.
+
+```
+$> infinit-acl --register --network cluster --user bob --path /path/to/mountpoint
+```
+
 Volume
 ----------
 
@@ -443,6 +491,10 @@ Locally created volume "alice/shared".
 ```
 
 _**NOTE**: You may have noticed that the name of the network is sometimes prepended with the username of its owner e.g "alice/cluster". This fully-qualified name distinguishes objects that you own from the ones that you don't. When manipulating objects of which you are the owner, you will not need to use the fully-qualified name as the command-line tools will automatically search in the user's namespace._
+
+#### Default permissions ####
+
+A volume can be created with _default permissions_ of either read-only or read-write. These permissions apply to anyone who has a passport for the network. The one exception to this is if a user has a passport with the `deny write` flag, they will not be able to write to read-write volumes.
 
 ### Publish a volume ###
 
@@ -771,7 +823,7 @@ Locally created drive "alice/workspace".
 Remotely pushed drive "alice/workspace".
 ```
 
-Note that the `--push` option is included to publish the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-users">inviting</a> to join.
+Note that the `--push` option is included to publish the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-existing-users">inviting</a> to join.
 
 ### List the drives ###
 
@@ -784,7 +836,7 @@ $> infinit-drive --list
 alice/workspace: ok
 ```
 
-### Invite users ###
+### Invite existing users ###
 
 It is now time to invite users to join the drive you've created for them.
 
@@ -813,6 +865,38 @@ Remotely pushed invitations "alice/workspace: bob, charlie".
 ```
 
 Without any `--user` specified the `--invite` command will push each pending invitations to the Hub, sending the notification emails as a consequence.
+
+### Invite new users ###
+
+Inviting people who have not yet created a user is complex as the process of generating the user's key pair is deferred.
+
+To ensure that invited users have access to the drive immediately, you will need to either have created a volume with read-write [default permissions](#default-permissions) or mount the volume and set [world read-write permissions](#world-readability-writability).
+
+The next step is to [create a delegate passport](#create-a-delegate-passport) for the Hub. This will allow the Hub to create passports for users to access your network when they sign up.
+
+```
+$> infinit-user --fetch --as alice --name hub
+Fetched user "hub".
+$> infinit-passport --create --as alice --network cluster --user hub --allow-create-passport --push
+Locally created passport "alice/cluster: hub".
+Remotely pushed passport "alice/cluster: hub".
+```
+
+The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the `infinit-acl` binary can be used to write the block.
+
+```
+$> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
+...
+$> infinit-acl --register --network cluster --user hub --path /mnt/shared/
+```
+
+The user can now be invited using their email address. They will receive an email asking them to install the graphical client and sign up. Note that the Hub will only generate their passport once they have confirmed their email address.
+
+```
+$> infinit-drive --invite --as alice --name --workspace --email dave@company.com --push
+Locally created invitation "alice/workspace: dave@company.com".
+Remotely pushed invitation "alice/workspace: dave@company.com".
+```
 
 ### Join a drive ###
 

@@ -1,17 +1,35 @@
 # Change Log
 
 
-## [Unreleased]
+## [0.5.2] - 2016-02-25
+
+Hotfix for AWS s3 storage in us-east-1 region.
+
+### Added
+
+- Add `infinit-block`, a debug utility to pretty print a block from
+  the disk.
+
+### Fixed
+
+- Fix AWS S3 storage on us-east-1 region.
+- Fix Google cloud storage and Google drive credentials mixup.
+- Fixed some logs and error messages where only the first character of
+  some strings was displayed.
 
 
-## [0.5.0]
+## [0.5.1] - YANKED
+
+Skipped release because of unrecognized version in RPCs.
+
+
+## [0.5.0] - 2016-02-23
 
 Rebalancing protocol and passport delegation.
 
 ### Added
 
 - Add dynamic block rebalancing.
-- Support Google Cloud Storage as storage backend.
 - Enable to disable writing to the DHT or acting as storage when
   signing a passport for a node.
 - Enable to delegate further passport signature when signing a
@@ -22,8 +40,6 @@ Rebalancing protocol and passport delegation.
   file.
 - Resolve hostnames passed to `--peer` options.
 - Add `--port-file` to output endpoints listened on to a file.
-- Add `infinit-block`, an debug utility to pretty print a block from
-  the disk.
 - Always show network compatibilty version in the logs.
 
 ### Changed

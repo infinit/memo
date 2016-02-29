@@ -522,22 +522,22 @@ namespace infinit
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
 #ifndef INFINIT_WINDOWS
       std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
-# ifdef INFINIT_PRODUCTION_BUILD
-      // bool const production_build = true;
-# else
-      // bool const production_build = false;
-# endif
-      // FIXME: reenable crash reporter
-      // if (production_build &&
-      //     elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
-      //     elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
-      // {
-      //   std::string crash_url =
-      //     elle::sprintf("%s/crash/report",
-      //     crash_host.length() ? crash_host : beyond());
-      //   crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
-      //   crash_url, xdg_cache_home() / "crashes");
-      // }
+#ifdef INFINIT_PRODUCTION_BUILD
+      bool const production_build = true;
+#else
+      bool const production_build = false;
+#endif
+      if (production_build &&
+          elle::os::getenv("INFINIT_CRASH_REPORTER", "") != "0" ||
+          elle::os::getenv("INFINIT_CRASH_REPORTER", "") == "1")
+      {
+        std::string crash_url =
+          elle::sprintf("%s/crash/report",
+          crash_host.length() ? crash_host : beyond());
+        auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
+        crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
+          crash_url, dumps_path);
+      }
 #endif
       reactor::Scheduler sched;
       reactor::Thread main_thread(
@@ -960,7 +960,8 @@ namespace infinit
 
     std::unique_ptr<reactor::filesystem::FileSystem>
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
-        boost::optional<std::string> mountpoint_ = {}
+        boost::optional<std::string> mountpoint_ = {},
+        boost::optional<bool> readonly = {}
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
 #endif
@@ -994,8 +995,11 @@ namespace infinit
           "-o", "noatime",
           "-o", "hard_remove",
         };
-
-#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+        if (readonly && readonly.get())
+        {
+          mount_options.push_back("-o");
+          mount_options.push_back("ro");
+        }
         auto add_option = [] (std::string const& opt_name,
                               std::string const& opt_val,
                               std::vector<std::string>& options)
@@ -1003,6 +1007,7 @@ namespace infinit
             options.push_back("-o");
             options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
           };
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         add_option("volname", volname_.get(), mount_options);
 #endif
 #ifdef INFINIT_MACOSX

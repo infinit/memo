@@ -31,7 +31,6 @@ namespace infinit
         : Super(CHB::_hash_address(data, owner, salt, d->version()), data)
         , _salt(std::move(salt))
         , _owner(owner)
-        , _doughnut(d)
       {
         if (d->version() < elle::Version(0, 4, 0))
           this->_owner = Address::null;
@@ -41,7 +40,6 @@ namespace infinit
         : Super(other)
         , _salt(other._salt)
         , _owner(other._owner)
-        , _doughnut(other._doughnut)
       {}
 
       /*---------.
@@ -63,11 +61,12 @@ namespace infinit
       {}
 
       blocks::ValidationResult
-      CHB::_validate() const
+      CHB::_validate(Model const& model) const
       {
         ELLE_DEBUG_SCOPE("%s: validate", *this);
-        auto expected_address = CHB::_hash_address(this->data(), this->_owner,
-          this->_salt, this->_doughnut->version());
+        auto expected_address =
+          CHB::_hash_address(this->data(), this->_owner,
+                             this->_salt, model.version());
         if (!equal_unflagged(this->address(), expected_address))
         {
           auto reason =
@@ -91,7 +90,6 @@ namespace infinit
                elle::Version const& version)
         : Super(input, version)
       {
-        input.serialize_context<Doughnut*>(this->_doughnut);
         input.serialize("salt", _salt);
         if (version >= elle::Version(0, 4, 0))
           input.serialize("owner", _owner);
@@ -119,8 +117,9 @@ namespace infinit
       }
 
       blocks::RemoveSignature
-      CHB::_sign_remove() const
+      CHB::_sign_remove(Model& model) const
       {
+        auto& dht = dynamic_cast<Doughnut&>(model);
         ELLE_TRACE("%s: sign_remove, owner=%x", *this, this->_owner);
         if (this->_owner == Address::null)
           return blocks::RemoveSignature();
@@ -128,8 +127,8 @@ namespace infinit
         // we need to figure out which key to use, the one giving us access to the owner
         elle::Buffer to_sign(this->address().value(), sizeof(Address::Value));
         elle::Buffer signature;
-        auto& keys = this->_doughnut->keys();
-        auto block = this->_doughnut->fetch(this->_owner);
+        auto& keys = dht.keys();
+        auto block = dht.fetch(this->_owner);
         // default behavior if signature not set below is to use doughnut key
         if (!block)
         {
@@ -159,13 +158,13 @@ namespace infinit
                 {
                   try
                   {
-                    Group g(*_doughnut, e.key);
+                    Group g(dht, e.key);
                     auto kp = g.current_key();
                     ELLE_TRACE("Using group key");
                     signature = kp.k().sign(to_sign);
                     res.signature_key.emplace(kp.K());
                     res.group_key.emplace(e.key);
-                    res.group_index = g.version()-1;
+                    res.group_index = g.version() - 1;
                     break;
                   }
                   catch (elle::Error const&)
@@ -181,14 +180,15 @@ namespace infinit
           signature = keys.k().sign(to_sign);
           res.signature_key.emplace(keys.K());
         }
-
         res.signature.emplace(signature);
         return res;
       }
 
       blocks::ValidationResult
-      CHB::_validate_remove(blocks::RemoveSignature const& sig) const
+      CHB::_validate_remove(Model& model,
+                            blocks::RemoveSignature const& sig) const
       {
+        auto& dht = dynamic_cast<Doughnut&>(model);
         ELLE_TRACE("%s: validate_remove", *this);
         if (this->_owner == Address::null)
           return blocks::ValidationResult::success();
@@ -200,7 +200,7 @@ namespace infinit
         if (!ok)
           return blocks::ValidationResult::failure("Invalid signature");
         // now verify that this key has access to owner
-        auto block = this->_doughnut->fetch(this->_owner);
+        auto block = model.fetch(this->_owner);
         if (!block)
         {
           ELLE_WARN("CHB owner %x not found, cannot validate remove request",
@@ -231,7 +231,7 @@ namespace infinit
           if (it != entries.end() && it->write)
           {
             // group has access, now check the key is indeed a group key
-            Group g(*_doughnut, *sig.group_key);
+            Group g(dht, *sig.group_key);
             auto pubs = g.group_public_keys();
             ELLE_TRACE("checking with group key %s/%s", *sig.group_index,
               pubs.size());
