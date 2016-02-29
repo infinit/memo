@@ -69,6 +69,7 @@ def configure(
   )
 
   markdown = drake.nodes(
+    'templates/pages/docs/src/markdown/s3.md',
     'templates/pages/docs/src/markdown/get_started.md',
     'templates/pages/docs/src/markdown/technology.md',
     'templates/pages/docs/src/markdown/reference.md',
@@ -119,31 +120,36 @@ def configure(
   ) + copy_generated_pages([changelog])
   templates = drake.nodes(
     'templates/base.html',
-    'templates/pages/home.html',
+
+    'templates/pages/about.html',
+    'templates/pages/contact.html',
     'templates/pages/drive.html',
     'templates/pages/faq.html',
+    'templates/pages/home.html',
+    'templates/pages/legal.html',
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
-    'templates/pages/about.html',
-    'templates/pages/contact.html',
-    'templates/pages/legal.html',
-    'templates/pages/press/pr_tech.html',
-    'templates/pages/press/pr_storage.html',
-    'templates/pages/press/resources.html',
-    'templates/pages/press/investors.html',
-    'templates/pages/docs/menu.html',
+
+    'templates/pages/docs/changelog.html',
+    'templates/pages/docs/comparisons.html',
+    'templates/pages/docs/decentralized_fs.html',
+    'templates/pages/docs/deployments.html',
     'templates/pages/docs/get_started.html',
     'templates/pages/docs/get_started_windows.html',
+    'templates/pages/docs/menu.html',
     'templates/pages/docs/overview.html',
-    'templates/pages/docs/technology.html',
-    'templates/pages/docs/deployments.html',
-    'templates/pages/docs/comparisons.html',
     'templates/pages/docs/personal_cloud.html',
-    'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
-    'templates/pages/docs/changelog.html',
+    'templates/pages/docs/s3.html',
+    'templates/pages/docs/technology.html',
+
+    'templates/pages/press/investors.html',
+    'templates/pages/press/pr_storage.html',
+    'templates/pages/press/pr_tech.html',
+    'templates/pages/press/resources.html',
+
     'templates/pages/users/confirm_email.html',
   ) + generated
 
@@ -213,6 +219,11 @@ def configure(
     'resources/images/schema-deployment-multi-servers@2x.png',
     'resources/images/schema-cover.png',
     'resources/images/terminal.png',
+
+    'resources/images/docs/s3/attach-policy.png',
+    'resources/images/docs/s3/create-bucket.png',
+    'resources/images/docs/s3/create-policy.png',
+    'resources/images/docs/s3/create-user.png',
 
     'resources/images/icons/storage.png',
     'resources/images/icons/storage@2x.png',

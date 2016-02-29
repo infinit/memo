@@ -166,6 +166,14 @@ class Website(bottle.Bottle):
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
+  @route('/documentation/storages/s3', name = 'doc_storages_s3')
+  @view('pages/docs/s3.html')
+  def roote(self):
+    return {
+      'title': 'Amazon S3 Storage',
+      'description': 'Create a storage resource that uses an Amazon S3 bucket.',
+    }
+
   @route('/open-source', name = 'opensource')
   @view('pages/opensource.html')
   def root(self):
