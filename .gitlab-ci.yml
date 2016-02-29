@@ -68,6 +68,12 @@ x86_64-windows-mingw4:
     - farm/configure --arch x86_64 --os windows --compiler mingw4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install
     - cd ../fs-build && python3 drake --website=false -j 4 //build
     - cd ../fs-build && python3 drake --website=false -j 4 //check
+    - rm -rf ../fs-install && mkdir -p ../fs-install
+    - python3 drake -j 4 //install
+    - mv ../fs-install "../infinit-$(GIT_DIR=../fs/.git git describe)"
+    - cd .. && zip -r "infinit-$(GIT_DIR=../fs/.git git describe).zip" "infinit-$(GIT_DIR=../fs/.git git describe)"
+    - mv "../infinit-$(GIT_DIR=../fs/.git git describe)" ../fs-install
+    - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" debian@debian.infinit.io:repository
 #    - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
   tags:
     - x86_64
