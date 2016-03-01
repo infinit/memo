@@ -98,6 +98,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = infinit::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
   elle::SafeFinally cleanup_path([&] {
       boost::filesystem::remove_all(path);
   });
