@@ -461,10 +461,10 @@ That's it, you will now be able to <a href="#link-a-device-to-a-network">link de
 
 ### Create a delegate passport ###
 
-A special type of passport can be created which allows a user to create passports for the network. This is done in two steps. The first is to create the passport with the `--allow-sign` flag.
+A special type of passport can be created which allows a user to create passports for the network. This is done in two steps. The first is to create the passport with the `--allow-create-passport` flag.
 
 ```
-$> infinit-passport --create --as alice --network cluster --user bob --allow-sign --push
+$> infinit-passport --create --as alice --network cluster --user bob --allow-create-passport --push
 Locally created passport "alice/cluster: bob".
 ```
 
@@ -877,7 +877,7 @@ The next step is to [create a delegate passport](#create-a-delegate-passport) fo
 ```
 $> infinit-user --fetch --as alice --name hub
 Fetched user "hub".
-$> infinit-passport --create --as alice --network cluster --user hub --allow-sign --push
+$> infinit-passport --create --as alice --network cluster --user hub --allow-create-passport --push
 Locally created passport "alice/cluster: hub".
 Remotely pushed passport "alice/cluster: hub".
 ```
