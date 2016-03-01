@@ -94,7 +94,7 @@ namespace infinit
         ELLE_ASSERT(&block);
         ELLE_TRACE_SCOPE("%s: store %f", *this, block);
         ELLE_DEBUG("%s: validate block", *this)
-          if (auto res = block.validate()); else
+          if (auto res = block.validate(this->doughnut())); else
             throw ValidationFailed(res.reason());
         try
         {
@@ -115,7 +115,7 @@ namespace infinit
                               mblock->version(), mprevious->version()),
                 std::move(previous));
           }
-          auto vr = previous->validate(block);
+          auto vr = previous->validate(this->doughnut(), block);
           if (!vr)
             if (vr.conflict())
               throw Conflict(vr.reason(), std::move(previous));
@@ -172,7 +172,7 @@ namespace infinit
             typename elle::serialization::binary::SerializerIn input(s);
             input.set_context<Doughnut*>(&this->_doughnut);
             auto previous = input.deserialize<std::unique_ptr<blocks::Block>>();
-            auto val = previous->validate_remove(rs);
+            auto val = previous->validate_remove(this->doughnut(), rs);
             if (!val)
               if (val.conflict())
                 throw Conflict(val.reason(), previous->clone());

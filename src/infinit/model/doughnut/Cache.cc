@@ -5,9 +5,10 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 
+#include <elle/bench.hh>
+#include <elle/bytes.hh>
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
-#include <elle/bench.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -45,9 +46,10 @@ namespace infinit
           , _cache_ttl(
             cache_ttl ?
             cache_ttl.get() : std::chrono::seconds(60 * 5))
-          , _cache_size(cache_size ? cache_size.get() : 64000000)
+          , _cache_size(cache_size ? cache_size.get() : 64_mB)
           , _disk_cache_path(disk_cache_path)
-          , _disk_cache_size(disk_cache_size ? disk_cache_size.get() : 64000000)
+          , _disk_cache_size(
+            disk_cache_size ? disk_cache_size.get() : 512_mB)
           , _disk_cache_used(0)
           , _cleanup_thread(
             new reactor::Thread(elle::sprintf("%s cleanup", *this),
@@ -88,7 +90,7 @@ namespace infinit
         void
         Cache::_remove(Address address, blocks::RemoveSignature rs)
         {
-          ELLE_TRACE_SCOPE("%s: remove %s", *this, address);
+          ELLE_TRACE_SCOPE("%s: remove %f", this, address);
           if (this->_cache.erase(address) > 0)
             ELLE_DEBUG("drop block from cache");
           else
@@ -99,7 +101,8 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Cache::_fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %s", *this, address);
+          ELLE_TRACE_SCOPE("%s: fetch %f (local_version: %s)",
+                           this, address, local_version);
           static elle::Bench bench_hit("bench.cache.ram.hit", 1000_sec);
           static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000_sec);
           auto hit = this->_cache.find(address);
@@ -112,13 +115,20 @@ namespace infinit
             if (local_version)
               if (auto mb =
                   dynamic_cast<blocks::MutableBlock*>(hit->block().get()))
-                if (mb->version() == local_version.get())
+              {
+                auto version = mb->version();
+                if (version == local_version.get())
+                {
+                  ELLE_DEBUG("cached version is the same: %s", version);
                   return nullptr;
+                }
+                else
+                  ELLE_DEBUG("cached version is more recent: %s", version);
+              }
             return hit->block()->clone();
           }
           else
           {
-
             bench_hit.add(0);
             // try disk cache
             auto disk_hit = this->_disk_cache.find(address);
@@ -144,14 +154,11 @@ namespace infinit
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
             {
-              if (dynamic_cast<blocks::MutableBlock*>(res.get()))
-              {
-                this->_cache.emplace(res->clone());
-              }
-              else if (_disk_cache_size)
-              {
+              if (this->_disk_cache_size &&
+                  dynamic_cast<blocks::ImmutableBlock*>(res.get()))
                 this->_disk_cache_push(res);
-              }
+              else
+                this->_cache.emplace(res->clone());
             }
             return res;
           }
@@ -164,7 +171,7 @@ namespace infinit
         {
           static elle::Bench bench("bench.cache.store", 10000_sec);
           elle::Bench::BenchScope bs(bench);
-          ELLE_TRACE_SCOPE("%s: store %s", *this, block->address());
+          ELLE_TRACE_SCOPE("%s: store %f", this, block->address());
           auto mb = dynamic_cast<blocks::MutableBlock*>(block.get());
           std::unique_ptr<blocks::Block> cloned;
           {
@@ -220,8 +227,7 @@ namespace infinit
           auto sz = boost::filesystem::file_size(path);
           this->_disk_cache.emplace(CachedCHB{block->address(), sz, now()});
           this->_disk_cache_used += sz;
-          ELLE_DEBUG("Adding %s to disk cache for %s, total %s",
-                     path, sz, this->_disk_cache_used);
+          ELLE_DEBUG("add %f to disk cache (%s bytes)", block->address(), sz);
           while (this->_disk_cache_used > this->_disk_cache_size)
           {
             ELLE_ASSERT(!this->_disk_cache.empty());
@@ -247,6 +253,7 @@ namespace infinit
         {
           if (!this->_disk_cache_path)
             return;
+          ELLE_TRACE_SCOPE("%s: reload disk cache", this);
           int count = 0;
           for (auto it = boost::filesystem::directory_iterator(*this->_disk_cache_path);
               it != boost::filesystem::directory_iterator();
@@ -258,8 +265,8 @@ namespace infinit
             this->_disk_cache_used += sz;
             ++count;
           }
-          ELLE_TRACE("Indexed %s blocks from %s totalling %s bytes",
-                     count, *this->_disk_cache_path, this->_disk_cache_used);
+          ELLE_TRACE("loaded %s blocks totalling %s bytes",
+                     count, this->_disk_cache_used);
         }
 
         void
@@ -339,12 +346,13 @@ namespace infinit
           }
         }
 
-        Cache::CachedCHB::CachedCHB(Address address, uint64_t size, clock::time_point last_used)
-        : _address(address)
-        , _size(size)
-        , _last_used(last_used)
-        {
-        }
+        Cache::CachedCHB::CachedCHB(Address address,
+                                    uint64_t size,
+                                    clock::time_point last_used)
+          : _address(address)
+          , _size(size)
+          , _last_used(last_used)
+        {}
 
         Cache::CachedBlock::CachedBlock(std::unique_ptr<blocks::Block> block)
           : _block(std::move(block))

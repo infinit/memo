@@ -71,16 +71,17 @@ namespace infinit
         _seal(boost::optional<int> version) override;
         virtual
         blocks::ValidationResult
-        _validate() const override;
+        _validate(Model const& model) const override;
         virtual
         blocks::RemoveSignature
-        _sign_remove() const override;
+        _sign_remove(Model& model) const override;
         virtual
         blocks::ValidationResult
-        _validate_remove(blocks::RemoveSignature const& sig) const override;
+        _validate_remove(Model& model,
+                         blocks::RemoveSignature const& sig) const override;
         virtual
         blocks::ValidationResult
-        _validate(const Block& new_block) const override;
+        _validate(Model const& model, const Block& new_block) const override;
       private:
         elle::Buffer
         _data_sign() const;

@@ -112,7 +112,7 @@ namespace infinit
 
       // FIXME: factor with CHB
       blocks::ValidationResult
-      NB::_validate() const
+      NB::_validate(Model const& model) const
       {
         Address expected_address;
         ELLE_DEBUG("%s: check address", *this)
@@ -144,7 +144,7 @@ namespace infinit
       }
 
       blocks::ValidationResult
-      NB::_validate(const Block& new_block) const
+      NB::_validate(Model const& model, const Block& new_block) const
       {
         auto nb = dynamic_cast<const NB*>(&new_block);
         if (nb)
@@ -158,7 +158,7 @@ namespace infinit
       }
 
       blocks::RemoveSignature
-      NB::_sign_remove() const
+      NB::_sign_remove(Model& model) const
       {
         blocks::RemoveSignature res;
         res.block.reset(new NB(this->_doughnut,
@@ -170,14 +170,15 @@ namespace infinit
       }
 
       blocks::ValidationResult
-      NB::_validate_remove(blocks::RemoveSignature const& sig) const
+      NB::_validate_remove(Model& model,
+                           blocks::RemoveSignature const& sig) const
       {
         if (!sig.block)
           return blocks::ValidationResult::failure("No block in signature");
         NB* other = dynamic_cast<NB*>(sig.block.get());
         if (!other)
           return blocks::ValidationResult::failure("not a NB");
-        auto val = other->validate();
+        auto val = other->validate(model);
         if (!val)
           return val;
         if (other->address() != this->address())

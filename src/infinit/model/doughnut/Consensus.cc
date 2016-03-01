@@ -90,7 +90,7 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::fetch(Address address, boost::optional<int> local_version)
         {
-          ELLE_TRACE_SCOPE("%s: fetch %s (local version: %s)",
+          ELLE_TRACE_SCOPE("%s: fetch %f (local version: %s)",
                            *this, address, local_version);
           if (this->doughnut().version() < elle::Version(0, 5, 0))
             return this->_fetch(address, local_version);
@@ -152,7 +152,7 @@ namespace infinit
                 }
                 catch (reactor::network::Exception const& e)
                 {
-                  ELLE_TRACE("Network exception removing %s: %s",
+                  ELLE_TRACE("network exception removing %f: %s",
                              address, e.what());
                 }
               });
@@ -217,13 +217,13 @@ namespace infinit
             // FIXME: get rid of that
             catch (elle::Error const& e)
             {
-              ELLE_TRACE("attempt fetching %s from %s failed: %s",
+              ELLE_TRACE("attempt fetching %f from %s failed: %s",
                          address, *peer, e.what());
             }
           }
           // Some overlays may return peers even if they don't have the block,
           // so we have to return MissingBlock here.
-          ELLE_TRACE("all %s peers failed fetching %x", attempt, address);
+          ELLE_TRACE("all %s peers failed fetching %f", attempt, address);
           throw MissingBlock(address);
         }
 

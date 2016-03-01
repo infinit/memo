@@ -133,7 +133,7 @@ namespace infinit
     {
       if (auto res = this->_fetch(address, local_version))
       {
-        if (!res->validate())
+        if (!res->validate(*this))
         {
           ELLE_WARN("%s: invalid block received for %s", *this, address);
           throw elle::Error("invalid block");
@@ -151,7 +151,7 @@ namespace infinit
     Model::remove(Address address)
     {
       auto block = this->fetch(address);
-      auto rs = block->sign_remove();
+      auto rs = block->sign_remove(*this);
       this->remove(address, std::move(rs));
     }
 

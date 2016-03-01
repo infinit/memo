@@ -154,10 +154,11 @@ namespace infinit
       protected:
         virtual
         blocks::ValidationResult
-        _validate() const override;
+        _validate(Model const& model) const override;
         virtual
         blocks::ValidationResult
-        _validate(blocks::Block const& new_block) const override;
+        _validate(Model const& model,
+                  blocks::Block const& new_block) const override;
         virtual
         void
         _seal(boost::optional<int> version) override;
@@ -181,10 +182,11 @@ namespace infinit
         _sign() const override;
         virtual
         model::blocks::RemoveSignature
-        _sign_remove() const override;
+        _sign_remove(Model& model) const override;
         virtual
         blocks::ValidationResult
-        _validate_remove(blocks::RemoveSignature const& rs) const override;
+        _validate_remove(Model& model,
+                         blocks::RemoveSignature const& rs) const override;
       protected:
         class DataSignature
         {

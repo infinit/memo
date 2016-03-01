@@ -371,7 +371,8 @@ COMMAND(run)
     report_action("running", "volume", volume.name);
     auto mountpoint = optional(args, "mountpoint");
     auto fs = volume.run(std::move(model),
-                         mountpoint
+                         mountpoint,
+                         flag(args, "readonly")
 #ifdef INFINIT_MACOSX
                          , optional(args, "mount-name")
                          , optional(args, "mount-icon")
@@ -824,6 +825,7 @@ main(int argc, char** argv)
   std::vector<Mode::OptionDescription> options_run_mount = {
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
+    { "readonly", bool_switch(), "mount as readonly" },
 #ifdef INFINIT_MACOSX
     { "mount-name", value<std::string>(), "name of mounted volume" },
     { "mount-icon", value<std::string>(), "icon for mounted volume" },

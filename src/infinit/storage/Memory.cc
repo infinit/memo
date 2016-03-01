@@ -30,6 +30,15 @@ namespace infinit
       return elle::Buffer(buffer.contents(), buffer.size());
     }
 
+    std::size_t
+    Memory::size() const
+    {
+      std::size_t res = 0;
+      for (auto const& block: *this->_blocks)
+        res += block.second.size();
+      return res;
+    }
+
     int
     Memory::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {

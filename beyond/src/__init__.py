@@ -340,10 +340,9 @@ class Beyond:
     variables = None
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
-      # Need to use .txt extension as otherwise SWU destroy the file.
-      with open('%s/client.txt' % temp_dir, 'wb') as crash_dump:
+      with open('%s/client.dmp' % temp_dir, 'wb') as crash_dump:
         crash_dump.write(data.getvalue())
-      with open('%s/client.txt' % temp_dir, 'rb') as crash_dump:
+      with open('%s/client.dmp' % temp_dir, 'rb') as crash_dump:
         self.__emailer.send_one(
           recipient_email = 'developers@infinit.io',
           recipient_name = 'Developers',

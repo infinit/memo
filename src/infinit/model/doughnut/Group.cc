@@ -103,7 +103,8 @@ namespace infinit
           auto raddr = UB::hash_address(*this->_public_control_key, this->_dht);
           this->_dht.remove(addr);
           this->_dht.remove(raddr);
-          this->_dht.remove(this->_block->address(), this->_block->sign_remove());
+          this->_dht.remove(this->_block->address(),
+                            this->_block->sign_remove(this->_dht));
         });
       }
 

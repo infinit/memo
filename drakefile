@@ -417,7 +417,7 @@ def configure(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
     if cxx_toolkit.os is drake.os.macos:
       bin_cxx_config.framework_add('CoreServices')
-      bin_cxx_config.flag('-headerpad_max_install_names')
+      bin_cxx_config.ldflag('-headerpad_max_install_names')
   else:
     bin_cxx_config.lib('shlwapi')
     bin_cxx_config.lib('ws2_32')
@@ -602,6 +602,7 @@ def configure(
       drake.nodes(
         'sendwithus_python/sendwithus/__init__.py',
         'sendwithus_python/sendwithus/encoder.py',
+        'sendwithus_python/sendwithus/exceptions.py',
         'sendwithus_python/sendwithus/version.py',
       ),
     )
@@ -622,7 +623,26 @@ def configure(
           'debian': rule_debian
         }
       )
+      crash_test_libs = drake.copy([
+          crash_reporter_lib,
+          cryptography_lib,
+          elle_lib,
+          reactor_lib,
+        ] + additional_libs,
+        'tests/functional/lib', True)
+      crash_test_libs += drake.copy([
+          elle.boost.program_options_dynamic,
+          elle.boost.filesystem_dynamic,
+          elle.boost.regex_dynamic,
+        ], 'tests/functional/lib', True)
+      crash_test_bin = drake.cxx.Executable(
+        'tests/functional/bin/crasher', [
+          drake.node('tests/functional/bin/crasher.cc')
+        ] + crash_test_libs,
+        cxx_toolkit,
+        bin_cxx_config)
       for test_name in [
+          'crash-reporter',
           'errors',
           'single-user-two-devices-shared-storage',
           'passport-restrictions',
@@ -640,6 +660,7 @@ def configure(
       ]:
         test = drake.node('tests/functional/%s' % test_name)
         rule_functional_tests << test
+        test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
         env = {
@@ -647,6 +668,8 @@ def configure(
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
           'PATH': ':'.join([
             str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                 absolute = True)),
+            str(drake.path_build(crash_test_bin.path(True).dirname(),
                                  absolute = True)),
             os.environ.get('PATH', '')
           ])
@@ -708,6 +731,8 @@ def configure(
   tests_names = [
     ('backward-compatibility', []),
     ('consensus/async', []),
+    ('consensus/cache', []),
+    ('bandwidth', []),
     ('doughnut', []),
     ('faith', []),
     ('rpc', []),
