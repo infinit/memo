@@ -61,7 +61,7 @@ COMMAND(export_)
   auto avatar = avatar_path(name);
   if (avatar)
     user.avatar_path = avatar.get().string();
-  if (args.count("full") && args["full"].as<bool>())
+  if (flag(args, "full"))
   {
     if (!script_mode)
     {
@@ -286,7 +286,7 @@ COMMAND(delete_)
       std::getline(std::cin, res);
     }
     if (res != user.name)
-      throw CommandLineError("Aborting...");
+      throw elle::Error("Aborting...");
   }
   bool ok = boost::filesystem::remove(path);
   if (ok)
