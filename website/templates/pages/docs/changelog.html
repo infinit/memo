@@ -5,7 +5,23 @@
   <%include file='menu.html'/>
 
   <section class="doc">
-    <%include file='generated/ChangeLog.html'/>
+    <h1>Change Log</h1>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#cli" class="active"><img src="${url('images/icons/cli@2x.png')}" alt="Logo Infinit CLI" height="31">Infinit CLI</a></li>
+
+      <li><a data-tab href="#drive"><img src="${url('images/icons/infinit-cloud-apps@2x.png')}" alt="Logo Infinit Drive" width="35" height="31"> Infinit Drive</a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="cli">
+        <%include file='generated/ChangeLog.html'/>
+      </div>
+
+       <div data-tabs-pane class="tabs-pane active" id="drive">
+        <%include file='../drive/ChangeLog.html'/>
+      </div>
+    </div>
   </section>
 
 

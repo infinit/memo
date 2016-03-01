@@ -14,6 +14,38 @@
       "interoperability": "applications"
     }
   },
+  "aerofs": {
+    "name": "AeroFS",
+    "description": "AeroFS is a sync service.",
+    "properties": {
+      "architecture": "file",
+      "interface": "Local Sync",
+      "model": "decentralized",
+      "environment": "controlled",
+      "redundancy": "None",
+      "fault_tolerance": "",
+      "security": "In-Transit",
+      "scalability": "homogeneous",
+      "interoperability": "applications"
+    },
+    "wikipedia": ""
+  },
+  "amazon-cloud-drive": {
+    "name": "Amazon Cloud Drive",
+    "description": "Amazon Cloud Drive is a web storage application from Amazon.[1] Its storage space can be accessed from up to eight specific devices. The devices can be mobile devices, different computers, and different browsers on the same computer.",
+    "properties": {
+      "architecture": "file",
+      "interface": "Local Sync",
+      "model": "Unknown (Proprietary)",
+      "environment": "",
+      "redundancy": "Unknown (Proprietary)",
+      "fault_tolerance": "Unknown (Proprietary)",
+      "security": "In-Transit",
+      "scalability": "",
+      "interoperability": "applications"
+    },
+    "wikipedia": "https://en.wikipedia.org/wiki/Amazon_Cloud_Drive"
+  },
   "aws-s3": {
     "name": "AWS S3",
     "description": "Amazon S3 (Simple Storage Service) is an online file storage web service offered by Amazon Web Services. Amazon S3 provides storage through web services interfaces (REST, SOAP, and BitTorrent).",
@@ -24,11 +56,75 @@
       "environment": "",
       "redundancy": "Unknown (proprietary)",
       "fault_tolerance": "Unknown (proprietary)",
-      "scalability": "",
       "security": "In-Transit",
+      "scalability": "",
       "interoperability": "protocol"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/Amazon_S3"
+  },
+  "bitcasa": {
+    "name": "Bitcasa",
+    "description": "Bitcasa is a cloud storage company founded in 2011. Bitcasa provides client software for Microsoft Windows, Mac OS X, Android and other web browsers.",
+    "properties": {
+      "architecture": "file",
+      "interface": "POSIX-compliant file system",
+      "model": "Unknown (proprietary)",
+      "environment": "",
+      "redundancy": "Unknown (proprietary)",
+      "fault_tolerance": "Unknown (proprietary)",
+      "security": "In-Transit & At-Rest",
+      "scalability": "",
+      "interoperability": "applications"
+    },
+    "wikipedia": "https://en.wikipedia.org/wiki/Bitcasa"
+  },
+   "bsync": {
+    "name": "BitTorent Sync",
+    "description": "BitTorrent Sync by BitTorrent, Inc is a proprietary peer-to-peer file synchronization tool available for Windows, Mac, Linux, Android, iOS, Windows Phone, Amazon Kindle Fire and BSD. It can sync files between devices on a local network, or between remote devices over the Internet via a modified version of the BitTorrent protocol.",
+    "properties": {
+      "architecture": "file",
+      "interface": "Local Sync",
+      "model": "decentralized",
+      "environment": "controlled",
+      "redundancy": "None",
+      "fault_tolerance": "",
+      "security": "In-Transit",
+      "scalability": "homogeneous",
+      "interoperability": "applications"
+    },
+    "wikipedia": "https://en.wikipedia.org/wiki/BitTorrent_Sync"
+  },
+  "box": {
+    "name": "Box",
+    "description": "Box (formerly Box.net) is an online file sharing and content management service for businesses. The company adopted a freemium business model, and provides up to 10 GB of free storage for personal accounts.[4] There are official clients offered for Windows and OS X, however Linux is not supported.",
+    "properties": {
+      "architecture": "file",
+      "interface": "Local Sync",
+      "model": "Unknown (proprietary)",
+      "environment": "",
+      "redundancy": "Unknown (proprietary)",
+      "fault_tolerance": "Unknown (proprietary)",
+      "security": "In-Transit",
+      "scalability": "",
+      "interoperability": "applications"
+    },
+    "wikipedia": "https://en.wikipedia.org/wiki/Box_(company)"
+  },
+  "ceph": {
+    "name": "Ceph",
+    "description": "Box (formerly Box.net) is an online file sharing and content management service for businesses. The company adopted a freemium business model, and provides up to 10 GB of free storage for personal accounts.[4] There are official clients offered for Windows and OS X, however Linux is not supported.",
+    "properties": {
+      "architecture": "file",
+      "interface": "Local Sync",
+      "model": "Unknown (proprietary)",
+      "environment": "",
+      "redundancy": "Unknown (proprietary)",
+      "fault_tolerance": "Unknown (proprietary)",
+      "security": "In-Transit",
+      "scalability": "",
+      "interoperability": "applications"
+    },
+    "wikipedia": "https://en.wikipedia.org/wiki/Box_(company)"
   },
   "glusterfs": {
     "name": "GlusterFS",
@@ -40,8 +136,9 @@
       "environment": "controlled",
       "redundancy": "Unknown (proprietary)",
       "fault_tolerance": "Unknown (proprietary)",
+      "security": "In-Transit",
       "scalability": "",
-      "security": "In-Transit"
+      "interoperability": "protocol"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
   }

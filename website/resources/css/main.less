@@ -957,6 +957,21 @@ body.doc_roadmap {
 
 
 body.doc_changelog {
+  ul.tabs {
+    padding: 10px 0 39px 0;
+    a {
+      background: none;
+      color: @infinitblack !important;
+      border-bottom-left-radius: 5px;
+      border-bottom-right-radius: 5px; outline: none;
+      font-family: @helvetica; font-size: 18px; font-weight: 300;
+      opacity: 0.7;  padding: 11px 18px;
+      img { vertical-align: middle; margin-right: 7px; }
+    }
+    li:last-child a img { margin-right: 4px; }
+    a.active, a:hover { background: #f5f5f5; opacity: 1; }
+  }
+  section.doc #cli h1 { display: none; }
   section.doc h3 { font-size: 1.2em; margin-top: 15px;}
   section.doc h2#unreleased,
   section.doc h2#-unreleased- { display: none; }

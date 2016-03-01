@@ -107,7 +107,7 @@ $(document).ready(function() {
     });
   }
 
-  if ($('body').hasClass('doc_deployments')) {
+  if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_changelog')) {
     tabby.init();
   }
 
@@ -116,7 +116,6 @@ $(document).ready(function() {
     var switcher = new Switchery(elem, { color: "#252d3b"});
 
     elem.onchange = function() {
-      console.log(elem.checked);
       if (elem.checked) {
         $('.property.same').hide();
       } else {
@@ -131,7 +130,7 @@ $(document).ready(function() {
     });
 
     $('.open-popup').click(function() {
-      $(this.attr('href')).show();
+      $($(this).attr('href')).show();
     });
   }
 

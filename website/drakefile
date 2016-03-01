@@ -84,6 +84,14 @@ def configure(
     target = changelog
   )
 
+  changelog_drive = drake.node(
+    'templates/pages/drive/ChangeLog.html',
+  )
+  drake.markdown.Renderer(
+    source = drake.Node('templates/pages/drive/ChangeLog'),
+    target = changelog_drive
+  )
+
   class CopyAndCleanup(drake.Copy):
 
     def __init__(self, source, to, post_process):
@@ -125,7 +133,6 @@ def configure(
 
     'templates/pages/about.html',
     'templates/pages/contact.html',
-    'templates/pages/drive.html',
     'templates/pages/faq.html',
     'templates/pages/home.html',
     'templates/pages/legal.html',
@@ -148,6 +155,9 @@ def configure(
     'templates/pages/docs/roadmap.html',
     'templates/pages/docs/s3.html',
     'templates/pages/docs/technology.html',
+
+    'templates/pages/drive/drive.html',
+    'templates/pages/drive/ChangeLog.html',
 
     'templates/pages/press/investors.html',
     'templates/pages/press/pr_storage.html',
@@ -306,6 +316,8 @@ def configure(
     'resources/images/icons/remove@2x.png',
     'resources/images/icons/fire.png',
     'resources/images/icons/fire@2x.png',
+    'resources/images/icons/cli.png',
+    'resources/images/icons/cli@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',
