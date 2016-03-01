@@ -580,6 +580,7 @@ test_filesystem(bool dht,
   namespace bfs = boost::filesystem;
   auto store = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   auto mount = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+  elle::os::setenv("INFINIT_HOME", store.string(), true);
   boost::filesystem::create_directories(mount);
   boost::filesystem::create_directories(store);
   mount_points.clear();
@@ -1072,6 +1073,7 @@ test_conflicts(bool paxos)
   namespace bfs = boost::filesystem;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
   auto mount = bfs::temp_directory_path() / bfs::unique_path();
+  elle::os::setenv("INFINIT_HOME", store.string(), true);
   bfs::create_directories(mount);
   bfs::create_directories(store);
   struct statvfs statstart;
@@ -1228,6 +1230,7 @@ test_acl(bool paxos)
   boost::system::error_code erc;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
   auto mount = bfs::temp_directory_path() / bfs::unique_path();
+  elle::os::setenv("INFINIT_HOME", store.string(), true);
   bfs::create_directories(mount);
   bfs::create_directories(store);
   struct statvfs statstart;
