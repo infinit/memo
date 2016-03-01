@@ -258,12 +258,12 @@ namespace infinit
       {
         if (final_flush && _parent)
           _owner.block_store()->store(std::move(_first_block),
-            this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
+            this->_first_block_new ? model::STORE_INSERT : model::STORE_UPDATE,
             elle::make_unique<FileConflictResolver>(
               full_path(), _owner.block_store().get()));
         else
           _owner.block_store()->store(*_first_block,
-            this->_first_block_new ? model::STORE_INSERT : model::STORE_ANY,
+            this->_first_block_new ? model::STORE_INSERT : model::STORE_UPDATE,
             elle::make_unique<FileConflictResolver>(
               full_path(), _owner.block_store().get()));
       }
@@ -641,7 +641,7 @@ namespace infinit
       Address prev = it->second.block->address();
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
       Address addr = it->second.block->crypt_store(*_owner.block_store(),
-        it->second.new_block? model::STORE_INSERT : model::STORE_ANY,
+        it->second.new_block ? model::STORE_INSERT : model::STORE_UPDATE,
         key);
       if (addr != prev)
       {
@@ -717,7 +717,7 @@ namespace infinit
                 auto key = cryptography::random::generate<elle::Buffer>(32).string();
                 auto old_addr = ab->address();
                 Address addr = ab->crypt_store(*_owner.block_store(),
-                  new_block? model::STORE_INSERT : model::STORE_ANY,
+                  new_block? model::STORE_INSERT : model::STORE_UPDATE,
                   key);
                 if (addr != old_addr)
                 {
