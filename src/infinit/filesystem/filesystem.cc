@@ -56,8 +56,10 @@ namespace infinit
       , _single_mount(false)
       , _volume_name(volume_name)
     {
-      _read_only = !dynamic_cast<model::doughnut::Doughnut*>(_block_store.get())
-        ->passport().allow_write();
+      auto pass = dynamic_cast<model::doughnut::Doughnut*>(_block_store.get())
+        ->passport();
+      _read_only = !pass.allow_write();
+      _network_name = pass.network();
 #ifndef INFINIT_WINDOWS
       reactor::scheduler().signal_handle
         (SIGUSR1, [this] { this->print_cache_stats();});
@@ -219,7 +221,8 @@ namespace infinit
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
-      auto root_block_cache_dir = xdg_state_home() / this->_volume_name;
+      auto root_block_cache_dir = xdg_state_home() / this->_network_name
+        / this->_volume_name;
       if (!boost::filesystem::exists(root_block_cache_dir))
         boost::filesystem::create_directories(root_block_cache_dir);
       auto root_block_cache_path = root_block_cache_dir / "root_block";
