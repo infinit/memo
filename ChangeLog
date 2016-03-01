@@ -1,13 +1,14 @@
 # Change Log
 
 
-## [0.5.3] - 2016-02-29
+## [0.5.4] - 2016-03-01
 
-Hotfix for disk performances.
+Hotfix for disk performances, persistent disk cache for file contents.
 
 ### Added
 
 - Implement `statfs` system call.
+- Add a disk block cache for immutable file contents.
 
 ### Changed
 
@@ -21,6 +22,11 @@ Hotfix for disk performances.
   files.
 - Use the GCS credentials instead of Google drive credentials to
   authenticate to GCS.
+
+
+## [0.5.3] - YANKED
+
+Skipped release because of unrecognized version in RPCs.
 
 
 ## [0.5.2] - 2016-02-25
