@@ -302,17 +302,17 @@ COMMAND(run)
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
-  bool cache = flag(args, option_cache.long_name());
-  boost::optional<int> cache_size =
-    option_opt<int>(args, option_cache_size.long_name());
-  boost::optional<int> cache_ttl =
-    option_opt<int>(args, option_cache_ttl.long_name());
-  boost::optional<int> cache_invalidation =
-    option_opt<int>(args, option_cache_invalidation.long_name());
-  boost::optional<uint64_t> disk_cache_size =
-    option_opt<uint64_t>(args, option_cache_disk_cache_size.long_name());
-  if (cache_size || cache_ttl || cache_invalidation || disk_cache_size)
+  bool cache = flag(args, option_cache_ram);
+  auto cache_ram_size = optional<int>(args, option_cache_ram_size);
+  auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
+  auto cache_ram_invalidation =
+    optional<int>(args, option_cache_ram_invalidation);
+  auto disk_cache_size = optional<uint64_t>(args, option_cache_disk_size);
+  if (cache_ram_size || cache_ram_ttl || cache_ram_invalidation
+      || disk_cache_size)
+  {
     cache = true;
+  }
 #ifndef INFINIT_WINDOWS
   if (flag(args, "daemon"))
     if (daemon(0, 1))
@@ -341,7 +341,7 @@ COMMAND(run)
   auto compatibility = optional(args, "compatibility-version");
   auto model = network.run(
     eps, true,
-    cache, cache_size, cache_ttl, cache_invalidation,
+    cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"), disk_cache_size, compatibility_version);
   // Only push if we have are contributing storage.
   bool push =
@@ -870,11 +870,11 @@ main(int argc, char** argv)
 #ifndef INFINIT_WINDOWS
     { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif
-    option_cache,
-    option_cache_size,
-    option_cache_ttl,
-    option_cache_invalidation,
-    option_cache_disk_cache_size,
+    option_cache_ram,
+    option_cache_ram_size,
+    option_cache_ram_ttl,
+    option_cache_ram_invalidation,
+    option_cache_disk_size,
     { "fetch-endpoints", bool_switch(),
       elle::sprintf("fetch endpoints from %s", beyond(true)) },
     { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },

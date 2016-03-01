@@ -2645,17 +2645,21 @@ namespace infinit
   }
 }
 
-Mode::OptionDescription option_cache(
-  "cache", boost::program_options::bool_switch(), "enable block cache");
-Mode::OptionDescription option_cache_size(
-  "cache-size", boost::program_options::value<int>(),
-  "maximum block cache size in bytes (default: 64 MB)");
-Mode::OptionDescription option_cache_ttl(
-  "cache-ttl", boost::program_options::value<int>(),
-  "block cache time-to-live in seconds (default: 5 minutes)");
-Mode::OptionDescription option_cache_invalidation(
-  "cache-invalidation", boost::program_options::value<int>(),
-  "block cache invalidation time in seconds (default: 15 seconds)");
-Mode::OptionDescription option_cache_disk_cache_size(
-  "disk-cache-size", boost::program_options::value<uint64_t>(),
-  "size of disk-cache for immutable data in bytes (default: 64MB)");
+Mode::OptionDescription option_cache_ram(
+  "cache-ram", boost::program_options::bool_switch(), "enable RAM block cache",
+  {{"cache", boost::program_options::bool_switch()}});
+Mode::OptionDescription option_cache_ram_size(
+  "cache-ram-size", boost::program_options::value<int>(),
+  "maximum RAM block cache size in bytes (default: 64 MB)",
+  {{"cache-size", boost::program_options::value<int>()}});
+Mode::OptionDescription option_cache_ram_ttl(
+  "cache-ram-ttl", boost::program_options::value<int>(),
+  "RAM block cache time-to-live in seconds (default: 5 minutes)",
+  {{"cache-ttl", boost::program_options::value<int>()}});
+Mode::OptionDescription option_cache_ram_invalidation(
+  "cache-ram-invalidation", boost::program_options::value<int>(),
+  "RAM block cache invalidation time in seconds (default: 15 seconds)",
+  {{"cache-ram-invalidation", boost::program_options::value<int>()}});
+Mode::OptionDescription option_cache_disk_size(
+  "cache-disk-size", boost::program_options::value<uint64_t>(),
+  "size of disk cache for immutable data in bytes (default: 64 MB)");
