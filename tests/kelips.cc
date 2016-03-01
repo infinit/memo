@@ -48,7 +48,7 @@ run_nodes(bfs::path where,  infinit::cryptography::rsa::KeyPair& kp,
 #else
     1;
 #endif
-  config.contact_timeout_ms = factor * valgrind(1000,20);
+  config.contact_timeout_ms = factor * valgrind(2000,20);
   config.ping_interval_ms = factor * valgrind(1000, 10) / count / 3;
   config.ping_timeout_ms = factor * valgrind(500, 20);
   for (int n=0; n<count; ++n)
@@ -195,6 +195,7 @@ ELLE_TEST_SCHEDULED(basic)
 {
   elle::filesystem::TemporaryDirectory d;
   auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
   auto kp = infinit::cryptography::rsa::keypair::generate(512);
   ELLE_LOG("write files")
   {
@@ -345,7 +346,7 @@ ELLE_TEST_SUITE()
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
   elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(16));
+  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(32));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);
