@@ -109,7 +109,7 @@ convert_capacity(std::string value)
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
-  auto capacity_repr = option_opt<std::string>(args, "capacity");
+  auto capacity_repr = optional(args, "capacity");
   boost::optional<int64_t> capacity;
   if (capacity_repr)
     capacity = convert_capacity(*capacity_repr);
