@@ -182,7 +182,7 @@ COMMAND(create)
   }
   else if (args.count("ssh"))
   {
-    auto host = mandatory(args, "ssh-host", "SSH remote host");
+    auto host = mandatory(args, "host", "SSH remote host");
     auto path = mandatory(args, "path", "Remote path to store into");
     config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
       name, host, path, capacity);
@@ -290,7 +290,7 @@ main(int argc, char** argv)
   ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");
   ssh_storage_options.add_options()
-    ("ssh-host", value<std::string>(), "hostname to connect to")
+    ("host", value<std::string>(), "hostname to connect to")
     ;
   std::string default_locations = elle::sprintf(
     "folder where blocks are stored (default:"
