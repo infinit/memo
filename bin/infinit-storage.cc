@@ -269,8 +269,8 @@ main(int argc, char** argv)
   Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
-    ("gcs", "store data in Google Cloud Storage")
-    ("s3", "store data in using Amazon S3")
+    ("gcs", "store data using Google Cloud Storage")
+    ("s3", "store data using Amazon S3")
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
