@@ -271,12 +271,12 @@ main(int argc, char** argv)
     ("filesystem", "store data on a local filesystem")
     ("gcs", "store data in Google Cloud Storage")
     ("s3", "store data in using Amazon S3")
-    ("ssh", "store data over SSH")
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
     ("dropbox", "store data in a Dropbox")
     ("google-drive", "store data in a Google Drive")
+    ("ssh", "store data over SSH")
     ;
   Mode::OptionsDescription cloud_options("Cloud storage options");
   cloud_options.add_options()
@@ -317,7 +317,7 @@ main(int argc, char** argv)
         storage_types,
         cloud_options,
         s3_options,
-        ssh_storage_options,
+        // ssh_storage_options,
       },
       {},
       {
