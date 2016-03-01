@@ -1,0 +1,76 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <section class="intro">
+    <h2>
+      <img src="${url('images/icons/infinit-cloud-apps.png')}" alt="Logo Infinit Cloud Apps">
+      Infinit Drive
+    </h2>
+    <h1>Simple and secure file synchronization for professionals</h1>
+    <p class="subtitle">Infinit Drive benefits from the simplicity of a consumer product, the security and scalability of enterprise-class technologies in addition to allowing one to choose where files are physically stored.</p>
+
+    % if os() == "Macintosh":
+      <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit%20Drive-0.2.1.dmg" class="button">Download</a>
+    % elif os() == "Windows":
+      <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
+    % else:
+      <a href="#install-linux" class="button linux_popup">Download</a>
+
+      <div id="install-linux" class="popup mfp-hide">
+        <h2>Linux Installation</h2>
+        <p>Import the public key used by the package management system.</p>
+        <pre><code>$> sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
+        </code></pre>
+
+        <p>Then add the repository locally:</p>
+        <pre><code>$> sudo add-apt-repository "deb https://debian.infinit.sh/ trusty main"
+        </code></pre>
+
+        <p>Update your local list of packages and install the command-line tools as you would any other package:</p>
+        <pre><code>$> sudo apt-get update</code></pre>
+
+        <p>Install <em>infinit-desktop</em>:
+        <pre><code>$> sudo apt-get install infinit-desktop</code></pre>
+      </div>
+    % endif
+
+    <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac and Linux"></p>
+
+    <div class="client"></div>
+  </section>
+
+  <section class="location">
+    <img src="${url('images/bg-worldmap.png')}" alt="Data Location Control">
+    <h2>Control the location of your data</h2>
+    <p>When creating a drive, you can choose where your files will actually be stored in your country or even on a specific hosting provider.
+    </p>
+    <p class="note">Note that unlike Dropbox, Infinit Drive does not use your local storage capacity unless you want it to.</p>
+  </section>
+
+  <section class="access">
+    <h2>Store and access your files</h2>
+    <p>Once your drive opened, you can store, access and even stream files as if they were stored on your local hard disk.</p>
+    <img src="${url('images/virtual-disk-mac.png')}" alt="Virtual Disk">
+    <p class="note">Unlike Google Drive with which it is difficult to understand who sees what file/folder, Infinit maintains a single and coherent hierarchical view of the files for everyone.</p>
+  </section>
+
+  <section class="integrations">
+    <img src="${url('images/logos/google-drive-big.png')}" alt="Google Drive">
+    <img src="${url('images/logos/slack-big.png')}" alt="Slack">
+    <h2>Increase your productivity</h2>
+    <p>Infinit Drive supports a variety of cloud services that can be integrated for you to work the way you want, be it Slack to get notified in real-time whenever someone updates one of your document or many of others.</p>
+  </section>
+
+  <section class="cta">
+    % if os() == "Macintosh":
+      <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit%20Drive-0.2.1.dmg" class="button">Download</a>
+    % elif os() == "Windows":
+      <a target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" class="button">Get Invitation</a>
+    % else:
+      <a href="#install-linux" class="button linux_popup">Download</a>
+    % endif
+
+    <p>Available for <img src="${url('images/icons/platforms.png')}" alt="Available for Mac and Linux"></p>
+  </section>
+</%block>
