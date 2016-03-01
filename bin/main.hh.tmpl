@@ -213,13 +213,30 @@ struct Mode
   class OptionDescription
     : public boost::program_options::option_description
   {
+  typedef std::pair<std::string, boost::program_options::value_semantic const*>
+    DeprecatedAliasPair;
   public:
-    OptionDescription(std::string const& name,
-                      boost::program_options::value_semantic const* s,
-                      std::string const& description)
+    OptionDescription(
+        std::string const& name,
+        boost::program_options::value_semantic const* s,
+        std::string const& description,
+        std::vector<DeprecatedAliasPair> const& deprecated_aliases_ = {})
       : boost::program_options::option_description(
           name.c_str(), s, upper_fchar(description).c_str())
-    {}
+    {
+      using boost::program_options::option_description;
+      for (auto const& deprecated: deprecated_aliases_)
+      {
+        deprecated_options.push_back(
+          boost::shared_ptr<option_description>(
+            new option_description(
+              deprecated.first.c_str(), deprecated.second,
+              elle::sprintf("Use \"--%s\" instead", name).c_str())));
+      }
+    }
+
+    std::vector<boost::shared_ptr<boost::program_options::option_description>>
+      deprecated_options;
   };
 
   class OptionsDescription;
@@ -302,18 +319,28 @@ struct Mode
     , options(this->description)
     , visible_options(this->description)
   {
+    namespace po = boost::program_options;
     Mode::OptionsDescription mode_options(
       elle::sprintf("%s options", upper_fchar(this->name)));
+    po::options_description deprecated("Deprecated options");
+    int deprecated_count = 0;
     for (auto const& option: options)
     {
       mode_options.add(
-        boost::shared_ptr<boost::program_options::option_description>
-        (new boost::program_options::option_description(std::move(option))));
+        boost::shared_ptr<po::option_description>
+        (new po::option_description(std::move(option))));
+      for (auto const& old: option.deprecated_options)
+      {
+        deprecated_count++;
+        deprecated.add(old);
+      }
     }
     this->_add_options(mode_options);
+    if (deprecated_count)
+      this->_add_options(deprecated, false);
     for (auto const& extra: extra_options)
       this->_add_options(extra);
-    boost::program_options::options_description hidden;
+    po::options_description hidden;
     for (auto const& option: hidden_options)
     {
       hidden.add(
@@ -363,14 +390,18 @@ parse_args(boost::program_options::options_description const& options,
            std::vector<std::string> const& args,
            std::string const& positional_arg)
 {
-  auto parser = boost::program_options::command_line_parser(args);
-  boost::program_options::positional_options_description p;
+  namespace po = boost::program_options;
+  auto parser = po::command_line_parser(args);
+  auto style = static_cast<int>(po::command_line_style::default_style);
+  style &= ~po::command_line_style::allow_guessing;
+  parser.style(style);
+  po::positional_options_description p;
   p.add(positional_arg.c_str(), -1);
   parser.options(options).positional(p);
-  boost::program_options::variables_map res;
+  po::variables_map res;
   auto parsed = parser.run();
-  boost::program_options::store(parsed, res);
-  boost::program_options::notify(res);
+  po::store(parsed, res);
+  po::notify(res);
   return res;
 }
 
@@ -1824,6 +1855,25 @@ private:
   }
 };
 
+template <typename T>
+boost::optional<T>
+check_deprecated(boost::program_options::variables_map const& vm,
+                 Mode::OptionDescription const& option)
+{
+  for (auto const& deprecated: option.deprecated_options)
+  {
+    if (vm.count(deprecated->long_name()))
+    {
+      std::cerr << "WARNING: option \"--" << deprecated->long_name()
+                << "\" is deprecated "
+                << "use \"--" << option.long_name() << "\" instead."
+                << std::endl;
+      return vm[deprecated->long_name()].as<T>();
+    }
+  }
+  return boost::none;
+}
+
 template <typename T = std::string>
 boost::optional<T>
 optional(boost::program_options::variables_map const& vm,
@@ -1833,6 +1883,17 @@ optional(boost::program_options::variables_map const& vm,
     return vm[name].as<T>();
   else
     return {};
+}
+
+template <typename T = std::string>
+boost::optional<T>
+optional(boost::program_options::variables_map const& vm,
+         Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated;
+  return optional<T>(vm, option.long_name());
 }
 
 template <typename T = std::string>
@@ -1852,9 +1913,32 @@ mandatory(boost::program_options::variables_map const& vm,
 template <typename T = std::string>
 T
 mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option,
+          std::string const& desc)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name(), desc);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
           std::string const& name)
 {
   return mandatory<T>(vm, name, name);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name());
 }
 
 template <>
@@ -1879,15 +1963,14 @@ flag(boost::program_options::variables_map const& vm,
   return vm.count(name) && vm[name].as<bool>();
 }
 
-template <typename T>
-boost::optional<T>
-option_opt(boost::program_options::variables_map const& vm,
-           std::string const& name)
+bool
+flag(boost::program_options::variables_map const& vm,
+     Mode::OptionDescription const& option)
 {
-  if (vm.count(name))
-    return vm[name].as<T>();
-  else
-    return {};
+  auto deprecated = check_deprecated<bool>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return flag(vm, option.long_name());
 }
 
 bool
