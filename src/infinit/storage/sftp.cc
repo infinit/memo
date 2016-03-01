@@ -1,7 +1,7 @@
 #include <unistd.h>
 #ifndef INFINIT_WINDOWS
-#include <arpa/inet.h>
-#include <sys/wait.h>
+# include <arpa/inet.h>
+# include <sys/wait.h>
 #endif
 
 #include <boost/asio.hpp>
@@ -286,6 +286,7 @@ namespace infinit
     }
     int Packet::readInt()
     {
+      ELLE_ASSERT_LTE(_pos + 4, this->size());
       int v = *(int*)(contents()+_pos);
       v = ntohl(v);
       _pos += 4;
@@ -294,6 +295,7 @@ namespace infinit
     elle::ConstWeakBuffer Packet::readString()
     {
       int len = readInt();
+      ELLE_ASSERT_LTE(_pos + len, this->size());
       auto res = elle::ConstWeakBuffer(contents() + _pos, len);
       _pos += len;
       return res;

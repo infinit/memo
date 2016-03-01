@@ -185,7 +185,7 @@ COMMAND(create)
 #ifndef INFINIT_WINDOWS
   else if (args.count("ssh"))
   {
-    auto host = mandatory(args, "ssh-host", "SSH remote host");
+    auto host = mandatory(args, "host", "SSH remote host");
     auto path = mandatory(args, "path", "Remote path to store into");
     config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
       name, host, path, capacity);
@@ -273,16 +273,14 @@ main(int argc, char** argv)
   Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
-    ("gcs", "store data in Google Cloud Storage")
-    ("s3", "store data in using Amazon S3")
-#ifndef INFINIT_WINDOWS
-    ("ssh", "store data over SSH")
-#endif
+    ("gcs", "store data using Google Cloud Storage")
+    ("s3", "store data using Amazon S3")
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
     ("dropbox", "store data in a Dropbox")
     ("google-drive", "store data in a Google Drive")
+    ("ssh", "store data over SSH")
     ;
   Mode::OptionsDescription cloud_options("Cloud storage options");
   cloud_options.add_options()
@@ -296,7 +294,7 @@ main(int argc, char** argv)
   ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");
   ssh_storage_options.add_options()
-    ("ssh-host", value<std::string>(), "hostname to connect to")
+    ("host", value<std::string>(), "hostname to connect to")
     ;
   std::string default_locations = elle::sprintf(
     "folder where blocks are stored (default:"
@@ -323,9 +321,7 @@ main(int argc, char** argv)
         storage_types,
         cloud_options,
         s3_options,
-#ifndef INFINIT_WINDOWS
-        ssh_storage_options,
-#endif
+        // ssh_storage_options,
       },
       {},
       {
