@@ -842,12 +842,12 @@ It is now time to invite users to join the drive you've created for them.
 
 Note that before you can reference a user, you need to fetch his/her public identity using the `infinit-user --fetch` command. Likewise, every user that will be invited must have been issued a passport to connect to the network.
 
-When inviting users, you can use the `--passports` option to automatically create any passports that are needed for the users you are inviting to the drive. The sequence of commands below shows how to invite both Bob and Charlie. The user Bob has already been fetched while Charlie is a completely new user, that needs to be fetched.
+When inviting users, you can use the `--passport` option to automatically create any passports that are needed for the users you are inviting to the drive. The sequence of commands below shows how to invite both Bob and Charlie. The user Bob has already been fetched while Charlie is a completely new user, that needs to be fetched.
 
 ```
 $> infinit-user --fetch --as alice --name charlie
 Fetched user "charlie".
-$> infinit-drive --invite --as alice --name workspace --user bob --user charlie --passports --push
+$> infinit-drive --invite --as alice --name workspace --user bob --user charlie --passport --push
 Locally created passport "alice/cluster: charlie".
 Locally created invitation for "bob".
 Locally created invitation for "charlie".
