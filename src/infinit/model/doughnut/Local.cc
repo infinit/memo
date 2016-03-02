@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
+#include <elle/network/Interface.hh>
 #include <elle/utility/Move.hh>
 
 #include <cryptography/random.hh>
@@ -203,6 +204,29 @@ namespace infinit
           return reactor::network::TCPServer::EndPoint(ep.address(), ep.port()-100);
         }
         else throw elle::Error("Local not listening on any endpoint");
+      }
+
+      std::vector<reactor::network::TCPServer::EndPoint>
+      Local::server_endpoints()
+      {
+        auto any_ip = boost::asio::ip::address();
+        auto ep = this->server_endpoint();
+        if (ep.address() != any_ip)
+          return { ep };
+
+        std::vector<reactor::network::TCPServer::EndPoint> res;
+        auto filter = (elle::network::Interface::Filter::only_up |
+                       elle::network::Interface::Filter::no_loopback |
+                       elle::network::Interface::Filter::no_autoip);
+        for (auto const& itf: elle::network::Interface::get_map(filter))
+        if (!itf.second.ipv4_address.empty()
+            && itf.second.ipv4_address != any_ip.to_string())
+        {
+          res.push_back(reactor::network::TCPServer::EndPoint(
+            boost::asio::ip::address::from_string(itf.second.ipv4_address),
+            ep.port()));
+        }
+        return res;
       }
 
       void

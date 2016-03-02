@@ -88,6 +88,8 @@ namespace infinit
       public:
         reactor::network::TCPServer::EndPoint
         server_endpoint();
+        std::vector<reactor::network::TCPServer::EndPoint>
+        server_endpoints();
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, server_thread);
         ELLE_ATTRIBUTE_RX(std::unique_ptr<reactor::network::UTPServer>, utp_server);
