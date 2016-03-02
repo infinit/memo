@@ -277,13 +277,11 @@ class Beyond:
           args = [binary_path + 'infinit-%s%s' % (type, exe_ext),
                   '--import', '-s']
           try:
-            process = subprocess.Popen(
+            subprocess.check_output(
               args,
               env = env,
-              stdin = subprocess.PIPE)
-            input = (json.dumps(data) + '\n').encode('utf-8')
-            out, err = process.communicate(input = input, timeout = 1)
-            process.wait(1)
+              input = (json.dumps(data) + '\n').encode('utf-8'),
+              timeout = 1)
           except Exception:
             raise Exception('impossible to import %s \'%s\'',
                             type, data['name'])
