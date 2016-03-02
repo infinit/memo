@@ -41,8 +41,9 @@
       <a href="${route('doc_storages_s3')}">Storage Providers <img src="${url('images/icons/caret-down.png')}" alt=""></a>
 
       <ul>
-        <li ${'class="active"' if request.route.name == 'doc_storages_s3' else ''}><a href="${route('doc_storages_s3')}#introduction">Amazon S3</a></li>
-        <li ${'class="active"' if request.route.name == 'doc_storages_gcs' else ''}><a href="${route('doc_storages_gcs')}#user">Google Cloud Storage</a></li>
+        <li ${'class="active"' if request.route.name == 'doc_storages_s3' else ''}><a href="${route('doc_storages_s3')}">Amazon S3</a></li>
+        <li ${'class="active"' if request.route.name == 'doc_storages_gcs' else ''}><a href="${route('doc_storages_gcs')}">Google Cloud Storage</a></li>
+        <li ${'class="active"' if request.route.name == 'doc_storages_filesystem' else ''}><a href="${route('doc_storages_filesystem')}">Local Filesystem</a></li>
       </ul>
     </li>
 
