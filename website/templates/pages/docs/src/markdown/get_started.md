@@ -27,11 +27,11 @@
 
 <div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
+<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the FUSE for OS X from the link below:</p>
 
-<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.1.0/osxfuse-3.1.0.dmg" class="button">Download OSXFUSE</a></p>
+<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.2.0/osxfuse-3.2.0.dmg" class="button">Download FUSE for OS X</a></p>
 
-<em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/.</em>
+<em><strong>NOTE</strong>: Infinit requires a version of FUSE for OS X that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/</a>.</em>
 
 % else:
 
@@ -49,6 +49,21 @@
 
 <div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+
+<p>If you have <a href="http://brew.sh">homebrew</a>, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#mac-tarball-install">Tarball install</a>.</p>
+
+<h3 id="mac-homebrew-install">&#9679; Homebrew install</h3>
+
+<p>To install the command-line tools, simply run the following command:</p>
+
+<pre><code>$> brew install infinit/releases/infinit</code></pre>
+
+<p>You can then change to the install directory and <a href="#2--basic-test">test</a> your install:</p>
+
+<pre><code>$> cd /usr/local</code></pre>
+
+<h3 id="mac-tarball-install">&#9679; Tarball install</h3>
+
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
 <p>Click the link below to download the Infinit command-line tools:</p>
 
@@ -56,7 +71,7 @@
 " class="button">Download Command Line Tools</a>
 
 % else:
-<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href='#linux-tarball-install'>Tarball Install</a>.</p>
+<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#linux-tarball-install">Tarball Install</a>.</p>
 
 <h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
 <p>First import the public key used by the package management system:</p>
@@ -95,7 +110,7 @@ Unpacking infinit (${tarball_version}) ...
 Setting up infinit (${tarball_version}) ...
 </code></pre>
 <p></p>
-<p>You can now change to the install directory and <a href='#2-basic-test'>test</a> your install.</p>
+<p>You can now change to the install directory and <a href='#2--basic-test'>test</a> your install.</p>
 <pre><code>$> cd /opt/infinit
 </code></pre>
 
