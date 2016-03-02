@@ -1,4 +1,3 @@
-
 static
 std::vector<std::string>
 endpoints_from_file(boost::filesystem::path const& path)
@@ -28,11 +27,21 @@ void
 port_to_file(uint16_t port, boost::filesystem::path const& path_)
 {
   boost::filesystem::ofstream f;
-  boost::filesystem::path path;
-  if (path_ == path_.filename())
-    path = boost::filesystem::absolute(path_);
-  else
-    path = path_;
+  boost::filesystem::path path(
+    path_ == path_.filename() ? boost::filesystem::absolute(path_) : path_);
   ifnt._open_write(f, path, "", "port file", true);
   f << port << std::endl;
+}
+
+static
+void
+endpoints_to_file(std::vector<reactor::network::TCPServer::EndPoint> endpoints,
+                  boost::filesystem::path const& path_)
+{
+  boost::filesystem::ofstream f;
+  boost::filesystem::path path(
+    path_ == path_.filename() ? boost::filesystem::absolute(path_) : path_);
+  ifnt._open_write(f, path, "", "endpoint file", true);
+  for (auto const& ep: endpoints)
+    f << ep << std::endl;
 }

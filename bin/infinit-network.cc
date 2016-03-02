@@ -475,8 +475,10 @@ COMMAND(run)
             && dht->local()->storage();
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
-  if (auto port_file = optional(args, "port-file"))
+  if (auto port_file = optional(args, option_port_file))
     port_to_file(dht->local()->server_endpoint().port(), port_file.get());
+  if (auto endpoint_file = optional(args, option_endpoint_file))
+    endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
   static const std::vector<int> signals = {SIGINT, SIGTERM
 #ifndef INFINIT_WINDOWS
     ,SIGQUIT
@@ -730,8 +732,8 @@ main(int argc, char** argv)
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
-        { "port-file", value<std::string>(),
-          "write node listening port to file" },
+        option_endpoint_file,
+        option_port_file,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif

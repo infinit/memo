@@ -350,8 +350,13 @@ COMMAND(run)
   if (model->local())
   {
     local_endpoint = model->local()->server_endpoint();
-    if (auto port_file = optional(args, "port-file"))
+    if (auto port_file = optional(args, option_port_file))
       port_to_file(local_endpoint.get().port(), port_file.get());
+    if (auto endpoint_file = optional(args, option_endpoint_file))
+    {
+      endpoints_to_file(model->local()->server_endpoints(),
+                        endpoint_file.get());
+    }
   }
   auto node_id = model->overlay()->node_id();
   auto run = [&]
@@ -885,7 +890,8 @@ main(int argc, char** argv)
     { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
-    { "port-file", value<std::string>(), "write node listening port to file" },
+    option_endpoint_file,
+    option_port_file,
   };
   Modes modes {
     {

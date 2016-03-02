@@ -2664,3 +2664,9 @@ Mode::OptionDescription option_cache_disk_size(
   "cache-disk-size", boost::program_options::value<uint64_t>(),
   "size of disk cache for immutable data in bytes (default: 64 MB)",
   {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
+Mode::OptionDescription option_port_file(
+  "port-file", boost::program_options::value<std::string>(),
+  "write node listening port to file");
+Mode::OptionDescription option_endpoint_file(
+  "endpoints-file", boost::program_options::value<std::string>(),
+  "write node listening endpoints to file");
