@@ -80,6 +80,16 @@ $(document).ready(function() {
     });
 
     $('ul.menu li.comparisons > a').click(function(e) {
+      $(this).parent().toggleClass('clicked');
+      $li = $('li.comparisons');
+      $popup = $('li.comparisons ul');
+
+      $(window).on("click", function(event){
+        if ($li.has(event.target).length === 0 && !$li.is(event.target)) {
+          $li.removeClass('clicked');
+        }
+      });
+
       e.preventDefault();
     });
   }
