@@ -19,7 +19,7 @@
     % for property, value in competitor['properties'].items():
       <%
         value_infinit = infinit['properties'][property]
-        if property == "interoperability" and "applications" in value and "applications" in value_infinit:
+        if property == "interoperability" and "Applications" in value and "Applications" in value_infinit:
           is_similar = True
         elif value == infinit['properties'][property]:
           is_similar = True
@@ -43,7 +43,8 @@
               value_infinit = value_infinit.capitalize() if len(value_infinit.split()) == 1 else value_infinit
             %>
 
-            ${value_infinit} ${'(soon)' if property == 'redundancy' else ''}
+            ${value_infinit}
+            ${'(soon)' if property == 'redundancy' else ''}
           </span>
 
           <p class="note">

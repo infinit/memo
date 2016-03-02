@@ -11,7 +11,7 @@
       "fault_tolerance": "byzantine",
       "scalability": "heterogeneous",
       "security": "In-Transit & At-Rest",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     }
   },
   "aerofs": {
@@ -26,7 +26,7 @@
       "fault_tolerance": "",
       "security": "In-Transit",
       "scalability": "homogeneous",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": ""
   },
@@ -42,7 +42,7 @@
       "fault_tolerance": "Unknown (Proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/Amazon_Cloud_Drive"
   },
@@ -106,7 +106,7 @@
       "fault_tolerance": "",
       "security": "In-Transit",
       "scalability": "homogeneous",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/BitTorrent_Sync"
   },
@@ -122,7 +122,7 @@
       "fault_tolerance": "Unknown (proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/Box_(company)"
   },
@@ -170,7 +170,7 @@
       "fault_tolerance": "Unknown (proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/Dropbox_(service)"
   },
@@ -186,7 +186,7 @@
       "fault_tolerance": "Unknown (proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "protocol"
+      "interoperability": "Applications (MacOS X, Linux, NetBSD)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
   },
@@ -218,7 +218,7 @@
       "fault_tolerance": "standard",
       "security": "none",
       "scalability": "homogeneous",
-      "interoperability": "applications (Linux)"
+      "interoperability": "Applications (Linux)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/HAMMER"
   },
@@ -250,7 +250,7 @@
       "fault_tolerance": "Unknown (Proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/ICloud"
   },
@@ -330,7 +330,7 @@
       "fault_tolerance": "none",
       "security": "In-Transit",
       "scalability": "none",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/OwnCloud"
   },
@@ -346,7 +346,7 @@
       "fault_tolerance": "none",
       "security": "In-Transit",
       "scalability": "none",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": ""
   },
@@ -378,7 +378,7 @@
       "fault_tolerance": "Unknown (proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/SugarSync"
   },
@@ -394,7 +394,7 @@
       "fault_tolerance": "byzantine",
       "security": "In-Transit & At-Rest",
       "scalability": "homogeneous",
-      "interoperability": "applications (Linux)"
+      "interoperability": "Applications (Linux)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/Tahoe-LAFS"
   },
@@ -426,7 +426,7 @@
       "fault_tolerance": "standard",
       "security": "In-Transit",
       "scalability": "homogeneous",
-      "interoperability": "applications"
+      "interoperability": "Applications (Windows, MacOS X, Linux)"
     },
     "wikipedia": "https://en.wikipedia.org/wiki/XtreemFS"
   }

@@ -580,6 +580,8 @@ body.pricing, body.press {
   ul.menu { position: absolute; margin-top: 20px; max-width: 250px; }
   ul.menu #menu-anchor { height: 1px; width: 100%;}
   ul.menu.fixed { position: fixed; top: 20px;}
+
+  ul.menu li { position: relative;}
   ul.menu li a { font-family: @helvetica; font-weight: 300; }
   ul.menu li.notice {
     width: 75%; margin-bottom: 20px; font-style: italic; color: @infinitgray;
@@ -594,6 +596,23 @@ body.pricing, body.press {
   ul.menu ul { list-style-type: circle; padding-left: 20px; }
   ul.menu ul li { margin: 5px 0;}
   ul.menu ul li a { font-size: 13px; }
+
+  ul.menu li.comparisons ul {
+    position:absolute; left: 0%; top: -70px; padding: 20px 30px;
+    width: 100%; visibility: hidden; opacity: 0;
+    transition: transform 0.2s; transform: translateX(50px);
+    list-style-type: none; background: #FFFFFF;
+    box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.50);
+    border-radius: 2px; width: 740px; max-height: 250px;
+    overflow: hidden;
+    li { margin-right: 10px; float: left; display: inline; width: 25%; }
+  }
+
+  ul.menu li.comparisons:hover > ul{
+    left: 60%; visibility: visible; opacity: 1;
+    transform: translateX(0px); z-index: 9;
+  }
+
 
   section.doc {
     float: left; width: 50%; padding: 0 15% 100px 12%; margin-top: 40px;

@@ -10,7 +10,7 @@
       <a href="${route('doc_technology')}">Technology</a>
     </li>
 
-    <li ${'class="active"' if request.route.name == 'doc_comparison' else ''}>
+    <li class="comparisons ${'active' if request.route.name == 'doc_comparison' else ''}">
       <a href="${route('doc_comparison')}">Comparison</a>
 
       <ul>
