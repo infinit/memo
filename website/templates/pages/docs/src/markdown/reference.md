@@ -137,7 +137,9 @@ _**WARNING**: The user identity file is the equivalent of an SSH key file and mu
 
 ### Sign up on the Hub ###
 
-To register on the Hub, you can either use the `--push` option when creating your user, push the user once it has been created locally or sign up directly on the Hub.
+To register on the Hub, you can either use the `--push` option <a href="#create-a-user">when creating your user</a>, push the user once it has been created locally or sign up directly on the Hub.
+
+#### Push an existing user to the Hub ####
 
 To push an existing user, simply invoke _infinit-user_ with the `--push` mode and `--email` option to specify a valid email address. Needless to say that this email address will *never* be shared with third parties and will solely be used for Infinit to communicate news of its file storage platform.
 
@@ -147,6 +149,8 @@ To push an existing user, simply invoke _infinit-user_ with the `--push` mode an
 $> infinit-user --push --name alice --fullname "Alice" --email alice@company.com
 Remotely pushed user "alice".
 ```
+
+#### Create and push user on the Hub ####
 
 Unfortunately, since names are unique, your user name may already be taken on the Hub, in which case the operation will fail. The action `--signup` has been introduced to overcome this problem, performing the equivalent of `--create --push` atomically, making sure that the user is created locally and remotely at once.
 
