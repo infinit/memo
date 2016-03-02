@@ -2645,9 +2645,9 @@ namespace infinit
   }
 }
 
-Mode::OptionDescription option_cache_ram(
-  "cache-ram", boost::program_options::bool_switch(), "enable RAM block cache",
-  {{"cache", boost::program_options::bool_switch()}});
+Mode::OptionDescription option_cache(
+  "cache", boost::program_options::bool_switch(),
+  "enable caching with default values");
 Mode::OptionDescription option_cache_ram_size(
   "cache-ram-size", boost::program_options::value<int>(),
   "maximum RAM block cache size in bytes (default: 64 MB)",
@@ -2659,7 +2659,8 @@ Mode::OptionDescription option_cache_ram_ttl(
 Mode::OptionDescription option_cache_ram_invalidation(
   "cache-ram-invalidation", boost::program_options::value<int>(),
   "RAM block cache invalidation time in seconds (default: 15 seconds)",
-  {{"cache-ram-invalidation", boost::program_options::value<int>()}});
+  {{"cache-invalidation", boost::program_options::value<int>()}});
 Mode::OptionDescription option_cache_disk_size(
   "cache-disk-size", boost::program_options::value<uint64_t>(),
-  "size of disk cache for immutable data in bytes (default: 64 MB)");
+  "size of disk cache for immutable data in bytes (default: 64 MB)",
+  {{"disk-cache-size", boost::program_options::value<uint64_t>()}});

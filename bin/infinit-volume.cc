@@ -302,7 +302,7 @@ COMMAND(run)
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
-  bool cache = flag(args, option_cache_ram);
+  bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
   auto cache_ram_invalidation =
@@ -870,7 +870,7 @@ main(int argc, char** argv)
 #ifndef INFINIT_WINDOWS
     { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif
-    option_cache_ram,
+    option_cache,
     option_cache_ram_size,
     option_cache_ram_ttl,
     option_cache_ram_invalidation,

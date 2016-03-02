@@ -455,7 +455,7 @@ COMMAND(run)
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);
-  bool cache = flag(args, option_cache_ram);
+  bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
   auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
   auto cache_ram_invalidation =
@@ -717,7 +717,7 @@ main(int argc, char** argv)
         { "peer", value<std::vector<std::string>>()->multitoken(),
           "peer address or file with list of peer addresses (host:port)" },
         { "async", bool_switch(), "use asynchronous operations" },
-        option_cache_ram,
+        option_cache,
         option_cache_ram_size,
         option_cache_ram_ttl,
         option_cache_ram_invalidation,
