@@ -42,6 +42,7 @@ $(document).ready(function() {
           menu.css({
             position: "fixed",
             top: '14px',
+            'z-index': '10',
             bottom: ""
           });
         }
@@ -71,9 +72,15 @@ $(document).ready(function() {
   }
 
   if ($('body').hasClass('documentation')) {
+
+    // dropdown menus
     $('ul.menu li.dropdown > a').click(function(e) {
       e.preventDefault();
       $(this).parent().toggleClass('clicked');
+    });
+
+    $('ul.menu li.comparisons > a').click(function(e) {
+      e.preventDefault();
     });
   }
 

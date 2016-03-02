@@ -137,7 +137,7 @@ section.blue {
   background: #EBF0F3;
 }
 
-pre code { font-family: @monospace; line-height: 17px; font-size: 14px; }
+pre code { font-family: @monospace; line-height: 17px; font-size: 14px; z-index: -1;}
 
 p.subtitle {
   font-family: @helvetica; font-size: 22px; color: #5D5D5D; line-height: 32px;
@@ -601,19 +601,31 @@ body.pricing, body.press {
     li a { font-size: 13px; }
   }
 
-  ul.menu li.dropdown ul {
-    opacity: 0;
-    transition: transform 0.1s; transform: translateY(10px); display: none;
+  ul.menu li.dropdown {
+    ul {
+      opacity: 0;
+      transition: transform 0.1s; transform: translateY(10px); display: none;
+    }
+    > a img {
+      transform: rotate(0deg);
+      transition: transform 0.2s linear;
+    }
   }
 
-  ul.menu li.dropdown.clicked > ul {
-    opacity: 1; visibility: visible; transform: translateX(0px); display: block;
+  ul.menu li.dropdown.clicked {
+    > ul {
+      opacity: 1; visibility: visible; transform: translateX(0px); display: block;
+    }
+    > a img {
+      transform: rotate(-180deg);
+      transition: transform 0.2s linear;
+    }
   }
 
   ul.menu li.comparisons {
     padding-right: 10px;
     ul {
-      position:absolute; left: 0%; top: -150px; padding: 25px 30px 20px 50px;
+      position:absolute; left: 0%; top: -146px; padding: 25px 30px 20px 50px;
       width: 100%; visibility: hidden; opacity: 0;
       transition: transform 0.2s; transform: translateX(50px);
       list-style-type: none; background: #FFFFFF;
@@ -625,27 +637,21 @@ body.pricing, body.press {
       li img {
         max-width: 17px; margin-right: 4px; max-height: 17px;
       }
-    }
-  }
-
-  @keyframes three {
-    0% {
-      transform: rotateZ(0);
-    }
-    100% {
-      transform: rotateZ(-90deg);
+      > a img {
+        transform: rotate(0deg);
+        transition: transform 0.2s linear;
+      }
     }
   }
 
   ul.menu li.comparisons:hover {
     > ul {
-      left: 101%; visibility: visible; opacity: 1;
+      left: 85%; visibility: visible; opacity: 1;
       transform: translateX(0px); z-index: 9;
     }
     > a img {
-      transform: rotateZ(-90deg);
-      animation: three 0.3s;
-      animation-direction: alternate;
+      transform: rotate(-90deg);
+      transition: transform 0.2s linear;
     }
   }
 
