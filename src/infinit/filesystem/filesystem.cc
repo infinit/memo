@@ -214,7 +214,7 @@ namespace infinit
       ELLE_ASSERT(!!acl_root);
       auto res =
         std::make_shared<Directory>(nullptr, *this, "", acl_root->address());
-      res->_block = std::move(acl_root);
+      res->_fetch(std::move(acl_root));
       return res;
     }
 

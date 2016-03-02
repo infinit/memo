@@ -225,6 +225,8 @@ namespace infinit
     void
     Directory::_fetch(std::unique_ptr<ACLBlock> block)
     {
+      static elle::Bench bench("bench.directory._fetch", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       ELLE_TRACE_SCOPE("%s: fetch block: %s", *this, this->_address);
       if (block)
         this->_block = std::move(block);
@@ -236,12 +238,23 @@ namespace infinit
                                       this->_block->version(), this));
         if (block)
           this->_block = std::move(block);
+        else
+        {
+          ELLE_DEBUG("%s: no change", *this);
+          /* If deserialization failed on previous run (because of permissions)
+          * we need to throw again
+          */
+          if (!this->_files.empty())
+            return;
+        }
       }
       else
         this->_block = elle::cast<ACLBlock>::runtime(
           this->_owner.fetch_or_die(this->_address, {}, this));
       ELLE_TRACE("Got block");
       ELLE_DUMP("block: %s", *this->_block);
+      static elle::Bench benchdec("bench.directory._fetch.decode", 10000_sec);
+      elle::Bench::BenchScope bsdec(benchdec);
       std::unordered_map<std::string, std::pair<EntryType,Address>> local;
       std::swap(local, _files);
       bool empty = false;
