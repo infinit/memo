@@ -318,6 +318,8 @@ def configure(
     'resources/images/icons/fire@2x.png',
     'resources/images/icons/cli.png',
     'resources/images/icons/cli@2x.png',
+    'resources/images/icons/caret-down.png',
+    'resources/images/icons/caret-down@2x.png',
 
     'resources/images/logos/360capitalpartners.png',
     'resources/images/logos/360capitalpartners@2x.png',

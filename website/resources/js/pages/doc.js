@@ -70,6 +70,13 @@ $(document).ready(function() {
     });
   }
 
+  if ($('body').hasClass('documentation')) {
+    $('ul.menu li.dropdown > a').click(function(e) {
+      e.preventDefault();
+      $(this).parent().toggleClass('clicked');
+    });
+  }
+
 
   if ($('body').hasClass('doc_get_started') ) {
     $('a.button').click(function() {
