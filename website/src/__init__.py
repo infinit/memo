@@ -56,7 +56,7 @@ class Website(bottle.Bottle):
     }
 
   @route('/drive', name = 'drive')
-  @view('pages/drive')
+  @view('pages/drive/drive.html')
   def root(self):
     return {
       'title': 'Infinit Drive',
