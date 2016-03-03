@@ -615,8 +615,7 @@ namespace infinit
     void
     File::_commit_all()
     {
-      ELLE_TRACE_SCOPE("%s: commit", *this);
-      ELLE_DEBUG_SCOPE("%s: push blocks", *this);
+      ELLE_TRACE_SCOPE("%s: commit", this);
       if (!check_cache(0))
       {
         ELLE_DEBUG("store first block: %f with payload %s, fat %s, total_size %s", *this->_first_block,

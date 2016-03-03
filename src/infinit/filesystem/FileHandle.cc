@@ -258,7 +258,7 @@ namespace infinit
     {
       if (size == 0)
         return 0;
-      ELLE_TRACE_SCOPE("%s: write %s at %s", *this, size, offset);
+      ELLE_TRACE_SCOPE("%s: write %s bytes at offset %s", *this, size, offset);
       ELLE_ASSERT_EQ(buffer.size(), size);
       this->_dirty = true;
       _owner->_header.mtime = time(nullptr);

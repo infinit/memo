@@ -215,7 +215,7 @@ namespace infinit
       , _inherit_auth(_parent?_parent->_inherit_auth : false)
       , _prefetching(false)
     {
-      ELLE_TRACE("%s: created with address %s", *this, this->_address);
+      ELLE_TRACE("%s: created with address %f", this, this->_address);
     }
 
     void
@@ -229,7 +229,7 @@ namespace infinit
     {
       static elle::Bench bench("bench.directory._fetch", 10000_sec);
       elle::Bench::BenchScope bs(bench);
-      ELLE_TRACE_SCOPE("%s: fetch block: %s", *this, this->_address);
+      ELLE_TRACE_SCOPE("%s: fetch block: %f", this, this->_address);
       if (block)
         this->_block = std::move(block);
       else if (this->_block)
@@ -253,7 +253,7 @@ namespace infinit
       else
         this->_block = elle::cast<ACLBlock>::runtime(
           this->_owner.fetch_or_die(this->_address, {}, this));
-      ELLE_TRACE("Got block");
+      ELLE_DEBUG("got block version %s", this->_block->version());
       ELLE_DUMP("block: %s", *this->_block);
       static elle::Bench benchdec("bench.directory._fetch.decode", 10000_sec);
       elle::Bench::BenchScope bsdec(benchdec);
