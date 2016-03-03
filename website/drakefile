@@ -142,7 +142,6 @@ def configure(
 
     'templates/pages/docs/changelog.html',
     'templates/pages/docs/comparison.html',
-    'templates/pages/docs/decentralized_fs.html',
     'templates/pages/docs/deployments.html',
     'templates/pages/docs/filesystem.html',
     'templates/pages/docs/gcs.html',
@@ -150,7 +149,6 @@ def configure(
     'templates/pages/docs/get_started_windows.html',
     'templates/pages/docs/menu.html',
     'templates/pages/docs/overview.html',
-    'templates/pages/docs/personal_cloud.html',
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
     'templates/pages/docs/s3.html',
