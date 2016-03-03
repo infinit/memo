@@ -141,15 +141,7 @@ $(document).ready(function() {
   `----------------*/
 
   function sortProperties(elem) {
-    var to_sort;
-    if (elem.checked) {
-      to_sort = '.property.different';
-    } else {
-      to_sort = '.property';
-    }
-
-    // new sort
-    $(to_sort).each(function(index, element) {
+    $('.property').each(function(index, element) {
       if ((index % 2) !== 1) {
         $(element).css('clear', 'both');
       } else {
@@ -163,12 +155,11 @@ $(document).ready(function() {
     var switcher = new Switchery(elem, { color: "#252d3b"});
 
     elem.onchange = function() {
-      sortProperties(elem);
-
+      $('.properties').toggleClass('compared');
       if (elem.checked) {
-        $('.property.same').hide();
+        $('.property .infinit').show();
       } else {
-        $('.property.same').show();
+        $('.property .infinit').hide();
       }
     };
 

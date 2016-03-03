@@ -1044,26 +1044,26 @@ body.doc_comparison {
   section.doc {
     img.competitor.big { float: right; max-height: 60px; margin-top: -4px;}
     .filters {
-      margin-top: 30px; float: right; color: @infinitgray;
+      margin: 40px 0 20px 0; color: @infinitgray; text-align: center;
+      font-weight: 300; font-size: 18px; font-family: @helvetica;
       label { padding-right: 6px;}
     }
+    .properties.compared .same { background: darken(white, 1%); }
     .property {
       width: 46%; margin:20px 2%; float: left;text-align: left;
       box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.17); border-radius: 3px;
       min-height: 209px;
-
-      &.same { display: none; }
 
       h2 {
         margin: 0; padding: 0; font-size: 14px; padding: 10px 20px; margin-bottom: 20px;
         border-bottom:1px solid #E7E7E7; text-transform: uppercase;
       }
       a.open-popup { outline: none; }
-      div.competitor, div.infinit {
+      div.competitor, div.infinit, p {
         padding: 0 20px;
         img {width: 20px; height: auto; vertical-align: sub;}
       }
-      div.infinit { color: @infinitred; margin-top: 7px;}
+      div.infinit { color: @infinitred; margin-top: 7px; display: none; }
       div.infinit img { margin: 0 2px; width: 16px; height: 15px; }
       p { font-size: 14px; line-height: 19px; }
     }

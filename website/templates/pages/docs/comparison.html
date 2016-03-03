@@ -10,13 +10,36 @@
     <p>${competitor['description']}</p>
 
     <div class="filters">
-      <label for="switcher">Display differences only</label>
-      <input type="checkbox" class="js-switch" checked />
+      <label for="switcher">Show comparison with Infinit</label>
+      <input type="checkbox" class="js-switch" />
     </div>
 
-    <h3>Comparison</h3>
+    <div class="properties">
+    <%
+      properties = [None]*9
 
-    % for property, value in competitor['properties'].items():
+      for property, value in competitor['properties'].items():
+        if property == 'architecture':
+          properties[0] = ['architecture', value]
+        elif property == 'interface':
+          properties[1] = ['interface', value]
+        elif property == 'model':
+          properties[2] = ['model', value]
+        elif property == 'environment':
+          properties[3] = ['environment', value]
+        elif property == 'redundancy':
+          properties[4] = ['redundancy', value]
+        elif property == 'fault_tolerance':
+          properties[5] = ['fault_tolerance', value]
+        elif property == 'security':
+          properties[6] = ['security', value]
+        elif property == 'scalability':
+          properties[7] = ['scalability', value]
+        elif property == 'interoperability':
+          properties[8] = ['interoperability', value]
+    %>
+
+    % for property, value in properties:
       <%
         value_infinit = infinit['properties'][property]
         if property == "interoperability" and "Applications" in value and "Applications" in value_infinit:
@@ -46,55 +69,59 @@
             ${value_infinit}
             ${'(soon)' if property == 'redundancy' else ''}
           </span>
-
-          <p class="note">
-          % if property == 'architecture' and value == 'Object':
-            Object-based storage architectures manage data as objects. File-based solutions store data as file hierarchy. <a class="open-popup" href="#object-file">Read more.</a>
-
-          % elif property == 'scalability' and value != 'heterogeneous':
-              Heterogeneous systems can integrate additional storage capacity from resources and providers of different nature being in the cloud, through an API, etc. <a class="open-popup" href="#scalability">Read more.</a>
-
-          % elif property == 'redundancy':
-            % if value == 'replication':
-              Erasure codes are more interesting than replication because less storage capacity is required to achieve the same durability and availability. <a class="open-popup" href="#redundancy">Read more.</a>
-            % elif value == 'None' or 'Unknown' in value:
-              A redundancy mechanism ensures availability and reliability for your files. <a class="open-popup" href="#redundancy">Read more.</a>
-            % endif
-
-          % elif property == 'security':
-            Every communication is encrypted (in transit) along with every block once stored (at rest). <a class="open-popup" href="#security">Read more.</a>
-
-          % elif property == 'interoperability':
-            <a class="open-popup" href="#interoperability">Read more.</a>
-
-          % elif property == 'interface':
-            File systems are better suited when users need to access large amount of data without having to download everything locally since it can be streamed. <a class="open-popup" href="#interface">Read more.</a>
-
-          % elif property == 'fault_tolerance':
-            % if value == 'None' or value == '' or 'Unknown' in value:
-              The capacity to maintain a storage system operational in the event of failure is referred to as fault tolerant. <a class="open-popup" href="#fault_tolerance">Read more.</a>
-            % elif value == 'Standard':
-              If the storage resources are not under the control of the administrator, the fault tolerance algorithm must be adapted to tolerate failures known as Byzantine. <a class="open-popup" href="#fault_tolerance">Read more.</a>
-            % endif
-
-          % elif property == 'environment':
-            % if value == 'Worldwide':
-              Worldwide environment can be worrying for businesses that want to control where their files are actually located. Infinit provides both. <a class="open-popup" href="#environment">Read more.</a>
-            % elif value == '':
-              A controlled environment is a set of servers and clients that are under the control of a single entity e.g a company. <a class="open-popup" href="#environment">Read more.</a>
-            %endif
-
-          % elif property == 'model':
-            % if value == 'Centralized':
-              Centralized systems store both the data and metadata on a single server. The availability and reliability of the whole infrastructure depends upon a single server. <a class="open-popup" href="#model">Read more.</a>
-            % elif value == 'Distributed' or 'Unknown' in value:
-              On decentralized systems, there is no metadata server that could act as a single point of failure or bottleneck. <a class="open-popup" href="#model">Read more.</a>
-            %endif
-          % endif
         </div>
-        <span>
+        <p class="note">
+        % if property == 'architecture':
+          % if value == 'Object':
+            Object-based storage architectures manage data as objects. File-based solutions store data as file hierarchy. <a class="open-popup" href="#object-file">Read more.</a>
+          % else:
+            File-based solutions store data as file hierarchy. <a class="open-popup" href="#object-file">Read more.</a>
+          % endif
+
+        % elif property == 'scalability' and value != 'heterogeneous':
+            Heterogeneous systems can integrate additional storage capacity from resources and providers of different nature being in the cloud, through an API, etc. <a class="open-popup" href="#scalability">Read more.</a>
+
+        % elif property == 'redundancy':
+          % if value == 'replication':
+            Erasure codes are more interesting than replication because less storage capacity is required to achieve the same durability and availability. <a class="open-popup" href="#redundancy">Read more.</a>
+          % elif value == 'None' or 'Unknown' in value:
+            A redundancy mechanism ensures availability and reliability for your files. <a class="open-popup" href="#redundancy">Read more.</a>
+          % endif
+
+        % elif property == 'security':
+          Every communication is encrypted (in transit) along with every block once stored (at rest). <a class="open-popup" href="#security">Read more.</a>
+
+        % elif property == 'interoperability':
+          <a class="open-popup" href="#interoperability">Read more.</a>
+
+        % elif property == 'interface':
+          File systems are better suited when users need to access large amount of data without having to download everything locally since it can be streamed. <a class="open-popup" href="#interface">Read more.</a>
+
+        % elif property == 'fault_tolerance':
+          % if value == 'None' or value == '' or 'Unknown' in value:
+            The capacity to maintain a storage system operational in the event of failure is referred to as fault tolerant. <a class="open-popup" href="#fault_tolerance">Read more.</a>
+          % elif value == 'Standard':
+            If the storage resources are not under the control of the administrator, the fault tolerance algorithm must be adapted to tolerate failures known as Byzantine. <a class="open-popup" href="#fault_tolerance">Read more.</a>
+          % endif
+
+        % elif property == 'environment':
+          % if value == 'Worldwide':
+            Worldwide environment can be worrying for businesses that want to control where their files are actually located. Infinit provides both. <a class="open-popup" href="#environment">Read more.</a>
+          % elif value == '':
+            A controlled environment is a set of servers and clients that are under the control of a single entity e.g a company. <a class="open-popup" href="#environment">Read more.</a>
+          %endif
+
+        % elif property == 'model':
+          % if value == 'Centralized':
+            Centralized systems store both the data and metadata on a single server. The availability and reliability of the whole infrastructure depends upon a single server. <a class="open-popup" href="#model">Read more.</a>
+          % elif value == 'Distributed' or 'Unknown' in value:
+            On decentralized systems, there is no metadata server that could act as a single point of failure or bottleneck. <a class="open-popup" href="#model">Read more.</a>
+          %endif
+        % endif
+        </p>
       </div>
     % endfor
+    </div>
 
     % if competitor['wikipedia']:
       <h3 class="links">Links</h3>
@@ -152,11 +179,12 @@
       <h3>Local Sync</h3>
       <p>A local sync technology clones all the files from a master copy (in the cloud for instance) on own's local device. This process has the advantage of keeping all the files local at any time, ensuring access even if worst case scenarios i.e if one is completely disconnected from the Internet. Unfortunately, such a technology also has its drawbacks, mainly to <strong>consume the local storage capacity</strong> of own's device. This becomes particularly problematic as the amount of data stored increases and exceeds the storage capacity available locally. Such solutions tend to provide a mechanism for the user to select which files and folders should not be cloned, rendering those unaccessible from this device.</p>
 
-      <h3>Local Sync vs File Systems</h3>
+      <h3>File Systems</h3>
       <p>While local sync is performed by a small program running in the background (i.e a daemon) that monitores changes between the master copy and the local one, POSIX-compliant file system technologies are low-level layers that basically emulate a hard disk drive. As such, file systems <strong>can capture low-level requests</strong> from applications and users such as reading and writing data from/to a file, adding an entry to a directory etc.</p>
 
       <p>The drawbacks of file systems is that they must provide additional mechanisms to allow users to access information quickly and when offline (e.g caching). However, file systems are better suited when users need to access potentially large amount of data without having to download everything locally since everything can be retrieved on-demand i.e <strong>streamed</strong>.</p>
 
+      <h3>Interface</h3>
       <p>Finally, some file storage solutions provide a Web interface to access and manage files. Such an interface is good because it requires no application to be installed on a user's computer. However, the user may lose in productivity because some file formats are not supported to be edited online e.g Photoshop, Catia etc. This is why most professional solutions provide a file sync or file system interface.</p>
     </div>
 
