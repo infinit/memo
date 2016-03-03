@@ -618,11 +618,13 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: commit", this);
       if (!check_cache(0))
       {
-        ELLE_DEBUG("store first block: %f with payload %s, fat %s, total_size %s", *this->_first_block,
-                   this->_data.size(), this->_fat, _header.size)
-        {
-          _commit_first(true);
-        }
+        ELLE_DEBUG_SCOPE(
+          "store first block: %s with payload %s, fat %s, total_size %s",
+          this->_first_block,
+          this->_data.size(),
+          this->_fat,
+          this->_header.size);
+        this->_commit_first(true);
       }
     }
 
