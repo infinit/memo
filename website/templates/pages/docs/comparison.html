@@ -51,25 +51,8 @@
       %>
 
       <div class="property ${'same' if is_similar else 'different'}">
-        <h2>${property}</h2>
-        <div class="competitor">
-          <img src="${url('images/logos/' + competitor_name + '.png')}" alt="${competitor['name']} logo">
-          <span>
-            <% value = value.capitalize() if len(value.split()) == 1 or "applications" in value else value %>
-            ${value if (value) else 'Not Applicable'}
-          </span>
-        </div>
-        <div class="infinit">
-          <img src="${url('images/logos/infinit.png')}" alt="${competitor['name']} logo">
-          <span>
-            <%
-              value_infinit = value_infinit.capitalize() if len(value_infinit.split()) == 1 else value_infinit
-            %>
-
-            ${value_infinit}
-            ${'(soon)' if property == 'redundancy' else ''}
-          </span>
-        </div>
+        <img class="" src="${url('images/icons/' + property + '.png')}" alt="${property}">
+        <h2>${property.capitalize()}</h2>
         <p class="note">
         % if property == 'architecture':
           % if value == 'Object':
@@ -92,33 +75,47 @@
           Every communication is encrypted (in transit) along with every block once stored (at rest). <a class="open-popup" href="#security">Read more.</a>
 
         % elif property == 'interoperability':
+          The ways a user or program can interact with a storage system.
           <a class="open-popup" href="#interoperability">Read more.</a>
 
         % elif property == 'interface':
           File systems are better suited when users need to access large amount of data without having to download everything locally since it can be streamed. <a class="open-popup" href="#interface">Read more.</a>
 
         % elif property == 'fault_tolerance':
-          % if value == 'None' or value == '' or 'Unknown' in value:
-            The capacity to maintain a storage system operational in the event of failure is referred to as fault tolerant. <a class="open-popup" href="#fault_tolerance">Read more.</a>
-          % elif value == 'Standard':
-            If the storage resources are not under the control of the administrator, the fault tolerance algorithm must be adapted to tolerate failures known as Byzantine. <a class="open-popup" href="#fault_tolerance">Read more.</a>
-          % endif
+          The capacity to maintain a storage system operational in the event of failure is referred to as fault tolerant. <a class="open-popup" href="#fault_tolerance">Read more.</a>
 
         % elif property == 'environment':
           % if value == 'Worldwide':
             Worldwide environment can be worrying for businesses that want to control where their files are actually located. Infinit provides both. <a class="open-popup" href="#environment">Read more.</a>
-          % elif value == '':
+          % else:
             A controlled environment is a set of servers and clients that are under the control of a single entity e.g a company. <a class="open-popup" href="#environment">Read more.</a>
           %endif
 
         % elif property == 'model':
           % if value == 'Centralized':
             Centralized systems store both the data and metadata on a single server. The availability and reliability of the whole infrastructure depends upon a single server. <a class="open-popup" href="#model">Read more.</a>
-          % elif value == 'Distributed' or 'Unknown' in value:
+          % else:
             On decentralized systems, there is no metadata server that could act as a single point of failure or bottleneck. <a class="open-popup" href="#model">Read more.</a>
           %endif
         % endif
         </p>
+        <div class="competitor">
+          <span>
+            <% value = value.capitalize() if len(value.split()) == 1 or "applications" in value else value %>
+            ${value if (value) else 'Not Applicable'}
+          </span>
+        </div>
+        <div class="infinit">
+          <img src="${url('images/logos/infinit.png')}" alt="${competitor['name']} logo">
+          <span>
+            <%
+              value_infinit = value_infinit.capitalize() if len(value_infinit.split()) == 1 else value_infinit
+            %>
+
+            ${value_infinit}
+            ${'(soon)' if property == 'redundancy' else ''}
+          </span>
+        </div>
       </div>
     % endfor
     </div>
