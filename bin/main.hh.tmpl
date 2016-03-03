@@ -971,6 +971,7 @@ namespace infinit
           mount_options.push_back("-o");
           mount_options.push_back("ro");
         }
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         auto add_option = [] (std::string const& opt_name,
                               std::string const& opt_val,
                               std::vector<std::string>& options)
@@ -978,7 +979,6 @@ namespace infinit
             options.push_back("-o");
             options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
           };
-#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         add_option("volname", volname_.get(), mount_options);
 #endif
 #ifdef INFINIT_MACOSX
