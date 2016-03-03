@@ -39,6 +39,8 @@
 #include <infinit/storage/Storage.hh>
 #include <infinit/version.hh>
 
+#include "DHT.hh"
+
 #ifdef INFINIT_MACOSX
 # define SXA_EXTRA ,0
 #else
@@ -57,12 +59,12 @@ namespace rfs = reactor::filesystem;
 namespace bfs = boost::filesystem;
 
 bool mounted = false;
-infinit::storage::Storage* storage;
+infinit::storage::Storage* g_storage;
 reactor::filesystem::FileSystem* fs;
 reactor::Scheduler* sched;
 
 std::vector<std::string> mount_points;
-std::vector<infinit::cryptography::rsa::PublicKey> keys;
+std::vector<infinit::cryptography::rsa::PublicKey> g_keys;
 std::vector<std::unique_ptr<infinit::model::doughnut::Doughnut>> nodes;
 std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
@@ -329,7 +331,7 @@ run_filesystem_dht(std::string const& store,
   sched = new reactor::Scheduler();
   fs = nullptr;
   mount_points.clear();
-  keys.clear();
+  g_keys.clear();
   nodes.clear();
   endpoints.clear();
   processes.clear();
@@ -356,8 +358,8 @@ run_filesystem_dht(std::string const& store,
       {
         ELLE_TRACE("configuring mounter...");
         //auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-        //keys.push_back(kp.K());
-        keys.push_back(owner_keys.K());
+        //g_keys.push_back(kp.K());
+        g_keys.push_back(owner_keys.K());
         infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys);
         ELLE_TRACE("instantiating dougnut...");
         infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
@@ -423,7 +425,7 @@ run_filesystem_dht(std::string const& store,
         model["type"] = "doughnut";
         model["name"] = "user" + std::to_string(i);
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-        keys.push_back(kp.K());
+        g_keys.push_back(kp.K());
         model["id"] = elle::format::base64::encode(
           elle::ConstWeakBuffer(
             infinit::model::Address::random(0).value(), // FIXME
@@ -518,7 +520,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
   sched = new reactor::Scheduler();
   fs = nullptr;
   mount_points.clear();
-  keys.clear();
+  g_keys.clear();
   nodes.clear();
   endpoints.clear();
   processes.clear();
@@ -531,7 +533,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     else
       storage = new infinit::storage::Filesystem(store);
     model = elle::make_unique<infinit::model::faith::Faith>(
-      std::unique_ptr<infinit::storage::Storage>(storage),
+      std::unique_ptr<infinit::storage::Storage>(g_storage),
       INFINIT_ELLE_VERSION);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "default-volume", std::move(model));
@@ -1098,8 +1100,8 @@ test_conflicts(bool paxos)
   BOOST_CHECK_EQUAL(mount_points.size(), 2);
   bfs::path m0 = mount_points[0];
   bfs::path m1 = mount_points[1];
-  BOOST_CHECK_EQUAL(keys.size(), 2);
-  std::string k1 = serialize(keys[1]);
+  BOOST_CHECK_EQUAL(g_keys.size(), 2);
+  std::string k1 = serialize(g_keys[1]);
   ELLE_LOG("set permissions");
   {
     setxattr(m0.c_str(), "user.infinit.auth.setrw",
@@ -1118,7 +1120,6 @@ test_conflicts(bool paxos)
     BOOST_CHECK(fd1 != -1);
     ELLE_LOG("write to file 0")
       BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
-
     ELLE_LOG("write to file 1")
       BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
     ELLE_LOG("close file 0")
@@ -1167,24 +1168,6 @@ test_conflicts(bool paxos)
     BOOST_CHECK_EQUAL(close(fd1), 0);
     BOOST_CHECK_EQUAL(stat((m0/"file3").c_str(), &st), 0);
     BOOST_CHECK_EQUAL(stat((m1/"file4").c_str(), &st), 0);
-  }
-  ELLE_LOG("write/unlink")
-  {
-    int fd0;
-    setxattr(m0.c_str(), "user.infinit.auth.inherit",
-             "true", strlen("true"), 0 SXA_EXTRA);
-    fd0 = open((m0 / "file5").string().c_str(), O_CREAT|O_RDWR, 0644);
-    BOOST_CHECK(fd0 != -1);
-    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-    fsync(fd0);
-    BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), 0);
-    usleep(2100000);
-    BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), 0);
-    bfs::remove(m1 / "file5");
-    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-    BOOST_CHECK_EQUAL(close(fd0), 0);
-    BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), -1);
-    BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), -1);
   }
   ELLE_LOG("write/replace")
   {
@@ -1258,8 +1241,8 @@ test_acl(bool paxos)
   bfs::path m0 = mount_points[0];
   bfs::path m1 = mount_points[1];
   //bfs::path m2 = mount_points[2];
-  BOOST_CHECK_EQUAL(keys.size(), 2);
-  std::string k1 = serialize(keys[1]);
+  BOOST_CHECK_EQUAL(g_keys.size(), 2);
+  std::string k1 = serialize(g_keys[1]);
   {
     boost::filesystem::ofstream ofs(m0 / "test");
     ofs << "Test";
@@ -1531,6 +1514,113 @@ acl_paxos()
   test_acl(true);
 }
 
+class DHTs
+{
+public:
+  template <typename ... Args>
+  DHTs(int count, Args ... args)
+    : owner_keys(infinit::cryptography::rsa::keypair::generate(512))
+    , dhts()
+  {
+    for (int i = 0; i < count; ++i)
+    {
+      this->dhts.emplace_back(owner = this->owner_keys, args ...);
+      for (int j = 0; j < i; ++j)
+        this->dhts[j].overlay->connect(*this->dhts[i].overlay);
+    }
+  }
+
+  struct Client
+  {
+    Client(std::string const& name, DHT dht)
+      : dht(std::move(dht))
+      , fs(elle::make_unique<reactor::filesystem::FileSystem>(
+             elle::make_unique<infinit::filesystem::FileSystem>(
+               name, this->dht.dht),
+             true))
+    {}
+
+    DHT dht;
+    std::unique_ptr<reactor::filesystem::FileSystem> fs;
+  };
+
+  Client
+  client()
+  {
+    DHT client(keys = this->owner_keys, storage = nullptr);
+    for (auto& dht: this->dhts)
+      dht.overlay->connect(*client.overlay);
+    return Client("volume", std::move(client));
+  }
+
+  infinit::cryptography::rsa::KeyPair owner_keys;
+  std::vector<DHT> dhts;
+};
+
+ELLE_TEST_SCHEDULED(write_unlink)
+{
+  DHTs servers(1);
+  auto client_1 = servers.client();
+  auto client_2 = servers.client();
+  auto root_1 = [&]
+    {
+      ELLE_LOG_SCOPE("fetch client 1 root");
+      return client_1.fs->path("/");
+    }();
+  auto root_2 = [&]
+    {
+      ELLE_LOG_SCOPE("fetch client 2 root");
+      return client_2.fs->path("/");
+    }();
+  auto handle = [&]
+  {
+    ELLE_LOG_SCOPE("create file file client 1");
+    auto handle =
+      root_1->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+    BOOST_CHECK(handle);
+    BOOST_CHECK_EQUAL(handle->write(elle::ConstWeakBuffer("data1"), 5, 0), 5);
+    return handle;
+  }();
+  ELLE_LOG("sync on client 1")
+    handle->fsync(true);
+  struct stat st;
+  ELLE_LOG("check file exists on client 1")
+    BOOST_CHECK_NO_THROW(root_1->child("file")->stat(&st));
+  ELLE_LOG("check file exists on client 2")
+    BOOST_CHECK_NO_THROW(root_2->child("file")->stat(&st));
+  ELLE_LOG("read on client 1")
+  {
+    elle::Buffer b(5);
+    BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+    BOOST_CHECK_EQUAL(b, "data1");
+  }
+  ELLE_LOG("remove file on client 2")
+    root_2->child("file")->unlink();
+  // Ability to read removed files not implemented yet, but it should
+  // ELLE_LOG("read on client 1")
+  // {
+  //   elle::Buffer b(5);
+  //   BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+  //   BOOST_CHECK_EQUAL(b, "data1");
+  // }
+  ELLE_LOG("write on client 1")
+    BOOST_CHECK_EQUAL(handle->write(elle::ConstWeakBuffer("data2"), 5, 0), 5);
+  ELLE_LOG("sync on client 1")
+    handle->fsync(true);
+  // ELLE_LOG("read on client 1")
+  // {
+  //   elle::Buffer b(5);
+  //   BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+  //   BOOST_CHECK_EQUAL(b, "data2");
+  // }
+  ELLE_LOG("close file on client 1")
+    BOOST_CHECK_NO_THROW(handle->close());
+  ELLE_LOG("check file does not exist on client 2")
+    BOOST_CHECK_THROW(root_1->child("file")->stat(&st), elle::Error);
+  ELLE_LOG("check file does not exist on client 2")
+    BOOST_CHECK_THROW(root_2->child("file")->stat(&st), elle::Error);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1549,4 +1639,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(conflicts), 0, 120);
   suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
 #endif
+  suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
 }
