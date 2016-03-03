@@ -22,7 +22,7 @@ namespace infinit
       Peer::fetch(Address address,
                   boost::optional<int> local_version) const
       {
-        ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
+        ELLE_TRACE_SCOPE("%s: fetch %f", this, address);
         auto res = this->_fetch(std::move(address), std::move(local_version));
         if (local_version)
           if (auto mb = dynamic_cast<blocks::MutableBlock*>(res.get()))

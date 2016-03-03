@@ -103,8 +103,8 @@ namespace infinit
             catch (MissingBlock const&)
             {
               auto user = elle::make_unique<UB>(this, name, this->passport());
-              ELLE_TRACE_SCOPE("%s: store user block at %x for %s",
-                               *this, user->address(), name);
+              ELLE_TRACE_SCOPE("%s: store user block at %f for %s",
+                               this, user->address(), name);
               try
               {
                 this->store(std::move(user));
@@ -132,7 +132,7 @@ namespace infinit
             catch(MissingBlock const&)
             {
               auto user = elle::make_unique<UB>(this, name, this->passport(), true);
-              ELLE_TRACE_SCOPE("%s: store reverse user block at %x", *this,
+              ELLE_TRACE_SCOPE("%s: store reverse user block at %f", this,
                                user->address());
               try
               {
@@ -286,8 +286,7 @@ namespace infinit
                          bool require_storage,
                          bool require_sign)
       {
-        ELLE_TRACE_SCOPE("%s: validating passport %s",
-                         *this, passport.user());
+        ELLE_TRACE_SCOPE("%s: validating passport %s", this, passport);
         if (  (require_write && !passport.allow_write())
            || (require_storage && !passport.allow_storage())
            || (require_sign && !passport.allow_sign())

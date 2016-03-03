@@ -7,7 +7,7 @@ namespace infinit
   namespace storage
   {
     MissingKey::MissingKey(Key key)
-      : Super(elle::sprintf("missing key: %x", key))
+      : Super(elle::sprintf("missing key: %f", key))
       , _key(key)
     {}
 

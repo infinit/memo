@@ -160,17 +160,17 @@ namespace infinit
       }
       catch (elle::serialization::Error const& se)
       {
-        ELLE_WARN("serialization error fetching %x: %s", address, se);
+        ELLE_WARN("serialization error fetching %f: %s", address, se);
         throw rfs::Error(EIO, elle::sprintf("%s", se));
       }
       catch(elle::Exception const& e)
       {
-        ELLE_WARN("unexpected exception fetching %x: %s", address, e);
+        ELLE_WARN("unexpected exception fetching %f: %s", address, e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
       catch(std::exception const& e)
       {
-        ELLE_WARN("unexpected exception on fetching %x: %s", address, e.what());
+        ELLE_WARN("unexpected exception on fetching %f: %s", address, e.what());
         throw rfs::Error(EIO, e.what());
       }
     }
@@ -243,13 +243,13 @@ namespace infinit
       {
         try
         {
-          ELLE_DEBUG_SCOPE("fetch root bootstrap block at %x", addr);
+          ELLE_DEBUG_SCOPE("fetch root bootstrap block at %f", addr);
           auto block = this->_block_store->fetch(addr);
           addr = Address(
             Address::from_string(block->data().string().substr(2)).value(),
             model::flags::mutable_block,
             false);
-          ELLE_DEBUG_SCOPE("fetch root block at %x", addr);
+          ELLE_DEBUG_SCOPE("fetch root block at %f", addr);
           break;
         }
         catch (model::MissingBlock const& e)

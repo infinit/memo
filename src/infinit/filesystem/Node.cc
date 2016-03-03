@@ -491,7 +491,7 @@ namespace infinit
                           std::string const& userkey,
                           Address self_address)
     {
-      ELLE_TRACE("set_permissions(%s, %s, %s)", flags, userkey, self_address);
+      ELLE_TRACE_SCOPE("%s: set_permissions(%s)", this, flags);
       std::pair<bool, bool> perms = parse_flags(flags);
       std::unique_ptr<infinit::model::User> user =
         umbrella([&] {return _get_user(userkey);}, EINVAL);

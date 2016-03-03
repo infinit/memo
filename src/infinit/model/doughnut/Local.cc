@@ -141,7 +141,7 @@ namespace infinit
       std::unique_ptr<blocks::Block>
       Local::_fetch(Address address, boost::optional<int> local_version) const
       {
-        ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
+        ELLE_TRACE_SCOPE("%s: fetch %f", this, address);
         elle::Buffer data;
         try
         {
