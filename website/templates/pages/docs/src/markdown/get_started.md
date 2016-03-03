@@ -134,7 +134,7 @@ Next, open your terminal and extract the Infinit tarball:
 
 <pre><code>$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
 Infinit-${tarball_version}/
-Infinit-clang3-${tarball_version}/bin/
+Infinit-${tarball_version}/bin/
 Infinit-${tarball_version}/lib
 ...
 Infinit-${tarball_version}/bin/infinit-storage
