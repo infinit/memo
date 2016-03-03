@@ -1,24 +1,23 @@
 #include <infinit/filesystem/File.hh>
 
-#include <cryptography/random.hh>
-#include <cryptography/SecretKey.hh>
-
-#include <infinit/filesystem/FileHandle.hh>
-#include <infinit/filesystem/Directory.hh>
-#include <infinit/filesystem/umbrella.hh>
-#include <infinit/filesystem/xattribute.hh>
+#ifdef INFINIT_WINDOWS
+#include <fcntl.h>
+#endif
+#include <sys/stat.h> // S_IMFT...
 
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 
+#include <cryptography/random.hh>
+#include <cryptography/SecretKey.hh>
+
+#include <infinit/filesystem/Directory.hh>
+#include <infinit/filesystem/FileHandle.hh>
+#include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/xattribute.hh>
+#include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
-
-#ifdef INFINIT_WINDOWS
-#include <fcntl.h>
-#endif
-
-#include <sys/stat.h> // S_IMFT...
 
 #ifdef INFINIT_WINDOWS
 #undef stat
@@ -224,11 +223,10 @@ namespace infinit
     void
     File::_commit()
     {
-      if (_rw_handle_count)
-      {
+      ELLE_TRACE_SCOPE("%s: commit", this);
+      if (this->_rw_handle_count)
         return;
-      }
-      _commit_first(true);
+      this->_commit_first(true);
     }
 
     void
@@ -615,7 +613,7 @@ namespace infinit
     void
     File::_commit_all()
     {
-      ELLE_TRACE_SCOPE("%s: commit", this);
+      ELLE_TRACE_SCOPE("%s: commit all", this);
       if (!check_cache(0))
       {
         ELLE_DEBUG_SCOPE(
@@ -736,11 +734,11 @@ namespace infinit
           this->_blocks.erase(it);
         }
       }
-      bool prev = _fat_changed;
-      if (_fat_changed)
+      bool prev = this->_fat_changed;
+      if (this->_fat_changed)
       {
-        ELLE_DEBUG("FAT changed, commiting first block");
-        _commit_first(cache_size == 0);
+        ELLE_DEBUG_SCOPE("FAT changed, commit first block");
+        this->_commit_first(cache_size == 0);
         _first_block_new = false;
         _fat_changed = false;
       }
