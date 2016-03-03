@@ -68,7 +68,7 @@
 <p>Click the link below to download the Infinit command-line tools:</p>
 
 <a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-" class="button">Download Command Line Tools</a>
+" class="button">Download Command Line Tools Tarball</a>
 
 % else:
 <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#linux-tarball-install">Tarball Install</a>.</p>
@@ -133,13 +133,13 @@ Next, open your terminal and extract the Infinit tarball:
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 
 <pre><code>$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-Infinit-x86_64-osx-clang3-${tarball_version}/
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/
-Infinit-x86_64-osx-clang3-${tarball_version}/lib
+Infinit-${tarball_version}/
+Infinit-clang3-${tarball_version}/bin/
+Infinit-${tarball_version}/lib
 ...
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-storage
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-user
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-volume
+Infinit-${tarball_version}/bin/infinit-storage
+Infinit-${tarball_version}/bin/infinit-user
+Infinit-${tarball_version}/bin/infinit-volume
 ...
 </code></pre>
 
@@ -169,7 +169,7 @@ Now that you’ve extracted the tarball, take a look. The extracted directory co
 
 <div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
-<pre><code>$> cd Infinit-x86_64-osx-clang3-${tarball_version}/
+<pre><code>$> cd Infinit-${tarball_version}/
 % else:
 <pre><code>$> cd Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
 % endif
