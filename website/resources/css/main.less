@@ -63,6 +63,11 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
   span { padding-right: 7px; }
 }
 
+div#full {
+  height: 100vh; background: rgba(0, 0, 0, 0.3); position: fixed; z-index: 11;
+  width: 100%; display: none;
+}
+
 input[type="text"], input[type="email"], input[type="password"], textarea {
   border: 1px solid @infinitgray; border-radius: 3px;
   padding: 1.5% 1.5%; outline: none; font-size: 13px;
@@ -628,7 +633,7 @@ body.pricing, body.press {
       position:absolute; left: 0%; top: -146px; padding: 25px 30px 20px 50px;
       width: 100%; visibility: hidden; opacity: 0;
       transition: transform 0.2s; transform: translateX(50px);
-      list-style-type: none; background: #FFFFFF;
+      list-style-type: none; background: #FFFFFF; z-index: 12;
       box-shadow: 0px 0px 2px 0px rgba(0,0,0,0.50);
       border-radius: 2px; width: 830px; max-height: 250px;
       overflow: hidden; .transition();
@@ -647,7 +652,7 @@ body.pricing, body.press {
   ul.menu li.comparisons.clicked {
     > ul {
       left: 85%; visibility: visible; opacity: 1;
-      transform: translateX(0px); z-index: 9;
+      transform: translateX(0px);
     }
     > a img {
       transform: rotate(-90deg);

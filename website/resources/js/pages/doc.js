@@ -1,3 +1,17 @@
+function showPopupMenu(element) {
+  $(element).parent().toggleClass('clicked');
+  $('#full').fadeIn();
+  $li = $('li.comparisons');
+  $popup = $('li.comparisons ul');
+
+  $(window).on("click", function(event){
+    if ($li.has(event.target).length === 0 && !$li.is(event.target)) {
+      $li.removeClass('clicked');
+      $('#full').fadeOut();
+    }
+  });
+}
+
 $(document).ready(function() {
 
   $('pre code').each(function(i, block) {
@@ -42,7 +56,7 @@ $(document).ready(function() {
           menu.css({
             position: "fixed",
             top: '14px',
-            'z-index': '10',
+            'z-index': '12',
             bottom: ""
           });
         }
@@ -79,19 +93,16 @@ $(document).ready(function() {
       $(this).parent().toggleClass('clicked');
     });
 
+    // comparisons menu
     $('ul.menu li.comparisons > a').click(function(e) {
-      $(this).parent().toggleClass('clicked');
-      $li = $('li.comparisons');
-      $popup = $('li.comparisons ul');
-
-      $(window).on("click", function(event){
-        if ($li.has(event.target).length === 0 && !$li.is(event.target)) {
-          $li.removeClass('clicked');
-        }
-      });
-
+      showPopupMenu(this);
       e.preventDefault();
     });
+
+    if (window.location.hash === '#comparisons') {
+      $('#full').fadeIn();
+      showPopupMenu($('ul.menu li.comparisons > a'));
+    }
   }
 
 
@@ -173,7 +184,14 @@ $(document).ready(function() {
       $($(this).attr('href')).show();
     });
 
-    // sortProperties(elem);
+    if (window.location.hash === '#slack') {
+      $.magnificPopup.open({
+        items: { src: '#slack'},
+        type: 'inline'
+      }, 0);
+
+      $('#slack').show();
+    }
   }
 
 });

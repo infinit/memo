@@ -41,6 +41,7 @@
   <body class="${request.route.name} ${'documentation' if request.route.name[:4] == 'doc_' else ''} ${'doc_get_started' if 'doc_get_started' in request.route.name else ''}">
 
     <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
+    <div id="full"></div>
 
     <header>
       <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"><span>Storage</span></a>
