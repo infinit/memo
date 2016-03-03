@@ -24,7 +24,7 @@ namespace infinit
       read(elle::WeakBuffer buffer, size_t size, off_t offset) override;
       virtual
       int
-      write(elle::WeakBuffer buffer, size_t size, off_t offset) override;
+      write(elle::ConstWeakBuffer buffer, size_t size, off_t offset) override;
       virtual
       void
       ftruncate(off_t offset) override;
@@ -42,11 +42,11 @@ namespace infinit
       print(std::ostream& stream) const override;
     private:
       int
-      _write_single(elle::WeakBuffer buffer, off_t offset);
+      _write_single(elle::ConstWeakBuffer buffer, off_t offset);
       int
-      _write_multi_single(elle::WeakBuffer buffer, off_t offset, int block);
+      _write_multi_single(elle::ConstWeakBuffer buffer, off_t offset, int block);
       int
-      _write_multi_multi(elle::WeakBuffer buffer, off_t offset,
+      _write_multi_multi(elle::ConstWeakBuffer buffer, off_t offset,
                          int start_block, int end_block);
       ELLE_ATTRIBUTE(std::shared_ptr<File>, owner);
       ELLE_ATTRIBUTE(bool, dirty);

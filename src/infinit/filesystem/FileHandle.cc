@@ -252,7 +252,9 @@ namespace infinit
     }
 
     int
-    FileHandle::write(elle::WeakBuffer buffer, size_t size, off_t offset)
+    FileHandle::write(elle::ConstWeakBuffer buffer,
+                      size_t size,
+                      off_t offset)
     {
       if (size == 0)
         return 0;
@@ -279,7 +281,7 @@ namespace infinit
         this->_owner->_header.size = std::max(this->_owner->_header.size,
                                               uint64_t(offset + size));
         return to_write + write(
-          elle::WeakBuffer(buffer.mutable_contents() + to_write, size - to_write),
+          elle::ConstWeakBuffer(buffer.contents() + to_write, size - to_write),
           size - to_write, offset + to_write);
       }
       this->_owner->_header.size = std::max(this->_owner->_header.size,
@@ -297,8 +299,9 @@ namespace infinit
     }
 
     int
-    FileHandle::_write_multi_single(
-        elle::WeakBuffer buffer, off_t offset, int block_idx)
+    FileHandle::_write_multi_single(elle::ConstWeakBuffer buffer,
+                                    off_t offset,
+                                    int block_idx)
     {
       auto const block_size = this->_owner->_header.block_size;
       auto const size = buffer.size();
@@ -339,8 +342,10 @@ namespace infinit
     }
 
     int
-    FileHandle::_write_multi_multi(
-        elle::WeakBuffer buffer, off_t offset, int start_block, int end_block)
+    FileHandle::_write_multi_multi(elle::ConstWeakBuffer buffer,
+                                   off_t offset,
+                                   int start_block,
+                                   int end_block)
     {
       uint64_t const block_size = this->_owner->_header.block_size;
       ELLE_ASSERT(start_block == end_block - 1);

@@ -47,7 +47,8 @@ namespace infinit
     public:
       XAttributeHandle(std::shared_ptr<rfs::Path> file, std::string const& name);
       int read(elle::WeakBuffer buffer, size_t size, off_t offset) override;
-      int write(elle::WeakBuffer buffer, size_t size, off_t offset) override;
+      int
+      write(elle::ConstWeakBuffer buffer, size_t size, off_t offset) override;
       void ftruncate(off_t offset) override {};
       void fsync(int datasync) override {};
       void fsyncdir(int datasync) override {};
