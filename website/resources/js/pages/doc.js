@@ -173,7 +173,7 @@ $(document).ready(function() {
       $($(this).attr('href')).show();
     });
 
-    sortProperties(elem);
+    // sortProperties(elem);
   }
 
 });
