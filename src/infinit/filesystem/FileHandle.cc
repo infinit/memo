@@ -381,6 +381,7 @@ namespace infinit
     FileHandle::fsync(int datasync)
     {
       ELLE_TRACE_SCOPE("%s: fsync", *this);
+      this->_owner->_commit_all();
     }
 
     void

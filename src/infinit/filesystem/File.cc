@@ -232,15 +232,24 @@ namespace infinit
     void
     File::_commit_first(bool final_flush)
     {
-      ELLE_DEBUG("commit_first, final=%s", final_flush);
       if (!this->_first_block)
       {
-        ELLE_DEBUG("re-fetching first_block");
-        Address addr = Address(
-          this->_parent->_files.find(_name)->second.second.value(),
-          model::flags::mutable_block, false);
-        this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
-          this->_owner.fetch_or_die(addr));
+        try
+        {
+          ELLE_DEBUG_SCOPE("fetch first block");
+          Address addr = Address(
+            this->_parent->_files.find(_name)->second.second.value(),
+            model::flags::mutable_block, false);
+          this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
+            this->_owner.block_store()->fetch(addr));
+        }
+        catch (model::MissingBlock const&)
+        {
+          // FIXME: keep the modification in memory if this is not the final
+          // flush
+          ELLE_WARN("%s: unable to commit as file was deleted", this);
+          return;
+        }
       }
       elle::Buffer serdata;
       {
