@@ -51,15 +51,18 @@ namespace infinit
   namespace filesystem
   {
     FileSystem::FileSystem(std::string const& volume_name,
-                           std::shared_ptr<model::Model> model)
+                           std::shared_ptr<model::Model> model,
+                           boost::optional<boost::filesystem::path> state_dir)
       : _block_store(std::move(model))
       , _single_mount(false)
       , _volume_name(volume_name)
+      , _state_dir(state_dir)
     {
-      auto pass = dynamic_cast<model::doughnut::Doughnut*>(_block_store.get())
-        ->passport();
-      _read_only = !pass.allow_write();
-      _network_name = pass.network();
+      auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
+        *this->_block_store.get());
+      auto passport = dht.passport();
+      this->_read_only = !passport.allow_write();
+      this->_network_name = passport.network();
 #ifndef INFINIT_WINDOWS
       reactor::scheduler().signal_handle
         (SIGUSR1, [this] { this->print_cache_stats();});
@@ -221,12 +224,16 @@ namespace infinit
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
-      auto root_block_cache_dir = xdg_state_home() / this->_network_name
-        / this->_volume_name;
-      if (!boost::filesystem::exists(root_block_cache_dir))
-        boost::filesystem::create_directories(root_block_cache_dir);
-      auto root_block_cache_path = root_block_cache_dir / "root_block";
-      ELLE_TRACE("root block cache is at %s", root_block_cache_path);
+      boost::optional<boost::filesystem::path> root_cache;
+      if (this->_state_dir)
+      {
+        auto root_block_cache_dir =
+          *this->_state_dir / this->_network_name / this->_volume_name;
+        if (!boost::filesystem::exists(root_block_cache_dir))
+          boost::filesystem::create_directories(root_block_cache_dir);
+        root_cache = root_block_cache_dir / "root_block";
+        ELLE_DEBUG("root block cache: %s", root_cache);
+      }
       bool migrate = true;
       auto dn = std::dynamic_pointer_cast<dht::Doughnut>(this->_block_store);
       auto const bootstrap_name = this->_volume_name + ".root";
@@ -267,39 +274,37 @@ namespace infinit
             {}
           if (*dn->owner() == dn->keys().K())
           {
-            if (boost::filesystem::exists(root_block_cache_path))
-            {
+            if (root_cache && boost::filesystem::exists(*root_cache))
               ELLE_TRACE("root block marker is set, refusing to recreate");
-            }
             else
             {
-              std::unique_ptr<MutableBlock> mb = dn->make_block<ACLBlock>();
-              auto saddr = elle::sprintf("%x", mb->address());
-              elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
+              std::unique_ptr<MutableBlock> mb;
               ELLE_TRACE("create missing root block")
               {
-                auto cpy = mb->clone();
-                this->store_or_die(std::move(cpy), model::STORE_INSERT);
+                mb = dn->make_block<ACLBlock>();
+                this->store_or_die(mb->clone(), model::STORE_INSERT);
               }
               ELLE_TRACE("create missing root bootstrap block")
               {
+                auto saddr = elle::sprintf("%x", mb->address());
+                elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
                 auto nb = elle::make_unique<dht::NB>(
                   dn.get(), dn->owner(), bootstrap_name, baddr);
                 this->store_or_die(std::move(nb), model::STORE_INSERT);
+                if (root_cache)
+                  boost::filesystem::ofstream(*root_cache) << saddr;
               }
               on_root_block_create();
-              boost::filesystem::ofstream ofs(root_block_cache_path);
-              ofs << saddr;
               return mb;
             }
           }
           reactor::sleep(1_sec);
         }
       }
-      if (!boost::filesystem::exists(root_block_cache_path))
+      if (root_cache && !boost::filesystem::exists(*root_cache))
       {
-        boost::filesystem::ofstream ofs(root_block_cache_path);
-        ofs << elle::sprintf("%x", addr);
+        boost::filesystem::ofstream ofs(*root_cache);
+        elle::fprintf(ofs, "%x", addr);
       }
       return elle::cast<MutableBlock>::runtime(fetch_or_die(addr));
     }

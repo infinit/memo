@@ -945,7 +945,8 @@ namespace infinit
       if (!volname_)
         volname_ = this->name;
 #endif
-      auto fs = elle::make_unique<filesystem::FileSystem>(this->name, dht);
+      auto fs = elle::make_unique<filesystem::FileSystem>(
+        this->name, dht, xdg_state_home());
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       boost::optional<boost::filesystem::path> mountpoint;
