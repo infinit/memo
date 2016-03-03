@@ -216,6 +216,8 @@ namespace infinit
         void
         Cache::_disk_cache_push(std::unique_ptr<blocks::Block>& block)
         {
+          if (!this->_disk_cache_path)
+            return;
           auto path = *this->_disk_cache_path
             / elle::sprintf("%x", block->address());
           {
