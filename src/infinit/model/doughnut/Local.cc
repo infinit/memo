@@ -132,9 +132,16 @@ namespace infinit
           auto ptr = &block;
           output.serialize_forward(ptr);
         }
-        this->_storage->set(block.address(), data,
-                            mode == STORE_ANY || mode == STORE_INSERT,
-                            mode == STORE_ANY || mode == STORE_UPDATE);
+        try
+        {
+          this->_storage->set(block.address(), data,
+                              mode == STORE_ANY || mode == STORE_INSERT,
+                              mode == STORE_ANY || mode == STORE_UPDATE);
+        }
+        catch (storage::MissingKey const&)
+        {
+          throw MissingBlock(block.address());
+        }
         on_store(block, mode);
       }
 
