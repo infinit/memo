@@ -279,9 +279,14 @@ namespace infinit
         ELLE_TRACE("permission exception: %s", e.what());
         throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
       }
+      catch (model::MissingBlock const&)
+      {
+        ELLE_WARN("%s: unable to commit as file was deleted", this);
+        return;
+      }
       catch(elle::Error const& e)
       {
-        ELLE_WARN("unexpected exception storing %x: %s",
+        ELLE_WARN("unexpected exception storing %f: %s",
           address, e);
         throw rfs::Error(EIO, e.what());
       }
