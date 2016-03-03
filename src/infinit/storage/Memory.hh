@@ -15,6 +15,9 @@ namespace infinit
       typedef std::unordered_map<Key, elle::Buffer> Blocks;
       Memory();
       Memory(Blocks& blocks);
+      /// Number of bytes stored
+      std::size_t
+      size() const;
 
     protected:
       virtual
@@ -50,4 +53,3 @@ namespace infinit
 }
 
 #endif
-

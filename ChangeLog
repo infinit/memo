@@ -1,6 +1,34 @@
 # Change Log
 
 
+## [0.5.4] - 2016-03-01
+
+Hotfix for disk performances, persistent disk cache for file contents.
+
+### Added
+
+- Implement `statfs` system call.
+- Add a disk block cache for immutable file contents.
+
+### Changed
+
+- Rename `--allow-sign` to `--allow-create-passport` in `infinit-passport`.
+- Tidy up `infinit-block` CLI interface to look like other binaries.
+
+### Fixed
+
+- Drop older Paxos version to avoid linear growth of blocks with
+  revisions, fixing disk hammering issues with folders of thousands of
+  files.
+- Use the GCS credentials instead of Google drive credentials to
+  authenticate to GCS.
+
+
+## [0.5.3] - YANKED
+
+Skipped release because of unrecognized version in RPCs.
+
+
 ## [0.5.2] - 2016-02-25
 
 Hotfix for AWS s3 storage in us-east-1 region.

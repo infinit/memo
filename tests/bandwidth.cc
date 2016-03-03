@@ -26,20 +26,16 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
   });
   auto k = infinit::cryptography::rsa::keypair::generate(512);
   DHT server_a(owner = k);
-  DHT server_b(owner = k);
-  DHT server_c(owner = k);
-  server_a.overlay->connect(*server_b.overlay);
-  server_a.overlay->connect(*server_c.overlay);
-  server_b.overlay->connect(*server_c.overlay);
   DHT client(keys = k, storage = nullptr);
   client.overlay->connect(*server_a.overlay);
-  client.overlay->connect(*server_b.overlay);
-  client.overlay->connect(*server_c.overlay);
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
     "test/bandwidth", client.dht);
   reactor::filesystem::FileSystem driver(std::move(fs), true);
   auto root = driver.path("/");
   int const max = std::stoi(elle::os::getenv("ITERATIONS", "100"));
+  auto& storage =
+    dynamic_cast<infinit::storage::Memory&>(*server_a.dht->local()->storage());
+  boost::optional<double> resident;
   for (int i = 0; i < max; ++i)
   {
     ELLE_LOG_SCOPE("%4s / %s\n", i, max);
@@ -49,7 +45,12 @@ ELLE_TEST_SCHEDULED(bazillion_small_files)
     memset(contents.mutable_contents(), 0xfd, contents.size());
     handle->write(contents, contents.size(), 0);
     handle->close();
-    // root->child(elle::sprintf("%04s", i))->unlink();
+    root->child(elle::sprintf("%04s", i))->unlink();
+    if (!resident)
+      resident = storage.size();
+    else
+      // Check storage space stays within 5%
+      BOOST_CHECK_CLOSE(double(storage.size()), *resident, 5.);
   }
 }
 

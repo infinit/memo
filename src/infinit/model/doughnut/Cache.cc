@@ -5,9 +5,10 @@
 #include <infinit/model/doughnut/Local.hh>
 #include <infinit/model/blocks/ImmutableBlock.hh>
 
+#include <elle/bench.hh>
+#include <elle/bytes.hh>
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
-#include <elle/bench.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
@@ -45,9 +46,10 @@ namespace infinit
           , _cache_ttl(
             cache_ttl ?
             cache_ttl.get() : std::chrono::seconds(60 * 5))
-          , _cache_size(cache_size ? cache_size.get() : 64000000)
+          , _cache_size(cache_size ? cache_size.get() : 64_mB)
           , _disk_cache_path(disk_cache_path)
-          , _disk_cache_size(disk_cache_size ? disk_cache_size.get() : 64000000)
+          , _disk_cache_size(
+            disk_cache_size ? disk_cache_size.get() : 512_mB)
           , _disk_cache_used(0)
           , _cleanup_thread(
             new reactor::Thread(elle::sprintf("%s cleanup", *this),
