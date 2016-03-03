@@ -145,7 +145,7 @@ class Website(bottle.Bottle):
 
   @route('/documentation/storages/filesystem', name = 'doc_storages_filesystem')
   @view('pages/docs/filesystem.html')
-  def roote(self):
+  def root(self):
     return {
       'title': 'Filesystem storage',
       'description': 'Create a storage resource that uses a local filesystem folder.',
@@ -153,7 +153,7 @@ class Website(bottle.Bottle):
 
   @route('/documentation/storages/gcs', name = 'doc_storages_gcs')
   @view('pages/docs/gcs.html')
-  def roote(self):
+  def root(self):
     return {
       'title': 'Google Cloud Storage',
       'description': 'Create a storage resource that uses GCS bucket.',
@@ -161,10 +161,18 @@ class Website(bottle.Bottle):
 
   @route('/documentation/storages/s3', name = 'doc_storages_s3')
   @view('pages/docs/s3.html')
-  def roote(self):
+  def root(self):
     return {
       'title': 'Amazon S3 Storage',
       'description': 'Create a storage resource that uses an Amazon S3 bucket.',
+    }
+
+  @route('/documentation/upgrade', name = 'doc_upgrade')
+  @view('pages/docs/upgrade.html')
+  def root(self):
+    return {
+      'title': 'Upgrade Network',
+      'description': 'Upgrade an Infinit network for all the clients to benefit from new features.',
     }
 
   @route('/documentation/comparison/', name = 'doc_comparisons')
