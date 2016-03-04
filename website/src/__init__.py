@@ -167,8 +167,8 @@ class Website(bottle.Bottle):
       'description': 'Create a storage resource that uses an Amazon S3 bucket.',
     }
 
-  @route('/documentation/upgrade', name = 'doc_upgrade')
-  @view('pages/docs/upgrade.html')
+  @route('/documentation/upgrading', name = 'doc_upgrading')
+  @view('pages/docs/upgrading.html')
   def root(self):
     return {
       'title': 'Upgrade Network',
