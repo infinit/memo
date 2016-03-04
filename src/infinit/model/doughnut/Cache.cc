@@ -154,6 +154,12 @@ namespace infinit
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
             {
+              if (!res->validate(doughnut()))
+              {
+                ELLE_WARN("%s: invalid block received for %s", this, address);
+                throw elle::Error("invalid block");
+              }
+
               if (this->_disk_cache_size &&
                   dynamic_cast<blocks::ImmutableBlock*>(res.get()))
                 this->_disk_cache_push(res);
