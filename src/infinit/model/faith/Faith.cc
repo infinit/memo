@@ -23,7 +23,7 @@ namespace infinit
     namespace faith
     {
       Faith::Faith(std::unique_ptr<storage::Storage> storage,
-                   elle::Version version)
+                   boost::optional<elle::Version> version)
         : Model(std::move(version))
         , _storage(std::move(storage))
       {}
