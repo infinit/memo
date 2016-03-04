@@ -64,7 +64,6 @@ reactor::filesystem::FileSystem* fs;
 reactor::Scheduler* sched;
 
 std::vector<std::string> mount_points;
-std::vector<infinit::cryptography::rsa::PublicKey> g_keys;
 std::vector<std::unique_ptr<infinit::model::doughnut::Doughnut>> nodes;
 std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
@@ -319,7 +318,7 @@ static void make_nodes(std::string store, int node_count,
 }
 
 static
-void
+std::vector<infinit::cryptography::rsa::PublicKey>
 run_filesystem_dht(std::string const& store,
                    std::string const& mountpoint,
                    int node_count,
@@ -328,10 +327,10 @@ run_filesystem_dht(std::string const& store,
                    int nmount = 1,
                    bool paxos = true)
 {
+  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   sched = new reactor::Scheduler();
   fs = nullptr;
   mount_points.clear();
-  g_keys.clear();
   nodes.clear();
   endpoints.clear();
   processes.clear();
@@ -358,9 +357,10 @@ run_filesystem_dht(std::string const& store,
       {
         ELLE_TRACE("configuring mounter...");
         //auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-        //g_keys.push_back(kp.K());
-        g_keys.push_back(owner_keys.K());
-        infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys);
+        //keys.push_back(kp.K());
+        keys.emplace_back(owner_keys.K());
+        infinit::model::doughnut::Passport passport(
+          owner_keys.K(), "testnet", owner_keys);
         ELLE_TRACE("instantiating dougnut...");
         infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
           [paxos] (infinit::model::doughnut::Doughnut& dht)
@@ -425,7 +425,7 @@ run_filesystem_dht(std::string const& store,
         model["type"] = "doughnut";
         model["name"] = "user" + std::to_string(i);
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-        g_keys.push_back(kp.K());
+        keys.emplace_back(kp.K());
         model["id"] = elle::format::base64::encode(
           elle::ConstWeakBuffer(
             infinit::model::Address::random(0).value(), // FIXME
@@ -512,7 +512,7 @@ run_filesystem_dht(std::string const& store,
     processes.clear();
   }
 #endif
-
+  return keys;
 }
 
 static void run_filesystem(std::string const& store, std::string const& mountpoint)
@@ -520,7 +520,6 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
   sched = new reactor::Scheduler();
   fs = nullptr;
   mount_points.clear();
-  g_keys.clear();
   nodes.clear();
   endpoints.clear();
   processes.clear();
@@ -1081,8 +1080,10 @@ test_conflicts(bool paxos)
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
   mount_points.clear();
+  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
-      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2, paxos);
+      keys = run_filesystem_dht(store.string(), mount.string(),
+                                5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
   elle::SafeFinally remover([&] {
@@ -1100,8 +1101,8 @@ test_conflicts(bool paxos)
   BOOST_CHECK_EQUAL(mount_points.size(), 2);
   bfs::path m0 = mount_points[0];
   bfs::path m1 = mount_points[1];
-  BOOST_CHECK_EQUAL(g_keys.size(), 2);
-  std::string k1 = serialize(g_keys[1]);
+  BOOST_CHECK_EQUAL(keys.size(), 2);
+  std::string k1 = serialize(keys[1]);
   ELLE_LOG("set permissions");
   {
     setxattr(m0.c_str(), "user.infinit.auth.setrw",
@@ -1219,8 +1220,10 @@ test_acl(bool paxos)
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
   mount_points.clear();
+  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
-      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2, paxos);
+      keys = run_filesystem_dht(store.string(), mount.string(),
+                                5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
@@ -1241,8 +1244,8 @@ test_acl(bool paxos)
   bfs::path m0 = mount_points[0];
   bfs::path m1 = mount_points[1];
   //bfs::path m2 = mount_points[2];
-  BOOST_CHECK_EQUAL(g_keys.size(), 2);
-  std::string k1 = serialize(g_keys[1]);
+  BOOST_CHECK_EQUAL(keys.size(), 2);
+  std::string k1 = serialize(keys[1]);
   {
     boost::filesystem::ofstream ofs(m0 / "test");
     ofs << "Test";
