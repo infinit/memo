@@ -151,7 +151,7 @@ def configure(
       'pyasn1_modules',
       'pyasn1_modules-0.0.8.dist-info',
       'rsa',
-      'rsa-3.2.dist-info',
+      'rsa-3.3.dist-info',
       'six-1.10.0.dist-info',
     ])
   sources += oauth2client.targets()
