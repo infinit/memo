@@ -58,11 +58,17 @@
           % if value == 'Object':
             Object-based storage architectures manage data as objects. File-based solutions store data as file hierarchy. <a class="open-popup" href="#object-file">Read more.</a>
           % else:
-            File-based solutions store data as file hierarchy. <a class="open-popup" href="#object-file">Read more.</a>
+            File-based solutions are used to store and collaborate around files organized through a hierarchical system. <a class="open-popup" href="#object-file">Read more.</a>
           % endif
 
-        % elif property == 'scalability' and value != 'heterogeneous':
+        % elif property == 'scalability':
+          % if value == 'heterogeneous':
             Heterogeneous systems can integrate additional storage capacity from resources and providers of different nature being in the cloud, through an API, etc. <a class="open-popup" href="#scalability">Read more.</a>
+          % elif value == 'homogeneous':
+            Homogeneous systems can only integrate additional storage capacity from resources that are under the control of the infrastructure's administrator. <a class="open-popup" href="#scalability">Read more.</a>
+          % else:
+            Some systems do not allow for the overall storage capacity to evolve over time. <a class="open-popup" href="#scalability">Read more.</a>
+          % endif
 
         % elif property == 'redundancy':
           % if value == 'replication':
@@ -72,14 +78,24 @@
           % endif
 
         % elif property == 'security':
-          Every communication is encrypted (in transit) along with every block once stored (at rest). <a class="open-popup" href="#security">Read more.</a>
+          % if value == 'In-Transit':
+            Every communication is encrypted (in transit) but blocks aren't encrypted once stored (at rest). <a class="open-popup" href="#security">Read more.</a>
+          % elif value == 'In Transit & At-Rest':
+            Every communication is encrypted (in transit) along with every block once stored (at rest). <a class="open-popup" href="#security">Read more.</a>
+          % else:
+            Communication is not encrypted (in-transit) nor blocks once stored (at-rest). <a class="open-popup" href="#security">Read more.</a>
+          % endif
 
         % elif property == 'interoperability':
           The ways a user or program can interact with a storage system.
           <a class="open-popup" href="#interoperability">Read more.</a>
 
         % elif property == 'interface':
-          File systems are better suited when users need to access large amount of data without having to download everything locally since it can be streamed. <a class="open-popup" href="#interface">Read more.</a>
+          % if value == 'Local Sync':
+            A local sync technology clones all the files from a master copy on own's local device consuming the local storage capacity of the device. <a class="open-popup" href="#interface">Read more.</a>
+          % else:
+            File systems are better suited when users need to access large amount of data without having to download everything locally since it can be streamed. <a class="open-popup" href="#interface">Read more.</a>
+          % endif
 
         % elif property == 'fault_tolerance':
           The capacity to maintain a storage system operational in the event of failure is referred to as fault tolerant. <a class="open-popup" href="#fault_tolerance">Read more.</a>
@@ -100,10 +116,32 @@
         % endif
         </p>
         <div class="competitor">
-          <span>
-            <% value = value.capitalize() if len(value.split()) == 1 or "applications" in value else value %>
-            ${value if (value) else 'Not Applicable'}
+          <span class="value">
+            <%
+            platforms = None
+
+            if len(value.split()) == 1 or "applications" in value:
+              value = value.capitalize()
+            else:
+              value
+
+            if "Applications" in value:
+              try:
+                arr = value.split('(')
+                value = arr[0]
+                platforms = arr[1]
+              except AttributeError:
+                pass
+
+            elif value == '':
+              value = 'Not Applicable'
+            %>
+
+            ${value}
           </span>
+          % if property == 'interoperability' and platforms:
+            <span class="platforms">(${platforms}</span>
+          % endif
         </div>
         <div class="infinit">
           <img src="${url('images/logos/infinit.png')}" alt="${competitor['name']} logo">

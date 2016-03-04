@@ -2,6 +2,7 @@ import bottle
 import sendwithus
 import requests
 import os
+import re
 import json
 
 from infinit.website.utils import resources_path, route, static_file, view
@@ -187,7 +188,8 @@ class Website(bottle.Bottle):
       'description': 'Compare Infinit with the other file storage solutions on the market.',
       'competitor': json_data[path],
       'competitor_name': path,
-      'infinit': json_data['infinit']
+      'infinit': json_data['infinit'],
+      're': re
     }
 
   @route('/open-source', name = 'opensource')

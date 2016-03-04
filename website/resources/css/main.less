@@ -142,7 +142,7 @@ section.blue {
   background: #EBF0F3;
 }
 
-pre code { font-family: @monospace; line-height: 17px; font-size: 14px; z-index: -1;}
+pre code { font-family: @monospace; line-height: 17px; font-size: 14px; }
 
 p.subtitle {
   font-family: @helvetica; font-size: 22px; color: #5D5D5D; line-height: 32px;
@@ -695,7 +695,7 @@ body.pricing, body.press {
 
     code {
       background: #E9F2F5; border-radius: 3px; padding: 3px;
-      color: #5A6878; font-family: @monospace; font-size: 13px;
+      color: #5A6878; font-family: @monospace; font-size: 13px; z-index: -1;
     }
 
     ul { list-style-type: circle; }
@@ -1061,7 +1061,7 @@ body.doc_comparison {
     }
     .properties div:nth-child(2n+1) { clear: both; }
     .property {
-      width: 46%; margin:30px 2%; float: left;
+      width: 46%; margin:35px 2%; float: left;
       min-height: 209px; text-align: center;
       > img { max-height: 60px;}
       h2 {
@@ -1070,9 +1070,13 @@ body.doc_comparison {
       }
       a.open-popup { outline: none; }
       div.competitor {
-        span {
+        span.value {
           font-weight: bold; background: #FFF088; display: inline-block;
           padding: 6px 10px; border-radius: 2px;
+        }
+        span.platforms {
+          font-style: italic; color: @infinitgray; display: block;
+          margin-top: 5px;
         }
       }
 
