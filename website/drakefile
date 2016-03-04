@@ -74,7 +74,7 @@ def configure(
     'templates/pages/docs/src/markdown/get_started.md',
     'templates/pages/docs/src/markdown/reference.md',
     'templates/pages/docs/src/markdown/s3.md',
-    'templates/pages/docs/src/markdown/upgrade.md',
+    'templates/pages/docs/src/markdown/upgrading.md',
     'templates/pages/docs/src/markdown/technology.md',
   )
   changelog = drake.node(
@@ -153,7 +153,7 @@ def configure(
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
     'templates/pages/docs/s3.html',
-    'templates/pages/docs/upgrade.html',
+    'templates/pages/docs/upgrading.html',
     'templates/pages/docs/technology.html',
 
     'templates/pages/drive/drive.html',
