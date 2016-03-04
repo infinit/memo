@@ -7,7 +7,7 @@
       "interface": "POSIX-compliant File System",
       "model": "decentralized",
       "environment": "controlled",
-      "redundancy": "Erasure Codes",
+      "redundancy": "Replication/Erasure Codes",
       "fault_tolerance": "byzantine",
       "scalability": "heterogeneous",
       "security": "In-Transit & At-Rest",
