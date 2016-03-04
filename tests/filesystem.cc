@@ -318,8 +318,9 @@ static void make_nodes(std::string store, int node_count,
 }
 
 static
-std::vector<infinit::cryptography::rsa::PublicKey>
-run_filesystem_dht(std::string const& store,
+void
+run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
+                   std::string const& store,
                    std::string const& mountpoint,
                    int node_count,
                    int nread = 1,
@@ -327,7 +328,6 @@ run_filesystem_dht(std::string const& store,
                    int nmount = 1,
                    bool paxos = true)
 {
-  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   sched = new reactor::Scheduler();
   fs = nullptr;
   mount_points.clear();
@@ -430,7 +430,6 @@ run_filesystem_dht(std::string const& store,
           elle::ConstWeakBuffer(
             infinit::model::Address::random(0).value(), // FIXME
             sizeof(infinit::model::Address::Value))).string();
-
         model["keys"] = "@KEYS@"; // placeholder, lolilol
         model["passport"] = "@PASSPORT@"; // placeholder, lolilol
         model["owner"] = "@OWNER@"; // placeholder, lolilol
@@ -512,10 +511,11 @@ run_filesystem_dht(std::string const& store,
     processes.clear();
   }
 #endif
-  return keys;
 }
 
-static void run_filesystem(std::string const& store, std::string const& mountpoint)
+static
+void
+run_filesystem(std::string const& store, std::string const& mountpoint)
 {
   sched = new reactor::Scheduler();
   fs = nullptr;
@@ -587,13 +587,14 @@ test_filesystem(bool dht,
   mount_points.clear();
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
+  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
       if (dht)
-        run_filesystem_dht(store.string(), mount.string(), 5,
+        run_filesystem_dht(keys, store.string(), mount.string(), 5,
                            nread, nwrite, 1, paxos);
       else
         run_filesystem(store.string(), mount.string());
-  });
+    });
   wait_for_mounts(mount, 1, &statstart);
   ELLE_LOG("starting test, mnt=%s, store=%s", mount, store);
 
@@ -1082,7 +1083,7 @@ test_conflicts(bool paxos)
   mount_points.clear();
   std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
-      keys = run_filesystem_dht(store.string(), mount.string(),
+      run_filesystem_dht(keys, store.string(), mount.string(),
                                 5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
@@ -1222,8 +1223,8 @@ test_acl(bool paxos)
   mount_points.clear();
   std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
-      keys = run_filesystem_dht(store.string(), mount.string(),
-                                5, 1, 1, 2, paxos);
+      run_filesystem_dht(keys, store.string(), mount.string(),
+                         5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
@@ -1237,7 +1238,6 @@ test_acl(bool paxos)
       ELLE_TRACE("unmounter threw %s", e.what());
     }
   });
-
   // Mounts/keys are in mount_points and keys
   // First entry got the root!
   BOOST_CHECK_EQUAL(mount_points.size(), 2);
