@@ -11,6 +11,10 @@
 #include <cryptography/random.hh>
 #include <cryptography/SecretKey.hh>
 
+#ifdef INFINIT_WINDOWS
+#undef stat
+#endif
+
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/umbrella.hh>
@@ -18,10 +22,6 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
-
-#ifdef INFINIT_WINDOWS
-#undef stat
-#endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.File");
 
