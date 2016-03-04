@@ -145,7 +145,7 @@ def configure(
     dependencies = [
       'httplib2',
       'httplib2-0.9.2-py3.4.egg-info',
-      'oauth2client-1.5.1-py3.4.egg-info',
+      'oauth2client-1.5.2.egg-info',
       'pyasn1',
       'pyasn1-0.1.9.dist-info',
       'pyasn1_modules',
