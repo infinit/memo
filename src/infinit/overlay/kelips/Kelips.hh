@@ -190,8 +190,7 @@ namespace infinit
         print(std::ostream& stream) const override;
         /// local hooks interface
         void
-        store(infinit::model::blocks::Block const& block,
-              infinit::model::StoreMode mode);
+        store(infinit::model::blocks::Block const& block);
         void
         fetch(Address address,
               std::unique_ptr<infinit::model::blocks::Block>& res);

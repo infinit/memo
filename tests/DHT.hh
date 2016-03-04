@@ -24,8 +24,7 @@ public:
   {
     if (local)
       local->on_store.connect(
-        [this] (blocks::Block const& block,
-                infinit::model::StoreMode)
+        [this] (blocks::Block const& block)
         {
           this->_blocks.emplace(block.address());
         });

@@ -142,7 +142,7 @@ namespace infinit
         {
           throw MissingBlock(block.address());
         }
-        on_store(block, mode);
+        on_store(block);
       }
 
       std::unique_ptr<blocks::Block>

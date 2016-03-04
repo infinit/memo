@@ -423,7 +423,7 @@ namespace infinit
             data.paxos.release();
           }
           if (block)
-            on_store(*block, STORE_ANY);
+            on_store(*block);
           return std::move(res);
         }
 
@@ -707,7 +707,7 @@ namespace infinit
           this->storage()->set(block.address(), data,
                               mode == STORE_ANY || mode == STORE_INSERT,
                               mode == STORE_ANY || mode == STORE_UPDATE);
-          on_store(block, mode);
+          on_store(block);
         }
 
         void

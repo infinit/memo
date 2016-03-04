@@ -785,8 +785,7 @@ namespace infinit
                                         std::placeholders::_1,
                                         std::placeholders::_2));
           l->on_store.connect(std::bind(&Node::store, this,
-                                          std::placeholders::_1,
-                                        std::placeholders::_2));
+                                          std::placeholders::_1));
           l->on_remove.connect(std::bind(&Node::remove, this,
                                          std::placeholders::_1));
 
@@ -2912,8 +2911,7 @@ namespace infinit
       {}
 
       void
-      Node::store(infinit::model::blocks::Block const& block,
-                  infinit::model::StoreMode mode)
+      Node::store(infinit::model::blocks::Block const& block)
       {
         auto its = _state.files.equal_range(block.address());
         if (std::find_if(its.first, its.second, [&](Files::value_type const& f) {

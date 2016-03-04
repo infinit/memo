@@ -68,8 +68,7 @@ namespace infinit
         virtual
         void
         remove(Address address, blocks::RemoveSignature rs) override;
-        boost::signals2::signal<
-          void (blocks::Block const& block, StoreMode mode)> on_store;
+        boost::signals2::signal<void (blocks::Block const& block)> on_store;
         boost::signals2::signal<
           void (Address, std::unique_ptr<blocks::Block>&)> on_fetch;
         boost::signals2::signal<
