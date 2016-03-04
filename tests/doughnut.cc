@@ -527,7 +527,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
     block_bob->data(elle::Buffer("AB", 2));
     BOOST_CHECK_THROW(dhts.dht_b->store(*block_bob),
                       infinit::model::doughnut::Conflict);
-    dhts.dht_b->store(*block_bob, infinit::model::STORE_ANY,
+    dhts.dht_b->store(*block_bob, infinit::model::STORE_UPDATE,
                       elle::make_unique<AppendConflictResolver>());
   }
   ELLE_LOG("alice: fetch block")
