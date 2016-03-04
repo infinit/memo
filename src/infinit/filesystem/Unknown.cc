@@ -149,7 +149,7 @@ namespace infinit
       auto serdata = elle::serialization::binary::serialize(fh);
       b->data(serdata);
       auto addr = b->address();
-      _owner.store_or_die(std::move(b));
+      _owner.store_or_die(std::move(b), model::STORE_INSERT);
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));
       _parent->_commit({OperationType::insert, _name, EntryType::symlink, addr}, true);

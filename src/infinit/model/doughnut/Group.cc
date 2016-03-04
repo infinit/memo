@@ -200,7 +200,7 @@ namespace infinit
       Group::add_member(model::User const& user)
       {
         this->block().add_member(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE);
       }
 
       void
@@ -218,7 +218,7 @@ namespace infinit
       Group::add_admin(model::User const& user)
       {
         this->block().add_admin(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE);
       }
 
       void
@@ -236,7 +236,7 @@ namespace infinit
       Group::remove_member(model::User const& user)
       {
         this->block().remove_member(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE);
       }
 
       void
@@ -254,7 +254,7 @@ namespace infinit
       Group::remove_admin(model::User const& user)
       {
         this->block().remove_admin(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE);
       }
 
       void

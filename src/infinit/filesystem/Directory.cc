@@ -726,8 +726,8 @@ namespace infinit
           auto p = elle::serialization::json::deserialize<model::doughnut::Passport>(s, false);
           model::doughnut::UB ub(dht.get(), name, p, false);
           model::doughnut::UB rub(dht.get(), name, p, true);
-          this->_owner.block_store()->store(ub);
-          this->_owner.block_store()->store(rub);
+          this->_owner.block_store()->store(ub,  model::STORE_INSERT);
+          this->_owner.block_store()->store(rub, model::STORE_INSERT);
         }
         else if (*special == "fsck.deref")
         {

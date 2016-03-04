@@ -705,8 +705,8 @@ namespace infinit
               return res;
             }();
           this->storage()->set(block.address(), data,
-                              mode == STORE_ANY || mode == STORE_INSERT,
-                              mode == STORE_ANY || mode == STORE_UPDATE);
+                              mode == STORE_INSERT,
+                              mode == STORE_UPDATE);
           on_store(block);
         }
 
@@ -819,9 +819,6 @@ namespace infinit
           overlay::Operation op;
           switch (mode)
           {
-            case STORE_ANY:
-              op = overlay::OP_INSERT_OR_UPDATE;
-              break;
             case STORE_INSERT:
               op = overlay::OP_INSERT;
               break;
@@ -907,7 +904,7 @@ namespace infinit
             elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
             {
               for (auto owner: owners)
-                  owner->store(*b, STORE_ANY);
+                owner->store(*b, mode);
             };
           }
         }

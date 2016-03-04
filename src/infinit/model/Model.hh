@@ -26,7 +26,6 @@ namespace infinit
   {
     enum StoreMode
     {
-      STORE_ANY,
       STORE_INSERT,
       STORE_UPDATE
     };
@@ -60,11 +59,11 @@ namespace infinit
       make_user(elle::Buffer const& data) const;
       void
       store(std::unique_ptr<blocks::Block> block,
-            StoreMode mode = STORE_ANY,
+            StoreMode mode,
             std::unique_ptr<ConflictResolver> = {});
       void
       store(blocks::Block& block,
-            StoreMode mode = STORE_ANY,
+            StoreMode mode,
             std::unique_ptr<ConflictResolver> = {});
       /** Fetch block at \param address
        *

@@ -135,8 +135,8 @@ namespace infinit
         try
         {
           this->_storage->set(block.address(), data,
-                              mode == STORE_ANY || mode == STORE_INSERT,
-                              mode == STORE_ANY || mode == STORE_UPDATE);
+                              mode == STORE_INSERT,
+                              mode == STORE_UPDATE);
         }
         catch (storage::MissingKey const&)
         {
