@@ -150,6 +150,24 @@ namespace infinit
               ELLE_DEBUG("cache miss");
               bench_disk_hit.add(0);
             }
+            auto it = this->_pending.find(address);
+            if (it != this->_pending.end())
+            {
+              static elle::Bench bench("bench.cache.pending_wait", 10000_sec);
+              elle::Bench::BenchScope bs(bench);
+              ELLE_TRACE("%s: fetch on %s pending", this, address);
+              auto b = it->second;
+              b->wait();
+              return _fetch(address, local_version);
+            }
+            it = this->_pending.insert(std::make_pair(
+              address, std::make_shared<reactor::Barrier>())).first;
+            auto b = it->second;
+            elle::SafeFinally sf([&]
+              {
+                b->open();
+                this->_pending.erase(address);
+              });
             auto res = _backend->fetch(address, local_version);
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
