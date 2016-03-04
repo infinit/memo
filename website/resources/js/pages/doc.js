@@ -1,13 +1,13 @@
 function showPopupMenu(element) {
   $(element).parent().toggleClass('clicked');
-  $('#full').fadeIn();
+  $('#full').fadeIn('fast');
   $li = $('li.comparisons');
   $popup = $('li.comparisons ul');
 
   $(window).on("click", function(event){
     if ($li.has(event.target).length === 0 && !$li.is(event.target)) {
       $li.removeClass('clicked');
-      $('#full').fadeOut();
+      $('#full').fadeOut('fast');
     }
   });
 }
