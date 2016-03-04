@@ -177,10 +177,10 @@ namespace infinit
           {
             static elle::Bench bench("bench.cache.store.clone", 10000_sec);
             elle::Bench::BenchScope bs(bench);
-            // Block was necessarily validated on its way up, so it's safe
-            // to flag it as local
+            // Block was necessarily validated on its way up, or generated
+            // locally.
             if (mb)
-              mb->is_local(true);
+              mb->validated(true);
             cloned = block->clone();
           }
           auto address = block->address();

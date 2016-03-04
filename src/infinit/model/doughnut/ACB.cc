@@ -487,8 +487,8 @@ namespace infinit
       blocks::ValidationResult
       BaseACB<Block>::_validate(Model const& model) const
       {
-        if (this->_is_local)
-          return blocks::ValidationResult::success();
+        static elle::Bench bench("bench.acb._validate", 10000_sec);
+        elle::Bench::BenchScope scope(bench);
         ELLE_DEBUG("%s: validate owner part", *this)
           if (auto res = Super::_validate(model)); else
             return res;

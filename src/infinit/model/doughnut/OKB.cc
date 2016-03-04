@@ -220,6 +220,7 @@ namespace infinit
         this->_data_plain = std::move(data);
         this->_data_changed = true;
         this->_data_decrypted = true;
+        this->_validated = false;
       }
 
       template <typename Block>
@@ -229,6 +230,7 @@ namespace infinit
         this->_decrypt_data();
         transformation(this->_data_plain);
         this->_data_changed = true;
+        this->_validated = false;
       }
 
       template <typename Block>
