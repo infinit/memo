@@ -48,7 +48,7 @@
         <li ${'class="active"' if request.route.name == 'doc_storages_filesystem' else ''}><a href="${route('doc_storages_filesystem')}">Local Filesystem</a></li>
         <li ${'class="active"' if request.route.name == 'doc_storages_s3' else ''}><a href="${route('doc_storages_s3')}">Amazon S3</a></li>
         <li ${'class="active"' if request.route.name == 'doc_storages_gcs' else ''}><a href="${route('doc_storages_gcs')}">Google Cloud Storage</a></li>
-        <li class="request"><a href="http://help.infinit.sh">Request other</a></li>
+        <li class="request"><a href="http://help.infinit.sh" target="_blank">Request new provider</a></li>
       </ul>
     </li>
 
