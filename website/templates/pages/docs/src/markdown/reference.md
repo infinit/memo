@@ -4,7 +4,7 @@ Reference
 This document goes through the command-line tools, describing how to perform specific tasks such as creating a storage network, contributing storage capacity, inviting users to join a drive and more.
 
 Introduction
-----------------
+------------
 
 ### Terminology ###
 
@@ -107,7 +107,7 @@ Note that some binaries operate in hub mode by default. For instance the _infini
 **IMPORTANT**: This document mainly covers flows involving the Hub. For users wanting to use Infinit in a pure decentralized environment, the `--push`/`--fetch` operations must be replaced with `--export`/`--import` operations and the resulting files must be manually shared with other users and moved between devices. You will sometimes need to provide additional information such as the IP address of bootstrap nodes in order to discover the other nodes of a network.
 
 User
-------
+----
 
 The _infinit-user_ binary allows one to create a user identity, publish it to the Hub so that it can be referenced by other users and perform other user based operations.
 
@@ -182,7 +182,7 @@ bob: public key only
 ```
 
 Credentials
----------------
+-----------
 
 The _infinit-credentials_ binary manages the credentials for your cloud services. Cloud services, such as Amazon Web Services, Google Cloud Storage and Dropbox, can be used to add storage to your networks. Infinit considers these cloud services as basic and unprivileged datastores that are used to store blocks of encrypted data.
 
@@ -253,7 +253,7 @@ GCS:
 ```
 
 Storage
------------
+-------
 
 The _infinit-storage_ binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API.
 
@@ -276,7 +276,7 @@ You can create a storage on top of a cloud service API. In order to do this, you
 
 You can then specify the type of cloud service you want your storage to rely upon along with the cloud service account identifier. Cloud service identifiers can be retrieved when <a href="#list-credentials">listing your credentials</a>.
 
-#### S3 ####
+##### S3 #####
 
 In order to use Amazon S3, you must first have created an AWS user and an S3 bucket. Ensure that the user has permissions to read and write in the bucket.
 
@@ -289,9 +289,9 @@ Created storage "s3".
 
 _**IMPORTANT**: The AWS user requires the correct <a href="#iam-policy" class="href iam_policy">permissions</a> for the S3 bucket, otherwise you will encounter `PermissionDenied` errors when mounting the volume. You can set the correct permissions at any time._
 
-#### GCS ####
+##### GCS #####
 
-In order to use GCS, you will first have to have created a GCS bucket and ensure that the user you added with `infinit-credentials` has access to it.
+In order to use GCS, you will first have to have created a GCS bucket and ensure that the user you added with _infinit-credentials_ has access to it.
 
 The following creates a storage resource which uses a folder of a GCS bucket, specifying a name for the storage, the GCS account identifier, the bucket's name and the folder to store the blocks in:
 
@@ -303,7 +303,7 @@ Created storage "gcs".
 The list of supported cloud services is continually evolving and can be seen by using `--create --help`. Enterprise storage solutions such as <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported. If you would like any others, [let us know](http://infinit-sh.uservoice.com).
 
 Network
------------
+-------
 
 With the _infinit-network_ utility you are able to create overlay networks, configure the way the distributed hash table behaves and much more.
 
@@ -393,7 +393,7 @@ Linked device to network "alice/cluster".
 _**NOTE**: This process must be performed on each new device, proving that the user has indeed been allowed to join the network (via the passport) and that this device belongs to the user._
 
 Passport
-------------
+--------
 
 The _infinit-passport_ binary is used to allow other users to join one's networks, granting him/her the right to link devices, contribute storage resources and potentially access files.
 
@@ -472,14 +472,14 @@ $> infinit-passport --create --as alice --network cluster --user bob --allow-cre
 Locally created passport "alice/cluster: bob".
 ```
 
-The second is to *register* the user's public key. This can only be done once you have created a volume on the network as you will be required to mount the volume and use the `infinit-acl` binary to register the user.
+The second is to *register* the user's public key. This can only be done once you have created a volume on the network as you will be required to mount the volume and use the _infinit-acl_ binary to register the user.
 
 ```
 $> infinit-acl --register --network cluster --user bob --path /path/to/mountpoint
 ```
 
 Volume
-----------
+------
 
 On top of the distributed storage layer i.e. the network, one can create a volume also known as logical drive. A volume is represented by the address of its root directory. While centralized file systems store this address in a specific block known as the _superblock_, Infinit uses a file located in the `$INFINIT_DATA_HOME` directory which describes the volume.
 
@@ -557,7 +557,7 @@ everything is
 **IMPORTANT**: It is possible that the volume owner didn't grant you access to the root directory, in which case you would get a "Permission Denied" error when listing the mount point. In this case, request that the volume owner <a href="#grant-revoke-access">grant's you access</a>.
 
 Access Control List
---------------------------
+-------------------
 
 Having joined a volume does not mean that you have the required permissions to browse the files and directories in it. As with most file system, in order to access, edit and/or delete a file, the owner must first grant you the permission to do so.
 
@@ -565,7 +565,7 @@ Unlike other file systems, Infinit provides advanced decentralized (i.e. without
 
 The owner of a volume is automatically granted access to its root directory. It is then his/her responsibility to manage the permissions on the root directory for other users to use the volume.
 
-Note that most access control actions use POSIX mechanisms such as standard permissions and extended attributes. The `infinit-acl` utility can be considered as a wrapper on top of extended attributes which allows one to manipulate the ACL of an Infinit volume.
+Note that most access control actions use POSIX mechanisms such as standard permissions and extended attributes. The _infinit-acl_ utility can be considered as a wrapper on top of extended attributes which allows one to manipulate the ACL of an Infinit volume.
 
 ### Grant/revoke access ###
 
@@ -694,7 +694,7 @@ $> infinit-acl --group --name marketing --add ^bob --path .
 ```
 
 Device
----------
+------
 
 ### Log in on another device ###
 
@@ -803,7 +803,7 @@ Imported user "alice".
 </pre>
 
 Drive
--------
+-----
 
 Once you've created your storage infrastructure comprising of a network, storage resources and volumes, you may wish to invite other users, potentially non-tech-savvy, to use it to seamlessly store and access their files.
 
@@ -886,7 +886,7 @@ Locally created passport "alice/cluster: hub".
 Remotely pushed passport "alice/cluster: hub".
 ```
 
-The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the `infinit-acl` binary can be used to write the block.
+The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the _infinit-acl_ binary can be used to write the block.
 
 ```
 $> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
