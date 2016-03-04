@@ -1,83 +1,60 @@
-Upgrade a network
-=================
+Upgrading a network
+===================
 
-This will guide you through setting up an Amazon S3 bucket as a storage resource for Infinit.
+This guide will help you upgrade an Infinit network to a newer version, providing users with new functionalities.
 
-### Prerequisites ###
+### Introduction ###
 
-- An [Amazon Web Services](https://aws.amazon.com) account with administrator privileges.
-- <a href="${route('doc_get_started')}">Infinit installed</a>.
-- An <a href="${route('doc_reference')}#user">Infinit user</a>.
+Every node in the network, being a client or a server, has the Infinit software installed in a specific version. Some may have the _0.4.0_ version, others the software in _0.5.2_.
 
-### Creating an S3 bucket ###
-
-Start by navigating to _S3_ in the <a href="http://aws.amazon.com/">AWS Management Console</a>. From here you click _Create Bucket_. As Amazon S3 buckets must be named uniquely across the entire platform, it's good practice to use your domain name and optionally the region the bucket is hosted in the name.
-
-<img src="${url('images/docs/s3/create-bucket.png')}" alt="AWS Management Console create bucket popup">
-
-Make a note of the bucket name and region that you chose as you will need this later.
-
-_**IMPORTANT**: Choose your bucket region to be closest to where you will be using it from. This will ensure that you have higher transfer speeds and lower latency when accessing your Infinit volume._
-
-### Creating a new AWS user ###
-
-We will now create a new AWS user which only has access to the bucket we created. We do this to improve the security of the system as in the unlikely event that the credentials are stolen, the thief will only have limited access to your AWS account.
-
-Navigate back to the root of the AWS Management Console and then to _Identity & Access Management_. Before creating the new user, we will create a custom _policy_ which describes what the user is allowed to access. Click _Policies_ on the left panel, then _Get Started_, then _Create Policy_ and finally _Create Your Own Policy_.
-
-The policy below will allow any S3 operation to be performed on the `infinit-s3-storage-de-example-com` bucket.
+The network (storage layer volumes rely upon) also runs in a specific version which is defined in the network descriptor. Every node has a copy of this descriptor in its `$INFINIT_HOME` directory. To find out which version a network is operating in, one only needs to export the descriptor as shown below:
 
 ```
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "s3:*",
-      "Resource": [
-          "arn:aws:s3:::infinit-s3-storage-de-example-com",
-          "arn:aws:s3:::infinit-s3-storage-de-example-com/*"
-      ]
-    }
-  ]
-}
+$> infinit-network --export --as alice --name cluster
+{"consensus":{"replication-factor":1,"type":"paxos"},"name":"alice/cluster","overlay":{"accept_plain":false,"bootstrap_nodes":[],"contact_timeout_ms":120000,"encrypt":true, ...,"version":"0.3.0"}
 ```
 
-<img src="${url('images/docs/s3/create-policy.png')}" alt="AWS Management Console create user policy">
+One can notice that, in the example above, the `version` attribute indicates that the network's version is _0.3.0_. As such, every node connecting to this network will operate in a compatibility mode matching the network's version. In other words, even a client in version _0.5.2_ will behave as if it were running the software in _0.3.0_.
 
-Once the policy has been created, you are ready to create the new user. Navigate to _Users_ on the left panel and click _Create New Users_. **IMPORTANT**: Once you've created the user, ensure that you download the user's credentials as you will need these later.
+As such, every node (client or server) can always update their software to the very latest version without any risk to impacting the whole system. Infinit has been designed to be backward compatible.
 
-<img src="${url('images/docs/s3/create-user.png')}" alt="AWS Management Console create user">
+This compatibility mode is required to make sure every node in the network speak a common language. The common language is defined by the network's version number. As a result, a client in _0.4.0_ for instance, would not be able to use the features provided by its latest client software because such functionalities weren't present in the _0.4.0_ version. This protection prevents a newer client, say _0.4.0_, to use a new feature that would result in a block being stored that a older client, say in _0.3.0_, would not be able to understand.
 
-From the _Users_ view, click on the name of the user that you created, select _Permissions_ and attach the policy that you created for the user.
+_**NOTE**: The infinit-network and infinit-volume provide a `--compatibility-version` option that allows a user to connect a client to an infrastructure while operating in a specific version._
 
-<img src="${url('images/docs/s3/attach-policy.png')}" alt="AWS Management Console attach policy to user">
+### Upgrading a network to a newer compatibility version ###
 
-### Add AWS credentials to Infinit ###
+The process of upgrading a network's version is not to be taken sligthly. The following provides advices that should be followed in order to make sure the process goes as smoothly as possible:
 
-Now that the AWS user has been created with the correct policy attached, we can add the user's credentials to Infinit. These credentials are the ones that you downloaded when [creating the user](#creating-a-new-aws-user).
+1. Ask the users of the network to be upgraded to update their client (Infinit Drive or command-line tools) to the newest version available on [Infinit's website](http://infinit.sh/get-started). Note that the updating method directly depends on your operating system (Linux, Windows, MacOS X etc.) and the way you retrieved the Infinit software (apt-get, homebrew, tarball etc.).
+2. Once all the users have updated their software, say to version _0.5.2_, the administrator can proceed to upgrading the network. In the meantime, the users can keep using the network through the new client software as it will be operating in the compatibility version defined in the network descriptor, as detailed above.
+3. The administrator can upgrade the network descriptor to the version of his/her choice. Make sure not to exceed the highest version supported by all the clients or some clients will find themselves incapable to connect to the network. The following example shows how to upgrade a network descriptor:
+   ```
+   $> infinit-network --upgrade --as alice --name cluster --compatibility-version 0.5
+   Locally updated network "alice/cluster".
+   ```
+   At this point, the network descriptor specifies the new compatibility version clients must support to be able to connect (the common language). However, this new descriptor must be distributed to all the clients for them to adapt their behavior.
+4. Ask all the users to stop their client and server nodes being by gently killing the _infinit-volume_ process or quitting the Infinit Drive's graphical user interface.
+5. As the administrator, you need to transmit the new network descriptor to all the nodes, clients and servers. This step depends on the mode of operation you chose. In decentralized mode, you will need to manually transfer the network descriptor to your users and other machines, through the _scp_ UNIX utility for instance. If you use the Infinit Hub, the process is much simpler as all you need is to update the Hub with the latest version of the network descriptor, as shown below. Note that before being able to push the new network descriptor, you must first remove it (`--pull`) from the Hub:
+   ```
+   $> infinit-network --pull --as alice --name cluster
+   Remotely deleted network "alice/cluster".
+   $> infinit-network --push --as alice --name cluster
+   Remotely pushed network "alice/cluster".
+   ```
+6. Ask the network users to fetch the new network descriptor and re-launch the software, being through the command-line tools or the Infinit Drive's graphical user interface. When it comes fetching the network descriptor, it once again depends on the mode of operation the administrator chose to use. In decentralized, every user will need to `--import` the network descriptor that was manually transferred on any device at the previous step. Using the hub is as straightforward, as shown below an one of Bob's devices:
+   ```
+   $> infinit-network --fetch --as bob --name alice/cluster
+   Fetched network "alice/cluster".
+   ```
 
-```
-$> infinit-credentials --add --as alice --aws --name s3-user
-Please enter your AWS credentials
-Access Key ID: AKIAIOSFODNN7EXAMPLE
-Secret Access Key: ****************************************
-Locally stored AWS credentials "s3-user".
-```
+   One can very easily check that the network version has indeed changed by exporting the network descriptor:
+   ```
+   $> infinit --export --as bob --name alice/cluster
+   {"consensus":{"replication-factor":1,"type":"paxos"},"name":"alice/cluster","overlay":{"accept_plain":false,"bootstrap_nodes":[],"contact_timeout_ms":120000,"encrypt":true, ...,"version":"0.5.0"}
+   ```
+7. Once the software re-launched (CLI or GUI), the network can be used again except that every client will now be able to benefit from the functionalities provided by the software in the network version, in this case the additional features of version _0.5.0_.
 
-_**NOTE**: AWS credentials are only ever stored locally and cannot be pushed to the Hub._
+_**NOTE**: The subminor versions never bring additional features, or network protocol modifications. As such, upgrading a network to a subminor version is equivalent to upgrading to its minor version. In other words, upgrading to _0.5.2_ is strictly equivalent to upgrading to _0.5.0_.
 
-### Creating the Infinit storage resource ###
-
-With the AWS user's credentials added to Infinit, you can now create the storage resource.
-
-In addition to providing a name to the storage resource, you will need to include the bucket name and bucket region. Be careful because the bucket region is not the literal name (Frankfurt) of the region but it's identifier (eu-central-1). Refer to [AWS's documentation](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region) to find out your region's identifier.
-
-Finally, you will need to specify the name of the credentials you recently registered, _s3-user_ in this example, through the `--account` option. The `--path` option indicates the name of the folder, within the bucket, that will be used to hold the encrypted data blocks stored by Infinit.
-
-```
-$> infinit-storage --create --s3 --name s3-storage --account s3-user --region eu-central-1 --bucket infinit-s3-storage-de-example-com --path blocks-folder
-Create storage "s3-storage".
-```
-
-_**NOTE**: You can optionally use Amazon S3's reduced redundancy storage by passing the `--reduced-redundancy` flag on creation of the storage resource._
+Assuming a node with a version lower version remains connected to the network after the upgrade, it would be in the incapacity to communicate with the other nodes that would refuse to talk in an outdated protocol. As a result, the volume would return I/O errors for every system call performed on a volume, leaving no choice to the user but to upgrade its local network descriptor and restart the software, as described in step _6_ and _7_.
