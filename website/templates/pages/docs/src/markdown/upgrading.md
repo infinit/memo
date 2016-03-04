@@ -52,7 +52,7 @@ The following provides advices that should be followed in order to make sure the
 
    One can very easily check that the local network descriptor's version has indeed changed:
    ```
-   $> infinit --export --as bob --name alice/cluster
+   $> infinit-network --export --as bob --name alice/cluster
    {"consensus":{"replication-factor":1,"type":"paxos"},"name":"alice/cluster","overlay":{"accept_plain":false,"bootstrap_nodes":[],"contact_timeout_ms":120000,"encrypt":true, ...,"version":"0.5.0"}
    ```
 7. Once the updated descriptor retrieved, every client and server can be re-launched. Every node will now benefit from the improvements brought by the new compatibility version, in this example all the functionalities from version _0.5.0_.
