@@ -481,10 +481,6 @@ namespace kademlia
     ELLE_TRACE("%s: waiting for value query", *this);
     q->barrier.wait();
     ELLE_TRACE("%s: waiting done", *this);
-    if (q->storeResult.empty() && op == infinit::overlay::OP_INSERT_OR_UPDATE)
-    {
-      return _lookup(address, n, infinit::overlay::OP_INSERT);
-    }
     infinit::overlay::Overlay::Members res;
     if (!q->storeResult.empty())
     {

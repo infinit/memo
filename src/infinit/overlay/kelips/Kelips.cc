@@ -2456,21 +2456,6 @@ namespace infinit
           for (auto r: res)
             yield(r);
         }
-        else if (op == infinit::overlay::OP_INSERT_OR_UPDATE)
-        {
-          bool hit = false;
-          kelipsGet(file, n, false, -1, false, [&](PeerLocation r) {
-              hit = true;
-              yield(r);
-          });
-          if (!hit)
-          {
-            ELLE_TRACE("%s: get failed on %x, trying put", *this, file);
-            std::vector<PeerLocation> res = kelipsPut(file, n);
-            for (auto e: res)
-              yield(e);
-          }
-        }
         else
         {
           kelipsGet(file, n, false, -1, false, yield);
