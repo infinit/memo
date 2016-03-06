@@ -6,6 +6,7 @@
 #include <infinit/model/MissingBlock.hh>
 
 #include <boost/filesystem/fstream.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <elle/cast.hh>
 #include <elle/log.hh>
@@ -36,6 +37,10 @@
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/serialization.hh>
 
+#include <infinit/filesystem/Node.hh>
+#include <infinit/filesystem/File.hh>
+#include <infinit/filesystem/Symlink.hh>
+#include <infinit/filesystem/Unknown.hh>
 
 #ifdef INFINIT_LINUX
   #include <attr/xattr.h>
@@ -205,22 +210,6 @@ namespace infinit
       << std::endl;
     }
 
-    std::shared_ptr<rfs::Path>
-    FileSystem::path(std::string const& path)
-    {
-      ELLE_TRACE_SCOPE("%s: fetch root", *this);
-      // In the infinit filesystem, we never query a path other than the root.
-      ELLE_ASSERT_EQ(path, "/");
-      auto root = this->_root_block();
-      ELLE_ASSERT(!!root);
-      auto acl_root =  elle::cast<ACLBlock>::runtime(std::move(root));
-      ELLE_ASSERT(!!acl_root);
-      auto res =
-        std::make_shared<Directory>(nullptr, *this, "", acl_root->address());
-      res->_fetch(std::move(acl_root));
-      return res;
-    }
-
     std::unique_ptr<MutableBlock>
     FileSystem::_root_block()
     {
@@ -370,6 +359,72 @@ namespace infinit
       auto perms = get_permissions(block);
       if (perms.first < r || perms.second < w)
         throw rfs::Error(EACCES, "Access denied.");
+    }
+
+    std::shared_ptr<reactor::filesystem::Path>
+    FileSystem::path(std::string const& path)
+    {
+      ELLE_ASSERT(!path.empty() && path[0] == '/');
+      std::vector<std::string> components;
+      boost::algorithm::split(components, path, boost::algorithm::is_any_of("/"));
+      auto d = get(_root_address);
+      for (int i=0; i< signed(components.size()) - 1; ++i)
+      {
+        auto const& files = d->files();
+        auto it = files.find(components[i]);
+        if (it == files.end() || it->second.first != EntryType::directory)
+          THROW_NOTDIR;
+        d = get(it->second.second);
+      }
+      auto const& files = d->files();
+      auto it = files.find(components.back());
+      if (it == files.end())
+        return std::shared_ptr<rfs::Path>(new Unknown(*this, d, components.back()));
+      
+      switch(it->second.first)
+      {
+      case EntryType::symlink:
+        return std::shared_ptr<rfs::Path>(new Symlink(*this, it->second.second, d, components.back()));
+      case EntryType::file:
+        return std::shared_ptr<rfs::Path>(new File(*this, it->second.second, d, components.back()));
+      case EntryType::directory:
+        {
+          auto dd = get(it->second.second);
+          return std::shared_ptr<rfs::Path>(new Directory(*this, dd, d, components.back()));
+        }
+      }
+      elle::unreachable();
+    }
+
+    std::shared_ptr<DirectoryData>
+    FileSystem::get(model::Address address)
+    {
+      boost::optional<int> version;
+      auto it = _directory_cache.find(address);
+      if (it != _directory_cache.end())
+        version = (*it)->block_version();
+      auto block = _block_store->fetch(address, version); //invalidates 'it'
+      it = _directory_cache.find(address);
+      if (!block)
+      {
+        ELLE_ASSERT(it != _directory_cache.end());
+        _directory_cache.modify(it,
+          [](std::shared_ptr<DirectoryData>& d) {d->_last_used = now();});
+        return *it;
+      }
+      if (it != _directory_cache.end())
+      {
+        _directory_cache.modify(it,
+          [](std::shared_ptr<DirectoryData>& d) {d->_last_used = now();});
+        (*it)->update(*block);
+      }
+      else
+      {
+        auto dd = std::make_shared<DirectoryData>(*block);
+        _directory_cache.insert(dd);
+        return dd;
+      }
+      return *it;
     }
   }
 }

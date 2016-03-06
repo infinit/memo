@@ -32,8 +32,12 @@ namespace infinit
       void fetch() {_fetch();}
       void commit() {_commit();}
     protected:
-      Node(FileSystem& owner, std::shared_ptr<Directory> parent, std::string const& name)
+      Node(FileSystem& owner,
+           model::Address address,
+           std::shared_ptr<DirectoryData> parent,
+           std::string const& name)
       : _owner(owner)
+      , _address(address)
       , _parent(parent)
       , _name(name)
       {}
@@ -50,12 +54,14 @@ namespace infinit
       void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
       virtual void _fetch() = 0;
       virtual void _commit() = 0;
+      virtual FileHeader& _header() = 0;
       virtual model::blocks::ACLBlock* _header_block() = 0;
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       FileSystem& _owner;
-      std::shared_ptr<Directory> _parent;
+      model::Address _address;
+      std::shared_ptr<DirectoryData> _parent;
       std::string _name;
-      ELLE_ATTRIBUTE_R(FileHeader, header, protected);
+      //ELLE_ATTRIBUTE_R(FileHeader, header, protected);
       friend class FileSystem;
     };
 

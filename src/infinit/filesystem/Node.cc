@@ -92,7 +92,7 @@ namespace infinit
       auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
       dir->_fetch();
-      if (dir->_files.find(newname) != dir->_files.end())
+      if (dir->_data->_files.find(newname) != dir->_data->_files.end())
       {
         ELLE_TRACE_SCOPE("%s: remove existing destination", *this);
         // File and empty dir gets removed.
@@ -116,47 +116,20 @@ namespace infinit
       }
       auto data = _parent->_files.at(_name);
       _parent->_files.erase(_name);
-      _parent->_commit({OperationType::remove, _name});
-      dir->_files.insert(std::make_pair(newname, data));
-      dir->_commit({OperationType::insert, newname, data.first, data.second});
+      _parent->write(*_owner.block_store(),
+                            {OperationType::remove, _name});
+      dir->_data->_files.insert(std::make_pair(newname, data));
+      dir->_data->write(*_owner.block_store(),
+                        {OperationType::insert, newname, data.first, data.second});
       _name = newname;
-      _parent = dir;
-      // Move the node in cache
-      ELLE_DEBUG("Extracting %s", current);
-      auto p = _owner.filesystem()->extract(current.string());
-      if (p)
-      {
-        std::dynamic_pointer_cast<Node>(p)->_name = newname;
-        // This might delete the dummy Unknown on destination which is fine
-        ELLE_DEBUG("Setting %s", where);
-        _owner.filesystem()->set(where.string(), p);
-      }
-    }
-
-    void
-    Node::_remove_from_cache(boost::filesystem::path full_path)
-    {
-      if (full_path == boost::filesystem::path())
-        full_path = this->full_path();
-      std::shared_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path.string());
-      ELLE_TRACE("remove_from_cache: %s released (%s), this=%s, path=%s", _name, self, this, full_path);
-      new reactor::Thread("delayed_cleanup", [self] { ELLE_DEBUG("async_clean");}, true);
-    }
-
-    boost::filesystem::path
-    Node::full_path()
-    {
-      if (_parent == nullptr)
-        return "/";
-      return _parent->full_path() / _name;
     }
 
     void
     Node::chmod(mode_t mode)
     {
       _fetch();
-      _header.mode = mode;
-      _header.ctime = time(nullptr);
+      _header().mode = mode;
+      _header().ctime = time(nullptr);
       auto acl = _header_block();
       if (acl)
       {
@@ -172,10 +145,11 @@ namespace infinit
     Node::chown(int uid, int gid)
     {
       _fetch();
-      _header.uid = uid;
-      _header.gid = gid;
+      auto& h = _header();
+      h.uid = uid;
+      h.gid = gid;
       if (acl_preserver && gid >= gid_start && gid < gid_start + gid_count
-        && acl_save[gid - gid_start])
+        && acl_save[gid - gid_start])  
       {
         auto block = _header_block();
         // clear current perms
@@ -190,7 +164,7 @@ namespace infinit
         dynamic_cast<model::blocks::ACLBlock*>(acl_save[gid - gid_start].get())
           ->copy_permissions(*block);
       }
-      _header.ctime = time(nullptr);
+      h.ctime = time(nullptr);
       _commit();
     }
 
@@ -200,9 +174,9 @@ namespace infinit
       ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: remove attribute \"%s\"", *this, k);
       _fetch();
-      if (_header.xattrs.erase(k))
+      if (_header().xattrs.erase(k))
       {
-         _header.ctime = time(nullptr);
+         _header().ctime = time(nullptr);
         _commit();
       }
       else
@@ -222,14 +196,6 @@ namespace infinit
         auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
           this->_owner.block_store());
         auto block = this->_header_block();
-        Address addr;
-        if (block)
-          addr = block->address();
-        else if (this->_parent)
-        {
-          auto const& elem = this->_parent->_files.at(this->_name);
-          addr = elem.second;
-        }
         if (*special == "block.nodes")
         {
           auto ids = elle::serialization::json::deserialize<
@@ -237,7 +203,7 @@ namespace infinit
           if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
                 dht->consensus().get()))
           {
-            paxos->rebalance(addr, ids);
+            paxos->rebalance(_address, ids);
             return;
           }
         }
@@ -248,7 +214,7 @@ namespace infinit
           if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
                 dht->consensus().get()))
           {
-            paxos->rebalance(addr);
+            paxos->rebalance(_address);
             return;
           }
         }
@@ -278,9 +244,8 @@ namespace infinit
         }, EINVAL);
         return;
       }
-      _fetch();
-      _header.xattrs[k] = elle::Buffer(v.data(), v.size());
-      _header.ctime = time(nullptr);
+      _header().xattrs[k] = elle::Buffer(v.data(), v.size());
+      _header().ctime = time(nullptr);
       _commit();
     }
 
@@ -380,9 +345,8 @@ namespace infinit
         else
           return elle::json::pretty_print(v);
       }
-      _fetch();
-      auto it = _header.xattrs.find(k);
-      if (it == _header.xattrs.end())
+      auto it = _header().xattrs.find(k);
+      if (it == _header().xattrs.end())
       {
         ELLE_DEBUG("no such attribute");
         throw rfs::Error(ENOATTR, "No attribute", elle::Backtrace());
@@ -398,14 +362,15 @@ namespace infinit
       memset(st, 0, sizeof(struct stat));
       #ifndef INFINIT_WINDOWS
       st->st_blksize = 16384;
-      st->st_blocks = _header.size / 512;
+      st->st_blocks = _header().size / 512;
       #endif
+      auto h = this->_header();
       st->st_mode  = 0600;
-      st->st_size  = this->_header.size;
-      st->st_atime = this->_header.atime;
-      st->st_mtime = this->_header.mtime;
-      st->st_ctime = this->_header.ctime;
-      st->st_nlink = this->_header.links;
+      st->st_size  = h.size;
+      st->st_atime = h.atime;
+      st->st_mtime = h.mtime;
+      st->st_ctime = h.ctime;
+      st->st_nlink = h.links;
       st->st_uid   =
       #ifdef INFINIT_WINDOWS
         0;
@@ -449,10 +414,9 @@ namespace infinit
     Node::utimens(const struct timespec tv[2])
     {
       ELLE_TRACE_SCOPE("%s: utimens: %s", *this, tv);
-      _fetch();
-      _header.atime = tv[0].tv_sec;
-      _header.mtime = tv[1].tv_sec;
-      _header.ctime = time(nullptr);
+      _header().atime = tv[0].tv_sec;
+      _header().mtime = tv[1].tv_sec;
+      _header().ctime = time(nullptr);
       _commit();
     }
 

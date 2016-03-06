@@ -101,7 +101,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
                     d->full_path(), elle::exception_string());
         continue;
       }
-      auto files = d->files();
+      auto files = d->data()->files();
       for (auto const& e: files)
       {
         try
@@ -160,7 +160,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
     else if (auto f = std::dynamic_pointer_cast<ifs::File>(p))
     {
       int idx=-1;
-      auto fat = f->fat();
+      auto fat = f->filedata()->fat();
       for (auto const& e: fat)
       {
         ++idx;
@@ -274,8 +274,8 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
         }
         catch (...)
         {
-          ifs::Directory d(nullptr, *fs, "unknown", a);
-          d.fetch();
+          auto b = dn->fetch(a);
+          ifs::DirectoryData d(*b);
           header = d.header();
         }
         if (header.mode & S_IFDIR)
@@ -283,7 +283,9 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
           types[a] = infinit::filesystem::EntryType::directory;
           try
           {
-            ifs::Directory d(nullptr, *fs, "unknown", a);
+            auto b = dn->fetch(a);
+            auto dd = std::make_shared<ifs::DirectoryData>(*b);
+            ifs::Directory d(*dn, dd, nullptr, "");
             bool dchange = false;
             d.fetch();
             auto files = d.files();

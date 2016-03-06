@@ -23,27 +23,6 @@ namespace infinit
       long size;
     };
 
-    enum class OperationType
-    {
-      insert,
-      update,
-      remove
-    };
-
-    enum class EntryType
-    {
-      file,
-      directory,
-      symlink
-    };
-
-    struct Operation
-    {
-      OperationType type;
-      std::string target;
-      EntryType entry_type;
-      Address address;
-    };
 
     static const int DIRECTORY_MASK = 0040000;
     static const int SYMLINK_MASK = 0120000;
@@ -55,10 +34,10 @@ namespace infinit
       , public Node
     {
     public:
-      Directory(DirectoryPtr parent,
-                FileSystem& owner,
-                std::string const& name,
-                Address address);
+      Directory(FileSystem& owner,
+                std::shared_ptr<DirectoryData> data,
+                std::shared_ptr<DirectoryData> parent,
+                std::string const& name);
       void stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override;
       std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override THROW_ISDIR;
@@ -99,7 +78,7 @@ namespace infinit
     public:
       void cache_stats(CacheStats& append);
       void serialize(elle::serialization::Serializer&);
-      bool allow_cache() override { return true;}
+      bool allow_cache() override { return false;}
 
     /*----------.
     | Printable |
@@ -114,6 +93,7 @@ namespace infinit
       void _fetch(std::unique_ptr<ACLBlock> block);
       void _commit() override;
       model::blocks::ACLBlock* _header_block() override;
+      FileHeader& _header() override;
       void move_recurse(boost::filesystem::path const& current,
           boost::filesystem::path const& where);
       friend class Unknown;
@@ -133,13 +113,9 @@ namespace infinit
       void _commit(Operation op, bool set_mtime = false);
       void _push_changes(Operation op, bool first_write = false);
       void _prefetch();
-      Address _address;
-      std::unique_ptr<ACLBlock> _block;
-      typedef elle::unordered_map<std::string, std::pair<EntryType, Address>> Files;
-      ELLE_ATTRIBUTE_R(Files, files);
-      bool _inherit_auth; //child nodes inherit this dir's permissions
-      bool _prefetching; // true if prefetch thread is running
       friend class FileSystem;
+      ELLE_ATTRIBUTE_R(std::shared_ptr<DirectoryData>, data);
+      ELLE_ATTRIBUTE(std::unique_ptr<ACLBlock>, block);
     };
 
     std::unique_ptr<Block>

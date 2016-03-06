@@ -1,6 +1,11 @@
 #include <infinit/filesystem/FileHandle.hh>
+
+#include <cryptography/SecretKey.hh>
+#include <cryptography/random.hh>
+
 #include <infinit/filesystem/Directory.hh>
 #include <elle/cast.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 
@@ -12,100 +17,29 @@ namespace infinit
 {
   namespace filesystem
   {
-    FileHandle::FileHandle(std::shared_ptr<File> owner,
-        bool writable,
-        bool push_mtime,
-        bool no_fetch,
-        bool dirty)
-      : _owner(owner)
+    const uint64_t FileHandle::default_first_block_size = 16384;
+    static const int lookahead_blocks =
+      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
+    static const int max_lookahead_threads =
+      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
+
+    FileHandle::FileHandle(model::Model& model,
+                           FileData data,
+                           bool writable,
+                           bool push_mtime,
+                           bool no_fetch,
+                           bool dirty)
+      : _model(model)
+      , _file(data)
       , _dirty(dirty)
       , _writable(writable)
     {
-      ELLE_TRACE_SCOPE("%s: create (previous handle count = %s,%s)",
-          *this, _owner->_r_handle_count, _owner->_rw_handle_count);
-      if (_writable)
-        _owner->_rw_handle_count++;
-      else
-        _owner->_r_handle_count++;
-      elle::SafeFinally reset_handle([&] {
-          if (_writable)
-            _owner->_rw_handle_count--;
-          else
-            _owner->_r_handle_count--;
-      });
-      _owner->_header.atime = time(nullptr);
-      // FIXME: the only thing that can invalidate _owner is hard links
-      // keep tracks of open handle to know if we should refetch
-      // or a backend stat call?
-      if (!no_fetch && _owner->_r_handle_count + _owner->_rw_handle_count == 1)
-      {
-        try
-        {
-          auto address = _owner->_parent->_files.at(_owner->_name).second;
-          ELLE_TRACE_SCOPE("fetch first block %x", address);
-          _owner->_first_block = elle::cast<MutableBlock>::runtime
-            (_owner->_owner.block_store()->fetch(address));
-          // access data to detect and report permission issues
-          auto len = _owner->_first_block->data().size();
-          ELLE_DEBUG("First block has %s bytes", len);
-        }
-        catch (infinit::model::MissingBlock const& err)
-        {
-          // This is not a mistake if file is already opened but data has not
-          // been pushed yet.
-          if (!_owner->_first_block)
-          {
-            ELLE_WARN("%s: block missing in model and not in cache", *this);
-            throw;
-          }
-        }
-        catch (infinit::model::doughnut::ValidationFailed const& e)
-        {
-          ELLE_TRACE("%s: validation failed: %s", *this, e);
-          THROW_ACCES;
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("%s: unexpected elle exception while fetching: %s",
-              *this, e.what());
-          _owner->_first_block.reset();
-          throw rfs::Error(EIO, e.what());
-        }
-        // FIXME: I *really* don't like those.
-        catch (std::exception const& e)
-        {
-          ELLE_ERR("%s: unexpected exception while fetching: %s",
-              *this, e.what());
-          throw rfs::Error(EIO, e.what());
-        }
-        catch (...)
-        {
-          ELLE_ERR("%s: unkown while fetching", *this);
-          throw rfs::Error(EIO, "unkown error");
-        }
-      }
-      reset_handle.abort();
     }
 
     FileHandle::~FileHandle()
     {
-      if (_writable)
-        --this->_owner->_rw_handle_count;
-      else
-        --this->_owner->_r_handle_count;
-      ELLE_TRACE_SCOPE("%s: close, %s,%s remain", *this,
-        this->_owner->_r_handle_count, this->_owner->_rw_handle_count);
-      if (this->_owner->_r_handle_count + this->_owner->_rw_handle_count == 0)
-      {
-        ELLE_TRACE("last handle closed, clear cache");
-        //unlink first, so that it can use cached info to delete the blocks
-        if (!this->_owner->_parent)
-          this->_owner->unlink();
-        this->_owner->_blocks.clear();
-        this->_owner->_first_block.reset();
-        if (this->_owner->_parent)
-          this->_owner->_remove_from_cache();
-      }
+      while (_prefetchers_count)
+        reactor::sleep(20_ms);
     }
 
     void
@@ -115,7 +49,7 @@ namespace infinit
       {
         ELLE_TRACE_SCOPE("%s: flush", *this);
         elle::SafeFinally cleanup([&] {this->_dirty = false;});
-        this->_owner->_commit_all();
+        _commit_all();
       }
       else
         ELLE_DEBUG("%s: skip non-dirty flush", *this);
@@ -124,28 +58,27 @@ namespace infinit
     int
     FileHandle::read(elle::WeakBuffer buffer, size_t size, off_t offset)
     {
-      _owner->_ensure_first_block();
       ELLE_TRACE_SCOPE("%s: read %s at %s", *this, size, offset);
       ELLE_TRACE("%s: have %s bytes and %s fat entries totalling %s", *this,
-        _owner->_data.size(), _owner->_fat.size(), _owner->_header.size);
+        _file._data.size(), _file._fat.size(), _file._header.size);
       ELLE_ASSERT_EQ(buffer.size(), size);
       int64_t total_size;
       int32_t block_size;
-      if (offset < signed(_owner->_data.size()))
+      if (offset < signed(_file._data.size()))
       {
-        size_t size1 = std::min(size, size_t(_owner->_data.size() - offset));
+        size_t size1 = std::min(size, size_t(_file._data.size() - offset));
         memcpy(buffer.mutable_contents(),
-               this->_owner->_data.contents() + offset,
+               _file._data.contents() + offset,
                size1);
-        if (size1 == size || _owner->_fat.empty())
+        if (size1 == size || _file._fat.empty())
           return size1;
         return size1 + read(
           elle::WeakBuffer(buffer.mutable_contents() + size1, size - size1),
           size - size1, offset + size1);
       }
       // multi case
-      total_size = _owner->_header.size;
-      block_size = _owner->_header.block_size;
+      total_size = _file._header.size;
+      block_size = _file._header.block_size;
       if (offset >= total_size)
       {
         ELLE_DEBUG("read past end: offset=%s, size=%s", offset, total_size);
@@ -160,72 +93,56 @@ namespace infinit
         size = total_size - offset;
       }
       // scroll offset so that offset 0 is first fat block
-      offset -= File::first_block_size;
+      offset -= _file._data.size();
       off_t end = offset + size;
       int start_block = offset ? (offset) / block_size : 0;
-      _owner->_last_read_block = start_block;
-      _owner->_check_prefetch();
+      _last_read_block = start_block;
+      _check_prefetch();
       int end_block = end ? (end - 1) / block_size : 0;
       if (start_block == end_block)
       { // single block case
         off_t block_offset = offset - (off_t)start_block * (off_t)block_size;
-        auto it = _owner->_blocks.find(start_block);
-        std::shared_ptr<AnyBlock> block;
-        if (it != _owner->_blocks.end())
+        auto it = _blocks.find(start_block);
+        std::shared_ptr<elle::Buffer> block;
+        if (it != _blocks.end())
         {
           ELLE_DEBUG("obtained block %s from cache", start_block);
           reactor::wait(it->second.ready);
           if (!it->second.block) // FIXME
             throw rfs::Error(EIO, elle::sprintf("lookahead failed"));
-          ELLE_DEBUG("block at %x", it->second.block.get());
-          ELLE_DEBUG("block %x with %s bytes",
-                     it->second.block->address(),
-                     it->second.block->data().size());
           block = it->second.block;
           it->second.last_use = std::chrono::system_clock::now();
         }
         else
         {
-          block = _owner->_block_at(start_block, false);
+          block = _block_at(start_block, false);
           if (!block)
           {
-            if (_owner->_rw_handle_count == 0)
-            { // attempt a fetch
-              _owner->_fetch();
-              block = _owner->_block_at(start_block, false);
-            }
-            if (!block)
-            {
-              // block would have been allocated: sparse file?
-              memset(buffer.mutable_contents(), 0, size);
-              ELLE_TRACE("read %s 0-bytes, missing block %s", size, start_block);
-              return size;
-            }
+            // block would have been allocated: sparse file?
+            memset(buffer.mutable_contents(), 0, size);
+            ELLE_LOG("read %s 0-bytes, missing block %s", size, start_block);
+            return size;
           }
-          ELLE_DEBUG("fetched block %x of size %s", block->address(), block->data().size());
-          _owner->check_cache();
+          ELLE_DEBUG("fetched block of size %s", block->size());
+          check_cache();
         }
         ELLE_ASSERT_LTE(signed(block_offset + size), block_size);
-        if (signed(block->data().size()) < signed(block_offset + size))
+        if (signed(block->size()) < signed(block_offset + size))
         { // sparse file, eof shrinkage of size was handled above
-          long available = block->data().size() - block_offset;
+          long available = block->size() - block_offset;
           if (available < 0)
             available = 0;
           ELLE_DEBUG("no data for %s out of %s bytes",
               size - available, size);
           if (available)
             memcpy(buffer.mutable_contents(),
-                block->data().contents() + block_offset,
+                block->contents() + block_offset,
                 available);
           memset(buffer.mutable_contents() + available, 0, size - available);
         }
         else
         {
-          block->data(
-              [&buffer, block_offset, size] (elle::Buffer& data)
-              {
-              memcpy(buffer.mutable_contents(), &data[block_offset], size);
-              });
+          memcpy(buffer.mutable_contents(), &(*block)[block_offset], size);
           ELLE_DEBUG("read %s bytes", size);
         }
         return size;
@@ -239,11 +156,11 @@ namespace infinit
         ELLE_DEBUG("split %s %s into %s %s and %s %s",
             size, offset, first_size, offset, second_size, second_offset);
         int r1 = read(elle::WeakBuffer(buffer.mutable_contents(), first_size),
-                      first_size, offset + File::first_block_size);
+                      first_size, offset + _file._data.size());
         if (r1 <= 0)
           return r1;
         int r2 = read(elle::WeakBuffer(buffer.mutable_contents() + first_size, second_size),
-                      second_size, second_offset + File::first_block_size);
+                      second_size, second_offset + _file._data.size());
         if (r2 < 0)
           return r2;
         ELLE_DEBUG("read %s+%s=%s bytes", r1, r2, r1+r2);
@@ -261,33 +178,33 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: write %s bytes at offset %s", *this, size, offset);
       ELLE_ASSERT_EQ(buffer.size(), size);
       this->_dirty = true;
-      _owner->_header.mtime = time(nullptr);
-      if (offset < signed(File::first_block_size))
+      _file._header.mtime = time(nullptr);
+      if (offset < signed(default_first_block_size))
       { // write on first block
-        this->_owner->_fat_changed = true;
-        auto wend = std::min(uint64_t(size + offset), File::first_block_size);
-        if (_owner->_data.size() < wend)
+        _fat_changed = true;
+        auto wend = std::min(uint64_t(size + offset), default_first_block_size);
+        if (_file._data.size() < wend)
         {
-          auto oldsz = _owner->_data.size();
-          _owner->_data.size(wend);
-          memset(_owner->_data.mutable_contents() + oldsz,
+          auto oldsz = _file._data.size();
+          _file._data.size(wend);
+          memset(_file._data.mutable_contents() + oldsz,
                  0,
                  wend - oldsz);
         }
         auto to_write = wend - offset;
-        memcpy(_owner->_data.mutable_contents() + offset,
+        memcpy(_file._data.mutable_contents() + offset,
                buffer.contents(),
                to_write);
-        this->_owner->_header.size = std::max(this->_owner->_header.size,
+        this->_file._header.size = std::max(this->_file._header.size,
                                               uint64_t(offset + size));
         return to_write + write(
           elle::ConstWeakBuffer(buffer.contents() + to_write, size - to_write),
           size - to_write, offset + to_write);
       }
-      this->_owner->_header.size = std::max(this->_owner->_header.size,
+      this->_file._header.size = std::max(this->_file._header.size,
                                             uint64_t(offset + size));
-      offset -= File::first_block_size;
-      uint64_t const block_size = this->_owner->_header.block_size;
+      offset -= default_first_block_size;
+      uint64_t const block_size = this->_file._header.block_size;
       int const start_block = offset / block_size;
       int const end_block = (offset + size - 1) / block_size;
       if (start_block == end_block)
@@ -303,11 +220,11 @@ namespace infinit
                                     off_t offset,
                                     int block_idx)
     {
-      auto const block_size = this->_owner->_header.block_size;
+      auto const block_size = this->_file._header.block_size;
       auto const size = buffer.size();
-      std::shared_ptr<AnyBlock> block;
-      auto const it = this->_owner->_blocks.find(block_idx);
-      if (it != this->_owner->_blocks.end())
+      std::shared_ptr<elle::Buffer> block;
+      auto const it = _blocks.find(block_idx);
+      if (it != _blocks.end())
       {
         block = it->second.block;
         it->second.dirty = true;
@@ -315,29 +232,27 @@ namespace infinit
       }
       else
       {
-        block = this->_owner->_block_at(block_idx, true);
+        block = _block_at(block_idx, true);
         ELLE_ASSERT(block);
-        this->_owner->check_cache();
-        auto const it = this->_owner->_blocks.find(block_idx);
-        ELLE_ASSERT(it != this->_owner->_blocks.end());
+        check_cache();
+        auto const it = _blocks.find(block_idx);
+        ELLE_ASSERT(it != _blocks.end());
         it->second.dirty = true;
         it->second.last_use = std::chrono::system_clock::now();
       }
       off_t block_offset = offset % block_size;
-      if (block->data().size() < block_offset + size)
+      if (block->size() < block_offset + size)
       {
-        int64_t old_size = block->data().size();
-        block->data(
-            [block_offset, size] (elle::Buffer& data)
-            {
-            data.size(block_offset + size);
-            });
+        int64_t old_size = block->size();
+        block->size(block_offset + size);
         ELLE_DEBUG("grow block from %s to %s",
             block_offset + size - old_size, block_offset + size);
         if (old_size < block_offset)
-          block->zero(old_size, block_offset - old_size);
+          memset(block->mutable_contents() + old_size,
+                 0,
+                 block_offset - old_size);
       }
-      block->write(block_offset, buffer.contents(), size);
+      memcpy(block->mutable_contents() + block_offset, buffer.contents(), size);
       return size;
     }
 
@@ -347,7 +262,7 @@ namespace infinit
                                    int start_block,
                                    int end_block)
     {
-      uint64_t const block_size = this->_owner->_header.block_size;
+      uint64_t const block_size = this->_file._header.block_size;
       ELLE_ASSERT(start_block == end_block - 1);
       auto const size = buffer.size();
       int64_t second_size = (offset + size) % block_size;
@@ -367,7 +282,7 @@ namespace infinit
     void
     FileHandle::ftruncate(off_t offset)
     {
-      return _owner->truncate(offset);
+      //FIXME implement
     }
 
     void
@@ -381,14 +296,247 @@ namespace infinit
     FileHandle::fsync(int datasync)
     {
       ELLE_TRACE_SCOPE("%s: fsync", *this);
-      this->_owner->_commit_all();
+      _commit_all();
     }
 
     void
     FileHandle::print(std::ostream& stream) const
     {
       elle::fprintf(stream, "FileHandle(%x, \"%s\")",
-                    (void*)(this), this->_owner->_name);
+                    (void*)(this), this->_file._address);
+    }
+    std::shared_ptr<elle::Buffer>
+    FileHandle::_block_at(int index, bool create)
+    {
+      ELLE_ASSERT_GTE(index, 0);
+      auto it = this->_blocks.find(index);
+      if (it != this->_blocks.end())
+        return it->second.block;
+      if (_file._fat.size() <= unsigned(index))
+      {
+        ELLE_TRACE("%s: block_at(%s) out of range", *this, index);
+        if (!create)
+        {
+          return nullptr;
+        }
+        _file._fat.resize(index+1, FileData::FatEntry(Address::null, {}));
+      }
+      std::shared_ptr<elle::Buffer> b;
+      bool is_new = false;
+      if (_file._fat[index].first == Address::null)
+      {
+        ELLE_ASSERT(_first_block);
+        b = std::make_shared<elle::Buffer>();
+        is_new = true;
+      }
+      else
+      {
+        ELLE_TRACE("Fetching %s", index);
+        Address addr(this->_file._fat[index].first.value(),
+                     model::flags::immutable_block, false);
+        auto block = fetch_or_die(_model, addr);
+        auto crypted = block->take_data();
+        cryptography::SecretKey sk(_file._fat[index].second);
+        b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
+        is_new = false;
+      }
+
+      auto inserted = this->_blocks.insert(std::make_pair(index,
+        CacheEntry{b, false}));
+      inserted.first->second.ready.open();
+      inserted.first->second.last_use = std::chrono::system_clock::now();
+      inserted.first->second.dirty = false; // we just fetched or inserted it
+      inserted.first->second.new_block = is_new;
+      return inserted.first->second.block;
+    }
+    void
+    FileHandle::_check_prefetch()
+    {
+      // Check if we need to relaunch a prefetcher
+      int nidx = _last_read_block + 1;
+      for (; nidx < _last_read_block + lookahead_blocks
+        && _prefetchers_count < max_lookahead_threads; ++nidx)
+      {
+        if (nidx >= signed(_file._fat.size()))
+          break;
+        if (this->_blocks.find(nidx) == this->_blocks.end())
+        {
+          _prefetch(nidx);
+          break;
+        }
+      }
+    }
+
+    void
+    FileHandle::_prefetch(int idx)
+    {
+      ELLE_TRACE("%s: prefetch index %s", *this, idx);
+      auto inserted =
+        this->_blocks.insert(std::make_pair(idx, CacheEntry{}));
+      inserted.first->second.last_use = std::chrono::system_clock::now();
+      inserted.first->second.dirty = false;
+      inserted.first->second.new_block = false;
+      auto addr = Address(this->_file._fat[idx].first.value(),
+                          model::flags::immutable_block, false);
+      auto key = _file._fat[idx].second;
+      ++_prefetchers_count;
+      new reactor::Thread("prefetcher", [this, addr, idx, key] {
+          std::unique_ptr<model::blocks::Block> bl;
+          try
+          {
+            bl = fetch_or_die(_model, addr);
+          }
+          catch (elle::Error const& e)
+          {
+            ELLE_TRACE("Prefetcher error fetching %x: %s", addr, e);
+            --this->_prefetchers_count;
+            this->_blocks[idx].ready.open();
+            return;
+          }
+          ELLE_TRACE("Prefetcher inserting value at %s", idx);
+          auto crypted = bl->take_data();
+          auto b = std::make_shared<elle::Buffer>(
+            cryptography::SecretKey(key).decipher(crypted));
+          this->_blocks[idx].last_use = std::chrono::system_clock::now();
+          this->_blocks[idx].block = b;
+          this->_blocks[idx].ready.open();
+          --this->_prefetchers_count;
+          this->_check_prefetch();
+          this->check_cache(this->max_cache_size);
+      }, true);
+    }
+    void
+    FileHandle::_commit_all()
+    {
+      ELLE_TRACE_SCOPE("%s: commit all", this);
+      if (!check_cache(0))
+      {
+        ELLE_DEBUG_SCOPE(
+          "store first block: %s with payload %s, fat %s, total_size %s",
+          this->_first_block,
+          this->_file._data.size(),
+          this->_file._fat,
+          this->_file._header.size);
+        this->_commit_first(true);
+      }
+    }
+    bool
+    FileHandle::_flush_block(int id)
+    {
+      bool fat_change = false;
+      auto it = this->_blocks.find(id);
+      Address prev = Address::null;
+      if (_file._fat.size() < unsigned(id) && !it->second.new_block)
+        prev = _file._fat.at(id).first;
+      auto key = cryptography::random::generate<elle::Buffer>(32).string();
+      auto cdata = cryptography::SecretKey(key).encipher(*it->second.block);
+      auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
+      auto baddr = block->address();
+      _model.store(std::move(block), model::STORE_INSERT);
+      if (baddr != prev)
+      {
+        ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
+          prev, baddr);
+        fat_change = true;
+        _file._fat[id] = FileData::FatEntry(baddr, key);
+        if (prev != Address::null)
+        {
+          unchecked_remove(_model, prev);
+        }
+      }
+      it->second.new_block = false;
+      it->second.dirty = false;
+      return fat_change;
+    }
+
+    bool
+    FileHandle::check_cache(int cache_size)
+    {
+      if (cache_size < 0)
+        cache_size = max_cache_size;
+      typedef std::pair<const int, CacheEntry> Elem;
+      if (cache_size == 0)
+      {
+        // Final flush, wait on all async ops
+        while (!_flushers.empty())
+        {
+          reactor::wait(*_flushers.back());
+          _flushers.pop_back();
+        }
+      }
+      else
+      {
+        // Just wait on finished ops to get exceptions
+        for (int i=0; i<signed(_flushers.size()); ++i)
+        {
+          if (_flushers[i]->done())
+          {
+            reactor::wait(*_flushers[i]);
+            std::swap(_flushers[i], _flushers[_flushers.size()-1]);
+            _flushers.pop_back();
+            --i;
+          }
+        }
+      }
+      while (this->_blocks.size() > unsigned(cache_size))
+      {
+        auto it = std::min_element(this->_blocks.begin(), this->_blocks.end(),
+          [](Elem const& a, Elem const& b) -> bool
+          {
+            return a.second.last_use < b.second.last_use;
+          });
+        ELLE_TRACE("Removing block %s from cache", it->first);
+        if (cache_size == 0)
+        { // final flush, sync
+          if (it->second.dirty)
+          {
+            _fat_changed = _flush_block(it->first) || _fat_changed;
+          }
+          this->_blocks.erase(it);
+        }
+        else
+        {
+          if (it->second.dirty)
+          {
+            int id = it->first;
+            ELLE_TRACE("starting async flusher for %s", id);
+            auto ab = it->second.block;
+            bool new_block = it->second.new_block;
+            _flushers.emplace_back(
+              new reactor::Thread("flusher", [this, id, ab, new_block] {
+                auto key = cryptography::random::generate<elle::Buffer>(32).string();
+                Address old_addr = Address::null;
+                if (_file._fat.size() < unsigned(id) && !new_block)
+                  old_addr = _file._fat.at(id).first;
+                auto cdata = cryptography::SecretKey(key).encipher(*ab);
+                auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
+                auto baddr = block->address();
+                _model.store(std::move(block), model::STORE_INSERT);
+                if (baddr != old_addr)
+                {
+                  ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
+                    old_addr, baddr);
+                  _fat_changed = true;
+                  this->_file._fat[id] = FileData::FatEntry(baddr, key);
+                  if (old_addr != Address::null)
+                  {
+                    unchecked_remove(_model, old_addr);
+                  }
+                }
+            }, reactor::Thread::managed = true));
+          }
+          this->_blocks.erase(it);
+        }
+      }
+      bool prev = this->_fat_changed;
+      if (this->_fat_changed)
+      {
+        ELLE_DEBUG_SCOPE("FAT changed, commit first block");
+        this->_commit_first(cache_size == 0);
+        _first_block_new = false;
+        _fat_changed = false;
+      }
+      return prev;
     }
   }
 }
