@@ -796,6 +796,18 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   }
 }
 
+int
+size(reactor::Generator<std::shared_ptr<dht::Peer>> const& g)
+{
+  int res = 0;
+  for (auto const& m: elle::unconst(g))
+  {
+    (void)m;
+    ++res;
+  }
+  return res;
+};
+
 namespace rebalancing
 {
   ELLE_TEST_SCHEDULED(extend_and_write)
@@ -811,17 +823,6 @@ namespace rebalancing
       dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
     }
     dht_b.overlay->connect(*dht_a.overlay);
-    auto size =
-      [] (reactor::Generator<std::shared_ptr<dht::Peer>> const& g)
-      {
-        int res = 0;
-        for (auto const& m: elle::unconst(g))
-        {
-          (void)m;
-          ++res;
-        }
-        return res;
-      };
     auto op = infinit::overlay::OP_FETCH;
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 1u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 1u);
@@ -886,6 +887,30 @@ namespace rebalancing
       dht_a.dht->store(*b1, infinit::model::STORE_UPDATE);
     }
   }
+
+  ELLE_TEST_SCHEDULED(expand)
+  {
+    DHT dht_a;
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b;
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    auto b = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to 1 node")
+    {
+      b->data(std::string("expand"));
+      dht_a.dht->store(*b, infinit::model::STORE_INSERT);
+    }
+    ELLE_LOG("connect second DHT")
+      dht_b.overlay->connect(*dht_a.overlay);
+    ELLE_LOG("write block to 2 nodes")
+    {
+      b->data(std::string("expand'"));
+      dht_a.dht->store(*b, infinit::model::STORE_INSERT);
+    }
+    auto op = infinit::overlay::OP_FETCH;
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 2u);
+  }
 }
 
 ELLE_TEST_SUITE()
@@ -923,5 +948,6 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(expand), 0, valgrind(1));
   }
 }

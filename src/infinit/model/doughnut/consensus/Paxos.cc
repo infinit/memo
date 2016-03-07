@@ -244,6 +244,23 @@ namespace infinit
           ELLE_ATTRIBUTE(boost::optional<int>, local_version);
         };
 
+        static
+        Paxos::PaxosClient::Peers
+        lookup_nodes(Doughnut& dht,
+                     Paxos::PaxosServer::Quorum const& q,
+                     Address address)
+        {
+          Paxos::PaxosClient::Peers res;
+          for (auto member: dht.overlay()->lookup_nodes(q))
+          {
+            ELLE_ASSERT(member);
+            res.push_back(
+              elle::make_unique<consensus::Peer>(
+                std::move(member), address));
+          }
+          return res;
+        }
+
         /*-----------.
         | RemotePeer |
         `-----------*/
@@ -327,6 +344,16 @@ namespace infinit
         | LocalPeer |
         `----------*/
 
+        void
+        Paxos::LocalPeer::initialize()
+        {
+          this->doughnut().overlay()->on_discover().connect(
+            [this] (Address& id)
+            {
+              this->_discovered(id);
+            });
+        }
+
         Paxos::LocalPeer::Decision&
         Paxos::LocalPeer::_load(Address address,
                                 boost::optional<PaxosServer::Quorum> peers)
@@ -363,6 +390,28 @@ namespace infinit
               else
                 throw MissingBlock(e.key());
             }
+        }
+
+        void
+        Paxos::LocalPeer::_discovered(model::Address id)
+        {
+          // FIXME: also rebalance blocks on disk
+          for (auto address: this->_addresses)
+          {
+            auto quorum = address.second.paxos.current_quorum();
+            if (signed(quorum.size()) < this->_factor &&
+                quorum.find(id) == quorum.end())
+            {
+              ELLE_TRACE("%s: rebalance block %f to newly discovered peer %f",
+                         this, address.first, id);
+              PaxosClient c(
+                this->doughnut().id(),
+                lookup_nodes(this->doughnut(), quorum, address.first));
+              quorum.insert(id);
+              // FIXME: do something in case of conflict
+              c.choose(address.second.paxos.current_version() + 1, quorum);
+            }
+          }
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
@@ -543,23 +592,6 @@ namespace infinit
         unconst(T const& v)
         {
           return const_cast<T&>(v);
-        }
-
-        static
-        Paxos::PaxosClient::Peers
-        lookup_nodes(Doughnut& dht,
-                     Paxos::PaxosServer::Quorum const& q,
-                     Address address)
-        {
-          Paxos::PaxosClient::Peers res;
-          for (auto member: dht.overlay()->lookup_nodes(q))
-          {
-            ELLE_ASSERT(member);
-            res.push_back(
-              elle::make_unique<consensus::Peer>(
-                std::move(member), address));
-          }
-          return res;
         }
 
         std::unique_ptr<blocks::Block>

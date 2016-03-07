@@ -138,6 +138,9 @@ namespace infinit
               : doughnut::Local(std::forward<Args>(args) ...)
               , _factor(factor)
             {}
+            virtual
+            void
+            initialize() override;
             ELLE_ATTRIBUTE_R(int, factor);
             virtual
             boost::optional<PaxosClient::Accepted>
@@ -190,6 +193,8 @@ namespace infinit
             Decision&
             _load(Address address,
                   boost::optional<PaxosServer::Quorum> peers = {});
+            void
+            _discovered(Address id);
           };
 
         /*-----.
