@@ -910,6 +910,10 @@ namespace rebalancing
     auto op = infinit::overlay::OP_FETCH;
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 2u);
+    ELLE_LOG("disconnect second DHT")
+      dht_b.overlay->disconnect(*dht_a.overlay);
+    ELLE_LOG("read block from second DHT")
+      BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
   }
 }
 
