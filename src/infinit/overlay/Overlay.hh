@@ -49,6 +49,15 @@ namespace infinit
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
 
+    /*------.
+    | Hooks |
+    `------*/
+    public:
+      ELLE_ATTRIBUTE_RX(
+        boost::signals2::signal<void (model::Address id)>, on_discover);
+      ELLE_ATTRIBUTE_RX(
+        boost::signals2::signal<void (model::Address id)>, on_disappear);
+
     /*-------.
     | Lookup |
     `-------*/

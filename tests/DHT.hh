@@ -45,6 +45,8 @@ public:
   {
     this->_peers.emplace_back(&other);
     other._peers.emplace_back(this);
+    this->on_discover()(other.node_id());
+    other.on_discover()(this->node_id());
   }
 
   void
@@ -60,8 +62,10 @@ public:
       if (*it == this)
       {
         other._peers.erase(it);
+        other.on_disappear()(this->node_id());
         break;
       }
+    this->on_disappear()(other.node_id());
   }
 
 protected:

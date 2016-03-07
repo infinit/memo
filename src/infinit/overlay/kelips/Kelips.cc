@@ -2853,7 +2853,9 @@ namespace infinit
             if (it->second.endpoints.empty())
             {
               ELLE_LOG("%s: erase %s from %s", *this, it->second, idx);
+              auto addr = it->second.address;
               it = contacts.erase(it);
+              this->on_disappear()(addr);
             }
             else
               ++it;
@@ -3226,6 +3228,8 @@ namespace infinit
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
+        if (inserted.second)
+          this->on_discover()(address);
         return &inserted.first->second;
       }
 
