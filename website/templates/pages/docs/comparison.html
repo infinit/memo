@@ -158,10 +158,10 @@
     % endfor
     </div>
 
-    % if competitor['wikipedia']:
+    % if 'links' in competitor:
       <h3 class="links">Links</h3>
       <ul>
-        <li><a href="${competitor['wikipedia']}">Wikipedia</a></li>
+        <!-- XXX iterate and display -->
       </ul>
     % endif
 
