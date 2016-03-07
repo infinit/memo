@@ -32,8 +32,30 @@ $(document).ready(function() {
     }
   });
 
-  if ($('body').hasClass('documentation') || $('body').hasClass('opensource')) {
+  /*----------------.
+  | All             |
+  `----------------*/
 
+  if ($('body').hasClass('documentation')) {
+    // dropdown menus
+    $('ul.menu li.dropdown > a').click(function(e) {
+      e.preventDefault();
+      $(this).parent().toggleClass('clicked');
+    });
+
+    // comparisons menu
+    $('ul.menu li.comparisons > a').click(function(e) {
+      showPopupMenu(this);
+      e.preventDefault();
+    });
+
+    if (window.location.hash === '#comparisons') {
+      $('#full').fadeIn();
+      showPopupMenu($('ul.menu li.comparisons > a'));
+    }
+  }
+
+  if ($('body').hasClass('documentation') || $('body').hasClass('opensource')) {
     var a = function () {
       var height = $(window).scrollTop();
       var menu_anchor = $("#menu-anchor").offset().top - 13;
@@ -73,6 +95,10 @@ $(document).ready(function() {
     $(window).scroll(a);
   }
 
+  /*----------------.
+  | Reference       |
+  `----------------*/
+
   if ($('body').hasClass('doc_reference')) {
     $('.iam_policy').magnificPopup({
       type:'inline',
@@ -85,26 +111,35 @@ $(document).ready(function() {
     });
   }
 
-  if ($('body').hasClass('documentation')) {
 
-    // dropdown menus
-    $('ul.menu li.dropdown > a').click(function(e) {
-      e.preventDefault();
-      $(this).parent().toggleClass('clicked');
-    });
+  if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments')) {
+    var enableSubMenu = function () {
+      var position = $(window).scrollTop() + 100;
+      var anchors = $("h2");
 
-    // comparisons menu
-    $('ul.menu li.comparisons > a').click(function(e) {
-      showPopupMenu(this);
-      e.preventDefault();
-    });
+      $(anchors).each(function(i, anchor) {
+        if
+        (
+          (anchors[i+1] !== undefined &&
+          position > $(anchor).offset().top &&
+          position < $(anchors[i+1]).offset().top) || (
+          anchors[i+1] === undefined &&
+          position > $(anchor).offset().top)
+        )
+        {
+          $('ul.menu ul li').removeClass('active');
+          $('ul.menu ul li.' + $(anchor).attr('id')).addClass('active');
+          return false;
+        }
+      });
+    };
 
-    if (window.location.hash === '#comparisons') {
-      $('#full').fadeIn();
-      showPopupMenu($('ul.menu li.comparisons > a'));
-    }
+    $(window).scroll(enableSubMenu);
   }
 
+  /*----------------.
+  | Get Started     |
+  `----------------*/
 
   if ($('body').hasClass('doc_get_started') ) {
     $('a.button').click(function() {

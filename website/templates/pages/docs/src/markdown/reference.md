@@ -205,7 +205,7 @@ Locally stored AWS credentials "s3-user".
 _**IMPORTANT**: AWS credentials are only ever stored locally and cannot be pushed to the Hub. Never use the AWS root user. Always create a specific user, giving the user the <a href="#iam-policy" class="href iam_policy">minimum required permissions</a>._
 
 <div id="iam-policy" class="popup mfp-hide">
-  <h2>Setting the Bucket Permissions</h2>
+  <h3>Setting the Bucket Permissions</h3>
   <p>In order to ensure that your user has the minimum required permissions for Infinit to work, you should create a new <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html" target="_blank"><strong>IAM policy</strong></a> for the user.</p>
   <p>Using the AWS console, open "Identity and Access Management". From there you can create a new policy using the JSON shown below. Ensure that you correctly set the <em>bucket-name</em>.</p>
   <pre><code>{
