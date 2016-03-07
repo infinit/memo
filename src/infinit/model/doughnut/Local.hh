@@ -44,6 +44,13 @@ namespace infinit
               int port = 0,
               Protocol p = Protocol::all);
         ~Local();
+        /** Called after every element of the DHT has been initialized.
+         *
+         *  The overlay does not exist upon construction, for instance.
+         */
+        virtual
+        void
+        initialize();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 

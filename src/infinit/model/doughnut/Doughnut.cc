@@ -62,7 +62,9 @@ namespace infinit
           nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
-      {}
+      {
+        this->_local->initialize();
+      }
 
       Doughnut::Doughnut(Address id,
                          std::string const& name,
