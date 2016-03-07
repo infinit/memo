@@ -3198,26 +3198,26 @@ namespace infinit
       {
         Contacts* target = observer ?
           &_state.observers : &_state.contacts[group_of(address)];
-        Contacts* ntarget = !observer ?
-          &_state.observers : &_state.contacts[group_of(address)];
-        auto it = target->find(address);
-        if (it == target->end())
-        { // check the other map for misplaced entries. This can happen
-          // when invoked with a packet's originAddress, for which we don't
-          // know the observer status
-          it = ntarget->find(address);
+        // Check the other map for misplaced entries. This can happen when
+        // invoked with a packet's originAddress, for which we don't know the
+        // observer status.
+        if (target->find(address) == target->end())
+        {
+          Contacts* ntarget = !observer ?
+            &_state.observers : &_state.contacts[group_of(address)];
+          auto it = ntarget->find(address);
           if (it != ntarget->end())
           {
             if (!observer)
             {
+              // Change
               ELLE_TRACE("moving misplaced entry for %x to %s", address,
                 target == &_state.observers ? "observers" : "storage nodes");
               target->insert(std::make_pair(address, std::move(it->second)));
               ntarget->erase(address);
-              return &(*target)[address];
             }
             else
-              return &it->second;
+              target = ntarget;
           }
         }
         if (!make)
@@ -3225,8 +3225,8 @@ namespace infinit
         Contact c {{},  {}, address, Duration(), Time(), 0};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
-        it = target->insert(std::make_pair(address, std::move(c))).first;
-        return &it->second;
+        auto inserted = target->insert(std::make_pair(address, std::move(c)));
+        return &inserted.first->second;
       }
 
       Overlay::Member
