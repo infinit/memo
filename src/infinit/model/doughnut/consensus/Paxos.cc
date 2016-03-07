@@ -423,7 +423,7 @@ namespace infinit
             data.paxos.release();
           }
           if (block)
-            on_store(*block);
+            this->on_store()(*block);
           return std::move(res);
         }
 
@@ -707,7 +707,7 @@ namespace infinit
           this->storage()->set(block.address(), data,
                               mode == STORE_INSERT,
                               mode == STORE_UPDATE);
-          on_store(block);
+          this->on_store()(block);
         }
 
         void
@@ -766,7 +766,7 @@ namespace infinit
           {
             throw MissingBlock(k.key());
           }
-          on_remove(address);
+          this->on_remove()(address);
           this->_addresses.erase(address);
         }
 

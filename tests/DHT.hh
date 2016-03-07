@@ -23,7 +23,7 @@ public:
     : Super(d, local, id)
   {
     if (local)
-      local->on_store.connect(
+      local->on_store().connect(
         [this] (blocks::Block const& block)
         {
           this->_blocks.emplace(block.address());

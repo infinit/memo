@@ -68,18 +68,25 @@ namespace infinit
         virtual
         void
         remove(Address address, blocks::RemoveSignature rs) override;
-        boost::signals2::signal<void (blocks::Block const& block)> on_store;
-        boost::signals2::signal<
-          void (Address, std::unique_ptr<blocks::Block>&)> on_fetch;
-        boost::signals2::signal<
-          void (Address)> on_remove;
-        boost::signals2::signal<
-          void (RPCServer&)> on_connect;
       protected:
         virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
+
+      /*------.
+      | Hooks |
+      `------*/
+      public:
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (blocks::Block const& block)>, on_store);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<
+            void (Address, std::unique_ptr<blocks::Block>&)>, on_fetch);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (Address)>, on_remove);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (RPCServer&)>, on_connect);
 
       /*-------.
       | Server |

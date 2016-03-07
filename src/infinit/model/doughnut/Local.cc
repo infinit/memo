@@ -142,7 +142,7 @@ namespace infinit
         {
           throw MissingBlock(block.address());
         }
-        on_store(block);
+        this->_on_store(block);
       }
 
       std::unique_ptr<blocks::Block>
@@ -163,7 +163,7 @@ namespace infinit
         ctx.set<Doughnut*>(&this->_doughnut);
         auto res = elle::serialization::binary::deserialize<
           std::unique_ptr<blocks::Block>>(data, true, ctx);
-        on_fetch(address, res);
+        this->_on_fetch(address, res);
         return std::move(res);
       }
 
@@ -193,7 +193,7 @@ namespace infinit
         {
           throw MissingBlock(k.key());
         }
-        on_remove(address);
+        this->_on_remove(address);
       }
 
       /*-------.
@@ -390,7 +390,7 @@ namespace infinit
               {
                 RPCServer rpcs(this->_doughnut.version());
                 this->_register_rpcs(rpcs);
-                this->on_connect(rpcs);
+                this->_on_connect(rpcs);
                 rpcs.set_context<Doughnut*>(&this->_doughnut);
                 rpcs.serve(**socket);
               });

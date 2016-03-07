@@ -210,13 +210,13 @@ namespace kademlia
     _mask = Address(v);
     if (local)
     {
-      local->on_fetch.connect(std::bind(&Kademlia::fetch, this,
-                                        std::placeholders::_1,
-                                        std::placeholders::_2));
-      local->on_store.connect(std::bind(&Kademlia::store, this,
-                                        std::placeholders::_1));
-      local->on_remove.connect(std::bind(&Kademlia::remove, this,
-                                         std::placeholders::_1));
+      local->on_fetch().connect(std::bind(&Kademlia::fetch, this,
+                                          std::placeholders::_1,
+                                          std::placeholders::_2));
+      local->on_store().connect(std::bind(&Kademlia::store, this,
+                                          std::placeholders::_1));
+      local->on_remove().connect(std::bind(&Kademlia::remove, this,
+                                           std::placeholders::_1));
       this->_port = local->server_endpoint().port();
       this->_config.port = this->_port;
     }

@@ -781,39 +781,41 @@ namespace infinit
         start();
         if (auto l = local)
         {
-          l->on_fetch.connect(std::bind(&Node::fetch, this,
-                                        std::placeholders::_1,
-                                        std::placeholders::_2));
-          l->on_store.connect(std::bind(&Node::store, this,
+          l->on_fetch().connect(std::bind(&Node::fetch, this,
+                                          std::placeholders::_1,
+                                          std::placeholders::_2));
+          l->on_store().connect(std::bind(&Node::store, this,
                                           std::placeholders::_1));
-          l->on_remove.connect(std::bind(&Node::remove, this,
-                                         std::placeholders::_1));
+          l->on_remove().connect(std::bind(&Node::remove, this,
+                                           std::placeholders::_1));
 
-          l->on_connect.connect([this](RPCServer& rpcs)
+          l->on_connect().connect(
+            [this](RPCServer& rpcs)
             {
-              rpcs.add("kelips_fetch_state",
-                        std::function<SerState ()>(
-                          [this] ()
-                          {
-                            SerState res;
-                            std::vector<GossipEndpoint> eps;
-                            for (auto const& e: _local_endpoints)
-                              eps.push_back(e.first);
-                            res.first.insert(std::make_pair(_self, eps));
-                            for (auto const& contacts: this->_state.contacts)
-                              for (auto const& c: contacts)
-                              {
-                                std::vector<GossipEndpoint> eps;
-                                for (auto const& e: c.second.endpoints)
-                                  eps.push_back(e.first);
-                                res.first.insert(std::make_pair(c.second.address, eps));
-                              }
-                            for (auto const& f: this->_state.files)
-                              res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
-                            // OH THE UGLY HACK, we need a place to store our own address
-                            res.second.push_back(std::make_pair(Address::null, _self));
-                            return res;
-                          }));
+              rpcs.add(
+                "kelips_fetch_state",
+                std::function<SerState ()>(
+                  [this] ()
+                  {
+                    SerState res;
+                    std::vector<GossipEndpoint> eps;
+                    for (auto const& e: _local_endpoints)
+                      eps.push_back(e.first);
+                    res.first.insert(std::make_pair(_self, eps));
+                    for (auto const& contacts: this->_state.contacts)
+                      for (auto const& c: contacts)
+                      {
+                        std::vector<GossipEndpoint> eps;
+                        for (auto const& e: c.second.endpoints)
+                          eps.push_back(e.first);
+                        res.first.insert(std::make_pair(c.second.address, eps));
+                      }
+                    for (auto const& f: this->_state.files)
+                      res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
+                    // OH THE UGLY HACK, we need a place to store our own address
+                    res.second.push_back(std::make_pair(Address::null, _self));
+                    return res;
+                  }));
             });
           this->_port = l->server_endpoint().port();
           for (auto const& itf: elle::network::Interface::get_map(
