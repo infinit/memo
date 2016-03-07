@@ -183,13 +183,17 @@ class Website(bottle.Bottle):
     file = resources_path() + '/json/comparisons.json'
     with open(file) as json_file:
       json_data = json.load(json_file)
+
+    referer = bottle.request.params.get('from')
+    show_comparison = referer == 'faq'
+
     return {
       'title': json_data[path]['name'] + ' Comparison',
       'description': 'Compare Infinit with the other file storage solutions on the market.',
       'competitor': json_data[path],
       'competitor_name': path,
       'infinit': json_data['infinit'],
-      're': re
+      'show_comparison': show_comparison,
     }
 
   @route('/open-source', name = 'opensource')

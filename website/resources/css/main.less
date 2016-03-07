@@ -1375,33 +1375,6 @@ body.opensource {
 
       img { float: left; margin-top: 4px; margin-right: 12px; }
 
-      a { width: 100%; color: #707070; text-shadow: 0 1px 0 #fff;}
-      a:hover span {
-        color: #fff;
-        text-decoration: none;
-        background-color: #3072b3;
-        background-image: -webkit-linear-gradient(#599bdc,#3072b3);
-        background-image: -moz-linear-gradient(#599bdc,#3072b3);
-        background-image: -ms-linear-gradient(#599bdc,#3072b3);
-        background-image: linear-gradient(#599bdc,#3072b3);
-        border-color: #518cc6 #518cc6 #2a65a0;
-        text-shadow: 0 -1px 0 rgba(0,0,0,.25);
-      }
-
-      span {
-        display: block; float: right; margin-top: 8px; background: #6D6D6D;
-        padding: 3px 6px; border-radius: 3px; color: white; margin-left: 10px;
-
-        &.star {
-          border: 1px solid #d4d4d4; background-color: #e6e6e6; font-weight: bold;
-          color: #707070; font-family: @helvetica; font-size: 12px;
-          padding: 4px 8px 4px 7px;
-          background-image: -webkit-linear-gradient(#fafafa,#eaeaea);
-          background-image: -moz-linear-gradient(#fafafa,#eaeaea);
-          background-image: -ms-linear-gradient(#fafafa,#eaeaea);
-          background-image: linear-gradient(#fafafa,#eaeaea);
-        }
-      }
       strong {
         font-size: 18px; font-family: @helvetica; margin-top: 7px;
         display: block; padding-top: 3px; float: left;
@@ -1418,6 +1391,41 @@ body.opensource {
     table tr td:nth-child(1) { border: none;}
     table tr:nth-child(2n) { background: #f9f9f9; }
     table tr td:nth-child(1), table tr th:nth-child(1) { padding-left: 20px; }
+  }
+}
+
+body.opensource section.doc .card.soon .github-card a,
+body.doc_technology section.doc a.github {
+  width: 100%; color: #707070; text-shadow: 0 1px 0 #fff; outline: none;
+
+  &:hover span.star {
+    color: #fff;
+    text-decoration: none;
+    background-color: #3072b3;
+    background-image: -webkit-linear-gradient(#599bdc,#3072b3);
+    background-image: -moz-linear-gradient(#599bdc,#3072b3);
+    background-image: -ms-linear-gradient(#599bdc,#3072b3);
+    background-image: linear-gradient(#599bdc,#3072b3);
+    border-color: #518cc6 #518cc6 #2a65a0;
+    text-shadow: 0 -1px 0 rgba(0,0,0,.25);
+  }
+}
+
+body.opensource section.doc .card.soon .github-card,
+body.doc_technology section.doc a.github {
+  span {
+    display: block; float: right; margin-top: 8px; background: #6D6D6D;
+    padding: 3px 6px; border-radius: 3px; color: white; margin-left: 10px;
+
+    &.star {
+      border: 1px solid #d4d4d4; background-color: #e6e6e6; font-weight: bold;
+      color: #707070; font-family: @helvetica; font-size: 12px;
+      padding: 4px 8px 4px 7px;
+      background-image: -webkit-linear-gradient(#fafafa,#eaeaea);
+      background-image: -moz-linear-gradient(#fafafa,#eaeaea);
+      background-image: -ms-linear-gradient(#fafafa,#eaeaea);
+      background-image: linear-gradient(#fafafa,#eaeaea);
+    }
   }
 }
 

@@ -151,14 +151,13 @@ $(document).ready(function() {
   | Comparisons     |
   `----------------*/
 
-  function sortProperties(elem) {
-    $('.property').each(function(index, element) {
-      if ((index % 2) !== 1) {
-        $(element).css('clear', 'both');
-      } else {
-        $(element).css('clear', 'none');
-      }
-    });
+  function displayComparison() {
+    $('.properties').toggleClass('compared');
+    if (elem.checked) {
+      $('.property .infinit').show();
+    } else {
+      $('.property .infinit').hide();
+    }
   }
 
   if ($('body').hasClass('doc_comparison')) {
@@ -166,12 +165,7 @@ $(document).ready(function() {
     var switcher = new Switchery(elem, { color: "#252d3b"});
 
     elem.onchange = function() {
-      $('.properties').toggleClass('compared');
-      if (elem.checked) {
-        $('.property .infinit').show();
-      } else {
-        $('.property .infinit').hide();
-      }
+      displayComparison();
     };
 
     $('.open-popup').magnificPopup({
@@ -192,6 +186,8 @@ $(document).ready(function() {
 
       $('#slack').show();
     }
+
+    displayComparison();
   }
 
 });
