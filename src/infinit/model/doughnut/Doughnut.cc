@@ -63,7 +63,8 @@ namespace infinit
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
       {
-        this->_local->initialize();
+        if (this->_local)
+          this->_local->initialize();
       }
 
       Doughnut::Doughnut(Address id,
