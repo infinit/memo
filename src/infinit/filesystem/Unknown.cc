@@ -81,10 +81,15 @@ namespace infinit
                      this->_parent->_files.end());
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::directory, address));
+      elle::SafeFinally revert([&] {
+          this->_parent->_files.erase(this->_name);
+          this->_owner.unchecked_remove(address);
+      });
       this->_parent->write(
         *_owner.block_store(),
         {OperationType::insert, this->_name, EntryType::directory, address},
         parent_block, true);
+      revert.abort();
     }
 
     std::unique_ptr<rfs::Handle>
@@ -96,8 +101,8 @@ namespace infinit
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
         ELLE_WARN("File %s exists where it should not", _name);
-        auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
-        return f->open(flags, mode);
+        File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
+        return f.open(flags, mode);
       }
       auto parent_block = this->_owner.block_store()->fetch(_parent->address());
       _owner.ensure_permissions(*parent_block, true, true);
@@ -122,12 +127,13 @@ namespace infinit
           }
       });
       FileData fd(b->address(), mode & 0700);
+      if (_parent->inherit_auth())
       {
         umbrella([&] { dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
           dynamic_cast<ACLBlock&>(*b));
         });
       }
-      fd.write(*_owner.block_store(), b);
+      fd.write(*_owner.block_store(), WriteTarget::all, b, true);
       std::unique_ptr<rfs::Handle> handle(
         new FileHandle(*_owner.block_store(), fd, true, true, true));
       remove_from_parent.abort();
@@ -152,7 +158,6 @@ namespace infinit
       _parent->write(*_owner.block_store(),
                      Operation{OperationType::insert, _name, EntryType::symlink, addr},
                      DirectoryData::null_block, true);
-      _remove_from_cache();
     }
 
     void

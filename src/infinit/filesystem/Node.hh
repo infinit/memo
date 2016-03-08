@@ -28,9 +28,9 @@ namespace infinit
     {
     public:
       typedef infinit::serialization_tag serialization_tag;
-      boost::filesystem::path full_path();
       void fetch() {_fetch();}
       void commit() {_commit();}
+      boost::filesystem::path full_path() { return {};}
     protected:
       Node(FileSystem& owner,
            model::Address address,
@@ -51,7 +51,6 @@ namespace infinit
       void removexattr(std::string const& k);
       void set_permissions(std::string const& flags,
         std::string const& userkey, Address self_address);
-      void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
       virtual void _fetch() = 0;
       virtual void _commit() = 0;
       virtual FileHeader& _header() = 0;

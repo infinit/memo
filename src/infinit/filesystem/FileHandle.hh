@@ -59,7 +59,7 @@ namespace infinit
         bool new_block;
         reactor::Barrier ready;
       };
-      void _commit_first(bool final_flush);
+      void _commit_first();
       void _commit_all();
       bool _flush_block(int id);
       void _prefetch(int idx);
@@ -75,7 +75,6 @@ namespace infinit
       FileData _file;
       std::vector<reactor::Thread::unique_ptr> _flushers;
       std::unordered_map<int, CacheEntry> _blocks;
-      std::unique_ptr<MutableBlock> _first_block;
       bool _first_block_new;
       bool _fat_changed;
       int _prefetchers_count; // number of running prefetchers

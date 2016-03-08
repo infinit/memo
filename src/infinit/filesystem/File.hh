@@ -24,6 +24,7 @@ namespace infinit
       public:
         File(FileSystem& owner,
              Address address,
+             std::shared_ptr<FileData> data,
              std::shared_ptr<DirectoryData> parent,
              std::string const& name);
         ~File();
@@ -61,7 +62,7 @@ namespace infinit
         friend class Node;
 
         std::unique_ptr<ACLBlock> _first_block;
-        ELLE_ATTRIBUTE_R(std::unique_ptr<FileData>, filedata);
+        ELLE_ATTRIBUTE_R(std::shared_ptr<FileData>, filedata);
 
       void _ensure_first_block();
       void _fetch() override;

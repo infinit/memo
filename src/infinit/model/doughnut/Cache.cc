@@ -363,7 +363,7 @@ namespace infinit
                   }
                 }
                 else
-                  ELLE_WARN("Nonmutable block in Cache");
+                  ELLE_WARN("Nonmutable block %f in Cache", address);
               }
             }
             reactor::sleep(

@@ -62,39 +62,54 @@ namespace infinit
       , _single_mount(false)
       , _volume_name(volume_name)
       , _state_dir(state_dir)
+      , _root_address(Address::null)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());
       auto passport = dht.passport();
       this->_read_only = !passport.allow_write();
       this->_network_name = passport.network();
-#ifndef INFINIT_WINDOWS
-      reactor::scheduler().signal_handle
-        (SIGUSR1, [this] { this->print_cache_stats();});
-#endif
+    }
+
+    void
+    FileSystem::filesystem(reactor::filesystem::FileSystem* fs)
+    {
+      this->_filesystem = fs;
+      fs->full_tree(false);
+    }
+
+    reactor::filesystem::FileSystem*
+    FileSystem::filesystem()
+    {
+      return _filesystem;
+    }
+    void
+    unchecked_remove(model::Model& model, model::Address address)
+    {
+      try
+      {
+        model.remove(address);
+      }
+      catch (model::MissingBlock const&)
+      {
+        ELLE_DEBUG("%s: block %f was not published", model, address);
+      }
+      catch (elle::Exception const& e)
+      {
+        ELLE_ERR("%s: unexpected exception: %s", model, e.what());
+        throw;
+      }
+      catch (...)
+      {
+        ELLE_ERR("%s: unknown exception", model);
+        throw;
+      }
     }
 
     void
     FileSystem::unchecked_remove(model::Address address)
     {
-      try
-      {
-        _block_store->remove(address);
-      }
-      catch (model::MissingBlock const&)
-      {
-        ELLE_DEBUG("%s: block was not published", *this);
-      }
-      catch (elle::Exception const& e)
-      {
-        ELLE_ERR("%s: unexpected exception: %s", *this, e.what());
-        throw;
-      }
-      catch (...)
-      {
-        ELLE_ERR("%s: unknown exception", *this);
-        throw;
-      }
+      filesystem::unchecked_remove(*block_store(), address);
     }
 
     void
@@ -112,7 +127,7 @@ namespace infinit
                              model::StoreMode mode,
                              std::unique_ptr<model::ConflictResolver> resolver)
     {
-      ELLE_TRACE_SCOPE("%s: store or die: %s", *this, *block);
+      ELLE_TRACE_SCOPE("%s: store or die: %s", this, block);
       auto address = block->address();
       try
       {
@@ -138,13 +153,14 @@ namespace infinit
     }
 
     std::unique_ptr<model::blocks::Block>
-    FileSystem::fetch_or_die(model::Address address,
-                             boost::optional<int> local_version,
-                             Node* node)
+    fetch_or_die(model::Model& model,
+                 model::Address address,
+                 boost::optional<int> local_version,
+                 Node* node)
     {
       try
       {
-        return this->_block_store->fetch(address, std::move(local_version));
+        return model.fetch(address, std::move(local_version));
       }
       catch(reactor::Terminate const& e)
       {
@@ -158,9 +174,7 @@ namespace infinit
       catch (model::MissingBlock const& mb)
       {
         ELLE_WARN("data not found fetching \"/%s\": %s",
-                  node ? node->full_path().string() : "", mb);
-        if (node)
-          node->_remove_from_cache();
+                  "", mb);
         throw rfs::Error(EIO, elle::sprintf("%s", mb));
       }
       catch (elle::serialization::Error const& se)
@@ -179,6 +193,13 @@ namespace infinit
         throw rfs::Error(EIO, e.what());
       }
     }
+    std::unique_ptr<model::blocks::Block>
+    FileSystem::fetch_or_die(model::Address address,
+                             boost::optional<int> local_version,
+                             Node* node)
+    {
+      return filesystem::fetch_or_die(*this->block_store(), address, local_version, node);
+    }
 
     std::unique_ptr<model::blocks::MutableBlock>
     FileSystem::unchecked_fetch(model::Address address)
@@ -193,21 +214,6 @@ namespace infinit
         ELLE_WARN("Unexpected storage result: %s", mb);
       }
       return {};
-    }
-
-    void
-    FileSystem::print_cache_stats()
-    {
-      auto root = std::dynamic_pointer_cast<Directory>(filesystem()->path("/"));
-      CacheStats stats;
-      memset(&stats, 0, sizeof(CacheStats));
-      root->cache_stats(stats);
-      std::cerr << "Statistics:\n"
-      << stats.directories << " dirs\n"
-      << stats.files << " files\n"
-      << stats.blocks <<" blocks\n"
-      << stats.size << " bytes"
-      << std::endl;
     }
 
     std::unique_ptr<MutableBlock>
@@ -283,6 +289,7 @@ namespace infinit
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }
+              _root_address = mb->address();
               on_root_block_create();
               return mb;
             }
@@ -295,6 +302,7 @@ namespace infinit
         boost::filesystem::ofstream ofs(*root_cache);
         elle::fprintf(ofs, "%x", addr);
       }
+      _root_address = addr;
       return elle::cast<MutableBlock>::runtime(fetch_or_die(addr));
     }
 
@@ -364,17 +372,32 @@ namespace infinit
     std::shared_ptr<reactor::filesystem::Path>
     FileSystem::path(std::string const& path)
     {
+      if (_root_address == Address::null)
+        _root_block();
       ELLE_ASSERT(!path.empty() && path[0] == '/');
       std::vector<std::string> components;
       boost::algorithm::split(components, path, boost::algorithm::is_any_of("/"));
+      ELLE_DEBUG("%s: get %s (%s)", this, path, components);
+      ELLE_ASSERT_EQ(components.front(), "");
       auto d = get(_root_address);
-      for (int i=0; i< signed(components.size()) - 1; ++i)
+      std::shared_ptr<DirectoryData> dp;
+      for (int i=1; i< signed(components.size()) - 1; ++i)
       {
+        if (components[i].empty())
+          continue;
         auto const& files = d->files();
         auto it = files.find(components[i]);
         if (it == files.end() || it->second.first != EntryType::directory)
+        {
+          ELLE_DEBUG("%s: component '%s' is not a directory", this, components[i]);
           THROW_NOTDIR;
+        }
+        dp = d;
         d = get(it->second.second);
+      }
+      if (components.back().empty())
+      {
+        return std::shared_ptr<rfs::Path>(new Directory(*this, d, dp, components.back()));
       }
       auto const& files = d->files();
       auto it = files.find(components.back());
@@ -386,7 +409,41 @@ namespace infinit
       case EntryType::symlink:
         return std::shared_ptr<rfs::Path>(new Symlink(*this, it->second.second, d, components.back()));
       case EntryType::file:
-        return std::shared_ptr<rfs::Path>(new File(*this, it->second.second, d, components.back()));
+        {
+          static elle::Bench bench_hit("bench.filesystem.filecache.hit", 1000_sec);
+          ELLE_DEBUG("fetching %f from file cache", it->second.second);
+          auto fit = _file_cache.find(it->second.second);
+          boost::optional<int> version;
+          if (fit != _file_cache.end())
+            version = (*fit)->block_version();
+          auto block = fetch_or_die(it->second.second, version);
+          fit = _file_cache.find(it->second.second);
+          std::shared_ptr<FileData> fd;
+          bench_hit.add(block ? 0 : 1);
+          std::pair<bool, bool> perms;
+          if (block)
+            perms = get_permissions(*block);
+          if (!block)
+          {
+           
+            fd = *fit;
+            _file_cache.modify(fit,
+              [](std::shared_ptr<FileData>& d) {d->_last_used = now();});
+          }
+          else if (fit != _file_cache.end())
+          {
+            fd = *fit;
+            _file_cache.modify(fit,
+              [](std::shared_ptr<FileData>& d) {d->_last_used = now();});
+            (*fit)->update(*block, perms);
+          }
+          else
+          {
+            fd = std::make_shared<FileData>(*block, perms);
+            _file_cache.insert(fd);
+          }
+        return std::shared_ptr<rfs::Path>(new File(*this, it->second.second, fd, d, components.back()));
+        }
       case EntryType::directory:
         {
           auto dd = get(it->second.second);
@@ -399,28 +456,35 @@ namespace infinit
     std::shared_ptr<DirectoryData>
     FileSystem::get(model::Address address)
     {
+      ELLE_DEBUG("%s: getting directory at %s", this, address);
+      static elle::Bench bench_hit("bench.filesystem.dircache.hit", 1000_sec);
       boost::optional<int> version;
       auto it = _directory_cache.find(address);
       if (it != _directory_cache.end())
         version = (*it)->block_version();
       auto block = _block_store->fetch(address, version); //invalidates 'it'
       it = _directory_cache.find(address);
+      std::pair<bool, bool> perms;
+      if (block)
+        perms = get_permissions(*block);
       if (!block)
       {
+        bench_hit.add(1);
         ELLE_ASSERT(it != _directory_cache.end());
         _directory_cache.modify(it,
           [](std::shared_ptr<DirectoryData>& d) {d->_last_used = now();});
         return *it;
       }
+      bench_hit.add(0);
       if (it != _directory_cache.end())
       {
         _directory_cache.modify(it,
           [](std::shared_ptr<DirectoryData>& d) {d->_last_used = now();});
-        (*it)->update(*block);
+        (*it)->update(*block, perms);
       }
       else
       {
-        auto dd = std::make_shared<DirectoryData>(*block);
+        auto dd = std::make_shared<DirectoryData>(*block, perms);
         _directory_cache.insert(dd);
         return dd;
       }

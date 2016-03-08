@@ -33,6 +33,10 @@ namespace infinit
       , _file(data)
       , _dirty(dirty)
       , _writable(writable)
+      , _first_block_new(false)
+      , _fat_changed(false)
+      , _prefetchers_count(0)
+      , _last_read_block(0)
     {
     }
 
@@ -203,6 +207,8 @@ namespace infinit
       }
       this->_file._header.size = std::max(this->_file._header.size,
                                             uint64_t(offset + size));
+      // In case we skipped embeded first block, fill it
+      this->_file._data.size(default_first_block_size);
       offset -= default_first_block_size;
       uint64_t const block_size = this->_file._header.block_size;
       int const start_block = offset / block_size;
@@ -280,9 +286,57 @@ namespace infinit
     }
 
     void
-    FileHandle::ftruncate(off_t offset)
+    FileHandle::ftruncate(off_t new_size)
     {
-      //FIXME implement
+      off_t current = _file._header.size;
+      if (new_size == signed(current))
+        return;
+      if (new_size > signed(current))
+      {
+        char buf[16384] = {0};
+        while (current < new_size)
+        {
+          auto nsz = std::min(off_t(16384), new_size - current);
+          current += write(elle::WeakBuffer(buf, nsz), nsz, current);
+        }
+        return;
+      }
+      uint64_t first_block_size = _file._data.size();
+      for (int i = _file._fat.size()-1; i >= 0; --i)
+      {
+        auto offset = first_block_size + i * _file._header.block_size;
+        if (signed(offset) >= new_size)
+        {
+          // kick the block
+          unchecked_remove(_model, _file._fat[i].first);
+          _file._fat.pop_back();
+          _blocks.erase(i);
+        }
+        else if (signed(offset + _file._header.block_size) >= new_size)
+        { // truncate the block
+          auto targetsize = new_size - offset;
+          auto it = _blocks.find(i);
+          if (it != _blocks.end())
+          {
+            auto data = it->second.block;
+            data->size(targetsize);
+            it->second.dirty = true;
+          }
+          else
+          {
+            auto buf = _block_at(i, true);
+            if (buf->size() != targetsize)
+            {
+              buf->size(targetsize);
+            }
+            _blocks.at(i).dirty = true;
+          }
+        }
+      }
+      if (new_size < signed(_file._data.size()))
+        _file._data.size(new_size);
+      this->_file._header.size = new_size;
+      _fat_changed = true;
     }
 
     void
@@ -325,7 +379,6 @@ namespace infinit
       bool is_new = false;
       if (_file._fat[index].first == Address::null)
       {
-        ELLE_ASSERT(_first_block);
         b = std::make_shared<elle::Buffer>();
         is_new = true;
       }
@@ -406,18 +459,24 @@ namespace infinit
       }, true);
     }
     void
+    FileHandle::_commit_first()
+    {
+      _file.write(_model, WriteTarget::data | WriteTarget::times,
+                  DirectoryData::null_block, _first_block_new);
+      _first_block_new = false;
+    }
+    void
     FileHandle::_commit_all()
     {
       ELLE_TRACE_SCOPE("%s: commit all", this);
       if (!check_cache(0))
       {
         ELLE_DEBUG_SCOPE(
-          "store first block: %s with payload %s, fat %s, total_size %s",
-          this->_first_block,
+          "store first block with payload %s, fat %s, total_size %s",
           this->_file._data.size(),
           this->_file._fat,
           this->_file._header.size);
-        this->_commit_first(true);
+        this->_commit_first();
       }
     }
     bool
@@ -531,8 +590,9 @@ namespace infinit
       bool prev = this->_fat_changed;
       if (this->_fat_changed)
       {
-        ELLE_DEBUG_SCOPE("FAT changed, commit first block");
-        this->_commit_first(cache_size == 0);
+        ELLE_DEBUG_SCOPE("FAT with %s entries changed, commit first block",
+                         this->_file._fat.size());
+        this->_commit_first();
         _first_block_new = false;
         _fat_changed = false;
       }

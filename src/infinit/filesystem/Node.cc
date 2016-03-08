@@ -84,7 +84,6 @@ namespace infinit
     void
     Node::rename(boost::filesystem::path const& where)
     {
-      boost::filesystem::path current = full_path();
       std::string newname = where.filename().string();
       boost::filesystem::path newpath = where.parent_path();
       if (!_parent)
@@ -136,6 +135,7 @@ namespace infinit
         auto wm = acl->get_world_permissions();
         wm.first = mode & 4;
         wm.second = mode & 2;
+        ELLE_DEBUG("setting world permissions to %s,%s", wm.first, wm.second);
         acl->set_world_permissions(wm.first, wm.second);
       }
       _commit();
@@ -195,7 +195,6 @@ namespace infinit
       {
         auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
           this->_owner.block_store());
-        auto block = this->_header_block();
         if (*special == "block.nodes")
         {
           auto ids = elle::serialization::json::deserialize<
@@ -220,6 +219,7 @@ namespace infinit
         }
         if (special->find("auth_others") == 0)
         {
+          auto block = this->_header_block();
           bool r = v.find("r") != std::string::npos;
           bool w = v.find("w") != std::string::npos;
           umbrella([&] {
@@ -365,7 +365,7 @@ namespace infinit
       st->st_blocks = _header().size / 512;
       #endif
       auto h = this->_header();
-      st->st_mode  = 0600;
+      st->st_mode  = h.mode;
       st->st_size  = h.size;
       st->st_atime = h.atime;
       st->st_mtime = h.mtime;
@@ -377,8 +377,8 @@ namespace infinit
       #else
         getuid();
       #endif
-      auto block = _header_block();
-      if (!acl_preserver || !block)
+      _fetch();
+      if (!acl_preserver)
         st->st_gid   =
       #ifdef INFINIT_WINDOWS
         0;
@@ -387,6 +387,7 @@ namespace infinit
       #endif
       else
       {
+        auto block = _header_block();
         acl_save[gid_position] = block->clone();
         dynamic_cast<model::blocks::MutableBlock*>(acl_save[gid_position].get())
           ->data(elle::Buffer());
@@ -394,19 +395,6 @@ namespace infinit
         gid_position = (gid_position + 1) % gid_count;
       }
       st->st_dev = 1;
-      if (block)
-      {
-        auto wp = block->get_world_permissions();
-        if (wp.first)
-          st->st_mode |= 4;
-        if (wp.second)
-          st->st_mode |= 2;
-      }
-      std::pair<bool, bool> perms = _owner.get_permissions(*block);
-      if (!perms.first)
-        st->st_mode &= ~0400;
-      if (!perms.second)
-        st->st_mode &= ~0200;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
     }
 

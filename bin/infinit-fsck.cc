@@ -275,7 +275,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
         catch (...)
         {
           auto b = dn->fetch(a);
-          ifs::DirectoryData d(*b);
+          ifs::DirectoryData d(*b, {true, true});
           header = d.header();
         }
         if (header.mode & S_IFDIR)
@@ -284,11 +284,12 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
           try
           {
             auto b = dn->fetch(a);
-            auto dd = std::make_shared<ifs::DirectoryData>(*b);
-            ifs::Directory d(*dn, dd, nullptr, "");
+            auto dd = std::make_shared<ifs::DirectoryData>(*b,
+              std::make_pair(true, true));
+            ifs::Directory d(*fs, dd, nullptr, "");
             bool dchange = false;
             d.fetch();
-            auto files = d.files();
+            auto files = d.data()->files();
             for (auto f: files)
             {
               Address fa = f.second.second;

@@ -15,15 +15,6 @@ namespace infinit
     typedef std::shared_ptr<Directory> DirectoryPtr;
     typedef infinit::model::blocks::ACLBlock ACLBlock;
 
-    struct CacheStats
-    {
-      int directories;
-      int files;
-      int blocks;
-      long size;
-    };
-
-
     static const int DIRECTORY_MASK = 0040000;
     static const int SYMLINK_MASK = 0120000;
     static const boost::posix_time::time_duration directory_cache_time
@@ -76,7 +67,6 @@ namespace infinit
       removexattr(std::string const& name) override;
 
     public:
-      void cache_stats(CacheStats& append);
       void serialize(elle::serialization::Serializer&);
       bool allow_cache() override { return false;}
 
@@ -112,7 +102,6 @@ namespace infinit
         std::weak_ptr<Directory> wd);
       void _commit(Operation op, bool set_mtime = false);
       void _push_changes(Operation op, bool first_write = false);
-      void _prefetch();
       friend class FileSystem;
       ELLE_ATTRIBUTE_R(std::shared_ptr<DirectoryData>, data);
       ELLE_ATTRIBUTE(std::unique_ptr<ACLBlock>, block);

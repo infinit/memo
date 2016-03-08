@@ -1,5 +1,7 @@
 #include <infinit/filesystem/File.hh>
 
+#include <pair>
+
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
@@ -121,9 +123,11 @@ namespace infinit
 
     File::File(FileSystem& owner,
              Address address,
+             std::shared_ptr<FileData> data,
              std::shared_ptr<DirectoryData> parent,
              std::string const& name)
       : Node(owner, address, parent, name)
+      , _filedata(data)
     {}
 
     File::~File()
@@ -151,33 +155,32 @@ namespace infinit
     void
     File::_fetch()
     {
-      // FIXME simplify
-      if (this->_first_block)
-      {
-        ELLE_LOG("multiple fetch called: %s", elle::Backtrace::current());
+      if (this->_filedata)
         return;
-      }
-      if (!this->_first_block)
-        this->_first_block = std::dynamic_pointer_cast<ACLBlock>(
-          this->_owner.fetch_or_die(_address, {}, this));
-      else
-      {
-        auto res = elle::cast<ACLBlock>::runtime(
-          this->_owner.fetch_or_die(_address, _first_block->version(), this));
-        if (res)
-          this->_first_block = std::move(res);
-        else
-          return;
-      }
+      this->_first_block = std::dynamic_pointer_cast<ACLBlock>(
+        this->_owner.fetch_or_die(_address, {}, this));
+      
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
       });
-      _filedata = elle::make_unique<FileData>(*_first_block);
+      auto perms = _owner.get_permissions(*_first_block);
+      _filedata = std::make_shared<FileData>(*_first_block, perms);
       remove_undecoded_first_block.abort();
     }
 
-    FileData::FileData(Block& block)
+    FileData::FileData(Block& block, std::pair<bool, bool> perms)
+    : _address(block.address())
     {
+      update(block, perms);
+      _last_used = FileSystem::now();
+    }
+    void
+    FileData::update(Block& block, std::pair<bool, bool> perms)
+    {
+      this->_block_version = dynamic_cast<ACLBlock&>(block).version();
+      ELLE_DEBUG("%s: updating from %f ver=%s, worldperm=%s",
+                 this, block.address(), _block_version,
+                 dynamic_cast<ACLBlock&>(block).get_world_permissions());
       bool empty;
       elle::IOStream is(
         umbrella([&] {
@@ -196,6 +199,8 @@ namespace infinit
       elle::serialization::binary::SerializerIn input(is);
       try
       {
+        _fat.clear();
+        _header.xattrs.clear();
         input.serialize("header", _header);
         input.serialize("fat", _fat);
         input.serialize("data", _data);
@@ -205,12 +210,97 @@ namespace infinit
         ELLE_WARN("File deserialization error: %s", e);
         throw rfs::Error(EIO, e.what());
       }
+      _header.mode &= ~606;
+      auto& ablock = dynamic_cast<ACLBlock&>(block);
+      auto wp = ablock.get_world_permissions();
+      if (wp.first)
+        _header.mode |= 4;
+      if (wp.second)
+        _header.mode |= 2;
+      if (perms.first)
+        _header.mode |= 0400;
+      if (perms.second)
+        _header.mode |= 0200;
+      ELLE_DEBUG("%s: updated from %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s worldperms=%s",
+                 this, _address, _header.size, _header.links, _fat.size(), _data.size(), wp);
+    }
+
+    FileData::FileData(Address address, int mode)
+    {
+      _address = address;
+      _block_version = -1;
+      _last_used = FileSystem::now();
+      _header = FileHeader { 0, 1, S_IFREG | mode,
+        time(nullptr), time(nullptr), time(nullptr),
+        File::default_block_size
+      };
+    }
+
+    void
+    FileData::merge(const FileData& previous, WriteTarget target)
+    {
+      if (! (target & WriteTarget::perms))
+      {
+        _header.mode = previous._header.mode;
+        _header.uid = previous._header.uid;
+        _header.gid = previous._header.gid;
+      }
+      if (! (target & WriteTarget::links))
+      {
+        _header.links = previous._header.links;
+      }
+      if (! (target & WriteTarget::data))
+      {
+        _header.size = previous._header.size;
+        _header.block_size = previous._header.block_size;
+        _fat = previous._fat;
+        _data = elle::Buffer(previous._data.contents(), previous._data.size());
+      }
+      if (! (target & WriteTarget::times))
+      {
+        _header.atime = previous._header.atime;
+        _header.mtime = previous._header.mtime;
+        _header.ctime = previous._header.ctime;
+      }
+      if (! (target & WriteTarget::xattrs))
+      {
+        _header.xattrs = previous._header.xattrs;
+      }
+      if (! (target & WriteTarget::symlink))
+      {
+        _header.symlink_target = previous._header.symlink_target;
+      }
     }
 
     void
     FileData::write(model::Model& model,
+                    WriteTarget target,
                     std::unique_ptr<ACLBlock>& block, bool first_write)
     {
+      ELLE_DEBUG("%s: write at %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s",
+                 this, _address,
+                 _header.size, _header.links, _fat.size(), _data.size());
+      bool block_allocated = !block;
+      if (!block)
+      {
+        try
+        {
+          block = elle::cast<ACLBlock>::runtime(model.fetch(_address));
+        }
+        catch (model::MissingBlock const&)
+        {
+          ELLE_WARN("%s: unable to commit as file was deleted", this);
+          return;
+        }
+      }
+      if (!block->data().empty())
+      {
+        FileData previous(*block, {true, true});
+        merge(previous, target);
+        ELLE_DEBUG("%s: post-merge write %f: sz=%s, links=%s, fatsize=%s, worldperm=%s version=%s", this, _address,
+                   _header.size, _header.links, _fat.size(), block->get_world_permissions(),
+                   block->version());
+      }
       elle::Buffer serdata;
       {
         elle::IOStream os(serdata.ostreambuf());
@@ -221,9 +311,9 @@ namespace infinit
       }
       try
       {
-        if (block)
+        block->data(serdata);
+        if (!block_allocated)
         {
-          block->data(serdata);
           model.store(*block,
                       first_write ? model::STORE_INSERT : model::STORE_UPDATE,
                       elle::make_unique<FileConflictResolver>(
@@ -232,9 +322,7 @@ namespace infinit
         }
         else
         {
-          auto b = elle::cast<ACLBlock>::runtime(model.fetch(_address));
-          b->data(serdata);
-          model.store(std::move(b),
+          model.store(std::move(block),
                       first_write ? model::STORE_INSERT : model::STORE_UPDATE,
                       elle::make_unique<FileConflictResolver>(
                         boost::filesystem::path(),
@@ -263,9 +351,8 @@ namespace infinit
     void
     File::_commit()
     {
-      ELLE_ASSERT(this->_first_block);
       ELLE_ASSERT(this->_filedata);
-      _filedata->write(*_owner.block_store(), _first_block);
+      _filedata->write(*_owner.block_store(), WriteTarget::all, _first_block);
     }
 
     void
@@ -273,6 +360,7 @@ namespace infinit
     {
       if (this->_first_block)
         return;
+      this->_filedata.reset();
      _fetch();
     }
 
@@ -403,13 +491,17 @@ namespace infinit
       for (int i = _filedata->_fat.size()-1; i >= 0; --i)
       {
         auto offset = first_block_size + i * _filedata->_header.block_size;
+        ELLE_DEBUG("considering %s: [%s, %s]", i,
+          offset, offset + _filedata->_header.block_size);
         if (signed(offset) >= new_size)
         { // kick the block
+          ELLE_DEBUG("removing %f", _filedata->_fat[i].first);
           _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat.pop_back();
         }
         else if (signed(offset + _filedata->_header.block_size) >= new_size)
         { // maybe truncate the block
+          ELLE_DEBUG("truncating %f", _filedata->_fat[i].first);
           auto targetsize = new_size - offset;
           cryptography::SecretKey sk(_filedata->_fat[i].second);
           auto block = _owner.fetch_or_die(_filedata->_fat[i].first);
@@ -442,9 +534,13 @@ namespace infinit
       if (_owner.read_only() && needw)
         throw rfs::Error(EACCES, "Access denied.");
       if (flags & O_TRUNC)
+      {
         truncate(0);
+        _fetch();
+      }
       else
       {
+        _ensure_first_block();
         _owner.ensure_permissions(*_first_block.get(), needr, needw);
       }
       return umbrella([&] {
@@ -459,7 +555,7 @@ namespace infinit
       if (flags & O_TRUNC)
         truncate(0);
       _fetch();
-      ELLE_DEBUG("Forcing entry %s", full_path());
+      //ELLE_DEBUG("Forcing entry %s", full_path());
       return std::unique_ptr<rfs::Handle>(
         new FileHandle(*_owner.block_store(), *_filedata, true));
     }
@@ -467,6 +563,7 @@ namespace infinit
     model::blocks::ACLBlock*
     File::_header_block()
     {
+      _ensure_first_block();
       return dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
     }
 
@@ -506,7 +603,7 @@ namespace infinit
         }
         else if (*special == "auth")
         {
-          _fetch();
+          _ensure_first_block();
           return perms_to_json(*_owner.block_store(), dynamic_cast<ACLBlock&>(*_first_block));
         }
       }

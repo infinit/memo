@@ -45,10 +45,10 @@ namespace infinit
     public:
       using clock = std::chrono::high_resolution_clock;
       static std::unique_ptr<model::blocks::ACLBlock> null_block;
-      DirectoryData(Block& block);
+      DirectoryData(Block& block, std::pair<bool, bool> perms);
       DirectoryData(model::Address address);
       void
-      update(model::blocks::Block& block);
+      update(model::blocks::Block& block, std::pair<bool, bool> perms);
       void
       write(model::Model& model,
             Operation op,
@@ -59,6 +59,7 @@ namespace infinit
       _prefetch(model::Model& model, std::shared_ptr<DirectoryData> self);
       void
       serialize(elle::serialization::Serializer&);
+      typedef infinit::serialization_tag serialization_tag;
       ELLE_ATTRIBUTE_R(model::Address, address);
       ELLE_ATTRIBUTE_R(int, block_version);
       typedef elle::unordered_map<std::string, std::pair<EntryType, model::Address>> Files;
@@ -81,20 +82,54 @@ namespace infinit
                                  Operation op,
                                  Address address);
     };
+    enum class WriteTarget
+    {
+      perms = 1,
+      links = 2,
+      data = 4,
+      times = 8,
+      xattrs = 16,
+      symlink = 32,
+      all = 255,
+    };
+    inline
+    bool
+    operator &(WriteTarget const& l, WriteTarget const& r)
+    {
+      typedef std::underlying_type<WriteTarget>::type ut;
+      return static_cast<ut>(l) & static_cast<ut>(r);
+    }
+    inline
+    WriteTarget 
+    operator |(WriteTarget const& l, WriteTarget const& r)
+    {
+      typedef std::underlying_type<WriteTarget>::type ut;
+      return static_cast<WriteTarget>(
+        static_cast<ut>(l) | static_cast<ut>(r));
+    }
     class FileData
     {
     public:
-      FileData(Block& block);
+      using clock = std::chrono::high_resolution_clock;
+      FileData(Block& block, std::pair<bool, bool> perms);
       FileData(model::Address address, int mode);
       void
+      update(model::blocks::Block& block, std::pair<bool, bool> perms);
+      void
       write(model::Model& model,
+            WriteTarget target = WriteTarget::all,
             std::unique_ptr<ACLBlock>&block = DirectoryData::null_block,
             bool first_write = false);
+      void
+      merge(const FileData& previous, WriteTarget target);
       ELLE_ATTRIBUTE_R(model::Address, address);
+      ELLE_ATTRIBUTE_R(int, block_version);
+      ELLE_ATTRIBUTE_R(clock::time_point, last_used);
       ELLE_ATTRIBUTE_R(FileHeader, header);
       typedef std::pair<Address, std::string> FatEntry; // (address, key)
       ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       ELLE_ATTRIBUTE_R(elle::Buffer, data);
+      friend class FileSystem;
       friend class File;
       friend class FileHandle;
     };
@@ -122,8 +157,6 @@ namespace infinit
       FileSystem(std::string const& volume_name,
                  std::shared_ptr<infinit::model::Model> model,
                  boost::optional<boost::filesystem::path> state_dir = {});
-      void
-      print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
       path(std::string const& path) override;
 
@@ -153,6 +186,8 @@ namespace infinit
       boost::signals2::signal<void()> on_root_block_create;
       std::shared_ptr<DirectoryData>
       get(model::Address address);
+      void filesystem(reactor::filesystem::FileSystem* fs) override;
+      reactor::filesystem::FileSystem* filesystem();
     private:
       std::unique_ptr<model::blocks::MutableBlock> _root_block();
       ELLE_ATTRIBUTE_R(std::shared_ptr<infinit::model::Model>, block_store);
@@ -169,13 +204,26 @@ namespace infinit
           bmi::hashed_unique<
             bmi::const_mem_fun<
               DirectoryData,
-              Address const&, &DirectoryData::address> >,
+              Address const&, &DirectoryData::address>>,
           bmi::ordered_non_unique<
             bmi::const_mem_fun<
               DirectoryData,
-              clock::time_point const&, &DirectoryData::last_used> >
+              clock::time_point const&, &DirectoryData::last_used>>
               > > DirectoryCache;
       ELLE_ATTRIBUTE_R(DirectoryCache, directory_cache);
+      typedef bmi::multi_index_container<
+        std::shared_ptr<FileData>,
+        bmi::indexed_by<
+          bmi::hashed_unique<
+            bmi::const_mem_fun<
+              FileData,
+              Address const&, &FileData::address>>,
+          bmi::ordered_non_unique<
+            bmi::const_mem_fun<
+              FileData,
+              clock::time_point const&, &FileData::last_used>>
+              > > FileCache;
+      ELLE_ATTRIBUTE_R(FileCache, file_cache);
     };
   }
 }
