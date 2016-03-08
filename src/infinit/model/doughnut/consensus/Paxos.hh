@@ -148,6 +148,9 @@ namespace infinit
             : public doughnut::Local
           {
           public:
+            typedef Paxos::PaxosClient PaxosClient;
+            typedef Paxos::PaxosServer PaxosServer;
+            typedef Paxos::Value Value;
             template <typename ... Args>
             LocalPeer(int factor, bool rebalance_auto_expand, Args&& ... args)
               : doughnut::Local(std::forward<Args>(args) ...)

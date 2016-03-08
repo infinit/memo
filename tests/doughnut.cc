@@ -916,11 +916,87 @@ namespace rebalancing
     ELLE_ATTRIBUTE_R(elle::Buffer, previous);
   };
 
+  class InstrumentedPaxosLocal:
+    public dht::consensus::Paxos::LocalPeer
+  {
+  public:
+    typedef dht::consensus::Paxos::LocalPeer Super;
+    typedef infinit::model::Address Address;
+
+    template <typename ... Args>
+    InstrumentedPaxosLocal(Args&& ... args)
+      : Super(std::forward<Args>(args)...)
+      , _all_operations()
+    {
+      this->_all_operations.open();
+    }
+
+
+    virtual
+    boost::optional<PaxosClient::Accepted>
+    propose(PaxosServer::Quorum peers,
+            Address address,
+            PaxosClient::Proposal const& p) override
+    {
+      reactor::wait(this->all_operations());
+      return Super::propose(peers, address, p);
+    }
+
+    virtual
+    PaxosClient::Proposal
+    accept(PaxosServer::Quorum peers,
+           Address address,
+           PaxosClient::Proposal const& p,
+           Value const& value) override
+    {
+      reactor::wait(this->all_operations());
+      return Super::accept(peers, address, p, value);
+    }
+
+    virtual
+    void
+    confirm(PaxosServer::Quorum peers,
+            Address address,
+            PaxosClient::Proposal const& p) override
+    {
+      reactor::wait(this->all_operations());
+      Super::confirm(peers, address, p);
+    }
+
+    ELLE_ATTRIBUTE_RX(reactor::Barrier, all_operations);
+  };
+
+  class InstrumentedPaxos:
+    public dht::consensus::Paxos
+  {
+    typedef dht::consensus::Paxos Super;
+    using Super::Super;
+    std::unique_ptr<dht::Local>
+    make_local(boost::optional<int> port,
+               std::unique_ptr<infinit::storage::Storage> storage)
+    {
+      return elle::make_unique<InstrumentedPaxosLocal>(
+        this->factor(),
+        this->rebalance_auto_expand(),
+        this->doughnut(),
+        this->doughnut().id(),
+        std::move(storage),
+        port ? port.get() : 0);
+    }
+  };
+
   ELLE_TEST_SCHEDULED(expand)
   {
-    DHT dht_a;
+    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
+      -> std::unique_ptr<dht::consensus::Consensus>
+      {
+        return elle::make_unique<InstrumentedPaxos>(
+          dht::consensus::doughnut = c->doughnut(),
+          dht::consensus::replication_factor = 3);
+      };
+    DHT dht_a(make_consensus = instrument);
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b;
+    DHT dht_b(make_consensus = instrument);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b = dht_a.dht->make_block<blocks::MutableBlock>();
     ELLE_LOG("write block to 1 node")
