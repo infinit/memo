@@ -260,8 +260,7 @@ namespace infinit
           {
             ELLE_ASSERT(member);
             res.push_back(
-              elle::make_unique<consensus::Peer>(
-                std::move(member), address));
+              elle::make_unique<Peer>(std::move(member), address));
           }
           return res;
         }
@@ -1006,12 +1005,7 @@ namespace infinit
               this->_owners(address, this->_factor, overlay::OP_FETCH);
             return fetch_from_members(peers, address, std::move(local_version));
           }
-          auto owners = this->_owners(address,
-                                      this->_factor, overlay::OP_FETCH);
-          PaxosClient::Peers peers;
-          for (auto peer: owners)
-            peers.push_back(elle::make_unique<Peer>(
-                              peer, address, local_version));
+          auto peers = this->_peers(address, local_version);
           if (peers.empty())
           {
             ELLE_TRACE("could not find any owner for %s", address);
@@ -1072,16 +1066,24 @@ namespace infinit
             }
         }
 
-        Paxos::PaxosClient
-        Paxos::_client(Address const& address)
+        Paxos::PaxosClient::Peers
+        Paxos::_peers(Address const& address,
+                      boost::optional<int> local_version)
         {
           auto owners =
             this->_owners(address, this->_factor, overlay::OP_FETCH);
           PaxosClient::Peers peers;
           for (auto peer: owners)
-            peers.push_back(elle::make_unique<Peer>(peer, address));
+            peers.push_back(
+              elle::make_unique<Peer>(peer, address, local_version));
+          return peers;
+        }
+
+        Paxos::PaxosClient
+        Paxos::_client(Address const& address)
+        {
           return Paxos::PaxosClient(
-            uid(this->doughnut().keys().K()), std::move(peers));
+            uid(this->doughnut().keys().K()), this->_peers(address));
         }
 
         std::pair<Paxos::PaxosServer::Quorum, int>

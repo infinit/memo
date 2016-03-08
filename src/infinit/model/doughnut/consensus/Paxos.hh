@@ -88,6 +88,9 @@ namespace infinit
                      PaxosClient::Quorum const& ids,
                      int version);
         private:
+          PaxosClient::Peers
+          _peers(Address const& address,
+                 boost::optional<int> local_version = {});
           PaxosClient
           _client(Address const& addr);
           std::pair<PaxosServer::Quorum, int>
