@@ -21,7 +21,7 @@
 1. Installation
 -----------------
 
-### Download and install Infinit’s dependencies
+<h3 class="skip">Download and install Infinit’s dependencies</h3>
 
 <img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE">
 
@@ -45,14 +45,14 @@
 % endif
 </div>
 
-### Download and install the Infinit command-line tools
+<h3 class="skip">Download and install the Infinit command-line tools</h3>
 
 <div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 
 <p>If you have <a href="http://brew.sh">homebrew</a>, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#mac-tarball-install">Tarball install</a>.</p>
 
-<h3 id="mac-homebrew-install">&#9679; Homebrew install</h3>
+<h3 class="skip" id="mac-homebrew-install">&#9679; Homebrew install</h3>
 
 <p>To install the command-line tools, simply run the following command:</p>
 
@@ -62,7 +62,7 @@
 
 <pre><code>$> cd /usr/local</code></pre>
 
-<h3 id="mac-tarball-install">&#9679; Tarball install</h3>
+<h3 class="skip" id="mac-tarball-install">&#9679; Tarball install</h3>
 
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
 <p>Click the link below to download the Infinit command-line tools:</p>
@@ -73,7 +73,7 @@
 % else:
 <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#linux-tarball-install">Tarball Install</a>.</p>
 
-<h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
+<h3 class="skip" id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
 <p>First import the public key used by the package management system:</p>
 <pre><code>$> sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
 Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
@@ -114,7 +114,7 @@ Setting up infinit (${tarball_version}) ...
 <pre><code>$> cd /opt/infinit
 </code></pre>
 
-<h3 id="linux-tarball-install">&#9679; Tarball Install</h3>
+<h3 class="skip" id="linux-tarball-install">&#9679; Tarball Install</h3>
 
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
 <p>Click the link below to download the Infinit command-line tools:</p>

@@ -10,7 +10,7 @@
       <a href="${route('doc_technology')}">Technology</a>
     </li>
 
-    <li class="dropdown ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
+    <li class="scroll_menu dropdown ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
       <a href="${route('doc_deployments')}">Examples <img src="${url('images/icons/caret-down.png')}" alt=""></a>
 
       <ul>
@@ -20,7 +20,7 @@
       </ul>
     </li>
 
-    <li class="${'active' if request.route.name == 'doc_reference' else ''}">
+    <li class="scroll_menu ${'active' if request.route.name == 'doc_reference' else ''}">
       <a href="${route('doc_reference')}">Reference</a>
 
       <ul>
