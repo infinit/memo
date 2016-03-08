@@ -120,7 +120,7 @@ $(document).ready(function() {
       if ($('body').hasClass('doc_get_started')) {
         anchors = $('h2, h3');
       } else {
-        anchors = $('h3');
+        anchors = $('h2');
       }
 
       $(anchors).each(function(i, anchor) {
@@ -139,7 +139,6 @@ $(document).ready(function() {
             targets = 'ul.menu li.scroll_menu ul li';
           }
 
-          console.log($(anchor));
           if (!$(anchor).hasClass('skip')) {
             $(targets).removeClass('active');
             $(targets + '.' + $(anchor).attr('id')).addClass('active');
