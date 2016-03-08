@@ -29,7 +29,7 @@ namespace infinit
                                lenient_fetch,
                                rebalance_auto_expand
                     );
-                }))
+                }, std::forward<Args>(args)...))
         {}
       }
     }
