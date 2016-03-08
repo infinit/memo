@@ -18,7 +18,7 @@ namespace infinit
               consensus::lenient_fetch = false).call(
                 [] (Doughnut& doughnut,
                     int factor,
-                    bool lenient_fetch)
+                    bool lenient_fetch) -> Paxos
                 {
                   return Paxos(doughnut, factor, lenient_fetch);
                 }))
