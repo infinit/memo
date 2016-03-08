@@ -396,7 +396,7 @@ namespace infinit
         Paxos::LocalPeer::_discovered(model::Address id)
         {
           // FIXME: also rebalance blocks on disk
-          for (auto address: this->_addresses)
+          for (auto const& address: this->_addresses)
           {
             auto quorum = address.second.paxos.current_quorum();
             if (signed(quorum.size()) < this->_factor &&
@@ -404,12 +404,25 @@ namespace infinit
             {
               ELLE_TRACE("%s: rebalance block %f to newly discovered peer %f",
                          this, address.first, id);
-              PaxosClient c(
-                this->doughnut().id(),
-                lookup_nodes(this->doughnut(), quorum, address.first));
-              quorum.insert(id);
-              // FIXME: do something in case of conflict
-              c.choose(address.second.paxos.current_version() + 1, quorum);
+              ELLE_DEBUG("elect new quorum")
+              {
+                PaxosClient c(
+                  this->doughnut().id(),
+                  lookup_nodes(this->doughnut(), quorum, address.first));
+                quorum.insert(id);
+                // FIXME: do something in case of conflict
+                c.choose(address.second.paxos.current_version() + 1, quorum);
+              }
+              if (auto value = address.second.paxos.current_value())
+                ELLE_DEBUG("propagate block value")
+                {
+                  PaxosClient c(
+                    this->doughnut().id(),
+                    lookup_nodes(this->doughnut(), quorum, address.first));
+                  // FIXME: do something in case of conflict
+                  c.choose(address.second.paxos.current_version() + 1,
+                           value->value.get<std::shared_ptr<blocks::Block>>());
+                }
             }
           }
         }

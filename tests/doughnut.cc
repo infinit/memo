@@ -888,6 +888,34 @@ namespace rebalancing
     }
   }
 
+  class VersionHop:
+    public infinit::model::ConflictResolver
+  {
+  public:
+    VersionHop(blocks::Block& previous)
+      : _previous(previous.data())
+    {}
+
+    virtual
+    std::unique_ptr<blocks::Block>
+    operator () (blocks::Block& failed,
+                 blocks::Block& current,
+                 infinit::model::StoreMode mode) override
+    {
+      BOOST_CHECK_EQUAL(current.data(), this->_previous);
+      return failed.clone();
+    }
+
+    virtual
+    void
+    serialize(elle::serialization::Serializer& s) override
+    {
+      s.serialize("previous", this->_previous);
+    }
+
+    ELLE_ATTRIBUTE_R(elle::Buffer, previous);
+  };
+
   ELLE_TEST_SCHEDULED(expand)
   {
     DHT dht_a;
@@ -904,8 +932,9 @@ namespace rebalancing
       dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("write block to 2 nodes")
     {
+      auto resolver = elle::make_unique<VersionHop>(*b);
       b->data(std::string("expand'"));
-      dht_a.dht->store(*b, infinit::model::STORE_INSERT);
+      dht_a.dht->store(*b, infinit::model::STORE_INSERT, std::move(resolver));
     }
     auto op = infinit::overlay::OP_FETCH;
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
