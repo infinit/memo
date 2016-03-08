@@ -4,10 +4,10 @@
     "description": "",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "decentralized",
       "environment": "controlled",
-      "redundancy": "Replication",
+      "redundancy": "replication",
       "fault_tolerance": "byzantine",
       "scalability": "heterogeneous",
       "security": "In-Transit & At-Rest",
@@ -22,11 +22,11 @@
     "description": "AeroFS is an enterprise file sync & share solution deployed on the customer's infrastructure, allowing the company to keep control of its data and enabling employees to securely collaborate both inside and outside the organization.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "decentralized",
       "environment": "controlled",
       "redundancy": "None",
-      "fault_tolerance": "",
+      "fault_tolerance": "standard",
       "security": "In-Transit",
       "scalability": "none",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
@@ -38,7 +38,7 @@
     "description": "Amazon Cloud Drive is a cloud-based file sync application that works in a similar fashion to <a href='/documentation/comparison/dropbox>Dropbox</a>, allowing users to sync their files between their devices.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "Unknown (Proprietary)",
       "environment": "",
       "redundancy": "Unknown (Proprietary)",
@@ -92,7 +92,7 @@
     "description": "Bitcasa is a cloud-based file storage service founded in 2011. Bitcasa allows users to access files stored in the cloud through a file system and Web interfaces.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant file system",
+      "interface": "file system",
       "model": "Unknown (proprietary)",
       "environment": "",
       "redundancy": "Unknown (proprietary)",
@@ -106,15 +106,15 @@
     }
   },
    "bsync": {
-    "name": "BitTorent Sync",
+    "name": "BitTorent sync",
     "description": "BitTorrent Sync proprietary peer-to-peer file synchronization tool available for Windows, Mac, Linux, Android, iOS, Windows Phone and more. It can sync files between devices on a local network, or between remote devices over the Internet via a modified version of the BitTorrent protocol.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "decentralized",
       "environment": "controlled",
       "redundancy": "None",
-      "fault_tolerance": "",
+      "fault_tolerance": "standard",
       "security": "In-Transit",
       "scalability": "none",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
@@ -128,7 +128,7 @@
     "description": "Box is a cloud-based file sharing and content management service for businesses. The company offers sync clients for Windows and MacOS X along with a Web interface that is the primary way of accessing files.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "Unknown (proprietary)",
       "environment": "",
       "redundancy": "Unknown (proprietary)",
@@ -164,7 +164,7 @@
     "description": "Coda is a distributed file system developed as a research project at Carnegie Mellon University since 1987. It descended directly from an older version of Andrew File System and offers many similar features.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "distributed",
       "environment": "controlled",
       "redundancy": "replication",
@@ -182,7 +182,7 @@
     "description": "Dropbox is a cloud-based file synchronization solution. Dropbox allows users to create a special folder on their computers, which Dropbox then synchronizes so that it appears to be the same folder (with the same contents) regardless of which device is used to view it.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "Unknown (proprietary)",
       "environment": "",
       "redundancy": "Unknown (proprietary)",
@@ -200,11 +200,11 @@
     "description": "GlusterFS is a scale-out network-attached storage file system. GlusterFS was developed originally by Gluster, Inc., then by Red Hat, Inc., after their purchase of Gluster in 2011.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "decentralized",
       "environment": "controlled",
       "redundancy": "Unknown (proprietary)",
-      "fault_tolerance": "Unknown (proprietary)",
+      "fault_tolerance": "standard",
       "security": "In-Transit",
       "scalability": "",
       "interoperability": "Applications (MacOS X, Linux, NetBSD)"
@@ -236,7 +236,7 @@
     "description": "HAMMER is a high-availability 64-bit distributed file system developed for DragonFly BSD.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "distributed",
       "environment": "controlled",
       "redundancy": "replication (mirroring)",
@@ -254,7 +254,7 @@
     "description": "The Hadoop distributed file system (HDFS) is a distributed, scalable, and portable file-system written in Java for the Hadoop framework. A Hadoop cluster is composed of a single namenode plus a cluster of datanodes, although redundancy options are available for the namenode due to its criticality.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "distributed",
       "environment": "controlled",
       "redundancy": "replication",
@@ -272,7 +272,7 @@
     "description": "iCloud is a cloud-based file storage service from Apple launched on 2011. The service provides its users with means to store data such as documents, photos, and music on remote servers in a similar fashion to <a href='/documentation/comparison/dropbox>Dropbox</a>.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "Unknown (Proprietary)",
       "environment": "",
       "redundancy": "Unknown (Proprietary)",
@@ -294,7 +294,7 @@
       "model": "decentralized",
       "environment": "controlled",
       "redundancy": "none",
-      "fault_tolerance": "none",
+      "fault_tolerance": "partial",
       "security": "In-Transit & At-Rest",
       "scalability": "homogeneous",
       "interoperability": "protocol"
@@ -308,11 +308,11 @@
     "description": "Lustre is a parallel distributed file system generally used for large-scale cluster computing. Lustre provides high performance file systems for computer clusters ranging in size from small workgroup clusters to large-scale, multi-site clusters.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "distributed",
       "environment": "controlled",
       "redundancy": "none",
-      "fault_tolerance": "standard",
+      "fault_tolerance": "partial",
       "security": "none",
       "scalability": "homogeneous",
       "interoperability": "protocol"
@@ -326,7 +326,7 @@
     "description": "MooseFS is a distributed file system developed by Core Technology. MooseFS aims to be fault-tolerant, highly available, highly performing, scalable general-purpose network distributed file system for data centers.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "distributed",
       "environment": "controlled",
       "redundancy": "replication",
@@ -344,11 +344,11 @@
     "description": "Network File System (NFS) is a distributed file system protocol originally developed by Sun Microsystems in 1984, allowing a user on a client computer to access files over a computer network much like local storage is accessed.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "distributed",
       "environment": "controlled",
       "redundancy": "none",
-      "fault_tolerance": "standard",
+      "fault_tolerance": "partial",
       "security": "none",
       "scalability": "homogeneous",
       "interoperability": "protocol"
@@ -362,7 +362,7 @@
     "description": "OwnCloud is a suite of client-server software for creating and using file hosting services. OwnCloud is functionally very similar to the widely used <a href='/documentation/comparison/dropbox'>Dropbox</a>, with the primary functional difference being that OwnCloud can be installed on a private server, hence removing the limits on storage space (except for disk capacity or account quota) or the number of connected clients.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "centralized",
       "environment": "controlled",
       "redundancy": "none",
@@ -380,7 +380,7 @@
     "description": "Pydio is a open source enterprise file sharing & sync solution that is similar to <a href='/documentation/comparison/owncloud'>OwnCloud</a>. Pydio targets businesses looking for an on-premise alternative to <a href='/documentation/comparison/dropbox'>Dropbox</a>. As for OwnCloud, Pydio does not provide businesses with infrastructure tools: scalability, redundancy, fault_tolerance etc.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "centralized",
       "environment": "controlled",
       "redundancy": "none",
@@ -412,7 +412,7 @@
     "description": "SugarSync is a cloud-based file storage service that enables active synchronization across computers and other devices for file backup, access, syncing, and sharing from a variety of operating systems.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "Unknown (proprietary)",
       "environment": "",
       "redundancy": "Unknown (proprietary)",
@@ -430,7 +430,7 @@
     "description": "Tahoe-LAFS is a free and open, secure, decentralized, fault-tolerant, distributed data store and distributed file system. It can be used as an online backup system, or to serve as a file or web host similar to Freenet, depending on the front-end used to insert and access files in the Tahoe system. Tahoe can also be used in a RAID-like manner to use multiple disks to make a single large RAIN pool of reliable data storage.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "decentralized",
       "environment": "controlled",
       "redundancy": "Erasure Codes",
@@ -448,7 +448,7 @@
     "description": "Wuala was a secure community-based peer-to-peer file storage, file synchronization, versioning and backup service originally developed and run by Caleido Inc. before being acquired by LaCie. Wuala announced that it was discontinuing its service and that all stored data would be deleted on 15 November 2015.",
     "properties": {
       "architecture": "file",
-      "interface": "Local Sync",
+      "interface": "File Synchronization",
       "model": "decentralized",
       "environment": "worldwide",
       "redundancy": "Erasure Codes",
@@ -466,7 +466,7 @@
     "description": "XtreemFS is a distributed file system for wide area networks. XtreemFS provides fault_tolerance while maintaining POSIX file system semantics. Fault-tolerance is achieved by using Paxos-based lease negotiation algorithms and is used to replicate files and metadata.",
     "properties": {
       "architecture": "file",
-      "interface": "POSIX-compliant File System",
+      "interface": "File System",
       "model": "distributed",
       "environment": "controlled",
       "redundancy": "replication",
