@@ -826,7 +826,7 @@ namespace rebalancing
     auto op = infinit::overlay::OP_FETCH;
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 1u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 1u);
-    auto paxos_a =
+    auto& paxos_a =
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 2")
       paxos_a.rebalance(b1->address());
@@ -852,7 +852,7 @@ namespace rebalancing
       b1->data(std::string("shrink_kill_and_write 1"));
       dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
     }
-    auto paxos_a =
+    auto& paxos_a =
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 1")
       paxos_a.rebalance(b1->address(), {dht_a.dht->id()});
@@ -876,7 +876,7 @@ namespace rebalancing
       b1->data(std::string("shrink_kill_and_write 1"));
       dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
     }
-    auto paxos_a =
+    auto& paxos_a =
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
     ELLE_LOG("rebalance block to quorum of 1")
       paxos_a.rebalance(b1->address(), {dht_a.dht->id()});

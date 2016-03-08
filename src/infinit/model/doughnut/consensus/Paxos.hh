@@ -1,6 +1,7 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_CONSENSUS_PAXOS_HH
 # define INFINIT_MODEL_DOUGHNUT_CONSENSUS_PAXOS_HH
 
+# include <elle/named.hh>
 # include <elle/unordered_map.hh>
 
 # include <reactor/Generator.hh>
@@ -19,6 +20,10 @@ namespace infinit
     {
       namespace consensus
       {
+        NAMED_ARGUMENT(doughnut);
+        NAMED_ARGUMENT(replication_factor);
+        NAMED_ARGUMENT(lenient_fetch);
+
         class Paxos
           : public Consensus
         {
@@ -41,7 +46,11 @@ namespace infinit
         | Construction |
         `-------------*/
         public:
-          Paxos(Doughnut& doughnut, int factor, bool lenient_fetch = false);
+          Paxos(Doughnut& doughnut,
+                int factor,
+                bool lenient_fetch = false);
+          template <typename ... Args>
+          Paxos(Args&& ... args);
           ELLE_ATTRIBUTE_R(int, factor);
           ELLE_ATTRIBUTE_R(bool, lenient_fetch);
         private:
@@ -246,5 +255,7 @@ namespace infinit
     }
   }
 }
+
+# include <infinit/model/doughnut/consensus/Paxos.hxx>
 
 #endif
