@@ -23,6 +23,7 @@ namespace infinit
         NAMED_ARGUMENT(doughnut);
         NAMED_ARGUMENT(replication_factor);
         NAMED_ARGUMENT(lenient_fetch);
+        NAMED_ARGUMENT(rebalance_auto_expand);
 
         class Paxos
           : public Consensus
@@ -48,11 +49,13 @@ namespace infinit
         public:
           Paxos(Doughnut& doughnut,
                 int factor,
-                bool lenient_fetch = false);
+                bool lenient_fetch = false,
+                bool rebalance_auto_expand = true);
           template <typename ... Args>
           Paxos(Args&& ... args);
           ELLE_ATTRIBUTE_R(int, factor);
           ELLE_ATTRIBUTE_R(bool, lenient_fetch);
+          ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
         private:
           struct _Details;
           friend struct _Details;
@@ -143,14 +146,16 @@ namespace infinit
           {
           public:
             template <typename ... Args>
-            LocalPeer(int factor, Args&& ... args)
+            LocalPeer(int factor, bool rebalance_auto_expand, Args&& ... args)
               : doughnut::Local(std::forward<Args>(args) ...)
               , _factor(factor)
+              , _rebalance_auto_expand(rebalance_auto_expand)
             {}
             virtual
             void
             initialize() override;
             ELLE_ATTRIBUTE_R(int, factor);
+            ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,

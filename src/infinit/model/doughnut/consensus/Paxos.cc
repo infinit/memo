@@ -101,10 +101,14 @@ namespace infinit
         | Construction |
         `-------------*/
 
-        Paxos::Paxos(Doughnut& doughnut, int factor, bool lenient_fetch)
+        Paxos::Paxos(Doughnut& doughnut,
+                     int factor,
+                     bool lenient_fetch,
+                     bool rebalance_auto_expand)
           : Super(doughnut)
           , _factor(factor)
           , _lenient_fetch(lenient_fetch)
+          , _rebalance_auto_expand(rebalance_auto_expand)
         {
           if (getenv("INFINIT_PAXOS_LENIENT_FETCH"))
             _lenient_fetch = true;
@@ -120,6 +124,7 @@ namespace infinit
         {
           return elle::make_unique<consensus::Paxos::LocalPeer>(
             this->factor(),
+            this->_rebalance_auto_expand,
             this->doughnut(),
             this->doughnut().id(),
             std::move(storage),
@@ -395,6 +400,8 @@ namespace infinit
         void
         Paxos::LocalPeer::_discovered(model::Address id)
         {
+          if (!this->_rebalance_auto_expand)
+            return;
           // FIXME: also rebalance blocks on disk
           for (auto const& address: this->_addresses)
           {

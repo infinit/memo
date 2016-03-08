@@ -15,12 +15,20 @@ namespace infinit
             elle::named::prototype(
               consensus::doughnut,
               consensus::replication_factor,
-              consensus::lenient_fetch = false).call(
+              consensus::lenient_fetch = false,
+              consensus::rebalance_auto_expand = true
+              ).call(
                 [] (Doughnut& doughnut,
                     int factor,
-                    bool lenient_fetch) -> Paxos
+                    bool lenient_fetch,
+                    bool rebalance_auto_expand
+                  ) -> Paxos
                 {
-                  return Paxos(doughnut, factor, lenient_fetch);
+                  return Paxos(doughnut,
+                               factor,
+                               lenient_fetch,
+                               rebalance_auto_expand
+                    );
                 }))
         {}
       }
