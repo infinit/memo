@@ -39,7 +39,7 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
       virtual
       std::unique_ptr<blocks::Block>
-      operator () (blocks::Block& old,
+      operator () (blocks::Block& failed,
                    blocks::Block& current,
                    StoreMode mode) = 0;
       virtual
