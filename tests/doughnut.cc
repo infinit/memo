@@ -812,9 +812,9 @@ namespace rebalancing
 {
   ELLE_TEST_SCHEDULED(extend_and_write)
   {
-    DHT dht_a;
+    DHT dht_a(dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b;
+    DHT dht_b(dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
     ELLE_LOG("write block to quorum of 1")

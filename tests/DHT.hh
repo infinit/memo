@@ -147,12 +147,12 @@ public:
       storage = elle::make_unique<infinit::storage::Memory>(),
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
-      make_consensus =
-      [] (std::unique_ptr<dht::consensus::Consensus> c)
+      make_consensus = [] (std::unique_ptr<dht::consensus::Consensus> c)
         -> std::unique_ptr<dht::consensus::Consensus>
       {
         return c;
-      }
+      },
+      dht::consensus::rebalance_auto_expand = true
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
@@ -168,7 +168,8 @@ public:
                      std::function<
                      std::unique_ptr<dht::consensus::Consensus>(
                        std::unique_ptr<dht::consensus::Consensus>
-                       )> make_consensus)
+                       )> make_consensus,
+                     bool rebalance_auto_expand)
              {
                this-> init(paxos,
                            keys,
@@ -176,7 +177,8 @@ public:
                            id,
                            std::move(storage),
                            version,
-                           std::move(make_consensus));
+                           std::move(make_consensus),
+                           rebalance_auto_expand);
              }, std::forward<Args>(args)...);
   }
 
@@ -193,7 +195,8 @@ private:
        boost::optional<elle::Version> version,
        std::function<
          std::unique_ptr<dht::consensus::Consensus>(
-           std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
+           std::unique_ptr<dht::consensus::Consensus>)> make_consensus,
+       bool rebalance_auto_expand)
   {
     auto keys =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -203,7 +206,10 @@ private:
         [&] (dht::Doughnut& dht)
         {
           return make_consensus(
-            elle::make_unique<dht::consensus::Paxos>(dht, 3));
+            elle::make_unique<dht::consensus::Paxos>(
+              dht::consensus::doughnut = dht,
+              dht::consensus::replication_factor = 3,
+              dht::consensus::rebalance_auto_expand = rebalance_auto_expand));
         };
     else
       consensus =
