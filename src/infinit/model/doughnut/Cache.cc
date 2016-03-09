@@ -181,7 +181,7 @@ namespace infinit
               if (this->_disk_cache_size &&
                   !dynamic_cast<blocks::MutableBlock*>(res.get()))
                 this->_disk_cache_push(res);
-              else
+              else if (dynamic_cast<blocks::MutableBlock*>(res.get()))
                 this->_cache.emplace(res->clone());
             }
             return res;
