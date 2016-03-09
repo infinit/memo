@@ -1248,13 +1248,28 @@ namespace infinit
     }
 
     void
+    network_save(NetworkDescriptor const& network,
+                 std::ostream& output)
+    {
+      elle::serialization::json::SerializerOut s(output, false, true);
+      s.serialize_forward(network);
+    }
+
+    void
+    network_save(Network const& network,
+                 std::ostream& output)
+    {
+      elle::serialization::json::SerializerOut s(output, false, true);
+      s.serialize_forward(network);
+    }
+
+    void
     network_save(NetworkDescriptor const& network, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_network_path(network.name),
                         network.name, "network", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(network);
+      network_save(network, f);
     }
 
     void
@@ -1263,8 +1278,7 @@ namespace infinit
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_network_path(network.name),
                         network.name, "network", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(network);
+      network_save(network, f);
     }
 
     Passport
