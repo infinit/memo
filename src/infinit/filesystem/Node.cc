@@ -478,6 +478,15 @@ namespace infinit
         ));
     }
 
+    boost::filesystem::path
+    Node::full_path()
+    {
+      if (_parent)
+        return _parent->_path / _name;
+      else
+        return "/";
+    }
+
     boost::optional<std::string>
     xattr_special(std::string const& name)
     {

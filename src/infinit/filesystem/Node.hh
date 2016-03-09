@@ -30,7 +30,7 @@ namespace infinit
       typedef infinit::serialization_tag serialization_tag;
       void fetch() {_fetch();}
       void commit() {_commit();}
-      boost::filesystem::path full_path() { return {};}
+      boost::filesystem::path full_path();
     protected:
       Node(FileSystem& owner,
            model::Address address,
