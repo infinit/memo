@@ -737,7 +737,16 @@ namespace infinit
             }
             else
             { // immutable block
-              auto buffer = this->storage()->get(address);
+              elle::Buffer buffer;
+              try
+              {
+                buffer = this->storage()->get(address);
+              }
+              catch (storage::MissingKey const& k)
+              {
+                throw MissingBlock(k.key());
+              }
+
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
               auto stored =
