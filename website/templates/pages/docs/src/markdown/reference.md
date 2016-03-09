@@ -145,7 +145,7 @@ To push an existing user, simply invoke _infinit-user_ with the `--push` mode an
 
 ```
 $> infinit-user --push --name alice --fullname "Alice" --email alice@company.com
-Remotely pushed user "alice".
+Remotely saved user "alice".
 ```
 
 Unfortunately, since names are unique, your user name may already be taken on the Hub, in which case the operation will fail. The action `--signup` has been introduced to overcome this problem, performing the equivalent of `--create --push` atomically, making sure that the user is created locally and remotely at once.
@@ -155,7 +155,7 @@ We advise users to sign up to the Hub before performing other operations to avoi
 ```
 $> infinit-user --signup --name alice --fullname "Alice" --email alice@company.com
 Generating RSA keypair.
-Remotely pushed user "alice".
+Remotely saved user "alice".
 ```
 
 ### Fetch a user ###
@@ -333,7 +333,7 @@ As with the other utilities, you can otherwise push the network to the Hub with 
 
 ```
 $> infinit-network --push --as alice --name cluster
-Remotely pushed network "alice/cluster".
+Remotely saved network "alice/cluster".
 ```
 
 You can also manipulate networks without relying on the Hub. Please refer to the `--export` and `--import` options in this case.
@@ -437,7 +437,7 @@ You can otherwise push a local passport by invoking the `--push` action option a
 
 ```
 $> infinit-passport --push --as alice --network cluster --user bob
-Remotely pushed passport "alice/cluster: bob".
+Remotely saved passport "alice/cluster: bob".
 ```
 
 If you are using the pure decentralized environment i.e. without the Hub, you will need to manually export the passport and transmit it to the invited user in which case you should refer to the `--export` and `--import` options.
@@ -502,7 +502,7 @@ A volume often needs to be shared with the other users in the network. As with t
 
 ```
 $> infinit-volume --push --as alice --name shared
-Remotely pushed volume "alice/shared".
+Remotely saved volume "alice/shared".
 ```
 
 _**NOTE**: You may want to keep your volume hidden from the users on a network, in which case you could omit this step and distribute its descriptor using the `--export` and `--import` options._
@@ -530,7 +530,7 @@ The following command mounts an Infinit file system. Note that the `--publish` o
 $> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
 Fetched endpoints for "alice/cluster".
 Running network "alice/cluster".
-Remotely pushed endpoints for "alice/cluster".
+Remotely saved endpoints for "alice/cluster".
 Running volume "alice/shared".
 ...
 ```
@@ -710,7 +710,7 @@ To activate this mode, you need to specify the `--full` option when signing up o
 <div><span>Device A</span></div>
 <code>$> infinit-user --signup --name alice --email alice@company.com --fullname Alice --full
 Password: ********
-Remotely pushed user "alice".
+Remotely saved user "alice".
 </code>
 </pre>
 
@@ -820,7 +820,7 @@ Creating a drive is as easy as any other operation. The following creates a driv
 ```
 $> infinit-drive --create --as alice --network cluster --volume shared --name workspace --description "Alice's, Bob's and Charlie's workspace" --push
 Locally created drive "alice/workspace".
-Remotely pushed drive "alice/workspace".
+Remotely saved drive "alice/workspace".
 ```
 
 Note that the `--push` option is included to publish the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-existing-users">inviting</a> to join.
@@ -851,8 +851,8 @@ $> infinit-drive --invite --as alice --name workspace --user bob --user charlie 
 Locally created passport "alice/cluster: charlie".
 Locally created invitation for "bob".
 Locally created invitation for "charlie".
-Remotely pushed passport "alice/cluster: charlie".
-Remotely pushed invitations "alice/workspace: bob, charlie".
+Remotely saved passport "alice/cluster: charlie".
+Remotely saved invitations "alice/workspace: bob, charlie".
 ```
 
 That's it, Bob and Charlie have been invited to join the drive named "alice/workspace". Following the `--push` of the invitations, an email is sent to notify each invited user of their invitation and letting them know how to proceed.
@@ -861,7 +861,7 @@ If you would like to prepare invitations locally and push them all later, you ca
 
 ```
 $> infinit-drive --invite --as alice --name workspace --push
-Remotely pushed invitations "alice/workspace: bob, charlie".
+Remotely saved invitations "alice/workspace: bob, charlie".
 ```
 
 Without any `--user` specified the `--invite` command will push each pending invitations to the Hub, sending the notification emails as a consequence.
@@ -879,7 +879,7 @@ $> infinit-user --fetch --as alice --name hub
 Fetched user "hub".
 $> infinit-passport --create --as alice --network cluster --user hub --allow-create-passport --push
 Locally created passport "alice/cluster: hub".
-Remotely pushed passport "alice/cluster: hub".
+Remotely saved passport "alice/cluster: hub".
 ```
 
 The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the `infinit-acl` binary can be used to write the block.
@@ -895,7 +895,7 @@ The user can now be invited using their email address. They will receive an emai
 ```
 $> infinit-drive --invite --as alice --name --workspace --email dave@company.com --push
 Locally created invitation "alice/workspace: dave@company.com".
-Remotely pushed invitation "alice/workspace: dave@company.com".
+Remotely saved invitation "alice/workspace: dave@company.com".
 ```
 
 ### Join a drive ###

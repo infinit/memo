@@ -271,7 +271,7 @@ The first step consists of creating a user on the Hub. All the commands that fol
 <div><span>Device A</span></div>
 <code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
 Generating RSA keypair.
-Remotely pushed user "alice".
+Remotely saved user "alice".
 </code></pre>
 
 ### Create a storage resource
@@ -298,7 +298,7 @@ The _infinit-network_ command is used to create the network, specifying a name a
 <div><span>Device A</span></div>
 <code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
 Locally created network "alice/my-network".
-Remotely pushed network "alice/my-network".
+Remotely saved network "alice/my-network".
 </code></pre>
 
 *__NOTE__: The `--push` option is used to publish the created network (likewise for other objects) onto the Hub for it to be easily fetched on another device or shared with other users.*
@@ -311,7 +311,7 @@ The last step on this device consists of creating a logical volume to store and 
 <div><span>Device A</span></div>
 <code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
 Locally created volume "alice/my-volume".
-Remotely pushed volume "alice/my-volume".
+Remotely saved volume "alice/my-volume".
 </code></pre>
 
 That’s it, you’ve created a volume named ‘my-volume’ i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named ‘my-network’, currently composed of a single computer with a single storage resource.
@@ -325,7 +325,7 @@ Let’s access this volume by mounting it as easily as any other filesystem:
 <code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
 Fetched endpoints for "alice/my-network".
 Running network "alice/my-network".
-Remotely pushed endpoints for "alice/my-network".
+Remotely saved endpoints for "alice/my-network".
 Running volume "alice/my-volume".
 </code></pre>
 

@@ -2274,7 +2274,7 @@ _beyond_push(reactor::http::Request& r,
   if (r.status() == reactor::http::StatusCode::Created)
   {
     if (report)
-      report_action("pushed", type, name, std::string("remotely"));
+      report_action("saved", type, name, std::string("remotely"));
   }
   else if (r.status() == reactor::http::StatusCode::OK)
   {
