@@ -31,7 +31,6 @@
       "scalability": "None",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
-    "links": {},
     "similar_to": ["bsync"]
   },
   "amazon-cloud-drive": {
@@ -406,7 +405,6 @@
       "scalability": "None",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
-    "links": {},
     "similar_to": ["owncloud"]
   },
   "storj": {
@@ -422,8 +420,7 @@
       "security": "In-Transit & At-Rest",
       "scalability": "Homogeneous",
       "interoperability": "applications"
-    },
-    "links": {}
+    }
   },
   "sugarsync": {
     "name": "SugarSync",
