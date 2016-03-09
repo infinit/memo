@@ -52,7 +52,7 @@ namespace infinit
       void set_permissions(std::string const& flags,
         std::string const& userkey, Address self_address);
       virtual void _fetch() = 0;
-      virtual void _commit() = 0;
+      virtual void _commit(WriteTarget = WriteTarget::all) = 0;
       virtual FileHeader& _header() = 0;
       virtual model::blocks::ACLBlock* _header_block() = 0;
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);

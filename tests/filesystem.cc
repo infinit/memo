@@ -1485,7 +1485,6 @@ test_acl(bool paxos)
   write(base0 / "rm2", "foo");
   BOOST_CHECK_EQUAL(directory_count(base0), 1);
   block = getxattr_(base0 / "rm2", "user.infinit.block.address");
-  std::cerr << "BLOCK: " << block << std::endl;
   block = block.substr(3, block.size()-5);
   BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", block), -1);
   BOOST_CHECK(can_access(base0 / "rm2", true));

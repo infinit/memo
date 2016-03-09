@@ -81,7 +81,7 @@ namespace infinit
     private:
       void _fetch() override;
       void _fetch(std::unique_ptr<ACLBlock> block);
-      void _commit() override;
+      void _commit(WriteTarget target) override;
       model::blocks::ACLBlock* _header_block() override;
       FileHeader& _header() override;
       void move_recurse(boost::filesystem::path const& current,

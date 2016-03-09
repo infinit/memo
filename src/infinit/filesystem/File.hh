@@ -66,7 +66,7 @@ namespace infinit
 
       void _ensure_first_block();
       void _fetch() override;
-      void _commit() override;
+      void _commit(WriteTarget target) override;
       FileHeader& _header() override;
       model::blocks::ACLBlock* _header_block() override;
 

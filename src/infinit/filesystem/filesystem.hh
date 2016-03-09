@@ -87,6 +87,7 @@ namespace infinit
     };
     enum class WriteTarget
     {
+      none = 0,
       perms = 1,
       links = 2,
       data = 4,
@@ -94,6 +95,7 @@ namespace infinit
       xattrs = 16,
       symlink = 32,
       all = 255,
+      block = 32768,
     };
     inline
     bool
@@ -103,7 +105,7 @@ namespace infinit
       return static_cast<ut>(l) & static_cast<ut>(r);
     }
     inline
-    WriteTarget 
+    WriteTarget
     operator |(WriteTarget const& l, WriteTarget const& r)
     {
       typedef std::underlying_type<WriteTarget>::type ut;
@@ -114,8 +116,10 @@ namespace infinit
     {
     public:
       using clock = std::chrono::high_resolution_clock;
-      FileData(Block& block, std::pair<bool, bool> perms);
-      FileData(model::Address address, int mode);
+      FileData(boost::filesystem::path path,
+               Block& block, std::pair<bool, bool> perms);
+      FileData(boost::filesystem::path path,
+               model::Address address, int mode);
       void
       update(model::blocks::Block& block, std::pair<bool, bool> perms);
       void
@@ -132,9 +136,11 @@ namespace infinit
       typedef std::pair<Address, std::string> FatEntry; // (address, key)
       ELLE_ATTRIBUTE_R(std::vector<FatEntry>, fat);
       ELLE_ATTRIBUTE_R(elle::Buffer, data);
+      ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
       friend class FileSystem;
       friend class File;
       friend class FileHandle;
+      friend class FileConflictResolver;
     };
     class Node;
     void unchecked_remove(model::Model& model,

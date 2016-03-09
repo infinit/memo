@@ -37,7 +37,7 @@ namespace infinit
       bool allow_cache() override { return false;}
       std::string getxattr(std::string const& k) override {THROW_NODATA;}
       void _fetch() override {}
-      void _commit() override {}
+      void _commit(WriteTarget target) override {}
       model::blocks::ACLBlock* _header_block() override { return nullptr;}
       FileHeader& _header() override THROW_NOENT;
       virtual

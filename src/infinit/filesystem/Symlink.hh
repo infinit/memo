@@ -45,7 +45,7 @@ namespace infinit
         void removexattr(std::string const& name) override;
         bool allow_cache() override { return false;}
         void _fetch() override;
-        void _commit() override;
+        void _commit(WriteTarget target) override;
         model::blocks::ACLBlock* _header_block() override;
         FileHeader& _header() override;
         virtual void print(std::ostream& stream) const override;

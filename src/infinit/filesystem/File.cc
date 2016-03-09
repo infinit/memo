@@ -45,9 +45,11 @@ namespace infinit
         : _model(nullptr)
       {}
 
-      FileConflictResolver(boost::filesystem::path path, model::Model* model)
+      FileConflictResolver(boost::filesystem::path path, model::Model* model,
+                           WriteTarget target)
         : _path(path)
         , _model(model)
+        , _target(target)
       {}
 
       std::unique_ptr<Block>
@@ -58,8 +60,25 @@ namespace infinit
         ELLE_LOG_SCOPE(
           "conflict: the file \"%s\" was modified since last read. Your"
           " changes will overwrite previous modifications", this->_path);
+        FileData cd(_path, current, {true, true});
+        FileData od(_path, b, {true, true});
+        od.merge(cd, _target);
+        // write od data into current block
+        elle::Buffer serdata;
+        {
+          elle::IOStream os(serdata.ostreambuf());
+          elle::serialization::binary::SerializerOut output(os);
+          output.serialize("header", od._header);
+          output.serialize("fat", od._fat);
+          output.serialize("data", od._data);
+        }
         auto block = elle::cast<MutableBlock>::runtime(current.clone());
-        block->data(b.data());
+        if (_target & WriteTarget::perms)
+        { // acl permission changes are handled by a different resolver
+          auto perms = dynamic_cast<ACLBlock&>(b).get_world_permissions();
+          dynamic_cast<ACLBlock&>(*block).set_world_permissions(perms.first, perms.second);
+        }
+        block->data(serdata);
         return elle::cast<Block>::runtime(block);
       }
 
@@ -69,6 +88,7 @@ namespace infinit
         std::string spath = this->_path.string();
         s.serialize("path", spath);
         this->_path = spath;
+        s.serialize("target", _target, elle::serialization::as<int>());
         if (s.in())
         {
           infinit::model::Model* model = nullptr;
@@ -80,6 +100,7 @@ namespace infinit
 
       boost::filesystem::path _path;
       model::Model* _model;
+      WriteTarget _target;
       typedef infinit::serialization_tag serialization_tag;
     };
 
@@ -164,12 +185,14 @@ namespace infinit
           this->_first_block.reset();
       });
       auto perms = _owner.get_permissions(*_first_block);
-      _filedata = std::make_shared<FileData>(*_first_block, perms);
+      _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms);
       remove_undecoded_first_block.abort();
     }
 
-    FileData::FileData(Block& block, std::pair<bool, bool> perms)
+    FileData::FileData(boost::filesystem::path path,
+                       Block& block, std::pair<bool, bool> perms)
     : _address(block.address())
+    , _path(path)
     {
       update(block, perms);
       _last_used = FileSystem::now();
@@ -229,8 +252,9 @@ namespace infinit
                  this, _address, _header.size, _header.links, _fat.size(), _data.size());
     }
 
-    FileData::FileData(Address address, int mode)
+    FileData::FileData(boost::filesystem::path path, Address address, int mode)
     {
+      _path = path;
       _address = address;
       _block_version = -1;
       _last_used = FileSystem::now();
@@ -299,7 +323,7 @@ namespace infinit
       }
       if (!block->data().empty())
       {
-        FileData previous(*block, {true, true});
+        FileData previous(_path, *block, {true, true});
         merge(previous, target);
         ELLE_DEBUG("%s: post-merge write %f: sz=%s, links=%s, fatsize=%s, worldperm=%s version=%s", this, _address,
                    _header.size, _header.links, _fat.size(), block->get_world_permissions(),
@@ -321,17 +345,14 @@ namespace infinit
           model.store(*block,
                       first_write ? model::STORE_INSERT : model::STORE_UPDATE,
                       elle::make_unique<FileConflictResolver>(
-                        boost::filesystem::path(),
-                        &model));
+                        _path, &model, target));
         }
         else
         {
           model.store(std::move(block),
                       first_write ? model::STORE_INSERT : model::STORE_UPDATE,
                       elle::make_unique<FileConflictResolver>(
-                        boost::filesystem::path(),
-                        &model
-                        ));
+                        _path, &model, target));
         }
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
@@ -353,10 +374,10 @@ namespace infinit
     }
 
     void
-    File::_commit()
+    File::_commit(WriteTarget target)
     {
       ELLE_ASSERT(this->_filedata);
-      _filedata->write(*_owner.block_store(), WriteTarget::all, _first_block);
+      _filedata->write(*_owner.block_store(), target, _first_block);
     }
 
     void
@@ -387,8 +408,7 @@ namespace infinit
         _parent->_files.at(_name).second},
         DirectoryData::null_block,
         true);
-      _owner.filesystem()->extract(where.string());
-      _commit();
+      _commit(WriteTarget::links);
     }
 
     void
@@ -409,7 +429,7 @@ namespace infinit
       {
         ELLE_DEBUG("%s remaining links", links - 1);
         _filedata->_header.links--;
-        _commit();
+        _commit(WriteTarget::links);
       }
       else
       {
@@ -525,7 +545,7 @@ namespace infinit
       if (new_size < signed(_filedata->_data.size()))
         _filedata->_data.size(new_size);
       this->_filedata->_header.size = new_size;
-      this->_commit();
+      this->_commit(WriteTarget::data);
     }
 
     std::unique_ptr<rfs::Handle>
@@ -631,7 +651,7 @@ namespace infinit
           _fetch();
           int idx = std::stoi(value);
           _filedata->_fat[idx] = std::make_pair(model::Address::null, "");
-          _commit();
+          _commit(WriteTarget::data);
           return;
         }
       }

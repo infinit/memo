@@ -138,7 +138,7 @@ namespace infinit
         ELLE_DEBUG("setting world permissions to %s,%s", wm.first, wm.second);
         acl->set_world_permissions(wm.first, wm.second);
       }
-      _commit();
+      _commit(WriteTarget::perms);
     }
 
     void
@@ -165,7 +165,7 @@ namespace infinit
           ->copy_permissions(*block);
       }
       h.ctime = time(nullptr);
-      _commit();
+      _commit(WriteTarget::block);
     }
 
     void
@@ -177,7 +177,7 @@ namespace infinit
       if (_header().xattrs.erase(k))
       {
          _header().ctime = time(nullptr);
-        _commit();
+        _commit(WriteTarget::xattrs);
       }
       else
         ELLE_TRACE_SCOPE("no such attribute");
@@ -224,7 +224,7 @@ namespace infinit
           bool w = v.find("w") != std::string::npos;
           umbrella([&] {
               block->set_world_permissions(r, w);
-              _commit();
+              _commit(WriteTarget::block);
           }, EACCES);
           return;
         }
@@ -246,7 +246,7 @@ namespace infinit
       }
       _header().xattrs[k] = elle::Buffer(v.data(), v.size());
       _header().ctime = time(nullptr);
-      _commit();
+      _commit(WriteTarget::xattrs);
     }
 
     static
@@ -405,7 +405,7 @@ namespace infinit
       _header().atime = tv[0].tv_sec;
       _header().mtime = tv[1].tv_sec;
       _header().ctime = time(nullptr);
-      _commit();
+      _commit(WriteTarget::times);
     }
 
     std::unique_ptr<infinit::model::User>

@@ -440,7 +440,7 @@ namespace infinit
           }
           else
           {
-            fd = std::make_shared<FileData>(*block, perms);
+            fd = std::make_shared<FileData>(current_path / components.back(), *block, perms);
             _file_cache.insert(fd);
           }
         return std::shared_ptr<rfs::Path>(new File(*this, it->second.second, fd, d, components.back()));

@@ -126,7 +126,7 @@ namespace infinit
             ELLE_WARN("Rollback failure on %s", _name);
           }
       });
-      FileData fd(b->address(), mode & 0700);
+      FileData fd(_parent->_path / _name, b->address(), mode & 0700);
       if (_parent->inherit_auth())
       {
         umbrella([&] { dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(

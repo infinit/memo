@@ -52,7 +52,7 @@ namespace infinit
     }
 
     void
-    Symlink::_commit()
+    Symlink::_commit(WriteTarget)
     {
       auto data = elle::serialization::binary::serialize(_h);
       _block->data(data);

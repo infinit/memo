@@ -392,7 +392,7 @@ namespace infinit
     }
 
     void
-    Directory::_commit()
+    Directory::_commit(WriteTarget target)
     {
       _commit(Operation{OperationType::update, "", EntryType::directory,
               Address::null}, false);
