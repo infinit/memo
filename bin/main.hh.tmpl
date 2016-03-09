@@ -52,6 +52,15 @@ std::string program;
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
 
+bool
+show_hidden_options()
+{
+#ifndef INFINIT_PRODUCTION_BUILD
+  return true;
+#endif
+  return !elle::os::getenv("INFINIT_SHOW_HIDDEN_OPTIONS", "").empty();
+}
+
 std::string
 beyond(bool help = false)
 {
@@ -357,9 +366,7 @@ struct Mode
                bool visible_in_production = true)
   {
     this->options.add(options);
-#ifdef INFINIT_PRODUCTION_BUILD
-    if (visible_in_production)
-#endif
+    if (visible_in_production && show_hidden_options())
       this->visible_options.add(options);
   }
 
@@ -486,7 +493,8 @@ namespace infinit
        int argc,
        char** argv,
        boost::optional<std::string> positional_arg = {},
-       boost::optional<bool> disable_as_arg = {})
+       boost::optional<bool> disable_as_arg = {},
+       boost::optional<Modes> hidden_modes = {})
   {
     try
     {
@@ -514,7 +522,8 @@ namespace infinit
       reactor::Thread main_thread(
         sched,
         "main",
-        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg
+        [&sched, &modes, &desc, argc, argv,
+         &positional_arg, &disable_as_arg, &hidden_modes
 #ifndef INFINIT_WINDOWS
          ,&crash_reporter
 #endif
@@ -531,10 +540,25 @@ namespace infinit
             using boost::program_options::value;
             Mode::OptionsDescription mode_options("Modes");
             for (auto const& mode: modes)
-              mode_options.add_options()(mode.name,
-                                         mode.description);
+              mode_options.add_options()(mode.name, mode.description);
+            Mode::OptionsDescription hidden_mode_options("Hidden Modes");
+            if (hidden_modes)
+            {
+              for (auto const& mode: hidden_modes.get())
+                hidden_mode_options.add_options()(mode.name, mode.description);
+            }
             Mode::OptionsDescription options(desc);
-            options.add(mode_options);
+            Mode::OptionsDescription visible_options(desc);
+            auto add_options =
+              [&] (boost::program_options::options_description const& m_options,
+                   bool visible_in_production = true)
+              {
+                options.add(m_options);
+                if (visible_in_production || show_hidden_options())
+                  visible_options.add(m_options);
+              };
+            add_options(mode_options);
+            add_options(hidden_mode_options, false);
             Mode::OptionsDescription misc("Miscellaneous");
             misc.add_options()
               ("help,h", "display the help")
@@ -550,7 +574,7 @@ namespace infinit
                  "user to run commands as (default: system user)")
               ;
             }
-            options.add(misc);
+            add_options(misc);
             boost::program_options::variables_map vm;
             try
             {
@@ -575,24 +599,34 @@ namespace infinit
                 _as_user = vm["as"].as<std::string>();
               Mode const* mode = nullptr;
               std::vector<std::string> args;
-              for (auto const& m: modes)
-                if (vm.count(m.name))
-                  if (!mode)
-                    mode = &m;
-                  else if (mode->name == "fetch" || mode->name == "push")
+              auto get_mode = [&] (Modes const& modes)
+                {
+                  for (auto const& m: modes)
                   {
-                    args.push_back("--" + mode->name);
-                    mode = &m;
+                    if (vm.count(m.name))
+                    {
+                      if (!mode)
+                        mode = &m;
+                      else if (mode->name == "fetch" || mode->name == "push")
+                      {
+                        args.push_back("--" + mode->name);
+                        mode = &m;
+                      }
+                      else
+                        args.push_back("--" + m.name);
+                    }
                   }
-                  else
-                    args.push_back("--" + m.name);
+                };
+              get_mode(modes);
+              if (mode == nullptr && hidden_modes)
+                get_mode(hidden_modes.get());
               if (!mode)
               {
                 std::ostream& output = help ? std::cout : std::cerr;
                 output << "Usage: " << program
                        << " MODE [OPTIONS...]" << std::endl;
                 output << std::endl;
-                output << options;
+                output << visible_options;
                 output << std::endl;
                 if (help)
                   throw elle::Exit(0);
@@ -2286,8 +2320,7 @@ _beyond_push(reactor::http::Request& r,
         return s.deserialize<BeyondError>();
       }
       catch (elle::serialization::Error const&)
-      {
-      }
+      {}
       return BeyondError("unknown", "Unknown error");
     }();
     if (error.error() == std::string("user/missing_field/email"))
