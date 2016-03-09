@@ -211,6 +211,8 @@ namespace infinit
             Decision&
             _load(Address address,
                   boost::optional<PaxosServer::Quorum> peers = {});
+            Decision&
+            _load(Address address, Decision decision);
             void
             _discovered(Address id);
             void

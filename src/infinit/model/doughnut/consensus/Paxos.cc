@@ -385,20 +385,29 @@ namespace infinit
                 // FIXME: this will trigger the retry with a mutable block
                 // type in Consensus::fetch
                 throw MissingBlock(address);
-              return this->_addresses.emplace(
-                address, std::move(*stored.paxos)).first->second;
+              return this->_load(address, std::move(*stored.paxos));
             }
             catch (storage::MissingKey const& e)
             {
               ELLE_TRACE("%s: missingkey reloading decision", *this);
               if (peers)
-                return this->_addresses.emplace(
-                  address,
-                  Decision(PaxosServer(this->id(),
-                                       *peers,elle_serialization_version(this->doughnut().version())))).first->second;
+              {
+                auto version =
+                  elle_serialization_version(this->doughnut().version());
+                return this->_load(
+                  address, Decision(PaxosServer(this->id(), *peers, version)));
+              }
               else
                 throw MissingBlock(e.key());
             }
+        }
+
+        Paxos::LocalPeer::Decision&
+        Paxos::LocalPeer::_load(Address address,
+                                Paxos::LocalPeer::Decision decision)
+        {
+          return this->_addresses.emplace(
+            address, std::move(decision)).first->second;
         }
 
         void
