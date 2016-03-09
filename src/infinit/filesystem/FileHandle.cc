@@ -29,10 +29,10 @@ namespace infinit
                            bool push_mtime,
                            bool no_fetch,
                            bool dirty)
-      : _model(model)
-      , _file(data)
-      , _dirty(dirty)
+      : _dirty(dirty)
       , _writable(writable)
+      , _model(model)
+      , _file(data)
       , _first_block_new(false)
       , _fat_changed(false)
       , _prefetchers_count(0)
@@ -376,11 +376,9 @@ namespace infinit
         _file._fat.resize(index+1, FileData::FatEntry(Address::null, {}));
       }
       std::shared_ptr<elle::Buffer> b;
-      bool is_new = false;
       if (_file._fat[index].first == Address::null)
       {
         b = std::make_shared<elle::Buffer>();
-        is_new = true;
       }
       else
       {
@@ -391,7 +389,6 @@ namespace infinit
         auto crypted = block->take_data();
         cryptography::SecretKey sk(_file._fat[index].second);
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
-        is_new = false;
       }
 
       auto inserted = this->_blocks.insert(std::make_pair(index,
@@ -399,7 +396,6 @@ namespace infinit
       inserted.first->second.ready.open();
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false; // we just fetched or inserted it
-      inserted.first->second.new_block = is_new;
       return inserted.first->second.block;
     }
     void
@@ -428,7 +424,6 @@ namespace infinit
         this->_blocks.insert(std::make_pair(idx, CacheEntry{}));
       inserted.first->second.last_use = std::chrono::system_clock::now();
       inserted.first->second.dirty = false;
-      inserted.first->second.new_block = false;
       auto addr = Address(this->_file._fat[idx].first.value(),
                           model::flags::immutable_block, false);
       auto key = _file._fat[idx].second;
@@ -485,7 +480,7 @@ namespace infinit
       bool fat_change = false;
       auto it = this->_blocks.find(id);
       Address prev = Address::null;
-      if (_file._fat.size() < unsigned(id) && !it->second.new_block)
+      if (_file._fat.size() < unsigned(id))
         prev = _file._fat.at(id).first;
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
       auto cdata = cryptography::SecretKey(key).encipher(*it->second.block);
@@ -503,7 +498,6 @@ namespace infinit
           unchecked_remove(_model, prev);
         }
       }
-      it->second.new_block = false;
       it->second.dirty = false;
       return fat_change;
     }
@@ -560,12 +554,11 @@ namespace infinit
             int id = it->first;
             ELLE_TRACE("starting async flusher for %s", id);
             auto ab = it->second.block;
-            bool new_block = it->second.new_block;
             _flushers.emplace_back(
-              new reactor::Thread("flusher", [this, id, ab, new_block] {
+              new reactor::Thread("flusher", [this, id, ab] {
                 auto key = cryptography::random::generate<elle::Buffer>(32).string();
                 Address old_addr = Address::null;
-                if (_file._fat.size() < unsigned(id) && !new_block)
+                if (_file._fat.size() < unsigned(id))
                   old_addr = _file._fat.at(id).first;
                 auto cdata = cryptography::SecretKey(key).encipher(*ab);
                 auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);

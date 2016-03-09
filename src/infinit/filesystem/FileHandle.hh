@@ -56,7 +56,6 @@ namespace infinit
         std::shared_ptr<elle::Buffer> block;
         bool dirty;
         std::chrono::system_clock::time_point last_use;
-        bool new_block;
         reactor::Barrier ready;
       };
       void _commit_first();
