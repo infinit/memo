@@ -392,7 +392,12 @@ COMMAND(link_)
 COMMAND(list)
 {
   for (auto const& network: ifnt.networks_get())
-    std::cout << network.name << std::endl;
+  {
+    std::cout << network.name;
+    if (network.model)
+      std::cout << ": linked";
+    std::cout << std::endl;
+  }
 }
 
 COMMAND(push)
