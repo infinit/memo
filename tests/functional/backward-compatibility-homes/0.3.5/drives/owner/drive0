@@ -1,0 +1,19 @@
+{
+    "description" : "",
+    "name" : "owner/drive0",
+    "network" : "owner/network0",
+    "owner" : "owner",
+    "users" : {
+        "owner" : {
+            "create_home" : false,
+            "permissions" : "rw",
+            "status" : "ok"
+        },
+        "user" : {
+            "create_home" : false,
+            "permissions" : "rw",
+            "status" : "ok"
+        }
+    },
+    "volume" : "owner/volume0"
+}

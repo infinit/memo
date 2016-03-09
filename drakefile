@@ -673,6 +673,7 @@ def configure(
           'volume_cli',
           'drive_cli',
           'storage_cli',
+          'cli-backward-compatibility',
       ]
       if not windows:
           test_names.append('crash-reporter')

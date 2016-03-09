@@ -1,0 +1,7 @@
+{
+    "network" : "owner/network0",
+    "signature" : "BaNwJr/yu2XP0gZoZMxG77tc/7jQze9Z1R3Ho2zSkm77vK2MwygK+daU+AYd56UEYrNm6yRYdmUDDz56LJhyFFgPPbKO1TOofNlBsXM3aEk3UvkhFeBD0yhFbPeFrJf0aDSkNaYysjMMrC+vuQqPm7iU0S3Yze4ir2G3KYVmikOLMDXhVOUa7dvO8VInzbCZadMQ9xmOuQLXqhfpS6ead8sk00bH3uCu5cZysEItCkqtnMqqg9BcFCM5uJKCGjKRewT1Hr768imwB4jlBncqB+1sVnscLZup27S0Xros+rj1sLOlnOEpc/ixe1jmh4XGlxHd++wmtK5rho0pXCh1qg==",
+    "user" : {
+        "rsa" : "MIIBCgKCAQEAuai6q3aCqzhRJM6h//ZIeRwjjRFiKhx4swtU2q/MFFKPFEz3EiAl9INFtnS8D2Mfl1u/EqF7auzA7sBUcz5X6OzO3oup2G7SKXhqG0/+oVCJ8kKgZjVYlSY39qRagpE5t5QbFB0XQRPpIvpVyXg8zDhjstaJb8jLpQ4j+s3bbt2Swofg6wGu7kKnBEGRTWy4v/eZEf8RQGdv8niD8AfmQTRjorFFRLZYisOMHyo+blzAQQym1psOuJIGf98SswJ26xXOSJCL0g04dWzMBqPKliEd4clIuRNplzQcfrJQN/JdswDXo4FonH3tPYIwewruYpzk2c7/fvZcVV4tYdtVcQIDAQAB"
+    }
+}
