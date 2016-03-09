@@ -206,8 +206,6 @@ def configure(
     'src/infinit/credentials/OAuthCredentials.hh',
     'src/infinit/filesystem/filesystem.cc',
     'src/infinit/filesystem/filesystem.hh',
-    'src/infinit/filesystem/AnyBlock.cc',
-    'src/infinit/filesystem/AnyBlock.hh',
     'src/infinit/filesystem/Directory.cc',
     'src/infinit/filesystem/Directory.hh',
     'src/infinit/filesystem/File.cc',

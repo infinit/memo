@@ -1,5 +1,4 @@
 #include <infinit/filesystem/filesystem.hh>
-#include <infinit/filesystem/AnyBlock.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/umbrella.hh>
 
