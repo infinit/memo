@@ -1009,16 +1009,18 @@ namespace rebalancing
     // local_b.all_operations().close();
     ELLE_LOG("connect second DHT")
       dht_b.overlay->connect(*dht_a.overlay);
+    auto op = infinit::overlay::OP_FETCH;
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 1u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 1u);
     reactor::wait(local_a.rebalanced(), b->address());
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 2u);
     ELLE_LOG("write block to 2 nodes")
     {
       auto resolver = elle::make_unique<VersionHop>(*b);
       b->data(std::string("expand'"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT, std::move(resolver));
     }
-    auto op = infinit::overlay::OP_FETCH;
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 2u);
     ELLE_LOG("disconnect second DHT")
       dht_b.overlay->disconnect(*dht_a.overlay);
     ELLE_LOG("read block from second DHT")
