@@ -45,8 +45,10 @@ namespace infinit
     public:
       using clock = std::chrono::high_resolution_clock;
       static std::unique_ptr<model::blocks::ACLBlock> null_block;
-      DirectoryData(Block& block, std::pair<bool, bool> perms);
-      DirectoryData(model::Address address);
+      DirectoryData(boost::filesystem::path path,
+                    Block& block, std::pair<bool, bool> perms);
+      DirectoryData(boost::filesystem::path path,
+                    model::Address address);
       void
       update(model::blocks::Block& block, std::pair<bool, bool> perms);
       void
@@ -68,6 +70,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(bool, inherit_auth);
       ELLE_ATTRIBUTE_R(bool, prefetching);
       ELLE_ATTRIBUTE_R(clock::time_point, last_used);
+      ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
       friend class Unknown;
       friend class Directory;
       friend class File;
@@ -185,7 +188,7 @@ namespace infinit
 
       boost::signals2::signal<void()> on_root_block_create;
       std::shared_ptr<DirectoryData>
-      get(model::Address address);
+      get(boost::filesystem::path path, model::Address address);
       void filesystem(reactor::filesystem::FileSystem* fs) override;
       reactor::filesystem::FileSystem* filesystem();
     private:

@@ -379,7 +379,8 @@ namespace infinit
       boost::algorithm::split(components, path, boost::algorithm::is_any_of("/"));
       ELLE_DEBUG("%s: get %s (%s)", this, path, components);
       ELLE_ASSERT_EQ(components.front(), "");
-      auto d = get(_root_address);
+      boost::filesystem::path current_path("/");
+      auto d = get(current_path, _root_address);
       std::shared_ptr<DirectoryData> dp;
       for (int i=1; i< signed(components.size()) - 1; ++i)
       {
@@ -393,7 +394,8 @@ namespace infinit
           THROW_NOTDIR;
         }
         dp = d;
-        d = get(it->second.second);
+        current_path /= components[i];
+        d = get(current_path, it->second.second);
       }
       if (components.back().empty())
       {
@@ -446,7 +448,7 @@ namespace infinit
         }
       case EntryType::directory:
         {
-          auto dd = get(it->second.second);
+          auto dd = get(current_path / components.back(), it->second.second);
           return std::shared_ptr<rfs::Path>(new Directory(*this, dd, d, components.back()));
         }
       }
@@ -454,7 +456,7 @@ namespace infinit
     }
 
     std::shared_ptr<DirectoryData>
-    FileSystem::get(model::Address address)
+    FileSystem::get(boost::filesystem::path path, model::Address address)
     {
       ELLE_DEBUG("%s: getting directory at %s", this, address);
       static elle::Bench bench_hit("bench.filesystem.dircache.hit", 1000_sec);
@@ -484,7 +486,7 @@ namespace infinit
       }
       else
       {
-        auto dd = std::make_shared<DirectoryData>(*block, perms);
+        auto dd = std::make_shared<DirectoryData>(path, *block, perms);
         _directory_cache.insert(dd);
         return dd;
       }

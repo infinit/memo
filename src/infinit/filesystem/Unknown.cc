@@ -70,7 +70,7 @@ namespace infinit
           this->_owner.block_store()->fetch(_parent->address()));
         umbrella([&] { parent_block
           ->copy_permissions(dynamic_cast<ACLBlock&>(*b));});
-        DirectoryData dd {address};
+        DirectoryData dd {this->_parent->_path / _name, address};
         dd._inherit_auth = true;
         dd.write(*_owner.block_store(), Operation{OperationType::update, "/inherit"}, b, true, true);
       }

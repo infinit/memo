@@ -275,7 +275,7 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
         catch (...)
         {
           auto b = dn->fetch(a);
-          ifs::DirectoryData d(*b, {true, true});
+          ifs::DirectoryData d({}, *b, {true, true});
           header = d.header();
         }
         if (header.mode & S_IFDIR)
@@ -284,7 +284,9 @@ fsck(std::unique_ptr<infinit::filesystem::FileSystem>& fs,
           try
           {
             auto b = dn->fetch(a);
-            auto dd = std::make_shared<ifs::DirectoryData>(*b,
+            auto dd = std::make_shared<ifs::DirectoryData>(
+              boost::filesystem::path(),
+              *b,
               std::make_pair(true, true));
             ifs::Directory d(*fs, dd, nullptr, "");
             bool dchange = false;

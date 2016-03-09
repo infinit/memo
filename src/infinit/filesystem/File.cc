@@ -177,9 +177,9 @@ namespace infinit
     void
     FileData::update(Block& block, std::pair<bool, bool> perms)
     {
-      this->_block_version = dynamic_cast<ACLBlock&>(block).version();
       ELLE_DEBUG("%s: updating from %f ver=%s, worldperm=%s",
-                 this, block.address(), _block_version,
+                 this, block.address(),
+                 dynamic_cast<ACLBlock&>(block).version(),
                  dynamic_cast<ACLBlock&>(block).get_world_permissions());
       bool empty;
       elle::IOStream is(
@@ -196,33 +196,37 @@ namespace infinit
                              time(nullptr), time(nullptr), time(nullptr),
                              File::default_block_size);
       }
-      elle::serialization::binary::SerializerIn input(is);
-      try
+      else
       {
-        _fat.clear();
-        _header.xattrs.clear();
-        input.serialize("header", _header);
-        input.serialize("fat", _fat);
-        input.serialize("data", _data);
+        elle::serialization::binary::SerializerIn input(is);
+        try
+        {
+          _fat.clear();
+          _header.xattrs.clear();
+          input.serialize("header", _header);
+          input.serialize("fat", _fat);
+          input.serialize("data", _data);
+        }
+        catch(elle::serialization::Error const& e)
+        {
+          ELLE_WARN("File deserialization error: %s", e);
+          throw rfs::Error(EIO, e.what());
+        }
+        _header.mode &= ~606;
+        auto& ablock = dynamic_cast<ACLBlock&>(block);
+        auto wp = ablock.get_world_permissions();
+        if (wp.first)
+          _header.mode |= 4;
+        if (wp.second)
+          _header.mode |= 2;
+        if (perms.first)
+          _header.mode |= 0400;
+        if (perms.second)
+          _header.mode |= 0200;
       }
-      catch(elle::serialization::Error const& e)
-      {
-        ELLE_WARN("File deserialization error: %s", e);
-        throw rfs::Error(EIO, e.what());
-      }
-      _header.mode &= ~606;
-      auto& ablock = dynamic_cast<ACLBlock&>(block);
-      auto wp = ablock.get_world_permissions();
-      if (wp.first)
-        _header.mode |= 4;
-      if (wp.second)
-        _header.mode |= 2;
-      if (perms.first)
-        _header.mode |= 0400;
-      if (perms.second)
-        _header.mode |= 0200;
-      ELLE_DEBUG("%s: updated from %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s worldperms=%s",
-                 this, _address, _header.size, _header.links, _fat.size(), _data.size(), wp);
+      this->_block_version = dynamic_cast<ACLBlock&>(block).version();
+      ELLE_DEBUG("%s: updated from %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s",
+                 this, _address, _header.size, _header.links, _fat.size(), _data.size());
     }
 
     FileData::FileData(Address address, int mode)

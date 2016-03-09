@@ -68,7 +68,7 @@ namespace infinit
     {
        ELLE_TRACE("edit conflict on %s (%s %s)",
                   b.address(), op.type, op.target);
-       DirectoryData d(current, {true, true});
+       DirectoryData d({}, current, {true, true});
        switch(op.type)
        {
        case OperationType::insert:
@@ -202,8 +202,9 @@ namespace infinit
 
     std::unique_ptr<model::blocks::ACLBlock> DirectoryData::null_block;
 
-    DirectoryData::DirectoryData(model::blocks::Block& block, std::pair<bool, bool> perms)
+    DirectoryData::DirectoryData(boost::filesystem::path path, model::blocks::Block& block, std::pair<bool, bool> perms)
     {
+      _path = path;
       _address = block.address();
       _last_used = FileSystem::now();
       _block_version = -1;
@@ -211,8 +212,9 @@ namespace infinit
       update(block, perms);
     }
 
-    DirectoryData::DirectoryData(Address address)
+    DirectoryData::DirectoryData(boost::filesystem::path path, Address address)
     {
+      _path = path;
       _address = address;
       _last_used = FileSystem::now();
       _block_version = -1;
@@ -245,7 +247,6 @@ namespace infinit
     void
     DirectoryData::update(Block& block, std::pair<bool, bool> perms)
     {
-      _block_version = dynamic_cast<ACLBlock&>(block).version();
       ELLE_DEBUG("%s updating from block %s at %s", this,
         _block_version, block.address());
       _last_used = FileSystem::now();
@@ -295,6 +296,7 @@ namespace infinit
         ELLE_TRACE("Directory block fetch OK");
         ELLE_DEBUG("%s", print_files(_files));
       }
+      _block_version = dynamic_cast<ACLBlock&>(block).version();
     }
 
     void
@@ -405,7 +407,7 @@ namespace infinit
     std::shared_ptr<rfs::Path>
     Directory::child(std::string const& name)
     {
-      THROW_INVAL;
+      return _owner.path((_data->_path / name).string());
       /*
       ELLE_TRACE_SCOPE("%s: get child \"%s\"", *this, name);
       if (name == ".")
@@ -493,7 +495,7 @@ namespace infinit
                 block = model->fetch(addr);
                 if (block && e.is_dir && e.level +1 < prefetch_depth)
                 {
-                  DirectoryData d(*block, {true, true});
+                  DirectoryData d({}, *block, {true, true});
                   for (auto const& f: d._files)
                     files->push_back(
                       PrefetchEntry{f.first, f.second.second, e.level+1,
