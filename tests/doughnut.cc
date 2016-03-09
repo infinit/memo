@@ -926,9 +926,18 @@ namespace rebalancing
     template <typename ... Args>
     InstrumentedPaxosLocal(Args&& ... args)
       : Super(std::forward<Args>(args)...)
-      , _all_operations()
+      , _all_barrier()
+      , _propose_barrier()
+      , _propose_bypass(false)
+      , _accept_barrier()
+      , _accept_bypass(false)
+      , _confirm_barrier()
+      , _confirm_bypass(false)
     {
-      this->_all_operations.open();
+      this->_all_barrier.open();
+      this->_propose_barrier.open();
+      this->_accept_barrier.open();
+      this->_confirm_barrier.open();
     }
 
 
@@ -938,8 +947,13 @@ namespace rebalancing
             Address address,
             PaxosClient::Proposal const& p) override
     {
-      reactor::wait(this->all_operations());
-      return Super::propose(peers, address, p);
+      this->_proposing(address);
+      reactor::wait(this->all_barrier());
+      if (!this->_propose_bypass)
+        reactor::wait(this->propose_barrier());
+      auto res = Super::propose(peers, address, p);
+      this->_proposed(address);
+      return res;
     }
 
     virtual
@@ -949,7 +963,9 @@ namespace rebalancing
            PaxosClient::Proposal const& p,
            Value const& value) override
     {
-      reactor::wait(this->all_operations());
+      reactor::wait(this->all_barrier());
+      if (!this->_accept_bypass)
+        reactor::wait(this->accept_barrier());
       return Super::accept(peers, address, p, value);
     }
 
@@ -959,11 +975,21 @@ namespace rebalancing
             Address address,
             PaxosClient::Proposal const& p) override
     {
-      reactor::wait(this->all_operations());
+      reactor::wait(this->all_barrier());
+      if (!this->_confirm_bypass)
+        reactor::wait(this->confirm_barrier());
       Super::confirm(peers, address, p);
     }
 
-    ELLE_ATTRIBUTE_RX(reactor::Barrier, all_operations);
+    ELLE_ATTRIBUTE_RX(reactor::Barrier, all_barrier);
+    ELLE_ATTRIBUTE_RX(reactor::Barrier, propose_barrier);
+    ELLE_ATTRIBUTE_RW(bool, propose_bypass);
+    ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address)>, proposing);
+    ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(Address)>, proposed);
+    ELLE_ATTRIBUTE_RX(reactor::Barrier, accept_barrier);
+    ELLE_ATTRIBUTE_RW(bool, accept_bypass);
+    ELLE_ATTRIBUTE_RX(reactor::Barrier, confirm_barrier);
+    ELLE_ATTRIBUTE_RW(bool, confirm_bypass);
   };
 
   class InstrumentedPaxos:
@@ -998,28 +1024,40 @@ namespace rebalancing
     auto& local_a = dynamic_cast<InstrumentedPaxosLocal&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     DHT dht_b(make_consensus = instrument);
-    // auto& local_b = dynamic_cast<InstrumentedPaxosLocal&>(*dht_b.dht->local());
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b = dht_a.dht->make_block<blocks::MutableBlock>();
-    ELLE_LOG("write block to 1 node")
+    ELLE_LOG("write block to first DHT")
     {
       b->data(std::string("expand"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT);
     }
-    // local_b.all_operations().close();
+    // Block the new quorum election to check the balancing is done in
+    // background.
+    local_a.propose_barrier().close();
     ELLE_LOG("connect second DHT")
       dht_b.overlay->connect(*dht_a.overlay);
+    reactor::wait(local_a.proposing(), b->address());
     auto op = infinit::overlay::OP_FETCH;
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 1u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 1u);
-    reactor::wait(local_a.rebalanced(), b->address());
+    // Insert another block, to check iterator invalidation while balancing.
+    ELLE_LOG("write other block to first DHT")
+    {
+      local_a.propose_bypass(true);
+      auto perturbate = dht_a.dht->make_block<blocks::MutableBlock>();
+      perturbate->data(std::string("booh!"));
+      dht_a.dht->store(*perturbate, infinit::model::STORE_INSERT);
+    }
+    local_a.propose_barrier().open();
+    ELLE_LOG("wait for rebalancing")
+      reactor::wait(local_a.rebalanced(), b->address());
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 2u);
-    ELLE_LOG("write block to 2 nodes")
+    ELLE_LOG("write block to both DHTs")
     {
       auto resolver = elle::make_unique<VersionHop>(*b);
       b->data(std::string("expand'"));
-      dht_a.dht->store(*b, infinit::model::STORE_INSERT, std::move(resolver));
+      dht_b.dht->store(*b, infinit::model::STORE_UPDATE, std::move(resolver));
     }
     ELLE_LOG("disconnect second DHT")
       dht_b.overlay->disconnect(*dht_a.overlay);
