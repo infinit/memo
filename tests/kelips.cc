@@ -417,6 +417,53 @@ ELLE_TEST_SCHEDULED(conflicts)
   }
 }
 
+ELLE_TEST_SCHEDULED(times)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 1);
+  auto fs = make_observer(nodes.front(), tmp, kp, 1, 1, false, false, false);
+  struct stat st;
+  // we only have second resolution, so test in batches to avoid too much sleeping
+  fs->path("/dir")->mkdir(0600);
+  fs->path("/dir2")->mkdir(0600);
+  writefile(*fs, "dir/file", "foo");
+  writefile(*fs, "dir2/file", "foo");
+  fs->path("/dir")->stat(&st);
+  auto now = time(nullptr);
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime <= 1);
+  fs->path("/dir/file")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime <= 1);
+
+  reactor::sleep(2100_ms);
+  now = time(nullptr);
+  appendfile(*fs, "dir/file", "foo"); //mtime changed, ctime unchanged, dir unchanged
+  fs->path("/dir/file")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+  fs->path("/dir")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime >= 2);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+
+  reactor::sleep(2100_ms);
+  now = time(nullptr);
+  writefile(*fs, "dir/file2", "foo");
+  fs->path("/dir2/dir")->mkdir(0600);
+  fs->path("/dir/file")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime >= 2);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+  fs->path("/dir")->stat(&st); // new file created: mtime change
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+  fs->path("/dir2")->stat(&st); // new dir created: mtime change
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+}
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
@@ -425,6 +472,7 @@ ELLE_TEST_SUITE()
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(32));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(32));
+  suite.add(BOOST_TEST_CASE(times), 0, valgrind(32));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);

@@ -113,7 +113,9 @@ namespace infinit
         std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
       _parent->write(*_owner.block_store(),
-                     Operation{OperationType::insert, _name, EntryType::file, b->address()});
+                     Operation{OperationType::insert, _name, EntryType::file, b->address()},
+                     DirectoryData::null_block,
+                     true);
       elle::SafeFinally remove_from_parent( [&] {
           _parent->_files.erase(_name);
           try

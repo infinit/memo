@@ -311,7 +311,6 @@ namespace infinit
       {
         ELLE_DEBUG_SCOPE("set mtime");
         _header.mtime = time(nullptr);
-        _header.ctime = time(nullptr);
       }
       elle::Buffer data;
       {
