@@ -35,7 +35,7 @@
   },
   "amazon-cloud-drive": {
     "name": "Amazon Cloud Drive",
-    "description": "Amazon Cloud Drive is a cloud-based File sync application that works in a similar fashion to <a href='/documentation/comparison/dropbox'>Dropbox</a>, allowing users to sync their Files between their devices.",
+    "description": "Amazon Cloud Drive is a cloud-based file sync application that works in a similar fashion to <a href='/documentation/comparison/dropbox'>Dropbox</a>, allowing users to sync their Files between their devices.",
     "properties": {
       "architecture": "File",
       "interface": "File Synchronization",

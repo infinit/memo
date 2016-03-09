@@ -152,7 +152,6 @@
             %>
 
             ${value_infinit}
-            ${'(soon)' if property == 'redundancy' else ''}
           </span>
         </div>
       </div>
@@ -165,7 +164,7 @@
         % for value in competitor['similar_to']:
           <li><img src="${url('images/logos/' + value + '.png')}"><a href="${value}">${json[value]['name']}</a></li>
         % endfor
-      </ul>
+      </ul><br>
     % endif
 
     % if 'links' in competitor:
@@ -178,14 +177,14 @@
     % endif
 
     <div class="popup mfp-hide" id="object-file">
-      <h1>Architecture</h1>
+      <p class="title">Architecture</p>
       <p><strong><a href="https://en.wikipedia.org/wiki/Object_storage" target="_blank">Object storage</a></strong> architecture manage data as objects. Object storage is mostly used to store application-specific, movies in the case of <em>Netflix</em> for example.</p>
       <p><strong><a href="https://en.wikipedia.org/wiki/File_system" target="_blank">File storage</a></strong> solutions represent data in files organized in folders and subfolders. This organization of information into a <a href="https://en.wikipedia.org/wiki/Directory_structure" target="_blank">hierarchical view</a> is perfectly adapted for humans to store and collaborate. In addition, file systems often provide an <a href="https://en.wikipedia.org/wiki/Computer_access_control" target="_blank">access control</a> mechanism, in particular in multi-user environments, to control which files/directories can be seen/edited by other users/groups.</p>
       <p>Another architecture exists, known as <strong><a href="https://en.wikipedia.org/wiki/Block_(data_storage)" target="_blank">block storage</a></strong>, which manages data as blocks within sectors and tracks i.e very much like a raw hard disk drive.</p>
     </div>
 
     <div class="popup mfp-hide" id="scalability">
-      <h1>Scalability</h1>
+      <p class="title">Scalability</p>
       <p>Some systems <strong>do not allow for the overall storage capacity to evolve</strong> over time. The ones that do are said to be <a href="https://en.wikipedia.org/wiki/Scalability" target="_blank">scalable</a>. Scalable storage systems could be further categorized into those that can scale without any interruption of service and those that require shutting down the system. In reality, the vast majority of existing scalable systems can scale dynamically i.e without requiring shutting down the service.</p>
 
       <p>There exists two types of systems when it comes to scalability. The first category contains systems that can <strong>scale over homogeneous resources</strong> such as local disks, network-attached storage resources etc; resources that are under the control of the infrastructure's administrator.</p>
@@ -195,7 +194,7 @@
     </div>
 
     <div class="popup mfp-hide" id="redundancy">
-    <h1>Redundancy</h1>
+      <p class="title">Redundancy</p>
       <p>Many storage systems provide <strong>no <a href="https://en.wikipedia.org/wiki/Data_redundancy" target="_blank">redundancy</a> mechanism</strong> and therefore cannot ensure the <a href="https://en.wikipedia.org/wiki/Data_redundancy" target="_blank">reliability</a> of the data they store. As a result, should a <a class="open-popup" href="#fault_tolerance">server fail</a> in such a system, some of (and possibly all) the data would be made <a href="https://en.wikipedia.org/wiki/Downtime" target="_blank">unavailable</a> &horbar; temporarily or permanently depending on the nature of the failure.</p>
 
       <p>Reliability &horbar; represented by both <a href="https://en.wikipedia.org/wiki/Durability_(database_systems)" target="_blank">durability</a> (data stored remain in the system) and <a href="https://en.wikipedia.org/wiki/Data_availability" target="_blank">availability</a> (data is always accessible) &horbar; implies that a system provides some sort of a redundancy mechanism. There are basically two categories of redundancy algorithms: replication and erasure codes (which are error-correcting codes).</p>
@@ -213,7 +212,7 @@
     </div>
 
     <div class="popup mfp-hide" id="security">
-      <h1>Security</h1>
+      <p class="title">Security</p>
       <p>Most storage systems <strong>do not encrypt data</strong> <a href="https://en.wikipedia.org/wiki/Data_in_transit" target="_blank">in transit</a> (between clients and servers) nor <a href="https://en.wikipedia.org/wiki/Data_at_rest" target="_blank">at rest</a> (once stored on a server) because the environment allows it i.e the clients and servers are located in a trusted network such as a company's.</p>
 
       <p>Large-scale <a class="open-popup" href="#environment">worldwide environments</a> require a storage solution that both encrypts <strong>in transit and at rest</strong> so that a block of data cannot be decrypted by a potentially malicious storage server. Such at-rest encryption mechanisms are necessary because worldwide environments are usually considered untrustworthy since composed of many devices under the control of unknown entities.</p>
@@ -222,14 +221,14 @@
     </div>
 
     <div class="popup mfp-hide" id="interoperability">
-      <h1>Interoperability</h1>
+      <p class="title">Interoperability</p>
       <p>File-based storage systems need to take into account the multitude of platforms in use today, both mobile and desktop, for human end-users to be able to manipulate their files through well designed <strong>applications</strong>.</p>
 
       <p>Object-based and block-based systems tend to comply with standard <strong>protocols</strong> to interact with the system, from <a href="https://en.wikipedia.org/wiki/Server_Message_Block" target="_blank">SMB</a> to specific <a href="https://en.wikipedia.org/wiki/Web_API" target="_blank">HTTP-based APIs</a> for cloud-based solutions. Likewise, many file-based storage systems integrate with existing protocols to ease the process of deploying clients on thousands of machines e.g <a href="https://en.wikipedia.org/wiki/Network_File_System" target="_blank">NFS</a>. Noteworthy is that many operating systems (Windows, MacOS X etc.) and mobile applications allow for the connection through such protocols to access remote file systems.</p>
     </div>
 
     <div class="popup mfp-hide" id="interface">
-      <h1>Interface</h1>
+      <p class="title">Interface</p>
       <p>A storage solution, in particular file-based, can be accessed in different ways. Every interface has its benefits and disadvantages that are summarized next.</p>
 
       <h3>File Synchronization</h3>
@@ -254,7 +253,7 @@
     </div>
 
     <div class="popup mfp-hide" id="fault_tolerance">
-      <h1>Fault Tolerance</h1>
+      <p class="title">Fault Tolerance</p>
       <p>The capacity to maintain a storage system operational in the event of failure is referred to as <a href="https://en.wikipedia.org/wiki/Fault_tolerance" target="_blank">fault tolerance</a>.</p>
       <p>While some systems provide <strong>no fault tolerance mechanism</strong>, most do. Depending on the nature of the resources composing a storage infrastructure, a system will need a different algorithms to detect potential failures: <a href="https://en.wikipedia.org/wiki/Software_bug" target="_blank">bug</a>, <a href="https://en.wikipedia.org/wiki/Crash_(computing)" target="_blank">crash</a> (temporary or permanent) or even <a href="https://en.wikipedia.org/wiki/Hacker_(computer_security)" target="_blank">malicious behavior</a>.</p>
 
@@ -266,7 +265,7 @@
     </div>
 
     <div class="popup mfp-hide" id="environment">
-      <h1>Environment</h1>
+      <p class="title">Environment</p>
       <p>The environment in which is deployed a storage system radically changes the constrains it must take into account for designing <a class="open-popup" href="#security">security</a>, reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault_tolerance">fault tolerance</a>) and <a class="open-popup" href="#scalability">scalability</a> mechanisms.</p>
 
       <h3>Controlled</h3>
@@ -283,7 +282,7 @@
     </div>
 
     <div class="popup mfp-hide" id="model">
-      <h1>Model</h1>
+      <p class="title">Model</p>
       <p>The way the different servers and clients are arranged in a storage system can have a drastic impact on the overall infrastructure's performance, <a class="open-popup" href="#scalability">scalability</a> and reliability (<a class="open-popup" href="#redundancy">redundancy</a> & <a class="open-popup" href="#fault_tolerance">fault tolerance</a>).
 
       <h3>Centralized</h3>
