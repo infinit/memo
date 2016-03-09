@@ -193,6 +193,7 @@ class Website(bottle.Bottle):
       'competitor': json_data[path],
       'competitor_name': path,
       'infinit': json_data['infinit'],
+      'json': json_data,
       'show_comparison': show_comparison,
     }
 

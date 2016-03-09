@@ -1061,9 +1061,13 @@ body.doc_comparison {
       font-weight: 300; font-size: 18px; font-family: @helvetica;
       label { padding-right: 6px;}
     }
+
+    .properties.compared .property.same {
+      opacity: 0.8; filter: grayscale(100%);  -webkit-filter: grayscale(1);
+    }
     .properties div:nth-child(2n+1) { clear: both; }
     .property {
-      width: 46%; margin:35px 2%; float: left;
+      width: 46%; margin:35px 2%; float: left; opacity: 1; .transition();
       min-height: 209px; text-align: center;
       > img { max-height: 60px;}
       h2 {
@@ -1075,6 +1079,8 @@ body.doc_comparison {
         span.value {
           font-weight: bold; background: #FFF088; display: inline-block;
           padding: 6px 10px; border-radius: 2px;
+
+          &.unknown { font-style: italic; color: #949333; }
         }
         span.platforms {
           font-style: italic; color: @infinitgray; display: block;
@@ -1088,6 +1094,11 @@ body.doc_comparison {
       p { font-size: 14px; line-height: 19px; margin-top: 0; padding: 0 20px; }
     }
     h3.links { clear: both; margin-top: 50px; }
+    ul.similar_to {
+      list-style-type: none;
+      li { margin: 10px 0;}
+      img { max-width: 20px; max-height:20px; vertical-align: text-top; padding-right:5px }
+    }
   }
   div.popup {
     h2 { margin-top: 0;}

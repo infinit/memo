@@ -9,12 +9,14 @@
     <h1>${competitor['name']}</h1>
     <p>${competitor['description']}</p>
 
-    <div class="filters">
-      <label for="switcher">Show comparison with Infinit</label>
-      <input type="checkbox" class="js-switch" ${'checked' if show_comparison else ''} />
-    </div>
+    % if competitor_name != 'infinit':
+      <div class="filters">
+        <label for="switcher">Show comparison with Infinit</label>
+        <input type="checkbox" class="js-switch" ${'checked' if show_comparison else ''} />
+      </div>
+    % endif
 
-    <div class="properties">
+    <div class="properties ${'compared' if show_comparison else ''}">
     <%
       properties = [None]*9
 
@@ -52,7 +54,7 @@
 
       <div class="property ${'same' if is_similar else 'different'}">
         <img class="" src="${url('images/icons/' + property + '.png')}" alt="${property}">
-        <h2>${property.capitalize()}</h2>
+        <h2>${property.replace('_', ' ').title()}</h2>
         <p class="note">
         % if property == 'architecture':
           % if value == 'Object':
@@ -62,18 +64,18 @@
           % endif
 
         % elif property == 'scalability':
-          % if value == 'heterogeneous':
+          % if value == 'Heterogeneous':
             Heterogeneous systems can scale by integrating additional storage capacity from resources of different nature being a cloud storage provider, a local disk, a SAN etc. <a class="open-popup" href="#scalability">Read more.</a>
-          % elif value == 'homogeneous':
+          % elif value == 'Homogeneous':
             Homogeneous systems can scale up and out but are limited to resources that are under the control of the infrastructure's administrator: local disk, NAS etc. <a class="open-popup" href="#scalability">Read more.</a>
           % else:
             Some systems do not allow for the overall storage capacity to evolve over time. <a class="open-popup" href="#scalability">Read more.</a>
           % endif
 
         % elif property == 'redundancy':
-          % if value == 'erasure codes':
+          % if 'Erasure Codes' in value:
             Erasure codes consume less storage capacity than replication while provoding the same durability and availability guarantees. <a class="open-popup" href="#redundancy">Read more.</a>
-          % elif value == 'replication':
+          % elif value == 'Replication':
             Replication is a simple redundancy mechanism that consumes more storage capacity than erasure codes but requires less time to reconstruct a missing piece.
           % else:
             Redundancy mechanisms ensure the availability and durability of the files stored in the storage infrastructure. <a class="open-popup" href="#redundancy">Read more.</a>
@@ -120,14 +122,9 @@
         % endif
         </p>
         <div class="competitor">
-          <span class="value">
+          <span class="value ${'unknown' if 'Unknown' in value or value == '' else ''}">
             <%
             platforms = None
-
-            if len(value.split()) == 1 or "applications" in value:
-              value = value.capitalize()
-            else:
-              value
 
             if "Applications" in value:
               try:
@@ -162,10 +159,21 @@
     % endfor
     </div>
 
+    % if 'similar_to' in competitor:
+      <h3 class="links">Similar To</h3>
+      <ul class="similar_to">
+        % for value in competitor['similar_to']:
+          <li><img src="${url('images/logos/' + value + '.png')}"><a href="${value}">${json[value]['name']}</a></li>
+        % endfor
+      </ul>
+    % endif
+
     % if 'links' in competitor:
       <h3 class="links">Links</h3>
       <ul>
-        <!-- XXX iterate and display -->
+        % for property, value in competitor['links'].items():
+          <li><a target="_blank" href="${value}">${property.capitalize()}</a></li>
+        % endfor
       </ul>
     % endif
 

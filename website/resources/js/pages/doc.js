@@ -201,10 +201,11 @@ $(document).ready(function() {
   `----------------*/
 
   function displayComparison() {
-    $('.properties').toggleClass('compared');
     if (elem.checked) {
+      $('.properties').addClass('compared');
       $('.property .infinit').show();
     } else {
+      $('.properties').removeClass('compared');
       $('.property .infinit').hide();
     }
   }

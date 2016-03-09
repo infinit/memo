@@ -3,41 +3,42 @@
     "name": "Infinit",
     "description": "",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "decentralized",
-      "environment": "controlled",
-      "redundancy": "replication",
-      "fault_tolerance": "byzantine",
-      "scalability": "heterogeneous",
+      "model": "DeCentralized",
+      "environment": "Controlled",
+      "redundancy": "Replication",
+      "fault_tolerance": "Byzantine",
+      "scalability": "Heterogeneous",
       "security": "In-Transit & At-Rest",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "links": {
-      "wikipedia": "https://en.wikipedia.org/wiki/Infinit_(file system)"
+      "wikipedia": "https://en.wikipedia.org/wiki/Infinit_(File system)"
     }
   },
   "aerofs": {
     "name": "AeroFS",
     "description": "AeroFS is an enterprise file sync & share solution deployed on the customer's infrastructure, allowing the company to keep control of its data and enabling employees to securely collaborate both inside and outside the organization.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
-      "model": "decentralized",
-      "environment": "controlled",
+      "model": "DeCentralized",
+      "environment": "Controlled",
       "redundancy": "None",
-      "fault_tolerance": "standard",
+      "fault_tolerance": "Standard",
       "security": "In-Transit",
-      "scalability": "none",
+      "scalability": "None",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
-    "links": {}
+    "links": {},
+    "similar_to": ["bsync"]
   },
   "amazon-cloud-drive": {
     "name": "Amazon Cloud Drive",
-    "description": "Amazon Cloud Drive is a cloud-based file sync application that works in a similar fashion to <a href='/documentation/comparison/dropbox>Dropbox</a>, allowing users to sync their files between their devices.",
+    "description": "Amazon Cloud Drive is a cloud-based File sync application that works in a similar fashion to <a href='/documentation/comparison/dropbox'>Dropbox</a>, allowing users to sync their Files between their devices.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
       "model": "Unknown (Proprietary)",
       "environment": "",
@@ -49,13 +50,14 @@
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Amazon_Cloud_Drive"
-    }
+    },
+    "similar_to": ["box", "dropbox", "icloud", "sugarsync"]
   },
   "aws-s3": {
     "name": "AWS S3",
-    "description": "Amazon S3 (Simple Storage Service) is a cloud-based object storage web service. S3 provides availability and durability guarantees along with extreme scalability.",
+    "description": "Amazon S3 (Simple Storage Service) is a cloud-based Object storage web service. S3 provides availability and durability guarantees along with extreme scalability.",
     "properties": {
-      "architecture": "object",
+      "architecture": "Object",
       "interface": "API",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -63,17 +65,18 @@
       "fault_tolerance": "Unknown (proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "protocol"
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Amazon_S3"
-    }
+    },
+    "similar_to": ["gcs", "backblaze"]
   },
   "backblaze": {
     "name": "BackBlaze B2",
-    "description": "Backblaze B2 is a cloud-based object storage service that competes against Amazon S3 by promising the lowest storage cost on the market.",
+    "description": "Backblaze B2 is a cloud-based Object storage service that competes against Amazon S3 by promising the lowest storage cost on the market.",
     "properties": {
-      "architecture": "object",
+      "architecture": "Object",
       "interface": "API",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -81,18 +84,19 @@
       "fault_tolerance": "Unknown (proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "protocol"
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Backblaze"
-    }
+    },
+    "similar_to": ["aws-s3", "gcs"]
   },
   "bitcasa": {
     "name": "Bitcasa",
-    "description": "Bitcasa is a cloud-based file storage service founded in 2011. Bitcasa allows users to access files stored in the cloud through a file system and Web interfaces.",
+    "description": "Bitcasa is a cloud-based File storage service founded in 2011. Bitcasa allows users to access Files stored in the cloud through a File system and Web interfaces.",
     "properties": {
-      "architecture": "file",
-      "interface": "file system",
+      "architecture": "File",
+      "interface": "File system",
       "model": "Unknown (proprietary)",
       "environment": "",
       "redundancy": "Unknown (proprietary)",
@@ -106,28 +110,29 @@
     }
   },
    "bsync": {
-    "name": "BitTorent sync",
-    "description": "BitTorrent Sync proprietary peer-to-peer file synchronization tool available for Windows, Mac, Linux, Android, iOS, Windows Phone and more. It can sync files between devices on a local network, or between remote devices over the Internet via a modified version of the BitTorrent protocol.",
+    "name": "BitTorent Sync",
+    "description": "BitTorrent Sync proprietary peer-to-peer File synchronization tool available for Windows, Mac, Linux, Android, iOS, Windows Phone and more. It can sync Files between devices on a local network, or between remote devices over the Internet via a modified version of the BitTorrent Protocol.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
-      "model": "decentralized",
-      "environment": "controlled",
+      "model": "DeCentralized",
+      "environment": "Controlled",
       "redundancy": "None",
-      "fault_tolerance": "standard",
+      "fault_tolerance": "Standard",
       "security": "In-Transit",
-      "scalability": "none",
+      "scalability": "None",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/BitTorrent_Sync"
-    }
+    },
+    "similar_to": ["aerofs"]
   },
   "box": {
     "name": "Box",
-    "description": "Box is a cloud-based file sharing and content management service for businesses. The company offers sync clients for Windows and MacOS X along with a Web interface that is the primary way of accessing files.",
+    "description": "Box is a cloud-based File sharing and content management service for businesses. The company offers sync clients for Windows and MacOS X along with a Web interface that is the primary way of accessing Files.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -139,21 +144,22 @@
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Box_(company)"
-    }
+    },
+    "similar_to": ["amazon-cloud-drive", "dropbox", "icloud", "sugarsync"]
   },
   "ceph": {
     "name": "Ceph",
-    "description": "Ceph is an object storage platform that stores data on a single distributed computer cluster. Ceph's distributed model aims at providing scalability at the exabyte level without single points of failure.",
+    "description": "Ceph is an Object storage platform that stores data on a single Distributed computer cluster. Ceph's Distributed model aims at providing scalability at the exabyte level without single points of failure.",
     "properties": {
-      "architecture": "object",
+      "architecture": "Object",
       "interface": "SDK",
-      "model": "distributed",
-      "environment": "controlled",
+      "model": "Distributed",
+      "environment": "Controlled",
       "redundancy": "Replication/Erasure Codes",
-      "fault_tolerance": "standard",
-      "security": "none",
-      "scalability": "homogeneous",
-      "interoperability": "protocol"
+      "fault_tolerance": "Standard",
+      "security": "None",
+      "scalability": "Homogeneous",
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Ceph_(software)"
@@ -161,27 +167,28 @@
   },
   "coda": {
     "name": "Coda",
-    "description": "Coda is a distributed file system developed as a research project at Carnegie Mellon University since 1987. It descended directly from an older version of Andrew File System and offers many similar features.",
+    "description": "Coda is a Distributed File system developed as a research project at Carnegie Mellon University since 1987. It descended directly from an older version of Andrew File System and offers many similar features.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "distributed",
-      "environment": "controlled",
-      "redundancy": "replication",
-      "fault_tolerance": "standard",
-      "security": "none",
-      "scalability": "homogeneous",
-      "interoperability": "protocol"
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "Replication",
+      "fault_tolerance": "Standard",
+      "security": "None",
+      "scalability": "Homogeneous",
+      "interoperability": "Protocol"
     },
     "links": {
-      "wikipedia": "https://en.wikipedia.org/wiki/Coda_(file_system)"
-    }
+      "wikipedia": "https://en.wikipedia.org/wiki/Coda_(File_system)"
+    },
+    "similar_to": ["hammer", "moosefs", "xtreemfs", "lustre", "hdfs", "nfs"]
   },
   "dropbox": {
     "name": "DropBox",
-    "description": "Dropbox is a cloud-based file synchronization solution. Dropbox allows users to create a special folder on their computers, which Dropbox then synchronizes so that it appears to be the same folder (with the same contents) regardless of which device is used to view it.",
+    "description": "Dropbox is a cloud-based File synchronization solution. Dropbox allows users to create a special folder on their computers, which Dropbox then synchronizes so that it appears to be the same folder (with the same contents) regardless of which device is used to view it.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -193,31 +200,33 @@
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Dropbox_(service)"
-    }
+    },
+    "similar_to": ["amazon-cloud-drive", "box", "icloud", "sugarsync"]
   },
   "glusterfs": {
     "name": "GlusterFS",
-    "description": "GlusterFS is a scale-out network-attached storage file system. GlusterFS was developed originally by Gluster, Inc., then by Red Hat, Inc., after their purchase of Gluster in 2011.",
+    "description": "GlusterFS is a scale-out network-attached storage File system. GlusterFS was developed originally by Gluster, Inc., then by Red Hat, Inc., after their purchase of Gluster in 2011.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "decentralized",
-      "environment": "controlled",
+      "model": "DeCentralized",
+      "environment": "Controlled",
       "redundancy": "Unknown (proprietary)",
-      "fault_tolerance": "standard",
+      "fault_tolerance": "Standard",
       "security": "In-Transit",
       "scalability": "",
       "interoperability": "Applications (MacOS X, Linux, NetBSD)"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/GlusterFS"
-    }
+    },
+    "similar_to": ["infinit", "tahoe-lafs"]
   },
   "gcs": {
     "name": "Google Cloud Storage",
-    "description": "Google Cloud Storage is a cloud-based object storage web service for storing and accessing data on Google's infrastructure. The service is comparable to <a href='/documentation/comparison/gcs'>Amazon S3</a> online storage service.",
+    "description": "Google Cloud Storage is a cloud-based Object storage web service for storing and accessing data on Google's infrastructure. The service is comparable to <a href='/documentation/comparison/gcs'>Amazon S3</a> online storage service.",
     "properties": {
-      "architecture": "object",
+      "architecture": "Object",
       "interface": "API",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -225,53 +234,56 @@
       "fault_tolerance": "Unknown (proprietary)",
       "security": "In-Transit",
       "scalability": "",
-      "interoperability": "protocol"
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Google_Storage"
-    }
+    },
+    "similar_to": ["aws-s3", "backblaze"]
   },
   "hammer": {
     "name": "HAMMER",
-    "description": "HAMMER is a high-availability 64-bit distributed file system developed for DragonFly BSD.",
+    "description": "HAMMER is a high-availability 64-bit Distributed File system developed for DragonFly BSD.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "distributed",
-      "environment": "controlled",
-      "redundancy": "replication (mirroring)",
-      "fault_tolerance": "standard",
-      "security": "none",
-      "scalability": "homogeneous",
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "Replication (mirroring)",
+      "fault_tolerance": "Standard",
+      "security": "None",
+      "scalability": "Homogeneous",
       "interoperability": "Applications (Linux, *BSD)"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/HAMMER"
-    }
+    },
+    "similar_to": ["coda", "moosefs", "xtreemfs", "lustre", "hdfs", "nfs"]
   },
   "hdfs": {
     "name": "HDFS",
-    "description": "The Hadoop distributed file system (HDFS) is a distributed, scalable, and portable file-system written in Java for the Hadoop framework. A Hadoop cluster is composed of a single namenode plus a cluster of datanodes, although redundancy options are available for the namenode due to its criticality.",
+    "description": "The Hadoop Distributed File system (HDFS) is a Distributed, scalable, and portable File-system written in Java for the Hadoop framework. A Hadoop cluster is composed of a single namenode plus a cluster of datanodes, although redundancy options are available for the namenode due to its criticality.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "distributed",
-      "environment": "controlled",
-      "redundancy": "replication",
-      "fault_tolerance": "standard",
-      "security": "none",
-      "scalability": "homogeneous",
-      "interoperability": "protocol"
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "Replication",
+      "fault_tolerance": "Standard",
+      "security": "None",
+      "scalability": "Homogeneous",
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Apache_Hadoop#HDFS"
-    }
+    },
+    "similar_to": ["coda", "hammer", "moosefs", "xtreemfs", "lustre", "nfs"]
   },
   "icloud": {
     "name": "iCloud",
-    "description": "iCloud is a cloud-based file storage service from Apple launched on 2011. The service provides its users with means to store data such as documents, photos, and music on remote servers in a similar fashion to <a href='/documentation/comparison/dropbox>Dropbox</a>.",
+    "description": "iCloud is a cloud-based File storage service from Apple launched on 2011. The service provides its users with means to store data such as documents, photos, and music on remote servers in a similar fashion to <a href='/documentation/comparison/dropbox>Dropbox</a>.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
       "model": "Unknown (Proprietary)",
       "environment": "",
@@ -283,21 +295,22 @@
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/ICloud"
-    }
+    },
+    "similar_to": ["amazon-cloud-drive", "sugarsync"]
   },
   "ipfs": {
     "name": "IPFS",
-    "description": "The InterPlanetary File System (IPFS) is a content-addressable peer-to-peer hypermedia distribution protocol. In some ways, IPFS is similar to the Web, but IPFS could be seen as a single BitTorrent swarm, exchanging objects within one Git repository. Not however that IPFS does not focus on providing high-level file system functionalities such as access control, POSIX compliance etc.",
+    "description": "The InterPlanetary File System (IPFS) is a content-addressable peer-to-peer hypermedia distribution Protocol. In some ways, IPFS is similar to the Web, but IPFS could be seen as a single BitTorrent swarm, exchanging Objects within one Git repository. Not however that IPFS does not focus on providing high-level File system functionalities such as access control, POSIX compliance etc.",
     "properties": {
-      "architecture": "object",
+      "architecture": "Object",
       "interface": "SDK",
-      "model": "decentralized",
-      "environment": "controlled",
-      "redundancy": "none",
-      "fault_tolerance": "partial",
+      "model": "DeCentralized",
+      "environment": "Controlled",
+      "redundancy": "None",
+      "fault_tolerance": "Partial",
       "security": "In-Transit & At-Rest",
-      "scalability": "homogeneous",
-      "interoperability": "protocol"
+      "scalability": "Homogeneous",
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/InterPlanetary_File_System"
@@ -305,113 +318,118 @@
   },
   "lustre": {
     "name": "Lustre",
-    "description": "Lustre is a parallel distributed file system generally used for large-scale cluster computing. Lustre provides high performance file systems for computer clusters ranging in size from small workgroup clusters to large-scale, multi-site clusters.",
+    "description": "Lustre is a parallel Distributed File system generally used for large-scale cluster computing. Lustre provides high performance File systems for computer clusters ranging in size from small workgroup clusters to large-scale, multi-site clusters.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "distributed",
-      "environment": "controlled",
-      "redundancy": "none",
-      "fault_tolerance": "partial",
-      "security": "none",
-      "scalability": "homogeneous",
-      "interoperability": "protocol"
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "None",
+      "fault_tolerance": "Partial",
+      "security": "None",
+      "scalability": "Homogeneous",
+      "interoperability": "Protocol"
     },
     "links": {
-      "wikipedia": "https://en.wikipedia.org/wiki/Lustre_(file_system)"
-    }
+      "wikipedia": "https://en.wikipedia.org/wiki/Lustre_(File_system)"
+    },
+    "similar_to": ["coda", "hammer", "moosefs", "xtreemfs", "hdfs", "nfs"]
   },
   "moosefs": {
     "name": "MooseFS",
-    "description": "MooseFS is a distributed file system developed by Core Technology. MooseFS aims to be fault-tolerant, highly available, highly performing, scalable general-purpose network distributed file system for data centers.",
+    "description": "MooseFS is a Distributed File system developed by Core Technology. MooseFS aims to be fault-tolerant, highly available, highly performing, scalable general-purpose network Distributed File system for data centers.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "distributed",
-      "environment": "controlled",
-      "redundancy": "replication",
-      "fault_tolerance": "standard",
-      "security": "none",
-      "scalability": "homogeneous",
-      "interoperability": "protocol"
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "Replication",
+      "fault_tolerance": "Standard",
+      "security": "None",
+      "scalability": "Homogeneous",
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Moose_File_System"
-    }
+    },
+    "similar_to": ["coda", "hammer", "xtreemfs", "lustre", "hdfs", "nfs"]
   },
   "nfs": {
     "name": "NFS",
-    "description": "Network File System (NFS) is a distributed file system protocol originally developed by Sun Microsystems in 1984, allowing a user on a client computer to access files over a computer network much like local storage is accessed.",
+    "description": "Network File System (NFS) is a Distributed File system Protocol originally developed by Sun Microsystems in 1984, allowing a user on a client computer to access Files over a computer network much like local storage is accessed.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "distributed",
-      "environment": "controlled",
-      "redundancy": "none",
-      "fault_tolerance": "partial",
-      "security": "none",
-      "scalability": "homogeneous",
-      "interoperability": "protocol"
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "None",
+      "fault_tolerance": "Partial",
+      "security": "None",
+      "scalability": "Homogeneous",
+      "interoperability": "Protocol"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Network_File_System"
-    }
+    },
+    "similar_to": ["coda", "hammer", "moosefs", "xtreemfs", "lustre", "hdfs"]
   },
   "owncloud": {
-    "name": "OwnCloud",
-    "description": "OwnCloud is a suite of client-server software for creating and using file hosting services. OwnCloud is functionally very similar to the widely used <a href='/documentation/comparison/dropbox'>Dropbox</a>, with the primary functional difference being that OwnCloud can be installed on a private server, hence removing the limits on storage space (except for disk capacity or account quota) or the number of connected clients.",
+    "name": "ownCloud",
+    "description": "OwnCloud is a suite of client-server software for creating and using File hosting services. OwnCloud is functionally very similar to the widely used <a href='/documentation/comparison/dropbox'>Dropbox</a>, with the primary functional difference being that OwnCloud can be installed on a private server, hence removing the limits on storage space (except for disk capacity or account quota) or the number of connected clients.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
-      "model": "centralized",
-      "environment": "controlled",
-      "redundancy": "none",
-      "fault_tolerance": "none",
+      "model": "Centralized",
+      "environment": "Controlled",
+      "redundancy": "None",
+      "fault_tolerance": "None",
       "security": "In-Transit",
-      "scalability": "none",
+      "scalability": "None",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/OwnCloud"
-    }
+    },
+    "similar_to": ["pydio"]
   },
   "pydio": {
     "name": "Pydio",
-    "description": "Pydio is a open source enterprise file sharing & sync solution that is similar to <a href='/documentation/comparison/owncloud'>OwnCloud</a>. Pydio targets businesses looking for an on-premise alternative to <a href='/documentation/comparison/dropbox'>Dropbox</a>. As for OwnCloud, Pydio does not provide businesses with infrastructure tools: scalability, redundancy, fault_tolerance etc.",
+    "description": "Pydio is a open source enterprise File sharing & sync solution that is similar to <a href='/documentation/comparison/owncloud'>OwnCloud</a>. Pydio targets businesses looking for an on-premise alternative to <a href='/documentation/comparison/dropbox'>Dropbox</a>. As for OwnCloud, Pydio does not provide businesses with infrastructure tools: scalability, redundancy, fault_tolerance etc.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
-      "model": "centralized",
-      "environment": "controlled",
-      "redundancy": "none",
-      "fault_tolerance": "none",
+      "model": "Centralized",
+      "environment": "Controlled",
+      "redundancy": "None",
+      "fault_tolerance": "None",
       "security": "In-Transit",
-      "scalability": "none",
+      "scalability": "None",
       "interoperability": "Applications (Windows, MacOS X, Linux, iOS, Android)"
     },
-    "links": {}
+    "links": {},
+    "similar_to": ["owncloud"]
   },
   "storj": {
     "name": "Storj",
-    "description": "Storj's aim is to become an object storage platform that can’t be censored or monitored, or have downtime. Storj is a platform, cryptocurrency, and suite of decentralized applications that allows users to store data in a secure and decentralized manner. It uses blockchain features like a transaction ledger, public/private key encryption, and cryptographic hash functions for security.",
+    "description": "Storj's aim is to become an Object storage platform that can’t be censored or monitored, or have downtime. Storj is a platform, cryptocurrency, and suite of DeCentralized applications that allows users to store data in a secure and DeCentralized manner. It uses blockchain features like a transaction ledger, public/private key encryption, and cryptographic hash functions for security.",
     "properties": {
-      "architecture": "object",
+      "architecture": "Object",
       "interface": "SDK",
-      "model": "decentralized",
-      "environment": "worldwide",
+      "model": "DeCentralized",
+      "environment": "Worldwide",
       "redundancy": "Erasure Codes",
-      "fault_tolerance": "byzantine",
+      "fault_tolerance": "Byzantine",
       "security": "In-Transit & At-Rest",
-      "scalability": "homogeneous",
+      "scalability": "Homogeneous",
       "interoperability": "applications"
     },
     "links": {}
   },
   "sugarsync": {
     "name": "SugarSync",
-    "description": "SugarSync is a cloud-based file storage service that enables active synchronization across computers and other devices for file backup, access, syncing, and sharing from a variety of operating systems.",
+    "description": "SugarSync is a cloud-based File storage service that enables active synchronization across computers and other devices for File backup, access, syncing, and sharing from a variety of operating systems.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
       "model": "Unknown (proprietary)",
       "environment": "",
@@ -423,38 +441,40 @@
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/SugarSync"
-    }
+    },
+    "similar_to": ["amazon-cloud-drive", "icloud"]
   },
   "tahoe-lafs": {
     "name": "Tahoe-LAFS",
-    "description": "Tahoe-LAFS is a free and open, secure, decentralized, fault-tolerant, distributed data store and distributed file system. It can be used as an online backup system, or to serve as a file or web host similar to Freenet, depending on the front-end used to insert and access files in the Tahoe system. Tahoe can also be used in a RAID-like manner to use multiple disks to make a single large RAIN pool of reliable data storage.",
+    "description": "Tahoe-LAFS is a free and open, secure, DeCentralized, fault-tolerant, Distributed data store and Distributed File system. It can be used as an online backup system, or to serve as a File or web host similar to Freenet, depending on the front-end used to insert and access Files in the Tahoe system. Tahoe can also be used in a RAID-like manner to use multiple disks to make a single large RAIN pool of reliable data storage.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "decentralized",
-      "environment": "controlled",
+      "model": "DeCentralized",
+      "environment": "Controlled",
       "redundancy": "Erasure Codes",
-      "fault_tolerance": "byzantine",
+      "fault_tolerance": "Byzantine",
       "security": "In-Transit & At-Rest",
-      "scalability": "homogeneous",
+      "scalability": "Homogeneous",
       "interoperability": "Applications (Linux, NetBSD)"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Tahoe-LAFS"
-    }
+    },
+    "similar_to": ["glusterfs", "infinit"]
   },
   "wuala": {
     "name": "Wuala",
-    "description": "Wuala was a secure community-based peer-to-peer file storage, file synchronization, versioning and backup service originally developed and run by Caleido Inc. before being acquired by LaCie. Wuala announced that it was discontinuing its service and that all stored data would be deleted on 15 November 2015.",
+    "description": "Wuala was a secure community-based peer-to-peer File storage, File synchronization, versioning and backup service originally developed and run by Caleido Inc. before being acquired by LaCie. Wuala announced that it was discontinuing its service and that all stored data would be deleted on 15 November 2015.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File Synchronization",
-      "model": "decentralized",
-      "environment": "worldwide",
+      "model": "DeCentralized",
+      "environment": "Worldwide",
       "redundancy": "Erasure Codes",
-      "fault_tolerance": "byzantine",
+      "fault_tolerance": "Byzantine",
       "security": "In-Transit & At-Rest",
-      "scalability": "homogeneous",
+      "scalability": "Homogeneous",
       "interoperability": "applications"
     },
     "links": {
@@ -463,20 +483,21 @@
   },
   "xtreemfs": {
     "name": "XtreemFS",
-    "description": "XtreemFS is a distributed file system for wide area networks. XtreemFS provides fault_tolerance while maintaining POSIX file system semantics. Fault-tolerance is achieved by using Paxos-based lease negotiation algorithms and is used to replicate files and metadata.",
+    "description": "XtreemFS is a Distributed File system for wide area networks. XtreemFS provides fault_tolerance while maintaining POSIX File system semantics. Fault-tolerance is achieved by using Paxos-based lease negotiation algorithms and is used to replicate Files and metadata.",
     "properties": {
-      "architecture": "file",
+      "architecture": "File",
       "interface": "File System",
-      "model": "distributed",
-      "environment": "controlled",
-      "redundancy": "replication",
-      "fault_tolerance": "standard",
+      "model": "Distributed",
+      "environment": "Controlled",
+      "redundancy": "Replication",
+      "fault_tolerance": "Standard",
       "security": "In-Transit",
-      "scalability": "homogeneous",
+      "scalability": "Homogeneous",
       "interoperability": "Applications (Windows, MacOS X, Linux)"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/XtreemFS"
-    }
+    },
+    "similar_to": ["coda", "hammer", "moosefs", "lustre", "hdfs", "nfs"]
   }
 }
