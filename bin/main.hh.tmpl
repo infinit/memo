@@ -899,8 +899,16 @@ namespace infinit
       , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-      , version(s.deserialize<elle::Version>("version"))
+      , version()
     {
+      try
+      {
+        version = s.deserialize<elle::Version>("version");
+      }
+      catch (elle::serialization::Error const&)
+      {
+        version = elle::Version(0, 3, 0);
+      }
       check_name(this->name);
     }
 
@@ -921,7 +929,15 @@ namespace infinit
       s.serialize("consensus", this->consensus);
       s.serialize("overlay", this->overlay);
       s.serialize("owner", this->owner);
-      s.serialize("version", this->version);
+      try
+      {
+        s.serialize("version", this->version);
+      }
+      catch (elle::serialization::Error const&)
+      {
+        // Oldest versions did not specify compatibility version.
+        this->version = elle::Version(0, 3, 0);
+      }
     }
 
     std::string name;
