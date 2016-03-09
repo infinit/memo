@@ -233,6 +233,7 @@ namespace infinit
               clock::time_point const&, &FileData::last_used>>
               > > FileCache;
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
+      static const int max_cache_size = 1000;
     };
   }
 }

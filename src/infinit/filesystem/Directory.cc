@@ -417,46 +417,8 @@ namespace infinit
     std::shared_ptr<rfs::Path>
     Directory::child(std::string const& name)
     {
+      // Never called by rfs::FileSystem, but used in some tests.
       return _owner.path((_data->_path / name).string());
-      /*
-      ELLE_TRACE_SCOPE("%s: get child \"%s\"", *this, name);
-      if (name == ".")
-        return shared_from_this();
-      // Alternate access to extended attributes
-      static const char* attr_key = "$xattr.";
-      if (name.size() > strlen(attr_key)
-        && name.substr(0, strlen(attr_key)) == attr_key)
-      {
-        return std::make_shared<XAttributeFile>(shared_from_this(),
-          name.substr(strlen(attr_key)));
-      }
-      if (name.size() > strlen("$xattrs.")
-        && name.substr(0, strlen("$xattrs.")) == "$xattrs.")
-      {
-        auto c = child(name.substr(strlen("$xattrs.")));
-        return std::make_shared<XAttributeDirectory>(c);
-      }
-      _fetch();
-      auto it = _files.find(name);
-      auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
-      if (it != _files.end())
-      {
-        switch(it->second.first)
-        {
-        case EntryType::symlink:
-          return std::shared_ptr<rfs::Path>(new Symlink(self, _owner, name));
-        case EntryType::file:
-          return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
-        case EntryType::directory:
-          return std::shared_ptr<rfs::Path>(
-            new Directory(self, _owner, name, it->second.second));
-        default:
-          return {};
-        }
-      }
-      else
-        return std::shared_ptr<rfs::Path>(new Unknown(self, _owner, name));
-      */
     }
 
     struct PrefetchEntry

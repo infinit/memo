@@ -1,6 +1,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/umbrella.hh>
+#include <infinit/filesystem/xattribute.hh>
 
 #include <infinit/model/MissingBlock.hh>
 
@@ -371,6 +372,15 @@ namespace infinit
     std::shared_ptr<reactor::filesystem::Path>
     FileSystem::path(std::string const& path)
     {
+      // cache cleanup, this place is as good as any
+      if (max_cache_size >= 0)
+      {
+        while (_file_cache.size() > unsigned(max_cache_size))
+          _file_cache.get<1>().erase(_file_cache.get<1>().begin());
+        while (_directory_cache.size() > unsigned(max_cache_size))
+          _directory_cache.get<1>().erase(_directory_cache.get<1>().begin());
+      }
+
       if (_root_address == Address::null)
         _root_block();
       ELLE_ASSERT(!path.empty() && path[0] == '/');
@@ -383,32 +393,64 @@ namespace infinit
       std::shared_ptr<DirectoryData> dp;
       for (int i=1; i< signed(components.size()) - 1; ++i)
       {
-        if (components[i].empty())
+        std::string& name = components[i];
+        if (name.empty() || name == ".")
           continue;
+        if (name.size() > strlen("$xattrs.")
+          && name.substr(0, strlen("$xattrs.")) == "$xattrs.")
+        {
+          auto rpath = boost::filesystem::path(
+            path.substr(0, path.find("$xattrs."))) / name.substr(strlen("$xattrs."));
+          auto target = this->path(rpath.string());
+          std::shared_ptr<rfs::Path> xroot = std::make_shared<XAttributeDirectory>(target);
+          for (int j=i+1; j < signed(components.size()) ; ++j)
+            xroot = xroot->child(components[j]);
+          return xroot;
+        }
+
         auto const& files = d->files();
-        auto it = files.find(components[i]);
+        auto it = files.find(name);
         if (it == files.end() || it->second.first != EntryType::directory)
         {
-          ELLE_DEBUG("%s: component '%s' is not a directory", this, components[i]);
+          ELLE_DEBUG("%s: component '%s' is not a directory", this, name);
           THROW_NOTDIR;
         }
         dp = d;
-        current_path /= components[i];
+        current_path /= name;
         d = get(current_path, it->second.second);
       }
-      if (components.back().empty())
+      std::string& name = components.back();
+      if (name.empty() || name == ".")
       {
-        return std::shared_ptr<rfs::Path>(new Directory(*this, d, dp, components.back()));
+        return std::shared_ptr<rfs::Path>(new Directory(*this, d, dp, name));
       }
+
+      static const char* attr_key = "$xattr.";
+      if (name.size() > strlen(attr_key)
+        && name.substr(0, strlen(attr_key)) == attr_key)
+      {
+        return std::make_shared<XAttributeFile>(
+          this->path(boost::filesystem::path(path).parent_path().string()),
+          name.substr(strlen(attr_key)));
+      }
+      if (name.size() > strlen("$xattrs.")
+        && name.substr(0, strlen("$xattrs.")) == "$xattrs.")
+      {
+        auto fname = name.substr(strlen("$xattrs."));
+        auto target = this->path(
+          (boost::filesystem::path(path).parent_path() / fname).string());
+        return std::make_shared<XAttributeDirectory>(target);
+      }
+
       auto const& files = d->files();
-      auto it = files.find(components.back());
+      auto it = files.find(name);
       if (it == files.end())
-        return std::shared_ptr<rfs::Path>(new Unknown(*this, d, components.back()));
-      
+        return std::shared_ptr<rfs::Path>(new Unknown(*this, d, name));
+
       switch(it->second.first)
       {
       case EntryType::symlink:
-        return std::shared_ptr<rfs::Path>(new Symlink(*this, it->second.second, d, components.back()));
+        return std::shared_ptr<rfs::Path>(new Symlink(*this, it->second.second, d, name));
       case EntryType::file:
         {
           static elle::Bench bench_hit("bench.filesystem.filecache.hit", 1000_sec);
@@ -440,15 +482,15 @@ namespace infinit
           }
           else
           {
-            fd = std::make_shared<FileData>(current_path / components.back(), *block, perms);
+            fd = std::make_shared<FileData>(current_path / name, *block, perms);
             _file_cache.insert(fd);
           }
-        return std::shared_ptr<rfs::Path>(new File(*this, it->second.second, fd, d, components.back()));
+        return std::shared_ptr<rfs::Path>(new File(*this, it->second.second, fd, d, name));
         }
       case EntryType::directory:
         {
-          auto dd = get(current_path / components.back(), it->second.second);
-          return std::shared_ptr<rfs::Path>(new Directory(*this, dd, d, components.back()));
+          auto dd = get(current_path / name, it->second.second);
+          return std::shared_ptr<rfs::Path>(new Directory(*this, dd, d, name));
         }
       }
       elle::unreachable();
