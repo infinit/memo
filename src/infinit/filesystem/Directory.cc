@@ -247,7 +247,7 @@ namespace infinit
     void
     DirectoryData::update(Block& block, std::pair<bool, bool> perms)
     {
-      ELLE_DEBUG("%s updating from block %s at %s", this,
+      ELLE_DEBUG("%s updating from version %s at %f", this,
         _block_version, block.address());
       _last_used = FileSystem::now();
      
@@ -262,7 +262,7 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("block is empty");
-        _header = FileHeader(0, 1, S_IFDIR | 0666,
+        _header = FileHeader(0, 1, S_IFDIR | 0600,
                              time(nullptr), time(nullptr), time(nullptr),
                              File::default_block_size);
         _inherit_auth = false;
@@ -333,13 +333,23 @@ namespace infinit
         else
         {
           auto b = elle::cast<ACLBlock>::runtime(model.fetch(_address));
-          b->data(data);
+          if (b->version() != _block_version)
+          {
+            ELLE_LOG("Conflict: block version not expected: %s vs %s",
+                     b->version(), _block_version);
+            DirectoryConflictResolver dcr(model, op, _address);
+            auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
+            b = elle::cast<ACLBlock>::runtime(nb);
+          }
+          else
+            b->data(data);
           version = b->version();
           model.store(std::move(b),
             first_write ? model::STORE_INSERT : model::STORE_UPDATE,
             elle::make_unique<DirectoryConflictResolver>(model, op, _address));
         }
         ELLE_TRACE("stored version %s of %f", version, _address);
+        _block_version = version + 1;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {

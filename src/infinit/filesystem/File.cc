@@ -215,7 +215,7 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("file block is empty");
-        _header = FileHeader(0, 1, S_IFREG | 0666,
+        _header = FileHeader(0, 1, S_IFREG | 0600,
                              time(nullptr), time(nullptr), time(nullptr),
                              File::default_block_size);
       }

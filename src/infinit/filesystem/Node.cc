@@ -396,6 +396,7 @@ namespace infinit
       }
       st->st_dev = 1;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
+      ELLE_DEBUG("%s: stat mode=%s size=%s links=%s", this, h.mode, h.size, h.links);
     }
 
     void
