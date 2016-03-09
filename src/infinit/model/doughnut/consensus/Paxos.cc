@@ -406,6 +406,9 @@ namespace infinit
         Paxos::LocalPeer::_load(Address address,
                                 Paxos::LocalPeer::Decision decision)
         {
+          auto const& quorum = decision.paxos.current_quorum();
+          if (signed(quorum.size()) < this->_factor)
+            this->_under_represented.emplace(address, quorum);
           return this->_addresses.emplace(
             address, std::move(decision)).first->second;
         }
@@ -424,15 +427,15 @@ namespace infinit
           while (true)
           {
             auto id = this->_rebalancable.get();
-            // FIXME: also rebalance blocks on disk
             std::unordered_set<Address> targets;
-            for (auto const& address: this->_addresses)
-            {
-              auto quorum = address.second.paxos.current_quorum();
-              if (signed(quorum.size()) < this->_factor &&
-                  quorum.find(id) == quorum.end())
-                targets.emplace(address.first);
-            }
+            auto test = [&] (PaxosServer::Quorum const& q)
+              {
+                return signed(q.size()) < this->_factor &&
+                q.find(id) == q.end();
+              };
+            for (auto const& b: this->_under_represented)
+              if (test(b.second))
+                targets.emplace(b.first);
             if (targets.empty())
               continue;
             ELLE_TRACE_SCOPE(
@@ -448,6 +451,11 @@ namespace infinit
                 // Beware of interators invalidation, use a reference.
                 auto& paxos = this->_addresses.at(address).paxos;
                 auto quorum = paxos.current_quorum();
+                // We can't actually rebalance this block, under_represented was
+                // wrong. Don't think this can happen but better safe than
+                // sorry.
+                if (!test(quorum))
+                  continue;
                 ELLE_TRACE_SCOPE(
                   "rebalance block %f to newly discovered peer %f",
                   address, id);

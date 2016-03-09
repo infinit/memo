@@ -221,6 +221,9 @@ namespace infinit
             ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address)>,
                              rebalanced);
             ELLE_ATTRIBUTE(reactor::Thread, rebalance_thread);
+            /// Blocks that are not replicated enough.
+            ELLE_ATTRIBUTE((std::unordered_map<Address, PaxosServer::Quorum>),
+                           under_represented);
           };
 
         /*-----.
