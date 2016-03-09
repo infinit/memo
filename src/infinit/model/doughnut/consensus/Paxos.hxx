@@ -10,6 +10,19 @@ namespace infinit
       namespace consensus
       {
         template <typename ... Args>
+        Paxos::LocalPeer::LocalPeer(int factor,
+                                    bool rebalance_auto_expand,
+                                    Args&& ... args)
+          : doughnut::Local(std::forward<Args>(args) ...)
+          , _factor(factor)
+          , _rebalance_auto_expand(rebalance_auto_expand)
+          , _rebalancable()
+          , _rebalanced()
+          , _rebalance_thread(elle::sprintf("%s: rebalance", this),
+                              [this] () { this->_rebalance(); })
+        {}
+
+        template <typename ... Args>
         Paxos::Paxos(Args&& ... args)
           : Paxos(
             elle::named::prototype(

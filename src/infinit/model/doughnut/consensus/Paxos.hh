@@ -152,11 +152,9 @@ namespace infinit
             typedef Paxos::PaxosServer PaxosServer;
             typedef Paxos::Value Value;
             template <typename ... Args>
-            LocalPeer(int factor, bool rebalance_auto_expand, Args&& ... args)
-              : doughnut::Local(std::forward<Args>(args) ...)
-              , _factor(factor)
-              , _rebalance_auto_expand(rebalance_auto_expand)
-            {}
+            LocalPeer(int factor, bool rebalance_auto_expand, Args&& ... args);
+            virtual
+            ~LocalPeer();
             virtual
             void
             initialize() override;
@@ -215,6 +213,12 @@ namespace infinit
                   boost::optional<PaxosServer::Quorum> peers = {});
             void
             _discovered(Address id);
+            void
+            _rebalance();
+            ELLE_ATTRIBUTE(reactor::Channel<Address>, rebalancable);
+            ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address)>,
+                             rebalanced);
+            ELLE_ATTRIBUTE(reactor::Thread, rebalance_thread);
           };
 
         /*-----.

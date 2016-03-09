@@ -348,6 +348,11 @@ namespace infinit
         | LocalPeer |
         `----------*/
 
+        Paxos::LocalPeer::~LocalPeer()
+        {
+          this->_rebalance_thread.terminate_now();
+        }
+
         void
         Paxos::LocalPeer::initialize()
         {
@@ -401,34 +406,55 @@ namespace infinit
         {
           if (!this->_rebalance_auto_expand)
             return;
-          // FIXME: also rebalance blocks on disk
-          for (auto const& address: this->_addresses)
+          this->_rebalancable.put(id);
+        }
+
+        void
+        Paxos::LocalPeer::_rebalance()
+        {
+          while (true)
           {
-            auto quorum = address.second.paxos.current_quorum();
-            if (signed(quorum.size()) < this->_factor &&
-                quorum.find(id) == quorum.end())
+            auto id = this->_rebalancable.get();
+            // FIXME: also rebalance blocks on disk
+            for (auto const& address: this->_addresses)
             {
-              ELLE_TRACE("%s: rebalance block %f to newly discovered peer %f",
-                         this, address.first, id);
-              ELLE_DEBUG("elect new quorum")
+              try
               {
-                PaxosClient c(
-                  this->doughnut().id(),
-                  lookup_nodes(this->doughnut(), quorum, address.first));
-                quorum.insert(id);
-                // FIXME: do something in case of conflict
-                c.choose(address.second.paxos.current_version() + 1, quorum);
-              }
-              if (auto value = address.second.paxos.current_value())
-                ELLE_DEBUG("propagate block value")
+                auto quorum = address.second.paxos.current_quorum();
+                if (signed(quorum.size()) < this->_factor &&
+                    quorum.find(id) == quorum.end())
                 {
-                  PaxosClient c(
+                  ELLE_TRACE(
+                    "%s: rebalance block %f to newly discovered peer %f",
+                    this, address.first, id);
+                  ELLE_DEBUG("elect new quorum")
+                  {
+                    PaxosClient c(
                     this->doughnut().id(),
                     lookup_nodes(this->doughnut(), quorum, address.first));
-                  // FIXME: do something in case of conflict
-                  c.choose(address.second.paxos.current_version() + 1,
-                           value->value.get<std::shared_ptr<blocks::Block>>());
+                    quorum.insert(id);
+                    // FIXME: do something in case of conflict
+                    c.choose(address.second.paxos.current_version() + 1,
+                             quorum);
+                  }
+                  if (auto value = address.second.paxos.current_value())
+                    ELLE_DEBUG("propagate block value")
+                    {
+                      PaxosClient c(
+                        this->doughnut().id(),
+                        lookup_nodes(this->doughnut(), quorum, address.first));
+                      // FIXME: do something in case of conflict
+                      c.choose(
+                        address.second.paxos.current_version() + 1,
+                        value->value.get<std::shared_ptr<blocks::Block>>());
+                    }
+                  this->_rebalanced(address.first);
                 }
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN("error rebalancing %s: %s", address.first, e);
+              }
             }
           }
         }

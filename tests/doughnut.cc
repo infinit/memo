@@ -995,8 +995,10 @@ namespace rebalancing
           dht::consensus::replication_factor = 3);
       };
     DHT dht_a(make_consensus = instrument);
+    auto& local_a = dynamic_cast<InstrumentedPaxosLocal&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     DHT dht_b(make_consensus = instrument);
+    // auto& local_b = dynamic_cast<InstrumentedPaxosLocal&>(*dht_b.dht->local());
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b = dht_a.dht->make_block<blocks::MutableBlock>();
     ELLE_LOG("write block to 1 node")
@@ -1004,8 +1006,10 @@ namespace rebalancing
       b->data(std::string("expand"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT);
     }
+    // local_b.all_operations().close();
     ELLE_LOG("connect second DHT")
       dht_b.overlay->connect(*dht_a.overlay);
+    reactor::wait(local_a.rebalanced(), b->address());
     ELLE_LOG("write block to 2 nodes")
     {
       auto resolver = elle::make_unique<VersionHop>(*b);
