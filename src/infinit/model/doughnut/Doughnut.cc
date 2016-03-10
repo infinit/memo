@@ -157,8 +157,11 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: destruct", *this);
         if (this->_user_init)
           this->_user_init->terminate_now();
+        this->_local->cleanup();
         this->_consensus.reset();
         this->_overlay.reset();
+        ELLE_ASSERT(this->_local.unique());
+        this->_local.reset();
       }
 
       cryptography::rsa::KeyPair const&

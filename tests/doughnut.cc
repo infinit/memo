@@ -1064,6 +1064,21 @@ namespace rebalancing
     ELLE_LOG("read block from second DHT")
       BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
   }
+
+  ELLE_TEST_SCHEDULED(rebalancing_while_destroyed)
+  {
+    DHT dht_a;
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b;
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to quorum of 1")
+    {
+      b1->data(std::string("extend_and_write 1"));
+      dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
+    }
+    dht_b.overlay->connect(*dht_a.overlay);
+  }
 }
 
 ELLE_TEST_SUITE()
@@ -1102,5 +1117,7 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand), 0, valgrind(1));
+    rebalancing->add(
+      BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
   }
 }

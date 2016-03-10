@@ -158,6 +158,9 @@ namespace infinit
             virtual
             void
             initialize() override;
+            virtual
+            void
+            cleanup() override;
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
             virtual

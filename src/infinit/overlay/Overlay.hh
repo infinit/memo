@@ -44,7 +44,7 @@ namespace infinit
               std::shared_ptr<infinit::model::doughnut::Local> local,
               model::Address node_id);
       virtual
-      ~Overlay() {}
+      ~Overlay();
       ELLE_ATTRIBUTE_R(model::Address, node_id);
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);

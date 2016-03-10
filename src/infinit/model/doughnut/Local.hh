@@ -51,6 +51,13 @@ namespace infinit
         virtual
         void
         initialize();
+        /** Get ready for destrucion.
+         *
+         *  Release all shared self-reference.
+         */
+        virtual
+        void
+        cleanup();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 

@@ -24,6 +24,11 @@ namespace infinit
       , _local(local)
     {}
 
+    Overlay::~Overlay()
+    {
+      ELLE_TRACE("%s: destruct", this);
+    }
+
     elle::json::Json
     Overlay::query(std::string const& k, boost::optional<std::string> const& v)
     {

@@ -66,7 +66,7 @@ namespace infinit
 
       Local::~Local()
       {
-        ELLE_TRACE_SCOPE("%s: terminate", *this);
+        ELLE_TRACE_SCOPE("%s: destruct", *this);
         if (this->_server_thread)
           this->_server_thread->terminate_now();
         if (this->_utp_server_thread)
@@ -75,6 +75,10 @@ namespace infinit
 
       void
       Local::initialize()
+      {}
+
+      void
+      Local::cleanup()
       {}
 
       /*-----------.

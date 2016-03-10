@@ -31,6 +31,12 @@ public:
     this->_peers.emplace_back(this);
   }
 
+  ~Overlay()
+  {
+    while (!this->_peers.empty())
+      this->disconnect(**this->_peers.begin());
+  }
+
   static
   std::unique_ptr<Overlay>
   make(infinit::model::doughnut::Doughnut& d,

@@ -350,6 +350,7 @@ namespace infinit
 
         Paxos::LocalPeer::~LocalPeer()
         {
+          ELLE_TRACE_SCOPE("%s: destruct", *this);
           this->_rebalance_thread.terminate_now();
         }
 
@@ -361,6 +362,12 @@ namespace infinit
             {
               this->_discovered(id);
             });
+        }
+
+        void
+        Paxos::LocalPeer::cleanup()
+        {
+          this->_rebalance_thread.terminate_now();
         }
 
         Paxos::LocalPeer::Decision&
