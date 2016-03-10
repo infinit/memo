@@ -1026,7 +1026,7 @@ namespace infinit
                     if (chosen->value.is<PaxosServer::Quorum>())
                     {
                       auto const& q = chosen->value.get<PaxosServer::Quorum>();
-                      ELLE_DEBUG_SCOPE("Paxos elected another quorum: %s", q);
+                      ELLE_DEBUG_SCOPE("Paxos elected another quorum: %f", q);
                       b->seal(chosen->proposal.version + 1);
                       throw Paxos::PaxosServer::WrongQuorum(q, peers_id);
                     }
@@ -1219,7 +1219,7 @@ namespace infinit
           ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
           auto latest = this->_latest(client);
           // FIXME: handle immutable block errors
-          ELLE_DEBUG("quorum: %s", latest.first);
+          ELLE_DEBUG("quorum: %f", latest.first);
           if (signed(latest.first.size()) == this->_factor)
           {
             ELLE_TRACE("block is already well balanced (%s replicas)",
@@ -1239,7 +1239,7 @@ namespace infinit
             ELLE_TRACE("unable to find any new owner");
             return false;
           }
-          ELLE_DEBUG("rebalance block to: %s", new_q)
+          ELLE_DEBUG("rebalance block to: %f", new_q)
             return this->_rebalance(client, address, new_q, latest.second);
         }
 
@@ -1262,12 +1262,33 @@ namespace infinit
           {
             // FIXME: version is the last *value* version, there could have
             // been a quorum since then in which case this will fail.
-            if (!client.choose(version + 1, ids))
-              ;
+            if (auto conflict = client.choose(version + 1, ids))
+            {
+              // FIXME: Retry balancing.
+              // FIXME: We should still try block propagation in the case that
+              // "someone else" failed to perform it.
+              if (conflict->value.is<PaxosServer::Quorum>())
+              {
+                auto quorum = conflict->value.get<PaxosServer::Quorum>();
+                if (quorum == ids)
+                  ELLE_WARN("someone else rebalanced to the same quorum");
+                else if (signed(quorum.size()) == this->_factor)
+                  ELLE_WARN("someone else rebalanced to a sufficient quorum");
+                else
+                  ELLE_WARN(
+                    "someone else rebalanced to an insufficient quorum");
+              }
+              else
+                ELLE_WARN(
+                  "someone else picked a value while we rebalanced");
+              return false;
+            }
             else
+            {
               ELLE_TRACE("successfully rebalanced to %s nodes at version %s",
                          ids.size(), version + 1);
-            return true;
+              return true;
+            }
           }
           catch (elle::Error const&)
           {
@@ -1373,6 +1394,9 @@ namespace infinit
         static const elle::serialization::Hierarchy<Configuration>::
         Register<Paxos::Configuration> _register_Configuration("paxos");
       }
+
+      static const elle::TypeInfo::RegisterAbbrevation
+      _dht_abbr("consensus::Paxos::LocalPeer", "PaxosLocal");
     }
   }
 }

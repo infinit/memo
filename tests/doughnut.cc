@@ -916,7 +916,7 @@ namespace rebalancing
     ELLE_ATTRIBUTE_R(elle::Buffer, previous);
   };
 
-  class InstrumentedPaxosLocal:
+  class Local:
     public dht::consensus::Paxos::LocalPeer
   {
   public:
@@ -924,7 +924,7 @@ namespace rebalancing
     typedef infinit::model::Address Address;
 
     template <typename ... Args>
-    InstrumentedPaxosLocal(Args&& ... args)
+    Local(Args&& ... args)
       : Super(std::forward<Args>(args)...)
       , _all_barrier()
       , _propose_barrier()
@@ -1001,7 +1001,7 @@ namespace rebalancing
     make_local(boost::optional<int> port,
                std::unique_ptr<infinit::storage::Storage> storage)
     {
-      return elle::make_unique<InstrumentedPaxosLocal>(
+      return elle::make_unique<Local>(
         *this,
         this->factor(),
         this->rebalance_auto_expand(),
@@ -1022,7 +1022,7 @@ namespace rebalancing
           dht::consensus::replication_factor = 2);
       };
     DHT dht_a(make_consensus = instrument);
-    auto& local_a = dynamic_cast<InstrumentedPaxosLocal&>(*dht_a.dht->local());
+    auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     DHT dht_b(make_consensus = instrument);
     dht_b.overlay->connect(*dht_a.overlay);
@@ -1059,7 +1059,7 @@ namespace rebalancing
           dht::consensus::replication_factor = 3);
       };
     DHT dht_a(make_consensus = instrument);
-    auto& local_a = dynamic_cast<InstrumentedPaxosLocal&>(*dht_a.dht->local());
+    auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     DHT dht_b(make_consensus = instrument);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
@@ -1103,6 +1103,39 @@ namespace rebalancing
       dht_b.overlay->disconnect(*dht_a.overlay);
     ELLE_LOG("read block from second DHT")
       BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
+  }
+
+  ELLE_TEST_SCHEDULED(expand_concurrent)
+  {
+    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
+      -> std::unique_ptr<dht::consensus::Consensus>
+      {
+        return elle::make_unique<InstrumentedPaxos>(
+          dht::consensus::doughnut = c->doughnut(),
+          dht::consensus::replication_factor = 3);
+      };
+    DHT dht_a(make_consensus = instrument);
+    auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b(make_consensus = instrument);
+    dht_b.overlay->connect(*dht_a.overlay);
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    DHT dht_c(make_consensus = instrument);
+    dht_c.overlay->connect(*dht_a.overlay);
+    dht_c.overlay->connect(*dht_b.overlay);
+    ELLE_LOG("third DHT: %s", dht_b.dht->id());
+    DHT client(storage = nullptr);
+    client.overlay->connect(*dht_a.overlay);
+    client.overlay->connect(*dht_b.overlay);
+    auto b = client.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to two DHT")
+    {
+      b->data(std::string("expand"));
+      client.dht->store(*b, infinit::model::STORE_INSERT);
+    }
+    // The order is deterministic. A bit spurious but still.
+    ELLE_LOG("wait for rebalancing")
+      reactor::wait(local_a.rebalanced(), b->address());
   }
 
   ELLE_TEST_SCHEDULED(rebalancing_while_destroyed)
@@ -1158,6 +1191,7 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_new_block), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_newcomer), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(expand_concurrent), 0, valgrind(5));
     rebalancing->add(
       BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
   }
