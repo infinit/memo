@@ -26,9 +26,8 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
     env = copy(os.environ)
     env['INFINIT_DATA_HOME'] = '%s/backward-compatibility-homes/%s' % (path, version)
     import subprocess
-    print(env['INFINIT_DATA_HOME'])
     args = list(copy(args)) + ['--as', 'user']
-    print(' '.join(args))
+    args[0] += os.environ.get('EXE_EXT', '')
     return Output(subprocess.check_output(args, env = env).strip().decode('utf-8'))
 
   ## ------##
@@ -113,7 +112,6 @@ for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
   for drive in map(
       lambda name: run('infinit-drive', '--export', '--name', name).json,
       [drive_descrption.split(':')[0] for drive_descrption in drives]):
-    print(drive["users"])
     assertEq(set(drive["users"].keys()), {'user', 'owner'})
     assertEq(drive['name'][:-1], 'owner/drive')
     assertEq(drive['volume'][:-1], 'owner/volume')
