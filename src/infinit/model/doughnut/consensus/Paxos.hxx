@@ -10,10 +10,12 @@ namespace infinit
       namespace consensus
       {
         template <typename ... Args>
-        Paxos::LocalPeer::LocalPeer(int factor,
+        Paxos::LocalPeer::LocalPeer(Paxos& paxos,
+                                    int factor,
                                     bool rebalance_auto_expand,
                                     Args&& ... args)
           : doughnut::Local(std::forward<Args>(args) ...)
+          , _paxos(paxos)
           , _factor(factor)
           , _rebalance_auto_expand(rebalance_auto_expand)
           , _rebalancable()

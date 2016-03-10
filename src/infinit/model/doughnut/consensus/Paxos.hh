@@ -64,9 +64,9 @@ namespace infinit
         | Blocks |
         `-------*/
         public:
-          void
+          bool
           rebalance(Address address);
-          void
+          bool
           rebalance(Address address, PaxosClient::Quorum const& ids);
         protected:
           virtual
@@ -80,9 +80,9 @@ namespace infinit
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
-          void
+          bool
           _rebalance(PaxosClient& client, Address address);
-          void
+          bool
           _rebalance(PaxosClient& client,
                      Address address,
                      PaxosClient::Quorum const& ids,
@@ -152,7 +152,10 @@ namespace infinit
             typedef Paxos::PaxosServer PaxosServer;
             typedef Paxos::Value Value;
             template <typename ... Args>
-            LocalPeer(int factor, bool rebalance_auto_expand, Args&& ... args);
+            LocalPeer(Paxos& paxos,
+                      int factor,
+                      bool rebalance_auto_expand,
+                      Args&& ... args);
             virtual
             ~LocalPeer();
             virtual
@@ -161,6 +164,7 @@ namespace infinit
             virtual
             void
             cleanup() override;
+            ELLE_ATTRIBUTE_R(Paxos&, paxos);
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
             virtual
@@ -220,7 +224,8 @@ namespace infinit
             _discovered(Address id);
             void
             _rebalance();
-            ELLE_ATTRIBUTE(reactor::Channel<Address>, rebalancable);
+            ELLE_ATTRIBUTE((reactor::Channel<std::pair<Address, bool>>),
+                           rebalancable);
             ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address)>,
                              rebalanced);
             ELLE_ATTRIBUTE(reactor::Thread, rebalance_thread);

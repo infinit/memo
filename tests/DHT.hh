@@ -112,6 +112,7 @@ protected:
               --count;
             }
           }
+        this->_looked_up(address);
       });
   }
 
@@ -127,6 +128,8 @@ protected:
 
   ELLE_ATTRIBUTE_RX(std::vector<Overlay*>, peers);
   ELLE_ATTRIBUTE(std::unordered_set<infinit::model::Address>, blocks);
+  ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(infinit::model::Address)>,
+                    looked_up);
 };
 
 NAMED_ARGUMENT(paxos);

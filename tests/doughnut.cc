@@ -1002,6 +1002,7 @@ namespace rebalancing
                std::unique_ptr<infinit::storage::Storage> storage)
     {
       return elle::make_unique<InstrumentedPaxosLocal>(
+        *this,
         this->factor(),
         this->rebalance_auto_expand(),
         this->doughnut(),
@@ -1011,7 +1012,44 @@ namespace rebalancing
     }
   };
 
-  ELLE_TEST_SCHEDULED(expand)
+  ELLE_TEST_SCHEDULED(expand_new_block)
+  {
+    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
+      -> std::unique_ptr<dht::consensus::Consensus>
+      {
+        return elle::make_unique<InstrumentedPaxos>(
+          dht::consensus::doughnut = c->doughnut(),
+          dht::consensus::replication_factor = 2);
+      };
+    DHT dht_a(make_consensus = instrument);
+    auto& local_a = dynamic_cast<InstrumentedPaxosLocal&>(*dht_a.dht->local());
+    ELLE_LOG("first DHT: %s", dht_a.dht->id());
+    DHT dht_b(make_consensus = instrument);
+    dht_b.overlay->connect(*dht_a.overlay);
+    ELLE_LOG("second DHT: %s", dht_b.dht->id());
+    DHT client(storage = nullptr);
+    client.overlay->connect(*dht_a.overlay);
+
+    auto b = client.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to one DHT")
+    {
+      b->data(std::string("expand"));
+      client.dht->store(*b, infinit::model::STORE_INSERT);
+    }
+    auto op = infinit::overlay::OP_FETCH;
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2, op)), 1u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2, op)), 1u);
+    ELLE_LOG("wait for rebalancing")
+      reactor::wait(local_a.rebalanced(), b->address());
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2, op)), 2u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2, op)), 2u);
+    ELLE_LOG("disconnect second DHT")
+      dht_b.overlay->disconnect(*dht_a.overlay);
+    ELLE_LOG("read block from second DHT")
+      BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
+  }
+
+  ELLE_TEST_SCHEDULED(expand_newcomer)
   {
     auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
       -> std::unique_ptr<dht::consensus::Consensus>
@@ -1034,6 +1072,8 @@ namespace rebalancing
     // Block the new quorum election to check the balancing is done in
     // background.
     local_a.propose_barrier().close();
+    // Wait until the first automatic expansion fails.
+    reactor::wait(dht_a.overlay->looked_up(), b->address());
     ELLE_LOG("connect second DHT")
       dht_b.overlay->connect(*dht_a.overlay);
     reactor::wait(local_a.proposing(), b->address());
@@ -1116,7 +1156,8 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
-    rebalancing->add(BOOST_TEST_CASE(expand), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(expand_new_block), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(expand_newcomer), 0, valgrind(1));
     rebalancing->add(
       BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
   }

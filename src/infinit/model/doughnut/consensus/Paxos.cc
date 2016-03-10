@@ -123,6 +123,7 @@ namespace infinit
                           std::unique_ptr<storage::Storage> storage)
         {
           return elle::make_unique<consensus::Paxos::LocalPeer>(
+            *this,
             this->factor(),
             this->_rebalance_auto_expand,
             this->doughnut(),
@@ -414,8 +415,13 @@ namespace infinit
                                 Paxos::LocalPeer::Decision decision)
         {
           auto const& quorum = decision.paxos.current_quorum();
-          if (signed(quorum.size()) < this->_factor)
+          if (this->_rebalance_auto_expand &&
+              decision.paxos.current_value() &&
+              signed(quorum.size()) < this->_factor)
+          {
             this->_under_represented.emplace(address, quorum);
+            this->_rebalancable.put(std::make_pair(address, false));
+          }
           return this->_addresses.emplace(
             address, std::move(decision)).first->second;
         }
@@ -423,23 +429,66 @@ namespace infinit
         void
         Paxos::LocalPeer::_discovered(model::Address id)
         {
-          if (!this->_rebalance_auto_expand)
-            return;
-          this->_rebalancable.put(id);
+          if (this->_rebalance_auto_expand)
+            this->_rebalancable.put(std::make_pair(id, true));
         }
 
         void
         Paxos::LocalPeer::_rebalance()
         {
+          auto propagate = [this] (PaxosServer& paxos,
+                                   Address a,
+                                   PaxosServer::Quorum q)
+            {
+              if (auto value = paxos.current_value())
+                ELLE_DEBUG("propagate block value")
+                {
+                  PaxosClient c(
+                    this->doughnut().id(),
+                    lookup_nodes(this->doughnut(), q, a));
+                  // FIXME: do something in case of conflict
+                  c.choose(
+                    paxos.current_version() + 1,
+                    value->value.get<std::shared_ptr<blocks::Block>>());
+                }
+              this->_rebalanced(a);
+            };
           while (true)
           {
-            auto id = this->_rebalancable.get();
-            std::unordered_set<Address> targets;
+            auto elt = this->_rebalancable.get();
+            if (!elt.second)
+            {
+              ELLE_TRACE_SCOPE("%s: rebalance block %f", this, elt.first);
+              auto it = this->_addresses.find(elt.first);
+              if (it == this->_addresses.end())
+                // The block was deleted in the meantime.
+                continue;
+              Paxos::PaxosClient client(
+                this->doughnut().id(),
+                lookup_nodes(this->_paxos.doughnut(),
+                             it->second.paxos.current_quorum(),
+                             it->first));
+              if (this->_paxos._rebalance(client, elt.first))
+              {
+                auto it = this->_addresses.find(elt.first);
+                if (it == this->_addresses.end())
+                  // The block was deleted in the meantime.
+                  continue;
+                auto q = it->second.paxos.current_quorum();
+                if (signed(q.size()) < this->_paxos.factor())
+                  this->_under_represented[elt.first] = q;
+                else
+                  this->_under_represented.erase(elt.first);
+                propagate(it->second.paxos, elt.first, q);
+              }
+              continue;
+            }
             auto test = [&] (PaxosServer::Quorum const& q)
               {
                 return signed(q.size()) < this->_factor &&
-                q.find(id) == q.end();
+                q.find(elt.first) == q.end();
               };
+            std::unordered_set<Address> targets;
             for (auto const& b: this->_under_represented)
               if (test(b.second))
                 targets.emplace(b.first);
@@ -447,7 +496,7 @@ namespace infinit
               continue;
             ELLE_TRACE_SCOPE(
               "%s: rebalance %s blocks to newly discovered peer %f",
-              this, targets.size(), id);
+              this, targets.size(), elt.first);
             for (auto address: targets)
               try
               {
@@ -456,37 +505,23 @@ namespace infinit
                   // The block was deleted in the meantime.
                   continue;
                 // Beware of interators invalidation, use a reference.
-                auto& paxos = this->_addresses.at(address).paxos;
+                auto& paxos = it->second.paxos;
                 auto quorum = paxos.current_quorum();
                 // We can't actually rebalance this block, under_represented was
                 // wrong. Don't think this can happen but better safe than
                 // sorry.
                 if (!test(quorum))
                   continue;
-                ELLE_TRACE_SCOPE(
-                  "rebalance block %f to newly discovered peer %f",
-                  address, id);
                 ELLE_DEBUG("elect new quorum")
                 {
                   PaxosClient c(
                   this->doughnut().id(),
                   lookup_nodes(this->doughnut(), quorum, address));
-                  quorum.insert(id);
+                  quorum.insert(elt.first);
                   // FIXME: do something in case of conflict
                   c.choose(paxos.current_version() + 1, quorum);
                 }
-                if (auto value = paxos.current_value())
-                  ELLE_DEBUG("propagate block value")
-                  {
-                    PaxosClient c(
-                      this->doughnut().id(),
-                      lookup_nodes(this->doughnut(), quorum, address));
-                    // FIXME: do something in case of conflict
-                    c.choose(
-                      paxos.current_version() + 1,
-                      value->value.get<std::shared_ptr<blocks::Block>>());
-                  }
-                this->_rebalanced(address);
+                propagate(paxos, address, quorum);
               }
               catch (elle::Error const& e)
               {
@@ -566,9 +601,10 @@ namespace infinit
           ELLE_TRACE_SCOPE("%s: confirm %f at proposal %s",
                            *this, address, p);
           auto& decision = this->_load(address);
+          bool had_value = bool(decision.paxos.current_value());
           decision.paxos.confirm(peers, p);
+          ELLE_DEBUG("store confirmed paxos")
           {
-            ELLE_DEBUG_SCOPE("store accepted paxos");
             BlockOrPaxos data(&decision);
             auto ser = [&]
             {
@@ -579,6 +615,15 @@ namespace infinit
             }();
             this->storage()->set(address, ser, true, true);
             data.paxos.release();
+          }
+          if (this->_rebalance_auto_expand &&
+              !had_value &&
+              decision.paxos.current_value() &&
+              signed(decision.paxos.current_quorum().size()) < this->_factor)
+          {
+            this->_under_represented.emplace(
+              address, decision.paxos.current_quorum());
+            this->_rebalancable.put(std::make_pair(address, false));
           }
         }
 
@@ -1160,15 +1205,15 @@ namespace infinit
           return std::make_pair<>(last.second, version);
         }
 
-        void
+        bool
         Paxos::rebalance(Address address)
         {
           ELLE_TRACE_SCOPE("%s: rebalance %f", *this, address);
           auto client = this->_client(address);
-          this->_rebalance(client, address);
+          return this->_rebalance(client, address);
         }
 
-        void
+        bool
         Paxos::_rebalance(PaxosClient& client, Address address)
         {
           ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
@@ -1179,7 +1224,7 @@ namespace infinit
           {
             ELLE_TRACE("block is already well balanced (%s replicas)",
                        this->_factor);
-            return;
+            return false;
           }
           PaxosServer::Quorum new_q;
           for (auto const& owner: this->_owners(
@@ -1192,22 +1237,22 @@ namespace infinit
           if (new_q == latest.first)
           {
             ELLE_TRACE("unable to find any new owner");
-            return;
+            return false;
           }
           ELLE_DEBUG("rebalance block to: %s", new_q)
-            this->_rebalance(client, address, new_q, latest.second);
+            return this->_rebalance(client, address, new_q, latest.second);
         }
 
-        void
+        bool
         Paxos::rebalance(Address address, PaxosClient::Quorum const& ids)
         {
           ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
           auto client = this->_client(address);
           auto latest = this->_latest(client);
-          this->_rebalance(client, address, ids, latest.second);
+          return this->_rebalance(client, address, ids, latest.second);
         }
 
-        void
+        bool
         Paxos::_rebalance(PaxosClient& client,
                           Address address,
                           PaxosClient::Quorum const& ids,
@@ -1222,10 +1267,12 @@ namespace infinit
             else
               ELLE_TRACE("successfully rebalanced to %s nodes at version %s",
                          ids.size(), version + 1);
+            return true;
           }
           catch (elle::Error const&)
           {
             ELLE_WARN("rebalancing failed: %s", elle::exception_string());
+            return false;
           }
         }
 

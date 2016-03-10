@@ -161,8 +161,11 @@ namespace infinit
           this->_local->cleanup();
         this->_consensus.reset();
         this->_overlay.reset();
-        ELLE_ASSERT(this->_local.unique());
-        this->_local.reset();
+        if (this->_local)
+        {
+          ELLE_ASSERT(this->_local.unique());
+          this->_local.reset();
+        }
       }
 
       cryptography::rsa::KeyPair const&
