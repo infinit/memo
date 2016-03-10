@@ -188,11 +188,10 @@ The _infinit-credentials_ binary manages the credentials for your cloud services
 
 *__NOTE__: Because this binary requires the Hub for some types of credentials (such as Dropbox and Google), you may need to register your user on the Infinit Hub. For more information, please refer to the <a href="#user">User</a> section, more specifically how to <a href="#sign-up-on-the-hub">Sign up on the Hub</a>.*
 
+
 ### Add credentials ###
 
-#### Amazon Web Services account ####
-
-To add AWS credentials so that an Amazon Simple Storage Service (S3) bucket can be used to store data, simply use the `--add` option specifying `--aws`. Note that an Access Key ID and Secrect Access Key are used, not the user name and password:
+The basic process for adding credentials consists in using the `--add` option as shown in the example below with Amazon Web Services:
 
 ```
 $> infinit-credentials --add --aws --name s3-user
@@ -202,43 +201,11 @@ Secret Access Key: ****************************************
 Locally stored AWS credentials "s3-user".
 ```
 
-_**IMPORTANT**: AWS credentials are only ever stored locally and cannot be pushed to the Hub. Never use the AWS root user. Always create a specific user, giving the user the <a href="#iam-policy" class="href iam_policy">minimum required permissions</a>._
+However, the procedure to follow differs with every cloud service. It is therefore advised to read the guide associated with the cloud service you intend to connect:
 
-<div id="iam-policy" class="popup mfp-hide">
-  <h3>Setting the Bucket Permissions</h3>
-  <p>In order to ensure that your user has the minimum required permissions for Infinit to work, you should create a new <a href="http://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html" target="_blank"><strong>IAM policy</strong></a> for the user.</p>
-  <p>Using the AWS console, open "Identity and Access Management". From there you can create a new policy using the JSON shown below. Ensure that you correctly set the <em>bucket-name</em>.</p>
-  <pre><code>{
-  "Version": "2012-10-17",
-  "Statement": [
-      {
-          "Effect": "Allow",
-          "Action": "s3:*",
-          "Resource": [
-              "arn:aws:s3:::bucket-name",
-              "arn:aws:s3:::bucket-name/*"
-          ]
-      }
-  ]
-}
-  </code></pre>
-</div>
+XXX horizontal list of the supported cloud services: AWS, Google
 
-#### Google Cloud Storage account ####
-
-To add Google Cloud Storage credentials so that a GCS bucket can be used to store data, use the `--add` option specifying `--gcs`. You will be required to navigate to the [OAuth](https://en.wikipedia.org/wiki/OAuth) link provided in the command line to give Infinit access to your GCS account.
-
-```
-$> infinit-credentials --add --gcs
-Register your Google account with infinit by visiting https://beyond.infinit.io/users/alice/gcs-oauth
-```
-
-Once you have done this, you will need to fetch the credentials from the Hub.
-
-```
-$> infinit-credentials --fetch
-Fetched Google Cloud Storage credentials alice@company.com (alice)
-```
+_**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the cloud services you would like to be supported in the future._
 
 ### List credentials ###
 
@@ -255,52 +222,24 @@ GCS:
 Storage
 -------
 
-The _infinit-storage_ binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API.
+The _infinit-storage_ binary allows for the definition of storage resources. Such storage resources can be local — storing blocks of data on a locally available file system — or remote in which case the blocks of data are stored through a cloud service API for instance.
 
 Note that storage resources are device-specific. As such, resources cannot be pushed to the Hub since they only live locally.
 
 ### Create a storage resource ###
 
-#### Locally ####
-
-To create a storage resource on top of a local file system, simply specify the `--filesystem` option. You specify the path where the encrypted data blocks are stored using the `--path` option:
+To create a storage resource, simply specify the `--create` option along with the type of the storage resource. In the example below, a storage resource is created on top of an existing local file system by storing the blocks of encrypted data in a specific directory specified that can be specified through the `--path` option:
 
 ```
 $> infinit-storage --create --filesystem --capacity 2GB --name local
 Created storage "local".
 ```
 
-#### Remotely ####
+However, the process differs depending on the nature of the storage resource. Please follow the guide that is specific to the type of storage you want to create:
 
-You can create a storage on top of a cloud service API. In order to do this, you will first need to add the cloud service's credentials using _infinit-credentials_, as shown in the <a href="#add-credentials">Add credentials</a> section.
+XXX horizontal list of the supported storage providers: Local Filesystem S3, GCS
 
-You can then specify the type of cloud service you want your storage to rely upon along with the cloud service account identifier. Cloud service identifiers can be retrieved when <a href="#list-credentials">listing your credentials</a>.
-
-##### S3 #####
-
-In order to use Amazon S3, you must first have created an AWS user and an S3 bucket. Ensure that the user has permissions to read and write in the bucket.
-
-The following creates a storage resource which uses a folder of an Amazon S3 bucket, specifying a name for the storage, the AWS account identifier, the region the bucket is in, the bucket's name and the folder to store the blocks in:
-
-```
-$> infinit-storage --create --s3 --name s3 --account s3-user --region eu-central-1 --bucket my-s3-bucket --path blocks-folder
-Created storage "s3".
-```
-
-_**IMPORTANT**: The AWS user requires the correct <a href="#iam-policy" class="href iam_policy">permissions</a> for the S3 bucket, otherwise you will encounter `PermissionDenied` errors when mounting the volume. You can set the correct permissions at any time._
-
-##### GCS #####
-
-In order to use GCS, you will first have to have created a GCS bucket and ensure that the user you added with _infinit-credentials_ has access to it.
-
-The following creates a storage resource which uses a folder of a GCS bucket, specifying a name for the storage, the GCS account identifier, the bucket's name and the folder to store the blocks in:
-
-```
-$> infinit-storage --create --gcs --name gcs --account alice@company.com --bucket my-gcs-bucket --path blocks-folder
-Created storage "gcs".
-```
-
-The list of supported cloud services is continually evolving and can be seen by using `--create --help`. Enterprise storage solutions such as <a href="https://www.backblaze.com/b2">Backblaze B2</a> as well as consumer oriented solutions such as <a href="https://www.dropbox.com">Dropbox</a> and <a href="https://www.google.com/drive">Google Drive</a> will be supported. If you would like any others, [let us know](http://infinit-sh.uservoice.com).
+_**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the types of storage backends that you would like to see supported in the future._
 
 Network
 -------
