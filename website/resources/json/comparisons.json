@@ -374,7 +374,7 @@
   },
   "owncloud": {
     "name": "ownCloud",
-    "description": "OwnCloud is a suite of client-server software for creating and using File hosting services. OwnCloud is functionally very similar to the widely used <a href='/documentation/comparison/dropbox'>Dropbox</a>, with the primary functional difference being that OwnCloud can be installed on a private server, hence removing the limits on storage space (except for disk capacity or account quota) or the number of connected clients.",
+    "description": "ownCloud is a suite of client-server software for creating and using File hosting services. OwnCloud is functionally very similar to the widely used <a href='/documentation/comparison/dropbox'>Dropbox</a>, with the primary functional difference being that OwnCloud can be installed on a private server, hence removing the limits on storage space (except for disk capacity or account quota) or the number of connected clients.",
     "properties": {
       "architecture": "File",
       "interface": "File Synchronization",

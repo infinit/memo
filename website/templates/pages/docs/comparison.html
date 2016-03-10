@@ -75,7 +75,7 @@
         % elif property == 'redundancy':
           % if 'Erasure Codes' in value:
             Erasure codes consume less storage capacity than replication while provoding the same durability and availability guarantees. <a class="open-popup" href="#redundancy">Read more.</a>
-          % elif value == 'Replication':
+          % elif 'Replication' in value:
             Replication is a simple redundancy mechanism that consumes more storage capacity than erasure codes but requires less time to reconstruct a missing piece.
           % else:
             Redundancy mechanisms ensure the availability and durability of the files stored in the storage infrastructure. <a class="open-popup" href="#redundancy">Read more.</a>
@@ -131,7 +131,7 @@
                 arr = value.split('(')
                 value = arr[0]
                 platforms = arr[1]
-              except AttributeError:
+              except IndexError:
                 pass
 
             elif value == '':
