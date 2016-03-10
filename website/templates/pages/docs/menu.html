@@ -10,11 +10,11 @@
       <a href="${route('doc_technology')}">Technology</a>
     </li>
 
-    <li class="scroll_menu dropdown ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
-      <a href="${route('doc_deployments')}">Examples <img src="${url('images/icons/caret-down.png')}" alt=""></a>
+    <li class="scroll_menu examples ${'active clicked' if request.route.name == 'doc_deployments' else ''}">
+      <a href="${route('doc_deployments')}">Examples</a>
 
       <ul>
-        <li class="centralized"><a href="${route('doc_deployments')}">Centralized (single server)</a></li>
+        <li class="centralized"><a href="${route('doc_deployments')}#centralized">Centralized (single server)</a></li>
         <li class="distributed"><a href="${route('doc_deployments')}#distributed">Distributed (several servers)</a></li>
         <li class="decentralized"><a href="${route('doc_deployments')}#decentralized">Decentralized (all servers)</a></li>
       </ul>

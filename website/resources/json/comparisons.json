@@ -54,7 +54,7 @@
   },
   "aws-s3": {
     "name": "AWS S3",
-    "description": "Amazon S3 (Simple Storage Service) is a cloud-based Object storage web service. S3 provides availability and durability guarantees along with extreme scalability.",
+    "description": "Amazon S3 (Simple Storage Service) is a cloud-based object storage web service. S3 provides availability and durability guarantees along with extreme scalability.",
     "properties": {
       "architecture": "Object",
       "interface": "API",
@@ -419,7 +419,7 @@
       "fault_tolerance": "Byzantine",
       "security": "In-Transit & At-Rest",
       "scalability": "Homogeneous",
-      "interoperability": "applications"
+      "interoperability": "Applications"
     }
   },
   "sugarsync": {
@@ -472,7 +472,7 @@
       "fault_tolerance": "Byzantine",
       "security": "In-Transit & At-Rest",
       "scalability": "Homogeneous",
-      "interoperability": "applications"
+      "interoperability": "Applications"
     },
     "links": {
       "wikipedia": "https://en.wikipedia.org/wiki/Wuala"

@@ -151,7 +151,20 @@
               value_infinit = value_infinit.capitalize() if len(value_infinit.split()) == 1 else value_infinit
             %>
 
+            <% if "Applications" in value_infinit:
+              try:
+                arr = value_infinit.split('(')
+                value_infinit = arr[0]
+                platforms_infinit = arr[1]
+              except AttributeError:
+                pass
+            %>
+
             ${value_infinit}
+
+            % if property == 'interoperability' and platforms_infinit:
+              <span class="platforms">(${platforms_infinit}</span>
+            % endif
           </span>
         </div>
       </div>

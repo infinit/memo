@@ -606,6 +606,9 @@ body.pricing, body.press {
     li a { font-size: 13px; }
   }
 
+  ul.menu li.examples ul { display: none; }
+  ul.menu li.examples.active ul { display: block; }
+
   ul.menu li.dropdown {
     ul {
       opacity: 0;
@@ -1082,6 +1085,9 @@ body.doc_comparison {
 
           &.unknown { font-style: italic; color: #949333; }
         }
+      }
+
+      div.competitor, div.infinit {
         span.platforms {
           font-style: italic; color: @infinitgray; display: block;
           margin-top: 5px;
