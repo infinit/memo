@@ -130,8 +130,17 @@ namespace infinit
          for (auto const& p: files)
          {
            auto id = std::stoi(p.filename().string());
-           auto op = this->_load_op(id,
-             this->_queue.size() < this->_queue.max_size());
+           Op op;
+           try
+           {
+             op = this->_load_op(id,
+               this->_queue.size() < this->_queue.max_size());
+           }
+           catch (elle::Error const& e)
+           {
+             ELLE_WARN("Failed to reload %s: %s", id, e);
+             continue;
+           }
            this->_next_index = std::max(id, this->_next_index);
            if (this->_queue.size() < this->_queue.max_size())
              this->_queue.put(op.index);
@@ -195,7 +204,17 @@ namespace infinit
               this->_first_disk_index = it->index;
               return;
             }
-            auto op = this->_load_op(it->index);
+            ELLE_DEBUG("reload %s", it->index);
+            Op op;
+            try
+            {
+              op = this->_load_op(it->index);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("Failed to reload %s: %s", it->index, e);
+              continue;
+            }
             ELLE_DEBUG("restore %s", op);
             this->_queue.put(op.index);
             this->_operations.get<1>().modify(
