@@ -13,8 +13,9 @@ namespace infinit
     if (exists(path) && !is_directory(path))
       throw elle::Error(elle::sprintf("not a directory: %s", path));
     create_directories(path);
+    boost::system::error_code erc;
     permissions(
-      path, boost::filesystem::add_perms | boost::filesystem::owner_write);
+      path, boost::filesystem::add_perms | boost::filesystem::owner_write, erc);
     return canonical(path);
   }
 
