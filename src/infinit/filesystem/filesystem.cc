@@ -9,6 +9,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <elle/bench.hh>
 #include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/os/environ.hh>
