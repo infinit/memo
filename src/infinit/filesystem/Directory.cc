@@ -205,7 +205,7 @@ namespace infinit
     DirectoryData::DirectoryData(boost::filesystem::path path, model::blocks::Block& block, std::pair<bool, bool> perms)
     {
       _path = path;
-      _address = block.address();
+      _address = Address(block.address().value(), model::flags::mutable_block, false);
       _last_used = FileSystem::now();
       _block_version = -1;
       _prefetching = false;
