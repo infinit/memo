@@ -5,6 +5,7 @@
 #include <elle/log.hh>
 #include <elle/bench.hh>
 #include <elle/serialization/json/SerializerIn.hh>
+#include <elle/serialization/json/MissingKey.hh>
 #include <aws/S3.hh>
 
 #include <infinit/model/Address.hh>
@@ -23,11 +24,11 @@ namespace infinit
   namespace storage
   {
     S3::S3(std::unique_ptr<aws::S3> storage,
-           bool reduced_redundancy,
+           aws::S3::StorageClass storage_class,
            boost::optional<int64_t> capacity)
       : Storage(std::move(capacity))
       , _storage(std::move(storage))
-      , _reduced_redundancy(reduced_redundancy)
+      , _storage_class(storage_class)
     {}
 
     S3::~S3()
@@ -74,7 +75,7 @@ namespace infinit
       this->_storage->put_object(value,
                                  elle::sprintf("%x", key),
                                  aws::RequestQuery(),
-                                 !this->reduced_redundancy());
+                                 this->storage_class());
       return 0;
     }
 
@@ -129,11 +130,11 @@ namespace infinit
 
     S3StorageConfig::S3StorageConfig(std::string name,
                                     aws::Credentials credentials,
-                                    bool reduced_redundancy,
+                                    aws::S3::StorageClass storage_class,
                                     boost::optional<int64_t> capacity)
       : StorageConfig(std::move(name), std::move(capacity))
       , credentials(std::move(credentials))
-      , reduced_redundancy(reduced_redundancy)
+      , storage_class(storage_class)
     {}
 
     S3StorageConfig::S3StorageConfig(elle::serialization::SerializerIn& input)
@@ -147,7 +148,54 @@ namespace infinit
     {
       StorageConfig::serialize(s);
       s.serialize("aws_credentials", this->credentials);
-      s.serialize("reduced_redundancy", this->reduced_redundancy);
+      if (s.out())
+      {
+        std::string out;
+        switch (this->storage_class)
+        {
+          case aws::S3::StorageClass::Standard:
+            out = "standard";
+            break;
+          case aws::S3::StorageClass::StandardIA:
+            out = "standard_ia";
+            break;
+          case aws::S3::StorageClass::ReducedRedundancy:
+            out = "reduced_redundancy";
+            break;
+
+          default:
+            out = "default";
+            break;
+        }
+        s.serialize("storage_class", out);
+      }
+      else
+      {
+        try
+        {
+          std::string in;
+          s.serialize("storage_class", in);
+          if (in == "standard")
+            this->storage_class = aws::S3::StorageClass::Standard;
+          else if (in == "standard_ia")
+          {
+            this->storage_class = aws::S3::StorageClass::StandardIA;
+          }
+          else if (in == "reduced_redundancy")
+            this->storage_class = aws::S3::StorageClass::ReducedRedundancy;
+          else
+            this->storage_class = aws::S3::StorageClass::Default;
+        }
+        catch (elle::serialization::MissingKey const& e)
+        {
+          bool reduced_redundancy;
+          s.serialize("reduced_redundancy", reduced_redundancy);
+          if (reduced_redundancy)
+            this->storage_class = aws::S3::StorageClass::ReducedRedundancy;
+          else
+            this->storage_class = aws::S3::StorageClass::Default;
+        }
+      }
     }
 
     std::unique_ptr<infinit::storage::Storage>
@@ -155,7 +203,7 @@ namespace infinit
     {
       auto s3 = elle::make_unique<aws::S3>(credentials);
       return elle::make_unique<infinit::storage::S3>(std::move(s3),
-                                                     this->reduced_redundancy,
+                                                     this->storage_class,
                                                      this->capacity);
     }
 

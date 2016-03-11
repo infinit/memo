@@ -13,7 +13,7 @@ namespace infinit
     {
     public:
       S3(std::unique_ptr<aws::S3> storage,
-         bool reduced_redundancy,
+         aws::S3::StorageClass storage_class,
          boost::optional<int64_t> capacity);
       ~S3();
 
@@ -32,16 +32,19 @@ namespace infinit
       _list() override;
 
       ELLE_ATTRIBUTE_RX(std::unique_ptr<aws::S3>, storage);
-      ELLE_ATTRIBUTE_R(bool, reduced_redundancy);
+      ELLE_ATTRIBUTE_R(aws::S3::StorageClass, storage_class);
     };
 
     struct S3StorageConfig
       : public StorageConfig
     {
     public:
+      typedef aws::S3::StorageClass StorageClass;
+
+    public:
       S3StorageConfig(std::string name,
                       aws::Credentials credentials,
-                      bool reduced_redundancy,
+                      aws::S3::StorageClass storage_class,
                       boost::optional<int64_t> capacity);
       S3StorageConfig(elle::serialization::SerializerIn& input);
 
@@ -53,7 +56,7 @@ namespace infinit
       make() override;
 
       aws::Credentials credentials;
-      bool reduced_redundancy;
+      aws::S3::StorageClass storage_class;
     };
   }
 }
