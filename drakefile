@@ -773,7 +773,7 @@ def configure(
     ('doughnut', []),
     ('faith', []),
     ('rpc', []),
-    ('storage', []),
+    ('storage', [aws_lib]),
     ('async-conflict', []),
     ('kelips', []),
   ]
