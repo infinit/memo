@@ -71,10 +71,13 @@ namespace infinit
       if (!insert || !update)
         throw elle::Error("only update and insert are supported");
       // FIXME: Use multipart upload for blocks bigger than 5 MiB.
-      this->_storage->put_object(value,
-                                 elle::sprintf("%x", key),
-                                 aws::RequestQuery(),
-                                 !this->reduced_redundancy());
+      this->_storage->put_object(
+        value,
+        elle::sprintf("%x", key),
+        aws::RequestQuery(),
+        this->reduced_redundancy() ?
+        aws::S3::StorageClass::ReducedRedundancy :
+        aws::S3::StorageClass::Default);
       return 0;
     }
 
