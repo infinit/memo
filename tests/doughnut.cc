@@ -1,5 +1,7 @@
 #include <memory>
 
+#include <boost/signals2/connection.hpp>
+
 #include <elle/cast.hh>
 #include <elle/log.hh>
 #include <elle/test.hh>
@@ -293,7 +295,8 @@ ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
     elle::Buffer data("\\_o<", 4);
     auto block = dht.make_block<blocks::ImmutableBlock>(data);
     auto addr = block->address();
-    dht.store(*block, infinit::model::STORE_INSERT);
+    ELLE_LOG("store block")
+      dht.store(*block, infinit::model::STORE_INSERT);
     ELLE_LOG("fetch block")
       BOOST_CHECK_EQUAL(dht.fetch(addr)->data(), data);
     ELLE_LOG("remove block")
@@ -622,7 +625,7 @@ public:
   {}
 
   virtual
-  reactor::Generator<infinit::overlay::Overlay::Member>
+  reactor::Generator<infinit::overlay::Overlay::WeakMember>
   _lookup(infinit::model::Address address,
           int n,
           infinit::overlay::Operation op) const
@@ -796,8 +799,9 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
   }
 }
 
+template <typename T>
 int
-size(reactor::Generator<std::shared_ptr<dht::Peer>> const& g)
+size(reactor::Generator<T> const& g)
 {
   int res = 0;
   for (auto const& m: elle::unconst(g))
@@ -841,9 +845,9 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(shrink_and_write)
   {
-    DHT dht_a;
+    DHT dht_a(dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b;
+    DHT dht_b(dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     dht_b.overlay->connect(*dht_a.overlay);
     auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
@@ -865,9 +869,9 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(shrink_kill_and_write)
   {
-    DHT dht_a;
+    DHT dht_a(dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b;
+    DHT dht_b(dht::consensus::rebalance_auto_expand = false);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     dht_b.overlay->connect(*dht_a.overlay);
     auto b1 = dht_a.dht->make_block<blocks::MutableBlock>();
@@ -1118,6 +1122,7 @@ namespace rebalancing
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     DHT dht_b(make_consensus = instrument);
+    auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     DHT dht_c(make_consensus = instrument);
@@ -1133,9 +1138,15 @@ namespace rebalancing
       b->data(std::string("expand"));
       client.dht->store(*b, infinit::model::STORE_INSERT);
     }
-    // The order is deterministic. A bit spurious but still.
     ELLE_LOG("wait for rebalancing")
-      reactor::wait(local_a.rebalanced(), b->address());
+    {
+      boost::signals2::signal<void(infinit::model::Address)> rebalanced;
+      boost::signals2::scoped_connection c_a =
+        local_a.rebalanced().connect(rebalanced);
+      boost::signals2::scoped_connection c_b =
+        local_b.rebalanced().connect(rebalanced);
+      reactor::wait(rebalanced, b->address());
+    }
   }
 
   ELLE_TEST_SCHEDULED(rebalancing_while_destroyed)

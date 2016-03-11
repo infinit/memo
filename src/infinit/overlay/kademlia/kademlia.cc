@@ -436,7 +436,7 @@ namespace kademlia
     }
   }
 
-  reactor::Generator<Kademlia::Member>
+  reactor::Generator<Kademlia::WeakMember>
   Kademlia::_lookup(infinit::model::Address address,
                     int n, infinit::overlay::Operation op) const
   {
@@ -470,10 +470,11 @@ namespace kademlia
           /* FIXME BEARCLAW */ Address(),
           ep));
       ELLE_TRACE("%s: returning", *this);
-      return reactor::generator<Member>(
-        [res] (reactor::yielder<Member>::type const& yield)
+      return reactor::generator<WeakMember>(
+        [res] (reactor::yielder<WeakMember>::type const& yield)
         {
-          for (auto r: res) yield(r);
+          for (auto r: res)
+            yield(r);
         });
     }
 
@@ -494,15 +495,18 @@ namespace kademlia
     }
     else
       throw infinit::model::MissingBlock(address);
-    return reactor::generator<Member>([res]  (reactor::yielder<Member>::type const& yield)
+    return reactor::generator<WeakMember>(
+      [res] (reactor::yielder<WeakMember>::type const& yield)
       {
-        for (auto r: res) yield(r);
+        for (auto r: res)
+          yield(r);
       });
   }
 
-  Kademlia::Member Kademlia::_lookup_node(infinit::model::Address address)
+  infinit::overlay::Overlay::WeakMember
+  Kademlia::_lookup_node(infinit::model::Address address)
   {
-    return Overlay::Member();
+    return Overlay::WeakMember();
   }
 
   static int qid = 0;

@@ -43,6 +43,7 @@ namespace infinit
         , _storage(std::move(storage))
         , _doughnut(dht)
       {
+        ELLE_TRACE_SCOPE("%s: construct", this);
         if (p == Protocol::tcp || p == Protocol::all)
         {
           this->_server = elle::make_unique<reactor::network::TCPServer>();

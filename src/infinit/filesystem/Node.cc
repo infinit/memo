@@ -299,7 +299,8 @@ namespace infinit
         std::vector<model::Address> nodes;
         // FIXME: hardcoded 3
         for (auto n: dht.overlay()->lookup(addr, 3, overlay::OP_FETCH))
-          nodes.push_back(n->id());
+          if (auto locked = n.lock())
+            nodes.push_back(locked->id());
         std::stringstream s;
         elle::serialization::json::serialize(nodes, s);
         return s.str();

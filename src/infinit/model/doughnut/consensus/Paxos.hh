@@ -87,6 +87,8 @@ namespace infinit
                      Address address,
                      PaxosClient::Quorum const& ids,
                      int version);
+          Paxos::PaxosServer::Quorum
+          _rebalance_extend_quorum(Address address, PaxosServer::Quorum q);
         private:
           PaxosClient::Peers
           _peers(Address const& address,

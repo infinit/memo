@@ -163,7 +163,11 @@ namespace infinit
         this->_overlay.reset();
         if (this->_local)
         {
-          ELLE_ASSERT(this->_local.unique());
+          if (!this->_local.unique())
+          {
+            ELLE_ABORT("Doughnut destroyed with %s extra references to Local",
+                       this->_local.use_count() - 1);
+          }
           this->_local.reset();
         }
       }

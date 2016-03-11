@@ -2930,7 +2930,7 @@ namespace infinit
         }
       }
 
-      Node::Member
+      Overlay::WeakMember
       Node::make_peer(PeerLocation hosts)
       {
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
@@ -2952,9 +2952,9 @@ namespace infinit
         }
         if (!disable_cache)
         {
-          auto it = _peer_cache.find(hosts.first);
+          auto it = this->_peer_cache.find(hosts.first);
           if (it != _peer_cache.end() && signed(it->second.size()) >= cache_count)
-            return it->second[rand()%it->second.size()];
+            return it->second[rand() % it->second.size()];
         }
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: hosts.second)
@@ -2968,20 +2968,20 @@ namespace infinit
             std::string uid;
             if (hosts.first != Address::null)
               uid = elle::sprintf("%x", hosts.first);
-            auto res = Overlay::Member(
+            auto res = Overlay::WeakMember(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                 elle::unconst(*this->doughnut()),
                 hosts.first,
                 endpoints,
                 uid,
                 elle::unconst(this)->_remotes_server));
-            std::dynamic_pointer_cast<model::doughnut::Remote>(res)
+            std::dynamic_pointer_cast<model::doughnut::Remote>(res.payload())
               ->retry_connect(std::function<bool(model::doughnut::Remote&)>(
                 std::bind(&Node::remote_retry_connect,
                           this, std::placeholders::_1,
                           uid)));
             if (!disable_cache)
-              _peer_cache[hosts.first].push_back(res);
+              this->_peer_cache[hosts.first].push_back(res);
             return res;
           }
           catch (elle::Error const& e)
@@ -2996,7 +2996,7 @@ namespace infinit
             try
             {
               // FIXME: don't always yield paxos
-              return Overlay::Member(
+              return Overlay::WeakMember(
                 new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                   elle::unconst(*this->doughnut()),
                   hosts.first,
@@ -3032,7 +3032,7 @@ namespace infinit
         return true;
       }
 
-      reactor::Generator<Node::Member>
+      reactor::Generator<Overlay::WeakMember>
       Node::_lookup(infinit::model::Address address,
                     int n,
                     infinit::overlay::Operation op) const
@@ -3043,15 +3043,16 @@ namespace infinit
           reactor::wait(elle::unconst(this)->_bootstraping);
           ELLE_TRACE("bootstrap opened");
         }
-        return reactor::generator<Node::Member>(
-          [this, address, n, op] (reactor::Generator<Node::Member>::yielder const& yield)
-        {
-          std::function<void(PeerLocation)> handle = [&](PeerLocation hosts)
+        return reactor::generator<Overlay::WeakMember>(
+          [this, address, n, op]
+          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
-            yield(elle::unconst(this)->make_peer(hosts));
-          };
-          elle::unconst(this)->address(address, op, n, handle);
-        });
+            std::function<void(PeerLocation)> handle = [&](PeerLocation hosts)
+              {
+                yield(elle::unconst(this)->make_peer(hosts));
+              };
+            elle::unconst(this)->address(address, op, n, handle);
+          });
       }
 
       void
@@ -3233,7 +3234,7 @@ namespace infinit
         return &inserted.first->second;
       }
 
-      Overlay::Member
+      Overlay::WeakMember
       Node::_lookup_node(Address address)
       {
         if (address == _self)
@@ -3478,9 +3479,9 @@ namespace infinit
         if (k.substr(0,5) == "node.")
         {
           Address target = Address::from_string(k.substr(5));
-          Overlay::Member n;
+          Overlay::WeakMember n;
           try {
-            n = lookup_node(target);
+            n = this->lookup_node(target);
             res["status"] = "got it";
           }
           catch (elle::Error const& e)

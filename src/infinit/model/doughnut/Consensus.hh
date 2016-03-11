@@ -40,7 +40,7 @@ namespace infinit
           static
           std::unique_ptr<blocks::Block>
           fetch_from_members(
-            reactor::Generator<overlay::Overlay::Member>& peers,
+            reactor::Generator<overlay::Overlay::WeakMember>& peers,
             Address address,
             boost::optional<int> local_version);
           void
@@ -59,10 +59,10 @@ namespace infinit
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs);
-          std::shared_ptr<Peer>
+          overlay::Overlay::WeakMember
           _owner(Address const& address,
                  overlay::Operation op) const;
-          reactor::Generator<overlay::Overlay::Member>
+          reactor::Generator<overlay::Overlay::WeakMember>
           _owners(Address const& address,
                   int factor,
                   overlay::Operation op) const;

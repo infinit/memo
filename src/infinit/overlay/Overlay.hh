@@ -4,6 +4,8 @@
 # include <unordered_map>
 
 # include <elle/json/json.hh>
+# include <elle/log.hh>
+
 
 # include <reactor/network/tcp-socket.hh>
 # include <reactor/Generator.hh>
@@ -34,6 +36,7 @@ namespace infinit
     `------*/
     public:
       typedef std::shared_ptr<model::doughnut::Peer> Member;
+      typedef std::ambivalent_ptr<model::doughnut::Peer> WeakMember;
       typedef std::vector<Member> Members;
 
     /*-------------.
@@ -63,23 +66,23 @@ namespace infinit
     `-------*/
     public:
       /// Lookup a list of nodes
-      reactor::Generator<Member>
+      reactor::Generator<WeakMember>
       lookup(model::Address address, int n, Operation op) const;
       /// Lookup a single node
-      Member
+      WeakMember
       lookup(model::Address address, Operation op) const;
       /// Lookup a node from its uid
-      Member
+      WeakMember
       lookup_node(model::Address address);
       /// Lookup nodes from uids
-      reactor::Generator<Overlay::Member>
+      reactor::Generator<WeakMember>
       lookup_nodes(std::unordered_set<model::Address> address);
     protected:
       virtual
-      reactor::Generator<Member>
+      reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, Operation op) const = 0;
       virtual
-      Member
+      WeakMember
       _lookup_node(model::Address address) = 0;
     /*------.
     | Query |

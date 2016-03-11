@@ -76,7 +76,7 @@ public:
 
 protected:
   virtual
-  reactor::Generator<Member>
+  reactor::Generator<WeakMember>
   _lookup(infinit::model::Address address,
           int n,
           infinit::overlay::Operation op) const override
@@ -85,9 +85,9 @@ protected:
     bool write = op == infinit::overlay::OP_INSERT;
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      this, n, write ? " new" : "", address);
-    return reactor::generator<Overlay::Member>(
+    return reactor::generator<Overlay::WeakMember>(
       [=]
-      (reactor::Generator<Overlay::Member>::yielder const& yield)
+      (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
       {
         int count = n;
         if (write)
@@ -117,13 +117,13 @@ protected:
   }
 
   virtual
-  Member
+  WeakMember
   _lookup_node(infinit::model::Address id) override
   {
     for (auto* peer: this->_peers)
       if (peer->local() && peer->local()->id() == id)
         return peer->local();
-    throw elle::Error(elle::sprintf("no such node: %s", id));
+    throw elle::Error(elle::sprintf("no such node: %f", id));
   }
 
   ELLE_ATTRIBUTE_RX(std::vector<Overlay*>, peers);
