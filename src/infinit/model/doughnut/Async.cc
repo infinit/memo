@@ -334,7 +334,7 @@ namespace infinit
             }
             else
             {
-              ELLE_TRACE("%s: fetch %s from disk journal", *this, address);
+              ELLE_TRACE("%s: fetch %s from disk journal at %s", *this, address, it->index);
               auto res = this->_load_op(it->index).block;
               if (!res)
                 throw MissingBlock(address);
