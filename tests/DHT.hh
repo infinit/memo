@@ -24,8 +24,7 @@ public:
   {
     if (local)
       local->on_store.connect(
-        [this] (blocks::Block const& block,
-                infinit::model::StoreMode)
+        [this] (blocks::Block const& block)
         {
           this->_blocks.emplace(block.address());
         });
@@ -73,10 +72,9 @@ protected:
           infinit::overlay::Operation op) const override
   {
     ELLE_LOG_COMPONENT("Overlay");
-    bool write = op == infinit::overlay::OP_INSERT ||
-      op == infinit::overlay::OP_INSERT_OR_UPDATE;
+    bool write = op == infinit::overlay::OP_INSERT;
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
-                     *this, n, write ? " new" : "", address);
+                     this, n, write ? " new" : "", address);
     return reactor::generator<Overlay::Member>(
       [=]
       (reactor::Generator<Overlay::Member>::yielder const& yield)

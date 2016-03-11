@@ -130,8 +130,17 @@ namespace infinit
          for (auto const& p: files)
          {
            auto id = std::stoi(p.filename().string());
-           auto op = this->_load_op(id,
-             this->_queue.size() < this->_queue.max_size());
+           Op op;
+           try
+           {
+             op = this->_load_op(id,
+               this->_queue.size() < this->_queue.max_size());
+           }
+           catch (elle::Error const& e)
+           {
+             ELLE_WARN("Failed to reload %s: %s", id, e);
+             continue;
+           }
            this->_next_index = std::max(id, this->_next_index);
            if (this->_queue.size() < this->_queue.max_size())
              this->_queue.put(op.index);
@@ -195,7 +204,17 @@ namespace infinit
               this->_first_disk_index = it->index;
               return;
             }
-            auto op = this->_load_op(it->index);
+            ELLE_DEBUG("reload %s", it->index);
+            Op op;
+            try
+            {
+              op = this->_load_op(it->index);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("Failed to reload %s: %s", it->index, e);
+              continue;
+            }
             ELLE_DEBUG("restore %s", op);
             this->_queue.put(op.index);
             this->_operations.get<1>().modify(
@@ -315,7 +334,7 @@ namespace infinit
             }
             else
             {
-              ELLE_TRACE("%s: fetch %s from disk journal", *this, address);
+              ELLE_TRACE("%s: fetch %s from disk journal at %s", *this, address, it->index);
               auto res = this->_load_op(it->index).block;
               if (!res)
                 throw MissingBlock(address);
@@ -328,7 +347,9 @@ namespace infinit
         void
         Async::_process_loop()
         {
+          ELLE_DEBUG("waiting for init...");
           reactor::wait(this->_init_barrier);
+          ELLE_DEBUG("running loop");
           while (!_exit_requested)
           {
             try
@@ -340,7 +361,9 @@ namespace infinit
                   *this, *this->_first_disk_index)
 
                 this->_load_operations();
+              ELLE_DEBUG("get one");
               int index = this->_queue.get();
+              ELLE_DEBUG("popped %s", index);
               if (_exit_requested)
                 break;
               auto it = this->_operations.get<1>().begin();
@@ -375,15 +398,25 @@ namespace infinit
                 }
                 catch (elle::Error const& e)
                 {
-                  ELLE_LOG("error in async loop: %s", e);
+                  ELLE_LOG("error in async loop on %s: %s", op->index, e);
                   ++attempt;
                   reactor::sleep(std::min(20000_ms,
                     boost::posix_time::milliseconds(200 * attempt)));
                   // reload block and try again
+                  auto index = op->index;
                   if (must_delete)
                     delete op;
-                  op = new Op(_load_op(op->index));
-                  must_delete = true;
+                  ELLE_DEBUG("reloading %s", index);
+                  try
+                  {
+                    op = new Op(_load_op(index));
+                    must_delete = true;
+                  }
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_WARN("Failed to reload %s: %s", index, e);
+                    break;
+                  }
                 }
               }
               if (!this->_journal_dir.empty())
@@ -402,6 +435,7 @@ namespace infinit
               ELLE_ABORT("%s: async loop killed: %s", *this, e.what());
             }
           }
+          ELLE_TRACE("exiting loop");
         }
 
         /*----------.

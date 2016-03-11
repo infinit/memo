@@ -423,7 +423,7 @@ namespace infinit
             data.paxos.release();
           }
           if (block)
-            on_store(*block, STORE_ANY);
+            on_store(*block);
           return std::move(res);
         }
 
@@ -705,9 +705,9 @@ namespace infinit
               return res;
             }();
           this->storage()->set(block.address(), data,
-                              mode == STORE_ANY || mode == STORE_INSERT,
-                              mode == STORE_ANY || mode == STORE_UPDATE);
-          on_store(block, mode);
+                              mode == STORE_INSERT,
+                              mode == STORE_UPDATE);
+          on_store(block);
         }
 
         void
@@ -737,7 +737,16 @@ namespace infinit
             }
             else
             { // immutable block
-              auto buffer = this->storage()->get(address);
+              elle::Buffer buffer;
+              try
+              {
+                buffer = this->storage()->get(address);
+              }
+              catch (storage::MissingKey const& k)
+              {
+                throw MissingBlock(k.key());
+              }
+
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
               auto stored =
@@ -819,9 +828,6 @@ namespace infinit
           overlay::Operation op;
           switch (mode)
           {
-            case STORE_ANY:
-              op = overlay::OP_INSERT_OR_UPDATE;
-              break;
             case STORE_INSERT:
               op = overlay::OP_INSERT;
               break;
@@ -907,7 +913,7 @@ namespace infinit
             elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
             {
               for (auto owner: owners)
-                  owner->store(*b, STORE_ANY);
+                owner->store(*b, mode);
             };
           }
         }

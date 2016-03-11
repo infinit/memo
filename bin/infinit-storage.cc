@@ -150,10 +150,31 @@ COMMAND(create)
     aws::Credentials aws_credentials(account->access_key_id,
                                      account->secret_access_key,
                                      region, bucket, root.get());
+    auto storage_class_str = optional(args, "storage-class");
+    aws::S3::StorageClass storage_class = aws::S3::StorageClass::Default;
+    if (storage_class_str)
+    {
+      std::string storage_class_parse = storage_class_str.get();
+      std::transform(storage_class_parse.begin(),
+                     storage_class_parse.end(),
+                     storage_class_parse.begin(),
+                     ::tolower);
+      if (storage_class_parse == "standard")
+        storage_class = aws::S3::StorageClass::Standard;
+      else if (storage_class_parse == "standard_ia")
+        storage_class = aws::S3::StorageClass::StandardIA;
+      else if (storage_class_parse == "reduced_redundancy")
+        storage_class = aws::S3::StorageClass::ReducedRedundancy;
+      else
+      {
+        throw CommandLineError(elle::sprintf("unrecognized storage class: %s",
+                                             storage_class_str.get()));
+      }
+    }
     config = elle::make_unique<infinit::storage::S3StorageConfig>(
       name,
       std::move(aws_credentials),
-      flag(args, "reduced-redundancy"),
+      storage_class,
       std::move(capacity));
   }
   else if (args.count("dropbox"))
@@ -289,7 +310,8 @@ main(int argc, char** argv)
   ;
   Mode::OptionsDescription s3_options("Amazon S3 storage options");
   s3_options.add_options()
-    ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
+    ("storage-class", value<std::string>(), "storage class to use: "
+       "STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)")
     ("region", value<std::string>(), "AWS region to use")
   ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");

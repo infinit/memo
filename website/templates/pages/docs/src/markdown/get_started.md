@@ -1,18 +1,28 @@
 ﻿
 <div><%
   if "mac" in request.path:
-    osname="mac"
+    osname = "mac"
   elif "linux" in request.path:
-    osname="linux"
+    osname = "linux"
   elif "windows" in request.path:
-    osname="windows"
+    osname = "windows"
   elif os() == "Macintosh":
-    osname="mac"
+    osname = "mac"
   elif os() == "Windows":
-    osname="windows"
+    osname = "windows"
   else:
-    osname="linux"
+    osname = "linux"
 
+  if osname == "mac" or osname == "linux":
+    demo_mountpoint = "~/mnt-demo"
+    demo_home = "$PWD/share/infinit/filesystem/test/home/"
+    ls_command = "ls"
+    exe = ""
+  else:
+    demo_mountpoint = "z:"
+    demo_home = "c:/PATH_TO_INFINIT/share/infinit/filesystem/test/home/"
+    ls_command = "dir"
+    exe = ".exe"
 %></div>
 
 Get Started
@@ -36,44 +46,39 @@ Get Started
 1. Installation
 -----------------
 
-### Download and install Infinit’s dependencies
-
-<img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE">
+<h3 class="skip">Download and install Infinit’s dependencies</h3>
 
 <div>
 % if osname == "mac":
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the OSXFUSE from the link below:</p>
 
-<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.1.0/osxfuse-3.1.0.dmg" class="button">Download OSXFUSE</a></p>
-
-<em><strong>NOTE</strong>: Infinit requires a version of OSXFUSE that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/.</em>
+<%include file='get_started/mac_fuse_install.html'/>
 
 % elif osname == "linux":
 
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use <code>apt-get</code>:</p>
-
-<br>
-
-<pre><code>$> sudo apt-get install fuse
-</code></pre>
+<%include file='get_started/linux_fuse_install.html'/>
 
 % else:
+
 <p> Infinit relies on <a href="https://github.com/dokan-dev/dokany">dokany</a> to create filesystems in userland. You will need to install it from the link below:</p>
 <p><a href="https://github.com/dokan-dev/dokany/releases/download/v1.0.0-RC1/DokanSetup.exe" class="button">Download DOKANY</a></p>
 
-<em><strong>NOTE</strong>: Infinit currently requires a 64bit version of Windows 7 or Windows 8.</em>
+<em><strong>NOTE</strong>: Infinit currently requires a 64 bit version of Windows 7 or Windows 8.</em>
 % endif
 </div>
 
-### Download and install the Infinit command-line tools
+<h3 class="skip">Download and install the Infinit command-line tools</h3>
 
 <div>
 % if osname == "mac":
-<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-<p>Click the link below to download the Infinit command-line tools:</p>
+<p>If you have <a href="http://brew.sh">homebrew</a>, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#mac-tarball-install">Tarball install</a>.</p>
 
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-" class="button">Download Command Line Tools</a>
+<h3 class="skip" id="mac-homebrew-install">&#9679; Homebrew install</h3>
+
+<%include file='get_started/mac_homebrew_install.html'/>
+
+<h3 class="skip" id="mac-tarball-install">&#9679; Tarball install</h3>
+
+<%include file='get_started/mac_tarball_install.html'/>
 
 % elif osname == "windows":
 <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
@@ -83,56 +88,16 @@ Get Started
 " class="button">Download Command Line Tools</a>
 
 % else:
-<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href='#linux-tarball-install'>Tarball Install</a>.</p>
 
-<h3 id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
-<p>First import the public key used by the package management system:</p>
-<pre><code>$> sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
-Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
-gpg: requesting key 3D2C3B0B from hkp server keyserver.ubuntu.com
-gpg: key 6821EB43: public key "Infinit &lt;contact@infinit.one&gt;" imported
-gpg: Total number processed: 1
-gpg:               imported: 1  (RSA: 1)
-</code></pre>
+<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#linux-tarball-install">Tarball Install</a>.</p>
 
-<p>Then add the repository locally:</p>
-<pre><code>$> sudo add-apt-repository "deb https://debian.infinit.sh/ trusty main"
-</code></pre>
+<h3 class="skip" id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
 
-<p>Finally, you can update your local list of packages and install the command-line tools as you would any other package:</p>
+<%include file='get_started/linux_apt_install.html'/>
 
-<pre><code>$> sudo apt-get update
-...
-Reading package lists... Done
-</code></pre>
+<h3 class="skip" id="linux-tarball-install">&#9679; Tarball Install</h3>
 
-<pre><code>$> sudo apt-get install infinit
-Reading package lists... Done
-Building dependency tree
-Reading state information... Done
-The following NEW packages will be installed:
-  infinit
-0 upgraded, 1 newly installed, 0 to remove and 24 not upgraded.
-Need to get 51,6 MB/51,6 MB of archives.
-After this operation, 51,6 MB of additional disk space will be used.
-Selecting previously unselected package infinit.
-(Reading database ... 208105 files and directories currently installed.)
-Preparing to unpack .../infinit_${tarball_version}_amd64.deb ...
-Unpacking infinit (${tarball_version}) ...
-Setting up infinit (${tarball_version}) ...
-</code></pre>
-<p></p>
-<p>You can now change to the install directory and <a href='#2-basic-test'>test</a> your install.</p>
-<pre><code>$> cd /opt/infinit
-</code></pre>
-
-<h3 id="linux-tarball-install">&#9679; Tarball Install</h3>
-
-<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-<p>Click the link below to download the Infinit command-line tools:</p>
-
-<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
-" class="button">Download Command Line Tools Tarball</a>
+<%include file='get_started/linux_tarball_install.html'/>
 
 % endif
 </div>
@@ -150,13 +115,13 @@ Next, open your terminal and extract the Infinit tarball:
 % if osname == "mac":
 
 <pre><code>$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-Infinit-x86_64-osx-clang3-${tarball_version}/
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/
-Infinit-x86_64-osx-clang3-${tarball_version}/lib
+Infinit-${tarball_version}/
+Infinit-${tarball_version}/bin/
+Infinit-${tarball_version}/lib
 ...
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-storage
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-user
-Infinit-x86_64-osx-clang3-${tarball_version}/bin/infinit-volume
+Infinit-${tarball_version}/bin/infinit-storage
+Infinit-${tarball_version}/bin/infinit-user
+Infinit-${tarball_version}/bin/infinit-volume
 ...
 </code></pre>
 
@@ -189,9 +154,11 @@ Now that you’ve extracted the tarball, take a look. The extracted directory co
 * The `share/infinit/filesystem/test/` subdirectory is provided for you to quickly test the command-line tools, see below.
 
 <div>
+
 % if osname != "windows":
 % if osname == "mac":
-<pre><code>$> cd Infinit-x86_64-osx-clang3-${tarball_version}/
+<pre><code>$> cd Infinit-${tarball_version}/
+
 % else:
 <pre><code>$> cd Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
 % endif
@@ -271,7 +238,7 @@ The first step consists of creating a user on the Hub. All the commands that fol
 <div><span>Device A</span></div>
 <code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
 Generating RSA keypair.
-Remotely pushed user "alice".
+Remotely saved user "alice".
 </code></pre>
 
 ### Create a storage resource
@@ -288,6 +255,8 @@ The binary _infinit-storage_ is used for this purpose. The option `--filesystem`
 Created storage "local".
 </code></pre>
 
+If you get an error similar to `locale::facet::_S_create_c_locale name not valid`, you need to pass `LC_ALL=C` in your environment (just prepend `LC_ALL=C` to your command line).
+
 ### Create a network
 
 Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.
@@ -298,7 +267,7 @@ The _infinit-network_ command is used to create the network, specifying a name a
 <div><span>Device A</span></div>
 <code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
 Locally created network "alice/my-network".
-Remotely pushed network "alice/my-network".
+Remotely saved network "alice/my-network".
 </code></pre>
 
 *__NOTE__: The `--push` option is used to publish the created network (likewise for other objects) onto the Hub for it to be easily fetched on another device or shared with other users.*
@@ -311,7 +280,7 @@ The last step on this device consists of creating a logical volume to store and 
 <div><span>Device A</span></div>
 <code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
 Locally created volume "alice/my-volume".
-Remotely pushed volume "alice/my-volume".
+Remotely saved volume "alice/my-volume".
 </code></pre>
 
 That’s it, you’ve created a volume named ‘my-volume’ i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named ‘my-network’, currently composed of a single computer with a single storage resource.
@@ -325,7 +294,7 @@ Let’s access this volume by mounting it as easily as any other filesystem:
 <code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
 Fetched endpoints for "alice/my-network".
 Running network "alice/my-network".
-Remotely pushed endpoints for "alice/my-network".
+Remotely saved endpoints for "alice/my-network".
 Running volume "alice/my-volume".
 </code></pre>
 
@@ -410,6 +379,10 @@ That’s it, you’ve created a filesystem that you quickly connected to with tw
 4. Go Further
 ------------------
 
+<blockquote class="warning">
+<strong>Notice:</strong> Some features may not be entirely developed yet, please have a look at <a href="${route('doc_roadmap')}">our roadmap</a> to follow our advancement. You can also subscribe to <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">our newsletter</a> to get notified of our upcoming features.
+</blockquote>
+
 You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Take a look at the <a href="${route('doc_deployments')}">examples of deployments</a> or the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.
 
 <div>
@@ -424,8 +397,13 @@ You can now invite other users to join the network, to contribute additional sto
   </a>
 </div>
 
-<a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Join our Facebook Group</a>
+### Any question, feedback ?
 
-<a href="#slack" class="icon-slack">Ask us something on Slack</a>
+Come talk to us! Whether you encounter a problem setting up your infrastructure, have a question or just to give us some feedback, we're never too far away:
 
-<a href="https://twitter.com/infinit_sh" class="icon-twitter">Follow us on Twitter</a>
+* <a href="https://reddit.com/r/infinit" class="icon-reddit">Reddit /r/infinit</a>
+* <a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Facebook Group</a>
+* <a href="#slack" class="icon-slack">Slack Community</a>
+* <a href="http://webchat.freenode.net/?channels=infinit" class="icon-infinit">IRC Channel</a>
+* <a href="https://twitter.com/infinit_sh" class="icon-twitter">Twitter</a>
+

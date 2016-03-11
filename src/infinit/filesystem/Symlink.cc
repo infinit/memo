@@ -56,7 +56,7 @@ namespace infinit
     {
       auto data = elle::serialization::binary::serialize(_h);
       _block->data(data);
-      _owner.store_or_die(std::move(_block));
+      _owner.store_or_die(std::move(_block), model::STORE_UPDATE);
     }
 
     void

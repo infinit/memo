@@ -1,0 +1,4 @@
+{
+    "name" : "owner/volume0",
+    "network" : "owner/network1"
+}

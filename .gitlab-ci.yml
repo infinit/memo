@@ -16,7 +16,6 @@ x86_64-trusty-gcc4:
     - cd ../fs-build && python3 drake --website=false -j 4 //build //beyond/build
     - cd ../fs-build && python3 drake --website=false -j 1 //check //beyond/check
     - cd ../fs-build && python3 drake --website=false -j 4 //install //beyond/install
-    - rm -rf ../fs-build/debian ../fs-build/debian-debug
     - cd ../fs-build && python3 drake -j 4 //beyond/debian
     - scp ../fs-build/beyond/infinit-beyond_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
   tags:
@@ -37,7 +36,6 @@ x86_64-jessie-gcc4:
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //build
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //check
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //install
-    - rm -rf ../fs-build/debian ../fs-build/debian-debug
     - cd ../fs-build && python3 drake --website=false --beyond=false -j 4 //debian
     - scp ../fs-build/infinit_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
     - scp ../fs-build/infinit-debug-symbols-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
@@ -128,6 +126,7 @@ website:
   stage: build
   script:
     - git submodule sync --recursive
+    - pip3 install mistune
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-website

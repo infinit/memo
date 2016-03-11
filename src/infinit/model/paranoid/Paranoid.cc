@@ -67,8 +67,8 @@ namespace infinit
         this->_storage->set(
           block->address(),
           this->_keys.K().seal(raw),
-          mode == STORE_ANY || mode == STORE_INSERT,
-          mode == STORE_ANY || mode == STORE_UPDATE);
+          mode == STORE_INSERT,
+          mode == STORE_UPDATE);
       }
 
       std::unique_ptr<blocks::Block>

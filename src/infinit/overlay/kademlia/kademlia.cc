@@ -214,8 +214,7 @@ namespace kademlia
                                         std::placeholders::_1,
                                         std::placeholders::_2));
       local->on_store.connect(std::bind(&Kademlia::store, this,
-                                        std::placeholders::_1,
-                                        std::placeholders::_2));
+                                        std::placeholders::_1));
       local->on_remove.connect(std::bind(&Kademlia::remove, this,
                                          std::placeholders::_1));
       this->_port = local->server_endpoint().port();
@@ -482,10 +481,6 @@ namespace kademlia
     ELLE_TRACE("%s: waiting for value query", *this);
     q->barrier.wait();
     ELLE_TRACE("%s: waiting done", *this);
-    if (q->storeResult.empty() && op == infinit::overlay::OP_INSERT_OR_UPDATE)
-    {
-      return _lookup(address, n, infinit::overlay::OP_INSERT);
-    }
     infinit::overlay::Overlay::Members res;
     if (!q->storeResult.empty())
     {
@@ -582,19 +577,17 @@ namespace kademlia
     s.serialize("wait_ms", wait_ms);
   }
 
-  void Kademlia::store(infinit::model::blocks::Block const& block,
-                       infinit::model::StoreMode mode)
+  void Kademlia::store(infinit::model::blocks::Block const& block)
   {
     // advertise it
     ELLE_TRACE("%s: Advertizing %x", *this, block.address());
   }
+
   void Kademlia::remove(Address address)
-  {
-  }
+  {}
 
   void Kademlia::fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b)
-  {
-  }
+  {}
 
   void Kademlia::print(std::ostream& o) const
   {

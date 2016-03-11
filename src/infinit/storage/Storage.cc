@@ -108,16 +108,6 @@ namespace infinit
       _on_storage_size_change.connect(f);
     }
 
-    /*----------.
-    | Printable |
-    `----------*/
-
-    void
-    Storage::print(std::ostream& out) const
-    {
-      elle::fprintf(out, "%s(%x)", elle::type_info(*this), this);
-    }
-
     std::unique_ptr<Storage>
     instantiate(std::string const& name,
                 std::string const& args)

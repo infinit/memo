@@ -538,7 +538,7 @@ namespace infinit
             sk.encipher(buf), _address);
           _owner.unchecked_remove(_filedata->_fat[i].first);
           _filedata->_fat[i].first = newblock->address();
-          _owner.store_or_die(std::move(newblock));
+          _owner.store_or_die(std::move(newblock), model::STORE_INSERT);
         }
       }
       // check first block data

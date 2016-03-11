@@ -24,7 +24,6 @@ namespace infinit
       OP_FETCH,
       OP_INSERT,
       OP_UPDATE,
-      OP_INSERT_OR_UPDATE, // for cases where we're not sure
       OP_REMOVE
     };
 

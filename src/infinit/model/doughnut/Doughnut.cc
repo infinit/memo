@@ -107,7 +107,7 @@ namespace infinit
                                this, user->address(), name);
               try
               {
-                this->store(std::move(user));
+                this->store(std::move(user), STORE_INSERT);
               }
               catch (elle::Error const& e)
               {
@@ -136,7 +136,7 @@ namespace infinit
                                user->address());
               try
               {
-                this->store(std::move(user));
+                this->store(std::move(user), STORE_INSERT);
               }
               catch (elle::Error const& e)
               {

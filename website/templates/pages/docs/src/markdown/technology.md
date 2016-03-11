@@ -7,7 +7,7 @@ However, at the technology level, Infinit is a set of independent layers that ca
 
 <br><img src="${url('images/schema-technology.png')}" alt="Infinit Technology"><br>
 
-Reactor
+Reactor <a class="github" href="https://github.com/infinit/elle" target="_blank"><span class="star">soon on github</span></a>
 -----------
 *#high-performance* *#interoperability*
 
@@ -74,7 +74,7 @@ void echo(std::unique_ptr<reactor::network::Socket> socket)
 
 [Learn More](http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming)
 
-Overlay Network
+Overlay Network <a class="github" href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a>
 ----------------------
 *#control* *#affordable* *#scalable* *#fault-tolerant* *#migration*
 
@@ -92,7 +92,7 @@ The decentralized nature of the overlay network ensures scalability and performa
 
 Finally, by creating the overlay network according to your needs (data location for instance), you control the flow of information. Also, the flexibility to add and remove nodes dynamically makes such systems extremely affordable.
 
-Distributed Hash Table
+Distributed Hash Table <a class="github" href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a>
 -------------------------------
 *#flexible* *#reliable* *#migration*
 
@@ -108,7 +108,7 @@ In addition to distributing the values among the nodes composing the overlay net
 
 *__Note__: In practice, the overlay network and distributed hash table are often combined into a single piece of software. For more information on the overlay networks and DHTs available, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.*
 
-File System
+File System <a class="github" href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a>
 ----------------
 *#secure* *#natural* *#on-demand* *#access-control* *#versioning*
 

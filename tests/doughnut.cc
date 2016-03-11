@@ -293,7 +293,7 @@ ELLE_TEST_SCHEDULED(CHB, (bool, paxos))
     elle::Buffer data("\\_o<", 4);
     auto block = dht.make_block<blocks::ImmutableBlock>(data);
     auto addr = block->address();
-    dht.store(*block);
+    dht.store(*block, infinit::model::STORE_INSERT);
     ELLE_LOG("fetch block")
       BOOST_CHECK_EQUAL(dht.fetch(addr)->data(), data);
     ELLE_LOG("remove block")
@@ -311,13 +311,13 @@ ELLE_TEST_SCHEDULED(OKB, (bool, paxos))
     block->data(elle::Buffer(data));
     auto addr = block->address();
     ELLE_LOG("store mutable block")
-      dht.store(*block);
+      dht.store(*block, infinit::model::STORE_INSERT);
     elle::Buffer updated(">o_/", 4);
     block->data(elle::Buffer(updated));
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(addr)->data(), data);
     ELLE_LOG("store updated mutable block")
-      dht.store(*block);
+      dht.store(*block, infinit::model::STORE_UPDATE);
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(addr)->data(), updated);
     ELLE_LOG("remove block")
@@ -342,9 +342,9 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
           std::move(dht.make_block<blocks::ImmutableBlock>(data)));
     }
     ELLE_LOG("store block")
-    dht.store(*block);
+      dht.store(*block, infinit::model::STORE_INSERT);
     for (auto& block: blocks_)
-      dht.store(*block);
+      dht.store(*block, infinit::model::STORE_INSERT);
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
     for (auto& block: blocks_)
@@ -357,13 +357,13 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
     ELLE_LOG("store block")
-    dht.store(*block);
+      dht.store(*block, infinit::model::STORE_INSERT);
     elle::Buffer updated(">o_/", 4);
     block->data(elle::Buffer(updated));
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), data);
     ELLE_LOG("store block")
-    dht.store(*block);
+      dht.store(*block, infinit::model::STORE_UPDATE);
     ELLE_LOG("fetch block")
       ELLE_ASSERT_EQ(dht.fetch(block->address())->data(), updated);
     ELLE_LOG("remove block")
@@ -378,7 +378,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
   elle::Buffer data("\\_o<", 4);
   block->data(elle::Buffer(data));
   ELLE_LOG("owner: store ACB")
-  dhts.dht_a->store(*block);
+    dhts.dht_a->store(*block, infinit::model::STORE_INSERT);
   {
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
@@ -386,12 +386,13 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-(", 3));
     ELLE_LOG("other: stored edited ACB")
-      BOOST_CHECK_THROW(dhts.dht_b->store(*acb), dht::ValidationFailed);
+      BOOST_CHECK_THROW(dhts.dht_b->store(*acb, infinit::model::STORE_UPDATE),
+                        dht::ValidationFailed);
   }
   ELLE_LOG("owner: add ACB read permissions")
     block->set_permissions(dht::User(dhts.keys_b->K(), ""), true, false);
   ELLE_LOG("owner: store ACB")
-    dhts.dht_a->store(*block);
+    dhts.dht_a->store(*block, infinit::model::STORE_UPDATE);
   {
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
@@ -399,12 +400,13 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-(", 3));
     ELLE_LOG("other: stored edited ACB")
-      BOOST_CHECK_THROW(dhts.dht_b->store(*acb), dht::ValidationFailed);
+      BOOST_CHECK_THROW(dhts.dht_b->store(*acb, infinit::model::STORE_UPDATE),
+                        dht::ValidationFailed);
   }
   ELLE_LOG("owner: add ACB write permissions")
     block->set_permissions(dht::User(dhts.keys_b->K(), ""), true, true);
   ELLE_LOG("owner: store ACB")
-    dhts.dht_a->store(*block);
+    dhts.dht_a->store(*block, infinit::model::STORE_UPDATE);
   {
     ELLE_LOG("other: fetch ACB");
     auto fetched = dhts.dht_b->fetch(block->address());
@@ -412,7 +414,7 @@ ELLE_TEST_SCHEDULED(ACB, (bool, paxos))
     auto acb = elle::cast<blocks::ACLBlock>::runtime(fetched);
     acb->data(elle::Buffer(":-)", 3));
     ELLE_LOG("other: stored edited ACB")
-      dhts.dht_b->store(*acb);
+      dhts.dht_b->store(*acb, infinit::model::STORE_UPDATE);
   }
   ELLE_LOG("owner: fetch ACB")
   {
@@ -428,7 +430,7 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
     dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
     elle::Buffer("blockdata", 9));
   ELLE_LOG("owner: store NB")
-    dhts.dht_a->store(*block);
+    dhts.dht_a->store(*block, infinit::model::STORE_INSERT);
   {
     ELLE_LOG("other: fetch NB");
     auto fetched =
@@ -441,7 +443,8 @@ ELLE_TEST_SCHEDULED(NB, (bool, paxos))
     auto block = elle::make_unique<dht::NB>(
       dhts.dht_a.get(), dhts.keys_a->public_key(), "blockname",
       elle::Buffer("blockdatb", 9));
-     BOOST_CHECK_THROW(dhts.dht_a->store(*block), std::exception);
+    BOOST_CHECK_THROW(dhts.dht_a->store(*block, infinit::model::STORE_UPDATE),
+                      std::exception);
   }
   // remove and remove protection
   BOOST_CHECK_THROW(dhts.dht_a->remove(
@@ -459,21 +462,23 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
   {
     dht::UB uba(dhta.get(), "a", dhta->keys().K());
     dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
-    dhta->store(uba);
-    dhta->store(ubarev);
+    dhta->store(uba, infinit::model::STORE_INSERT);
+    dhta->store(ubarev, infinit::model::STORE_INSERT);
   }
   auto ruba = dhta->fetch(dht::UB::hash_address(dhta->keys().K(), *dhta));
   BOOST_CHECK(ruba);
   auto* uba = dynamic_cast<dht::UB*>(ruba.get());
   BOOST_CHECK(uba);
   dht::UB ubf(dhta.get(), "duck", dhta->keys().K(), true);
-  BOOST_CHECK_THROW(dhta->store(ubf), std::exception);
-  BOOST_CHECK_THROW(dhtb->store(ubf), std::exception);
+  BOOST_CHECK_THROW(dhta->store(ubf, infinit::model::STORE_INSERT),
+                    std::exception);
+  BOOST_CHECK_THROW(dhtb->store(ubf, infinit::model::STORE_INSERT),
+                    std::exception);
   BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
   BOOST_CHECK_THROW(dhtb->remove(ruba->address(), {}), std::exception);
   BOOST_CHECK_THROW(dhta->remove(ruba->address(), {}), std::exception);
   dhta->remove(ruba->address());
-  dhtb->store(ubf);
+  dhtb->store(ubf, infinit::model::STORE_INSERT);
 }
 
 class AppendConflictResolver
@@ -507,7 +512,7 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
     block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"), true, true);
   }
   ELLE_LOG("alice: store block")
-    dhts.dht_a->store(*block_alice);
+    dhts.dht_a->store(*block_alice, infinit::model::STORE_INSERT);
   std::unique_ptr<
     blocks::ACLBlock,
     std::default_delete<blocks::Block>> block_bob;
@@ -520,14 +525,15 @@ ELLE_TEST_SCHEDULED(conflict, (bool, paxos))
   ELLE_LOG("alice: modify block")
   {
     block_alice->data(elle::Buffer("AA", 2));
-    dhts.dht_a->store(*block_alice);
+    dhts.dht_a->store(*block_alice, infinit::model::STORE_UPDATE);
   }
   ELLE_LOG("bob: modify block")
   {
     block_bob->data(elle::Buffer("AB", 2));
-    BOOST_CHECK_THROW(dhts.dht_b->store(*block_bob),
-                      infinit::model::doughnut::Conflict);
-    dhts.dht_b->store(*block_bob, infinit::model::STORE_ANY,
+    BOOST_CHECK_THROW(
+      dhts.dht_b->store(*block_bob, infinit::model::STORE_UPDATE),
+      infinit::model::doughnut::Conflict);
+    dhts.dht_b->store(*block_bob, infinit::model::STORE_UPDATE,
                       elle::make_unique<AppendConflictResolver>());
   }
   ELLE_LOG("alice: fetch block")
@@ -575,7 +581,7 @@ ELLE_TEST_SCHEDULED(restart, (bool, paxos))
     mblock =
       dhts.dht_a->make_block<blocks::MutableBlock>(
         elle::Buffer("mutable", 7));
-    dhts.dht_a->store(*mblock);
+    dhts.dht_a->store(*mblock, infinit::model::STORE_INSERT);
   }
   ELLE_LOG("load blocks")
   {
@@ -655,12 +661,12 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
     elle::Buffer data("\\_o<", 4);
     block->data(elle::Buffer(data));
     ELLE_LOG("store block")
-      dhts.dht_a->store(*block);
+      dhts.dht_a->store(*block, infinit::model::STORE_INSERT);
     elle::Buffer updated(">o_/", 4);
     block->data(elle::Buffer(updated));
     stonehenge->fail = true;
     ELLE_LOG("store updated block")
-      dhts.dht_a->store(*block);
+      dhts.dht_a->store(*block, infinit::model::STORE_UPDATE);
   }
 }
 
@@ -684,7 +690,7 @@ ELLE_TEST_SCHEDULED(cache, (bool, paxos))
     block->data(elle::Buffer(data));
     auto addr = block->address();
     ELLE_LOG("store block")
-      dhts.dht_a->store(*block);
+      dhts.dht_a->store(*block, infinit::model::STORE_INSERT);
     auto fetched = [&]
       {
         ELLE_LOG("fetch block")
@@ -734,7 +740,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     b->seal();
     auto addr = b->address();
     auto cb = cycle(*dhts.dht_a, std::move(b));
-    dhts.dht_a->store(std::move(cb));
+    dhts.dht_a->store(std::move(cb), infinit::model::STORE_INSERT);
     cb = dhts.dht_a->fetch(addr);
     BOOST_CHECK_EQUAL(cb->data(), elle::Buffer("foo"));
   }
@@ -745,7 +751,7 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     reactor::sleep(100_ms);
     auto addr = b->address();
     auto cb = cycle(*dhts.dht_a, std::move(b));
-    dhts.dht_a->store(std::move(cb));
+    dhts.dht_a->store(std::move(cb), infinit::model::STORE_INSERT);
     cb = dhts.dht_a->fetch(addr);
     BOOST_CHECK_EQUAL(cb->data(), elle::Buffer("foo"));
   }
@@ -754,14 +760,14 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     block_alice->data(elle::Buffer("alice_1", 7));
     block_alice->set_permissions(dht::User(dhts.keys_b->K(), "bob"), true, true);
     auto addr = block_alice->address();
-    dhts.dht_a->store(std::move(block_alice));
+    dhts.dht_a->store(std::move(block_alice), infinit::model::STORE_INSERT);
     auto block_bob = dhts.dht_b->fetch(addr);
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("alice_1"));
     dynamic_cast<blocks::MutableBlock*>(block_bob.get())->data(
       elle::Buffer("bob_1"));
     block_bob->seal();
     block_bob = cycle(*dhts.dht_b, std::move(block_bob));
-    dhts.dht_b->store(std::move(block_bob));
+    dhts.dht_b->store(std::move(block_bob), infinit::model::STORE_UPDATE);
     block_bob = dhts.dht_a->fetch(addr);
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("bob_1"));
   }
@@ -777,14 +783,14 @@ ELLE_TEST_SCHEDULED(serialize, (bool, paxos))
     block_alice->data(elle::Buffer("alice_1", 7));
     block_alice->set_permissions(dht::User(*gkey, "@g"), true, true);
     auto addr = block_alice->address();
-    dhts.dht_a->store(std::move(block_alice));
+    dhts.dht_a->store(std::move(block_alice), infinit::model::STORE_INSERT);
     auto block_bob = dhts.dht_b->fetch(addr);
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("alice_1"));
     dynamic_cast<blocks::MutableBlock*>(block_bob.get())->data(
       elle::Buffer("bob_1"));
     block_bob->seal();
     block_bob = cycle(*dhts.dht_b, std::move(block_bob));
-    dhts.dht_b->store(std::move(block_bob));
+    dhts.dht_b->store(std::move(block_bob), infinit::model::STORE_UPDATE);
     block_bob = dhts.dht_a->fetch(addr);
     BOOST_CHECK_EQUAL(block_bob->data(), elle::Buffer("bob_1"));
   }
@@ -802,7 +808,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 1")
     {
       b1->data(std::string("extend_and_write 1"));
-      dht_a.dht->store(*b1);
+      dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
     }
     dht_b.overlay->connect(*dht_a.overlay);
     auto size =
@@ -826,7 +832,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 2")
     {
       b1->data(std::string("extend_and_write 1 bis"));
-      dht_a.dht->store(*b1);
+      dht_a.dht->store(*b1, infinit::model::STORE_UPDATE);
     }
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b1->address(), 3, op)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b1->address(), 3, op)), 2u);
@@ -843,7 +849,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 2")
     {
       b1->data(std::string("shrink_kill_and_write 1"));
-      dht_a.dht->store(*b1);
+      dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
     }
     auto paxos_a =
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
@@ -852,7 +858,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 1")
     {
       b1->data(std::string("extend_and_write 2"));
-      dht_a.dht->store(*b1);
+      dht_a.dht->store(*b1, infinit::model::STORE_UPDATE);
     }
   }
 
@@ -867,7 +873,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 2")
     {
       b1->data(std::string("shrink_kill_and_write 1"));
-      dht_a.dht->store(*b1);
+      dht_a.dht->store(*b1, infinit::model::STORE_INSERT);
     }
     auto paxos_a =
       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
@@ -877,7 +883,7 @@ namespace rebalancing
     ELLE_LOG("write block to quorum of 1")
     {
       b1->data(std::string("extend_and_write 2"));
-      dht_a.dht->store(*b1);
+      dht_a.dht->store(*b1, infinit::model::STORE_UPDATE);
     }
   }
 }

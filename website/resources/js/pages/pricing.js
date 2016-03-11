@@ -1,45 +1,32 @@
 $(document).ready(function() {
 
   var usersLabel = $('#usersLabel span');
-  var capacityLabel = $('#capacityLabel span');
+  var capacityLabel = $('.capacityLabel span');
+  var hasAddedStorage = false;
 
   // Price Update
   function updatePrice() {
     var current_users = parseInt($(usersLabel).text());
-    var current_storage = parseInt($(capacityLabel).text());
-    var price_per_gb = $('#storageSelect option:selected').attr('data-price');
-    var price_per_gb_aerofs = 0.13;
     var max_users = $('.plan.startup p.max_users').attr('data-max-users');
     var price_per_user = $('.plan.business p.price').attr('data-price');
-    var price_per_user_dropbox = 12;
-    var price_per_user_aerofs = 15;
     var price = 0;
-    var price_dropbox = 0;
-    var price_aerofs = 0;
-    var porcentage;
+    var price_storage = 0;
 
     // yearly price
     if (current_users >= max_users) {
       price =  price_per_user * 12 * current_users;
     }
 
-    // yearly price with storage
-    price += (current_storage * 1000 * price_per_gb);
+    // all storage price
+    $.each($('tr.storage'), function(i, element) {
+      var current_storage = parseInt($(element).find('.capacityLabel span').text());
+      var price_per_gb = $(element).find('.storageSelect option:selected').attr('data-price');
 
-    // display aerofs comparison when > 30 users
-    // else display dropbox
-    if (current_users < 100 && (current_storage === 1 || current_storage === 0)) {
-      $('.price .service').text('Dropbox');
-      price_dropbox = price_per_user_dropbox * 12 * current_users;
-      porcentage = 100 - (price / price_dropbox * 100);
-    } else {
-      $('.price .service').text('AeroFS');
-      price_aerofs = price_per_user_aerofs * 12 * current_users;
-      price_aerofs += current_storage * 1000 * price_per_gb_aerofs;
-      porcentage = 100 - (price / price_aerofs * 100);
-    }
+      price_storage += current_storage * 1000 * price_per_gb;
+    });
 
-    $('.price .porcentage').text(Math.round(porcentage));
+    // full price
+    price += price_storage;
 
     if (price === 0) {
       $('.estimation p.free').show();
@@ -49,7 +36,6 @@ $(document).ready(function() {
       $('.estimation p.infinit').show();
       $('.estimation p.free').hide();
     }
-
   }
 
   // Users Slider
@@ -59,15 +45,61 @@ $(document).ready(function() {
   });
 
   // Capacity Slider
-  $("#capacityInput").bind("slider:changed", function (event, data) {
+  $(".capacityInput").bind("slider:changed", function (event, data) {
     capacityLabel.text(data.value);
     updatePrice();
   });
 
-  $('#storageSelect').on('change', function() {
+  $('table.controls').on('change', '.storageSelect', function() {
+    updatePrice();
+  });
+
+  function bindSlider(element) {
+    console.log(element.find('.capacityLabel span').text());
+    element.find('.capacityInput').simpleSlider({
+      range: [0, 100],
+      step: 1,
+      value: parseInt(element.find('.capacityLabel span').text()),
+      highlight: true
+    });
+
+    // remove duplicated slider - hacky
+    if (hasAddedStorage) { element.find('.slider').first().remove(); }
+
+    element.find('.slider').css('min-height', '24px');
+    element.find('.dragger').css({'margin-top': '-10px', 'margin-left': '-10px'});
+    element.find('.remove').css('display', 'block');
+
+    element.find('.capacityInput').bind("slider:changed", function (event, data) {
+      element.find('.capacityLabel span').text(data.value);
+      updatePrice();
+    });
+  }
+
+  $('table.controls').on('click', 'tr.storage a.add', function() {
+    event.preventDefault();
+    var new_element;
+
+    if (!hasAddedStorage) {
+      new_element = $( "tr.storage").clone();
+    } else {
+      new_element = $( "tr.storage").first().clone();
+    }
+
+    hasAddedStorage = true;
+    bindSlider(new_element);
+    $('tr.add_storage').before(new_element);
+    updatePrice();
+  });
+
+  $('table.controls').on('click', 'tr.storage a.remove', function() {
+    event.preventDefault();
+    console.log($(this).parent().parent());
+    $(this).parent().parent().remove();
     updatePrice();
   });
 
   updatePrice();
+  bindSlider($("tr.storage"));
 
 });

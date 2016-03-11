@@ -385,14 +385,28 @@ COMMAND(link_)
       self.name,
       boost::optional<int>(),
       desc.version));
-  ifnt.network_save(network, true);
-  report_action("linked", "device to network", network.name);
+  auto has_output = optional(args, "output");
+  auto output = has_output ? get_output(args) : nullptr;
+  if (output)
+  {
+    ifnt.network_save(network, *output);
+  }
+  else
+  {
+    ifnt.network_save(network, true);
+    report_action("linked", "device to network", network.name);
+  }
 }
 
 COMMAND(list)
 {
   for (auto const& network: ifnt.networks_get())
-    std::cout << network.name << std::endl;
+  {
+    std::cout << network.name;
+    if (network.model)
+      std::cout << ": linked";
+    std::cout << std::endl;
+  }
 }
 
 COMMAND(push)
@@ -673,8 +687,8 @@ main(int argc, char** argv)
       {
         { "storage", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional)" },
+        option_output("network"),
       },
-
     },
     {
       "list",

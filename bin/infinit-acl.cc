@@ -614,27 +614,6 @@ main(int argc, char** argv)
       },
     },
     {
-      "set-xattr",
-      "Set an extended attribute",
-      &set_xattr,
-      "--path PATH --name NAME --value VALUE",
-      {
-        {"name,n", value<std::string>(), "attribute name"},
-        {"value,s", value<std::string>(), "attribute value"},
-        {"path,p", value<std::string>(), "Target file or directory"},
-      },
-    },
-    {
-      "get-xattr",
-      "Get an extended attribute",
-      &get_xattr,
-      "--path PATH --name NAME",
-      {
-        {"name,n", value<std::string>(), "attribute name"},
-        {"path,p", value<std::string>(), "Target file or directory"},
-      },
-    },
-    {
       "set",
       "Set ACL",
       &set,
@@ -702,7 +681,30 @@ main(int argc, char** argv)
       },
     }
   };
+  Modes hidden_modes = {
+    {
+      "set-xattr",
+      "Set an extended attribute",
+      &set_xattr,
+      "--path PATH --name NAME --value VALUE",
+      {
+        {"name,n", value<std::string>(), "attribute name"},
+        {"value,s", value<std::string>(), "attribute value"},
+        {"path,p", value<std::string>(), "Target file or directory"},
+      },
+    },
+    {
+      "get-xattr",
+      "Get an extended attribute",
+      &get_xattr,
+      "--path PATH --name NAME",
+      {
+        {"name,n", value<std::string>(), "attribute name"},
+        {"path,p", value<std::string>(), "Target file or directory"},
+      },
+    },
+  };
   return infinit::main("Infinit access control list utility", modes, argc, argv,
-                       std::string("path"));
+                       std::string("path"), boost::none, hidden_modes);
 
 }

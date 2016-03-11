@@ -15,13 +15,13 @@
 
     <h2 id="centralized">Centralized (single server)</h2>
 
-    <p>In this configuration, data is stored in a <strong>centralized</strong> location. Since there is a single server involved, the files are <strong>not replicated</strong>. The availability of the infrastructure is thus fully dependent on this single server and cannot be gauranteed. Should the server fail, all the files would be rendered inaccessible to the users; temporarily or permanently depending on the failure. This is referred to as having a <strong>single point of failure</strong>.</p>
+    <p>In this configuration, data is stored in a <strong>centralized</strong> location. Since there is a single server involved, the files are <strong>not replicated</strong>. The availability of the infrastructure is thus fully dependent on this single server and cannot be guaranteed. Should the server fail, all the files would be rendered inaccessible to the users; temporarily or permanently depending on the failure. This is referred to as having a <strong>single point of failure</strong>.</p>
 
-    <p>This durability/availability limitation can be avoided by adding more servers. However, you may want to set up such storage infrastructure in a specific case such as to store short-lived non-critical data. Note that such a deployment is similar to what services such as OwnCloud, Pydio or a simple WebDAV service provide.</p>
+    <p>This durability/availability limitation can be avoided by adding more servers. However, you may want to set up such a storage infrastructure to store short-lived non-critical data for instance. Note that such a deployment is similar to what services such as OwnCloud, Pydio or a simple WebDAV service provide.</p>
 
     <img src="${url('images/schema-deployment-one-server.png')}" alt="Illustration of a centralized infrastructure i.e. a single server without redundancy"><br>
 
-    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.). Note that for Bob and subsequent users to be able to list/edit the volume's root directory, Alice would need to grant them access to do so through the <em>infinit-acl</em> binary.</p>
+    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.). Note that for Bob and subsequent users to be able to list/edit the volume's root directory, Alice would need to grant them access to do so through the <a href="/documentation/reference#access-control-list"><em>infinit-acl</em></a>.
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#centralized-server" class="active">Server <span>(Alice)</span></a></li>
@@ -64,11 +64,15 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
+    <p>Download full shell script: <a href="${url('scripts/centralized.sh')}" download="centralized.sh">centralized.sh</a>.</p>
+
     <h2 id="distributed">Distributed (multiple servers)</h2>
 
-    <p>This type of deployment is more reliable than the previous one as it relies on several servers to <strong>distribute the storage load</strong> so as to <strong>tolerate failures</strong>. In many ways, such a deployment is similar to other systems such as: MooseFS, HDFS, XtreemFS and even Dropbox (with the servers reprensenting the underlying object store i.e. Amazon S3). Such systems are designed to scale within the boundaries of a trusted server infrastructure e.g. a controlled data center.</p>
+    <p>This type of deployment is more reliable than the previous one as it relies on several servers to <strong>distribute the storage load</strong> so as to <strong>tolerate failures</strong>. In many ways, such a deployment is similar to other systems such as MooseFS, HDFS, XtreemFS and even Dropbox (with the servers reprensenting the underlying object store i.e. Amazon S3). Such systems are designed to scale within the boundaries of a trusted server infrastructure e.g. a controlled data center.</p>
 
-    <p>A major design concern for this type of architecture is ensuring that it is scaled correctly so that there are enough servers to handle client load. If there are not, there will be a <strong>bottleneck</strong> serving the requests. Should one of the servers the fail, the problem would be exacerbated as clients redirect their requests to the other servers. This could lead to a <a href="https://en.wikipedia.org/wiki/Cascading_failure">cascading failure</a>.</p>
+    <p>The main difference between this deployment and existing distributed storage systems is that the latter commonly rely on a set of specific servers referred to as master servers or metadata servers to control critical aspects of the infrastructure: location of the data blocks, access control, versioning, locking etc. Infinit on the other hand provides such functionalities through an architecture that does not require super-privileged master servers.</p>
+
+    <p>The main concern when it comes to this distributed deployment is to ensure that it is scaled according to the load of requests that will be generated by clients. If there are not enough servers, there will be a <strong>bottleneck</strong> serving the client requests. Should one of the servers fail, the problem would be exacerbated as clients redirect their requests to the other servers. This could lead to a <a href="https://en.wikipedia.org/wiki/Cascading_failure">cascading failure</a>.</p>
 
     <img src="${url('images/schema-deployment-multi-servers.png')}" alt="Figure illustrating a storage infrastructure composed of a set of servers with redundancy"><br>
 
@@ -125,19 +129,21 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
+    <p>Download full shell script: <a href="${url('scripts/distributed.sh')}" download="distributed.sh">distributed.sh</a>.</p>
+
     <h2 id="decentralized">Decentralized (all servers)</h2>
 
     <p>This type of deployment addresses the limitations of the previous ones by distributing the storage load, hence the requests, between a large number of nodes. A large number of storage nodes can be achieved by making use of end-user devices and the unused storage that they have. These devices can serve other clients, effectively spreading the request load.</p>
 
-    <p>As a result, such a <strong>highly-scalable</strong> distributed deployment or decentralized deployment, can support a large number of clients. This approach also removes single points of failure and other bottlenecks. The scalable nature of such a deployment ensures <strong>fault tolerance</strong> as the system automatically detects failing servers and transparently rebalances the impacted blocks so as to maintain the replication factor.</p>
+    <p>As a result, such a <strong>highly-scalable</strong> decentralized deployment can support a large number of clients. This approach also removes single points of failure and other bottlenecks. The scalable nature of such a deployment ensures <strong>fault tolerance</strong> as the system automatically detects failing servers and transparently rebalances the impacted blocks so as to maintain the replication factor.</p>
 
     <p>Take note that the replication factor you define can drastically change the infrastructure's behavior. For instance, should you set the replication factor to equal the number of storage nodes in the network, all the blocks of all the files would be replicated on every machine acting as a server (i.e. contributing storage capacity). Such a configuration would be equivalent to Bitorrent Sync. Even though having all the files on your machine at any time is interesting for accessibility, it also consumes a lot of storage capacity on every user's computer.</p>
 
-    <p>Ideally, a replication factor high enough for all the files to be available even if some of the nodes are turned off without requiring all the computers to store a replica for all the files in the system would be chosen. A higher volatility of the nodes would require a higher factor of replication. Note, however, that the replication factor must never exceeds the number of storage nodes in the storage infrastructure.</p>
+    <p>Ideally, a replication factor high enough for all the files to be available even if some of the nodes are turned off (without requiring all the computers to store a replica for all the files) should be preferred. A higher volatility of the nodes would require a higher factor of replication. Note, however, that the replication factor must never exceed the number of storage nodes in the storage infrastructure.</p>
 
     <img src="${url('images/schema-decentralized-s3.png')}" alt="Illustration of a decentralized environment in which storage capacities from several client machines are aggregated into a peer-to-peer storage infrastructure"><br>
 
-    <p>Follow the instructions below to set up such an infrastructure. Of note is that the example below is composed mostly of nodes contributing storage capacity from thier local disk while a machine (server C) contributes storage from both its local disk and a public cloud provider, in this case Amazon S3. In addition, while most devices (A, D ... X) contribute storage and access the volume, some nodes operate as a client or server only (B and C).</p>
+    <p>Follow the instructions below to set up such an infrastructure. Of note is that the example below is composed mostly of nodes contributing storage capacity from thier local disk while a machine (server C) contributes storage from both its local disk and a public cloud provider, in this case Amazon S3. In addition, while most devices (A, D ... X) contribute storage and access the volume, some nodes operate as a client or server only (B as a client and C as a server).</p>
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#decentralized-node-a" class="active">Client/Server A <span>(Alice)</span></a></li>
@@ -206,6 +212,8 @@ $> infinit-volume --mount --as dave --name alice/shared --async --cache --publis
 </code></pre>
       </div>
     </div>
+
+    <p>Download full shell script: <a href="${url('scripts/decentralized.sh')}" download="decentralized.sh">decentralized.sh</a>.</p>
   <section>
 
 </%block>

@@ -192,7 +192,9 @@ def configure(
       except:
         return '#define INFINIT_%s "%s"' % (name.upper(), value)
 
-  CxxVersionGenerator(drake.node('src/infinit/version.hh'), git)
+  CxxVersionGenerator(drake.node('src/infinit/version.hh'),
+                      git,
+                      production_build = production_build)
 
   infinit_sources = drake.nodes(
     'src/infinit/RPC.hh',
@@ -654,7 +656,7 @@ def configure(
           ] + crash_test_libs,
           cxx_toolkit,
           bin_cxx_config)
-        
+
       test_names = [
           'errors',
           'single-user-two-devices-shared-storage',
@@ -670,6 +672,7 @@ def configure(
           'volume_cli',
           'drive_cli',
           'storage_cli',
+          'cli-backward-compatibility',
       ]
       if not windows:
           test_names.append('crash-reporter')
@@ -685,7 +688,7 @@ def configure(
         if not windows:
             extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
                                  absolute = True)))
-        extra_path.append(os.environ.get('PATH', '')) 
+        extra_path.append(os.environ.get('PATH', ''))
         env = {
           'PYTHONPATH':
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),

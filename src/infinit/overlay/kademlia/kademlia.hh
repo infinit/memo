@@ -59,7 +59,7 @@ namespace kademlia
              std::shared_ptr<infinit::model::doughnut::Local> server,
              infinit::model::doughnut::Doughnut* doughnut);
     virtual ~Kademlia();
-    void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);
+    void store(infinit::model::blocks::Block const& block);
     void remove(Address address);
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;

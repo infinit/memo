@@ -74,19 +74,19 @@ $> ​▎
       <p class="title">Infinit is deployed once and evolves along with your needs</p>
 
       <div>
-        <img src="${url('images/icons/scalable-yellow.png')}">
+        <img src="${url('images/icons/scalability.png')}">
         <h3>Scalable</h3>
         <p>Scales on demand according to your business requirements, from 1GB to petabytes and beyond.</p>
       </div>
 
       <div>
-        <img src="${url('images/icons/lock.png')}">
+        <img src="${url('images/icons/security.png')}">
         <h3>Secure</h3>
         <p>All the files are encrypted both in transit and at rest through bank-level cryptographic algorithms.</p>
       </div>
 
       <div class="fault">
-        <img src="${url('images/icons/fault.png')}">
+        <img src="${url('images/icons/fault_tolerance.png')}">
         <h3>Fault Tolerant</h3>
         <p>Designed to tolerate disk, server and even malicious failures and to automatically adapt without any human intervention.</p>
       </div>
@@ -124,7 +124,7 @@ $> ​▎
       <p>Invite your non-tech-savvy colleagues to join drives you defined in your freshly created storage infrastructure.</p>
       <img src="${url('images/icons/platforms.png')}" alt="Available for Mac, Windows and Linux"><br>
 
-      <a class="button" href="${route('drive')}">See Infinit Drive</a>
+      <a class="button" href="${route('drive')}">Discover Infinit Drive</a>
     </div>
   </section>
 
@@ -154,13 +154,22 @@ $> ​▎
   </section>
 
 
-  <section class="download" id="download">
-    <p class="title">Start using Infinit now</p>
-    <p class="subtitle">Create your first infrastructure in a few minutes</p>
+  <section class="encore">
 
-    <a class="button big" href="${route('doc_get_started')}">Get Started</a>
-    <br><br><br><br><br><br>
+    <div class="get_started">
+      <p class="title">Start using Infinit now</p>
+      <p class="subtitle">Create your first infrastructure in a few minutes</p>
 
+      <a class="button big" href="${route('doc_get_started')}">Get Started</a>
+      <br><br><br><br><br><br>
+    </div>
+
+    <div class="search_faq">
+      <p class="title">Have more questions?</p>
+      <p class="subtitle">Search an answer in our <a href="${route('faq')}">FAQ</a></p>
+
+      <input type="text" id="search" placeholder="Search FAQ..." />
+    </div>
     <!--
     <div>
       <img src="${url('images/terminal-mini.png')}">
@@ -186,8 +195,10 @@ $> ​▎
     -->
   </section>
 
-  <section class="estimation">
-
+  <section class="press">
+    <a href="http://techcrunch.com/2016/02/16/infinits-file-storage-platform-lets-you-unify-cloud-storage-servers-and-local-computers/"><img src="${url('images/logos/techcrunch.png')}" alt="techcrunch logo"></a>
+    <a class="siliconangle" href="http://siliconangle.com/blog/2016/02/16/infinit-wants-to-become-the-docker-of-storage/"><img src="${url('images/logos/siliconangle.png')}" alt="siliconangle logo"></a>
+    <a href="http://www.infoworld.com/article/3020684/storage/startup-infinit-takes-on-dropbox-box-using-cloud-and-local-storage.html"><img src="${url('images/logos/infoworld.png')}" alt="infoworld logo"></a>
   </section>
 
 
