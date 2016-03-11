@@ -1,0 +1,14 @@
+## [0.2.1] (backend 0.5.2) - 2016-02-29
+
+### Fixed
+
+- Fix mount / unmount button not changing state.
+- Change the invitation popup to cover the whole window.
+- Report the correct error if uploading an avatar fails.
+- Fix error reporting on login.
+
+### Changed
+
+- Use backend 0.5.2.
+- Show only drives you own or you have been invited to.
+- Automatically open mountpoint after mounting a drive.

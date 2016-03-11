@@ -45,16 +45,25 @@
       li.connect ul li { padding-left: 0; }
     }
   }
+
+  body.faq {
+    main { margin: 0 5%;}
+    .filters { width: 100%; margin:0; }
+    #search-input input { width: 86%; margin: 0 5%; padding: 14px 2%; }
+  }
+
 }
 
 @media (max-width:600px) {
   header {
-    ul { display: none; }
+    ul li { display: none; }
+    ul li:last-child { display: block; }
   }
 
   body.home {
     section.features {
       span.arrow { display: none; }
+      .terminal .header { margin-top: -58px; }
     }
 
     section.usecases {
@@ -65,6 +74,23 @@
         margin: 0;
       }
     }
+
+    section.encore {
+      div.get_started, div.search_faq {
+        width: 90%; float: none; padding: 0 5%;
+      }
+      div.get_started { padding-top: 50px; }
+      div.search_faq { padding-bottom: 50px; }
+    }
+
+    section.press {
+      img { margin-bottom: 40px;}
+      a:first-child img { margin-bottom: 10px; }
+    }
+  }
+
+  body.faq {
+    .filters { display: none; }
   }
 
   body.drive {

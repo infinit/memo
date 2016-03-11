@@ -7,12 +7,55 @@ $(document).ready(function() {
   if ($('body').hasClass('faq')) {
 
     var search = instantsearch({
-      // Replace with your own values
       appId: '2BTFITEL0N',
       apiKey: 'f27772a74737b4bb66eb0999104830d2',
       indexName: 'infinit_sh_faq',
       urlSync: true
     });
+
+    instantsearch.widgets.singleFacet = function singleFacet(options) {
+      options.template = Hogan.compile(options.template);
+      var $container = $(options.container);
+
+      return {
+        getConfiguration: function(/*currentSearchParams*/) {
+          // Make sure the facet used for this widget is declared
+          return {
+            facets: [options.facet.attributeName]
+          };
+        },
+        init: function(params) {
+          $container.on('click', '.facet', function(e) {
+            e.preventDefault();
+
+            params.helper.removeFacetRefinement(options.facet.attributeName);
+
+            if (options.facet.value !== 'popular') {
+              params.helper.addFacetRefinement(options.facet.attributeName, options.facet.value);
+            }
+
+            params.helper.search();
+          });
+        },
+        render: function(params) {
+          // We know we only activate one refinement per facet, so just get the first one
+          var refinement = params.helper.getRefinements(options.facet.attributeName)[0];
+
+          if (!refinement && options.facet.value === 'popular') {
+            active = true;
+          } else {
+            active = refinement ? refinement.value === options.facet.value : false;
+          }
+
+          $container.html(options.template.render({
+            label: options.facet.label,
+            active: active,
+            icon_name: options.facet.icon_name
+          }));
+
+        }
+      };
+    };
 
     var widgets = [
       instantsearch.widgets.searchBox({
@@ -29,32 +72,60 @@ $(document).ready(function() {
         }
       }),
 
-      // instantsearch.widgets.stats({
-      //   container: '#stats'
-      // }),
+      instantsearch.widgets.singleFacet({
+        container: $('.facets .popular'),
+        template: $('#single-facet-template').html(),
+        facet: {
+          attributeName: 'category',
+          value: 'popular',
+          label: 'Popular',
+          icon_name: 'fire'
+        }
+      }),
 
-      // instantsearch.widgets.pagination({
-      //   container: '#pagination'
-      // }),
+      instantsearch.widgets.singleFacet({
+        container: $('.facets .general'),
+        template: $('#single-facet-template').html(),
+        facet: {
+          attributeName: 'category',
+          value: 'general',
+          label: 'General',
+          icon_name: 'idea-clean'
+        }
+      }),
 
-      instantsearch.widgets.menu({
-        container: '#category',
-        attributeName: 'category',
-        limit: 10,
-        operator: 'or',
-        autoHideContainer: false,
-        cssClasses: {
-          active: 'active'
+      instantsearch.widgets.singleFacet({
+        container: $('.facets .technology'),
+        template: $('#single-facet-template').html(),
+        facet: {
+          attributeName: 'category',
+          value: 'technology',
+          label: 'Technology',
+          icon_name: 'code'
+        }
+      }),
+
+      instantsearch.widgets.singleFacet({
+        container: $('.facets .comparisons'),
+        template: $('#single-facet-template').html(),
+        facet: {
+          attributeName: 'category',
+          value: 'comparisons',
+          label: 'Comparisons',
+          icon_name: 'comparison'
+        }
+      }),
+
+      instantsearch.widgets.singleFacet({
+        container: $('.facets .security'),
+        template: $('#single-facet-template').html(),
+        facet: {
+          attributeName: 'category',
+          value: 'security',
+          label: 'Security',
+          icon_name: 'lock'
         }
       })
-
-      // instantsearch.widgets.clearAll({
-      //   container: '#clear',
-      //   templates: {
-      //     link: 'Popular'
-      //   },
-      //   autoHideContainer: false
-      // })
     ];
 
     widgets.forEach(search.addWidget, search);

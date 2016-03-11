@@ -9,14 +9,24 @@ function displayBannerMessage(message) {
 
 $(document).ready(function() {
 
-  $('.icon-slack').magnificPopup({
+  // $('.icon-slack').magnificPopup({
+  //   type:'inline',
+  //   midClick: true,
+  //   mainClass: 'mfp-fade'
+  // });
+
+  // $('.icon-slack').click(function() {
+  //   $('#slack').show();
+  // });
+
+  $('.open-popup').magnificPopup({
     type:'inline',
     midClick: true,
     mainClass: 'mfp-fade'
   });
 
-  $('.icon-slack').click(function() {
-    $('#slack').show();
+  $('.open-popup').click(function() {
+    $($(this).attr('href')).show();
   });
 
   $('#slack form').submit(function(e) {
