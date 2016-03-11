@@ -2,6 +2,7 @@
 #include <infinit/filesystem/Directory.hh>
 #include <infinit/filesystem/umbrella.hh>
 #include <infinit/filesystem/xattribute.hh>
+#include <infinit/filesystem/Unreachable.hh>
 
 #include <infinit/model/MissingBlock.hh>
 
@@ -417,7 +418,8 @@ namespace infinit
         }
         dp = d;
         current_path /= name;
-        d = get(current_path, it->second.second);
+        d = get(current_path,
+                Address(it->second.second.value(), model::flags::mutable_block, false));
       }
       std::string& name = components.back();
       if (name.empty() || name == ".")
@@ -447,20 +449,35 @@ namespace infinit
       if (it == files.end())
         return std::shared_ptr<rfs::Path>(new Unknown(*this, d, name));
 
+      auto address = Address(it->second.second.value(), model::flags::mutable_block, false);
       switch(it->second.first)
       {
       case EntryType::symlink:
-        return std::shared_ptr<rfs::Path>(new Symlink(*this, it->second.second, d, name));
+        return std::shared_ptr<rfs::Path>(new Symlink(*this, address, d, name));
       case EntryType::file:
         {
           static elle::Bench bench_hit("bench.filesystem.filecache.hit", 1000_sec);
-          ELLE_DEBUG("fetching %f from file cache", it->second.second);
-          auto fit = _file_cache.find(it->second.second);
+          ELLE_DEBUG("fetching %f from file cache", address);
+          auto fit = _file_cache.find(address);
           boost::optional<int> version;
           if (fit != _file_cache.end())
             version = (*fit)->block_version();
-          auto block = fetch_or_die(it->second.second, version);
-          fit = _file_cache.find(it->second.second);
+          std::unique_ptr<model::blocks::Block> block;
+          try
+          {
+            block = fetch_or_die(address, version);
+          }
+          catch (reactor::filesystem::Error const& e)
+          {
+            if (e.error_code() == EACCES)
+            {
+              return std::make_shared<Unreachable>(*this, d, name,
+                address, EntryType::file);
+            }
+            else
+              throw e;
+          }
+          fit = _file_cache.find(address);
           std::shared_ptr<FileData> fd;
           bench_hit.add(block ? 0 : 1);
           std::pair<bool, bool> perms;
@@ -485,12 +502,25 @@ namespace infinit
             fd = std::make_shared<FileData>(current_path / name, *block, perms);
             _file_cache.insert(fd);
           }
-        return std::shared_ptr<rfs::Path>(new File(*this, it->second.second, fd, d, name));
+        return std::shared_ptr<rfs::Path>(new File(*this, address, fd, d, name));
         }
       case EntryType::directory:
         {
-          auto dd = get(current_path / name, it->second.second);
-          return std::shared_ptr<rfs::Path>(new Directory(*this, dd, d, name));
+          try
+          {
+            auto dd = get(current_path / name, address);
+            return std::shared_ptr<rfs::Path>(new Directory(*this, dd, d, name));
+          }
+          catch (reactor::filesystem::Error const& e)
+          {
+            if (e.error_code() == EACCES)
+            {
+              return std::make_shared<Unreachable>(*this, d, name,
+                address, EntryType::directory);
+            }
+            else
+              throw e;
+          }
         }
       }
       elle::unreachable();
@@ -505,7 +535,7 @@ namespace infinit
       auto it = _directory_cache.find(address);
       if (it != _directory_cache.end())
         version = (*it)->block_version();
-      auto block = _block_store->fetch(address, version); //invalidates 'it'
+      auto block = fetch_or_die(address, version); //invalidates 'it'
       it = _directory_cache.find(address);
       std::pair<bool, bool> perms;
       if (block)

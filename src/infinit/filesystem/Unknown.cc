@@ -4,6 +4,7 @@
 
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/File.hh>
+#include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <reactor/filesystem.hh>
 
@@ -181,6 +182,17 @@ namespace infinit
       elle::fprintf(stream, "Unknown(\"%s\")", this->_name);
     }
 
-
+    Unreachable::Unreachable(FileSystem& owner, std::shared_ptr<DirectoryData> parent,
+                             std::string const& name,
+                             Address address,
+                             EntryType type)
+    : _type(type)
+    {}
+    void
+    Unreachable::stat(struct stat* st)
+    {
+      memset(st, 0, sizeof(struct stat));
+      st->st_mode = _type == EntryType::file ? S_IFREG : S_IFDIR;
+    }
   }
 }
