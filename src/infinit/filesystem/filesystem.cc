@@ -467,6 +467,13 @@ namespace infinit
           try
           {
             block = fetch_or_die(address, version);
+            block->data();
+          }
+          catch (infinit::model::doughnut::ValidationFailed const& e)
+          {
+            ELLE_TRACE("perm exception %s", e);
+            return std::make_shared<Unreachable>(*this, d, name,
+              address, EntryType::file);
           }
           catch (reactor::filesystem::Error const& e)
           {
@@ -530,7 +537,7 @@ namespace infinit
     std::shared_ptr<DirectoryData>
     FileSystem::get(boost::filesystem::path path, model::Address address)
     {
-      ELLE_DEBUG("%s: getting directory at %s", this, address);
+      ELLE_DEBUG_SCOPE("%s: getting directory at %s", this, address);
       static elle::Bench bench_hit("bench.filesystem.dircache.hit", 1000_sec);
       boost::optional<int> version;
       auto it = _directory_cache.find(address);
