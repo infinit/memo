@@ -258,10 +258,10 @@ namespace infinit
       _address = address;
       _block_version = -1;
       _last_used = FileSystem::now();
-      _header = FileHeader { 0, 1, S_IFREG | mode,
+      _header = FileHeader ( 0, 1, S_IFREG | mode,
         time(nullptr), time(nullptr), time(nullptr),
         File::default_block_size
-      };
+      );
     }
 
     void
