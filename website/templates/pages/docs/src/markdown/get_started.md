@@ -23,24 +23,14 @@
 
 <h3 class="skip">Download and install Infinit’s dependencies</h3>
 
-<img class="fuse" src="${url('images/icons/osxfuse.png')}" alt="FUSE">
-
 <div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install the FUSE for OS X from the link below:</p>
 
-<p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.2.0/osxfuse-3.2.0.dmg" class="button">Download FUSE for OS X</a></p>
-
-<em><strong>NOTE</strong>: Infinit requires a version of FUSE for OS X that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/</a>.</em>
+<%include file='get_started/mac_fuse_install.html'/>
 
 % else:
 
-<p>Infinit relies on <a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace">FUSE</a> to create filesystems in userland. You will need to install FUSE using your distribution's package manager. For example, if you use a Debian based distribution, you would use <code>apt-get</code>:</p>
-
-<br>
-
-<pre><code>$> sudo apt-get install fuse
-</code></pre>
+<%include file='get_started/linux_fuse_install.html'/>
 
 % endif
 </div>
@@ -54,73 +44,23 @@
 
 <h3 class="skip" id="mac-homebrew-install">&#9679; Homebrew install</h3>
 
-<p>To install the command-line tools, simply run the following command:</p>
-
-<pre><code>$> brew install infinit/releases/infinit</code></pre>
-
-<p>You can then change to the install directory and <a href="#2--basic-test">test</a> your install:</p>
-
-<pre><code>$> cd /usr/local</code></pre>
+<%include file='get_started/mac_homebrew_install.html'/>
 
 <h3 class="skip" id="mac-tarball-install">&#9679; Tarball install</h3>
 
-<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-<p>Click the link below to download the Infinit command-line tools:</p>
-
-<a href="https://storage.googleapis.com/sh_infinit_releases/osx/Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-" class="button">Download Command Line Tools Tarball</a>
+<%include file='get_started/mac_tarball_install.html'/>
 
 % else:
+
 <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#linux-tarball-install">Tarball Install</a>.</p>
 
 <h3 class="skip" id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
-<p>First import the public key used by the package management system:</p>
-<pre><code>$> sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
-Executing: gpg --ignore-time-conflict --no-options --no-default-keyring --homedir /tmp/tmp.fCTpAPiWSi --no-auto-check-trustdb --trust-model always --keyring /etc/apt/trusted.gpg --primary-keyring /etc/apt/trusted.gpg --keyserver keyserver.ubuntu.com --recv-keys 3D2C3B0B
-gpg: requesting key 3D2C3B0B from hkp server keyserver.ubuntu.com
-gpg: key 6821EB43: public key "Infinit &lt;contact@infinit.one&gt;" imported
-gpg: Total number processed: 1
-gpg:               imported: 1  (RSA: 1)
-</code></pre>
 
-<p>Then add the repository locally:</p>
-<pre><code>$> sudo add-apt-repository "deb https://debian.infinit.sh/ trusty main"
-</code></pre>
-
-<p>Finally, you can update your local list of packages and install the command-line tools as you would any other package:</p>
-
-<pre><code>$> sudo apt-get update
-...
-Reading package lists... Done
-</code></pre>
-
-<pre><code>$> sudo apt-get install infinit
-Reading package lists... Done
-Building dependency tree
-Reading state information... Done
-The following NEW packages will be installed:
-  infinit
-0 upgraded, 1 newly installed, 0 to remove and 24 not upgraded.
-Need to get 51,6 MB/51,6 MB of archives.
-After this operation, 51,6 MB of additional disk space will be used.
-Selecting previously unselected package infinit.
-(Reading database ... 208105 files and directories currently installed.)
-Preparing to unpack .../infinit_${tarball_version}_amd64.deb ...
-Unpacking infinit (${tarball_version}) ...
-Setting up infinit (${tarball_version}) ...
-</code></pre>
-<p></p>
-<p>You can now change to the install directory and <a href='#2--basic-test'>test</a> your install.</p>
-<pre><code>$> cd /opt/infinit
-</code></pre>
+<%include file='get_started/linux_apt_install.html'/>
 
 <h3 class="skip" id="linux-tarball-install">&#9679; Tarball Install</h3>
 
-<img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
-<p>Click the link below to download the Infinit command-line tools:</p>
-
-<a href="https://storage.googleapis.com/sh_infinit_releases/linux64/Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
-" class="button">Download Command Line Tools Tarball</a>
+<%include file='get_started/linux_tarball_install.html'/>
 
 % endif
 </div>

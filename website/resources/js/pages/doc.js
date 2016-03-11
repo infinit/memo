@@ -218,16 +218,6 @@ $(document).ready(function() {
       displayComparison();
     };
 
-    $('.open-popup').magnificPopup({
-      type:'inline',
-      midClick: true,
-      mainClass: 'mfp-fade'
-    });
-
-    $('.open-popup').click(function() {
-      $($(this).attr('href')).show();
-    });
-
     if (window.location.hash === '#slack') {
       $.magnificPopup.open({
         items: { src: '#slack'},

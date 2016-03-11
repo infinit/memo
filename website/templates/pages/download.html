@@ -1,0 +1,66 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <h1>Download Infinit CLI</h1>
+  <p class="subtitle">Available for Mac and Linux, Windows coming soon.</p>
+
+  <section class="platforms">
+    <div class="platform mac">
+      <img src="${url('images/icons/apple.png')}">
+      <h2>Mac OS X</h2>
+      <a class="open-popup button" href="#mac-homebrew">Download</a><br>
+      <a class="open-popup direct" href="#mac-tarball">or download tarballs</a>
+    </div>
+
+    <div class="platform linux">
+      <img src="${url('images/icons/debian.png')}">
+      <h2>Linux (Debian)</h2>
+      <a class="open-popup button" href="#linux-apt">Download</a><br>
+      <a class="open-popup direct" href="#linux-tarball">or download tarball</a>
+    </div>
+
+    <div class="platform windows">
+      <img src="${url('images/icons/windows.png')}">
+      <h2>Windows</h2>
+      <a class="button" target="_blank" href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee">Get Invitation</a>
+    </div>
+  </section>
+
+  <div class="popup" id="mac-homebrew">
+    <section class="doc">
+      <h3>Download FUSE</h3>
+      <%include file='docs/generated/get_started/mac_fuse_install.html'/>
+      <br><h3>Download Infinit via Homebrew</h3>
+      <%include file='docs/generated/get_started/mac_homebrew_install.html'/>
+    </section>
+  </div>
+
+  <div class="popup" id="mac-tarball">
+    <section class="doc">
+      <h3>Download FUSE</h3>
+      <%include file='docs/generated/get_started/mac_fuse_install.html'/>
+      <br><h3>Download Infinit Tarball</h3>
+      <%include file='docs/generated/get_started/mac_tarball_install.html'/>
+    </section>
+  </div>
+
+  <div class="popup" id="linux-apt">
+    <section class="doc">
+      <h3>Download FUSE</h3>
+      <%include file='docs/generated/get_started/linux_fuse_install.html'/>
+      <br><h3>Download Infinit with apt</h3>
+      <%include file='docs/generated/get_started/linux_apt_install.html'/>
+    </section>
+  </div>
+
+  <div class="popup" id="linux-tarball">
+    <section class="doc">
+      <h3>Download FUSE</h3>
+      <%include file='docs/generated/get_started/linux_fuse_install.html'/>
+      <br><h3>Download Infinit Tarball</h3>
+      <%include file='docs/generated/get_started/linux_tarball_install.html'/>
+    </section>
+  </div>
+
+</%block>

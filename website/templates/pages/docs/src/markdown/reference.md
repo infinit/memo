@@ -203,7 +203,10 @@ Locally stored AWS credentials "s3-user".
 
 However, the procedure to follow differs with every cloud service. It is therefore advised to read the guide associated with the cloud service you intend to connect:
 
-XXX horizontal list of the supported cloud services: AWS, Google
+<ul class="horizontal">
+  <li><a href="${route('doc_storages_s3')}"><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3 logo"> Amazon S3</a></li>
+  <li><a href="${route('doc_storages_gcs')}"><img src="${url('images/logos/gcs.png')}" alt="Google Cloud Storage logo"> Google Cloud Storage</a></li>
+</ul>
 
 _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the cloud services you would like to be supported in the future._
 
@@ -237,7 +240,11 @@ Created storage "local".
 
 However, the process differs depending on the nature of the storage resource. Please follow the guide that is specific to the type of storage you want to create:
 
-XXX horizontal list of the supported storage providers: Local Filesystem S3, GCS
+<ul class="horizontal">
+  <li><a href="${route('doc_storages_filesystem')}"><img src="${url('images/icons/hierarchy.png')}" alt="file system logo"> Local Filesystem</a></li>
+  <li><a href="${route('doc_storages_s3')}"><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3 logo"> Amazon S3</a></li>
+  <li><a href="${route('doc_storages_gcs')}"><img src="${url('images/logos/gcs.png')}" alt="Google Cloud Storage logo"> Google Cloud Storage</a></li>
+</ul>
 
 _**NOTE**: Do not hesitate to <a href="http://help.infinit.sh" target="_blank">vote for and/or request</a> the types of storage backends that you would like to see supported in the future._
 

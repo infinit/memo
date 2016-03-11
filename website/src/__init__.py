@@ -64,6 +64,14 @@ class Website(bottle.Bottle):
       'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
+  @route('/download', name = 'download')
+  @view('pages/download.html')
+  def root(self):
+    return {
+      'title': 'Download Infinit CLI Tools',
+      'description': 'Download the Infinit command line tools for Mac, Linux or Windows.',
+    }
+
   @route('/faq', name = 'faq')
   @view('pages/faq.html')
   def root(self):
