@@ -1,18 +1,28 @@
 ﻿
 <div><%
   if "mac" in request.path:
-    osname="mac"
+    osname = "mac"
   elif "linux" in request.path:
-    osname="linux"
+    osname = "linux"
   elif "windows" in request.path:
-    osname="windows"
+    osname = "windows"
   elif os() == "Macintosh":
-    osname="mac"
+    osname = "mac"
   elif os() == "Windows":
-    osname="windows"
+    osname = "windows"
   else:
-    osname="linux"
+    osname = "linux"
 
+  if osname == "mac" or osname == "linux":
+    demo_mountpoint = "~/mnt-demo"
+    demo_home = "$PWD/share/infinit/filesystem/test/home/"
+    ls_command = "ls"
+    exe = ""
+  else:
+    demo_mountpoint = "z:"
+    demo_home = "c:/PATH_TO_INFINIT/share/infinit/filesystem/test/home/"
+    ls_command = "dir"
+    exe = ".exe"
 %></div>
 
 Get Started
@@ -61,7 +71,7 @@ Get Started
 <p> Infinit relies on <a href="https://github.com/dokan-dev/dokany">dokany</a> to create filesystems in userland. You will need to install it from the link below:</p>
 <p><a href="https://github.com/dokan-dev/dokany/releases/download/v1.0.0-RC1/DokanSetup.exe" class="button">Download DOKANY</a></p>
 
-<em><strong>NOTE</strong>: Infinit currently requires a 64bit version of Windows 7 or Windows 8.</em>
+<em><strong>NOTE</strong>: Infinit currently requires a 64 bit version of Windows 7 or Windows 8.</em>
 % endif
 </div>
 
