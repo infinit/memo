@@ -139,6 +139,8 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: connect", *this);
         this->_connector = socket;
         this->_endpoint = endpoint;
+        if (this->_connection_thread)
+          this->_connection_thread->terminate_now();
         this->_connection_thread.reset(
           new reactor::Thread(
             elle::sprintf("%s connection", *this),
