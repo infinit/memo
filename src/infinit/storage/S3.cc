@@ -65,11 +65,11 @@ namespace infinit
     int
     S3::_set(Key key, elle::Buffer const& value, bool insert, bool update)
     {
+      // FIXME: properly handle insert and update flags.
       BENCH("set");
+      ELLE_DEBUG("set %x", key);
       if (!insert && !update)
         throw elle::Error("neither inserting nor updating");
-      if (!insert || !update)
-        throw elle::Error("only update and insert are supported");
       // FIXME: Use multipart upload for blocks bigger than 5 MiB.
       this->_storage->put_object(value,
                                  elle::sprintf("%x", key),
