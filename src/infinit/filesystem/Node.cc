@@ -84,7 +84,6 @@ namespace infinit
     void
     Node::rename(boost::filesystem::path const& where)
     {
-      boost::filesystem::path current = full_path();
       std::string newname = where.filename().string();
       boost::filesystem::path newpath = where.parent_path();
       if (!_parent)
@@ -92,7 +91,7 @@ namespace infinit
       auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
       dir->_fetch();
-      if (dir->_files.find(newname) != dir->_files.end())
+      if (dir->_data->_files.find(newname) != dir->_data->_files.end())
       {
         ELLE_TRACE_SCOPE("%s: remove existing destination", *this);
         // File and empty dir gets removed.
@@ -116,66 +115,41 @@ namespace infinit
       }
       auto data = _parent->_files.at(_name);
       _parent->_files.erase(_name);
-      _parent->_commit({OperationType::remove, _name});
-      dir->_files.insert(std::make_pair(newname, data));
-      dir->_commit({OperationType::insert, newname, data.first, data.second});
+      _parent->write(*_owner.block_store(),
+                            {OperationType::remove, _name});
+      dir->_data->_files.insert(std::make_pair(newname, data));
+      dir->_data->write(*_owner.block_store(),
+                        {OperationType::insert, newname, data.first, data.second});
       _name = newname;
-      _parent = dir;
-      // Move the node in cache
-      ELLE_DEBUG("Extracting %s", current);
-      auto p = _owner.filesystem()->extract(current.string());
-      if (p)
-      {
-        std::dynamic_pointer_cast<Node>(p)->_name = newname;
-        // This might delete the dummy Unknown on destination which is fine
-        ELLE_DEBUG("Setting %s", where);
-        _owner.filesystem()->set(where.string(), p);
-      }
-    }
-
-    void
-    Node::_remove_from_cache(boost::filesystem::path full_path)
-    {
-      if (full_path == boost::filesystem::path())
-        full_path = this->full_path();
-      std::shared_ptr<rfs::Path> self = _owner.filesystem()->extract(full_path.string());
-      ELLE_TRACE("remove_from_cache: %s released (%s), this=%s, path=%s", _name, self, this, full_path);
-      new reactor::Thread("delayed_cleanup", [self] { ELLE_DEBUG("async_clean");}, true);
-    }
-
-    boost::filesystem::path
-    Node::full_path()
-    {
-      if (_parent == nullptr)
-        return "/";
-      return _parent->full_path() / _name;
     }
 
     void
     Node::chmod(mode_t mode)
     {
       _fetch();
-      _header.mode = mode;
-      _header.ctime = time(nullptr);
+      _header().mode = mode;
+      _header().ctime = time(nullptr);
       auto acl = _header_block();
       if (acl)
       {
         auto wm = acl->get_world_permissions();
         wm.first = mode & 4;
         wm.second = mode & 2;
+        ELLE_DEBUG("setting world permissions to %s,%s", wm.first, wm.second);
         acl->set_world_permissions(wm.first, wm.second);
       }
-      _commit();
+      _commit(WriteTarget::perms);
     }
 
     void
     Node::chown(int uid, int gid)
     {
       _fetch();
-      _header.uid = uid;
-      _header.gid = gid;
+      auto& h = _header();
+      h.uid = uid;
+      h.gid = gid;
       if (acl_preserver && gid >= gid_start && gid < gid_start + gid_count
-        && acl_save[gid - gid_start])
+        && acl_save[gid - gid_start])  
       {
         auto block = _header_block();
         // clear current perms
@@ -190,8 +164,8 @@ namespace infinit
         dynamic_cast<model::blocks::ACLBlock*>(acl_save[gid - gid_start].get())
           ->copy_permissions(*block);
       }
-      _header.ctime = time(nullptr);
-      _commit();
+      h.ctime = time(nullptr);
+      _commit(WriteTarget::block);
     }
 
     void
@@ -200,10 +174,10 @@ namespace infinit
       ELLE_LOG_COMPONENT("infinit.filesystem.Node.xattr");
       ELLE_TRACE_SCOPE("%s: remove attribute \"%s\"", *this, k);
       _fetch();
-      if (_header.xattrs.erase(k))
+      if (_header().xattrs.erase(k))
       {
-         _header.ctime = time(nullptr);
-        _commit();
+         _header().ctime = time(nullptr);
+        _commit(WriteTarget::xattrs);
       }
       else
         ELLE_TRACE_SCOPE("no such attribute");
@@ -221,15 +195,6 @@ namespace infinit
       {
         auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
           this->_owner.block_store());
-        auto block = this->_header_block();
-        Address addr;
-        if (block)
-          addr = block->address();
-        else if (this->_parent)
-        {
-          auto const& elem = this->_parent->_files.at(this->_name);
-          addr = elem.second;
-        }
         if (*special == "block.nodes")
         {
           auto ids = elle::serialization::json::deserialize<
@@ -237,7 +202,7 @@ namespace infinit
           if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
                 dht->consensus().get()))
           {
-            paxos->rebalance(addr, ids);
+            paxos->rebalance(_address, ids);
             return;
           }
         }
@@ -248,17 +213,18 @@ namespace infinit
           if (auto paxos = dynamic_cast<model::doughnut::consensus::Paxos*>(
                 dht->consensus().get()))
           {
-            paxos->rebalance(addr);
+            paxos->rebalance(_address);
             return;
           }
         }
         if (special->find("auth_others") == 0)
         {
+          auto block = this->_header_block();
           bool r = v.find("r") != std::string::npos;
           bool w = v.find("w") != std::string::npos;
           umbrella([&] {
               block->set_world_permissions(r, w);
-              _commit();
+              _commit(WriteTarget::block);
           }, EACCES);
           return;
         }
@@ -278,10 +244,9 @@ namespace infinit
         }, EINVAL);
         return;
       }
-      _fetch();
-      _header.xattrs[k] = elle::Buffer(v.data(), v.size());
-      _header.ctime = time(nullptr);
-      _commit();
+      _header().xattrs[k] = elle::Buffer(v.data(), v.size());
+      _header().ctime = time(nullptr);
+      _commit(WriteTarget::xattrs);
     }
 
     static
@@ -380,9 +345,8 @@ namespace infinit
         else
           return elle::json::pretty_print(v);
       }
-      _fetch();
-      auto it = _header.xattrs.find(k);
-      if (it == _header.xattrs.end())
+      auto it = _header().xattrs.find(k);
+      if (it == _header().xattrs.end())
       {
         ELLE_DEBUG("no such attribute");
         throw rfs::Error(ENOATTR, "No attribute", elle::Backtrace());
@@ -398,22 +362,23 @@ namespace infinit
       memset(st, 0, sizeof(struct stat));
       #ifndef INFINIT_WINDOWS
       st->st_blksize = 16384;
-      st->st_blocks = _header.size / 512;
+      st->st_blocks = _header().size / 512;
       #endif
-      st->st_mode  = 0600;
-      st->st_size  = this->_header.size;
-      st->st_atime = this->_header.atime;
-      st->st_mtime = this->_header.mtime;
-      st->st_ctime = this->_header.ctime;
-      st->st_nlink = this->_header.links;
+      auto h = this->_header();
+      st->st_mode  = h.mode;
+      st->st_size  = h.size;
+      st->st_atime = h.atime;
+      st->st_mtime = h.mtime;
+      st->st_ctime = h.ctime;
+      st->st_nlink = h.links;
       st->st_uid   =
       #ifdef INFINIT_WINDOWS
         0;
       #else
         getuid();
       #endif
-      auto block = _header_block();
-      if (!acl_preserver || !block)
+      _fetch();
+      if (!acl_preserver)
         st->st_gid   =
       #ifdef INFINIT_WINDOWS
         0;
@@ -422,6 +387,7 @@ namespace infinit
       #endif
       else
       {
+        auto block = _header_block();
         acl_save[gid_position] = block->clone();
         dynamic_cast<model::blocks::MutableBlock*>(acl_save[gid_position].get())
           ->data(elle::Buffer());
@@ -429,31 +395,18 @@ namespace infinit
         gid_position = (gid_position + 1) % gid_count;
       }
       st->st_dev = 1;
-      if (block)
-      {
-        auto wp = block->get_world_permissions();
-        if (wp.first)
-          st->st_mode |= 4;
-        if (wp.second)
-          st->st_mode |= 2;
-      }
-      std::pair<bool, bool> perms = _owner.get_permissions(*block);
-      if (!perms.first)
-        st->st_mode &= ~0400;
-      if (!perms.second)
-        st->st_mode &= ~0200;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
+      ELLE_DEBUG("%s: stat mode=%s size=%s links=%s", this, h.mode, h.size, h.links);
     }
 
     void
     Node::utimens(const struct timespec tv[2])
     {
       ELLE_TRACE_SCOPE("%s: utimens: %s", *this, tv);
-      _fetch();
-      _header.atime = tv[0].tv_sec;
-      _header.mtime = tv[1].tv_sec;
-      _header.ctime = time(nullptr);
-      _commit();
+      _header().atime = tv[0].tv_sec;
+      _header().mtime = tv[1].tv_sec;
+      _header().ctime = time(nullptr);
+      _commit(WriteTarget::times);
     }
 
     std::unique_ptr<infinit::model::User>
@@ -523,6 +476,15 @@ namespace infinit
         elle::make_unique<ACLConflictResolver>(
           _owner.block_store().get(), perms.first, perms.second, userkey
         ));
+    }
+
+    boost::filesystem::path
+    Node::full_path()
+    {
+      if (_parent)
+        return _parent->_path / _name;
+      else
+        return "/";
     }
 
     boost::optional<std::string>

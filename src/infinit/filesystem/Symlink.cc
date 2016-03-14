@@ -18,24 +18,31 @@ namespace infinit
 {
   namespace filesystem
   {
-    Symlink::Symlink(DirectoryPtr parent,
-        FileSystem& owner,
-        std::string const& name)
-      : Node(owner, parent, name)
+    Symlink::Symlink(
+      FileSystem& owner,
+       Address address,
+      std::shared_ptr<DirectoryData> parent,
+      std::string const& name)
+      : Node(owner, address, parent, name)
     {}
 
     void
     Symlink::_fetch()
     {
-      auto addr = Address(
-        this->_parent->_files.at(this->_name).second.value(),
-        model::flags::mutable_block, false);
       this->_block = std::dynamic_pointer_cast<MutableBlock>(
-        this->_owner.fetch_or_die(addr));
+        this->_owner.fetch_or_die(_address));
       umbrella([&] {
-          this->_header = elle::serialization::binary::deserialize<FileHeader>(
+          this->_h = elle::serialization::binary::deserialize<FileHeader>(
             this->_block->data());
       });
+    }
+
+    FileHeader&
+    Symlink::_header()
+    {
+      if (!_block)
+        _fetch();
+      return _h;
     }
 
     model::blocks::ACLBlock*
@@ -45,9 +52,9 @@ namespace infinit
     }
 
     void
-    Symlink::_commit()
+    Symlink::_commit(WriteTarget)
     {
-      auto data = elle::serialization::binary::serialize(_header);
+      auto data = elle::serialization::binary::serialize(_h);
       _block->data(data);
       _owner.store_or_die(std::move(_block), model::STORE_UPDATE);
     }
@@ -79,8 +86,10 @@ namespace infinit
       Symlink::unlink()
       {
         _parent->_files.erase(_name);
-        _parent->_commit({OperationType::remove, _name},true);
-        _remove_from_cache();
+        _parent->write(*_owner.block_store(),
+          {OperationType::remove, _name},
+          DirectoryData::null_block,
+          true);
       }
 
     void
@@ -93,7 +102,7 @@ namespace infinit
       Symlink::readlink()
       {
         _fetch();
-        return *_header.symlink_target;
+        return *_h.symlink_target;
       }
 
     void
@@ -134,7 +143,7 @@ namespace infinit
     {
       _fetch();
       std::vector<std::string> res;
-      for (auto const& a: _header.xattrs)
+      for (auto const& a: _h.xattrs)
         res.push_back(a.first);
       return res;
     }

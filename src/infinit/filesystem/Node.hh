@@ -28,12 +28,16 @@ namespace infinit
     {
     public:
       typedef infinit::serialization_tag serialization_tag;
-      boost::filesystem::path full_path();
       void fetch() {_fetch();}
       void commit() {_commit();}
+      boost::filesystem::path full_path();
     protected:
-      Node(FileSystem& owner, std::shared_ptr<Directory> parent, std::string const& name)
+      Node(FileSystem& owner,
+           model::Address address,
+           std::shared_ptr<DirectoryData> parent,
+           std::string const& name)
       : _owner(owner)
+      , _address(address)
       , _parent(parent)
       , _name(name)
       {}
@@ -47,15 +51,16 @@ namespace infinit
       void removexattr(std::string const& k);
       void set_permissions(std::string const& flags,
         std::string const& userkey, Address self_address);
-      void _remove_from_cache(boost::filesystem::path p = boost::filesystem::path());
       virtual void _fetch() = 0;
-      virtual void _commit() = 0;
+      virtual void _commit(WriteTarget = WriteTarget::all) = 0;
+      virtual FileHeader& _header() = 0;
       virtual model::blocks::ACLBlock* _header_block() = 0;
       std::unique_ptr<infinit::model::User> _get_user(std::string const& value);
       FileSystem& _owner;
-      std::shared_ptr<Directory> _parent;
+      model::Address _address;
+      std::shared_ptr<DirectoryData> _parent;
       std::string _name;
-      ELLE_ATTRIBUTE_R(FileHeader, header, protected);
+      //ELLE_ATTRIBUTE_R(FileHeader, header, protected);
       friend class FileSystem;
     };
 

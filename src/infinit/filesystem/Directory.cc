@@ -1,5 +1,8 @@
 #include <infinit/filesystem/Directory.hh>
 
+#include <unordered_map>
+#include <pair>
+
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
@@ -50,28 +53,31 @@ namespace infinit
 {
   namespace filesystem
   {
+    FileSystem::clock::time_point
+    FileSystem::now()
+    {
+      return FileSystem::clock::now();
+    }
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
                                model::StoreMode store_mode,
-                               boost::filesystem::path p,
-                               FileSystem& owner,
+                               model::Model& model,
                                Operation op,
-                               std::weak_ptr<Directory> wd)
+                               Address address)
     {
        ELLE_TRACE("edit conflict on %s (%s %s)",
                   b.address(), op.type, op.target);
-       Directory d({}, owner, "", b.address());
-       d._fetch(elle::cast<ACLBlock>::runtime(current.clone()));
+       DirectoryData d({}, current, {true, true});
        switch(op.type)
        {
        case OperationType::insert:
          ELLE_ASSERT(!op.target.empty());
-         if (d._files.find(op.target) != d._files.end())
+         if (d.files().find(op.target) != d.files().end())
          {
            ELLE_LOG("Conflict: the object %s was also created remotely,"
              " your changes will overwrite the previous content.",
-             p / op.target);
+             op.target);
          }
          ELLE_TRACE("insert: Overriding entry %s", op.target);
          d._files[op.target] = std::make_pair(op.entry_type, op.address);
@@ -80,7 +86,7 @@ namespace infinit
          if (op.target == "")
          {
            ELLE_LOG("Conflict: the directory %s was updated remotely, your"
-                    " changes will be dropped.", p);
+                    " changes will be dropped.", "");
            break;
          }
          else if (op.target == "/inherit")
@@ -97,25 +103,16 @@ namespace infinit
          {
            ELLE_LOG("Conflict: the object %s (%s / %s) was removed remotely,"
              " your changes will be dropped.",
-             p / op.target, p, op.target);
-           if (!wd.expired())
-           {
-             auto sd = wd.lock();
-             sd->_files.erase(op.target);
-           }
+             op.target, "", op.target);
+           // FIXME update cached entry
            break;
          }
          else if (d._files[op.target].second != op.address)
          {
            ELLE_LOG("Conflict: the object %s was replaced remotely,"
              " your changes will be dropped.",
-             p / op.target);
-           if (!wd.expired())
-           {
-             auto sd = wd.lock();
-             if (sd->_files.find(op.target) != sd->_files.end())
-               sd->_files[op.target] = d._files[op.target];
-           }
+             op.target);
+           // FIXME update cached entry
            break;
          }
          ELLE_TRACE("update: Overriding entry %s", op.target);
@@ -131,38 +128,36 @@ namespace infinit
          elle::serialization::binary::SerializerOut output(os);
          output.serialize_forward(d);
        }
-       d._block->data(data);
-       return std::move(d._block);
+       auto res = elle::cast<ACLBlock>::runtime(current.clone());
+       res->data(data);
+       return std::move(res);
     }
 
     class DirectoryConflictResolver: public model::ConflictResolver
     {
     public:
       DirectoryConflictResolver(elle::serialization::SerializerIn& s)
-        : _owner(nullptr)
+        : _model(nullptr)
       {
         serialize(s);
       }
 
       DirectoryConflictResolver(DirectoryConflictResolver&& b)
-        : _path(b._path)
-        , _owner(b._owner)
+        : _model(b._model)
         , _op(b._op)
-        , _wptr(b._wptr)
+        , _address(b._address)
       {}
 
       DirectoryConflictResolver()
-        : _owner(nullptr)
+        : _model(nullptr)
       {}
 
-      DirectoryConflictResolver(boost::filesystem::path p,
-                                FileSystem* owner,
+      DirectoryConflictResolver(model::Model& model,
                                 Operation op,
-                                std::weak_ptr<Directory> wd)
-        : _path(p)
-        , _owner(owner)
+                                Address address)
+        : _model(&model)
         , _op(op)
-        , _wptr(wd)
+        , _address(address)
       {}
 
       ~DirectoryConflictResolver()
@@ -175,94 +170,91 @@ namespace infinit
       {
         return resolve_directory_conflict(
           block, current, mode,
-          this->_path, *this->_owner, this->_op, this->_wptr);
+          *this->_model, this->_op, this->_address);
       }
 
       void serialize(elle::serialization::Serializer& s) override
       {
-        std::string spath = _path.string();
-        s.serialize("path", spath);
-        _path = spath;
         s.serialize("optype", _op.type, elle::serialization::as<int>());
         s.serialize("optarget", _op.target);
         s.serialize("opaddr", _op.address);
         s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
       }
 
-      boost::filesystem::path _path;
-      FileSystem* _owner;
-      bool _owner_allocated;
+      model::Model* _model;
       Operation _op;
-      std::weak_ptr<Directory> _wptr;
+      Address _address;
       typedef infinit::serialization_tag serialization_tag;
     };
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DirectoryConflictResolver> _register_dcr("dcr");
 
+
+    Directory::Directory(FileSystem& owner,
+                         std::shared_ptr<DirectoryData> self,
+                         std::shared_ptr<DirectoryData> parent,
+                         std::string const& name)
+      : Node(owner, self->address(), parent, name)
+      , _data(self)
+    {
+      ELLE_TRACE("%s: created with address %f", this, this->_address);
+    }
+
+    std::unique_ptr<model::blocks::ACLBlock> DirectoryData::null_block;
+
+    DirectoryData::DirectoryData(boost::filesystem::path path, model::blocks::Block& block, std::pair<bool, bool> perms)
+    {
+      _path = path;
+      _address = Address(block.address().value(), model::flags::mutable_block, false);
+      _last_used = FileSystem::now();
+      _block_version = -1;
+      _prefetching = false;
+      update(block, perms);
+    }
+
+    DirectoryData::DirectoryData(boost::filesystem::path path, Address address)
+    {
+      _path = path;
+      _address = address;
+      _last_used = FileSystem::now();
+      _block_version = -1;
+      _prefetching = false;
+      _inherit_auth = false;
+    }
+
     void
-    Directory::serialize(elle::serialization::Serializer& s)
+    DirectoryData::serialize(elle::serialization::Serializer& s)
     {
       s.serialize("header", this->_header);
       s.serialize("content", this->_files);
       s.serialize("inherit_auth", this->_inherit_auth);
     }
 
-    Directory::Directory(DirectoryPtr parent, FileSystem& owner,
-                         std::string const& name,
-                         Address address)
-      : Node(owner, parent, name)
-      , _address(Address(address.value(), model::flags::mutable_block, false))
-      , _inherit_auth(_parent?_parent->_inherit_auth : false)
-      , _prefetching(false)
+    static
+    std::string
+    print_files(DirectoryData::Files const& files)
     {
-      ELLE_TRACE("%s: created with address %f", this, this->_address);
-    }
-
-    void
-    Directory::_fetch()
-    {
-      this->_fetch(nullptr);
-    }
-
-    void
-    Directory::_fetch(std::unique_ptr<ACLBlock> block)
-    {
-      static elle::Bench bench("bench.directory._fetch", 10000_sec);
-      elle::Bench::BenchScope bs(bench);
-      ELLE_TRACE_SCOPE("%s: fetch block: %f", this, this->_address);
-      if (block)
-        this->_block = std::move(block);
-      else if (this->_block)
+      std::string res("\n");
+      for (auto const& f: files)
       {
-        auto block =
-          elle::cast<ACLBlock>::runtime(
-            this->_owner.fetch_or_die(this->_address,
-                                      this->_block->version(), this));
-        if (block)
-          this->_block = std::move(block);
-        else
-        {
-          ELLE_DEBUG("%s: no change", *this);
-          /* If deserialization failed on previous run (because of permissions)
-          * we need to throw again
-          */
-          if (!this->_files.empty())
-            return;
-        }
+        const char* t = (f.second.first == EntryType::file) ? "file" :
+          (f.second.first == EntryType::directory) ? "dir " : "sym ";
+        res += elle::sprintf("  %15s: %s %f\n", f.first, t, f.second.second);
       }
-      else
-        this->_block = elle::cast<ACLBlock>::runtime(
-          this->_owner.fetch_or_die(this->_address, {}, this));
-      ELLE_DEBUG("got block version %s", this->_block->version());
-      ELLE_DUMP("block: %s", *this->_block);
-      static elle::Bench benchdec("bench.directory._fetch.decode", 10000_sec);
-      elle::Bench::BenchScope bsdec(benchdec);
-      std::unordered_map<std::string, std::pair<EntryType,Address>> local;
-      std::swap(local, _files);
+      return res;
+    }
+
+    void
+    DirectoryData::update(Block& block, std::pair<bool, bool> perms)
+    {
+      ELLE_DEBUG("%s updating from version %s at %f", this,
+        _block_version, block.address());
+      _last_used = FileSystem::now();
+     
       bool empty = false;
       elle::IOStream is(
         umbrella([&] {
-            auto& d = _block->data();
+            auto& d = block.data();
             ELLE_DUMP("block data: %s", d);
             empty = d.empty();
             return d.istreambuf();
@@ -270,23 +262,118 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("block is empty");
-        _header = FileHeader(0, 1, S_IFDIR | 0666,
+        _header = FileHeader(0, 1, S_IFDIR | 0600,
                              time(nullptr), time(nullptr), time(nullptr),
                              File::default_block_size);
-        return;
+        _inherit_auth = false;
       }
-      elle::serialization::binary::SerializerIn input(is);
+      else
+      {
+        elle::serialization::binary::SerializerIn input(is);
+        try
+        {
+          _files.clear();
+          _header.xattrs.clear();
+          input.serialize_forward(*this);
+        }
+        catch(elle::serialization::Error const& e)
+        {
+          ELLE_WARN("Directory deserialization error: %s", e);
+          ELLE_TRACE("%s", elle::Backtrace::current());
+          throw rfs::Error(EIO, e.what());
+        }
+        _header.mode &= ~606;
+        auto& ablock = dynamic_cast<ACLBlock&>(block);
+        auto wp = ablock.get_world_permissions();
+        if (wp.first)
+          _header.mode |= 4;
+        if (wp.second)
+          _header.mode |= 2;
+        if (perms.first)
+          _header.mode |= 0400;
+        if (perms.second)
+          _header.mode |= 0200;
+        ELLE_TRACE("Directory block fetch OK");
+        ELLE_DEBUG("%s", print_files(_files));
+      }
+      _block_version = dynamic_cast<ACLBlock&>(block).version();
+    }
+
+    void
+    DirectoryData::write(model::Model& model,
+                         Operation op,
+                         std::unique_ptr<model::blocks::ACLBlock>&block,
+                         bool set_mtime,
+                         bool first_write)
+    {
+      ELLE_DEBUG("%s: write at %s: %s", this, _address, print_files(_files));
+      if (set_mtime)
+      {
+        ELLE_DEBUG_SCOPE("set mtime");
+        _header.mtime = time(nullptr);
+      }
+      elle::Buffer data;
+      {
+        elle::IOStream os(data.ostreambuf());
+        elle::serialization::binary::SerializerOut output(os);
+        output.serialize_forward(*this);
+      }
       try
       {
-        input.serialize_forward(*this);
+        int version = 0;
+        if (block)
+        {
+          block->data(data);
+          version = block->version();
+          model.store(*block,
+            first_write ? model::STORE_INSERT : model::STORE_UPDATE,
+            elle::make_unique<DirectoryConflictResolver>(model, op, _address));
+        }
+        else
+        {
+          auto b = elle::cast<ACLBlock>::runtime(model.fetch(_address));
+          if (b->version() != _block_version)
+          {
+            ELLE_LOG("Conflict: block version not expected: %s vs %s",
+                     b->version(), _block_version);
+            DirectoryConflictResolver dcr(model, op, _address);
+            auto nb = dcr(*b, *b, first_write ? model::STORE_INSERT : model::STORE_UPDATE);
+            b = elle::cast<ACLBlock>::runtime(nb);
+          }
+          else
+            b->data(data);
+          version = b->version();
+          model.store(std::move(b),
+            first_write ? model::STORE_INSERT : model::STORE_UPDATE,
+            elle::make_unique<DirectoryConflictResolver>(model, op, _address));
+        }
+        ELLE_TRACE("stored version %s of %f", version, _address);
+        _block_version = version + 1;
       }
-      catch(elle::serialization::Error const& e)
+      catch (infinit::model::doughnut::ValidationFailed const& e)
       {
-        ELLE_WARN("Directory deserialization error: %s", e);
-        std::swap(local, _files);
+        ELLE_TRACE("permission exception: %s", e.what());
+        throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
+      }
+      catch(elle::Error const& e)
+      {
+        ELLE_WARN("unexpected elle error storing %x: %s",
+                  _address, e);
         throw rfs::Error(EIO, e.what());
       }
-      ELLE_TRACE("Directory block fetch OK");
+    }
+
+    FileHeader&
+    Directory::_header()
+    {
+      return _data->_header;
+    }
+
+    void
+    Directory::_fetch()
+    {
+      _block = elle::cast<ACLBlock>::runtime(
+        _owner.block_store()->fetch(_address));
     }
 
     void
@@ -314,7 +401,7 @@ namespace infinit
     }
 
     void
-    Directory::_commit()
+    Directory::_commit(WriteTarget target)
     {
       _commit(Operation{OperationType::update, "", EntryType::directory,
               Address::null}, false);
@@ -323,111 +410,14 @@ namespace infinit
     void
     Directory::_commit(Operation op, bool set_mtime)
     {
-      ELLE_TRACE_SCOPE("%s: commit %s entries", *this, _files.size());
-      if (set_mtime)
-      {
-        ELLE_DEBUG_SCOPE("set mtime");
-        _header.mtime = time(nullptr);
-        _header.ctime = time(nullptr);
-      }
-      elle::SafeFinally clean_cache([&] { _block.reset();});
-      elle::Buffer data;
-      {
-        elle::IOStream os(data.ostreambuf());
-        elle::serialization::binary::SerializerOut output(os);
-        output.serialize_forward(*this);
-      }
-      ELLE_DUMP("content: %s", data);
-      if (!this->_block)
-        ELLE_DEBUG("fetch root block")
-          this->_block = elle::cast<ACLBlock>::runtime(
-            this->_owner.fetch_or_die(this->_address));
-      _block->data(data);
-      this->_push_changes(op);
-      clean_cache.abort();
-    }
-
-    void
-    Directory::_push_changes(Operation op, bool first_write)
-    {
-      ELLE_DEBUG_SCOPE("%s: store changes", *this);
-      elle::SafeFinally clean_cache([&] { _block.reset();});
-      auto address = _block->address();
-      try
-      {
-        std::weak_ptr<Directory> wptr;
-        // The directory can be a temp on the stack, in which case
-        // shared_from_this will fail
-        try
-        {
-          std::shared_ptr<Directory> dptr = std::dynamic_pointer_cast<Directory>(shared_from_this());
-          wptr = dptr;
-        }
-        catch (std::bad_weak_ptr const&)
-        {
-        }
-        ELLE_DEBUG("%s: store changes engage!", *this);
-        this->_owner.block_store()->store(
-          std::move(_block),
-          first_write ? model::STORE_INSERT : model::STORE_UPDATE,
-          elle::make_unique<DirectoryConflictResolver>(
-            full_path(), &_owner, op, wptr));
-        ELLE_ASSERT(!_block);
-      }
-      catch (infinit::model::doughnut::ValidationFailed const& e)
-      {
-        ELLE_TRACE("permission exception: %s", e.what());
-        throw rfs::Error(EACCES, elle::sprintf("%s", e.what()));
-      }
-      catch(elle::Error const& e)
-      {
-        ELLE_WARN("unexpected elle error storing %x: %s",
-                  address, e);
-        throw rfs::Error(EIO, e.what());
-      }
-      clean_cache.abort();
+      _data->write(*_owner.block_store(), op, _block, set_mtime);
     }
 
     std::shared_ptr<rfs::Path>
     Directory::child(std::string const& name)
     {
-      ELLE_TRACE_SCOPE("%s: get child \"%s\"", *this, name);
-      if (name == ".")
-        return shared_from_this();
-      // Alternate access to extended attributes
-      static const char* attr_key = "$xattr.";
-      if (name.size() > strlen(attr_key)
-        && name.substr(0, strlen(attr_key)) == attr_key)
-      {
-        return std::make_shared<XAttributeFile>(shared_from_this(),
-          name.substr(strlen(attr_key)));
-      }
-      if (name.size() > strlen("$xattrs.")
-        && name.substr(0, strlen("$xattrs.")) == "$xattrs.")
-      {
-        auto c = child(name.substr(strlen("$xattrs.")));
-        return std::make_shared<XAttributeDirectory>(c);
-      }
-      _fetch();
-      auto it = _files.find(name);
-      auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
-      if (it != _files.end())
-      {
-        switch(it->second.first)
-        {
-        case EntryType::symlink:
-          return std::shared_ptr<rfs::Path>(new Symlink(self, _owner, name));
-        case EntryType::file:
-          return std::shared_ptr<rfs::Path>(new File(self, _owner, name));
-        case EntryType::directory:
-          return std::shared_ptr<rfs::Path>(
-            new Directory(self, _owner, name, it->second.second));
-        default:
-          return {};
-        }
-      }
-      else
-        return std::shared_ptr<rfs::Path>(new Unknown(self, _owner, name));
+      // Never called by rfs::FileSystem, but used in some tests.
+      return _owner.path((_data->_path / name).string());
     }
 
     struct PrefetchEntry
@@ -439,8 +429,9 @@ namespace infinit
     };
 
     void
-    Directory::_prefetch()
+    DirectoryData::_prefetch(model::Model& model, std::shared_ptr<DirectoryData> self)
     {
+      ELLE_ASSERT_EQ(self.get(), this);
       static int prefetch_threads = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_THREADS", "3"));
       static int prefetch_depth = std::stoi(
@@ -454,13 +445,11 @@ namespace infinit
           PrefetchEntry{f.first, f.second.second, 0,
                         f.second.first == EntryType::directory});
       this->_prefetching = true;
-      auto self = std::dynamic_pointer_cast<Directory>(shared_from_this());
-      auto model = _owner.block_store();
       auto running = std::make_shared<int>(nthreads);
       for (int i = 0; i < nthreads; ++i)
         new reactor::Thread(
           elle::sprintf("prefetcher %s", i),
-          [self, files, model, running]
+          [self, files, model=&model, running]
           {
             int nf = 0;
             while (!files->empty())
@@ -477,8 +466,7 @@ namespace infinit
                 block = model->fetch(addr);
                 if (block && e.is_dir && e.level +1 < prefetch_depth)
                 {
-                  Directory d(self, self->_owner, "", e.address);
-                  d._fetch(elle::cast<ACLBlock>::runtime(block));
+                  DirectoryData d({}, *block, {true, true});
                   for (auto const& f: d._files)
                     files->push_back(
                       PrefetchEntry{f.first, f.second.second, e.level+1,
@@ -499,10 +487,9 @@ namespace infinit
     Directory::list_directory(rfs::OnDirectoryEntry cb)
     {
       ELLE_TRACE_SCOPE("%s: list", *this);
-      _fetch();
-      _prefetch();
+      _data->_prefetch(*_owner.block_store(), _data);
       struct stat st;
-      for (auto const& e: _files)
+      for (auto const& e: _data->_files)
       {
         switch(e.second.first)
         {
@@ -529,46 +516,19 @@ namespace infinit
     Directory::rmdir()
     {
       ELLE_TRACE_SCOPE("%s: remove", *this);
-      _fetch();
-      if (!_files.empty())
+      if (!_data->_files.empty())
         throw rfs::Error(ENOTEMPTY, "Directory not empty");
       if (_parent.get() == nullptr)
         throw rfs::Error(EINVAL, "Cannot delete root node");
       _parent->_files.erase(_name);
-      _parent->_commit({OperationType::remove, _name});
-      umbrella([&] {_owner.block_store()->remove(_block->address());});
-      _remove_from_cache();
-    }
-
-    void
-    Directory::move_recurse(boost::filesystem::path const& current,
-        boost::filesystem::path const& where)
-    {
-      for (auto const& v: _files)
-      {
-        std::string const& name = v.first;
-        ELLE_DEBUG("Extracting %s", current / name);
-        auto p = _owner.filesystem()->extract((current / name).string());
-        if (p)
-        {
-          auto ptr = p.get();
-          ELLE_DEBUG("Inserting %s", where / name);
-          _owner.filesystem()->set((where/name).string(), std::move(p));
-          if (v.second.first == EntryType::directory)
-          {
-            dynamic_cast<Directory*>(ptr)->move_recurse(current / name, where / name);
-          }
-        }
-      }
+      _parent->write(*_owner.block_store(), {OperationType::remove, _name});
+      umbrella([&] {_owner.block_store()->remove(_data->address());});
     }
 
     void
     Directory::rename(boost::filesystem::path const& where)
     {
-      boost::filesystem::path current = full_path();
       Node::rename(where);
-      // We might have children that pointed to us, we need to move them
-      this->move_recurse(current, where);
     }
 
     void
@@ -578,7 +538,6 @@ namespace infinit
       bool can_access = false;
       try
       {
-        this->_fetch();
         this->Node::stat(st);
         st->st_mode |= S_IFDIR;
         if (st->st_mode & 0400)
@@ -614,31 +573,7 @@ namespace infinit
     model::blocks::ACLBlock*
     Directory::_header_block()
     {
-      return dynamic_cast<model::blocks::ACLBlock*>(_block.get());
-    }
-
-    void
-    Directory::cache_stats(CacheStats& cs)
-    {
-      cs.directories++;
-      boost::filesystem::path current = full_path();
-      for(auto const& f: _files)
-      {
-        auto p = _owner.filesystem()->get((current / f.first).string());
-        if (!p)
-          return;
-        if (Directory* d = dynamic_cast<Directory*>(p.get()))
-          d->cache_stats(cs);
-        else if (File* f = dynamic_cast<File*>(p.get()))
-        {
-          cs.files++;
-          cs.blocks += 1 + f->_blocks.size();
-          if (f->_first_block)
-            cs.size += f->_first_block->data().size();
-          for (auto& b: f->_blocks)
-            cs.size += b.second.block->data().size();
-        }
-      }
+      return _block.get();
     }
 
     void
@@ -686,9 +621,8 @@ namespace infinit
     Directory::listxattr()
     {
       ELLE_TRACE_SCOPE("%s: listxattr", *this);
-      this->_fetch();
       std::vector<std::string> res;
-      for (auto const& a: _header.xattrs)
+      for (auto const& a: _data->_header.xattrs)
         res.push_back(a.first);
       return res;
     }
@@ -699,23 +633,22 @@ namespace infinit
                         int flags)
     {
       ELLE_TRACE_SCOPE("%s: setxattr %s", *this, name);
-      this->_fetch();
       if (auto special = xattr_special(name))
       {
         ELLE_DEBUG("handle special xattr %s", *special);
         if (*special == "auth.inherit")
         {
           bool on = !(value == "0" || value == "false" || value=="");
-          this->_inherit_auth = on;
-          this->_commit(
+          this->_data->_inherit_auth = on;
+          this->_data->write(
+            *_owner.block_store(),
             {OperationType::update, on ? "/inherit" : "/disinherit"});
         }
         else if (special->find("auth.") == 0)
         {
           auto perms = special->substr(5);
           ELLE_DEBUG("set permissions %s", perms);
-          set_permissions(perms, value, this->_block->address());
-          this->_block.reset();
+          set_permissions(perms, value, this->_data->address());
         }
         else if (special->find("register.") == 0)
         {
@@ -731,8 +664,9 @@ namespace infinit
         }
         else if (*special == "fsck.deref")
         {
-          this->_files.erase(value);
-          this->_commit({OperationType::remove, value}, true);
+          this->_data->_files.erase(value);
+          this->_data->write(*_owner.block_store(), {OperationType::remove, value}, DirectoryData::null_block,
+                             true);
         }
         else if (*special == "fsck.ref")
         {
@@ -749,8 +683,9 @@ namespace infinit
             type = EntryType::symlink;
           std::string ename = value.substr(p1+1, p2 - p1 - 1);
           Address eaddr = Address::from_string(value.substr(p2+1));
-          this->_files[ename] = std::make_pair(type, eaddr);
-          this->_commit({OperationType::insert, ename}, true);
+          this->_data->_files[ename] = std::make_pair(type, eaddr);
+          this->_data->write(*_owner.block_store(), {OperationType::insert, ename}, DirectoryData::null_block,
+                      true);
         }
         else if (*special == "fsck.rmblock")
         {
@@ -760,24 +695,23 @@ namespace infinit
         }
         else if (*special == "fsck.unlink")
         {
-          auto it = _files.find(value);
-          if (it == _files.end())
+          auto it = _data->_files.find(value);
+          if (it == _data->_files.end())
             THROW_NOENT;
-          auto c = child(value);
-          auto f = dynamic_cast<File*>(c.get());
-          if (!f)
-            THROW_ISDIR;
+          File f(_owner, it->second.second, {}, _data, value);
           try
           {
-            f->unlink();
+            f.unlink();
           }
           catch(std::exception const& e)
           {
             ELLE_WARN(
               "%s: unlink of %s failed with %s, forcibly remove from parent",
               *this, value, e.what());
-            this->_files.erase(value);
-            this->_commit({OperationType::remove, value}, true);
+            this->_data->_files.erase(value);
+            this->_data->write(*_owner.block_store(),
+                               Operation{OperationType::remove, value},
+                               DirectoryData::null_block, true);
           }
         }
         else if (special->find("group.") == 0)
@@ -851,13 +785,13 @@ namespace infinit
       {
         if (*special == "auth")
         {
-          this->_fetch();
-          return perms_to_json(*this->_owner.block_store(), *this->_block);
+          auto block = elle::cast<ACLBlock>::runtime(
+            this->_owner.block_store()->fetch(this->_data->address()));
+          return perms_to_json(*this->_owner.block_store(), *block);
         }
         else if (*special == "auth.inherit")
         {
-          this->_fetch();
-          return this->_inherit_auth ? "true" : "false";
+          return this->_data->_inherit_auth ? "true" : "false";
         }
         else if (*special == "sync")
         {

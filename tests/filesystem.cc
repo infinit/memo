@@ -30,7 +30,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/overlay/Stonehenge.hh>
@@ -366,12 +366,18 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           [paxos] (infinit::model::doughnut::Doughnut& dht)
           -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
           {
+            std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+            consensus;
             if (paxos)
-              return elle::make_unique<
-            infinit::model::doughnut::consensus::Paxos>(dht, 3);
+              consensus = elle::make_unique<
+                infinit::model::doughnut::consensus::Paxos>(dht, 3);
             else
-              return elle::make_unique<
-            infinit::model::doughnut::consensus::Consensus>(dht);
+              consensus = elle::make_unique<
+                infinit::model::doughnut::consensus::Consensus>(dht);
+            consensus = elle::make_unique<
+              infinit::model::doughnut::consensus::Cache>
+                (std::move(consensus), 1000);
+            return consensus;
           };
         infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
           [=] (infinit::model::doughnut::Doughnut& dht,
@@ -410,8 +416,8 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
             ELLE_LOG("filesystem unmounted");
             nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
             processes.clear();
-            reactor::scheduler().terminate();
 #endif
+            reactor::scheduler().terminate();
             });
       }
       else
@@ -826,7 +832,8 @@ test_filesystem(bool dht,
 
   ELLE_LOG("test cross-block")
   {
-    fd = open((mount / "babar").string().c_str(), O_RDWR|O_CREAT, 0644);
+    struct stat st;
+    int fd = open((mount / "babar").string().c_str(), O_RDWR|O_CREAT, 0644);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 - 10, SEEK_SET);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
@@ -850,7 +857,8 @@ test_filesystem(bool dht,
   }
   ELLE_LOG("test cross-block 2")
   {
-    fd = open((mount / "bibar").string().c_str(), O_RDWR|O_CREAT, 0644);
+    struct stat st;
+    int fd = open((mount / "bibar").string().c_str(), O_RDWR|O_CREAT, 0644);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 + 16384 - 10, SEEK_SET);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
@@ -875,7 +883,7 @@ test_filesystem(bool dht,
 
   ELLE_LOG("test link/unlink")
   {
-    fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
+    int fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
     ::close(fd);
     bfs::remove(mount / "u");
   }
