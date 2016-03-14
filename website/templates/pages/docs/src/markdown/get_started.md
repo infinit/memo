@@ -324,7 +324,7 @@ You can now invite other users to join the network, to contribute additional sto
   </a>
 </div>
 
-### Any question, feedback ?
+### Any question, feedback?
 
 Come talk to us! Whether you encounter a problem setting up your infrastructure, have a question or just to give us some feedback, we're never too far away:
 
