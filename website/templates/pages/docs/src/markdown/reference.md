@@ -338,6 +338,14 @@ Linked device to network "alice/cluster".
 
 _**NOTE**: This process must be performed on each new device, proving that the user has indeed been allowed to join the network (via the passport) and that this device belongs to the user._
 
+### Upgrade a network ###
+
+Every node, no matter the version of its Infinit software, will always run in a compatibility mode defined by the version of the network. As such, assuming all the clients and servers are operating in version _0.5.4_ while the network is configured in _0.3.0_, all the nodes would behave as if running the version _0.3.0_.
+
+Upgrading a network, say from _0.3.0_ to _0.5.0_, allows nodes to benefit from the functionality introduced between those versions. The process of upgrading a network goes through several steps, from updating the network descriptor to distributing it to the clients and servers to finally restarting the nodes to take the new descriptor into account.
+
+The complete procedure is detailed in the [Upgrading a network](/documentation/upgrading) guide.
+
 Passport
 --------
 
