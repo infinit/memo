@@ -3,12 +3,19 @@
 from utils import *
 import json
 
-# Creating and deleting networks.
-with TemporaryDirectory() as tmp, Infinit() as bob, Infinit() as alice:
+# Creating and deleting volumes.
+with Infinit() as bob:
   bob.run(['infinit-user', '--create',  'bob'])
   bob.run(['infinit-network', '--create', '--name', 'network', '--as', 'bob'])
   bob.run(['infinit-volume', '--create', '--name', 'volume', '--network', 'network', '--as', 'bob'])
+  # Simulate the volume being run and creating it's root block cache directory.
+  import os
+  state_dir = '%s/.local/state/infinit/filesystem' % bob
+  os.makedirs('%s/bob/network/bob/volume' % state_dir)
   bob.run(['infinit-volume', '--export', '--name', 'bob/volume', '--as', 'bob'])
+  bob.run(['infinit-volume', '--delete', '--name', 'volume', '--as', 'bob'])
+  # Ensure volume root block cache directory is removed.
+  assertEq(len(os.listdir('%s/bob/network/bob' % state_dir)), 0)
 
 # Push to the hub.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob:
