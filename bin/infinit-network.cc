@@ -436,6 +436,8 @@ COMMAND(delete_)
   auto owner = self_user(ifnt, args);
   auto network_name = ifnt.qualified_name(name, owner);
   auto path = ifnt._network_path(network_name);
+  auto network = ifnt.network_get(network_name, owner, false);
+  boost::filesystem::remove_all(network.cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "network", network_name, std::string("locally"));
   else

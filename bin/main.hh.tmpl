@@ -836,11 +836,10 @@ namespace infinit
         boost::optional<elle::Version> version = {})
     {
       ELLE_LOG("client version: %s", version_describe);
-      boost::filesystem::path p = xdg_state_home() / "cache" / name;
       return this->dht()->make(
         hosts,
         client,
-        p,
+        this->cache_dir(),
         async_writes,
         cache,
         cache_size,
@@ -869,6 +868,12 @@ namespace infinit
                   name,
                   std::move(s),
                   user);
+    }
+
+    boost::filesystem::path
+    cache_dir()
+    {
+      return xdg_state_home() / "cache" / this->name;
     }
 
     std::string name;
