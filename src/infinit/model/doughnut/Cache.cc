@@ -7,6 +7,7 @@
 
 #include <elle/bench.hh>
 #include <elle/bytes.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
 
@@ -189,9 +190,21 @@ namespace infinit
             {
               if (!res->validate(doughnut()))
               {
-                ELLE_WARN("%s: invalid block received for %s", this, address);
+                ELLE_WARN("%s: invalid block received for %f", this, address);
                 throw elle::Error("invalid block");
               }
+              static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
+              if (decode)
+                try
+                {
+                  static elle::Bench bench("bench.cache.preempt_decode", 10000_sec);
+                  elle::Bench::BenchScope bs(bench);
+                  res->data();
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_LOG("%s: block %f is not readable: %s", this, address, e);
+                }
 
               if (this->_disk_cache_size &&
                   !dynamic_cast<blocks::MutableBlock*>(res.get()))
