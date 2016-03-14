@@ -654,7 +654,7 @@ namespace infinit
       Address prev = it->second.block->address();
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
       Address addr = it->second.block->crypt_store(*_owner.block_store(),
-        it->second.new_block ? model::STORE_INSERT : model::STORE_UPDATE,
+        model::STORE_INSERT,
         key);
       if (addr != prev)
       {
@@ -730,7 +730,7 @@ namespace infinit
                 auto key = cryptography::random::generate<elle::Buffer>(32).string();
                 auto old_addr = ab->address();
                 Address addr = ab->crypt_store(*_owner.block_store(),
-                  new_block? model::STORE_INSERT : model::STORE_UPDATE,
+                  model::STORE_INSERT,
                   key);
                 if (addr != old_addr)
                 {
