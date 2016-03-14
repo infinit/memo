@@ -366,7 +366,7 @@ struct Mode
                bool visible_in_production = true)
   {
     this->options.add(options);
-    if (visible_in_production && show_hidden_options())
+    if (visible_in_production || show_hidden_options())
       this->visible_options.add(options);
   }
 
