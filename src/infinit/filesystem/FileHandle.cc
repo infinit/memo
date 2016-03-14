@@ -483,7 +483,14 @@ namespace infinit
       if (_file._fat.size() < unsigned(id))
         prev = _file._fat.at(id).first;
       auto key = cryptography::random::generate<elle::Buffer>(32).string();
-      auto cdata = cryptography::SecretKey(key).encipher(*it->second.block);
+      auto ab = it->second.block;
+      elle::Buffer cdata;
+      if (ab->size() >= 262144)
+        reactor::background([&] {
+            cdata = cryptography::SecretKey(key).encipher(*ab);
+        });
+      else
+        cdata = cryptography::SecretKey(key).encipher(*ab);
       auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
       auto baddr = block->address();
       _model.store(std::move(block), model::STORE_INSERT);
@@ -560,7 +567,13 @@ namespace infinit
                 Address old_addr = Address::null;
                 if (_file._fat.size() < unsigned(id))
                   old_addr = _file._fat.at(id).first;
-                auto cdata = cryptography::SecretKey(key).encipher(*ab);
+                elle::Buffer cdata;
+                if (ab->size() >= 262144)
+                  reactor::background([&] {
+                    cdata = cryptography::SecretKey(key).encipher(*ab);
+                  });
+                else
+                  cdata = cryptography::SecretKey(key).encipher(*ab);
                 auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
                 auto baddr = block->address();
                 _model.store(std::move(block), model::STORE_INSERT);
