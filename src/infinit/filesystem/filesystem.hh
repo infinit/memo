@@ -20,9 +20,10 @@ namespace infinit
       : public reactor::filesystem::Operations
     {
     public:
-      FileSystem(std::string const& volume_name,
-                 std::shared_ptr<infinit::model::Model> model,
-                 boost::optional<boost::filesystem::path> state_dir = {});
+      FileSystem(
+        std::string const& volume_name,
+        std::shared_ptr<infinit::model::Model> model,
+        boost::optional<boost::filesystem::path> root_block_cache_dir = {});
       void
       print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
@@ -59,7 +60,8 @@ namespace infinit
       ELLE_ATTRIBUTE_R(std::string, volume_name);
       ELLE_ATTRIBUTE_R(std::string, network_name);
       ELLE_ATTRIBUTE_R(bool, read_only);
-      ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, state_dir);
+      ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>,
+                       root_block_cache_dir);
     };
   }
 }

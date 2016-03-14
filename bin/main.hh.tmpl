@@ -996,7 +996,7 @@ namespace infinit
         volname_ = this->name;
 #endif
       auto fs = elle::make_unique<filesystem::FileSystem>(
-        this->name, dht, xdg_state_home());
+        this->name, dht, this->root_block_cache_dir());
       auto driver =
         elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       boost::optional<boost::filesystem::path> mountpoint;
@@ -1023,24 +1023,31 @@ namespace infinit
           mount_options.push_back("ro");
         }
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
-        auto add_option = [] (std::string const& opt_name,
-                              std::string const& opt_val,
-                              std::vector<std::string>& options)
+        auto add_option =
+          [&mount_options] (std::string const& opt_name,
+                            std::string const& opt_val)
           {
-            options.push_back("-o");
-            options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
+            mount_options.push_back("-o");
+            mount_options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
           };
-        add_option("volname", volname_.get(), mount_options);
+        add_option("volname", volname_.get());
 #endif
 #ifdef INFINIT_MACOSX
-        add_option("daemon_timeout", "600", mount_options);
+        add_option("daemon_timeout", "60");
         if (volicon_)
-          add_option("volicon", volicon_.get(), mount_options);
+          add_option("volicon", volicon_.get());
 #endif
         driver->mount(mountpoint.get(), mount_options);
       }
       return driver;
     }
+
+    boost::filesystem::path
+    root_block_cache_dir()
+    {
+      return xdg_state_home() / this->network / this->name;
+    }
+
 
     std::string name;
     boost::optional<std::string> mountpoint;

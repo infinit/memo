@@ -50,13 +50,14 @@ namespace infinit
 {
   namespace filesystem
   {
-    FileSystem::FileSystem(std::string const& volume_name,
-                           std::shared_ptr<model::Model> model,
-                           boost::optional<boost::filesystem::path> state_dir)
+    FileSystem::FileSystem(
+        std::string const& volume_name,
+        std::shared_ptr<model::Model> model,
+        boost::optional<boost::filesystem::path> root_block_cache_dir)
       : _block_store(std::move(model))
       , _single_mount(false)
       , _volume_name(volume_name)
-      , _state_dir(state_dir)
+      , _root_block_cache_dir(root_block_cache_dir)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
         *this->_block_store.get());
@@ -225,13 +226,12 @@ namespace infinit
     FileSystem::_root_block()
     {
       boost::optional<boost::filesystem::path> root_cache;
-      if (this->_state_dir)
+      if (this->root_block_cache_dir())
       {
-        auto root_block_cache_dir =
-          *this->_state_dir / this->_network_name / this->_volume_name;
-        if (!boost::filesystem::exists(root_block_cache_dir))
-          boost::filesystem::create_directories(root_block_cache_dir);
-        root_cache = root_block_cache_dir / "root_block";
+        auto dir = this->root_block_cache_dir().get();
+        if (!boost::filesystem::exists(dir))
+          boost::filesystem::create_directories(dir);
+        root_cache = dir / "root_block";
         ELLE_DEBUG("root block cache: %s", root_cache);
       }
       bool migrate = true;
@@ -275,7 +275,10 @@ namespace infinit
           if (*dn->owner() == dn->keys().K())
           {
             if (root_cache && boost::filesystem::exists(*root_cache))
-              ELLE_TRACE("root block marker is set, refusing to recreate");
+            {
+              ELLE_WARN(
+                "refusing to recreate root block, marker set: %s", root_cache);
+            }
             else
             {
               std::unique_ptr<MutableBlock> mb;

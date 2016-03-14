@@ -120,11 +120,15 @@ COMMAND(delete_)
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
+  auto volume = ifnt.volume_get(name);
+  boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "volume", name, std::string("locally"));
   else
+  {
     throw elle::Error(
       elle::sprintf("File for volume could not be deleted: %s", path));
+  }
 }
 
 COMMAND(fetch)
