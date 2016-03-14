@@ -335,65 +335,69 @@ namespace infinit
         {
           while (true)
           {
-            auto const now = consensus::now();
-            ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
-            ELLE_DEBUG("evict unused blocks")
             {
-              auto& order = this->_cache.get<1>();
-              auto deadline = now - this->_cache_ttl;
-              auto it = order.begin();
-              while (it != order.end() && it->last_used() < deadline)
+              static elle::Bench bench("bench.cache.cleanup", 10000_sec);
+              elle::Bench::BenchScope bs(bench);
+              auto const now = consensus::now();
+              ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
+              ELLE_DEBUG("evict unused blocks")
               {
-                ELLE_DUMP("evict %s", it->block()->address());
-                it = order.erase(it);
-              }
-            }
-            // FIXME: take cache_size in account too
-            ELLE_DEBUG("refresh obsolete blocks")
-            {
-              auto& order = this->_cache.get<2>();
-              auto deadline = now - this->_cache_invalidation;
-              while (!order.empty())
-              {
-                auto& cached = *order.begin();
-                if (!(cached.last_fetched() < deadline))
-                  break;
-                auto const address = cached.block()->address();
-                if (auto mb =
-                    dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
+                auto& order = this->_cache.get<1>();
+                auto deadline = now - this->_cache_ttl;
+                auto it = order.begin();
+                while (it != order.end() && it->last_used() < deadline)
                 {
-                  ELLE_DEBUG_SCOPE("refresh %s", address);
-                  try
-                  {
-                    auto block = this->_backend->fetch(address, mb->version());
-                    // Beware: everything is invalidated past there we probably
-                    // yielded.
-                    auto it = this->_cache.find(address);
-                    if (it != this->_cache.end())
-                      this->_cache.modify(
-                        it,
-                        [&] (CachedBlock& cache)
-                        {
-                          if (block)
-                            cache.block() = std::move(block);
-                          cache.last_fetched(now);
-                        });
-                  }
-                  catch (MissingBlock const&)
-                  {
-                    ELLE_DUMP("drop removed block");
-                    this->_cache.erase(address);
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_TRACE("Fetch error on %x: %s", address, e);
-                    this->_cache.erase(address);
-                  }
+                  ELLE_DUMP("evict %s", it->block()->address());
+                  it = order.erase(it);
                 }
-                else
+              }
+              // FIXME: take cache_size in account too
+              ELLE_DEBUG("refresh obsolete blocks")
+              {
+                auto& order = this->_cache.get<2>();
+                auto deadline = now - this->_cache_invalidation;
+                while (!order.empty())
                 {
-                  ELLE_WARN("Nonmutable block %f in Cache", address);
-                  break;
+                  auto& cached = *order.begin();
+                  if (!(cached.last_fetched() < deadline))
+                    break;
+                  auto const address = cached.block()->address();
+                  if (auto mb =
+                      dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
+                  {
+                    ELLE_DEBUG_SCOPE("refresh %s", address);
+                    try
+                    {
+                      auto block = this->_backend->fetch(address, mb->version());
+                      // Beware: everything is invalidated past there we probably
+                      // yielded.
+                      auto it = this->_cache.find(address);
+                      if (it != this->_cache.end())
+                        this->_cache.modify(
+                          it,
+                          [&] (CachedBlock& cache)
+                          {
+                            if (block)
+                              cache.block() = std::move(block);
+                            cache.last_fetched(now);
+                          });
+                    }
+                    catch (MissingBlock const&)
+                    {
+                      ELLE_DUMP("drop removed block");
+                      this->_cache.erase(address);
+                    }
+                    catch (elle::Error const& e)
+                    {
+                      ELLE_TRACE("Fetch error on %x: %s", address, e);
+                      this->_cache.erase(address);
+                    }
+                  }
+                  else
+                  {
+                    ELLE_WARN("Nonmutable block %f in Cache", address);
+                    break;
+                  }
                 }
               }
             }
