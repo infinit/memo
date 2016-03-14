@@ -203,7 +203,7 @@ namespace infinit
                 }
                 catch (elle::Error const& e)
                 {
-                  ELLE_LOG("%s: block %f is not readable: %s", this, address, e);
+                  ELLE_TRACE("%s: block %f is not readable: %s", this, address, e);
                 }
 
               if (this->_disk_cache_size &&
