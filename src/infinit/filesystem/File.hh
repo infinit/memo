@@ -64,11 +64,14 @@ namespace infinit
         std::unique_ptr<ACLBlock> _first_block;
         ELLE_ATTRIBUTE_R(std::shared_ptr<FileData>, filedata);
 
-      void _ensure_first_block();
-      void _fetch() override;
-      void _commit(WriteTarget target) override;
-      FileHeader& _header() override;
-      model::blocks::ACLBlock* _header_block() override;
+        // address -> (size, open_handle_count)
+        typedef std::unordered_map<Address, std::pair<uint64_t, int>> SizeMap;
+        static SizeMap _size_map;
+        void _ensure_first_block();
+        void _fetch() override;
+        void _commit(WriteTarget target) override;
+        FileHeader& _header() override;
+        model::blocks::ACLBlock* _header_block() override;
 
     };
   }

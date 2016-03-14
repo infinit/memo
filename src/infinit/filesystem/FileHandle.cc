@@ -38,10 +38,24 @@ namespace infinit
       , _prefetchers_count(0)
       , _last_read_block(0)
     {
+      if (_writable)
+      {
+        auto it = File::_size_map.insert(std::make_pair(data.address(),
+          std::make_pair(data.header().size, 0))).first;
+        it->second.second++;
+        it->second.first = std::max(it->second.first, data.header().size);
+      }
     }
 
     FileHandle::~FileHandle()
     {
+      if (_writable)
+      {
+        auto it = File::_size_map.find(_file.address());
+        if (!--it->second.second)
+          File::_size_map.erase(it);
+      }
+
       while (_prefetchers_count)
         reactor::sleep(20_ms);
     }
@@ -201,12 +215,16 @@ namespace infinit
                to_write);
         this->_file._header.size = std::max(this->_file._header.size,
                                               uint64_t(offset + size));
+        auto& sz = File::_size_map.at(this->_file.address()).first;
+        sz = std::max(sz, this->_file._header.size);
         return to_write + write(
           elle::ConstWeakBuffer(buffer.contents() + to_write, size - to_write),
           size - to_write, offset + to_write);
       }
       this->_file._header.size = std::max(this->_file._header.size,
                                             uint64_t(offset + size));
+      auto& sz = File::_size_map.at(this->_file.address()).first;
+      sz = std::max(sz, this->_file._header.size);
       // In case we skipped embeded first block, fill it
       this->_file._data.size(default_first_block_size);
       offset -= default_first_block_size;

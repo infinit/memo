@@ -481,7 +481,15 @@ namespace infinit
         ELLE_WARN("unexpected exception on stat: %s", e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
-      ELLE_DEBUG("stat size: %s", st->st_size);
+      auto it = this->_size_map.find(_filedata->address());
+      if (it != this->_size_map.end())
+      {
+        ELLE_DEBUG("open file size overwrite: %s -> %s",
+                   st->st_size, it->second.first);
+        st->st_size = it->second.first;
+      }
+      else
+        ELLE_DEBUG("stat size: %s", st->st_size);
     }
 
     void
@@ -678,5 +686,7 @@ namespace infinit
     {
       elle::fprintf(stream, "File(\"%s\")", this->_name);
     }
+
+    File::SizeMap File::_size_map;
   }
 }
