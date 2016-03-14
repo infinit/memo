@@ -9,15 +9,15 @@ function displayBannerMessage(message) {
 
 $(document).ready(function() {
 
-  // $('.icon-slack').magnificPopup({
-  //   type:'inline',
-  //   midClick: true,
-  //   mainClass: 'mfp-fade'
-  // });
+  $('.icon-slack').magnificPopup({
+    type:'inline',
+    midClick: true,
+    mainClass: 'mfp-fade'
+  });
 
-  // $('.icon-slack').click(function() {
-  //   $('#slack').show();
-  // });
+  $('.icon-slack').click(function() {
+    $('#slack').show();
+  });
 
   $('.open-popup').magnificPopup({
     type:'inline',
@@ -50,5 +50,14 @@ $(document).ready(function() {
     e.preventDefault();
     e.unbind();
   });
+
+  if (window.location.hash === '#slack') {
+    $.magnificPopup.open({
+      items: { src: '#slack'},
+      type: 'inline'
+    }, 0);
+
+    $('#slack').show();
+  }
 
 });
