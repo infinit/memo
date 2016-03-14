@@ -467,7 +467,8 @@ namespace infinit
           try
           {
             block = fetch_or_die(address, version);
-            block->data();
+            if (block)
+              block->data();
           }
           catch (infinit::model::doughnut::ValidationFailed const& e)
           {
@@ -493,7 +494,6 @@ namespace infinit
             perms = get_permissions(*block);
           if (!block)
           {
-           
             fd = *fit;
             _file_cache.modify(fit,
               [](std::shared_ptr<FileData>& d) {d->_last_used = now();});
