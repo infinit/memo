@@ -416,8 +416,8 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
             ELLE_LOG("filesystem unmounted");
             nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
             processes.clear();
-            reactor::scheduler().terminate();
 #endif
+            reactor::scheduler().terminate();
             });
       }
       else
