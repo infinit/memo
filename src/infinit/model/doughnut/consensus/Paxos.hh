@@ -169,6 +169,7 @@ namespace infinit
             ELLE_ATTRIBUTE_R(Paxos&, paxos);
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
+            ELLE_ATTRIBUTE_R(reactor::Thread::unique_ptr, rebalance_inspector);
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,

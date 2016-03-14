@@ -378,6 +378,22 @@ namespace infinit
             {
               this->_discovered(id);
             });
+          this->_rebalance_inspector.reset(
+            new reactor::Thread(
+              elle::sprintf("%s: rebalancing inspector", this),
+              [this]
+              {
+                ELLE_TRACE_SCOPE("%s: inspect disk blocks for rebalancing",
+                                 this);
+                for (auto address: this->storage()->list())
+                {
+                  reactor::yield();
+                  this->_load(address);
+                  auto it = this->_under_represented.find(address);
+                  if (it == this->_under_represented.end())
+                    this->_under_represented.erase(it);
+                }
+              }));
         }
 
         void

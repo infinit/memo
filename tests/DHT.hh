@@ -29,6 +29,8 @@ public:
           this->_blocks.emplace(block.address());
         });
     this->_peers.emplace_back(this);
+    for (auto const& addr: local->storage()->list())
+      this->_blocks.emplace(addr);
   }
 
   ~Overlay()

@@ -1147,6 +1147,44 @@ namespace rebalancing
         local_b.rebalanced().connect(rebalanced);
       reactor::wait(rebalanced, b->address());
     }
+    auto op = infinit::overlay::OP_FETCH;
+    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 3u);
+    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 3u);
+    BOOST_CHECK_EQUAL(size(dht_c.overlay->lookup(b->address(), 3, op)), 3u);
+  }
+
+  ELLE_TEST_SCHEDULED(expand_from_disk)
+  {
+    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
+      -> std::unique_ptr<dht::consensus::Consensus>
+      {
+        return elle::make_unique<InstrumentedPaxos>(
+          dht::consensus::doughnut = c->doughnut(),
+          dht::consensus::replication_factor = 3);
+      };
+    infinit::storage::Memory::Blocks storage_a;
+    infinit::model::Address address;
+    auto id_a = infinit::model::Address::random();
+    ELLE_LOG("create block with 1 DHT")
+    {
+      DHT dht_a(id = id_a,
+                make_consensus = instrument,
+                storage = elle::make_unique<Memory>(storage_a));
+      auto block = dht_a.dht->make_block<blocks::MutableBlock>();
+      address = block->address();
+      dht_a.dht->store(std::move(block), infinit::model::STORE_INSERT);
+    }
+    BOOST_CHECK_EQUAL(storage_a.size(), 1u);
+    ELLE_LOG("restart with 2 DHTs")
+    {
+      DHT dht_a(id = id_a,
+                make_consensus = instrument,
+                storage = elle::make_unique<Memory>(storage_a));
+      auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
+      DHT dht_b(make_consensus = instrument);
+      dht_b.overlay->connect(*dht_a.overlay);
+      reactor::wait(local_a.rebalanced(), address);
+    }
   }
 
   ELLE_TEST_SCHEDULED(rebalancing_while_destroyed)
@@ -1203,6 +1241,7 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(expand_new_block), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_newcomer), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_concurrent), 0, valgrind(5));
+    rebalancing->add(BOOST_TEST_CASE(expand_from_disk), 0, valgrind(1));
     rebalancing->add(
       BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
   }
