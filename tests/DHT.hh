@@ -23,12 +23,22 @@ public:
     : Super(d, local, id)
   {
     if (local)
-      local->on_store.connect(
+    {
+      local->on_store().connect(
         [this] (blocks::Block const& block)
         {
           this->_blocks.emplace(block.address());
         });
+      for (auto const& addr: local->storage()->list())
+        this->_blocks.emplace(addr);
+    }
     this->_peers.emplace_back(this);
+  }
+
+  ~Overlay()
+  {
+    while (!this->_peers.empty())
+      this->disconnect(**this->_peers.begin());
   }
 
   static
@@ -45,6 +55,8 @@ public:
   {
     this->_peers.emplace_back(&other);
     other._peers.emplace_back(this);
+    this->on_discover()(other.node_id());
+    other.on_discover()(this->node_id());
   }
 
   void
@@ -60,13 +72,15 @@ public:
       if (*it == this)
       {
         other._peers.erase(it);
+        other.on_disappear()(this->node_id());
         break;
       }
+    this->on_disappear()(other.node_id());
   }
 
 protected:
   virtual
-  reactor::Generator<Member>
+  reactor::Generator<WeakMember>
   _lookup(infinit::model::Address address,
           int n,
           infinit::overlay::Operation op) const override
@@ -75,9 +89,9 @@ protected:
     bool write = op == infinit::overlay::OP_INSERT;
     ELLE_TRACE_SCOPE("%s: lookup %s%s owners for %f",
                      this, n, write ? " new" : "", address);
-    return reactor::generator<Overlay::Member>(
+    return reactor::generator<Overlay::WeakMember>(
       [=]
-      (reactor::Generator<Overlay::Member>::yielder const& yield)
+      (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
       {
         int count = n;
         if (write)
@@ -102,21 +116,24 @@ protected:
               --count;
             }
           }
+        this->_looked_up(address);
       });
   }
 
   virtual
-  Member
+  WeakMember
   _lookup_node(infinit::model::Address id) override
   {
     for (auto* peer: this->_peers)
       if (peer->local() && peer->local()->id() == id)
         return peer->local();
-    throw elle::Error(elle::sprintf("no such node: %s", id));
+    throw elle::Error(elle::sprintf("no such node: %f", id));
   }
 
   ELLE_ATTRIBUTE_RX(std::vector<Overlay*>, peers);
   ELLE_ATTRIBUTE(std::unordered_set<infinit::model::Address>, blocks);
+  ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(infinit::model::Address)>,
+                    looked_up);
 };
 
 NAMED_ARGUMENT(paxos);
@@ -143,12 +160,12 @@ public:
       storage = elle::make_unique<infinit::storage::Memory>(),
       version = boost::optional<elle::Version>(),
       make_overlay = &Overlay::make,
-      make_consensus =
-      [] (std::unique_ptr<dht::consensus::Consensus> c)
+      make_consensus = [] (std::unique_ptr<dht::consensus::Consensus> c)
         -> std::unique_ptr<dht::consensus::Consensus>
       {
         return c;
-      }
+      },
+      dht::consensus::rebalance_auto_expand = true
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
@@ -164,7 +181,8 @@ public:
                      std::function<
                      std::unique_ptr<dht::consensus::Consensus>(
                        std::unique_ptr<dht::consensus::Consensus>
-                       )> make_consensus)
+                       )> make_consensus,
+                     bool rebalance_auto_expand)
              {
                this-> init(paxos,
                            keys,
@@ -172,7 +190,8 @@ public:
                            id,
                            std::move(storage),
                            version,
-                           std::move(make_consensus));
+                           std::move(make_consensus),
+                           rebalance_auto_expand);
              }, std::forward<Args>(args)...);
   }
 
@@ -189,7 +208,8 @@ private:
        boost::optional<elle::Version> version,
        std::function<
          std::unique_ptr<dht::consensus::Consensus>(
-           std::unique_ptr<dht::consensus::Consensus>)> make_consensus)
+           std::unique_ptr<dht::consensus::Consensus>)> make_consensus,
+       bool rebalance_auto_expand)
   {
     auto keys =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -199,7 +219,10 @@ private:
         [&] (dht::Doughnut& dht)
         {
           return make_consensus(
-            elle::make_unique<dht::consensus::Paxos>(dht, 3));
+            elle::make_unique<dht::consensus::Paxos>(
+              dht::consensus::doughnut = dht,
+              dht::consensus::replication_factor = 3,
+              dht::consensus::rebalance_auto_expand = rebalance_auto_expand));
         };
     else
       consensus =

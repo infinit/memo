@@ -43,6 +43,7 @@ namespace infinit
         , _storage(std::move(storage))
         , _doughnut(dht)
       {
+        ELLE_TRACE_SCOPE("%s: construct", this);
         if (p == Protocol::tcp || p == Protocol::all)
         {
           this->_server = elle::make_unique<reactor::network::TCPServer>();
@@ -66,12 +67,20 @@ namespace infinit
 
       Local::~Local()
       {
-        ELLE_TRACE_SCOPE("%s: terminate", *this);
+        ELLE_TRACE_SCOPE("%s: destruct", *this);
         if (this->_server_thread)
           this->_server_thread->terminate_now();
         if (this->_utp_server_thread)
           this->_utp_server_thread->terminate_now();
       }
+
+      void
+      Local::initialize()
+      {}
+
+      void
+      Local::cleanup()
+      {}
 
       /*-----------.
       | Networking |
@@ -142,7 +151,7 @@ namespace infinit
         {
           throw MissingBlock(block.address());
         }
-        on_store(block);
+        this->_on_store(block);
       }
 
       std::unique_ptr<blocks::Block>
@@ -163,7 +172,7 @@ namespace infinit
         ctx.set<Doughnut*>(&this->_doughnut);
         auto res = elle::serialization::binary::deserialize<
           std::unique_ptr<blocks::Block>>(data, true, ctx);
-        on_fetch(address, res);
+        this->_on_fetch(address, res);
         return std::move(res);
       }
 
@@ -193,7 +202,7 @@ namespace infinit
         {
           throw MissingBlock(k.key());
         }
-        on_remove(address);
+        this->_on_remove(address);
       }
 
       /*-------.
@@ -390,7 +399,7 @@ namespace infinit
               {
                 RPCServer rpcs(this->_doughnut.version());
                 this->_register_rpcs(rpcs);
-                this->on_connect(rpcs);
+                this->_on_connect(rpcs);
                 rpcs.set_context<Doughnut*>(&this->_doughnut);
                 rpcs.serve(**socket);
               });

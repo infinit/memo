@@ -62,7 +62,10 @@ namespace infinit
           nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
-      {}
+      {
+        if (this->_local)
+          this->_local->initialize();
+      }
 
       Doughnut::Doughnut(Address id,
                          std::string const& name,
@@ -154,8 +157,19 @@ namespace infinit
         ELLE_TRACE_SCOPE("%s: destruct", *this);
         if (this->_user_init)
           this->_user_init->terminate_now();
+        if (this->_local)
+          this->_local->cleanup();
         this->_consensus.reset();
         this->_overlay.reset();
+        if (this->_local)
+        {
+          if (!this->_local.unique())
+          {
+            ELLE_ABORT("Doughnut destroyed with %s extra references to Local",
+                       this->_local.use_count() - 1);
+          }
+          this->_local.reset();
+        }
       }
 
       cryptography::rsa::KeyPair const&

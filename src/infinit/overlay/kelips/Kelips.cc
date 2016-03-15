@@ -781,39 +781,41 @@ namespace infinit
         start();
         if (auto l = local)
         {
-          l->on_fetch.connect(std::bind(&Node::fetch, this,
-                                        std::placeholders::_1,
-                                        std::placeholders::_2));
-          l->on_store.connect(std::bind(&Node::store, this,
+          l->on_fetch().connect(std::bind(&Node::fetch, this,
+                                          std::placeholders::_1,
+                                          std::placeholders::_2));
+          l->on_store().connect(std::bind(&Node::store, this,
                                           std::placeholders::_1));
-          l->on_remove.connect(std::bind(&Node::remove, this,
-                                         std::placeholders::_1));
+          l->on_remove().connect(std::bind(&Node::remove, this,
+                                           std::placeholders::_1));
 
-          l->on_connect.connect([this](RPCServer& rpcs)
+          l->on_connect().connect(
+            [this](RPCServer& rpcs)
             {
-              rpcs.add("kelips_fetch_state",
-                        std::function<SerState ()>(
-                          [this] ()
-                          {
-                            SerState res;
-                            std::vector<GossipEndpoint> eps;
-                            for (auto const& e: _local_endpoints)
-                              eps.push_back(e.first);
-                            res.first.insert(std::make_pair(_self, eps));
-                            for (auto const& contacts: this->_state.contacts)
-                              for (auto const& c: contacts)
-                              {
-                                std::vector<GossipEndpoint> eps;
-                                for (auto const& e: c.second.endpoints)
-                                  eps.push_back(e.first);
-                                res.first.insert(std::make_pair(c.second.address, eps));
-                              }
-                            for (auto const& f: this->_state.files)
-                              res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
-                            // OH THE UGLY HACK, we need a place to store our own address
-                            res.second.push_back(std::make_pair(Address::null, _self));
-                            return res;
-                          }));
+              rpcs.add(
+                "kelips_fetch_state",
+                std::function<SerState ()>(
+                  [this] ()
+                  {
+                    SerState res;
+                    std::vector<GossipEndpoint> eps;
+                    for (auto const& e: _local_endpoints)
+                      eps.push_back(e.first);
+                    res.first.insert(std::make_pair(_self, eps));
+                    for (auto const& contacts: this->_state.contacts)
+                      for (auto const& c: contacts)
+                      {
+                        std::vector<GossipEndpoint> eps;
+                        for (auto const& e: c.second.endpoints)
+                          eps.push_back(e.first);
+                        res.first.insert(std::make_pair(c.second.address, eps));
+                      }
+                    for (auto const& f: this->_state.files)
+                      res.second.push_back(std::make_pair(f.second.address, f.second.home_node));
+                    // OH THE UGLY HACK, we need a place to store our own address
+                    res.second.push_back(std::make_pair(Address::null, _self));
+                    return res;
+                  }));
             });
           this->_port = l->server_endpoint().port();
           for (auto const& itf: elle::network::Interface::get_map(
@@ -2853,7 +2855,9 @@ namespace infinit
             if (it->second.endpoints.empty())
             {
               ELLE_LOG("%s: erase %s from %s", *this, it->second, idx);
+              auto addr = it->second.address;
               it = contacts.erase(it);
+              this->on_disappear()(addr);
             }
             else
               ++it;
@@ -2928,7 +2932,7 @@ namespace infinit
         }
       }
 
-      Node::Member
+      Overlay::WeakMember
       Node::make_peer(PeerLocation hosts)
       {
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
@@ -2950,9 +2954,9 @@ namespace infinit
         }
         if (!disable_cache)
         {
-          auto it = _peer_cache.find(hosts.first);
+          auto it = this->_peer_cache.find(hosts.first);
           if (it != _peer_cache.end() && signed(it->second.size()) >= cache_count)
-            return it->second[rand()%it->second.size()];
+            return it->second[rand() % it->second.size()];
         }
         std::vector<GossipEndpoint> endpoints;
         for (auto const& ep: hosts.second)
@@ -2966,20 +2970,20 @@ namespace infinit
             std::string uid;
             if (hosts.first != Address::null)
               uid = elle::sprintf("%x", hosts.first);
-            auto res = Overlay::Member(
+            auto res = Overlay::WeakMember(
               new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                 elle::unconst(*this->doughnut()),
                 hosts.first,
                 endpoints,
                 uid,
                 elle::unconst(this)->_remotes_server));
-            std::dynamic_pointer_cast<model::doughnut::Remote>(res)
+            std::dynamic_pointer_cast<model::doughnut::Remote>(res.payload())
               ->retry_connect(std::function<bool(model::doughnut::Remote&)>(
                 std::bind(&Node::remote_retry_connect,
                           this, std::placeholders::_1,
                           uid)));
             if (!disable_cache)
-              _peer_cache[hosts.first].push_back(res);
+              this->_peer_cache[hosts.first].push_back(res);
             return res;
           }
           catch (elle::Error const& e)
@@ -2994,7 +2998,7 @@ namespace infinit
             try
             {
               // FIXME: don't always yield paxos
-              return Overlay::Member(
+              return Overlay::WeakMember(
                 new infinit::model::doughnut::consensus::Paxos::RemotePeer(
                   elle::unconst(*this->doughnut()),
                   hosts.first,
@@ -3030,7 +3034,7 @@ namespace infinit
         return true;
       }
 
-      reactor::Generator<Node::Member>
+      reactor::Generator<Overlay::WeakMember>
       Node::_lookup(infinit::model::Address address,
                     int n,
                     infinit::overlay::Operation op) const
@@ -3041,15 +3045,16 @@ namespace infinit
           reactor::wait(elle::unconst(this)->_bootstraping);
           ELLE_TRACE("bootstrap opened");
         }
-        return reactor::generator<Node::Member>(
-          [this, address, n, op] (reactor::Generator<Node::Member>::yielder const& yield)
-        {
-          std::function<void(PeerLocation)> handle = [&](PeerLocation hosts)
+        return reactor::generator<Overlay::WeakMember>(
+          [this, address, n, op]
+          (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
           {
-            yield(elle::unconst(this)->make_peer(hosts));
-          };
-          elle::unconst(this)->address(address, op, n, handle);
-        });
+            std::function<void(PeerLocation)> handle = [&](PeerLocation hosts)
+              {
+                yield(elle::unconst(this)->make_peer(hosts));
+              };
+            elle::unconst(this)->address(address, op, n, handle);
+          });
       }
 
       void
@@ -3198,26 +3203,26 @@ namespace infinit
       {
         Contacts* target = observer ?
           &_state.observers : &_state.contacts[group_of(address)];
-        Contacts* ntarget = !observer ?
-          &_state.observers : &_state.contacts[group_of(address)];
-        auto it = target->find(address);
-        if (it == target->end())
-        { // check the other map for misplaced entries. This can happen
-          // when invoked with a packet's originAddress, for which we don't
-          // know the observer status
-          it = ntarget->find(address);
+        // Check the other map for misplaced entries. This can happen when
+        // invoked with a packet's originAddress, for which we don't know the
+        // observer status.
+        if (target->find(address) == target->end())
+        {
+          Contacts* ntarget = !observer ?
+            &_state.observers : &_state.contacts[group_of(address)];
+          auto it = ntarget->find(address);
           if (it != ntarget->end())
           {
             if (!observer)
             {
+              // Change
               ELLE_TRACE("moving misplaced entry for %x to %s", address,
                 target == &_state.observers ? "observers" : "storage nodes");
               target->insert(std::make_pair(address, std::move(it->second)));
               ntarget->erase(address);
-              return &(*target)[address];
             }
             else
-              return &it->second;
+              target = ntarget;
           }
         }
         if (!make)
@@ -3225,11 +3230,13 @@ namespace infinit
         Contact c {{},  {}, address, Duration(), Time(), 0};
         for (auto const& ep: endpoints)
           c.endpoints.push_back(TimedEndpoint(ep, now()));
-        it = target->insert(std::make_pair(address, std::move(c))).first;
-        return &it->second;
+        auto inserted = target->insert(std::make_pair(address, std::move(c)));
+        if (inserted.second)
+          this->on_discover()(address);
+        return &inserted.first->second;
       }
 
-      Overlay::Member
+      Overlay::WeakMember
       Node::_lookup_node(Address address)
       {
         if (address == _self)
@@ -3474,9 +3481,9 @@ namespace infinit
         if (k.substr(0,5) == "node.")
         {
           Address target = Address::from_string(k.substr(5));
-          Overlay::Member n;
+          Overlay::WeakMember n;
           try {
-            n = lookup_node(target);
+            n = this->lookup_node(target);
             res["status"] = "got it";
           }
           catch (elle::Error const& e)

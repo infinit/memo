@@ -14,7 +14,7 @@ namespace infinit
       : Overlay(dht, std::move(local), std::move(node_id))
     {}
 
-    reactor::Generator<Kalimero::Member>
+    reactor::Generator<Kalimero::WeakMember>
     Kalimero::_lookup(model::Address address, int n, Operation op) const
     {
       if (n != 1)
@@ -24,14 +24,14 @@ namespace infinit
       }
       if (!this->local())
         throw elle::Error("kalimero can only be a server");
-      return reactor::generator<Kalimero::Member>(
-        [this] (std::function<void (Kalimero::Member)> yield)
+      return reactor::generator<Kalimero::WeakMember>(
+        [this] (std::function<void (Kalimero::WeakMember)> yield)
         {
           yield(this->local());
         });
     }
 
-    Overlay::Member
+    Overlay::WeakMember
     Kalimero::_lookup_node(model::Address address)
     {
       return this->local();

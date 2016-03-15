@@ -52,48 +52,49 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    reactor::Generator<Overlay::Member>
+    reactor::Generator<Overlay::WeakMember>
     Stonehenge::_lookup(model::Address address,
                         int n,
                         Operation) const
     {
       // Use modulo on the address to determine the owner and yield the n
       // following nodes.
-      return reactor::generator<Overlay::Member>( [this, address, n]
-        (reactor::Generator<Overlay::Member>::yielder const& yield)
-      {
-        int size = this->_peers.size();
-        ELLE_ASSERT_LTE(n, size);
-        auto owner = address.value()[0] % size;
-        ELLE_ASSERT(this->doughnut());
-        int i = owner;
-        do
+      return reactor::generator<Overlay::WeakMember>(
+        [this, address, n]
+        (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
-          ELLE_DEBUG("%s: yield %s", *this, this->_peers[i]);
-          // FIXME: don't always yield Paxos
-          yield(this->_make_member(this->_peers[i]));
-          i = (i + 1) % size;
-        }
-        while (i != (owner + n) % size);
-      });
+          int size = this->_peers.size();
+          ELLE_ASSERT_LTE(n, size);
+          auto owner = address.value()[0] % size;
+          ELLE_ASSERT(this->doughnut());
+          int i = owner;
+          do
+          {
+            ELLE_DEBUG("%s: yield %s", *this, this->_peers[i]);
+            // FIXME: don't always yield Paxos
+            yield(this->_make_member(this->_peers[i]));
+            i = (i + 1) % size;
+          }
+          while (i != (owner + n) % size);
+        });
     }
 
-    Overlay::Member
+    Overlay::WeakMember
     Stonehenge::_lookup_node(model::Address address)
     {
       for (auto const& peer: this->_peers)
         if (peer.id == address)
           return this->_make_member(peer);
       ELLE_WARN("%s: could not find peer %s", *this, address);
-      return nullptr;
+      return Overlay::Member(nullptr);
     }
 
-    Overlay::Member
+    Overlay::WeakMember
     Stonehenge::_make_member(Peer const& peer) const
     {
       if (!peer.endpoint)
         throw elle::Error(elle::sprintf("missing endpoint for %s", peer.id));
-      return Overlay::Member(
+      return Overlay::WeakMember(
         new infinit::model::doughnut::consensus::Paxos::RemotePeer(
           elle::unconst(*this->doughnut()),
           peer.id, peer.endpoint->host, peer.endpoint->port));
