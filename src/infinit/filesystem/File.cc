@@ -437,10 +437,10 @@ namespace infinit
         // FIXME optimize pass removal data
         for (unsigned i=0; i<_filedata->_fat.size(); ++i)
         {
-          ELLE_DEBUG_SOCPE("removing %s: %f", i, _filedata->_fat[i].first);
+          ELLE_DEBUG_SCOPE("removing %s: %f", i, _filedata->_fat[i].first);
           _owner.unchecked_remove(_filedata->_fat[i].first);
         }
-        ELLE_DEBUG_SOCPE("removing first block at %f", _first_block->address());
+        ELLE_DEBUG_SCOPE("removing first block at %f", _first_block->address());
         _owner.unchecked_remove(_first_block->address());
       }
     }
