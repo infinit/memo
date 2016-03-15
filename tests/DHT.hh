@@ -23,14 +23,16 @@ public:
     : Super(d, local, id)
   {
     if (local)
+    {
       local->on_store().connect(
         [this] (blocks::Block const& block)
         {
           this->_blocks.emplace(block.address());
         });
+      for (auto const& addr: local->storage()->list())
+        this->_blocks.emplace(addr);
+    }
     this->_peers.emplace_back(this);
-    for (auto const& addr: local->storage()->list())
-      this->_blocks.emplace(addr);
   }
 
   ~Overlay()
