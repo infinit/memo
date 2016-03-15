@@ -18,7 +18,10 @@ namespace infinit
       , public rfs::Path
     {
       public:
-        Symlink(DirectoryPtr parent, FileSystem& owner, std::string const& name);
+        Symlink(FileSystem& owner,
+                Address address,
+                std::shared_ptr<DirectoryData> parent,
+                std::string const& name);
         void stat(struct stat*) override;
         void list_directory(rfs::OnDirectoryEntry cb) override THROW_NOTDIR;
         std::unique_ptr<rfs::Handle> open(int flags, mode_t mode) override;
@@ -42,10 +45,12 @@ namespace infinit
         void removexattr(std::string const& name) override;
         bool allow_cache() override { return false;}
         void _fetch() override;
-        void _commit() override;
+        void _commit(WriteTarget target) override;
         model::blocks::ACLBlock* _header_block() override;
+        FileHeader& _header() override;
         virtual void print(std::ostream& stream) const override;
         std::unique_ptr<MutableBlock> _block;
+        FileHeader _h;
     };
   }
 }

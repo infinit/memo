@@ -5,6 +5,7 @@
 #include <elle/bench.hh>
 #include <elle/cast.hh>
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 #include <elle/utility/Move.hh>
 
@@ -174,6 +175,19 @@ namespace infinit
         return this->_data_version;
       }
 
+      static void background_open(elle::Buffer & target,
+                                  elle::Buffer const& src,
+                                  infinit::cryptography::rsa::PrivateKey const& k)
+      {
+        static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
+        if (bg)
+          reactor::background([&] {
+              target = k.open(src);
+          });
+        else
+          target = k.open(src);
+      }
+
       template <typename Block>
       elle::Buffer
       BaseACB<Block>::_decrypt_data(elle::Buffer const& data) const
@@ -184,7 +198,7 @@ namespace infinit
         if (this->owner_private_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
-          secret_buffer = this->owner_private_key()->open(this->_owner_token);
+          background_open(secret_buffer, this->_owner_token, *this->owner_private_key());
         }
         else if (!this->_acl_entries.empty())
         {
@@ -192,7 +206,7 @@ namespace infinit
           for (auto const& e: this->_acl_entries)
           {
             if (e.key == this->doughnut()->keys().K())
-              secret_buffer = this->doughnut()->keys().k().open(e.token);
+              background_open(secret_buffer, e.token, this->doughnut()->keys().k());
           }
         }
         if (secret_buffer.empty())
@@ -212,7 +226,7 @@ namespace infinit
                 ++idx;
                 continue;
               }
-              secret_buffer = keys[v].k().open(e.token);
+              background_open(secret_buffer, e.token, keys[v].k());
             }
             catch (elle::Error const& e)
             {
@@ -226,6 +240,8 @@ namespace infinit
           // FIXME: better exceptions
           throw ValidationFailed("no read permissions");
         }
+        static elle::Bench bench("bench.acb.decrypt_2", 10000_sec);
+        elle::Bench::BenchScope bs(bench);
         auto secret = elle::serialization::json::deserialize
           <cryptography::SecretKey>(secret_buffer);
         ELLE_DUMP("%s: secret: %s", *this, secret);

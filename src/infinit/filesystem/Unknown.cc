@@ -1,6 +1,10 @@
 #include <infinit/filesystem/Unknown.hh>
+
+#include <elle/cast.hh>
+
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/File.hh>
+#include <infinit/filesystem/Unreachable.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <reactor/filesystem.hh>
 
@@ -44,8 +48,10 @@ namespace infinit
       return elle::make_unique<DummyConflictResolver>();
     }
 
-    Unknown::Unknown(DirectoryPtr parent, FileSystem& owner, std::string const& name)
-      : Node(owner, parent, name)
+    Unknown::Unknown(FileSystem& owner,
+                     std::shared_ptr<DirectoryData> parent,
+                     std::string const& name)
+      : Node(owner, model::Address::null, parent, name)
     {}
 
     void
@@ -57,15 +63,17 @@ namespace infinit
       auto b = this->_owner.block_store()->
         make_block<infinit::model::blocks::ACLBlock>();
       auto address = b->address();
-      if (this->_parent->_inherit_auth)
+      std::unique_ptr<ACLBlock> parent_block;
+      if (this->_parent->inherit_auth())
       {
         ELLE_DEBUG_SCOPE("inheriting auth");
-        ELLE_ASSERT(!!_parent->_block);
-        umbrella([&] { this->_parent->_block->copy_permissions(*b);});
-        Directory d(this->_parent, this->_owner, this->_name, address);
-        d._block = std::move(b);
-        d._inherit_auth = true;
-        d._push_changes({OperationType::update, "/inherit"}, true);
+        parent_block = elle::cast<ACLBlock>::runtime(
+          this->_owner.block_store()->fetch(_parent->address()));
+        umbrella([&] { parent_block
+          ->copy_permissions(dynamic_cast<ACLBlock&>(*b));});
+        DirectoryData dd {this->_parent->_path / _name, address};
+        dd._inherit_auth = true;
+        dd.write(*_owner.block_store(), Operation{OperationType::update, "/inherit"}, b, true, true);
       }
       else
         this->_owner.store_or_die(std::move(b), model::STORE_INSERT,
@@ -74,9 +82,15 @@ namespace infinit
                      this->_parent->_files.end());
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::directory, address));
-      this->_parent->_commit(
-        {OperationType::insert, this->_name, EntryType::directory, address});
-      this->_remove_from_cache();
+      elle::SafeFinally revert([&] {
+          this->_parent->_files.erase(this->_name);
+          this->_owner.unchecked_remove(address);
+      });
+      this->_parent->write(
+        *_owner.block_store(),
+        {OperationType::insert, this->_name, EntryType::directory, address},
+        parent_block, true);
+      revert.abort();
     }
 
     std::unique_ptr<rfs::Handle>
@@ -85,54 +99,46 @@ namespace infinit
       if (_owner.read_only())
         throw rfs::Error(EACCES, "Access denied.");
       mode |= S_IFREG;
-      if (!_owner.single_mount())
-        _parent->_fetch();
       if (_parent->_files.find(_name) != _parent->_files.end())
       {
         ELLE_WARN("File %s exists where it should not", _name);
-        _remove_from_cache();
-        auto f = std::dynamic_pointer_cast<File>(_owner.filesystem()->path(full_path().string()));
-        return f->open(flags, mode);
+        File f(_owner, _parent->_files.at(_name).second, {}, _parent, _name);
+        return f.open(flags, mode);
       }
-      _owner.ensure_permissions(*_parent->_block, true, true);
+      auto parent_block = this->_owner.block_store()->fetch(_parent->address());
+      _owner.ensure_permissions(*parent_block, true, true);
       auto b = _owner.block_store()->make_block<infinit::model::blocks::ACLBlock>();
       //optimize: dont push block yet _owner.block_store()->store(*b);
       ELLE_DEBUG("Adding file to parent %x", _parent.get());
       _parent->_files.insert(
         std::make_pair(_name,
           std::make_pair(EntryType::file, b->address())));
-      _parent->_commit({OperationType::insert, _name, EntryType::file, b->address()}, true);
+      _parent->write(*_owner.block_store(),
+                     Operation{OperationType::insert, _name, EntryType::file, b->address()},
+                     DirectoryData::null_block,
+                     true);
       elle::SafeFinally remove_from_parent( [&] {
           _parent->_files.erase(_name);
           try
           {
-            _parent->_commit({OperationType::remove, _name}, true);
+            _parent->write(*_owner.block_store(),
+                           Operation{OperationType::remove, _name});
           }
           catch(...)
           {
             ELLE_WARN("Rollback failure on %s", _name);
           }
       });
-      _remove_from_cache();
-      auto raw = _owner.filesystem()->path(full_path().string());
-      auto f = std::dynamic_pointer_cast<File>(raw);
-      if (!f)
-        ELLE_ERR("Expected valid pointer from %s(%s), got nullptr",
-                 raw.get(), typeid(*raw).name());
-      f->_first_block = std::move(b);
-      f->_first_block_new = true;
-      f->_header = FileHeader(0, 1, S_IFREG | (mode & 0700),
-                              time(nullptr), time(nullptr), time(nullptr),
-                              File::default_block_size);
-      if (_parent->_inherit_auth)
+      FileData fd(_parent->_path / _name, b->address(), mode & 0700);
+      if (_parent->inherit_auth())
       {
-        umbrella([&] { _parent->_block->copy_permissions(
-          dynamic_cast<ACLBlock&>(*f->_first_block));
+        umbrella([&] { dynamic_cast<ACLBlock*>(parent_block.get())->copy_permissions(
+          dynamic_cast<ACLBlock&>(*b));
         });
       }
-      f->_commit_first(false);
-      _owner.filesystem()->set(f->full_path().string(), f);
-      std::unique_ptr<rfs::Handle> handle(new FileHandle(f, true, true, true));
+      fd.write(*_owner.block_store(), WriteTarget::all, b, true);
+      std::unique_ptr<rfs::Handle> handle(
+        new FileHandle(*_owner.block_store(), fd, true, true, true));
       remove_from_parent.abort();
       return handle;
     }
@@ -152,8 +158,9 @@ namespace infinit
       _owner.store_or_die(std::move(b), model::STORE_INSERT);
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));
-      _parent->_commit({OperationType::insert, _name, EntryType::symlink, addr}, true);
-      _remove_from_cache();
+      _parent->write(*_owner.block_store(),
+                     Operation{OperationType::insert, _name, EntryType::symlink, addr},
+                     DirectoryData::null_block, true);
     }
 
     void
@@ -175,6 +182,17 @@ namespace infinit
       elle::fprintf(stream, "Unknown(\"%s\")", this->_name);
     }
 
-
+    Unreachable::Unreachable(FileSystem& owner, std::shared_ptr<DirectoryData> parent,
+                             std::string const& name,
+                             Address address,
+                             EntryType type)
+    : _type(type)
+    {}
+    void
+    Unreachable::stat(struct stat* st)
+    {
+      memset(st, 0, sizeof(struct stat));
+      st->st_mode = _type == EntryType::file ? S_IFREG : S_IFDIR;
+    }
   }
 }

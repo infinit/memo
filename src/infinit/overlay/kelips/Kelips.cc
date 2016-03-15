@@ -2310,7 +2310,8 @@ namespace infinit
       void
       Node::onGetFileReply(packet::GetFileReply* p)
       {
-        ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddress, p->result);
+        ELLE_DEBUG("%s: got reply for GET %f from %f: %s", *this,
+                   p->fileAddress, p->sender, p->result);
         auto it = _pending_requests.find(p->request_id);
         if (it == _pending_requests.end())
         {
@@ -2425,7 +2426,8 @@ namespace infinit
       void
       Node::onPutFileReply(packet::PutFileReply* p)
       {
-        ELLE_DEBUG("%s: got reply for %s: %s", *this, p->request_id, p->results);
+        ELLE_DEBUG("%s: got reply for PUT %f from %f: %s",
+          *this, p->request_id, p->sender, p->results);
         auto it = _pending_requests.find(p->request_id);
         if (it == _pending_requests.end())
         {

@@ -14,7 +14,8 @@ namespace infinit
       , public rfs::Path
     {
     public:
-      Unknown(DirectoryPtr parent, FileSystem& owner, std::string const& name);
+      Unknown(FileSystem& owner, std::shared_ptr<DirectoryData> parent,
+              std::string const& name);
       void
       stat(struct stat*) override;
       void list_directory(rfs::OnDirectoryEntry cb) override THROW_NOENT;
@@ -36,8 +37,9 @@ namespace infinit
       bool allow_cache() override { return false;}
       std::string getxattr(std::string const& k) override {THROW_NODATA;}
       void _fetch() override {}
-      void _commit() override {}
+      void _commit(WriteTarget target) override {}
       model::blocks::ACLBlock* _header_block() override { return nullptr;}
+      FileHeader& _header() override THROW_NOENT;
       virtual
       void
       print(std::ostream& stream) const override;

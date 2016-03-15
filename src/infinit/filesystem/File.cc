@@ -1,5 +1,7 @@
 #include <infinit/filesystem/File.hh>
 
+#include <pair>
+
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
@@ -30,12 +32,6 @@ namespace infinit
   namespace filesystem
   {
 
-    const uint64_t File::first_block_size = 16384;
-    static const int lookahead_blocks =
-      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
-    static const int max_lookahead_threads =
-      std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_THREADS", "3"));
-
     class FileConflictResolver
       : public model::ConflictResolver
     {
@@ -49,9 +45,11 @@ namespace infinit
         : _model(nullptr)
       {}
 
-      FileConflictResolver(boost::filesystem::path path, model::Model* model)
+      FileConflictResolver(boost::filesystem::path path, model::Model* model,
+                           WriteTarget target)
         : _path(path)
         , _model(model)
+        , _target(target)
       {}
 
       std::unique_ptr<Block>
@@ -62,8 +60,25 @@ namespace infinit
         ELLE_LOG_SCOPE(
           "conflict: the file \"%s\" was modified since last read. Your"
           " changes will overwrite previous modifications", this->_path);
+        FileData cd(_path, current, {true, true});
+        FileData od(_path, b, {true, true});
+        od.merge(cd, _target);
+        // write od data into current block
+        elle::Buffer serdata;
+        {
+          elle::IOStream os(serdata.ostreambuf());
+          elle::serialization::binary::SerializerOut output(os);
+          output.serialize("header", od._header);
+          output.serialize("fat", od._fat);
+          output.serialize("data", od._data);
+        }
         auto block = elle::cast<MutableBlock>::runtime(current.clone());
-        block->data(b.data());
+        if (_target & WriteTarget::perms)
+        { // acl permission changes are handled by a different resolver
+          auto perms = dynamic_cast<ACLBlock&>(b).get_world_permissions();
+          dynamic_cast<ACLBlock&>(*block).set_world_permissions(perms.first, perms.second);
+        }
+        block->data(serdata);
         return elle::cast<Block>::runtime(block);
       }
 
@@ -73,6 +88,7 @@ namespace infinit
         std::string spath = this->_path.string();
         s.serialize("path", spath);
         this->_path = spath;
+        s.serialize("target", _target, elle::serialization::as<int>());
         if (s.in())
         {
           infinit::model::Model* model = nullptr;
@@ -84,6 +100,7 @@ namespace infinit
 
       boost::filesystem::path _path;
       model::Model* _model;
+      WriteTarget _target;
       typedef infinit::serialization_tag serialization_tag;
     };
 
@@ -125,17 +142,13 @@ namespace infinit
       Node::removexattr(k);
     }
 
-    File::File(DirectoryPtr parent, FileSystem& owner, std::string const& name,
-               std::unique_ptr<MutableBlock> block)
-      : Node(owner, parent, name)
-      , _first_block(std::move(block))
-      , _first_block_new(false)
-      , _r_handle_count(0)
-      , _rw_handle_count(0)
-      , _fat_changed(false)
-      , _full_path(full_path())
-      , _prefetchers_count(0)
-      , _last_read_block(0)
+    File::File(FileSystem& owner,
+             Address address,
+             std::shared_ptr<FileData> data,
+             std::shared_ptr<DirectoryData> parent,
+             std::string const& name)
+      : Node(owner, address, parent, name)
+      , _filedata(data)
     {}
 
     File::~File()
@@ -146,7 +159,7 @@ namespace infinit
     bool
     File::allow_cache()
     {
-      return true;
+      return false;
     }
 
     void
@@ -163,37 +176,38 @@ namespace infinit
     void
     File::_fetch()
     {
-      if ((this->_rw_handle_count && this->_first_block)  || !_parent)
-      {
-        ELLE_DEBUG("%s: bypassing fetch: w_handle=%s, first_block=%s parent=%s",
-                   *this, _rw_handle_count, !!_first_block, !!_parent);
+      if (this->_filedata)
         return;
-      }
-      this->_parent->_fetch();
-      auto it = this->_parent->_files.find(_name);
-      if (it == this->_parent->_files.end())
-        THROW_NOENT;
-      Address addr = model::Address(
-        it->second.second.value(), model::flags::mutable_block, false);
-      if (!this->_first_block)
-        this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
-          this->_owner.fetch_or_die(addr, {}, this));
-      else
-      {
-        auto res = elle::cast<MutableBlock>::runtime(
-          this->_owner.fetch_or_die(addr, _first_block->version(), this));
-        if (res)
-          this->_first_block = std::move(res);
-        else
-          return;
-      }
-      bool empty = false;
+      this->_first_block = std::dynamic_pointer_cast<ACLBlock>(
+        this->_owner.fetch_or_die(_address, {}, this));
+      
       elle::SafeFinally remove_undecoded_first_block([&] {
           this->_first_block.reset();
       });
+      auto perms = _owner.get_permissions(*_first_block);
+      _filedata = std::make_shared<FileData>(_parent->_path / _name, *_first_block, perms);
+      remove_undecoded_first_block.abort();
+    }
+
+    FileData::FileData(boost::filesystem::path path,
+                       Block& block, std::pair<bool, bool> perms)
+    : _address(block.address())
+    , _path(path)
+    {
+      update(block, perms);
+      _last_used = FileSystem::now();
+    }
+    void
+    FileData::update(Block& block, std::pair<bool, bool> perms)
+    {
+      ELLE_DEBUG("%s: updating from %f ver=%s, worldperm=%s",
+                 this, block.address(),
+                 dynamic_cast<ACLBlock&>(block).version(),
+                 dynamic_cast<ACLBlock&>(block).get_world_permissions());
+      bool empty;
       elle::IOStream is(
         umbrella([&] {
-            auto& d = this->_first_block->data();
+            auto& d = block.data();
             ELLE_DUMP("block data: %s", d);
             empty = d.empty();
             return d.istreambuf();
@@ -201,55 +215,119 @@ namespace infinit
       if (empty)
       {
         ELLE_DEBUG("file block is empty");
-        _header = FileHeader(0, 1, S_IFREG | 0666,
+        _header = FileHeader(0, 1, S_IFREG | 0600,
                              time(nullptr), time(nullptr), time(nullptr),
                              File::default_block_size);
       }
-      elle::serialization::binary::SerializerIn input(is);
-      try
+      else
       {
-        input.serialize("header", _header);
-        input.serialize("fat", _fat);
-        input.serialize("data", _data);
+        elle::serialization::binary::SerializerIn input(is);
+        try
+        {
+          _fat.clear();
+          _header.xattrs.clear();
+          input.serialize("header", _header);
+          input.serialize("fat", _fat);
+          input.serialize("data", _data);
+        }
+        catch(elle::serialization::Error const& e)
+        {
+          ELLE_WARN("File deserialization error: %s", e);
+          throw rfs::Error(EIO, e.what());
+        }
+        _header.mode &= ~606;
+        auto& ablock = dynamic_cast<ACLBlock&>(block);
+        auto wp = ablock.get_world_permissions();
+        if (wp.first)
+          _header.mode |= 4;
+        if (wp.second)
+          _header.mode |= 2;
+        if (perms.first)
+          _header.mode |= 0400;
+        if (perms.second)
+          _header.mode |= 0200;
       }
-      catch(elle::serialization::Error const& e)
-      {
-        ELLE_WARN("File deserialization error: %s", e);
-        throw rfs::Error(EIO, e.what());
-      }
-      remove_undecoded_first_block.abort();
+      this->_block_version = dynamic_cast<ACLBlock&>(block).version();
+      ELLE_DEBUG("%s: updated from %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s",
+                 this, _address, _header.size, _header.links, _fat.size(), _data.size());
+    }
+
+    FileData::FileData(boost::filesystem::path path, Address address, int mode)
+    {
+      _path = path;
+      _address = address;
+      _block_version = -1;
+      _last_used = FileSystem::now();
+      _header = FileHeader ( 0, 1, S_IFREG | mode,
+        time(nullptr), time(nullptr), time(nullptr),
+        File::default_block_size
+      );
     }
 
     void
-    File::_commit()
+    FileData::merge(const FileData& previous, WriteTarget target)
     {
-      ELLE_TRACE_SCOPE("%s: commit", this);
-      if (this->_rw_handle_count)
-        return;
-      this->_commit_first(true);
+      if (! (target & WriteTarget::perms))
+      {
+        _header.mode = previous._header.mode;
+        _header.uid = previous._header.uid;
+        _header.gid = previous._header.gid;
+      }
+      if (! (target & WriteTarget::links))
+      {
+        _header.links = previous._header.links;
+      }
+      if (! (target & WriteTarget::data))
+      {
+        _header.size = previous._header.size;
+        _header.block_size = previous._header.block_size;
+        _fat = previous._fat;
+        _data = elle::Buffer(previous._data.contents(), previous._data.size());
+      }
+      if (! (target & WriteTarget::times))
+      {
+        _header.atime = previous._header.atime;
+        _header.mtime = previous._header.mtime;
+        _header.ctime = previous._header.ctime;
+      }
+      if (! (target & WriteTarget::xattrs))
+      {
+        _header.xattrs = previous._header.xattrs;
+      }
+      if (! (target & WriteTarget::symlink))
+      {
+        _header.symlink_target = previous._header.symlink_target;
+      }
     }
 
     void
-    File::_commit_first(bool final_flush)
+    FileData::write(model::Model& model,
+                    WriteTarget target,
+                    std::unique_ptr<ACLBlock>& block, bool first_write)
     {
-      if (!this->_first_block)
+      ELLE_DEBUG("%s: write at %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s",
+                 this, _address,
+                 _header.size, _header.links, _fat.size(), _data.size());
+      bool block_allocated = !block;
+      if (!block)
       {
         try
         {
-          ELLE_DEBUG_SCOPE("fetch first block");
-          Address addr = Address(
-            this->_parent->_files.find(_name)->second.second.value(),
-            model::flags::mutable_block, false);
-          this->_first_block = std::dynamic_pointer_cast<MutableBlock>(
-            this->_owner.block_store()->fetch(addr));
+          block = elle::cast<ACLBlock>::runtime(model.fetch(_address));
         }
         catch (model::MissingBlock const&)
         {
-          // FIXME: keep the modification in memory if this is not the final
-          // flush
           ELLE_WARN("%s: unable to commit as file was deleted", this);
           return;
         }
+      }
+      if (!block->data().empty())
+      {
+        FileData previous(_path, *block, {true, true});
+        merge(previous, target);
+        ELLE_DEBUG("%s: post-merge write %f: sz=%s, links=%s, fatsize=%s, worldperm=%s version=%s", this, _address,
+                   _header.size, _header.links, _fat.size(), block->get_world_permissions(),
+                   block->version());
       }
       elle::Buffer serdata;
       {
@@ -259,20 +337,23 @@ namespace infinit
         output.serialize("fat", _fat);
         output.serialize("data", _data);
       }
-      _first_block->data(serdata);
-      auto address = _first_block->address();
       try
       {
-        if (final_flush && _parent)
-          _owner.block_store()->store(std::move(_first_block),
-            this->_first_block_new ? model::STORE_INSERT : model::STORE_UPDATE,
-            elle::make_unique<FileConflictResolver>(
-              full_path(), _owner.block_store().get()));
+        block->data(serdata);
+        if (!block_allocated)
+        {
+          model.store(*block,
+                      first_write ? model::STORE_INSERT : model::STORE_UPDATE,
+                      elle::make_unique<FileConflictResolver>(
+                        _path, &model, target));
+        }
         else
-          _owner.block_store()->store(*_first_block,
-            this->_first_block_new ? model::STORE_INSERT : model::STORE_UPDATE,
-            elle::make_unique<FileConflictResolver>(
-              full_path(), _owner.block_store().get()));
+        {
+          model.store(std::move(block),
+                      first_write ? model::STORE_INSERT : model::STORE_UPDATE,
+                      elle::make_unique<FileConflictResolver>(
+                        _path, &model, target));
+        }
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
       {
@@ -287,10 +368,16 @@ namespace infinit
       catch(elle::Error const& e)
       {
         ELLE_WARN("unexpected exception storing %f: %s",
-          address, e);
+          _address, e);
         throw rfs::Error(EIO, e.what());
       }
-      this->_first_block_new = false;
+    }
+
+    void
+    File::_commit(WriteTarget target)
+    {
+      ELLE_ASSERT(this->_filedata);
+      _filedata->write(*_owner.block_store(), target, _first_block);
     }
 
     void
@@ -298,106 +385,8 @@ namespace infinit
     {
       if (this->_first_block)
         return;
+      this->_filedata.reset();
      _fetch();
-    }
-
-    std::shared_ptr<AnyBlock>
-    File::_block_at(int index, bool create)
-    {
-      ELLE_ASSERT_GTE(index, 0);
-      auto it = this->_blocks.find(index);
-      if (it != this->_blocks.end())
-        return it->second.block;
-      if (_fat.size() <= unsigned(index))
-      {
-        ELLE_TRACE("%s: block_at(%s) out of range", *this, index);
-        if (!create)
-        {
-          return nullptr;
-        }
-        _fat.resize(index+1, FatEntry(Address::null, {}));
-      }
-      AnyBlock b;
-      bool is_new = false;
-      if (_fat[index].first == Address::null)
-      {
-        ELLE_ASSERT(_first_block);
-        b = AnyBlock(_owner.block_store()->make_block<ImmutableBlock>(
-          elle::Buffer(), _first_block->address()), std::string());
-        is_new = true;
-      }
-      else
-      {
-        ELLE_TRACE("Fetching %s", index);
-        Address addr(this->_fat[index].first.value(),
-                     model::flags::immutable_block, false);
-        b = AnyBlock(this->_owner.fetch_or_die(addr), this->_fat[index].second);
-        is_new = false;
-      }
-
-      auto inserted = this->_blocks.insert(std::make_pair(index,
-        File::CacheEntry{std::make_shared<AnyBlock>(std::move(b)), false}));
-      inserted.first->second.ready.open();
-      inserted.first->second.last_use = std::chrono::system_clock::now();
-      inserted.first->second.dirty = false; // we just fetched or inserted it
-      inserted.first->second.new_block = is_new;
-      return inserted.first->second.block;
-    }
-
-    void
-    File::_check_prefetch()
-    {
-      // Check if we need to relaunch a prefetcher
-      int nidx = _last_read_block + 1;
-      for (; nidx < _last_read_block + lookahead_blocks
-        && _prefetchers_count < max_lookahead_threads; ++nidx)
-      {
-        if (nidx >= signed(_fat.size()))
-          break;
-        if (this->_blocks.find(nidx) == this->_blocks.end())
-        {
-          _prefetch(nidx);
-          break;
-        }
-      }
-    }
-
-    void
-    File::_prefetch(int idx)
-    {
-      ELLE_TRACE("%s: prefetch index %s", *this, idx);
-      auto inserted =
-        this->_blocks.insert(std::make_pair(idx, File::CacheEntry{}));
-      inserted.first->second.last_use = std::chrono::system_clock::now();
-      inserted.first->second.dirty = false;
-      inserted.first->second.new_block = false;
-      auto self = std::dynamic_pointer_cast<File>(shared_from_this());
-      auto addr = Address(this->_fat[idx].first.value(),
-                          model::flags::immutable_block, false);
-      auto key = _fat[idx].second;
-      ++_prefetchers_count;
-      new reactor::Thread("prefetcher", [self, addr, idx, key] {
-          std::unique_ptr<model::blocks::Block> bl;
-          try
-          {
-            bl = self->_owner.fetch_or_die(addr);
-          }
-          catch (elle::Error const& e)
-          {
-            ELLE_TRACE("Prefetcher error fetching %x: %s", addr, e);
-            --self->_prefetchers_count;
-            self->_blocks[idx].ready.open();
-            return;
-          }
-          ELLE_TRACE("Prefetcher inserting value at %s", idx);
-          auto b = std::make_shared<AnyBlock>(std::move(bl), key);
-          self->_blocks[idx].last_use = std::chrono::system_clock::now();
-          self->_blocks[idx].block = b;
-          self->_blocks[idx].ready.open();
-          --self->_prefetchers_count;
-          self->_check_prefetch();
-          self->check_cache(self->max_cache_size);
-      }, true);
     }
 
     void
@@ -407,68 +396,53 @@ namespace infinit
       boost::filesystem::path newpath = where.parent_path();
       auto dir = std::dynamic_pointer_cast<Directory>(
         _owner.filesystem()->path(newpath.string()));
-      if (dir->_files.find(newname) != dir->_files.end())
+      if (dir->_data->_files.find(newname) != dir->_data->_files.end())
         throw rfs::Error(EEXIST, "target file exists");
       // we need a place to store the link count
       _ensure_first_block();
-      _header.links++;
-      dir->_files.insert(std::make_pair(newname, _parent->_files.at(_name)));
-      dir->_commit(
+      _filedata->_header.links++;
+      dir->_data->_files.insert(std::make_pair(newname, _parent->_files.at(_name)));
+      dir->_data->write(
+        *_owner.block_store(),
         {OperationType::insert, newname, EntryType::file,
-           _parent->_files.at(_name).second},
-         true);
-      _owner.filesystem()->extract(where.string());
-      _commit();
+        _parent->_files.at(_name).second},
+        DirectoryData::null_block,
+        true);
+      _commit(WriteTarget::links);
     }
 
     void
     File::unlink()
     {
-      ELLE_TRACE_SCOPE("%s: unlink, handle_count %s,%s", *this,
-        _r_handle_count, _rw_handle_count);
-
-      if (_parent)
-        _fetch();
-
-      // multi method can't be called after deletion from parent
-      if (!_first_block)
-      {
-        if (!_parent)
-        {
-          ELLE_ERR("%s: parent is null and root block unavailable", *this);
-          _remove_from_cache(_full_path);
-          return;
-        }
-      }
-      if (_parent)
-      {
-        auto info = _parent->_files.at(_name);
-        elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
-        _parent->_files.erase(_name);
-        _parent->_commit({OperationType::remove, _name}, true);
-        revert.abort();
-        _parent = nullptr;
-        _remove_from_cache(_full_path);
-      }
-      if (_rw_handle_count || _r_handle_count)
-        return;
-      int links = _header.links;
+      _ensure_first_block();
+      auto info = _parent->_files.at(_name);
+      elle::SafeFinally revert([&] { _parent->_files[_name] = info;});
+      _parent->_files.erase(_name);
+      _parent->write(
+        *_owner.block_store(),
+        {OperationType::remove, _name},
+        DirectoryData::null_block,
+        true);
+      revert.abort();
+      int links = _filedata->_header.links;
       if (links > 1)
       {
         ELLE_DEBUG("%s remaining links", links - 1);
-        _header.links--;
-        _commit_first(false);
+        _filedata->_header.links--;
+        _commit(WriteTarget::links);
       }
       else
       {
-        ELLE_DEBUG("No remaining links");
-        for (unsigned i=0; i<_fat.size(); ++i)
+        ELLE_DEBUG_SCOPE("No remaining links");
+        // FIXME optimize pass removal data
+        for (unsigned i=0; i<_filedata->_fat.size(); ++i)
         {
-          _owner.unchecked_remove(_fat[i].first);
+          ELLE_DEBUG_SOCPE("removing %s: %f", i, _filedata->_fat[i].first);
+          _owner.unchecked_remove(_filedata->_fat[i].first);
         }
+        ELLE_DEBUG_SOCPE("removing first block at %f", _first_block->address());
         _owner.unchecked_remove(_first_block->address());
       }
-      _remove_from_cache(_full_path);
     }
 
     void
@@ -476,7 +450,6 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: rename to %s", *this, where);
       Node::rename(where);
-      _full_path = full_path();
     }
 
     void
@@ -490,7 +463,7 @@ namespace infinit
         this->_fetch();
         Node::stat(st);
         st->st_mode |= S_IFREG;
-        if ((st->st_mode & 0400) && (_header.mode & 0100))
+        if ((st->st_mode & 0400) && (_filedata->_header.mode & 0100))
           st->st_mode |= 0100;
       }
       catch (infinit::model::doughnut::ValidationFailed const& e)
@@ -502,8 +475,6 @@ namespace infinit
         ELLE_DEBUG("%s: filesystem exception: %s", *this, e.what());
         if (e.error_code() != EACCES)
         {
-          if (!_rw_handle_count)
-            _remove_from_cache();
           throw;
         }
       }
@@ -512,7 +483,15 @@ namespace infinit
         ELLE_WARN("unexpected exception on stat: %s", e);
         throw rfs::Error(EIO, elle::sprintf("%s", e));
       }
-      ELLE_DEBUG("stat size: %s", st->st_size);
+      auto it = this->_size_map.find(_filedata->address());
+      if (it != this->_size_map.end())
+      {
+        ELLE_DEBUG("open file size overwrite: %s -> %s",
+                   st->st_size, it->second.first);
+        st->st_size = it->second.first;
+      }
+      else
+        ELLE_DEBUG("stat size: %s", st->st_size);
     }
 
     void
@@ -525,14 +504,14 @@ namespace infinit
     File::truncate(off_t new_size)
     {
       _fetch();
-      ELLE_TRACE("%s: truncate %s -> %s", *this, _header.size, new_size);
-      if (new_size == signed(_header.size))
+      ELLE_TRACE("%s: truncate %s -> %s", *this, _filedata->_header.size, new_size);
+      if (new_size == signed(_filedata->_header.size))
         return;
-      if (new_size > signed(_header.size))
+      if (new_size > signed(_filedata->_header.size))
       {
         auto h = open(O_RDWR, 0666);
         char buf[16384] = {0};
-        int64_t sz = _header.size;
+        int64_t sz = _filedata->_header.size;
         while (sz < new_size)
         {
           auto nsz = std::min(off_t(16384), new_size - sz);
@@ -541,74 +520,66 @@ namespace infinit
         h->close();
         return;
       }
+      uint64_t first_block_size = _filedata->_data.size();
       // Remove fat blocks starting from the end
-      for (int i = _fat.size()-1; i >= 0; --i)
+      for (int i = _filedata->_fat.size()-1; i >= 0; --i)
       {
-        auto offset = first_block_size + i * _header.block_size;
+        auto offset = first_block_size + i * _filedata->_header.block_size;
+        ELLE_DEBUG("considering %s: [%s, %s]", i,
+          offset, offset + _filedata->_header.block_size);
         if (signed(offset) >= new_size)
         { // kick the block
-          _owner.unchecked_remove(_fat[i].first);
-          _fat.pop_back();
+          ELLE_DEBUG("removing %f", _filedata->_fat[i].first);
+          _owner.unchecked_remove(_filedata->_fat[i].first);
+          _filedata->_fat.pop_back();
         }
-        else if (signed(offset + _header.block_size) >= new_size)
+        else if (signed(offset + _filedata->_header.block_size) >= new_size)
         { // maybe truncate the block
+          ELLE_DEBUG("truncating %f", _filedata->_fat[i].first);
           auto targetsize = new_size - offset;
-          auto it = this->_blocks.find(i);
-          if (it != this->_blocks.end())
+          cryptography::SecretKey sk(_filedata->_fat[i].second);
+          auto block = _owner.fetch_or_die(_filedata->_fat[i].first);
+          elle::Buffer buf(sk.decipher(block->data()));
+          if (buf.size() > targetsize)
           {
-            it->second.block->data([&](elle::Buffer& buf) {
-                if (buf.size() > targetsize)
-                  buf.size(targetsize);
-            });
-            it->second.dirty = true;
+            buf.size(targetsize);
           }
-          else
-          {
-            cryptography::SecretKey sk(_fat[i].second);
-            auto targetsize = new_size - offset;
-            auto block = _owner.fetch_or_die(_fat[i].first);
-            elle::Buffer buf(sk.decipher(block->data()));
-            if (buf.size() > targetsize)
-            {
-              buf.size(targetsize);
-            }
-            auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
-              sk.encipher(buf), _first_block->address());
-            _owner.unchecked_remove(_fat[i].first);
-            _fat[i].first = newblock->address();
-            _owner.store_or_die(std::move(newblock), model::STORE_INSERT);
-          }
+          auto newblock = _owner.block_store()->make_block<ImmutableBlock>(
+            sk.encipher(buf), _address);
+          _owner.unchecked_remove(_filedata->_fat[i].first);
+          _filedata->_fat[i].first = newblock->address();
+          _owner.store_or_die(std::move(newblock), model::STORE_INSERT);
         }
       }
       // check first block data
-      if (new_size < signed(_data.size()))
-        _data.size(new_size);
-      this->_header.size = new_size;
-      this->_commit();
+      if (new_size < signed(_filedata->_data.size()))
+        _filedata->_data.size(new_size);
+      this->_filedata->_header.size = new_size;
+      this->_commit(WriteTarget::data);
     }
 
     std::unique_ptr<rfs::Handle>
     File::open(int flags, mode_t mode)
     {
+      // FIXME atime
       ELLE_TRACE_SCOPE("%s: open", *this);
       bool needw = (flags & O_ACCMODE) != O_RDONLY;
       bool needr = (flags & O_ACCMODE) != O_WRONLY;
       if (_owner.read_only() && needw)
         throw rfs::Error(EACCES, "Access denied.");
       if (flags & O_TRUNC)
+      {
         truncate(0);
+        _fetch();
+      }
       else
-      { // preemptive  permissions check
-        if (!_rw_handle_count)
-        {
-          _fetch();
-        }
+      {
+        _ensure_first_block();
         _owner.ensure_permissions(*_first_block.get(), needr, needw);
       }
-      _owner.filesystem()->set(full_path().string(), shared_from_this());
       return umbrella([&] {
-        return std::unique_ptr<rfs::Handle>(new FileHandle(
-          std::dynamic_pointer_cast<File>(shared_from_this()), needw, false, true));
+        return std::unique_ptr<rfs::Handle>(
+          new FileHandle(*_owner.block_store(), *_filedata, needw, false, true));
       });
     }
 
@@ -617,146 +588,25 @@ namespace infinit
     {
       if (flags & O_TRUNC)
         truncate(0);
-      ELLE_DEBUG("Forcing entry %s", full_path());
-      if (!_owner.single_mount())
-        _owner.filesystem()->set(full_path().string(), shared_from_this());
-      return std::unique_ptr<rfs::Handle>(new FileHandle(
-        std::dynamic_pointer_cast<File>(shared_from_this()), true));
-    }
-
-    void
-    File::_commit_all()
-    {
-      ELLE_TRACE_SCOPE("%s: commit all", this);
-      if (!check_cache(0))
-      {
-        ELLE_DEBUG_SCOPE(
-          "store first block: %s with payload %s, fat %s, total_size %s",
-          this->_first_block,
-          this->_data.size(),
-          this->_fat,
-          this->_header.size);
-        this->_commit_first(true);
-      }
+      _fetch();
+      //ELLE_DEBUG("Forcing entry %s", full_path());
+      return std::unique_ptr<rfs::Handle>(
+        new FileHandle(*_owner.block_store(), *_filedata, true));
     }
 
     model::blocks::ACLBlock*
     File::_header_block()
     {
+      _ensure_first_block();
       return dynamic_cast<model::blocks::ACLBlock*>(_first_block.get());
     }
 
-    bool
-    File::_flush_block(int id)
+    FileHeader&
+    File::_header()
     {
-      bool fat_change = false;
-      auto it = this->_blocks.find(id);
-      Address prev = it->second.block->address();
-      auto key = cryptography::random::generate<elle::Buffer>(32).string();
-      Address addr = it->second.block->crypt_store(*_owner.block_store(),
-        model::STORE_INSERT,
-        key);
-      if (addr != prev)
-      {
-        ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
-          prev, addr);
-        fat_change = true;
-        _fat[id] = FatEntry(addr, key);
-        if (!it->second.new_block)
-        {
-          _owner.unchecked_remove(prev);
-        }
-      }
-      it->second.new_block = false;
-      it->second.dirty = false;
-      return fat_change;
-    }
-
-    bool
-    File::check_cache(int cache_size)
-    {
-      if (cache_size < 0)
-        cache_size = max_cache_size;
-      typedef std::pair<const int, CacheEntry> Elem;
-      if (cache_size == 0)
-      {
-        // Final flush, wait on all async ops
-        while (!_flushers.empty())
-        {
-          reactor::wait(*_flushers.back());
-          _flushers.pop_back();
-        }
-      }
-      else
-      {
-        // Just wait on finished ops to get exceptions
-        for (int i=0; i<signed(_flushers.size()); ++i)
-        {
-          if (_flushers[i]->done())
-          {
-            reactor::wait(*_flushers[i]);
-            std::swap(_flushers[i], _flushers[_flushers.size()-1]);
-            _flushers.pop_back();
-            --i;
-          }
-        }
-      }
-      while (this->_blocks.size() > unsigned(cache_size))
-      {
-        auto it = std::min_element(this->_blocks.begin(), this->_blocks.end(),
-          [](Elem const& a, Elem const& b) -> bool
-          {
-            return a.second.last_use < b.second.last_use;
-          });
-        ELLE_TRACE("Removing block %s from cache", it->first);
-        if (cache_size == 0)
-        { // final flush, sync
-          if (it->second.dirty)
-          {
-            _fat_changed = _flush_block(it->first) || _fat_changed;
-          }
-          this->_blocks.erase(it);
-        }
-        else
-        {
-          if (it->second.dirty)
-          {
-            int id = it->first;
-            ELLE_TRACE("starting async flusher for %s", id);
-            auto ab = it->second.block;
-            bool new_block = it->second.new_block;
-            _flushers.emplace_back(
-              new reactor::Thread("flusher", [this, id, ab, new_block] {
-                auto key = cryptography::random::generate<elle::Buffer>(32).string();
-                auto old_addr = ab->address();
-                Address addr = ab->crypt_store(*_owner.block_store(),
-                  model::STORE_INSERT,
-                  key);
-                if (addr != old_addr)
-                {
-                  ELLE_DEBUG("Changing address of block %s: %s -> %s", id,
-                    old_addr, addr);
-                  _fat_changed = true;
-                  _fat[id] = FatEntry(addr, key);
-                  if (!new_block)
-                  {
-                    _owner.unchecked_remove(old_addr);
-                  }
-                }
-            }, reactor::Thread::managed = true));
-          }
-          this->_blocks.erase(it);
-        }
-      }
-      bool prev = this->_fat_changed;
-      if (this->_fat_changed)
-      {
-        ELLE_DEBUG_SCOPE("FAT changed, commit first block");
-        this->_commit_first(cache_size == 0);
-        _first_block_new = false;
-        _fat_changed = false;
-      }
-      return prev;
+      if (!_filedata)
+        _fetch();
+      return _filedata->_header;
     }
 
     std::vector<std::string> File::listxattr()
@@ -764,7 +614,7 @@ namespace infinit
       _fetch();
       ELLE_TRACE("file listxattr");
       std::vector<std::string> res;
-      for (auto const& a: _header.xattrs)
+      for (auto const& a: _filedata->_header.xattrs)
         res.push_back(a.first);
       return res;
     }
@@ -778,18 +628,17 @@ namespace infinit
         {
           _fetch();
           std::stringstream res;
-          res <<  "total_size: "  << _header.size  << "\n";
-          for (int i=0; i < signed(_fat.size()); ++i)
+          res <<  "total_size: "  << _filedata->_header.size  << "\n";
+          for (int i=0; i < signed(_filedata->_fat.size()); ++i)
           {
-            res << i << ": " << _fat[i].first << "\n";
+            res << i << ": " << _filedata->_fat[i].first << "\n";
           }
           return res.str();
         }
         else if (*special == "auth")
         {
-          Address addr = _parent->_files.at(_name).second;
-          auto block = _owner.fetch_or_die(addr);
-          return perms_to_json(*_owner.block_store(), dynamic_cast<ACLBlock&>(*block));
+          _ensure_first_block();
+          return perms_to_json(*_owner.block_store(), dynamic_cast<ACLBlock&>(*_first_block));
         }
       }
       return Node::getxattr(key);
@@ -804,16 +653,15 @@ namespace infinit
         ELLE_DEBUG("found special %s", *special);
         if (special->find("auth.") == 0)
         {
-          set_permissions(special->substr(strlen("auth.")), value,
-                          _parent->_files.at(_name).second);
+          set_permissions(special->substr(strlen("auth.")), value, _address);
           return;
         }
         else if (*special == "fsck.nullentry")
         {
+          _fetch();
           int idx = std::stoi(value);
-          _fat[idx] = std::make_pair(model::Address::null, "");
-          _fat_changed = true;
-          _commit_first(false);
+          _filedata->_fat[idx] = std::make_pair(model::Address::null, "");
+          _commit(WriteTarget::data);
           return;
         }
       }
@@ -823,6 +671,7 @@ namespace infinit
     std::shared_ptr<rfs::Path>
     File::child(std::string const& name)
     {
+      // FIXME remove
       static const char* attr_key = "$xattr.";
       if (name.size() > strlen(attr_key)
         && name.substr(0, strlen(attr_key)) == attr_key)
@@ -839,5 +688,7 @@ namespace infinit
     {
       elle::fprintf(stream, "File(\"%s\")", this->_name);
     }
+
+    File::SizeMap File::_size_map;
   }
 }
