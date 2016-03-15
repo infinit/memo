@@ -393,7 +393,7 @@ _save_avatar(std::string const& name,
   ifnt._open_write(f, ifnt._user_avatar_path(name),
                    name, "avatar", true);
   f << buffer.string();
-  report_action("fetched", "avatar", name, std::string("locally"));
+  report_action("saved", "avatar", name, std::string("locally"));
 }
 
 void
