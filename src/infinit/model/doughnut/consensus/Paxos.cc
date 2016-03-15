@@ -389,9 +389,8 @@ namespace infinit
                 {
                   reactor::yield();
                   this->_load(address);
-                  auto it = this->_under_represented.find(address);
-                  if (it == this->_under_represented.end())
-                    this->_under_represented.erase(it);
+                  if (!contains(this->_under_represented, address))
+                    this->_addresses.erase(address);
                 }
               }));
         }
