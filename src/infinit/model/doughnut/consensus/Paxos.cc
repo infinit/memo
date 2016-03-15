@@ -383,14 +383,32 @@ namespace infinit
               elle::sprintf("%s: rebalancing inspector", this),
               [this]
               {
-                ELLE_TRACE_SCOPE("%s: inspect disk blocks for rebalancing",
-                                 this);
-                for (auto address: this->storage()->list())
+                try
                 {
-                  reactor::yield();
-                  this->_load(address);
-                  if (!contains(this->_under_represented, address))
-                    this->_addresses.erase(address);
+                  ELLE_TRACE_SCOPE("%s: inspect disk blocks for rebalancing",
+                                   this);
+                  for (auto address: this->storage()->list())
+                  {
+                    reactor::yield();
+                    try
+                    {
+                      this->_load(address);
+                      if (!contains(this->_under_represented, address))
+                        this->_addresses.erase(address);
+                    }
+                    catch (MissingBlock const&)
+                    {}
+                  }
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_ERR("disk rebalancer inspector exited: %s", e);
+                }
+                catch (...)
+                {
+                  ELLE_ERR("disk rebalancer inspector crashed: %s",
+                           elle::exception_string());
+                  throw;
                 }
               }));
         }
@@ -398,6 +416,7 @@ namespace infinit
         void
         Paxos::LocalPeer::cleanup()
         {
+          this->_rebalance_inspector.reset();
           this->_rebalance_thread.terminate_now();
         }
 
