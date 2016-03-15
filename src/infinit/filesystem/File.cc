@@ -3,6 +3,7 @@
 #ifdef INFINIT_WINDOWS
 #include <fcntl.h>
 #endif
+#include <pair>
 #include <sys/stat.h> // S_IMFT...
 
 #include <elle/cast.hh>
