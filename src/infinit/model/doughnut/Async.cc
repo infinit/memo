@@ -347,9 +347,7 @@ namespace infinit
         void
         Async::_process_loop()
         {
-          ELLE_DEBUG("waiting for init...");
           reactor::wait(this->_init_barrier);
-          ELLE_DEBUG("running loop");
           while (!_exit_requested)
           {
             try
@@ -359,11 +357,8 @@ namespace infinit
                 ELLE_TRACE(
                   "%s: restore additional operations from disk at index %s",
                   *this, *this->_first_disk_index)
-
-                this->_load_operations();
-              ELLE_DEBUG("get one");
+                  this->_load_operations();
               int index = this->_queue.get();
-              ELLE_DEBUG("popped %s", index);
               if (_exit_requested)
                 break;
               auto it = this->_operations.get<1>().begin();
@@ -406,7 +401,7 @@ namespace infinit
                   auto index = op->index;
                   if (must_delete)
                     delete op;
-                  ELLE_DEBUG("reloading %s", index);
+                  ELLE_DEBUG("reload %s", index);
                   try
                   {
                     op = new Op(_load_op(index));
@@ -414,7 +409,8 @@ namespace infinit
                   }
                   catch (elle::Error const& e)
                   {
-                    ELLE_WARN("Failed to reload %s: %s", index, e);
+                    ELLE_WARN("%s: failed to reload %s: %s",
+                              this, index, e);
                     break;
                   }
                 }
