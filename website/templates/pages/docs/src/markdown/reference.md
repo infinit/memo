@@ -255,7 +255,7 @@ With the _infinit-network_ utility you are able to create overlay networks, conf
 
 ### Create a network ###
 
-The example below creates a network named _'cluster'_ which aggregates the storage resources controlled by the users involved in this network.
+The example below creates a network named "cluster" which aggregates the storage resources controlled by the users involved in this network.
 
 The network can be configured depending on the requirements of the storage infrastructure the administrator is setting up. For instance, the number of computing devices could be extremely small, the owners of those computers could be somewhat untrustworthy or their machines could be expected to be turned on and off throughout the day. To cater for this the network parameters can be tuned: the overlay's topology, the replication factor, the fault tolerance algorithm, etc.
 
@@ -329,7 +329,7 @@ $> infinit-network --fetch --as bob --name alice/cluster
 Fetched network "alice/cluster".
 ```
 
-You now have both the network descriptor and a passport locally allowing you to link new devices to it. Let's link Bob's current device to Alice's 'cluster' network. Note that one can decide to contribute additional storage capacity through the `--storage` option.
+You now have both the network descriptor and a passport locally allowing you to link new devices to it. Let's link Bob's current device to Alice's "cluster" network. Note that one can decide to contribute additional storage capacity through the `--storage` option.
 
 ```
 $> infinit-network --link --as bob --name alice/cluster
@@ -355,7 +355,7 @@ The _infinit-passport_ binary is used to control which users are allowed to conn
 
 To allow another user to join a network and link devices, you must issue a passport. In order to reference the user to invite, you first need to obtain his/her user public identity.
 
-Let's say that you want to invite the user 'bob' to your network. First you need to fetch his identity from the Hub (or retrieve it manually if operating without the Hub, see `--export` and `--import`):
+Let's say that you want to invite the user "bob" to your network. First you need to fetch his identity from the Hub (or retrieve it manually if operating without the Hub, see `--export` and `--import`):
 
 ```
 $> infinit-user --fetch --as alice --name bob
@@ -546,7 +546,7 @@ $> infinit-acl --set --path /mnt/shared/ --mode rw --user bob
 
 _**NOTE:** The infinit-acl binary provides additional options to better manage hierarchical permissions. Do not hesitate to rely on the help to learn more._
 
-Once the command has been run, Bob will be able to read and write files/directories in the root directory of Alice's 'shared' volume.
+Once the command has been run, Bob will be able to read and write files/directories in the root directory of Alice's "shared" volume.
 
 #### Inheritance ####
 
@@ -630,7 +630,7 @@ $> infinit-acl --set --mode rw --user @marketing --path /mnt/shared/awesome.txt
 
 ### Add/remove group members ###
 
-Any group administrator can add and remove members through the `--add` and `--remove` options. In the example below, Alice first adds Bob as a member of her Marketing group. Then, Alice creates a group named 'marketing/tokyo' and adds it to her Marketing group.
+Any group administrator can add and remove members through the `--add` and `--remove` options. In the example below, Alice first adds Bob as a member of her Marketing group. Then, Alice creates a group named "marketing/tokyo" and adds it to her Marketing group.
 
 ```
 $> infinit-acl --group --name marketing --add-user bob --path .
@@ -638,7 +638,7 @@ $> infinit-acl --group --create --name marketing/tokyo --path .
 $> infinit-acl --group --name marketing --add-group marketing/tokyo --path .
 ```
 
-The 'marketing/tokyo' group could also be added or removed using the `--add` or `--remove` option and a '@' prefix before the group name:
+The "marketing/tokyo" group could also be added or removed using the `--add` or `--remove` option and a '@' prefix before the group name:
 
 ```
 $> infinit-acl --group --name --marketing --add @marketing/tokyo --path .
