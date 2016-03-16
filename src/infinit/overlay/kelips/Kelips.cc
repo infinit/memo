@@ -3232,7 +3232,7 @@ namespace infinit
           c.endpoints.push_back(TimedEndpoint(ep, now()));
         auto inserted = target->insert(std::make_pair(address, std::move(c)));
         if (inserted.second)
-          this->on_discover()(address);
+          this->on_discover()(address, observer);
         return &inserted.first->second;
       }
 

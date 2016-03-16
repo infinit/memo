@@ -55,8 +55,8 @@ public:
   {
     this->_peers.emplace_back(&other);
     other._peers.emplace_back(this);
-    this->on_discover()(other.node_id());
-    other.on_discover()(this->node_id());
+    this->on_discover()(other.node_id(), !other.doughnut()->local());
+    other.on_discover()(this->node_id(), !this->doughnut()->local());
   }
 
   void

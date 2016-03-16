@@ -57,7 +57,8 @@ namespace infinit
     `------*/
     public:
       ELLE_ATTRIBUTE_RX(
-        boost::signals2::signal<void (model::Address id)>, on_discover);
+        boost::signals2::signal<void (model::Address id,
+                                      bool observer)>, on_discover);
       ELLE_ATTRIBUTE_RX(
         boost::signals2::signal<void (model::Address id)>, on_disappear);
 

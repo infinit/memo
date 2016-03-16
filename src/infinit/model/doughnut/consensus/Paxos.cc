@@ -374,9 +374,10 @@ namespace infinit
         Paxos::LocalPeer::initialize()
         {
           this->doughnut().overlay()->on_discover().connect(
-            [this] (Address& id)
+            [this] (Address& id, bool observer)
             {
-              this->_discovered(id);
+              if (!observer)
+                this->_discovered(id);
             });
           this->_rebalance_inspector.reset(
             new reactor::Thread(
