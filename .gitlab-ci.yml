@@ -65,6 +65,7 @@ x86_64-jessie-gcc4:
 x86_64-windows-mingw4:
   stage: build
   script:
+    - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
     - mkdir -p ../fs-build ../fs-install
