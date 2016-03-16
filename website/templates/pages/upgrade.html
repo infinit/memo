@@ -1,0 +1,64 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <h1>Upgrade Infinit CLI</h1>
+  <p class="subtitle">Get the latest version of our CLI tools.</p>
+
+  <section class="platforms">
+    <div class="platform mac">
+      <img src="${url('images/icons/apple.png')}">
+      <h2>Mac OS X</h2>
+      <a class="open-popup" href="#mac-homebrew">Update via Homebrew</a><br>
+      <a class="open-popup" href="#mac-tarball">Update via tarball</a>
+    </div>
+
+    <div class="platform linux">
+      <img src="${url('images/icons/debian.png')}">
+      <h2>Linux (Debian)</h2>
+      <a class="open-popup" href="#linux-apt">Update via repository</a><br>
+      <a class="open-popup" href="#linux-tarball">Update via tarball</a>
+    </div>
+
+    <div class="platform windows">
+      <img src="${url('images/icons/windows.png')}">
+      <h2>Windows</h2>
+    </div>
+  </section>
+
+  <div class="popup" id="mac-homebrew">
+    <section class="doc">
+      <br><h3>Upgrade to Infinit ${tarball_version} via Homebrew</h3>
+      <p>With brew installed, just run the following commands:</p>
+      <pre><code>$> brew update</code></pre>
+      <pre><code>$> brew upgrade infinit</code></pre>
+    </section>
+  </div>
+
+  <div class="popup" id="mac-tarball">
+    <section class="doc">
+      <br><h3>Upgrade to Infinit ${tarball_version}</h3>
+      <%include file='docs/generated/get_started/mac_tarball_install.html'/>
+      <p>Then, extract the Infinit tarball and simply replace your old installation with the new content.</p>
+    </section>
+  </div>
+
+  <div class="popup" id="linux-apt">
+    <section class="doc">
+      <br><h3>Upgrade to Infinit ${tarball_version} via our repository</h3>
+      <p>On a Debian-based distribution, simply run the following command:</p>
+      <pre><code>$> apt-get install infinit
+...
+Unpacking infinit (${tarball_version})...</code></pre>
+    </section>
+  </div>
+
+  <div class="popup" id="linux-tarball">
+    <section class="doc">
+      <br><h3>Upgrade to Infinit ${tarball_version}</h3>
+      <%include file='docs/generated/get_started/linux_tarball_install.html'/>
+      <p>Then, extract the Infinit tarball and simply replace your old installation with the new content.</p>
+    </section>
+  </div>
+
+</%block>

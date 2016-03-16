@@ -14,24 +14,6 @@ function showPopupMenu(element) {
 
 $(document).ready(function() {
 
-  $('pre code').each(function(i, block) {
-    hljs.configure({ languages: ['bash', 'cpp'] });
-    hljs.initHighlighting();
-  });
-
-  $('a[href*=#]:not([href=#]):not([data-tab])').click(function() {
-    if (location.pathname.replace(/^\//,'') === this.pathname.replace(/^\//,'') && location.hostname === this.hostname) {
-      var target = $(this.hash);
-      target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
-      if (target.length) {
-        $('html,body').animate({
-          scrollTop: target.offset().top - 30
-        }, 500);
-        return false;
-      }
-    }
-  });
-
   /*----------------.
   | All             |
   `----------------*/

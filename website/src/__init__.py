@@ -72,6 +72,14 @@ class Website(bottle.Bottle):
       'description': 'Download the Infinit command line tools for Mac, Linux or Windows.',
     }
 
+  @route('/upgrade', name = 'upgrade')
+  @view('pages/upgrade.html')
+  def root(self):
+    return {
+      'title': 'Upgrade Infinit CLI Tools',
+      'description': 'Upgrade your Infinit command line tools to the latest version to get all the new features.',
+    }
+
   @route('/faq', name = 'faq')
   @view('pages/faq.html')
   def root(self):

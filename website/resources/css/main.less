@@ -566,7 +566,7 @@ body.drive {
 | Documentation   |
 `----------------*/
 
-body.download {
+body.download, body.upgrade {
   h1, p.subtitle, .platform { text-align: center; }
   h1 { margin-bottom: 3px; margin-top: 40px; }
   p.subtitle { margin-top: 0; }
@@ -594,7 +594,22 @@ body.download {
     }
 
   }
+}
 
+body.upgrade {
+  section.platforms {
+    .platform {
+      a {
+        font-size: 15px; display: inline-block; margin-bottom: 10px;
+        color: @infinitblue; .transition();
+
+        &:hover {
+          color: darken(@infinitblue, 10%);
+          border-bottom: 2px solid darken(@infinitblue, 10%);
+        }
+      }
+    }
+  }
 }
 
 
@@ -1166,6 +1181,7 @@ body.doc_comparison {
     }
   }
   div.popup {
+    section.doc { float: none; width: 100%; padding: 0; }
     p.title { margin-top: 0; border-bottom: 1px solid @infinitgray; padding-bottom: 5px;}
   }
 }
