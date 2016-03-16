@@ -273,7 +273,7 @@ The following overlay types are currently available:
 list of peers must never change or be reordered once set.
 - Kelips: Overlay with support for node churn. The _k_ argument specifies the
 number of groups to use, each group being responsible for _1/kth_ of the files.
-See the reference paper [_"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"_](http://link.springer.com/chapter/10.1007/978-3-540-45172-3_15) for more information.
+See the reference paper _<a href="http://iptps03.cs.berkeley.edu/final-papers/kelips.pdf" target="_blank">"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"</a>_ for more information.
 
 ### Push a network ###
 
@@ -337,6 +337,22 @@ Linked device to network "alice/cluster".
 ```
 
 _**NOTE**: This process must be performed on each new device, proving that the user has indeed been allowed to join the network (via the passport) and that this device belongs to the user._
+
+### Run a network ###
+
+Running a network means launching the Infinit software to act as a node in the storage network, also known as a "server". For a node to act as a server, it must [contribute some storage capacity](#create-a-storage-resource).
+
+If you want your node to also provide a POSIX-compliant file system interface, please consider [running/mounting a volume](#mount-a-volume).
+
+In order to run a network, just use the option `--run`. Note that the `--publish` option tells the binary to rely on the Hub to ease the process of connecting to the network by providing you with the endpoint of bootstrap nodes while publishing your own endpoint for other nodes to find you as well:
+
+```
+$> infinit-network --run --as alice --name cluster --publish
+Fetched endpoints for "alice/cluster".
+Running network "alice/cluster".
+Remotely pushed endpoints for "alice/cluster".
+...
+```
 
 ### Upgrade a network ###
 
