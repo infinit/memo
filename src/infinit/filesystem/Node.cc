@@ -149,7 +149,7 @@ namespace infinit
       h.uid = uid;
       h.gid = gid;
       if (acl_preserver && gid >= gid_start && gid < gid_start + gid_count
-        && acl_save[gid - gid_start])  
+        && acl_save[gid - gid_start])
       {
         auto block = _header_block();
         // clear current perms
@@ -261,11 +261,11 @@ namespace infinit
       }
       else if (op == "nodes")
       {
-        std::vector<model::Address> nodes;
+        std::vector<std::string> nodes;
         // FIXME: hardcoded 3
         for (auto n: dht.overlay()->lookup(addr, 3, overlay::OP_FETCH))
           if (auto locked = n.lock())
-            nodes.push_back(locked->id());
+            nodes.push_back(elle::sprintf("%f", locked->id()));
         std::stringstream s;
         elle::serialization::json::serialize(nodes, s);
         return s.str();
