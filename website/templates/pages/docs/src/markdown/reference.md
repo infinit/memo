@@ -98,7 +98,7 @@ All objects (users, storages, networks, volumes etc.) are created locally by def
 
 The command-line tools however provide a way to rely on the Hub for certain operations in order to simplify some administrative tasks such as inviting a user to a drive, sharing the volumes created within a network, moving the user identity to another of your devices and so on. In addition, some functionalities such as the consumption of storage capacity in a network are only available through the Hub. As a rule of thumb, we advise you to always rely on the Hub, unless you know exactly what you are doing.
 
-The use of the Hub can be activated through specific options, mostly `--push`, `--fetch` and `--pull`. The `--push` option publishes an object on the Hub for other users to retrieve it. The `--pull` option does the exact opposite, removing the object from the Hub. Finally, the `--fetch` option retrieves a resource from the Hub, e.g. a network descriptor, and stores it locally in the `$INFINIT_DATA_HOME` directory.
+The use of the Hub can be activated through specific options, mostly `--push`, `--fetch` and `--pull`. The `--push` option pushes an object on the Hub for other users to retrieve it. The `--pull` option does the exact opposite, removing the object from the Hub. Finally, the `--fetch` option retrieves a resource from the Hub, e.g. a network descriptor, and stores it locally in the `$INFINIT_DATA_HOME` directory.
 
 One can decide to either create objects locally before pushing them to the Hub or to perform both tasks through a single action by specifying `--push` option when invoking the command.
 
@@ -109,7 +109,7 @@ Note that some binaries operate in hub mode by default. For instance the _infini
 User
 ----
 
-The _infinit-user_ binary allows one to create a user identity, publish it to the Hub so that it can be referenced by other users and perform other user based operations.
+The _infinit-user_ binary allows one to create a user identity, push it to the Hub so that it can be referenced by other users and perform other user based operations.
 
 ### Create a user ###
 
@@ -275,9 +275,9 @@ list of peers must never change or be reordered once set.
 number of groups to use, each group being responsible for _1/kth_ of the files.
 See the reference paper [_"Kelips: Building an Efficient and Stable P2P DHT through Increased Memory and Background Overhead"_](http://link.springer.com/chapter/10.1007/978-3-540-45172-3_15) for more information.
 
-### Publish a network ###
+### Push a network ###
 
-You can now publish a network for other users to retrieve it. Note that the easiest way is always to append the `--push` option to the network creation command to perform both the creation and publication actions at once.
+You can now push a network onto the Hub for other users to retrieve it. Note that the easiest way is always to append the `--push` option to the network creation command to perform both the creation and publication actions at once.
 
 As with the other utilities, you can otherwise push the network to the Hub with the `--push` option:
 
@@ -349,11 +349,11 @@ The complete procedure is detailed in the [Upgrading a network](/documentation/u
 Passport
 --------
 
-The _infinit-passport_ binary is used to allow other users to join one's networks, granting him/her the right to link devices, contribute storage resources and potentially access files.
+The _infinit-passport_ binary is used to control which users are allowed to connect to a network, granting him/her the right to link devices, contribute storage resources etc.
 
 ### Create a passport ###
 
-To allow another user to join a network and link devices, you must issue him/her a passport. In order to reference the user to invite, you first need to obtain his/her user public identity.
+To allow another user to join a network and link devices, you must issue a passport. In order to reference the user to invite, you first need to obtain his/her user public identity.
 
 Let's say that you want to invite the user 'bob' to your network. First you need to fetch his identity from the Hub (or retrieve it manually if operating without the Hub, see `--export` and `--import`):
 
@@ -417,20 +417,26 @@ alice/cluster: bob
 
 That's it, you will now be able to <a href="#link-a-device-to-a-network">link devices to the networks</a> these passports allow you to.
 
-### Create a delegate passport ###
+### Delegate the creation of passports ###
 
-A special type of passport can be created which allows a user to create passports for the network. This is done in two steps. The first is to create the passport with the `--allow-create-passport` flag.
+The network administrator may not want to be the only user to be able to issue passports, because he is not always connected for instance. A special type of passport has been introduced to delegate the process of passport creation.
+
+The process of delegation is performed in two steps. The first is to create the passport with the `--allow-create-passport` flag:
 
 ```
 $> infinit-passport --create --as alice --network cluster --user bob --allow-create-passport --push
 Locally created passport "alice/cluster: bob".
 ```
 
-The second is to *register* the user's public key. This can only be done once you have created a volume on the network as you will be required to mount the volume and use the _infinit-acl_ binary to register the user.
+The second is to register the user's public key.
+
+**IMPORTANT**: This can only be done once you have created a volume on the network as you will be required to mount the volume and use the _infinit-acl_ binary to register the user.
 
 ```
 $> infinit-acl --register --network cluster --user bob --path /path/to/mountpoint
 ```
+
+Bob can now [fetch the new passport](#receive-a-passport), at which point he will in turn be able to [issue passports](#create-a-passport) for other users to connect to the network.
 
 Volume
 ------
@@ -448,15 +454,22 @@ $> infinit-volume --create --as alice --network cluster --name shared
 Locally created volume "alice/shared".
 ```
 
-_**NOTE**: You may have noticed that the name of the network is sometimes prepended with the username of its owner e.g "alice/cluster". This fully-qualified name distinguishes objects that you own from the ones that you don't. When manipulating objects of which you are the owner, you will not need to use the fully-qualified name as the command-line tools will automatically search in the user's namespace._
+_**NOTE**: You may have noticed that the name of the network is sometimes prepended with the username of its owner e.g "alice/cluster". This fully-qualified name distinguishes objects that you own from the ones that you don't. When manipulating objects you own, you will not need to use the fully-qualified name as the command-line tools will automatically search in the user's namespace._
 
 #### Default permissions ####
 
-A volume can be created with _default permissions_ of either read-only or read-write. These permissions apply to anyone who has a passport for the network. The one exception to this is if a user has a passport with the `deny write` flag, they will not be able to write to read-write volumes.
+A volume can be created with default permissions of either read-only or read-write. These permissions apply to anyone who has a passport for the network. Such permissions are quite handy when one wants to create a collaboration space in which everyone trusts each other for instance.
 
-### Publish a volume ###
+```
+$> infinit-volume --create --as alice --network --cluster --name shared --default-permissions rw
+Locally created volume "alice/shared".
+```
 
-A volume often needs to be shared with the other users in the network. As with the other resources, the easiest way to do this is to rely on the Hub, either using the `--push` option on volume creation or by publishing the volume as a separate action:
+_**NOTE**: The one exception to this is if a user has a passport with the `deny write` flag. In this case, the user is not authorized to create blocks in the underlying network and as such will not be able to write (create/modify/delete files or folders) to the volume even with default read-write permissions._
+
+### Push a volume ###
+
+A volume often needs to be shared with the other users in the network. As with the other resources, the easiest way to do this is to rely on the Hub, either using the `--push` option on volume creation or by pushing the volume as a separate action:
 
 ```
 $> infinit-volume --push --as alice --name shared
@@ -467,7 +480,7 @@ _**NOTE**: You may want to keep your volume hidden from the users on a network, 
 
 ### List the volumes ###
 
-You can list the volumes that you have local descriptors for with the `--list` option. Remember that you can also fetch the volumes on your networks which have been published to the Hub:
+You can list the volumes that you have local descriptors for with the `--list` option. Remember that you can also fetch the volumes on your networks which have been pushed to the Hub:
 
 ```
 $> infinit-volume --fetch --as alice
@@ -763,25 +776,27 @@ Once you've created your storage infrastructure comprising of a network, storage
 
 A client application with a graphical interface called <a href="http://infinit.sh/drive">Infinit Drive</a> is provided for end-users to see the drives they are allowed to access, the people contributing to it, their permissions, etc.
 
-<img src="${url('images/desktop-client.png')}" alt="Infinit Drive app">
+<img src="${url('images/desktop-client.png')}" alt="Infinit Drive">
 
 The notions of storage resources, networks and volumes are too technical for most end-users. Such users may also require a simple email guiding them through the set-up process.
 
-This is why the notion of a *drive* has been introduced. A drive is nothing more than an abstraction on top of a volume.
+This is why the notion of a *drive* has been introduced. A drive is nothing more than an abstraction on top of a volume. In other words, a drive is a volume that will show up in the Infinit Drive's interface.
 
-Rather than listing all the networks and volumes a user is allowed to access in the graphical interface, only the drives the user has been invited to join will be shown. This way, should an administrator create a storage network with hundreds of volumes, the end-user will only see the drives they have been explicitly given access to, making his/her experience as enjoyable as possible without limiting the possibilities of the underlying command-line tools.
+The volume/drive distinction has been introduced to avoid listing all the volumes in the graphical user interface (GUI). Let us recall that as many volumes as one wants can be created in a network. As such, a network could contain a thousands volumes that have very specific purposes and that most users of the networks are not supposed to use.
+
+As such, the network administrator can define the volumes that will be usable by non-tech-savvy users. These volumes are referred to as drives. As a result, only the drives a user has been invited to will be displayed in the GUI, receiving an email detailing how to install the application and join/use the drive.
 
 ### Create a drive ###
 
 Creating a drive is as easy as any other operation. The following creates a drive named "workspace" based on the network "cluster" and volume "shared".
 
 ```
-$> infinit-drive --create --as alice --network cluster --volume shared --name workspace --description "Alice's, Bob's and Charlie's workspace" --push
+$> infinit-drive --create --as alice --network cluster --volume shared --name workspace --description "Alice's, Bob's, Charlie's and Dave's workspace" --push
 Locally created drive "alice/workspace".
 Remotely pushed drive "alice/workspace".
 ```
 
-Note that the `--push` option is included to publish the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-existing-users">inviting</a> to join.
+Note that the `--push` option is included to push the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-existing-users">inviting</a> to join.
 
 ### List the drives ###
 
@@ -794,13 +809,17 @@ $> infinit-drive --list
 alice/workspace: ok
 ```
 
-### Invite existing users ###
+### Invite users ###
 
-It is now time to invite users to join the drive you've created for them.
+There are two ways to invite users to join a drive depending on the fact that the user already has an [Infinit account](#create-a-user) i.e user identity.
 
-Note that before you can reference a user, you need to fetch his/her public identity using the `infinit-user --fetch` command. Likewise, every user that will be invited must have been issued a passport to connect to the network.
+#### Existing users (by public identity) ####
 
-When inviting users, you can use the `--passports` option to automatically create any passports that are needed for the users you are inviting to the drive. The sequence of commands below shows how to invite both Bob and Charlie. The user Bob has already been fetched while Charlie is a completely new user, that needs to be fetched.
+Before you can invite a user to a drive, you need to be able to reference him/her. For that, you need to fetch his/her public identity using the `infinit-user --fetch` command (assuming you are using the Hub).
+
+Every user that will be invited must have been [issued a passport](#create-a-passport) to connect to the network. Since creating a passport for many users may be cumbersome, a `--passports` option is provided to the _infinit-drive_ binary in order to automatically create any missing passport.
+
+The sequence of commands below shows how to invite both Bob and Charlie. Note that the user Bob has already been fetched locally and has already been issued a passport. However, Charlie is a freshly created user for whom no passport has been created.
 
 ```
 $> infinit-user --fetch --as alice --name charlie
@@ -822,15 +841,23 @@ $> infinit-drive --invite --as alice --name workspace --push
 Remotely pushed invitations "alice/workspace: bob, charlie".
 ```
 
-Without any `--user` specified the `--invite` command will push each pending invitations to the Hub, sending the notification emails as a consequence.
+Without any `--user` specified, the `--invite` command will push each pending invitations to the Hub, sending the notification emails as a consequence.
 
-### Invite new users ###
+#### Non-existing users (by email) ####
 
-Inviting people who have not yet created a user is complex as the process of generating the user's key pair is deferred.
+Inviting users who do not already have an Infinit account is a bit more complicated because the process of generating the invited user's key pair is deferred.
 
-To ensure that invited users have access to the drive immediately, you will need to either have created a volume with read-write [default permissions](#default-permissions) or mount the volume and set [world read-write permissions](#world-readability-writability).
+The whole problem related to inviting non-existing users is that such users do not have a user identity yet, hence cannot be referenced. As a result, creating a passport, granting the invitee accesss to directories/files or adding the invitee to a group cannot be achieved at the time of the invitation.
 
-The next step is to [create a delegate passport](#create-a-delegate-passport) for the Hub. This will allow the Hub to create passports for users to access your network when they sign up.
+When invited, a user receives an email and is likely to install the Infinit Drive application. At this point the invitee will register i.e create a user identity. It is at this time in the process that the invitee can be referenced through its public identity.
+
+As the network administrator, you could invite users by email, wait for them to create an account and then manually issue a passport, grant access to some folders etc. once you notice the invitee has registered. The problem is that the invitee would not understand why, once the application installed, they have to wait to be able to access the drive.
+
+If, as the network administrator, you want the experience to be as smooth as possible, here are some possible solutions:
+1. **Access Control**: To ensure that invited users have access to the drive immediately following their registration, a solution is to create a volume with read-write [default permissions](#default-permissions). Alternatively, you could mount the volume and set [world read-write permissions](#world-readability-writability) for everyone to have access to the files in the volume, at least to the root directory for the invitee to be able to list its contents.
+2. **Passport**: The passport needs to be generated following the invitee's registration. Currently, the only way to do that is to [delegate the passport creation](#delegate-the-creation-of-passports) to the [Infinit Hub](#hub). Because the Hub will be notified of the user's registration, it will be able to act accordingly by generating the passport right away.
+
+The following demonstrates how to delegate the passport creation to the Hub for a passport to be generated following the invited user's registration:
 
 ```
 $> infinit-user --fetch --as alice --name hub
@@ -848,10 +875,10 @@ $> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --p
 $> infinit-acl --register --network cluster --user hub --path /mnt/shared/
 ```
 
-The user can now be invited using their email address. They will receive an email asking them to install the graphical client and sign up. Note that the Hub will only generate their passport once they have confirmed their email address.
+Users can now be invited using their email addresses. They will receive an email asking them to install the graphical client and sign up. Note that the Hub will only generate their passport once they have confirmed their email address.
 
 ```
-$> infinit-drive --invite --as alice --name --workspace --email dave@company.com --push
+$> infinit-drive --invite --as alice --name workspace --email dave@company.com --push
 Locally created invitation "alice/workspace: dave@company.com".
 Remotely pushed invitation "alice/workspace: dave@company.com".
 ```
@@ -876,4 +903,4 @@ $> infinit-drive --join --as charlie --name alice/workspace
 Joined drive "alice/workspace".
 ```
 
-That's it, you are now allowed to mount the volume (i.e. 'alice/shared') associated with the drive to browse, store and access files. Note that you could have done that without using through the drive invitation process because you are using the command-line tools. Non-tech-savvy users, however, will appreciate having an interface with only the drives they have been invited to join and thus have access to.
+That's it, you are now allowed to access the drive "alice/workspace", which is an abstraction of the volume "alice/shared". Note that you could have accessed the volume without using the drive invitation anyway. However, should you launch the graphical user interface, you will see the "alice/workspace" drive that you just joined.
