@@ -52,6 +52,7 @@ templates = {
   },
   'Internal/Crash Report': {
     'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
+    'version': 'ver_UcXopNCDszaggwtrhVcBSn',
   },
   'Internal/Passport Generation Error': {
     'templte': 'tem_LdEi9v8WrTACa8BNUhoSte',
@@ -337,8 +338,11 @@ class Beyond:
   ## Crash Report ##
   ## ------------ ##
 
-  def crash_report_send(self, data):
-    variables = None
+  def crash_report_send(self, data, platform = 'Unknown', version = 'Unknown'):
+    variables = {
+      'platform': platform,
+      'version': version,
+    }
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
       with open('%s/client.dmp' % temp_dir, 'wb') as crash_dump:
