@@ -699,9 +699,9 @@ test_filesystem(bool dht,
     bfs::remove(mount / "tt");
   }
 
-  struct stat st;
   // hardlink
 #ifndef INFINIT_MACOSX
+  struct stat st;
   {
     bfs::ofstream ofs(mount / "test");
     ofs << "Test";
