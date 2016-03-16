@@ -747,6 +747,14 @@ namespace infinit
         , _dropped_gets(0)
         , _failed_puts(0)
       {
+#ifndef INFINIT_WINDOWS
+        reactor::scheduler().signal_handle(SIGUSR1, [this] {
+            auto json = this->query("stats", {});
+            std::cerr << elle::json::pretty_print(json);
+            json = this->query("blockcount", {});
+            std::cerr << elle::json::pretty_print(json);
+        });
+#endif
         _self = Address(this->node_id());
         if (!local)
           ELLE_LOG("Running in observer mode");
