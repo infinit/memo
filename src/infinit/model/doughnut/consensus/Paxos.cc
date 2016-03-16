@@ -502,28 +502,35 @@ namespace infinit
             auto elt = this->_rebalancable.get();
             if (!elt.second)
             {
-              ELLE_TRACE_SCOPE("%s: rebalance block %f", this, elt.first);
-              auto it = this->_addresses.find(elt.first);
-              if (it == this->_addresses.end())
-                // The block was deleted in the meantime.
-                continue;
-              Paxos::PaxosClient client(
-                this->doughnut().id(),
-                lookup_nodes(this->_paxos.doughnut(),
-                             it->second.paxos.current_quorum(),
-                             it->first));
-              if (this->_paxos._rebalance(client, elt.first))
+              try
               {
+                ELLE_TRACE_SCOPE("%s: rebalance block %f", this, elt.first);
                 auto it = this->_addresses.find(elt.first);
                 if (it == this->_addresses.end())
                   // The block was deleted in the meantime.
                   continue;
-                auto q = it->second.paxos.current_quorum();
-                if (signed(q.size()) < this->_paxos.factor())
-                  this->_under_represented[elt.first] = q;
-                else
-                  this->_under_represented.erase(elt.first);
-                propagate(it->second.paxos, elt.first, q);
+                Paxos::PaxosClient client(
+                  this->doughnut().id(),
+                  lookup_nodes(this->_paxos.doughnut(),
+                               it->second.paxos.current_quorum(),
+                               it->first));
+                if (this->_paxos._rebalance(client, elt.first))
+                {
+                  auto it = this->_addresses.find(elt.first);
+                  if (it == this->_addresses.end())
+                    // The block was deleted in the meantime.
+                    continue;
+                  auto q = it->second.paxos.current_quorum();
+                  if (signed(q.size()) < this->_paxos.factor())
+                    this->_under_represented[elt.first] = q;
+                  else
+                    this->_under_represented.erase(elt.first);
+                  propagate(it->second.paxos, elt.first, q);
+                }
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_WARN("rebalancing of %f failed: %s", elt.first, e);
               }
               continue;
             }
@@ -569,7 +576,7 @@ namespace infinit
               }
               catch (elle::Error const& e)
               {
-                ELLE_WARN("error rebalancing %s: %s", address, e);
+                ELLE_WARN("rebalancing of %f failed: %s", elt.first, e);
               }
           }
         }
