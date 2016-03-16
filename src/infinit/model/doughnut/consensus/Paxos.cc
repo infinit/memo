@@ -405,12 +405,6 @@ namespace infinit
                 {
                   ELLE_ERR("disk rebalancer inspector exited: %s", e);
                 }
-                catch (...)
-                {
-                  ELLE_ERR("disk rebalancer inspector crashed: %s",
-                           elle::exception_string());
-                  throw;
-                }
               }));
         }
 
