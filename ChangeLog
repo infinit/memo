@@ -15,6 +15,9 @@ Automatic replication of under-duplicated blocks and CPU usage improvement.
 ### Changed
 
 - Shorten many logs for readability.
+- Update OpenSSL to 1.0.2g for security fixes, although we are not
+  vulnerable to DROWN attacks.
+- Update Curl to 7.47.1 because why not.
 
 ### Fixed
 
