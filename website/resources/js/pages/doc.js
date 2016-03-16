@@ -191,7 +191,7 @@ $(document).ready(function() {
     });
   }
 
-  if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_changelog')) {
+  if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_changelog') || $('body').hasClass('doc_get_started')) {
     tabby.init();
   }
 

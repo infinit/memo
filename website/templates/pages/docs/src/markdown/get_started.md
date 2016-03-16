@@ -40,27 +40,53 @@
 <div>
 % if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 
-<p>If you have <a href="http://brew.sh">homebrew</a>, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#mac-tarball-install">Tarball install</a>.</p>
+<p>If you have <a href="http://brew.sh">homebrew</a>, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball install.</p>
 
-<h3 class="skip" id="mac-homebrew-install">&#9679; Homebrew install</h3>
+<ul data-tabs class="tabs">
+  <li><a data-tab href="#mac-homebrew-install" class="active">• Homebrew Install</a></li>
+  <li><a data-tab href="#mac-tarball-install">• Tarball Install</a></li>
+</ul>
 
-<%include file='get_started/mac_homebrew_install.html'/>
+</div> <!-- need closing condition div before opening a new one -->
 
-<h3 class="skip" id="mac-tarball-install">&#9679; Tarball install</h3>
+<div data-tabs-content class="data-tabs-content">
+  <div data-tabs-pane class="tabs-pane active" id="mac-homebrew-install">
+    <h3 class="skip">Homebrew Install</h3>
+    <%include file='get_started/mac_homebrew_install.html'/>
+  </div>
 
-<%include file='get_started/mac_tarball_install.html'/>
+  <div data-tabs-pane class="tabs-pane active" id="mac-tarball-install">
+    <h3 class="skip">Tarball Install</h3>
+    <%include file='get_started/mac_tarball_install.html'/>
+  </div>
+</div>
+
+<div> <!-- open it again -->
 
 % else:
 
-<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools. Otherwise, skip to the <a href="#linux-tarball-install">Tarball Install</a>.</p>
+<p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball Install.</p>
 
-<h3 class="skip" id="linux-ubuntu-install">&#9679; Ubuntu install</h3>
+<ul data-tabs class="tabs">
+  <li><a data-tab href="#linux-homebrew-install" class="active">• Repository Install</a></li>
+  <li><a data-tab href="#linux-tarball-install">• Tarball Install</a></li>
+</ul>
 
-<%include file='get_started/linux_apt_install.html'/>
+</div> <!-- need closing condition div before opening a new one -->
 
-<h3 class="skip" id="linux-tarball-install">&#9679; Tarball Install</h3>
+<div data-tabs-content class="data-tabs-content">
+  <div data-tabs-pane class="tabs-pane active" id="linux-homebrew-install">
+    <h3 class="skip">Repository Install</h3>
+    <%include file='get_started/linux_apt_install.html'/>
+  </div>
 
-<%include file='get_started/linux_tarball_install.html'/>
+  <div data-tabs-pane class="tabs-pane active" id="linux-tarball-install">
+    <h3 class="skip">Tarball Install</h3>
+    <%include file='get_started/linux_tarball_install.html'/>
+  </div>
+</div>
+
+<div> <!-- open it again -->
 
 % endif
 </div>
