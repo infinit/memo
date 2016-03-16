@@ -390,7 +390,7 @@ namespace infinit
                                    this);
                   for (auto address: this->storage()->list())
                   {
-                    reactor::yield();
+                    reactor::sleep(100_ms);
                     try
                     {
                       this->_load(address);
