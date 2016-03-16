@@ -86,7 +86,7 @@ set_home()
 {
   path="${1}"
 
-  execute_foreground "export INFINIT_DATA_HOME=${path}"
+  execute_foreground "export INFINIT_HOME=${path}"
 }
 
 # ---------- functionalities -------------------------------------------------
