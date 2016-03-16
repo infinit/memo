@@ -515,7 +515,7 @@ namespace infinit
           crash_host.length() ? crash_host : beyond());
         auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
         crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
-          crash_url, dumps_path);
+          crash_url, dumps_path, version_describe);
       }
 #endif
       reactor::Scheduler sched;
