@@ -886,13 +886,13 @@ def configure(
     ('bandwidth', []),
     ('doughnut', []),
     ('faith', []),
+    ('filesystem', binaries),
     ('rpc', []),
     ('storage', [aws_lib]),
     ('async-conflict', []),
     ('kelips', []),
   ]
   if not windows:
-    tests_names.append(('filesystem', binaries))
     tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     tests_extra_libs = []
@@ -932,4 +932,5 @@ def configure(
     else:
       runner = drake.Runner(exe = test, env = env)
     runner.reporting = drake.Runner.Reporting.on_failure
-    rule_check << runner.status
+    if not windows or test_name != 'filesystem':
+      rule_check << runner.status
