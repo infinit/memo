@@ -1052,6 +1052,8 @@ body.doc_overview {
 
 body.doc_technology {
   section.doc {
+    p.github { float:right; margin-top: 50px; }
+    p.github a span.star { padding: 1px 8px 2px 7px !important; }
     img { display: block; margin: auto; }
     h2 { margin-bottom: 0px; }
     h2 + p { margin-top: 5px; }
@@ -1487,7 +1489,7 @@ body.opensource {
 }
 
 body.opensource section.doc .card.soon .github-card a,
-body.doc_technology section.doc a.github {
+body.doc_technology section.doc p.github a {
   width: 100%; color: #707070; text-shadow: 0 1px 0 #fff; outline: none;
 
   &:hover span.star {
@@ -1504,7 +1506,7 @@ body.doc_technology section.doc a.github {
 }
 
 body.opensource section.doc .card.soon .github-card,
-body.doc_technology section.doc a.github {
+body.doc_technology section.doc p.github a {
   span {
     display: block; float: right; margin-top: 8px; background: #6D6D6D;
     padding: 3px 6px; border-radius: 3px; color: white; margin-left: 10px;
