@@ -23,8 +23,10 @@ with Infinit() as user:
             '--name', 'volume',
             '--network', 'network',
             '--as', 'user'])
+  mountpoint = '%s/%s' % (user.dir, 'mountpoint')
+  os.mkdir(mountpoint)
   with user.run(['infinit-volume',
-                 '--mount', '--mountpoint', '%s/%s' % (user.dir, 'mountpoint'),
+                 '--mount', '--mountpoint', mountpoint,
                  '--as', 'user',
                  '--name', 'volume'], wait = False) as p:
     try:
