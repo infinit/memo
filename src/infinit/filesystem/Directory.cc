@@ -89,6 +89,12 @@ namespace infinit
                     " changes will be dropped.", "");
            break;
          }
+         else if (op.target == "/perms")
+         {
+           auto wp = dynamic_cast<ACLBlock&>(b).get_world_permissions();
+           dynamic_cast<ACLBlock&>(current).set_world_permissions(wp.first, wp.second);
+           break;
+         }
          else if (op.target == "/inherit")
          {
            d._inherit_auth = true;
@@ -403,7 +409,10 @@ namespace infinit
     void
     Directory::_commit(WriteTarget target)
     {
-      _commit(Operation{OperationType::update, "", EntryType::directory,
+      std::string op;
+      if (target == WriteTarget::perms)
+        op = "/perms";
+      _commit(Operation{OperationType::update, op, EntryType::directory,
               Address::null}, false);
     }
 
