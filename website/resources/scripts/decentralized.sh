@@ -37,6 +37,17 @@ random()
   head -c 32 /dev/random | md5 | perl -ne 'print lc'
 }
 
+arrayfy()
+{
+  path="${1}"
+
+  _ifs=${IFS}
+  IFS=$'\n'
+  array=( $(cat ${path}) )
+  for i in ${array[@]} ; do echo $i ; done
+  IFS=${_ifs}
+}
+
 # ---------- log -------------------------------------------------------------
 
 _log_commands_path="/dev/null"
@@ -135,19 +146,14 @@ run_network()
     _peers="${_peers} --peer ${_peer}"
   done
 
-  output_path=$(mktemp)
+  endpoints_path=$(mktemp)
 
-  pid=$(execute_background "infinit-network --run --as ${as} --name ${name} ${_peers} ${options}" "${output_path}")
+  pid=$(execute_background "infinit-network --run --as ${as} --name ${name} --endpoints-file ${endpoints_path} ${_peers} ${options}")
 
   sleep 10
 
-  endpoint=$(cat <"${output_path}" | grep "listening on 192.168.0" | sed -E "s/^.*listening on ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+).*$/\1/")
-
   echo "${pid}"
-  echo "${endpoint}"
-  echo "${output_path}"
-
-  cat ${output_path} >> ${_log_outputs_path}
+  echo "${endpoints_path}"
 }
 
 create_volume()
@@ -173,19 +179,14 @@ mount_volume()
     _peers="${_peers} --peer ${_peer}"
   done
 
-  output_path=$(mktemp)
+  endpoints_path=$(mktemp)
 
-  pid=$(execute_background "infinit-volume --mount --as ${as} --name ${name} --mountpoint ${mount_point} ${_peers} ${options}" "${output_path}")
+  pid=$(execute_background "infinit-volume --mount --as ${as} --name ${name} --mountpoint ${mount_point} --endpoints-file ${endpoints_path} ${_peers} ${options}")
 
   sleep 10
 
-  endpoint=$(cat <"${output_path}" | grep "listening on 192.168.0" | sed -E "s/^.*listening on ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+).*$/\1/")
-
   echo "${pid}"
-  echo "${endpoint}"
-  echo "${output_path}"
-
-  cat ${output_path} >> ${_log_outputs_path}
+  echo "${endpoints_path}"
 }
 
 transmit_identity()
@@ -724,8 +725,7 @@ echo "[Client/Server A] Mount volume 'shared': ${mount_point_Acs}"
 peers_Acs=()
 output_Acs=$(mount_volume "${USER_NAME_A}" "shared" "${mount_point_Acs}" peers_Acs[@] "--publish")
 pid_Acs=$(r "${output_Acs}" 1)
-track_file $(r "${output_Acs}" 3)
-# echo "[XXX] $(r "${output_Acs}" 3)"
+track_file $(r "${output_Acs}" 2)
 track_mount "${mount_point_Acs}" "${pid_Acs}"
 
 # ---------- client B --------------------------------------------------------
@@ -752,8 +752,7 @@ echo "[Client B] Mount volume 'shared': ${mount_point_Bc}"
 peers_Bc=()
 output_Bc=$(mount_volume "${USER_NAME_B}" "${USER_NAME_A}/shared" "${mount_point_Bc}" peers_Bc[@] "--publish")
 pid_Bc=$(r "${output_Bc}" 1)
-track_file $(r "${output_Bc}" 3)
-# echo "[XXX] $(r "${output_Bc}" 3)"
+track_file $(r "${output_Bc}" 2)
 track_mount "${mount_point_Bc}" "${pid_Bc}"
 
 sleep 3
@@ -790,8 +789,7 @@ echo "[Server C] Run network 'cluster'"
 peers_Cs=()
 output_Cs=$(run_network "${USER_NAME_C}" "${USER_NAME_A}/cluster" peers_Cs[@] "--publish")
 pid_Cs=$(r "${output_Cs}" 1)
-track_file $(r "${output_Cs}" 3)
-# echo "[XXX] $(r "${output_Cs}" 3)"
+track_file $(r "${output_Cs}" 2)
 track_run "${pid_Cs}"
 
 sleep 3
@@ -833,8 +831,7 @@ client_server_X()
   peers_Xcs=()
   output_Xcs=$(mount_volume "${user}" "${USER_NAME_A}/shared" "${mount_point}" peers_Xcs[@] "--publish")
   pid_Xcs=$(r "${output_Xcs}" 1)
-  track_file $(r "${output_Xcs}" 3)
-  # echo "[XXX] $(r "${output_Xcs}" 3)
+  track_file $(r "${output_Xcs}" 2)
   track_mount "${mount_point}" "${pid_Xcs}"
 
   sleep 3
