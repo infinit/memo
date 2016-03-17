@@ -690,6 +690,7 @@ def configure(
             ]))
       if not windows:
         tests.append(functional_test('crash-reporter'))
+      if linux:
         pjdfstest = drake.include(
           'pjdfstest',
           cxx_toolkit = cxx_toolkit,
