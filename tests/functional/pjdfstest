@@ -37,7 +37,7 @@ with Infinit() as user:
             ready = True
             break
       subprocess.check_call(
-        ['prove', '-r', os.environ['PJDFSTESTS']],
+        ['prove', '-rof', '--jobs', '9',  os.environ['PJDFSTESTS']],
         cwd = '%s/%s' % (user.dir, 'mountpoint'))
     finally:
       p.send_signal(2)
