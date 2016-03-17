@@ -32,6 +32,20 @@ namespace infinit
   namespace filesystem
   {
 
+    static std::string print_mode(int m)
+    {
+      std::string res;
+      res += (m & 0200) ? 'r' : '-';
+      res += (m & 0400) ? 'w' : '-';
+      res += (m & 0100) ? 'x' : '-';
+      res += (m & 0020) ? 'r' : '-';
+      res += (m & 0040) ? 'w' : '-';
+      res += (m & 0010) ? 'x' : '-';
+      res += (m & 0002) ? 'r' : '-';
+      res += (m & 0004) ? 'w' : '-';
+      res += (m & 0001) ? 'x' : '-';
+      return res;
+    }
     class FileConflictResolver
       : public model::ConflictResolver
     {
@@ -127,7 +141,9 @@ namespace infinit
     void
     File::chmod(mode_t mode)
     {
+      ELLE_DEBUG("chmod to %s", print_mode(mode));
       Node::chmod(mode);
+      ELLE_DEBUG("current mode: %s", print_mode(_filedata->_header.mode));
     }
 
     void
@@ -235,7 +251,7 @@ namespace infinit
           ELLE_WARN("File deserialization error: %s", e);
           throw rfs::Error(EIO, e.what());
         }
-        _header.mode &= ~606;
+        _header.mode &= ~0606;
         auto& ablock = dynamic_cast<ACLBlock&>(block);
         auto wp = ablock.get_world_permissions();
         if (wp.first)
@@ -248,8 +264,9 @@ namespace infinit
           _header.mode |= 0200;
       }
       this->_block_version = dynamic_cast<ACLBlock&>(block).version();
-      ELLE_DEBUG("%s: updated from %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s",
-                 this, _address, _header.size, _header.links, _fat.size(), _data.size());
+      ELLE_DEBUG("%s: updated from %f: sz=%s, links=%s, mode=%s, fatsize=%s, firstblocksize=%s",
+                 this, _address, _header.size, _header.links, print_mode(_header.mode),
+                 _fat.size(), _data.size());
     }
 
     FileData::FileData(boost::filesystem::path path, Address address, int mode)
@@ -269,16 +286,19 @@ namespace infinit
     {
       if (! (target & WriteTarget::perms))
       {
+        ELLE_DUMP("overwriting perms");
         _header.mode = previous._header.mode;
         _header.uid = previous._header.uid;
         _header.gid = previous._header.gid;
       }
       if (! (target & WriteTarget::links))
       {
+        ELLE_DUMP("overwriting hardlinks");
         _header.links = previous._header.links;
       }
       if (! (target & WriteTarget::data))
       {
+        ELLE_DUMP("overwriting data");
         _header.size = previous._header.size;
         _header.block_size = previous._header.block_size;
         _fat = previous._fat;
@@ -286,16 +306,19 @@ namespace infinit
       }
       if (! (target & WriteTarget::times))
       {
+        ELLE_DUMP("overwriting times");
         _header.atime = previous._header.atime;
         _header.mtime = previous._header.mtime;
         _header.ctime = previous._header.ctime;
       }
       if (! (target & WriteTarget::xattrs))
       {
+        ELLE_DUMP("overwriting xattrs");
         _header.xattrs = previous._header.xattrs;
       }
       if (! (target & WriteTarget::symlink))
       {
+        ELLE_DUMP("overwriting links");
         _header.symlink_target = previous._header.symlink_target;
       }
     }
@@ -305,9 +328,9 @@ namespace infinit
                     WriteTarget target,
                     std::unique_ptr<ACLBlock>& block, bool first_write)
     {
-      ELLE_DEBUG("%s: write at %f: sz=%s, links=%s, fatsize=%s, firstblocksize=%s",
+      ELLE_DEBUG("%s: write at %f: sz=%s, links=%s, mode=%s, fatsize=%s, firstblocksize=%s",
                  this, _address,
-                 _header.size, _header.links, _fat.size(), _data.size());
+                 _header.size, _header.links, print_mode(_header.mode), _fat.size(), _data.size());
       bool block_allocated = !block;
       if (!block)
       {
@@ -325,8 +348,8 @@ namespace infinit
       {
         FileData previous(_path, *block, {true, true});
         merge(previous, target);
-        ELLE_DEBUG("%s: post-merge write %f: sz=%s, links=%s, fatsize=%s, worldperm=%s version=%s", this, _address,
-                   _header.size, _header.links, _fat.size(), block->get_world_permissions(),
+        ELLE_DEBUG("%s: post-merge write %f: sz=%s, links=%s, mode=%s fatsize=%s, worldperm=%s version=%s", this, _address,
+                   _header.size, _header.links, print_mode(_header.mode), _fat.size(), block->get_world_permissions(),
                    block->version());
       }
       elle::Buffer serdata;

@@ -127,9 +127,10 @@ namespace infinit
     Node::chmod(mode_t mode)
     {
       _fetch();
-      _header().mode = mode;
-      _header().ctime = time(nullptr);
       auto acl = _header_block();
+      _header().mode = mode;
+      ELLE_DEBUG("chmod setting mode to %x", mode & 0777);
+      _header().ctime = time(nullptr);
       if (acl)
       {
         auto wm = acl->get_world_permissions();
@@ -397,7 +398,7 @@ namespace infinit
       }
       st->st_dev = 1;
       st->st_ino = (unsigned short)(uint64_t)(void*)this;
-      ELLE_DEBUG("%s: stat mode=%s size=%s links=%s", this, h.mode, h.size, h.links);
+      ELLE_DEBUG("%s: stat mode=%x size=%s links=%s", this, h.mode&0777, h.size, h.links);
     }
 
     void

@@ -288,7 +288,7 @@ namespace infinit
           ELLE_TRACE("%s", elle::Backtrace::current());
           throw rfs::Error(EIO, e.what());
         }
-        _header.mode &= ~606;
+        _header.mode &= ~0606;
         auto& ablock = dynamic_cast<ACLBlock&>(block);
         auto wp = ablock.get_world_permissions();
         if (wp.first)
