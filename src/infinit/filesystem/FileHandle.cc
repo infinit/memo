@@ -403,12 +403,13 @@ namespace infinit
       }
       else
       {
-        ELLE_TRACE("Fetching %s", index);
         Address addr(this->_file._fat[index].first.value(),
                      model::flags::immutable_block, false);
+        auto secret = _file._fat[index].second;
+        ELLE_TRACE("Fetching %s at %f", index, addr);
         auto block = fetch_or_die(_model, addr);
         auto crypted = block->take_data();
-        cryptography::SecretKey sk(_file._fat[index].second);
+        cryptography::SecretKey sk(secret);
         b = std::make_shared<elle::Buffer>(sk.decipher(crypted));
       }
 
