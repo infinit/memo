@@ -184,7 +184,9 @@ namespace infinit
                 b->open();
                 this->_pending.erase(address);
               });
-            auto res = _backend->fetch(address, local_version);
+            // Don't pass local_version to fetch, prioritizing cache feed over
+            // this optimization.
+            auto res = _backend->fetch(address);
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
             {
@@ -211,6 +213,12 @@ namespace infinit
                 this->_disk_cache_push(res);
               else if (dynamic_cast<blocks::MutableBlock*>(res.get()))
                 this->_cache.emplace(res->clone());
+            }
+            if (res)
+            {
+              auto mut = dynamic_cast<blocks::MutableBlock*>(res.get());
+              if (mut && local_version && mut->version() == *local_version)
+                return nullptr;
             }
             return res;
           }
