@@ -589,7 +589,7 @@ namespace infinit
               new reactor::Thread("flusher", [this, id, ab] {
                 auto key = cryptography::random::generate<elle::Buffer>(32).string();
                 Address old_addr = Address::null;
-                if (_file._fat.size() < unsigned(id))
+                if (_file._fat.size() > unsigned(id))
                   old_addr = _file._fat.at(id).first;
                 elle::Buffer cdata;
                 if (ab->size() >= 262144)
