@@ -147,7 +147,7 @@ def configure(
     'templates/pages/opensource.html',
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
-    'templates/pages/upgrade.html',
+    'templates/pages/update.html',
 
     'templates/pages/docs/changelog.html',
     'templates/pages/docs/comparison.html',
