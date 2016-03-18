@@ -1,4 +1,4 @@
-Upgrading a network
+Upgrading a Network
 ===================
 
 This guide will help you upgrade an Infinit network to a newer version, providing users with new functionalities.

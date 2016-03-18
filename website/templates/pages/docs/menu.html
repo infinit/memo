@@ -52,6 +52,10 @@
       </ul>
     </li>
 
+    <li ${'class="active"' if request.route.name == 'doc_environment_variables' else ''}>
+      <a href="${route('doc_environment_variables')}">Environment Variables</a>
+    </li>
+
     <li class="comparisons ${'active' if request.route.name == 'doc_comparison' else ''}">
       <a href="#">Comparisons <img src="${url('images/icons/caret-down.png')}" alt=""></a>
 

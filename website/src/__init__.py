@@ -192,6 +192,14 @@ class Website(bottle.Bottle):
       'description': 'Upgrade an Infinit network for all the clients to benefit from new features.',
     }
 
+  @route('/documentation/environment-variables', name = 'doc_environment_variables')
+  @view('pages/docs/environment_variables.html')
+  def root(self):
+    return {
+      'title': 'Environment Variables',
+      'description': 'List of the environment variables that can be set to alter the behavior of the Infinit file system.',
+    }
+
   @route('/documentation/comparison/', name = 'doc_comparisons')
   @route('/documentation/comparison/<path:path>', name = 'doc_comparison')
   @view('pages/docs/comparison.html')
