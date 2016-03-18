@@ -1,4 +1,5 @@
 @import "variables";
+@import "tooltips";
 
 @import url('//fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,600,700');
 
@@ -254,6 +255,30 @@ footer nav > ul > li {
 
 body.home {
   section { clear: both; }
+
+  .btn-contact {
+    display: block;
+    position: fixed;
+    right: 40px;
+    bottom: -100%;
+    width: 56px;
+    height: 54px;
+    box-sizing: border-box;
+    border-radius: 27px;
+    background: @infinitred;
+    cursor: pointer;
+    overflow: visible;
+
+    .chat-icon {
+      position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+      width: 32px; height: auto; margin: auto; fill: #fff;
+    }
+
+    &.show { bottom:40px; }
+    &:hover { background: darken(@infinitred, 10%);  }
+  }
+  ​
+
 
   h4.title {
     font-size: 33px; line-height: 41px; text-align: center;
