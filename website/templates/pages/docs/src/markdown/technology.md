@@ -111,7 +111,8 @@ In addition to distributing the values among the nodes composing the overlay net
 
 *__Note__: In practice, the overlay network and distributed hash table are often combined into a single piece of software. For more information on the overlay networks and DHTs available, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.*
 
-File System <a class="github" href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a>
+<p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
+File System
 ----------------
 *#secure* *#natural* *#on-demand* *#access-control* *#versioning*
 
