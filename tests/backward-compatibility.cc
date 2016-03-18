@@ -228,21 +228,22 @@ struct TestSetConflictResolver
 
 template<typename Base>
 void
-generate(std::string const& name, Base* b, boost::filesystem::path dir)
+generate(std::string const& name, Base* b, boost::filesystem::path dir,
+         elle::Version const& version)
 {
   {
     auto path = dir / elle::sprintf("%s.bin", name);
     boost::filesystem::ofstream output(path);
     if (!output.good())
       throw elle::Error(elle::sprintf("unable to open %s", path));
-    elle::serialization::binary::serialize(b, output, false);
+    elle::serialization::binary::serialize(b, output, version, false);
   }
   {
     auto path = dir / elle::sprintf("%s.json", name);
     boost::filesystem::ofstream output(path);
     if (!output.good())
       throw elle::Error(elle::sprintf("unable to open %s", path));
-    elle::serialization::json::serialize(b, output, false);
+    elle::serialization::json::serialize(b, output, version, false);
   }
 }
 
@@ -298,14 +299,14 @@ main(int argc, char** argv)
           "generate",
           [&] (std::string const& name, infinit::model::blocks::Block* b)
           {
-            generate(name, b, current);
+            generate(name, b, current, current_version);
           });
         TestSetConflictResolver cr(keys, current_version);
         cr.apply(
           "generate",
           [&] (std::string const& name, infinit::model::ConflictResolver* b)
           {
-            generate(name, b, current);
+            generate(name, b, current, current_version);
           });
       }
       else
