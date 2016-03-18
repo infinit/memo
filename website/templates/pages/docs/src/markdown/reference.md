@@ -693,9 +693,7 @@ The easiest (but least secure) way to retrieve your user identity on another dev
 
 To activate this mode, you need to specify the `--full` option when signing up on the Hub, along with a password, as shown below. Note that the password can be provided in-line using the `--password` option or entered when prompted:
 
-<pre>
-<div><span>Device A</span></div>
-<code>$> infinit-user --signup --name alice --email alice@company.com --fullname Alice --full
+<pre><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname Alice --full
 Password: ********
 Remotely pushed user "alice".
 </code>
@@ -703,9 +701,7 @@ Remotely pushed user "alice".
 
 Following this operation, one can login on another device very simply by invoking the `--login` option:
 
-<pre class="alternate">
-<div><span>Device B</span></div>
-<code>$> infinit-user --login --name alice
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --login --name alice
 Password: ********
 Locally saved user "alice".
 </code>
@@ -713,9 +709,7 @@ Locally saved user "alice".
 
 That's it, you can see by listing the local users that your private user identity has been retrieved:
 
-<pre class="alternate">
-<div><span>Device B</span></div>
-<code>$> infinit-user --list
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --list
 alice: public/private keys
 </code>
 </pre>
@@ -728,9 +722,7 @@ If you are uncomfortable with us keeping your user identity, there is another (p
 
 The method relies on the Hub as a temporary store for your user identity to be kept until it is retrieved on another device. If not retrieved after 5 minutes, the user identity will be removed from the Hub. The user identity is also encrypted with a key of your choice so that we cannot access it. In the future, a direct point-to-point method will be used to bypass the Hub altogether.
 
-<pre>
-<div><span>Device A</span></div>
-<code>$> infinit-device --transmit --as alice --user
+<pre><div><span>Device A</span></div><code>$> infinit-device --transmit --as alice --user
 Passphrase: ********
 Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
@@ -739,9 +731,7 @@ User identity on the Hub for: 297 seconds
 
 Once the command has been launched, you have 5 minutes to retrieve the user identity on another device using the following command:
 
-<pre class="alternate">
-<div><span>Device B</span></div>
-<code>$> infinit-device --receive --user --name alice
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-device --receive --user --name alice
 Passphrase: ********
 Received user identity for "alice".
 </code>
@@ -749,9 +739,7 @@ Received user identity for "alice".
 
 You can verify that the user has been saved locally by listing the local users:
 
-<pre class="alternate">
-<div><span>Device B</span></div>
-<code>$> infinit-user --list
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --list
 alice: public/private keys
 </code>
 </pre>
@@ -764,9 +752,7 @@ For users that either do not trust the two methods above or who are using a comp
 
 First, export the user identity to a file:
 
-<pre>
-<div><span>Device A</span></div>
-<code>$> infinit-user --export --name alice --full --output alice.user
+<pre><div><span>Device A</span></div><code>$> infinit-user --export --name alice --full --output alice.user
 WARNING: you are exporting the user "alice" including the private key
 WARNING: anyone in possession of this information can impersonate that user
 WARNING: if you mean to export your user for someone else, remove the --full flag
@@ -778,9 +764,7 @@ $> cat alice.user
 
 At this point, it is your responsibility to move the file to your other device, using _SCP_ for instance. Re-creating the user entity the just requires an import:
 
-<pre class="alternate">
-<div><span>Device B</span></div>
-<code>$> infinit-user --import --input alice.user
+<pre class="alternate"><div><span>Device B</span></div><code>$> infinit-user --import --input alice.user
 Imported user "alice".
 </code>
 </pre>
