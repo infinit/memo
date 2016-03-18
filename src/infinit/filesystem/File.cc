@@ -46,77 +46,69 @@ namespace infinit
       res += (m & 0001) ? 'x' : '-';
       return res;
     }
-    class FileConflictResolver
-      : public model::ConflictResolver
+
+    FileConflictResolver::FileConflictResolver(elle::serialization::SerializerIn& s)
     {
-    public:
-      FileConflictResolver(elle::serialization::SerializerIn& s)
+      this->serialize(s);
+    }
+
+    FileConflictResolver::FileConflictResolver()
+      : _model(nullptr)
+    {}
+
+    FileConflictResolver::FileConflictResolver(boost::filesystem::path path, model::Model* model,
+                         WriteTarget target)
+      : _path(path)
+      , _model(model)
+      , _target(target)
+    {}
+
+    std::unique_ptr<Block>
+    FileConflictResolver::operator()(Block& b,
+                                     Block& current,
+                                     model::StoreMode store_mode)
+    {
+      ELLE_LOG_SCOPE(
+        "conflict: the file \"%s\" was modified since last read. Your"
+        " changes will overwrite previous modifications", this->_path);
+      FileData cd(_path, current, {true, true});
+      FileData od(_path, b, {true, true});
+      od.merge(cd, _target);
+      // write od data into current block
+      elle::Buffer serdata;
       {
-        this->serialize(s);
+        elle::IOStream os(serdata.ostreambuf());
+        elle::serialization::binary::SerializerOut output(os);
+        output.serialize("header", od._header);
+        output.serialize("fat", od._fat);
+        output.serialize("data", od._data);
       }
+      auto block = elle::cast<MutableBlock>::runtime(current.clone());
+      if (_target & WriteTarget::perms)
+      { // acl permission changes are handled by a different resolver
+        auto perms = dynamic_cast<ACLBlock&>(b).get_world_permissions();
+        dynamic_cast<ACLBlock&>(*block).set_world_permissions(perms.first, perms.second);
+      }
+      block->data(serdata);
+      return elle::cast<Block>::runtime(block);
+    }
 
-      FileConflictResolver()
-        : _model(nullptr)
-      {}
-
-      FileConflictResolver(boost::filesystem::path path, model::Model* model,
-                           WriteTarget target)
-        : _path(path)
-        , _model(model)
-        , _target(target)
-      {}
-
-      std::unique_ptr<Block>
-      operator()(Block& b,
-                 Block& current,
-                 model::StoreMode store_mode) override
+    void
+    FileConflictResolver::serialize(elle::serialization::Serializer& s)
+    {
+      std::string spath = this->_path.string();
+      s.serialize("path", spath);
+      this->_path = spath;
+      s.serialize("target", _target, elle::serialization::as<int>());
+      if (s.in())
       {
-        ELLE_LOG_SCOPE(
-          "conflict: the file \"%s\" was modified since last read. Your"
-          " changes will overwrite previous modifications", this->_path);
-        FileData cd(_path, current, {true, true});
-        FileData od(_path, b, {true, true});
-        od.merge(cd, _target);
-        // write od data into current block
-        elle::Buffer serdata;
-        {
-          elle::IOStream os(serdata.ostreambuf());
-          elle::serialization::binary::SerializerOut output(os);
-          output.serialize("header", od._header);
-          output.serialize("fat", od._fat);
-          output.serialize("data", od._data);
-        }
-        auto block = elle::cast<MutableBlock>::runtime(current.clone());
-        if (_target & WriteTarget::perms)
-        { // acl permission changes are handled by a different resolver
-          auto perms = dynamic_cast<ACLBlock&>(b).get_world_permissions();
-          dynamic_cast<ACLBlock&>(*block).set_world_permissions(perms.first, perms.second);
-        }
-        block->data(serdata);
-        return elle::cast<Block>::runtime(block);
+        infinit::model::Model* model = nullptr;
+        const_cast<elle::serialization::Context&>(s.context()).get(model);
+        ELLE_ASSERT(model);
+        this->_model = model;
       }
+    }
 
-      void
-      serialize(elle::serialization::Serializer& s) override
-      {
-        std::string spath = this->_path.string();
-        s.serialize("path", spath);
-        this->_path = spath;
-        s.serialize("target", _target, elle::serialization::as<int>());
-        if (s.in())
-        {
-          infinit::model::Model* model = nullptr;
-          const_cast<elle::serialization::Context&>(s.context()).get(model);
-          ELLE_ASSERT(model);
-          this->_model = model;
-        }
-      }
-
-      boost::filesystem::path _path;
-      model::Model* _model;
-      WriteTarget _target;
-      typedef infinit::serialization_tag serialization_tag;
-    };
 
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<FileConflictResolver> _register_fcr("fcr");

@@ -139,61 +139,54 @@ namespace infinit
        return std::move(res);
     }
 
-    class DirectoryConflictResolver: public model::ConflictResolver
+    DirectoryConflictResolver::DirectoryConflictResolver(elle::serialization::SerializerIn& s)
+      : _model(nullptr)
     {
-    public:
-      DirectoryConflictResolver(elle::serialization::SerializerIn& s)
-        : _model(nullptr)
-      {
-        serialize(s);
-      }
+      serialize(s);
+    }
 
-      DirectoryConflictResolver(DirectoryConflictResolver&& b)
-        : _model(b._model)
-        , _op(b._op)
-        , _address(b._address)
-      {}
+    DirectoryConflictResolver::DirectoryConflictResolver(DirectoryConflictResolver&& b)
+      : _model(b._model)
+      , _op(b._op)
+      , _address(b._address)
+    {}
 
-      DirectoryConflictResolver()
-        : _model(nullptr)
-      {}
+    DirectoryConflictResolver::DirectoryConflictResolver()
+      : _model(nullptr)
+    {}
 
-      DirectoryConflictResolver(model::Model& model,
-                                Operation op,
-                                Address address)
-        : _model(&model)
-        , _op(op)
-        , _address(address)
-      {}
+    DirectoryConflictResolver::DirectoryConflictResolver(model::Model& model,
+                              Operation op,
+                              Address address)
+      : _model(&model)
+      , _op(op)
+      , _address(address)
+    {}
 
-      ~DirectoryConflictResolver()
-      {}
+    DirectoryConflictResolver::~DirectoryConflictResolver()
+    {}
 
-      std::unique_ptr<Block>
-      operator() (Block& block,
-                  Block& current,
-                  model::StoreMode mode) override
-      {
-        return resolve_directory_conflict(
-          block, current, mode,
-          *this->_model, this->_op, this->_address);
-      }
+    std::unique_ptr<Block>
+    DirectoryConflictResolver::operator() (Block& block,
+                Block& current,
+                model::StoreMode mode)
+    {
+      return resolve_directory_conflict(
+        block, current, mode,
+        *this->_model, this->_op, this->_address);
+    }
 
-      void serialize(elle::serialization::Serializer& s) override
-      {
-        std::string path;
-        s.serialize("path", path); // for backward compatibility
-        s.serialize("optype", _op.type, elle::serialization::as<int>());
-        s.serialize("optarget", _op.target);
-        s.serialize("opaddr", _op.address);
-        s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
-      }
+    void
+    DirectoryConflictResolver::serialize(elle::serialization::Serializer& s)
+    {
+      std::string path;
+      s.serialize("path", path); // for backward compatibility
+      s.serialize("optype", _op.type, elle::serialization::as<int>());
+      s.serialize("optarget", _op.target);
+      s.serialize("opaddr", _op.address);
+      s.serialize("opetype", _op.entry_type, elle::serialization::as<int>());
+    }
 
-      model::Model* _model;
-      Operation _op;
-      Address _address;
-      typedef infinit::serialization_tag serialization_tag;
-    };
     static const elle::serialization::Hierarchy<model::ConflictResolver>::
     Register<DirectoryConflictResolver> _register_dcr("dcr");
 

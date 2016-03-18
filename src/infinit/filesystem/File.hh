@@ -74,6 +74,26 @@ namespace infinit
         model::blocks::ACLBlock* _header_block() override;
 
     };
+
+    class FileConflictResolver
+      : public model::ConflictResolver
+    {
+    public:
+      FileConflictResolver(elle::serialization::SerializerIn& s);
+      FileConflictResolver();
+      FileConflictResolver(boost::filesystem::path path, model::Model* model,
+                           WriteTarget target);
+      std::unique_ptr<Block>
+      operator()(Block& b,
+                 Block& current,
+                 model::StoreMode store_mode) override;
+      void
+      serialize(elle::serialization::Serializer& s) override;
+      boost::filesystem::path _path;
+      model::Model* _model;
+      WriteTarget _target;
+      typedef infinit::serialization_tag serialization_tag;
+    };
   }
 }
 

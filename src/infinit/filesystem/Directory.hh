@@ -107,6 +107,27 @@ namespace infinit
       ELLE_ATTRIBUTE(std::unique_ptr<ACLBlock>, block);
     };
 
+    class DirectoryConflictResolver: public model::ConflictResolver
+    {
+    public:
+       DirectoryConflictResolver(elle::serialization::SerializerIn& s);
+       DirectoryConflictResolver(DirectoryConflictResolver&& b);
+       DirectoryConflictResolver();
+       DirectoryConflictResolver(model::Model& model,
+                                Operation op,
+                                Address address);
+       ~DirectoryConflictResolver();
+       std::unique_ptr<Block>
+       operator() (Block& block,
+                   Block& current,
+                   model::StoreMode mode) override;
+       void serialize(elle::serialization::Serializer& s) override;
+       model::Model* _model;
+       Operation _op;
+       Address _address;
+       typedef infinit::serialization_tag serialization_tag;
+    };
+
     std::unique_ptr<Block>
     resolve_directory_conflict(Block& b,
                                Block& current,
