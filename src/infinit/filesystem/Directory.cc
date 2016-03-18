@@ -181,6 +181,8 @@ namespace infinit
 
       void serialize(elle::serialization::Serializer& s) override
       {
+        std::string path;
+        s.serialize("path", path); // for backward compatibility
         s.serialize("optype", _op.type, elle::serialization::as<int>());
         s.serialize("optarget", _op.target);
         s.serialize("opaddr", _op.address);
