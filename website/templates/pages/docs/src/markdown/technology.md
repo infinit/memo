@@ -8,11 +8,11 @@ However, at the technology level, Infinit is a set of independent layers that ca
 <br><img src="${url('images/schema-technology.png')}" alt="Infinit Technology"><br>
 
 <p class="github"><a href="https://github.com/infinit/elle" target="_blank"><span class="star">soon on github</span></a></p>
-Reactor
------------
+Elle
+----
 *#high-performance* *#interoperability*
 
-The [reactor layer](https://en.wikipedia.org/wiki/Reactor_pattern) is a C++ development coroutine-based framework that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write/read and therefore to maintain.
+The Elle library is a C++ development coroutine-based framework based the [reactor pattern](https://en.wikipedia.org/wiki/Reactor_pattern) that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write/read and therefore to maintain.
 
 This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.
 
@@ -77,7 +77,7 @@ void echo(std::unique_ptr<reactor::network::Socket> socket)
 
 <p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
 Overlay Network
-----------------------
+---------------
 *#control* *#affordable* *#scalable* *#fault-tolerant* *#migration*
 
 The [overlay network](https://en.wikipedia.org/wiki/Overlay_network) layer connects the devices (desktop computer, server, mobile etc.) in a peer-to-peer manner i.e without a central server. The main purpose of this layer is to map identifiers (more precisely ranges of identifiers) onto nodes and to provide an algorithm to locate the node responsible for a given identifier.
@@ -96,7 +96,7 @@ Finally, by creating the overlay network according to your needs (data location 
 
 <p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
 Distributed Hash Table
--------------------------------
+----------------------
 *#flexible* *#reliable* *#migration*
 
 The [distributed hash table](https://en.wikipedia.org/wiki/Distributed_hash_table) (DHT) layer relies on the overlay network to provide a key-value store similar to hash tables, with the difference that the information is distributed across the network.
@@ -113,7 +113,7 @@ In addition to distributing the values among the nodes composing the overlay net
 
 <p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
 File System
-----------------
+-----------
 *#secure* *#natural* *#on-demand* *#access-control* *#versioning*
 
 The [file system](https://en.wikipedia.org/wiki/File_system) layer offers a hierarchical file organization on top of the distributed hash table whose role is to store blocks of data in a similar way to a hard disk.

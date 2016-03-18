@@ -8,7 +8,7 @@ This page contains some environment variables that can be used to alter the file
 Elle
 ----
 
-The [Elle](/documentation/technology#reactor) library is the core utility library on top of which the Infinit file system is built. This development framework has the particularity to rely on coroutines to allow for asynchronous programming in a natural way.
+The [Elle](/documentation/technology#elle) library is the core utility library on top of which the Infinit file system is built. This development framework has the particularity to rely on coroutines to allow for asynchronous programming in a natural way.
 
 The Elle-specific environment variables described below are mostly related to logging operations performed by the file system and other low-level components of the whole stack. We would like to encourage developers to use these environment variables to activate the logs when they encounter a problem. If the issue can be reproduced, the whole community would be extremely grateful if the logs could be sent over to the Infinit team for the bug to be fixed.
 

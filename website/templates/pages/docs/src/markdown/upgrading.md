@@ -3,7 +3,8 @@ Upgrading a Network
 
 This guide will help you upgrade an Infinit network to a newer version, providing users with new functionalities.
 
-### Introduction ###
+Introduction
+------------
 
 Every node in the network, being a client or a server, has the Infinit software installed in a specific version. Some may have downloaded the _0.4.0_ version from the Infinit website, others the software in _0.5.2_.
 
@@ -24,7 +25,8 @@ This compatibility mode is required to make sure every node in the network speak
 
 _**NOTE**: The infinit-network and infinit-volume provide a `--compatibility-version` option that allows a user to connect a client to an infrastructure while operating in a specific version._
 
-### Upgrading Process ###
+Upgrading process
+-----------------
 
 The following provides advices that should be followed in order to make sure the process of upgrading goes as smoothly as possible:
 
