@@ -374,38 +374,41 @@ namespace infinit
         Paxos::LocalPeer::initialize()
         {
           this->doughnut().overlay()->on_discover().connect(
-            [this] (Address& id, bool observer)
+            [this] (Address id, bool observer)
             {
               if (!observer)
                 this->_discovered(id);
             });
-          this->_rebalance_inspector.reset(
-            new reactor::Thread(
-              elle::sprintf("%s: rebalancing inspector", this),
-              [this]
-              {
-                try
+          if (this->_factor > 1)
+            this->_rebalance_inspector.reset(
+              new reactor::Thread(
+                elle::sprintf("%s: rebalancing inspector", this),
+                [this]
                 {
-                  ELLE_TRACE_SCOPE("%s: inspect disk blocks for rebalancing",
-                                   this);
-                  for (auto address: this->storage()->list())
+                  try
                   {
-                    reactor::sleep(100_ms);
-                    try
+                    ELLE_TRACE_SCOPE("%s: inspect disk blocks for rebalancing",
+                                     this);
+                    for (auto address: this->storage()->list())
                     {
-                      this->_load(address);
-                      if (!contains(this->_under_represented, address))
-                        this->_addresses.erase(address);
+                      reactor::sleep(100_ms);
+                      try
+                      {
+                        this->_load(address);
+                        auto quorum = this->_quorums.find(address);
+                        ELLE_ASSERT(quorum != this->_quorums.end());
+                        if (quorum->replication_factor() >= this->_factor)
+                          this->_addresses.erase(address);
+                      }
+                      catch (MissingBlock const&)
+                      {}
                     }
-                    catch (MissingBlock const&)
-                    {}
                   }
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_ERR("disk rebalancer inspector exited: %s", e);
-                }
-              }));
+                  catch (elle::Error const& e)
+                  {
+                    ELLE_ERR("disk rebalancer inspector exited: %s", e);
+                  }
+                }));
         }
 
         void
@@ -459,15 +462,24 @@ namespace infinit
                                 Paxos::LocalPeer::Decision decision)
         {
           auto const& quorum = decision.paxos.current_quorum();
+          this->_cache(address, quorum);
           if (this->_rebalance_auto_expand &&
               decision.paxos.current_value() &&
               signed(quorum.size()) < this->_factor)
-          {
-            this->_under_represented.emplace(address, quorum);
             this->_rebalancable.put(std::make_pair(address, false));
-          }
           return this->_addresses.emplace(
             address, std::move(decision)).first->second;
+        }
+
+        void
+        Paxos::LocalPeer::_cache(Address address, Quorum quorum)
+        {
+          this->_quorums.erase(address);
+          for (auto const& node: quorum)
+            this->_node_blocks[node].erase(address);
+          this->_quorums.emplace(address, quorum);
+          for (auto const& node: quorum)
+            this->_node_blocks[node].insert(address);
         }
 
         void
@@ -521,10 +533,11 @@ namespace infinit
                     // The block was deleted in the meantime.
                     continue;
                   auto q = it->second.paxos.current_quorum();
-                  if (signed(q.size()) < this->_paxos.factor())
-                    this->_under_represented[elt.first] = q;
-                  else
-                    this->_under_represented.erase(elt.first);
+                  this->_quorums.modify(
+                    this->_quorums.find(elt.first),
+                    [&] (BlockRepartition& r) {r.quorum = q;});
+                  for (auto const& node: q)
+                    this->_node_blocks[node].insert(elt.first);
                   propagate(it->second.paxos, elt.first, q);
                 }
               }
@@ -532,52 +545,58 @@ namespace infinit
               {
                 ELLE_WARN("rebalancing of %f failed: %s", elt.first, e);
               }
-              continue;
             }
-            auto test = [&] (PaxosServer::Quorum const& q)
-              {
-                return signed(q.size()) < this->_factor &&
-                q.find(elt.first) == q.end();
-              };
-            std::unordered_set<Address> targets;
-            for (auto const& b: this->_under_represented)
-              if (test(b.second))
-                targets.emplace(b.first);
-            if (targets.empty())
-              continue;
-            ELLE_TRACE_SCOPE(
-              "%s: rebalance %s blocks to newly discovered peer %f",
-              this, targets.size(), elt.first);
-            for (auto address: targets)
-              try
-              {
-                auto it = this->_addresses.find(address);
-                if (it == this->_addresses.end())
-                  // The block was deleted in the meantime.
-                  continue;
-                // Beware of interators invalidation, use a reference.
-                auto& paxos = it->second.paxos;
-                auto quorum = paxos.current_quorum();
-                // We can't actually rebalance this block, under_represented was
-                // wrong. Don't think this can happen but better safe than
-                // sorry.
-                if (!test(quorum))
-                  continue;
-                ELLE_DEBUG("elect new quorum")
+            else
+            {
+              auto test = [&] (PaxosServer::Quorum const& q)
                 {
-                  PaxosClient c(
-                  this->doughnut().id(),
-                  lookup_nodes(this->doughnut(), quorum, address));
-                  quorum.insert(elt.first);
-                  // FIXME: do something in case of conflict
-                  c.choose(paxos.current_version() + 1, quorum);
-                }
-                propagate(paxos, address, quorum);
-              }
-              catch (elle::Error const& e)
+                  return signed(q.size()) < this->_factor &&
+                  q.find(elt.first) == q.end();
+                };
+              std::unordered_set<Address> targets;
+              for (auto const& r: this->_quorums.get<1>())
               {
-                ELLE_WARN("rebalancing of %f failed: %s", elt.first, e);
+                if (r.replication_factor() >= this->_factor)
+                  break;
+                if (test(r.quorum))
+                  targets.emplace(r.address);
               }
+              if (targets.empty())
+                continue;
+              ELLE_TRACE_SCOPE(
+                "%s: rebalance %s blocks to newly discovered peer %f",
+                this, targets.size(), elt.first);
+              for (auto address: targets)
+                try
+                {
+                  auto it = this->_addresses.find(address);
+                  if (it == this->_addresses.end())
+                    // The block was deleted in the meantime.
+                    continue;
+                  // Beware of interators invalidation, use a reference.
+                  auto& paxos = it->second.paxos;
+                  auto quorum = paxos.current_quorum();
+                  // We can't actually rebalance this block, under_represented
+                  // was wrong. Don't think this can happen but better safe than
+                  // sorry.
+                  if (!test(quorum))
+                    continue;
+                  ELLE_DEBUG("elect new quorum")
+                  {
+                    PaxosClient c(
+                    this->doughnut().id(),
+                    lookup_nodes(this->doughnut(), quorum, address));
+                    quorum.insert(elt.first);
+                    // FIXME: do something in case of conflict
+                    c.choose(paxos.current_version() + 1, quorum);
+                  }
+                  propagate(paxos, address, quorum);
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_WARN("rebalancing of %f failed: %s", elt.first, e);
+                }
+            }
           }
         }
 
@@ -667,15 +686,12 @@ namespace infinit
             this->storage()->set(address, ser, true, true);
             data.paxos.release();
           }
+          this->_cache(address, decision.paxos.current_quorum());
           if (this->_rebalance_auto_expand &&
               !had_value &&
               decision.paxos.current_value() &&
               signed(decision.paxos.current_quorum().size()) < this->_factor)
-          {
-            this->_under_represented.emplace(
-              address, decision.paxos.current_quorum());
             this->_rebalancable.put(std::make_pair(address, false));
-          }
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
@@ -1404,6 +1420,18 @@ namespace infinit
         {
           s.serialize("chosen", this->chosen);
           s.serialize("paxos", this->paxos);
+        }
+
+        Paxos::LocalPeer::BlockRepartition::BlockRepartition(
+          Address address_, PaxosServer::Quorum quorum_)
+          : address(address_)
+          , quorum(std::move(quorum_))
+        {}
+
+        int
+        Paxos::LocalPeer::BlockRepartition::replication_factor() const
+        {
+          return this->quorum.size();
         }
 
         /*-----.

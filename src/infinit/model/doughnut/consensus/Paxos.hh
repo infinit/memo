@@ -1,6 +1,11 @@
 #ifndef INFINIT_MODEL_DOUGHNUT_CONSENSUS_PAXOS_HH
 # define INFINIT_MODEL_DOUGHNUT_CONSENSUS_PAXOS_HH
 
+# include <boost/multi_index_container.hpp>
+# include <boost/multi_index/hashed_index.hpp>
+# include <boost/multi_index/mem_fun.hpp>
+# include <boost/multi_index/ordered_index.hpp>
+
 # include <elle/named.hh>
 # include <elle/unordered_map.hh>
 
@@ -20,6 +25,8 @@ namespace infinit
     {
       namespace consensus
       {
+        namespace bmi = boost::multi_index;
+
         NAMED_ARGUMENT(doughnut);
         NAMED_ARGUMENT(replication_factor);
         NAMED_ARGUMENT(lenient_fetch);
@@ -153,6 +160,7 @@ namespace infinit
             typedef Paxos::PaxosClient PaxosClient;
             typedef Paxos::PaxosServer PaxosServer;
             typedef Paxos::Value Value;
+            typedef PaxosServer::Quorum Quorum;
             template <typename ... Args>
             LocalPeer(Paxos& paxos,
                       int factor,
@@ -224,6 +232,8 @@ namespace infinit
             Decision&
             _load(Address address, Decision decision);
             void
+            _cache(Address address, Quorum quorum);
+            void
             _discovered(Address id);
             void
             _rebalance();
@@ -232,9 +242,35 @@ namespace infinit
             ELLE_ATTRIBUTE_X(boost::signals2::signal<void(Address)>,
                              rebalanced);
             ELLE_ATTRIBUTE(reactor::Thread, rebalance_thread);
-            /// Blocks that are not replicated enough.
-            ELLE_ATTRIBUTE((std::unordered_map<Address, PaxosServer::Quorum>),
-                           under_represented);
+            struct BlockRepartition
+            {
+              BlockRepartition(Address address, PaxosServer::Quorum quorum);
+              Address address;
+              PaxosServer::Quorum quorum;
+              int
+              replication_factor() const;
+            };
+            typedef bmi::multi_index_container<
+              BlockRepartition,
+              bmi::indexed_by<
+                bmi::hashed_unique<
+                  bmi::member<
+                    BlockRepartition,
+                    Address,
+                    &BlockRepartition::address> >,
+                bmi::ordered_non_unique<
+                  bmi::const_mem_fun<
+                    BlockRepartition,
+                    int,
+                    &BlockRepartition::replication_factor> >
+                >> Quorums;
+
+            /// Blocks quorum
+            ELLE_ATTRIBUTE_R(Quorums, quorums);
+            /// Nodes blocks
+            typedef std::unordered_map<
+              Address, std::unordered_set<Address>> NodeBlocks;
+            ELLE_ATTRIBUTE_R(NodeBlocks, node_blocks);
           };
 
         /*-----.
