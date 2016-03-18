@@ -79,7 +79,8 @@ namespace infinit
       : public model::ConflictResolver
     {
     public:
-      FileConflictResolver(elle::serialization::SerializerIn& s);
+      FileConflictResolver(elle::serialization::SerializerIn& s,
+                           elle::Version const& v);
       FileConflictResolver();
       FileConflictResolver(boost::filesystem::path path, model::Model* model,
                            WriteTarget target);
@@ -88,7 +89,8 @@ namespace infinit
                  Block& current,
                  model::StoreMode store_mode) override;
       void
-      serialize(elle::serialization::Serializer& s) override;
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& version) override;
       boost::filesystem::path _path;
       model::Model* _model;
       WriteTarget _target;

@@ -500,7 +500,8 @@ class AppendConflictResolver
 
   virtual
   void
-  serialize(elle::serialization::Serializer& s) override
+  serialize(elle::serialization::Serializer& s,
+            elle::Version const&) override
   {}
 };
 
@@ -912,7 +913,8 @@ namespace rebalancing
 
     virtual
     void
-    serialize(elle::serialization::Serializer& s) override
+    serialize(elle::serialization::Serializer& s,
+              elle::Version const&) override
     {
       s.serialize("previous", this->_previous);
     }

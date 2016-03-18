@@ -28,7 +28,8 @@ namespace infinit
     public:
       DummyConflictResolver() {}
       DummyConflictResolver(elle::serialization::SerializerIn& s) {}
-      void serialize(elle::serialization::Serializer& s) override
+      void serialize(elle::serialization::Serializer& s,
+                     elle::Version const&) override
       {
       }
       std::unique_ptr<Block>

@@ -33,7 +33,7 @@ namespace infinit
     // Called in case of conflict error. Returns the new block to retry with
     // or null to abort
     class ConflictResolver
-      : public elle::serialization::VirtuallySerializable<false>
+      : public elle::serialization::VirtuallySerializable<true>
     {
     public:
       typedef infinit::serialization_tag serialization_tag;
@@ -44,7 +44,8 @@ namespace infinit
                    StoreMode mode) = 0;
       virtual
       void
-      serialize(elle::serialization::Serializer& s) override = 0;
+      serialize(elle::serialization::Serializer& s,
+                elle::Version const& v) override = 0;
     };
 
     class Model

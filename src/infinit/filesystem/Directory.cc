@@ -139,10 +139,12 @@ namespace infinit
        return std::move(res);
     }
 
-    DirectoryConflictResolver::DirectoryConflictResolver(elle::serialization::SerializerIn& s)
+    DirectoryConflictResolver::DirectoryConflictResolver(
+      elle::serialization::SerializerIn& s,
+      elle::Version const& v)
       : _model(nullptr)
     {
-      serialize(s);
+      serialize(s, v);
     }
 
     DirectoryConflictResolver::DirectoryConflictResolver(DirectoryConflictResolver&& b)
@@ -177,7 +179,8 @@ namespace infinit
     }
 
     void
-    DirectoryConflictResolver::serialize(elle::serialization::Serializer& s)
+    DirectoryConflictResolver::serialize(elle::serialization::Serializer& s,
+                                         elle::Version const& version)
     {
       std::string path;
       s.serialize("path", path); // for backward compatibility

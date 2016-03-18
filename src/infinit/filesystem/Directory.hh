@@ -110,7 +110,8 @@ namespace infinit
     class DirectoryConflictResolver: public model::ConflictResolver
     {
     public:
-       DirectoryConflictResolver(elle::serialization::SerializerIn& s);
+       DirectoryConflictResolver(elle::serialization::SerializerIn& s,
+                                 elle::Version const& v);
        DirectoryConflictResolver(DirectoryConflictResolver&& b);
        DirectoryConflictResolver();
        DirectoryConflictResolver(model::Model& model,
@@ -121,7 +122,8 @@ namespace infinit
        operator() (Block& block,
                    Block& current,
                    model::StoreMode mode) override;
-       void serialize(elle::serialization::Serializer& s) override;
+       void serialize(elle::serialization::Serializer& s,
+                      elle::Version const& v) override;
        model::Model* _model;
        Operation _op;
        Address _address;

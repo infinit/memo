@@ -47,9 +47,10 @@ namespace infinit
       return res;
     }
 
-    FileConflictResolver::FileConflictResolver(elle::serialization::SerializerIn& s)
+    FileConflictResolver::FileConflictResolver(elle::serialization::SerializerIn& s,
+                                               elle::Version const& v)
     {
-      this->serialize(s);
+      this->serialize(s, v);
     }
 
     FileConflictResolver::FileConflictResolver()
@@ -94,12 +95,17 @@ namespace infinit
     }
 
     void
-    FileConflictResolver::serialize(elle::serialization::Serializer& s)
+    FileConflictResolver::serialize(elle::serialization::Serializer& s,
+                                    elle::Version const& version)
     {
+      ELLE_DEBUG("FileConflictResolver: serialize in %s", version);
       std::string spath = this->_path.string();
       s.serialize("path", spath);
       this->_path = spath;
-      s.serialize("target", _target, elle::serialization::as<int>());
+      if (version >= elle::Version(0, 5, 5))
+        s.serialize("target", _target, elle::serialization::as<int>());
+      else if (s.in())
+        _target = WriteTarget::all | WriteTarget::block;
       if (s.in())
       {
         infinit::model::Model* model = nullptr;

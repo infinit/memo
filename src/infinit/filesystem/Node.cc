@@ -36,11 +36,13 @@ namespace infinit
       , _write(w)
       , _userkey(key)
       {}
-      ACLConflictResolver(elle::serialization::SerializerIn& s)
+      ACLConflictResolver(elle::serialization::SerializerIn& s,
+                          elle::Version const& v)
       {
-        serialize(s);
+        serialize(s, v);
       }
-      void serialize(elle::serialization::Serializer& s) override
+      void serialize(elle::serialization::Serializer& s,
+                     elle::Version const& ) override
       {
         s.serialize("read", _read);
         s.serialize("write", _write);
