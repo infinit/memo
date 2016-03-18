@@ -236,6 +236,10 @@ namespace infinit
             void
             _discovered(Address id);
             void
+            _disappeared(Address id);
+            void
+            _node_lost(Address id);
+            void
             _rebalance();
             ELLE_ATTRIBUTE((reactor::Channel<std::pair<Address, bool>>),
                            rebalancable);
@@ -271,6 +275,12 @@ namespace infinit
             typedef std::unordered_map<
               Address, std::unordered_set<Address>> NodeBlocks;
             ELLE_ATTRIBUTE_R(NodeBlocks, node_blocks);
+            ELLE_ATTRIBUTE_R(std::unordered_set<Address>, nodes);
+            typedef
+              std::unordered_map<Address, boost::asio::deadline_timer>
+              NodeTimeouts;
+            ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
+            ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 
         /*-----.

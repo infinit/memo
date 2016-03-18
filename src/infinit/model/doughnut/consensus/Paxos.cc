@@ -379,6 +379,12 @@ namespace infinit
               if (!observer)
                 this->_discovered(id);
             });
+          this->doughnut().overlay()->on_disappear().connect(
+            [this] (Address id, bool observer)
+            {
+              if (!observer)
+                this->_disappeared(id);
+            });
           if (this->_factor > 1)
             this->_rebalance_inspector.reset(
               new reactor::Thread(
@@ -485,8 +491,43 @@ namespace infinit
         void
         Paxos::LocalPeer::_discovered(model::Address id)
         {
+          this->_nodes.emplace(id);
+          this->_node_timeouts.erase(id);
           if (this->_rebalance_auto_expand)
             this->_rebalancable.put(std::make_pair(id, true));
+        }
+
+        void
+        Paxos::LocalPeer::_disappeared(model::Address id)
+        {
+          if (this->_nodes.erase(id))
+          {
+            auto it = this->_node_timeouts.emplace(
+              std::piecewise_construct,
+              std::forward_as_tuple(id),
+              std::forward_as_tuple(reactor::scheduler().io_service()));
+            it.first->second.cancel();
+            it.first->second.expires_from_now(
+              boost::posix_time::seconds(
+                this->_node_timeout.count() *
+                decltype(this->_node_timeout)::period::num /
+                decltype(this->_node_timeout)::period::den));
+            it.first->second.async_wait(
+              [this, id] (const boost::system::error_code& error)
+              {
+                if (!error)
+                  this->_node_lost(id);
+              });
+          }
+          if (this->_rebalance_auto_expand)
+            this->_rebalancable.put(std::make_pair(id, true));
+        }
+
+        void
+        Paxos::LocalPeer::_node_lost(model::Address id)
+        {
+          ELLE_WARN("lost contact with %f for %s, evict",
+                    id, this->_node_timeout);
         }
 
         void

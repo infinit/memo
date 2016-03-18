@@ -72,10 +72,10 @@ public:
       if (*it == this)
       {
         other._peers.erase(it);
-        other.on_disappear()(this->node_id());
+        other.on_disappear()(this->node_id(), !this->doughnut()->local());
         break;
       }
-    this->on_disappear()(other.node_id());
+    this->on_disappear()(other.node_id(), !other.doughnut()->local());
   }
 
 protected:

@@ -22,6 +22,9 @@ namespace infinit
           , _rebalanced()
           , _rebalance_thread(elle::sprintf("%s: rebalance", this),
                               [this] () { this->_rebalance(); })
+          , _node_timeout(
+            std::chrono::duration_cast<decltype(this->_node_timeout)>(
+              std::chrono::minutes(10)))
         {}
 
         template <typename ... Args>
