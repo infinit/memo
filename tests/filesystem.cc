@@ -1568,6 +1568,33 @@ public:
   std::vector<DHT> dhts;
 };
 
+ELLE_TEST_SCHEDULED(write_truncate)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  // the emacs save procedure: open() truncate() write()
+  auto handle = client.fs->path("/file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  handle->write(elle::ConstWeakBuffer("foo\nbar\nbaz\n", 12), 12, 0);
+  handle->close();
+  handle.reset();
+  handle = client.fs->path("/file")->open(O_RDWR, 0);
+  BOOST_CHECK(handle);
+  client.fs->path("/file")->truncate(0);
+  handle->write(elle::ConstWeakBuffer("foo\nbar\n", 8), 8, 0);
+  handle->close();
+  handle.reset();
+  struct stat st;
+  client.fs->path("/file")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_size, 8);
+  handle = client.fs->path("/file")->open(O_RDWR, 0);
+  char buffer[64];
+  int count = handle->read(elle::WeakBuffer(buffer, 64), 64, 0);
+  BOOST_CHECK_EQUAL(count, 8);
+  buffer[count] = 0;
+  BOOST_CHECK_EQUAL(buffer, std::string("foo\nbar\n"));
+}
+
+
 ELLE_TEST_SCHEDULED(write_unlink)
 {
   DHTs servers(1);
@@ -1651,4 +1678,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
 #endif
   suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
+  suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
 }
