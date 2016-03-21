@@ -334,9 +334,10 @@ def configure(
     'resources/images/logos/xtreemfs.png',
     'resources/images/logos/xtreemfs@2x.png',
 
-    'resources/scripts/centralized.sh',
-    'resources/scripts/distributed.sh',
-    'resources/scripts/decentralized.sh',
+    'resources/scripts/get-started.sh',
+    'resources/scripts/deployments/centralized.sh',
+    'resources/scripts/deployments/distributed.sh',
+    'resources/scripts/deployments/decentralized.sh',
 
     'resources/fonts/icons.eot',
     'resources/fonts/icons.svg',

@@ -613,228 +613,95 @@ fi
 
 # ---------- globals ---------------------------------------------------------
 
-USER_NAME_A="alice.$(random)"
-USER_NAME_B="bob.$(random)"
-USER_NAME_C="charlie.$(random)"
+USER_NAME="alice.$(random)"
 
-# XXX temporary
-export INFINIT_RDV=""
-
-# ---------- prolog ----------------------------------------------------------
+# ---------- device A --------------------------------------------------------
 
 # homes
-infinit_home_As=$(mktemp -d)
-track_directory "${infinit_home_As}"
-echo "[Server A] Home location: ${infinit_home_As}"
-infinit_home_Ac=$(mktemp -d)
-track_directory "${infinit_home_Ac}"
-echo "[Client A] Home location: ${infinit_home_Ac}"
-infinit_home_Bc=$(mktemp -d)
-track_directory "${infinit_home_Bc}"
-echo "[Client B] Home location: ${infinit_home_Bc}"
-infinit_home_Cc=$(mktemp -d)
-track_directory "${infinit_home_Cc}"
-echo "[Client C] Home location: ${infinit_home_Cc}"
+infinit_home_A=$(mktemp -d)
+track_directory "${infinit_home_A}"
+echo "[Device A] Home location: ${infinit_home_A}"
+infinit_home_B=$(mktemp -d)
+track_directory "${infinit_home_B}"
+echo "[Device B] Home location: ${infinit_home_B}"
 
-# create user A
-set_home "${infinit_home_Ac}"
-echo "[Client A] Create user: ${USER_NAME_A}"
-create_user "${USER_NAME_A}" "--email ${USER_NAME_A}@infinit.sh --push"
-track_user "${infinit_home_Ac}" "${USER_NAME_A}"
-
-# create user B
-set_home "${infinit_home_Bc}"
-echo "[Client B] Create user: ${USER_NAME_B}"
-create_user "${USER_NAME_B}" "--email ${USER_NAME_B}@infinit.sh --push"
-track_user "${infinit_home_Bc}" "${USER_NAME_B}"
-
-# create user C
-set_home "${infinit_home_Cc}"
-echo "[Client B] Create user: ${USER_NAME_C}"
-create_user "${USER_NAME_C}" "--email ${USER_NAME_C}@infinit.sh --push"
-track_user "${infinit_home_Cc}" "${USER_NAME_C}"
-
-# transmit user identity from client A to server A
-set_home "${infinit_home_Ac}"
-echo "[Client A] Transmit user identity from client A to server A"
-passphrase=$(random)
-transmit_identity "${USER_NAME_A}" "${passphrase}"
-
-# ---------- server A --------------------------------------------------------
-
-# home
-set_home "${infinit_home_As}"
-
-# receive identity
-echo "[Server A] Receive identity from client A"
-receive_identity "${USER_NAME_A}" "${passphrase}"
+# create user
+set_home "${infinit_home_A}"
+echo "[Device A] Create user: ${USER_NAME}"
+create_user "${USER_NAME}" "--email nobody+${USER_NAME}@infinit.sh --push"
+track_user "${infinit_home_A}" "${USER_NAME}"
 
 # create storage
-storage_path_As=$(mktemp -d)
-track_directory "${storage_path_As}"
-echo "[Server A] Create local storage: ${storage_path_As}"
-create_filesystem_storage "local" "1GB" "${storage_path_As}"
+storage_path_A=$(mktemp -d)
+track_directory "${storage_path_A}"
+echo "[Device A] Create local storage: ${storage_path_A}"
+create_filesystem_storage "local" "1GB" "${storage_path_A}"
 
 # create network
-echo "[Server A] Create network: cluster"
-storages_As=("local")
-create_network "${USER_NAME_A}" "cluster" storages_As[@] "--kelips --replication-factor 1 --push"
-track_network "${infinit_home_As}" "${USER_NAME_A}" "cluster"
+echo "[Device A] Create network: my-network"
+storages_A=("local")
+create_network "${USER_NAME}" "my-network" storages_A[@] "--kelips --push"
+track_network "${infinit_home_A}" "${USER_NAME}" "my-network"
 
 # create volume
-echo "[Server A] Create volume: shared"
-create_volume "${USER_NAME_A}" "cluster" "shared" "--push"
-track_volume "${infinit_home_As}" "${USER_NAME_A}" "shared"
-
-# fetch user B and C into A's home
-echo "[Server A] Fetch user B's and C's public identity"
-fetch_user "${USER_NAME_A}" "${USER_NAME_B}"
-fetch_user "${USER_NAME_A}" "${USER_NAME_C}"
-
-# invite user B and C to network
-echo "[Server A] Invite user '${USER_NAME_B}' to the network 'cluster'"
-create_passport "${USER_NAME_A}" "cluster" "${USER_NAME_B}" "--push"
-track_passport "${infinit_home_As}" "${USER_NAME_A}" "cluster" "${USER_NAME_B}"
-echo "[Server A] Invite user '${USER_NAME_C}' to the network 'cluster'"
-create_passport "${USER_NAME_A}" "cluster" "${USER_NAME_C}" "--push"
-track_passport "${infinit_home_As}" "${USER_NAME_A}" "cluster" "${USER_NAME_C}"
-
-# run network
-echo "[Server A] Run network 'cluster'"
-peers_As=()
-output_As=$(run_network "${USER_NAME_A}" "cluster" peers_As[@] "--publish")
-pid_As=$(r "${output_As}" 1)
-track_file $(r "${output_As}" 2)
-track_run "${pid_As}"
-
-# ---------- client B...X ----------------------------------------------------
-
-client_X()
-{
-  identifier="${1}"
-  user="${2}"
-  home="${3}"
-  mount_point="${4}"
-
-  # home
-  set_home "${home}"
-
-  # fetch objects
-  echo "[Client ${identifier}] Fetch user, network, volume and passport"
-  fetch_user "${user}" "${USER_NAME_A}"
-  fetch_network "${user}"
-  fetch_volume "${user}"
-  fetch_passport "${user}"
-
-  # link device
-  echo "[Client ${identifier}] Link new device to network 'cluster'"
-  storages_Xc=()
-  link_device "${user}" "${USER_NAME_A}/cluster" storages_Xc[@]
-
-  # mount volume
-  track_directory "${mount_point}"
-  echo "[Client ${identifier}] Mount volume 'shared': ${mount_point}"
-  peers_Xc=()
-  output_Xc=$(mount_volume "${user}" "${USER_NAME_A}/shared" "${mount_point}" peers_Xc[@] "--publish")
-  pid_Xc=$(r "${output_Xc}" 1)
-  track_file $(r "${output_Xc}" 2)
-  track_mount "${mount_point}" "${pid_Xc}"
-
-  sleep 3
-}
-
-# ---------- client A --------------------------------------------------------
-
-# home
-set_home "${infinit_home_Ac}"
-
-# fetch objects
-echo "[Client A] Fetch users, network and volume"
-fetch_network "${USER_NAME_A}"
-fetch_volume "${USER_NAME_A}"
-
-# link device
-echo "[Client A] Link new device to network 'cluster'"
-storages_Ac=()
-link_device "${USER_NAME_A}" "cluster" storages_Ac[@]
+echo "[Device A] Create volume: my-volume"
+create_volume "${USER_NAME}" "my-network" "my-volume" "--push"
+track_volume "${infinit_home_A}" "${USER_NAME}" "my-volume"
 
 # mount volume
-mount_point_Ac=$(mktemp -d)
-track_directory "${mount_point_Ac}"
-echo "[Client A] Mount volume 'shared': ${mount_point_Ac}"
-peers_Ac=()
-output_Ac=$(mount_volume "${USER_NAME_A}" "shared" "${mount_point_Ac}" peers_Ac[@] "--publish")
-pid_Ac=$(r "${output_Ac}" 1)
-track_file $(r "${output_Ac}" 2)
-track_mount "${mount_point_Ac}" "${pid_Ac}"
+mount_point_A=$(mktemp -d)
+track_directory "${mount_point_A}"
+echo "[Device A] Mount volume 'my-volume': ${mount_point_A}"
+peers_A=()
+output_A=$(mount_volume "${USER_NAME}" "my-volume" "${mount_point_A}" peers_A[@] "--publish")
+pid_A=$(r "${output_A}" 1)
+track_file $(r "${output_A}" 2)
+track_mount "${mount_point_A}" "${pid_A}"
 
 sleep 3
 
 # create file
-echo "[Client A] Create and write file: awesome.txt"
-echo "everything is" > ${mount_point_Ac}/awesome.txt
+echo "[Device A] Create and write file: awesome.txt"
+echo "everything is" > ${mount_point_A}/awesome.txt
 
-# ---------- client B --------------------------------------------------------
+# transmit user identity from device A to device B
+echo "[Device A] Transmit user identity from device A to device B"
+passphrase=$(random)
+transmit_identity "${USER_NAME}" "${passphrase}"
 
-mount_point_Bc=$(mktemp -d)
-client_X "B" "${USER_NAME_B}" "${infinit_home_Bc}" "${mount_point_Bc}"
-
-# check permission to read the file
-echo "[Client B] Check the permissions on the file 'awesome.txt'"
-if [ -r "${mount_point_Bc}/awesome.txt" ] ; then
-  echo "[error] ${USER_NAME_B} seems to be able to read the file"
-  exit 1
-fi
-
-# ---------- client C --------------------------------------------------------
-
-mount_point_Cc=$(mktemp -d)
-client_X "C" "${USER_NAME_C}" "${infinit_home_Cc}" "${mount_point_Cc}"
-
-# check permission to read the file
-echo "[Client C] Check the permissions on the file 'awesome.txt'"
-if [ -r "${mount_point_Cc}/awesome.txt" ] ; then
-  echo "[error] ${USER_NAME_C} seems to be able to read the file"
-  exit 1
-fi
-
-# ---------- client A --------------------------------------------------------
+# ---------- device B --------------------------------------------------------
 
 # home
-set_home "${infinit_home_Ac}"
+set_home "${infinit_home_B}"
 
-# grant user B and C access to the file
-echo "[Client A] Grant access to '${USER_NAME_B}'"
-grant_access "${mount_point_Ac}/" "r" "${USER_NAME_B}"
-grant_access "${mount_point_Ac}/awesome.txt" "r" "${USER_NAME_B}"
-echo "[Client A] Grant access to '${USER_NAME_C}'"
-grant_access "${mount_point_Ac}/" "r" "${USER_NAME_C}"
-grant_access "${mount_point_Ac}/awesome.txt" "r" "${USER_NAME_C}"
+# receive identity
+echo "[Device B] Receive identity from device A"
+receive_identity "${USER_NAME}" "${passphrase}"
 
-sleep 3
+# fetch objects
+echo "[Device B] Fetch network and volume"
+fetch_network "${USER_NAME}" "my-network"
+fetch_volume "${USER_NAME}" "my-network" "my-volume"
 
-# ---------- client B --------------------------------------------------------
+# link device
+echo "[Device B] Link new device to network 'my-network'"
+storages_B=()
+link_device "${USER_NAME}" "my-network" storages_B[@]
 
-# home
-set_home "${infinit_home_Bc}"
+# mount volume
+mount_point_B=$(mktemp -d)
+track_directory "${mount_point_B}"
+echo "[Device B] Mount volume 'my-volume': ${mount_point_B}"
+peers_B=()
+output_B=$(mount_volume "${USER_NAME}" "my-volume" "${mount_point_B}" peers_B[@] "--publish")
+pid_B=$(r "${output_B}" 1)
+track_file $(r "${output_B}" 2)
+track_mount "${mount_point_B}" "${pid_B}"
 
-# read the file with user B
-content_Bc=$(cat ${mount_point_Bc}/awesome.txt)
-echo "[Client B] Read file 'awesome.txt': \"${content_Bc}\""
-if [ "${content_Bc}" != "everything is" ] ; then
-  echo "[error] unexpected content '${content_Bc}'"
-  exit 1
-fi
-
-# ---------- client C --------------------------------------------------------
-
-# home
-set_home "${infinit_home_Cc}"
-
-# read the file with user C
-content_Cc=$(cat ${mount_point_Cc}/awesome.txt)
-echo "[Client C] Read file 'awesome.txt': \"${content_Cc}\""
-if [ "${content_Cc}" != "everything is" ] ; then
-  echo "[error] unexpected content '${content_Cc}'"
+# read the file from device B
+content_B=$(cat ${mount_point_B}/awesome.txt)
+echo "[Device B] Read file 'awesome.txt': \"${content_B}\""
+if [ "${content_B}" != "everything is" ] ; then
+  echo "[error] unexpected content '${content_B}'"
   exit 1
 fi

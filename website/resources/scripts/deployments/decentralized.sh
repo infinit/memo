@@ -585,6 +585,10 @@ clean()
 # Note that the options --async and --cache have been removed to make sure that
 # when an operation returns, its actions have taken effects. This is necessary
 # in a script where every operation depends on the previous one.
+#
+# In addition, because connecting a AWS S3 storage resource is complicated for
+# such an example, device C contributes storage capacity through two local
+# disks: local1 and local2; hence replacing S3 with local2.
 
 set -e
 
@@ -616,262 +620,287 @@ fi
 USER_NAME_A="alice.$(random)"
 USER_NAME_B="bob.$(random)"
 USER_NAME_C="charlie.$(random)"
-
-# XXX temporary
-export INFINIT_RDV=""
+USER_NAME_D="dave.$(random)"
+USER_NAME_E="eve.$(random)"
 
 # ---------- prolog ----------------------------------------------------------
 
 # homes
-infinit_home_As1=$(mktemp -d)
-track_directory "${infinit_home_As1}"
-echo "[Server A1] Home location: ${infinit_home_As1}"
-infinit_home_As2=$(mktemp -d)
-track_directory "${infinit_home_As2}"
-echo "[Server A2] Home location: ${infinit_home_As2}"
-infinit_home_As3=$(mktemp -d)
-track_directory "${infinit_home_As3}"
-echo "[Server A3] Home location: ${infinit_home_As3}"
-infinit_home_Ac=$(mktemp -d)
-track_directory "${infinit_home_Ac}"
-echo "[Client A] Home location: ${infinit_home_Ac}"
+infinit_home_Acs=$(mktemp -d)
+track_directory "${infinit_home_Acs}"
+echo "[Client/Server A] Home location: ${infinit_home_Acs}"
 infinit_home_Bc=$(mktemp -d)
 track_directory "${infinit_home_Bc}"
 echo "[Client B] Home location: ${infinit_home_Bc}"
-infinit_home_Cc=$(mktemp -d)
-track_directory "${infinit_home_Cc}"
-echo "[Client B] Home location: ${infinit_home_Cc}"
+infinit_home_Cs=$(mktemp -d)
+track_directory "${infinit_home_Cs}"
+echo "[Server C] Home location: ${infinit_home_Cs}"
+infinit_home_Dcs=$(mktemp -d)
+track_directory "${infinit_home_Dcs}"
+echo "[Client/Server D] Home location: ${infinit_home_Dcs}"
+infinit_home_Ecs=$(mktemp -d)
+track_directory "${infinit_home_Ecs}"
+echo "[Client/Server E] Home location: ${infinit_home_Dcs}"
 
 # create user A
-set_home "${infinit_home_Ac}"
-echo "[Client A] Create user: ${USER_NAME_A}"
-create_user "${USER_NAME_A}" "--email ${USER_NAME_A}@infinit.sh --push"
-track_user "${infinit_home_Ac}" "${USER_NAME_A}"
+set_home "${infinit_home_Acs}"
+echo "[Client/Server A] Create user: ${USER_NAME_A}"
+create_user "${USER_NAME_A}" "--email nobody+${USER_NAME_A}@infinit.sh --push"
+track_user "${infinit_home_Acs}" "${USER_NAME_A}"
 
 # create user B
 set_home "${infinit_home_Bc}"
 echo "[Client B] Create user: ${USER_NAME_B}"
-create_user "${USER_NAME_B}" "--email ${USER_NAME_B}@infinit.sh --push"
+create_user "${USER_NAME_B}" "--email nobody+${USER_NAME_B}@infinit.sh --push"
 track_user "${infinit_home_Bc}" "${USER_NAME_B}"
 
 # create user C
-set_home "${infinit_home_Cc}"
-echo "[Client C] Create user: ${USER_NAME_C}"
-create_user "${USER_NAME_C}" "--email ${USER_NAME_C}@infinit.sh --push"
-track_user "${infinit_home_Cc}" "${USER_NAME_C}"
+set_home "${infinit_home_Cs}"
+echo "[Server C] Create user: ${USER_NAME_C}"
+create_user "${USER_NAME_C}" "--email nobody+${USER_NAME_C}@infinit.sh --push"
+track_user "${infinit_home_Cs}" "${USER_NAME_C}"
 
-# export user A
-set_home "${infinit_home_Ac}"
-echo "[Client A] Export user's public identity"
-user_public_file_path_A=$(export_user_private "${USER_NAME_A}")
-track_file "${user_public_file_path_A}"
+# create user D
+set_home "${infinit_home_Dcs}"
+echo "[Client/Server D] Create user: ${USER_NAME_D}"
+create_user "${USER_NAME_D}" "--email nobody+${USER_NAME_D}@infinit.sh --push"
+track_user "${infinit_home_Dcs}" "${USER_NAME_D}"
 
-# ---------- server A2...N ---------------------------------------------------
+# create user E
+set_home "${infinit_home_Ecs}"
+echo "[Client/Server E] Create user: ${USER_NAME_E}"
+create_user "${USER_NAME_E}" "--email nobody+${USER_NAME_E}@infinit.sh --push"
+track_user "${infinit_home_Ecs}" "${USER_NAME_E}"
 
-server_AN()
-{
-  identifier="${1}"
-  home="${2}"
-  capacity="${3}"
-
-  # home
-  set_home "${home}"
-
-  # import user
-  echo "[Server A${identifier}] Import user's public identity"
-  import_user "${user_public_file_path_A}"
-
-  # fetch network
-  echo "[Server A${identifier}] Fetch network 'cluster'"
-  fetch_network "${USER_NAME_A}"
-
-  # create storage
-  storage_path_AsN=$(mktemp -d)
-  track_directory "${storage_path_AsN}"
-  echo "[Server A${identifier}] Create local storage: ${storage_path_AsN}"
-  create_filesystem_storage "local" "${capacity}" "${storage_path_AsN}"
-
-  # link device
-  echo "[Server A${identifier}] Link new device to network 'cluster'"
-  storages_AsN=("local")
-  link_device "${USER_NAME_A}" "cluster" storages_AsN[@]
-
-  # run network
-  echo "[Server A${identifier}] Run network 'cluster'"
-  peers_AsN=()
-  output_AsN=$(run_network "${USER_NAME_A}" "cluster" peers_AsN[@] "--publish")
-  pid_AsN=$(r "${output_AsN}" 1)
-  track_file $(r "${output_AsN}" 2)
-  track_run "${pid_AsN}"
-}
-
-# ---------- server A1 -------------------------------------------------------
+# ---------- client/server A -------------------------------------------------
 
 # home
-set_home "${infinit_home_As1}"
-
-# import user
-echo "[Server A1] Import user's public identity"
-import_user "${user_public_file_path_A}"
+set_home "${infinit_home_Acs}"
 
 # create storage
-storage_path_As1=$(mktemp -d)
-track_directory "${storage_path_As1}"
-echo "[Server A1] Create local storage: ${storage_path_As1}"
-create_filesystem_storage "local" "2GB" "${storage_path_As1}"
+storage_path_Acs=$(mktemp -d)
+track_directory "${storage_path_Acs}"
+echo "[Client/Server A] Create local storage: ${storage_path_Acs}"
+create_filesystem_storage "local" "1.5GB" "${storage_path_Acs}"
 
 # create network
-echo "[Server A1] Create network: cluster"
-storages_As1=("local")
-create_network "${USER_NAME_A}" "cluster" storages_As1[@] "--kelips --replication-factor 2 --push"
-track_network "${infinit_home_As1}" "${USER_NAME_A}" "cluster"
+echo "[Client/Server A] Create network: cluster"
+storages_Acs=("local")
+create_network "${USER_NAME_A}" "cluster" storages_Acs[@] "--kelips --replication-factor 3 --push"
+track_network "${infinit_home_Acs}" "${USER_NAME_A}" "cluster"
 
 # create volume
-echo "[Server A1] Create volume: shared"
+echo "[Client/Server A] Create volume: shared"
 create_volume "${USER_NAME_A}" "cluster" "shared" "--push"
-track_volume "${infinit_home_As1}" "${USER_NAME_A}" "shared"
+track_volume "${infinit_home_Acs}" "${USER_NAME_A}" "shared"
 
-# fetch user B and C into A's home
-echo "[Server A1] Fetch user B's and C's public identity"
+# fetch user B, C, D and E into A's home
+echo "[Client/Server A] Fetch user B's, C's, D's and E's public identity"
 fetch_user "${USER_NAME_A}" "${USER_NAME_B}"
 fetch_user "${USER_NAME_A}" "${USER_NAME_C}"
+fetch_user "${USER_NAME_A}" "${USER_NAME_D}"
+fetch_user "${USER_NAME_A}" "${USER_NAME_E}"
 
-# invite user B and C to network
-echo "[Server A1] Invite user '${USER_NAME_B}' to the network 'cluster'"
+# invite user B, C, D and E to network
+echo "[Client/Server A] Invite user '${USER_NAME_B}' to the network 'cluster'"
 create_passport "${USER_NAME_A}" "cluster" "${USER_NAME_B}" "--push"
-track_passport "${infinit_home_As1}" "${USER_NAME_A}" "cluster" "${USER_NAME_B}"
-echo "[Server A1] Invite user '${USER_NAME_C}' to the network 'cluster'"
+track_passport "${infinit_home_Acs}" "${USER_NAME_A}" "cluster" "${USER_NAME_B}"
+echo "[Client/Server A] Invite user '${USER_NAME_C}' to the network 'cluster'"
 create_passport "${USER_NAME_A}" "cluster" "${USER_NAME_C}" "--push"
-track_passport "${infinit_home_As1}" "${USER_NAME_A}" "cluster" "${USER_NAME_C}"
+track_passport "${infinit_home_Acs}" "${USER_NAME_A}" "cluster" "${USER_NAME_C}"
+echo "[Client/Server A] Invite user '${USER_NAME_D}' to the network 'cluster'"
+create_passport "${USER_NAME_A}" "cluster" "${USER_NAME_D}" "--push"
+track_passport "${infinit_home_Acs}" "${USER_NAME_A}" "cluster" "${USER_NAME_D}"
+echo "[Client/Server A] Invite user '${USER_NAME_E}' to the network 'cluster'"
+create_passport "${USER_NAME_A}" "cluster" "${USER_NAME_E}" "--push"
+track_passport "${infinit_home_Acs}" "${USER_NAME_A}" "cluster" "${USER_NAME_E}"
+
+# mount volume
+mount_point_Acs=$(mktemp -d)
+track_directory "${mount_point_Acs}"
+echo "[Client/Server A] Mount volume 'shared': ${mount_point_Acs}"
+peers_Acs=()
+output_Acs=$(mount_volume "${USER_NAME_A}" "shared" "${mount_point_Acs}" peers_Acs[@] "--publish")
+pid_Acs=$(r "${output_Acs}" 1)
+track_file $(r "${output_Acs}" 2)
+track_mount "${mount_point_Acs}" "${pid_Acs}"
+
+# ---------- client B --------------------------------------------------------
+
+# home
+set_home "${infinit_home_Bc}"
+
+# fetch objects
+echo "[Client B] Fetch user, network, volume and passport"
+fetch_user "${USER_NAME_B}" "${USER_NAME_A}"
+fetch_network "${USER_NAME_B}"
+fetch_volume "${USER_NAME_B}"
+fetch_passport "${USER_NAME_B}"
+
+# link device
+echo "[Client B] Link new device to network 'cluster'"
+storages_Bc=()
+link_device "${USER_NAME_B}" "${USER_NAME_A}/cluster" storages_Bc[@]
+
+# mount volume
+mount_point_Bc=$(mktemp -d)
+track_directory "${mount_point_Bc}"
+echo "[Client B] Mount volume 'shared': ${mount_point_Bc}"
+peers_Bc=()
+output_Bc=$(mount_volume "${USER_NAME_B}" "${USER_NAME_A}/shared" "${mount_point_Bc}" peers_Bc[@] "--publish")
+pid_Bc=$(r "${output_Bc}" 1)
+track_file $(r "${output_Bc}" 2)
+track_mount "${mount_point_Bc}" "${pid_Bc}"
+
+sleep 3
+
+# ---------- server C --------------------------------------------------------
+
+# home
+set_home "${infinit_home_Cs}"
+
+# fetch objects
+echo "[Server C] Fetch user, network, volume and passport"
+fetch_user "${USER_NAME_C}" "${USER_NAME_A}"
+fetch_network "${USER_NAME_C}"
+fetch_volume "${USER_NAME_C}"
+fetch_passport "${USER_NAME_C}"
+
+# create storage resources
+storage_path_Cs1=$(mktemp -d)
+track_directory "${storage_path_Cs1}"
+echo "[Server C] Create local storage 1: ${storage_path_Cs1}"
+create_filesystem_storage "local1" "2GB" "${storage_path_Cs1}"
+storage_path_Cs2=$(mktemp -d)
+track_directory "${storage_path_Cs2}"
+echo "[Server C] Create local storage 2: ${storage_path_Cs2}"
+create_filesystem_storage "local2" "4GB" "${storage_path_Cs2}"
+
+# link device
+echo "[Server C] Link new device to network 'cluster'"
+storages_Cs=("local1" "local2")
+link_device "${USER_NAME_C}" "${USER_NAME_A}/cluster" storages_Cs[@]
 
 # run network
-echo "[Server A1] Run network 'cluster'"
-peers_As1=()
-output_As1=$(run_network "${USER_NAME_A}" "cluster" peers_As1[@] "--publish")
-pid_As1=$(r "${output_As1}" 1)
-track_file $(r "${output_As1}" 2)
-track_run "${pid_As1}"
+echo "[Server C] Run network 'cluster'"
+peers_Cs=()
+output_Cs=$(run_network "${USER_NAME_C}" "${USER_NAME_A}/cluster" peers_Cs[@] "--publish")
+pid_Cs=$(r "${output_Cs}" 1)
+track_file $(r "${output_Cs}" 2)
+track_run "${pid_Cs}"
 
-# ---------- server A2 -------------------------------------------------------
+sleep 3
 
-server_AN "2" "${infinit_home_As2}" "5GB"
+# ---------- client_server D...X ---------------------------------------------
 
-# ---------- server A3 -------------------------------------------------------
-
-server_AN "3" "${infinit_home_As3}" "3GB"
-
-# ---------- client B...X ----------------------------------------------------
-
-client_X()
+client_server_X()
 {
   identifier="${1}"
   user="${2}"
   home="${3}"
   mount_point="${4}"
+  capacity="${5}"
 
   # home
   set_home "${home}"
 
   # fetch objects
-  echo "[Client ${identifier}] Fetch user, network, volume and passport"
+  echo "[Client/Server ${identifier}] Fetch user, network, volume and passport"
   fetch_user "${user}" "${USER_NAME_A}"
   fetch_network "${user}"
   fetch_volume "${user}"
   fetch_passport "${user}"
 
+  # create storage
+  storage_path_Xcs=$(mktemp -d)
+  track_directory "${storage_path_Xcs}"
+  echo "[Client/Server ${identifier}] Create local storage: ${storage_path_Xcs}"
+  create_filesystem_storage "local" "${capacity}" "${storage_path_Xcs}"
+
   # link device
-  echo "[Client ${identifier}] Link new device to network 'cluster'"
-  storages_Xc=()
-  link_device "${user}" "${USER_NAME_A}/cluster" storages_Xc[@]
+  echo "[Client/Server ${identifier}] Link new device to network 'cluster'"
+  storages_Xcs=("local")
+  link_device "${user}" "${USER_NAME_A}/cluster" storages_Xcs[@]
 
   # mount volume
   track_directory "${mount_point}"
-  echo "[Client ${identifier}] Mount volume 'shared': ${mount_point}"
-  peers_Xc=()
-  output_Xc=$(mount_volume "${user}" "${USER_NAME_A}/shared" "${mount_point}" peers_Xc[@] "--publish")
-  pid_Xc=$(r "${output_Xc}" 1)
-  track_file $(r "${output_Xc}" 2)
-  track_mount "${mount_point}" "${pid_Xc}"
+  echo "[Client/Server ${identifier}] Mount volume 'shared': ${mount_point}"
+  peers_Xcs=()
+  output_Xcs=$(mount_volume "${user}" "${USER_NAME_A}/shared" "${mount_point}" peers_Xcs[@] "--publish")
+  pid_Xcs=$(r "${output_Xcs}" 1)
+  track_file $(r "${output_Xcs}" 2)
+  track_mount "${mount_point}" "${pid_Xcs}"
 
   sleep 3
 }
 
-# ---------- client A --------------------------------------------------------
+# ---------- client/server D -------------------------------------------------
 
-# home
-set_home "${infinit_home_Ac}"
+mount_point_Dcs=$(mktemp -d)
+client_server_X "D" "${USER_NAME_D}" "${infinit_home_Dcs}" "${mount_point_Dcs}" "5GB"
 
-# fetch objects
-echo "[Client A] Fetch network and volume"
-fetch_network "${USER_NAME_A}"
-fetch_volume "${USER_NAME_A}"
+# ---------- client/server E -------------------------------------------------
 
-# link device
-echo "[Client A] Link new device to network 'cluster'"
-storages_Ac=()
-link_device "${USER_NAME_A}" "cluster" storages_Ac[@]
+mount_point_Ecs=$(mktemp -d)
+client_server_X "E" "${USER_NAME_E}" "${infinit_home_Ecs}" "${mount_point_Ecs}" "5GB"
 
-# mount volume
-mount_point_Ac=$(mktemp -d)
-track_directory "${mount_point_Ac}"
-echo "[Client A] Mount volume 'shared': ${mount_point_Ac}"
-peers_Ac=()
-output_Ac=$(mount_volume "${USER_NAME_A}" "shared" "${mount_point_Ac}" peers_Ac[@] "--publish")
-pid_Ac=$(r "${output_Ac}" 1)
-track_file $(r "${output_Ac}" 2)
-track_mount "${mount_point_Ac}" "${pid_Ac}"
-
-sleep 3
+# ---------- client/server A -------------------------------------------------
 
 # create file
-echo "[Client A] Create and write file: awesome.txt"
-echo "everything is" > ${mount_point_Ac}/awesome.txt
+set_home "${infinit_home_Acs}"
+echo "[Client/Server A] Create and write file: awesome.txt"
+echo "everything is" > ${mount_point_Acs}/awesome.txt
 
 # ---------- client B --------------------------------------------------------
 
-mount_point_Bc=$(mktemp -d)
-client_X "B" "${USER_NAME_B}" "${infinit_home_Bc}" "${mount_point_Bc}"
-
 # check permission to read the file
+set_home "${infinit_home_Bc}"
 echo "[Client B] Check the permissions on the file 'awesome.txt'"
 if [ -r "${mount_point_Bc}/awesome.txt" ] ; then
   echo "[error] ${USER_NAME_B} seems to be able to read the file"
   exit 1
 fi
 
-# ---------- client C --------------------------------------------------------
-
-mount_point_Cc=$(mktemp -d)
-client_X "C" "${USER_NAME_C}" "${infinit_home_Cc}" "${mount_point_Cc}"
+# ---------- client/server D -------------------------------------------------
 
 # check permission to read the file
-echo "[Client C] Check the permissions on the file 'awesome.txt'"
-if [ -r "${mount_point_Cc}/awesome.txt" ] ; then
-  echo "[error] ${USER_NAME_C} seems to be able to read the file"
+set_home "${infinit_home_Dcs}"
+echo "[Client/Server D] Check the permissions on the file 'awesome.txt'"
+if [ -r "${mount_point_Dcs}/awesome.txt" ] ; then
+  echo "[error] ${USER_NAME_D} seems to be able to read the file"
   exit 1
 fi
 
-# ---------- client A --------------------------------------------------------
+# ---------- client/server E -------------------------------------------------
 
-# home
-set_home "${infinit_home_Ac}"
+# check permission to read the file
+set_home "${infinit_home_Ecs}"
+echo "[Client/Server E] Check the permissions on the file 'awesome.txt'"
+if [ -r "${mount_point_Ecs}/awesome.txt" ] ; then
+  echo "[error] ${USER_NAME_E} seems to be able to read the file"
+  exit 1
+fi
 
-# grant user B and C access to the file
-echo "[Client A] Grant access to '${USER_NAME_B}'"
-grant_access "${mount_point_Ac}/" "r" "${USER_NAME_B}"
-grant_access "${mount_point_Ac}/awesome.txt" "r" "${USER_NAME_B}"
-echo "[Client A] Grant access to '${USER_NAME_C}'"
-grant_access "${mount_point_Ac}/" "r" "${USER_NAME_C}"
-grant_access "${mount_point_Ac}/awesome.txt" "r" "${USER_NAME_C}"
+# ---------- client/server A -------------------------------------------------
+
+# grant user B, D and E access to the file
+set_home "${infinit_home_Acs}"
+echo "[Client/Server A] Grant access to '${USER_NAME_B}'"
+grant_access "${mount_point_Acs}/" "r" "${USER_NAME_B}"
+grant_access "${mount_point_Acs}/awesome.txt" "r" "${USER_NAME_B}"
+echo "[Client/Server A] Grant access to '${USER_NAME_D}'"
+grant_access "${mount_point_Acs}/" "r" "${USER_NAME_D}"
+grant_access "${mount_point_Acs}/awesome.txt" "r" "${USER_NAME_D}"
+echo "[Client/Server A] Grant access to '${USER_NAME_E}'"
+grant_access "${mount_point_Acs}/" "r" "${USER_NAME_E}"
+grant_access "${mount_point_Acs}/awesome.txt" "r" "${USER_NAME_E}"
 
 sleep 3
 
 # ---------- client B --------------------------------------------------------
 
-# home
-set_home "${infinit_home_Bc}"
-
 # read the file with user B
+set_home "${infinit_home_Bc}"
 content_Bc=$(cat ${mount_point_Bc}/awesome.txt)
 echo "[Client B] Read file 'awesome.txt': \"${content_Bc}\""
 if [ "${content_Bc}" != "everything is" ] ; then
@@ -879,15 +908,24 @@ if [ "${content_Bc}" != "everything is" ] ; then
   exit 1
 fi
 
-# ---------- client C --------------------------------------------------------
+# ---------- client/server D -------------------------------------------------
 
-# home
-set_home "${infinit_home_Cc}"
+# read the file with user D
+set_home "${infinit_home_Dcs}"
+content_Dcs=$(cat ${mount_point_Dcs}/awesome.txt)
+echo "[Client/Server D] Read file 'awesome.txt': \"${content_Dcs}\""
+if [ "${content_Dcs}" != "everything is" ] ; then
+  echo "[error] unexpected content '${content_Dcs}'"
+  exit 1
+fi
 
-# read the file with user C
-content_Cc=$(cat ${mount_point_Cc}/awesome.txt)
-echo "[Client C] Read file 'awesome.txt': \"${content_Cc}\""
-if [ "${content_Cc}" != "everything is" ] ; then
-  echo "[error] unexpected content '${content_Cc}'"
+# ---------- client/server E -------------------------------------------------
+
+# read the file with user E
+set_home "${infinit_home_Ecs}"
+content_Ecs=$(cat ${mount_point_Ecs}/awesome.txt)
+echo "[Client/Server E] Read file 'awesome.txt': \"${content_Ecs}\""
+if [ "${content_Ecs}" != "everything is" ] ; then
+  echo "[error] unexpected content '${content_Ecs}'"
   exit 1
 fi
