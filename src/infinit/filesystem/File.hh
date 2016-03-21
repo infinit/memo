@@ -16,7 +16,7 @@ namespace infinit
     class Directory;
     typedef std::shared_ptr<Directory> DirectoryPtr;
     typedef infinit::model::blocks::MutableBlock MutableBlock;
-
+    class FileHandle;
     class File
       : public rfs::Path
       , public Node
@@ -64,8 +64,9 @@ namespace infinit
         std::unique_ptr<ACLBlock> _first_block;
         ELLE_ATTRIBUTE_R(std::shared_ptr<FileData>, filedata);
 
-        // address -> (size, open_handle_count)
-        typedef std::unordered_map<Address, std::pair<uint64_t, int>> SizeMap;
+        //(size, open_handles)
+        typedef std::pair<uint64_t, std::vector<FileHandle*>> SizeHandles;
+        typedef std::unordered_map<Address, SizeHandles> SizeMap;
         static SizeMap _size_map;
         void _ensure_first_block();
         void _fetch() override;

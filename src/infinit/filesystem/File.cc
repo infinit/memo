@@ -582,6 +582,14 @@ namespace infinit
         _filedata->_data.size(new_size);
       this->_filedata->_header.size = new_size;
       this->_commit(WriteTarget::data);
+
+      // propagate to all write-opened file handles
+      auto it = _size_map.find(_filedata->address());
+      if (it != _size_map.end())
+      {
+        for (auto fh: it->second.second)
+          fh->ftruncate(new_size);
+      }
     }
 
     std::unique_ptr<rfs::Handle>

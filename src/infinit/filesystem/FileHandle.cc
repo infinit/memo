@@ -41,8 +41,8 @@ namespace infinit
       if (_writable)
       {
         auto it = File::_size_map.insert(std::make_pair(data.address(),
-          std::make_pair(data.header().size, 0))).first;
-        it->second.second++;
+          File::SizeHandles(data.header().size, {}))).first;
+        it->second.second.push_back(this);
         it->second.first = std::max(it->second.first, data.header().size);
       }
     }
@@ -51,9 +51,12 @@ namespace infinit
     {
       if (_writable)
       {
-        auto it = File::_size_map.find(_file.address());
-        if (!--it->second.second)
-          File::_size_map.erase(it);
+        auto sh = File::_size_map.at(_file.address());
+        auto it = std::find(sh.second.begin(), sh.second.end(), this);
+        std::swap(*it, sh.second.back());
+        sh.second.pop_back();
+        if (sh.second.empty())
+          File::_size_map.erase(_file.address());
       }
 
       while (_prefetchers_count)
