@@ -143,7 +143,7 @@ COMMAND(create)
       }
       catch (elle::serialization::Error const& e)
       {
-        throw CommandLineError("protocol must be one of: utp, tcp, all");
+        throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
       }
     }
     overlay_config = std::move(kelips);
@@ -197,7 +197,8 @@ COMMAND(create)
       infinit::model::doughnut::Passport(
         owner.public_key,
         ifnt.qualified_name(name, owner),
-        infinit::cryptography::rsa::KeyPair(owner.public_key, owner.private_key.get())),
+        infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                            owner.private_key.get())),
       owner.name,
       std::move(port),
       version);
