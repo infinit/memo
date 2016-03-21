@@ -1124,7 +1124,9 @@ namespace infinit
             }
             if (peers.empty())
               throw elle::Error(
-                elle::sprintf("No peer available for store %x", b->address()));
+                elle::sprintf("No peer available for store %s %x",
+                  op == overlay::OP_INSERT ? "insert" : "update",
+                  b->address()));
             ELLE_DEBUG("owners: %f", peers);
             // FIXME: client is persisted on conflict resolution, hence the
             // round number is kept and won't start at 0.
