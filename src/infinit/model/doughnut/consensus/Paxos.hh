@@ -31,6 +31,7 @@ namespace infinit
         NAMED_ARGUMENT(replication_factor);
         NAMED_ARGUMENT(lenient_fetch);
         NAMED_ARGUMENT(rebalance_auto_expand);
+        NAMED_ARGUMENT(node_timeout);
 
         class Paxos
           : public Consensus
@@ -56,13 +57,15 @@ namespace infinit
         public:
           Paxos(Doughnut& doughnut,
                 int factor,
-                bool lenient_fetch = false,
-                bool rebalance_auto_expand = true);
+                bool lenient_fetch,
+                bool rebalance_auto_expand,
+                std::chrono::system_clock::duration node_timeout);
           template <typename ... Args>
           Paxos(Args&& ... args);
           ELLE_ATTRIBUTE_R(int, factor);
           ELLE_ATTRIBUTE_R(bool, lenient_fetch);
           ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
+          ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
         private:
           struct _Details;
           friend struct _Details;
@@ -156,6 +159,9 @@ namespace infinit
           class LocalPeer
             : public doughnut::Local
           {
+          /*-------------.
+          | Construction |
+          `-------------*/
           public:
             typedef Paxos::PaxosClient PaxosClient;
             typedef Paxos::PaxosServer PaxosServer;
@@ -165,6 +171,7 @@ namespace infinit
             LocalPeer(Paxos& paxos,
                       int factor,
                       bool rebalance_auto_expand,
+                      std::chrono::system_clock::duration node_timeout,
                       Args&& ... args);
             virtual
             ~LocalPeer();
@@ -178,6 +185,13 @@ namespace infinit
             ELLE_ATTRIBUTE_R(int, factor);
             ELLE_ATTRIBUTE_R(bool, rebalance_auto_expand);
             ELLE_ATTRIBUTE_R(reactor::Thread::unique_ptr, rebalance_inspector);
+            ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
+            ELLE_ATTRIBUTE(std::vector<reactor::Thread::unique_ptr>,
+                           evict_threads);
+          /*------.
+          | Paxos |
+          `------*/
+          public:
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,
@@ -279,7 +293,6 @@ namespace infinit
             typedef
               std::unordered_map<Address, boost::asio::deadline_timer>
               NodeTimeouts;
-            ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
             ELLE_ATTRIBUTE_R(NodeTimeouts, node_timeouts);
           };
 

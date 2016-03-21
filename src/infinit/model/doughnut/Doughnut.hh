@@ -53,6 +53,16 @@ namespace infinit
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {});
         ~Doughnut();
+
+      /*-----.
+      | Time |
+      `-----*/
+      protected:
+        virtual
+        std::chrono::high_resolution_clock::time_point
+        now();
+
+      public:
         cryptography::rsa::KeyPair const&
         keys() const;
         std::shared_ptr<cryptography::rsa::KeyPair>

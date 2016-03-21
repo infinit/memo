@@ -37,8 +37,7 @@ public:
 
   ~Overlay()
   {
-    while (!this->_peers.empty())
-      this->disconnect(**this->_peers.begin());
+    this->disconnect_all();
   }
 
   static
@@ -76,6 +75,13 @@ public:
         break;
       }
     this->on_disappear()(other.node_id(), !other.doughnut()->local());
+  }
+
+  void
+  disconnect_all()
+  {
+    while (!this->_peers.empty())
+      this->disconnect(**this->_peers.begin());
   }
 
 protected:
@@ -140,6 +146,7 @@ NAMED_ARGUMENT(paxos);
 NAMED_ARGUMENT(keys);
 NAMED_ARGUMENT(owner);
 NAMED_ARGUMENT(id);
+NAMED_ARGUMENT(node_timeout);
 NAMED_ARGUMENT(storage);
 NAMED_ARGUMENT(make_overlay);
 NAMED_ARGUMENT(make_consensus);
@@ -165,7 +172,8 @@ public:
       {
         return c;
       },
-      dht::consensus::rebalance_auto_expand = true
+      dht::consensus::rebalance_auto_expand = true,
+      dht::consensus::node_timeout = std::chrono::minutes(10)
       ).call([this] (bool paxos,
                      infinit::cryptography::rsa::KeyPair keys,
                      boost::optional<infinit::cryptography::rsa::KeyPair> owner,
@@ -182,7 +190,8 @@ public:
                      std::unique_ptr<dht::consensus::Consensus>(
                        std::unique_ptr<dht::consensus::Consensus>
                        )> make_consensus,
-                     bool rebalance_auto_expand)
+                     bool rebalance_auto_expand,
+                     std::chrono::system_clock::duration node_timeout)
              {
                this-> init(paxos,
                            keys,
@@ -191,7 +200,8 @@ public:
                            std::move(storage),
                            version,
                            std::move(make_consensus),
-                           rebalance_auto_expand);
+                           rebalance_auto_expand,
+                           node_timeout);
              }, std::forward<Args>(args)...);
   }
 
@@ -209,7 +219,8 @@ private:
        std::function<
          std::unique_ptr<dht::consensus::Consensus>(
            std::unique_ptr<dht::consensus::Consensus>)> make_consensus,
-       bool rebalance_auto_expand)
+       bool rebalance_auto_expand,
+       std::chrono::system_clock::duration node_timeout)
   {
     auto keys =
       std::make_shared<infinit::cryptography::rsa::KeyPair>(std::move(keys_));
@@ -222,7 +233,8 @@ private:
             elle::make_unique<dht::consensus::Paxos>(
               dht::consensus::doughnut = dht,
               dht::consensus::replication_factor = 3,
-              dht::consensus::rebalance_auto_expand = rebalance_auto_expand));
+              dht::consensus::rebalance_auto_expand = rebalance_auto_expand,
+              dht::consensus::node_timeout = node_timeout));
         };
     else
       consensus =

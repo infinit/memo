@@ -998,6 +998,9 @@ namespace rebalancing
     ELLE_ATTRIBUTE_RW(bool, confirm_bypass);
   };
 
+  static constexpr
+  auto default_node_timeout = std::chrono::seconds(1);
+
   class InstrumentedPaxos:
     public dht::consensus::Paxos
   {
@@ -1011,6 +1014,8 @@ namespace rebalancing
         *this,
         this->factor(),
         this->rebalance_auto_expand(),
+        std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          default_node_timeout),
         this->doughnut(),
         this->doughnut().id(),
         std::move(storage),
@@ -1203,6 +1208,47 @@ namespace rebalancing
     }
     dht_b.overlay->connect(*dht_a.overlay);
   }
+
+  ELLE_TEST_SCHEDULED(evict_faulty)
+  {
+    DHT dht_a(dht::consensus::node_timeout = std::chrono::seconds(1));
+    auto& local_a =
+      dynamic_cast<dht::consensus::Paxos::LocalPeer&>(*dht_a.dht->local());
+    ELLE_LOG("first DHT: %f", dht_a.dht->id());
+    DHT dht_b;
+    auto& local_b =
+      dynamic_cast<dht::consensus::Paxos::LocalPeer&>(*dht_b.dht->local());
+    dht_b.overlay->connect(*dht_a.overlay);
+    ELLE_LOG("second DHT: %f", dht_b.dht->id());
+    DHT dht_c;
+    dht_c.overlay->connect(*dht_a.overlay);
+    dht_c.overlay->connect(*dht_b.overlay);
+    ELLE_LOG("third DHT: %f", dht_c.dht->id());
+    auto b = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block")
+    {
+      b->data(std::string("evict_faulty"));
+      dht_a.dht->store(*b, infinit::model::STORE_INSERT);
+    }
+    DHT dht_d;
+    dht_d.overlay->connect(*dht_a.overlay);
+    dht_d.overlay->connect(*dht_b.overlay);
+    dht_d.overlay->connect(*dht_c.overlay);
+    ELLE_LOG("fourth DHT: %f", dht_d.dht->id());
+    ELLE_LOG("disconnect third DHT")
+    {
+      dht_c.overlay->disconnect_all();
+      boost::signals2::signal<void(infinit::model::Address)> rebalanced;
+      boost::signals2::scoped_connection c_a =
+        local_a.rebalanced().connect(rebalanced);
+      boost::signals2::scoped_connection c_b =
+        local_b.rebalanced().connect(rebalanced);
+      reactor::wait(rebalanced, b->address());
+    }
+    ELLE_LOG("disconnect first DHT")
+      dht_a.overlay->disconnect_all();
+    BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
+  }
 }
 
 ELLE_TEST_SUITE()
@@ -1246,5 +1292,6 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(expand_from_disk), 0, valgrind(1));
     rebalancing->add(
       BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(evict_faulty), 0, valgrind(5));
   }
 }

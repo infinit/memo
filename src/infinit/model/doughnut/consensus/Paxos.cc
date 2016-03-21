@@ -104,11 +104,13 @@ namespace infinit
         Paxos::Paxos(Doughnut& doughnut,
                      int factor,
                      bool lenient_fetch,
-                     bool rebalance_auto_expand)
+                     bool rebalance_auto_expand,
+                     std::chrono::system_clock::duration node_timeout)
           : Super(doughnut)
           , _factor(factor)
           , _lenient_fetch(lenient_fetch)
           , _rebalance_auto_expand(rebalance_auto_expand)
+          , _node_timeout(node_timeout)
         {
           if (getenv("INFINIT_PAXOS_LENIENT_FETCH"))
             _lenient_fetch = true;
@@ -126,6 +128,7 @@ namespace infinit
             *this,
             this->factor(),
             this->_rebalance_auto_expand,
+            this->_node_timeout,
             this->doughnut(),
             this->doughnut().id(),
             std::move(storage),
@@ -502,6 +505,8 @@ namespace infinit
         {
           if (this->_nodes.erase(id))
           {
+            ELLE_TRACE("%s: node %f disappeared, evict in %s",
+                       this, id, this->_node_timeout);
             auto it = this->_node_timeouts.emplace(
               std::piecewise_construct,
               std::forward_as_tuple(id),
@@ -516,18 +521,42 @@ namespace infinit
               [this, id] (const boost::system::error_code& error)
               {
                 if (!error)
-                  this->_node_lost(id);
+                  this->_evict_threads.emplace_back(
+                    new reactor::Thread(
+                      elle::sprintf("%s: evict %f", this, id),
+                      [this, id]
+                      {
+                        this->_node_lost(id);
+                      }));
               });
           }
-          if (this->_rebalance_auto_expand)
-            this->_rebalancable.put(std::make_pair(id, true));
         }
 
         void
-        Paxos::LocalPeer::_node_lost(model::Address id)
+        Paxos::LocalPeer::_node_lost(model::Address lost_id)
         {
           ELLE_WARN("lost contact with %f for %s, evict",
-                    id, this->_node_timeout);
+                    lost_id, this->_node_timeout);
+          auto blocks = this->_node_blocks.find(lost_id);
+          if (blocks != this->_node_blocks.end())
+            for (auto address: blocks->second)
+            {
+              ELLE_TRACE_SCOPE("%s: evict %f from %f quorum",
+                               this, lost_id, address);
+              auto& decision = this->_load(address);
+              auto q = decision.paxos.current_quorum();
+              Paxos::PaxosClient client(
+                this->doughnut().id(),
+                lookup_nodes(this->_paxos.doughnut(), q, address));
+              if (q.erase(lost_id))
+              {
+                client.choose(decision.paxos.current_version() + 1, q);
+                ELLE_TRACE("%s: evicted %f from %f quorum",
+                           this, lost_id, address);
+                if (signed(q.size()) < this->_factor)
+                  this->_rebalancable.put(std::make_pair(address, false));
+              }
+            }
         }
 
         void
@@ -562,11 +591,11 @@ namespace infinit
                 if (it == this->_addresses.end())
                   // The block was deleted in the meantime.
                   continue;
+                auto peers = lookup_nodes(this->_paxos.doughnut(),
+                                          it->second.paxos.current_quorum(),
+                                          it->first);
                 Paxos::PaxosClient client(
-                  this->doughnut().id(),
-                  lookup_nodes(this->_paxos.doughnut(),
-                               it->second.paxos.current_quorum(),
-                               it->first));
+                  this->doughnut().id(), std::move(peers));
                 if (this->_paxos._rebalance(client, elt.first))
                 {
                   auto it = this->_addresses.find(elt.first);
@@ -1401,42 +1430,70 @@ namespace infinit
                           PaxosClient::Quorum const& ids,
                           int version)
         {
-          try
+          std::unique_ptr<PaxosClient> replace;
+          while (true)
           {
-            // FIXME: version is the last *value* version, there could have
-            // been a quorum since then in which case this will fail.
-            if (auto conflict = client.choose(version + 1, ids))
+            try
             {
-              // FIXME: Retry balancing.
-              // FIXME: We should still try block propagation in the case that
-              // "someone else" failed to perform it.
-              if (conflict->value.is<PaxosServer::Quorum>())
+              // FIXME: version is the last *value* version, there could have
+              // been a quorum since then in which case this will fail.
+              if (auto conflict =
+                  (replace ? *replace : client).choose(version + 1, ids))
               {
-                auto quorum = conflict->value.get<PaxosServer::Quorum>();
-                if (quorum == ids)
-                  ELLE_WARN("someone else rebalanced to the same quorum");
-                else if (signed(quorum.size()) == this->_factor)
-                  ELLE_WARN("someone else rebalanced to a sufficient quorum");
+                // FIXME: Retry balancing.
+                // FIXME: We should still try block propagation in the case that
+                // "someone else" failed to perform it.
+                if (conflict->value.is<PaxosServer::Quorum>())
+                {
+                  auto quorum = conflict->value.get<PaxosServer::Quorum>();
+                  if (quorum == ids)
+                    ELLE_TRACE("someone else rebalanced to the same quorum");
+                  else if (signed(quorum.size()) == this->_factor)
+                    ELLE_TRACE(
+                      "someone else rebalanced to a sufficient quorum");
+                  else
+                  {
+                    ELLE_TRACE(
+                      "someone else rebalanced to an insufficient quorum");
+                    auto new_q =
+                      this->_rebalance_extend_quorum(address, quorum);
+                    if (new_q == quorum)
+                    {
+                      ELLE_TRACE("unable to find any new owner");
+                      return false;
+                    }
+                    ++version;
+                    replace.reset(
+                      new Paxos::PaxosClient(
+                        this->doughnut().id(),
+                        lookup_nodes(this->doughnut(), new_q, address)));
+                    continue;
+                  }
+                }
                 else
                   ELLE_WARN(
-                    "someone else rebalanced to an insufficient quorum");
+                    "someone else picked a value while we rebalanced");
+                return false;
               }
               else
-                ELLE_WARN(
-                  "someone else picked a value while we rebalanced");
+              {
+                ELLE_TRACE("successfully rebalanced to %s nodes at version %s",
+                           ids.size(), version + 1);
+                return true;
+              }
+            }
+            catch (Paxos::PaxosServer::WrongQuorum const& e)
+            {
+              replace.reset(
+                new Paxos::PaxosClient(
+                  this->doughnut().id(),
+                  lookup_nodes(this->doughnut(), e.expected(), address)));
+            }
+            catch (elle::Error const&)
+            {
+              ELLE_WARN("rebalancing failed: %s", elle::exception_string());
               return false;
             }
-            else
-            {
-              ELLE_TRACE("successfully rebalanced to %s nodes at version %s",
-                         ids.size(), version + 1);
-              return true;
-            }
-          }
-          catch (elle::Error const&)
-          {
-            ELLE_WARN("rebalancing failed: %s", elle::exception_string());
-            return false;
           }
         }
 

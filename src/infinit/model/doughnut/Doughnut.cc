@@ -41,6 +41,10 @@ namespace infinit
   {
     namespace doughnut
     {
+      /*-------------.
+      | Construction |
+      `-------------*/
+
       Doughnut::Doughnut(Address id,
                          std::shared_ptr<cryptography::rsa::KeyPair> keys,
                          std::shared_ptr<cryptography::rsa::PublicKey> owner,
@@ -170,6 +174,16 @@ namespace infinit
           }
           this->_local.reset();
         }
+      }
+
+      /*-----.
+      | Time |
+      `-----*/
+
+      std::chrono::high_resolution_clock::time_point
+      Doughnut::now()
+      {
+        return std::chrono::high_resolution_clock::now();
       }
 
       cryptography::rsa::KeyPair const&
