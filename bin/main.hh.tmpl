@@ -79,7 +79,7 @@ class CommandLineError
 public:
   template <typename ... Args>
   CommandLineError(Args&& ... args)
-    : elle::Error(std::forward<Args>(args)...)
+    : elle::Error(elle::sprintf(std::forward<Args>(args)...))
   {}
 };
 
@@ -308,10 +308,8 @@ struct Mode
 
   typedef
     std::function<void (boost::program_options::variables_map const&)> Action;
-  typedef
-    std::vector<OptionDescription> Options;
-  typedef
-    std::vector<OptionsDescription> OptionsVector;
+  typedef std::vector<OptionDescription> Options;
+  typedef std::vector<OptionsDescription> OptionsVector;
 
   Mode(std::string name_,
        std::string description_,
@@ -349,7 +347,7 @@ struct Mode
       this->_add_options(deprecated, false);
     for (auto const& extra: extra_options)
       this->_add_options(extra);
-    po::options_description hidden;
+    po::options_description hidden("Hidden options");
     for (auto const& option: hidden_options)
     {
       hidden.add(
@@ -994,6 +992,9 @@ namespace infinit
 #ifdef INFINIT_MACOSX
         , boost::optional<std::string> volicon_ = {}
 #endif
+#ifndef INFINIT_WINDOWS
+        , boost::optional<std::vector<std::string>> fuse_options = {}
+#endif
     )
     {
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
@@ -1027,6 +1028,14 @@ namespace infinit
           mount_options.push_back("-o");
           mount_options.push_back("ro");
         }
+        if (fuse_options)
+        {
+          for (auto const& opt: fuse_options.get())
+          {
+            mount_options.push_back("-o");
+            mount_options.push_back(opt);
+          }
+        }
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         auto add_option =
           [&mount_options] (std::string const& opt_name,
@@ -1052,7 +1061,6 @@ namespace infinit
     {
       return xdg_state_home() / this->network / this->name;
     }
-
 
     std::string name;
     boost::optional<std::string> mountpoint;
@@ -2726,23 +2734,23 @@ Mode::OptionDescription option_cache(
   "enable caching with default values");
 Mode::OptionDescription option_cache_ram_size(
   "cache-ram-size", boost::program_options::value<int>(),
-  "maximum RAM block cache size in bytes (default: 64 MB)",
+  "maximum RAM block cache size in bytes\n(default: 64 MB)",
   {{"cache-size", boost::program_options::value<int>()}});
 Mode::OptionDescription option_cache_ram_ttl(
   "cache-ram-ttl", boost::program_options::value<int>(),
-  "RAM block cache time-to-live in seconds (default: 5 minutes)",
+  "RAM block cache time-to-live in seconds\n(default: 5 minutes)",
   {{"cache-ttl", boost::program_options::value<int>()}});
 Mode::OptionDescription option_cache_ram_invalidation(
   "cache-ram-invalidation", boost::program_options::value<int>(),
-  "RAM block cache invalidation time in seconds (default: 15 seconds)",
+  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
   {{"cache-invalidation", boost::program_options::value<int>()}});
 Mode::OptionDescription option_cache_disk_size(
   "cache-disk-size", boost::program_options::value<uint64_t>(),
-  "size of disk cache for immutable data in bytes (default: 512 MB)",
+  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
   {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
 Mode::OptionDescription option_port_file(
   "port-file", boost::program_options::value<std::string>(),
   "write node listening port to file");
 Mode::OptionDescription option_endpoint_file(
   "endpoints-file", boost::program_options::value<std::string>(),
-  "write node listening endpoints to file");
+  "write node listening endpoints to file\n(format: host:port\\n)");

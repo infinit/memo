@@ -303,6 +303,16 @@ COMMAND(run)
       }
     }
   }
+  boost::optional<std::vector<std::string>> fuse_options;
+  if (args.count("fuse-option"))
+  {
+    if (!args.count("mountpoint"))
+      throw CommandLineError("FUSE options require the volume to be mounted");
+    std::vector<std::string> fuse_options_;
+    for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
+      fuse_options_.push_back(opt);
+    fuse_options = fuse_options_;
+  }
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
@@ -396,6 +406,9 @@ COMMAND(run)
 #endif
 #ifdef INFINIT_MACOSX
                          , optional(args, "mount-icon")
+#endif
+#ifndef INFINIT_WINDOWS
+                         , fuse_options
 #endif
                          );
     if (volume.default_permissions && !volume.default_permissions->empty())
@@ -965,6 +978,13 @@ main(int argc, char** argv)
       &run,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
+#ifndef INFINIT_WINDOWS
+      {},
+      {
+        { "fuse-option", value<std::vector<std::string>>()->multitoken(),
+          "option to pass directly to FUSE" },
+      },
+#endif
     },
     {
       "mount",
@@ -972,6 +992,13 @@ main(int argc, char** argv)
       &mount,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
+#ifndef INFINIT_WINDOWS
+      {},
+      {
+        { "fuse-option", value<std::vector<std::string>>()->multitoken(),
+          "option to pass directly to FUSE" },
+      },
+#endif
     },
     {
       "delete",
