@@ -763,6 +763,7 @@ def configure(
           t['dependencies'] = binaries
           t['paths'] = [str(x.path(True).dirname()) for x in binaries]
         return t
+      utils = drake.node('tests/functional/utils.py')
       tests = list(
         map(lambda x: functional_test(x),
             [
@@ -829,7 +830,8 @@ def configure(
           env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
           exe = test,
-          env = env
+          env = env,
+          sources = [utils],
         )
         rule_functional_check << runner.status
         runner.reporting = drake.Runner.Reporting.on_failure
