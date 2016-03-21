@@ -474,6 +474,7 @@ def configure(
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
     ('infinit-drive', [], True),
+    ('infinit-journal', [], True),
     ('infinit-network', [], True),
     ('infinit-passport', [], True),
     ('infinit-smb', [], False),
