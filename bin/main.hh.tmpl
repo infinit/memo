@@ -1028,6 +1028,7 @@ namespace infinit
           mount_options.push_back("-o");
           mount_options.push_back("ro");
         }
+#ifndef INFINIT_WINDOWS
         if (fuse_options)
         {
           for (auto const& opt: fuse_options.get())
@@ -1036,6 +1037,7 @@ namespace infinit
             mount_options.push_back(opt);
           }
         }
+#endif
 #if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         auto add_option =
           [&mount_options] (std::string const& opt_name,
