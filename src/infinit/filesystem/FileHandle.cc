@@ -306,7 +306,11 @@ namespace infinit
     void
     FileHandle::ftruncate(off_t new_size)
     {
+      elle::SafeFinally write_cache_size([&] {
+          File::_size_map.at(this->_file.address()).first = new_size;
+      });
       off_t current = _file._header.size;
+      ELLE_DEBUG_SCOPE("%s: ftruncate %s -> %s", this, current, new_size);
       if (new_size == signed(current))
         return;
       if (new_size > signed(current))
@@ -326,6 +330,7 @@ namespace infinit
         if (signed(offset) >= new_size)
         {
           // kick the block
+          ELLE_DEBUG("removing from fat at %s", i);
           unchecked_remove(_model, _file._fat[i].first);
           _file._fat.pop_back();
           _blocks.erase(i);
@@ -355,6 +360,7 @@ namespace infinit
         _file._data.size(new_size);
       this->_file._header.size = new_size;
       _fat_changed = true;
+      _dirty = true;
     }
 
     void

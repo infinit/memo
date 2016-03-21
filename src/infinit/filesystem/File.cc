@@ -525,6 +525,11 @@ namespace infinit
     File::truncate(off_t new_size)
     {
       _fetch();
+      elle::SafeFinally write_cache_size([&] {
+          auto it = _size_map.find(this->_address);
+          if (it != _size_map.end())
+            it->second.first = new_size;
+      });
       ELLE_TRACE("%s: truncate %s -> %s", *this, _filedata->_header.size, new_size);
       if (new_size == signed(_filedata->_header.size))
         return;
