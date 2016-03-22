@@ -541,6 +541,10 @@ def configure(
       for s in installed_symbols:
         rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
 
+  connectivity = drake.copy(elle.reactor.connectivity, '.',
+                            strip_prefix = 'elle/reactor')
+  installed_binaries.append(connectivity)
+
   ## ----- ##
   ## Share ##
   ## ----- ##
