@@ -731,7 +731,6 @@ namespace infinit
               elle::serialization::binary::serialize(
                 data, this->doughnut().version()),
               true, true);
-            data.paxos.release();
           }
           if (block)
             this->on_store()(*block);
@@ -760,7 +759,6 @@ namespace infinit
               return res;
             }();
             this->storage()->set(address, ser, true, true);
-            data.paxos.release();
           }
           this->_cache(address, decision.paxos.current_quorum());
           if (this->_rebalance_auto_expand &&
@@ -949,7 +947,6 @@ namespace infinit
                     data,
                     this->doughnut().version()),
                   true, true);
-                data.paxos.release();
               }
               // ELLE_ASSERT(block.unique());
               // FIXME: Don't clone, it's useless, find a way to steal
