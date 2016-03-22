@@ -18,6 +18,7 @@
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Conflict.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
 
@@ -383,6 +384,14 @@ namespace infinit
                     catch (MissingBlock const&)
                     {
                       // Nothing: block was already removed.
+                    }
+                    catch (Conflict const& e)
+                    {
+                      ELLE_TRACE("Conflict removing %f: %s", addr, e);
+                      // try again, regenerating the remove signature
+                      auto block = this->_backend->fetch(addr);
+                      this->_backend->remove(addr, block->sign_remove(
+                        this->doughnut()));
                     }
                   else
                   {
