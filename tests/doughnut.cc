@@ -987,6 +987,13 @@ namespace rebalancing
       Super::confirm(peers, address, p);
     }
 
+    virtual
+    void
+    _disappeared_schedule_eviction(infinit::model::Address id) override
+    {
+      this->_evict.connect([this, id] { this->_disappeared_evict(id); });
+    }
+
     ELLE_ATTRIBUTE_RX(reactor::Barrier, all_barrier);
     ELLE_ATTRIBUTE_RX(reactor::Barrier, propose_barrier);
     ELLE_ATTRIBUTE_RW(bool, propose_bypass);
@@ -996,6 +1003,7 @@ namespace rebalancing
     ELLE_ATTRIBUTE_RW(bool, accept_bypass);
     ELLE_ATTRIBUTE_RX(reactor::Barrier, confirm_barrier);
     ELLE_ATTRIBUTE_RW(bool, confirm_bypass);
+    ELLE_ATTRIBUTE_RX(boost::signals2::signal<void()>, evict);
   };
 
   static constexpr
@@ -1195,16 +1203,14 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(evict_faulty)
   {
-    DHT dht_a(dht::consensus::node_timeout = std::chrono::seconds(1));
-    auto& local_a =
-      dynamic_cast<dht::consensus::Paxos::LocalPeer&>(*dht_a.dht->local());
+    DHT dht_a(make_consensus = instrument(3));
+    auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %f", dht_a.dht->id());
-    DHT dht_b;
-    auto& local_b =
-      dynamic_cast<dht::consensus::Paxos::LocalPeer&>(*dht_b.dht->local());
+    DHT dht_b(make_consensus = instrument(3));
+    auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %f", dht_b.dht->id());
-    DHT dht_c;
+    DHT dht_c(make_consensus = instrument(3));
     dht_c.overlay->connect(*dht_a.overlay);
     dht_c.overlay->connect(*dht_b.overlay);
     ELLE_LOG("third DHT: %f", dht_c.dht->id());
@@ -1214,7 +1220,7 @@ namespace rebalancing
       b->data(std::string("evict_faulty"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT);
     }
-    DHT dht_d;
+    DHT dht_d(make_consensus = instrument(3));
     dht_d.overlay->connect(*dht_a.overlay);
     dht_d.overlay->connect(*dht_b.overlay);
     dht_d.overlay->connect(*dht_c.overlay);
@@ -1222,6 +1228,11 @@ namespace rebalancing
     ELLE_LOG("disconnect third DHT")
     {
       dht_c.overlay->disconnect_all();
+      local_a.evict()();
+      local_b.evict()();
+    }
+    ELLE_LOG("wait for rebalancing")
+    {
       boost::signals2::signal<void(infinit::model::Address)> rebalanced;
       boost::signals2::scoped_connection c_a =
         local_a.rebalanced().connect(rebalanced);
@@ -1231,7 +1242,8 @@ namespace rebalancing
     }
     ELLE_LOG("disconnect first DHT")
       dht_a.overlay->disconnect_all();
-    BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
+    ELLE_LOG("read block")
+      BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
   }
 }
 

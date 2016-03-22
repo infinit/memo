@@ -507,36 +507,42 @@ namespace infinit
           {
             ELLE_TRACE("%s: node %f disappeared, evict in %s",
                        this, id, this->_node_timeout);
-            auto it = this->_node_timeouts.emplace(
-              std::piecewise_construct,
-              std::forward_as_tuple(id),
-              std::forward_as_tuple(reactor::scheduler().io_service()));
-            it.first->second.cancel();
-            it.first->second.expires_from_now(
-              boost::posix_time::seconds(
-                this->_node_timeout.count() *
-                decltype(this->_node_timeout)::period::num /
-                decltype(this->_node_timeout)::period::den));
-            it.first->second.async_wait(
-              [this, id] (const boost::system::error_code& error)
-              {
-                if (!error)
-                  this->_evict_threads.emplace_back(
-                    new reactor::Thread(
-                      elle::sprintf("%s: evict %f", this, id),
-                      [this, id]
-                      {
-                        this->_node_lost(id);
-                      }));
-              });
+            this->_disappeared_schedule_eviction(id);
           }
         }
 
         void
-        Paxos::LocalPeer::_node_lost(model::Address lost_id)
+        Paxos::LocalPeer::_disappeared_schedule_eviction(model::Address id)
         {
-          ELLE_WARN("lost contact with %f for %s, evict",
-                    lost_id, this->_node_timeout);
+          auto it = this->_node_timeouts.emplace(
+            std::piecewise_construct,
+            std::forward_as_tuple(id),
+            std::forward_as_tuple(reactor::scheduler().io_service()));
+          it.first->second.cancel();
+          it.first->second.expires_from_now(
+            boost::posix_time::seconds(
+              this->_node_timeout.count() *
+              decltype(this->_node_timeout)::period::num /
+              decltype(this->_node_timeout)::period::den));
+          it.first->second.async_wait(
+            [this, id] (const boost::system::error_code& error)
+            {
+              if (!error)
+                this->_evict_threads.emplace_back(
+                  new reactor::Thread(
+                    elle::sprintf("%s: evict %f", this, id),
+                    [this, id]
+                    {
+                      ELLE_WARN("lost contact with %f for %s, evict",
+                                id, this->_node_timeout);
+                      this->_disappeared_evict(id);
+                    }));
+            });
+        }
+
+        void
+        Paxos::LocalPeer::_disappeared_evict(model::Address lost_id)
+        {
           auto blocks = this->_node_blocks.find(lost_id);
           if (blocks != this->_node_blocks.end())
             for (auto address: blocks->second)

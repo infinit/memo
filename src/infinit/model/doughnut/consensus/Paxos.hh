@@ -251,8 +251,13 @@ namespace infinit
             _discovered(Address id);
             void
             _disappeared(Address id);
+            virtual
             void
-            _node_lost(Address id);
+            _disappeared_schedule_eviction(model::Address id);
+          protected:
+            void
+            _disappeared_evict(Address id);
+          private:
             void
             _rebalance();
             ELLE_ATTRIBUTE((reactor::Channel<std::pair<Address, bool>>),
