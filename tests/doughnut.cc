@@ -1023,24 +1023,29 @@ namespace rebalancing
     }
   };
 
+  std::function<std::unique_ptr<dht::consensus::Consensus>(
+    std::unique_ptr<dht::consensus::Consensus>)>
+  instrument(int factor)
+  {
+    return [factor] (std::unique_ptr<dht::consensus::Consensus> c)
+      -> std::unique_ptr<dht::consensus::Consensus>
+    {
+      return elle::make_unique<InstrumentedPaxos>(
+        dht::consensus::doughnut = c->doughnut(),
+        dht::consensus::replication_factor = factor);
+    };
+  }
+
   ELLE_TEST_SCHEDULED(expand_new_block)
   {
-    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
-      -> std::unique_ptr<dht::consensus::Consensus>
-      {
-        return elle::make_unique<InstrumentedPaxos>(
-          dht::consensus::doughnut = c->doughnut(),
-          dht::consensus::replication_factor = 2);
-      };
-    DHT dht_a(make_consensus = instrument);
+    DHT dht_a(make_consensus = instrument(2));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b(make_consensus = instrument);
+    DHT dht_b(make_consensus = instrument(2));
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     DHT client(storage = nullptr);
     client.overlay->connect(*dht_a.overlay);
-
     auto b = client.dht->make_block<blocks::MutableBlock>();
     ELLE_LOG("write block to one DHT")
     {
@@ -1062,17 +1067,10 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_newcomer)
   {
-    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
-      -> std::unique_ptr<dht::consensus::Consensus>
-      {
-        return elle::make_unique<InstrumentedPaxos>(
-          dht::consensus::doughnut = c->doughnut(),
-          dht::consensus::replication_factor = 3);
-      };
-    DHT dht_a(make_consensus = instrument);
+    DHT dht_a(make_consensus = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b(make_consensus = instrument);
+    DHT dht_b(make_consensus = instrument(3));
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     auto b = dht_a.dht->make_block<blocks::MutableBlock>();
     ELLE_LOG("write block to first DHT")
@@ -1118,21 +1116,14 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_concurrent)
   {
-    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
-      -> std::unique_ptr<dht::consensus::Consensus>
-      {
-        return elle::make_unique<InstrumentedPaxos>(
-          dht::consensus::doughnut = c->doughnut(),
-          dht::consensus::replication_factor = 3);
-      };
-    DHT dht_a(make_consensus = instrument);
+    DHT dht_a(make_consensus = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
-    DHT dht_b(make_consensus = instrument);
+    DHT dht_b(make_consensus = instrument(3));
     auto& local_b = dynamic_cast<Local&>(*dht_b.dht->local());
     dht_b.overlay->connect(*dht_a.overlay);
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
-    DHT dht_c(make_consensus = instrument);
+    DHT dht_c(make_consensus = instrument(3));
     dht_c.overlay->connect(*dht_a.overlay);
     dht_c.overlay->connect(*dht_b.overlay);
     ELLE_LOG("third DHT: %s", dht_b.dht->id());
@@ -1162,20 +1153,13 @@ namespace rebalancing
 
   ELLE_TEST_SCHEDULED(expand_from_disk)
   {
-    auto instrument = [] (std::unique_ptr<dht::consensus::Consensus> c)
-      -> std::unique_ptr<dht::consensus::Consensus>
-      {
-        return elle::make_unique<InstrumentedPaxos>(
-          dht::consensus::doughnut = c->doughnut(),
-          dht::consensus::replication_factor = 3);
-      };
     infinit::storage::Memory::Blocks storage_a;
     infinit::model::Address address;
     auto id_a = infinit::model::Address::random();
     ELLE_LOG("create block with 1 DHT")
     {
       DHT dht_a(id = id_a,
-                make_consensus = instrument,
+                make_consensus = instrument(3),
                 storage = elle::make_unique<Memory>(storage_a));
       auto block = dht_a.dht->make_block<blocks::MutableBlock>();
       address = block->address();
@@ -1185,10 +1169,10 @@ namespace rebalancing
     ELLE_LOG("restart with 2 DHTs")
     {
       DHT dht_a(id = id_a,
-                make_consensus = instrument,
+                make_consensus = instrument(3),
                 storage = elle::make_unique<Memory>(storage_a));
       auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
-      DHT dht_b(make_consensus = instrument);
+      DHT dht_b(make_consensus = instrument(3));
       dht_b.overlay->connect(*dht_a.overlay);
       reactor::wait(local_a.rebalanced(), address);
     }
