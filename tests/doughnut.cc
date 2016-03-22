@@ -462,6 +462,7 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
   DHTs dhts(paxos);
   auto& dhta = dhts.dht_a;
   auto& dhtb = dhts.dht_b;
+  ELLE_LOG("store UB and RUB")
   {
     dht::UB uba(dhta.get(), "a", dhta->keys().K());
     dht::UB ubarev(dhta.get(), "a", dhta->keys().K(), true);
@@ -473,15 +474,23 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
   auto* uba = dynamic_cast<dht::UB*>(ruba.get());
   BOOST_CHECK(uba);
   dht::UB ubf(dhta.get(), "duck", dhta->keys().K(), true);
-  BOOST_CHECK_THROW(dhta->store(ubf, infinit::model::STORE_INSERT),
+  ELLE_LOG("fail storing different UB")
+  {
+    BOOST_CHECK_THROW(dhta->store(ubf, infinit::model::STORE_INSERT),
                     std::exception);
-  BOOST_CHECK_THROW(dhtb->store(ubf, infinit::model::STORE_INSERT),
-                    std::exception);
-  BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
-  BOOST_CHECK_THROW(dhtb->remove(ruba->address(), {}), std::exception);
-  BOOST_CHECK_THROW(dhta->remove(ruba->address(), {}), std::exception);
-  dhta->remove(ruba->address());
-  dhtb->store(ubf, infinit::model::STORE_INSERT);
+    BOOST_CHECK_THROW(dhtb->store(ubf, infinit::model::STORE_INSERT),
+                      std::exception);
+  }
+  ELLE_LOG("fail removing RUB")
+  {
+    BOOST_CHECK_THROW(dhtb->remove(ruba->address()), std::exception);
+    BOOST_CHECK_THROW(dhtb->remove(ruba->address(), {}), std::exception);
+    BOOST_CHECK_THROW(dhta->remove(ruba->address(), {}), std::exception);
+  }
+  ELLE_LOG("remove RUB")
+    dhta->remove(ruba->address());
+  ELLE_LOG("store different UB")
+    dhtb->store(ubf, infinit::model::STORE_INSERT);
 }
 
 class AppendConflictResolver
