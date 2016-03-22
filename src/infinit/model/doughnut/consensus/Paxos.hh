@@ -240,6 +240,8 @@ namespace infinit
             typedef elle::unordered_map<Address, Decision> Addresses;
             ELLE_ATTRIBUTE(Addresses, addresses);
           private:
+            void
+            _remove(Address address);
             Decision&
             _load(Address address,
                   boost::optional<PaxosServer::Quorum> peers = {});

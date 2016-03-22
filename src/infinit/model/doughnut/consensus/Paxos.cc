@@ -760,12 +760,19 @@ namespace infinit
             }();
             this->storage()->set(address, ser, true, true);
           }
-          this->_cache(address, decision.paxos.current_quorum());
-          if (this->_rebalance_auto_expand &&
-              !had_value &&
-              decision.paxos.current_value() &&
-              signed(decision.paxos.current_quorum().size()) < this->_factor)
-            this->_rebalancable.put(std::make_pair(address, false));
+          auto const& quorum = decision.paxos.current_quorum();
+          if (!contains(quorum, this->doughnut().id()))
+            ELLE_TRACE("%s: evicted from %f quorum", this, address)
+              this->_remove(address);
+          else
+          {
+            this->_cache(address, quorum);
+            if (this->_rebalance_auto_expand &&
+                !had_value &&
+                decision.paxos.current_value() &&
+                signed(decision.paxos.current_quorum().size()) < this->_factor)
+              this->_rebalancable.put(std::make_pair(address, false));
+          }
         }
 
         boost::optional<Paxos::PaxosClient::Accepted>
@@ -1044,7 +1051,6 @@ namespace infinit
               {
                 throw MissingBlock(k.key());
               }
-
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
               auto stored =
@@ -1065,6 +1071,12 @@ namespace infinit
               }
             }
           }
+          this->_remove(address);
+        }
+
+        void
+        Paxos::LocalPeer::_remove(Address address)
+        {
           try
           {
             this->storage()->erase(address);

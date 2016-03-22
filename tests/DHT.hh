@@ -29,6 +29,11 @@ public:
         {
           this->_blocks.emplace(block.address());
         });
+      local->on_remove().connect(
+        [this] (infinit::model::Address addr)
+        {
+          this->_blocks.erase(addr);
+        });
       for (auto const& addr: local->storage()->list())
         this->_blocks.emplace(addr);
     }
