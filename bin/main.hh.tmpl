@@ -968,6 +968,27 @@ namespace infinit
       return static_cast<model::doughnut::Configuration*>(this->model.get());
     }
 
+    bool
+    allowed(infinit::User const& user) const
+    {
+      if (this->model == nullptr)
+        return false;
+      // Compare passport's public key and user public key.
+      return this->dht()->passport.user() == user.public_key;
+    }
+
+    void
+    ensure_allowed(infinit::User const& user,
+                   std::string const& action,
+                   std::string const& resource = "network") const
+    {
+      if (!this->allowed(user))
+        throw elle::Error(
+          elle::sprintf("You cannot %s this %s as %s",
+                        action, resource, user.name));
+    }
+
+
     std::unique_ptr<model::doughnut::Doughnut>
     run(User const& user,
         overlay::NodeEndpoints const& hosts = overlay::NodeEndpoints(),
@@ -1059,15 +1080,6 @@ namespace infinit
     print(std::ostream& out) const override
     {
       out << "Network(" << this->name << ")";
-    }
-
-    bool
-    allowed(infinit::User const& user) const
-    {
-      if (this->model == nullptr)
-        return false;
-      // Compare passport's public key and user public key.
-      return this->dht()->passport.user() == user.public_key;
     }
 
     std::string name;

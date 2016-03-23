@@ -270,6 +270,7 @@ COMMAND(update)
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   auto network = ifnt.network_get(name, owner);
+  network.ensure_allowed(owner, "update");
   auto& dht = *network.dht();
   if (auto port = optional<int>(args, "port"))
     dht.port = port.get();
@@ -634,6 +635,7 @@ COMMAND(run)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
+  network.ensure_allowed(self, "run");
   infinit::overlay::NodeEndpoints eps;
   if (args.count("peer"))
   {

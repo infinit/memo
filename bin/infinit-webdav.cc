@@ -519,6 +519,7 @@ run(variables_map const& args)
   auto name = mandatory(args, "name", "network name");
   auto self = self_user(ifnt, args);
   auto network = ifnt.network_get(name, self);
+  network.ensure_allowed(self, "run");
   std::unordered_map<infinit::model::Address, std::vector<std::string>> hosts;
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)

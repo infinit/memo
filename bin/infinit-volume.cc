@@ -364,6 +364,7 @@ COMMAND(run)
       fuse_options.push_back(opt);
   }
   auto network = ifnt.network_get(volume.network, self);
+  network.ensure_allowed(self, "run", "volume");
   ELLE_TRACE("run network");
   bool cache = flag(args, option_cache);
   auto cache_ram_size = optional<int>(args, option_cache_ram_size);
