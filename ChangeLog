@@ -11,6 +11,9 @@ Automatic replication of under-duplicated blocks and CPU usage improvement.
 - Synchronize file content on `fsync` system call.
 - Cache the root block address locally to avoid recreating one if all
   storage nodes are down.
+- Add `infinit-journal` binary to inspect asynchronous write queue.
+- Add `infinit-connectivity` to test network connectivity
+  capabilities.
 
 ### Changed
 
@@ -25,6 +28,9 @@ Automatic replication of under-duplicated blocks and CPU usage improvement.
 - Fix infinite recursion on certain log levels.
 - Remove immutable blocks cache on disk when the corresponding file is
   deleted.
+- Fix SEGV when shutting down while deciphering a block.
+- Handle conflicts when changing world permissions on a directory.
+- Fix misreported file size upon `truncate` or `ftruncate`.
 
 
 ## [0.5.4] - 2016-03-01
