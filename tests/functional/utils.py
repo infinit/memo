@@ -208,6 +208,13 @@ def assertIn(a, b):
   if a not in b:
     raise AssertionError('%r not in %r' % (a, b))
 
+def throws(f):
+  try:
+    f()
+    assert False
+  except Exception:
+    pass
+
 import bottle
 
 class FakeGCS:

@@ -5,117 +5,220 @@ import json
 from distutils.version import LooseVersion as Version
 from utils import *
 from copy import copy
+from operator import itemgetter
+
+from functools import partial
 
 path = os.path.dirname(os.path.realpath(__file__))
 
-class Output(str):
-
-  @property
-  def json(self):
-    import json
-    return json.loads(self)
-
-  @property
-  def list(self):
-    return self.split('\r\n' if os.environ.get('EXE_EXT', '') else '\n')
+_assertEq = assertEq
+def assertEq(x, y, key = 'name'):
+  if isinstance(x, list) and isinstance(y, list):
+    return _assertEq(
+      sorted(x, key=itemgetter(key)),
+      sorted(y, key=itemgetter(key))
+    )
+  else:
+    return _assertEq(x, y)
 
 for version in ['0.3.2', '0.3.5', '0.3.7', '0.4.0', '0.5.0', '0.5.2', '0.5.4']:
   version = Version(version)
 
-  infinit = Infinit()
-  def run(*args):
-    args = list(copy(args)) + ['--as', 'user']
-    process = infinit.spawn(
-      args,
-      env = {
-        'INFINIT_DATA_HOME' :
-        '%s/backward-compatibility-homes/%s' % (path, version) })
-    stdout, stderr = process.communicate()
-    return Output(stdout.strip().decode('utf-8'))
+  with Infinit() as t:
+    # Copy the hierachie so we can edit it (e.g.: link networks)
+    shutil.copytree('%s/backward-compatibility-homes/%s' % (path, version),
+                    t.data_home)
+    def run(*args, as_user, **kwargs):
+      e = {'INFINIT_USER': as_user}
+      return t.run_json(env = e, args = list(args) + ['--script'], **kwargs)
+    user = partial(run, as_user = 'user')
+    ## ------##
+    ##  User ##
+    ## ----- ##
+    users = user('infinit-user', '--list')
+    print(users)
+    assertEq(users, [
+      { 'name': 'other', 'has_private_key': True },
+      { 'name': 'owner', 'has_private_key': False },
+      { 'name': 'user', 'has_private_key': True },
+    ])
 
-  ## ------##
-  ##  User ##
-  ## ----- ##
-  users = run('infinit-user', '--list').list
-  assertEq(set(users), {'user: public/private keys', 'owner: public key only'})
-  # User 'user'.
-  user = run('infinit-user', '--export', '--name', 'user', '--full').json
-  assertEq(user['name'], 'user')
-  assertIn('public_key', user)
-  assertIn('rsa', user['public_key'])
-  assertIn('private_key', user)
-  assertIn('rsa', user['private_key'])
-  # User 'owner'.
-  owner = run('infinit-user', '--export', '--name', 'owner').json
-  assertEq(owner['name'], 'owner')
-  assertIn('public_key', owner)
-  assertIn('rsa', owner['public_key'])
+    # User 'user'.
+    u = user('infinit-user', '--export', '--name', 'user', '--full')
+    assertEq(u['name'], 'user')
+    assertIn('public_key', u)
+    assertIn('rsa', u['public_key'])
+    assertIn('private_key', u)
+    assertIn('rsa', u['private_key'])
+    # User 'owner'.
+    o = user('infinit-user', '--export', '--name', 'owner')
+    assertEq(o['name'], 'owner')
+    assertIn('public_key', o)
+    assertIn('rsa', o['public_key'])
 
-  ## -------- ##
-  ## Networks ##
-  ## -------- ##
-  networks = run('infinit-network', '--list').list
-  assertEq(set(networks), {'owner/network0: linked', 'owner/network1: not linked'})
-  # Network 'network1'.
-  try:
-    network1 = run('infinit-network', '--export', '--name', 'owner/network1')
-    assert False
-  except Exception:
-    pass
-  # Network 'network0'.
-  network0 = run('infinit-network', '--export', '--name', 'owner/network0').json
-  assertEq(network0['name'], 'owner/network0')
-  assertEq(network0['owner']['rsa'], owner['public_key']['rsa'])
-  if version < Version('0.4.0'):
-    assertEq(network0['version'], '0.3.0')
-  else:
-    assertEq(network0['version'], str(version))
+    ## -------- ##
+    ## Networks ##
+    ## -------- ##
+    networks = user('infinit-network', '--list')
+    assertEq(networks,
+             [
+               {'name': 'owner/network1', 'linked': False},
+               {'name': 'owner/network0', 'linked': True}
+             ],
+             key = 'name')
+    # Network 'network1'.
+    try:
+      network1 = user('infinit-network', '--export', '--name', 'owner/network1')
+      assert False
+    except Exception:
+      pass
+    # Network 'network0'.
+    network0 = user('infinit-network', '--export', '--name', 'owner/network0')
+    assertEq(network0['name'], 'owner/network0')
+    assertEq(network0['owner']['rsa'], o['public_key']['rsa'])
+    if version < Version('0.4.0'):
+      assertEq(network0['version'], '0.3.0')
+    else:
+      assertEq(network0['version'], str(version))
 
-  ## --------- ##
-  ## Passports ##
-  ## --------- ##
-  passports = run('infinit-passport', '--list').list
-  assertEq(set(passports), {'owner/network0: user', 'owner/network1: user'})
-  for passport in map(
-      lambda network: run('infinit-passport', '--export',
-                          '--user', 'user', '--network', network).json,
-      [passport.split(':')[0] for passport in passports]):
-    assertEq(passport['allow_sign'], False)
-    assertEq(passport['allow_storage'], True)
-    assertEq(passport['allow_write'], True)
-    assertEq(passport['network'][:-1], 'owner/network')
-    assertEq(passport['user']['rsa'], user['public_key']['rsa'])
+    ## --------- ##
+    ## Passports ##
+    ## --------- ##
+    passports = user('infinit-passport', '--list')
+    assertEq(passports, [
+      {'network': 'owner/network1', 'user': 'other'},
+      {'network': 'owner/network1', 'user': 'user'},
+      {'network': 'owner/network0', 'user': 'user'}
+    ], key = 'network'),
+    for passport in map(
+        lambda network: user('infinit-passport', '--export',
+                            '--user', 'user', '--network', network),
+        [passport['network'] for passport in passports]):
+      assertEq(passport['allow_sign'], False)
+      assertEq(passport['allow_storage'], True)
+      assertEq(passport['allow_write'], True)
+      assertEq(passport['network'][:-1], 'owner/network')
+      assertEq(passport['user']['rsa'], u['public_key']['rsa'])
 
-  ### Fakely link passport.
-  run('infinit-network',
-      '--link',
-      '--name', 'owner/network1',
-      '--output', '-')
+    ### Fakely link passport.
+    user('infinit-network', '--link', '--name', 'owner/network1',
+        '--output', '-')
+    ### Really link the network.
+    user('infinit-network', '--link', '--name', 'owner/network1')
+    # Network 'network1'.<
+    network1 = user('infinit-network', '--export', '--name', 'owner/network1')
+    assertEq(network1['name'], 'owner/network1')
+    assertEq(network1['owner']['rsa'], o['public_key']['rsa'])
 
-  ## ------- ##
-  ## Volumes ##
-  ## ------- ##
-  volumes = run('infinit-volume', '--list').list
-  assertEq(set(volumes),
-           {
-             'owner/volume1: network owner/network1',
-             'owner/volume0: network owner/network1'
-           })
-  for volume in map(
-      lambda name: run('infinit-volume', '--export', '--name', name).json,
-      [volume_descrption.split(':')[0] for volume_descrption in volumes]):
-    assertEq(volume['name'][:-1], 'owner/volume')
-    assertEq(volume['network'][:-1], 'owner/network')
+    ## ------- ##
+    ## Volumes ##
+    ## ------- ##
+    volumes = user('infinit-volume', '--list')
+    print(volumes)
+    assertEq(volumes, [
+      { 'name': 'owner/volume0', 'network': 'owner/network1' },
+      { 'name': 'owner/volume1', 'network': 'owner/network1' },
+    ])
+    for volume in map(
+        lambda name: user('infinit-volume', '--export', '--name', name),
+        [volume_descrption['name'] for volume_descrption in volumes]):
+      assertEq(volume['name'][:-1], 'owner/volume')
+      assertEq(volume['network'][:-1], 'owner/network')
 
-  ## ------ ##
-  ## Drives ##
-  ## ------ ##
-  drives = run('infinit-drive', '--list').list
-  assertEq(set(drives), {'owner/drive0: ok', 'owner/drive1: pending'})
-  for drive in map(
-      lambda name: run('infinit-drive', '--export', '--name', name).json,
-      [drive_descrption.split(':')[0] for drive_descrption in drives]):
-    assertEq(set(drive["users"].keys()), {'user', 'owner'})
-    assertEq(drive['name'][:-1], 'owner/drive')
-    assertEq(drive['volume'][:-1], 'owner/volume')
-    assertEq(drive['network'][:-1], 'owner/network')
+    ## ------ ##
+    ## Drives ##
+    ## ------ ##
+    drives = user('infinit-drive', '--list')
+    print(drives)
+    assertEq(drives, [
+      { 'name': 'owner/drive0', 'status': 'ok'},
+      { 'name': 'owner/drive1', 'status': 'pending'},
+    ])
+    for drive in map(
+        lambda name: user('infinit-drive', '--export', '--name', name),
+        [drive_descrption['name'] for drive_descrption in drives]):
+      assertEq(set(drive["users"].keys()), {'user', 'owner'})
+      assertEq(drive['name'][:-1], 'owner/drive')
+      assertEq(drive['volume'][:-1], 'owner/volume')
+      assertEq(drive['network'][:-1], 'owner/network')
+
+    ## --------- ##
+    ## Same home ##
+    ## --------- ##
+
+    # Use a previously linked network.
+    other = partial(run, as_user = 'other')
+    assertEq(other('infinit-network', '--list'), [
+      { 'name': 'owner/network0', 'linked': False },
+      { 'name': 'owner/network1', 'linked': False },
+    ])
+    other('infinit-network', '--link', 'owner/network1')
+    # Other should have his owner/network0 linked.
+    assertEq(other('infinit-network', '--list'), [
+      { 'name': 'owner/network0', 'linked': False },
+      { 'name': 'owner/network1', 'linked': True },
+    ])
+    # User should still have both networks linked.
+    assertEq(user('infinit-network', '--list'), [
+      { 'name': 'owner/network0', 'linked': True },
+      { 'name': 'owner/network1', 'linked': True },
+    ])
+
+    # New user in the same home.
+    new = partial(run, as_user = 'new')
+    new('infinit-user', '--create', '--name', 'new')
+    assertEq(new('infinit-network', '--list'), [
+      { 'name': 'owner/network0', 'linked': False },
+      { 'name': 'owner/network1', 'linked': False },
+    ])
+    throws(lambda: new('infinit-network', '--link', 'owner/network0'))
+    throws(lambda: new('infinit-network', '--link', 'owner/network1'))
+    new('infinit-network', '--create', '--name', 'network')
+    assertEq(new('infinit-network', '--list'), [
+      { 'name': 'new/network', 'linked': True },
+      { 'name': 'owner/network0', 'linked': False },
+      { 'name': 'owner/network1', 'linked': False },
+    ])
+    assertEq(other('infinit-network', '--list'), [
+      { 'name': 'owner/network0', 'linked': False },
+      { 'name': 'owner/network1', 'linked': True },
+    ])
+    assertEq(user('infinit-network', '--list'), [
+      { 'name': 'owner/network0', 'linked': True },
+      { 'name': 'owner/network1', 'linked': True },
+    ])
+    # print(l)
+    # assert False
+
+    ## -------------- ##
+    ## Network delete ##
+    ## -------------- ##
+    assertEq(
+      user('infinit-network', '--list'),
+      [
+        {'name': 'owner/network0', 'linked': True },
+        {'name': 'owner/network1', 'linked': True },
+      ],
+      key = 'name')
+    user('infinit-network', '--delete', '--name', 'owner/network1')
+    assertEq(
+      user('infinit-network', '--list'),
+      [
+        {'name': 'owner/network0', 'linked': True }
+      ],
+      key = 'name')
+    user('infinit-network', '--create', '--kelips', '--name', 'network')
+    assertEq(
+      user('infinit-network', '--list'),
+      [
+        {'name': 'user/network', 'linked': True },
+        {'name': 'owner/network0', 'linked': True },
+      ],
+      key = 'name')
+    user('infinit-network', '--delete', '--name', 'user/network')
+    assertEq(
+      user('infinit-network', '--list'),
+      [
+        {'name': 'owner/network0', 'linked': True}
+      ],
+      key = 'name')
