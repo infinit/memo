@@ -153,6 +153,15 @@ Run the _infinit-volume_ command by prefixing it with the environment variable `
 
 ```
 $> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+Fetched endpoints for "infinit/demo".
+Running network "infinit/demo".
+[           infinit-volume           ] [main] client version: 0.5.4
+[        infinit.model.Model         ] [main] infinit::model::Model(0x7f7ffbc02bf0): compatibility version 0.3.0
+[        infinit.overlay.kelips        ] [main] Running in observer mode
+[        infinit.overlay.kelips        ] [main] Filesystem is read-only until peers are reached
+[        infinit.overlay.kelips        ] [main] Kelips(0.0.0.0:0): listening on port 62046
+Running volume "infinit/demo".
+...
 ```
 
 _**NOTE**: You can stop this test volume by hitting `CTRL^C` or by interrupting the infinit-volume process._
@@ -239,6 +248,7 @@ Fetched endpoints for "alice/my-network".
 Running network "alice/my-network".
 Remotely pushed endpoints for "alice/my-network".
 Running volume "alice/my-volume".
+...
 </code></pre>
 
 _**NOTE**: This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit `CTRL^C` or interrupt the process. You should wait until the end of the guide to stop this process though._
@@ -293,6 +303,7 @@ Finally, the volume can be mounted on device B as simply as on device A:
 Fetch endpoints for "alice/my-network".
 Running network “alice/my-network”.
 Running volume "alice/my-volume".
+...
 </code></pre>
 
 It is now time to check if the file you created on device A is synchronized with device B:
