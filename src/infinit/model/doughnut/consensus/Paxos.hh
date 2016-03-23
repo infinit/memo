@@ -106,7 +106,7 @@ namespace infinit
           PaxosClient
           _client(Address const& addr);
           std::pair<PaxosServer::Quorum, int>
-          _latest(PaxosClient& client);
+          _latest(PaxosClient& client, Address address);
 
         /*--------.
         | Factory |

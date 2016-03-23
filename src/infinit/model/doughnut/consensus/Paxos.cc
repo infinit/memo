@@ -1359,6 +1359,7 @@ namespace infinit
           for (auto peer: owners)
             peers.push_back(
               elle::make_unique<Peer>(peer, address, local_version));
+          ELLE_DEBUG("peers: %f", peers);
           return peers;
         }
 
@@ -1370,15 +1371,24 @@ namespace infinit
         }
 
         std::pair<Paxos::PaxosServer::Quorum, int>
-        Paxos::_latest(PaxosClient& client)
+        Paxos::_latest(PaxosClient& client, Address address)
         {
           int version = 0;
-          auto last = client.get_quorum();
-          // FIXME: Couldn't we operate on MutableBlocks directly in Paxos ?
-          if (last.first)
-            version = std::dynamic_pointer_cast<blocks::MutableBlock>(
-              *last.first)->version();
-          return std::make_pair<>(last.second, version);
+          while (true)
+            try
+            {
+              auto last = client.get_quorum();
+              // FIXME: Couldn't we operate on MutableBlocks directly in Paxos ?
+              if (last.first)
+                version = std::dynamic_pointer_cast<blocks::MutableBlock>(
+                  *last.first)->version();
+              return std::make_pair<>(last.second, version);
+            }
+            catch (Paxos::PaxosServer::WrongQuorum const& e)
+            {
+              client.peers(
+                lookup_nodes(this->doughnut(), e.expected(), address));
+            }
         }
 
         bool
@@ -1411,7 +1421,7 @@ namespace infinit
         Paxos::_rebalance(PaxosClient& client, Address address)
         {
           ELLE_ASSERT_GTE(this->doughnut().version(), elle::Version(0, 5, 0));
-          auto latest = this->_latest(client);
+          auto latest = this->_latest(client, address);
           // FIXME: handle immutable block errors
           ELLE_DEBUG("quorum: %f", latest.first);
           if (signed(latest.first.size()) == this->_factor)
@@ -1435,7 +1445,7 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: rebalance %f to %f", *this, address, ids);
           auto client = this->_client(address);
-          auto latest = this->_latest(client);
+          auto latest = this->_latest(client, address);
           return this->_rebalance(client, address, ids, latest.second);
         }
 
