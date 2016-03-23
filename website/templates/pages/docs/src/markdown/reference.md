@@ -16,9 +16,11 @@ The *Hub* is a cloud service whose role is to ease the process of discovery, sha
 
 ### Home ###
 
-All the configuration files Infinit creates and uses are located in the `$INFINIT_DATA_HOME` directory which, by default, is set to `$HOME/.local/share/infinit/filesystem/`.
+All the configuration files Infinit creates and uses are located in the `$INFINIT_HOME` directory which is, by default, set to `$HOME`. More precisely, Infinit stores configuration files, cache files etc. in the directories `$INFINIT_HOME/.local/{state,share}/infinit/filesystem` following the [XDG Base Directory Specification](http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html).
 
-One can very easily set the environment variable to point to the directory of his/her choice, either by modifying the shell configuration or by setting it manually:
+Please refer to the [environment variables documentation](/documentation/environment-variables) should you want to specifically define where the configuration files, journal operations etc. are stored.
+
+As an example, `$INFINIT_DATA_HOME` references the directory that contains the configuration files such as user identities, network descriptors etc. The environment variable is, by default, set to `$INFINIT_HOME/.local/share/infinit/filesystem/` and can be very easily changed by either modifying your shell configuration or by setting it manually:
 
 ```
 $> export INFINIT_DATA_HOME="/some/where/"
