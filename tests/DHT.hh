@@ -37,7 +37,7 @@ public:
       for (auto const& addr: local->storage()->list())
         this->_blocks.emplace(addr);
     }
-    this->_peers.emplace_back(this);
+    this->_peers.emplace(this);
   }
 
   ~Overlay()
@@ -57,36 +57,35 @@ public:
   void
   connect(Overlay& other)
   {
-    this->_peers.emplace_back(&other);
-    other._peers.emplace_back(this);
-    this->on_discover()(other.node_id(), !other.doughnut()->local());
-    other.on_discover()(this->node_id(), !this->doughnut()->local());
+    if (this->_peers.emplace(&other).second)
+      this->on_discover()(other.node_id(), !other.doughnut()->local());
+    if (other._peers.emplace(this).second)
+      other.on_discover()(this->node_id(), !this->doughnut()->local());
+  }
+
+  void
+  connect_recursive(Overlay& other)
+  {
+    for (auto overlay: std::unordered_set<Overlay*>(other._peers))
+      this->connect(*overlay);
   }
 
   void
   disconnect(Overlay& other)
   {
-    for (auto it = this->_peers.begin(); it != this->_peers.end(); ++it)
-      if (*it == &other)
-      {
-        this->_peers.erase(it);
-        break;
-      }
-    for (auto it = other._peers.begin(); it != other._peers.end(); ++it)
-      if (*it == this)
-      {
-        other._peers.erase(it);
-        other.on_disappear()(this->node_id(), !this->doughnut()->local());
-        break;
-      }
-    this->on_disappear()(other.node_id(), !other.doughnut()->local());
+    bool me = this->_peers.erase(&other);
+    if (other._peers.erase(this))
+      other.on_disappear()(this->node_id(), !this->doughnut()->local());
+    if (me)
+      this->on_disappear()(other.node_id(), !other.doughnut()->local());
   }
 
   void
   disconnect_all()
   {
-    while (!this->_peers.empty())
-      this->disconnect(**this->_peers.begin());
+    for (auto peer: std::unordered_set<Overlay*>(this->_peers))
+      if (peer != this)
+        this->disconnect(*peer);
   }
 
 protected:
@@ -141,8 +140,8 @@ protected:
     throw elle::Error(elle::sprintf("no such node: %f", id));
   }
 
-  ELLE_ATTRIBUTE_RX(std::vector<Overlay*>, peers);
-  ELLE_ATTRIBUTE(std::unordered_set<infinit::model::Address>, blocks);
+  ELLE_ATTRIBUTE_RX(std::unordered_set<Overlay*>, peers);
+  ELLE_ATTRIBUTE_R(std::unordered_set<infinit::model::Address>, blocks);
   ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(infinit::model::Address)>,
                     looked_up);
 };

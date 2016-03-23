@@ -902,6 +902,76 @@ namespace rebalancing
     }
   }
 
+  ELLE_TEST_SCHEDULED(quorum_duel_1)
+  {
+    DHT dht_a(dht::consensus::rebalance_auto_expand = false);
+    ELLE_LOG("first DHT: %f", dht_a.dht->id());
+    DHT dht_b(dht::consensus::rebalance_auto_expand = false);
+    ELLE_LOG("second DHT: %f", dht_b.dht->id());
+    dht_b.overlay->connect_recursive(*dht_a.overlay);
+    DHT dht_c(dht::consensus::rebalance_auto_expand = false);
+    ELLE_LOG("third DHT: %f", dht_c.dht->id());
+    dht_c.overlay->connect_recursive(*dht_a.overlay);
+    auto b = dht_a.dht->make_block<blocks::MutableBlock>();
+    ELLE_LOG("write block to quorum of 3")
+    {
+      b->data(std::string("quorum_duel"));
+      dht_a.dht->store(*b, infinit::model::STORE_INSERT);
+    }
+    BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+    ELLE_LOG("disconnect third DHT")
+      dht_c.overlay->disconnect_all();
+    ELLE_LOG("rebalance block to quorum of 1")
+    {
+      auto& local_a =
+        dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+      local_a.rebalance(b->address(), {dht_a.dht->id()});
+    }
+    ELLE_LOG("reconnect third DHT")
+      dht_c.overlay->connect_recursive(*dht_a.overlay);
+    ELLE_LOG("write block to quorum of 1")
+    {
+      BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+      b->data(std::string("quorum_duel_edited"));
+      dht_c.dht->store(*b, infinit::model::STORE_UPDATE);
+    }
+  }
+
+  // ELLE_TEST_SCHEDULED(quorum_duel_2)
+  // {
+  //   DHT dht_a(dht::consensus::rebalance_auto_expand = false);
+  //   ELLE_LOG("first DHT: %f", dht_a.dht->id());
+  //   DHT dht_b(dht::consensus::rebalance_auto_expand = false);
+  //   ELLE_LOG("second DHT: %f", dht_b.dht->id());
+  //   dht_b.overlay->connect_recursive(*dht_a.overlay);
+  //   DHT dht_c(dht::consensus::rebalance_auto_expand = false);
+  //   ELLE_LOG("third DHT: %f", dht_c.dht->id());
+  //   dht_c.overlay->connect_recursive(*dht_a.overlay);
+  //   auto b = dht_a.dht->make_block<blocks::MutableBlock>();
+  //   ELLE_LOG("write block to quorum of 3")
+  //   {
+  //     b->data(std::string("quorum_duel"));
+  //     dht_a.dht->store(*b, infinit::model::STORE_INSERT);
+  //   }
+  //   BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+  //   ELLE_LOG("disconnect third DHT")
+  //     dht_c.overlay->disconnect_all();
+  //   ELLE_LOG("rebalance block to quorum of 2")
+  //   {
+  //     auto& local_a =
+  //       dynamic_cast<dht::consensus::Paxos&>(*dht_a.dht->consensus());
+  //     local_a.rebalance(b->address(), {dht_a.dht->id(), dht_c.dht->id()});
+  //   }
+  //   ELLE_LOG("reconnect third DHT")
+  //     dht_c.overlay->connect_recursive(*dht_a.overlay);
+  //   ELLE_LOG("write block to quorum of 2")
+  //   {
+  //     BOOST_CHECK_EQUAL(dht_c.overlay->blocks().size(), 1u);
+  //     b->data(std::string("quorum_duel_edited"));
+  //     dht_c.dht->store(*b, infinit::model::STORE_UPDATE);
+  //   }
+  // }
+
   class VersionHop:
     public infinit::model::ConflictResolver
   {
@@ -1291,6 +1361,8 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(extend_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(shrink_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
+    rebalancing->add(BOOST_TEST_CASE(quorum_duel_1), 0, valgrind(1));
+    // rebalancing->add(BOOST_TEST_CASE(quorum_duel_2), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_new_block), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_newcomer), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_concurrent), 0, valgrind(5));
