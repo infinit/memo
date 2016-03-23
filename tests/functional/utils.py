@@ -50,45 +50,54 @@ class Infinit(TemporaryDirectory):
   @property
   def version(self):
     return self.run(['infinit-volume', '--version'])[0]
-  def run(self, args, input = None, return_code = 0, env = {}):
-    if isinstance(args, str):
-      args = args.split(' ')
-    args[0] += os.environ.get('EXE_EXT', '')
-    self.env = {
+
+  @property
+  def env(self):
+    env = {
       'PATH': os.environ['PATH'],
       'INFINIT_HOME': self.dir,
       'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',
     }
     if 'WINEDEBUG' in os.environ:
-        self.env['WINEDEBUG'] = os.environ['WINEDEBUG']
+      env['WINEDEBUG'] = os.environ['WINEDEBUG']
     if 'ELLE_LOG_LEVEL' in os.environ:
-      self.env['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
+      env['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
-      self.env['INFINIT_BEYOND'] = self.__beyond.domain
-    self.env.update(env)
+      env['INFINIT_BEYOND'] = self.__beyond.domain
+    return env
+
+  def run(self, args, input = None, return_code = 0, env = {}, wait = True):
+    environ = self.env
+    environ.update(env)
+    if isinstance(args, str):
+      args = args.split(' ')
+    args[0] += os.environ.get('EXE_EXT', '')
+    cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
     if input is not None:
       args.append('-s')
     pretty = '%s %s' % (
-      ' '.join('%s=%s' % (k, v) for k, v in self.env.items()),
+      ' '.join('%s=%s' % (k, v) for k, v in environ.items()),
       ' '.join(pipes.quote(arg) for arg in args))
     if input is not None:
       if isinstance(input, list):
-        input = '\n'.join(map(json.dumps, input)) + '\n'
+        input = '\n'.join(map(json.dumps, input)) + cr
       elif isinstance(input, dict):
-        input = json.dumps(input) + '\n'
+        input = json.dumps(input) + cr
       pretty = 'echo %s | %s' % (
         pipes.quote(input.strip()), pretty)
       input = input.encode('utf-8')
     print(pretty)
     process = subprocess.Popen(
       args,
-      env = self.env,
+      env = environ,
       stdin =  subprocess.PIPE,
       stdout =  subprocess.PIPE,
       stderr =  subprocess.PIPE,
     )
     self.process = process
+    if not wait:
+      return process
     if input is not None:
       # FIXME: On OSX, if you spam stdin before the FDStream takes it
       # over, you get a broken pipe.
@@ -102,14 +111,15 @@ class Infinit(TemporaryDirectory):
       #  unreachable()
       raise Exception('command failed with code %s: %s (reason: %s)' % \
                       (process.returncode, pretty, reason))
+
     out = out.decode('utf-8')
     self.last_out = out
-    self.last_err = err.decode('utf-8')
+    self.last_err = err and err.decode('utf-8')
     try:
       return json.loads(out)
     except:
       _out = []
-      for line in out.split(os.environ.get('EXE_EXT', '') and '\r\n' or '\n'):
+      for line in out.split(cr):
         if len(line) == 0:
           continue
         try:

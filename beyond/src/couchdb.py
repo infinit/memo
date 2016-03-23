@@ -67,6 +67,9 @@ python=python3 -m couchdb
       time.sleep(0.1)
     while not os.path.exists(self.__path('uri')):
       time.sleep(0.1)
+    # Wait for the file to be written.
+    while os.stat(self.__path('uri')).st_size == 0:
+      time.sleep(0.1)
     with open(self.__path('uri'), 'r') as f:
       self.__uri = f.read().strip()
     while True:

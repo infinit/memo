@@ -492,7 +492,7 @@ def configure(
     additional_libs += [elle_lib, reactor_lib, cryptography_lib]
   else:
     pass
-  binaries = []
+  binaries = {}
   global installed_binaries
   installed_binaries = []
   installed_symbols = []
@@ -512,7 +512,7 @@ def configure(
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
-    binaries.append(bin)
+    binaries[name] = bin
     if install:
       installed_binaries.append(bin)
       if not windows:
@@ -658,43 +658,71 @@ def configure(
           cxx_toolkit,
           bin_cxx_config)
 
-      test_names = [
-          'errors',
-          'single-user-two-devices-shared-storage',
-          'passport-restrictions',
-          'passport-sign-delegate',
-          #FIXME: 'flow',
-          # Test clis.
-          'main_cli',
-          'device_cli',
-          'user_cli',
-          'network_cli',
-          'passport_cli',
-          'volume_cli',
-          'drive_cli',
-          'storage_cli',
-          'cli-backward-compatibility',
-      ]
+
+      def functional_test(name, env = {}, binaries = []):
+        t = {
+          'name': name
+        }
+        if env:
+          t['env'] = env
+        if binaries:
+          t['dependencies'] = binaries
+          t['paths'] = [str(x.path(True).dirname()) for x in binaries]
+        return t
+      tests = list(
+        map(lambda x: functional_test(x),
+            [
+              'errors',
+              'single-user-two-devices-shared-storage',
+              'passport-restrictions',
+              'passport-sign-delegate',
+              #FIXME: 'flow',
+              # Test clis.
+              'main_cli',
+              'device_cli',
+              'user_cli',
+              'network_cli',
+              'passport_cli',
+              'volume_cli',
+              'drive_cli',
+              'storage_cli',
+              'cli-backward-compatibility',
+            ]))
       if not windows:
-          test_names.append('crash-reporter')
-      for test_name in test_names:
-        test = drake.node('tests/functional/%s' % test_name)
+        tests.append(functional_test('crash-reporter'))
+      if linux:
+        pjdfstest = drake.include(
+          'pjdfstest',
+          cxx_toolkit = cxx_toolkit,
+          cxx_config = cxx_config)
+        tests.append(functional_test(
+          'pjdfstest',
+          {
+            'PJDFSTESTS': str(pjdfstest.tests_folder),
+          },
+          [pjdfstest.pjdfstest]
+        ))
+      for t in tests:
+        test = drake.node('tests/functional/%s' % t['name'])
         rule_functional_tests << test
         if not windows:
           test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
+        test.dependencies_add(t.get('dependencies', []))
         extra_path = [str(drake.path_build(installed_binaries[0].path(True).dirname(),
-                                 absolute = True))]
+                                           absolute = True))]
+        extra_path += t.get('paths', [])
         if not windows:
-            extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
-                                 absolute = True)))
+          extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
+                                                 absolute = True)))
         extra_path.append(os.environ.get('PATH', ''))
         env = {
           'PYTHONPATH':
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
           'PATH': ':'.join(extra_path)
         }
+        env.update(t.get('env', {}))
         if cxx_toolkit.os == drake.os.windows:
           env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
@@ -778,7 +806,7 @@ def configure(
     ('kelips', []),
   ]
   if not windows:
-    tests_names.append(('filesystem', binaries))
+    tests_names.append(('filesystem', binaries.values()))
     tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
   else:
     tests_extra_libs = []
@@ -793,13 +821,19 @@ def configure(
       'tests/%s' % test_name,
       [
         drake.node('tests/%s.cc' % test_name),
-        ifnt_lib
+        ifnt_lib,
       ] + tests_extra_libs,
       cxx_toolkit,
       test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
     test.dependencies_add(dependencies)
+
     rule_tests << test
-    env = {'SOURCE_DIR': drake.path_source()}
+    env = {
+      'SOURCE_DIR': drake.path_source(),
+      'PATH': '%s:%s' % (str(drake.path_build(
+        binaries['infinit'].path(True).dirname(),
+        absolute = True)), os.environ['PATH'])
+    }
     #  _____ _____  ____  __ _____
     # |  ___|_ _\ \/ /  \/  | ____|
     # | |_   | | \  /| |\/| |  _|

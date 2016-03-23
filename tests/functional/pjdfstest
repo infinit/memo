@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+from utils import *
+
+with Infinit() as user:
+  # Signup without sending private key.
+  user.run(['infinit-user', '--create',
+             '--name', 'user',
+             '--email', 'user@infinit.io'])
+  user.run(['infinit-storage', '--create',
+             '--filesystem',
+             '--name', 'storage',
+             '--as', 'user'])
+  user.run(['infinit-network',
+            '--create', '--kelips',
+            '--name', 'network',
+            '--storage', 'storage',
+            '--as', 'user'])
+  user.run(['infinit-volume',
+            '--create',
+            '--name', 'volume',
+            '--network', 'network',
+            '--as', 'user'])
+  mountpoint = '%s/%s' % (user.dir, 'mountpoint')
+  os.mkdir(mountpoint)
+  with user.run(['infinit-volume',
+                 '--mount', '--mountpoint', mountpoint,
+                 '--as', 'user',
+                 '--name', 'volume'], wait = False) as p:
+    try:
+      ready = False
+      while not ready:
+        for line in p.stdout:
+          if 'Running volume' in line.decode('utf-8'):
+            ready = True
+            break
+      subprocess.check_call(
+        ['prove', '-rof', '--jobs', '9',  os.environ['PJDFSTESTS']],
+        cwd = '%s/%s' % (user.dir, 'mountpoint'))
+    finally:
+      p.send_signal(2)
