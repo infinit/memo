@@ -7,6 +7,7 @@
 
 #include <elle/Error.hh>
 #include <elle/Exit.hh>
+#include <elle/finally.hh>
 #include <elle/With.hh>
 #include <elle/cast.hh>
 #include <elle/format/base64url.hh>
@@ -20,6 +21,9 @@
 #include <das/serializer.hh>
 
 #include <reactor/http/Request.hh>
+#include <reactor/network/rdv-socket.hh>
+#include <reactor/network/rdv-socket.hh>
+#include <reactor/network/buffer.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
@@ -2655,6 +2659,47 @@ private:
     catch (std::exception const& e)
     {
       ELLE_TRACE("UPNP eror: %s", e.what());
+    }
+    ELLE_TRACE("Obtaining public address from RDV");
+    try
+    {
+      auto host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
+      if (host.empty())
+        throw std::runtime_error("RDV disabled");
+      int port = 7890;
+      auto p = host.find_first_of(':');
+      if ( p!= host.npos)
+      {
+        port = std::stoi(host.substr(p+1));
+        host = host.substr(0, p);
+      }
+      reactor::network::RDVSocket socket;
+      socket.close();
+      socket.bind(boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), 0));
+      reactor::Thread poller("poll", [&]
+      {
+        while (true)
+        {
+          elle::Buffer buf;
+          buf.size(5000);
+          boost::asio::ip::udp::endpoint ep;
+          socket.receive_from(reactor::network::Buffer(buf.mutable_contents(),
+                                                       buf.size()), ep);
+        }
+      });
+      elle::SafeFinally spoll([&] {
+          poller.terminate_now();
+      });
+      socket.rdv_connect("ip-fetcher", host, port, 5_sec);
+      poller.terminate_now();
+      spoll.abort();
+      ELLE_TRACE("RDV gave endpoint %s", socket.public_endpoint());
+      if (socket.public_endpoint().port())
+        endpoints.addresses.push_back(socket.public_endpoint().address().to_string());
+    }
+    catch (std::exception const& e)
+    {
+      ELLE_TRACE("RDV error: %s", e.what());
     }
     ELLE_TRACE("Pushing endpoints");
 
