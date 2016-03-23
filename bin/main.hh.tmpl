@@ -1370,11 +1370,9 @@ namespace infinit
   {
   public:
     bool
-    is_qualified_name(std::string const& network_name)
+    is_qualified_name(std::string const& network_name) const
     {
-      if (network_name.find("/") != std::string::npos)
-        return true;
-      return false;
+      return (network_name.find("/") != std::string::npos);
     }
 
     std::string
@@ -1386,17 +1384,6 @@ namespace infinit
         return elle::sprintf("%s/%s", owner.name, network_name);
     }
 
-    std::string
-    network_path_get(std::string const& name_, User const& owner)
-    {
-      std::string name = qualified_name(name_, owner);
-      std::string path = this->_network_path(name).string();
-      if (boost::filesystem::exists(path))
-        return path;
-      throw elle::Error(
-        elle::sprintf("network \"%s\" not found", name));
-    }
-
     Network
     network_get(std::string const& name_,
                 User const& owner,
@@ -1404,8 +1391,16 @@ namespace infinit
     {
       auto name = qualified_name(name_, owner);
       boost::filesystem::ifstream f;
-      this->_open_read(f, this->_network_path(name), name, "network");
-      auto res = load<Network>(f);
+      try
+      {
+        this->_open_read(f, this->_network_path(name, owner), name, "network");
+      }
+      catch (MissingLocalResource const&)
+      {
+        this->_open_read(
+          f, this->_network_descriptor_path(name), name, "network");
+      }
+      auto res = elle::serialization::json::deserialize<Network>(f, false);
       if (!res.model && require_model)
       {
         throw elle::Error(
@@ -1416,22 +1411,37 @@ namespace infinit
     }
 
     std::vector<Network>
-    networks_get() const
+    networks_get(boost::optional<infinit::User> self) const
     {
       namespace boost_fs = boost::filesystem;
       std::vector<Network> res;
-      for (boost_fs::recursive_directory_iterator it(this->_network_path());
-           it != boost_fs::recursive_directory_iterator();
-           ++it)
-      {
-        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+      auto extract = [this, &res]  (boost::filesystem::path const& path) {
+        for (boost_fs::recursive_directory_iterator it(path);
+             it != boost_fs::recursive_directory_iterator();
+             ++it)
         {
-          boost_fs::ifstream f;
-          this->_open_read(
-            f, it->path(), it->path().filename().string(), "network");
-          res.push_back(load<Network>(f));
+          if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+          {
+            boost_fs::ifstream f;
+            this->_open_read(
+              f, it->path(), "network", it->path().filename().string());
+            auto network = elle::serialization::json::deserialize<Network>(
+              f, false);
+            // Ignore duplicates.
+            if (std::find_if(res.begin(), res.end(), [&network] (Network const& n) {
+                  return n.name == network.name;
+                }) == res.end())
+              res.push_back(std::move(network));
+          }
         }
+      };
+      if (self)
+      {
+        // Start by linked networks first.
+        extract(this->_network_path(*self));
       }
+      // Then linked networks.
+      extract(this->_network_descriptor_path());
       return res;
     }
 
@@ -1464,8 +1474,16 @@ namespace infinit
       try
       {
         boost::filesystem::ifstream f;
-        this->_open_read(f, this->_network_path(name), name, "network");
-        return load<NetworkDescriptor>(f);
+        try
+        {
+          this->_open_read(f, this->_network_path(name, owner), name, "network");
+        }
+        catch (MissingLocalResource const&)
+        {
+          this->_open_read(f, this->_network_descriptor_path(name), name, "network");
+        }
+        elle::serialization::json::SerializerIn s(f, false);
+        return s.deserialize<NetworkDescriptor>();
       }
       catch (elle::serialization::Error const&)
       {
@@ -1486,16 +1504,17 @@ namespace infinit
     network_save(NetworkDescriptor const& network, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
-      this->_open_write(f, this->_network_path(network.name),
+      this->_open_write(f, this->_network_descriptor_path(network.name),
                         network.name, "network", overwrite);
       save(f, network);
     }
 
     void
-    network_save(Network const& network, bool overwrite = false)
+    network_save(infinit::User const& self,
+                 Network const& network, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
-      this->_open_write(f, this->_network_path(network.name),
+      this->_open_write(f, this->_network_path(network.name, self),
                         network.name, "network", overwrite);
       save(f, network);
     }
@@ -1866,7 +1885,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path() const
+    _network_descriptor_path() const
     {
       auto root = xdg_data_home() / "networks";
       create_directories(root);
@@ -1874,9 +1893,25 @@ namespace infinit
     }
 
     boost::filesystem::path
-    _network_path(std::string const& name) const
+    _network_descriptor_path(std::string const& name) const
     {
-      return this->_network_path() / name;
+      return this->_network_descriptor_path() / name;
+    }
+
+    boost::filesystem::path
+    _network_path(User const& user) const
+    {
+      auto root = xdg_data_home() / "linked_networks" / user.name;
+      create_directories(root);
+      return root;
+    }
+
+    boost::filesystem::path
+    _network_path(std::string const& name,
+                  User const& user) const
+    {
+      ELLE_ASSERT(is_qualified_name(name));
+      return this->_network_path(user) / name;
     }
 
     boost::filesystem::path
@@ -2032,11 +2067,12 @@ namespace infinit
     drive_fetch(std::string const& name);
 
     std::vector<std::string>
-    networks_for_storage(std::string const& storage_name)
+    networks_for_storage(User const& owner,
+                         std::string const& storage_name)
     {
       std::vector<std::string> res;
       using namespace infinit::model::doughnut;
-      for (auto const& network: this->networks_get())
+      for (auto const& network: this->networks_get(owner))
       {
         if (network.model)
         {

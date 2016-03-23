@@ -48,7 +48,7 @@ COMMAND(stats)
   }
   else
   {
-    networks = ifnt.networks_get();
+    networks = ifnt.networks_get(owner);
   }
   elle::json::Object res;
   for (auto const& network: networks)

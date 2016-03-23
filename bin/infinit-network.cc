@@ -205,7 +205,7 @@ COMMAND(create)
     }
     else
     {
-      ifnt.network_save(network);
+      ifnt.network_save(owner, network);
       report_created("network", network.name);
     }
     if (aliased_flag(args, {"push-network", "push"}))
@@ -295,7 +295,7 @@ COMMAND(update)
   }
   else
   {
-    ifnt.network_save(network, true);
+    ifnt.network_save(owner, network, true);
     report_updated("network", network.name);
   }
   if (aliased_flag(args, {"push-network", "push"}))
@@ -346,15 +346,18 @@ COMMAND(fetch)
             d->port,
             desc.version,
             desc.admin_keys));
-        ifnt.network_save(updated_network, true);
+        ifnt.network_save(self, updated_network, true);
       }
       else
       {
+        // The network was present but not linked, just overwrite it with the
+        // new descriptor.
         ifnt.network_save(desc, true);
       }
     }
     catch (MissingLocalResource const& e)
     {
+      // The network wasn't present at all.
       ifnt.network_save(desc);
     }
   };
@@ -402,18 +405,7 @@ COMMAND(link_)
   auto self = self_user(ifnt, args);
   auto network_name = mandatory(args, "name", "network name");
   auto storage = storage_configuration(args);
-  auto desc = [&] () -> infinit::NetworkDescriptor
-  {
-    try
-    {
-      return ifnt.network_descriptor_get(network_name, self, false);
-    }
-    catch (elle::serialization::Error const&)
-    {
-      throw elle::Error(elle::sprintf(
-        "this device has already been linked to %s", network_name));
-    }
-  }();
+  auto desc = ifnt.network_descriptor_get(network_name, self);
   auto passport = [&] () -> infinit::Passport
   {
     if (self.public_key == desc.owner)
@@ -463,17 +455,18 @@ COMMAND(link_)
   }
   else
   {
-    ifnt.network_save(network, true);
+    ifnt.network_save(self, network, true);
     report_action("linked", "device to network", network.name);
   }
 }
 
 COMMAND(list)
 {
+  auto self = self_user(ifnt, args);
   if (script_mode)
   {
     elle::json::Array l;
-    for (auto const& network: ifnt.networks_get())
+    for (auto const& network: ifnt.networks_get(self))
     {
       elle::json::Object o;
       o["name"] = network.name;
@@ -484,7 +477,7 @@ COMMAND(list)
   }
   else
   {
-    for (auto const& network: ifnt.networks_get())
+    for (auto const& network: ifnt.networks_get(self))
     {
       std::cout << network.name;
       if (network.model)
@@ -522,8 +515,9 @@ COMMAND(delete_)
   auto name = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   auto network_name = ifnt.qualified_name(name, owner);
-  auto path = ifnt._network_path(network_name);
   auto network = ifnt.network_get(network_name, owner, false);
+  auto path = ifnt._network_path(network_name, owner);
+  auto descriptor_path = ifnt._network_descriptor_path(network_name);
   bool purge = flag(args, "purge");
   bool pull = flag(args, "pull");
   if (purge)
@@ -561,11 +555,26 @@ COMMAND(delete_)
   if (pull)
     beyond_delete("network", network_name, owner, true, purge);
   boost::filesystem::remove_all(network.cache_dir());
-  if (boost::filesystem::remove(path))
-    report_action("deleted", "network", network_name, std::string("locally"));
-  else
-    throw elle::Error(
-      elle::sprintf("File for network could not be deleted: %s", path));
+  auto del = [&] (boost::filesystem::path const& path,
+                  std::string const& message)
+  {
+    if (boost::filesystem::exists(path))
+    {
+      if (boost::filesystem::remove(path))
+        report_action("deleted", message, network_name, std::string("locally"));
+      else
+        throw elle::Error(
+          elle::sprintf("File for network could not be deleted: %s", path));
+      return true;
+    }
+    return false;
+  };
+  bool network_deleted = del(path, "linked network");
+  bool network_descriptor_deleted = del(descriptor_path, "network");
+  if (!network_deleted && !network_descriptor_deleted)
+  {
+    throw elle::Error("Nothing has been deleted");
+  }
 }
 
 COMMAND(run)

@@ -53,7 +53,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-user', '--fetch', '--name', 'bob'])
 
   # Create.
-  l = bob.run_json(['infinit-network', '--list', '--script'])
+  l = bob.run_json(['infinit-network', '--list', '--as', 'bob', '--script'])
   assertEq(len(l), 0)
   bob.run(['infinit-network', '--create', '--name', 'a', '--as', 'bob', '--push'])
   try:
@@ -61,20 +61,20 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
     unreachable()
   except Exception as e:
     pass
-  l = bob.run_json(['infinit-network', '--list', '--script'])
+  l = bob.run_json(['infinit-network', '--list', '--script', '--as', 'bob'])
   assertEq(len(l), 1)
   bob.run(['infinit-network', '--create', '--name', 'b', '--as', 'bob', '--push'])
-  l = bob.run_json(['infinit-network', '--list', '--script'])
+  l = bob.run_json(['infinit-network', '--list', '--script', '--as', 'bob'])
   assertEq(len(l), 2)
 
-  l = alice.run_json(['infinit-network', '--list', '--script'])
+  l = alice.run_json(['infinit-network', '--list', '--script', '--as', 'alice'])
   assertEq(len(l), 0)
   alice.run(['infinit-network', '--fetch', '--name', 'bob/a', '--as', 'alice'])
-  l = alice.run_json(['infinit-network', '--list', '--script'])
+  l = alice.run_json(['infinit-network', '--list', '--script', '--as', 'alice'])
   assertEq(len(l), 1)
   alice.run(['infinit-network', '--fetch', '--as', 'alice'])
   # Still one, alice hasn't been invited to the 2nd network.
-  l = alice.run_json(['infinit-network', '--list', '--script'])
+  l = alice.run_json(['infinit-network', '--list', '--script', '--as', 'alice'])
   assertEq(len(l), 1)
 
 # Update network.
@@ -221,27 +221,27 @@ with Beyond() as beyond, \
     ['infinit-user', '--signup', 'alice', '--email', 'alice@infinit.io'])
   bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
-  assertEq(len(bob.run_json(['infinit-network', '--list', '-s'])), 1)
+  assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
   bob.run(['infinit-user', '--fetch', 'alice'])
   bob.run(['infinit-passport', '--create', '--as', 'bob',
            '-u', 'alice', '-n', 'n', '-p'])
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 1)
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
   alice.run(['infinit-network', '--create', '--as', 'alice', 'n', '-p'])
   alice.run(['infinit-user', '--fetch', 'bob'])
   alice.run(['infinit-passport', '--create', '--as', 'alice',
            '-u', 'bob', '-n', 'n', '-p'])
   bob.run(['infinit-passport', '--fetch', '--as', 'bob'])
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 2)
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 2)
   bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s', '--as', 'bob'])), 1)
   bob.run(['infinit-drive', '--create', '--as', 'bob', 'd',
            '-V', 'v', '-N', 'n', '-p'])
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
   bob.run(['infinit-network', '--delete', '--as', 'bob',
            '--purge', '--pull', 'n'])
-  assertEq(len(bob.run_json(['infinit-network', '--list', '-s'])), 0)
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 1)
+  assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 0)
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)

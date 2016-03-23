@@ -340,12 +340,12 @@ COMMAND(delete_)
                       std::string("locally"));
       }
     }
-    for (auto const& network_: ifnt.networks_get())
+    for (auto const& network_: ifnt.networks_get(user))
     {
       auto network = network_.name;
       if (owner(network) != user.name)
         continue;
-      auto network_path = ifnt._network_path(network);
+      auto network_path = ifnt._network_path(network, user);
       if (boost::filesystem::remove(network_path))
         report_action("deleted", "network", network, std::string("locally"));
     }

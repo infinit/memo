@@ -246,7 +246,8 @@ with Beyond() as beyond, \
   bob.run(['infinit-storage', '--create', '--as', 'b', 's', '--filesystem'])
   bob.run(
     ['infinit-network', '--create', '--as', 'b', 'n', '--storage', 's', '-p'])
-  assert path.exists('%s/b/n' % bob.networks_path)
+  assert not path.exists('%s/b/n' % bob.networks_path)
+  assert path.exists('%s/b/b/n' % bob.linked_networks_path)
   bob.run(
     ['infinit-volume', '--create', '--as', 'b', 'v', '--network', 'n', '-p'])
   assert path.exists('%s/b/v' % bob.volumes_path)
@@ -259,9 +260,9 @@ with Beyond() as beyond, \
   assert path.exists('%s/b/n/a' % bob.passports_path)
   # Create volume and drive with another owner on bob's network.
   alice.run(['infinit-network', '--fetch', '--as', 'a'])
-  assertEq(len(alice.run_json(['infinit-network', '--list', '-s'])), 1)
+  assertEq(len(alice.run_json(['infinit-network', '--list', '-s', '--as', 'a'])), 1)
   alice.run(['infinit-passport', '--fetch', '--as', 'a'])
-  assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 1)
+  assertEq(len(alice.run_json(['infinit-passport', '--list', '-s', '--as', 'a'])), 1)
   alice.run(['infinit-network', '--link', '--as', 'a', 'b/n'])
   alice.run(
     ['infinit-volume', '--create', '--as', 'a', 'v', '--network', 'b/n', '-p'])
@@ -276,7 +277,7 @@ with Beyond() as beyond, \
   alice.run(['infinit-passport', '--create', '--as', 'a',
              '-n', 'n', '-u', 'b', '-p'])
   bob.run(['infinit-passport', '--fetch', '--as', 'b'])
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 2)
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'b'])), 2)
   assert path.exists('%s/a/n/b' % bob.passports_path)
   # Nuke bob.
   bob.run(['infinit-user', '--delete', '--as', 'b', '--name', 'b',
@@ -284,6 +285,7 @@ with Beyond() as beyond, \
           input = 'b')
   # Check that elements have been removed.
   assert not path.exists('%s/b/n' % bob.networks_path)
+  assert not path.exists('%s/b/b/n' % bob.linked_networks_path)
   assert not path.exists('%s/b/v' % bob.volumes_path)
   assert not path.exists('%s/b/d' % bob.drives_path)
   assert not path.exists('%s/b/n/a' % bob.passports_path)

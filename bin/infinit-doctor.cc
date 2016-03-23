@@ -456,7 +456,15 @@ _integrity(boost::program_options::variables_map const& args,
   auto storage_resources = parse(ifnt.storages_get());
   auto drives = parse(ifnt.drives_get());
   auto volumes = parse(ifnt.volumes_get());
-  auto networks = parse(ifnt.networks_get());
+  boost::optional<infinit::User> user;
+  try
+  {
+    user = self_user(ifnt, args);
+  }
+  catch (...)
+  {
+  }
+  auto networks = parse(ifnt.networks_get(user));
   auto verbose = flag(args, "verbose");
   std::cout << "Storage resources:" << std::endl;
   for (auto& elem: storage_resources)

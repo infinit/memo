@@ -78,26 +78,26 @@ with Beyond() as beyond, \
   bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
   assertEq(len(bob.run_json(['infinit-storage', '--list', '-s'])), 1)
   bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
-  assertEq(len(bob.run_json(['infinit-network', '--list', '-s'])), 1)
+  assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 1)
   bob.run(['infinit-passport', '--create', '--as', 'bob',
            '-u', 'alice', '-n', 'n', '-p'])
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 1)
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 1)
   alice.run(['infinit-passport', '--fetch', '--as', 'alice',
              '-u', 'alice', '-n', 'bob/n'])
   alice.run(['infinit-passport', '--delete', '--as', 'alice',
              '-u', 'alice', '-n', 'bob/n'])
   bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s', '--as', 'bob'])), 1)
   bob.run(['infinit-drive', '--create', '--as', 'bob', 'd',
            '-V', 'v', '-N', 'n', '-p'])
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
   bob.run(['infinit-storage', '--delete', '--as', 'bob',
            '--purge', '--pull', 's'])
-  assertEq(len(bob.run_json(['infinit-storage', '--list', '-s'])), 0)
-  assertEq(len(bob.run_json(['infinit-network', '--list', '-s'])), 0)
-  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 0)
-  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
+  assertEq(len(bob.run_json(['infinit-storage', '--list', '-s', '--as', 'bob'])), 0)
+  assertEq(len(bob.run_json(['infinit-network', '--list', '-s', '--as', 'bob'])), 0)
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s', '--as', 'bob'])), 0)
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s', '--as', 'bob'])), 0)
   assertEq(
     len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
   bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'], return_code = 1)

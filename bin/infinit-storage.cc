@@ -324,7 +324,7 @@ COMMAND(delete_)
     throw elle::Error("only filesystem storages can be cleared");
   if (purge)
   {
-    auto networks = ifnt.networks_for_storage(name);
+    auto networks = ifnt.networks_for_storage(owner, name);
     std::vector<std::string> volumes;
     for (auto const& network: networks)
     {
@@ -362,7 +362,7 @@ COMMAND(delete_)
       // Only need to pull network as Beyond handles cleaning up properly.
       if (pull)
         beyond_delete("network", network, owner, true, purge);
-      auto net_path = ifnt._network_path(network);
+      auto net_path = ifnt._network_path(network, owner);
       if (boost::filesystem::remove(net_path))
         report_action("deleted", "network", network, std::string("locally"));
     }

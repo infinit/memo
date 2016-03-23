@@ -89,6 +89,10 @@ class Infinit(TemporaryDirectory):
     return '%s/networks' % self.data_home
 
   @property
+  def linked_networks_path(self):
+    return '%s/linked_networks' % self.data_home
+
+  @property
   def passports_path(self):
     return '%s/passports' % self.data_home
 
