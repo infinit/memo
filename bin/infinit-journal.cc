@@ -101,12 +101,12 @@ main(int argc, char** argv)
   Modes modes = {
     {
       "show",
-      "Show async operations",
+      "Show the remaining asynchronous operations",
       &show,
       elle::sprintf("--network NETWORK [--%s --%s]",
                     option_data.long_name(), option_operations.long_name()),
       {
-        { "network,N",  value<std::string>(), "network to check" },
+        { "network,N", value<std::string>(), "network to check" },
         option_data,
         option_operations,
       },
