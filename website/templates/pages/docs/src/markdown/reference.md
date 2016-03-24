@@ -483,7 +483,7 @@ $> infinit-volume --create --as alice --network --cluster --name shared --defaul
 Locally created volume "alice/shared".
 ```
 
-_**NOTE**: The one exception to this is if a user has a passport with the `deny write` flag. In this case, the user is not authorized to create blocks in the underlying network and as such will not be able to write (create/modify/delete files or folders) to the volume even with default read-write permissions._
+_**NOTE**: The one exception to this is if a user has a passport with the _deny write_ flag. In this case, the user is not authorized to create blocks in the underlying network and as such will not be able to write (create/modify/delete files or folders) to the volume even with default read-write permissions._
 
 ### Push a volume ###
 
