@@ -1,5 +1,9 @@
 #include <elle/log.hh>
 
+#include <infinit/model/doughnut/ACB.hh>
+#include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/OKB.hh>
+
 ELLE_LOG_COMPONENT("infinit-journal");
 
 #include <main.hh>
@@ -52,7 +56,6 @@ COMMAND(stats)
       }
   if (script_mode)
   {
-
     elle::json::Object stats;
     stats["operations"] = operation_count;
     stats["size"] = data_size;
@@ -63,6 +66,29 @@ COMMAND(stats)
     std::cout << network.name << ": "
               << operation_count << " operations, "
               << human_readable_data_size(data_size) << "\n";
+  }
+}
+
+COMMAND(export_)
+{
+  auto owner = self_user(ifnt, args);
+  auto network_name =
+    ifnt.qualified_name(mandatory(args, "network", "Network"), owner);
+  auto network = ifnt.network_get(network_name, owner);
+  boost::filesystem::path async_path = network.cache_dir() / "async";
+  auto operation = mandatory<int>(args, "operation");
+  boost::filesystem::ifstream i(async_path / elle::sprintf("%s", operation));
+  if (!i.good())
+    throw elle::Error(elle::sprintf("no such operation: %s", operation));
+  {
+    elle::serialization::Context ctx;
+    auto dht = network.run();
+    ctx.set<infinit::model::doughnut::Doughnut*>(dht.get());
+    ctx.set(infinit::model::doughnut::ACBDontWaitForSignature{});
+    ctx.set(infinit::model::doughnut::OKBDontWaitForSignature{});
+    auto op = elle::serialization::binary::deserialize<
+      infinit::model::doughnut::consensus::Async::Op>(i, true, ctx);
+    elle::serialization::json::serialize(op, std::cout);
   }
 }
 
@@ -79,6 +105,16 @@ main(int argc, char** argv)
       elle::sprintf("--network NETWORK"),
       {
         { "network,N", value<std::string>(), "network to check" },
+      },
+    },
+    {
+      "export",
+      "Export an operation",
+      &export_,
+      elle::sprintf("--network NETWORK --operation OPERATION"),
+      {
+        { "network,N", value<std::string>(), "network to check" },
+        { "operation,O", value<int>(), "operation to export" },
       },
     },
   };
