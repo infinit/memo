@@ -648,7 +648,7 @@ section.doc {
     border-bottom: 1px solid #DFDFDF; display: block; margin-top: 0;
   }
 
-  p, li, p.note { line-height: 23px; font-size: 15px; }
+  p, li, p.note, strong { line-height: 23px; font-size: 15px; }
   p.note, em { font-style: italic; color: #8C8C8C; }
   p a, li a { color: @infinitblue; .transition() }
 
@@ -680,6 +680,14 @@ section.doc {
   ul.horizontal li {
     margin: 5px 20px 5px 0; float: left;
     img { max-height: 15px; width: auto; margin-right: 3px; }
+
+    a {
+      background: #f6f6f6; padding: 13px 23px; border-radius: 3px;
+      margin: 5px 0 10px 0; display: inline-block;
+      font-size: 16px; color: #2C2F31;
+
+      &:hover { border-bottom: 0; background: darken(#f6f6f6, 5%); }
+    }
   }
 
   blockquote {
@@ -751,6 +759,14 @@ section.doc {
   }
 
   .tags { margin-top: -10px; margin-bottom: 25px; }
+
+  a.external {
+    margin-left: 6px; display: inline-block;
+    img {
+      width: 10px; height: auto;
+      padding-right: 4px; vertical-align: baseline;
+    }
+  }
 }
 
 body.documentation, body.legal, body.contact, body.opensource, body.solutions,
@@ -790,11 +806,11 @@ body.pricing, body.press {
     color: @infinitred;
   }
 
-  ul.menu > li { padding-top: 5px; padding-bottom: 5px; }
+  ul.menu > li { padding-top: 3px; padding-bottom: 5px; }
   ul.menu li > a { font-size: 15px;  }
 
   ul.menu li ul {
-    list-style-type: circle; padding-left: 20px;
+    list-style-type: circle; padding-left: 20px; margin-top: 7px;
 
     li { margin: 5px 0;}
     li a { font-size: 13px; }
@@ -1088,6 +1104,43 @@ body.doc_technology {
     }
     table { width: 100%; }
     table tr td { text-align: left; width: 50%;}
+  }
+}
+
+
+body.doc_status {
+  section.doc {
+    min-height: 500px;
+
+    .green { background: #D9F1C9; color: #558C3F; }
+    .yellow { background: #FDF5BF; color: #877D5B; }
+    .red { background: #F0B8B8; color: #8D4D4D; }
+
+    blockquote.green {
+
+    }
+
+    blockquote { font-weight: 600; font-family: @sourcesans; }
+    blockquote img { float: left; margin-top: -10px;  margin-right: 8px;}
+    h2 { margin-top: 40px; }
+
+    .issue {
+      padding: 10px 0; border-bottom: 1px solid #E7E7E7;
+
+      span.date {
+        display: block; text-transform: uppercase;
+        color: @infinitgray; font-size: 11px; margin: 13px 0 7px 0;
+      }
+      strong { font-size: 17px; font-weight: 600; display: inline-block; }
+      p { margin-top: 5px; color: darken(@infinitgray, 10%); }
+      span.version { background: #f6f6f6; color: darken(@infinitgray, 10%); .transition();}
+      a:hover span.version { background: darken(#f6f6f6, 5%); }
+      span.green, span.yellow, span.red, span.version {
+        padding: 3px 7px; font-weight: 600; display: inline-block;
+        margin-left: 5px; border-radius: 3px; font-size: 12px;
+      }
+    }
+    .issue:last-child { border-bottom: none;}
   }
 }
 

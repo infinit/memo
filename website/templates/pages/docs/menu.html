@@ -90,6 +90,10 @@
       </ul>
     </li>
 
+    <li ${'class="active"' if request.route.name == 'doc_status' else ''}>
+      <a href="${route('doc_status')}">Status</a>
+    </li>
+
     <li ${'class="active"' if request.route.name == 'doc_roadmap' else ''}>
       <a href="${route('doc_roadmap')}">Roadmap</a>
     </li>

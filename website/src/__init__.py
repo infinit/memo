@@ -160,6 +160,14 @@ class Website(bottle.Bottle):
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
 
+  @route('/documentation/status', name = 'doc_status')
+  @view('pages/docs/status.html')
+  def root(self):
+    return {
+      'title': 'Status',
+      'description': 'Keep track of announcements regarding system wide issues or performance status.',
+    }
+
   @route('/documentation/storages/filesystem', name = 'doc_storages_filesystem')
   @view('pages/docs/filesystem.html')
   def root(self):

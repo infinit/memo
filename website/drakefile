@@ -160,6 +160,7 @@ def configure(
     'templates/pages/docs/reference.html',
     'templates/pages/docs/roadmap.html',
     'templates/pages/docs/s3.html',
+    'templates/pages/docs/status.html',
     'templates/pages/docs/upgrading.html',
     'templates/pages/docs/environment_variables.html',
     'templates/pages/docs/technology.html',
@@ -454,6 +455,14 @@ def configure(
     'resources/images/icons/debian@2x.png',
     'resources/images/icons/windows.png',
     'resources/images/icons/windows@2x.png',
+    'resources/images/icons/external-link.png',
+    'resources/images/icons/external-link@2x.png',
+    'resources/images/icons/status-healthy.png',
+    'resources/images/icons/status-healthy@2x.png',
+    'resources/images/icons/status-problems.png',
+    'resources/images/icons/status-problems@2x.png',
+    'resources/images/icons/status-down.png',
+    'resources/images/icons/status-down@2x.png',
   )
 
   resources = resources + resources_icons
