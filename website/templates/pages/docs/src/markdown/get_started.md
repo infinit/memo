@@ -55,9 +55,29 @@
     <%include file='get_started/mac_homebrew_install.html'/>
   </div>
 
-  <div data-tabs-pane class="tabs-pane active" id="mac-tarball-install">
+  <div data-tabs-pane class="tabs-pane" id="mac-tarball-install">
     <h3 class="skip">Tarball Install</h3>
     <%include file='get_started/mac_tarball_install.html'/>
+
+    <p>Next, open your terminal and extract the Infinit tarball:</p>
+
+    <pre><code>$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
+Infinit-${tarball_version}/
+Infinit-${tarball_version}/bin/
+Infinit-${tarball_version}/lib
+...
+Infinit-${tarball_version}/bin/infinit-storage
+Infinit-${tarball_version}/bin/infinit-user
+Infinit-${tarball_version}/bin/infinit-volume
+...</code></pre>
+
+    <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+
+    <pre><code>$> cd Infinit-${tarball_version}/
+$> ls
+bin/    lib/    share/
+</code></pre>
+
   </div>
 </div>
 
@@ -80,38 +100,13 @@
     <%include file='get_started/linux_apt_install.html'/>
   </div>
 
-  <div data-tabs-pane class="tabs-pane active" id="linux-tarball-install">
+  <div data-tabs-pane class="tabs-pane" id="linux-tarball-install">
     <h3 class="skip">Tarball Install</h3>
     <%include file='get_started/linux_tarball_install.html'/>
-  </div>
-</div>
 
-<div> <!-- open it again -->
+    <p>Next, open your terminal and extract the Infinit tarball:</p>
 
-% endif
-</div>
-
-<br>
-
-Next, open your terminal and extract the Infinit tarball:
-
-<div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
-
-<pre><code>$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-Infinit-${tarball_version}/
-Infinit-${tarball_version}/bin/
-Infinit-${tarball_version}/lib
-...
-Infinit-${tarball_version}/bin/infinit-storage
-Infinit-${tarball_version}/bin/infinit-user
-Infinit-${tarball_version}/bin/infinit-volume
-...
-</code></pre>
-
-% else:
-
-<pre><code>$> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+    <pre><code>$> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
 Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
 Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
 Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
@@ -122,25 +117,27 @@ Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-volume
 ...
 </code></pre>
 
-% endif
+    <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+
+    <pre><code>$> cd Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+$> ls
+bin/    lib/    share/
+</code></pre>
+
+  </div>
 </div>
 
-Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:
+<div> <!-- open it again -->
+
+% endif
+</div>
 
 * The `bin/` subdirectory contains the actual Infinit binaries such as _infinit-user_, _infinit-network_, etc.
 * The `lib/` subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).
 * The `share/infinit/filesystem/test/` subdirectory is provided for you to quickly test the command-line tools, see below.
 
-<div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
-<pre><code>$> cd Infinit-${tarball_version}/
-% else:
-<pre><code>$> cd Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
-% endif
-$> ls
-bin/    lib/    share/
-</code></pre>
-</div>
+All the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_DATA_HOME` directory which, by default, is set to `$HOME/.local/share/infinit/filesystem/`, following the [XDG Base Directory Specification](http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html). You can edit your shell configuration to set `INFINIT_DATA_HOME` to another location if you would like.
+
 
 2. Basic Test
 --------------
@@ -153,6 +150,7 @@ In the following, we are going to run the _infinit-volume_ command by prefixing 
 
 ```
 $> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+...
 Fetched endpoints for "infinit/demo".
 Running network "infinit/demo".
 [           infinit-volume           ] [main] client version: 0.5.4

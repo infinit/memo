@@ -1751,7 +1751,11 @@ ul.tabs a.active {
   &:hover { background: @terminalbg; border-bottom: 0px !important; }
 }
 
-.data-tabs-content .tabs-pane:first-child pre code { border-top-left-radius: 0 !important;}
+body.doc_deployments {
+  .data-tabs-content .tabs-pane:first-child pre code {
+    border-top-left-radius: 0 !important;
+  }
+}
 .tabs-pane { clear: both; }
 .tabs-pane pre { margin-top: 0; }
 
