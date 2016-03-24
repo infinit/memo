@@ -136,8 +136,6 @@ bin/    lib/    share/
 * The `lib/` subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).
 * The `share/infinit/filesystem/test/` subdirectory is provided for you to quickly test the command-line tools, see below.
 
-All the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_DATA_HOME` directory which, by default, is set to `$HOME/.local/share/infinit/filesystem/`, following the [XDG Base Directory Specification](http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html). You can edit your shell configuration to set `INFINIT_DATA_HOME` to another location if you would like.
-
 
 2. Basic Test
 --------------

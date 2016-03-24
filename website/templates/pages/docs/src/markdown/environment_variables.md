@@ -3,7 +3,7 @@ Environment Variables
 
 This page contains some environment variables that can be used to alter the file system's behavior.
 
-**IMPORTANT**: If you do not precisely understand the impact changing these variables can have, please do not!
+<blockquote class="warning"><strong>Important</strong>: If you do not precisely understand the impact changing these variables can have, please do not!</blockquote>
 
 Elle
 ----
