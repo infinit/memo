@@ -188,13 +188,19 @@ static
 int
 directory_count(boost::filesystem::path const& p)
 {
+  boost::system::error_code erc;
   try
   {
-    boost::filesystem::directory_iterator d(p);
-    int s = 0;
+    boost::filesystem::directory_iterator d(p, erc);
+    if (erc)
+      throw std::runtime_error("construction failed : " + erc.message());
+    int s=0;
     while (d != boost::filesystem::directory_iterator())
     {
-      ++s; ++d;
+      ++s;
+      d.increment(erc);
+      if (erc)
+        throw std::runtime_error("increment failed : " + erc.message());
     }
     return s;
   }
