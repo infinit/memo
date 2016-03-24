@@ -622,7 +622,7 @@ main(int argc, char** argv)
         { "path,p", value<std::vector<std::string>>(), "paths" },
         { "user,u", value<std::vector<std::string>>(), elle::sprintf(
           "users and groups (prefix: %s<group>)", group_prefix) },
-        { "group", value<std::vector<std::string>>(), "groups" },
+        { "group,g", value<std::vector<std::string>>(), "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
         { "others-mode,o", value<std::string>(), "access mode for everybody: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
