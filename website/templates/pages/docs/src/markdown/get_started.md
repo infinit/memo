@@ -125,8 +125,6 @@ Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-volume
 % endif
 </div>
 
-All the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_DATA_HOME` directory which, by default, is set to `$HOME/.local/share/infinit/filesystem/`, following the [XDG Base Directory Specification](http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html). You can edit your shell configuration to set `INFINIT_DATA_HOME` to another location if you would like.
-
 Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:
 
 * The `bin/` subdirectory contains the actual Infinit binaries such as _infinit-user_, _infinit-network_, etc.
@@ -147,9 +145,11 @@ bin/    lib/    share/
 2. Basic Test
 --------------
 
-For you to quickly (through a single command) try Infinit out, the following is going to let you **mount an existing volume** and access files through a mount point. Don’t worry, this file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.
+For you to quickly (through a single command) try Infinit out, the following is going to let you **mount an existing volume** and access files through a mount point. Don’t worry, this "demo" file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.
 
-Run the _infinit-volume_ command by prefixing it with the environment variable `INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home` to tell the command where to look for the configuration files required for this test.
+First, you need to understand that all the configuration files that the Infinit command-line tools create and use are located in the `$INFINIT_DATA_HOME` directory which, by default, is set to `$INFINIT_HOME/.local/share/infinit/filesystem/`, with `$INFINIT_HOME` set to `$HOME`. All these [environment variables](/documentation/environment-variables) can be changed according to your needs.
+
+In the following, we are going to run the _infinit-volume_ command by prefixing it with the environment variable `INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home` to tell the command where to look for the configuration files required for this test, in this case in the `share/` directory that is next to the binaries and contains the configuration file for this "demo" volume.
 
 ```
 $> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
@@ -262,7 +262,7 @@ everything is
 
 ### Access from another machine
 
-Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. If you don’t have another device, you can simulate another device by opening another terminal and setting `INFINIT_DATA_HOME` to a different directory.
+Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. If you don’t have another device, you can simulate another device by opening another terminal and [setting](/documentation/environment-variables) `$INFINIT_HOME` to a different directory.
 
 In order to access your volume from another device, you will need to transfer your user’s identity to that device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.
 
