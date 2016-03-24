@@ -880,6 +880,6 @@ The _infinit-journal_ binary provides the means for checking the status of the a
 In order to check the number of pending asynchronous operations and/or the amount of data remaining to be sent to the storage nodes, you can use the `--show` flag.
 
 ```
-$> infinit-journal --show --as alice --network alice/cluster --operations --data
+$> infinit-journal --show --as alice --network alice/cluster
 alice/cluster: 185 operations, 71 MB
 ```

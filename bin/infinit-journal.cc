@@ -6,13 +6,6 @@ ELLE_LOG_COMPONENT("infinit-journal");
 
 infinit::Infinit ifnt;
 
-Mode::OptionDescription option_data(
-  "data", boost::program_options::bool_switch(),
-  "data in asynchronous cache");
-Mode::OptionDescription option_operations(
-  "operations", boost::program_options::bool_switch(),
-  "number of asynchronous operations remaining");
-
 static
 bool
 valid_block(boost::filesystem::path const& path)
@@ -45,52 +38,32 @@ COMMAND(show)
   auto network_name =
     ifnt.qualified_name(mandatory(args, "network", "Network"), owner);
   auto network = ifnt.network_get(network_name, owner);
-  bool data = flag(args, option_data);
-  bool operations = flag(args, option_operations);
-  if (!data && !operations)
-  {
-    throw CommandLineError("specify either --%s or --%s",
-      option_data.long_name(), option_operations.long_name());
-  }
   boost::filesystem::path async_path = network.cache_dir() / "async";
   int operation_count = 0;
   int64_t data_size = 0;
   if (boost::filesystem::exists(async_path))
-  {
-    if (data)
-    {
-      for (boost::filesystem::directory_iterator it(async_path);
-           it != boost::filesystem::directory_iterator();
-           ++it)
+    for (boost::filesystem::directory_iterator it(async_path);
+         it != boost::filesystem::directory_iterator();
+         ++it)
+      if (valid_block(it->path()))
       {
-        if (valid_block(it->path()))
-        {
-          operation_count++;
-          data_size += boost::filesystem::file_size(*it);
-        }
+        operation_count++;
+        data_size += boost::filesystem::file_size(*it);
       }
-    }
-    if (operations && !data)
-    {
-      operation_count = std::count_if(
-        boost::filesystem::directory_iterator(async_path),
-        boost::filesystem::directory_iterator(),
-        [](boost::filesystem::directory_entry const& entry)
-        {
-          return valid_block(entry.path());
-        });
-    }
-  }
-  std::cout << network.name << ": ";
-  if (operations)
+  if (script_mode)
   {
-    std::cout << operation_count <<  " operations";
-    if (data)
-      std::cout << ", ";
+
+    elle::json::Object stats;
+    stats["operations"] = operation_count;
+    stats["size"] = data_size;
+    elle::json::write(std::cout, stats);
   }
-  if (data)
-    std::cout << human_readable_data_size(data_size);
-  std::cout << std::endl;
+  else
+  {
+    std::cout << network.name << ": "
+              << operation_count << " operations, "
+              << human_readable_data_size(data_size) << "\n";
+  }
 }
 
 int
@@ -103,12 +76,9 @@ main(int argc, char** argv)
       "show",
       "Show the remaining asynchronous operations",
       &show,
-      elle::sprintf("--network NETWORK [--%s --%s]",
-                    option_data.long_name(), option_operations.long_name()),
+      elle::sprintf("--network NETWORK"),
       {
         { "network,N", value<std::string>(), "network to check" },
-        option_data,
-        option_operations,
       },
     },
   };

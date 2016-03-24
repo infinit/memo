@@ -2065,6 +2065,57 @@ flag(boost::program_options::variables_map const& vm,
 }
 
 bool
+_one(bool seen)
+{
+  return seen;
+}
+
+template <typename First, typename ... Args>
+bool
+_one(bool seen, First&& first, Args&& ... args)
+{
+  auto b = bool(first);
+  if (seen && b)
+    return false;
+  return _one(seen || b, std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+bool
+one(Args&& ... args)
+{
+  return _one(false, std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+bool
+none(Args&& ... args)
+{
+  return true;
+}
+
+template <typename First, typename ... Args>
+bool
+none(First&& first, Args&& ... args)
+{
+  return first ? false : none(std::forward<Args>(args)...);
+}
+
+template <typename First, typename ... Args>
+bool
+all(First&& first, Args&& ... args)
+{
+  return !first ? false : none(std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+bool
+all(Args&& ... args)
+{
+  return true;
+}
+
+bool
 aliased_flag(boost::program_options::variables_map const& vm,
              std::vector<std::string> aliases)
 {

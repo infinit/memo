@@ -21,32 +21,6 @@ infinit::Infinit ifnt;
 #include <endpoint_file.hh>
 
 static
-bool
-_one(bool seen)
-{
-  return seen;
-}
-
-template <typename First, typename ... Args>
-static
-bool
-_one(bool seen, First&& first, Args&& ... args)
-{
-  auto b = bool(first);
-  if (seen && b)
-    return false;
-  return _one(seen || b, std::forward<Args>(args)...);
-}
-
-template <typename ... Args>
-static
-bool
-one(Args&& ... args)
-{
-  return _one(false, std::forward<Args>(args)...);
-}
-
-static
 std::unique_ptr<infinit::storage::StorageConfig>
 storage_configuration(boost::program_options::variables_map const& args)
 {
