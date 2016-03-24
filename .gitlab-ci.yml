@@ -18,6 +18,7 @@ x86_64-trusty-gcc4:
     - cd ../fs-build && python3 drake --website=false -j $(nproc) //install //beyond/install
     - cd ../fs-build && python3 drake -j $(nproc) //beyond/debian
     - scp ../fs-build/beyond/infinit-beyond_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
     - trusty
@@ -39,6 +40,7 @@ x86_64-jessie-gcc4:
     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //debian
     - scp ../fs-build/infinit_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
     - scp ../fs-build/infinit-debug-symbols-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
     - jessie
@@ -138,6 +140,7 @@ website:
     - cd ../fs-build && python3 drake -j $(nproc) //website/install --prefix=$(realpath ../fs-website)
     - cd ../fs-build && python3 drake -j $(nproc) //website/debian
     - scp ../fs-build/website/infinit-sh_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
     - trusty
