@@ -877,9 +877,9 @@ When running a network or volume with the asynchronous option `--async`, operati
 The _infinit-journal_ binary provides the means for checking the status of the asynchronous cache or _journal_ on a per network basis.
 
 ### Check asynchronous network cache ###
-In order to check the number of pending asynchronous operations and/or the amount of data remaining to be sent to the storage nodes, you can use the `--show` flag.
+In order to check the number of pending asynchronous operations and/or the amount of data remaining to be sent to the storage nodes, you can use the `--show` option.
 
 ```
-$> infinit-journal --show --as alice --network alice/cluster
+$> infinit-journal --stats --as alice --network alice/cluster
 alice/cluster: 185 operations, 71 MB
 ```

@@ -32,7 +32,7 @@ human_readable_data_size(int64_t value)
   return elle::sprintf("%s B", value);
 }
 
-COMMAND(show)
+COMMAND(stats)
 {
   auto owner = self_user(ifnt, args);
   auto network_name =
@@ -73,9 +73,9 @@ main(int argc, char** argv)
   using boost::program_options::value;
   Modes modes = {
     {
-      "show",
-      "Show the remaining asynchronous operations",
-      &show,
+      "stats",
+      "Show the remaining asynchronous operations count and size",
+      &stats,
       elle::sprintf("--network NETWORK"),
       {
         { "network,N", value<std::string>(), "network to check" },
