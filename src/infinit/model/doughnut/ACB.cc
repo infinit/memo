@@ -844,7 +844,7 @@ namespace infinit
           return valid;
 
         if (this->version() >= mb->version())
-          return blocks::ValidationResult::conflict("Invalid version");
+          return blocks::ValidationResult::conflict("invalid version");
 
         valid = dynamic_cast<const blocks::Block*>(this)->validate(model, *mb);
         if (!valid)

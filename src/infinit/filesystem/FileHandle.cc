@@ -524,7 +524,7 @@ namespace infinit
         cdata = cryptography::SecretKey(key).encipher(*ab);
       auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
       auto baddr = block->address();
-      _model.store(std::move(block), model::STORE_INSERT);
+      _model.store(std::move(block), model::STORE_INSERT, model::make_drop_conflict_resolver());
       if (baddr != prev)
       {
         ELLE_DEBUG("Changing address of block %s: %s -> %s", it->first,
@@ -610,7 +610,8 @@ namespace infinit
                   cdata = cryptography::SecretKey(key).encipher(*ab);
                 auto block = _model.make_block<ImmutableBlock>(std::move(cdata), _file._address);
                 auto baddr = block->address();
-                _model.store(std::move(block), model::STORE_INSERT);
+                _model.store(std::move(block), model::STORE_INSERT,
+                             model::make_drop_conflict_resolver());
                 if (baddr != old_addr)
                 {
                   ELLE_DEBUG("Changing address of block %s: %s -> %s", id,

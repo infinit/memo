@@ -84,9 +84,10 @@ namespace infinit
               *gb->owner_key());
             auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
               *gb->owner_key(), true);
-            _dht.store(std::move(ub), STORE_INSERT);
-            _dht.store(std::move(rub), STORE_INSERT);
-            _dht.store(std::move(gb), STORE_INSERT);
+            // FIXME
+            _dht.store(std::move(ub), STORE_INSERT, make_drop_conflict_resolver());
+            _dht.store(std::move(rub), STORE_INSERT, make_drop_conflict_resolver());
+            _dht.store(std::move(gb), STORE_INSERT, make_drop_conflict_resolver());
             ELLE_DEBUG("...done");
         });
       }
@@ -200,7 +201,7 @@ namespace infinit
       Group::add_member(model::User const& user)
       {
         this->block().add_member(user);
-        this->_dht.store(this->block(), STORE_UPDATE);
+        this->_dht.store(this->block(), STORE_UPDATE, make_drop_conflict_resolver());
       }
 
       void
@@ -218,7 +219,7 @@ namespace infinit
       Group::add_admin(model::User const& user)
       {
         this->block().add_admin(user);
-        this->_dht.store(this->block(), STORE_UPDATE);
+        this->_dht.store(this->block(), STORE_UPDATE, make_drop_conflict_resolver());
       }
 
       void
@@ -236,7 +237,7 @@ namespace infinit
       Group::remove_member(model::User const& user)
       {
         this->block().remove_member(user);
-        this->_dht.store(this->block(), STORE_UPDATE);
+        this->_dht.store(this->block(), STORE_UPDATE, make_drop_conflict_resolver());
       }
 
       void
@@ -254,7 +255,7 @@ namespace infinit
       Group::remove_admin(model::User const& user)
       {
         this->block().remove_admin(user);
-        this->_dht.store(this->block(), STORE_UPDATE);
+        this->_dht.store(this->block(), STORE_UPDATE, make_drop_conflict_resolver());
       }
 
       void

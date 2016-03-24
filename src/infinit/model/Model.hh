@@ -48,6 +48,9 @@ namespace infinit
                 elle::Version const& v) override = 0;
     };
 
+    std::unique_ptr<ConflictResolver>
+    make_drop_conflict_resolver();
+
     class Model
     {
     public:

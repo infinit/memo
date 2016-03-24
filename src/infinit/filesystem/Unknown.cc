@@ -23,31 +23,6 @@ namespace infinit
 {
   namespace filesystem
   {
-    class DummyConflictResolver: public model::ConflictResolver
-    {
-    public:
-      DummyConflictResolver() {}
-      DummyConflictResolver(elle::serialization::SerializerIn& s) {}
-      void serialize(elle::serialization::Serializer& s,
-                     elle::Version const&) override
-      {
-      }
-      std::unique_ptr<Block>
-      operator() (Block& block,
-                  Block& current,
-                  model::StoreMode mode) override
-      {
-        return current.clone();
-      }
-    };
-    static const elle::serialization::Hierarchy<model::ConflictResolver>::
-    Register<DummyConflictResolver> _register_dcr("dummy");
-
-    static
-    std::unique_ptr<model::ConflictResolver> dummy_conflict_resolver()
-    {
-      return elle::make_unique<DummyConflictResolver>();
-    }
 
     Unknown::Unknown(FileSystem& owner,
                      std::shared_ptr<DirectoryData> parent,
@@ -78,7 +53,7 @@ namespace infinit
       }
       else
         this->_owner.store_or_die(std::move(b), model::STORE_INSERT,
-                                  dummy_conflict_resolver());
+                                  model::make_drop_conflict_resolver());
       ELLE_ASSERT_EQ(this->_parent->_files.find(this->_name),
                      this->_parent->_files.end());
       this->_parent->_files.emplace(
@@ -156,7 +131,8 @@ namespace infinit
       auto serdata = elle::serialization::binary::serialize(fh);
       b->data(serdata);
       auto addr = b->address();
-      _owner.store_or_die(std::move(b), model::STORE_INSERT);
+      _owner.store_or_die(std::move(b), model::STORE_INSERT,
+                          model::make_drop_conflict_resolver());
       this->_parent->_files.emplace(
         this->_name, std::make_pair(EntryType::symlink, addr));
       _parent->write(*_owner.block_store(),

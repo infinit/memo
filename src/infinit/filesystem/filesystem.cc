@@ -264,7 +264,8 @@ namespace infinit
               auto nb = elle::make_unique<dht::NB>(
                 dn.get(), dn->owner(), bootstrap_name,
                 old->data(), old->signature());
-              this->store_or_die(std::move(nb), model::STORE_INSERT);
+              this->store_or_die(std::move(nb), model::STORE_INSERT,
+                                 model::make_drop_conflict_resolver());
               continue;
             }
             catch (model::MissingBlock const&)
@@ -282,7 +283,8 @@ namespace infinit
               ELLE_TRACE("create missing root block")
               {
                 mb = dn->make_block<ACLBlock>();
-                this->store_or_die(mb->clone(), model::STORE_INSERT);
+                this->store_or_die(mb->clone(), model::STORE_INSERT,
+                  model::make_drop_conflict_resolver());
               }
               ELLE_TRACE("create missing root bootstrap block")
               {
@@ -290,7 +292,8 @@ namespace infinit
                 elle::Buffer baddr = elle::Buffer(saddr.data(), saddr.size());
                 auto nb = elle::make_unique<dht::NB>(
                   dn.get(), dn->owner(), bootstrap_name, baddr);
-                this->store_or_die(std::move(nb), model::STORE_INSERT);
+                this->store_or_die(std::move(nb), model::STORE_INSERT,
+                  model::make_drop_conflict_resolver());
                 if (root_cache)
                   boost::filesystem::ofstream(*root_cache) << saddr;
               }

@@ -113,6 +113,11 @@ namespace infinit
                  std::unique_ptr<ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store %f", *this, *block);
+      if (!resolver)
+      {
+        ELLE_WARN("%s: store() called without resolver from %s",
+                  this, elle::Backtrace::current());
+      }
       block->seal();
       return this->_store(std::move(block), mode, std::move(resolver));
     }
@@ -123,6 +128,11 @@ namespace infinit
                  std::unique_ptr<ConflictResolver> resolver)
     {
       ELLE_TRACE_SCOPE("%s: store %f", *this, block);
+      if (!resolver)
+      {
+        ELLE_WARN("%s: store() called without resolver from %s",
+                  this, elle::Backtrace::current());
+      }
       block.seal();
       auto copy = block.clone();
       return this->_store(std::move(copy), mode, std::move(resolver));
@@ -185,6 +195,32 @@ namespace infinit
         // Oldest versions did not specify compatibility version.
         this->version = elle::Version(0, 3, 0);
       }
+    }
+    class DummyConflictResolver: public ConflictResolver
+    {
+    public:
+      DummyConflictResolver() {}
+      DummyConflictResolver(elle::serialization::SerializerIn& s) {}
+      void serialize(elle::serialization::Serializer& s,
+                     elle::Version const&) override
+      {
+      }
+      std::unique_ptr<blocks::Block>
+      operator() (blocks::Block& block,
+                  blocks::Block& current,
+                  model::StoreMode mode) override
+      {
+        ELLE_WARN("Conflict editing %f, dropping changes", block.address());
+        return current.clone();
+      }
+    };
+    static const elle::serialization::Hierarchy<model::ConflictResolver>::
+    Register<DummyConflictResolver> _register_dcr("dummy");
+
+    std::unique_ptr<ConflictResolver>
+    make_drop_conflict_resolver()
+    {
+      return elle::make_unique<DummyConflictResolver>();
     }
   }
 }
