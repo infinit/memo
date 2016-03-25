@@ -666,7 +666,7 @@ namespace infinit
         }
         else
           ELLE_DEBUG("%s: ACL didn't change", *this);
-        if (data_changed)
+        if (data_changed || version)
         {
           static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
