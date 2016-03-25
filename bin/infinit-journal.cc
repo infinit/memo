@@ -99,7 +99,7 @@ main(int argc, char** argv)
   using boost::program_options::value;
   Modes modes = {
     {
-      "stats",
+      "stat",
       "Show the remaining asynchronous operations count and size",
       &stats,
       elle::sprintf("--network NETWORK"),
