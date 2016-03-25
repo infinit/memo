@@ -1,4 +1,3 @@
-#include <elle/utility/Move.hh>
 #include <reactor/network/exception.hh>
 #include <reactor/network/tcp-server.hh>
 #include <reactor/scheduler.hh>
