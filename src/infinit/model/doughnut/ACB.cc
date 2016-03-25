@@ -368,7 +368,10 @@ namespace infinit
           elle::Buffer token;
           if (this->_owner_token.size())
           {
-            auto secret = this->owner_private_key()->open(this->_owner_token);
+            auto okey = this->owner_private_key();
+            if (!okey)
+              throw elle::Error("Owner key unavailable");
+            auto secret = okey->open(this->_owner_token);
             token = key.seal(secret);
           }
           acl_entries.emplace_back(ACLEntry(key, read, write, token));
