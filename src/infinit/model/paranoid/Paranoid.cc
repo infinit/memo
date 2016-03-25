@@ -80,7 +80,7 @@ namespace infinit
         try
         {
           auto stored = this->_storage->get(address);
-          raw = std::move(this->_keys.k().open(stored));
+          raw = this->_keys.k().open(stored);
         }
         catch (infinit::storage::MissingKey const&)
         {

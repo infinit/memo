@@ -448,7 +448,7 @@ namespace infinit
                 p / "cache",
                 std::move(disk_cache_size)
                 );
-            return std::move(consensus);
+            return consensus;
           };
         Doughnut::OverlayBuilder overlay =
           [&] (Doughnut& dht, Address id, std::shared_ptr<Local> local)

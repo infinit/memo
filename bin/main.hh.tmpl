@@ -324,9 +324,9 @@ struct Mode
        Options hidden_options = {},
        OptionsVector hidden_extra_options = {})
     : name(std::move(name_))
-    , description(std::move(upper_fchar(description_)))
+    , description(upper_fchar(description_))
     , action(std::move(action_))
-    , help_complement(std::move(upper_fchar(help)))
+    , help_complement(upper_fchar(help))
     , options(this->description)
     , visible_options(this->description)
   {

@@ -129,7 +129,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
         std::move(backend));
       backend = std::move(cache);
     }
-    return std::move(backend);
+    return backend;
   };
   infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
   [&] (infinit::model::doughnut::Doughnut& dht,

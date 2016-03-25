@@ -173,7 +173,7 @@ namespace infinit
         auto res = elle::serialization::binary::deserialize<
           std::unique_ptr<blocks::Block>>(data, true, ctx);
         this->_on_fetch(address, res);
-        return std::move(res);
+        return res;
       }
 
       void

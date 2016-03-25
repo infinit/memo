@@ -734,7 +734,7 @@ namespace infinit
           }
           if (block)
             this->on_store()(*block);
-          return std::move(res);
+          return res;
         }
 
         void

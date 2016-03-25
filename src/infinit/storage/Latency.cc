@@ -128,7 +128,7 @@ namespace infinit
       make() override
       {
         return elle::make_unique<infinit::storage::Latency>(
-          std::move(storage->make()), latency_get , latency_set, latency_erase);
+          storage->make(), latency_get , latency_set, latency_erase);
       }
     };
 

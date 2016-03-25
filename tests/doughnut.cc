@@ -341,8 +341,7 @@ ELLE_TEST_SCHEDULED(async, (bool, paxos))
       auto s = elle::sprintf("\\_o< %d", i);
       elle::Buffer data(elle::sprintf(s).c_str(),
                         (int)std::strlen(s.c_str()));
-      blocks_.push_back(
-          std::move(dht.make_block<blocks::ImmutableBlock>(data)));
+      blocks_.push_back(dht.make_block<blocks::ImmutableBlock>(data));
     }
     ELLE_LOG("store block")
       dht.store(*block, infinit::model::STORE_INSERT);

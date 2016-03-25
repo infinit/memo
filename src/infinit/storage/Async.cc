@@ -392,7 +392,7 @@ namespace infinit
       make() override
       {
         return elle::make_unique<infinit::storage::Async>(
-          std::move(storage->make()), max_blocks, max_size,
+          storage->make(), max_blocks, max_size,
           merge ? *merge : true, journal_dir? *journal_dir: "");
       }
     };

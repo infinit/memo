@@ -119,7 +119,7 @@ namespace infinit
       boost::algorithm::split(bargs, args, boost::algorithm::is_any_of(sep),
                               boost::algorithm::token_compress_on);
       std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
-      return std::move(backend);
+      return backend;
     }
 
     /*---------------.

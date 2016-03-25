@@ -177,7 +177,7 @@ COMMAND(create)
       std::move(port),
       version);
   {
-    infinit::Network network(std::move(ifnt.qualified_name(name, owner)),
+    infinit::Network network(ifnt.qualified_name(name, owner),
                              std::move(dht));
     if (args.count("output"))
     {

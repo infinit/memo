@@ -103,7 +103,7 @@ namespace infinit
     {
       std::vector<std::unique_ptr<infinit::storage::Storage>> s;
       for(auto const& c: storage)
-        s.push_back(std::move(c->make()));
+        s.push_back(c->make());
       return elle::make_unique<infinit::storage::Strip>(
         std::move(s));
     }

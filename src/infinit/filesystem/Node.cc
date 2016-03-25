@@ -421,7 +421,7 @@ namespace infinit
       ELLE_TRACE("setxattr raw key");
       elle::Buffer userkey = elle::Buffer(value.data(), value.size());
       auto user = _owner.block_store()->make_user(userkey);
-      return std::move(user);
+      return user;
     }
 
     static std::pair<bool, bool> parse_flags(std::string const& flags)
