@@ -885,7 +885,8 @@ main(int argc, char** argv)
     { "mount-name", value<std::string>(), "name of mounted volume" },
 #endif
 #ifdef INFINIT_MACOSX
-    { "mount-icon", value<std::string>(), "icon for mounted volume" },
+    { "mount-icon", value<std::string>(),
+      "path to an icon for mounted volume" },
     { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
 #endif
     { "async", bool_switch(), "use asynchronous operations" },
