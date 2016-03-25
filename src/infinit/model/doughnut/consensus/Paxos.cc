@@ -936,7 +936,7 @@ namespace infinit
               auto block = highest->value;
               Paxos::PaxosClient::Peers peers =
                 lookup_nodes(
-                  this->doughnut(), paxos.quorum_initial(), address);
+                  this->doughnut(), paxos.quorum(), address);
               if (peers.empty())
                 throw elle::Error(
                   elle::sprintf("No peer available for fetch %x", address));
