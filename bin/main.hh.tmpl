@@ -367,6 +367,8 @@ struct Mode
   _add_options(boost::program_options::options_description const& options,
                bool visible_in_production = true)
   {
+    if (options.options().size() == 0)
+      return;
     this->options.add(options);
     if (visible_in_production || show_hidden_options())
       this->visible_options.add(options);
@@ -555,6 +557,8 @@ namespace infinit
               [&] (boost::program_options::options_description const& m_options,
                    bool visible_in_production = true)
               {
+                if (m_options.options().size() == 0)
+                  return;
                 options.add(m_options);
                 if (visible_in_production || show_hidden_options())
                   visible_options.add(m_options);
