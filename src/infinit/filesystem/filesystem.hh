@@ -59,7 +59,7 @@ namespace infinit
             bool set_mtime = false,
             bool first_write = false);
       void
-      _prefetch(model::Model& model, std::shared_ptr<DirectoryData> self);
+      _prefetch(FileSystem& fs, std::shared_ptr<DirectoryData> self);
       void
       serialize(elle::serialization::Serializer&);
       typedef infinit::serialization_tag serialization_tag;
@@ -238,7 +238,7 @@ namespace infinit
               clock::time_point const&, &FileData::last_used>>
               > > FileCache;
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
-      static const int max_cache_size = 1000;
+      static const int max_cache_size = 10000;
     };
   }
 }

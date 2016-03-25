@@ -433,10 +433,30 @@ namespace infinit
       Address address;
       int level;
       bool is_dir;
+      boost::optional<int> cached_version;
     };
 
+    static
+    boost::optional<int>
+    cached_version(FileSystem& fs, Address addr, EntryType type)
+    {
+      if (type == EntryType::directory)
+      {
+        auto it = fs.directory_cache().find(addr);
+        if (it != fs.directory_cache().end())
+          return (*it)->block_version();
+      }
+      else
+      {
+        auto it = fs.file_cache().find(addr);
+        if (it != fs.file_cache().end())
+          return (*it)->block_version();
+      }
+      return boost::optional<int>();
+    }
+
     void
-    DirectoryData::_prefetch(model::Model& model, std::shared_ptr<DirectoryData> self)
+    DirectoryData::_prefetch(FileSystem& fs, std::shared_ptr<DirectoryData> self)
     {
       ELLE_ASSERT_EQ(self.get(), this);
       static int prefetch_threads = std::stoi(
@@ -450,13 +470,15 @@ namespace infinit
       for (auto const& f: this->_files)
         files->push_back(
           PrefetchEntry{f.first, f.second.second, 0,
-                        f.second.first == EntryType::directory});
+                        f.second.first == EntryType::directory,
+                        cached_version(fs, f.second.second, f.second.first)
+          });
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
       for (int i = 0; i < nthreads; ++i)
         new reactor::Thread(
           elle::sprintf("prefetcher %s", i),
-          [self, files, model=&model, running]
+          [self, files, fs=&fs, running]
           {
             int nf = 0;
             while (!files->empty())
@@ -470,19 +492,31 @@ namespace infinit
               {
                 Address addr(e.address.value(),
                              model::flags::mutable_block, false);
-                block = model->fetch(addr);
-                if (block && e.is_dir && e.level +1 < prefetch_depth)
+                block = fs->block_store()->fetch(addr, e.cached_version);
+                if (e.is_dir && e.level +1 < prefetch_depth)
                 {
-                  DirectoryData d({}, *block, {true, true});
-                  for (auto const& f: d._files)
+                  std::shared_ptr<DirectoryData> d;
+                  if (block)
+                    d = std::shared_ptr<DirectoryData>(
+                      new DirectoryData({}, *block, {true, true}));
+                  else
+                    d = *(fs->directory_cache().find(addr));
+
+                  for (auto const& f: d->_files)
                     files->push_back(
                       PrefetchEntry{f.first, f.second.second, e.level+1,
-                                    f.second.first == EntryType::directory});
+                                    f.second.first == EntryType::directory,
+                                    cached_version(*fs, f.second.second, f.second.first)
+                      });
                 }
               }
               catch(elle::Error const& e)
               {
                 ELLE_TRACE("Exception while prefeching: %s", e.what());
+              }
+              catch(std::out_of_range const& e)
+              {
+                ELLE_TRACE("Entry vanished from cache: %s", e.what());
               }
             }
             if (!(--(*running)))
@@ -494,7 +528,7 @@ namespace infinit
     Directory::list_directory(rfs::OnDirectoryEntry cb)
     {
       ELLE_TRACE_SCOPE("%s: list", *this);
-      _data->_prefetch(*_owner.block_store(), _data);
+      _data->_prefetch(_owner, _data);
       struct stat st;
       for (auto const& e: _data->_files)
       {
