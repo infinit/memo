@@ -581,7 +581,14 @@ def configure(
 
   debian_nodes = install_nodes('debian/opt/infinit')
   git = drake.git.Git()
+  if cxx_toolkit.os is drake.os.linux:
+    platform = 'linux'
+  elif cxx_toolkit.os is drake.os.macos:
+    platform = 'macosx'
+  else:
+    platform = 'unknown'
   with drake.templating.Context(content = {
+      'platform': platform,
       'version': git.description(),
       'version_major': git.version().split('.')[0],
       'version_minor': git.version().split('.')[1],
@@ -606,7 +613,7 @@ def configure(
                strip_prefix = True),
   )
   rule_debian << drake.debian.Packager(
-    'infinit-debug-symbols-%s_0_amd64.deb' % git.description(),
+    'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
     debian_debug_nodes, debian_debug_dir).package
 
   ## ------ ##
