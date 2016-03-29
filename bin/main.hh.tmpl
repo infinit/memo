@@ -788,6 +788,7 @@ namespace infinit
   }
 
   struct User
+    : public elle::Printable
   {
     User(std::string const& name,
          cryptography::rsa::KeyPair const& keys,
@@ -860,6 +861,17 @@ namespace infinit
         this->public_key == user.public_key;
     }
 
+    void
+    print(std::ostream& out) const override
+    {
+      out << "User(" << this->name << ": public";
+      if (this->private_key)
+        out << "/private keys";
+      else
+        out << " key only";
+      out << ")";
+    }
+
     std::string name;
     cryptography::rsa::PublicKey public_key;
     boost::optional<cryptography::rsa::PrivateKey> private_key;
@@ -871,6 +883,7 @@ namespace infinit
   };
 
   struct Network
+    : public elle::Printable
   {
     Network(std::string name, std::unique_ptr<model::ModelConfig> model)
       : name(std::move(name))
@@ -953,6 +966,12 @@ namespace infinit
       return xdg_state_home() / "cache" / this->name;
     }
 
+    void
+    print(std::ostream& out) const override
+    {
+      out << "Network(" << this->name << ")";
+    }
+
     std::string name;
     std::unique_ptr<model::ModelConfig> model;
   };
@@ -1030,6 +1049,7 @@ namespace infinit
   };
 
   struct Volume
+    : public elle::Printable
   {
     Volume() {};
 
@@ -1143,6 +1163,12 @@ namespace infinit
       return xdg_state_home() / this->network / this->name;
     }
 
+    void
+    print(std::ostream& out) const override
+    {
+      out << "Volume(" << this->name << ")";
+    }
+
     std::string name;
     boost::optional<std::string> mountpoint;
     std::string network;
@@ -1150,6 +1176,7 @@ namespace infinit
   };
 
   struct Drive
+    : public elle::Printable
   {
     struct User
     {
@@ -1234,6 +1261,12 @@ namespace infinit
       s.serialize("description", this->description);
       s.serialize("users", this->users);
       s.serialize("icon_path", this->icon_path);
+    }
+
+    void
+    print(std::ostream& out) const override
+    {
+      out << "Drive(" << this->name << ")";
     }
 
     std::string name;
