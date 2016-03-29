@@ -192,7 +192,7 @@ $> export PATH=$PWD/bin/:$PATH
 
 The first step consists of creating a user on the Hub. All the commands that follow use the user name ‘alice’ but you should **pick your own unique user name**:
 
-<pre><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
+<pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
 Generating RSA keypair.
 Remotely pushed user "alice".
 </code></pre>
@@ -205,7 +205,7 @@ Next, we are going to declare a local storage resource. A local storage stores d
 
 The binary _infinit-storage_ is used for this purpose. The option `--filesystem` is used to indicate that the storage will be on the local filesystem:
 
-<pre><div><span>Device A</span></div><code>$> infinit-storage --create --filesystem --name local --capacity 1GB
+<pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-storage --create --filesystem --name local --capacity 1GB
 Created storage "local".
 </code></pre>
 
@@ -217,7 +217,7 @@ Now that we have at least one storage resource to store data, we can create a ne
 
 The _infinit-network_ command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the ‘local’ storage resource is used but you could plug as many as you like. Obviously, you need to substitute 'alice' with your username:
 
-<pre><div><span>Device A</span></div><code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
+<pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
 Locally created network "alice/my-network".
 Remotely pushed network "alice/my-network".
 </code></pre>
@@ -228,7 +228,7 @@ Remotely pushed network "alice/my-network".
 
 The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the _infinit-volume_ binary as shown next:
 
-<pre><div><span>Device A</span></div><code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
+<pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
 Locally created volume "alice/my-volume".
 Remotely pushed volume "alice/my-volume".
 </code></pre>
@@ -239,7 +239,7 @@ That’s it, you’ve created a volume named ‘my-volume’ i.e. a filesystem. 
 
 Let’s access this volume by mounting it as easily as any other filesystem:
 
-<pre><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
+<pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
 Fetched endpoints for "alice/my-network".
 Running network "alice/my-network".
 Remotely pushed endpoints for "alice/my-network".
@@ -251,7 +251,7 @@ _**NOTE**: This command does not return. You can make it run in the background i
 
 That’s it! You can now create, list and access files from the mount point `~/mnt-my-volume`. Try creating a file right now:
 
-<pre><div><span>Device A</span></div><code>$> echo "everything is" > ~/mnt-my-volume/awesome.txt
+<pre class="ribbon"><div><span>Device A</span></div><code>$> echo "everything is" > ~/mnt-my-volume/awesome.txt
 $> cat ~/mnt-my-volume/awesome.txt
 everything is
 </code></pre>
@@ -264,7 +264,7 @@ In order to access your volume from another device, you will need to transfer yo
 
 Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.
 
-<pre><div><span>Device A</span></div><code>$> infinit-device --transmit --user --as alice
+<pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-device --transmit --user --as alice
 Passphrase: ********
 Transmitted user identity for "alice".
 User identity on the Hub for: 297 seconds
