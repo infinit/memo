@@ -116,11 +116,13 @@ x86_64-osx-clang:
     - python3 drake -j 4 //beyond/check
     - rm -rf ../fs-install && mkdir -p ../fs-install
     - python3 drake -j 4 //install
-    - if GIT_DIR=../fs/.git git describe --exact-match HEAD; then python3 drake -j 4 --prefix=/Users/infinit/filesystem-symbols //symbols; fi
     - TARBALL=infinit-x86_64-osx-clang3-$(GIT_DIR=../fs/.git git describe).tbz
     - gtar -cvjf /tmp/$TARBALL -C ../fs-install . --show-transformed-names --transform "s,^\\./,infinit-$(GIT_DIR=../fs/.git git describe)/,"
     - scp /tmp/$TARBALL debian@debian.infinit.io:brew
     - ssh debian@debian.infinit.io 'make brew'
+    - python3 drake -j 4 //debian
+    - scp ../fs-build/infinit-debug-symbols-macosx-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
     - osx
