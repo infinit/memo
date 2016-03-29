@@ -39,34 +39,52 @@ human_readable_data_size(int64_t value)
 COMMAND(stats)
 {
   auto owner = self_user(ifnt, args);
-  auto network_name =
-    ifnt.qualified_name(mandatory(args, "network", "Network"), owner);
-  auto network = ifnt.network_get(network_name, owner);
-  boost::filesystem::path async_path = network.cache_dir() / "async";
-  int operation_count = 0;
-  int64_t data_size = 0;
-  if (boost::filesystem::exists(async_path))
-    for (boost::filesystem::directory_iterator it(async_path);
-         it != boost::filesystem::directory_iterator();
-         ++it)
-      if (valid_block(it->path()))
-      {
-        operation_count++;
-        data_size += boost::filesystem::file_size(*it);
-      }
-  if (script_mode)
+  auto network_name_ = optional(args, "network");
+  std::vector<infinit::Network> networks;
+  if (network_name_)
   {
-    elle::json::Object stats;
-    stats["operations"] = operation_count;
-    stats["size"] = data_size;
-    elle::json::write(std::cout, stats);
+    auto network_name = ifnt.qualified_name(network_name_.get(), owner);
+    networks.emplace_back(ifnt.network_get(network_name, owner));
   }
   else
   {
-    std::cout << network.name << ": "
-              << operation_count << " operations, "
-              << human_readable_data_size(data_size) << "\n";
+    networks = ifnt.networks_get();
   }
+  elle::json::Object res;
+  for (auto const& network: networks)
+  {
+    boost::filesystem::path async_path = network.cache_dir() / "async";
+    int operation_count = 0;
+    int64_t data_size = 0;
+    if (boost::filesystem::exists(async_path))
+    {
+      for (boost::filesystem::directory_iterator it(async_path);
+           it != boost::filesystem::directory_iterator();
+           ++it)
+      {
+        if (valid_block(it->path()))
+        {
+          operation_count++;
+          data_size += boost::filesystem::file_size(*it);
+        }
+      }
+    }
+    if (script_mode)
+    {
+      elle::json::Object stats;
+      stats["operations"] = operation_count;
+      stats["size"] = data_size;
+      res[network.name] = stats;
+    }
+    else
+    {
+      std::cout << network.name << ": "
+                << operation_count << " operations, "
+                << human_readable_data_size(data_size) << "\n";
+    }
+  }
+  if (script_mode)
+    elle::json::write(std::cout, res);
 }
 
 COMMAND(export_)
@@ -102,7 +120,7 @@ main(int argc, char** argv)
       "stat",
       "Show the remaining asynchronous operations count and size",
       &stats,
-      elle::sprintf("--network NETWORK"),
+      "[--network NETWORK]",
       {
         { "network,N", value<std::string>(), "network to check" },
       },
@@ -111,7 +129,7 @@ main(int argc, char** argv)
       "export",
       "Export an operation",
       &export_,
-      elle::sprintf("--network NETWORK --operation OPERATION"),
+      "--network NETWORK --operation OPERATION",
       {
         { "network,N", value<std::string>(), "network to check" },
         { "operation,O", value<int>(), "operation to export" },
