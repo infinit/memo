@@ -299,7 +299,7 @@ namespace infinit
         if (perms.second)
           _header.mode |= 0200;
         ELLE_TRACE("Directory block fetch OK");
-        ELLE_DEBUG("%s", print_files(_files));
+        ELLE_DUMP("%s", print_files(_files));
       }
       _block_version = dynamic_cast<ACLBlock&>(block).version();
     }
@@ -311,7 +311,8 @@ namespace infinit
                          bool set_mtime,
                          bool first_write)
     {
-      ELLE_DEBUG("%s: write at %s: %s", this, _address, print_files(_files));
+      ELLE_DEBUG("%s: write at %s", this, _address);
+      ELLE_DUMP("%s", print_files(_files));
       if (set_mtime)
       {
         ELLE_DEBUG_SCOPE("set mtime");
@@ -464,7 +465,7 @@ namespace infinit
         elle::os::getenv("INFINIT_PREFETCH_THREADS", "3"));
       static int prefetch_depth = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
-      int nthreads = std::min(prefetch_threads, signed(_files.size()) / 2);
+      int nthreads = prefetch_threads;
       if (_prefetching || !nthreads
         || (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
         return;
@@ -478,17 +479,34 @@ namespace infinit
           });
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
+      auto parked = std::make_shared<int>(0);
       for (int i = 0; i < nthreads; ++i)
         new reactor::Thread(
           elle::sprintf("prefetcher %s", i),
-          [self, files, fs=&fs, running]
+          [self, files, fs=&fs, running, parked, nthreads]
           {
             static elle::Bench bench("bench.fs.prefetch", 10000_sec);
             elle::Bench::BenchScope bs(bench);
             auto start_time = boost::posix_time::microsec_clock::universal_time();
             int nf = 0;
-            while (!files->empty())
+            bool should_exit = false;
+            while (true)
             {
+              while (files->empty())
+              {
+                ELLE_DEBUG("parking");
+                ++*parked;
+                if (*parked == nthreads)
+                {
+                  ELLE_DEBUG("all threads parked");
+                  should_exit = true;
+                  break;
+                }
+                reactor::sleep(100_ms);
+                --*parked;
+              }
+              if (should_exit)
+                break;
               ++nf;
               auto e = files->back();
               ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
