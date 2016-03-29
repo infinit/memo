@@ -4,8 +4,10 @@
 #include <elle/serialization/json.hh>
 
 #include <infinit/filesystem/filesystem.hh>
+#include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Async.hh>
+#include <infinit/model/doughnut/Group.hh>
 #include <infinit/overlay/Kalimero.hh>
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
@@ -29,6 +31,7 @@ namespace bfs = boost::filesystem;
 std::unique_ptr<reactor::filesystem::FileSystem>
 make(
   bfs::path where,
+  infinit::model::Address node_id,
   bool enable_async,
   int cache_size,
   infinit::cryptography::rsa::KeyPair& kp)
@@ -43,7 +46,7 @@ make(
         -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
         {
            auto backend = elle::make_unique<
-             infinit::model::doughnut::consensus::Consensus>(dht);
+             infinit::model::doughnut::consensus::Paxos>(dht, 1);
            if (!enable_async)
              return backend;
            auto async = elle::make_unique<
@@ -59,7 +62,7 @@ make(
           return elle::make_unique<infinit::overlay::Kalimero>(&dht, id, local);
         };
   auto dn = std::make_shared<infinit::model::doughnut::Doughnut>(
-    infinit::model::Address::random(0), // FIXME
+    node_id,
     std::make_shared<infinit::cryptography::rsa::KeyPair>(kp),
     kp.public_key(),
     passport,
@@ -101,6 +104,7 @@ root_count(std::unique_ptr<reactor::filesystem::FileSystem>& fs)
 
 ELLE_TEST_SCHEDULED(async_cache)
 {
+  auto node_id = infinit::model::Address::random(0);
   auto path = bfs::temp_directory_path() / bfs::unique_path();
   auto kp = infinit::cryptography::rsa::keypair::generate(1024);
   ELLE_LOG("root path: %s", path);
@@ -109,7 +113,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   elle::SafeFinally cleanup_path([&] {
       boost::filesystem::remove_all(path);
   });
-  auto fs = make(path, true, 10, kp);
+  auto fs = make(path, node_id, true, 10, kp);
   auto root = fs->path("/");
   auto handle = root->child("foo")->create(O_RDWR, 0666 | S_IFREG);
   ELLE_DEBUG("test that re-instantiating everything works")
@@ -120,7 +124,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
     root.reset();
     fs.reset();
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     int count = 0;
     fs->path("/")->list_directory([&](std::string const&, struct stat*)
                                   { ++count;});
@@ -137,7 +141,7 @@ ELLE_TEST_SCHEDULED(async_cache)
   {
     elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
     fs.reset();
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     handle = fs->path("/")->child("foo2")->create(O_RDWR, 0666 | S_IFREG);
     handle->write(elle::WeakBuffer((char*)"bar", 3), 3, 0);
     handle->close();
@@ -148,7 +152,7 @@ ELLE_TEST_SCHEDULED(async_cache)
     fs->path("/")->child("dir")->mkdir(777 | S_IFDIR);
     elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
     fs.reset();
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
     handle = fs->path("/")->child("foo")->open(O_RDWR, 0666);
     char buf[10] = {0};
@@ -167,17 +171,17 @@ ELLE_TEST_SCHEDULED(async_cache)
   ELLE_LOG("conflict dir")
   {
     elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "file", "foo");
     fs.reset();
     // create another file in the same dir
-    fs = make(path, false, 0, kp);
+    fs = make(path, node_id, false, 0, kp);
     writefile(fs, "file2", "bar");
     fs.reset();
     elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
     // restart with async which will dequeue
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
     BOOST_CHECK_EQUAL(root_count(fs), 5);
     fs.reset();
@@ -186,17 +190,17 @@ ELLE_TEST_SCHEDULED(async_cache)
   ELLE_LOG("conflict dir 2")
   {
     elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "samefile", "foo");
     fs.reset();
     // create same file in the same dir
-    fs = make(path, false, 0, kp);
+    fs = make(path, node_id, false, 0, kp);
     writefile(fs, "samefile", "bar");
     fs.reset();
     elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
     // restart with async which will dequeue
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
     BOOST_CHECK_EQUAL(root_count(fs), 6);
     fs.reset();
@@ -205,17 +209,17 @@ ELLE_TEST_SCHEDULED(async_cache)
   ELLE_LOG("conflict file")
   {
     elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     // queue a file creation
     writefile(fs, "samefile", "foo");
     fs.reset();
     // create same file in the same dir
-    fs = make(path, false, 0, kp);
+    fs = make(path, node_id, false, 0, kp);
     writefile(fs, "samefile", "bar");
     fs.reset();
     elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
     // restart with async which will dequeue
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
     BOOST_CHECK_EQUAL(root_count(fs), 6);
     struct stat st;
@@ -229,18 +233,18 @@ ELLE_TEST_SCHEDULED(async_cache)
     auto kp2 = infinit::cryptography::rsa::keypair::generate(1024);
     auto pub2 = elle::serialization::json::serialize(kp2.K());
     elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     // queue a attr change
     fs->path("/")->child("samefile")->setxattr("infinit.auth.setrw",
                                                std::string((const char*)pub2.contents(), pub2.size()), 0);
     fs.reset();
     // write same file in the same dir
-    fs = make(path, false, 0, kp);
+    fs = make(path, node_id, false, 0, kp);
     writefile(fs, "samefile", "bar");
     fs.reset();
     elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
     // restart with async which will dequeue
-    fs = make(path, true, 10, kp);
+    fs = make(path, node_id, true, 10, kp);
     BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
     BOOST_CHECK_EQUAL(root_count(fs), 6);
     auto auth = fs->path("/")->child("samefile")->getxattr("user.infinit.auth");
@@ -251,8 +255,83 @@ ELLE_TEST_SCHEDULED(async_cache)
   }
 }
 
+ELLE_TEST_SCHEDULED(async_groups)
+{
+  auto node_id = infinit::model::Address::random(0);
+  auto path = bfs::temp_directory_path() / bfs::unique_path();
+  auto kp = infinit::cryptography::rsa::keypair::generate(1024);
+  ELLE_LOG("root path: %s", path);
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::os::setenv("INFINIT_PREFETCH_THREADS", "0", true);
+  elle::SafeFinally cleanup_path([&] {
+      boost::filesystem::remove_all(path);
+  });
+
+  // Create group
+  auto fs = make(path, node_id, false, 10, kp);
+  auto dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+      ->block_store().get());
+  {
+    infinit::model::doughnut::Group g(*dn, "test_group");
+    g.create();
+    g.current_public_key();
+    g.group_keys();
+  }
+  fs.reset();
+
+  // stash agroup update
+  elle::os::setenv("INFINIT_ASYNC_NOPOP", "1", 1);
+  fs = make(path, node_id, true, 10, kp);
+  auto root = fs->path("/");
+  dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+      ->block_store().get());
+  {
+    infinit::model::doughnut::Group g(*dn, "test_group");
+    g.remove_member(elle::serialization::json::serialize(kp.public_key()));
+    g.current_public_key();
+    g.group_keys();
+  }
+  {
+    infinit::model::doughnut::Group g(*dn, "test_group");
+    g.current_public_key();
+    g.group_keys();
+    g.list_members();
+  }
+  fs.reset();
+
+  // push some group update
+  fs = make(path, node_id, false, 10, kp);
+  dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+      ->block_store().get());
+  {
+    infinit::model::doughnut::Group g(*dn, "test_group");
+    g.remove_member(elle::serialization::json::serialize(kp.public_key()));
+    g.current_public_key();
+    g.group_keys();
+  }
+  fs.reset();
+
+  // unstash
+  elle::os::unsetenv("INFINIT_ASYNC_NOPOP");
+  fs = make(path, node_id, true, 10, kp);
+  dn = dynamic_cast<infinit::model::doughnut::Doughnut*>(
+    dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get())
+      ->block_store().get());
+  BOOST_CHECK_EQUAL(fs->path("/")->getxattr("user.infinit.sync"), "ok");
+  {
+    infinit::model::doughnut::Group g(*dn, "test_group");
+    g.current_public_key();
+    g.group_keys();
+  }
+  BOOST_CHECK(true);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(async_cache), 0, valgrind(10));
+  suite.add(BOOST_TEST_CASE(async_groups), 0, valgrind(10));
 }

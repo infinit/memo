@@ -666,7 +666,7 @@ namespace infinit
         }
         else
           ELLE_DEBUG("%s: ACL didn't change", *this);
-        if (data_changed || version)
+        if (data_changed)
         {
           static elle::Bench bench("bench.acb.seal.datachange", 10000_sec);
           elle::Bench::BenchScope scope(bench);
@@ -746,6 +746,51 @@ namespace infinit
         {
           if (version)
             this->_data_version = *version;
+          if (!sign_key)
+          { // can happen if version is set but data is unchanged
+            if (this->owner_private_key())
+            {
+              ELLE_DEBUG("we are owner");
+              sign_key = this->owner_private_key();
+              this->_editor = -1;
+            }
+          }
+          int idx = 0;
+          if (!sign_key)
+          {
+            for (auto& e: this->_acl_entries)
+            {
+              if (e.key == this->doughnut()->keys().K())
+              {
+                ELLE_DEBUG("we are editor %s", idx);
+                this->_editor = idx;
+                sign_key = this->doughnut()->keys().private_key();
+              }
+              ++idx;
+            }
+          }
+          if (!sign_key)
+          {
+            for (auto& e: this->_acl_group_entries)
+            {
+              Group g(*this->doughnut(), e.key);
+              try
+              {
+                auto kp = g.current_key();
+                this->_editor = idx;
+                ELLE_DEBUG("we are editor from group %s", g);
+                sign_key = g.current_key().private_key();
+              }
+              catch (elle::Error const& e)
+              {}
+            }
+            ++idx;
+          }
+          if (!sign_key && this->_world_writable)
+          {
+            ELLE_DEBUG("block is world writable");
+            sign_key = this->doughnut()->keys().private_key();
+          }
           if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
           ELLE_DEBUG_SCOPE("%s: sign data", *this);
