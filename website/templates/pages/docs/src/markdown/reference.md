@@ -580,7 +580,7 @@ If ACL inheritance is disabled, newly created files and directories can only be 
 
 By default, files and directories can only be read/written by users present in the object's ACLs. It is possible to flag a file/directory as world-readable (everyone can read it) or world-writable (everyone can modify it).
 
-The _chmod_ UNIX binary must be used to set this. The following example sets a file as world-readable before making it world-writable as well. The `ls -l` command displays a file as world-readable/write through the _others_ category (the last three `rwx` indicators).
+The _chmod_ UNIX binary can be used to set this. The following example sets a file as world-readable before making it world-writable as well. The `ls -l` command displays a file as world-readable/write through the _others_ category (the last three `rwx` indicators).
 
 ```
 $> ls -l /mnt/shared/awesome.txt
@@ -590,6 +590,8 @@ $> chmod o+r /mnt/shared/awesome.txt
 $> chmod o+w /mnt/shared/awesome.txt
 -rw----rw-  1 alice  users     14B Jan 20 16:55 awesome.txt
 ```
+
+_**NOTE**: The option `--others-mode` can also be used in the binary infinit-acl to set and list the permissions associated with 'everybody'._
 
 ### List permissions ###
 
