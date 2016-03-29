@@ -48,7 +48,7 @@ make(
            auto backend = elle::make_unique<
              infinit::model::doughnut::consensus::Paxos>(dht, 1);
            if (!enable_async)
-             return backend;
+             return std::move(backend);
            auto async = elle::make_unique<
              infinit::model::doughnut::consensus::Async>(std::move(backend),
                where / "async", cache_size);
