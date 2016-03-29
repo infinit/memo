@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <pair>
 
+#include <elle/bench.hh>
 #include <elle/cast.hh>
 #include <elle/os/environ.hh>
 #include <elle/serialization/binary.hh>
@@ -464,8 +465,10 @@ namespace infinit
       static int prefetch_depth = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
       int nthreads = std::min(prefetch_threads, signed(_files.size()) / 2);
-      if (_prefetching || !nthreads)
+      if (_prefetching || !nthreads
+        || (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
         return;
+      this->_last_prefetch = FileSystem::now();
       auto files = std::make_shared<std::vector<PrefetchEntry>>();
       for (auto const& f: this->_files)
         files->push_back(
@@ -480,6 +483,9 @@ namespace infinit
           elle::sprintf("prefetcher %s", i),
           [self, files, fs=&fs, running]
           {
+            static elle::Bench bench("bench.fs.prefetch", 10000_sec);
+            elle::Bench::BenchScope bs(bench);
+            auto start_time = boost::posix_time::microsec_clock::universal_time();
             int nf = 0;
             while (!files->empty())
             {
@@ -519,6 +525,10 @@ namespace infinit
                 ELLE_TRACE("Entry vanished from cache: %s", e.what());
               }
             }
+            ELLE_TRACE("prefetched %s entries in %s us",
+                     nf,
+                     (boost::posix_time::microsec_clock::universal_time() - start_time)
+                       .total_microseconds());
             if (!(--(*running)))
               self->_prefetching = false;
         }, true);

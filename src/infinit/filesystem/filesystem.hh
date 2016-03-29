@@ -70,6 +70,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(Files, files);
       ELLE_ATTRIBUTE_R(bool, inherit_auth);
       ELLE_ATTRIBUTE_R(bool, prefetching);
+      ELLE_ATTRIBUTE_R(clock::time_point, last_prefetch);
       ELLE_ATTRIBUTE_R(clock::time_point, last_used);
       ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
       friend class Unknown;
