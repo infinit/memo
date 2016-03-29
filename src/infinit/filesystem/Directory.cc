@@ -255,7 +255,7 @@ namespace infinit
       ELLE_DEBUG("%s updating from version %s at %f", this,
         _block_version, block.address());
       _last_used = FileSystem::now();
-     
+
       bool empty = false;
       elle::IOStream is(
         umbrella([&] {
@@ -480,76 +480,93 @@ namespace infinit
       this->_prefetching = true;
       auto running = std::make_shared<int>(nthreads);
       auto parked = std::make_shared<int>(0);
-      for (int i = 0; i < nthreads; ++i)
-        new reactor::Thread(
-          elle::sprintf("prefetcher %s", i),
-          [self, files, fs=&fs, running, parked, nthreads]
+      auto prefetch_task =
+        [self, files, fs=&fs, running, parked, nthreads]
+        {
+          static elle::Bench bench("bench.fs.prefetch", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
+          auto start_time = boost::posix_time::microsec_clock::universal_time();
+          int nf = 0;
+          bool should_exit = false;
+          while (true)
           {
-            static elle::Bench bench("bench.fs.prefetch", 10000_sec);
-            elle::Bench::BenchScope bs(bench);
-            auto start_time = boost::posix_time::microsec_clock::universal_time();
-            int nf = 0;
-            bool should_exit = false;
-            while (true)
+            while (files->empty())
             {
-              while (files->empty())
+              ELLE_DEBUG("parking");
+              ++*parked;
+              if (*parked == nthreads)
               {
-                ELLE_DEBUG("parking");
-                ++*parked;
-                if (*parked == nthreads)
-                {
-                  ELLE_DEBUG("all threads parked");
-                  should_exit = true;
-                  break;
-                }
-                reactor::sleep(100_ms);
-                --*parked;
-              }
-              if (should_exit)
+                ELLE_DEBUG("all threads parked");
+                should_exit = true;
                 break;
-              ++nf;
-              auto e = files->back();
-              ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
-              files->pop_back();
-              std::unique_ptr<model::blocks::Block> block;
-              try
+              }
+              reactor::sleep(100_ms);
+              --*parked;
+            }
+            if (should_exit)
+              break;
+            ++nf;
+            auto e = files->back();
+            ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
+            files->pop_back();
+            std::unique_ptr<model::blocks::Block> block;
+            try
+            {
+              Address addr(e.address.value(),
+                           model::flags::mutable_block, false);
+              block = fs->block_store()->fetch(addr, e.cached_version);
+              if (e.is_dir && e.level +1 < prefetch_depth)
               {
-                Address addr(e.address.value(),
-                             model::flags::mutable_block, false);
-                block = fs->block_store()->fetch(addr, e.cached_version);
-                if (e.is_dir && e.level +1 < prefetch_depth)
-                {
-                  std::shared_ptr<DirectoryData> d;
-                  if (block)
-                    d = std::shared_ptr<DirectoryData>(
-                      new DirectoryData({}, *block, {true, true}));
-                  else
-                    d = *(fs->directory_cache().find(addr));
+                std::shared_ptr<DirectoryData> d;
+                if (block)
+                  d = std::shared_ptr<DirectoryData>(
+                    new DirectoryData({}, *block, {true, true}));
+                else
+                  d = *(fs->directory_cache().find(addr));
 
-                  for (auto const& f: d->_files)
-                    files->push_back(
-                      PrefetchEntry{f.first, f.second.second, e.level+1,
-                                    f.second.first == EntryType::directory,
-                                    cached_version(*fs, f.second.second, f.second.first)
-                      });
-                }
-              }
-              catch(elle::Error const& e)
-              {
-                ELLE_TRACE("Exception while prefeching: %s", e.what());
-              }
-              catch(std::out_of_range const& e)
-              {
-                ELLE_TRACE("Entry vanished from cache: %s", e.what());
+                for (auto const& f: d->_files)
+                  files->push_back(
+                    PrefetchEntry{f.first, f.second.second, e.level+1,
+                                  f.second.first == EntryType::directory,
+                                  cached_version(*fs, f.second.second, f.second.first)
+                    });
               }
             }
-            ELLE_TRACE("prefetched %s entries in %s us",
-                     nf,
-                     (boost::posix_time::microsec_clock::universal_time() - start_time)
-                       .total_microseconds());
-            if (!(--(*running)))
-              self->_prefetching = false;
-        }, true);
+            catch(elle::Error const& e)
+            {
+              ELLE_TRACE("Exception while prefeching: %s", e.what());
+            }
+            catch(std::out_of_range const& e)
+            {
+              ELLE_TRACE("Entry vanished from cache: %s", e.what());
+            }
+          }
+          ELLE_TRACE("prefetched %s entries in %s us",
+                   nf,
+                   (boost::posix_time::microsec_clock::universal_time() - start_time)
+                     .total_microseconds());
+          if (!(--(*running)))
+            self->_prefetching = false;
+          fs->pending().clear();
+          auto* self = reactor::scheduler().current();
+          auto& running = fs->running();
+          auto it = std::find_if(running.begin(), running.end(),
+            [self](reactor::Thread::unique_ptr const& p)
+            {
+              return p.get() == self;
+            });
+          if (it != running.end())
+          {
+            fs->pending().emplace_back(std::move(*it));
+            std::swap(running.back(), *it);
+            running.pop_back();
+          }
+      };
+      for (int i = 0; i < nthreads; ++i)
+        fs.running().emplace_back(new reactor::Thread(
+          elle::sprintf("prefetcher %s", i),
+          prefetch_task
+          ));
     }
 
     void

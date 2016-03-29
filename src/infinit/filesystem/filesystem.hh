@@ -11,6 +11,7 @@
 # include <boost/multi_index_container.hpp>
 
 # include <reactor/filesystem.hh>
+# include <reactor/thread.hh>
 # include <infinit/model/Model.hh>
 # include <infinit/filesystem/FileData.hh>
 
@@ -239,6 +240,8 @@ namespace infinit
               clock::time_point const&, &FileData::last_used>>
               > > FileCache;
       ELLE_ATTRIBUTE_R(FileCache, file_cache);
+      ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, running);
+      ELLE_ATTRIBUTE_RX(std::vector<reactor::Thread::unique_ptr>, pending);
       static const int max_cache_size = 10000;
     };
   }
