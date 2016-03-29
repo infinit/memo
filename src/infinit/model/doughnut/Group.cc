@@ -370,7 +370,7 @@ namespace infinit
           res->remove_admin(user);
           break;
         }
-        return res;
+        return std::move(res);
       }
       static const elle::serialization::Hierarchy<model::ConflictResolver>::
       Register<GroupConflictResolver> _register_gcr("gcr");
