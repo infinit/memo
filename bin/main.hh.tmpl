@@ -877,7 +877,7 @@ namespace infinit
     }
 
     boost::filesystem::path
-    cache_dir()
+    cache_dir() const
     {
       return xdg_state_home() / "cache" / this->name;
     }
