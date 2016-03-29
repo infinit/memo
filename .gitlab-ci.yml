@@ -39,7 +39,7 @@ x86_64-jessie-gcc4:
     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
     - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //debian
     - scp ../fs-build/infinit_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
-    - scp ../fs-build/infinit-debug-symbols-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
+    - scp ../fs-build/infinit-debug-symbols-linux-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
     - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
