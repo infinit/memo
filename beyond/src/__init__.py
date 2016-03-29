@@ -293,7 +293,7 @@ class Beyond:
             try:
               network = self.network_get(*drive.network.split('/'))
             except Network.NotFound:
-              raise Exception('Unkown network \'%s\'' % drive.network)
+              raise Exception('Unknown network \'%s\'' % drive.network)
             import_data('network', network.json())
             subprocess.check_call(
               [
