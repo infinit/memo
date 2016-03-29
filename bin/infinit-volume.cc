@@ -889,9 +889,9 @@ main(int argc, char** argv)
       "path to an icon for mounted volume" },
     { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
 #endif
-    { "async", bool_switch(), "use asynchronous operations" },
+    { "async", bool_switch(), "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
-    { "daemon,d", bool_switch(), "run as a background daemon"},
+    { "daemon,d", bool_switch(), "run as a background daemon" },
 #endif
     option_cache,
     option_cache_ram_size,
