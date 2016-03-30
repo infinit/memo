@@ -108,6 +108,13 @@ Note that some binaries operate in hub mode by default. For instance the _infini
 
 **IMPORTANT**: This document mainly covers flows involving the Hub. For users wanting to use Infinit in a pure decentralized environment, the `--push`/`--fetch` operations must be replaced with `--export`/`--import` operations and the resulting files must be manually shared with other users and moved between devices. You will sometimes need to provide additional information such as the IP address of bootstrap nodes in order to discover the other nodes of a network.
 
+Doctor
+------
+
+The _infinit-doctor_ binary provides an easy way to check the health of your local environment: configuration files, version of the software, networking capabilities etc.
+
+This binary is _not yet available_.
+
 User
 ----
 
@@ -908,3 +915,14 @@ Joined drive "alice/workspace".
 ```
 
 That's it, you are now allowed to access the drive "alice/workspace", which is an abstraction of the volume "alice/shared". Note that you could have accessed the volume without using the drive invitation anyway. However, should you launch the graphical user interface, you will see the "alice/workspace" drive that you just joined.
+
+LDAP
+----
+
+This binary is only provided in the **Enterprise** version of the Infinit storage platform. Please [contact us](/contact) to schedule a demo or talk to a sales representative.
+
+Monitor
+-------
+
+This binary is only provided in the **Enterprise** version of the Infinit storage platform. Please [contact us](/contact) to schedule a demo or talk to a sales representative.
+
