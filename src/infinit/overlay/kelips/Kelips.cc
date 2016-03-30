@@ -2561,7 +2561,7 @@ namespace infinit
               boost::posix_time::milliseconds(_config.query_timeout_ms));
             if (!r->barrier.opened())
             {
-              ELLE_LOG("%s: get request on %s timeout (try %s)",
+              ELLE_TRACE("%s: get request on %s timeout (try %s)",
                         *this, file, i);
               this->_pending_requests.erase(ir.first);
             }
