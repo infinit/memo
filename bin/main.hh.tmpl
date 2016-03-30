@@ -1128,6 +1128,7 @@ namespace infinit
         add_option("daemon_timeout", "600");
         if (volicon_)
           add_option("volicon", volicon_.get());
+        add_option("modules", "iconv,from_code=UTF-8,to_code=UTF-8-MAC");
 #endif
         driver->mount(mountpoint.get(), mount_options);
       }
