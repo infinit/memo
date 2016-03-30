@@ -108,7 +108,7 @@ namespace infinit
         _target = WriteTarget::all | WriteTarget::block;
       if (s.in())
       {
-        infinit::model::Model* model = nullptr;
+        infinit::model::doughnut::Doughnut* model = nullptr;
         const_cast<elle::serialization::Context&>(s.context()).get(model);
         ELLE_ASSERT(model);
         this->_model = model;

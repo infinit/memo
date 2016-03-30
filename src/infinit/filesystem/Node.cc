@@ -49,7 +49,7 @@ namespace infinit
         s.serialize("userkey", _userkey);
         if (s.in())
         {
-          infinit::model::Model* model = nullptr;
+          infinit::model::doughnut::Doughnut* model = nullptr;
           const_cast<elle::serialization::Context&>(s.context()).get(model);
           ELLE_ASSERT(model);
           _model = model;
