@@ -45,7 +45,7 @@
     "category": "technology",
     "popularity": 0,
     "question": "What's the &laquo; Hub &raquo;?",
-    "answer" : "<p>All the tasks you're doing with the Infinit command line tools are done locally by default. You can then push them to the Hub so it will be easier to retrieve it from other devices or for other users. Learn more in our <a href=\"/documentation/reference#hub\">documentation</a>.</p>"
+    "answer" : "<p>The Infinit Hub is a Web service to acts as a registry for storing non-sensitive information that can be retrieved on other machines and possibly by other trusted users. Learn more in our <a target=\"blank\" href=\"http://blog.infinit.one/introduction-infinit-hub/\">introduction</a> or directly check our <a href=\"/documentation/reference#hub\">documentation</a>.</p>"
   },
   {
     "category": ["general", "security"],
