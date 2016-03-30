@@ -1781,6 +1781,7 @@ namespace infinit
                std::string const& name,
                std::string const& type) const
     {
+      ELLE_DEBUG("open %s (%s (%s) for reading", path, name, type);
       f.open(path);
       if (!f.good())
       {
@@ -1796,6 +1797,7 @@ namespace infinit
                 std::string const& type,
                 bool overwrite = false)
     {
+      ELLE_DEBUG("open %s (%s (%s) for writing", path, name, type);
       create_directories(path.parent_path());
       if (!overwrite && exists(path))
       {
