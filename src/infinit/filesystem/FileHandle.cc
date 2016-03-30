@@ -17,7 +17,8 @@ namespace infinit
 {
   namespace filesystem
   {
-    const uint64_t FileHandle::default_first_block_size = 16384;
+    const uint64_t FileHandle::default_first_block_size =
+      std::stoi(elle::os::getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", "0"));;
     static const int lookahead_blocks =
       std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
     static const int max_lookahead_threads =
@@ -202,14 +203,22 @@ namespace infinit
     {
       if (size == 0)
         return 0;
-      ELLE_TRACE_SCOPE("%s: write %s bytes at offset %s", *this, size, offset);
+      // figure out first block size for this file
+      uint64_t max_first_block_size = 0;
+      if (this->_file._fat.empty())
+        max_first_block_size = std::max(default_first_block_size,
+                                      _file._data.size());
+      else
+        max_first_block_size = _file._data.size();
+      ELLE_TRACE_SCOPE("%s: write %s bytes at offset %s fbs %s)",
+                       *this, size, offset, max_first_block_size);
       ELLE_ASSERT_EQ(buffer.size(), size);
       this->_dirty = true;
       _file._header.mtime = time(nullptr);
-      if (offset < signed(default_first_block_size))
+      if (offset < signed(max_first_block_size))
       { // write on first block
         _fat_changed = true;
-        auto wend = std::min(uint64_t(size + offset), default_first_block_size);
+        auto wend = std::min(uint64_t(size + offset), max_first_block_size);
         if (_file._data.size() < wend)
         {
           auto oldsz = _file._data.size();
@@ -235,8 +244,8 @@ namespace infinit
       auto& sz = File::_size_map.at(this->_file.address()).first;
       sz = std::max(sz, this->_file._header.size);
       // In case we skipped embeded first block, fill it
-      this->_file._data.size(default_first_block_size);
-      offset -= default_first_block_size;
+      this->_file._data.size(max_first_block_size);
+      offset -= max_first_block_size;
       uint64_t const block_size = this->_file._header.block_size;
       int const start_block = offset / block_size;
       int const end_block = (offset + size - 1) / block_size;
