@@ -491,6 +491,69 @@ namespace infinit
     }
   }
 
+  // Return arguments for mode in the correct order.
+  // Note: just using "collect_unrecognized" is insufficient as this changes
+  // the order and does not handle the case where the binary has a mode and
+  // mode argument with the same name.
+  static
+  std::vector<std::string>
+  mode_arguments(
+    std::vector<std::string> tokens,
+    Mode const* mode,
+    Modes const& modes, boost::optional<Modes> hidden_modes,
+    boost::program_options::basic_parsed_options<char> const& parsed)
+  {
+    bool after_mode = false;
+    std::vector<std::string> res;
+    // Valid tokens are modes + unrecognized options.
+    std::vector<std::string> valid_tokens;
+    bool handling_valid_option = false;
+    for (auto const& m: modes)
+      valid_tokens.push_back(elle::sprintf("--%s", m.name));
+    if (hidden_modes)
+    {
+      for (auto const& m: hidden_modes.get())
+        valid_tokens.push_back(elle::sprintf("--%s", m.name));
+    }
+    for (auto val: boost::program_options::collect_unrecognized(
+          parsed.options, boost::program_options::include_positional))
+      valid_tokens.push_back(val);
+    for (auto const& token: tokens)
+    {
+      if (token == elle::sprintf("--%s", mode->name) && !after_mode)
+      {
+        after_mode = true;
+        // Handle case where token directly after mode is positional argument.
+        // e.g.: infinit-user --create bob
+        handling_valid_option = true;
+        continue;
+      }
+      if (!after_mode)
+        continue;
+      // We're after the mode in the tokens, check if we have a valid token.
+      if (std::find(valid_tokens.begin(), valid_tokens.end(), token)
+          != valid_tokens.end())
+      {
+        // Check if token is an option descriptor.
+        if (token.find("--") != std::string::npos)
+          handling_valid_option = true;
+        // Only push back valid option descriptors and their associated values.
+        if (handling_valid_option)
+          res.push_back(token);
+      }
+      // If we were passed an option descriptor, it's not a valid one. Ignore
+      // proceeding value.
+      else if (token.find("--") != std::string::npos)
+        handling_valid_option = false;
+      // Assume invalid option descriptors are not multitoken and accept next
+      // token as it is a positional argument.
+      // e.g.: infinit-network --export --as owner network
+      else
+        handling_valid_option = true;
+    }
+    return res;
+  }
+
   int
   main(std::string desc,
        Modes const& modes,
@@ -604,22 +667,25 @@ namespace infinit
               if (vm.count("as"))
                 _as_user = vm["as"].as<std::string>();
               Mode const* mode = nullptr;
-              std::vector<std::string> args;
+              std::vector<std::string> tokens;
+              for (int i = 0; i < argc; i++)
+                tokens.emplace_back(std::string(argv[i]));
               auto get_mode = [&] (Modes const& modes)
                 {
+                  int pos = std::distance(tokens.begin(), tokens.end());
                   for (auto const& m: modes)
                   {
                     if (vm.count(m.name))
                     {
-                      if (!mode)
-                        mode = &m;
-                      else if (mode->name == "fetch" || mode->name == "push")
+                      int new_pos = std::distance(
+                        tokens.begin(),
+                        std::find(tokens.begin(), tokens.end(),
+                                  elle::sprintf("--%s", m.name)));
+                      if (new_pos < pos)
                       {
-                        args.push_back("--" + mode->name);
                         mode = &m;
+                        pos = new_pos;
                       }
-                      else
-                        args.push_back("--" + m.name);
                     }
                   }
                 };
@@ -644,13 +710,6 @@ namespace infinit
                 mode->help(std::cout);
                 return;
               }
-              for (auto const& unrecognized:
-                     boost::program_options::collect_unrecognized(
-                       parsed.options,
-                       boost::program_options::include_positional))
-              {
-                args.push_back(unrecognized);
-              }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
 #ifndef INFINIT_WINDOWS
               if (crash_reporter && crash_reporter->crashes_pending_upload())
@@ -664,12 +723,21 @@ namespace infinit
 #endif
               try
               {
+                std::vector<std::string> args =
+                  mode_arguments(tokens, mode, modes, hidden_modes, parsed);
                 mode->action(parse_args(mode->options, args,
                              (positional_arg ? positional_arg.get() : "name")));
                 if (crash_upload_thread)
                   reactor::wait(*crash_upload_thread);
               }
               catch (CommandLineError const&)
+              {
+                mode->help(std::cerr);
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
+                throw;
+              }
+              catch (boost::program_options::error_with_option_name const& e)
               {
                 mode->help(std::cerr);
                 if (crash_upload_thread)
