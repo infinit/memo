@@ -102,10 +102,25 @@ namespace infinit
             throw elle::Error("Group destruction needs group name as input");
           public_control_key();
           block();
+          auto ctrl = _control_key();
+
+          // UB
           auto addr = UB::hash_address(this->_name, this->_dht);
-          auto raddr = UB::hash_address(*this->_public_control_key, this->_dht);
-          this->_dht.remove(addr);
-          this->_dht.remove(raddr);
+          auto block = _dht.fetch(addr);
+          auto to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
+          blocks::RemoveSignature sig;
+          sig.signature_key.emplace(ctrl.K());
+          sig.signature.emplace(ctrl.k().sign(to_sign));
+          this->_dht.remove(addr, sig);
+
+          // RUB
+          addr = UB::hash_address(*this->_public_control_key, this->_dht);
+          block = _dht.fetch(addr);
+          to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
+          sig.signature_key.emplace(ctrl.K());
+          sig.signature.emplace(ctrl.k().sign(to_sign));
+          this->_dht.remove(addr, sig);
+
           this->_dht.remove(this->_block->address(),
                             this->_block->sign_remove(this->_dht));
         });
@@ -165,8 +180,10 @@ namespace infinit
       cryptography::rsa::KeyPair
       Group::_control_key()
       {
-        return elle::serialization::binary::deserialize
-          <cryptography::rsa::KeyPair>(this->block().data());
+        auto priv = this->block().control_key();
+        if (!priv)
+          throw elle::Error("You are not a group admin");
+        return cryptography::rsa::KeyPair(public_control_key(), *priv);
       }
 
       cryptography::rsa::PublicKey

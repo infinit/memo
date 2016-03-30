@@ -63,6 +63,8 @@ namespace infinit
         virtual
         int
         group_version() const;
+        std::shared_ptr<cryptography::rsa::PrivateKey>
+        control_key() const;
       protected:
         class OwnerSignature
           : public Super::OwnerSignature

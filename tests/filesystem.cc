@@ -113,6 +113,11 @@ static int group_remove_admin(bfs::path p, std::string const& gname, std::string
   return setxattr(p.c_str(), "user.infinit.group.removeadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
 
+static int group_delete(bfs::path p, std::string const& gname)
+{
+  return setxattr(p.c_str(), "user.infinit.group.delete", gname.c_str(), gname.size(), 0 SXA_EXTRA);
+}
+
 static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
 {
   struct statvfs stparent;
@@ -1463,6 +1468,7 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(group_delete(m0, "group1"), 0);
 
   ELLE_LOG("removal");
   //test the xattrs we'll use
