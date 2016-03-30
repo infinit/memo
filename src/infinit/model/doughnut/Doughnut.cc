@@ -430,7 +430,8 @@ namespace infinit
         boost::optional<std::chrono::seconds> cache_ttl,
         boost::optional<std::chrono::seconds> cache_invalidation,
         boost::optional<uint64_t> disk_cache_size,
-        boost::optional<elle::Version> version)
+        boost::optional<elle::Version> version,
+        boost::optional<int> port_)
       {
         Doughnut::ConsensusBuilder consensus =
           [&] (Doughnut& dht)
@@ -456,7 +457,7 @@ namespace infinit
             return this->overlay->make(
               std::move(id), hosts, std::move(local), &dht);
           };
-        auto port = this->port ? this->port.get() : 0;
+        auto port = port_ ? port_.get() : this->port ? this->port.get() : 0;
         std::unique_ptr<storage::Storage> storage;
         if (this->storage)
           storage = this->storage->make();

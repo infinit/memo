@@ -457,10 +457,11 @@ COMMAND(run)
   {
     cache = true;
   }
+  auto port = optional<int>(args, option_port);
   auto dht = network.run(
     eps, false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version);
+    flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
             && dht->local()->storage();
@@ -725,6 +726,7 @@ main(int argc, char** argv)
           "alias for --fetch-endpoints --push-endpoints" },
         option_endpoint_file,
         option_port_file,
+        option_port,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif

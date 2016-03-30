@@ -907,7 +907,8 @@ namespace infinit
         boost::optional<int> cache_invalidation = {},
         bool async_writes = false,
         boost::optional<uint64_t> disk_cache_size = {},
-        boost::optional<elle::Version> version = {})
+        boost::optional<elle::Version> version = {},
+        boost::optional<int> port = {})
     {
       ELLE_LOG("client version: %s", version_describe);
       return this->dht()->make(
@@ -924,7 +925,8 @@ namespace infinit
           ? std::chrono::seconds(cache_invalidation.get())
           : boost::optional<std::chrono::seconds>(),
         disk_cache_size,
-        std::move(version));
+        std::move(version),
+        std::move(port));
     }
 
     inline
@@ -2924,6 +2926,9 @@ Mode::OptionDescription option_port_file(
 Mode::OptionDescription option_endpoint_file(
   "endpoints-file", boost::program_options::value<std::string>(),
   "write node listening endpoints to file\n(format: host:port\\n)");
+Mode::OptionDescription option_port(
+  "port", boost::program_options::value<int>(),
+  "outbound port to use");
 Mode::OptionDescription option_disable_mac_utf8(
   "disable-utf-8-conversion", boost::program_options::bool_switch(),
   "disable FUSE conversion of UTF-8 to native format");

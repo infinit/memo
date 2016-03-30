@@ -158,7 +158,8 @@ namespace infinit
              boost::optional<std::chrono::seconds> cache_ttl = {},
              boost::optional<std::chrono::seconds> cache_invalidation = {},
              boost::optional<uint64_t> disk_cache_size = {},
-             boost::optional<elle::Version> version = {});
+             boost::optional<elle::Version> version = {},
+             boost::optional<int> port = {});
       };
     }
   }

@@ -355,10 +355,11 @@ COMMAND(run)
     beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
+  auto port = optional<int>(args, option_port);
   auto model = network.run(
     eps, true,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version);
+    flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
@@ -912,6 +913,7 @@ main(int argc, char** argv)
       "alias for --fetch-endpoints --push-endpoints" },
     option_endpoint_file,
     option_port_file,
+    option_port,
   };
   std::vector<Mode::OptionDescription> options_run_mount_hidden = {
 #ifndef INFINIT_WINDOWS
