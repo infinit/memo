@@ -1128,7 +1128,6 @@ namespace infinit
         add_option("daemon_timeout", "600");
         if (volicon_)
           add_option("volicon", volicon_.get());
-        add_option("modules", "iconv,from_code=UTF-8,to_code=UTF-8-MAC");
 #endif
         driver->mount(mountpoint.get(), mount_options);
       }
@@ -2925,3 +2924,6 @@ Mode::OptionDescription option_port_file(
 Mode::OptionDescription option_endpoint_file(
   "endpoints-file", boost::program_options::value<std::string>(),
   "write node listening endpoints to file\n(format: host:port\\n)");
+Mode::OptionDescription option_disable_mac_utf8(
+  "disable-utf-8-conversion", boost::program_options::bool_switch(),
+  "disable FUSE conversion of UTF-8 to native format");

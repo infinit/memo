@@ -303,15 +303,17 @@ COMMAND(run)
       }
     }
   }
-  boost::optional<std::vector<std::string>> fuse_options;
+  std::vector<std::string> fuse_options;
+#ifdef INFINIT_MACOSX
+  if (!flag(args, option_disable_mac_utf8))
+    fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+#endif
   if (args.count("fuse-option"))
   {
     if (!args.count("mountpoint"))
       throw CommandLineError("FUSE options require the volume to be mounted");
-    std::vector<std::string> fuse_options_;
     for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
-      fuse_options_.push_back(opt);
-    fuse_options = fuse_options_;
+      fuse_options.push_back(opt);
   }
   auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
@@ -911,6 +913,15 @@ main(int argc, char** argv)
     option_endpoint_file,
     option_port_file,
   };
+  std::vector<Mode::OptionDescription> options_run_mount_hidden = {
+#ifndef INFINIT_WINDOWS
+    { "fuse-option", value<std::vector<std::string>>()->multitoken(),
+      "option to pass directly to FUSE" },
+#endif
+#ifdef INFINIT_MACOSX
+    option_disable_mac_utf8,
+#endif
+  };
   Modes modes {
     {
       "create",
@@ -979,13 +990,8 @@ main(int argc, char** argv)
       &run,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
-#ifndef INFINIT_WINDOWS
       {},
-      {
-        { "fuse-option", value<std::vector<std::string>>()->multitoken(),
-          "option to pass directly to FUSE" },
-      },
-#endif
+      options_run_mount_hidden,
     },
     {
       "mount",
@@ -993,13 +999,8 @@ main(int argc, char** argv)
       &mount,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
-#ifndef INFINIT_WINDOWS
       {},
-      {
-        { "fuse-option", value<std::vector<std::string>>()->multitoken(),
-          "option to pass directly to FUSE" },
-      },
-#endif
+      options_run_mount_hidden,
     },
     {
       "delete",
