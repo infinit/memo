@@ -475,7 +475,7 @@ namespace infinit
       ELLE_TRACE_SCOPE("%s: set_permissions(%s)", *this, flags);
       std::pair<bool, bool> perms = parse_flags(flags);
       std::unique_ptr<infinit::model::User> user =
-        umbrella([&] {return _get_user(userkey);}, EINVAL);
+        umbrella([&] {return this->_get_user(userkey);}, EINVAL);
       if (!user)
       {
         ELLE_WARN("user %s does not exist", userkey);
@@ -489,13 +489,13 @@ namespace infinit
       auto acb = dynamic_cast<model::doughnut::ACB*>(acl.get());
       if (!acb)
       {
-#ifdef __GNUC__
+#ifdef __clang__
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
 #endif
         throw rfs::Error(EIO,
           elle::sprintf("Block is not an ACB block: %s", typeid(*acl).name()));
-#ifdef __GNUC__
+#ifdef __clang__
 #  pragma GCC diagnostic pop
 #endif
       }
