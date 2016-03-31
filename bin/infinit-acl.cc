@@ -260,7 +260,10 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
       else
       {
         if (st.st_mode & 06)
-          output << "  world: " << ((st.st_mode & 02) ? "rw" : "r") << std::endl;
+        {
+          output << "  world: " << ((st.st_mode & 02) ? "rw" : "r")
+                 << std::endl;
+        }
       }
       elle::json::Json j = elle::json::read(ss);
       auto a = boost::any_cast<elle::json::Array>(j);
@@ -458,11 +461,13 @@ COMMAND(set)
   }
   for (auto const& path: paths)
   {
-    set_action(path, users, mode, omode, inherit, disinherit, verbose, fallback);
+    set_action(path, users, mode, omode, inherit, disinherit, verbose,
+               fallback);
     if (recursive)
     {
       recursive_action(
-        set_action, path, users, mode, omode, inherit, disinherit, verbose, fallback);
+        set_action, path, users, mode, omode, inherit, disinherit, verbose,
+        fallback);
     }
   }
 }
