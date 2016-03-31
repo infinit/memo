@@ -347,6 +347,17 @@ namespace infinit
             return getxattr_block(*dht, op, addr);
           }
         }
+        else if (special->find("mountpoint") == 0)
+        {
+          return (
+            this->_owner.mountpoint() ? this->_owner.mountpoint().get().string()
+                                      : "");
+        }
+        else if (special->find("root") == 0)
+        {
+          return this->full_path() == this->full_path().root_path() ? "true"
+                                                                    : "false";
+        }
       }
       if (k.substr(0, strlen(overlay_info)) == overlay_info)
       {
