@@ -201,8 +201,16 @@ recursive_action(A action, std::string const& path, Args ... args)
   bfs::recursive_directory_iterator it(path, erc);
   if (erc)
     throw elle::Error(elle::sprintf("%s : %s", path, erc.message()));
-  for (; it != bfs::recursive_directory_iterator(); ++it)
+  for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
+  {
+    if (erc == boost::system::errc::permission_denied)
+    {
+      std::cout << "permission denied, skipping " << it->path().string()
+                << std::endl;
+      continue;
+    }
     action(it->path().string(), args...);
+  }
 }
 
 static
@@ -386,7 +394,6 @@ COMMAND(get_xattr)
     std::cout << result << std::endl;
   }
 }
-
 
 COMMAND(list)
 {
