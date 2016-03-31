@@ -213,6 +213,8 @@ namespace infinit
           ELLE_WARN("CHB owner %x is not an ACB", this->_owner);
           return blocks::ValidationResult::success();
         }
+        if (acb->get_world_permissions().second)
+          return blocks::ValidationResult::success();
         if (*acb->owner_key() == key)
           return blocks::ValidationResult::success();
         if (!sig.group_key)
