@@ -169,7 +169,8 @@ namespace infinit
       FileSystem(
         std::string const& volume_name,
         std::shared_ptr<infinit::model::Model> model,
-        boost::optional<boost::filesystem::path> root_block_cache_dir = {});
+        boost::optional<boost::filesystem::path> root_block_cache_dir = {},
+        boost::optional<boost::filesystem::path> mountpoint = {});
       void
       print_cache_stats();
       std::shared_ptr<reactor::filesystem::Path>
@@ -212,6 +213,7 @@ namespace infinit
       ELLE_ATTRIBUTE_R(bool, read_only);
       ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>,
                        root_block_cache_dir);
+      ELLE_ATTRIBUTE_R(boost::optional<boost::filesystem::path>, mountpoint);
       ELLE_ATTRIBUTE_R(model::Address, root_address);
 
       typedef bmi::multi_index_container<

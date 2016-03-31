@@ -60,11 +60,13 @@ namespace infinit
     FileSystem::FileSystem(
         std::string const& volume_name,
         std::shared_ptr<model::Model> model,
-        boost::optional<boost::filesystem::path> root_block_cache_dir)
+        boost::optional<boost::filesystem::path> root_block_cache_dir,
+        boost::optional<boost::filesystem::path> mountpoint)
       : _block_store(std::move(model))
       , _single_mount(false)
       , _volume_name(volume_name)
       , _root_block_cache_dir(root_block_cache_dir)
+      , _mountpoint(mountpoint)
       , _root_address(Address::null)
     {
       auto& dht = dynamic_cast<model::doughnut::Doughnut&>(
