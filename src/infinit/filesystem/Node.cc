@@ -478,8 +478,15 @@ namespace infinit
       auto acb = dynamic_cast<model::doughnut::ACB*>(acl.get());
       if (!acb)
       {
+#ifdef __GNUC__
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wpotentially-evaluated-expression"
+#endif
         throw rfs::Error(EIO,
           elle::sprintf("Block is not an ACB block: %s", typeid(*acl).name()));
+#ifdef __GNUC__
+#  pragma GCC diagnostic pop
+#endif
       }
       auto dn = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
         this->_owner.block_store());
