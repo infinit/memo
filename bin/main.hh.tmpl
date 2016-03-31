@@ -1249,6 +1249,7 @@ namespace infinit
   T
   load(std::ifstream& input)
   {
+    ELLE_ASSERT(input.is_open());
     elle::serialization::json::SerializerIn s(input, false);
     return std::move(s.deserialize<T>());
   }
@@ -1258,6 +1259,7 @@ namespace infinit
   save(std::ofstream& output,
        T const& resource)
   {
+    ELLE_ASSERT(output.is_open());
     elle::serialization::json::SerializerOut s(output, false, true);
     s.serialize_forward(resource);
   }
