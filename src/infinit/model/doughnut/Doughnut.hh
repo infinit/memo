@@ -80,8 +80,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
-        ELLE_ATTRIBUTE(elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
-      public:
+        ELLE_ATTRIBUTE(
+          elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
 
       protected:
         virtual
@@ -89,7 +89,8 @@ namespace infinit
         _make_mutable_block() const override;
         virtual
         std::unique_ptr<blocks::ImmutableBlock>
-        _make_immutable_block(elle::Buffer content, Address owner) const override;
+        _make_immutable_block(elle::Buffer content,
+                              Address owner) const override;
         virtual
         std::unique_ptr<blocks::ACLBlock>
         _make_acl_block() const override;

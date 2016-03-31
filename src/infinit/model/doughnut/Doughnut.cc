@@ -61,11 +61,11 @@ namespace infinit
         , _passport(std::move(passport))
         , _consensus(consensus(*this))
         , _local(
-          storage ?
-          this->_consensus->make_local(std::move(port), std::move(storage)) :
-          nullptr)
+          storage
+            ? this->_consensus->make_local(std::move(port), std::move(storage))
+            : nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
-        , _pool([this] { return elle::make_unique<ACB>(this);},100, 1)
+        , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
       {
         if (this->_local)
           this->_local->initialize();
@@ -131,15 +131,16 @@ namespace infinit
                          *this, name, block->address());
               auto ub = elle::cast<UB>::runtime(block);
               if (ub->name() != name)
-                throw elle::Error(
-                  elle::sprintf(
-                    "user reverse block exists at %s(%x) "
-                    "with different name: %s",
-                    name, addr, ub->name()));
+              {
+                throw elle::Error(elle::sprintf(
+                  "user reverse block exists at %s(%x) with different name: %s",
+                  name, addr, ub->name()));
+              }
             }
-            catch(MissingBlock const&)
+            catch (MissingBlock const&)
             {
-              auto user = elle::make_unique<UB>(this, name, this->passport(), true);
+              auto user =
+                elle::make_unique<UB>(this, name, this->passport(), true);
               ELLE_TRACE_SCOPE("%s: store reverse user block at %f", this,
                                user->address());
               try
@@ -149,13 +150,14 @@ namespace infinit
               }
               catch (elle::Error const& e)
               {
-                ELLE_TRACE("%s: failed to store reverse user block: %s", *this, e);
+                ELLE_TRACE("%s: failed to store reverse user block: %s",
+                           *this, e);
               }
             }
           };
-        _user_init.reset(new reactor::Thread(
-                           elle::sprintf("%s: user blocks checker", *this),
-                           check_user_blocks));
+        this->_user_init.reset(new reactor::Thread(
+          elle::sprintf("%s: user blocks checker", *this),
+          check_user_blocks));
       }
 
       Doughnut::~Doughnut()
@@ -246,8 +248,7 @@ namespace infinit
           {
             auto block = this->fetch(UB::hash_address(pub, *this));
             auto ub = elle::cast<UB>::runtime(block);
-            return elle::make_unique<doughnut::User>
-              (ub->key(), ub->name());
+            return elle::make_unique<doughnut::User>(ub->key(), ub->name());
           }
           catch (MissingBlock const&)
           {
@@ -276,8 +277,7 @@ namespace infinit
           {
             auto block = this->fetch(UB::hash_address(data.string(), *this));
             auto ub = elle::cast<UB>::runtime(block);
-            return elle::make_unique<doughnut::User>
-              (ub->key(), data.string());
+            return elle::make_unique<doughnut::User>(ub->key(), data.string());
           }
           catch (infinit::model::MissingBlock const&)
           {
@@ -300,7 +300,6 @@ namespace infinit
       Doughnut::_fetch(Address address,
                        boost::optional<int> local_version) const
       {
-        std::unique_ptr<blocks::Block> res;
         return this->_consensus->fetch(address, std::move(local_version));
       }
 
@@ -438,9 +437,12 @@ namespace infinit
           {
             auto consensus = this->consensus->make(dht);
             if (async)
+            {
               consensus = elle::make_unique<consensus::Async>(
                 std::move(consensus), p / "async");
+            }
             if (cache)
+            {
               consensus = elle::make_unique<consensus::Cache>(
                 std::move(consensus),
                 std::move(cache_size),
@@ -449,6 +451,7 @@ namespace infinit
                 p / "cache",
                 std::move(disk_cache_size)
                 );
+            }
             return consensus;
           };
         Doughnut::OverlayBuilder overlay =
@@ -463,6 +466,7 @@ namespace infinit
           storage = this->storage->make();
         std::unique_ptr<Doughnut> dht;
         if (!client || !this->name)
+        {
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
             std::make_shared<cryptography::rsa::KeyPair>(keys),
@@ -473,7 +477,9 @@ namespace infinit
             std::move(port),
             std::move(storage),
             version ? version.get() : this->version);
+        }
         else
+        {
           dht = elle::make_unique<infinit::model::doughnut::Doughnut>(
             this->id,
             this->name.get(),
@@ -485,6 +491,7 @@ namespace infinit
             std::move(port),
             std::move(storage),
             version ? version.get() : this->version);
+        }
         return dht;
       }
 
