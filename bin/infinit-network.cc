@@ -230,11 +230,12 @@ COMMAND(export_)
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, owner);
+  network_name = network.name;
   {
     infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
-  report_exported(*output, "network", network.name);
+  report_exported(*output, "network", network_name);
 }
 
 COMMAND(fetch)
