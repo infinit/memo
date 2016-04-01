@@ -487,9 +487,9 @@ COMMAND(set)
   std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
   mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
-  bool navigate = flag(args, "navigate");
-  if (navigate && mode.find("setr") != 0)
-    throw elle::Error("--navigate can only be used with mode 'r', 'rw'");
+  bool traverse = flag(args, "traverse");
+  if (traverse && mode.find("setr") != 0)
+    throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
   bool fallback = flag(args, "fallback-xattrs");
   // Don't do any operations before checking paths.
@@ -509,7 +509,7 @@ COMMAND(set)
   {
     set_action(path, users, mode, omode, inherit, disinherit, verbose,
                fallback);
-    if (navigate)
+    if (traverse)
     {
       boost::filesystem::path working_path(path);
       while (!path_is_root(working_path.string(), fallback))
@@ -691,7 +691,7 @@ main(int argc, char** argv)
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "apply recursively" },
-        { "navigate", bool_switch(),
+        { "traverse", bool_switch(),
           "add read permissions to parent directories" },
         fallback_option,
         verbose_option,
