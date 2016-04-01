@@ -424,7 +424,8 @@ namespace infinit
                 }
                 catch (elle::Error const& e)
                 {
-                  ELLE_LOG("error in async loop on %s: %s", op->index, e);
+                  ELLE_LOG("error in async loop on %s: %s, from:\n%s",
+                           op->index, e, e.backtrace());
                 }
                 // If we land here (no break) an error occurred
                 ++attempt;
