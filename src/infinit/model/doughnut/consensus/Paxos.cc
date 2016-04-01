@@ -442,6 +442,8 @@ namespace infinit
               auto buffer = this->storage()->get(address);
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
+              context.set<elle::Version>(
+                elle_serialization_version(this->doughnut().version()));
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
