@@ -229,7 +229,7 @@ COMMAND(create)
                                optional(args, "fullname"));
   if (output)
   {
-    ifnt.user_save(user, *output);
+    save(*output, user);
     report_exported(*output, "user", user.name);
   }
   else
