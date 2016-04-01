@@ -473,6 +473,7 @@ def configure(
     ('infinit-block', [], True),
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
+    ('infinit-doctor', [], True),
     ('infinit-drive', [], True),
     ('infinit-journal', [], True),
     ('infinit-network', [], True),
