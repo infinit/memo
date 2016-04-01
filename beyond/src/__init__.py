@@ -492,6 +492,17 @@ class User:
         },
         **self.__beyond.template('User/Welcome')
       )
+      self.__beyond.emailer.send_one(
+        recipient_email = 'sales@infinit.sh',
+        recipient_name = 'sales',
+        variables = {
+          'user': {
+            'email': self.email,
+            'name': self.name,
+          }
+        },
+        **self.__beyond.template('Sales/New Customer')
+      )
 
   def confirmation_code(self, email):
     return self.__emails.get(email, None)

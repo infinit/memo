@@ -259,6 +259,7 @@ def configure(
       'users/get',
       'users/pairing',
       'users/delete',
+      'users/welcome',
       'networks/delete',
       'networks/put',
       'networks/storage',
