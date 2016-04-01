@@ -1615,10 +1615,21 @@ namespace infinit
       save(f, a);
     }
 
-    std::vector<std::unique_ptr<Credentials>>
+    template <typename T = infinit::Credentials>
+    std::vector<
+      std::unique_ptr<
+        T,
+        std::default_delete<infinit::Credentials>
+        >
+      >
     credentials(std::string const& name) const
     {
-      std::vector<std::unique_ptr<Credentials>> res;
+      std::vector<
+        std::unique_ptr<
+          T,
+          std::default_delete<infinit::Credentials>
+          >
+        > res;
       auto const path = this->_credentials_path(name);
       boost::filesystem::directory_iterator const end;
       for (boost::filesystem::directory_iterator it(path);
@@ -1629,7 +1640,8 @@ namespace infinit
         {
           boost::filesystem::ifstream f;
           this->_open_read(f, it->path(), name, "crendential");
-          res.push_back(load<std::unique_ptr<Credentials>>(f));
+          res.push_back(
+            elle::cast<T>::runtime(load<std::unique_ptr<Credentials>>(f)));
         }
       }
       return res;
@@ -1656,10 +1668,15 @@ namespace infinit
       this->credentials_add("aws", std::move(a));
     }
 
-    std::vector<std::unique_ptr<Credentials>>
+    std::vector<
+      std::unique_ptr<
+        AWSCredentials,
+        std::default_delete<infinit::Credentials>
+        >
+      >
     credentials_aws() const
     {
-      return this->credentials("aws");
+      return this->credentials<AWSCredentials>("aws");
     }
 
     std::unique_ptr<AWSCredentials, std::default_delete<infinit::Credentials>>
@@ -1675,10 +1692,15 @@ namespace infinit
       this->credentials_add("dropbox", std::move(a));
     }
 
-    std::vector<std::unique_ptr<Credentials>>
+    std::vector<
+      std::unique_ptr<
+      OAuthCredentials,
+        std::default_delete<infinit::Credentials>
+        >
+      >
     credentials_dropbox() const
     {
-      return this->credentials("dropbox");
+      return this->credentials<OAuthCredentials>("dropbox");
     }
 
     std::unique_ptr<OAuthCredentials, std::default_delete<infinit::Credentials>>
@@ -1694,10 +1716,15 @@ namespace infinit
       this->credentials_add("google", std::move(a));
     }
 
-    std::vector<std::unique_ptr<Credentials>>
+    std::vector<
+      std::unique_ptr<
+        OAuthCredentials,
+        std::default_delete<infinit::Credentials>
+        >
+      >
     credentials_google() const
     {
-      return this->credentials("google");
+      return this->credentials<OAuthCredentials>("google");
     }
 
     std::unique_ptr<OAuthCredentials, std::default_delete<infinit::Credentials>>
@@ -1713,10 +1740,15 @@ namespace infinit
       this->credentials_add("gcs", std::move(a));
     }
 
-    std::vector<std::unique_ptr<Credentials>>
+    std::vector<
+      std::unique_ptr<
+        OAuthCredentials,
+        std::default_delete<infinit::Credentials>
+        >
+      >
     credentials_gcs() const
     {
-      return this->credentials("gcs");
+      return this->credentials<OAuthCredentials>("gcs");
     }
 
     std::unique_ptr<OAuthCredentials, std::default_delete<infinit::Credentials>>
