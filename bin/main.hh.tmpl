@@ -2771,15 +2771,25 @@ beyond_delete(std::string const& type,
 
 inline
 static
+std::string
+self_user_name(boost::program_options::variables_map const& args)
+{
+  static auto const env  = elle::os::getenv("INFINIT_USER", "");
+  if (!_as_user && !env.empty())
+    _as_user = env;
+  if (_as_user)
+    return _as_user.get();
+  return elle::system::username();
+}
+
+inline
+static
 infinit::User
 self_user(infinit::Infinit const& ifnt,
           boost::program_options::variables_map const& args,
           bool private_mandatory = true)
 {
-  static auto const env  = elle::os::getenv("INFINIT_USER", "");
-  if (!_as_user && !env.empty())
-    _as_user = env;
-  auto res = ifnt.user_get(_as_user);
+  auto res = ifnt.user_get(self_user_name(args));
   if (private_mandatory && !res.private_key)
   {
     throw elle::Error(
