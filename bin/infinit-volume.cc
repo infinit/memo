@@ -308,14 +308,27 @@ COMMAND(run)
   if (!flag(args, option_disable_mac_utf8))
     fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
 #endif
+  auto volume = ifnt.volume_get(name);
+  auto mountpoint = optional(args, "mountpoint");
+  if (!mountpoint)
+    mountpoint = volume.mountpoint;
+  if (mountpoint)
+  {
+    if (boost::filesystem::exists(mountpoint.get()))
+    {
+      if (!boost::filesystem::is_directory(mountpoint.get()))
+        throw (elle::Error("mountpoint is not a directory"));
+      if (!boost::filesystem::is_empty(mountpoint.get()))
+        throw elle::Error("mountpoint is not empty");
+    }
+  }
   if (args.count("fuse-option"))
   {
-    if (!args.count("mountpoint"))
+    if (mountpoint)
       throw CommandLineError("FUSE options require the volume to be mounted");
     for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
       fuse_options.push_back(opt);
   }
-  auto volume = ifnt.volume_get(name);
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
   bool cache = flag(args, option_cache);
@@ -414,7 +427,6 @@ COMMAND(run)
     }
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto mountpoint = optional(args, "mountpoint");
     auto fs = volume.run(std::move(model),
                          mountpoint,
                          flag(args, "readonly")
