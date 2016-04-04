@@ -567,7 +567,7 @@ COMMAND(sanity)
     throw elle::Error("Please check your configuration");
 }
 
-COMMAND(all)
+COMMAND(run_all)
 {
   bool sane = true;
   sane &= _sanity(args, boost::none);
@@ -586,7 +586,7 @@ main(int argc, char** argv)
     {
       "all",
       "Perform all possible checks",
-      &all,
+      &run_all,
     },
     {
       "networking",
@@ -595,12 +595,12 @@ main(int argc, char** argv)
     },
     {
       "sanity",
-      "Sanity checks",
+      "Perform sanity checks",
       &sanity,
     },
     {
       "integrity",
-      "Integrity checks",
+      "Perform integrity checks",
       &integrity,
     }
   };
