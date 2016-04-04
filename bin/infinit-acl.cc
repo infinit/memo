@@ -184,8 +184,11 @@ enforce_in_mountpoint(std::string const& path, bool fallback)
 {
   if (!boost::filesystem::exists(path))
     throw elle::Error(elle::sprintf("path does not exist: %s", path));
-  auto mountpoint = path_mountpoint(path, fallback);
-  if (!mountpoint || mountpoint.get().empty())
+  // We can only read attributes of files we have permissions for so use path's
+  // parent.
+  auto parent = boost::filesystem::path(path).parent_path();
+  auto parent_mountpoint = path_mountpoint(parent.string(), fallback);
+  if (!parent_mountpoint || parent_mountpoint.get().empty())
     throw elle::Error(elle::sprintf("%s not in an Infinit volume", path));
 }
 
@@ -236,6 +239,8 @@ recursive_action(A action, std::string const& path, Args ... args)
     throw elle::Error(elle::sprintf("%s : %s", path, erc.message()));
   for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
   {
+    // Ensure that we have permission on the file.
+    boost::filesystem::exists(it->path(), erc);
     if (erc == boost::system::errc::permission_denied)
     {
       std::cout << "permission denied, skipping " << it->path().string()
