@@ -5,7 +5,7 @@ At the highest level, Infinit is a file system platform that allows for creating
 
 However, at the technology level, Infinit is a set of independent layers that can be used to develop powerful applications, create block-level data stores and more.
 
-<br><img src="${url('images/schema-technology.png')}" alt="Infinit Technology"><br>
+<br><img src="${url('images/schema-technology-infinit.png')}" alt="Infinit Technology"><br>
 
 <p class="github"><a href="https://github.com/infinit/elle" target="_blank"><span class="star">soon on github</span></a></p>
 Elle
@@ -132,6 +132,6 @@ Note that one can configure a device to use a limited amount of local storage ca
 
 Another problem with most cloud storage providers is that the files are not encrypted, leaving the user with no choice but to trust the cloud storage provider. Infinit has been conceived with the assumption that no storage provider can be trusted. In addition to relying on fault-tolerant algorithms, Infinit makes use of strong encryption. Whenever a document is edited for instance, the file is cut into chunks, every chunk is encrypted and then distributed and replicated throughout the distributed hash table. Every key used for encrypting a block is unique and known to the file owner only (along with the users who have been granted access).
 
-<br><img src="${url('images/schema-encryption.png')}" alt="Infinit Encryption Schema"><br>
+<br><a target="_blank" href="${url('images/schema-technology-dht-overlay@2x.png')}"><img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema" title="Click to see larger image"></a><br>
 
 Finally, the file system layer also provides access control (without the use of a centralized server), versioning and other file-system-related features.

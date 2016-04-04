@@ -209,8 +209,6 @@ The binary _infinit-storage_ is used for this purpose. The option `--filesystem`
 Created storage "local".
 </code></pre>
 
-If you get an error similar to `locale::facet::_S_create_c_locale name not valid`, you need to pass `LC_ALL=C` in your environment (just prepend `LC_ALL=C` to your command line).
-
 ### Create a network
 
 Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.
