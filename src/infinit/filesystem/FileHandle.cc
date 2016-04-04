@@ -129,12 +129,18 @@ namespace infinit
         {
           ELLE_DEBUG("obtained block %s from cache", start_block);
           reactor::wait(it->second.ready);
-          if (!it->second.block) // FIXME
-            throw rfs::Error(EIO, elle::sprintf("lookahead failed"));
-          block = it->second.block;
-          it->second.last_use = std::chrono::high_resolution_clock::now();
+          if (!it->second.block)
+          {
+            ELLE_WARN("lookahead failure on block %s", start_block);
+            _blocks.erase(start_block);
+          }
+          else
+          {
+            block = it->second.block;
+            it->second.last_use = std::chrono::high_resolution_clock::now();
+          }
         }
-        else
+        if (!block)
         {
           block = _block_at(start_block, false);
           if (!block)

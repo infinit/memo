@@ -1665,6 +1665,35 @@ ELLE_TEST_SCHEDULED(write_unlink)
     BOOST_CHECK_THROW(root_2->child("file")->stat(&st), elle::Error);
 }
 
+ELLE_TEST_SCHEDULED(prefetcher_failure)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  ::Overlay* o = dynamic_cast< ::Overlay*>(client.dht.dht->overlay().get());
+  auto root = client.fs->path("/");
+  BOOST_CHECK(o);
+  root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  // grow to 2 data blocks
+  root->child("file")->truncate(1024*1024*3);
+  auto fat = root->child("file")->getxattr("user.infinit.fat");
+  std::cerr << "-\n" << fat << std::endl;
+  std::stringstream ss(fat);
+  std::string address1, address2, address3;
+  std::string skip;
+  ss >> skip >> skip >> skip >> address1 >> skip >> address2 >> skip >> address3;
+  auto a2 = infinit::model::Address::from_string(address2.substr(2));
+  auto a3 = infinit::model::Address::from_string(address3.substr(2));
+  o->fail_addresses().insert(a2);
+  o->fail_addresses().insert(a3);
+  auto handle = root->child("file")->open(O_RDWR, 0);
+  char buf[16384];
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192), 16384);
+  reactor::sleep(200_ms);
+  o->fail_addresses().clear();
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024 + 8192), 16384);
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024*2 + 8192), 16384);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1685,4 +1714,5 @@ ELLE_TEST_SUITE()
 #endif
   suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
   suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
+  suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
 }
