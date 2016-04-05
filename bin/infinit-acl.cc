@@ -180,16 +180,18 @@ path_mountpoint(std::string const& path, bool fallback)
 
 static
 void
-enforce_in_mountpoint(std::string const& path, bool fallback)
+enforce_in_mountpoint(std::string const& path_, bool fallback)
 {
+  auto path = boost::filesystem::absolute(path_);
   if (!boost::filesystem::exists(path))
-    throw elle::Error(elle::sprintf("path does not exist: %s", path));
-  // We can only read attributes of files we have permissions for so use path's
-  // parent.
-  auto parent = boost::filesystem::path(path).parent_path();
-  auto parent_mountpoint = path_mountpoint(parent.string(), fallback);
-  if (!parent_mountpoint || parent_mountpoint.get().empty())
-    throw elle::Error(elle::sprintf("%s not in an Infinit volume", path));
+    throw elle::Error(elle::sprintf("path does not exist: %s", path_));
+  for (auto const& p: {path, path.parent_path()})
+  {
+    auto mountpoint = path_mountpoint(p.string(), fallback);
+    if (mountpoint && !mountpoint.get().empty())
+      return;
+  }
+  throw elle::Error(elle::sprintf("%s not in an Infinit volume", path_));
 }
 
 static
