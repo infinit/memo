@@ -878,15 +878,17 @@ namespace infinit
           {
             elle::serialization::Context context;
             context.set<Doughnut*>(&this->doughnut());
+            context.set<elle::Version>(
+              elle_serialization_version(this->doughnut().version()));
             auto data =
               elle::serialization::binary::deserialize<BlockOrPaxos>(
                 this->storage()->get(address), true, context);
-            // FIXME: this will trigger the retry with an immutable block type
-            // in Consensus::fetch
             if (!data.block)
             {
-              ELLE_TRACE("%s: fetch: no data block", *this);
-              throw MissingBlock(address);
+              ELLE_TRACE("%s: plain fetch called on mutable block", *this);
+              throw elle::Error(
+                elle::sprintf(
+                  "plain fetch called on mutable block %f", address));
             }
             return std::unique_ptr<blocks::Block>(data.block.release());
           }
