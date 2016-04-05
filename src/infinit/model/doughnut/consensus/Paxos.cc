@@ -991,9 +991,13 @@ namespace infinit
             elle::IOStream s(previous_buffer.istreambuf());
             typename elle::serialization::binary::SerializerIn input(s);
             input.set_context<Doughnut*>(&this->doughnut());
+            input.set_context<elle::Version>(
+              elle_serialization_version(this->doughnut().version()));
             auto stored = input.deserialize<BlockOrPaxos>();
             if (!stored.block)
-              ELLE_WARN("No block, cannot validate update");
+              throw ValidationFailed(
+                elle::sprintf("storing immutable block on mutable block %f",
+                              block.address()));
             else
             {
               auto vr = stored.block->validate(this->doughnut(), block);
