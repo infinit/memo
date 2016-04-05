@@ -448,8 +448,6 @@ namespace infinit
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
               if (!stored.paxos)
-                // FIXME: this will trigger the retry with a mutable block
-                // type in Consensus::fetch
                 throw MissingBlock(address);
               return this->_load(address, std::move(*stored.paxos));
             }
@@ -1028,13 +1026,12 @@ namespace infinit
         void
         Paxos::LocalPeer::remove(Address address, blocks::RemoveSignature rs)
         {
+          ELLE_TRACE_SCOPE("%s: remove %f", this, address);
           if (this->doughnut().version() >= elle::Version(0, 4, 0))
           {
-            auto it = this->_addresses.find(address);
-            ELLE_TRACE("paxos::remove, known=%s", it != this->_addresses.end());
-            if (it != this->_addresses.end())
+            try
             {
-              auto& decision = this->_addresses.at(address);
+              auto& decision = this->_load(address);
               auto& paxos = decision.paxos;
               if (auto highest = paxos.current_value())
               {
@@ -1050,8 +1047,8 @@ namespace infinit
               else
                 ELLE_WARN("No paxos accepted, cannot validate removal");
             }
-            else
-            { // immutable block
+            catch (MissingBlock const&) // Immutable block, maybe
+            {
               elle::Buffer buffer;
               try
               {
@@ -1063,22 +1060,22 @@ namespace infinit
               }
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
+              context.set<elle::Version>(
+                elle_serialization_version(this->doughnut().version()));
               auto stored =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   buffer, true, context);
-              if (!stored.block)
-                ELLE_WARN("No paxos and no block, cannot validate removal");
-              else
-              {
-                auto& previous = *stored.block;
-                auto valres = previous.validate_remove(this->doughnut(), rs);
-                ELLE_TRACE("Immutable block remove validation gave %s", valres);
-                if (!valres)
-                  if (valres.conflict())
-                    throw Conflict(valres.reason(), previous.clone());
-                  else
-                    throw ValidationFailed(valres.reason());
-              }
+              // This should never happen, has store.paxos must be null,
+              // otherwise we would have treated it as a mutable block.
+              ELLE_ASSERT(stored.block);
+              auto& previous = *stored.block;
+              auto valres = previous.validate_remove(this->doughnut(), rs);
+              ELLE_TRACE("Immutable block remove validation gave %s", valres);
+              if (!valres)
+                if (valres.conflict())
+                  throw Conflict(valres.reason(), previous.clone());
+                else
+                  throw ValidationFailed(valres.reason());
             }
           }
           this->_remove(address);
