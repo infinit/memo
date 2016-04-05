@@ -899,6 +899,8 @@ namespace infinit
             {
               elle::serialization::Context context;
               context.set<Doughnut*>(&this->doughnut());
+              context.set<elle::Version>(
+                elle_serialization_version(this->doughnut().version()));
               auto data =
                 elle::serialization::binary::deserialize<BlockOrPaxos>(
                   this->storage()->get(address), true, context);
