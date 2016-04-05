@@ -724,6 +724,17 @@ ELLE_TEST_SCHEDULED(wrong_quorum)
   }
 }
 
+namespace tests_paxos
+{
+  ELLE_TEST_SCHEDULED(CHB_no_peer)
+  {
+    DHT dht(storage = nullptr);
+    auto chb = dht.dht->make_block<blocks::ImmutableBlock>();
+    BOOST_CHECK_THROW(dht.dht->store(*chb, infinit::model::STORE_INSERT),
+                      elle::Error);
+  }
+}
+
 ELLE_TEST_SCHEDULED(cache, (bool, paxos))
 {
   dht::consensus::Cache* cache = nullptr;
@@ -1407,6 +1418,10 @@ ELLE_TEST_SUITE()
   }
 #undef TEST
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
+  {
+    using namespace tests_paxos;
+    paxos->add(BOOST_TEST_CASE(CHB_no_peer));
+  }
   {
     boost::unit_test::test_suite* rebalancing = BOOST_TEST_SUITE("rebalancing");
     paxos->add(rebalancing);

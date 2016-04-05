@@ -1173,8 +1173,8 @@ namespace infinit
             }
             if (peers.empty())
               throw elle::Error(
-                elle::sprintf("No peer available for store %s %x",
-                  op == overlay::OP_INSERT ? "insert" : "update",
+                elle::sprintf("no peer available for %s of %f",
+                  op == overlay::OP_INSERT ? "insertion" : "update",
                   b->address()));
             ELLE_DEBUG("owners: %f", peers);
             // FIXME: client is persisted on conflict resolution, hence the
@@ -1232,6 +1232,7 @@ namespace infinit
           }
           else
           {
+            int reached = 0;
             elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
             {
               for (auto wpeer: owners)
@@ -1240,9 +1241,17 @@ namespace infinit
                 if (!peer)
                   ELLE_WARN("peer was deleted while storing");
                 else
+                {
                   peer->store(*b, mode);
+                  ++reached;
+                }
               }
             };
+            if (reached == 0)
+              throw elle::Error(
+                elle::sprintf("no peer available for %s of %f",
+                              op == overlay::OP_INSERT ? "insertion" : "update",
+                              b->address()));
           }
         }
 
