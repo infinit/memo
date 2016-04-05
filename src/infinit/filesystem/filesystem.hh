@@ -153,6 +153,10 @@ namespace infinit
                  model::Address address,
                  boost::optional<int> local_version = {},
                  Node* node = nullptr);
+    NAMED_ARGUMENT(volume_name);
+    NAMED_ARGUMENT(model);
+    NAMED_ARGUMENT(root_block_cache_dir);
+    NAMED_ARGUMENT(mountpoint);
     /** Filesystem using a Block Storage as backend.
     * Directory: nodes are serialized, and contains name, stat() and block
     *            address of the directory content
@@ -166,6 +170,8 @@ namespace infinit
     public:
       using clock = std::chrono::high_resolution_clock;
       static clock::time_point now();
+      template <typename ... Args>
+      FileSystem(Args&& ... args);
       FileSystem(
         std::string const& volume_name,
         std::shared_ptr<infinit::model::Model> model,
@@ -248,5 +254,7 @@ namespace infinit
     };
   }
 }
+
+# include <infinit/filesystem/Filesystem.hxx>
 
 #endif
