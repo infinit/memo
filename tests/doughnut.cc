@@ -492,6 +492,48 @@ ELLE_TEST_SCHEDULED(UB, (bool, paxos))
     dhtb->store(ubf, infinit::model::STORE_INSERT);
 }
 
+namespace removal
+{
+  ELLE_TEST_SCHEDULED(serialize_ACB_remove, (bool, paxos))
+  {
+    Memory::Blocks dht_storage;
+    auto dht_id = infinit::model::Address::random();
+    infinit::model::Address address;
+    // Store signature removal in the first run so the second run of the DHT
+    // does not fetch the block before removing it. This tests the block is
+    // still reloaded without a previous fetch.
+    infinit::model::blocks::RemoveSignature rs_bad;
+    infinit::model::blocks::RemoveSignature rs_good;
+    ELLE_LOG("store block")
+    {
+      DHT dht(id = dht_id,
+              storage = elle::make_unique<Memory>(dht_storage));
+      auto b = dht.dht->make_block<blocks::ACLBlock>();
+      address = b->address();
+      b->data(std::string("removal/serialize_ACB_remove"));
+      dht.dht->store(*b, infinit::model::STORE_INSERT);
+      rs_bad = b->sign_remove(*dht.dht);
+      b->data([] (elle::Buffer& b) { b.append("_", 1); });
+      dht.dht->store(*b, infinit::model::STORE_UPDATE);
+      rs_good = b->sign_remove(*dht.dht);
+    }
+    ELLE_LOG("fail removing block")
+    {
+      DHT dht(id = dht_id,
+              storage = elle::make_unique<Memory>(dht_storage));
+      BOOST_CHECK_THROW(dht.dht->remove(address, rs_bad),
+                        infinit::model::doughnut::Conflict);
+    }
+    ELLE_LOG("remove block")
+    {
+      DHT dht(id = dht_id,
+              storage = elle::make_unique<Memory>(dht_storage));
+      dht.dht->remove(address, rs_good);
+    }
+    BOOST_CHECK(!contains(dht_storage, address));
+  }
+}
+
 class AppendConflictResolver
   : public infinit::model::ConflictResolver
 {
@@ -1334,11 +1376,13 @@ ELLE_TEST_SUITE()
   suite.add(paxos);
 #define TEST(Name)                              \
   {                                             \
-    auto Name = boost::bind(::Name, true);      \
+    auto _Name = boost::bind(Name, true);       \
+    auto Name = _Name;                          \
     paxos->add(BOOST_TEST_CASE(Name));          \
   }                                             \
   {                                             \
-    auto Name = boost::bind(::Name, false);     \
+    auto _Name = boost::bind(Name, false);      \
+    auto Name = _Name;                          \
     plain->add(BOOST_TEST_CASE(Name));          \
   }
   TEST(CHB);
@@ -1351,6 +1395,16 @@ ELLE_TEST_SUITE()
   TEST(restart);
   TEST(cache);
   TEST(serialize);
+  {
+    boost::unit_test::test_suite* remove_plain = BOOST_TEST_SUITE("removal");
+    plain->add(remove_plain);
+    boost::unit_test::test_suite* remove_paxos = BOOST_TEST_SUITE("removal");
+    paxos->add(remove_paxos);
+    auto* plain = remove_plain;
+    auto* paxos = remove_paxos;
+    using namespace removal;
+    TEST(serialize_ACB_remove);
+  }
 #undef TEST
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
   {
