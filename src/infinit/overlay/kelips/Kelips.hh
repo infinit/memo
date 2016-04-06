@@ -266,6 +266,7 @@ namespace infinit
         void
         kelipsGet(Address file, int n, bool local_override, int attempts,
           bool query_node,
+          bool fast_mode, // return as soon as we have a result
           std::function<void(PeerLocation)> yield);
         std::vector<PeerLocation>
         kelipsPut(Address file, int n);

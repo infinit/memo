@@ -1363,7 +1363,10 @@ namespace infinit
                       boost::optional<int> local_version)
         {
           auto owners =
-            this->_owners(address, this->_factor, overlay::OP_FETCH);
+            this->_owners(address,
+                          this->_factor,
+                          address.mutable_block() ?
+                            overlay::OP_FETCH_FAST : overlay::OP_FETCH);
           PaxosClient::Peers peers;
           for (auto peer: owners)
             peers.push_back(

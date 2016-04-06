@@ -26,7 +26,8 @@ namespace infinit
       OP_FETCH,
       OP_INSERT,
       OP_UPDATE,
-      OP_REMOVE
+      OP_REMOVE,
+      OP_FETCH_FAST, ///< Fetch faster but can return a subset of requested nodes
     };
 
     class Overlay

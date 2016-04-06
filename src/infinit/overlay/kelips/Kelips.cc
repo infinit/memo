@@ -2470,19 +2470,22 @@ namespace infinit
         }
         else
         {
-          kelipsGet(file, n, false, -1, false, yield);
+          kelipsGet(file, n, false, -1, false,
+                    op == infinit::overlay::OP_FETCH_FAST,
+                    yield);
         }
       }
 
       void
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
                       bool query_node,
+                      bool fast_mode,
                       std::function <void(PeerLocation)> yield)
       {
         ELLE_TRACE_SCOPE("%s: get %s", *this, file);
         if (attempts == -1)
           attempts = _config.query_get_retries;
-        auto f = [this,file,n,local_override, attempts, yield, query_node]() {
+        auto f = [this,file,n,local_override, attempts, yield, query_node, fast_mode]() {
           std::set<Address> result_set;
           packet::GetFileRequest r;
           r.sender = _self;
@@ -2505,7 +2508,7 @@ namespace infinit
               [&](std::pair<const infinit::model::Address, File> const& f) {
                 return f.second.home_node == _self;
               });
-            if (it_us != its.second && (n == 1 || local_override))
+            if (it_us != its.second && (n == 1 || local_override || fast_mode))
             {
               ELLE_DEBUG("get satifsfied locally");
               yield(PeerLocation(Address::null,
@@ -2517,7 +2520,7 @@ namespace infinit
             addLocalResults(&r, &yield);
             for (auto const& e: r.result)
               result_set.insert(e.first);
-            if (result_set.size() >= unsigned(n))
+            if (result_set.size() >= unsigned(fast_mode ? 1 : n))
             { // Request completed locally
               ELLE_DEBUG("Driver exiting");
               bench_localresult.add(1);
@@ -2585,7 +2588,7 @@ namespace infinit
                 if (result_set.insert(e.first).second)
                   yield(PeerLocation{e.first, e.second});
               }
-              if (signed(result_set.size()) >= n)
+              if (signed(result_set.size()) >= (fast_mode ? 1 : n))
                 break;
             }
           }
@@ -3029,7 +3032,7 @@ namespace infinit
         // Perform a lookup for the node
         boost::optional<PeerLocation> result;
         auto address = Address::from_string(id.substr(2));
-        kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
+        kelipsGet(address, 1, false, -1, true, false, [&](PeerLocation p)
           {
             result = p;
           });
@@ -3251,7 +3254,7 @@ namespace infinit
           return this->local();
         auto async_lookup = [this, address]() {
           boost::optional<PeerLocation> result;
-          kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
+          kelipsGet(address, 1, false, -1, true, false, [&](PeerLocation p)
             {
               result = p;
             });
@@ -3277,7 +3280,7 @@ namespace infinit
             throw elle::Error(elle::sprintf("Node %s not found", address));
         }
         boost::optional<PeerLocation> result;
-        kelipsGet(address, 1, false, -1, true, [&](PeerLocation p)
+        kelipsGet(address, 1, false, -1, true, false, [&](PeerLocation p)
           {
             result = p;
           });
@@ -3447,7 +3450,7 @@ namespace infinit
               Address addr = to_scan.back();
               to_scan.pop_back();
               std::vector<PeerLocation> res;
-              kelipsGet(addr, factor, false, 3, false, [&](PeerLocation pl) {
+              kelipsGet(addr, factor, false, 3, false, false, [&](PeerLocation pl) {
                   res.push_back(pl);
               });
               if (counts.size() <= res.size())
