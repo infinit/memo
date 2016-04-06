@@ -55,6 +55,11 @@ namespace infinit
           void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
+        public:
+          static
+          std::vector<boost::filesystem::path>
+          entries(boost::filesystem::path const& root);
+
           /*----------.
           | Operation |
           `----------*/
