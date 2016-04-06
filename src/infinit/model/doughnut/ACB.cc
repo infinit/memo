@@ -878,24 +878,41 @@ namespace infinit
       BaseACB<Block>::_validate_remove(Model& model,
                                        blocks::RemoveSignature const& rs) const
       {
+        ELLE_DUMP_SCOPE("%s: check %f validates removal", this, rs);
         if (!rs.block)
-          return blocks::ValidationResult::failure("Expected a block in RemoveSignature");
+        {
+          ELLE_DUMP("remove signature has no block");
+          return blocks::ValidationResult::failure(
+            "remove signature has no block");
+        }
         auto mb = dynamic_cast<Self*>(rs.block.get());
         if (!mb)
-          return blocks::ValidationResult::failure("Signature is not a mutable block");
+        {
+          ELLE_DUMP("remove signature block is not mutable");
+          return blocks::ValidationResult::failure(
+            "remove signature block is not mutable");
+        }
         if (!mb->deleted())
-          return blocks::ValidationResult::failure("Block not marked for deletion");
+        {
+          ELLE_DUMP("remove signature block's not marked for deletion");
+          return blocks::ValidationResult::failure(
+            "remove signature block's not marked for deletion");
+        }
         // FIXME: calling validate can change our address, and make
         // the validate(other) below fail
         auto valid = rs.block->validate(model);
         if (!valid)
+        {
+          ELLE_DUMP("remove signature block's is not valid");
           return valid;
-
+        }
         if (this->version() >= mb->version())
+        {
+          ELLE_DUMP("removal version %s is not greater than local version %s",
+                    mb->version(), this->version());
           return blocks::ValidationResult::conflict("invalid version");
-
-        valid = dynamic_cast<const blocks::Block*>(this)->validate(model, *mb);
-        if (!valid)
+        }
+        if (!(valid = this->blocks::Block::validate(model, *mb)))
           return valid;
         return blocks::ValidationResult::success();
       }

@@ -1069,7 +1069,6 @@ namespace infinit
               ELLE_ASSERT(stored.block);
               auto& previous = *stored.block;
               auto valres = previous.validate_remove(this->doughnut(), rs);
-              ELLE_TRACE("Immutable block remove validation gave %s", valres);
               if (!valres)
                 if (valres.conflict())
                   throw Conflict(valres.reason(), previous.clone());
