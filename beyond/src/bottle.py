@@ -238,7 +238,7 @@ class Bottle(bottle.Bottle):
     if delay > 300:
       raise Response(401, {
         'error': 'user/unauthorized',
-        'reason': 'too late: request was issued %ss ago' % delay,
+        'reason': 'request was issued %ss ago, check system clock' % delay,
       })
     rawk = user.public_key['rsa']
     der = b64decode(rawk.encode('latin-1'))
