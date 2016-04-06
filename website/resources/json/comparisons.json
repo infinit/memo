@@ -181,7 +181,7 @@
       "interoperability": "Protocols"
     },
     "links": {
-      "wikipedia": "https://en.wikipedia.org/wiki/Coda_(File_system)"
+      "wikipedia": "https://en.wikipedia.org/wiki/Coda_(file_system)"
     },
     "similar_to": ["hammer", "moosefs", "xtreemfs", "lustre", "hdfs", "nfs"]
   },
@@ -332,7 +332,7 @@
       "interoperability": "Protocols"
     },
     "links": {
-      "wikipedia": "https://en.wikipedia.org/wiki/Lustre_(File_system)"
+      "wikipedia": "https://en.wikipedia.org/wiki/Lustre_(file_system)"
     },
     "similar_to": ["coda", "hammer", "moosefs", "xtreemfs", "hdfs", "nfs"]
   },
