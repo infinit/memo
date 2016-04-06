@@ -502,8 +502,8 @@ namespace removal
     // Store signature removal in the first run so the second run of the DHT
     // does not fetch the block before removing it. This tests the block is
     // still reloaded without a previous fetch.
-    infinit::model::blocks::RemoveSignature rs_bad;
-    infinit::model::blocks::RemoveSignature rs_good;
+    elle::Buffer rs_bad;
+    elle::Buffer rs_good;
     ELLE_LOG("store block")
     {
       DHT dht(id = dht_id,
@@ -512,23 +512,33 @@ namespace removal
       address = b->address();
       b->data(std::string("removal/serialize_ACB_remove"));
       dht.dht->store(*b, infinit::model::STORE_INSERT);
-      rs_bad = b->sign_remove(*dht.dht);
+      rs_bad =
+        elle::serialization::binary::serialize(b->sign_remove(*dht.dht));
       b->data([] (elle::Buffer& b) { b.append("_", 1); });
       dht.dht->store(*b, infinit::model::STORE_UPDATE);
-      rs_good = b->sign_remove(*dht.dht);
+      rs_good =
+        elle::serialization::binary::serialize(b->sign_remove(*dht.dht));
     }
     ELLE_LOG("fail removing block")
     {
       DHT dht(id = dht_id,
               storage = elle::make_unique<Memory>(dht_storage));
-      BOOST_CHECK_THROW(dht.dht->remove(address, rs_bad),
-                        infinit::model::doughnut::Conflict);
+      elle::serialization::Context ctx;
+      ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
+      auto sig = elle::serialization::binary::deserialize<
+        blocks::RemoveSignature>(rs_bad, true, ctx);
+      BOOST_CHECK_THROW(
+        dht.dht->remove(address, sig), infinit::model::doughnut::Conflict);
     }
     ELLE_LOG("remove block")
     {
       DHT dht(id = dht_id,
               storage = elle::make_unique<Memory>(dht_storage));
-      dht.dht->remove(address, rs_good);
+      elle::serialization::Context ctx;
+      ctx.set<infinit::model::doughnut::Doughnut*>(dht.dht.get());
+      auto sig = elle::serialization::binary::deserialize<
+        blocks::RemoveSignature>(rs_good, true, ctx);
+      dht.dht->remove(address, sig);
     }
     BOOST_CHECK(!contains(dht_storage, address));
   }
