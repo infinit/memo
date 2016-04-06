@@ -160,6 +160,7 @@ namespace infinit
     void
     Model::remove(Address address)
     {
+      ELLE_TRACE_SCOPE("%s: remove %f", this, address);
       auto block = this->fetch(address);
       auto rs = block->sign_remove(*this);
       this->remove(address, std::move(rs));
