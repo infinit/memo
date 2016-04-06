@@ -395,8 +395,35 @@ namespace infinit
         }
         return std::move(res);
       }
+
       static const elle::serialization::Hierarchy<model::ConflictResolver>::
       Register<GroupConflictResolver> _register_gcr("gcr");
     }
+  }
+}
+
+namespace std
+{
+  std::ostream&
+  operator << (std::ostream& out,
+               infinit::model::doughnut::GroupConflictResolver::Action action)
+  {
+    using namespace infinit::model::doughnut;
+    switch (action)
+    {
+      case GroupConflictResolver::Action::add_member:
+        out << "add member";
+        break;
+      case GroupConflictResolver::Action::remove_member:
+        out << "remove member";
+        break;
+      case GroupConflictResolver::Action::add_admin:
+        out << "add admin";
+        break;
+      case GroupConflictResolver::Action::remove_admin:
+        out << "remove admin";
+        break;
+    }
+    return out;
   }
 }

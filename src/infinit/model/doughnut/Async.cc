@@ -40,15 +40,6 @@ namespace infinit
       namespace consensus
       {
         struct OpAddressOnly{};
-        std::ostream&
-        operator <<(std::ostream& o, Async::Op const& op)
-        {
-          if (op.mode)
-            elle::fprintf(o, "Op::store(%s, %s)", op.index, *op.block);
-          else
-            elle::fprintf(o, "Op::remove(%s)", op.index);
-          return o;
-        }
 
         Async::Op::Op(elle::serialization::SerializerIn& ser)
         {
@@ -528,5 +519,19 @@ namespace infinit
         {}
       }
     }
+  }
+}
+
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream& o,
+              infinit::model::doughnut::consensus::Async::Op const& op)
+  {
+    if (op.mode)
+      elle::fprintf(o, "Op::store(%s, %s)", op.index, *op.block);
+    else
+      elle::fprintf(o, "Op::remove(%s)", op.index);
+    return o;
   }
 }

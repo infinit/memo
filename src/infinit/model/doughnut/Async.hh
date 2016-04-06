@@ -130,4 +130,10 @@ namespace infinit
   }
 }
 
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream& o,
+              infinit::model::doughnut::consensus::Async::Op const& op);
+}
 #endif

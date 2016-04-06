@@ -586,3 +586,44 @@ namespace infinit
     }
   }
 }
+
+namespace std
+{
+  std::ostream&
+  operator <<(std::ostream& out,
+              infinit::filesystem::EntryType entry)
+  {
+    switch (entry)
+    {
+      case infinit::filesystem::EntryType::file:
+        out << "file";
+        break;
+      case infinit::filesystem::EntryType::directory:
+        out << "directory";
+        break;
+      case infinit::filesystem::EntryType::symlink:
+        out << "symlink";
+        break;
+    }
+    return out;
+  }
+
+  std::ostream&
+  operator <<(std::ostream& out,
+              infinit::filesystem::OperationType operation)
+  {
+    switch (operation)
+    {
+      case infinit::filesystem::OperationType::insert:
+        out << "insert";
+        break;
+      case infinit::filesystem::OperationType::update:
+        out << "update";
+        break;
+      case infinit::filesystem::OperationType::remove:
+        out << "remove";
+        break;
+    }
+    return out;
+  }
+}
