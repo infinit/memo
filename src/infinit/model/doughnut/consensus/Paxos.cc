@@ -1037,7 +1037,6 @@ namespace infinit
               {
                 auto& v = highest->value.get<std::shared_ptr<blocks::Block>>();
                 auto valres = v->validate_remove(this->doughnut(), rs);
-                ELLE_TRACE("mutable block remove validation gave %s", valres);
                 if (!valres)
                   if (valres.conflict())
                     throw Conflict(valres.reason(), v->clone());
@@ -1299,8 +1298,6 @@ namespace infinit
             ELLE_TRACE("could not find any owner for %s", address);
             throw MissingBlock(address);
           }
-          else
-            ELLE_DEBUG("owners: %s", peers);
           while (true)
             try
             {
