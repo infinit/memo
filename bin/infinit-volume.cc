@@ -921,6 +921,8 @@ main(int argc, char** argv)
     { "async", bool_switch(), "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
     { "daemon,d", bool_switch(), "run as a background daemon" },
+    { "fuse-option", value<std::vector<std::string>>()->multitoken(),
+      "option to pass directly to FUSE" },
 #endif
     option_cache,
     option_cache_ram_size,
@@ -942,10 +944,6 @@ main(int argc, char** argv)
     option_port,
   };
   std::vector<Mode::OptionDescription> options_run_mount_hidden = {
-#ifndef INFINIT_WINDOWS
-    { "fuse-option", value<std::vector<std::string>>()->multitoken(),
-      "option to pass directly to FUSE" },
-#endif
 #ifdef INFINIT_MACOSX
     option_disable_mac_utf8,
 #endif
