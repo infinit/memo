@@ -864,63 +864,67 @@ namespace infinit
     std::string
     Directory::getxattr(std::string const& key)
     {
-      ELLE_TRACE_SCOPE("%s: getxattr %s", *this, key);
-      auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
-        this->_owner.block_store());
-      if (auto special = xattr_special(key))
-      {
-        if (*special == "auth")
+      return umbrella(
+        [&] () -> std::string
         {
-          auto block = elle::cast<ACLBlock>::runtime(
-            this->_owner.block_store()->fetch(this->_data->address()));
-          return perms_to_json(*this->_owner.block_store(), *block);
-        }
-        else if (*special == "auth.inherit")
-        {
-          return this->_data->_inherit_auth ? "true" : "false";
-        }
-        else if (*special == "sync")
-        {
-          auto c = dht->consensus().get();
-          auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
-          if (!a)
+          ELLE_TRACE_SCOPE("%s: getxattr %s", *this, key);
+          auto dht = std::dynamic_pointer_cast<model::doughnut::Doughnut>(
+            this->_owner.block_store());
+          if (auto special = xattr_special(key))
           {
-            auto cache = dynamic_cast<model::doughnut::consensus::Cache*>(c);
-            if (!cache)
-              return "no async";
-            a = dynamic_cast<model::doughnut::consensus::Async*>(
-              cache->backend().get());
-            if (!a)
-              return "no async behind cache";
-          }
-          a->sync();
-          return "ok";
-        }
-        else if (special->find("group.list.") == 0)
-        {
-          std::string value = special->substr(strlen("group.list."));
-          return umbrella(
-            [&]
+            if (*special == "auth")
             {
-              model::doughnut::Group g(*dht, value);
-              elle::json::Object o;
-              auto members = g.list_members();
-              elle::json::Array v;
-              for (auto const& m: members)
-                v.push_back(m->name());
-              o["members"] = v;
-              members = g.list_admins();
-              elle::json::Array va;
-              for (auto const& m: members)
-                va.push_back(m->name());
-              o["admins"] = va;
-              std::stringstream ss;
-              elle::json::write(ss, o, true);
-              return ss.str();
-            });
-        }
-      }
-      return Node::getxattr(key);
+              auto block = elle::cast<ACLBlock>::runtime(
+                this->_owner.block_store()->fetch(this->_data->address()));
+              return perms_to_json(*this->_owner.block_store(), *block);
+            }
+            else if (*special == "auth.inherit")
+            {
+              return this->_data->_inherit_auth ? "true" : "false";
+            }
+            else if (*special == "sync")
+            {
+              auto c = dht->consensus().get();
+              auto a = dynamic_cast<model::doughnut::consensus::Async*>(c);
+              if (!a)
+              {
+                auto cache = dynamic_cast<model::doughnut::consensus::Cache*>(c);
+                if (!cache)
+                  return "no async";
+                a = dynamic_cast<model::doughnut::consensus::Async*>(
+                  cache->backend().get());
+                if (!a)
+                  return "no async behind cache";
+              }
+              a->sync();
+              return "ok";
+            }
+            else if (special->find("group.list.") == 0)
+            {
+              std::string value = special->substr(strlen("group.list."));
+              return umbrella(
+                [&]
+                {
+                  model::doughnut::Group g(*dht, value);
+                  elle::json::Object o;
+                  auto members = g.list_members();
+                  elle::json::Array v;
+                  for (auto const& m: members)
+                    v.push_back(m->name());
+                  o["members"] = v;
+                  members = g.list_admins();
+                  elle::json::Array va;
+                  for (auto const& m: members)
+                    va.push_back(m->name());
+                  o["admins"] = va;
+                  std::stringstream ss;
+                  elle::json::write(ss, o, true);
+                  return ss.str();
+                });
+            }
+          }
+          return Node::getxattr(key);
+        });
     }
 
     void Directory::removexattr(std::string const& k)
