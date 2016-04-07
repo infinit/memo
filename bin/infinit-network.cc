@@ -338,9 +338,20 @@ COMMAND(link_)
     {
       return infinit::Passport(
         self.public_key, desc.name,
-        infinit::cryptography::rsa::KeyPair(self.public_key, self.private_key.get()));
+        infinit::cryptography::rsa::KeyPair(self.public_key,
+                                            self.private_key.get()));
     }
-    return ifnt.passport_get(desc.name, self.name);
+    try
+    {
+      return ifnt.passport_get(desc.name, self.name);
+    }
+    catch (MissingLocalResource const&)
+    {
+      throw elle::Error(
+        elle::sprintf("missing passport (%s: %s), "
+                      "use infinit-passport to fetch or import",
+                      desc.name, self.name));
+    }
   }();
   bool ok = passport.verify(
     passport.certifier() ? *passport.certifier() : desc.owner);
