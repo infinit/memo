@@ -1220,6 +1220,24 @@ conflicts_paxos()
   test_conflicts(true);
 }
 
+std::vector<infinit::model::Address>
+get_fat(std::string const& attr)
+{
+  std::stringstream input(attr);
+  std::vector<infinit::model::Address> res;
+  for (auto const& entry:
+         boost::any_cast<elle::json::Array>(elle::json::read(input)))
+    res.push_back(infinit::model::Address::from_string(
+                    boost::any_cast<std::string>(entry)));
+  return res;
+}
+
+std::vector<infinit::model::Address>
+get_fat(boost::filesystem::path const& path)
+{
+  return get_fat(getxattr_(path, "user.infinit.fat"));
+}
+
 static
 void
 test_acl(bool paxos)
@@ -1503,16 +1521,12 @@ test_acl(bool paxos)
     for (int i=0; i<100; ++i)
       ofs.write(buffer, 16384);
   }
-  auto fat = getxattr_(base0 / "rm3", "user.infinit.fat");
-  std::stringstream ss(fat);
-  std::string address;
-  ss >> address >> address >> address >> address;
-  address = address.substr(2);
-  infinit::model::Address::from_string(address);
-
-  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", address), -1);
+  auto fat = get_fat(base0 / "rm3");
+  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock",
+                              elle::sprintf("%x", fat[0])), -1);
   BOOST_CHECK(can_access(base0 / "rm3", true, true));
-  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", address), 0);
+  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock",
+                              elle::sprintf("%x", fat[0])), 0);
   BOOST_CHECK(!can_access(base0 / "rm3", true, true));
   ELLE_LOG("test end");
 }
@@ -1675,16 +1689,10 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
   root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
   // grow to 2 data blocks
   root->child("file")->truncate(1024*1024*3);
-  auto fat = root->child("file")->getxattr("user.infinit.fat");
-  std::cerr << "-\n" << fat << std::endl;
-  std::stringstream ss(fat);
-  std::string address1, address2, address3;
-  std::string skip;
-  ss >> skip >> skip >> skip >> address1 >> skip >> address2 >> skip >> address3;
-  auto a2 = infinit::model::Address::from_string(address2.substr(2));
-  auto a3 = infinit::model::Address::from_string(address3.substr(2));
-  o->fail_addresses().insert(a2);
-  o->fail_addresses().insert(a3);
+  auto fat = get_fat(root->child("file")->getxattr("user.infinit.fat"));
+  BOOST_CHECK_EQUAL(fat.size(), 3);
+  o->fail_addresses().insert(fat[1]);
+  o->fail_addresses().insert(fat[2]);
   auto handle = root->child("file")->open(O_RDWR, 0);
   char buf[16384];
   BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192), 16384);
