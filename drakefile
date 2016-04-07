@@ -765,9 +765,12 @@ def configure(
   cxx_config_tests.lib_path_runtime('../lib')
   cxx_config_tests.lib_path_runtime('../../lib') # For consensus/async test.
   cxx_config_tests += elle.boost.config_test(link = False)
+  cxx_config_tests += elle.boost.config_timer(link = False)
   if not windows:
     cxx_config_tests.library_add(
       drake.copy(elle.boost.test_dynamic, 'lib', True))
+    cxx_config_tests.library_add(
+      drake.copy(elle.boost.timer_dynamic, 'lib', True))
     cxx_config_tests += elle.boost.config_system(link = False)
     cxx_config_tests.library_add(
       drake.copy(elle.boost.system_dynamic, 'lib', True))
@@ -798,6 +801,7 @@ def configure(
 
     cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
     cxx_config_tests.library_add(elle.boost.test_static)
+    cxx_config_tests.library_add(elle.boost.timer_static)
     infinit_lib_tests = drake.copy(infinit_lib, 'tests',
                                    strip_prefix = True)
     infinit_lib_tests_consensus = drake.copy(infinit_lib, 'tests/consensus',
