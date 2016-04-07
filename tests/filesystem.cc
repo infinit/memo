@@ -502,7 +502,7 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           ofs.write(ser.data(), ser.size());
         }
         std::vector<std::string> args {
-          "infinit",
+          "bin/infinit",
           "-c",
           (mountpoint + "/" + std::to_string(i))
         };
