@@ -9,7 +9,7 @@
 #include <sys/stat.h> // S_IMFT...
 
 #ifdef INFINIT_WINDOWS
-#undef stat
+# undef stat
 #endif
 
 ELLE_LOG_COMPONENT("infinit.filesystem.Symlink");
@@ -18,11 +18,10 @@ namespace infinit
 {
   namespace filesystem
   {
-    Symlink::Symlink(
-      FileSystem& owner,
-       Address address,
-      std::shared_ptr<DirectoryData> parent,
-      std::string const& name)
+    Symlink::Symlink(FileSystem& owner,
+                     Address address,
+                     std::shared_ptr<DirectoryData> parent,
+                     std::string const& name)
       : Node(owner, address, parent, name)
     {}
 
@@ -30,7 +29,7 @@ namespace infinit
     Symlink::_fetch()
     {
       this->_block = std::dynamic_pointer_cast<MutableBlock>(
-        this->_owner.fetch_or_die(_address));
+        this->_owner.fetch_or_die(this->_address));
       umbrella([&] {
           this->_h = elle::serialization::binary::deserialize<FileHeader>(
             this->_block->data());
@@ -40,80 +39,80 @@ namespace infinit
     FileHeader&
     Symlink::_header()
     {
-      if (!_block)
-        _fetch();
-      return _h;
+      if (!this->_block)
+        this->_fetch();
+      return this->_h;
     }
 
     model::blocks::ACLBlock*
     Symlink::_header_block()
     {
-      return dynamic_cast<model::blocks::ACLBlock*>(_block.get());
+      return dynamic_cast<model::blocks::ACLBlock*>(this->_block.get());
     }
 
     void
     Symlink::_commit(WriteTarget)
     {
-      auto data = elle::serialization::binary::serialize(_h);
-      _block->data(data);
-      _owner.store_or_die(std::move(_block), model::STORE_UPDATE);
+      auto data = elle::serialization::binary::serialize(this->_h);
+      this->_block->data(data);
+      this->_owner.store_or_die(std::move(this->_block), model::STORE_UPDATE);
     }
 
     void
-      Symlink::stat(struct stat* st)
+    Symlink::stat(struct stat* st)
+    {
+      ELLE_TRACE_SCOPE("%s: stat", *this);
+      try
       {
-        ELLE_TRACE_SCOPE("%s: stat", *this);
-        try
-        {
-          this->_fetch();
-          this->Node::stat(st);
-        }
-        catch (infinit::model::doughnut::ValidationFailed const& e)
-        {
-          ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
-        }
-        catch (rfs::Error const& e)
-        {
-          ELLE_DEBUG("%s: filesystem exception: %s", *this, e.what());
-          if (e.error_code() != EACCES)
-            throw;
-        }
-        st->st_mode |= S_IFLNK;
-        st->st_mode |= 0777; // Set rxwrwxrwx, to mimic Posix behavior.
+        this->_fetch();
+        this->Node::stat(st);
       }
+      catch (infinit::model::doughnut::ValidationFailed const& e)
+      {
+        ELLE_DEBUG("%s: permission exception dropped for stat: %s", *this, e);
+      }
+      catch (rfs::Error const& e)
+      {
+        ELLE_DEBUG("%s: filesystem exception: %s", *this, e.what());
+        if (e.error_code() != EACCES)
+          throw;
+      }
+      st->st_mode |= S_IFLNK;
+      st->st_mode |= 0777; // Set rxwrwxrwx, to mimic Posix behavior.
+    }
 
     void
-      Symlink::unlink()
-      {
-        _parent->_files.erase(_name);
-        _parent->write(*_owner.block_store(),
-          {OperationType::remove, _name},
-          DirectoryData::null_block,
-          true);
-      }
+    Symlink::unlink()
+    {
+      this->_parent->_files.erase(this->_name);
+      this->_parent->write(*this->_owner.block_store(),
+                           {OperationType::remove, this->_name},
+                           DirectoryData::null_block,
+                           true);
+    }
 
     void
-      Symlink::rename(boost::filesystem::path const& where)
-      {
-        Node::rename(where);
-      }
+    Symlink::rename(boost::filesystem::path const& where)
+    {
+      Node::rename(where);
+    }
 
     boost::filesystem::path
-      Symlink::readlink()
-      {
-        _fetch();
-        return *_h.symlink_target;
-      }
+    Symlink::readlink()
+    {
+      this->_fetch();
+      return *this->_h.symlink_target;
+    }
 
     void
-      Symlink::link(boost::filesystem::path const& where)
-      {
-        auto p = _owner.filesystem()->path(where.string());
-        Unknown* unk = dynamic_cast<Unknown*>(p.get());
-        if (unk == nullptr)
-          THROW_EXIST;
-        unk->symlink(readlink());
-      }
+    Symlink::link(boost::filesystem::path const& where)
+    {
+      auto p = this->_owner.filesystem()->path(where.string());
+      Unknown* unk = dynamic_cast<Unknown*>(p.get());
+      if (unk == nullptr)
+        THROW_EXIST;
+      unk->symlink(readlink());
+    }
 
     void
     Symlink::print(std::ostream& stream) const
@@ -138,33 +137,39 @@ namespace infinit
     {
       return Node::getxattr(key);
     }
+
     std::vector<std::string>
     Symlink::listxattr()
     {
-      _fetch();
+      this->_fetch();
       std::vector<std::string> res;
-      for (auto const& a: _h.xattrs)
+      for (auto const& a: this->_h.xattrs)
         res.push_back(a.first);
       return res;
     }
+
     void
-    Symlink::setxattr(std::string const& name, std::string const& value, int flags)
+    Symlink::setxattr(std::string const& name,
+                      std::string const& value,
+                      int flags)
     {
       Node::setxattr(name, value, flags);
     }
+
     void
     Symlink::removexattr(std::string const& name)
     {
       Node::removexattr(name);
     }
+
     std::unique_ptr<rfs::Handle>
     Symlink::open(int flags, mode_t mode)
     {
 #ifdef INFINIT_MACOSX
-  #define O_PATH O_SYMLINK
+# define O_PATH O_SYMLINK
 #endif
-#ifndef INFINIT_WINDOWS
-      if (! (flags & O_PATH))
+#ifdef O_PATH
+      if (!(flags & O_PATH))
 #endif
         THROW_NOSYS;
       return {};
