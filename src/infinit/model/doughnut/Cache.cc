@@ -114,16 +114,84 @@ namespace infinit
           this->_backend->remove(address, std::move(rs));
         }
 
+        void
+        Cache::_fetch(std::vector<Address> const& addresses,
+                      std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                         std::exception_ptr)> res)
+        {
+          std::vector<Address> missing;
+          for (auto a: addresses)
+          {
+            bool hit = false;
+            auto block = this->_fetch_cache(a, {}, hit);
+            if (hit)
+              res(a, std::move(block), {});
+            else
+              missing.push_back(a);
+          }
+          _backend->fetch(missing,
+            [&](Address addr, std::unique_ptr<blocks::Block> block,
+                std::exception_ptr exc)
+            {
+              if (block)
+              {
+                if (!block->validate(doughnut()))
+                {
+                  ELLE_WARN("%s: invalid block received for %s", this, addr);
+                  res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
+                  return;
+                }
+                if (this->_disk_cache_size &&
+                  dynamic_cast<blocks::ImmutableBlock*>(block.get()))
+                this->_disk_cache_push(block);
+                else if (dynamic_cast<blocks::MutableBlock*>(block.get()))
+                  this->_cache.emplace(block->clone());
+              }
+              res(addr, std::move(block), exc);
+            });
+        }
+
         std::unique_ptr<blocks::Block>
         Cache::_fetch(Address address, boost::optional<int> local_version)
         {
+          bool hit = false;
+          auto res = _fetch_cache(address, local_version, hit);
+          if (hit)
+            return std::move(res);
+          res = _backend->fetch(address, local_version);
+          // FIXME: pass the whole block to fetch() so we can cache it there ?
+          if (res)
+          {
+            // Validate now so that our cache can store the validated status
+            if (!res->validate(doughnut()))
+            {
+              ELLE_WARN("%s: invalid block received for %s", this, address);
+              throw elle::Error("invalid block");
+            }
+            if (this->_disk_cache_size &&
+              dynamic_cast<blocks::ImmutableBlock*>(res.get()))
+              this->_disk_cache_push(res);
+            else if (dynamic_cast<blocks::MutableBlock*>(res.get()))
+              this->_cache.emplace(res->clone());
+          }
+          return res;
+        }
+
+        std::unique_ptr<blocks::Block>
+        Cache::_fetch_cache(Address address, boost::optional<int> local_version,
+                            bool& cache_hit)
+        {
+          cache_hit = false;
           ELLE_TRACE_SCOPE("%s: fetch %f (local_version: %s)",
                            this, address, local_version);
           static elle::Bench bench_hit("bench.cache.ram.hit", 1000_sec);
           static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000_sec);
+          static elle::Bench bench("bench.cache._fetch", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
           auto hit = this->_cache.find(address);
           if (hit != this->_cache.end())
           {
+            cache_hit = true;
             ELLE_DEBUG("cache hit");
             this->_cache.modify(
               hit, [] (CachedBlock& b) { b.last_used(now()); });
@@ -150,6 +218,7 @@ namespace infinit
             auto disk_hit = this->_disk_cache.find(address);
             if (disk_hit != this->_disk_cache.end())
             {
+              cache_hit = true;
               ELLE_DEBUG("cache hit(disk)");
               bench_disk_hit.add(1);
               auto path = *this->_disk_cache_path / elle::sprintf("%x", address);
@@ -222,6 +291,7 @@ namespace infinit
             }
             return res;
           }
+          return {};
         }
 
         void

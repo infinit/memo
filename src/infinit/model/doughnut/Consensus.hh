@@ -33,6 +33,10 @@ namespace infinit
           store(std::unique_ptr<blocks::Block> block,
                 StoreMode mode,
                 std::unique_ptr<ConflictResolver> resolver);
+          void
+          fetch(std::vector<Address> const& addresses,
+                std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                   std::exception_ptr)> res);
           std::unique_ptr<blocks::Block>
           fetch(Address address, boost::optional<int> local_version = {});
           void
@@ -56,6 +60,11 @@ namespace infinit
           virtual
           std::unique_ptr<blocks::Block>
           _fetch(Address address, boost::optional<int> local_version);
+          virtual
+          void
+          _fetch(std::vector<Address> const& addresses,
+            std::function<void(Address, std::unique_ptr<blocks::Block>,
+                               std::exception_ptr)> res);
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs);

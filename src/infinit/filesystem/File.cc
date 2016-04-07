@@ -24,6 +24,11 @@
 #include <infinit/filesystem/FileHandle.hh>
 #include <infinit/filesystem/umbrella.hh>
 #include <infinit/filesystem/xattribute.hh>
+
+#include <elle/bench.hh>
+#include <elle/cast.hh>
+#include <elle/os/environ.hh>
+
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/User.hh>
@@ -479,6 +484,8 @@ namespace infinit
     void
     File::stat(struct stat* st)
     {
+      static elle::Bench bench("bench.file.stat", 10000_sec);
+      elle::Bench::BenchScope bs(bench);
       ELLE_TRACE_SCOPE("%s: stat, parent %s", *this, _parent);
       memset(st, 0, sizeof(struct stat));
       st->st_mode = S_IFREG;

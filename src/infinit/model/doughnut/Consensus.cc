@@ -99,6 +99,34 @@ namespace infinit
           return this->_fetch(address, local_version);
         }
 
+        void
+        Consensus::fetch(std::vector<Address> const& addresses,
+                         std::function<void(Address, std::unique_ptr<blocks::Block>,
+                           std::exception_ptr)> res)
+        {
+           ELLE_TRACE_SCOPE("%s: fetch %s", *this, addresses);
+           this->_fetch(addresses, res);
+        }
+
+        void
+        Consensus::_fetch(std::vector<Address> const& addresses,
+                         std::function<void(Address, std::unique_ptr<blocks::Block>,
+                           std::exception_ptr)> res)
+        {
+          for (auto a: addresses)
+          {
+            try
+            {
+              auto block = this->fetch(a);
+              res(a, std::move(block), {});
+            }
+            catch (elle::Error const& e)
+            {
+              res(a, {}, std::current_exception());
+            }
+          }
+        }
+
         std::unique_ptr<blocks::Block>
         Consensus::_fetch(Address address, boost::optional<int> last_version)
         {

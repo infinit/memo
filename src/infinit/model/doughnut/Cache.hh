@@ -60,6 +60,11 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
+          _fetch(std::vector<Address> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                    std::exception_ptr)> res) override;
+          virtual
+          void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
         /*------.
@@ -70,8 +75,13 @@ namespace infinit
           void
           clear();
         private:
-          void _cleanup();
-          std::unique_ptr<blocks::Block> _copy(blocks::Block& block);
+          void
+          _cleanup();
+          std::unique_ptr<blocks::Block>
+          _fetch_cache(Address address, boost::optional<int> local_version,
+                       bool& hit);
+          std::unique_ptr<blocks::Block>
+          _copy(blocks::Block& block);
           ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);

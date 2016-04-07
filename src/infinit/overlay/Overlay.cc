@@ -39,6 +39,13 @@ namespace infinit
     | Lookup |
     `-------*/
 
+    reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    Overlay::lookup(std::vector<model::Address> const& addresses, int n) const
+    {
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, addresses);
+      return this->_lookup(addresses, n);
+    }
+
     reactor::Generator<Overlay::WeakMember>
     Overlay::lookup(model::Address address, int n, Operation op) const
     {
@@ -53,6 +60,18 @@ namespace infinit
       for (auto res: this->_lookup(address, 1, op))
         return res;
       throw model::MissingBlock(address);
+    }
+
+    reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+    Overlay::_lookup(std::vector<model::Address> const& addresses, int n) const
+    {
+      return reactor::Generator<std::pair<model::Address, WeakMember>>(
+        [this, addresses, n] (reactor::Generator<std::pair<model::Address, WeakMember>>::yielder const& yield)
+        {
+          for (auto const& a: addresses)
+            for (auto res: lookup(a, n, OP_FETCH))
+              yield(std::make_pair(a, res));
+        });
     }
 
     Configuration::Configuration(elle::serialization::SerializerIn& input)

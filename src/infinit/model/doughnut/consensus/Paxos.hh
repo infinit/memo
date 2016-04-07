@@ -89,6 +89,15 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
+          _fetch(std::vector<Address> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                   std::exception_ptr)> res) override;
+          std::unique_ptr<blocks::Block>
+          _fetch(Address address,
+                 PaxosClient::Peers peers,
+                 boost::optional<int> local_version);
+          virtual
+          void
           _remove(Address address, blocks::RemoveSignature rs) override;
           bool
           _rebalance(PaxosClient& client, Address address);

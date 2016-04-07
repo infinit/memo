@@ -160,6 +160,41 @@ namespace infinit
     }
 
     void
+    Model::fetch(std::vector<Address> const& addresses,
+            std::function<void(Address, std::unique_ptr<blocks::Block>,
+                               std::exception_ptr)> res) const
+    {
+      this->_fetch(addresses, [&](Address addr,
+                                  std::unique_ptr<blocks::Block> block,
+                                  std::exception_ptr exception)
+        {
+          if (block && !block->validate(*this))
+            res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
+          else
+            res(addr, std::move(block), exception);
+        });
+    }
+
+    void
+    Model::_fetch(std::vector<Address> const& addresses,
+                  std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                     std::exception_ptr)> res) const
+    {
+      for (auto addr: addresses)
+      {
+        try
+        {
+          auto block = _fetch(addr, {});
+          res(addr, std::move(block), {});
+        }
+        catch (elle::Error const& e)
+        {
+          res(addr, {}, std::current_exception());
+        }
+      }
+    }
+
+    void
     Model::remove(Address address)
     {
       ELLE_TRACE_SCOPE("%s: remove %f", this, address);

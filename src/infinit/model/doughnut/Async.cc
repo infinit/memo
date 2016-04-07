@@ -312,8 +312,29 @@ namespace infinit
           this->_push_op(Op(address, nullptr, {}, {}, std::move(rs)));
         }
 
-        // Fetch operation must be synchronous, else the consistency is not
-        // preserved.
+        void
+        Async::_fetch(std::vector<Address> const& addresses,
+                      std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                         std::exception_ptr)> res)
+        {
+          if (this->_init_thread && !this->_init_thread->done()
+            && reactor::scheduler().current() != this->_init_thread.get())
+            reactor::wait(this->_init_barrier);
+
+          this->_queue.open();
+          std::vector<Address> remain;
+          for (auto addr: addresses)
+          {
+            bool hit = false;
+            auto block = this->_fetch_cache(addr, {}, hit);
+            if (hit)
+              res(addr, std::move(block), {});
+            else
+              remain.push_back(addr);
+          }
+          this->_backend->fetch(remain, res);
+        }
+
         std::unique_ptr<blocks::Block>
         Async::_fetch(Address address, boost::optional<int> local_version)
         {
@@ -322,9 +343,26 @@ namespace infinit
             reactor::wait(this->_init_barrier);
 
           this->_queue.open();
+
+          bool hit = false;
+          auto block = this->_fetch_cache(address, local_version, hit);
+          if (hit)
+            return std::move(block);
+          else
+            return this->_backend->fetch(address, local_version);
+        }
+
+        // Fetch operation must be synchronous, else the consistency is not
+        // preserved.
+        std::unique_ptr<blocks::Block>
+        Async::_fetch_cache(Address address, boost::optional<int> local_version,
+                            bool& hit)
+        {
+          hit = false;
           auto it = this->_operations.find(address);
           if (it != this->_operations.end())
           {
+            hit = true;
             if (it->block)
             {
               ELLE_TRACE("%s: fetch %s from memory queue", *this, address);
@@ -344,7 +382,7 @@ namespace infinit
               return res;
             }
           }
-          return this->_backend->fetch(address, local_version);
+          return {};
         }
 
         void

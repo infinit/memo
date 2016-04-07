@@ -1288,6 +1288,34 @@ namespace infinit
                            accepted);
         };
 
+        void
+        Paxos::_fetch(std::vector<Address> const& addresses,
+                      std::function<void(Address, std::unique_ptr<blocks::Block>,
+                        std::exception_ptr)> res)
+        {
+          auto hits = this->doughnut().overlay()->lookup(
+            addresses, this->_factor);
+          std::unordered_map<Address, PaxosClient::Peers> peers;
+          for (auto r: hits)
+          {
+            auto& p = peers[r.first];
+            p.push_back(elle::make_unique<Peer>(r.second, r.first, boost::optional<int>()));
+          }
+          // FIXME: dont wait for all to finish
+          for (auto& p: peers)
+          {
+            try
+            {
+              auto block = this->_fetch(p.first, std::move(p.second), {});
+              res(p.first, std::move(block), {});
+            }
+            catch (elle::Error const& e)
+            {
+              res(p.first, {}, std::current_exception());
+            }
+          }
+        }
+
         std::unique_ptr<blocks::Block>
         Paxos::_fetch(Address address, boost::optional<int> local_version)
         {
@@ -1298,6 +1326,13 @@ namespace infinit
             return fetch_from_members(peers, address, std::move(local_version));
           }
           auto peers = this->_peers(address, local_version);
+
+          return _fetch(address, std::move(peers), local_version);
+        }
+ 
+        std::unique_ptr<blocks::Block>
+        Paxos::_fetch(Address address,PaxosClient::Peers peers, boost::optional<int> local_version)
+        {
           if (peers.empty())
           {
             ELLE_TRACE("could not find any owner for %s", address);
@@ -1308,6 +1343,7 @@ namespace infinit
             {
               if (address.mutable_block())
               {
+                BENCH("_fetch.run");
                 ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
                   this->doughnut().id(), std::move(peers));
