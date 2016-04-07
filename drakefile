@@ -811,7 +811,10 @@ def configure(
       test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
     test.dependencies_add(dependencies)
     rule_tests << test
-    env = {'SOURCE_DIR': drake.path_source()}
+    env = {
+      'SOURCE_DIR': drake.path_source(),
+      'BUILD_DIR': drake.path_build(),
+    }
     #  _____ _____  ____  __ _____
     # |  ___|_ _\ \/ /  \/  | ____|
     # | |_   | | \  /| |\/| |  _|
