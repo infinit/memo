@@ -312,14 +312,25 @@ COMMAND(run)
   auto mountpoint = optional(args, "mountpoint");
   if (!mountpoint)
     mountpoint = volume.mountpoint;
+  bool created_mountpoint = false;
   if (mountpoint)
   {
-    if (boost::filesystem::exists(mountpoint.get()))
+    try
     {
-      if (!boost::filesystem::is_directory(mountpoint.get()))
-        throw (elle::Error("mountpoint is not a directory"));
-      if (!boost::filesystem::is_empty(mountpoint.get()))
-        throw elle::Error("mountpoint is not empty");
+      if (boost::filesystem::exists(mountpoint.get()))
+      {
+        if (!boost::filesystem::is_directory(mountpoint.get()))
+          throw (elle::Error("mountpoint is not a directory"));
+        if (!boost::filesystem::is_empty(mountpoint.get()))
+          throw elle::Error("mountpoint is not empty");
+      }
+      created_mountpoint =
+        boost::filesystem::create_directories(mountpoint.get());
+    }
+    catch (boost::filesystem::filesystem_error const& e)
+    {
+      throw elle::Error(elle::sprintf("unable to access mountpoint: %s",
+                                      e.what()));
     }
   }
   if (args.count("fuse-option"))
@@ -442,21 +453,23 @@ COMMAND(run)
                          );
     if (volume.default_permissions && !volume.default_permissions->empty())
     {
-      auto ops = dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get());
+      auto ops =
+        dynamic_cast<infinit::filesystem::FileSystem*>(fs->operations().get());
       ops->on_root_block_create.connect([&] {
-          ELLE_DEBUG("root_block hook triggered");
-          auto path = fs->path("/");
-          int mode = 0700;
-          if (*volume.default_permissions == "rw")
-            mode |= 06;
-          else if (*volume.default_permissions == "r")
-            mode |= 04;
-          else
-          {
-            ELLE_WARN("Unexpected default permissions %s", *volume.default_permissions);
-            return;
-          }
-          path->chmod(mode);
+        ELLE_DEBUG("root_block hook triggered");
+        auto path = fs->path("/");
+        int mode = 0700;
+        if (*volume.default_permissions == "rw")
+          mode |= 06;
+        else if (*volume.default_permissions == "r")
+          mode |= 04;
+        else
+        {
+          ELLE_WARN("Unexpected default permissions %s",
+                    *volume.default_permissions);
+          return;
+        }
+        path->chmod(mode);
       });
     }
 #ifdef INFINIT_MACOSX
@@ -482,6 +495,15 @@ COMMAND(run)
 #endif
       ELLE_TRACE("unmounting")
         fs->unmount();
+      if (created_mountpoint)
+      {
+        try
+        {
+          boost::filesystem::remove(mountpoint.get());
+        }
+        catch (boost::filesystem::filesystem_error const&)
+        {}
+      }
     });
     if (script_mode)
     {
