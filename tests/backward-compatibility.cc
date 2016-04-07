@@ -16,7 +16,15 @@
 #include <infinit/model/doughnut/NB.hh>
 #include <infinit/model/doughnut/OKB.hh>
 #include <infinit/model/doughnut/UB.hh>
+
+#include <infinit/filesystem/filesystem.hh>
+#include <infinit/filesystem/Directory.hh>
+#include <infinit/filesystem/File.hh>
+
 #include <infinit/version.hh>
+
+
+ELLE_LOG_COMPONENT("backward-compatibility");
 
 static
 boost::filesystem::path
@@ -127,6 +135,7 @@ static const DeterministicSecretKey secret =
   elle::serialization::json::deserialize<DeterministicSecretKey>(secret_buffer);
 
 namespace dht = infinit::model::doughnut;
+namespace fs = infinit::filesystem;
 
 class DummyDoughnut
   : public dht::Doughnut
@@ -193,6 +202,51 @@ struct TestSet
   std::shared_ptr<dht::UB> rub;
 };
 
+struct TestSetConflictResolver
+{
+  TestSetConflictResolver(std::shared_ptr<infinit::cryptography::rsa::KeyPair> keys,
+          boost::optional<elle::Version> v)
+  : dht(keys, v)
+  , dir(new fs::DirectoryConflictResolver(dht,
+      fs::Operation{fs::OperationType::insert, "foo", fs::EntryType::directory, {}},
+      infinit::model::Address()))
+  , file(new fs::FileConflictResolver("/foo", &dht, fs::WriteTarget::data))
+  {}
+  void apply(std::string const& action,
+             std::function<void(std::string const&,
+                                infinit::model::ConflictResolver*)> const& f)
+  {
+    std::cout << "  " << action << " dir" << std::endl;
+    f("cr_dir", dir.get());
+    std::cout << "  " << action << " file" << std::endl;
+    f("cr_file", file.get());
+  }
+  DummyDoughnut dht;
+  std::shared_ptr<fs::DirectoryConflictResolver> dir;
+  std::shared_ptr<fs::FileConflictResolver> file;
+};
+
+template<typename Base>
+void
+generate(std::string const& name, Base* b, boost::filesystem::path dir,
+         elle::Version const& version)
+{
+  {
+    auto path = dir / elle::sprintf("%s.bin", name);
+    boost::filesystem::ofstream output(path);
+    if (!output.good())
+      throw elle::Error(elle::sprintf("unable to open %s", path));
+    elle::serialization::binary::serialize(b, output, version, false);
+  }
+  {
+    auto path = dir / elle::sprintf("%s.json", name);
+    boost::filesystem::ofstream output(path);
+    if (!output.good())
+      throw elle::Error(elle::sprintf("unable to open %s", path));
+    elle::serialization::json::serialize(b, output, version, false);
+  }
+}
+
 int
 main(int argc, char** argv)
 {
@@ -245,20 +299,14 @@ main(int argc, char** argv)
           "generate",
           [&] (std::string const& name, infinit::model::blocks::Block* b)
           {
-            {
-              auto path = current / elle::sprintf("%s.bin", name);
-              boost::filesystem::ofstream output(path);
-              if (!output.good())
-                throw elle::Error(elle::sprintf("unable to open %s", path));
-              elle::serialization::binary::serialize(b, output, false);
-            }
-            {
-              auto path = current / elle::sprintf("%s.json", name);
-              boost::filesystem::ofstream output(path);
-              if (!output.good())
-                throw elle::Error(elle::sprintf("unable to open %s", path));
-              elle::serialization::json::serialize(b, output, false);
-            }
+            generate(name, b, current, current_version);
+          });
+        TestSetConflictResolver cr(keys, current_version);
+        cr.apply(
+          "generate",
+          [&] (std::string const& name, infinit::model::ConflictResolver* b)
+          {
+            generate(name, b, current, current_version);
           });
       }
       else
@@ -338,6 +386,42 @@ main(int argc, char** argv)
                 boost::filesystem::ifstream input(path);
                 if (!input.good())
                   throw elle::Error(elle::sprintf("unable to open %s", path));
+                elle::Buffer contents(
+                  std::string((std::istreambuf_iterator<char>(input)),
+                              std::istreambuf_iterator<char>()));
+                ELLE_ASSERT_EQ(
+                  contents,
+                  elle::serialization::binary::serialize(b, version, false));
+              }
+            });
+          TestSetConflictResolver cr(keys, version);
+          cr.apply(
+            "check",
+            [&] (std::string const& name, infinit::model::ConflictResolver* b)
+            {
+              {
+                auto path = it->path() / elle::sprintf("%s.json", name);
+                boost::filesystem::ifstream input(path);
+                if (!input.good())
+                {
+                  ELLE_WARN("unable to open %s", path);
+                  return;
+                }
+                elle::Buffer contents(
+                  std::string((std::istreambuf_iterator<char>(input)),
+                              std::istreambuf_iterator<char>()));
+                ELLE_ASSERT_EQ(
+                  contents,
+                  elle::serialization::json::serialize(b, version, false));
+              }
+              {
+                auto path = it->path() / elle::sprintf("%s.bin", name);
+                boost::filesystem::ifstream input(path);
+                if (!input.good())
+                {
+                  ELLE_WARN("unable to open %s", path);
+                  return;
+                }
                 elle::Buffer contents(
                   std::string((std::istreambuf_iterator<char>(input)),
                               std::istreambuf_iterator<char>()));

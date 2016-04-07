@@ -138,6 +138,9 @@ namespace infinit
         private:
           void _load_disk_cache();
           void _disk_cache_push(std::unique_ptr<blocks::Block>& block);
+          typedef std::unordered_map<Address, std::shared_ptr<reactor::Barrier>>
+          Pending;
+          ELLE_ATTRIBUTE(Pending, pending);
         };
       }
     }

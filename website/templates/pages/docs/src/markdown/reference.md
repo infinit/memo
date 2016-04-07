@@ -869,3 +869,17 @@ Joined drive "alice/workspace".
 ```
 
 That's it, you are now allowed to mount the volume (i.e. 'alice/shared') associated with the drive to browse, store and access files. Note that you could have done that without using through the drive invitation process because you are using the command-line tools. Non-tech-savvy users, however, will appreciate having an interface with only the drives they have been invited to join and thus have access to.
+
+Journal
+-------
+When running a network or volume with the asynchronous option `--async`, operations are written to the local disk before being sent to the storage nodes. This ensures a better end user experience by not exposing them directly to the network latency or bandwidth.
+
+The _infinit-journal_ binary provides the means for checking the status of the asynchronous write buffer or _journal_.
+
+### Check asynchronous network cache ###
+In order to check the number of pending asynchronous operations and/or the amount of data remaining to be sent to the storage nodes, you can use the `--stat` option.
+
+```
+$> infinit-journal --stat --as alice --network alice/cluster
+alice/cluster: 185 operations, 71 MB
+```

@@ -167,6 +167,44 @@ port_setxattr(std::string const& file,
   return 0;
 }
 
+static
+boost::optional<std::string>
+path_mountpoint(std::string const& path, bool fallback)
+{
+  char buffer[4095];
+  int sz = port_getxattr(path, "infinit.mountpoint", buffer, 4095, fallback);
+  if (sz <= 0)
+    return {};
+  return std::string(buffer, sz);
+}
+
+static
+void
+enforce_in_mountpoint(std::string const& path_, bool fallback)
+{
+  auto path = boost::filesystem::absolute(path_);
+  if (!boost::filesystem::exists(path))
+    throw elle::Error(elle::sprintf("path does not exist: %s", path_));
+  for (auto const& p: {path, path.parent_path()})
+  {
+    auto mountpoint = path_mountpoint(p.string(), fallback);
+    if (mountpoint && !mountpoint.get().empty())
+      return;
+  }
+  throw elle::Error(elle::sprintf("%s not in an Infinit volume", path_));
+}
+
+static
+bool
+path_is_root(std::string const& path, bool fallback)
+{
+  char buffer[4095];
+  int sz = port_getxattr(path, "infinit.root", buffer, 4095, fallback);
+  if (sz < 0)
+    return false;
+  return std::string(buffer, sz) == std::string("true");
+}
+
 class InvalidArgument
   : public elle::Error
 {
@@ -201,8 +239,18 @@ recursive_action(A action, std::string const& path, Args ... args)
   bfs::recursive_directory_iterator it(path, erc);
   if (erc)
     throw elle::Error(elle::sprintf("%s : %s", path, erc.message()));
-  for (; it != bfs::recursive_directory_iterator(); ++it)
+  for (; it != bfs::recursive_directory_iterator(); it.increment(erc))
+  {
+    // Ensure that we have permission on the file.
+    boost::filesystem::exists(it->path(), erc);
+    if (erc == boost::system::errc::permission_denied)
+    {
+      std::cout << "permission denied, skipping " << it->path().string()
+                << std::endl;
+      continue;
+    }
     action(it->path().string(), args...);
+  }
 }
 
 static
@@ -260,7 +308,10 @@ list_action(std::string const& path, bool verbose, bool fallback_xattrs)
       else
       {
         if (st.st_mode & 06)
-          output << "  world: " << ((st.st_mode & 02) ? "rw" : "r") << std::endl;
+        {
+          output << "  world: " << ((st.st_mode & 02) ? "rw" : "r")
+                 << std::endl;
+        }
       }
       elle::json::Json j = elle::json::read(ss);
       auto a = boost::any_cast<elle::json::Array>(j);
@@ -384,7 +435,6 @@ COMMAND(get_xattr)
   }
 }
 
-
 COMMAND(list)
 {
   auto paths = mandatory<std::vector<std::string>>(args, "path", "file/folder");
@@ -395,6 +445,7 @@ COMMAND(list)
   bool fallback = flag(args, "fallback-xattrs");
   for (auto const& path: paths)
   {
+    enforce_in_mountpoint(path, fallback);
     list_action(path, verbose, fallback);
     if (recursive)
       recursive_action(list_action, path, verbose, fallback);
@@ -443,13 +494,18 @@ COMMAND(set)
   std::vector<std::string> modes_map = {"setr", "setw", "setrw", "clear", ""};
   mode = modes_map[it - allowed_modes.begin()];
   bool recursive = flag(args, "recursive");
+  bool traverse = flag(args, "traverse");
+  if (traverse && mode.find("setr") != 0)
+    throw elle::Error("--traverse can only be used with mode 'r', 'rw'");
   bool verbose = flag(args, "verbose");
   bool fallback = flag(args, "fallback-xattrs");
   // Don't do any operations before checking paths.
   for (auto const& path: paths)
   {
-    if ((inherit || disinherit) &&
-      !recursive && !boost::filesystem::is_directory(path))
+    enforce_in_mountpoint(path, fallback);
+    if ((inherit || disinherit)
+        && !recursive
+        && !boost::filesystem::is_directory(path))
     {
       throw CommandLineError(elle::sprintf(
         "%s is not a directory, cannot %s inherit",
@@ -458,11 +514,23 @@ COMMAND(set)
   }
   for (auto const& path: paths)
   {
-    set_action(path, users, mode, omode, inherit, disinherit, verbose, fallback);
+    set_action(path, users, mode, omode, inherit, disinherit, verbose,
+               fallback);
+    if (traverse)
+    {
+      boost::filesystem::path working_path(path);
+      while (!path_is_root(working_path.string(), fallback))
+      {
+        working_path = working_path.parent_path();
+        set_action(working_path.string(), users, "setr", "", false, false,
+                   verbose, fallback);
+      }
+    }
     if (recursive)
     {
       recursive_action(
-        set_action, path, users, mode, omode, inherit, disinherit, verbose, fallback);
+        set_action, path, users, mode, omode, inherit, disinherit, verbose,
+        fallback);
     }
   }
 }
@@ -534,10 +602,8 @@ COMMAND(group)
   if (action_count > 1)
     throw CommandLineError("specify only one action at a time");
   bool fallback = flag(args, "fallback-xattrs");
-  std::string path =
-    mandatory<std::string>(args, "path", "path in volume");
-  if (!boost::filesystem::exists(path))
-    throw elle::Error(elle::sprintf("path does not exist: %s", path));
+  std::string path = mandatory<std::string>(args, "path", "path in volume");
+  enforce_in_mountpoint(path, fallback);
   // Need to perform group actions on a directory in the volume.
   if (!boost::filesystem::is_directory(path))
     path = boost::filesystem::path(path).parent_path().string();
@@ -578,10 +644,11 @@ COMMAND(register_)
   auto user_name = mandatory<std::string>(args, "user", "user name");
   auto network_name = mandatory<std::string>(args, "network", "network name");
   auto network = ifnt.network_get(network_name, self);
+  bool fallback = flag(args, "fallback-xattrs");
   auto path = mandatory<std::string>(args, "path", "path to mountpoint");
+  enforce_in_mountpoint(path, fallback);
   auto user = ifnt.user_get(user_name);
   auto passport = ifnt.passport_get(network.name, user_name);
-  bool fallback = flag(args, "fallback-xattrs");
   std::stringstream output;
   elle::serialization::json::serialize(passport, output, false);
   check(port_setxattr, path, "user.infinit.register." + user_name, output.str(),
@@ -620,16 +687,19 @@ main(int argc, char** argv)
       "--path PATHS [--user USERS]",
       {
         { "path,p", value<std::vector<std::string>>(), "paths" },
-        { "user,u", value<std::vector<std::string>>(), elle::sprintf(
-          "users and groups (prefix: %s<group>)", group_prefix) },
-        { "group", value<std::vector<std::string>>(), "groups" },
+        { "user,u", value<std::vector<std::string>>()->multitoken(),
+          elle::sprintf("users and groups (prefix: %s<group>)", group_prefix) },
+        { "group,g", value<std::vector<std::string>>(), "groups" },
         { "mode,m", value<std::string>(), "access mode: r,w,rw,none" },
-        { "others-mode,o", value<std::string>(), "access mode for everybody: r,w,rw,none" },
+        { "others-mode,o", value<std::string>(),
+          "access mode for other network users: r,w,rw,none" },
         { "enable-inherit,i", bool_switch(),
           "new files/folders inherit from their parent directory" },
         { "disable-inherit", bool_switch(),
           "new files/folders do not inherit from their parent directory" },
         { "recursive,R", bool_switch(), "apply recursively" },
+        { "traverse", bool_switch(),
+          "add read permissions to parent directories" },
         fallback_option,
         verbose_option,
       },
@@ -649,8 +719,8 @@ main(int argc, char** argv)
           "add administrator to group" },
         { "add-group", value<std::vector<std::string>>(),
           "add group to group" },
-        { "add", value<std::vector<std::string>>()->multitoken(), elle::sprintf(
-          "add users, administrators and groups to group "
+        { "add", value<std::vector<std::string>>()->multitoken(),
+          elle::sprintf("add users, administrators and groups to group "
           "(prefix: %s<group>, %s<admin>)", group_prefix, admin_prefix) },
         { "remove-user", value<std::vector<std::string>>(),
           "remove user from group" },

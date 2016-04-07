@@ -129,7 +129,7 @@ make_observer(std::shared_ptr<imd::Doughnut>& root_node,
         std::move(backend));
       backend = std::move(cache);
     }
-    return std::move(backend);
+    return backend;
   };
   infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
   [&] (infinit::model::doughnut::Doughnut& dht,
@@ -158,7 +158,7 @@ writefile(rfs::FileSystem& fs,
           std::string const& name,
           std::string const& content)
 {
-  auto handle = fs.path("/")->child(name)->create(O_RDWR, 0666 | S_IFREG);
+  auto handle = fs.path("/" + name)->create(O_RDWR, 0666 | S_IFREG);
   handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
                 content.size(), 0);
   handle->close();
@@ -170,9 +170,9 @@ appendfile(rfs::FileSystem& fs,
            std::string const& name,
            std::string const& content)
 {
-  auto handle = fs.path("/")->child(name)->open(O_RDWR, 0666 | S_IFREG);
+  auto handle = fs.path("/" + name)->open(O_RDWR, 0666 | S_IFREG);
   struct stat st;
-  fs.path("/")->child(name)->stat(&st);
+  fs.path("/" + name)->stat(&st);
   handle->write(elle::WeakBuffer((char*)content.data(), content.size()),
                 content.size(), st.st_size);
   handle->close();
@@ -183,7 +183,7 @@ std::string
 readfile(rfs::FileSystem& fs,
          std::string const& name)
 {
-  auto handle = fs.path("/")->child(name)->open(O_RDONLY, S_IFREG);
+  auto handle = fs.path("/" + name)->open(O_RDONLY, S_IFREG);
   std::string res(32768, 0);
   int sz = handle->read(elle::WeakBuffer(elle::unconst(res.data()), 32768), 32768, 0);
   res.resize(sz);
@@ -340,6 +340,130 @@ ELLE_TEST_SCHEDULED(basic)
 //   test_kill_nodes(15, 3, 3, 1, true, false);
 // }
 
+ELLE_TEST_SCHEDULED(conflicts)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  ELLE_LOG("write files")
+  {
+    auto nodes = run_nodes(tmp, kp, 1);
+    auto fs1 = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
+    auto fs2 = make_observer(nodes.front(), tmp, kp, 1, 1, true, false, false);
+    auto cache1 =
+      dynamic_cast<infinit::model::doughnut::consensus::Cache*>(
+        dynamic_cast<infinit::model::doughnut::Doughnut*>(
+          dynamic_cast<infinit::filesystem::FileSystem*>(
+           fs1->operations().get())->block_store().get())->consensus().get());
+    auto cache2 =
+      dynamic_cast<infinit::model::doughnut::consensus::Cache*>(
+        dynamic_cast<infinit::model::doughnut::Doughnut*>(
+          dynamic_cast<infinit::filesystem::FileSystem*>(
+           fs2->operations().get())->block_store().get())->consensus().get());
+    struct stat st;
+    fs1->path("/dir")->mkdir(0600);
+    cache2->clear();
+    fs2->path("/dir")->stat(&st);
+    BOOST_CHECK_NO_THROW(writefile(*fs1, "dir/file", "foo"));
+    cache2->clear();
+    BOOST_CHECK_EQUAL(readfile(*fs2, "dir/file"), "foo");
+
+    ELLE_LOG("conflict 1");
+    BOOST_CHECK_NO_THROW(appendfile(*fs1, "dir/file", "bar"));
+    BOOST_CHECK_NO_THROW(fs2->path("/dir/file")->chmod(0606));
+    cache1->clear();
+    cache2->clear();
+    BOOST_CHECK_EQUAL(readfile(*fs2, "dir/file"), "foobar");
+    BOOST_CHECK_NO_THROW(fs1->path("/dir/file")->stat(&st));
+    BOOST_CHECK_EQUAL(st.st_mode & 0777, 0606);
+    BOOST_CHECK_NO_THROW(fs2->path("/dir/file")->stat(&st));
+    BOOST_CHECK_EQUAL(st.st_mode & 0777, 0606);
+
+    ELLE_LOG("conflict 2");
+    fs2->path("/dir/file")->chmod(0604);
+    appendfile(*fs1, "dir/file", "bar");
+    cache1->clear();
+    cache2->clear();
+    BOOST_CHECK_EQUAL(readfile(*fs2, "dir/file"), "foobarbar");
+    fs1->path("/dir/file")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_mode & 0777, 0604);
+
+    ELLE_LOG("conflict 3");
+    writefile(*fs1, "dir/file2", "foo");
+    fs2->path("/dir")->chmod(0606);
+    cache1->clear();
+    cache2->clear();
+    BOOST_CHECK_EQUAL(readfile(*fs2, "dir/file2"), "foo");
+    fs1->path("/dir")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_mode & 0666, 0606);
+
+    ELLE_LOG("conflict 4");
+    fs2->path("/dir")->chmod(0604);
+    writefile(*fs1, "dir/file3", "foo");
+    cache1->clear();
+    cache2->clear();
+    BOOST_CHECK_EQUAL(readfile(*fs2, "dir/file3"), "foo");
+    fs1->path("/dir")->stat(&st);
+    BOOST_CHECK_EQUAL(st.st_mode & 0666, 0604);
+
+    ELLE_LOG("conflict 5");
+    writefile(*fs1, "dir/c51", "foo");
+    writefile(*fs2, "dir/c52", "foo");
+    cache1->clear();
+    cache2->clear();
+    BOOST_CHECK_EQUAL(readfile(*fs2, "dir/c51"), "foo");
+    BOOST_CHECK_EQUAL(readfile(*fs1, "dir/c52"), "foo");
+  }
+}
+
+ELLE_TEST_SCHEDULED(times)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 1);
+  auto fs = make_observer(nodes.front(), tmp, kp, 1, 1, false, false, false);
+  struct stat st;
+  // we only have second resolution, so test in batches to avoid too much sleeping
+  fs->path("/dir")->mkdir(0600);
+  fs->path("/dir2")->mkdir(0600);
+  writefile(*fs, "dir/file", "foo");
+  writefile(*fs, "dir2/file", "foo");
+  fs->path("/dir")->stat(&st);
+  auto now = time(nullptr);
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime <= 1);
+  fs->path("/dir/file")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime <= 1);
+
+  reactor::sleep(2100_ms);
+  now = time(nullptr);
+  appendfile(*fs, "dir/file", "foo"); //mtime changed, ctime unchanged, dir unchanged
+  fs->path("/dir/file")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+  fs->path("/dir")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime >= 2);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+
+  reactor::sleep(2100_ms);
+  now = time(nullptr);
+  writefile(*fs, "dir/file2", "foo");
+  fs->path("/dir2/dir")->mkdir(0600);
+  fs->path("/dir/file")->stat(&st);
+  BOOST_CHECK(now - st.st_mtime >= 2);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+  fs->path("/dir")->stat(&st); // new file created: mtime change
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+  fs->path("/dir2")->stat(&st); // new dir created: mtime change
+  BOOST_CHECK(now - st.st_mtime <= 1);
+  BOOST_CHECK(now - st.st_ctime >= 2);
+}
+
 ELLE_TEST_SUITE()
 {
   srand(time(nullptr));
@@ -347,6 +471,8 @@ ELLE_TEST_SUITE()
   elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
   suite.add(BOOST_TEST_CASE(basic), 0, valgrind(32));
+  suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(32));
+  suite.add(BOOST_TEST_CASE(times), 0, valgrind(32));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);

@@ -1,6 +1,41 @@
 # Change Log
 
 
+## [0.5.5]
+
+Automatic replication of under-replicated blocks and CPU usage improvement.
+
+### Added
+
+- Automatically rebalance under-replicated blocks to new nodes.
+- Synchronize file content on `fsync` system call.
+- Cache the root block address locally to avoid recreating one if all
+  storage nodes are down.
+- Add `infinit-journal` binary to inspect asynchronous write queue.
+- Add `infinit-connectivity` to test network connectivity
+  capabilities.
+- Publish public IP to beyond.
+
+### Changed
+
+- Shorten many logs for readability.
+- Update OpenSSL to 1.0.2g for security fixes, although we are not
+  vulnerable to DROWN attacks.
+- Update Curl to 7.47.1 because why not.
+
+### Fixed
+
+- Fix IO error when performing `fsync` on an unlinked file.
+- Fix infinite recursion on certain log levels.
+- Remove immutable blocks cache on disk when the corresponding file is
+  deleted.
+- Fix SEGV when shutting down while deciphering a block.
+- Handle conflicts when changing world permissions on a directory.
+- Fix misreported file size upon `truncate` or `ftruncate`.
+- Fixed async cache deadlock upon conflict on group blocks.
+- Ensure prefetcher work in parallel on large directories.
+
+
 ## [0.5.4] - 2016-03-01
 
 Hotfix for disk performances, persistent disk cache for file contents.
@@ -9,11 +44,13 @@ Hotfix for disk performances, persistent disk cache for file contents.
 
 - Implement `statfs` system call.
 - Add a disk block cache for immutable file contents.
+- Show linked network in `infinit-network --list`.
 
 ### Changed
 
 - Rename `--allow-sign` to `--allow-create-passport` in `infinit-passport`.
 - Tidy up `infinit-block` CLI interface to look like other binaries.
+- Drop all cache when a network is deleted locally.
 
 ### Fixed
 
@@ -22,6 +59,9 @@ Hotfix for disk performances, persistent disk cache for file contents.
   files.
 - Use the GCS credentials instead of Google drive credentials to
   authenticate to GCS.
+- Fix SEGV when retrying an asynchronous write operation.
+- Fix importing pre-0.4 networks.
+- Fixed assertions on cleanup when shutdown abruptly.
 
 
 ## [0.5.3] - YANKED

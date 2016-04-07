@@ -64,10 +64,13 @@ namespace kademlia
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;
   protected:
-    virtual reactor::Generator<Member> _lookup(infinit::model::Address address,
-                                     int n, infinit::overlay::Operation op)
-                                  const override;
-    virtual Overlay::Member _lookup_node(infinit::model::Address address) override;
+    virtual reactor::Generator<WeakMember>
+    _lookup(infinit::model::Address address,
+            int n,
+            infinit::overlay::Operation op) const override;
+    virtual
+    Overlay::WeakMember
+    _lookup_node(infinit::model::Address address) override;
   public:
 
   private:

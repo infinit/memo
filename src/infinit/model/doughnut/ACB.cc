@@ -5,6 +5,7 @@
 #include <elle/bench.hh>
 #include <elle/cast.hh>
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 #include <elle/utility/Move.hh>
 
@@ -174,6 +175,22 @@ namespace infinit
         return this->_data_version;
       }
 
+      static void background_open(elle::Buffer & target,
+                                  elle::Buffer const& src,
+                                  infinit::cryptography::rsa::PrivateKey const& k)
+      {
+        static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
+        if (bg)
+        {
+          reactor::Thread::NonInterruptible ni;
+          reactor::background([&] {
+              target = k.open(src);
+          });
+        }
+        else
+          target = k.open(src);
+      }
+
       template <typename Block>
       elle::Buffer
       BaseACB<Block>::_decrypt_data(elle::Buffer const& data) const
@@ -184,7 +201,7 @@ namespace infinit
         if (this->owner_private_key())
         {
           ELLE_DEBUG("%s: we are owner", *this);
-          secret_buffer = this->owner_private_key()->open(this->_owner_token);
+          background_open(secret_buffer, this->_owner_token, *this->owner_private_key());
         }
         else if (!this->_acl_entries.empty())
         {
@@ -192,7 +209,7 @@ namespace infinit
           for (auto const& e: this->_acl_entries)
           {
             if (e.key == this->doughnut()->keys().K())
-              secret_buffer = this->doughnut()->keys().k().open(e.token);
+              background_open(secret_buffer, e.token, this->doughnut()->keys().k());
           }
         }
         if (secret_buffer.empty())
@@ -212,7 +229,7 @@ namespace infinit
                 ++idx;
                 continue;
               }
-              secret_buffer = keys[v].k().open(e.token);
+              background_open(secret_buffer, e.token, keys[v].k());
             }
             catch (elle::Error const& e)
             {
@@ -226,6 +243,8 @@ namespace infinit
           // FIXME: better exceptions
           throw ValidationFailed("no read permissions");
         }
+        static elle::Bench bench("bench.acb.decrypt_2", 10000_sec);
+        elle::Bench::BenchScope bs(bench);
         auto secret = elle::serialization::json::deserialize
           <cryptography::SecretKey>(secret_buffer);
         ELLE_DUMP("%s: secret: %s", *this, secret);
@@ -349,7 +368,10 @@ namespace infinit
           elle::Buffer token;
           if (this->_owner_token.size())
           {
-            auto secret = this->owner_private_key()->open(this->_owner_token);
+            auto okey = this->owner_private_key();
+            if (!okey)
+              throw elle::Error("Owner key unavailable");
+            auto secret = okey->open(this->_owner_token);
             token = key.seal(secret);
           }
           acl_entries.emplace_back(ACLEntry(key, read, write, token));
@@ -725,6 +747,51 @@ namespace infinit
           if (version)
             this->_data_version = *version;
           if (!sign_key)
+          { // can happen if version is set but data is unchanged
+            if (this->owner_private_key())
+            {
+              ELLE_DEBUG("we are owner");
+              sign_key = this->owner_private_key();
+              this->_editor = -1;
+            }
+          }
+          int idx = 0;
+          if (!sign_key)
+          {
+            for (auto& e: this->_acl_entries)
+            {
+              if (e.key == this->doughnut()->keys().K())
+              {
+                ELLE_DEBUG("we are editor %s", idx);
+                this->_editor = idx;
+                sign_key = this->doughnut()->keys().private_key();
+              }
+              ++idx;
+            }
+          }
+          if (!sign_key)
+          {
+            for (auto& e: this->_acl_group_entries)
+            {
+              Group g(*this->doughnut(), e.key);
+              try
+              {
+                auto kp = g.current_key();
+                this->_editor = idx;
+                ELLE_DEBUG("we are editor from group %s", g);
+                sign_key = g.current_key().private_key();
+              }
+              catch (elle::Error const& e)
+              {}
+            }
+            ++idx;
+          }
+          if (!sign_key && this->_world_writable)
+          {
+            ELLE_DEBUG("block is world writable");
+            sign_key = this->doughnut()->keys().private_key();
+          }
+          if (!sign_key)
             throw ValidationFailed("not owner and no write permissions");
           ELLE_DEBUG_SCOPE("%s: sign data", *this);
           this->_data_signature = std::make_shared<typename Super::SignFuture>(
@@ -811,24 +878,41 @@ namespace infinit
       BaseACB<Block>::_validate_remove(Model& model,
                                        blocks::RemoveSignature const& rs) const
       {
+        ELLE_DUMP_SCOPE("%s: check %f validates removal", this, rs);
         if (!rs.block)
-          return blocks::ValidationResult::failure("Expected a block in RemoveSignature");
+        {
+          ELLE_DUMP("remove signature has no block");
+          return blocks::ValidationResult::failure(
+            "remove signature has no block");
+        }
         auto mb = dynamic_cast<Self*>(rs.block.get());
         if (!mb)
-          return blocks::ValidationResult::failure("Signature is not a mutable block");
+        {
+          ELLE_DUMP("remove signature block is not mutable");
+          return blocks::ValidationResult::failure(
+            "remove signature block is not mutable");
+        }
         if (!mb->deleted())
-          return blocks::ValidationResult::failure("Block not marked for deletion");
+        {
+          ELLE_DUMP("remove signature block's not marked for deletion");
+          return blocks::ValidationResult::failure(
+            "remove signature block's not marked for deletion");
+        }
         // FIXME: calling validate can change our address, and make
         // the validate(other) below fail
         auto valid = rs.block->validate(model);
         if (!valid)
+        {
+          ELLE_DUMP("remove signature block's is not valid");
           return valid;
-
+        }
         if (this->version() >= mb->version())
-          return blocks::ValidationResult::conflict("Invalid version");
-
-        valid = dynamic_cast<const blocks::Block*>(this)->validate(model, *mb);
-        if (!valid)
+        {
+          ELLE_DUMP("removal version %s is not greater than local version %s",
+                    mb->version(), this->version());
+          return blocks::ValidationResult::conflict("invalid version");
+        }
+        if (!(valid = this->blocks::Block::validate(model, *mb)))
           return valid;
         return blocks::ValidationResult::success();
       }

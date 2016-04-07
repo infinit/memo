@@ -47,13 +47,13 @@ namespace infinit
                        insert ? update ? "upsert" : "insert" : "update", key);
       int delta = this->_set(key, value, insert, update);
 
-      _usage += delta;
-      if (std::abs(_base_usage - _usage) >= _step)
+      this->_usage += delta;
+      if (std::abs(this->_base_usage - this->_usage) >= this->_step)
       {
         ELLE_DUMP("%s: _base_usage - _usage = %s (_step = %s)", *this,
-          _base_usage -_usage, _step);
+          this->_base_usage - this->_usage, this->_step);
         ELLE_DEBUG("%s: update Beyond (if --push provided) with usage = %s",
-          *this, _usage);
+          *this, this->_usage);
         try
         {
           this->_on_storage_size_change();
@@ -62,7 +62,7 @@ namespace infinit
         {
           ELLE_WARN("Error notifying storage size change: %s", e);
         }
-        _base_usage = _usage;
+        this->_base_usage = this->_usage;
       }
 
       ELLE_DEBUG("%s: usage/capacity = %s/%s", *this,
@@ -76,8 +76,8 @@ namespace infinit
     {
       ELLE_TRACE_SCOPE("%s: erase %x", *this, key);
       int delta = this->_erase(key);
-      ELLE_DEBUG("usage %s and delta %s", _usage, delta);
-      _usage += delta;
+      ELLE_DEBUG("usage %s and delta %s", this->_usage, delta);
+      this->_usage += delta;
       this->_size_cache.erase(key);
       return delta;
     }
@@ -105,7 +105,7 @@ namespace infinit
     void
     Storage::register_notifier(std::function<void ()> f)
     {
-      _on_storage_size_change.connect(f);
+      this->_on_storage_size_change.connect(f);
     }
 
     std::unique_ptr<Storage>
@@ -118,8 +118,9 @@ namespace infinit
       const char* sep = (space == args.npos) ? ":" : " ";
       boost::algorithm::split(bargs, args, boost::algorithm::is_any_of(sep),
                               boost::algorithm::token_compress_on);
-      std::unique_ptr<Storage> backend = elle::Factory<Storage>::instantiate(name, bargs);
-      return std::move(backend);
+      std::unique_ptr<Storage> backend =
+        elle::Factory<Storage>::instantiate(name, bargs);
+      return backend;
     }
 
     /*---------------.

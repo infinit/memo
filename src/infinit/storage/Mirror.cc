@@ -140,7 +140,7 @@ namespace infinit
         for(auto const& c: storage)
         {
           ELLE_ASSERT(!!c);
-          s.push_back(std::move(c->make()));
+          s.push_back(c->make());
         }
         return elle::make_unique<infinit::storage::Mirror>(
           std::move(s), balance, parallel);

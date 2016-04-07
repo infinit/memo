@@ -15,7 +15,8 @@ namespace crash_reporting
   {
   public:
     CrashReporter(std::string crash_url,
-                  boost::filesystem::path dumps_path);
+                  boost::filesystem::path dumps_path,
+                  std::string version);
     ~CrashReporter();
 
     bool
@@ -29,7 +30,8 @@ namespace crash_reporting
     std::string _crash_url;
     bool _enabled;
     google_breakpad::ExceptionHandler* _exception_handler;
-    ELLE_ATTRIBUTE_R(boost::filesystem::path, dumps_path);
+    ELLE_ATTRIBUTE(boost::filesystem::path, dumps_path);
+    ELLE_ATTRIBUTE(std::string, version);
   };
 }
 

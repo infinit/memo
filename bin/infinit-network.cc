@@ -21,32 +21,6 @@ infinit::Infinit ifnt;
 #include <endpoint_file.hh>
 
 static
-bool
-_one(bool seen)
-{
-  return seen;
-}
-
-template <typename First, typename ... Args>
-static
-bool
-_one(bool seen, First&& first, Args&& ... args)
-{
-  auto b = bool(first);
-  if (seen && b)
-    return false;
-  return _one(seen || b, std::forward<Args>(args)...);
-}
-
-template <typename ... Args>
-static
-bool
-one(Args&& ... args)
-{
-  return _one(false, std::forward<Args>(args)...);
-}
-
-static
 std::unique_ptr<infinit::storage::StorageConfig>
 storage_configuration(boost::program_options::variables_map const& args)
 {
@@ -143,7 +117,7 @@ COMMAND(create)
       }
       catch (elle::serialization::Error const& e)
       {
-        throw CommandLineError("protocol must be one of: utp, tcp, all");
+        throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
       }
     }
     overlay_config = std::move(kelips);
@@ -197,12 +171,13 @@ COMMAND(create)
       infinit::model::doughnut::Passport(
         owner.public_key,
         ifnt.qualified_name(name, owner),
-        infinit::cryptography::rsa::KeyPair(owner.public_key, owner.private_key.get())),
+        infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                            owner.private_key.get())),
       owner.name,
       std::move(port),
       version);
   {
-    infinit::Network network(std::move(ifnt.qualified_name(name, owner)),
+    infinit::Network network(ifnt.qualified_name(name, owner),
                              std::move(dht));
     if (args.count("output"))
     {
@@ -255,11 +230,12 @@ COMMAND(export_)
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, owner);
+  network_name = network.name;
   {
     infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
-  report_exported(*output, "network", network.name);
+  report_exported(*output, "network", network_name);
 }
 
 COMMAND(fetch)
@@ -482,10 +458,11 @@ COMMAND(run)
   {
     cache = true;
   }
+  auto port = optional<int>(args, option_port);
   auto dht = network.run(
     eps, false,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version);
+    flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
             && dht->local()->storage();
@@ -750,6 +727,7 @@ main(int argc, char** argv)
           "alias for --fetch-endpoints --push-endpoints" },
         option_endpoint_file,
         option_port_file,
+        option_port,
 #ifndef INFINIT_WINDOWS
         { "daemon,d", bool_switch(), "run as a background daemon"},
 #endif

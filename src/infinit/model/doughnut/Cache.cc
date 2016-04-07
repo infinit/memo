@@ -7,6 +7,7 @@
 
 #include <elle/bench.hh>
 #include <elle/bytes.hh>
+#include <elle/os/environ.hh>
 #include <elle/serialization/json.hh>
 #include <elle/serialization/binary.hh>
 
@@ -165,21 +166,59 @@ namespace infinit
               ELLE_DEBUG("cache miss");
               bench_disk_hit.add(0);
             }
-            auto res = _backend->fetch(address, local_version);
+            auto it = this->_pending.find(address);
+            if (it != this->_pending.end())
+            {
+              static elle::Bench bench("bench.cache.pending_wait", 10000_sec);
+              elle::Bench::BenchScope bs(bench);
+              ELLE_TRACE("%s: fetch on %s pending", this, address);
+              auto b = it->second;
+              b->wait();
+              return _fetch(address, local_version);
+            }
+            it = this->_pending.insert(std::make_pair(
+              address, std::make_shared<reactor::Barrier>())).first;
+            auto b = it->second;
+            elle::SafeFinally sf([&]
+              {
+                b->open();
+                this->_pending.erase(address);
+              });
+            // Don't pass local_version to fetch, prioritizing cache feed over
+            // this optimization.
+            auto res = _backend->fetch(address);
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
             {
               if (!res->validate(doughnut()))
               {
-                ELLE_WARN("%s: invalid block received for %s", this, address);
+                ELLE_WARN("%s: invalid block received for %f", this, address);
                 throw elle::Error("invalid block");
               }
+              static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
+              if (decode)
+                try
+                {
+                  static elle::Bench bench("bench.cache.preempt_decode", 10000_sec);
+                  elle::Bench::BenchScope bs(bench);
+                  res->data();
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_TRACE("%s: block %f is not readable: %s", this, address, e);
+                }
 
               if (this->_disk_cache_size &&
-                  dynamic_cast<blocks::ImmutableBlock*>(res.get()))
+                  !dynamic_cast<blocks::MutableBlock*>(res.get()))
                 this->_disk_cache_push(res);
-              else
+              else if (dynamic_cast<blocks::MutableBlock*>(res.get()))
                 this->_cache.emplace(res->clone());
+            }
+            if (res)
+            {
+              auto mut = dynamic_cast<blocks::MutableBlock*>(res.get());
+              if (mut && local_version && mut->version() == *local_version)
+                return nullptr;
             }
             return res;
           }
@@ -304,63 +343,70 @@ namespace infinit
         {
           while (true)
           {
-            auto const now = consensus::now();
-            ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
-            ELLE_DEBUG("evict unused blocks")
             {
-              auto& order = this->_cache.get<1>();
-              auto deadline = now - this->_cache_ttl;
-              auto it = order.begin();
-              while (it != order.end() && it->last_used() < deadline)
+              static elle::Bench bench("bench.cache.cleanup", 10000_sec);
+              elle::Bench::BenchScope bs(bench);
+              auto const now = consensus::now();
+              ELLE_DEBUG_SCOPE("%s: cleanup cache", *this);
+              ELLE_DEBUG("evict unused blocks")
               {
-                ELLE_DUMP("evict %s", it->block()->address());
-                it = order.erase(it);
-              }
-            }
-            // FIXME: take cache_size in account too
-            ELLE_DEBUG("refresh obsolete blocks")
-            {
-              auto& order = this->_cache.get<2>();
-              auto deadline = now - this->_cache_invalidation;
-              while (!order.empty())
-              {
-                auto& cached = *order.begin();
-                if (!(cached.last_fetched() < deadline))
-                  break;
-                auto const address = cached.block()->address();
-                if (auto mb =
-                    dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
+                auto& order = this->_cache.get<1>();
+                auto deadline = now - this->_cache_ttl;
+                auto it = order.begin();
+                while (it != order.end() && it->last_used() < deadline)
                 {
-                  ELLE_DEBUG_SCOPE("refresh %s", address);
-                  try
+                  ELLE_DUMP("evict %s", it->block()->address());
+                  it = order.erase(it);
+                }
+              }
+              // FIXME: take cache_size in account too
+              ELLE_DEBUG("refresh obsolete blocks")
+              {
+                auto& order = this->_cache.get<2>();
+                auto deadline = now - this->_cache_invalidation;
+                while (!order.empty())
+                {
+                  auto& cached = *order.begin();
+                  if (!(cached.last_fetched() < deadline))
+                    break;
+                  auto const address = cached.block()->address();
+                  if (auto mb =
+                      dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
                   {
-                    auto block = this->_backend->fetch(address, mb->version());
-                    // Beware: everything is invalidated past there we probably
-                    // yielded.
-                    auto it = this->_cache.find(address);
-                    if (it != this->_cache.end())
-                      this->_cache.modify(
-                        it,
-                        [&] (CachedBlock& cache)
-                        {
-                          if (block)
-                            cache.block() = std::move(block);
-                          cache.last_fetched(now);
-                        });
+                    ELLE_DEBUG_SCOPE("refresh %s", address);
+                    try
+                    {
+                      auto block = this->_backend->fetch(address, mb->version());
+                      // Beware: everything is invalidated past there we probably
+                      // yielded.
+                      auto it = this->_cache.find(address);
+                      if (it != this->_cache.end())
+                        this->_cache.modify(
+                          it,
+                          [&] (CachedBlock& cache)
+                          {
+                            if (block)
+                              cache.block() = std::move(block);
+                            cache.last_fetched(now);
+                          });
+                    }
+                    catch (MissingBlock const&)
+                    {
+                      ELLE_DUMP("drop removed block");
+                      this->_cache.erase(address);
+                    }
+                    catch (elle::Error const& e)
+                    {
+                      ELLE_TRACE("Fetch error on %x: %s", address, e);
+                      this->_cache.erase(address);
+                    }
                   }
-                  catch (MissingBlock const&)
+                  else
                   {
-                    ELLE_DUMP("drop removed block");
-                    this->_cache.erase(address);
-                  }
-                  catch (elle::Error const& e)
-                  {
-                    ELLE_TRACE("Fetch error on %x: %s", address, e);
-                    this->_cache.erase(address);
+                    ELLE_WARN("Nonmutable block %f in Cache", address);
+                    break;
                   }
                 }
-                else
-                  ELLE_WARN("Nonmutable block in Cache");
               }
             }
             reactor::sleep(

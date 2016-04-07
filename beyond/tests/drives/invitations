@@ -72,7 +72,7 @@ with Beyond() as beyond:
         'developers+passport_generation@infinit.sh',
         'Internal/Passport Generation Error')
       assertEq(len(emails), 1)
-      assertIn('Unkown network', emails[0]['errors'])
+      assertIn('Unknown network', emails[0]['errors'])
 
     def test_multiple_invitations(self):
       user, _, _, drive = setup(beyond)

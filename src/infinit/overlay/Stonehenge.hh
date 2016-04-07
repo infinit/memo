@@ -39,16 +39,16 @@ namespace infinit
     `-------*/
     protected:
       virtual
-      reactor::Generator<Member>
+      reactor::Generator<std::ambivalent_ptr<model::doughnut::Peer>>
       _lookup(model::Address address,
               int n,
               Operation op) const override;
       virtual
-      Overlay::Member
+      Overlay::WeakMember
       _lookup_node(model::Address address) override;
 
     private:
-      Overlay::Member
+      Overlay::WeakMember
       _make_member(Peer const& p) const;
     };
 

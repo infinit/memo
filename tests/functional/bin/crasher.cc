@@ -36,6 +36,7 @@ main(int argc, char** argv)
     ("dumps", po::value<std::string>(), "Crash dump location")
     ("help", "Help!")
     ("server", po::value<std::string>(), "Server to upload to")
+    ("version", po::value<std::string>(), "Version to send to server")
   ;
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -48,8 +49,10 @@ main(int argc, char** argv)
   bool crash = vm.count("crash");
   std::string dumps = option_str(vm, "dumps");
   std::string server = option_str(vm, "server");
+  std::string version =
+    vm.count("version") ? option_str(vm, "version") : "test_version";
   auto crash_reporter =
-    elle::make_unique<crash_reporting::CrashReporter>(server, dumps);
+    elle::make_unique<crash_reporting::CrashReporter>(server, dumps, version);
   if (crash)
     do_crash();
   reactor::Scheduler sched;

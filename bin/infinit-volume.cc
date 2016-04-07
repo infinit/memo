@@ -303,7 +303,32 @@ COMMAND(run)
       }
     }
   }
+  std::vector<std::string> fuse_options;
+#ifdef INFINIT_MACOSX
+  if (!flag(args, option_disable_mac_utf8))
+    fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+#endif
   auto volume = ifnt.volume_get(name);
+  auto mountpoint = optional(args, "mountpoint");
+  if (!mountpoint)
+    mountpoint = volume.mountpoint;
+  if (mountpoint)
+  {
+    if (boost::filesystem::exists(mountpoint.get()))
+    {
+      if (!boost::filesystem::is_directory(mountpoint.get()))
+        throw (elle::Error("mountpoint is not a directory"));
+      if (!boost::filesystem::is_empty(mountpoint.get()))
+        throw elle::Error("mountpoint is not empty");
+    }
+  }
+  if (args.count("fuse-option"))
+  {
+    if (mountpoint)
+      throw CommandLineError("FUSE options require the volume to be mounted");
+    for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
+      fuse_options.push_back(opt);
+  }
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
   bool cache = flag(args, option_cache);
@@ -343,10 +368,11 @@ COMMAND(run)
     beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
+  auto port = optional<int>(args, option_port);
   auto model = network.run(
     eps, true,
     cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version);
+    flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
@@ -369,25 +395,38 @@ COMMAND(run)
     {
       ELLE_DEBUG("Connect callback to log storage stat");
       model->local()->storage()->register_notifier([&] {
-        network.notify_storage(self, node_id);
+        try
+        {
+          network.notify_storage(self, node_id);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("Error notifying storage size change: %s", e);
+        }
       });
 
       {
-        static reactor::Thread updater("periodic_stat_updater", [&] {
+        static reactor::Thread updater("periodic storage stat updater", [&] {
           while (true)
           {
             ELLE_LOG_COMPONENT("infinit-volume");
             ELLE_DEBUG(
               "Hourly notification to beyond with storage usage (periodic)");
-                network.notify_storage(self, node_id);
-                reactor::wait(updater, 60_min);
+            try
+            {
+              network.notify_storage(self, node_id);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("Error notifying storage size change: %s", e);
+            }
+            reactor::wait(updater, 60_min);
           }
         });
       }
     }
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto mountpoint = optional(args, "mountpoint");
     auto fs = volume.run(std::move(model),
                          mountpoint,
                          flag(args, "readonly")
@@ -396,6 +435,9 @@ COMMAND(run)
 #endif
 #ifdef INFINIT_MACOSX
                          , optional(args, "mount-icon")
+#endif
+#ifndef INFINIT_WINDOWS
+                         , fuse_options
 #endif
                          );
     if (volume.default_permissions && !volume.default_permissions->empty())
@@ -872,12 +914,15 @@ main(int argc, char** argv)
     { "mount-name", value<std::string>(), "name of mounted volume" },
 #endif
 #ifdef INFINIT_MACOSX
-    { "mount-icon", value<std::string>(), "icon for mounted volume" },
+    { "mount-icon", value<std::string>(),
+      "path to an icon for mounted volume" },
     { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
 #endif
-    { "async", bool_switch(), "use asynchronous operations" },
+    { "async", bool_switch(), "use asynchronous write operations" },
 #ifndef INFINIT_WINDOWS
-    { "daemon,d", bool_switch(), "run as a background daemon"},
+    { "daemon,d", bool_switch(), "run as a background daemon" },
+    { "fuse-option", value<std::vector<std::string>>()->multitoken(),
+      "option to pass directly to FUSE" },
 #endif
     option_cache,
     option_cache_ram_size,
@@ -896,6 +941,12 @@ main(int argc, char** argv)
       "alias for --fetch-endpoints --push-endpoints" },
     option_endpoint_file,
     option_port_file,
+    option_port,
+  };
+  std::vector<Mode::OptionDescription> options_run_mount_hidden = {
+#ifdef INFINIT_MACOSX
+    option_disable_mac_utf8,
+#endif
   };
   Modes modes {
     {
@@ -965,6 +1016,8 @@ main(int argc, char** argv)
       &run,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
+      {},
+      options_run_mount_hidden,
     },
     {
       "mount",
@@ -972,6 +1025,8 @@ main(int argc, char** argv)
       &mount,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
+      {},
+      options_run_mount_hidden,
     },
     {
       "delete",

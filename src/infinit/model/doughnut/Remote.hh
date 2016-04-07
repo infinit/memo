@@ -91,6 +91,7 @@ namespace infinit
         ELLE_ATTRIBUTE(std::function <std::iostream& ()>, connector);
         ELLE_ATTRIBUTE(std::string, endpoint);
         ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, connection_thread);
+        ELLE_ATTRIBUTE(reactor::Mutex, connection_mutex);
         ELLE_ATTRIBUTE_R(elle::Buffer, credentials, protected);
         /* Callback is expected to retry an async connection, with
            potentially updated endpoints. Should return false if it

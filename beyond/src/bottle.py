@@ -238,7 +238,7 @@ class Bottle(bottle.Bottle):
     if delay > 300:
       raise Response(401, {
         'error': 'user/unauthorized',
-        'reason': 'too late: request was issued %ss ago' % delay,
+        'reason': 'request was issued %ss ago, check system clock' % delay,
       })
     rawk = user.public_key['rsa']
     der = b64decode(rawk.encode('latin-1'))
@@ -904,7 +904,17 @@ class Bottle(bottle.Bottle):
   ## Crash Report ##
   ## ------------ ##
   def crash_report_put(self):
-    self.__beyond.crash_report_send(bottle.request.body)
+    content_type = bottle.request.headers.get('Content-Type')
+    # Old crash reports only contained dump data.
+    if content_type == 'application/octet-stream':
+      self.__beyond.crash_report_send(bottle.request.body)
+    elif content_type == 'application/json':
+      json = bottle.request.json
+      from base64 import b64decode
+      from io import BytesIO
+      self.__beyond.crash_report_send(BytesIO(b64decode(json.get('dump', ''))),
+                                      json.get('platform', 'Unknown'),
+                                      json.get('version', 'Unknown'))
     return {}
 
   ## --- ##

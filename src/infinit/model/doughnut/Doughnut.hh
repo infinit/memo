@@ -53,6 +53,16 @@ namespace infinit
                  std::unique_ptr<storage::Storage> local,
                  boost::optional<elle::Version> version = {});
         ~Doughnut();
+
+      /*-----.
+      | Time |
+      `-----*/
+      protected:
+        virtual
+        std::chrono::high_resolution_clock::time_point
+        now();
+
+      public:
         cryptography::rsa::KeyPair const&
         keys() const;
         std::shared_ptr<cryptography::rsa::KeyPair>
@@ -70,8 +80,8 @@ namespace infinit
         ELLE_ATTRIBUTE_R(std::shared_ptr<Local>, local)
         ELLE_ATTRIBUTE_R(std::unique_ptr<overlay::Overlay>, overlay)
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, user_init)
-        ELLE_ATTRIBUTE(elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
-      public:
+        ELLE_ATTRIBUTE(
+          elle::ProducerPool<std::unique_ptr<blocks::MutableBlock>>, pool)
 
       protected:
         virtual
@@ -79,7 +89,8 @@ namespace infinit
         _make_mutable_block() const override;
         virtual
         std::unique_ptr<blocks::ImmutableBlock>
-        _make_immutable_block(elle::Buffer content, Address owner) const override;
+        _make_immutable_block(elle::Buffer content,
+                              Address owner) const override;
         virtual
         std::unique_ptr<blocks::ACLBlock>
         _make_acl_block() const override;
@@ -148,7 +159,8 @@ namespace infinit
              boost::optional<std::chrono::seconds> cache_ttl = {},
              boost::optional<std::chrono::seconds> cache_invalidation = {},
              boost::optional<uint64_t> disk_cache_size = {},
-             boost::optional<elle::Version> version = {});
+             boost::optional<elle::Version> version = {},
+             boost::optional<int> port = {});
       };
     }
   }

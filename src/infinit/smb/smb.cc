@@ -296,7 +296,7 @@ namespace infinit
       data[1] = sz >> 16;
       data[2] = sz >> 8;
       data[3] = sz;
-      return std::move(buf);
+      return buf;
     }
 
     SMBServer::SMBServer(std::unique_ptr<infinit::filesystem::FileSystem> fs)

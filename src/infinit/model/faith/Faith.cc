@@ -56,7 +56,7 @@ namespace infinit
           elle::IOStream s(data.istreambuf());
           Serializer::SerializerIn input(s, false);
           auto res = input.deserialize<std::unique_ptr<blocks::Block>>();
-          return std::move(res);
+          return res;
         }
         catch (infinit::storage::MissingKey const&)
         {

@@ -15,10 +15,10 @@ namespace infinit
                model::Address node_id,
                std::shared_ptr<model::doughnut::Local> local);
       virtual
-      reactor::Generator<Member>
+      reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, Operation op) const override;
       virtual
-      Overlay::Member
+      Overlay::WeakMember
       _lookup_node(model::Address address) override;
     };
 

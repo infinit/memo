@@ -24,6 +24,11 @@ namespace infinit
       , _local(local)
     {}
 
+    Overlay::~Overlay()
+    {
+      ELLE_TRACE("%s: destruct", this);
+    }
+
     elle::json::Json
     Overlay::query(std::string const& k, boost::optional<std::string> const& v)
     {
@@ -34,19 +39,18 @@ namespace infinit
     | Lookup |
     `-------*/
 
-    reactor::Generator<Overlay::Member>
+    reactor::Generator<Overlay::WeakMember>
     Overlay::lookup(model::Address address, int n, Operation op) const
     {
-      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %s", *this, n, address);
+      ELLE_TRACE_SCOPE("%s: lookup %s nodes for %f", this, n, address);
       return this->_lookup(address, n, op);
     }
 
-    Overlay::Member
+    Overlay::WeakMember
     Overlay::lookup(model::Address address, Operation op) const
     {
-      ELLE_DEBUG("address %7.s", address);
-      auto gen = this->lookup(address, 1, op);
-      for (auto res: gen)
+      ELLE_TRACE_SCOPE("%s: lookup 1 node for %f", this, address);
+      for (auto res: this->_lookup(address, 1, op))
         return res;
       throw model::MissingBlock(address);
     }
@@ -56,18 +60,18 @@ namespace infinit
       this->serialize(input);
     }
 
-    Overlay::Member
+    Overlay::WeakMember
     Overlay::lookup_node(model::Address address)
     {
       return this->_lookup_node(address);
     }
 
-    reactor::Generator<Overlay::Member>
+    reactor::Generator<Overlay::WeakMember>
     Overlay::lookup_nodes(std::unordered_set<model::Address> addresses)
     {
-      return reactor::generator<Overlay::Member>(
+      return reactor::generator<Overlay::WeakMember>(
         [this, addresses]
-        (reactor::Generator<Overlay::Member>::yielder const& yield)
+        (reactor::Generator<Overlay::WeakMember>::yielder const& yield)
         {
           elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
           {
@@ -78,13 +82,13 @@ namespace infinit
                 {
                   try
                   {
-                    auto peer = this->lookup_node(address);
-                    yield(peer);
+                    yield(this->_lookup_node(address));
                   }
                   catch (elle::Error const& e)
                   {
-                    ELLE_TRACE("Failed to lookup node %s: %s", address, e);
-                    yield(Member(new model::doughnut::DummyPeer(address)));
+                    ELLE_TRACE("%s: failed to lookup node %f: %s",
+                               this, address, e);
+                    yield(WeakMember(new model::doughnut::DummyPeer(address)));
                   }
                 });
             reactor::wait(scope);

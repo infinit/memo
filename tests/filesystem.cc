@@ -30,7 +30,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/overlay/Stonehenge.hh>
@@ -111,6 +111,11 @@ static int group_remove_admin(bfs::path p, std::string const& gname, std::string
 {
   std::string cmd = gname + ":" + uname;
   return setxattr(p.c_str(), "user.infinit.group.removeadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+
+static int group_delete(bfs::path p, std::string const& gname)
+{
+  return setxattr(p.c_str(), "user.infinit.group.delete", gname.c_str(), gname.size(), 0 SXA_EXTRA);
 }
 
 static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
@@ -366,12 +371,18 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
           [paxos] (infinit::model::doughnut::Doughnut& dht)
           -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
           {
+            std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+            consensus;
             if (paxos)
-              return elle::make_unique<
-            infinit::model::doughnut::consensus::Paxos>(dht, 3);
+              consensus = elle::make_unique<
+                infinit::model::doughnut::consensus::Paxos>(dht, 3);
             else
-              return elle::make_unique<
-            infinit::model::doughnut::consensus::Consensus>(dht);
+              consensus = elle::make_unique<
+                infinit::model::doughnut::consensus::Consensus>(dht);
+            consensus = elle::make_unique<
+              infinit::model::doughnut::consensus::Cache>
+                (std::move(consensus), 1000);
+            return consensus;
           };
         infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
           [=] (infinit::model::doughnut::Doughnut& dht,
@@ -410,8 +421,8 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
             ELLE_LOG("filesystem unmounted");
             nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
             processes.clear();
-            reactor::scheduler().terminate();
 #endif
+            reactor::scheduler().terminate();
             });
       }
       else
@@ -693,9 +704,9 @@ test_filesystem(bool dht,
     bfs::remove(mount / "tt");
   }
 
-  struct stat st;
   // hardlink
 #ifndef INFINIT_MACOSX
+  struct stat st;
   {
     bfs::ofstream ofs(mount / "test");
     ofs << "Test";
@@ -826,7 +837,8 @@ test_filesystem(bool dht,
 
   ELLE_LOG("test cross-block")
   {
-    fd = open((mount / "babar").string().c_str(), O_RDWR|O_CREAT, 0644);
+    struct stat st;
+    int fd = open((mount / "babar").string().c_str(), O_RDWR|O_CREAT, 0644);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 - 10, SEEK_SET);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
@@ -850,7 +862,8 @@ test_filesystem(bool dht,
   }
   ELLE_LOG("test cross-block 2")
   {
-    fd = open((mount / "bibar").string().c_str(), O_RDWR|O_CREAT, 0644);
+    struct stat st;
+    int fd = open((mount / "bibar").string().c_str(), O_RDWR|O_CREAT, 0644);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 + 16384 - 10, SEEK_SET);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
@@ -875,7 +888,7 @@ test_filesystem(bool dht,
 
   ELLE_LOG("test link/unlink")
   {
-    fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
+    int fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
     ::close(fd);
     bfs::remove(mount / "u");
   }
@@ -1455,6 +1468,7 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(group_delete(m0, "group1"), 0);
 
   ELLE_LOG("removal");
   //test the xattrs we'll use
@@ -1560,6 +1574,33 @@ public:
   std::vector<DHT> dhts;
 };
 
+ELLE_TEST_SCHEDULED(write_truncate)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  // the emacs save procedure: open() truncate() write()
+  auto handle = client.fs->path("/file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  handle->write(elle::ConstWeakBuffer("foo\nbar\nbaz\n", 12), 12, 0);
+  handle->close();
+  handle.reset();
+  handle = client.fs->path("/file")->open(O_RDWR, 0);
+  BOOST_CHECK(handle);
+  client.fs->path("/file")->truncate(0);
+  handle->write(elle::ConstWeakBuffer("foo\nbar\n", 8), 8, 0);
+  handle->close();
+  handle.reset();
+  struct stat st;
+  client.fs->path("/file")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_size, 8);
+  handle = client.fs->path("/file")->open(O_RDWR, 0);
+  char buffer[64];
+  int count = handle->read(elle::WeakBuffer(buffer, 64), 64, 0);
+  BOOST_CHECK_EQUAL(count, 8);
+  buffer[count] = 0;
+  BOOST_CHECK_EQUAL(buffer, std::string("foo\nbar\n"));
+}
+
+
 ELLE_TEST_SCHEDULED(write_unlink)
 {
   DHTs servers(1);
@@ -1624,6 +1665,35 @@ ELLE_TEST_SCHEDULED(write_unlink)
     BOOST_CHECK_THROW(root_2->child("file")->stat(&st), elle::Error);
 }
 
+ELLE_TEST_SCHEDULED(prefetcher_failure)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  ::Overlay* o = dynamic_cast< ::Overlay*>(client.dht.dht->overlay().get());
+  auto root = client.fs->path("/");
+  BOOST_CHECK(o);
+  root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  // grow to 2 data blocks
+  root->child("file")->truncate(1024*1024*3);
+  auto fat = root->child("file")->getxattr("user.infinit.fat");
+  std::cerr << "-\n" << fat << std::endl;
+  std::stringstream ss(fat);
+  std::string address1, address2, address3;
+  std::string skip;
+  ss >> skip >> skip >> skip >> address1 >> skip >> address2 >> skip >> address3;
+  auto a2 = infinit::model::Address::from_string(address2.substr(2));
+  auto a3 = infinit::model::Address::from_string(address3.substr(2));
+  o->fail_addresses().insert(a2);
+  o->fail_addresses().insert(a3);
+  auto handle = root->child("file")->open(O_RDWR, 0);
+  char buf[16384];
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192), 16384);
+  reactor::sleep(200_ms);
+  o->fail_addresses().clear();
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024 + 8192), 16384);
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024*2 + 8192), 16384);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1643,4 +1713,6 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
 #endif
   suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
+  suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
+  suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
 }
