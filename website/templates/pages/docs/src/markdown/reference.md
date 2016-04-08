@@ -20,7 +20,7 @@ All the configuration files Infinit creates and uses are located in the `$INFINI
 
 Please refer to the [environment variables documentation](/documentation/environment-variables) should you want to specifically define where the configuration files, journal operations etc. are stored.
 
-As an example, `$INFINIT_DATA_HOME` references the directory that contains the configuration files such as user identities, network descriptors etc. The environment variable is, by default, set to `$INFINIT_HOME/.local/share/infinit/filesystem/` and can be very easily changed by either modifying your shell configuration or by setting it manually:
+As an example, `$INFINIT_DATA_HOME` references the directory that contains the configuration files such as user identities, network descriptors etc. The environment variable is, by default, set to `$INFINIT_HOME/.local/share/infinit/filesystem/` and can be very easily changed by either modifying your shell configuration or by [setting it](/documentation/environment_variables) manually:
 
 ```
 $> export INFINIT_DATA_HOME="/some/where/"
@@ -96,7 +96,7 @@ With the exception of the _infinit-user_ binary, one can specify the Infinit use
 
 ### Hub ###
 
-All objects (users, storages, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_DATA_HOME` directory.
+All objects (users, storages, networks, volumes etc.) are created locally by default with no server involved. The creation process may generate one or more files and store them in the `$INFINIT_HOME` directory, more specifically in the subdirectory `$INFINIT_DATA_HOME`.
 
 The command-line tools however provide a way to rely on the Hub for certain operations in order to simplify some administrative tasks such as inviting a user to a drive, sharing the volumes created within a network, moving the user identity to another of your devices and so on. In addition, some functionalities such as the consumption of storage capacity in a network are only available through the Hub. As a rule of thumb, we advise you to always rely on the Hub, unless you know exactly what you are doing.
 
@@ -466,7 +466,7 @@ Bob can now [fetch the new passport](#receive-a-passport), at which point he wil
 Volume
 ------
 
-On top of the distributed storage layer i.e. the network, one can create a volume also known as logical drive. A volume is represented by the address of its root directory. While centralized file systems store this address in a specific block known as the _superblock_, Infinit uses a file located in the `$INFINIT_DATA_HOME` directory which describes the volume.
+On top of the distributed storage layer i.e. the network, one can create a volume also known as logical drive. A volume is represented by the address of its root directory. While centralized file systems store this address in a specific block known as the _superblock_, Infinit uses a file located in the `$INFINIT_HOME` directory which describes the volume.
 
 Note that several volumes can be created on the same network, which is analogous to partitions on the same hard disk drive.
 
