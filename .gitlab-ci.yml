@@ -5,6 +5,29 @@ variables:
   PYTHONUNBUFFERED: "1"
   LC_ALL: "C.UTF-8"
 
+x86_64-centos6-gcc4:
+  stage: build
+  script:
+    - git submodule sync --recursive
+    - git submodule update --init --recursive
+    - git fetch origin --tags
+    - mkdir -p ../fs-build ../fs-install
+    - scl enable devtoolset-4 rh-python34 "farm/configure --arch x86_64 --os centos6 --compiler gcc4 --project Filesystem --source-dir . --build-dir ../fs-build --install-dir ../fs-install"
+    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //build"
+    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //check"
+    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //install"
+    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
+    - scp ../fs-build/infinit-${$(GIT_DIR=../fs/.git git describe)//-/_}-1.el6.x86_64.rpm debian@debian.infinit.io:brew
+    - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
+    - scp ../fs-build/infinit-debug-symbols-linux-centos6-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io 'make debian'
+  tags:
+    - x86_64
+    - centos6
+    - gcc4
+  except:
+    - feature/website
+
 x86_64-trusty-gcc4:
   stage: build
   script:
@@ -120,7 +143,7 @@ x86_64-osx-clang:
     - gtar -cvjf /tmp/$TARBALL -C ../fs-install . --show-transformed-names --transform "s,^\\./,infinit-$(GIT_DIR=../fs/.git git describe)/,"
     - scp /tmp/$TARBALL debian@debian.infinit.io:brew
     - ssh debian@debian.infinit.io 'make brew'
-    - python3 drake -j 4 //debian
+    - python3 drake -j 4 //debian-debug
     - scp ../fs-build/infinit-debug-symbols-macosx-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
     - ssh debian@debian.infinit.io 'make debian'
   tags:
