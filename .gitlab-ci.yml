@@ -6,6 +6,8 @@ variables:
   LC_ALL: "C.UTF-8"
 
 x86_64-centos6-gcc4:
+  variables:
+    LC_ALL: "en_US.utf8"
   stage: build
   script:
     - git submodule sync
