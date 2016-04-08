@@ -33,6 +33,8 @@ namespace infinit
         NAMED_ARGUMENT(rebalance_auto_expand);
         NAMED_ARGUMENT(node_timeout);
 
+        struct BlockOrPaxos;
+
         class Paxos
           : public Consensus
         {
@@ -242,11 +244,13 @@ namespace infinit
           private:
             void
             _remove(Address address);
+            BlockOrPaxos
+            _load(Address address);
             Decision&
-            _load(Address address,
-                  boost::optional<PaxosServer::Quorum> peers = {});
+            _load_paxos(Address address,
+                        boost::optional<PaxosServer::Quorum> peers = {});
             Decision&
-            _load(Address address, Decision decision);
+            _load_paxos(Address address, Decision decision);
             void
             _cache(Address address, Quorum quorum);
             void
@@ -336,8 +340,11 @@ namespace infinit
 
         struct BlockOrPaxos
         {
+          explicit
           BlockOrPaxos(blocks::Block& b);
+          explicit
           BlockOrPaxos(Paxos::LocalPeer::Decision* p);
+          explicit
           BlockOrPaxos(elle::serialization::SerializerIn& s);
           std::unique_ptr<
             blocks::Block, std::function<void(blocks::Block*)>> block;

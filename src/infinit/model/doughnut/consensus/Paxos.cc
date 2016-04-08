@@ -403,7 +403,7 @@ namespace infinit
                       reactor::sleep(100_ms);
                       try
                       {
-                        this->_load(address);
+                        this->_load_paxos(address);
                         auto quorum = this->_quorums.find(address);
                         ELLE_ASSERT(quorum != this->_quorums.end());
                         if (quorum->replication_factor() >= this->_factor)
@@ -427,48 +427,69 @@ namespace infinit
           this->_rebalance_thread.terminate_now();
         }
 
-        Paxos::LocalPeer::Decision&
-        Paxos::LocalPeer::_load(Address address,
-                                boost::optional<PaxosServer::Quorum> peers)
+        BlockOrPaxos
+        Paxos::LocalPeer::_load(Address address)
         {
           auto decision = this->_addresses.find(address);
           if (decision != this->_addresses.end())
-            return decision->second;
+            return BlockOrPaxos(&decision->second);
           else
-            try
-            {
-              ELLE_TRACE_SCOPE("%s: load paxos %f from storage",
-                               *this, address);
-              auto buffer = this->storage()->get(address);
-              elle::serialization::Context context;
-              context.set<Doughnut*>(&this->doughnut());
-              context.set<elle::Version>(
-                elle_serialization_version(this->doughnut().version()));
-              auto stored =
-                elle::serialization::binary::deserialize<BlockOrPaxos>(
-                  buffer, true, context);
-              if (!stored.paxos)
-                throw MissingBlock(address);
-              return this->_load(address, std::move(*stored.paxos));
-            }
-            catch (storage::MissingKey const& e)
-            {
-              ELLE_TRACE("%s: missingkey reloading decision", *this);
-              if (peers)
-              {
-                auto version =
-                  elle_serialization_version(this->doughnut().version());
-                return this->_load(
-                  address, Decision(PaxosServer(this->id(), *peers, version)));
-              }
-              else
-                throw MissingBlock(e.key());
-            }
+            ELLE_TRACE_SCOPE("%s: load %f from storage", *this, address);
+            auto buffer = this->storage()->get(address);
+            elle::serialization::Context context;
+            context.set<Doughnut*>(&this->doughnut());
+            context.set<elle::Version>(
+              elle_serialization_version(this->doughnut().version()));
+            auto stored =
+              elle::serialization::binary::deserialize<BlockOrPaxos>(
+                buffer, true, context);
+            if (stored.block)
+              return stored;
+            else if (stored.paxos)
+              return BlockOrPaxos(
+                &this->_load_paxos(address, std::move(*stored.paxos)));
+            else
+              ELLE_ABORT("no block and no paxos ?");
         }
 
         Paxos::LocalPeer::Decision&
-        Paxos::LocalPeer::_load(Address address,
-                                Paxos::LocalPeer::Decision decision)
+        Paxos::LocalPeer::_load_paxos(
+          Address address,
+          boost::optional<PaxosServer::Quorum> peers)
+        {
+          try
+          {
+            auto res = this->_load(address);
+            if (res.block)
+              throw elle::Error(
+                elle::sprintf(
+                  "immutable block found when paxos was expected: %s",
+                  address));
+            else
+              return *res.paxos;
+          }
+          catch (storage::MissingKey const& e)
+          {
+            if (peers)
+            {
+              ELLE_TRACE("%s: create paxos for %f", this, address);
+              auto version =
+                elle_serialization_version(this->doughnut().version());
+              return this->_load_paxos(
+                address, Decision(PaxosServer(this->id(), *peers, version)));
+            }
+            else
+            {
+              ELLE_TRACE("%s: missingkey reloading decision for %f",
+                         this, address);
+              throw MissingBlock(e.key());
+            }
+          }
+        }
+
+        Paxos::LocalPeer::Decision&
+        Paxos::LocalPeer::_load_paxos(Address address,
+                                      Paxos::LocalPeer::Decision decision)
         {
           auto const& quorum = decision.paxos.current_quorum();
           this->_cache(address, quorum);
@@ -549,7 +570,7 @@ namespace infinit
             {
               ELLE_TRACE_SCOPE("%s: evict %f from %f quorum",
                                this, lost_id, address);
-              auto& decision = this->_load(address);
+              auto& decision = this->_load_paxos(address);
               auto q = decision.paxos.current_quorum();
               Paxos::PaxosClient client(
                 this->doughnut().id(),
@@ -683,7 +704,7 @@ namespace infinit
         {
           ELLE_TRACE_SCOPE("%s: get proposal at %f: %s",
                            *this, address, p);
-          auto& decision = this->_load(address, peers);
+          auto& decision = this->_load_paxos(address, peers);
           auto res = decision.paxos.propose(std::move(peers), p);
           BlockOrPaxos data(&decision);
           this->storage()->set(
@@ -711,7 +732,7 @@ namespace infinit
               if (auto res = block->validate(this->doughnut())); else
                 throw ValidationFailed(res.reason());
           }
-          auto& decision = this->_load(address);
+          auto& decision = this->_load_paxos(address);
           auto& paxos = decision.paxos;
           if (block)
             if (auto previous = paxos.current_value())
@@ -745,7 +766,7 @@ namespace infinit
           BENCH("confirm.local");
           ELLE_TRACE_SCOPE("%s: confirm %f at proposal %s",
                            *this, address, p);
-          auto& decision = this->_load(address);
+          auto& decision = this->_load_paxos(address);
           bool had_value = bool(decision.paxos.current_value());
           decision.paxos.confirm(peers, p);
           ELLE_DEBUG("store confirmed paxos")
@@ -780,7 +801,7 @@ namespace infinit
                               boost::optional<int> local_version)
         {
           ELLE_TRACE_SCOPE("%s: get %f from %f", *this, address, peers);
-          auto res = this->_load(address).paxos.get(peers);
+          auto res = this->_load_paxos(address).paxos.get(peers);
           // Honor local_version
           if (local_version && res &&
               res->value.template is<std::shared_ptr<blocks::Block>>())
@@ -1031,7 +1052,7 @@ namespace infinit
           {
             try
             {
-              auto& decision = this->_load(address);
+              auto& decision = this->_load_paxos(address);
               auto& paxos = decision.paxos;
               if (auto highest = paxos.current_value())
               {
