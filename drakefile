@@ -655,7 +655,6 @@ def configure(
     drake.copy(drake.nodes('redhat-packaging/infinit.spec'),
                'redhat/SPECS', strip_prefix = True),
   )
-  print(list(redhat_nodes))
 
   redhat_package = drake.redhat.Packager('infinit',
                                          redhat_version,
