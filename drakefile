@@ -3,6 +3,7 @@ import drake.cxx
 import drake.debian
 import drake.git
 import drake.python
+import drake.redhat
 import drake.valgrind
 
 import os
@@ -582,7 +583,8 @@ def configure(
   debian_nodes = install_nodes('debian/opt/infinit')
   git = drake.git.Git()
   if cxx_toolkit.os is drake.os.linux:
-    platform = 'linux'
+    from platform import linux_distribution
+    platform = linux_distribution()[0]
   elif cxx_toolkit.os is drake.os.macos:
     platform = 'macosx'
   else:
@@ -602,6 +604,7 @@ def configure(
                strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
+  rule_debian_debug = drake.Rule('debian-debug')
   if cxx_toolkit.os is drake.os.linux:
     rule_debian << drake.debian.Packager(
       'infinit_%s_amd64.deb' % git.description(),
@@ -613,9 +616,53 @@ def configure(
                '%s/DEBIAN' % debian_debug_dir,
                strip_prefix = True),
   )
-  rule_debian << drake.debian.Packager(
+  debian_debug_package = drake.debian.Packager(
     'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
     debian_debug_nodes, debian_debug_dir).package
+  rule_debian << debian_debug_package
+  rule_debian_debug << debian_debug_package
+
+  ## ------- ##
+  ## Red Hat ##
+  ## ------- ##
+
+  redhat_version = git.description().replace('-', '_')
+  redhat_rule = drake.Rule('redhat')
+  redhat_build_root = 'redhat/BUILDROOT'
+  redhat_nodes = list(install_nodes('%s/opt/infinit' % redhat_build_root))
+  def installed_files(nodes):
+    def clean_path(path):
+      return str(path).replace(
+        '%s/' % drake.path_build(), '').replace(redhat_build_root, '')
+    res = set()
+    for node in nodes:
+      res.add(clean_path(node))
+      if isinstance(node, drake.cxx.Executable):
+        for dep in node.dependencies_recursive:
+          res.add(clean_path(dep))
+    return sorted(list(res))
+
+  with drake.templating.Context(content = {
+      'changelog': '',
+      'files': '\n'.join(installed_files(redhat_nodes)),
+      'glibc_version': '2.12',
+      'version': redhat_version,
+  }):
+    drake.node('redhat-packaging/infinit.spec.tmpl')
+
+  redhat_nodes = chain(
+    redhat_nodes,
+    drake.copy(drake.nodes('redhat-packaging/infinit.spec'),
+               'redhat/SPECS', strip_prefix = True),
+  )
+  print(list(redhat_nodes))
+
+  redhat_package = drake.redhat.Packager('infinit',
+                                         redhat_version,
+                                         'el6', 'x86_64',
+                                         drake.path_build('redhat'),
+                                         redhat_nodes).package
+  redhat_rule << redhat_package
 
   ## ------ ##
   ## Beyond ##
