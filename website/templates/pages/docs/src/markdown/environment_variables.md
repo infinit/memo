@@ -264,7 +264,9 @@ Several more specific environment variables are also provided:
 
 The crash reporter can be activated or deactivated by setting to `1` or `0` respectively the `INFINIT_CRASH_REPORTER` environment variable.
 
+### INFINIT_RDV ###
 
+Infinit uses a server for NAT traversal. If you would like to disable this, you can set the `INFINIT_RDV` variable to an empty string.
 
 <!-- ???
  'INFINIT_ASYNC_MAX_ENTRY_HOPS',
