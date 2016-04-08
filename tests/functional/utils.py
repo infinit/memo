@@ -98,10 +98,6 @@ class Infinit(TemporaryDirectory):
     self.process = process
     if not wait:
       return process
-    if input is not None:
-      # FIXME: On OSX, if you spam stdin before the FDStream takes it
-      # over, you get a broken pipe.
-      time.sleep(0.5)
     out, err = process.communicate(input)
     process.wait()
     if process.returncode != return_code:
