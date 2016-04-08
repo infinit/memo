@@ -380,7 +380,8 @@ namespace infinit
             }
             catch (elle::Error const& e)
             {
-              ELLE_ABORT("%s: async loop killed: %s", *this, e.what());
+              ELLE_ABORT("%s: async loop killed: %s\n",
+                         this, e.what(), e.backtrace());
             }
           }
           ELLE_TRACE("exiting loop");
@@ -424,7 +425,7 @@ namespace infinit
             }
             catch (storage::Collision const& c)
             {
-              // check for idenpotence
+              // check for idempotence
               try
               {
                 auto block = this->_backend->fetch(op->address);
@@ -433,13 +434,13 @@ namespace infinit
                 if (block->blocks::Block::data()
                   == o.block->blocks::Block::data())
                 {
-                  ELLE_LOG("Idempotent replay detected at %s", op->index);
+                  ELLE_LOG("skip idempotent replay %s", op->index);
                   break;
                 }
               }
               catch (elle::Error const& e)
               {
-                ELLE_LOG("error in async loop rechecking on %s: %s", op->index, e);
+                ELLE_LOG("error in async loop rechecking %s: %s", op->index, e);
               }
             }
             catch (elle::Error const& e)
