@@ -552,6 +552,8 @@ $> chmod o+w /mnt/shared/awesome.txt
 -rw----rw-  1 alice  users     14B Jan 20 16:55 awesome.txt
 ```
 
+_**NOTE**: The option `--others-mode` can also be used in the binary infinit-acl to set and list the permissions associated with 'everybody'._
+
 ### List permissions ###
 
 Every user with the volume descriptor and read permissions can consult the Access Control List (ACL) associated with a file system object:
