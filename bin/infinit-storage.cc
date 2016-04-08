@@ -273,6 +273,26 @@ COMMAND(delete_)
 {
   auto name = mandatory(args, "name", "storage name");
   auto storage = ifnt.storage_get(name);
+  bool clear = flag(args, "clear-content");
+  if (auto fs_storage =
+        dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
+  {
+    if (clear)
+    {
+      try
+      {
+        boost::filesystem::remove_all(fs_storage->path);
+        report_action("cleared", "storage", fs_storage->name);
+      }
+      catch (boost::filesystem::filesystem_error const& e)
+      {
+        throw elle::Error(elle::sprintf("unable to clear storage contents: %s",
+                                        e.what()));
+      }
+    }
+  }
+  else if (clear)
+    throw elle::Error("only filesystem storages can be cleared");
   auto path = ifnt._storage_path(name);
   bool ok = boost::filesystem::remove(path);
   if (ok)
@@ -383,6 +403,8 @@ main(int argc, char** argv)
       {},
       {
         { "name,n", value<std::string>(), "storage to delete" },
+        { "clear-content", bool_switch(),
+          "remove all blocks (filesystem only)" },
       },
     },
   };
