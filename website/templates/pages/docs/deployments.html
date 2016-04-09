@@ -21,7 +21,9 @@
 
     <img src="${url('images/schema-deployment-one-server.png')}" alt="Illustration of a centralized infrastructure i.e. a single server without redundancy"><br>
 
-    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.). Note that for Bob and subsequent users to be able to list/edit the volume's root directory, Alice would need to grant them access to do so through the <a href="/documentation/reference#access-control-list"><em>infinit-acl</em></a>.
+    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.).</p>
+
+    <p><strong>IMPORTANT</strong>: For Bob and subsequent users to be able to list/edit the volume's root directory, Alice needs to grant them access to do so through the <a href="/documentation/reference#access-control-list"><em>infinit-acl</em></a>. Without this step, users would simply get a <em>Permission Denied</em> error.
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#centralized-server" class="active">Server <span>(Alice)</span></a></li>
