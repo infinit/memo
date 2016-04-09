@@ -1185,7 +1185,7 @@ namespace rebalancing
     };
   }
 
-  ELLE_TEST_SCHEDULED(expand_new_block)
+  ELLE_TEST_SCHEDULED(expand_new_block, (bool, immutable))
   {
     DHT dht_a(make_consensus = instrument(2));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
@@ -1195,12 +1195,21 @@ namespace rebalancing
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     DHT client(storage = nullptr);
     client.overlay->connect(*dht_a.overlay);
-    auto b = client.dht->make_block<blocks::MutableBlock>();
+    auto b =
+      [&] () -> std::unique_ptr<blocks::Block>
+      {
+        elle::Buffer data(std::string("expand"));
+        if (immutable)
+          return client.dht->make_block<blocks::ImmutableBlock>(data);
+        else
+        {
+          auto b = client.dht->make_block<blocks::MutableBlock>();
+          b->data(data);
+          return std::move(b);
+        }
+      }();
     ELLE_LOG("write block to one DHT")
-    {
-      b->data(std::string("expand"));
       client.dht->store(*b, infinit::model::STORE_INSERT);
-    }
     auto op = infinit::overlay::OP_FETCH;
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 2, op)), 1u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 2, op)), 1u);
@@ -1441,7 +1450,12 @@ ELLE_TEST_SUITE()
     rebalancing->add(BOOST_TEST_CASE(shrink_kill_and_write), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(quorum_duel_1), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(quorum_duel_2), 0, valgrind(1));
-    rebalancing->add(BOOST_TEST_CASE(expand_new_block), 0, valgrind(1));
+    {
+      auto expand_new_CHB = [] () { expand_new_block(true); };
+      auto expand_new_OKB = [] () { expand_new_block(false); };
+      rebalancing->add(BOOST_TEST_CASE(expand_new_CHB), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(expand_new_OKB), 0, valgrind(1));
+    }
     rebalancing->add(BOOST_TEST_CASE(expand_newcomer), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(expand_concurrent), 0, valgrind(5));
     rebalancing->add(BOOST_TEST_CASE(expand_from_disk), 0, valgrind(1));

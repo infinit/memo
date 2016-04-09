@@ -252,7 +252,7 @@ namespace infinit
             Decision&
             _load_paxos(Address address, Decision decision);
             void
-            _cache(Address address, Quorum quorum);
+            _cache(Address address, bool immutable, Quorum quorum);
             void
             _discovered(Address id);
             void
@@ -273,8 +273,11 @@ namespace infinit
             ELLE_ATTRIBUTE(reactor::Thread, rebalance_thread);
             struct BlockRepartition
             {
-              BlockRepartition(Address address, PaxosServer::Quorum quorum);
+              BlockRepartition(Address address,
+                               bool immubable,
+                               PaxosServer::Quorum quorum);
               Address address;
+              bool immutable;
               PaxosServer::Quorum quorum;
               int
               replication_factor() const;
