@@ -59,8 +59,10 @@
         % if property == 'architecture':
           % if value == 'Object':
             Object-based storage architecture manage data as objects and are used mostly to store application-specific data. <a class="open-popup" href="#object-file">Read more.</a>
-          % else:
+          % elif value == 'File':
             File-based solutions provide humans with a way to store and collaborate around files organized through a hierarchy of folders. <a class="open-popup" href="#object-file">Read more.</a>
+          % else:
+            Block storage solutions offer an interface at the lowest level possible which existing file systems can leverage to provide human-level functionalities. <a class="open-popup" href="#object-file">Read more.</a>
           % endif
 
         % elif property == 'scalability':
