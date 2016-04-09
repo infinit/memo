@@ -182,7 +182,7 @@ namespace infinit
                 return remote->propose(
                   q, this->_address, p);
               else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("Peer unavailable");
+                throw reactor::network::Exception("dummy peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", member);
             });
           }
@@ -214,7 +214,7 @@ namespace infinit
                   }
                 }
               else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("Peer unavailable");
+                throw reactor::network::Exception("dummy peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", member);
             });
           }
@@ -242,7 +242,7 @@ namespace infinit
                 return;
               }
               else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("Peer unavailable");
+                throw reactor::network::Exception("dummy peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", member);
             });
           }
@@ -261,7 +261,7 @@ namespace infinit
                        dynamic_cast<Paxos::RemotePeer*>(member.get()))
                 return remote->get(q, this->_address, this->_local_version);
               else if (dynamic_cast<DummyPeer*>(member.get()))
-                throw reactor::network::Exception("Peer unavailable");
+                throw reactor::network::Exception("dummy peer unavailable");
               ELLE_ABORT("invalid paxos peer: %s", member);
             });
           }
