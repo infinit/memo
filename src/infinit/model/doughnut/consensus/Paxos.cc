@@ -703,25 +703,26 @@ namespace infinit
                 }
                 else
                 {
-                  auto q = this->_quorums.find(address);
-                  if (q == this->_quorums.end())
+                  auto it = this->_quorums.find(address);
+                  if (it == this->_quorums.end())
                     // The block was deleted in the meantime.
                     continue;
+                  auto q = *it;
                   auto new_q =
-                    this->_paxos._rebalance_extend_quorum(address, q->quorum);
-                  if (new_q == q->quorum)
+                    this->_paxos._rebalance_extend_quorum(address, q.quorum);
+                  if (new_q == q.quorum)
                   {
                     ELLE_DEBUG("unable to find any new owner for %f", address);
                     continue;
                   }
                   else
-                    ELLE_DEBUG("rebalance from %f to %f", q->quorum, new_q);
+                    ELLE_DEBUG("rebalance from %f to %f", q.quorum, new_q);
                   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
                   {
                     bool rebalanced = false;
                     for (auto peer: new_q)
                     {
-                      if (contains(q->quorum, peer))
+                      if (contains(q.quorum, peer))
                         continue;
                       scope.run_background(
                         elle::sprintf("%s: duplicate to %f",
