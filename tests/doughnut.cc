@@ -1316,7 +1316,7 @@ namespace rebalancing
     BOOST_CHECK_EQUAL(size(dht_c.overlay->lookup(b->address(), 3, op)), 3u);
   }
 
-  ELLE_TEST_SCHEDULED(expand_from_disk)
+  ELLE_TEST_SCHEDULED(expand_from_disk, (bool, immutable))
   {
     infinit::storage::Memory::Blocks storage_a;
     infinit::model::Address address;
@@ -1326,7 +1326,7 @@ namespace rebalancing
       DHT dht_a(id = id_a,
                 make_consensus = instrument(3),
                 storage = elle::make_unique<Memory>(storage_a));
-      auto block = dht_a.dht->make_block<blocks::MutableBlock>();
+      auto block = make_block(dht_a, immutable, "expand_from_disk");
       address = block->address();
       dht_a.dht->store(std::move(block), infinit::model::STORE_INSERT);
     }
@@ -1470,7 +1470,12 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(expand_newcomer_OKB), 0, valgrind(1));
     }
     rebalancing->add(BOOST_TEST_CASE(expand_concurrent), 0, valgrind(5));
-    rebalancing->add(BOOST_TEST_CASE(expand_from_disk), 0, valgrind(1));
+    {
+      auto expand_CHB_from_disk = [] () { expand_from_disk(true); };
+      auto expand_OKB_from_disk = [] () { expand_from_disk(false); };
+      rebalancing->add(BOOST_TEST_CASE(expand_CHB_from_disk), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(expand_OKB_from_disk), 0, valgrind(1));
+    }
     rebalancing->add(
       BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
     rebalancing->add(BOOST_TEST_CASE(evict_faulty), 0, valgrind(5));

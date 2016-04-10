@@ -445,14 +445,19 @@ namespace infinit
                       reactor::sleep(100_ms);
                       try
                       {
-                        this->_load_paxos(address);
-                        auto quorum = this->_quorums.find(address);
-                        ELLE_ASSERT(quorum != this->_quorums.end());
-                        if (quorum->replication_factor() >= this->_factor)
-                          this->_addresses.erase(address);
+                        auto b = this->_load(address);
+                        if (b.paxos)
+                        {
+                          auto quorum = this->_quorums.find(address);
+                          ELLE_ASSERT(quorum != this->_quorums.end());
+                          if (quorum->replication_factor() >= this->_factor)
+                            this->_addresses.erase(address);
+                        }
                       }
                       catch (MissingBlock const&)
-                      {}
+                      {
+                        // Block was deleted in the meantime (right?).
+                      }
                     }
                   }
                   catch (elle::Error const& e)
@@ -486,7 +491,21 @@ namespace infinit
               elle::serialization::binary::deserialize<BlockOrPaxos>(
                 buffer, true, context);
             if (stored.block)
+            {
+              if (this->_rebalance_auto_expand)
+              {
+                static auto const op = overlay::OP_FETCH;
+                PaxosServer::Quorum q;
+                for (auto wpeer: this->doughnut().overlay()->lookup(
+                       address, this->_factor, op))
+                  if (auto peer = wpeer.lock())
+                    q.insert(peer->id());
+                this->_cache(address, true, q);
+                if (signed(q.size()) < this->_factor)
+                  this->_rebalancable.put(std::make_pair(address, false));
+              }
               return stored;
+            }
             else if (stored.paxos)
               return BlockOrPaxos(
                 &this->_load_paxos(address, std::move(*stored.paxos)));
