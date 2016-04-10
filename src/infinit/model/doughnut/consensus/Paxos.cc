@@ -496,13 +496,20 @@ namespace infinit
               {
                 static auto const op = overlay::OP_FETCH;
                 PaxosServer::Quorum q;
-                for (auto wpeer: this->doughnut().overlay()->lookup(
-                       address, this->_factor, op))
-                  if (auto peer = wpeer.lock())
-                    q.insert(peer->id());
-                this->_cache(address, true, q);
-                if (signed(q.size()) < this->_factor)
-                  this->_rebalancable.put(std::make_pair(address, false));
+                if (this->_quorums.find(address) == this->_quorums.end())
+                {
+                  for (auto wpeer: this->doughnut().overlay()->lookup(
+                         address, this->_factor, op))
+                    if (auto peer = wpeer.lock())
+                      q.insert(peer->id());
+                  this->_cache(address, true, q);
+                  if (signed(q.size()) < this->_factor)
+                  {
+                    ELLE_DUMP("schedule %f for rebalancing after load",
+                              address);
+                    this->_rebalancable.put(std::make_pair(address, false));
+                  }
+                }
               }
               return stored;
             }
@@ -557,7 +564,10 @@ namespace infinit
           if (this->_rebalance_auto_expand &&
               decision.paxos.current_value() &&
               signed(quorum.size()) < this->_factor)
+          {
+            ELLE_DUMP("schedule %f for rebalancing after load", address);
             this->_rebalancable.put(std::make_pair(address, false));
+          }
           return this->_addresses.emplace(
             address, std::move(decision)).first->second;
         }
@@ -643,7 +653,11 @@ namespace infinit
                 ELLE_TRACE("%s: evicted %f from %f quorum",
                            this, lost_id, address);
                 if (signed(q.size()) < this->_factor)
+                {
+                  ELLE_DUMP("schedule %f for rebalancing after eviction",
+                            address);
                   this->_rebalancable.put(std::make_pair(address, false));
+                }
               }
             }
         }
@@ -943,7 +957,11 @@ namespace infinit
                 !had_value &&
                 decision.paxos.current_value() &&
                 signed(decision.paxos.current_quorum().size()) < this->_factor)
+              {
+                ELLE_DUMP("schedule %f for rebalancing after confirmation",
+                          address);
                 this->_rebalancable.put(std::make_pair(address, false));
+              }
             }
           }
           else
@@ -951,7 +969,11 @@ namespace infinit
             this->_cache(address, true, peers);
             if (this->_rebalance_auto_expand &&
                 signed(peers.size()) < this->_factor)
+            {
+              ELLE_DUMP("schedule %f for rebalancing after confirmation",
+                        address);
               this->_rebalancable.put(std::make_pair(address, false));
+            }
           }
         }
 
