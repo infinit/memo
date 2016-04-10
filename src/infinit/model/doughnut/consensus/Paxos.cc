@@ -70,6 +70,47 @@ namespace infinit
           , paxos()
         {}
 
+        /*----------------------------.
+        | LocalPeer::BlockRepartition |
+        `----------------------------*/
+
+
+        Paxos::LocalPeer::BlockRepartition::BlockRepartition(
+          Address address_, bool immutable_, PaxosServer::Quorum quorum_)
+          : address(address_)
+          , immutable(immutable_)
+          , quorum(std::move(quorum_))
+        {}
+
+        bool
+        Paxos::LocalPeer::BlockRepartition::operator ==(
+          BlockRepartition const& rhs) const
+        {
+          return
+            this->address == rhs.address &&
+            this->immutable == rhs.immutable &&
+            this->quorum == rhs.quorum;
+        }
+
+        int
+        Paxos::LocalPeer::BlockRepartition::replication_factor() const
+        {
+          return this->quorum.size();
+        }
+
+        struct Paxos::LocalPeer::BlockRepartition::HashByAddress
+        {
+          std::size_t
+          operator()(Paxos::LocalPeer::BlockRepartition const& r) const
+          {
+            return std::hash<Address>()(r.address);
+          }
+        };
+
+        /*-------------.
+        | BlockOrPaxos |
+        `-------------*/
+
         BlockOrPaxos::BlockOrPaxos(Paxos::LocalPeer::Decision* p)
           : block(nullptr)
           , paxos(p, [] (Paxos::LocalPeer::Decision*) {})
@@ -713,13 +754,14 @@ namespace infinit
                   return signed(q.size()) < this->_factor &&
                   q.find(address) == q.end();
                 };
-              std::unordered_set<Address> targets;
+              std::unordered_set<BlockRepartition,
+                                 BlockRepartition::HashByAddress> targets;
               for (auto const& r: this->_quorums.get<1>())
               {
                 if (r.replication_factor() >= this->_factor)
                   break;
                 if (test(r.quorum))
-                  targets.emplace(r.address);
+                  targets.emplace(r);
               }
               if (targets.empty())
                 continue;
@@ -729,32 +771,54 @@ namespace infinit
               for (auto target: targets)
                 try
                 {
-                  auto it = this->_addresses.find(target);
-                  if (it == this->_addresses.end())
-                    // The block was deleted in the meantime.
-                    continue;
-                  // Beware of interators invalidation, use a reference.
-                  auto& paxos = it->second.paxos;
-                  auto quorum = paxos.current_quorum();
-                  // We can't actually rebalance this block, under_represented
-                  // was wrong. Don't think this can happen but better safe than
-                  // sorry.
-                  if (!test(quorum))
-                    continue;
-                  ELLE_DEBUG("elect new quorum")
+                  if (target.immutable)
                   {
-                    PaxosClient c(
-                    this->doughnut().id(),
-                    lookup_nodes(this->doughnut(), quorum, target));
-                    quorum.insert(address);
-                    // FIXME: do something in case of conflict
-                    c.choose(paxos.current_version() + 1, quorum);
+                    auto peer =
+                      this->doughnut().overlay()-> lookup_node(address).lock();
+                    if (!peer)
+                      // Peer left in the meantime.
+                      continue;
+                    auto b = this->_load(target.address);
+                    ELLE_ASSERT(b.block);
+                    peer->store(*b.block, STORE_INSERT);
+                    this->_quorums.modify(
+                      this->_quorums.find(target.address),
+                      [&] (BlockRepartition& r)
+                      {r.quorum.insert(peer->id());});
+                    this->_node_blocks[peer->id()].insert(target.address);
+                    ELLE_TRACE("successfully duplicated %f to %f",
+                               target.address, address);
+                    this->_rebalanced(target.address);
                   }
-                  propagate(paxos, target, quorum);
+                  else
+                  {
+                    auto it = this->_addresses.find(target.address);
+                    if (it == this->_addresses.end())
+                      // The block was deleted in the meantime.
+                      continue;
+                    // Beware of interators invalidation, use a reference.
+                    auto& paxos = it->second.paxos;
+                    auto quorum = paxos.current_quorum();
+                    // We can't actually rebalance this block, under_represented
+                    // was wrong. Don't think this can happen but better safe
+                    // than sorry.
+                    if (!test(quorum))
+                      continue;
+                    ELLE_DEBUG("elect new quorum")
+                    {
+                      PaxosClient c(
+                      this->doughnut().id(),
+                      lookup_nodes(this->doughnut(), quorum, target.address));
+                      quorum.insert(address);
+                      // FIXME: do something in case of conflict
+                      c.choose(paxos.current_version() + 1, quorum);
+                    }
+                    propagate(paxos, target.address, quorum);
+                  }
                 }
                 catch (elle::Error const& e)
                 {
-                  ELLE_WARN("rebalancing of %f failed: %s", target, e);
+                  ELLE_WARN("rebalancing of %f failed: %s", target.address, e);
                 }
             }
           }
@@ -1655,19 +1719,6 @@ namespace infinit
         {
           s.serialize("chosen", this->chosen);
           s.serialize("paxos", this->paxos);
-        }
-
-        Paxos::LocalPeer::BlockRepartition::BlockRepartition(
-          Address address_, bool immutable_, PaxosServer::Quorum quorum_)
-          : address(address_)
-          , immutable(immutable_)
-          , quorum(std::move(quorum_))
-        {}
-
-        int
-        Paxos::LocalPeer::BlockRepartition::replication_factor() const
-        {
-          return this->quorum.size();
         }
 
         /*-----.

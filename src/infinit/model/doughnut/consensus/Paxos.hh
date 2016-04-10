@@ -281,6 +281,9 @@ namespace infinit
               PaxosServer::Quorum quorum;
               int
               replication_factor() const;
+              struct HashByAddress;
+              bool
+              operator ==(BlockRepartition const& rhs) const;
             };
             typedef bmi::multi_index_container<
               BlockRepartition,

@@ -1185,6 +1185,21 @@ namespace rebalancing
     };
   }
 
+  static
+  std::unique_ptr<blocks::Block>
+  make_block(DHT& client, bool immutable, std::string data_)
+  {
+    elle::Buffer data(std::move(data_));
+    if (immutable)
+      return client.dht->make_block<blocks::ImmutableBlock>(std::move(data));
+    else
+    {
+      auto b = client.dht->make_block<blocks::MutableBlock>();
+      b->data(std::move(data));
+      return std::move(b);
+    }
+  }
+
   ELLE_TEST_SCHEDULED(expand_new_block, (bool, immutable))
   {
     DHT dht_a(make_consensus = instrument(2));
@@ -1195,19 +1210,7 @@ namespace rebalancing
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
     DHT client(storage = nullptr);
     client.overlay->connect(*dht_a.overlay);
-    auto b =
-      [&] () -> std::unique_ptr<blocks::Block>
-      {
-        elle::Buffer data(std::string("expand"));
-        if (immutable)
-          return client.dht->make_block<blocks::ImmutableBlock>(data);
-        else
-        {
-          auto b = client.dht->make_block<blocks::MutableBlock>();
-          b->data(data);
-          return std::move(b);
-        }
-      }();
+    auto b = make_block(client, immutable, "expand_new_block");
     ELLE_LOG("write block to one DHT")
       client.dht->store(*b, infinit::model::STORE_INSERT);
     auto op = infinit::overlay::OP_FETCH;
@@ -1223,19 +1226,16 @@ namespace rebalancing
       BOOST_CHECK_EQUAL(dht_b.dht->fetch(b->address())->data(), b->data());
   }
 
-  ELLE_TEST_SCHEDULED(expand_newcomer)
+  ELLE_TEST_SCHEDULED(expand_newcomer, (bool, immutable))
   {
     DHT dht_a(make_consensus = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
     ELLE_LOG("first DHT: %s", dht_a.dht->id());
     DHT dht_b(make_consensus = instrument(3));
     ELLE_LOG("second DHT: %s", dht_b.dht->id());
-    auto b = dht_a.dht->make_block<blocks::MutableBlock>();
+    auto b = make_block(dht_a, immutable, "expand_newcomer");
     ELLE_LOG("write block to first DHT")
-    {
-      b->data(std::string("expand"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT);
-    }
     // Block the new quorum election to check the balancing is done in
     // background.
     local_a.propose_barrier().close();
@@ -1243,28 +1243,35 @@ namespace rebalancing
     reactor::wait(dht_a.overlay->looked_up(), b->address());
     ELLE_LOG("connect second DHT")
       dht_b.overlay->connect(*dht_a.overlay);
-    reactor::wait(local_a.proposing(), b->address());
-    auto op = infinit::overlay::OP_FETCH;
-    BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 1u);
-    BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 1u);
-    // Insert another block, to check iterator invalidation while balancing.
-    ELLE_LOG("write other block to first DHT")
+    static auto const op = infinit::overlay::OP_FETCH;
+    if (!immutable)
     {
-      local_a.propose_bypass(true);
-      auto perturbate = dht_a.dht->make_block<blocks::MutableBlock>();
+      reactor::wait(local_a.proposing(), b->address());
+      BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 1u);
+      BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 1u);
+      // Insert another block, to check iterator invalidation while balancing.
+      ELLE_LOG("write other block to first DHT")
+      {
+        local_a.propose_bypass(true);
+        auto perturbate = dht_a.dht->make_block<blocks::MutableBlock>();
       perturbate->data(std::string("booh!"));
       dht_a.dht->store(*perturbate, infinit::model::STORE_INSERT);
+      }
+      local_a.propose_barrier().open();
     }
-    local_a.propose_barrier().open();
     ELLE_LOG("wait for rebalancing")
       reactor::wait(local_a.rebalanced(), b->address());
     BOOST_CHECK_EQUAL(size(dht_a.overlay->lookup(b->address(), 3, op)), 2u);
     BOOST_CHECK_EQUAL(size(dht_b.overlay->lookup(b->address(), 3, op)), 2u);
-    ELLE_LOG("write block to both DHTs")
+    if (!immutable)
     {
-      auto resolver = elle::make_unique<VersionHop>(*b);
-      b->data(std::string("expand'"));
-      dht_b.dht->store(*b, infinit::model::STORE_UPDATE, std::move(resolver));
+      auto& mb = dynamic_cast<blocks::MutableBlock&>(*b);
+      ELLE_LOG("write block to both DHTs")
+      {
+        auto resolver = elle::make_unique<VersionHop>(mb);
+        mb.data(std::string("expand'"));
+        dht_b.dht->store(mb, infinit::model::STORE_UPDATE, std::move(resolver));
+      }
     }
     ELLE_LOG("disconnect second DHT")
       dht_b.overlay->disconnect(*dht_a.overlay);
@@ -1456,7 +1463,12 @@ ELLE_TEST_SUITE()
       rebalancing->add(BOOST_TEST_CASE(expand_new_CHB), 0, valgrind(1));
       rebalancing->add(BOOST_TEST_CASE(expand_new_OKB), 0, valgrind(1));
     }
-    rebalancing->add(BOOST_TEST_CASE(expand_newcomer), 0, valgrind(1));
+    {
+      auto expand_newcomer_CHB = [] () { expand_newcomer(true); };
+      auto expand_newcomer_OKB = [] () { expand_newcomer(false); };
+      rebalancing->add(BOOST_TEST_CASE(expand_newcomer_CHB), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(expand_newcomer_OKB), 0, valgrind(1));
+    }
     rebalancing->add(BOOST_TEST_CASE(expand_concurrent), 0, valgrind(5));
     rebalancing->add(BOOST_TEST_CASE(expand_from_disk), 0, valgrind(1));
     rebalancing->add(
