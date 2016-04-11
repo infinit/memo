@@ -1949,6 +1949,68 @@ ELLE_TEST_SCHEDULED(paxos_race)
   }
 }
 
+ELLE_TEST_SCHEDULED(data_embed)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  auto root = client.fs->path("/");
+  auto h = root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 0);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    0);
+
+  h = root->child("file")->open(O_RDWR, 0);
+  h->write(elle::ConstWeakBuffer("foo", 3), 3, 3);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    0);
+
+  h = root->child("file")->open(O_RDWR, 0);
+  char buf[1024] = {0};
+  BOOST_CHECK_EQUAL(h->read(elle::WeakBuffer(buf, 64), 64, 0), 6);
+  BOOST_CHECK_EQUAL(buf, std::string("foofoo"));
+  h->close();
+  h.reset();
+
+  h = root->child("file")->open(O_RDWR, 0);
+  h->write(elle::ConstWeakBuffer("barbarbaz", 9), 9, 0);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    0);
+    h = root->child("file")->open(O_RDWR, 0);
+  BOOST_CHECK_EQUAL(h->read(elle::WeakBuffer(buf, 64), 64, 0), 9);
+  BOOST_CHECK_EQUAL(buf, std::string("barbarbaz"));
+  h->close();
+  h.reset();
+
+  h = root->child("file")->open(O_RDWR, 0);
+  for (int i = 0; i < 1024; ++i)
+    h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 1024*i);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file")->getxattr("user.infinit.fat")).size(),
+    1);
+
+  h = root->child("file2")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 0);
+  for (int i = 0; i < 1024; ++i)
+    h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 1024*i);
+  h->write(elle::ConstWeakBuffer(buf, 1024), 1024, 1024*1024);
+  h->close();
+  h.reset();
+  BOOST_CHECK_EQUAL(
+    get_fat(root->child("file2")->getxattr("user.infinit.fat")).size(),
+    2);
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1972,5 +2034,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
   suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
   suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
-  suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
+  suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
 }

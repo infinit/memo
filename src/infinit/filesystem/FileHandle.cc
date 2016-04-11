@@ -19,6 +19,8 @@ namespace infinit
   {
     const uint64_t FileHandle::default_first_block_size =
       std::stoi(elle::os::getenv("INFINIT_FIRST_BLOCK_DATA_SIZE", "0"));;
+    static const int max_embed_size =
+      std::stoi(elle::os::getenv("INFINIT_MAX_EMBED_SIZE", "8192"));
     static const int lookahead_blocks =
       std::stoi(elle::os::getenv("INFINIT_LOOKAHEAD_BLOCKS", "5"));
     static const int max_lookahead_threads =
@@ -583,6 +585,26 @@ namespace infinit
             --i;
           }
         }
+      }
+      // optimize by embeding data in ACB for small payloads
+      if (cache_size == 0 && max_embed_size && !default_first_block_size
+        && this->_blocks.size() == 1
+        && this->_blocks.begin()->first == 0
+        && this->_blocks.at(0).dirty
+        && this->_file._fat.size() == 1
+        && this->_file._fat[0].first == Address::null
+        && signed(this->_blocks.at(0).block->size()
+          + this->_file._data.size()) <= max_embed_size)
+      {
+        ELLE_TRACE_SCOPE("%s: enabling data embed", this);
+        this->_file._data.append(this->_blocks.at(0).block->contents(),
+          this->_blocks.at(0).block->size());
+        this->_file._fat.clear();
+        this->_blocks.clear();
+        this->_commit_first();
+        _first_block_new = false;
+        _fat_changed = false;
+        return true;
       }
       while (this->_blocks.size() > unsigned(cache_size))
       {
