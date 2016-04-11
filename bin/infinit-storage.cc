@@ -116,14 +116,28 @@ COMMAND(create)
   std::unique_ptr<infinit::storage::StorageConfig> config;
   if (args.count("filesystem"))
   {
-    auto path = optional(args, "path");
-    if (!path)
-      path = (infinit::xdg_data_home() / "blocks" / name).string();
-    else
-      path = infinit::canonical_folder(*path).string();
+    auto user_path = optional(args, "path");
+    auto path = user_path
+              ? infinit::canonical_folder(user_path.get())
+              : (infinit::xdg_data_home() / "blocks" / name);
+    if (boost::filesystem::exists(path))
+    {
+      if (!boost::filesystem::is_directory(path))
+      {
+        throw elle::Error(
+          elle::sprintf("path is not directory: %s", path));
+      }
+      if (!boost::filesystem::is_empty(path))
+      {
+        std::cout << "WARNING: This storage already contains blocks."
+                  << std::endl
+                  << "You may encounter issues."
+                  << std::endl;
+      }
+    }
     config =
       elle::make_unique<infinit::storage::FilesystemStorageConfig>
-        (name, std::move(*path), std::move(capacity));
+        (name, std::move(path.string()), std::move(capacity));
   }
   else if (args.count("gcs"))
   {
