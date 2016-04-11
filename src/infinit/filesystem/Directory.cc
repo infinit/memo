@@ -500,6 +500,8 @@ namespace infinit
                 should_exit = true;
                 break;
               }
+              else
+                ELLE_DEBUG("%s/%s threads parked", *parked, nthreads);
               reactor::sleep(100_ms);
               --*parked;
             }
@@ -564,7 +566,7 @@ namespace infinit
       };
       for (int i = 0; i < nthreads; ++i)
         fs.running().emplace_back(new reactor::Thread(
-          elle::sprintf("prefetcher %s", i),
+          elle::sprintf("prefetcher %x-%s", (void*)parked.get(), i),
           prefetch_task
           ));
     }
