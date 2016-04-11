@@ -328,14 +328,14 @@ namespace infinit
           class Configuration
             : public consensus::Configuration
           {
-          // Factory
           public:
-            Configuration(int replication_factor);
+            Configuration(int replication_factor,
+                          std::chrono::system_clock::duration node_timeout);
             virtual
             std::unique_ptr<Consensus>
             make(model::doughnut::Doughnut& dht) override;
             ELLE_ATTRIBUTE_R(int, replication_factor);
-          // Serialization
+            ELLE_ATTRIBUTE_R(std::chrono::system_clock::duration, node_timeout);
           public:
             Configuration(elle::serialization::SerializerIn& s);
             virtual

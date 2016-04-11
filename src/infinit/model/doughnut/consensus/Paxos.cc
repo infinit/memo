@@ -4,6 +4,7 @@
 
 #include <elle/memory.hh>
 #include <elle/bench.hh>
+#include <elle/serialization/json/MissingKey.hh>
 
 #include <cryptography/rsa/PublicKey.hh>
 #include <cryptography/hash.hh>
@@ -1810,15 +1811,21 @@ namespace infinit
         | Configuration |
         `--------------*/
 
-        Paxos::Configuration::Configuration(int replication_factor)
+        Paxos::Configuration::Configuration(
+          int replication_factor,
+          std::chrono::system_clock::duration node_timeout)
           : consensus::Configuration()
           , _replication_factor(replication_factor)
+          , _node_timeout(node_timeout)
         {}
 
         std::unique_ptr<Consensus>
         Paxos::Configuration::make(model::doughnut::Doughnut& dht)
         {
-          return elle::make_unique<Paxos>(dht, this->_replication_factor);
+          return elle::make_unique<Paxos>(
+            dht,
+            consensus::replication_factor = this->_replication_factor,
+            consensus::node_timeout = this->_node_timeout);
         }
 
         Paxos::Configuration::Configuration(
@@ -1832,6 +1839,15 @@ namespace infinit
         {
           consensus::Configuration::serialize(s);
           s.serialize("replication-factor", this->_replication_factor);
+          try
+          {
+            s.serialize("eviction-delay", this->_node_timeout);
+          }
+          catch (elle::serialization::MissingKey const&)
+          {
+            ELLE_ASSERT(s.in());
+            this->_node_timeout = std::chrono::minutes(10);
+          }
         }
 
         static const elle::serialization::Hierarchy<Configuration>::

@@ -145,7 +145,8 @@ COMMAND(create)
     if (paxos)
       consensus_config = elle::make_unique<
         infinit::model::doughnut::consensus::Paxos::Configuration>(
-          replication_factor);
+          replication_factor,
+          std::chrono::minutes(10));
     else
     {
       if (replication_factor != 1)
