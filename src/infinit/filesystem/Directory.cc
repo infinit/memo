@@ -570,19 +570,26 @@ namespace infinit
                       && recurse.at(addr) + 1 < prefetch_depth
                       )
                     {
-                      std::shared_ptr<DirectoryData> d;
-                      if (block)
-                      d = std::shared_ptr<DirectoryData>(
-                        new DirectoryData({}, *block, {true, true}));
-                      else
-                        d = *(fs->directory_cache().find(addr));
+                      try
+                      {
+                        std::shared_ptr<DirectoryData> d;
+                        if (block)
+                        d = std::shared_ptr<DirectoryData>(
+                          new DirectoryData({}, *block, {true, true}));
+                        else
+                          d = *(fs->directory_cache().find(addr));
                       
-                      for (auto const& f: d->_files)
-                      files->push_back(
-                        PrefetchEntry{f.first, f.second.second, recurse.at(addr) +1,
-                                       f.second.first == EntryType::directory,
-                                       cached_version(*fs, f.second.second, f.second.first)
-                      });
+                        for (auto const& f: d->_files)
+                        files->push_back(
+                          PrefetchEntry{f.first, f.second.second, recurse.at(addr) +1,
+                                         f.second.first == EntryType::directory,
+                                         cached_version(*fs, f.second.second, f.second.first)
+                        });
+                      }
+                      catch (elle::Error const& e)
+                      {
+                        ELLE_TRACE("Exception while prefeching: %s", e.what());
+                      }
                     }
                   });
             }
