@@ -486,7 +486,7 @@ _**NOTE**: You may have noticed that the name of the network is sometimes prepen
 A volume can be created with default permissions of either read-only or read-write. These permissions apply to anyone who has a passport for the network. Such permissions are quite handy when one wants to create a collaboration space in which everyone trusts each other for instance.
 
 ```
-$> infinit-volume --create --as alice --network --cluster --name shared --default-permissions rw
+$> infinit-volume --create --as alice --network cluster --name shared --default-permissions rw
 Locally created volume "alice/shared".
 ```
 
