@@ -79,7 +79,7 @@ namespace infinit
           _cleanup();
           std::unique_ptr<blocks::Block>
           _fetch_cache(Address address, boost::optional<int> local_version,
-                       bool& hit);
+                       bool& hit, bool cache_only = false);
           std::unique_ptr<blocks::Block>
           _copy(blocks::Block& block);
           ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
