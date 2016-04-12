@@ -1,3 +1,5 @@
+#include <pair>
+
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 
 #include <functional>
@@ -351,6 +353,18 @@ namespace infinit
               Address, boost::optional<int>)>("get");
             get.set_context<Doughnut*>(&this->_doughnut);
             return get(peers, address, local_version);
+          });
+        }
+
+        std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+        Paxos::RemotePeer::get_multi(std::vector<std::pair<Address, PaxosServer::Quorum>> const& query)
+        {
+          return network_exception_to_unavailable([&] {
+              auto get_multi = make_rpc<
+                std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>(
+                  std::vector<std::pair<Address, PaxosServer::Quorum>> const&)>("get_multi");
+              get_multi.set_context<Doughnut*>(&this->_doughnut);
+              return get_multi(query);
           });
         }
 
@@ -793,6 +807,15 @@ namespace infinit
           return res;
         }
 
+        std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+        Paxos::LocalPeer::get_multi(std::vector<std::pair<Address, PaxosServer::Quorum>> const& query)
+        {
+          std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>> res;
+          for (auto& q: query)
+            res[q.first] = get(q.second, q.first, {});
+          return res;
+        }
+
         void
         Paxos::LocalPeer::_register_rpcs(RPCServer& rpcs)
         {
@@ -856,6 +879,11 @@ namespace infinit
             boost::optional<Paxos::PaxosClient::Accepted>(
               PaxosServer::Quorum, Address, boost::optional<int>)>
             (std::bind(&LocalPeer::get, this, ph::_1, ph::_2, ph::_3)));
+          rpcs.add(
+            "get_multi",
+            std::function<std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+            (std::vector<std::pair<Address, PaxosServer::Quorum>> const&)>
+            (std::bind(&LocalPeer::get_multi, this, ph::_1)));
         }
 
         template <typename T>
@@ -1293,26 +1321,105 @@ namespace infinit
                       std::function<void(Address, std::unique_ptr<blocks::Block>,
                         std::exception_ptr)> res)
         {
+          BENCH("multi_fetch");
+          ELLE_DEBUG("querying %s addresses", addresses.size());
           auto hits = this->doughnut().overlay()->lookup(
             addresses, this->_factor);
-          std::unordered_map<Address, PaxosClient::Peers> peers;
-          for (auto r: hits)
+
+          static bool multipaxos = elle::os::getenv("INFINIT_PAXOS_NO_MULTI", "").empty();
+          if (doughnut().version() < elle::Version(0, 6, 0))
+            multipaxos = false;
+          if (multipaxos)
           {
-            auto& p = peers[r.first];
-            p.push_back(elle::make_unique<Peer>(r.second, r.first, boost::optional<int>()));
-          }
-          // FIXME: dont wait for all to finish
-          for (auto& p: peers)
+            std::unordered_map<overlay::Overlay::Member, std::unordered_set<Address>> targets;
+            std::unordered_map<Address, PaxosServer::Quorum> quorums;
+            for (auto r: hits)
+            {
+              targets[r.second.lock()].insert(r.first);
+              quorums[r.first].insert(r.second.lock()->id());
+            }
+            ELLE_DEBUG("got %s targets and %s quorums", targets.size(), quorums.size());
+            std::unordered_map<Address,
+              std::vector<boost::optional<Paxos::PaxosClient::Accepted>>> results;
+            for (auto& p: targets)
+            {
+              std::vector<std::pair<Address, PaxosServer::Quorum>> query;
+              for (auto a: p.second)
+                query.push_back(std::make_pair(a, quorums.at(a)));
+              ELLE_DEBUG("querying %s addresses from %s", query.size(), p.first.get());
+              try
+              {
+                std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>> res;
+                if (auto local =
+                    dynamic_cast<Paxos::LocalPeer*>(p.first.get()))
+                  res = local->get_multi(query);
+                else if (auto remote =
+                  dynamic_cast<Paxos::RemotePeer*>(p.first.get()))
+                  res = remote->get_multi(query);
+                else if (dynamic_cast<DummyPeer*>(p.first.get()))
+                  continue;
+                else
+                  ELLE_ABORT("invalid paxos peer: %s", p.first);
+                for (auto& r: res)
+                  results[r.first].push_back(r.second);
+              }
+              catch (elle::Error const& e)
+              {
+                ELLE_LOG("%s: get_multi threw %s", this, e.what());
+                throw;
+              }
+            }
+            ELLE_DEBUG("processing results");
+            for (auto& r: results)
+            {
+              // check headcount
+              int reached = signed(r.second.size());
+              int size = signed(quorums.at(r.first).size());
+              if (reached <= (size-1) / 2)
+              {
+                ELLE_TRACE("too few peers to reach consensus: %s of %s",
+                           reached, size);
+                try
+                {
+                  throw athena::paxos::TooFewPeers(reached, size);
+                }
+                catch(...)
+                {
+                  res(r.first, {}, std::current_exception());
+                }
+              }
+              boost::optional<Paxos::PaxosClient::Accepted> best;
+              for (auto& c: r.second)
+                if (c)
+                  if (!best || best->proposal < c->proposal)
+                    best.emplace(std::move(c.get()));
+              if (best)
+                res(r.first,
+                  best->value.template get<std::shared_ptr<blocks::Block>>()->clone(),
+                  {});
+              else
+                elle::unreachable();
+            }
+            ELLE_DEBUG("done");
+          } // multipaxos
+          else
           {
-            try
+            std::unordered_map<Address, PaxosClient::Peers> peers;
+            for (auto r: hits)
             {
-              auto block = this->_fetch(p.first, std::move(p.second), {});
-              res(p.first, std::move(block), {});
+              auto& p = peers[r.first];
+              p.push_back(elle::make_unique<Peer>(r.second, r.first, boost::optional<int>()));
             }
-            catch (elle::Error const& e)
-            {
-              res(p.first, {}, std::current_exception());
-            }
+            for (auto& p: peers)
+              try
+              {
+                auto block = this->_fetch(p.first, std::move(p.second), {});
+                res(p.first, std::move(block), {});
+              }
+              catch (elle::Error const& e)
+              {
+                res(p.first, {}, std::current_exception());
+              }
           }
         }
 

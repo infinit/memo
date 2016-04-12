@@ -159,6 +159,9 @@ namespace infinit
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version);
+            virtual
+            std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+            get_multi(std::vector<std::pair<Address, PaxosServer::Quorum>> const& query);
           };
 
           /*----------.
@@ -222,6 +225,9 @@ namespace infinit
             get(PaxosServer::Quorum peers,
                 Address address,
                 boost::optional<int> local_version);
+            virtual
+            std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+            get_multi(std::vector<std::pair<Address, PaxosServer::Quorum>> const& query);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
