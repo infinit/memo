@@ -1084,6 +1084,30 @@ test_filesystem(bool dht,
     bfs::remove(mount / "test");
   }
 
+  ELLE_LOG("test symlink")
+  {
+    auto real_path = mount / "real_file";
+    auto symlink_path = mount / "symlink";
+    ELLE_TRACE("write real file")
+    {
+      bfs::ofstream ofs(real_path);
+      ofs << "something";
+    }
+    ELLE_TRACE("create symlink")
+    {
+      bfs::create_symlink(real_path, symlink_path);
+    }
+    std::string text;
+    ELLE_TRACE("read through symlink")
+    {
+      bfs::ifstream ifs(symlink_path);
+      ifs >> text;
+    }
+    BOOST_CHECK_EQUAL(text, "something");
+    bfs::remove(real_path);
+    bfs::remove(symlink_path);
+  }
+
   ELLE_LOG("utf-8");
   const char* name = "éùßñЂ";
   write(mount / name, "foo");
