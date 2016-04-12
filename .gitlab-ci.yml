@@ -105,6 +105,7 @@ x86_64-windows-mingw4:
 x86_64-osx-clang:
   stage: build
   script:
+    - export LC_ALL=en_US.UTF-8
     - git submodule sync --recursive
     - git submodule update --init --recursive
     - git fetch origin --tags
