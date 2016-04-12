@@ -648,11 +648,11 @@ def configure(
       'glibc_version': '2.12',
       'version': redhat_version,
   }):
-    drake.node('redhat-packaging/infinit.spec.tmpl')
+    drake.node('redhat-packaging/package/infinit.spec.tmpl')
 
   redhat_nodes = chain(
     redhat_nodes,
-    drake.copy(drake.nodes('redhat-packaging/infinit.spec'),
+    drake.copy(drake.nodes('redhat-packaging/package/infinit.spec'),
                'redhat/SPECS', strip_prefix = True),
   )
 
@@ -662,6 +662,30 @@ def configure(
                                          drake.path_build('redhat'),
                                          redhat_nodes).package
   redhat_rule << redhat_package
+
+  redhat_repo_version = '0.1'
+  with drake.templating.Context(content = {
+      'base_url': 'http://127.0.0.1',
+      'gpg_key': 'http://127.0.0.1/gpg.pub',
+      'files': '/etc/yum.repo.d/infinit.repo',
+      'version': redhat_repo_version,
+  }):
+    drake.node('redhat-packaging/repository/infinit-release.spec.tmpl')
+    drake.node('redhat-packaging/repository/infinit.repo.tmpl')
+
+  redhat_repo_nodes = chain(
+    drake.copy(drake.nodes('redhat-packaging/repository/infinit-release.spec'),
+               'redhat-repo/SPECS', strip_prefix = True),
+    drake.copy(drake.nodes('redhat-packaging/repository/infinit.repo'),
+               'redhat-repo/BUILDROOT/etc/yum.repo.d', strip_prefix = True),
+  )
+
+  redhat_repo_package = drake.redhat.Packager('infinit-release',
+                                              redhat_repo_version,
+                                              'el6', 'x86_64',
+                                              drake.path_build('redhat-repo'),
+                                              redhat_repo_nodes).package
+  redhat_rule << redhat_repo_package
 
   ## ------ ##
   ## Beyond ##
