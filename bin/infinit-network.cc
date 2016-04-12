@@ -136,6 +136,7 @@ COMMAND(create)
       replication_factor = args["replication-factor"].as<int>();
     if (replication_factor < 1)
       throw CommandLineError("replication factor must be greater than 0");
+    auto eviction = optional<std::string>(args, "eviction-delay");
     bool no_consensus = args.count("no-consensus");
     bool paxos = args.count("paxos");
     if (!no_consensus)
@@ -143,10 +144,14 @@ COMMAND(create)
     if (!one(no_consensus, paxos))
       throw CommandLineError("more than one consensus specified");
     if (paxos)
+    {
       consensus_config = elle::make_unique<
         infinit::model::doughnut::consensus::Paxos::Configuration>(
           replication_factor,
-          std::chrono::minutes(10));
+          eviction ?
+          std::chrono::duration_from_string<std::chrono::seconds>(*eviction) :
+          std::chrono::seconds(10 * 60));
+    }
     else
     {
       if (replication_factor != 1)
@@ -597,6 +602,8 @@ main(int argc, char** argv)
           "storage to contribute (optional)" },
         { "port", value<int>(), "port to listen on (default: random)" },
         { "replication-factor,r", value<int>(),
+          "missing servers eviction delay (default: 10min)" },
+        { "eviction-delay,e", value<std::string>(),
           "data replication factor (default: 1)" },
         option_output("network"),
         { "push-network", bool_switch(),
