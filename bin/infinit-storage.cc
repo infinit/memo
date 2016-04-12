@@ -129,9 +129,9 @@ COMMAND(create)
       }
       if (!boost::filesystem::is_empty(path))
       {
-        std::cout << "WARNING: This storage already contains blocks."
+        std::cout << "WARNING: Path is not empty: " << path
                   << std::endl
-                  << "You may encounter issues."
+                  << "WARNING: You may encounter unexpected behavior."
                   << std::endl;
       }
     }
