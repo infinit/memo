@@ -4,13 +4,13 @@
 
 #include <sys/types.h>
 #ifndef INFINIT_WINDOWS
-#include <sys/statvfs.h>
+# include <sys/statvfs.h>
 #endif
 
 #ifdef INFINIT_LINUX
-#include <attr/xattr.h>
+# include <attr/xattr.h>
 #elif defined(INFINIT_MACOSX)
-#include <sys/xattr.h>
+# include <sys/xattr.h>
 #endif
 
 #include <boost/filesystem/fstream.hpp>
@@ -49,9 +49,9 @@
 
 ELLE_LOG_COMPONENT("test");
 
-# define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
-                                            INFINIT_MINOR,   \
-                                            INFINIT_SUBMINOR)
+#define INFINIT_ELLE_VERSION elle::Version(INFINIT_MAJOR,   \
+                                           INFINIT_MINOR,   \
+                                           INFINIT_SUBMINOR)
 
 
 namespace ifs = infinit::filesystem;
@@ -69,12 +69,16 @@ std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
 std::vector<std::unique_ptr<elle::system::Process>> processes;
 
-static int setxattr_(bfs::path p, std::string const& name, std::string const& value)
+static
+int
+setxattr_(bfs::path p, std::string const& name, std::string const& value)
 {
-  return setxattr(p.c_str(), name.c_str(), value.c_str(), value.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), name.c_str(), value.c_str(), value.size(),
+                  0 SXA_EXTRA);
 }
 
-std::string getxattr_(bfs::path p, std::string const& name)
+std::string
+getxattr_(bfs::path p, std::string const& name)
 {
   char buf[2048];
   int res = getxattr(p.c_str(), name.c_str(), buf, 2048 SXA_EXTRA SXA_EXTRA);
@@ -87,38 +91,63 @@ std::string getxattr_(bfs::path p, std::string const& name)
     return "";
 }
 
-static int group_create(bfs::path p, std::string const& name)
+static
+int
+group_create(bfs::path p, std::string const& name)
 {
-  return setxattr(p.c_str(), "user.infinit.group.create", name.c_str(), name.size(), 0 SXA_EXTRA);
-}
-static int group_add(bfs::path p, std::string const& gname, std::string const& uname)
-{
-  std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.add", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
-}
-static int group_remove(bfs::path p, std::string const& gname, std::string const& uname)
-{
-  std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.remove", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.create",
+                  name.c_str(), name.size(), 0 SXA_EXTRA);
 }
 
-static int group_add_admin(bfs::path p, std::string const& gname, std::string const& uname)
+static
+int
+group_add(bfs::path p, std::string const& gname, std::string const& uname)
 {
   std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.addadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.add",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
-static int group_remove_admin(bfs::path p, std::string const& gname, std::string const& uname)
+
+static
+int
+group_remove(bfs::path p, std::string const& gname, std::string const& uname)
 {
   std::string cmd = gname + ":" + uname;
-  return setxattr(p.c_str(), "user.infinit.group.removeadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+  return setxattr(p.c_str(), "user.infinit.group.remove",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
 
-static int group_delete(bfs::path p, std::string const& gname)
+static
+int
+group_add_admin(bfs::path p, std::string const& gname, std::string const& uname)
 {
-  return setxattr(p.c_str(), "user.infinit.group.delete", gname.c_str(), gname.size(), 0 SXA_EXTRA);
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.addadmin",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
 }
 
-static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
+static
+int
+group_remove_admin(
+  bfs::path p, std::string const& gname, std::string const& uname)
+{
+  std::string cmd = gname + ":" + uname;
+  return setxattr(p.c_str(), "user.infinit.group.removeadmin",
+                  cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+
+static
+int
+group_delete(bfs::path p, std::string const& gname)
+{
+  return setxattr(p.c_str(), "user.infinit.group.delete",
+                  gname.c_str(), gname.size(), 0 SXA_EXTRA);
+}
+
+static
+void
+wait_for_mounts(
+  boost::filesystem::path root, int count, struct statvfs* start = nullptr)
 {
   struct statvfs stparent;
   if (start)
@@ -141,7 +170,8 @@ static void wait_for_mounts(boost::filesystem::path root, int count, struct stat
     while (true)
     {
       int res = statvfs(mount_points[i].c_str(), &st);
-      ELLE_TRACE("%s fsid: %s %s  blk %s %s", i, st.f_fsid, stparent.f_fsid, st.f_blocks, stparent.f_blocks);
+      ELLE_TRACE("%s fsid: %s %s  blk %s %s", i, st.f_fsid, stparent.f_fsid,
+                 st.f_blocks, stparent.f_blocks);
       // statvfs failure with EPERM means its mounted
       if (res < 0
         || st.f_fsid != stparent.f_fsid
@@ -154,19 +184,21 @@ static void wait_for_mounts(boost::filesystem::path root, int count, struct stat
   }
 }
 
-static int directory_count(boost::filesystem::path const& p)
+static
+int
+directory_count(boost::filesystem::path const& p)
 {
   try
   {
     boost::filesystem::directory_iterator d(p);
-    int s=0;
-    while (d!= boost::filesystem::directory_iterator())
+    int s = 0;
+    while (d != boost::filesystem::directory_iterator())
     {
       ++s; ++d;
     }
     return s;
   }
-  catch(std::exception const& e)
+  catch (std::exception const& e)
   {
     ELLE_LOG("directory_count failed with %s", e.what());
     return -1;
@@ -230,7 +262,9 @@ can_access(boost::filesystem::path const& p,
   }
 }
 
-static bool touch(boost::filesystem::path const& p)
+static
+bool
+touch(boost::filesystem::path const& p)
 {
   boost::filesystem::ofstream ofs(p);
   if (!ofs.good())
@@ -239,7 +273,9 @@ static bool touch(boost::filesystem::path const& p)
   return true;
 }
 
-template<typename T> std::string serialize(T & t)
+template<typename T>
+std::string
+serialize(T & t)
 {
   elle::Buffer buf;
   {
@@ -254,9 +290,12 @@ template<typename T> std::string serialize(T & t)
 // Run nodes in a separate scheduler to avoid reentrency issues
 // ndmefyl: WHAT THE FUCK is that supposed to imply O.o
 reactor::Scheduler* nodes_sched;
-static void make_nodes(std::string store, int node_count,
-                       infinit::cryptography::rsa::KeyPair const& owner,
-                       bool paxos)
+static
+void
+make_nodes(std::string store,
+           int node_count,
+           infinit::cryptography::rsa::KeyPair const& owner,
+           bool paxos)
 {
   reactor::Scheduler s;
   nodes_sched = &s;
@@ -411,19 +450,19 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
         fs = new reactor::filesystem::FileSystem(std::move(ops), true);
         ELLE_TRACE("running mounter...");
         new reactor::Thread("mounter", [mp] {
-            ELLE_LOG("mounting on %s", mp);
-            mounted = true;
-            fs->mount(mp, {"", "-o", "hard_remove"}); // {"", "-d" /*, "-o", "use_ino"*/});
-            ELLE_TRACE("waiting...");
-            reactor::wait(*fs);
-            ELLE_TRACE("...done");
+          ELLE_LOG("mounting on %s", mp);
+          mounted = true;
+          fs->mount(mp, {"", "-o", "hard_remove", "-o", "nobrowse"}); // {"", "-d" /*, "-o", "use_ino"*/});
+          ELLE_TRACE("waiting...");
+          reactor::wait(*fs);
+          ELLE_TRACE("...done");
 #ifndef INFINIT_MACOSX
-            ELLE_LOG("filesystem unmounted");
-            nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
-            processes.clear();
+          ELLE_LOG("filesystem unmounted");
+          nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
+          processes.clear();
 #endif
-            reactor::scheduler().terminate();
-            });
+          reactor::scheduler().terminate();
+        });
       }
       else
       {
@@ -535,7 +574,8 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
   endpoints.clear();
   processes.clear();
   mounted = false;
-  auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+  auto tmp = boost::filesystem::temp_directory_path()
+           / boost::filesystem::unique_path();
   std::unique_ptr<infinit::model::Model> model;
   reactor::Thread t(*sched, "fs", [&] {
     if (!elle::os::getenv("STORAGE_MEMORY", "").empty())
@@ -556,7 +596,9 @@ run_filesystem(std::string const& store, std::string const& mountpoint)
   sched->run();
 }
 
-static std::string read(boost::filesystem::path const& where)
+static
+std::string
+read(boost::filesystem::path const& where)
 {
   std::string text;
   boost::filesystem::ifstream ifs(where);
@@ -564,7 +606,9 @@ static std::string read(boost::filesystem::path const& where)
   return text;
 }
 
-static void read_all(boost::filesystem::path const& where)
+static
+void
+read_all(boost::filesystem::path const& where)
 {
   boost::filesystem::ifstream ifs(where);
   char buffer[1024];
@@ -576,7 +620,9 @@ static void read_all(boost::filesystem::path const& where)
   }
 }
 
-static void write(boost::filesystem::path const& where, std::string const& what)
+static
+void
+write(boost::filesystem::path const& where, std::string const& what)
 {
   boost::filesystem::ofstream ofs(where);
   ofs << what;
@@ -590,8 +636,10 @@ test_filesystem(bool dht,
                 bool paxos = true)
 {
   namespace bfs = boost::filesystem;
-  auto store = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
-  auto mount = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+  auto store = boost::filesystem::temp_directory_path()
+             / boost::filesystem::unique_path();
+  auto mount = boost::filesystem::temp_directory_path()
+             / boost::filesystem::unique_path();
   elle::os::setenv("INFINIT_HOME", store.string(), true);
   boost::filesystem::create_directories(mount);
   boost::filesystem::create_directories(store);
@@ -647,7 +695,6 @@ test_filesystem(bool dht,
       }
   });
   std::string text;
-
   {
     boost::filesystem::ofstream ofs(mount / "test");
     ofs << "Test";
@@ -659,7 +706,8 @@ test_filesystem(bool dht,
   }
   BOOST_CHECK_EQUAL(text, "Test");
   {
-    bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test",
+                      std::ofstream::out|std::ofstream::ate|std::ofstream::app);
     ofs << "coin";
   }
   BOOST_CHECK_EQUAL(directory_count(mount), 1);
@@ -713,7 +761,10 @@ test_filesystem(bool dht,
   }
   bfs::create_hard_link(mount / "test", mount / "test2");
   {
-    bfs::ofstream ofs(mount / "test2", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test2",
+                      std::ofstream::out |
+                      std::ofstream::ate |
+                      std::ofstream::app);
     ofs << "coinB";
     ofs.close();
   }
@@ -728,7 +779,10 @@ test_filesystem(bool dht,
   BOOST_CHECK_EQUAL(text, "TestcoinB");
 
   {
-    bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test",
+                      std::ofstream::out |
+                      std::ofstream::ate |
+                      std::ofstream::app);
     ofs << "coinA";
   }
   // XXX [@Matthieu]: Should be 500000.
@@ -752,7 +806,10 @@ test_filesystem(bool dht,
     ofs << "Test";
   }
   {
-    bfs::ofstream ofs(mount / "test", std::ofstream::out|std::ofstream::ate|std::ofstream::app);
+    bfs::ofstream ofs(mount / "test",
+                      std::ofstream::out |
+                      std::ofstream::ate |
+                      std::ofstream::app);
     ofs << "a";
     bfs::create_hard_link(mount / "test", mount / "test2");
     ofs << "b";
@@ -780,7 +837,8 @@ test_filesystem(bool dht,
     ifs.read(buffer, 20);
     BOOST_CHECK_EQUAL(ifs.gcount(), 16);
     char expect[] = {'f','o','o',0,0,0,0,0,0,0,0,0,0,'f','o','o'};
-    BOOST_CHECK_EQUAL(std::string(buffer, buffer + 16), std::string(expect, expect + 16));
+    BOOST_CHECK_EQUAL(std::string(buffer, buffer + 16),
+                      std::string(expect, expect + 16));
   }
   bfs::remove(mount / "test");
 
@@ -991,17 +1049,21 @@ test_filesystem(bool dht,
     sz = listxattr( (mount / "file").c_str(), attrlist, 1024 SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, strlen("testattr")+1);
     BOOST_CHECK_EQUAL(attrlist, "testattr");
-    sz = getxattr(mount.c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr(mount.c_str(), "testattr", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, strlen("foo"));
     attrlist[sz] = 0;
     BOOST_CHECK_EQUAL(attrlist, "foo");
-    sz = getxattr( (mount / "file").c_str(), "testattr", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr( (mount / "file").c_str(), "testattr", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, strlen("foo"));
     attrlist[sz] = 0;
     BOOST_CHECK_EQUAL(attrlist, "foo");
-    sz = getxattr( (mount / "file").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr( (mount / "file").c_str(), "nope", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, -1);
-    sz = getxattr( (mount / "nope").c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
+    sz = getxattr( (mount / "nope").c_str(), "nope", attrlist,
+                  1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, -1);
     sz = getxattr( mount.c_str(), "nope", attrlist, 1024 SXA_EXTRA SXA_EXTRA);
     BOOST_CHECK_EQUAL(sz, -1);
@@ -1034,24 +1096,28 @@ test_filesystem(bool dht,
   BOOST_CHECK_EQUAL(directory_count(mount), 0);
 }
 
-void test_basic()
+void
+test_basic()
 {
   test_filesystem(false);
 }
 
-void filesystem()
+void
+filesystem()
 {
   test_filesystem(true, 5, 1, 1, false);
 }
 
-void filesystem_paxos()
+void
+filesystem_paxos()
 {
   test_filesystem(true, 5, 1, 1, true);
 }
 
-void unmounter(boost::filesystem::path mount,
-               boost::filesystem::path store,
-               std::thread& t)
+void
+unmounter(boost::filesystem::path mount,
+          boost::filesystem::path store,
+          std::thread& t)
 {
   ELLE_LOG("unmounting");
   if (!nodes_sched->done())
@@ -1402,7 +1468,8 @@ test_acl(bool paxos)
   ELLE_LOG("world-writable");
   bfs::create_directory(m0 / "dir4");
   BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), -1);
-  bfs::permissions(m0 / "dir4", bfs::add_perms |bfs::others_write | bfs::others_read);
+  bfs::permissions(m0 / "dir4",
+                   bfs::add_perms |bfs::others_write | bfs::others_read);
   BOOST_CHECK_EQUAL(directory_count(m1 / "dir4"), 0);
   write(m1 / "dir4" / "file", "foo");
   bfs::create_directory(m1 /"dir4"/ "dir");
@@ -1414,7 +1481,8 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m1 / "dir4" / "file"), "foo");
 
   write(m0 / "file5", "foo");
-  bfs::permissions(m0 / "file5", bfs::add_perms |bfs::others_write | bfs::others_read);
+  bfs::permissions(m0 / "file5",
+                   bfs::add_perms |bfs::others_write | bfs::others_read);
   write(m1 / "file5", "bar");
   BOOST_CHECK_EQUAL(read(m1 / "file5"), "bar");
   BOOST_CHECK_EQUAL(read(m0 / "file5"), "bar");
@@ -1593,7 +1661,8 @@ ELLE_TEST_SCHEDULED(write_truncate)
   DHTs servers(1);
   auto client = servers.client();
   // the emacs save procedure: open() truncate() write()
-  auto handle = client.fs->path("/file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  auto handle =
+    client.fs->path("/file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
   handle->write(elle::ConstWeakBuffer("foo\nbar\nbaz\n", 12), 12, 0);
   handle->close();
   handle.reset();
@@ -1695,11 +1764,16 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
   o->fail_addresses().insert(fat[2]);
   auto handle = root->child("file")->open(O_RDWR, 0);
   char buf[16384];
-  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192), 16384);
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192),
+                    16384);
   reactor::sleep(200_ms);
   o->fail_addresses().clear();
-  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024 + 8192), 16384);
-  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024*2 + 8192), 16384);
+  BOOST_CHECK_EQUAL(
+    handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024 * 1024 + 8192),
+    16384);
+  BOOST_CHECK_EQUAL(
+    handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024 * 1024 * 2 + 8192),
+    16384);
 }
 
 ELLE_TEST_SUITE()
