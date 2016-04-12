@@ -274,7 +274,8 @@ namespace infinit
         addLocalResults(packet::GetFileRequest* p, reactor::yielder<PeerLocation>::type const* yield);
         void
         addLocalResults(packet::MultiGetFileRequest* p,
-                        reactor::yielder<std::pair<Address, PeerLocation>>::type const* yield);
+                        reactor::yielder<std::pair<Address, PeerLocation>>::type const* yield,
+                        std::vector<std::set<Address>>& result_sets);
         void
         kelipsMGet(std::vector<Address> files, int n,
                    std::function<void (std::pair<Address, PeerLocation>)> yield);

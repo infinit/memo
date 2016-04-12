@@ -2248,7 +2248,8 @@ namespace infinit
 
       void
       Node::addLocalResults(packet::MultiGetFileRequest* p,
-        reactor::yielder<std::pair<Address, PeerLocation>>::type const* yield)
+        reactor::yielder<std::pair<Address, PeerLocation>>::type const* yield,
+        std::vector<std::set<Address>>& result_sets)
       {
         ELLE_ASSERT_LTE(p->results.size(), p->fileAddresses.size());
         p->results.resize(p->fileAddresses.size());
@@ -2260,7 +2261,8 @@ namespace infinit
           std::function <void(PeerLocation)> yield_next = [&](PeerLocation pl)
           {
             if (yield)
-              (*yield)(std::make_pair(gfr.fileAddress, pl));
+              if (result_sets[i].insert(pl.first).second)
+                (*yield)(std::make_pair(gfr.fileAddress, pl));
           };
           addLocalResults(&gfr, &yield_next);
           p->results[i] = gfr.result;
@@ -2345,7 +2347,8 @@ namespace infinit
         int fg = group_of(p->fileAddresses.front());
         if (fg == _group)
         {
-          addLocalResults(p, nullptr);
+          std::vector<std::set<Address>> result_sets;
+          addLocalResults(p, nullptr, result_sets);
         }
         bool done = true;
         for (unsigned int i=0; i<p->fileAddresses.size(); ++i)
@@ -2668,7 +2671,7 @@ namespace infinit
         int fg = group_of(files.front());
         if (fg == _group)
         {
-          addLocalResults(&r, &yield);
+          addLocalResults(&r, &yield, result_sets);
           bool done = true;
           for (unsigned int i=0; i<files.size(); ++i)
           {
@@ -2711,8 +2714,9 @@ namespace infinit
           }
           else
           {
-            ELLE_DEBUG("request %s (%s) gave %s results",
-              i, req.request_id, r->result.size());
+            ELLE_TRACE("request %s (%s) gave %s results",
+              i, req.request_id, r->multi_result.size());
+            ELLE_DUMP("got %s", r->multi_result);
             for (unsigned f = 0; f < r->multi_result.size(); ++f)
             {
               for (auto fr: r->multi_result[f])
