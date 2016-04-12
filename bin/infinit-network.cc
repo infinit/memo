@@ -156,7 +156,7 @@ COMMAND(create)
     {
       if (replication_factor != 1)
       {
-        throw CommandLineError(
+        throw elle::Error(
           "without consensus, replication factor must be 1");
       }
       consensus_config = elle::make_unique<
