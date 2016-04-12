@@ -1446,7 +1446,7 @@ namespace infinit
                 elle::sprintf("no peer available for %s of %f",
                               op == overlay::OP_INSERT ? "insertion" : "update",
                               b->address()));
-            if (true || this->doughnut().version() >= elle::Version(0, 6, 0))
+            if (this->doughnut().version() >= elle::Version(0, 6, 0))
               for (auto peer: reached)
                 if (auto local =
                     dynamic_cast<Paxos::LocalPeer*>(peer.get()))
