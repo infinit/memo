@@ -3519,7 +3519,7 @@ namespace infinit
         , query_get_ttl(10)
         , query_put_ttl(10)
         , query_put_insert_ttl(3)
-        , contact_timeout_ms(120000)
+        , contact_timeout_ms(3000)
         , file_timeout_ms(1200000)
         , ping_interval_ms(1000)
         , ping_timeout_ms(1000)
