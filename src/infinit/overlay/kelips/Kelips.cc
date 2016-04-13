@@ -2865,7 +2865,7 @@ namespace infinit
               ELLE_LOG("%s: erase %s from %s", *this, it->second, idx);
               auto addr = it->second.address;
               it = contacts.erase(it);
-              this->on_disappear()(addr, true);
+              this->on_disappear()(addr, false);
             }
             else
               ++it;
