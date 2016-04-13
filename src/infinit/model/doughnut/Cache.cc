@@ -410,42 +410,17 @@ namespace infinit
               {
                 auto& order = this->_cache.get<2>();
                 auto deadline = now - this->_cache_invalidation;
-                while (!order.empty())
+                std::vector<Model::AddressVersion> need_refresh;
+                for (auto it = order.begin(); it != order.end(); ++it)
                 {
-                  auto& cached = *order.begin();
+                  auto& cached = *it;
                   if (!(cached.last_fetched() < deadline))
                     break;
                   auto const address = cached.block()->address();
                   if (auto mb =
                       dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
                   {
-                    ELLE_DEBUG_SCOPE("refresh %s", address);
-                    try
-                    {
-                      auto block = this->_backend->fetch(address, mb->version());
-                      // Beware: everything is invalidated past there we probably
-                      // yielded.
-                      auto it = this->_cache.find(address);
-                      if (it != this->_cache.end())
-                        this->_cache.modify(
-                          it,
-                          [&] (CachedBlock& cache)
-                          {
-                            if (block)
-                              cache.block() = std::move(block);
-                            cache.last_fetched(now);
-                          });
-                    }
-                    catch (MissingBlock const&)
-                    {
-                      ELLE_DUMP("drop removed block");
-                      this->_cache.erase(address);
-                    }
-                    catch (elle::Error const& e)
-                    {
-                      ELLE_TRACE("Fetch error on %x: %s", address, e);
-                      this->_cache.erase(address);
-                    }
+                    need_refresh.push_back(std::make_pair(address, mb->version()));
                   }
                   else
                   {
@@ -453,8 +428,45 @@ namespace infinit
                     break;
                   }
                 }
+                static const int batch_size = std::stoi(
+                  elle::os::getenv("INFINIT_CACHE_REFRESH_BATCH_SIZE", "20"));
+                for (int i=0; i < signed(need_refresh.size()); i+= batch_size)
+                {
+                  std::vector<Model::AddressVersion> batch;
+                  if (signed(need_refresh.size()) >= (i + batch_size))
+                    batch.insert(batch.end(), need_refresh.begin() + i,
+                      need_refresh.begin() + i + batch_size);
+                  else
+                    batch.insert(batch.end(), need_refresh.begin() + i,
+                      need_refresh.end());
+                  ELLE_DEBUG("Processing batch %s-%s of %s",
+                    i, i+batch.size(), need_refresh.size());
+                  this->_backend->fetch(batch,
+                    [&](Address a, std::unique_ptr<blocks::Block> b,
+                      std::exception_ptr e)
+                    {
+                      if (e)
+                      {
+                        ELLE_TRACE("fetch error on %f: %s", a, e);
+                        this->_cache.erase(a);
+                      }
+                      else
+                      {
+                        auto it = this->_cache.find(a);
+                        if (it != this->_cache.end())
+                          this->_cache.modify(
+                            it,
+                            [&] (CachedBlock& cache)
+                            {
+                              if (b)
+                                cache.block() = std::move(b);
+                              cache.last_fetched(now);
+                            });
+                      }
+                    });
+                  }
+                }
               }
-            }
             reactor::sleep(
               boost::posix_time::seconds(
                 this->_cache_invalidation.count()) / 10);
