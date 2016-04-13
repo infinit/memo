@@ -639,22 +639,30 @@ namespace infinit
               {
                 auto& decision = *block.paxos;
                 auto q = decision.paxos.current_quorum();
-                Paxos::PaxosClient client(
-                  this->doughnut().id(),
-                  lookup_nodes(this->_paxos.doughnut(), q, address));
-                if (q.erase(lost_id))
+                while (true)
                 {
-                  std::cerr << "GOGO" << std::endl;
-                  client.choose(decision.paxos.current_version() + 1, q);
-                  std::cerr << "PWORE" << std::endl;
-                  ELLE_TRACE("%s: evicted %f from %f quorum",
-                             this, lost_id, address);
-                  if (signed(q.size()) < this->_factor)
+                  try
                   {
-                    std::cerr << "RANGER" << std::endl;
-                    ELLE_DUMP("schedule %f for rebalancing after eviction",
-                              address);
-                    this->_rebalancable.put(std::make_pair(address, false));
+                    Paxos::PaxosClient client(
+                      this->doughnut().id(),
+                      lookup_nodes(this->_paxos.doughnut(), q, address));
+                    if (q.erase(lost_id))
+                    {
+                      client.choose(decision.paxos.current_version() + 1, q);
+                      ELLE_TRACE("%s: evicted %f from %f quorum",
+                                 this, lost_id, address);
+                      if (signed(q.size()) < this->_factor)
+                      {
+                        ELLE_DUMP("schedule %f for rebalancing after eviction",
+                                  address);
+                        this->_rebalancable.put(std::make_pair(address, false));
+                      }
+                    }
+                    break;
+                  }
+                  catch (Paxos::PaxosServer::WrongQuorum const& e)
+                  {
+                    q = e.expected();
                   }
                 }
               }
@@ -664,14 +672,11 @@ namespace infinit
                 auto it = this->_quorums.find(addr);
                 ELLE_ASSERT(it != this->_quorums.end());
                 auto q = it->quorum;
-                std::cerr << "BITE " << q << ": " << lost_id << std::endl;
                 if (q.erase(lost_id))
                 {
-                  std::cerr << "POIL" << std::endl;
                   this->_cache(addr, true, q);
                   if (signed(q.size()) < this->_factor)
                   {
-                    std::cerr << "CUL" << std::endl;
                     ELLE_DUMP("schedule %f for rebalancing after eviction",
                               addr);
                     this->_rebalancable.put(
