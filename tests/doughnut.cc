@@ -1358,7 +1358,7 @@ namespace rebalancing
     dht_b.overlay->connect(*dht_a.overlay);
   }
 
-  ELLE_TEST_SCHEDULED(evict_faulty)
+  ELLE_TEST_SCHEDULED(evict_faulty, (bool, immutable))
   {
     DHT dht_a(make_consensus = instrument(3));
     auto& local_a = dynamic_cast<Local&>(*dht_a.dht->local());
@@ -1371,12 +1371,9 @@ namespace rebalancing
     dht_c.overlay->connect(*dht_a.overlay);
     dht_c.overlay->connect(*dht_b.overlay);
     ELLE_LOG("third DHT: %f", dht_c.dht->id());
-    auto b = dht_a.dht->make_block<blocks::MutableBlock>();
+    auto b = make_block(dht_a, immutable, "evict_faulty");
     ELLE_LOG("write block")
-    {
-      b->data(std::string("evict_faulty"));
       dht_a.dht->store(*b, infinit::model::STORE_INSERT);
-    }
     DHT dht_d(make_consensus = instrument(3));
     dht_d.overlay->connect(*dht_a.overlay);
     dht_d.overlay->connect(*dht_b.overlay);
@@ -1478,6 +1475,11 @@ ELLE_TEST_SUITE()
     }
     rebalancing->add(
       BOOST_TEST_CASE(rebalancing_while_destroyed), 0, valgrind(1));
-    rebalancing->add(BOOST_TEST_CASE(evict_faulty), 0, valgrind(5));
+    {
+      auto evict_faulty_CHB = [] () { evict_faulty(true); };
+      auto evict_faulty_OKB = [] () { evict_faulty(false); };
+      rebalancing->add(BOOST_TEST_CASE(evict_faulty_CHB), 0, valgrind(1));
+      rebalancing->add(BOOST_TEST_CASE(evict_faulty_OKB), 0, valgrind(1));
+    }
   }
 }
