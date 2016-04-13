@@ -950,7 +950,7 @@ test_filesystem(bool dht,
         lseek(fd, sv, SEEK_SET);
         unsigned char c = dist(gen);
         ELLE_TRACE("Write 1 at %s", sv);
-        write(fd, &c, 1);
+        BOOST_CHECK_EQUAL(write(fd, &c, 1), 1);
       }
       ELLE_TRACE("Closing");
       close(fd);
