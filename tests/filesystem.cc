@@ -452,7 +452,12 @@ run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
         new reactor::Thread("mounter", [mp] {
           ELLE_LOG("mounting on %s", mp);
           mounted = true;
-          fs->mount(mp, {"", "-o", "hard_remove", "-o", "nobrowse"}); // {"", "-d" /*, "-o", "use_ino"*/});
+          std::vector<std::string> mount_options = {"", "-o", "hard_remove"};  // {"", "-d" /*, "-o", "use_ino"*/});
+#ifdef INFINIT_MACOSX
+          mount_options.push_back("-o");
+          mount_options.push_back("nobrowse");
+#endif
+          fs->mount(mp, mount_options);
           ELLE_TRACE("waiting...");
           reactor::wait(*fs);
           ELLE_TRACE("...done");
