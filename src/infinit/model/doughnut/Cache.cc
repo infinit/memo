@@ -115,17 +115,17 @@ namespace infinit
         }
 
         void
-        Cache::_fetch(std::vector<Address> const& addresses,
+        Cache::_fetch(std::vector<AddressVersion> const& addresses,
                       std::function<void(Address, std::unique_ptr<blocks::Block>,
                                          std::exception_ptr)> res)
         {
-          std::vector<Address> missing;
+          std::vector<AddressVersion> missing;
           for (auto a: addresses)
           {
             bool hit = false;
-            auto block = this->_fetch_cache(a, {}, hit, true);
+            auto block = this->_fetch_cache(a.first, a.second, hit, true);
             if (hit)
-              res(a, std::move(block), {});
+              res(a.first, std::move(block), {});
             else
               missing.push_back(a);
           }
@@ -135,17 +135,7 @@ namespace infinit
             {
               if (block)
               {
-                if (!block->validate(doughnut()))
-                {
-                  ELLE_WARN("%s: invalid block received for %s", this, addr);
-                  res(addr, {}, std::make_exception_ptr(elle::Error("invalid block")));
-                  return;
-                }
-                if (this->_disk_cache_size &&
-                  dynamic_cast<blocks::ImmutableBlock*>(block.get()))
-                this->_disk_cache_push(block);
-                else if (dynamic_cast<blocks::MutableBlock*>(block.get()))
-                  this->_cache.emplace(block->clone());
+                this->_insert_cache(*block);
               }
               res(addr, std::move(block), exc);
             });
@@ -159,6 +149,33 @@ namespace infinit
           return res;
         }
 
+        void
+        Cache::_insert_cache(blocks::Block& b)
+        {
+          if (!b.validate(doughnut()))
+          {
+            ELLE_WARN("%s: invalid block received for %s", this, b.address());
+            throw elle::Error("invalid block");
+          }
+          static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
+          if (decode)
+            try
+            {
+              static elle::Bench bench("bench.cache.preempt_decode", 10000_sec);
+              elle::Bench::BenchScope bs(bench);
+              b.data();
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("%s: block %f is not readable: %s", this, b.address(), e);
+            }
+          if (this->_disk_cache_size &&
+            dynamic_cast<blocks::ImmutableBlock*>(&b))
+          this->_disk_cache_push(b);
+          else if (dynamic_cast<blocks::MutableBlock*>(&b))
+            this->_cache.emplace(b.clone());
+
+        }
         std::unique_ptr<blocks::Block>
         Cache::_fetch_cache(Address address, boost::optional<int> local_version,
                             bool& cache_hit, bool cache_only)
@@ -243,32 +260,7 @@ namespace infinit
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
             {
-              if (!res->validate(doughnut()))
-              {
-                ELLE_WARN("%s: invalid block received for %f", this, address);
-                throw elle::Error("invalid block");
-              }
-              static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
-              if (decode)
-                try
-                {
-                  static elle::Bench bench("bench.cache.preempt_decode", 10000_sec);
-                  elle::Bench::BenchScope bs(bench);
-                  res->data();
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_TRACE("%s: block %f is not readable: %s", this, address, e);
-                }
-
-              if (this->_disk_cache_size &&
-                  !dynamic_cast<blocks::MutableBlock*>(res.get()))
-                this->_disk_cache_push(res);
-              else if (dynamic_cast<blocks::MutableBlock*>(res.get()))
-                this->_cache.emplace(res->clone());
-            }
-            if (res)
-            {
+              this->_insert_cache(*res);
               auto mut = dynamic_cast<blocks::MutableBlock*>(res.get());
               if (mut && local_version && mut->version() == *local_version)
                 return nullptr;
@@ -323,27 +315,27 @@ namespace infinit
           }
           else
           {
-            this->_disk_cache_push(cloned);
+            this->_disk_cache_push(*cloned);
           }
         }
 
         void
-        Cache::_disk_cache_push(std::unique_ptr<blocks::Block>& block)
+        Cache::_disk_cache_push(blocks::Block& block)
         {
           if (!this->_disk_cache_path)
             return;
           auto path = *this->_disk_cache_path
-            / elle::sprintf("%x", block->address());
+            / elle::sprintf("%x", block.address());
           {
             boost::filesystem::ofstream ofs(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(ofs);
             sout.set_context<Doughnut*>(&this->doughnut());
-            sout.serialize_forward(block);
+            sout.serialize_forward(&block);
           }
           auto sz = boost::filesystem::file_size(path);
-          this->_disk_cache.emplace(CachedCHB{block->address(), sz, now()});
+          this->_disk_cache.emplace(CachedCHB{block.address(), sz, now()});
           this->_disk_cache_used += sz;
-          ELLE_DEBUG("add %f to disk cache (%s bytes)", block->address(), sz);
+          ELLE_DEBUG("add %f to disk cache (%s bytes)", block.address(), sz);
           while (this->_disk_cache_used > this->_disk_cache_size)
           {
             ELLE_ASSERT(!this->_disk_cache.empty());

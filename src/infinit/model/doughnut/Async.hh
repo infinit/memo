@@ -48,7 +48,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
-          _fetch(std::vector<Address> const& addresses,
+          _fetch(std::vector<AddressVersion> const& addresses,
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
                                     std::exception_ptr)> res) override;
           virtual

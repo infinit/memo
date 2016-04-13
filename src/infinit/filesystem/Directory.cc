@@ -510,9 +510,8 @@ namespace infinit
             }
             if (should_exit)
               break;
-            std::vector<Address> addresses;
+            std::vector<model::Model::AddressVersion> addresses;
             std::unordered_map<Address, int> recurse;
-            std::unordered_map<Address, boost::optional<int>> cached_versions;
             do
             {
               ++nf;
@@ -521,18 +520,17 @@ namespace infinit
               files->pop_back();
               Address addr(e.address.value(),
                 model::flags::mutable_block, false);
-              addresses.push_back(addr);
+              addresses.push_back(std::make_pair(addr, e.cached_version));
               if (e.is_dir && e.level + 1 < prefetch_depth)
-                recurse.insert(std::make_pair(addr, e.level));
-              cached_versions.insert(std::make_pair(addr, e.cached_version));
+                recurse.insert(std::make_pair(addr, e.level));;
             } while (signed(addresses.size()) < group_size && !files->empty());
             if (addresses.size() == 1)
             {
               std::unique_ptr<model::blocks::Block> block;
               try
               {
-                Address addr = addresses.front();
-                block = fs->block_store()->fetch(addr, cached_versions[addr]);
+                Address addr = addresses.front().first;
+                block = fs->block_store()->fetch(addr, addresses.front().second);
                 if (!recurse.empty())
                 {
                   std::shared_ptr<DirectoryData> d;

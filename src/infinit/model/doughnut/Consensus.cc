@@ -100,7 +100,7 @@ namespace infinit
         }
 
         void
-        Consensus::fetch(std::vector<Address> const& addresses,
+        Consensus::fetch(std::vector<AddressVersion> const& addresses,
                          std::function<void(Address, std::unique_ptr<blocks::Block>,
                            std::exception_ptr)> res)
         {
@@ -109,7 +109,7 @@ namespace infinit
         }
 
         void
-        Consensus::_fetch(std::vector<Address> const& addresses,
+        Consensus::_fetch(std::vector<AddressVersion> const& addresses,
                          std::function<void(Address, std::unique_ptr<blocks::Block>,
                            std::exception_ptr)> res)
         {
@@ -117,12 +117,12 @@ namespace infinit
           {
             try
             {
-              auto block = this->fetch(a);
-              res(a, std::move(block), {});
+              auto block = this->fetch(a.first, a.second);
+              res(a.first, std::move(block), {});
             }
             catch (elle::Error const& e)
             {
-              res(a, {}, std::current_exception());
+              res(a.first, {}, std::current_exception());
             }
           }
         }

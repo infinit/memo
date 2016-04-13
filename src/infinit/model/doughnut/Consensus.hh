@@ -29,12 +29,13 @@ namespace infinit
         | Blocks |
         `-------*/
         public:
+          typedef std::pair<Address, boost::optional<int>> AddressVersion;
           void
           store(std::unique_ptr<blocks::Block> block,
                 StoreMode mode,
                 std::unique_ptr<ConflictResolver> resolver);
           void
-          fetch(std::vector<Address> const& addresses,
+          fetch(std::vector<AddressVersion> const& addresses,
                 std::function<void(Address, std::unique_ptr<blocks::Block>,
                                    std::exception_ptr)> res);
           std::unique_ptr<blocks::Block>
@@ -62,7 +63,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version);
           virtual
           void
-          _fetch(std::vector<Address> const& addresses,
+          _fetch(std::vector<AddressVersion> const& addresses,
             std::function<void(Address, std::unique_ptr<blocks::Block>,
                                std::exception_ptr)> res);
           virtual

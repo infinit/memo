@@ -313,7 +313,7 @@ namespace infinit
         }
 
         void
-        Async::_fetch(std::vector<Address> const& addresses,
+        Async::_fetch(std::vector<AddressVersion> const& addresses,
                       std::function<void(Address, std::unique_ptr<blocks::Block>,
                                          std::exception_ptr)> res)
         {
@@ -322,13 +322,13 @@ namespace infinit
             reactor::wait(this->_init_barrier);
 
           this->_queue.open();
-          std::vector<Address> remain;
+          std::vector<AddressVersion> remain;
           for (auto addr: addresses)
           {
             bool hit = false;
-            auto block = this->_fetch_cache(addr, {}, hit);
+            auto block = this->_fetch_cache(addr.first, addr.second, hit);
             if (hit)
-              res(addr, std::move(block), {});
+              res(addr.first, std::move(block), {});
             else
               remain.push_back(addr);
           }

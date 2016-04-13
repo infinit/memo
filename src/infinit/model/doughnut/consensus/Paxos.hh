@@ -89,7 +89,7 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
-          _fetch(std::vector<Address> const& addresses,
+          _fetch(std::vector<AddressVersion> const& addresses,
                  std::function<void(Address, std::unique_ptr<blocks::Block>,
                    std::exception_ptr)> res) override;
           std::unique_ptr<blocks::Block>
@@ -161,7 +161,7 @@ namespace infinit
                 boost::optional<int> local_version);
             virtual
             std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
-            get_multi(std::vector<std::pair<Address, PaxosServer::Quorum>> const& query);
+            get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
           };
 
           /*----------.
@@ -227,7 +227,7 @@ namespace infinit
                 boost::optional<int> local_version);
             virtual
             std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
-            get_multi(std::vector<std::pair<Address, PaxosServer::Quorum>> const& query);
+            get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;

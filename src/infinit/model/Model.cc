@@ -160,7 +160,7 @@ namespace infinit
     }
 
     void
-    Model::fetch(std::vector<Address> const& addresses,
+    Model::fetch(std::vector<AddressVersion> const& addresses,
             std::function<void(Address, std::unique_ptr<blocks::Block>,
                                std::exception_ptr)> res) const
     {
@@ -176,7 +176,7 @@ namespace infinit
     }
 
     void
-    Model::_fetch(std::vector<Address> const& addresses,
+    Model::_fetch(std::vector<AddressVersion> const& addresses,
                   std::function<void(Address, std::unique_ptr<blocks::Block>,
                                      std::exception_ptr)> res) const
     {
@@ -184,12 +184,12 @@ namespace infinit
       {
         try
         {
-          auto block = _fetch(addr, {});
-          res(addr, std::move(block), {});
+          auto block = _fetch(addr.first, addr.second);
+          res(addr.first, std::move(block), {});
         }
         catch (elle::Error const& e)
         {
-          res(addr, {}, std::current_exception());
+          res(addr.first, {}, std::current_exception());
         }
       }
     }
