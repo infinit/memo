@@ -247,6 +247,8 @@ namespace infinit
           ELLE_DUMP("%s: decrypted data: %s", *this, this->_data_plain);
           const_cast<BaseOKB<Block>*>(this)->_data_decrypted = true;
         }
+        else
+          ELLE_DEBUG("Data already decrypted");
       }
 
       template <typename Block>

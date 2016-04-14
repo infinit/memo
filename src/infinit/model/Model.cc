@@ -143,10 +143,12 @@ namespace infinit
     {
       if (auto res = this->_fetch(address, local_version))
       {
-        if (!res->validate(*this))
+        auto val = res->validate(*this);
+        if (!val)
         {
-          ELLE_WARN("%s: invalid block received for %s", *this, address);
-          throw elle::Error("invalid block");
+          ELLE_WARN("%s: invalid block received for %s:%s", *this, address,
+                    val.reason());
+          throw elle::Error("invalid block: " + val.reason());
         }
         return res;
       }

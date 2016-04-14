@@ -501,6 +501,17 @@ namespace infinit
         return res;
       }
 
+      static bool has_key(cryptography::rsa::PublicKey const& k,
+                          std::vector<ACLEntry> const& v, bool write)
+      {
+        auto it = std::find_if(v.begin(), v.end(),
+          [&](ACLEntry const& ent)
+          {
+            return ent.key == k && ent.read && ent.write >= write;
+          });
+        return it != v.end();
+      }
+
       /*-----------.
       | Validation |
       `-----------*/
@@ -586,6 +597,31 @@ namespace infinit
 
       template <typename Block>
       blocks::ValidationResult
+      BaseACB<Block>::validate_admin_keys(Model& model) const
+      {
+        // check for admin keys
+        auto const& aks = dynamic_cast<Doughnut const&>(model).admin_keys();
+        for (auto const& k: aks.r)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_entries, false))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin R key %s", k));
+        for (auto const& k: aks.w)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_entries, true))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin RW key %s", k));
+        for (auto const& k: aks.group_r)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_group_entries, false))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin R group key %s", k));
+        for (auto const& k: aks.group_w)
+          if (k != *this->owner_key() && !has_key(k, this->_acl_group_entries, true))
+            return blocks::ValidationResult::failure(
+              elle::sprintf("Missing admin RW group key %s", k));
+        return blocks::ValidationResult::success();
+      }
+
+      template <typename Block>
+      blocks::ValidationResult
       BaseACB<Block>::_validate(Model const& model,
                                 blocks::Block const& new_block) const
       {
@@ -646,9 +682,22 @@ namespace infinit
       {
         static elle::Bench bench("bench.acb.seal", 10000_sec);
         elle::Bench::BenchScope scope(bench);
+        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
+
+        // enforce admin keys
+        auto const& aks = this->dht()->admin_keys();
+        for (auto const& k: aks.r)
+          if (k != *this->owner_key()) set_permissions(k, true, false);
+        for (auto const& k: aks.w)
+          if (k != *this->owner_key()) set_permissions(k, true, true);
+        for (auto const& k: aks.group_r)
+          if (k != *this->owner_key()) set_group_permissions(k, true, false);
+        for (auto const& k: aks.group_w)
+          if (k != *this->owner_key()) set_group_permissions(k, true, true);
+
         bool acl_changed = this->_acl_changed;
         bool data_changed = this->_data_changed;
-        std::shared_ptr<infinit::cryptography::rsa::PrivateKey> sign_key;
+
         if (acl_changed)
         {
           static elle::Bench bench("bench.acb.seal.aclchange", 10000_sec);

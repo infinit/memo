@@ -32,7 +32,7 @@ namespace infinit
                   cryptography::rsa::KeyPair const& keys,
                   boost::optional<elle::Buffer> salt);
         OKBHeader(OKBHeader const& other);
-        ELLE_ATTRIBUTE(Doughnut*, dht);
+        ELLE_ATTRIBUTE_R(Doughnut*, dht);
 
       /*---------.
       | Contents |

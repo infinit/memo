@@ -1388,6 +1388,106 @@ namespace rebalancing
   }
 }
 
+// Since we use Locals, blocks dont go through serialization and thus
+// are fetched already decoded
+static void no_cheating(dht::Doughnut* d, std::unique_ptr<blocks::Block>& b)
+{
+  auto acb = dynamic_cast<dht::ACB*>(b.get());
+  if (!acb)
+    return;
+  elle::Buffer buf;
+  {
+    elle::IOStream os(buf.ostreambuf());
+    elle::serialization::binary::serialize(b, os);
+  }
+  elle::IOStream is(buf.istreambuf());
+  elle::serialization::Context ctx;
+  ctx.set(d);
+  auto res =
+    elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
+      is, true, ctx);
+  b.reset(res.release());
+}
+
+ELLE_TEST_SCHEDULED(admin_keys)
+{
+  auto owner_key = infinit::cryptography::rsa::keypair::generate(512);
+  DHT dht(keys=owner_key, owner=owner_key);
+  DHT client(storage = nullptr, keys=owner_key, owner=owner_key);
+  client.overlay->connect(*dht.overlay);
+  auto b0 = client.dht->make_block<blocks::ACLBlock>();
+  b0->data(std::string("foo"));
+  client.dht->store(*b0, infinit::model::STORE_INSERT);
+  auto b1 = client.dht->make_block<blocks::ACLBlock>();
+  b1->data(std::string("foo"));
+  client.dht->store(*b1, infinit::model::STORE_INSERT);
+  auto b2 = client.dht->fetch(b1->address());
+  no_cheating(client.dht.get(), b2);
+  BOOST_CHECK_EQUAL(b2->data().string(), "foo");
+  // set server-side adm key but don't tell the client
+  auto admin = infinit::cryptography::rsa::keypair::generate(512);
+  dht.dht->admin_keys().r.push_back(admin.K());
+  dynamic_cast<infinit::model::blocks::MutableBlock*>(b2.get())->data(std::string("bar"));
+  BOOST_CHECK_THROW(client.dht->store(*b2, infinit::model::STORE_UPDATE), std::exception);
+  auto b3 = client.dht->make_block<blocks::ACLBlock>();
+  b3->data(std::string("baz"));
+  BOOST_CHECK_THROW(client.dht->store(*b3, infinit::model::STORE_INSERT), std::exception);
+  // tell the client
+  client.dht->admin_keys().r.push_back(admin.K());
+  b3 = client.dht->make_block<blocks::ACLBlock>();
+  b3->data(std::string("baz"));
+  BOOST_CHECK_NO_THROW(client.dht->store(*b3, infinit::model::STORE_INSERT));
+
+  // check admin can actually read the block
+  DHT cadm(storage = nullptr, keys=admin, owner=owner_key);
+  cadm.dht->admin_keys().r.push_back(admin.K());
+  cadm.overlay->connect(*dht.overlay);
+  auto b4 = cadm.dht->fetch(b3->address());
+  BOOST_CHECK_EQUAL(b4->data().string(), "baz");
+  // but not the first one pushed before setting admin_key
+  auto b0a = cadm.dht->fetch(b0->address());
+  no_cheating(cadm.dht.get(), b0a);
+  BOOST_CHECK_THROW(b0a->data(), std::exception);
+
+  // do some stuff with blocks owned by admin
+  auto ba = cadm.dht->make_block<blocks::ACLBlock>();
+  ba->data(std::string("foo"));
+  ba->set_permissions(*cadm.dht->make_user(elle::serialization::json::serialize(
+    owner_key.K())), true, true);
+  cadm.dht->store(*ba, infinit::model::STORE_INSERT);
+  auto ba2 = cadm.dht->fetch(ba->address());
+  no_cheating(cadm.dht.get(), ba2);
+  BOOST_CHECK_EQUAL(ba2->data(), std::string("foo"));
+  auto ba3 = client.dht->fetch(ba->address());
+  no_cheating(client.dht.get(), ba3);
+  BOOST_CHECK_EQUAL(ba3->data(), std::string("foo"));
+  dynamic_cast<infinit::model::blocks::MutableBlock*>(ba3.get())->data(std::string("bar"));
+  client.dht->store(*ba3, infinit::model::STORE_UPDATE);
+  auto ba4 = cadm.dht->fetch(ba->address());
+  no_cheating(cadm.dht.get(), ba4);
+  BOOST_CHECK_EQUAL(ba4->data(), std::string("bar"));
+
+  // check group admin key
+  auto gadmin = infinit::cryptography::rsa::keypair::generate(512);
+  DHT cadmg(storage = nullptr, keys=gadmin, owner=owner_key);
+  cadmg.overlay->connect(*dht.overlay);
+  {
+    dht::Group g(*dht.dht, "g");
+    g.create();
+    g.add_member(*cadmg.dht->make_user(elle::serialization::json::serialize(
+      gadmin.K())));
+    cadmg.dht->admin_keys().group_r.push_back(g.public_control_key());
+    dht.dht->admin_keys().group_r.push_back(g.public_control_key());
+    client.dht->admin_keys().group_r.push_back(g.public_control_key());
+  }
+
+  auto bg = client.dht->make_block<blocks::ACLBlock>();
+  bg->data(std::string("baz"));
+  client.dht->store(*bg, infinit::model::STORE_INSERT);
+  auto bg2 = cadmg.dht->fetch(bg->address());
+  BOOST_CHECK_EQUAL(bg2->data(), std::string("baz"));
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -1427,6 +1527,7 @@ ELLE_TEST_SUITE()
     TEST(serialize_ACB_remove);
   }
 #undef TEST
+  paxos->add(BOOST_TEST_CASE(admin_keys));
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
   {
     using namespace tests_paxos;

@@ -124,6 +124,12 @@ namespace infinit
                 elle::sprintf("version %s is not superior to current version %s",
                               mblock->version(), mprevious->version()),
                 std::move(previous));
+            if (auto* acb = dynamic_cast<const ACB*>(mblock))
+            {
+              auto v = acb->validate_admin_keys(this->doughnut());
+              if (!v)
+                throw ValidationFailed(v.reason());
+            }
           }
           auto vr = previous->validate(this->doughnut(), block);
           if (!vr)

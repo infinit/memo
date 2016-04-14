@@ -901,6 +901,17 @@ namespace infinit
               a->sync();
               return "ok";
             }
+            else if (special->find("group.control_key.") == 0)
+            {
+              std::string value = special->substr(strlen("group.control_key."));
+              return umbrella(
+                [&]
+                {
+                  model::doughnut::Group g(*dht, value);
+                  return elle::serialization::json::serialize(
+                    g.public_control_key()).string();
+                });
+            }
             else if (special->find("group.list.") == 0)
             {
               std::string value = special->substr(strlen("group.list."));

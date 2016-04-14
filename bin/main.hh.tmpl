@@ -50,6 +50,12 @@
 
 #include "version.hh"
 
+#ifdef INFINIT_LINUX
+# include <attr/xattr.h>
+#elif defined(INFINIT_MACOSX)
+# include <sys/xattr.h>
+#endif
+
 std::string program;
 
 #define COMMAND(name) static void name(boost::program_options::variables_map const& args)
@@ -965,12 +971,14 @@ namespace infinit
       std::unique_ptr<model::doughnut::consensus::Configuration> consensus_,
       std::unique_ptr<overlay::Configuration> overlay_,
       cryptography::rsa::PublicKey owner_,
-      elle::Version version_)
+      elle::Version version_,
+      model::doughnut::AdminKeys admin_keys_)
       : name(std::move(name_))
       , consensus(std::move(consensus_))
       , overlay(std::move(overlay_))
       , owner(std::move(owner_))
       , version(std::move(version_))
+      , admin_keys(std::move(admin_keys_))
     {
       check_name(this->name);
     }
@@ -991,6 +999,13 @@ namespace infinit
       catch (elle::serialization::Error const&)
       {
         version = elle::Version(0, 3, 0);
+      }
+      try
+      {
+        s.serialize("admin_keys", this->admin_keys);
+      }
+      catch (elle::serialization::Error const&)
+      {
       }
       check_name(this->name);
     }
@@ -1028,6 +1043,7 @@ namespace infinit
     std::unique_ptr<overlay::Configuration> overlay;
     cryptography::rsa::PublicKey owner;
     elle::Version version;
+    model::doughnut::AdminKeys admin_keys;
   };
 
   struct Volume
@@ -2927,6 +2943,53 @@ namespace infinit
     return beyond_fetch<Drive>("drive", name);
   }
 }
+
+static
+boost::filesystem::path
+file_xattrs_dir(std::string const& file)
+{
+  boost::filesystem::path p(file);
+  auto filename = p.filename();
+  auto dir = p.parent_path();
+  boost::filesystem::path res;
+  // dir might be outside the filesystem, so dont go below file if its a
+  // directory
+  if (boost::filesystem::is_directory(file))
+    res = p / "$xattrs..";
+  else
+    res = dir / ("$xattrs." + filename.string());
+  boost::system::error_code erc;
+  boost::filesystem::create_directory(res, erc);
+  return res;
+}
+
+#ifdef INFINIT_MACOSX
+# define SXA_EXTRA ,0
+#else
+# define SXA_EXTRA
+#endif
+
+static
+int
+port_getxattr(std::string const& file,
+              std::string const& key,
+              char* val, int val_size,
+              bool fallback_xattrs)
+{
+#ifndef INFINIT_WINDOWS
+  int res = -1;
+  res = getxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
+  if (res >= 0 || !fallback_xattrs)
+    return res;
+#endif
+  if (!fallback_xattrs)
+    elle::unreachable();
+  auto attr_dir = file_xattrs_dir(file);
+  boost::filesystem::ifstream ifs(attr_dir / key);
+  ifs.read(val, val_size);
+  return ifs.gcount();
+}
+
 
 Mode::OptionDescription option_cache(
   "cache", boost::program_options::bool_switch(),

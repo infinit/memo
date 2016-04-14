@@ -701,6 +701,12 @@ namespace infinit
             ELLE_DEBUG("validate block")
               if (auto res = block->validate(this->doughnut())); else
                 throw ValidationFailed(res.reason());
+            if (auto* acb = dynamic_cast<ACB*>(block.get()))
+            {
+              auto v = acb->validate_admin_keys(this->doughnut());
+              if (!v)
+                throw ValidationFailed(v.reason());
+            }
           }
           auto& decision = this->_load(address);
           auto& paxos = decision.paxos;

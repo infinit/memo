@@ -157,6 +157,19 @@ COMMAND(create)
         infinit::model::doughnut::consensus::Configuration>();
     }
   }
+  infinit::model::doughnut::AdminKeys admin_keys;
+  if (args.count("admin-r"))
+  {
+    auto admins = args["admin-r"].as<std::vector<std::string>>();
+    for (auto const& a: admins)
+      admin_keys.r.push_back(ifnt.user_get(a).public_key);
+  }
+  if (args.count("admin-rw"))
+  {
+    auto admins = args["admin-rw"].as<std::vector<std::string>>();
+    for (auto const& a: admins)
+      admin_keys.w.push_back(ifnt.user_get(a).public_key);
+  }
   boost::optional<int> port;
   if (args.count("port"))
     port = args["port"].as<int>();
@@ -175,7 +188,8 @@ COMMAND(create)
                                             owner.private_key.get())),
       owner.name,
       std::move(port),
-      version);
+      version,
+      admin_keys);
   {
     infinit::Network network(ifnt.qualified_name(name, owner),
                              std::move(dht));
@@ -196,6 +210,37 @@ COMMAND(create)
     }
   }
 }
+static std::pair<infinit::cryptography::rsa::PublicKey, bool>
+user_key(std::string name, boost::optional<std::string> mountpoint)
+{
+  bool is_group = false;
+  if (!name.empty() && name[0] == '@')
+  {
+    is_group = true;
+    name = name.substr(1);
+  }
+  if (!name.empty() && name[0] == '{')
+  {
+    elle::Buffer buf(name);
+    elle::IOStream is(buf.istreambuf());
+    auto key = elle::serialization::json::deserialize
+      <infinit::cryptography::rsa::PublicKey>(is);
+    return std::make_pair(key, is_group);
+  }
+  if (!is_group)
+    return std::make_pair(ifnt.user_get(name).public_key, false);
+  if (!mountpoint)
+    throw elle::Error("A mountpoint is required to fetch groups.");
+  char buf[32768];
+  int res = port_getxattr(*mountpoint, "infinit.group.control_key." + name, buf, 16384, true);
+  if (res <= 0)
+    throw elle::Error("Unable to fetch group " + name);
+  elle::Buffer b(buf, res);
+  elle::IOStream is(b.istreambuf());
+    auto key = elle::serialization::json::deserialize
+      <infinit::cryptography::rsa::PublicKey>(is);
+  return std::make_pair(key, is_group);
+}
 
 COMMAND(update)
 {
@@ -207,6 +252,37 @@ COMMAND(update)
     dht.port = port.get();
   if (compatibility_version)
     dht.version = compatibility_version.get();
+  if (args.count("admin-r"))
+  {
+    for (auto u: args["admin-r"].as<std::vector<std::string>>())
+    {
+      auto r = user_key(u, optional(args, "mountpoint"));
+      auto& target = r.second ? dht.admin_keys.group_r : dht.admin_keys.r;
+      target.push_back(r.first);
+    }
+  }
+  if (args.count("admin-rw"))
+  {
+    for (auto u: args["admin-rw"].as<std::vector<std::string>>())
+    {
+      auto r = user_key(u, optional(args, "mountpoint"));
+      auto& target = r.second ? dht.admin_keys.group_w : dht.admin_keys.w;
+      target.push_back(r.first);
+    }
+  }
+  if (args.count("admin-remove"))
+  {
+    for (auto u: args["admin-remove"].as<std::vector<std::string>>())
+    {
+      auto r = user_key(u, optional(args, "mountpoint"));
+#define DEL(cont) cont.erase(std::remove(cont.begin(), cont.end(), r.first), cont.end())
+      DEL(dht.admin_keys.r);
+      DEL(dht.admin_keys.w);
+      DEL(dht.admin_keys.group_r);
+      DEL(dht.admin_keys.group_w);
+#undef DEL
+    }
+  }
   if (args.count("output"))
   {
     auto output = get_output(args);
@@ -263,7 +339,8 @@ COMMAND(fetch)
             d->passport,
             self.name,
             d->port,
-            desc.version));
+            desc.version,
+            desc.admin_keys));
         ifnt.network_save(updated_network, true);
       }
       else
@@ -371,7 +448,8 @@ COMMAND(link_)
       std::move(passport),
       self.name,
       boost::optional<int>(),
-      desc.version));
+      desc.version,
+      desc.admin_keys));
   auto has_output = optional(args, "output");
   auto output = has_output ? get_output(args) : nullptr;
   if (output)
@@ -612,6 +690,10 @@ main(int argc, char** argv)
         { "push-network", bool_switch(),
           elle::sprintf("push the network to %s", beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-network" },
+        { "admin-r", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read all data"},
+        { "admin-rw", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read and write all data"},
       },
       {
         consensus_types_options,
@@ -633,6 +715,14 @@ main(int argc, char** argv)
             elle::sprintf("push the updated network to %s",
                           beyond(true)).c_str() },
         { "push,p", bool_switch(), "alias for --push-network" },
+        { "admin-r", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read all data"},
+        { "admin-rw", value<std::vector<std::string>>()->multitoken(),
+          "Set an admin user that can read and write all data"},
+        {"admin-remove", value<std::vector<std::string>>()->multitoken(),
+          "Remove given user to all admin lists"},
+        {"mountpoint", value<std::string>(),
+          "Mountpoint of a volume using this network, required to add admin groups"},
       },
       {},
     },

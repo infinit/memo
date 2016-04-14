@@ -53,7 +53,8 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version)
+                         boost::optional<elle::Version> version,
+                         AdminKeys const& admin_keys)
         : Model(std::move(version))
         , _id(std::move(id))
         , _keys(keys)
@@ -66,6 +67,7 @@ namespace infinit
             : nullptr)
         , _overlay(overlay_builder(*this, id, this->_local))
         , _pool([this] { return elle::make_unique<ACB>(this); }, 100, 1)
+        , _admin_keys(admin_keys)
       {
         if (this->_local)
           this->_local->initialize();
@@ -80,7 +82,8 @@ namespace infinit
                          OverlayBuilder overlay_builder,
                          boost::optional<int> port,
                          std::unique_ptr<storage::Storage> storage,
-                         boost::optional<elle::Version> version)
+                         boost::optional<elle::Version> version,
+                         AdminKeys const& admin_keys)
         : Doughnut(std::move(id),
                    std::move(keys),
                    std::move(owner),
@@ -89,7 +92,8 @@ namespace infinit
                    std::move(overlay_builder),
                    std::move(port),
                    std::move(storage),
-                   std::move(version))
+                   std::move(version),
+                   std::move(admin_keys))
       {
         auto check_user_blocks = [name, this]
           {
@@ -369,7 +373,8 @@ namespace infinit
         Passport passport_,
         boost::optional<std::string> name_,
         boost::optional<int> port_,
-        elle::Version version)
+        elle::Version version,
+        AdminKeys admin_keys)
         : ModelConfig(std::move(storage), std::move(version))
         , id(std::move(id_))
         , consensus(std::move(consensus_))
@@ -379,6 +384,7 @@ namespace infinit
         , passport(std::move(passport_))
         , name(std::move(name_))
         , port(std::move(port_))
+        , admin_keys(std::move(admin_keys))
       {}
 
       Configuration::Configuration(elle::serialization::SerializerIn& s)
@@ -394,7 +400,15 @@ namespace infinit
         , passport(s.deserialize<Passport>("passport"))
         , name(s.deserialize<boost::optional<std::string>>("name"))
         , port(s.deserialize<boost::optional<int>>("port"))
-      {}
+      {
+        try
+        {
+          s.serialize("admin_keys", this->admin_keys);
+        }
+        catch (elle::serialization::Error const&)
+        {
+        }
+      }
 
       void
       Configuration::serialize(elle::serialization::Serializer& s)
@@ -408,6 +422,7 @@ namespace infinit
         s.serialize("passport", this->passport);
         s.serialize("name", this->name);
         s.serialize("port", this->port);
+        s.serialize("admin_keys", this->admin_keys);
       }
 
       std::unique_ptr<infinit::model::Model>
@@ -476,7 +491,8 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version ? version.get() : this->version);
+            version ? version.get() : this->version,
+            admin_keys);
         }
         else
         {
@@ -490,7 +506,8 @@ namespace infinit
             std::move(overlay),
             std::move(port),
             std::move(storage),
-            version ? version.get() : this->version);
+            version ? version.get() : this->version,
+            admin_keys);
         }
         return dht;
       }
