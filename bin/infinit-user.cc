@@ -288,8 +288,9 @@ COMMAND(delete_)
     if (res != user.name)
       throw elle::Error("Aborting...");
   }
-  bool ok = boost::filesystem::remove(path);
-  if (ok)
+  if (avatar_path(name))
+    boost::filesystem::remove(avatar_path(name).get());
+  if (boost::filesystem::remove(path))
     report_action("deleted", "user", user.name, std::string("locally"));
   else
   {
