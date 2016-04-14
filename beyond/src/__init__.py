@@ -55,7 +55,7 @@ templates = {
     'version': 'ver_UcXopNCDszaggwtrhVcBSn',
   },
   'Internal/Passport Generation Error': {
-    'templte': 'tem_LdEi9v8WrTACa8BNUhoSte',
+    'template': 'tem_LdEi9v8WrTACa8BNUhoSte',
   },
   'User/Welcome': {
     'template': 'tem_Jsd948JkLqhBQs3fgGZSsS',
@@ -65,6 +65,9 @@ templates = {
     'template': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
   },
 }
+# Make sure templates only contains entires named 'template' and 'version'.
+assert set(itertools.chain(*[list(x.keys()) for x in templates.values()])) == \
+       {'template', 'version'}
 
 class Beyond:
 
