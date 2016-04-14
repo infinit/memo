@@ -275,14 +275,14 @@ COMMAND(delete_)
   {
     std::string res;
     {
-      std::cout << "WARNING: You will no longer be able to access data, "
-                << std::endl
-                << "WARNING: volumes or networks for this user." << std::endl
-                << "WARNING: The user's private key will be lost, you will not"
-                << std::endl
-                << "WARNING: be able to pull the user from " << beyond(true)
-                << "." << std::endl << std::endl
-                << "Confirm the name of the user you would like to delete: ";
+      std::cout
+        << "WARNING: The local copy of the user's private key will be removed."
+        << std::endl
+        << "WARNING: You will no longer be able to perform actions on "
+        << beyond(true) << std::endl
+        << "WARNING: for this user." << std::endl
+        << std::endl
+        << "Confirm the name of the user you would like to delete: ";
       std::getline(std::cin, res);
     }
     if (res != user.name)
