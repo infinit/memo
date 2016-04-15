@@ -2493,6 +2493,19 @@ _beyond_push(reactor::http::Request& r,
   {
     read_error<ResourceGone>(r, type, name);
   }
+  else if (r.status() == reactor::http::StatusCode::Unauthorized)
+  {
+    throw elle::Error(
+      elle::sprintf("Unauthorized pushing %s \"%s\", check the system clock",
+                    type, name));
+  }
+  else if (r.status() == reactor::http::StatusCode::Forbidden)
+  {
+    throw elle::Error(
+      elle::sprintf("Forbidden pushing %s \"%s\", "
+                    "ensure the user has been set using --as or INFINIT_USER",
+                    type, name));
+  }
   else
   {
     auto error = [&] {
@@ -2613,6 +2626,12 @@ fetch_data(std::string const& url,
       }
     }
   }
+  else if (r->status() == reactor::http::StatusCode::Unauthorized)
+  {
+    throw elle::Error(
+      elle::sprintf("Unauthorized fetching %s \"%s\", check the system clock",
+                    type, name));
+  }
   else
   {
     throw elle::Error(
@@ -2710,6 +2729,19 @@ beyond_delete(std::string const& where,
            r.status() == reactor::http::StatusCode::Temporary_Redirect)
   {
     throw Redirected(url);
+  }
+  else if (r.status() == reactor::http::StatusCode::Unauthorized)
+  {
+    throw elle::Error(
+      elle::sprintf("Unauthorized deleting %s \"%s\", check the system clock",
+                    type, name));
+  }
+  else if (r.status() == reactor::http::StatusCode::Forbidden)
+  {
+    throw elle::Error(
+      elle::sprintf("Forbidden deleting %s \"%s\", "
+                    "ensure the user has been set using --as or INFINIT_USER",
+                    type, name));
   }
   else
   {
