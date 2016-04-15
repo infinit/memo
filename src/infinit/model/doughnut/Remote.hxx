@@ -97,9 +97,13 @@ namespace infinit
         }
         while (true)
         {
+          // We need to know if someone else made a reconnection attempt
+          // while we were waiting, and if so try this new connection
+          // without making a reconnect of our own
+          int prev_reconnection_id = _reconnection_id;
           try
           {
-            if (need_reconnect && reactor::wait(*this->_connection_thread, 0_sec))
+            if (need_reconnect)
               reconnect(connect_timeout);
             else
               connect(connect_timeout);
@@ -118,7 +122,7 @@ namespace infinit
           }
           reactor::sleep(boost::posix_time::milliseconds(
             200 * std::min(10, attempt)));
-          need_reconnect = true;
+          need_reconnect = (_reconnection_id == prev_reconnection_id);
         }
       }
 

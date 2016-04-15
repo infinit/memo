@@ -35,6 +35,8 @@ namespace infinit
         , _channels()
         , _connection_thread()
         , _fast_fail(false)
+        , _connected(false)
+        , _reconnection_id(0)
       {
         this->_connect(
           elle::sprintf("%s:%s", host, port),
@@ -55,6 +57,8 @@ namespace infinit
         , _channels()
         , _connection_thread()
         , _fast_fail(false)
+        , _connected(false)
+        , _reconnection_id(0)
       {
         this->initiate_connect(endpoint);
       }
@@ -62,6 +66,7 @@ namespace infinit
       void
       Remote::initiate_connect(boost::asio::ip::tcp::endpoint endpoint)
       {
+        ELLE_DEBUG("%s: initiate_connect TCP://%s", this, endpoint);
         this->_connect(
           elle::sprintf("%s", endpoint),
           [endpoint, this] () -> std::iostream&
@@ -82,6 +87,8 @@ namespace infinit
         , _channels()
         , _connection_thread()
         , _fast_fail(false)
+        , _connected(false)
+        , _reconnection_id(0)
       {
         this->_connect(
           elle::sprintf("%s", endpoint),
@@ -105,6 +112,8 @@ namespace infinit
         , _channels()
         , _connection_thread()
         , _fast_fail(false)
+        , _connected(false)
+        , _reconnection_id(0)
       {
         this->initiate_connect(endpoints, peer_id, server);
       }
@@ -114,6 +123,7 @@ namespace infinit
                                std::string const& peer_id,
                                reactor::network::UTPServer& server)
       {
+        ELLE_DEBUG("%s: initiate_connect UTP://%s at %s", this, peer_id, endpoints);
         this->_connect(
           elle::sprintf("%s", endpoints),
           [this, endpoints, peer_id, &server] () -> std::iostream&
@@ -138,6 +148,7 @@ namespace infinit
       {
         reactor::Lock lock(this->_connection_mutex);
         ELLE_TRACE_SCOPE("%s: connect", *this);
+        ++this->_reconnection_id;
         this->_connector = socket;
         this->_endpoint = endpoint;
         if (this->_connection_thread)
@@ -197,9 +208,16 @@ namespace infinit
       void
       Remote::reconnect(elle::DurationOpt timeout)
       {
-        this->_credentials = {};
-        if (!retry_connect() || !retry_connect()(*this))
-          _connect(this->_endpoint, this->_connector);
+        if (!this->_reconnection_mutex.locked())
+        {
+          ELLE_DEBUG("reconnecting...");
+          reactor::Lock lock(this->_reconnection_mutex);
+          this->_credentials = {};
+          if (!retry_connect() || !retry_connect()(*this))
+            _connect(this->_endpoint, this->_connector);
+        }
+        else
+          ELLE_DEBUG("skipping overlaped reconnect");
         connect(timeout);
       }
 
