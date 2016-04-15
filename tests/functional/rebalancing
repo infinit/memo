@@ -6,7 +6,7 @@ import threading
 from itertools import *
 from utils import *
 
-def test():
+def test_a():
   with TemporaryDirectory() as port_tmp,  \
        TemporaryDirectory() as tmp,       \
        Infinit(user = 'a') as a,                    \
@@ -113,4 +113,119 @@ def test():
     assertEq(run_b.wait(), 0)
     assertEq(run_d.wait(), 0)
 
-test()
+def test_b():
+  with TemporaryDirectory() as port_tmp,  \
+       TemporaryDirectory() as tmp,       \
+       Infinit(user = 'a') as a,                    \
+       Infinit(user = 'b') as b,                    \
+       Infinit(user = 'c') as d,                    \
+       Infinit(user = 'd') as c:
+    infinits = [a, b, c, d]
+    # Create users and storage
+    for i in infinits:
+      i.run(['infinit-user', '--create'])
+      i.run(['infinit-storage',
+             '--create', 'storage', '--filesystem',
+             '--path', '%s/blocks' % i.dir])
+    # Exchange users
+    for (lhs, rhs) in permutations(infinits, 2):
+      user = rhs.run(['infinit-user', '--export'])
+      lhs.run(['infinit-user', '--import'], input = user)
+    # Create network and volume, distribute passports and link
+    a.run(['infinit-network', '--create', 'network', '--kelips',
+           '--replication-factor', '3', '--eviction-delay', '1s',
+           '--storage', 'storage'])
+    network = a.run(['infinit-network', '--export', 'network'])
+    a.run(['infinit-volume',
+           '--create', 'volume', '--network', 'network'])
+    volume = a.run(['infinit-volume', '--export', 'volume'])
+    for i in [b, c, d]:
+      i.run(['infinit-network', '--import'], input = network)
+      i.run(['infinit-volume', '--import'], input = volume)
+      a.run(['infinit-passport',
+             '--create', '--network', 'network',
+             '--user', i.user])
+      p = a.run(['infinit-passport',
+                 '--export', '--network', 'network',
+                 '--user', i.user])
+      i.run(['infinit-passport', '--import'], input = p)
+      i.run(['infinit-network',
+             '--link', 'a/network', '--storage', 'storage'])
+    # Run volume with A, B and C
+    run_a = a.spawn(['infinit-volume',
+                     '--run', 'a/volume', '--script',
+                     '--endpoints-file', '%s/endpoints' % a.dir])
+    def wait_file(path):
+      while True:
+        try:
+          if os.stat(path).st_size > 0:
+            break
+        except FileNotFoundError:
+          pass
+    wait_file('%s/endpoints' % a.dir)
+    run_b = b.spawn(['infinit-network',
+                     '--run', 'a/network', '--script',
+                     '--peer', '%s/endpoints' % a.dir,
+                     '--endpoints-file', '%s/endpoints' % b.dir])
+    wait_file('%s/endpoints' % b.dir)
+    run_c = c.spawn(['infinit-network',
+                     '--run', 'a/network', '--script',
+                     '--peer', '%s/endpoints' % a.dir,
+                     '--peer', '%s/endpoints' % b.dir,
+                     '--endpoints-file', '%s/endpoints' % c.dir])
+    wait_file('%s/endpoints' % c.dir)
+    run_d = d.spawn(['infinit-network',
+                     '--run', 'a/network', '--script',
+                     '--peer', '%s/endpoints' % a.dir,
+                     '--peer', '%s/endpoints' % b.dir,
+                     '--peer', '%s/endpoints' % c.dir,
+                     '--endpoints-file', '%s/endpoints' % d.dir])
+    wait_file('%s/endpoints' % d.dir)
+    import time
+    time.sleep(5)
+    # Create file
+    def op(p, j):
+      j = json.dumps(j)
+      p.stdin.write((j + '\n').encode())
+      p.stdin.flush()
+      output = next(p.stdout)
+      return json.loads(output.decode())
+    op(run_a, {'operation': 'create', 'path': '/foo',
+               'handle': 'h', 'flags': 0x0202, 'mode': 33206})
+    contents = bytes(16385)
+    op(run_a, {
+      'operation': 'write',
+      'handle': 'h',
+      'offset': 0,
+      'size': len(contents),
+      'content': base64.b64encode(contents).decode('latin-1')})
+    # Check blocks are replicated
+    def check_replication(infinits):
+      blocks = {}
+      for i in infinits:
+        for block in chain(*(
+            files for d, subd, files in os.walk('%s/blocks' % i.dir))):
+          blocks.setdefault(block, 0)
+          blocks[block] += 1
+      print(blocks)
+      for block, value in blocks.items():
+        if value != 3:
+          return False
+      return True
+    assert check_replication(infinits)
+    # Kill D
+    run_d.terminate()
+    assertEq(run_d.wait(), 0)
+    # Wait for rebalancing
+    while not check_replication([a, b, c]):
+      import time
+      time.sleep(1)
+    run_a.stdin.close()
+    run_b.terminate()
+    run_c.terminate()
+    assertEq(run_a.wait(), 0)
+    assertEq(run_b.wait(), 0)
+    assertEq(run_c.wait(), 0)
+
+test_a()
+test_b()
