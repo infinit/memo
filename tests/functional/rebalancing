@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+
+import base64
+import threading
+
+from itertools import *
+from utils import *
+
+def test():
+  with TemporaryDirectory() as port_tmp,  \
+       TemporaryDirectory() as tmp,       \
+       Infinit(user = 'a') as a,                    \
+       Infinit(user = 'b') as b,                    \
+       Infinit(user = 'c') as d,                    \
+       Infinit(user = 'd') as c:
+    infinits = [a, b, c, d]
+    # Create users and storage
+    for i in infinits:
+      i.run(['infinit-user', '--create'])
+      i.run(['infinit-storage',
+             '--create', 'storage', '--filesystem',
+             '--path', '%s/blocks' % i.dir])
+    # Exchange users
+    for (lhs, rhs) in permutations(infinits, 2):
+      user = rhs.run(['infinit-user', '--export'])
+      lhs.run(['infinit-user', '--import'], input = user)
+    # Create network and volume, distribute passports and link
+    a.run(['infinit-network', '--create', 'network', '--kelips',
+           '--replication-factor', '3', '--eviction-delay', '1s',
+           '--storage', 'storage'])
+    network = a.run(['infinit-network', '--export', 'network'])
+    a.run(['infinit-volume',
+           '--create', 'volume', '--network', 'network'])
+    volume = a.run(['infinit-volume', '--export', 'volume'])
+    for i in [b, c, d]:
+      i.run(['infinit-network', '--import'], input = network)
+      i.run(['infinit-volume', '--import'], input = volume)
+      a.run(['infinit-passport',
+             '--create', '--network', 'network',
+             '--user', i.user])
+      p = a.run(['infinit-passport',
+                 '--export', '--network', 'network',
+                 '--user', i.user])
+      i.run(['infinit-passport', '--import'], input = p)
+      i.run(['infinit-network',
+             '--link', 'a/network', '--storage', 'storage'])
+    # Run volume with A, B and C
+    run_a = a.spawn(['infinit-volume',
+                     '--run', 'a/volume', '--script',
+                     '--endpoints-file', '%s/endpoints' % a.dir])
+    def wait_file(path):
+      while True:
+        try:
+          if os.stat(path).st_size > 0:
+            break
+        except FileNotFoundError:
+          pass
+    wait_file('%s/endpoints' % a.dir)
+    run_b = b.spawn(['infinit-network',
+                     '--run', 'a/network', '--script',
+                     '--peer', '%s/endpoints' % a.dir,
+                     '--endpoints-file', '%s/endpoints' % b.dir])
+    wait_file('%s/endpoints' % b.dir)
+    run_c = c.spawn(['infinit-network',
+                     '--run', 'a/network', '--script',
+                     '--peer', '%s/endpoints' % a.dir,
+                     '--peer', '%s/endpoints' % b.dir,
+                     '--endpoints-file', '%s/endpoints' % c.dir])
+    wait_file('%s/endpoints' % c.dir)
+    # Create file
+    def op(p, j):
+      j = json.dumps(j)
+      p.stdin.write((j + '\n').encode())
+      p.stdin.flush()
+      output = next(p.stdout)
+      return json.loads(output.decode())
+    op(run_a, {'operation': 'create', 'path': '/foo',
+               'handle': 'h', 'flags': 0x0202, 'mode': 33206})
+    contents = bytes(16385)
+    op(run_a, {
+      'operation': 'write',
+      'handle': 'h',
+      'offset': 0,
+      'size': len(contents),
+      'content': base64.b64encode(contents).decode('latin-1')})
+    # Check blocks are replicated
+    def blocks(i):
+      return list(chain(*(
+        files for d, subd, files in os.walk('%s/blocks' % i.dir))))
+    assertEq(blocks(a), blocks(b))
+    assertEq(blocks(a), blocks(c))
+    # Kill C, plug D
+    run_d = d.spawn(['infinit-network',
+                     '--run', 'a/network', '--script',
+                     '--peer', '%s/endpoints' % a.dir,
+                     '--peer', '%s/endpoints' % b.dir,
+                     '--endpoints-file', '%s/endpoints' % d.dir])
+    run_c.terminate()
+    assertEq(run_c.wait(), 0)
+    # Wait for rebalancing
+    blocks_a = blocks(a)
+    while True:
+      blocks_d = blocks(d)
+      if blocks_d == blocks_a:
+        break
+      print(blocks_d)
+      import time
+      time.sleep(1)
+    run_a.stdin.close()
+    run_b.terminate()
+    run_d.terminate()
+    assertEq(run_a.wait(), 0)
+    assertEq(run_b.wait(), 0)
+    assertEq(run_d.wait(), 0)
+
+test()
