@@ -577,8 +577,13 @@ namespace infinit
                         d = std::shared_ptr<DirectoryData>(
                           new DirectoryData({}, *block, {true, true}));
                         else
-                          d = *(fs->directory_cache().find(addr));
-                      
+                        {
+                          auto it = fs->directory_cache().find(addr);
+                          if (it == fs->directory_cache().end())
+                            throw elle::Error(
+                              elle::sprintf("directory at %f vanished from cache", addr));
+                          d = *it;
+                        }
                         for (auto const& f: d->_files)
                         files->push_back(
                           PrefetchEntry{f.first, f.second.second, recurse.at(addr) +1,
