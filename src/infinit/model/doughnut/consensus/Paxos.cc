@@ -356,12 +356,12 @@ namespace infinit
           });
         }
 
-        std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+        Paxos::GetMultiResult
         Paxos::RemotePeer::get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query)
         {
           return network_exception_to_unavailable([&] {
               auto get_multi = make_rpc<
-                std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>(
+                GetMultiResult(
                   std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const&)>("get_multi");
               get_multi.set_context<Doughnut*>(&this->_doughnut);
               return get_multi(query);
@@ -807,12 +807,27 @@ namespace infinit
           return res;
         }
 
-        std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+        Paxos::GetMultiResult
         Paxos::LocalPeer::get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query)
         {
-          std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>> res;
+          GetMultiResult res;
           for (auto& q: query)
-            res[q.first.first] = get(q.second, q.first.first, q.first.second);
+          {
+            try
+            {
+              res[q.first.first] = AcceptedOrError(get(q.second, q.first.first, q.first.second), {});
+            }
+            catch (PaxosServer::WrongQuorum const& wq)
+            {
+              res[q.first.first] = AcceptedOrError({},
+                std::make_shared<PaxosServer::WrongQuorum>(wq));
+            }
+            catch (elle::Error const& e)
+            {
+              res[q.first.first] = AcceptedOrError({},
+                std::make_shared<elle::Error>(e.what()));
+            }
+          }
           return res;
         }
 
@@ -881,7 +896,7 @@ namespace infinit
             (std::bind(&LocalPeer::get, this, ph::_1, ph::_2, ph::_3)));
           rpcs.add(
             "get_multi",
-            std::function<std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+            std::function<GetMultiResult
             (std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const&)>
             (std::bind(&LocalPeer::get_multi, this, ph::_1)));
         }
@@ -1353,42 +1368,97 @@ namespace infinit
             std::unordered_map<overlay::Overlay::Member, std::vector<AddressVersion>> targets;
             std::unordered_map<Address, PaxosServer::Quorum> quorums;
             std::unordered_map<Address, boost::optional<int>> versions;
+            // track (nodeid, blockaddress) requests sent/pending to avoid duplicate on WrongQuorum
+            std::set<std::pair<Address, Address>> requested;
             for (auto a: addresses)
               versions[a.first] = a.second;
             for (auto r: hits)
             {
               targets[r.second.lock()].push_back(std::make_pair(r.first, versions.at(r.first)));
               quorums[r.first].insert(r.second.lock()->id());
+              requested.insert(std::make_pair(r.second.lock()->id(), r.first));
             }
             ELLE_DEBUG("got %s targets and %s quorums", targets.size(), quorums.size());
             std::unordered_map<Address,
               std::vector<boost::optional<Paxos::PaxosClient::Accepted>>> results;
-            for (auto& p: targets)
-            {
-              std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> query;
-              for (auto a: p.second)
-                query.push_back(std::make_pair(a, quorums.at(a.first)));
-              ELLE_DEBUG("querying %s addresses from %s", query.size(), p.first.get());
-              try
+            while (!targets.empty())
+            { // In case of wrong quorums, we will need to make further requests
+              auto round_targets = std::move(targets);
+              targets.clear();
+              for (auto& p: round_targets)
               {
-                std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>> res;
-                if (auto local =
-                    dynamic_cast<Paxos::LocalPeer*>(p.first.get()))
-                  res = local->get_multi(query);
-                else if (auto remote =
-                  dynamic_cast<Paxos::RemotePeer*>(p.first.get()))
-                  res = remote->get_multi(query);
-                else if (dynamic_cast<DummyPeer*>(p.first.get()))
+                if (p.second.empty())
                   continue;
-                else
-                  ELLE_ABORT("invalid paxos peer: %s", p.first);
-                for (auto& r: res)
-                  results[r.first].push_back(r.second);
-              }
-              catch (elle::Error const& e)
-              {
-                ELLE_LOG("%s: get_multi threw %s", this, e.what());
-                throw;
+                std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> query;
+                for (auto a: p.second)
+                  query.push_back(std::make_pair(a, quorums.at(a.first)));
+                ELLE_DEBUG("querying %s addresses from %s", query.size(), p.first.get());
+                try
+                {
+                  GetMultiResult res;
+                  if (auto local =
+                      dynamic_cast<Paxos::LocalPeer*>(p.first.get()))
+                    res = local->get_multi(query);
+                  else if (auto remote =
+                    dynamic_cast<Paxos::RemotePeer*>(p.first.get()))
+                    res = remote->get_multi(query);
+                  else if (dynamic_cast<DummyPeer*>(p.first.get()))
+                    continue;
+                  else
+                    ELLE_ABORT("invalid paxos peer: %s", p.first);
+                  for (auto& r: res)
+                  {
+                    if (!r.second.second)
+                      results[r.first].push_back(r.second.first);
+                    else
+                    {
+                      ELLE_TRACE("get_multi error on %s: %s", r.first,
+                                 *r.second.second);
+                      if (auto wq = dynamic_cast<PaxosServer::WrongQuorum*>
+                        (r.second.second.get()))
+                      {
+                        requested.erase(std::make_pair(p.first->id(), r.first));
+                        auto q = wq->expected();
+                        quorums[r.first] = q;
+                        for (auto& peerId: q)
+                        {
+                          // check if we already made that request
+                          if (requested.find(std::make_pair(peerId, r.first))
+                            != requested.end())
+                            continue;
+                          requested.insert(std::make_pair(peerId, r.first));
+                          // check if we already have this peer
+                          auto it = std::find_if(round_targets.begin(),
+                            round_targets.end(),
+                            [&](decltype(*targets.begin()) e) {
+                              return e.first->id() == peerId;
+                            });
+                          if (it != round_targets.end())
+                            targets[it->first].push_back(
+                              AddressVersion(r.first, versions[r.first]));
+                          else
+                          { // look the peer up
+                            try
+                            {
+                              auto peer = this->doughnut().overlay()->lookup_node(peerId);
+                              targets[peer.lock()].push_back(
+                                AddressVersion(r.first, versions[r.first]));
+                            }
+                            catch (elle::Error const& e)
+                            {
+                              ELLE_TRACE("Error while fetching new peer %s:%s",
+                                peerId, e);
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                catch (elle::Error const& e)
+                {
+                  ELLE_LOG("%s: get_multi threw %s", this, e.what());
+                }
               }
             }
             ELLE_DEBUG("processing results");

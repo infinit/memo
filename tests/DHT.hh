@@ -106,6 +106,9 @@ protected:
         if (this->_fail_addresses.find(address) != this->_fail_addresses.end())
           return;
         int count = n;
+        auto it = this->_partial_addresses.find(address);
+        if (it != this->_partial_addresses.end())
+          count = it->second;
         if (write)
           for (auto& peer: this->_peers)
           {
@@ -147,6 +150,7 @@ protected:
   ELLE_ATTRIBUTE_RX(boost::signals2::signal<void(infinit::model::Address)>,
                     looked_up);
   ELLE_ATTRIBUTE_RX(std::unordered_set<infinit::model::Address>, fail_addresses);
+  ELLE_ATTRIBUTE_RX((std::unordered_map<infinit::model::Address, int>), partial_addresses);
 };
 
 NAMED_ARGUMENT(paxos);

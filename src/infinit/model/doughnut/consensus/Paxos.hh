@@ -8,6 +8,7 @@
 
 # include <elle/named.hh>
 # include <elle/unordered_map.hh>
+# include <elle/Error.hh>
 
 # include <reactor/Generator.hh>
 
@@ -125,6 +126,11 @@ namespace infinit
           make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
 
+          typedef std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+                            std::shared_ptr<elle::Error>>
+          AcceptedOrError;
+          typedef std::unordered_map<Address, AcceptedOrError>
+          GetMultiResult;
         /*-----.
         | Peer |
         `-----*/
@@ -160,7 +166,7 @@ namespace infinit
                 Address address,
                 boost::optional<int> local_version);
             virtual
-            std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+            GetMultiResult
             get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
           };
 
@@ -226,7 +232,7 @@ namespace infinit
                 Address address,
                 boost::optional<int> local_version);
             virtual
-            std::unordered_map<Address, boost::optional<Paxos::PaxosClient::Accepted>>
+            GetMultiResult
             get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
             virtual
             void

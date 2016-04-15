@@ -1409,6 +1409,61 @@ static void no_cheating(dht::Doughnut* d, std::unique_ptr<blocks::Block>& b)
   b.reset(res.release());
 }
 
+ELLE_TEST_SCHEDULED(batch_quorum)
+{
+  auto owner_key = infinit::cryptography::rsa::keypair::generate(512);
+  DHT dht_a(keys=owner_key, owner=owner_key);
+  DHT dht_b(keys=owner_key, owner=owner_key);
+  DHT dht_c(keys=owner_key, owner=owner_key);
+  dht_b.overlay->connect(*dht_a.overlay);
+  dht_c.overlay->connect(*dht_a.overlay);
+  dht_b.overlay->connect(*dht_c.overlay);
+  std::vector<infinit::model::Model::AddressVersion> addrs;
+  for (int i=0; i<10; ++i)
+  {
+    auto block = dht_a.dht->make_block<blocks::ACLBlock>();
+    block->data(std::string("foo"));
+    addrs.push_back(std::make_pair(block->address(), boost::optional<int>()));
+    const_cast<Overlay&>(dynamic_cast<Overlay const&>(*dht_a.overlay)).partial_addresses()[block->address()] = 1+(i%3);
+    dht_b.dht->store(*block, infinit::model::STORE_INSERT);
+  }
+  int hit = 0;
+  auto handler = [&](infinit::model::Address,
+                     std::unique_ptr<blocks::Block> b,
+                     std::exception_ptr ex)
+    {
+      if (ex)
+      {
+        try
+        {
+          std::rethrow_exception(ex);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_ERR("boum %s", e);
+        }
+      }
+      BOOST_CHECK(b);
+      if (b)
+        BOOST_CHECK_EQUAL(b->data(), std::string("foo"));
+      if (b && !ex)
+        ++hit;
+    };
+  dht_b.dht->fetch(addrs, handler);
+  BOOST_CHECK_EQUAL(hit, 10);
+  hit = 0;
+  dht_a.dht->fetch(addrs, handler);
+  BOOST_CHECK_EQUAL(hit, 10);
+  dht_c.overlay->disconnect(*dht_a.overlay);
+  dht_c.overlay->disconnect(*dht_b.overlay);
+  hit = 0;
+  dht_b.dht->fetch(addrs, handler);
+  BOOST_CHECK_EQUAL(hit, 10);
+  hit = 0;
+  dht_a.dht->fetch(addrs, handler);
+  BOOST_CHECK_EQUAL(hit, 10);
+}
+
 ELLE_TEST_SCHEDULED(admin_keys)
 {
   auto owner_key = infinit::cryptography::rsa::keypair::generate(512);
@@ -1528,6 +1583,7 @@ ELLE_TEST_SUITE()
   }
 #undef TEST
   paxos->add(BOOST_TEST_CASE(admin_keys));
+  paxos->add(BOOST_TEST_CASE(batch_quorum));
   paxos->add(BOOST_TEST_CASE(wrong_quorum));
   {
     using namespace tests_paxos;
