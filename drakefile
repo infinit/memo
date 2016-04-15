@@ -696,16 +696,12 @@ def configure(
           test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
-        extra_path = [str(drake.path_build(installed_binaries[0].path(True).dirname(),
-                                 absolute = True))]
-        if not windows:
-            extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
-                                 absolute = True)))
-        extra_path.append(os.environ.get('PATH', ''))
+        test.dependency_add(drake.node('tests/functional/utils.py'))
         env = {
           'PYTHONPATH':
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
-          'PATH': ':'.join(extra_path)
+          'SOURCE_DIR': drake.path_source(),
+          'BUILD_DIR': drake.path_build(),
         }
         if cxx_toolkit.os == drake.os.windows:
           env['EXE_EXT'] = '.exe'
