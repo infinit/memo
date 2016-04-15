@@ -1322,6 +1322,22 @@ namespace infinit
                         std::exception_ptr)> res)
         {
           BENCH("multi_fetch");
+          if (this->doughnut().version() < elle::Version(0, 5, 0))
+          {
+            for (auto av: addresses)
+            {
+              try
+              {
+                auto block = this->_fetch(av.first, av.second);
+                res(av.first, std::move(block), {});
+              }
+              catch (elle::Error const& e)
+              {
+                res(av.first, {}, std::make_exception_ptr(e));
+              }
+            }
+            return;
+          }
           ELLE_DEBUG("querying %s addresses", addresses.size());
           std::vector<Address> raw_addrs;
           for (auto const& a: addresses)
