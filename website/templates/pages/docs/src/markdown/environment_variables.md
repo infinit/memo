@@ -160,7 +160,8 @@ $> cat demo.log
 ...
 ```
 
-### ELLE_LOG_PID<br>ELLE_LOG_TID ###
+### ELLE_LOG_PID ###
+<h3 class="list">ELLE_LOG_TID</h3>
 
 The environment variables `ELLE_LOG_PID` and `ELLE_LOG_TID` can be activated, i.e set to `1`, to include in the logs the identifier of the process and thread (i.e coroutine), respectively.
 
@@ -249,11 +250,16 @@ The `INFINIT_USER` environment variable can be specified with the name of a user
 
 The `INFINIT_BACKTRACE` environment variable, if set to `1`, indicates the software to display a backtrace should an exception escape.
 
-### INFINIT_HOME<br>INFINIT_DATA_HOME<br>INFINIT_CACHE_HOME<br>INFINIT_STATE_HOME ###
+### INFINIT_HOME ###
+<h3 class="list">INFINIT_DATA_HOME</h3>
+<h3 class="list">INFINIT_CACHE_HOME</h3>
+<h3 class="list">INFINIT_STATE_HOME</h3>
 
 By default, all the information the command-line tools and GUI need are looked for in the `$HOME/.local/...` directories following the [XDG Base Directory Specifications](http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html).
 
-The `INFINIT_HOME` environment variable can be used to define a new user home directory. For instance, should `INFINIT_HOME` be set to `/tmp/home.test/`, Infinit would be looking for configuration files, cache directories and journals in the directory `/tmp/home.test/.local/...`
+The `INFINIT_HOME` environment variable can be used to define a new user home directory. For instance, should `INFINIT_HOME` be set to `/tmp/home.test/`, Infinit would be looking for configuration files, cache directories and journals in the directory `/tmp/home.test/.local/...`.
+
+This comes in handy when you only own a single device but want to <strong>simulate another device</strong> by opening another terminal and setting `INFINIT_HOME` to a different directory. You can then simulate as many devices as you want.
 
 Several more specific environment variables are also provided:
 - `INFINIT_DATA_HOME`: Path to the specific directory containing the user identities, network and volumes descriptors etc.

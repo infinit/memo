@@ -642,6 +642,13 @@ body.update {
 | Documentation   |
 `----------------*/
 
+section.doc, body.faq #hits .hit p {
+  code {
+    background: #E9F2F5; border-radius: 3px; padding: 3px;
+    color: #5A6878; font-family: @monospace; font-size: 13px; z-index: -1;
+  }
+}
+
 section.doc {
   h1 {
     font-size: 33px; line-height: 41px; padding-bottom: 15px;
@@ -664,12 +671,8 @@ section.doc {
 
   h2 { margin-top: 70px; font-size: 1.9em;}
   h3 { font-size: 1.4em; margin-top: 45px; margin-bottom: 7px; }
+  h3.list { margin-top: 5px;}
   .button { font-size: 14px; padding: 6px 11px; margin-bottom: 20px;}
-
-  code {
-    background: #E9F2F5; border-radius: 3px; padding: 3px;
-    color: #5A6878; font-family: @monospace; font-size: 13px; z-index: -1;
-  }
 
   ul { list-style-type: circle; }
   ul li { margin: 10px 20px;}
