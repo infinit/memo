@@ -80,6 +80,16 @@ def create_file(infinit):
     'size': len(contents),
     'content': base64.b64encode(contents).decode('latin-1')})
 
+def wait(run):
+  out, err = run.communicate()
+  rv = run.wait()
+  if rv != 0:
+    reason = 'process failed with return code %s' % rv
+    print(reason, file = sys.stderr)
+    print('STDOUT:\n%s' % out.decode('utf-8'))
+    print('STDERR:\n%s' % err.decode('utf-8'))
+    raise Exception(reason)
+
 def test_a():
   with TemporaryDirectory() as port_tmp,  \
        TemporaryDirectory() as tmp,       \
@@ -105,10 +115,11 @@ def test_a():
                      '--peer', '%s/endpoints' % a.dir,
                      '--peer', '%s/endpoints' % b.dir])
     run_c.terminate()
-    assertEq(run_c.wait(), 0)
+    wait(run_c)
     # Wait for rebalancing
     blocks_a = blocks(a)
     attempts = 0
+    print(blocks_a)
     while True:
       blocks_d = blocks(d)
       if blocks_d == blocks_a:
@@ -118,15 +129,13 @@ def test_a():
       time.sleep(1)
       attempts += 1
       if attempts > 120:
-        raise Exception('%s blocks failed to be rebalanced',
-                        len(blocks_a) - len(blocks_b))
-    run_a.stdin.close()
+        raise Exception('%s blocks failed to be rebalanced' %
+                        (len(blocks_a) - len(blocks_d)))
+    wait(run_a)
     run_b.terminate()
     run_d.terminate()
-    assertEq(run_a.wait(), 0)
-    assertEq(run_b.wait(), 0)
-    assertEq(run_d.wait(), 0)
-
+    wait(run_b)
+    wait(run_d)
 
 def test_b():
   with TemporaryDirectory() as port_tmp,  \
@@ -160,7 +169,7 @@ def test_b():
     assert check_replication(infinits)
     # Kill D
     run_d.terminate()
-    assertEq(run_d.wait(), 0)
+    wait(run_d)
     # Wait for rebalancing
     attempt = 0
     while not check_replication([a, b, c]):
@@ -169,12 +178,11 @@ def test_b():
       attempt += 1
       if attempt > 120:
         raise Exception('some block were not replicated')
-    run_a.stdin.close()
+    wait(run_a)
     run_b.terminate()
     run_c.terminate()
-    assertEq(run_a.wait(), 0)
-    assertEq(run_b.wait(), 0)
-    assertEq(run_c.wait(), 0)
+    wait(run_b)
+    wait(run_c)
 
 test_a()
 test_b()
