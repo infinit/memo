@@ -118,6 +118,7 @@ class Infinit(TemporaryDirectory):
     if input is not None:
       # FIXME: On OSX, if you spam stdin before the FDStream takes it
       # over, you get a broken pipe.
+      time.sleep(0.5)
       process.stdin.write(input)
     process.pretty = pretty
     return process
