@@ -81,10 +81,10 @@ with TemporaryDirectory() as tmp, \
       'infinit-volume', '--run', '--as', 'user', 'volume',
       '--port-file', portfile],
       return_code = 118)
-  import threading
-  t = threading.Thread(target = run_volume)
-  t.start()
-  time.sleep(1)
+  volume_process = infinit_1.spawn([
+    'infinit-volume', '--run', '--as', 'user', 'volume',
+    '--port-file', portfile])
+  time.sleep(2)
   response = infinit_2.run_script(
     user = 'user2', volume = 'user/volume',
     peer = peer(),
@@ -97,5 +97,5 @@ with TemporaryDirectory() as tmp, \
     peer = peer())
   assertEq(response['success'], False)
   assertEq(response['message'], 'Access denied.')
-  infinit_1.process.kill()
-  t.join()
+  volume_process.terminate()
+  assert volume_process.wait() == 0
