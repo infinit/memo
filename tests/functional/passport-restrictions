@@ -53,9 +53,10 @@ with TemporaryDirectory() as tmp, \
   try:
     infinit_2.run(['infinit-network', '--link', 'user/network',
         '--storage', 'storage', '--as', 'user2'])
-    raise Exception('link with storage suceeded when it should not have')
   except:
     pass
+  else:
+    raise Exception('link with storage should have failed')
   infinit_2.run(['infinit-network', '--link', 'user/network',
         '--as', 'user2'])
   response = infinit_1.run_script(
