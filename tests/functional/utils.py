@@ -126,16 +126,14 @@ class Infinit(TemporaryDirectory):
     process = self.spawn(args, input, return_code, env)
     out, err = process.communicate()
     process.wait()
+    out = out.decode('utf-8')
+    err = err.decode('utf-8')
     if process.returncode != return_code:
-      out = out.decode('utf-8')
-      err = err.decode('utf-8')
-      #if process.returncode not in [0, 1]:
-      #  unreachable()
       raise Exception(
         'command failed with code %s: %s\nstdout: %s\nstderr: %s' % \
         (process.returncode, process.pretty, out, err))
     self.last_out = out
-    self.last_err = err.decode('utf-8')
+    self.last_err = err
     try:
       return json.loads(out)
     except:
