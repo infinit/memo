@@ -122,6 +122,7 @@ website:
     - cd ../fs-build && python3 drake -j 4 //website/install --prefix=$(realpath ../fs-website)
     - cd ../fs-build && python3 drake -j 4 //website/debian
     - scp ../fs-build/website/infinit-sh_$(GIT_DIR=../fs/.git git describe)_amd64.deb debian@debian.infinit.io:repository
+    - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
     - trusty
