@@ -9,6 +9,9 @@ from utils import *
 def initialize(infinits):
   # Create users and storage
   for i in infinits:
+    i.env['ELLE_LOG_FILE'] = '%s/logs' % i.dir
+    i.env['ELLE_LOG_TIME'] = '1'
+    i.env['ELLE_LOG_LEVEL'] = 'infinit.model*:DEBUG'
     i.run(['infinit-user', '--create'])
     i.run(['infinit-storage',
            '--create', 'storage', '--filesystem',

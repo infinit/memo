@@ -56,6 +56,7 @@ class Infinit(TemporaryDirectory):
     self.__beyond = beyond
     self.__infinit_root = infinit_root or ''
     self.__user = user
+    self.__env = {}
 
   def __enter__(self):
     super().__enter__()
@@ -68,6 +69,10 @@ class Infinit(TemporaryDirectory):
   @property
   def user(self):
     return self.__user
+
+  @property
+  def env(self):
+    return self.__env
 
   def spawn(self, args, input = None, return_code = 0, env = {}):
     if isinstance(args, str):
@@ -93,6 +98,7 @@ class Infinit(TemporaryDirectory):
     if self.__beyond is not None:
       env_['INFINIT_BEYOND'] = self.__beyond.domain
     env_.update(env)
+    env_.update(self.__env)
     if input is not None:
       args.append('-s')
     pretty = '%s %s' % (
