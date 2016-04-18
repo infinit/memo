@@ -997,7 +997,7 @@ main(int argc, char** argv)
       &export_,
       "--name VOLUME",
       {
-        { "name,n", value<std::string>(), "network to export" },
+        { "name,n", value<std::string>(), "volume to export" },
         option_output("volume"),
       },
     },

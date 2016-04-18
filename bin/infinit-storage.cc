@@ -365,7 +365,7 @@ main(int argc, char** argv)
       "create",
       "Create a storage",
       &create,
-      "STORAGE-TYPE [STORAGE-OPTIONS...]",
+      "--name STORAGE STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
         { "capacity,c", value<std::string>(), "limit the storage capacity, "
@@ -414,7 +414,7 @@ main(int argc, char** argv)
       "delete",
       "Delete a storage",
       &delete_,
-      {},
+      "--name STORAGE",
       {
         { "name,n", value<std::string>(), "storage to delete" },
         { "clear-content", bool_switch(),

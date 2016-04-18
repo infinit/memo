@@ -1805,6 +1805,32 @@ ELLE_TEST_SCHEDULED(prefetcher_failure)
     16384);
 }
 
+ELLE_TEST_SCHEDULED(paxos_race)
+{
+  DHTs servers(1);
+  auto c1 = servers.client();
+  auto c2 = servers.client();
+  auto r1 = c1.fs->path("/");
+  auto r2 = c2.fs->path("/");
+  ELLE_LOG("create both directories")
+  {
+    reactor::Thread t1("t1", [&] { r1->child("foo")->mkdir(0700);});
+    reactor::Thread t2("t2", [&] { r2->child("bar")->mkdir(0700);});
+    reactor::wait({&t1, &t2});
+  }
+  ELLE_LOG("check")
+  {
+    int count = 0;
+    c1.fs->path("/")->list_directory(
+      [&](std::string const&, struct stat*) { ++count;});
+    BOOST_CHECK_EQUAL(count, 2);
+    count = 0;
+    c2.fs->path("/")->list_directory(
+      [&](std::string const&, struct stat*) { ++count;});
+    BOOST_CHECK_EQUAL(count, 2);
+  }
+}
+
 ELLE_TEST_SUITE()
 {
   // This is needed to ignore child process exiting with nonzero
@@ -1826,4 +1852,5 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
   suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
   suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
+  suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
 }

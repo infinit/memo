@@ -50,15 +50,6 @@ namespace infinit
           }
         }
 
-        static
-        Address
-        uid(cryptography::rsa::PublicKey const& key)
-        {
-          auto serial = cryptography::rsa::publickey::der::encode(key);
-          return
-            cryptography::hash(serial, cryptography::Oneway::sha256).contents();
-        }
-
         template <typename T>
         static
         void
@@ -944,7 +935,7 @@ namespace infinit
               if (peers.empty())
                 throw elle::Error(
                   elle::sprintf("No peer available for fetch %x", address));
-              Paxos::PaxosClient client(uid(this->doughnut().keys().K()),
+              Paxos::PaxosClient client(this->doughnut().id(),
                                         std::move(peers));
               auto chosen = client.choose(version, block);
               // FIXME: factor with the end of doughnut::Local::store
@@ -1185,7 +1176,7 @@ namespace infinit
               try
               {
                 Paxos::PaxosClient client(
-                  uid(this->doughnut().keys().K()), std::move(peers));
+                  this->doughnut().id(), std::move(peers));
                 // Keep resolving conflicts and retrying
                 while (true)
                 {
@@ -1313,7 +1304,7 @@ namespace infinit
               {
                 ELLE_DEBUG_SCOPE("run paxos");
                 Paxos::PaxosClient client(
-                  uid(this->doughnut().keys().K()), std::move(peers));
+                  this->doughnut().id(), std::move(peers));
                 if (auto res = client.get())
                   if (*res)
                   {
@@ -1379,7 +1370,7 @@ namespace infinit
         Paxos::_client(Address const& address)
         {
           return Paxos::PaxosClient(
-            uid(this->doughnut().keys().K()), this->_peers(address));
+            this->doughnut().id(), this->_peers(address));
         }
 
         std::pair<Paxos::PaxosServer::Quorum, int>
