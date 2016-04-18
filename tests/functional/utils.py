@@ -127,14 +127,13 @@ class Infinit(TemporaryDirectory):
     out, err = process.communicate()
     process.wait()
     if process.returncode != return_code:
-      reason = err.decode('utf-8')
-      print(reason, file = sys.stderr)
+      out = out.decode('utf-8')
+      err = err.decode('utf-8')
       #if process.returncode not in [0, 1]:
       #  unreachable()
       raise Exception(
-        'command failed with code %s: %s (reason: %s)' % \
-        (process.returncode, process.pretty, reason))
-    out = out.decode('utf-8')
+        'command failed with code %s: %s\nstdout: %s\nstderr: %s' % \
+        (process.returncode, process.pretty, out, err))
     self.last_out = out
     self.last_err = err.decode('utf-8')
     try:
