@@ -409,7 +409,11 @@ def configure(
     drake.node('bin/email.hh.tmpl')
     drake.node('bin/infinit-drive.cc.tmpl')
 
-  drake.node('bin/password.hh')
+  drake.nodes(
+    'bin/endpoint_file.hh',
+    'bin/password.hh',
+    'bin/xattrs.hh',
+  )
 
   bin_cxx_config = drake.cxx.Config(cxx_config)
   bin_cxx_config += elle.das.config

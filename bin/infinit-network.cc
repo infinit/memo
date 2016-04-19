@@ -15,6 +15,7 @@
 ELLE_LOG_COMPONENT("infinit-network");
 
 #include <main.hh>
+#include <xattrs.hh>
 
 infinit::Infinit ifnt;
 

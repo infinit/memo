@@ -12,6 +12,7 @@
 ELLE_LOG_COMPONENT("infinit-acl");
 
 #include <main.hh>
+#include <xattrs.hh>
 
 #ifdef INFINIT_WINDOWS
 # undef stat
