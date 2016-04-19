@@ -452,6 +452,11 @@ beyond_push(std::string const& where,
             bool report = true,
             bool beyond_error = false); // FIXME: Remove when migration done.
 
+template<typename T>
+T
+beyond_fetch(std::string const& type,
+             std::string const& name);
+
 namespace infinit
 {
   typedef infinit::AWSCredentials AWSCredentials;
@@ -1474,14 +1479,26 @@ namespace infinit
     }
 
     User
-    user_get(boost::optional<std::string> user = {}) const
+    user_get(boost::optional<std::string> user = {},
+             bool beyond_fallback = false) const
     {
       if (!user)
         user = elle::system::username();
-      boost::filesystem::ifstream f;
-      this->_open_read(f, this->_user_path(user.get()), user.get(), "user");
-      elle::serialization::json::SerializerIn s(f, false);
-      return s.deserialize<User>();
+      try
+      {
+        boost::filesystem::ifstream f;
+        this->_open_read(f, this->_user_path(user.get()), user.get(), "user");
+        elle::serialization::json::SerializerIn s(f, false);
+        return s.deserialize<User>();
+      }
+      catch (MissingLocalResource const& e)
+      {
+        if (!beyond_fallback)
+          throw;
+        ELLE_LOG("User %s not found locally, trying on %s", user, beyond(true));
+        auto u = beyond_fetch<User>("user", *user);
+        return u;
+      }
     }
 
     std::vector<User>
