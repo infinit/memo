@@ -24,6 +24,10 @@ class Website(bottle.Bottle):
     self.__swu = sendwithus.api(api_key = 'live_f237084a19cbf6b2373464481155d953a4d86e8d')
     self.__hub = os.environ.get('INFINIT_BEYOND', 'https://beyond.infinit.io')
 
+  def __call__(self, e, h):
+    e['PATH_INFO'] = e['PATH_INFO'].rstrip('/')
+    return super().__call__(e, h)
+
   def debug(self):
     if hasattr(bottle.request, 'certificate') and \
        bottle.request.certificate in [
