@@ -230,6 +230,10 @@ class Beyond:
       raise User.NotFound()
     return [User.from_json(self, u) for u in users]
 
+  def user_by_ldap_dn(self, dn):
+    user = self.__datastore.user_by_ldap_dn(dn)
+    return User.from_json(self, user)
+
   def user_delete(self, name):
     return self.__datastore.user_delete(name = name)
 

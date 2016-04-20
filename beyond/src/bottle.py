@@ -113,6 +113,7 @@ class Bottle(bottle.Bottle):
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
+    self.route('/ldap_users/<name>', method = 'GET')(self.user_from_ldap_dn)
 
     # Email confirmation
     self.route('/users/<name>/confirm_email',
@@ -359,6 +360,15 @@ class Bottle(bottle.Bottle):
       if throws:
         raise self.__user_not_found(email)
       return []
+
+  def user_from_ldap_dn(self, name, throws = True):
+    try:
+      res = self.__beyond.user_by_ldap_dn(name)
+      return res.json()
+    except User.NotFound as e:
+      if throws:
+        raise self.__user_not_found(name)
+      return None
 
   def user_put(self, name):
     try:

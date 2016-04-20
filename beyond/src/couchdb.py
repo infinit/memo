@@ -106,6 +106,7 @@ class CouchDBDatastore:
                   views = [
                     ('per_name', self.__user_per_name),
                     ('per_email', self.__user_per_email),
+                    ('per_ldap_dn', self.__user_per_ldap_dn),
                   ])
     self.__design('pairing',
                   updates = [],
@@ -217,6 +218,15 @@ class CouchDBDatastore:
 
   def __user_per_name(user):
     yield user['name'], user
+
+  def __user_per_ldap_dn(user):
+    yield user['ldap_dn'], user
+
+  def user_by_ldap_dn(self, dn):
+    rows = self.__couchdb['users'].view('beyond/per_ldap_dn', key = dn)
+    if len(rows) == 0:
+      raise infinit.beyond.User.NotFound()
+    return [r.value for r in rows][0]
 
   def user_update(self, id, diff = {}):
     args = {
