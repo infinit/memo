@@ -83,11 +83,13 @@ class Bottle(bottle.Bottle):
       gcs = None,
       production = True,
       force_admin = False,
+      ldap_server = None,
   ):
     super().__init__(catchall = not production)
     self.__beyond = beyond
     self.__ban_list = ['demo', 'root', 'admin']
     self.__force_admin = force_admin
+    self.__ldap_server = ldap_server
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
     self.install(JsongoPlugin())
@@ -503,19 +505,38 @@ class Bottle(bottle.Bottle):
       })
     try:
       user = self.__beyond.user_get(name)
-      if user.password_hash is None:
-        raise Response(404,
-                     {
-                       'error': 'users/not_in', # Better name.
-                       'reason': 'User doesn\'t use the hub to login',
-                       'name': name
-                     })
-      if json['password_hash'] != user.password_hash:
-        raise Response(403,
+      if user.ldap_dn:
+        if json.get('password', None) is None:
+          raise Response(403,
+                         {
+                           'error': 'users/invalid_password',
+                           'reason': 'password missing for LDAP login',
+                         })
+        try:
+          import ldap3
+          server = ldap3.Server(self.__ldap_server)
+          c = ldap3.Connection(server, user.ldap_dn, json['password'], auto_bind=True)
+          c.extend.standard.who_am_i()
+        except Exception as e:
+          raise Response(403,
+                         {
+                           'error': 'user/invalid_password',
+                           'reason': str(e),
+                         })
+      else:
+        if user.password_hash is None:
+          raise Response(404,
                        {
-                         'error': 'users/invalid_password',
-                         'reason': 'password do not match',
+                         'error': 'users/not_in', # Better name.
+                         'reason': 'User doesn\'t use the hub to login',
+                         'name': name
                        })
+        if json['password_hash'] != user.password_hash:
+          raise Response(403,
+                         {
+                           'error': 'users/invalid_password',
+                           'reason': 'password do not match',
+                         })
       user = user.json(private = True)
       if 'private_key' in user:
         user['private_key'] = self.decrypt_key(user['private_key'])

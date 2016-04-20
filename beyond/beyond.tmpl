@@ -104,6 +104,9 @@ def parse_options():
   parser.add_argument('--port-file',
                       type = str,
                       help = 'File to write effective listen port to')
+  parser.add_argument('--ldap-server',
+                      type = str,
+                      help = 'Hostname or URL of the ldap server')
   return parser.parse_args()
 
 try:
@@ -131,7 +134,7 @@ try:
       validate_email_address = args.email_validation,
       sendwithus_api_key = args.sendwithus_app_key)
     app = infinit.beyond.bottle.Bottle(
-      beyond, gcs = gcs, production = False)
+      beyond, gcs = gcs, production = False, ldap_server = args.ldap_server)
     import bottle
     kwargs = {}
     if args.host is not None:

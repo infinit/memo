@@ -376,6 +376,7 @@ class User:
       ('gcs_accounts', None),
       ('password_hash', None),
       ('private_key', None),
+      ('ldap_dn', None),
     ]
   }
   class Duplicate(Exception):
@@ -395,7 +396,8 @@ class User:
                dropbox_accounts = None,
                google_accounts = None,
                gcs_accounts = None,
-               emails = {}
+               emails = {},
+               ldap_dn = None,
   ):
     self.__beyond = beyond
     self.__id = id
@@ -416,6 +418,7 @@ class User:
       if self.__email not in self.__emails:
         self.__emails[self.__email] = True
     self.__emails_original = deepcopy(self.emails)
+    self.__ldap_dn = ldap_dn
 
   @classmethod
   def from_json(self, beyond, json, check_integrity = False):
@@ -441,6 +444,7 @@ class User:
       google_accounts = json.get('google_accounts', []),
       gcs_accounts = json.get('gcs_accounts', []),
       emails = json.get('emails', {}),
+      ldap_dn = json.get('ldap_dn', None)
     )
 
   def json(self,
@@ -473,6 +477,8 @@ class User:
         res['private_key'] = self.private_key
       if self.password_hash is not None:
         res['password_hash'] = self.password_hash
+      if self.ldap_dn is not None:
+        res['ldap_dn'] = self.ldap_dn
     return res
 
   def create(self):
@@ -596,6 +602,10 @@ class User:
   @property
   def gcs_accounts(self):
     return self.__gcs_accounts
+
+  @property
+  def ldap_dn(self):
+    return self.__ldap_dn
 
   def __eq__(self, other):
     if self.name != other.name or self.public_key != other.public_key:
