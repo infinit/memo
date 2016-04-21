@@ -220,7 +220,10 @@ class CouchDBDatastore:
     yield user['name'], user
 
   def __user_per_ldap_dn(user):
-    yield user['ldap_dn'], user
+    if 'ldap_dn' in user:
+      yield user['ldap_dn'], user
+    else:
+      yield None, user # Fixme what to do in that case?
 
   def user_by_ldap_dn(self, dn):
     rows = self.__couchdb['users'].view('beyond/per_ldap_dn', key = dn)
