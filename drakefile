@@ -489,6 +489,7 @@ def configure(
     ('infinit-webdav', [], False),
     ('infinit-fsck', [], False),
     ('reactor-example', [], False),
+    ('infinit-ldap', [], True),
     # ('s3fs', [aws_lib], False),
   ]
   if not windows:
