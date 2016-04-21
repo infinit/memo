@@ -93,6 +93,18 @@ $(document).ready(function() {
     });
   }
 
+  if ($('body').hasClass('doc_technology')) {
+    // $('.open-popup').magnificPopup({
+    //   type:'inline',
+    //   midClick: true,
+    //   mainClass: 'mfp-fade'
+    // });
+
+    // $('.open-popup').click(function() {
+    //   $('#iam-policy').show();
+    // });
+  }
+
 
   if ($('body').hasClass('doc_reference') || $('body').hasClass('doc_deployments') || $('body').hasClass('doc_get_started')) {
     var enableSubMenu = function () {

@@ -5,9 +5,11 @@ At the highest level, Infinit is a file system platform that allows for creating
 
 However, at the technology level, Infinit is a set of independent layers that can be used to develop powerful applications, create block-level data stores and more.
 
-<br><img src="${url('images/schema-technology-infinit.png')}" alt="Infinit Technology"><br>
+<br><img src="${url('images/schema-technology-infinit.png')}" alt="Infinit Technology">
+<p class="note">System calls issued by applications go through the kernel, back to the userspace through FUSE to finally reach Infinit software stack.</p>
 
 <p class="github"><a href="https://github.com/infinit/elle" target="_blank"><span class="star">soon on github</span></a></p>
+
 Elle
 ----
 *#high-performance* *#interoperability*
@@ -72,8 +74,14 @@ void echo(std::unique_ptr<reactor::network::Socket> socket)
 }
 ...
 ```
+<br>
 
-[Learn More](http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming)
+**Learn More**
+
+If you want to go further, check out our two presentations from our last C++ meetups.
+
+<p><a class="external" target="_blank" href="http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming"><img src="${url('images/icons/external-link.png')}">Highly concurrent yet natural programming</a> </p>
+<p><a class="external" target="_blank" href="http://www.slideshare.net/infinit-one/infinit-filesystem-reactor-reloaded"><img src="${url('images/icons/external-link.png')}">Infinit filesystem, Reactor reloaded</a></p>
 
 <p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
 Overlay Network
@@ -132,6 +140,14 @@ Note that one can configure a device to use a limited amount of local storage ca
 
 Another problem with most cloud storage providers is that the files are not encrypted, leaving the user with no choice but to trust the cloud storage provider. Infinit has been conceived with the assumption that no storage provider can be trusted. In addition to relying on fault-tolerant algorithms, Infinit makes use of strong encryption. Whenever a document is edited for instance, the file is cut into chunks, every chunk is encrypted and then distributed and replicated throughout the distributed hash table. Every key used for encrypting a block is unique and known to the file owner only (along with the users who have been granted access).
 
-<br><a target="_blank" href="${url('images/schema-technology-dht-overlay@2x.png')}"><img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema" title="Click to see larger image"></a><br>
+<br>
+<a href="#encryption-schema" class="open-popup">
+  <img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema" title="Click to see larger image">
+</a>
+<br>
+
+<div class="popup mfp-hide" id="encryption-schema">
+  <img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema">
+</div>
 
 Finally, the file system layer also provides access control (without the use of a centralized server), versioning and other file-system-related features.
