@@ -122,6 +122,11 @@ COMMAND(populate_beyond)
           auto u = beyond_fetch<infinit::User>("user",
                                                reactor::http::url_encode(username));
           ELLE_TRACE("username %s taken", username);
+          if ((*pattern).find('%') == std::string::npos)
+          {
+            ELLE_ERR("Username %s already taken, skipping %s", username, dn);
+            break;
+          }
           continue;
         }
         catch (MissingResource const& e)
@@ -181,7 +186,8 @@ main(int argc, char** argv)
         {"filter,f", value<std::string>(), "raw LDAP query to use"},
         {"object-class,o", value<std::string>(), "Filter results (default: person)"},
         {"username-pattern,U", value<std::string>(),
-          "beyond unique username to set (default: $(cn)%)"},
+          "beyond unique username to set (default: $(cn)%). Remove the '%'"
+          "to disable unique username generator"},
         {"email-pattern,e", value<std::string>(),
           "email address pattern (default: $(mail)"},
         {"fullname-pattern,F", value<std::string>(),
