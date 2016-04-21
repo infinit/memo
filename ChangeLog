@@ -3,7 +3,8 @@
 
 ## [0.5.5]
 
-Automatic replication of under-replicated blocks and CPU usage improvement.
+Automatic replication of under-replicated metadata blocks and CPU
+usage improvement.
 
 ### Added
 
@@ -34,6 +35,8 @@ Automatic replication of under-replicated blocks and CPU usage improvement.
 - Fix misreported file size upon `truncate` or `ftruncate`.
 - Fixed async cache deadlock upon conflict on group blocks.
 - Ensure prefetcher work in parallel on large directories.
+- Report error if no servers are available to store data block.
+- Fix race condition when connecting several time to a peer.
 
 
 ## [0.5.4] - 2016-03-01

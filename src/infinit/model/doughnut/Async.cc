@@ -410,7 +410,11 @@ namespace infinit
                 {
                   ELLE_TRACE("Conflict removing %f: %s", addr, e);
                   // try again, regenerating the remove signature
-                  auto block = this->_backend->fetch(addr);
+                  Address faddr(addr.value(),
+                                op->remove_signature.block ?
+                                  model::flags::mutable_block : model::flags::immutable_block,
+                                false);
+                  auto block = this->_backend->fetch(faddr);
                   this->_backend->remove(addr, block->sign_remove(
                     this->doughnut()));
                 }
