@@ -95,17 +95,25 @@ COMMAND(populate_network)
     filter = "objectClass=posixGroup";
   auto res = ldap.search(searchbase, *filter, {"cn", "memberUid"});
 
-  std::unordered_set<std::string> all_members;
+  std::unordered_set<std::string> all_members; // uids
+  std::unordered_map<std::string, std::string> dns; // uid -> dn
+
   std::unordered_map<std::string, std::vector<std::string>> groups; //gname -> uids
   for (auto const& r: res)
   {
-    auto name = r.at("cn")[0];
-    auto members = r.at("memberUid");
-    all_members.insert(members.begin(), members.end());
-    groups[name] = members;
+    if (r.find("memberUid") == r.end())
+    { // assume this is an user
+      dns.insert(std::make_pair(r.at("dn")[0], r.at("dn")[0]));
+    }
+    else
+    {
+      auto name = r.at("cn")[0];
+      auto members = r.at("memberUid");
+      all_members.insert(members.begin(), members.end());
+      groups[name] = members;
+    }
   }
 
-  std::unordered_map<std::string, std::string> dns; // uid -> dn
   for (auto const& m: all_members)
   { // FIXME: batch
     auto r = ldap.search(elle::ldap::Attr(), "uid="+m, {});
