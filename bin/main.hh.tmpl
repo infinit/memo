@@ -2947,6 +2947,11 @@ namespace infinit
   }
 }
 
+#ifdef INFINIT_MACOSX
+# define SXA_EXTRA ,0
+#else
+# define SXA_EXTRA
+#endif
 
 Mode::OptionDescription option_cache(
   "cache", boost::program_options::bool_switch(),
