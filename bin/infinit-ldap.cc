@@ -13,6 +13,7 @@
 
 ELLE_LOG_COMPONENT("infinit-ldap");
 
+#include <xattrs.hh>
 #include <main.hh>
 #include <password.hh>
 
@@ -65,7 +66,7 @@ struct UserData
   std::string email;
 };
 
-COMMAND(populate_beyond)
+elle::ldap::LDAPClient make_ldap(variables_map const& args)
 {
   auto password = optional(args, "password");
   if (!password)
@@ -74,6 +75,114 @@ COMMAND(populate_beyond)
                               elle::ldap::Attr(mandatory(args, "domain")),
                               mandatory(args, "user"),
                               *password);
+  return ldap;
+}
+
+COMMAND(populate_network)
+{
+  auto self = self_user(ifnt, args);
+  auto network = infinit::NetworkDescriptor(ifnt.network_get(mandatory(args, "network"), self));
+  auto mountpoint = mandatory(args, "mountpoint");
+  auto ldap = make_ldap(args);
+  auto searchbase = mandatory(args, "searchbase");
+  auto objectclass = optional(args, "object-class");
+  auto filter = optional(args, "filter");
+  if (filter && objectclass)
+    throw elle::Error("filter and object-class can't both be specified");
+  if (objectclass)
+    filter = "objectClass=" + *objectclass;
+  else if (!filter)
+    filter = "objectClass=posixGroup";
+  auto res = ldap.search(searchbase, *filter, {"cn", "memberUid"});
+
+  std::unordered_set<std::string> all_members;
+  std::unordered_map<std::string, std::vector<std::string>> groups; //gname -> uids
+  for (auto const& r: res)
+  {
+    auto name = r.at("cn")[0];
+    auto members = r.at("memberUid");
+    all_members.insert(members.begin(), members.end());
+    groups[name] = members;
+  }
+
+  std::unordered_map<std::string, std::string> dns; // uid -> dn
+  for (auto const& m: all_members)
+  { // FIXME: batch
+    auto r = ldap.search(elle::ldap::Attr(), "uid="+m, {});
+    dns[m] = r.front().at("dn").front();
+  }
+
+  std::unordered_map<std::string, infinit::User> users; // uid -> user
+  for (auto const& m: dns)
+  {
+    try
+    {
+      auto u = beyond_fetch<infinit::User>("ldap_user",
+                                           reactor::http::url_encode(m.second));
+      users.insert(std::make_pair(m.first, u));
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_LOG("Failed to fetch user %s from %s", m.second, beyond(true));
+    }
+  }
+
+  // Push all users
+  for (auto const& u: users)
+  {
+    ELLE_TRACE("Pusing user %s (%s)", u.second.name, u.first);
+    infinit::model::doughnut::Passport passport(
+      u.second.public_key,
+      network.name,
+      infinit::cryptography::rsa::KeyPair(self.public_key,
+                                          self.private_key.get()),
+      self.public_key != network.owner,
+      !flag(args, "deny-write"),
+      !flag(args, "deny-storage"),
+      false);
+    try
+    {
+      beyond_push(
+        elle::sprintf("networks/%s/passports/%s", network.name, u.second.name),
+        "passport",
+        elle::sprintf("%s: %s", network.name, u.second.name),
+        passport,
+        self);
+    }
+    catch (elle::Error const& e)
+    {
+      ELLE_LOG("failed to push passport: %s", e);
+    }
+    auto passport_ser = elle::serialization::json::serialize(passport, false);
+    int res = port_setxattr(mountpoint, "infinit.register." + u.second.name,
+                            passport_ser.string(), true);
+    if (res)
+      ELLE_LOG("Failed to set user %s: %s", u.second.name, res);
+  }
+  // Push groups
+  for (auto const& g: groups)
+  {
+    ELLE_TRACE_SCOPE("Creating group %s", g.first);
+    port_setxattr(mountpoint, "infinit.group.create", g.first, true);
+    for (auto const& m: g.second)
+    {
+      if (users.find(m) == users.end())
+      {
+        ELLE_TRACE("skipping user %s", m);
+        continue;
+      }
+      ELLE_TRACE("adding user %s", m);
+      int res = port_setxattr(mountpoint, "infinit.group.add",
+        g.first + ':' + users.at(m).name, true);
+      if (res)
+        ELLE_LOG("Failed to add %s to group %s: %s", m, g.first, res);
+    }
+  }
+}
+
+COMMAND(populate_beyond)
+{
+  auto ldap = make_ldap(args);
   auto searchbase = mandatory(args, "searchbase");
   auto objectclass = optional(args, "object-class");
   auto filter = optional(args, "filter");
@@ -165,6 +274,11 @@ COMMAND(populate_beyond)
   }
 }
 
+#define LDAP_CORE_OPTIONS \
+        {"server", value<std::string>(), "URL to LDAP server"},     \
+        {"domain,d", value<std::string>(), "LDAP domain"},          \
+        {"user,u", value<std::string>(), "LDAP username"},          \
+        {"password,p", value<std::string>(), "LDAP password"}
 int
 main(int argc, char** argv)
 {
@@ -173,17 +287,29 @@ main(int argc, char** argv)
   using boost::program_options::bool_switch;
   Modes modes {
     {
+      "populate-network",
+      "Register LDAP users and groups to a network",
+      &populate_network,
+      {},
+      {
+        LDAP_CORE_OPTIONS,
+        {"searchbase,b", value<std::string>(), "search starting point (without domain)"},
+        {"filter,f", value<std::string>(), "raw LDAP query to use (default: objectClass=posixGroup)"},
+        {"object-class,o", value<std::string>(), "Filter results (default: posixGroup)"},
+        {"mountpoint,m", value<std::string>(), "Path to a mounted volume of the network"},
+        {"network,n", value<std::string>(), "Network name"},
+        {"as", value<std::string>(), "user"},
+      }
+    },
+    {
       "populate-beyond",
       "Register LDAP users on beyond",
       &populate_beyond,
       {},
       {
-        {"server", value<std::string>(), "URL to LDAP server"},
-        {"domain,d", value<std::string>(), "LDAP domain"},
-        {"user,u", value<std::string>(), "LDAP username"},
-        {"password,p", value<std::string>(), "LDAP password"},
+        LDAP_CORE_OPTIONS,
         {"searchbase,b", value<std::string>(), "search starting point (without domain)"},
-        {"filter,f", value<std::string>(), "raw LDAP query to use"},
+        {"filter,f", value<std::string>(), "raw LDAP query to use (default: objectClass=person)"},
         {"object-class,o", value<std::string>(), "Filter results (default: person)"},
         {"username-pattern,U", value<std::string>(),
           "beyond unique username to set (default: $(cn)%). Remove the '%'"
