@@ -1,3 +1,10 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <boost/filesystem.hpp>
+
 #include <elle/os/environ.hh>
 #include <elle/test.hh>
 
@@ -11,6 +18,12 @@ ELLE_LOG_COMPONENT("infinit.model.doughnut.bandwidth-test");
 
 ELLE_TEST_SCHEDULED(bazillion_small_files)
 {
+  auto path = boost::filesystem::temp_directory_path()
+    / boost::filesystem::unique_path();
+  elle::os::setenv("INFINIT_HOME", path.string(), true);
+  elle::SafeFinally cleanup_path([&] {
+      boost::filesystem::remove_all(path);
+  });
   auto k = infinit::cryptography::rsa::keypair::generate(512);
   DHT server_a(owner = k);
   DHT client(keys = k, storage = nullptr);

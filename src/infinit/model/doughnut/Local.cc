@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
+#include <elle/network/Interface.hh>
 #include <elle/utility/Move.hh>
 
 #include <cryptography/random.hh>
@@ -42,6 +43,7 @@ namespace infinit
         , _storage(std::move(storage))
         , _doughnut(dht)
       {
+        ELLE_TRACE_SCOPE("%s: construct", this);
         if (p == Protocol::tcp || p == Protocol::all)
         {
           this->_server = elle::make_unique<reactor::network::TCPServer>();
@@ -65,12 +67,20 @@ namespace infinit
 
       Local::~Local()
       {
-        ELLE_TRACE_SCOPE("%s: terminate", *this);
+        ELLE_TRACE_SCOPE("%s: destruct", *this);
         if (this->_server_thread)
           this->_server_thread->terminate_now();
         if (this->_utp_server_thread)
           this->_utp_server_thread->terminate_now();
       }
+
+      void
+      Local::initialize()
+      {}
+
+      void
+      Local::cleanup()
+      {}
 
       /*-----------.
       | Networking |
@@ -131,16 +141,23 @@ namespace infinit
           auto ptr = &block;
           output.serialize_forward(ptr);
         }
-        this->_storage->set(block.address(), data,
-                            mode == STORE_ANY || mode == STORE_INSERT,
-                            mode == STORE_ANY || mode == STORE_UPDATE);
-        on_store(block, mode);
+        try
+        {
+          this->_storage->set(block.address(), data,
+                              mode == STORE_INSERT,
+                              mode == STORE_UPDATE);
+        }
+        catch (storage::MissingKey const&)
+        {
+          throw MissingBlock(block.address());
+        }
+        this->_on_store(block);
       }
 
       std::unique_ptr<blocks::Block>
       Local::_fetch(Address address, boost::optional<int> local_version) const
       {
-        ELLE_TRACE_SCOPE("%s: fetch %x", *this, address);
+        ELLE_TRACE_SCOPE("%s: fetch %f", this, address);
         elle::Buffer data;
         try
         {
@@ -155,8 +172,8 @@ namespace infinit
         ctx.set<Doughnut*>(&this->_doughnut);
         auto res = elle::serialization::binary::deserialize<
           std::unique_ptr<blocks::Block>>(data, true, ctx);
-        on_fetch(address, res);
-        return std::move(res);
+        this->_on_fetch(address, res);
+        return res;
       }
 
       void
@@ -185,7 +202,7 @@ namespace infinit
         {
           throw MissingBlock(k.key());
         }
-        on_remove(address);
+        this->_on_remove(address);
       }
 
       /*-------.
@@ -203,6 +220,29 @@ namespace infinit
           return reactor::network::TCPServer::EndPoint(ep.address(), ep.port()-100);
         }
         else throw elle::Error("Local not listening on any endpoint");
+      }
+
+      std::vector<reactor::network::TCPServer::EndPoint>
+      Local::server_endpoints()
+      {
+        auto any_ip = boost::asio::ip::address();
+        auto ep = this->server_endpoint();
+        if (ep.address() != any_ip)
+          return { ep };
+
+        std::vector<reactor::network::TCPServer::EndPoint> res;
+        auto filter = (elle::network::Interface::Filter::only_up |
+                       elle::network::Interface::Filter::no_loopback |
+                       elle::network::Interface::Filter::no_autoip);
+        for (auto const& itf: elle::network::Interface::get_map(filter))
+        if (!itf.second.ipv4_address.empty()
+            && itf.second.ipv4_address != any_ip.to_string())
+        {
+          res.push_back(reactor::network::TCPServer::EndPoint(
+            boost::asio::ip::address::from_string(itf.second.ipv4_address),
+            ep.port()));
+        }
+        return res;
       }
 
       void
@@ -359,7 +399,7 @@ namespace infinit
               {
                 RPCServer rpcs(this->_doughnut.version());
                 this->_register_rpcs(rpcs);
-                this->on_connect(rpcs);
+                this->_on_connect(rpcs);
                 rpcs.set_context<Doughnut*>(&this->_doughnut);
                 rpcs.serve(**socket);
               });

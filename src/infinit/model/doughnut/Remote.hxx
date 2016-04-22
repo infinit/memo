@@ -99,7 +99,7 @@ namespace infinit
         {
           try
           {
-            if (need_reconnect)
+            if (need_reconnect && reactor::wait(*this->_connection_thread, 0_sec))
               reconnect(connect_timeout);
             else
               connect(connect_timeout);
@@ -107,8 +107,8 @@ namespace infinit
           }
           catch(reactor::network::Exception const& e)
           {
-            ELLE_TRACE("network exception when invoking %s: %s",
-                       name, e);
+            ELLE_TRACE("network exception when invoking %s (attempt %s/%s): %s",
+                       name, attempt+1, max_attempts, e);
           }
           if (max_attempts && ++attempt >= max_attempts)
           {

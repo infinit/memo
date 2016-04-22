@@ -120,11 +120,15 @@ COMMAND(delete_)
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
+  auto volume = ifnt.volume_get(name);
+  boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "volume", name, std::string("locally"));
   else
+  {
     throw elle::Error(
       elle::sprintf("File for volume could not be deleted: %s", path));
+  }
 }
 
 COMMAND(fetch)
@@ -299,23 +303,57 @@ COMMAND(run)
       }
     }
   }
+  std::vector<std::string> fuse_options;
+#ifdef INFINIT_MACOSX
+  if (!flag(args, option_disable_mac_utf8))
+    fuse_options.push_back("modules=iconv,from_code=UTF-8,to_code=UTF-8-MAC");
+#endif
   auto volume = ifnt.volume_get(name);
+  auto mountpoint = optional(args, "mountpoint");
+  if (!mountpoint)
+    mountpoint = volume.mountpoint;
+  if (mountpoint)
+  {
+    if (boost::filesystem::exists(mountpoint.get()))
+    {
+      if (!boost::filesystem::is_directory(mountpoint.get()))
+        throw (elle::Error("mountpoint is not a directory"));
+      if (!boost::filesystem::is_empty(mountpoint.get()))
+        throw elle::Error("mountpoint is not empty");
+    }
+  }
+  if (args.count("fuse-option"))
+  {
+    if (mountpoint)
+      throw CommandLineError("FUSE options require the volume to be mounted");
+    for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
+      fuse_options.push_back(opt);
+  }
   auto network = ifnt.network_get(volume.network, self);
   ELLE_TRACE("run network");
-  bool cache = flag(args, option_cache.long_name());
-  boost::optional<int> cache_size =
-    option_opt<int>(args, option_cache_size.long_name());
-  boost::optional<int> cache_ttl =
-    option_opt<int>(args, option_cache_ttl.long_name());
-  boost::optional<int> cache_invalidation =
-    option_opt<int>(args, option_cache_invalidation.long_name());
-  boost::optional<uint64_t> disk_cache_size =
-    option_opt<uint64_t>(args, option_cache_disk_cache_size.long_name());
-  if (cache_size || cache_ttl || cache_invalidation || disk_cache_size)
+  bool cache = flag(args, option_cache);
+  auto cache_ram_size = optional<int>(args, option_cache_ram_size);
+  auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
+  auto cache_ram_invalidation =
+    optional<int>(args, option_cache_ram_invalidation);
+  auto disk_cache_size = optional<uint64_t>(args, option_cache_disk_size);
+  if (cache_ram_size || cache_ram_ttl || cache_ram_invalidation
+      || disk_cache_size)
+  {
     cache = true;
+  }
+#ifndef INFINIT_WINDOWS
+  if (flag(args, "daemon"))
+    if (daemon(0, 1))
+      perror("daemon:");
+#endif
   if (!getenv("INFINIT_DISABLE_SIGNAL_HANDLER"))
   {
-    static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
+    static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+    , SIGQUIT
+#endif
+    };
     for (auto signal: signals)
       reactor::scheduler().signal_handle(
         signal,
@@ -330,10 +368,11 @@ COMMAND(run)
     beyond_fetch_endpoints(network, eps);
   report_action("running", "network", network.name);
   auto compatibility = optional(args, "compatibility-version");
+  auto port = optional<int>(args, option_port);
   auto model = network.run(
     eps, true,
-    cache, cache_size, cache_ttl, cache_invalidation,
-    flag(args, "async"), disk_cache_size, compatibility_version);
+    cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
+    flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push =
     aliased_flag(args, {"push-endpoints", "push", "publish"}) && model->local();
@@ -341,8 +380,13 @@ COMMAND(run)
   if (model->local())
   {
     local_endpoint = model->local()->server_endpoint();
-    if (auto port_file = optional(args, "port-file"))
+    if (auto port_file = optional(args, option_port_file))
       port_to_file(local_endpoint.get().port(), port_file.get());
+    if (auto endpoint_file = optional(args, option_endpoint_file))
+    {
+      endpoints_to_file(model->local()->server_endpoints(),
+                        endpoint_file.get());
+    }
   }
   auto node_id = model->overlay()->node_id();
   auto run = [&]
@@ -351,31 +395,49 @@ COMMAND(run)
     {
       ELLE_DEBUG("Connect callback to log storage stat");
       model->local()->storage()->register_notifier([&] {
-        network.notify_storage(self, node_id);
+        try
+        {
+          network.notify_storage(self, node_id);
+        }
+        catch (elle::Error const& e)
+        {
+          ELLE_WARN("Error notifying storage size change: %s", e);
+        }
       });
 
       {
-        static reactor::Thread updater("periodic_stat_updater", [&] {
+        static reactor::Thread updater("periodic storage stat updater", [&] {
           while (true)
           {
             ELLE_LOG_COMPONENT("infinit-volume");
             ELLE_DEBUG(
               "Hourly notification to beyond with storage usage (periodic)");
-                network.notify_storage(self, node_id);
-                reactor::wait(updater, 60_min);
+            try
+            {
+              network.notify_storage(self, node_id);
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_WARN("Error notifying storage size change: %s", e);
+            }
+            reactor::wait(updater, 60_min);
           }
         });
       }
     }
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
-    auto mountpoint = optional(args, "mountpoint");
     auto fs = volume.run(std::move(model),
                          mountpoint,
                          flag(args, "readonly")
-#ifdef INFINIT_MACOSX
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
                          , optional(args, "mount-name")
+#endif
+#ifdef INFINIT_MACOSX
                          , optional(args, "mount-icon")
+#endif
+#ifndef INFINIT_WINDOWS
+                         , fuse_options
 #endif
                          );
     if (volume.default_permissions && !volume.default_permissions->empty())
@@ -423,7 +485,23 @@ COMMAND(run)
     });
     if (script_mode)
     {
+#ifndef INFINIT_WINDOWS
       reactor::FDStream stdin_stream(0);
+#else
+      // Windows does not support async io on stdin
+      elle::Buffer input;
+      while (true)
+      {
+        char buf[4096];
+        std::cin.read(buf, 4096);
+        int count = std::cin.gcount();
+        if (count > 0)
+          input.append(buf, count);
+        else
+          break;
+      }
+      auto stdin_stream = elle::IOStream(input.istreambuf());
+#endif
       std::unordered_map<std::string,
         std::unique_ptr<reactor::filesystem::Handle>> handles;
       while (true)
@@ -758,6 +836,12 @@ COMMAND(run)
         }
         catch (elle::Error const& e)
         {
+#ifdef INFINIT_WINDOWS
+           // Something is outputing a ",'" garbage on stdout if we just
+           // return, which breaks the tests
+           exit(0);
+           return; // assume EOF
+#endif
           ELLE_LOG("bronk on op %s: %s", op, e);
           elle::serialization::json::SerializerOut response(std::cout);
           response.serialize("success", false);
@@ -826,17 +910,25 @@ main(int argc, char** argv)
     { "name", value<std::string>(), "volume name" },
     { "mountpoint,m", value<std::string>(), "where to mount the filesystem" },
     { "readonly", bool_switch(), "mount as readonly" },
-#ifdef INFINIT_MACOSX
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
     { "mount-name", value<std::string>(), "name of mounted volume" },
-    { "mount-icon", value<std::string>(), "icon for mounted volume" },
+#endif
+#ifdef INFINIT_MACOSX
+    { "mount-icon", value<std::string>(),
+      "path to an icon for mounted volume" },
     { "finder-sidebar", bool_switch(), "show volume in Finder sidebar" },
 #endif
-    { "async", bool_switch(), "use asynchronous operations" },
+    { "async", bool_switch(), "use asynchronous write operations" },
+#ifndef INFINIT_WINDOWS
+    { "daemon,d", bool_switch(), "run as a background daemon" },
+    { "fuse-option", value<std::vector<std::string>>()->multitoken(),
+      "option to pass directly to FUSE" },
+#endif
     option_cache,
-    option_cache_size,
-    option_cache_ttl,
-    option_cache_invalidation,
-    option_cache_disk_cache_size,
+    option_cache_ram_size,
+    option_cache_ram_ttl,
+    option_cache_ram_invalidation,
+    option_cache_disk_size,
     { "fetch-endpoints", bool_switch(),
       elle::sprintf("fetch endpoints from %s", beyond(true)) },
     { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
@@ -847,7 +939,14 @@ main(int argc, char** argv)
     { "push,p", bool_switch(), "alias for --push-endpoints" },
     { "publish", bool_switch(),
       "alias for --fetch-endpoints --push-endpoints" },
-    { "port-file", value<std::string>(), "write node listening port to file" },
+    option_endpoint_file,
+    option_port_file,
+    option_port,
+  };
+  std::vector<Mode::OptionDescription> options_run_mount_hidden = {
+#ifdef INFINIT_MACOSX
+    option_disable_mac_utf8,
+#endif
   };
   Modes modes {
     {
@@ -876,7 +975,7 @@ main(int argc, char** argv)
       &export_,
       "--name VOLUME",
       {
-        { "name,n", value<std::string>(), "network to export" },
+        { "name,n", value<std::string>(), "volume to export" },
         option_output("volume"),
       },
     },
@@ -917,6 +1016,8 @@ main(int argc, char** argv)
       &run,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
+      {},
+      options_run_mount_hidden,
     },
     {
       "mount",
@@ -924,6 +1025,8 @@ main(int argc, char** argv)
       &mount,
       "--name VOLUME [--mountpoint PATH]",
       options_run_mount,
+      {},
+      options_run_mount_hidden,
     },
     {
       "delete",

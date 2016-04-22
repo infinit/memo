@@ -190,8 +190,7 @@ namespace infinit
         print(std::ostream& stream) const override;
         /// local hooks interface
         void
-        store(infinit::model::blocks::Block const& block,
-              infinit::model::StoreMode mode);
+        store(infinit::model::blocks::Block const& block);
         void
         fetch(Address address,
               std::unique_ptr<infinit::model::blocks::Block>& res);
@@ -205,11 +204,11 @@ namespace infinit
       `--------*/
       protected:
         virtual
-        reactor::Generator<Overlay::Member>
+        reactor::Generator<Overlay::WeakMember>
         _lookup(infinit::model::Address address, int n,
                 infinit::overlay::Operation op) const override;
         virtual
-        Overlay::Member
+        WeakMember
         _lookup_node(Address address) override;
       private:
         typedef infinit::model::doughnut::Local Local;
@@ -297,7 +296,7 @@ namespace infinit
         Contact*
         get_or_make(Address address, bool observer,
           std::vector<GossipEndpoint> endpoints, bool make=true);
-        Node::Member
+        Overlay::WeakMember
         make_peer(PeerLocation pl);
         packet::RequestKey make_key_request();
         bool remote_retry_connect(model::doughnut::Remote& remote,
@@ -342,8 +341,9 @@ namespace infinit
         std::string _rdv_id;
         std::string _rdv_host;
         std::unordered_map<std::string, elle::Buffer> _challenges;
-        std::unordered_map<Address,
-          std::vector<Node::Member>> _peer_cache;
+        ELLE_ATTRIBUTE(
+          (std::unordered_map<Address, std::vector<Overlay::WeakMember>>),
+          peer_cache);
         // node_id -> (lookup_thread, lookup_success)
         std::unordered_map<Address,
           std::pair<reactor::Thread::unique_ptr, bool>> _node_lookups;

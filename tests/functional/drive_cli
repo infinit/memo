@@ -137,7 +137,7 @@ with Beyond() as beyond,\
   # Create them passports and push invitation.
   bob.run(['infinit-drive', '--as', 'bob',
           '--invite', 'employees',
-          '--push', '--passports'])
+          '--push', '--passport'])
 
   god1.run(['infinit-drive', '--fetch', '--as', 'god1'])
   god2.run(['infinit-drive', '--fetch', '--as', 'god2'])

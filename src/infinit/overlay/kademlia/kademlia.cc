@@ -210,14 +210,13 @@ namespace kademlia
     _mask = Address(v);
     if (local)
     {
-      local->on_fetch.connect(std::bind(&Kademlia::fetch, this,
-                                        std::placeholders::_1,
-                                        std::placeholders::_2));
-      local->on_store.connect(std::bind(&Kademlia::store, this,
-                                        std::placeholders::_1,
-                                        std::placeholders::_2));
-      local->on_remove.connect(std::bind(&Kademlia::remove, this,
-                                         std::placeholders::_1));
+      local->on_fetch().connect(std::bind(&Kademlia::fetch, this,
+                                          std::placeholders::_1,
+                                          std::placeholders::_2));
+      local->on_store().connect(std::bind(&Kademlia::store, this,
+                                          std::placeholders::_1));
+      local->on_remove().connect(std::bind(&Kademlia::remove, this,
+                                           std::placeholders::_1));
       this->_port = local->server_endpoint().port();
       this->_config.port = this->_port;
     }
@@ -437,7 +436,7 @@ namespace kademlia
     }
   }
 
-  reactor::Generator<Kademlia::Member>
+  reactor::Generator<Kademlia::WeakMember>
   Kademlia::_lookup(infinit::model::Address address,
                     int n, infinit::overlay::Operation op) const
   {
@@ -471,10 +470,11 @@ namespace kademlia
           /* FIXME BEARCLAW */ Address(),
           ep));
       ELLE_TRACE("%s: returning", *this);
-      return reactor::generator<Member>(
-        [res] (reactor::yielder<Member>::type const& yield)
+      return reactor::generator<WeakMember>(
+        [res] (reactor::yielder<WeakMember>::type const& yield)
         {
-          for (auto r: res) yield(r);
+          for (auto r: res)
+            yield(r);
         });
     }
 
@@ -482,10 +482,6 @@ namespace kademlia
     ELLE_TRACE("%s: waiting for value query", *this);
     q->barrier.wait();
     ELLE_TRACE("%s: waiting done", *this);
-    if (q->storeResult.empty() && op == infinit::overlay::OP_INSERT_OR_UPDATE)
-    {
-      return _lookup(address, n, infinit::overlay::OP_INSERT);
-    }
     infinit::overlay::Overlay::Members res;
     if (!q->storeResult.empty())
     {
@@ -499,15 +495,18 @@ namespace kademlia
     }
     else
       throw infinit::model::MissingBlock(address);
-    return reactor::generator<Member>([res]  (reactor::yielder<Member>::type const& yield)
+    return reactor::generator<WeakMember>(
+      [res] (reactor::yielder<WeakMember>::type const& yield)
       {
-        for (auto r: res) yield(r);
+        for (auto r: res)
+          yield(r);
       });
   }
 
-  Kademlia::Member Kademlia::_lookup_node(infinit::model::Address address)
+  infinit::overlay::Overlay::WeakMember
+  Kademlia::_lookup_node(infinit::model::Address address)
   {
-    return Overlay::Member();
+    return Overlay::WeakMember();
   }
 
   static int qid = 0;
@@ -582,19 +581,17 @@ namespace kademlia
     s.serialize("wait_ms", wait_ms);
   }
 
-  void Kademlia::store(infinit::model::blocks::Block const& block,
-                       infinit::model::StoreMode mode)
+  void Kademlia::store(infinit::model::blocks::Block const& block)
   {
     // advertise it
     ELLE_TRACE("%s: Advertizing %x", *this, block.address());
   }
+
   void Kademlia::remove(Address address)
-  {
-  }
+  {}
 
   void Kademlia::fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b)
-  {
-  }
+  {}
 
   void Kademlia::print(std::ostream& o) const
   {

@@ -169,7 +169,7 @@ COMMAND(invite)
   ELLE_DEBUG("push: %s", push);
   if (!emails && !users && !push)
     throw CommandLineError("specify users using --user and/or --email");
-  bool generate_passports = flag(args, "passports");
+  bool generate_passports = flag(args, "passport");
   ELLE_DEBUG("generate passports: %s", generate_passports);
   if (emails)
   {
@@ -525,7 +525,7 @@ main(int argc, char** argv)
         { "push-invitations", bool_switch(),
           "update remote drive descriptor and send invitations" },
         { "push,p", bool_switch(), "alias for --push-invitations" },
-        { "passports", bool_switch(), "create passports for each invitee" },
+        { "passport", bool_switch(), "create passports for each invitee" },
       },
       {},
       // Hidden options.

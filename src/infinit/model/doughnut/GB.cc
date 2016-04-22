@@ -230,6 +230,12 @@ namespace infinit
         return res;
       }
 
+      std::shared_ptr<cryptography::rsa::PrivateKey>
+      GB::control_key() const
+      {
+        return _owner_private_key;
+      }
+
       std::unique_ptr<blocks::Block>
       GB::clone() const
       {

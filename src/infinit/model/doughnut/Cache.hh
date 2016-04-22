@@ -7,6 +7,7 @@
 # include <boost/multi_index_container.hpp>
 # include <boost/multi_index/hashed_index.hpp>
 # include <boost/multi_index/identity.hpp>
+# include <boost/multi_index/mem_fun.hpp>
 # include <boost/multi_index/ordered_index.hpp>
 # include <boost/multi_index/sequenced_index.hpp>
 
@@ -137,6 +138,9 @@ namespace infinit
         private:
           void _load_disk_cache();
           void _disk_cache_push(std::unique_ptr<blocks::Block>& block);
+          typedef std::unordered_map<Address, std::shared_ptr<reactor::Barrier>>
+          Pending;
+          ELLE_ATTRIBUTE(Pending, pending);
         };
       }
     }

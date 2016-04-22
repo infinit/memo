@@ -1,4 +1,3 @@
-import cryptography
 
 import json
 import pipes
@@ -54,12 +53,15 @@ class Infinit(TemporaryDirectory):
   def run(self, args, input = None, return_code = 0, env = {}):
     if isinstance(args, str):
       args = args.split(' ')
+    args[0] += os.environ.get('EXE_EXT', '')
     self.env = {
       'PATH': os.environ['PATH'],
       'INFINIT_HOME': self.dir,
       'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',
     }
+    if 'WINEDEBUG' in os.environ:
+        self.env['WINEDEBUG'] = os.environ['WINEDEBUG']
     if 'ELLE_LOG_LEVEL' in os.environ:
       self.env['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
@@ -107,7 +109,7 @@ class Infinit(TemporaryDirectory):
       return json.loads(out)
     except:
       _out = []
-      for line in out.split('\n'):
+      for line in out.split(os.environ.get('EXE_EXT', '') and '\r\n' or '\n'):
         if len(line) == 0:
           continue
         try:

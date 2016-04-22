@@ -523,16 +523,14 @@ run(variables_map const& args)
   bool fetch = args.count("fetch") && args["fetch"].as<bool>();
   if (fetch)
     beyond_fetch_endpoints(network, hosts);
-  bool cache = flag(args, option_cache.long_name());
-  boost::optional<int> cache_size =
-    option_opt<int>(args, option_cache_size.long_name());
-  boost::optional<int> cache_ttl =
-    option_opt<int>(args, option_cache_ttl.long_name());
-  boost::optional<int> cache_invalidation =
-    option_opt<int>(args, option_cache_invalidation.long_name());
+  bool cache = flag(args, option_cache);
+  auto cache_ram_size = optional<int>(args, option_cache_ram_size);
+  auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
+  auto cache_ram_invalidation =
+    optional<int>(args, option_cache_ram_invalidation);
   report_action("running", "network", network.name);
   auto model = network.run(
-    hosts, true, cache, cache_size, cache_ttl, cache_invalidation,
+    hosts, true, cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
     flag(args, "async"));
   auto fs = elle::make_unique<infinit::filesystem::FileSystem>(
     args["volume"].as<std::string>(),
@@ -563,9 +561,9 @@ int main(int argc, char** argv)
         { "volume", value<std::string>(), "created volume name" },
         { "async", bool_switch(), "Use asynchronious operations" },
         option_cache,
-        option_cache_size,
-        option_cache_ttl,
-        option_cache_invalidation,
+        option_cache_ram_size,
+        option_cache_ram_ttl,
+        option_cache_ram_invalidation,
       },
     },
   };

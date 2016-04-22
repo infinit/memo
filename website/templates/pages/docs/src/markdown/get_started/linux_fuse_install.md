@@ -4,5 +4,6 @@
 </code></pre>
 
 <p>Some distributions, such as Red Hat Enterprise Linux and CentOS, require that you add your user to the <em>fuse</em> group. You will only need to do this step if you get a <em>permission denied</em> error when trying to mount a volume. After adding the user to the group, you will need to logout and back in again.</p>
+
 <pre><code>$> sudo usermod -a -G fuse $USER
 </code></pre>

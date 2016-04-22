@@ -9,19 +9,16 @@ namespace infinit
       MutableBlock::MutableBlock(Address address)
         : Super(address)
         , _data_changed(true)
-        , _is_local(true)
       {}
 
       MutableBlock::MutableBlock(Address address, elle::Buffer data)
         : Super(address, data)
         , _data_changed(true)
-        , _is_local(true)
       {}
 
       MutableBlock::MutableBlock(MutableBlock const& other)
         : Super(other)
         , _data_changed(other._data_changed)
-        , _is_local(other._is_local)
       {}
 
       void
@@ -55,7 +52,6 @@ namespace infinit
                                  elle::Version const& version)
         : Super(input, version)
         , _data_changed(false)
-        , _is_local(false)
       {
         this->_serialize(input);
       }

@@ -1,13 +1,38 @@
-﻿Get Started
+﻿
+<div><%
+  if "mac" in request.path:
+    osname = "mac"
+  elif "linux" in request.path:
+    osname = "linux"
+  elif "windows" in request.path:
+    osname = "windows"
+  elif os() == "Macintosh":
+    osname = "mac"
+  elif os() == "Windows":
+    osname = "windows"
+  else:
+    osname = "linux"
+
+  if osname == "mac" or osname == "linux":
+    demo_mountpoint = "~/mnt-demo"
+    demo_home = "$PWD/share/infinit/filesystem/test/home/"
+    ls_command = "ls"
+    exe = ""
+  else:
+    demo_mountpoint = "z:"
+    demo_home = "c:/PATH_TO_INFINIT/share/infinit/filesystem/test/home/"
+    ls_command = "dir"
+    exe = ".exe"
+%></div>
+
+Get Started
 =========
 
 <div>
-% if os() == "Windows":
-<blockquote class="warning">
-<strong>Notice:</strong> The following is written for users of Mac OS X and Linux only. Please <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to know when it’s available for <strong>Windows</strong>.
-</blockquote>
+% if osname == "windows":
+<p><em>The following is written for users of Windows. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_linux')}">Linux</a> guide.</em></p>
 
-% elif "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+% elif osname == "mac":
 <p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
 
 % else:
@@ -24,9 +49,16 @@
 <h3 class="skip">Download and install Infinit’s dependencies</h3>
 
 <div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
+% if osname == "mac":
 
 <%include file='get_started/mac_fuse_install.html'/>
+
+<!-- % elif osname == "windows": -->
+
+<!-- <p> Infinit relies on <a href="https://github.com/dokan-dev/dokany">dokany</a> to create filesystems in userland. You will need to install it from the link below:</p>
+<p><a href="https://github.com/dokan-dev/dokany/releases/download/v1.0.0-RC1/DokanSetup.exe" class="button">Download DOKANY</a></p> -->
+
+<!-- <em><strong>NOTE</strong>: Infinit currently requires a 64 bit version of Windows 7 or Windows 8.</em> -->
 
 % else:
 
@@ -38,9 +70,10 @@
 <h3 class="skip">Download and install the Infinit command-line tools</h3>
 
 <div>
-% if "mac" in request.path or (os() == "Macintosh" and "linux" not in request.path):
 
-<p>If you have <a href="http://brew.sh">homebrew</a>, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball install.</p>
+% if osname == "mac":
+
+<p>If you have <a href="http://brew.sh">Homebrew</a>, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball install.</p>
 
 <ul data-tabs class="tabs">
   <li><a data-tab href="#mac-homebrew-install" class="active">• Homebrew Install</a></li>
@@ -53,6 +86,12 @@
   <div data-tabs-pane class="tabs-pane active" id="mac-homebrew-install">
     <h3 class="skip">Homebrew Install</h3>
     <%include file='get_started/mac_homebrew_install.html'/>
+    <p>Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:</p>
+
+    <pre><code>$> cd /usr/local
+$> ls
+bin/    lib/    share/
+</code></pre>
   </div>
 
   <div data-tabs-pane class="tabs-pane" id="mac-tarball-install">
@@ -61,19 +100,19 @@
 
     <p>Next, open your terminal and extract the Infinit tarball:</p>
 
-    <pre><code>$> tar xjvf Infinit-x86_64-osx-clang3-${tarball_version}.tbz
-Infinit-${tarball_version}/
-Infinit-${tarball_version}/bin/
-Infinit-${tarball_version}/lib
+    <pre><code>$> tar xjvf infinit-x86_64-osx-clang3-${tarball_version}.tbz
+infinit-${tarball_version}/
+infinit-${tarball_version}/bin/
+infinit-${tarball_version}/lib
 ...
-Infinit-${tarball_version}/bin/infinit-storage
-Infinit-${tarball_version}/bin/infinit-user
-Infinit-${tarball_version}/bin/infinit-volume
+infinit-${tarball_version}/bin/infinit-storage
+infinit-${tarball_version}/bin/infinit-user
+infinit-${tarball_version}/bin/infinit-volume
 ...</code></pre>
 
-    <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+<p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
 
-    <pre><code>$> cd Infinit-${tarball_version}/
+    <pre><code>$> cd infinit-${tarball_version}/
 $> ls
 bin/    lib/    share/
 </code></pre>
@@ -81,23 +120,37 @@ bin/    lib/    share/
   </div>
 </div>
 
-<div> <!-- open it again -->
+<!-- % elif osname == "windows": -->
 
+<!-- <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+<p>Click the link below to download the Infinit command-line tools:</p>
+
+<a href="https://storage.googleapis.com/sh_infinit_releases/windows/Infinit-windows-${tarball_version}.zip
+" class="button">Download Command Line Tools</a>
+<p>Extract the downloaded zip file to some directory.</p> -->
+
+<div>
 % else:
 
 <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball Install.</p>
 
 <ul data-tabs class="tabs">
-  <li><a data-tab href="#linux-homebrew-install" class="active">• Repository Install</a></li>
+  <li><a data-tab href="#linux-repository-install" class="active">• Repository Install</a></li>
   <li><a data-tab href="#linux-tarball-install">• Tarball Install</a></li>
 </ul>
 
 </div> <!-- need closing condition div before opening a new one -->
 
 <div data-tabs-content class="data-tabs-content">
-  <div data-tabs-pane class="tabs-pane active" id="linux-homebrew-install">
+  <div data-tabs-pane class="tabs-pane active" id="linux-repository-install">
     <h3 class="skip">Repository Install</h3>
     <%include file='get_started/linux_apt_install.html'/>
+
+    <p>Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:</p>
+    <pre><code>$> cd /opt/infinit
+$> ls
+bin/    lib/    share/
+</code></pre>
   </div>
 
   <div data-tabs-pane class="tabs-pane" id="linux-tarball-install">
@@ -106,20 +159,20 @@ bin/    lib/    share/
 
     <p>Next, open your terminal and extract the Infinit tarball:</p>
 
-    <pre><code>$> tar xjvf Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
-Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
-Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
-Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
+    <pre><code>$> tar xjvf infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
 ...
-Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-storage
-Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-user
-Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-volume
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-storage
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-user
+infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-volume
 ...
 </code></pre>
 
     <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
 
-    <pre><code>$> cd Infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+    <pre><code>$> cd infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
 $> ls
 bin/    lib/    share/
 </code></pre>
@@ -127,8 +180,7 @@ bin/    lib/    share/
   </div>
 </div>
 
-<div> <!-- open it again -->
-
+<div>
 % endif
 </div>
 
@@ -162,16 +214,30 @@ Running volume "infinit/demo".
 
 _**NOTE**: You can stop this test volume by hitting `CTRL^C` or by interrupting the infinit-volume process._
 
-This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `~/mnt-demo/`.
+This command mounts the volume named ‘infinit/demo’ on behalf of the user ‘demo’ and makes it accessible through the mount point `${demo_mountpoint}`.
 
-Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `~/mnt-demo/` as you would any other POSIX-compliant filesystem.
+Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point `${demo_mountpoint}` as you would any other POSIX-compliant filesystem.
 
 Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.
 
 ```
-$> ls ~/mnt-demo/
+$> ${ls_command} ${demo_mountpoint}
 Aosta Valley/         Brannenburg/          Cape Town/            Infinit_MakingOf.mp4 New York/             Paris/
 ```
+
+<!-- <div>
+% if osname == "windows":
+</div>
+
+<p><em><strong>NOTE</strong>: You must specify an unused drive letter as the mount point argument, mounting to an arbitrary path is not supported.</em></p>
+
+<p>You can also browse the files from an explorer window.</p>
+
+<p><em><strong>NOTE</strong>: If the new drive does not appear automatically in the `my PC` virtual directory, try entering `z:` in the url bar of explorer. If this fails with an error, open the start menu, select `run command`, and enter at the prompt `explorer z:`.</em></p>
+
+<div>
+% endif
+</div> -->
 
 3. Create Infrastructure
 -------------------------------
@@ -184,9 +250,15 @@ It is now time for you to **create your own storage infrastructure**. What follo
 
 First, add the `bin/` directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:
 
-```
-$> export PATH=$PWD/bin/:$PATH
-```
+<div>
+<!-- % if osname == "windows":
+<pre><code>$> set PATH=c:/path_to_infinit/bin;%PATH%
+</code></pre> -->
+<!-- % else: -->
+<pre><code>$> export PATH=$PWD/bin/:$PATH
+</code></pre>
+<!-- %endif -->
+</div>
 
 ### Create a user
 
@@ -194,7 +266,7 @@ The first step consists of creating a user on the Hub. All the commands that fol
 
 <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
 Generating RSA keypair.
-Remotely pushed user "alice".
+Remotely saved user "alice".
 </code></pre>
 
 ### Create a storage resource
@@ -217,7 +289,7 @@ The _infinit-network_ command is used to create the network, specifying a name a
 
 <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
 Locally created network "alice/my-network".
-Remotely pushed network "alice/my-network".
+Remotely saved network "alice/my-network".
 </code></pre>
 
 *__NOTE__: The `--push` option is used to publish the created network (likewise for other objects) onto the Hub for it to be easily fetched on another device or shared with other users.*
@@ -228,7 +300,7 @@ The last step on this device consists of creating a logical volume to store and 
 
 <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
 Locally created volume "alice/my-volume".
-Remotely pushed volume "alice/my-volume".
+Remotely saved volume "alice/my-volume".
 </code></pre>
 
 That’s it, you’ve created a volume named ‘my-volume’ i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named ‘my-network’, currently composed of a single computer with a single storage resource.
@@ -240,7 +312,7 @@ Let’s access this volume by mounting it as easily as any other filesystem:
 <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
 Fetched endpoints for "alice/my-network".
 Running network "alice/my-network".
-Remotely pushed endpoints for "alice/my-network".
+Remotely saved endpoints for "alice/my-network".
 Running volume "alice/my-volume".
 ...
 </code></pre>

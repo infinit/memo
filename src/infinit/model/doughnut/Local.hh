@@ -44,6 +44,20 @@ namespace infinit
               int port = 0,
               Protocol p = Protocol::all);
         ~Local();
+        /** Called after every element of the DHT has been initialized.
+         *
+         *  The overlay does not exist upon construction, for instance.
+         */
+        virtual
+        void
+        initialize();
+        /** Get ready for destrucion.
+         *
+         *  Release all shared self-reference.
+         */
+        virtual
+        void
+        cleanup();
         ELLE_ATTRIBUTE_R(std::unique_ptr<storage::Storage>, storage);
         ELLE_ATTRIBUTE_R(Doughnut&, doughnut);
 
@@ -68,19 +82,25 @@ namespace infinit
         virtual
         void
         remove(Address address, blocks::RemoveSignature rs) override;
-        boost::signals2::signal<
-          void (blocks::Block const& block, StoreMode mode)> on_store;
-        boost::signals2::signal<
-          void (Address, std::unique_ptr<blocks::Block>&)> on_fetch;
-        boost::signals2::signal<
-          void (Address)> on_remove;
-        boost::signals2::signal<
-          void (RPCServer&)> on_connect;
       protected:
         virtual
         std::unique_ptr<blocks::Block>
         _fetch(Address address,
                boost::optional<int> local_version) const override;
+
+      /*------.
+      | Hooks |
+      `------*/
+      public:
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (blocks::Block const& block)>, on_store);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<
+            void (Address, std::unique_ptr<blocks::Block>&)>, on_fetch);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (Address)>, on_remove);
+        ELLE_ATTRIBUTE_RX(
+          boost::signals2::signal<void (RPCServer&)>, on_connect);
 
       /*-------.
       | Server |
@@ -88,6 +108,8 @@ namespace infinit
       public:
         reactor::network::TCPServer::EndPoint
         server_endpoint();
+        std::vector<reactor::network::TCPServer::EndPoint>
+        server_endpoints();
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::network::TCPServer>, server);
         ELLE_ATTRIBUTE(std::unique_ptr<reactor::Thread>, server_thread);
         ELLE_ATTRIBUTE_RX(std::unique_ptr<reactor::network::UTPServer>, utp_server);

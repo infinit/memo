@@ -1,10 +1,12 @@
 #include <elle/filesystem/TemporaryDirectory.hh>
+#include <elle/serialization/json.hh>
 #include <elle/test.hh>
 
 #include <infinit/storage/Collision.hh>
 #include <infinit/storage/Filesystem.hh>
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/MissingKey.hh>
+#include <infinit/storage/S3.hh>
 #include <infinit/storage/Storage.hh>
 
 ELLE_LOG_COMPONENT("tests.storage");
@@ -116,6 +118,39 @@ filesystem_large_capacity()
   tests_capacity(storage, size);
 }
 
+extern const std::string zero_five_four_s3_storage_reduced;
+extern const std::string zero_five_four_s3_storage_default;
+
+static
+void
+s3_storage_class_backward(bool reduced)
+{
+  ELLE_TRACE("starting s3_storage_class_backward_%s",
+             reduced ? "reduced" : "default");
+  std::stringstream ss(reduced ? zero_five_four_s3_storage_reduced
+                               : zero_five_four_s3_storage_default);
+  using elle::serialization::json::deserialize;
+  auto config = deserialize<infinit::storage::S3StorageConfig>(ss, false);
+  BOOST_CHECK_EQUAL(
+    static_cast<int>(config.storage_class),
+    static_cast<int>(reduced ? aws::S3::StorageClass::ReducedRedundancy
+                             : aws::S3::StorageClass::Default));
+}
+
+static
+void
+s3_storage_class_backward_reduced()
+{
+  s3_storage_class_backward(true);
+}
+
+static
+void
+s3_storage_class_backward_default()
+{
+  s3_storage_class_backward(false);
+}
+
 ELLE_TEST_SUITE()
 {
   auto& suite = boost::unit_test::framework::master_test_suite();
@@ -123,4 +158,34 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(filesystem_small_capacity));
   suite.add(BOOST_TEST_CASE(filesystem_large_capacity));
   suite.add(BOOST_TEST_CASE(memory));
+  suite.add(BOOST_TEST_CASE(s3_storage_class_backward_reduced));
+  suite.add(BOOST_TEST_CASE(s3_storage_class_backward_default));
 }
+
+const std::string zero_five_four_s3_storage_reduced =
+"{"
+"    \"aws_credentials\" : {"
+"        \"access_key_id\" : \"AKIAIOSFODNN7EXAMPLE\","
+"        \"bucket\" : \"some-bucket\","
+"        \"folder\" : \"some-folder\","
+"        \"region\" : \"eu-central-1\","
+"        \"secret_access_key\" : \"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\""
+"    },"
+"    \"name\" : \"s3\","
+"    \"reduced_redundancy\" : true,"
+"    \"type\" : \"s3\""
+"}";
+
+const std::string zero_five_four_s3_storage_default =
+"{"
+"    \"aws_credentials\" : {"
+"        \"access_key_id\" : \"AKIAIOSFODNN7EXAMPLE\","
+"        \"bucket\" : \"some-bucket\","
+"        \"folder\" : \"some-folder\","
+"        \"region\" : \"eu-central-1\","
+"        \"secret_access_key\" : \"wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\""
+"    },"
+"    \"name\" : \"s3\","
+"    \"reduced_redundancy\" : false,"
+"    \"type\" : \"s3\""
+"}";

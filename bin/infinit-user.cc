@@ -61,7 +61,7 @@ COMMAND(export_)
   auto avatar = avatar_path(name);
   if (avatar)
     user.avatar_path = avatar.get().string();
-  if (args.count("full") && args["full"].as<bool>())
+  if (flag(args, "full"))
   {
     if (!script_mode)
     {
@@ -275,21 +275,22 @@ COMMAND(delete_)
   {
     std::string res;
     {
-      std::cout << "WARNING: You will no longer be able to access data, "
-                << std::endl
-                << "WARNING: volumes or networks for this user." << std::endl
-                << "WARNING: The user's private key will be lost, you will not"
-                << std::endl
-                << "WARNING: be able to pull the user from " << beyond(true)
-                << "." << std::endl << std::endl
-                << "Confirm the name of the user you would like to delete: ";
+      std::cout
+        << "WARNING: The local copy of the user's private key will be removed."
+        << std::endl
+        << "WARNING: You will no longer be able to perform actions on "
+        << beyond(true) << std::endl
+        << "WARNING: for this user." << std::endl
+        << std::endl
+        << "Confirm the name of the user you would like to delete: ";
       std::getline(std::cin, res);
     }
     if (res != user.name)
-      throw CommandLineError("Aborting...");
+      throw elle::Error("Aborting...");
   }
-  bool ok = boost::filesystem::remove(path);
-  if (ok)
+  if (avatar_path(name))
+    boost::filesystem::remove(avatar_path(name).get());
+  if (boost::filesystem::remove(path))
     report_action("deleted", "user", user.name, std::string("locally"));
   else
   {
@@ -393,7 +394,7 @@ _save_avatar(std::string const& name,
   ifnt._open_write(f, ifnt._user_avatar_path(name),
                    name, "avatar", true);
   f << buffer.string();
-  report_action("fetched", "avatar", name, std::string("locally"));
+  report_action("saved", "avatar", name, std::string("locally"));
 }
 
 void

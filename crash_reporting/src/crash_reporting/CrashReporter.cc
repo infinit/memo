@@ -1,6 +1,7 @@
 #include <crash_reporting/CrashReporter.hh>
 
-#include <elle/os/environ.hh>
+#include <elle/format/base64.hh>
+#include <elle/json/json.hh>
 #include <elle/log.hh>
 #include <elle/system/platform.hh>
 #include <elle/system/user_paths.hh>
@@ -44,11 +45,13 @@ namespace crash_reporting
   }
 
   CrashReporter::CrashReporter(std::string crash_url,
-                               boost::filesystem::path dumps_path)
+                               boost::filesystem::path dumps_path,
+                               std::string version)
     : _crash_url(std::move(crash_url))
     , _enabled(true)
     , _exception_handler(nullptr)
     , _dumps_path(std::move(dumps_path))
+    , _version(std::move(version))
   {
 #ifdef INFINIT_LINUX
     google_breakpad::MinidumpDescriptor descriptor(this->_dumps_path.string());
@@ -148,11 +151,25 @@ namespace crash_reporting
         ELLE_DEBUG("%s: uploading: %s", *this, path);
         reactor::http::Request r(this->_crash_url,
                                  reactor::http::Method::PUT,
-                                 "application/octet-stream");
-        std::istreambuf_iterator<char> end;
-        std::copy(std::istreambuf_iterator<char>(f),
-                  end,
-                  std::ostreambuf_iterator<char>(r));
+                                 "application/json");
+        elle::Buffer dump;
+        elle::IOStream stream(dump.ostreambuf());
+        elle::format::base64::Stream base64_stream(stream);
+        auto const chunk_size = 16 * 1024;
+        char chunk[chunk_size + 1];
+        chunk[chunk_size] = 0;
+        while (!f.eof())
+        {
+          f.read(chunk, chunk_size);
+          base64_stream.write(chunk, chunk_size);
+          base64_stream.flush();
+        }
+        elle::json::Object content;
+        content["dump"] = dump.string();
+        content["platform"] = elle::system::platform::os_description();
+        content["version"] = this->_version;
+        ELLE_DUMP("%s: content to upload: %s", *this, content);
+        elle::json::write(r, content);
         if (r.status() == reactor::http::StatusCode::OK)
         {
           ELLE_DUMP("%s: removing uploaded crash dump: %s", *this, path);
@@ -164,8 +181,6 @@ namespace crash_reporting
           ELLE_ERR("%s: unable to upload crash report (%s) to %s: %s",
                    *this, path, this->_crash_url, r.status());
         }
-        if (f.is_open())
-          f.close();
       }
       catch (reactor::http::RequestError const& e)
       {

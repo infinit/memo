@@ -41,12 +41,13 @@ class SymbolsGenerator(drake.Builder):
 
   def sym_output_path(self, sym_file):
     # Remove existing sym files if they exist.
-    existing_path = \
-      '%s/%s' % (self.__normalized_output_path, sym_file.path().basename())
+    existing_path = '%s/%s' % (
+      self.__normalized_output_path,
+      sym_file.path().basename().without_last_extension())
     import os
-    if os.path.exists(str(existing_path)):
+    if os.path.exists(existing_path):
       import shutil
-      shutil.rmtree(str(existing_path))
+      shutil.rmtree(existing_path)
     res = None
     with open(str(sym_file), 'r') as f:
       line = f.readline()

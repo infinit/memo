@@ -7,6 +7,7 @@
 
 #include <elle/Error.hh>
 #include <elle/Exit.hh>
+#include <elle/finally.hh>
 #include <elle/With.hh>
 #include <elle/cast.hh>
 #include <elle/format/base64url.hh>
@@ -20,6 +21,9 @@
 #include <das/serializer.hh>
 
 #include <reactor/http/Request.hh>
+#include <reactor/network/rdv-socket.hh>
+#include <reactor/network/rdv-socket.hh>
+#include <reactor/network/buffer.hh>
 
 #include <cryptography/hash.hh>
 #include <cryptography/rsa/KeyPair.hh>
@@ -29,8 +33,11 @@
 #include <reactor/scheduler.hh>
 #include <reactor/thread.hh>
 
-#include <crash_reporting/CrashReporter.hh>
+#ifndef INFINIT_WINDOWS
+# include <crash_reporting/CrashReporter.hh>
+#endif
 
+#include <infinit/utility.hh>
 #include <infinit/credentials/AWSCredentials.hh>
 #include <infinit/credentials/OAuthCredentials.hh>
 #include <infinit/filesystem/filesystem.hh>
@@ -48,6 +55,15 @@ std::string program;
 #define COMMAND(name) static void name(boost::program_options::variables_map const& args)
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
+
+bool
+show_hidden_options()
+{
+#ifndef INFINIT_PRODUCTION_BUILD
+  return true;
+#endif
+  return !elle::os::getenv("INFINIT_SHOW_HIDDEN_OPTIONS", "").empty();
+}
 
 std::string
 beyond(bool help = false)
@@ -67,7 +83,7 @@ class CommandLineError
 public:
   template <typename ... Args>
   CommandLineError(Args&& ... args)
-    : elle::Error(std::forward<Args>(args)...)
+    : elle::Error(elle::sprintf(std::forward<Args>(args)...))
   {}
 };
 
@@ -210,13 +226,30 @@ struct Mode
   class OptionDescription
     : public boost::program_options::option_description
   {
+  typedef std::pair<std::string, boost::program_options::value_semantic const*>
+    DeprecatedAliasPair;
   public:
-    OptionDescription(std::string const& name,
-                      boost::program_options::value_semantic const* s,
-                      std::string const& description)
+    OptionDescription(
+        std::string const& name,
+        boost::program_options::value_semantic const* s,
+        std::string const& description,
+        std::vector<DeprecatedAliasPair> const& deprecated_aliases_ = {})
       : boost::program_options::option_description(
           name.c_str(), s, upper_fchar(description).c_str())
-    {}
+    {
+      using boost::program_options::option_description;
+      for (auto const& deprecated: deprecated_aliases_)
+      {
+        deprecated_options.push_back(
+          boost::shared_ptr<option_description>(
+            new option_description(
+              deprecated.first.c_str(), deprecated.second,
+              elle::sprintf("Use \"--%s\" instead", name).c_str())));
+      }
+    }
+
+    std::vector<boost::shared_ptr<boost::program_options::option_description>>
+      deprecated_options;
   };
 
   class OptionsDescription;
@@ -279,10 +312,8 @@ struct Mode
 
   typedef
     std::function<void (boost::program_options::variables_map const&)> Action;
-  typedef
-    std::vector<OptionDescription> Options;
-  typedef
-    std::vector<OptionsDescription> OptionsVector;
+  typedef std::vector<OptionDescription> Options;
+  typedef std::vector<OptionsDescription> OptionsVector;
 
   Mode(std::string name_,
        std::string description_,
@@ -293,24 +324,34 @@ struct Mode
        Options hidden_options = {},
        OptionsVector hidden_extra_options = {})
     : name(std::move(name_))
-    , description(std::move(upper_fchar(description_)))
+    , description(upper_fchar(description_))
     , action(std::move(action_))
-    , help_complement(std::move(upper_fchar(help)))
+    , help_complement(upper_fchar(help))
     , options(this->description)
     , visible_options(this->description)
   {
+    namespace po = boost::program_options;
     Mode::OptionsDescription mode_options(
       elle::sprintf("%s options", upper_fchar(this->name)));
+    po::options_description deprecated("Deprecated options");
+    int deprecated_count = 0;
     for (auto const& option: options)
     {
       mode_options.add(
-        boost::shared_ptr<boost::program_options::option_description>
-        (new boost::program_options::option_description(std::move(option))));
+        boost::shared_ptr<po::option_description>
+        (new po::option_description(std::move(option))));
+      for (auto const& old: option.deprecated_options)
+      {
+        deprecated_count++;
+        deprecated.add(old);
+      }
     }
     this->_add_options(mode_options);
+    if (deprecated_count)
+      this->_add_options(deprecated, false);
     for (auto const& extra: extra_options)
       this->_add_options(extra);
-    boost::program_options::options_description hidden;
+    po::options_description hidden("Hidden options");
     for (auto const& option: hidden_options)
     {
       hidden.add(
@@ -326,10 +367,10 @@ struct Mode
   _add_options(boost::program_options::options_description const& options,
                bool visible_in_production = true)
   {
+    if (options.options().size() == 0)
+      return;
     this->options.add(options);
-#ifdef INFINIT_PRODUCTION_BUILD
-    if (visible_in_production)
-#endif
+    if (visible_in_production || show_hidden_options())
       this->visible_options.add(options);
   }
 
@@ -360,14 +401,18 @@ parse_args(boost::program_options::options_description const& options,
            std::vector<std::string> const& args,
            std::string const& positional_arg)
 {
-  auto parser = boost::program_options::command_line_parser(args);
-  boost::program_options::positional_options_description p;
+  namespace po = boost::program_options;
+  auto parser = po::command_line_parser(args);
+  auto style = static_cast<int>(po::command_line_style::default_style);
+  style &= ~po::command_line_style::allow_guessing;
+  parser.style(style);
+  po::positional_options_description p;
   p.add(positional_arg.c_str(), -1);
   parser.options(options).positional(p);
-  boost::program_options::variables_map res;
+  po::variables_map res;
   auto parsed = parser.run();
-  boost::program_options::store(parsed, res);
-  boost::program_options::notify(res);
+  po::store(parsed, res);
+  po::notify(res);
   return res;
 }
 
@@ -430,67 +475,6 @@ namespace infinit
   }
 
   inline
-  boost::filesystem::path
-  canonical_folder(boost::filesystem::path const& path)
-  {
-    if (exists(path) && !is_directory(path))
-      throw elle::Error(elle::sprintf("not a directory: %s", path));
-    create_directories(path);
-    permissions(
-      path, boost::filesystem::add_perms | boost::filesystem::owner_write);
-    return canonical(path);
-  }
-
-  inline
-  boost::filesystem::path
-  home()
-  {
-    static auto const infinit_home = elle::os::getenv("INFINIT_HOME", "");
-    return infinit_home.empty() ? elle::system::home_directory() : infinit_home;
-  }
-
-  inline
-  boost::filesystem::path
-  _xdg_home(std::string const& type, std::string const& def)
-  {
-    auto const infinit = elle::os::getenv("INFINIT_" + type + "_HOME", "");
-    auto const xdg = elle::os::getenv("XDG_" + type + "_HOME", "");
-    auto const dir =
-      !infinit.empty() ? infinit :
-      !xdg.empty() ? xdg :
-      home() / def / "infinit/filesystem";
-    return canonical_folder(dir);
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_cache_home()
-  {
-    return _xdg_home("CACHE", ".cache");
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_config_home()
-  {
-    return _xdg_home("CONFIG", ".config");
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_data_home()
-  {
-    return _xdg_home("DATA", ".local/share");
-  }
-
-  inline
-  boost::filesystem::path
-  xdg_state_home()
-  {
-    return _xdg_home("STATE", ".local/state");
-  }
-
-  inline
   void
   check_broken_locale()
   {
@@ -503,8 +487,71 @@ namespace infinit
       ELLE_WARN(
         "Something is wrong with your locale settings, overriding: %s",
         e.what());
-      setenv("LC_ALL", "C", 1);
+      elle::os::setenv("LC_ALL", "C", 1);
     }
+  }
+
+  // Return arguments for mode in the correct order.
+  // Note: just using "collect_unrecognized" is insufficient as this changes
+  // the order and does not handle the case where the binary has a mode and
+  // mode argument with the same name.
+  static
+  std::vector<std::string>
+  mode_arguments(
+    std::vector<std::string> tokens,
+    Mode const* mode,
+    Modes const& modes, boost::optional<Modes> hidden_modes,
+    boost::program_options::basic_parsed_options<char> const& parsed)
+  {
+    bool after_mode = false;
+    std::vector<std::string> res;
+    // Valid tokens are modes + unrecognized options.
+    std::vector<std::string> valid_tokens;
+    bool handling_valid_option = false;
+    for (auto const& m: modes)
+      valid_tokens.push_back(elle::sprintf("--%s", m.name));
+    if (hidden_modes)
+    {
+      for (auto const& m: hidden_modes.get())
+        valid_tokens.push_back(elle::sprintf("--%s", m.name));
+    }
+    for (auto val: boost::program_options::collect_unrecognized(
+          parsed.options, boost::program_options::include_positional))
+      valid_tokens.push_back(val);
+    for (auto const& token: tokens)
+    {
+      if (token == elle::sprintf("--%s", mode->name) && !after_mode)
+      {
+        after_mode = true;
+        // Handle case where token directly after mode is positional argument.
+        // e.g.: infinit-user --create bob
+        handling_valid_option = true;
+        continue;
+      }
+      if (!after_mode)
+        continue;
+      // We're after the mode in the tokens, check if we have a valid token.
+      if (std::find(valid_tokens.begin(), valid_tokens.end(), token)
+          != valid_tokens.end())
+      {
+        // Check if token is an option descriptor.
+        if (token.find("--") != std::string::npos)
+          handling_valid_option = true;
+        // Only push back valid option descriptors and their associated values.
+        if (handling_valid_option)
+          res.push_back(token);
+      }
+      // If we were passed an option descriptor, it's not a valid one. Ignore
+      // proceeding value.
+      else if (token.find("--") != std::string::npos)
+        handling_valid_option = false;
+      // Assume invalid option descriptors are not multitoken and accept next
+      // token as it is a positional argument.
+      // e.g.: infinit-network --export --as owner network
+      else
+        handling_valid_option = true;
+    }
+    return res;
   }
 
   int
@@ -513,11 +560,13 @@ namespace infinit
        int argc,
        char** argv,
        boost::optional<std::string> positional_arg = {},
-       boost::optional<bool> disable_as_arg = {})
+       boost::optional<bool> disable_as_arg = {},
+       boost::optional<Modes> hidden_modes = {})
   {
     try
     {
       std::string crash_host(elle::os::getenv("INFINIT_CRASH_REPORT_HOST", ""));
+#ifndef INFINIT_WINDOWS
       std::unique_ptr<crash_reporting::CrashReporter> crash_reporter;
 #ifdef INFINIT_PRODUCTION_BUILD
       bool const production_build = true;
@@ -533,14 +582,19 @@ namespace infinit
           crash_host.length() ? crash_host : beyond());
         auto dumps_path = canonical_folder(xdg_cache_home() / "crashes");
         crash_reporter = elle::make_unique<crash_reporting::CrashReporter>(
-          crash_url, dumps_path);
+          crash_url, dumps_path, version_describe);
       }
+#endif
       reactor::Scheduler sched;
       reactor::Thread main_thread(
         sched,
         "main",
-        [&sched, &modes, &desc, argc, argv, &positional_arg, &disable_as_arg,
-         &crash_reporter]
+        [&sched, &modes, &desc, argc, argv,
+         &positional_arg, &disable_as_arg, &hidden_modes
+#ifndef INFINIT_WINDOWS
+         ,&crash_reporter
+#endif
+         ]
         {
 #ifdef INFINIT_LINUX
           // boost::filesystem uses the default locale, detect here if it
@@ -553,10 +607,27 @@ namespace infinit
             using boost::program_options::value;
             Mode::OptionsDescription mode_options("Modes");
             for (auto const& mode: modes)
-              mode_options.add_options()(mode.name,
-                                         mode.description);
+              mode_options.add_options()(mode.name, mode.description);
+            Mode::OptionsDescription hidden_mode_options("Hidden Modes");
+            if (hidden_modes)
+            {
+              for (auto const& mode: hidden_modes.get())
+                hidden_mode_options.add_options()(mode.name, mode.description);
+            }
             Mode::OptionsDescription options(desc);
-            options.add(mode_options);
+            Mode::OptionsDescription visible_options(desc);
+            auto add_options =
+              [&] (boost::program_options::options_description const& m_options,
+                   bool visible_in_production = true)
+              {
+                if (m_options.options().size() == 0)
+                  return;
+                options.add(m_options);
+                if (visible_in_production || show_hidden_options())
+                  visible_options.add(m_options);
+              };
+            add_options(mode_options);
+            add_options(hidden_mode_options, false);
             Mode::OptionsDescription misc("Miscellaneous");
             misc.add_options()
               ("help,h", "display the help")
@@ -572,7 +643,7 @@ namespace infinit
                  "user to run commands as (default: system user)")
               ;
             }
-            options.add(misc);
+            add_options(misc);
             boost::program_options::variables_map vm;
             try
             {
@@ -596,25 +667,38 @@ namespace infinit
               if (vm.count("as"))
                 _as_user = vm["as"].as<std::string>();
               Mode const* mode = nullptr;
-              std::vector<std::string> args;
-              for (auto const& m: modes)
-                if (vm.count(m.name))
-                  if (!mode)
-                    mode = &m;
-                  else if (mode->name == "fetch" || mode->name == "push")
+              std::vector<std::string> tokens;
+              for (int i = 0; i < argc; i++)
+                tokens.emplace_back(std::string(argv[i]));
+              auto get_mode = [&] (Modes const& modes)
+                {
+                  int pos = std::distance(tokens.begin(), tokens.end());
+                  for (auto const& m: modes)
                   {
-                    args.push_back("--" + mode->name);
-                    mode = &m;
+                    if (vm.count(m.name))
+                    {
+                      int new_pos = std::distance(
+                        tokens.begin(),
+                        std::find(tokens.begin(), tokens.end(),
+                                  elle::sprintf("--%s", m.name)));
+                      if (new_pos < pos)
+                      {
+                        mode = &m;
+                        pos = new_pos;
+                      }
+                    }
                   }
-                  else
-                    args.push_back("--" + m.name);
+                };
+              get_mode(modes);
+              if (mode == nullptr && hidden_modes)
+                get_mode(hidden_modes.get());
               if (!mode)
               {
                 std::ostream& output = help ? std::cout : std::cerr;
                 output << "Usage: " << program
                        << " MODE [OPTIONS...]" << std::endl;
                 output << std::endl;
-                output << options;
+                output << visible_options;
                 output << std::endl;
                 if (help)
                   throw elle::Exit(0);
@@ -626,14 +710,8 @@ namespace infinit
                 mode->help(std::cout);
                 return;
               }
-              for (auto const& unrecognized:
-                     boost::program_options::collect_unrecognized(
-                       parsed.options,
-                       boost::program_options::include_positional))
-              {
-                args.push_back(unrecognized);
-              }
               std::unique_ptr<reactor::Thread> crash_upload_thread;
+#ifndef INFINIT_WINDOWS
               if (crash_reporter && crash_reporter->crashes_pending_upload())
               {
                 crash_upload_thread.reset(new reactor::Thread("upload crashes",
@@ -642,14 +720,24 @@ namespace infinit
                     crash_reporter->upload_existing();
                   }));
               }
+#endif
               try
               {
+                std::vector<std::string> args =
+                  mode_arguments(tokens, mode, modes, hidden_modes, parsed);
                 mode->action(parse_args(mode->options, args,
                              (positional_arg ? positional_arg.get() : "name")));
                 if (crash_upload_thread)
                   reactor::wait(*crash_upload_thread);
               }
               catch (CommandLineError const&)
+              {
+                mode->help(std::cerr);
+                if (crash_upload_thread)
+                  reactor::wait(*crash_upload_thread);
+                throw;
+              }
+              catch (boost::program_options::error_with_option_name const& e)
               {
                 mode->help(std::cerr);
                 if (crash_upload_thread)
@@ -819,14 +907,14 @@ namespace infinit
         boost::optional<int> cache_invalidation = {},
         bool async_writes = false,
         boost::optional<uint64_t> disk_cache_size = {},
-        boost::optional<elle::Version> version = {})
+        boost::optional<elle::Version> version = {},
+        boost::optional<int> port = {})
     {
       ELLE_LOG("client version: %s", version_describe);
-      boost::filesystem::path p = xdg_state_home() / "cache" / name;
       return this->dht()->make(
         hosts,
         client,
-        p,
+        this->cache_dir(),
         async_writes,
         cache,
         cache_size,
@@ -837,7 +925,8 @@ namespace infinit
           ? std::chrono::seconds(cache_invalidation.get())
           : boost::optional<std::chrono::seconds>(),
         disk_cache_size,
-        std::move(version));
+        std::move(version),
+        std::move(port));
     }
 
     inline
@@ -854,7 +943,14 @@ namespace infinit
                   "storage usage",
                   name,
                   std::move(s),
-                  user);
+                  user,
+                  false);
+    }
+
+    boost::filesystem::path
+    cache_dir() const
+    {
+      return xdg_state_home() / "cache" / this->name;
     }
 
     std::string name;
@@ -885,8 +981,16 @@ namespace infinit
       , overlay(s.deserialize<std::unique_ptr<overlay::Configuration>>
                 ("overlay"))
       , owner(s.deserialize<cryptography::rsa::PublicKey>("owner"))
-      , version(s.deserialize<elle::Version>("version"))
+      , version()
     {
+      try
+      {
+        version = s.deserialize<elle::Version>("version");
+      }
+      catch (elle::serialization::Error const&)
+      {
+        version = elle::Version(0, 3, 0);
+      }
       check_name(this->name);
     }
 
@@ -907,7 +1011,15 @@ namespace infinit
       s.serialize("consensus", this->consensus);
       s.serialize("overlay", this->overlay);
       s.serialize("owner", this->owner);
-      s.serialize("version", this->version);
+      try
+      {
+        s.serialize("version", this->version);
+      }
+      catch (elle::serialization::Error const&)
+      {
+        // Oldest versions did not specify compatibility version.
+        this->version = elle::Version(0, 3, 0);
+      }
     }
 
     std::string name;
@@ -953,20 +1065,30 @@ namespace infinit
     run(std::shared_ptr<model::doughnut::Doughnut> dht,
         boost::optional<std::string> mountpoint_ = {},
         boost::optional<bool> readonly = {}
-#ifdef INFINIT_MACOSX
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
         , boost::optional<std::string> volname_ = {}
+#endif
+#ifdef INFINIT_MACOSX
         , boost::optional<std::string> volicon_ = {}
+#endif
+#ifndef INFINIT_WINDOWS
+        , boost::optional<std::vector<std::string>> fuse_options = {}
 #endif
     )
     {
-      auto fs = elle::make_unique<filesystem::FileSystem>(this->name, dht);
-      auto driver =
-        elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+      if (!volname_)
+        volname_ = this->name;
+#endif
       boost::optional<boost::filesystem::path> mountpoint;
       if (mountpoint_)
         mountpoint = mountpoint_.get();
       else if (this->mountpoint)
         mountpoint = this->mountpoint.get();
+      auto fs = elle::make_unique<filesystem::FileSystem>(
+        this->name, dht, this->root_block_cache_dir(), mountpoint);
+      auto driver =
+        elle::make_unique<reactor::filesystem::FileSystem>(std::move(fs), true);
       if (mountpoint)
       {
         try
@@ -985,28 +1107,40 @@ namespace infinit
           mount_options.push_back("-o");
           mount_options.push_back("ro");
         }
-#ifdef INFINIT_MACOSX
-        auto add_option = [] (std::string const& opt_name,
-                              std::string const& opt_val,
-                              std::vector<std::string>& options)
+#ifndef INFINIT_WINDOWS
+        if (fuse_options)
+        {
+          for (auto const& opt: fuse_options.get())
           {
-            options.push_back("-o");
-            options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
+            mount_options.push_back("-o");
+            mount_options.push_back(opt);
+          }
+        }
+#endif
+#if defined(INFINIT_MACOSX) || defined(INFINIT_WINDOWS)
+        auto add_option =
+          [&mount_options] (std::string const& opt_name,
+                            std::string const& opt_val)
+          {
+            mount_options.push_back("-o");
+            mount_options.push_back(elle::sprintf("%s=%s", opt_name, opt_val));
           };
-        std::vector<std::string> mac_mount_options = {
-          "-o", "daemon_timeout=600",
-        };
-        if (volname_)
-          add_option("volname", volname_.get(), mac_mount_options);
+        add_option("volname", volname_.get());
+#endif
+#ifdef INFINIT_MACOSX
+        add_option("daemon_timeout", "600");
         if (volicon_)
-          add_option("volicon", volicon_.get(), mac_mount_options);
-        mount_options.insert(mount_options.end(),
-                             mac_mount_options.begin(),
-                             mac_mount_options.end());
+          add_option("volicon", volicon_.get());
 #endif
         driver->mount(mountpoint.get(), mount_options);
       }
       return driver;
+    }
+
+    boost::filesystem::path
+    root_block_cache_dir()
+    {
+      return xdg_state_home() / this->network / this->name;
     }
 
     std::string name;
@@ -1231,13 +1365,28 @@ namespace infinit
     }
 
     void
+    network_save(NetworkDescriptor const& network,
+                 std::ostream& output)
+    {
+      elle::serialization::json::SerializerOut s(output, false, true);
+      s.serialize_forward(network);
+    }
+
+    void
+    network_save(Network const& network,
+                 std::ostream& output)
+    {
+      elle::serialization::json::SerializerOut s(output, false, true);
+      s.serialize_forward(network);
+    }
+
+    void
     network_save(NetworkDescriptor const& network, bool overwrite = false)
     {
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_network_path(network.name),
                         network.name, "network", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(network);
+      network_save(network, f);
     }
 
     void
@@ -1246,8 +1395,7 @@ namespace infinit
       boost::filesystem::ofstream f;
       this->_open_write(f, this->_network_path(network.name),
                         network.name, "network", overwrite);
-      elle::serialization::json::SerializerOut s(f, false, true);
-      s.serialize_forward(network);
+      network_save(network, f);
     }
 
     Passport
@@ -1301,9 +1449,11 @@ namespace infinit
       this->_open_write(
         f, path, user.name, "user", overwrite);
       user_save(user, f);
+#ifndef INFINIT_WINDOWS
       boost::filesystem::permissions(path,
         boost::filesystem::remove_perms
         | boost::filesystem::others_all | boost::filesystem::group_all);
+#endif
     }
 
     User
@@ -1871,6 +2021,25 @@ private:
   }
 };
 
+template <typename T>
+boost::optional<T>
+check_deprecated(boost::program_options::variables_map const& vm,
+                 Mode::OptionDescription const& option)
+{
+  for (auto const& deprecated: option.deprecated_options)
+  {
+    if (vm.count(deprecated->long_name()))
+    {
+      std::cerr << "WARNING: option \"--" << deprecated->long_name()
+                << "\" is deprecated "
+                << "use \"--" << option.long_name() << "\" instead."
+                << std::endl;
+      return vm[deprecated->long_name()].as<T>();
+    }
+  }
+  return boost::none;
+}
+
 template <typename T = std::string>
 boost::optional<T>
 optional(boost::program_options::variables_map const& vm,
@@ -1880,6 +2049,17 @@ optional(boost::program_options::variables_map const& vm,
     return vm[name].as<T>();
   else
     return {};
+}
+
+template <typename T = std::string>
+boost::optional<T>
+optional(boost::program_options::variables_map const& vm,
+         Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated;
+  return optional<T>(vm, option.long_name());
 }
 
 template <typename T = std::string>
@@ -1899,9 +2079,32 @@ mandatory(boost::program_options::variables_map const& vm,
 template <typename T = std::string>
 T
 mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option,
+          std::string const& desc)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name(), desc);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
           std::string const& name)
 {
   return mandatory<T>(vm, name, name);
+}
+
+template <typename T = std::string>
+T
+mandatory(boost::program_options::variables_map const& vm,
+          Mode::OptionDescription const& option)
+{
+  auto deprecated = check_deprecated<T>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return mandatory<T>(vm, option.long_name());
 }
 
 template <>
@@ -1926,15 +2129,65 @@ flag(boost::program_options::variables_map const& vm,
   return vm.count(name) && vm[name].as<bool>();
 }
 
-template <typename T>
-boost::optional<T>
-option_opt(boost::program_options::variables_map const& vm,
-           std::string const& name)
+bool
+flag(boost::program_options::variables_map const& vm,
+     Mode::OptionDescription const& option)
 {
-  if (vm.count(name))
-    return vm[name].as<T>();
-  else
-    return {};
+  auto deprecated = check_deprecated<bool>(vm, option);
+  if (deprecated)
+    return deprecated.get();
+  return flag(vm, option.long_name());
+}
+
+bool
+_one(bool seen)
+{
+  return seen;
+}
+
+template <typename First, typename ... Args>
+bool
+_one(bool seen, First&& first, Args&& ... args)
+{
+  auto b = bool(first);
+  if (seen && b)
+    return false;
+  return _one(seen || b, std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+bool
+one(Args&& ... args)
+{
+  return _one(false, std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+bool
+none(Args&& ... args)
+{
+  return true;
+}
+
+template <typename First, typename ... Args>
+bool
+none(First&& first, Args&& ... args)
+{
+  return first ? false : none(std::forward<Args>(args)...);
+}
+
+template <typename First, typename ... Args>
+bool
+all(First&& first, Args&& ... args)
+{
+  return !first ? false : none(std::forward<Args>(args)...);
+}
+
+template <typename ... Args>
+bool
+all(Args&& ... args)
+{
+  return true;
 }
 
 bool
@@ -2203,7 +2456,7 @@ _beyond_push(reactor::http::Request& r,
   if (r.status() == reactor::http::StatusCode::Created)
   {
     if (report)
-      report_action("pushed", type, name, std::string("remotely"));
+      report_action("saved", type, name, std::string("remotely"));
   }
   else if (r.status() == reactor::http::StatusCode::OK)
   {
@@ -2240,6 +2493,19 @@ _beyond_push(reactor::http::Request& r,
   {
     read_error<ResourceGone>(r, type, name);
   }
+  else if (r.status() == reactor::http::StatusCode::Unauthorized)
+  {
+    throw elle::Error(
+      elle::sprintf("Unauthorized pushing %s \"%s\", check the system clock",
+                    type, name));
+  }
+  else if (r.status() == reactor::http::StatusCode::Forbidden)
+  {
+    throw elle::Error(
+      elle::sprintf("Forbidden pushing %s \"%s\", "
+                    "ensure the user has been set using --as or INFINIT_USER",
+                    type, name));
+  }
   else
   {
     auto error = [&] {
@@ -2249,8 +2515,7 @@ _beyond_push(reactor::http::Request& r,
         return s.deserialize<BeyondError>();
       }
       catch (elle::serialization::Error const&)
-      {
-      }
+      {}
       return BeyondError("unknown", "Unknown error");
     }();
     if (error.error() == std::string("user/missing_field/email"))
@@ -2361,6 +2626,12 @@ fetch_data(std::string const& url,
       }
     }
   }
+  else if (r->status() == reactor::http::StatusCode::Unauthorized)
+  {
+    throw elle::Error(
+      elle::sprintf("Unauthorized fetching %s \"%s\", check the system clock",
+                    type, name));
+  }
   else
   {
     throw elle::Error(
@@ -2459,6 +2730,19 @@ beyond_delete(std::string const& where,
   {
     throw Redirected(url);
   }
+  else if (r.status() == reactor::http::StatusCode::Unauthorized)
+  {
+    throw elle::Error(
+      elle::sprintf("Unauthorized deleting %s \"%s\", check the system clock",
+                    type, name));
+  }
+  else if (r.status() == reactor::http::StatusCode::Forbidden)
+  {
+    throw elle::Error(
+      elle::sprintf("Forbidden deleting %s \"%s\", "
+                    "ensure the user has been set using --as or INFINIT_USER",
+                    type, name));
+  }
   else
   {
     ELLE_LOG("HTTP response: %s", r.response());
@@ -2534,6 +2818,47 @@ private:
     {
       ELLE_TRACE("UPNP eror: %s", e.what());
     }
+    ELLE_TRACE("Obtaining public address from RDV");
+    try
+    {
+      auto host = elle::os::getenv("INFINIT_RDV", "rdv.infinit.sh:7890");
+      if (host.empty())
+        throw std::runtime_error("RDV disabled");
+      int port = 7890;
+      auto p = host.find_first_of(':');
+      if ( p!= host.npos)
+      {
+        port = std::stoi(host.substr(p+1));
+        host = host.substr(0, p);
+      }
+      reactor::network::RDVSocket socket;
+      socket.close();
+      socket.bind(boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), 0));
+      reactor::Thread poller("poll", [&]
+      {
+        while (true)
+        {
+          elle::Buffer buf;
+          buf.size(5000);
+          boost::asio::ip::udp::endpoint ep;
+          socket.receive_from(reactor::network::Buffer(buf.mutable_contents(),
+                                                       buf.size()), ep);
+        }
+      });
+      elle::SafeFinally spoll([&] {
+          poller.terminate_now();
+      });
+      socket.rdv_connect("ip-fetcher", host, port, 5_sec);
+      poller.terminate_now();
+      spoll.abort();
+      ELLE_TRACE("RDV gave endpoint %s", socket.public_endpoint());
+      if (socket.public_endpoint().port())
+        endpoints.addresses.push_back(socket.public_endpoint().address().to_string());
+    }
+    catch (std::exception const& e)
+    {
+      ELLE_TRACE("RDV error: %s", e.what());
+    }
     ELLE_TRACE("Pushing endpoints");
 
     for (auto const& itf: elle::network::Interface::get_map(
@@ -2544,7 +2869,7 @@ private:
         endpoints.addresses.push_back(itf.second.ipv4_address);
     endpoints.port = port;
     beyond_push(this->_url, std::string("endpoints for"),
-                network.name, endpoints, self);
+                network.name, endpoints, self, false);
   }
 
   ~InterfacePublisher()
@@ -2610,16 +2935,33 @@ namespace infinit
 }
 
 Mode::OptionDescription option_cache(
-  "cache", boost::program_options::bool_switch(), "enable block cache");
-Mode::OptionDescription option_cache_size(
-  "cache-size", boost::program_options::value<int>(),
-  "maximum block cache size in bytes (default: 64 MB)");
-Mode::OptionDescription option_cache_ttl(
-  "cache-ttl", boost::program_options::value<int>(),
-  "block cache time-to-live in seconds (default: 5 minutes)");
-Mode::OptionDescription option_cache_invalidation(
-  "cache-invalidation", boost::program_options::value<int>(),
-  "block cache invalidation time in seconds (default: 15 seconds)");
-Mode::OptionDescription option_cache_disk_cache_size(
-  "disk-cache-size", boost::program_options::value<uint64_t>(),
-  "size of disk-cache for immutable data in bytes (default: 64MB)");
+  "cache", boost::program_options::bool_switch(),
+  "enable caching with default values");
+Mode::OptionDescription option_cache_ram_size(
+  "cache-ram-size", boost::program_options::value<int>(),
+  "maximum RAM block cache size in bytes\n(default: 64 MB)",
+  {{"cache-size", boost::program_options::value<int>()}});
+Mode::OptionDescription option_cache_ram_ttl(
+  "cache-ram-ttl", boost::program_options::value<int>(),
+  "RAM block cache time-to-live in seconds\n(default: 5 minutes)",
+  {{"cache-ttl", boost::program_options::value<int>()}});
+Mode::OptionDescription option_cache_ram_invalidation(
+  "cache-ram-invalidation", boost::program_options::value<int>(),
+  "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
+  {{"cache-invalidation", boost::program_options::value<int>()}});
+Mode::OptionDescription option_cache_disk_size(
+  "cache-disk-size", boost::program_options::value<uint64_t>(),
+  "size of disk cache for immutable data in bytes\n(default: 512 MB)",
+  {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
+Mode::OptionDescription option_port_file(
+  "port-file", boost::program_options::value<std::string>(),
+  "write node listening port to file");
+Mode::OptionDescription option_endpoint_file(
+  "endpoints-file", boost::program_options::value<std::string>(),
+  "write node listening endpoints to file\n(format: host:port\\n)");
+Mode::OptionDescription option_port(
+  "port", boost::program_options::value<int>(),
+  "outbound port to use");
+Mode::OptionDescription option_disable_mac_utf8(
+  "disable-utf-8-conversion", boost::program_options::bool_switch(),
+  "disable FUSE conversion of UTF-8 to native format");

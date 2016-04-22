@@ -1,4 +1,5 @@
 #include <elle/log.hh>
+#include <elle/utils.hh>
 
 #include <infinit/model/blocks/Block.hh>
 
@@ -17,16 +18,19 @@ namespace infinit
       Block::Block(Address address)
         : _address(std::move(address))
         , _data()
+        , _validated(false)
       {}
 
       Block::Block(Address address, elle::Buffer data)
         : _address(std::move(address))
         , _data(std::move(data))
+        , _validated(false)
       {}
 
       Block::Block(Block const& other)
         : _address(other._address)
         , _data(other._data)
+        , _validated(other._validated)
       {}
 
       /*---------.
@@ -80,7 +84,11 @@ namespace infinit
       Block::validate(Model const& model) const
       {
         ELLE_TRACE_SCOPE("%s: validate", *this);
-        return this->_validate(model);
+        if (this->_validated)
+          return ValidationResult::success();
+        ValidationResult res = this->_validate(model);
+        elle::unconst(this)->_validated = res;
+        return res;
       }
 
       ValidationResult
@@ -148,6 +156,7 @@ namespace infinit
 
       Block::Block(elle::serialization::Serializer& input,
                    elle::Version const& version)
+      : _validated(false)
       {
         this->serialize(input, version);
       }

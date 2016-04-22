@@ -4,6 +4,8 @@
 # include <unordered_map>
 
 # include <elle/json/json.hh>
+# include <elle/log.hh>
+
 
 # include <reactor/network/tcp-socket.hh>
 # include <reactor/Generator.hh>
@@ -24,7 +26,6 @@ namespace infinit
       OP_FETCH,
       OP_INSERT,
       OP_UPDATE,
-      OP_INSERT_OR_UPDATE, // for cases where we're not sure
       OP_REMOVE
     };
 
@@ -35,6 +36,7 @@ namespace infinit
     `------*/
     public:
       typedef std::shared_ptr<model::doughnut::Peer> Member;
+      typedef std::ambivalent_ptr<model::doughnut::Peer> WeakMember;
       typedef std::vector<Member> Members;
 
     /*-------------.
@@ -45,33 +47,44 @@ namespace infinit
               std::shared_ptr<infinit::model::doughnut::Local> local,
               model::Address node_id);
       virtual
-      ~Overlay() {}
+      ~Overlay();
       ELLE_ATTRIBUTE_R(model::Address, node_id);
       ELLE_ATTRIBUTE_R(model::doughnut::Doughnut*, doughnut);
       ELLE_ATTRIBUTE_R(std::shared_ptr<model::doughnut::Local>, local);
+
+    /*------.
+    | Hooks |
+    `------*/
+    public:
+      ELLE_ATTRIBUTE_RX(
+        boost::signals2::signal<void (model::Address id,
+                                      bool observer)>, on_discover);
+      ELLE_ATTRIBUTE_RX(
+        boost::signals2::signal<void (model::Address id,
+                                      bool observer)>, on_disappear);
 
     /*-------.
     | Lookup |
     `-------*/
     public:
       /// Lookup a list of nodes
-      reactor::Generator<Member>
+      reactor::Generator<WeakMember>
       lookup(model::Address address, int n, Operation op) const;
       /// Lookup a single node
-      Member
+      WeakMember
       lookup(model::Address address, Operation op) const;
       /// Lookup a node from its uid
-      Member
+      WeakMember
       lookup_node(model::Address address);
       /// Lookup nodes from uids
-      reactor::Generator<Overlay::Member>
+      reactor::Generator<WeakMember>
       lookup_nodes(std::unordered_set<model::Address> address);
     protected:
       virtual
-      reactor::Generator<Member>
+      reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, Operation op) const = 0;
       virtual
-      Member
+      WeakMember
       _lookup_node(model::Address address) = 0;
     /*------.
     | Query |

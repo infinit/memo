@@ -4,6 +4,15 @@
 gpg: key 6821EB43: public key "Infinit &lt;contact@infinit.one&gt;" imported
 </code></pre>
 
+<p>Ensure that you have the <code>add-apt-repository</code> command installed:
+<pre><code>$> sudo apt-get install software-properties-common
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+software-properties-common is already the newest version.
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+</code></pre>
+
 <p>Then add the repository locally:</p>
 <pre><code>$> sudo add-apt-repository "deb https://debian.infinit.sh/ trusty main"
 </code></pre>
@@ -15,8 +24,4 @@ $> sudo apt-get install infinit
 ...
 Unpacking infinit (${tarball_version})...
 Setting up infinit (${tarball_version})...
-</code></pre>
-<p></p>
-<p>You can now change to the install directory and <a href='#2--basic-test'>test</a> your install.</p>
-<pre><code>$> cd /opt/infinit
 </code></pre>

@@ -70,6 +70,33 @@ namespace infinit
         ELLE_ATTRIBUTE(std::unique_ptr<GB>, block);
         static reactor::LocalStorage<std::vector<cryptography::rsa::PublicKey>> _stack;
       };
+
+      class GroupConflictResolver : public ConflictResolver
+      {
+      public:
+        enum class Action
+        {
+          add_member,
+          remove_member,
+          add_admin,
+          remove_admin,
+        };
+        GroupConflictResolver(Action action, model::User const& user);
+        GroupConflictResolver(GroupConflictResolver&& b);
+        GroupConflictResolver(elle::serialization::SerializerIn& s,
+                              elle::Version const& v);
+        ~GroupConflictResolver();
+        std::unique_ptr<blocks::Block>
+        operator() (blocks::Block& block,
+                    blocks::Block& current,
+                    model::StoreMode mode) override;
+        void serialize(elle::serialization::Serializer& s,
+                       elle::Version const& v) override;
+        Action _action;
+        std::unique_ptr<cryptography::rsa::PublicKey> _key;
+        std::string _name;
+        typedef infinit::serialization_tag serialization_tag;
+      };
     }
   }
 }

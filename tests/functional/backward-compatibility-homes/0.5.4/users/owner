@@ -1,0 +1,6 @@
+{
+    "name" : "owner",
+    "public_key" : {
+        "rsa" : "MIIBCgKCAQEAqpnWyBfom/vXqIxHfMw2dT82By4KhGuBR+ClkNy96EMjmL74Rzj8q6Udnql/th3+ClvB4EdZAd6AMLWuC0jkuC9zyHYHc7D5JBz84c3GEFnsJMyBNDMLbivmBjWiInjqih/O8bGpBWIpm1OGrqvxO+qijCNZQTfI/5EooxGNsP7zHWhz51Ue21fuORbNMVko4iANT8s+027P3PsDtGdp1aAw3o2T25DbeR7kUvGMlr+34LQ6O+2FhMv/OY0PpjJ13aKJ0P3j52mok1tsJlcFP7vOj3+njgx4SvKYFbSPoEyNMfczH5fP/e3q2gHl7JRzUbqJHe2rHlagyXTLeBr93QIDAQAB"
+    }
+}

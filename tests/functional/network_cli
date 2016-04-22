@@ -15,7 +15,13 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   except Exception as e:
     pass
   bob.run(['infinit-network', '--create', '--name', 'broken', '--as', 'bob'])
+  # Simulate the network being run with cache and async.
+  import os
+  state_dir = '%s/.local/state/infinit/filesystem' % bob
+  os.makedirs('%s/cache/bob/broken' % state_dir)
   bob.run(['infinit-network', '--delete', '--name', 'broken', '--as', 'bob'])
+  # Ensure network cache directory is removed
+  assertEq(len(os.listdir('%s/cache/bob' % state_dir)), 0)
 
   bob.run(['infinit-network', '--create', '--name', 'broken', '--as', 'bob'])
   # Specified.

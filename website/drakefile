@@ -134,7 +134,7 @@ def configure(
     )
 
   generated = copy_generated_pages(
-    drake.nodes(*[m.path(True).with_extension('html') for m in markdown])
+    drake.nodes(*[m.name_relative.with_extension('html') for m in markdown])
   ) + copy_generated_pages([changelog])
   templates = drake.nodes(
     'templates/base.html',

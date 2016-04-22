@@ -59,7 +59,7 @@ The Reactor example uses a coroutine with a `while` loop to accept connections f
 
 ```
 ...
-void echo(std::unique_ptr<reactor::network::Socket> socket)
+void echo(std::shared_ptr<reactor::network::Socket> socket)
 {
   try
   {

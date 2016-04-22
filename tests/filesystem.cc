@@ -30,7 +30,7 @@
 #include <infinit/filesystem/filesystem.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/Local.hh>
-#include <infinit/model/doughnut/Local.hh>
+#include <infinit/model/doughnut/Cache.hh>
 #include <infinit/model/doughnut/consensus/Paxos.hh>
 #include <infinit/model/faith/Faith.hh>
 #include <infinit/overlay/Stonehenge.hh>
@@ -38,6 +38,8 @@
 #include <infinit/storage/Memory.hh>
 #include <infinit/storage/Storage.hh>
 #include <infinit/version.hh>
+
+#include "DHT.hh"
 
 #ifdef INFINIT_MACOSX
 # define SXA_EXTRA ,0
@@ -57,12 +59,11 @@ namespace rfs = reactor::filesystem;
 namespace bfs = boost::filesystem;
 
 bool mounted = false;
-infinit::storage::Storage* storage;
+infinit::storage::Storage* g_storage;
 reactor::filesystem::FileSystem* fs;
 reactor::Scheduler* sched;
 
 std::vector<std::string> mount_points;
-std::vector<infinit::cryptography::rsa::PublicKey> keys;
 std::vector<std::unique_ptr<infinit::model::doughnut::Doughnut>> nodes;
 std::vector<boost::asio::ip::tcp::endpoint> endpoints;
 infinit::overlay::Stonehenge::Peers peers;
@@ -110,6 +111,11 @@ static int group_remove_admin(bfs::path p, std::string const& gname, std::string
 {
   std::string cmd = gname + ":" + uname;
   return setxattr(p.c_str(), "user.infinit.group.removeadmin", cmd.c_str(), cmd.size(), 0 SXA_EXTRA);
+}
+
+static int group_delete(bfs::path p, std::string const& gname)
+{
+  return setxattr(p.c_str(), "user.infinit.group.delete", gname.c_str(), gname.size(), 0 SXA_EXTRA);
 }
 
 static void wait_for_mounts(boost::filesystem::path root, int count, struct statvfs* start = nullptr)
@@ -318,7 +324,8 @@ static void make_nodes(std::string store, int node_count,
 
 static
 void
-run_filesystem_dht(std::string const& store,
+run_filesystem_dht(std::vector<infinit::cryptography::rsa::PublicKey>& keys,
+                   std::string const& store,
                    std::string const& mountpoint,
                    int node_count,
                    int nread = 1,
@@ -329,7 +336,6 @@ run_filesystem_dht(std::string const& store,
   sched = new reactor::Scheduler();
   fs = nullptr;
   mount_points.clear();
-  keys.clear();
   nodes.clear();
   endpoints.clear();
   processes.clear();
@@ -357,19 +363,26 @@ run_filesystem_dht(std::string const& store,
         ELLE_TRACE("configuring mounter...");
         //auto kp = infinit::cryptography::rsa::keypair::generate(2048);
         //keys.push_back(kp.K());
-        keys.push_back(owner_keys.K());
-        infinit::model::doughnut::Passport passport(owner_keys.K(), "testnet", owner_keys);
+        keys.emplace_back(owner_keys.K());
+        infinit::model::doughnut::Passport passport(
+          owner_keys.K(), "testnet", owner_keys);
         ELLE_TRACE("instantiating dougnut...");
         infinit::model::doughnut::Doughnut::ConsensusBuilder consensus =
           [paxos] (infinit::model::doughnut::Doughnut& dht)
           -> std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
           {
+            std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
+            consensus;
             if (paxos)
-              return elle::make_unique<
-            infinit::model::doughnut::consensus::Paxos>(dht, 3);
+              consensus = elle::make_unique<
+                infinit::model::doughnut::consensus::Paxos>(dht, 3);
             else
-              return elle::make_unique<
-            infinit::model::doughnut::consensus::Consensus>(dht);
+              consensus = elle::make_unique<
+                infinit::model::doughnut::consensus::Consensus>(dht);
+            consensus = elle::make_unique<
+              infinit::model::doughnut::consensus::Cache>
+                (std::move(consensus), 1000);
+            return consensus;
           };
         infinit::model::doughnut::Doughnut::OverlayBuilder overlay =
           [=] (infinit::model::doughnut::Doughnut& dht,
@@ -408,8 +421,8 @@ run_filesystem_dht(std::string const& store,
             ELLE_LOG("filesystem unmounted");
             nodes_sched->mt_run<void>("clearer", [] { nodes.clear();});
             processes.clear();
-            reactor::scheduler().terminate();
 #endif
+            reactor::scheduler().terminate();
             });
       }
       else
@@ -423,12 +436,11 @@ run_filesystem_dht(std::string const& store,
         model["type"] = "doughnut";
         model["name"] = "user" + std::to_string(i);
         auto kp = infinit::cryptography::rsa::keypair::generate(2048);
-        keys.push_back(kp.K());
+        keys.emplace_back(kp.K());
         model["id"] = elle::format::base64::encode(
           elle::ConstWeakBuffer(
             infinit::model::Address::random(0).value(), // FIXME
             sizeof(infinit::model::Address::Value))).string();
-
         model["keys"] = "@KEYS@"; // placeholder, lolilol
         model["passport"] = "@PASSPORT@"; // placeholder, lolilol
         model["owner"] = "@OWNER@"; // placeholder, lolilol
@@ -490,7 +502,7 @@ run_filesystem_dht(std::string const& store,
           ofs.write(ser.data(), ser.size());
         }
         std::vector<std::string> args {
-          "bin/infinit",
+          elle::sprintf("%s/bin/infinit", elle::os::getenv("BUILD_DIR", ".")),
           "-c",
           (mountpoint + "/" + std::to_string(i))
         };
@@ -510,15 +522,15 @@ run_filesystem_dht(std::string const& store,
     processes.clear();
   }
 #endif
-
 }
 
-static void run_filesystem(std::string const& store, std::string const& mountpoint)
+static
+void
+run_filesystem(std::string const& store, std::string const& mountpoint)
 {
   sched = new reactor::Scheduler();
   fs = nullptr;
   mount_points.clear();
-  keys.clear();
   nodes.clear();
   endpoints.clear();
   processes.clear();
@@ -531,7 +543,7 @@ static void run_filesystem(std::string const& store, std::string const& mountpoi
     else
       storage = new infinit::storage::Filesystem(store);
     model = elle::make_unique<infinit::model::faith::Faith>(
-      std::unique_ptr<infinit::storage::Storage>(storage),
+      std::unique_ptr<infinit::storage::Storage>(g_storage),
       INFINIT_ELLE_VERSION);
     std::unique_ptr<ifs::FileSystem> ops = elle::make_unique<ifs::FileSystem>(
       "default-volume", std::move(model));
@@ -580,18 +592,20 @@ test_filesystem(bool dht,
   namespace bfs = boost::filesystem;
   auto store = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
   auto mount = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+  elle::os::setenv("INFINIT_HOME", store.string(), true);
   boost::filesystem::create_directories(mount);
   boost::filesystem::create_directories(store);
   mount_points.clear();
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
+  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
       if (dht)
-        run_filesystem_dht(store.string(), mount.string(), 5,
+        run_filesystem_dht(keys, store.string(), mount.string(), 5,
                            nread, nwrite, 1, paxos);
       else
         run_filesystem(store.string(), mount.string());
-  });
+    });
   wait_for_mounts(mount, 1, &statstart);
   ELLE_LOG("starting test, mnt=%s, store=%s", mount, store);
 
@@ -690,9 +704,9 @@ test_filesystem(bool dht,
     bfs::remove(mount / "tt");
   }
 
-  struct stat st;
   // hardlink
 #ifndef INFINIT_MACOSX
+  struct stat st;
   {
     bfs::ofstream ofs(mount / "test");
     ofs << "Test";
@@ -823,7 +837,8 @@ test_filesystem(bool dht,
 
   ELLE_LOG("test cross-block")
   {
-    fd = open((mount / "babar").string().c_str(), O_RDWR|O_CREAT, 0644);
+    struct stat st;
+    int fd = open((mount / "babar").string().c_str(), O_RDWR|O_CREAT, 0644);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 - 10, SEEK_SET);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
@@ -847,7 +862,8 @@ test_filesystem(bool dht,
   }
   ELLE_LOG("test cross-block 2")
   {
-    fd = open((mount / "bibar").string().c_str(), O_RDWR|O_CREAT, 0644);
+    struct stat st;
+    int fd = open((mount / "bibar").string().c_str(), O_RDWR|O_CREAT, 0644);
     BOOST_CHECK_GE(fd, 0);
     lseek(fd, 1024*1024 + 16384 - 10, SEEK_SET);
     const char* data = "abcdefghijklmnopqrstuvwxyz";
@@ -872,7 +888,7 @@ test_filesystem(bool dht,
 
   ELLE_LOG("test link/unlink")
   {
-    fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
+    int fd = open((mount / "u").string().c_str(), O_RDWR|O_CREAT, 0644);
     ::close(fd);
     bfs::remove(mount / "u");
   }
@@ -1072,13 +1088,16 @@ test_conflicts(bool paxos)
   namespace bfs = boost::filesystem;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
   auto mount = bfs::temp_directory_path() / bfs::unique_path();
+  elle::os::setenv("INFINIT_HOME", store.string(), true);
   bfs::create_directories(mount);
   bfs::create_directories(store);
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
   mount_points.clear();
+  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
-      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2, paxos);
+      run_filesystem_dht(keys, store.string(), mount.string(),
+                                5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
   elle::SafeFinally remover([&] {
@@ -1116,7 +1135,6 @@ test_conflicts(bool paxos)
     BOOST_CHECK(fd1 != -1);
     ELLE_LOG("write to file 0")
       BOOST_CHECK_EQUAL(write(fd0, "foo", 3), 3);
-
     ELLE_LOG("write to file 1")
       BOOST_CHECK_EQUAL(write(fd1, "bar", 3), 3);
     ELLE_LOG("close file 0")
@@ -1166,24 +1184,6 @@ test_conflicts(bool paxos)
     BOOST_CHECK_EQUAL(stat((m0/"file3").c_str(), &st), 0);
     BOOST_CHECK_EQUAL(stat((m1/"file4").c_str(), &st), 0);
   }
-  ELLE_LOG("write/unlink")
-  {
-    int fd0;
-    setxattr(m0.c_str(), "user.infinit.auth.inherit",
-             "true", strlen("true"), 0 SXA_EXTRA);
-    fd0 = open((m0 / "file5").string().c_str(), O_CREAT|O_RDWR, 0644);
-    BOOST_CHECK(fd0 != -1);
-    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-    fsync(fd0);
-    BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), 0);
-    usleep(2100000);
-    BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), 0);
-    bfs::remove(m1 / "file5");
-    BOOST_CHECK_EQUAL(write(fd0, "coin", 4), 4);
-    BOOST_CHECK_EQUAL(close(fd0), 0);
-    BOOST_CHECK_EQUAL(stat((m0/"file5").c_str(), &st), -1);
-    BOOST_CHECK_EQUAL(stat((m1/"file5").c_str(), &st), -1);
-  }
   ELLE_LOG("write/replace")
   {
     int fd0, fd1;
@@ -1220,6 +1220,24 @@ conflicts_paxos()
   test_conflicts(true);
 }
 
+std::vector<infinit::model::Address>
+get_fat(std::string const& attr)
+{
+  std::stringstream input(attr);
+  std::vector<infinit::model::Address> res;
+  for (auto const& entry:
+         boost::any_cast<elle::json::Array>(elle::json::read(input)))
+    res.push_back(infinit::model::Address::from_string(
+                    boost::any_cast<std::string>(entry)));
+  return res;
+}
+
+std::vector<infinit::model::Address>
+get_fat(boost::filesystem::path const& path)
+{
+  return get_fat(getxattr_(path, "user.infinit.fat"));
+}
+
 static
 void
 test_acl(bool paxos)
@@ -1228,13 +1246,16 @@ test_acl(bool paxos)
   boost::system::error_code erc;
   auto store = bfs::temp_directory_path() / bfs::unique_path();
   auto mount = bfs::temp_directory_path() / bfs::unique_path();
+  elle::os::setenv("INFINIT_HOME", store.string(), true);
   bfs::create_directories(mount);
   bfs::create_directories(store);
   struct statvfs statstart;
   statvfs(mount.string().c_str(), &statstart);
   mount_points.clear();
+  std::vector<infinit::cryptography::rsa::PublicKey> keys;
   std::thread t([&] {
-      run_filesystem_dht(store.string(), mount.string(), 5, 1, 1, 2, paxos);
+      run_filesystem_dht(keys, store.string(), mount.string(),
+                         5, 1, 1, 2, paxos);
   });
   wait_for_mounts(mount, 2, &statstart);
   ELLE_LOG("Test start");
@@ -1248,7 +1269,6 @@ test_acl(bool paxos)
       ELLE_TRACE("unmounter threw %s", e.what());
     }
   });
-
   // Mounts/keys are in mount_points and keys
   // First entry got the root!
   BOOST_CHECK_EQUAL(mount_points.size(), 2);
@@ -1466,6 +1486,7 @@ test_acl(bool paxos)
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
   BOOST_CHECK_EQUAL(read(m0 / "g1"), "foo");
+  BOOST_CHECK_EQUAL(group_delete(m0, "group1"), 0);
 
   ELLE_LOG("removal");
   //test the xattrs we'll use
@@ -1500,16 +1521,12 @@ test_acl(bool paxos)
     for (int i=0; i<100; ++i)
       ofs.write(buffer, 16384);
   }
-  auto fat = getxattr_(base0 / "rm3", "user.infinit.fat");
-  std::stringstream ss(fat);
-  std::string address;
-  ss >> address >> address >> address >> address;
-  address = address.substr(2);
-  infinit::model::Address::from_string(address);
-
-  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock", address), -1);
+  auto fat = get_fat(base0 / "rm3");
+  BOOST_CHECK_EQUAL(setxattr_(base1, "user.infinit.fsck.rmblock",
+                              elle::sprintf("%x", fat[0])), -1);
   BOOST_CHECK(can_access(base0 / "rm3", true, true));
-  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock", address), 0);
+  BOOST_CHECK_EQUAL(setxattr_(base0, "user.infinit.fsck.rmblock",
+                              elle::sprintf("%x", fat[0])), 0);
   BOOST_CHECK(!can_access(base0 / "rm3", true, true));
   ELLE_LOG("test end");
 }
@@ -1526,6 +1543,189 @@ void
 acl_paxos()
 {
   test_acl(true);
+}
+
+class DHTs
+{
+public:
+  template <typename ... Args>
+  DHTs(int count, Args ... args)
+    : owner_keys(infinit::cryptography::rsa::keypair::generate(512))
+    , dhts()
+  {
+    for (int i = 0; i < count; ++i)
+    {
+      this->dhts.emplace_back(owner = this->owner_keys, args ...);
+      for (int j = 0; j < i; ++j)
+        this->dhts[j].overlay->connect(*this->dhts[i].overlay);
+    }
+  }
+
+  struct Client
+  {
+    Client(std::string const& name, DHT dht)
+      : dht(std::move(dht))
+      , fs(elle::make_unique<reactor::filesystem::FileSystem>(
+             elle::make_unique<infinit::filesystem::FileSystem>(
+               name, this->dht.dht),
+             true))
+    {}
+
+    DHT dht;
+    std::unique_ptr<reactor::filesystem::FileSystem> fs;
+  };
+
+  Client
+  client()
+  {
+    DHT client(keys = this->owner_keys, storage = nullptr);
+    for (auto& dht: this->dhts)
+      dht.overlay->connect(*client.overlay);
+    return Client("volume", std::move(client));
+  }
+
+  infinit::cryptography::rsa::KeyPair owner_keys;
+  std::vector<DHT> dhts;
+};
+
+ELLE_TEST_SCHEDULED(write_truncate)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  // the emacs save procedure: open() truncate() write()
+  auto handle = client.fs->path("/file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  handle->write(elle::ConstWeakBuffer("foo\nbar\nbaz\n", 12), 12, 0);
+  handle->close();
+  handle.reset();
+  handle = client.fs->path("/file")->open(O_RDWR, 0);
+  BOOST_CHECK(handle);
+  client.fs->path("/file")->truncate(0);
+  handle->write(elle::ConstWeakBuffer("foo\nbar\n", 8), 8, 0);
+  handle->close();
+  handle.reset();
+  struct stat st;
+  client.fs->path("/file")->stat(&st);
+  BOOST_CHECK_EQUAL(st.st_size, 8);
+  handle = client.fs->path("/file")->open(O_RDWR, 0);
+  char buffer[64];
+  int count = handle->read(elle::WeakBuffer(buffer, 64), 64, 0);
+  BOOST_CHECK_EQUAL(count, 8);
+  buffer[count] = 0;
+  BOOST_CHECK_EQUAL(buffer, std::string("foo\nbar\n"));
+}
+
+
+ELLE_TEST_SCHEDULED(write_unlink)
+{
+  DHTs servers(1);
+  auto client_1 = servers.client();
+  auto client_2 = servers.client();
+  auto root_1 = [&]
+    {
+      ELLE_LOG_SCOPE("fetch client 1 root");
+      return client_1.fs->path("/");
+    }();
+  auto root_2 = [&]
+    {
+      ELLE_LOG_SCOPE("fetch client 2 root");
+      return client_2.fs->path("/");
+    }();
+  auto handle = [&]
+  {
+    ELLE_LOG_SCOPE("create file file client 1");
+    auto handle =
+      root_1->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+    BOOST_CHECK(handle);
+    BOOST_CHECK_EQUAL(handle->write(elle::ConstWeakBuffer("data1"), 5, 0), 5);
+    return handle;
+  }();
+  ELLE_LOG("sync on client 1")
+    handle->fsync(true);
+  struct stat st;
+  ELLE_LOG("check file exists on client 1")
+    BOOST_CHECK_NO_THROW(root_1->child("file")->stat(&st));
+  ELLE_LOG("check file exists on client 2")
+    BOOST_CHECK_NO_THROW(root_2->child("file")->stat(&st));
+  ELLE_LOG("read on client 1")
+  {
+    elle::Buffer b(5);
+    BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+    BOOST_CHECK_EQUAL(b, "data1");
+  }
+  ELLE_LOG("remove file on client 2")
+    root_2->child("file")->unlink();
+  // Ability to read removed files not implemented yet, but it should
+  // ELLE_LOG("read on client 1")
+  // {
+  //   elle::Buffer b(5);
+  //   BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+  //   BOOST_CHECK_EQUAL(b, "data1");
+  // }
+  ELLE_LOG("write on client 1")
+    BOOST_CHECK_EQUAL(handle->write(elle::ConstWeakBuffer("data2"), 5, 0), 5);
+  ELLE_LOG("sync on client 1")
+    handle->fsync(true);
+  // ELLE_LOG("read on client 1")
+  // {
+  //   elle::Buffer b(5);
+  //   BOOST_CHECK_EQUAL(handle->read(b, 5, 0), 5);
+  //   BOOST_CHECK_EQUAL(b, "data2");
+  // }
+  ELLE_LOG("close file on client 1")
+    BOOST_CHECK_NO_THROW(handle->close());
+  ELLE_LOG("check file does not exist on client 2")
+    BOOST_CHECK_THROW(root_1->child("file")->stat(&st), elle::Error);
+  ELLE_LOG("check file does not exist on client 2")
+    BOOST_CHECK_THROW(root_2->child("file")->stat(&st), elle::Error);
+}
+
+ELLE_TEST_SCHEDULED(prefetcher_failure)
+{
+  DHTs servers(1);
+  auto client = servers.client();
+  ::Overlay* o = dynamic_cast< ::Overlay*>(client.dht.dht->overlay().get());
+  auto root = client.fs->path("/");
+  BOOST_CHECK(o);
+  root->child("file")->create(O_CREAT | O_RDWR, S_IFREG | 0644);
+  // grow to 2 data blocks
+  root->child("file")->truncate(1024*1024*3);
+  auto fat = get_fat(root->child("file")->getxattr("user.infinit.fat"));
+  BOOST_CHECK_EQUAL(fat.size(), 3);
+  o->fail_addresses().insert(fat[1]);
+  o->fail_addresses().insert(fat[2]);
+  auto handle = root->child("file")->open(O_RDWR, 0);
+  char buf[16384];
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 8192), 16384);
+  reactor::sleep(200_ms);
+  o->fail_addresses().clear();
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024 + 8192), 16384);
+  BOOST_CHECK_EQUAL(handle->read(elle::WeakBuffer(buf, 16384), 16384, 1024*1024*2 + 8192), 16384);
+}
+
+ELLE_TEST_SCHEDULED(paxos_race)
+{
+  DHTs servers(1);
+  auto c1 = servers.client();
+  auto c2 = servers.client();
+  auto r1 = c1.fs->path("/");
+  auto r2 = c2.fs->path("/");
+  ELLE_LOG("create both directories")
+  {
+    reactor::Thread t1("t1", [&] { r1->child("foo")->mkdir(0700);});
+    reactor::Thread t2("t2", [&] { r2->child("bar")->mkdir(0700);});
+    reactor::wait({&t1, &t2});
+  }
+  ELLE_LOG("check")
+  {
+    int count = 0;
+    c1.fs->path("/")->list_directory(
+      [&](std::string const&, struct stat*) { ++count;});
+    BOOST_CHECK_EQUAL(count, 2);
+    count = 0;
+    c2.fs->path("/")->list_directory(
+      [&](std::string const&, struct stat*) { ++count;});
+    BOOST_CHECK_EQUAL(count, 2);
+  }
 }
 
 ELLE_TEST_SUITE()
@@ -1546,4 +1746,8 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(conflicts), 0, 120);
   suite.add(BOOST_TEST_CASE(conflicts_paxos), 0, 120);
 #endif
+  suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
+  suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
+  suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
+  suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
 }

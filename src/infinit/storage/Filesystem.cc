@@ -31,6 +31,8 @@ namespace infinit
       for (auto const& dir: dirs)
       {
         auto blocks_path = dir.path();
+        if (!is_directory(blocks_path))
+          continue;
         auto blocks = make_iterator_range(
           directory_iterator(blocks_path), {});
         for (auto const& block: blocks)

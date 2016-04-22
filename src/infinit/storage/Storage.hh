@@ -27,7 +27,6 @@ namespace infinit
     };
 
     class Storage
-      : public elle::Printable
     {
     public:
       Storage(boost::optional<int64_t> capacity = {});
@@ -73,14 +72,6 @@ namespace infinit
       ELLE_ATTRIBUTE(int64_t, step);
       ELLE_ATTRIBUTE((std::unordered_map<Key, int>), size_cache, mutable);
       ELLE_ATTRIBUTE(boost::signals2::signal<void ()>, on_storage_size_change);
-
-    /*----------.
-    | Printable |
-    `----------*/
-    public:
-      virtual
-      void
-      print(std::ostream& out) const override;
     };
 
     std::unique_ptr<Storage>

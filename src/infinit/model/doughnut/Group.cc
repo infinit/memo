@@ -3,12 +3,14 @@
 #include <elle/cast.hh>
 
 #include <cryptography/rsa/KeyPair.hh>
+#include <cryptography/rsa/PublicKey.hh>
 
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Doughnut.hh>
 #include <infinit/model/doughnut/ACB.hh>
 #include <infinit/model/doughnut/GB.hh>
 #include <infinit/model/doughnut/UB.hh>
+#include <infinit/model/doughnut/User.hh>
 #include <infinit/model/blocks/GroupBlock.hh>
 #include <infinit/filesystem/umbrella.hh>
 
@@ -84,9 +86,10 @@ namespace infinit
               *gb->owner_key());
             auto rub = elle::make_unique<UB>(&_dht, "@"+_name,
               *gb->owner_key(), true);
-            _dht.store(std::move(ub), STORE_INSERT);
-            _dht.store(std::move(rub), STORE_INSERT);
-            _dht.store(std::move(gb), STORE_INSERT);
+            // FIXME
+            _dht.store(std::move(ub), STORE_INSERT, make_drop_conflict_resolver());
+            _dht.store(std::move(rub), STORE_INSERT, make_drop_conflict_resolver());
+            _dht.store(std::move(gb), STORE_INSERT, make_drop_conflict_resolver());
             ELLE_DEBUG("...done");
         });
       }
@@ -99,10 +102,25 @@ namespace infinit
             throw elle::Error("Group destruction needs group name as input");
           public_control_key();
           block();
+          auto ctrl = _control_key();
+
+          // UB
           auto addr = UB::hash_address(this->_name, this->_dht);
-          auto raddr = UB::hash_address(*this->_public_control_key, this->_dht);
-          this->_dht.remove(addr);
-          this->_dht.remove(raddr);
+          auto block = _dht.fetch(addr);
+          auto to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
+          blocks::RemoveSignature sig;
+          sig.signature_key.emplace(ctrl.K());
+          sig.signature.emplace(ctrl.k().sign(to_sign));
+          this->_dht.remove(addr, sig);
+
+          // RUB
+          addr = UB::hash_address(*this->_public_control_key, this->_dht);
+          block = _dht.fetch(addr);
+          to_sign = elle::serialization::binary::serialize((blocks::Block*)block.get());
+          sig.signature_key.emplace(ctrl.K());
+          sig.signature.emplace(ctrl.k().sign(to_sign));
+          this->_dht.remove(addr, sig);
+
           this->_dht.remove(this->_block->address(),
                             this->_block->sign_remove(this->_dht));
         });
@@ -152,13 +170,20 @@ namespace infinit
           {}
           throw;
         }
+        catch (elle::Error const& e)
+        {
+          ELLE_TRACE("exception fetching GB: %s", e.what());
+          throw;
+        }
       }
 
       cryptography::rsa::KeyPair
       Group::_control_key()
       {
-        return elle::serialization::binary::deserialize
-          <cryptography::rsa::KeyPair>(this->block().data());
+        auto priv = this->block().control_key();
+        if (!priv)
+          throw elle::Error("You are not a group admin");
+        return cryptography::rsa::KeyPair(public_control_key(), *priv);
       }
 
       cryptography::rsa::PublicKey
@@ -200,7 +225,11 @@ namespace infinit
       Group::add_member(model::User const& user)
       {
         this->block().add_member(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE,
+          elle::make_unique<GroupConflictResolver>(
+            GroupConflictResolver::Action::add_member,
+            user
+        ));
       }
 
       void
@@ -218,7 +247,11 @@ namespace infinit
       Group::add_admin(model::User const& user)
       {
         this->block().add_admin(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE,
+          elle::make_unique<GroupConflictResolver>(
+            GroupConflictResolver::Action::add_admin,
+            user
+        ));
       }
 
       void
@@ -236,7 +269,11 @@ namespace infinit
       Group::remove_member(model::User const& user)
       {
         this->block().remove_member(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE,
+          elle::make_unique<GroupConflictResolver>(
+            GroupConflictResolver::Action::remove_member,
+            user
+        ));
       }
 
       void
@@ -254,7 +291,11 @@ namespace infinit
       Group::remove_admin(model::User const& user)
       {
         this->block().remove_admin(user);
-        this->_dht.store(this->block());
+        this->_dht.store(this->block(), STORE_UPDATE,
+          elle::make_unique<GroupConflictResolver>(
+            GroupConflictResolver::Action::remove_admin,
+            user
+        ));
       }
 
       void
@@ -283,6 +324,73 @@ namespace infinit
             return this->block().all_public_keys();
         });
       }
+
+      GroupConflictResolver::GroupConflictResolver(GroupConflictResolver&& b)
+      : _action(b._action)
+      , _key(std::move(b._key))
+      , _name(std::move(b._name))
+      {
+      }
+
+      GroupConflictResolver::GroupConflictResolver(elle::serialization::SerializerIn& s,
+                                                   elle::Version const& v)
+      {
+        serialize(s, v);
+      }
+
+      GroupConflictResolver::~GroupConflictResolver()
+      {
+      }
+
+      void
+      GroupConflictResolver::serialize(elle::serialization::Serializer& s,
+                                       elle::Version const& v)
+      {
+        s.serialize("action", this->_action, elle::serialization::as<int>());
+        s.serialize("key", this->_key);
+        s.serialize("name", this->_name);
+      }
+
+      GroupConflictResolver::GroupConflictResolver(Action action,
+                                                   model::User const& user)
+      {
+        auto duser = dynamic_cast<doughnut::User const*>(&user);
+        if (!duser)
+          throw elle::Error("User argument is not a doughnut user");
+        this->_action = action;
+        this->_key = elle::make_unique<cryptography::rsa::PublicKey>(duser->key());
+        this->_name = duser->name();
+      }
+
+      std::unique_ptr<blocks::Block>
+      GroupConflictResolver::operator()(blocks::Block& block,
+                                        blocks::Block& current,
+                                        model::StoreMode mode)
+      {
+        ELLE_TRACE("Conflict editing group, replaying action on %s", this->_name);
+        auto res = elle::cast<GB>::runtime(current.clone());
+        if (!res)
+          throw elle::Error("GroupConflictResolver failed to access current block");
+        doughnut::User user(*this->_key, this->_name);
+        switch (this->_action)
+        {
+        case Action::add_member:
+          res->add_member(user);
+          break;
+        case Action::remove_member:
+          res->remove_member(user);
+          break;
+        case Action::add_admin:
+          res->add_admin(user);
+          break;
+        case Action::remove_admin:
+          res->remove_admin(user);
+          break;
+        }
+        return std::move(res);
+      }
+      static const elle::serialization::Hierarchy<model::ConflictResolver>::
+      Register<GroupConflictResolver> _register_gcr("gcr");
     }
   }
 }

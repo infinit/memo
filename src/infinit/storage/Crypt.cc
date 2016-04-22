@@ -89,7 +89,7 @@ namespace infinit
     CryptStorageConfig::make()
     {
       return elle::make_unique<infinit::storage::Crypt>(
-        std::move(storage->make()), password, salt);
+        storage->make(), password, salt);
     }
 
 

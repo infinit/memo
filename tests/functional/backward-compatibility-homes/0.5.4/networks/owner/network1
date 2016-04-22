@@ -1,0 +1,44 @@
+{
+    "consensus" : {
+        "replication-factor" : 1,
+        "type" : "paxos"
+    },
+    "name" : "owner/network1",
+    "overlay" : {
+        "accept_plain" : false,
+        "bootstrap_nodes" : [
+        ],
+        "contact_timeout_ms" : 120000,
+        "encrypt" : true,
+        "file_timeout_ms" : 1200000,
+        "gossip" : {
+            "bootstrap_group_target" : 12,
+            "bootstrap_other_target" : 12,
+            "contacts_group" : 3,
+            "contacts_other" : 3,
+            "files" : 6,
+            "group_target" : 3,
+            "interval_ms" : 2000,
+            "new_threshold" : 5,
+            "old_threshold_ms" : 40000,
+            "other_target" : 3
+        },
+        "k" : 1,
+        "max_other_contacts" : 6,
+        "ping_interval_ms" : 1000,
+        "ping_timeout_ms" : 1000,
+        "query_get_retries" : 30,
+        "query_get_ttl" : 10,
+        "query_put_insert_ttl" : 3,
+        "query_put_retries" : 12,
+        "query_put_ttl" : 10,
+        "query_timeout_ms" : 1000,
+        "rpc_protocol" : "all",
+        "type" : "kelips",
+        "wait" : 0
+    },
+    "owner" : {
+        "rsa" : "MIIBCgKCAQEAqpnWyBfom/vXqIxHfMw2dT82By4KhGuBR+ClkNy96EMjmL74Rzj8q6Udnql/th3+ClvB4EdZAd6AMLWuC0jkuC9zyHYHc7D5JBz84c3GEFnsJMyBNDMLbivmBjWiInjqih/O8bGpBWIpm1OGrqvxO+qijCNZQTfI/5EooxGNsP7zHWhz51Ue21fuORbNMVko4iANT8s+027P3PsDtGdp1aAw3o2T25DbeR7kUvGMlr+34LQ6O+2FhMv/OY0PpjJ13aKJ0P3j52mok1tsJlcFP7vOj3+njgx4SvKYFbSPoEyNMfczH5fP/e3q2gHl7JRzUbqJHe2rHlagyXTLeBr93QIDAQAB"
+    },
+    "version" : "0.5.4"
+}

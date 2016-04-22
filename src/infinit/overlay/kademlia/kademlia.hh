@@ -59,15 +59,18 @@ namespace kademlia
              std::shared_ptr<infinit::model::doughnut::Local> server,
              infinit::model::doughnut::Doughnut* doughnut);
     virtual ~Kademlia();
-    void store(infinit::model::blocks::Block const& block, infinit::model::StoreMode mode);
+    void store(infinit::model::blocks::Block const& block);
     void remove(Address address);
     void fetch(Address address, std::unique_ptr<infinit::model::blocks::Block> & b);
     void print(std::ostream& stream) const override;
   protected:
-    virtual reactor::Generator<Member> _lookup(infinit::model::Address address,
-                                     int n, infinit::overlay::Operation op)
-                                  const override;
-    virtual Overlay::Member _lookup_node(infinit::model::Address address) override;
+    virtual reactor::Generator<WeakMember>
+    _lookup(infinit::model::Address address,
+            int n,
+            infinit::overlay::Operation op) const override;
+    virtual
+    Overlay::WeakMember
+    _lookup_node(infinit::model::Address address) override;
   public:
 
   private:

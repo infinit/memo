@@ -16,7 +16,9 @@
 #include <infinit/storage/GCS.hh>
 #include <infinit/storage/GoogleDrive.hh>
 #include <infinit/storage/S3.hh>
+#ifndef INFINIT_WINDOWS
 #include <infinit/storage/sftp.hh>
+#endif
 
 ELLE_LOG_COMPONENT("infinit-storage");
 
@@ -107,7 +109,7 @@ convert_capacity(std::string value)
 COMMAND(create)
 {
   auto name = mandatory(args, "name", "storage name");
-  auto capacity_repr = option_opt<std::string>(args, "capacity");
+  auto capacity_repr = optional(args, "capacity");
   boost::optional<int64_t> capacity;
   if (capacity_repr)
     capacity = convert_capacity(*capacity_repr);
@@ -148,10 +150,31 @@ COMMAND(create)
     aws::Credentials aws_credentials(account->access_key_id,
                                      account->secret_access_key,
                                      region, bucket, root.get());
+    auto storage_class_str = optional(args, "storage-class");
+    aws::S3::StorageClass storage_class = aws::S3::StorageClass::Default;
+    if (storage_class_str)
+    {
+      std::string storage_class_parse = storage_class_str.get();
+      std::transform(storage_class_parse.begin(),
+                     storage_class_parse.end(),
+                     storage_class_parse.begin(),
+                     ::tolower);
+      if (storage_class_parse == "standard")
+        storage_class = aws::S3::StorageClass::Standard;
+      else if (storage_class_parse == "standard_ia")
+        storage_class = aws::S3::StorageClass::StandardIA;
+      else if (storage_class_parse == "reduced_redundancy")
+        storage_class = aws::S3::StorageClass::ReducedRedundancy;
+      else
+      {
+        throw CommandLineError(elle::sprintf("unrecognized storage class: %s",
+                                             storage_class_str.get()));
+      }
+    }
     config = elle::make_unique<infinit::storage::S3StorageConfig>(
       name,
       std::move(aws_credentials),
-      flag(args, "reduced-redundancy"),
+      storage_class,
       std::move(capacity));
   }
   else if (args.count("dropbox"))
@@ -180,13 +203,15 @@ COMMAND(create)
        self_user(ifnt, {}).name,
        std::move(capacity));
   }
+#ifndef INFINIT_WINDOWS
   else if (args.count("ssh"))
   {
-    auto host = mandatory(args, "ssh-host", "SSH remote host");
+    auto host = mandatory(args, "host", "SSH remote host");
     auto path = mandatory(args, "path", "Remote path to store into");
     config = elle::make_unique<infinit::storage::SFTPStorageConfig>(
       name, host, path, capacity);
   }
+#endif
   if (!config)
     throw CommandLineError("storage type unspecified");
   if (args.count("output"))
@@ -269,14 +294,14 @@ main(int argc, char** argv)
   Mode::OptionsDescription storage_types("Storage types");
   storage_types.add_options()
     ("filesystem", "store data on a local filesystem")
-    ("gcs", "store data in Google Cloud Storage")
-    ("s3", "store data in using Amazon S3")
-    ("ssh", "store data over SSH")
+    ("gcs", "store data using Google Cloud Storage")
+    ("s3", "store data using Amazon S3")
     ;
   Mode::OptionsDescription hidden_storage_types("Hidden storage types");
   hidden_storage_types.add_options()
     ("dropbox", "store data in a Dropbox")
     ("google-drive", "store data in a Google Drive")
+    ("ssh", "store data over SSH")
     ;
   Mode::OptionsDescription cloud_options("Cloud storage options");
   cloud_options.add_options()
@@ -285,12 +310,13 @@ main(int argc, char** argv)
   ;
   Mode::OptionsDescription s3_options("Amazon S3 storage options");
   s3_options.add_options()
-    ("reduced-redundancy", bool_switch(), "use reduced redundancy storage")
+    ("storage-class", value<std::string>(), "storage class to use: "
+       "STANDARD, STANDARD_IA, REDUCED_REDUNDANCY (default: bucket default)")
     ("region", value<std::string>(), "AWS region to use")
   ;
   Mode::OptionsDescription ssh_storage_options("SSH storage options");
   ssh_storage_options.add_options()
-    ("ssh-host", value<std::string>(), "hostname to connect to")
+    ("host", value<std::string>(), "hostname to connect to")
     ;
   std::string default_locations = elle::sprintf(
     "folder where blocks are stored (default:"
@@ -305,7 +331,7 @@ main(int argc, char** argv)
       "create",
       "Create a storage",
       &create,
-      "STORAGE-TYPE [STORAGE-OPTIONS...]",
+      "--name STORAGE STORAGE-TYPE [STORAGE-OPTIONS...]",
       {
         { "name,n", value<std::string>(), "created storage name" },
         { "capacity,c", value<std::string>(), "limit the storage capacity, "
@@ -317,7 +343,7 @@ main(int argc, char** argv)
         storage_types,
         cloud_options,
         s3_options,
-        ssh_storage_options,
+        // ssh_storage_options,
       },
       {},
       {
@@ -354,7 +380,7 @@ main(int argc, char** argv)
       "delete",
       "Delete a storage",
       &delete_,
-      {},
+      "--name STORAGE",
       {
         { "name,n", value<std::string>(), "storage to delete" },
       },

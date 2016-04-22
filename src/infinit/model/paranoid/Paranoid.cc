@@ -67,8 +67,8 @@ namespace infinit
         this->_storage->set(
           block->address(),
           this->_keys.K().seal(raw),
-          mode == STORE_ANY || mode == STORE_INSERT,
-          mode == STORE_ANY || mode == STORE_UPDATE);
+          mode == STORE_INSERT,
+          mode == STORE_UPDATE);
       }
 
       std::unique_ptr<blocks::Block>
@@ -80,7 +80,7 @@ namespace infinit
         try
         {
           auto stored = this->_storage->get(address);
-          raw = std::move(this->_keys.k().open(stored));
+          raw = this->_keys.k().open(stored);
         }
         catch (infinit::storage::MissingKey const&)
         {

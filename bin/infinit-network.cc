@@ -21,32 +21,6 @@ infinit::Infinit ifnt;
 #include <endpoint_file.hh>
 
 static
-bool
-_one(bool seen)
-{
-  return seen;
-}
-
-template <typename First, typename ... Args>
-static
-bool
-_one(bool seen, First&& first, Args&& ... args)
-{
-  auto b = bool(first);
-  if (seen && b)
-    return false;
-  return _one(seen || b, std::forward<Args>(args)...);
-}
-
-template <typename ... Args>
-static
-bool
-one(Args&& ... args)
-{
-  return _one(false, std::forward<Args>(args)...);
-}
-
-static
 std::unique_ptr<infinit::storage::StorageConfig>
 storage_configuration(boost::program_options::variables_map const& args)
 {
@@ -143,7 +117,7 @@ COMMAND(create)
       }
       catch (elle::serialization::Error const& e)
       {
-        throw CommandLineError("protocol must be one of: utp, tcp, all");
+        throw CommandLineError("'protocol' must be 'utp', 'tcp' or 'all'");
       }
     }
     overlay_config = std::move(kelips);
@@ -197,12 +171,13 @@ COMMAND(create)
       infinit::model::doughnut::Passport(
         owner.public_key,
         ifnt.qualified_name(name, owner),
-        infinit::cryptography::rsa::KeyPair(owner.public_key, owner.private_key.get())),
+        infinit::cryptography::rsa::KeyPair(owner.public_key,
+                                            owner.private_key.get())),
       owner.name,
       std::move(port),
       version);
   {
-    infinit::Network network(std::move(ifnt.qualified_name(name, owner)),
+    infinit::Network network(ifnt.qualified_name(name, owner),
                              std::move(dht));
     if (args.count("output"))
     {
@@ -255,11 +230,12 @@ COMMAND(export_)
   auto output = get_output(args);
   auto network_name = mandatory(args, "name", "network name");
   auto network = ifnt.network_get(network_name, owner);
+  network_name = network.name;
   {
     infinit::NetworkDescriptor desc(std::move(network));
     elle::serialization::json::serialize(desc, *output, false);
   }
-  report_exported(*output, "network", network.name);
+  report_exported(*output, "network", network_name);
 }
 
 COMMAND(fetch)
@@ -385,14 +361,28 @@ COMMAND(link_)
       self.name,
       boost::optional<int>(),
       desc.version));
-  ifnt.network_save(network, true);
-  report_action("linked", "device to network", network.name);
+  auto has_output = optional(args, "output");
+  auto output = has_output ? get_output(args) : nullptr;
+  if (output)
+  {
+    ifnt.network_save(network, *output);
+  }
+  else
+  {
+    ifnt.network_save(network, true);
+    report_action("linked", "device to network", network.name);
+  }
 }
 
 COMMAND(list)
 {
   for (auto const& network: ifnt.networks_get())
-    std::cout << network.name << std::endl;
+  {
+    std::cout << network.name;
+    if (network.model)
+      std::cout << ": linked";
+    std::cout << std::endl;
+  }
 }
 
 COMMAND(push)
@@ -422,6 +412,8 @@ COMMAND(delete_)
   auto owner = self_user(ifnt, args);
   auto network_name = ifnt.qualified_name(name, owner);
   auto path = ifnt._network_path(network_name);
+  auto network = ifnt.network_get(network_name, owner, false);
+  boost::filesystem::remove_all(network.cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "network", network_name, std::string("locally"));
   else
@@ -455,28 +447,41 @@ COMMAND(run)
   bool fetch = aliased_flag(args, {"fetch-endpoints", "fetch", "publish"});
   if (fetch)
     beyond_fetch_endpoints(network, eps);
-  bool cache = flag(args, option_cache.long_name());
-  boost::optional<int> cache_size =
-    option_opt<int>(args, option_cache_size.long_name());
-  boost::optional<int> cache_ttl =
-    option_opt<int>(args, option_cache_ttl.long_name());
-  boost::optional<int> cache_invalidation =
-    option_opt<int>(args, option_cache_invalidation.long_name());
-  boost::optional<uint64_t> disk_cache_size =
-    option_opt<uint64_t>(args, option_cache_disk_cache_size.long_name());
-  if (cache_size || cache_ttl || cache_invalidation || disk_cache_size)
+  bool cache = flag(args, option_cache);
+  auto cache_ram_size = optional<int>(args, option_cache_ram_size);
+  auto cache_ram_ttl = optional<int>(args, option_cache_ram_ttl);
+  auto cache_ram_invalidation =
+    optional<int>(args, option_cache_ram_invalidation);
+  auto disk_cache_size = optional<uint64_t>(args, option_cache_disk_size);
+  if (cache_ram_size || cache_ram_ttl || cache_ram_invalidation
+      || disk_cache_size)
+  {
     cache = true;
-  auto dht =
-    network.run(eps, false, cache, cache_size, cache_ttl, cache_invalidation,
-                flag(args, "async"), disk_cache_size, compatibility_version);
+  }
+  auto port = optional<int>(args, option_port);
+  auto dht = network.run(
+    eps, false,
+    cache, cache_ram_size, cache_ram_ttl, cache_ram_invalidation,
+    flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
             && dht->local()->storage();
   if (!dht->local())
     throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
-  if (auto port_file = optional(args, "port-file"))
+  if (auto port_file = optional(args, option_port_file))
     port_to_file(dht->local()->server_endpoint().port(), port_file.get());
-  static const std::vector<int> signals = {SIGINT, SIGTERM, SIGQUIT};
+  if (auto endpoint_file = optional(args, option_endpoint_file))
+    endpoints_to_file(dht->local()->server_endpoints(), endpoint_file.get());
+  static const std::vector<int> signals = {SIGINT, SIGTERM
+#ifndef INFINIT_WINDOWS
+    ,SIGQUIT
+#endif
+  };
+#ifndef INFINIT_WINDOWS
+  if (flag(args, "daemon"))
+    if (daemon(0, 1))
+      perror("daemon:");
+#endif
   for (auto signal: signals)
     reactor::scheduler().signal_handle(
     signal,
@@ -661,8 +666,8 @@ main(int argc, char** argv)
       {
         { "storage", value<std::vector<std::string>>()->multitoken(),
           "storage to contribute (optional)" },
+        option_output("network"),
       },
-
     },
     {
       "list",
@@ -708,10 +713,10 @@ main(int argc, char** argv)
           "peer address or file with list of peer addresses (host:port)" },
         { "async", bool_switch(), "use asynchronous operations" },
         option_cache,
-        option_cache_size,
-        option_cache_ttl,
-        option_cache_invalidation,
-        option_cache_disk_cache_size,
+        option_cache_ram_size,
+        option_cache_ram_ttl,
+        option_cache_ram_invalidation,
+        option_cache_disk_size,
         { "fetch-endpoints", bool_switch(),
           elle::sprintf("fetch endpoints from %s", beyond(true)).c_str() },
         { "fetch,f", bool_switch(), "alias for --fetch-endpoints" },
@@ -720,8 +725,12 @@ main(int argc, char** argv)
         { "push,p", bool_switch(), "alias for --push-endpoints" },
         { "publish", bool_switch(),
           "alias for --fetch-endpoints --push-endpoints" },
-        { "port-file", value<std::string>(),
-          "write node listening port to file" },
+        option_endpoint_file,
+        option_port_file,
+        option_port,
+#ifndef INFINIT_WINDOWS
+        { "daemon,d", bool_switch(), "run as a background daemon"},
+#endif
       },
     },
     {

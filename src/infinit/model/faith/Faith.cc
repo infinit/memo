@@ -23,7 +23,7 @@ namespace infinit
     namespace faith
     {
       Faith::Faith(std::unique_ptr<storage::Storage> storage,
-                   elle::Version version)
+                   boost::optional<elle::Version> version)
         : Model(std::move(version))
         , _storage(std::move(storage))
       {}
@@ -42,8 +42,8 @@ namespace infinit
         }
         this->_storage->set(block->address(),
                             data,
-                            mode == STORE_ANY || mode == STORE_INSERT,
-                            mode == STORE_ANY || mode == STORE_UPDATE);
+                            mode == STORE_INSERT,
+                            mode == STORE_UPDATE);
       }
 
       std::unique_ptr<blocks::Block>
@@ -56,7 +56,7 @@ namespace infinit
           elle::IOStream s(data.istreambuf());
           Serializer::SerializerIn input(s, false);
           auto res = input.deserialize<std::unique_ptr<blocks::Block>>();
-          return std::move(res);
+          return res;
         }
         catch (infinit::storage::MissingKey const&)
         {

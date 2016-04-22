@@ -92,6 +92,7 @@ namespace infinit
         sign_remove(Model& model) const;
         ValidationResult
         validate_remove(Model& model, RemoveSignature const& sig) const;
+        ELLE_ATTRIBUTE_RW(bool, validated, protected);
       protected:
         virtual
         void

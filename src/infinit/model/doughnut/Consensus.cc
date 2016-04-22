@@ -45,9 +45,6 @@ namespace infinit
           overlay::Operation op;
           switch (mode)
           {
-            case STORE_ANY:
-              op = overlay::OP_INSERT_OR_UPDATE;
-              break;
             case STORE_INSERT:
               op = overlay::OP_INSERT;
               break;
@@ -63,9 +60,14 @@ namespace infinit
           {
             try
             {
-              // FIXME: give ownership of block
-              owner->store(nb ? *nb : *block, mode);
-              break;
+              if (auto o = owner.lock())
+              {
+                // FIXME: give ownership of block
+                o->store(nb ? *nb : *block, mode);
+                break;
+              }
+              else
+                throw model::MissingBlock(block->address());
             }
             catch (Conflict const& c)
             {
@@ -100,8 +102,10 @@ namespace infinit
         std::unique_ptr<blocks::Block>
         Consensus::_fetch(Address address, boost::optional<int> last_version)
         {
-          return this->_owner(address, overlay::OP_FETCH)->fetch(
-            address, std::move(last_version));
+          if (auto owner = this->_owner(address, overlay::OP_FETCH).lock())
+            return owner->fetch(address, std::move(last_version));
+          else
+            throw model::MissingBlock(address);
         }
 
         void
@@ -113,17 +117,20 @@ namespace infinit
         void
         Consensus::_remove(Address address, blocks::RemoveSignature rs)
         {
-          this->_owner(address, overlay::OP_REMOVE)->remove(address, std::move(rs));
+          if (auto owner = this->_owner(address, overlay::OP_FETCH).lock())
+            owner->remove(address, std::move(rs));
+          else
+            throw model::MissingBlock(address);
         }
 
-        std::shared_ptr<Peer>
+        overlay::Overlay::WeakMember
         Consensus::_owner(Address const& address,
                           overlay::Operation op) const
         {
           return this->doughnut().overlay()->lookup(address, op);
         }
 
-        reactor::Generator<overlay::Overlay::Member>
+        reactor::Generator<overlay::Overlay::WeakMember>
         Consensus::_owners(Address const& address,
                            int factor,
                            overlay::Operation op) const
@@ -147,7 +154,10 @@ namespace infinit
               {
                 try
                 {
-                  p->remove(address, rs);
+                  if (auto lock = p.lock())
+                    lock->remove(address, rs);
+                  else
+                    ELLE_TRACE("peer was destroyed while removing");
                   ++count;
                 }
                 catch (reactor::network::Exception const& e)
@@ -165,13 +175,14 @@ namespace infinit
 
         std::unique_ptr<blocks::Block>
         Consensus::fetch_from_members(
-          reactor::Generator<overlay::Overlay::Member>& peers,
+          reactor::Generator<overlay::Overlay::WeakMember>& peers,
           Address address,
           boost::optional<int> local_version)
         {
           std::unique_ptr<blocks::Block> result;
           reactor::Channel<overlay::Overlay::Member> connected;
-          typedef reactor::Generator<overlay::Overlay::Member> PeerGenerator;
+          typedef
+            reactor::Generator<overlay::Overlay::WeakMember> PeerGenerator;
           bool hit = false;
           // try connecting to all peers in parallel
           auto connected_peers = PeerGenerator(
@@ -180,8 +191,11 @@ namespace infinit
               elle::With<reactor::Scope>() <<
               [&peers,&yield,&hit] (reactor::Scope& s)
               {
-                for (auto p: peers)
+                for (auto wp: peers)
                 {
+                  auto p = wp.lock();
+                  if (!p)
+                    ELLE_TRACE("peer was deleted while fetching");
                   hit = true;
                   s.run_background(elle::sprintf("connect to %s", *p),
                   [p,&yield]
@@ -206,12 +220,15 @@ namespace infinit
           // try to get on all connected peers sequentially to avoid wasting
           // bandwidth
           int attempt = 0;
-          for (auto peer: connected_peers)
+          for (auto wpeer: connected_peers)
           {
+            auto peer = wpeer.lock();
+            if (!peer)
+              ELLE_TRACE("peer was deleted while fetching");
             ++attempt;
             try
             {
-              ELLE_TRACE_SCOPE("fetch from %s", *peer);
+              ELLE_TRACE_SCOPE("fetch from %s", peer);
               return peer->fetch(address, local_version);
             }
             // FIXME: get rid of that

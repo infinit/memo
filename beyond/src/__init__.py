@@ -1,8 +1,7 @@
 import base64
-import cryptography
-import os
 import requests
 import subprocess
+import os
 
 import infinit.beyond.version
 
@@ -10,6 +9,9 @@ from infinit.beyond import validation, emailer
 
 from copy import deepcopy
 from itertools import chain
+
+
+exe_ext = os.environ.get('EXE_EXT', '')
 
 ## -------- ##
 ## Binaries ##
@@ -20,14 +22,14 @@ os.environ['INFINIT_CRASH_REPORTER_ENABLED'] = '0'
 def find_binaries():
   for path in chain(
       os.environ.get('PATH', '').split(':'),
-      ['/opt/infinit/bin', os.environ.get('INFINIT_BINARIES')],
+      ['bin', '/opt/infinit/bin', os.environ.get('INFINIT_BINARIES')],
   ):
     if not path:
       continue
     if not path.endswith('/'):
       path += '/'
     try:
-      subprocess.check_call([path + 'infinit-user', '--version'])
+      subprocess.check_call([path + 'infinit-user' + exe_ext, '--version'])
       return path
     except FileNotFoundError:
       pass
@@ -50,6 +52,7 @@ templates = {
   },
   'Internal/Crash Report': {
     'template': 'tem_fu5GEE6jxByj2SB4zM6CrH',
+    'version': 'ver_UcXopNCDszaggwtrhVcBSn',
   },
   'Internal/Passport Generation Error': {
     'templte': 'tem_LdEi9v8WrTACa8BNUhoSte',
@@ -272,15 +275,14 @@ class Beyond:
         import os
         import json
         def import_data(type, data):
-          args = [binary_path + 'infinit-%s' % type, '--import', '-s']
+          args = [binary_path + 'infinit-%s%s' % (type, exe_ext),
+                  '--import', '-s']
           try:
-            process = subprocess.Popen(
+            subprocess.check_output(
               args,
               env = env,
-              stdin = subprocess.PIPE)
-            input = (json.dumps(data) + '\n').encode('utf-8')
-            out, err = process.communicate(input = input, timeout = 1)
-            process.wait(1)
+              input = (json.dumps(data) + '\n').encode('utf-8'),
+              timeout = 1)
           except Exception:
             raise Exception('impossible to import %s \'%s\'',
                             type, data['name'])
@@ -291,11 +293,11 @@ class Beyond:
             try:
               network = self.network_get(*drive.network.split('/'))
             except Network.NotFound:
-              raise Exception('Unkown network \'%s\'' % drive.network)
+              raise Exception('Unknown network \'%s\'' % drive.network)
             import_data('network', network.json())
             subprocess.check_call(
               [
-                binary_path + 'infinit-passport', '--create',
+                binary_path + 'infinit-passport' + exe_ext, '--create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
@@ -303,7 +305,7 @@ class Beyond:
               env = env)
             output = subprocess.check_output(
               [
-                binary_path + 'infinit-passport', '--export',
+                binary_path + 'infinit-passport' + exe_ext, '--export',
                 '--user', user.name,
                 '--network', network.name
               ],
@@ -336,8 +338,11 @@ class Beyond:
   ## Crash Report ##
   ## ------------ ##
 
-  def crash_report_send(self, data):
-    variables = None
+  def crash_report_send(self, data, platform = 'Unknown', version = 'Unknown'):
+    variables = {
+      'platform': platform,
+      'version': version,
+    }
     import tempfile
     with tempfile.TemporaryDirectory() as temp_dir:
       with open('%s/client.dmp' % temp_dir, 'wb') as crash_dump:
@@ -530,8 +535,10 @@ class User:
 
   @property
   def id(self):
-    der = base64.b64decode(self.public_key['rsa'].encode('latin-1'))
-    id = base64.urlsafe_b64encode(cryptography.hash(der))[0:8]
+    import hashlib
+    der = base64.b64decode(self.public_key['rsa']) # .encode('latin-1'))
+    sha = hashlib.sha256(der).digest()
+    id = base64.urlsafe_b64encode(sha)[0:8]
     return id.decode('latin-1')
 
   @property

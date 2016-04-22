@@ -4,4 +4,4 @@
 
 <p><a href="https://github.com/osxfuse/osxfuse/releases/download/osxfuse-3.2.0/osxfuse-3.2.0.dmg" class="button">Download FUSE for OS X</a></p>
 
-<em><strong>NOTE</strong>: Infinit requires a version of FUSE for OS X that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/</a>.</em>
+<p><em><strong>NOTE</strong>: Infinit requires a version of FUSE for OS X that is newer than available on <a href="https://osxfuse.github.io">https://osxfuse.github.io/</a>.</em></p>

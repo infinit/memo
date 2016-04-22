@@ -62,8 +62,7 @@ def configure(
     def execute(self):
       if not super().execute():
         return False
-      if cxx_toolkit.os == drake.os.macos and \
-          cxx_toolkit.kind == drake.cxx.GccToolkit.Kind.gcc:
+      if cxx_toolkit.os == drake.os.macos:
         def set_lib_id(path):
           subprocess.check_output([
             'install_name_tool',
@@ -75,31 +74,32 @@ def configure(
           os.chmod(str(path), 0o755)
           if 'dylib' in str(path):
             set_lib_id(path)
-          otool_out = subprocess.check_output(['otool', '-L',  str(path)])
-          otool_lines = otool_out.decode('utf-8').strip().split('\n')
-          otool_lines = [
-            x.replace('\t', '').split(' ')[0]
-            for x in otool_lines[1:] if 'libstdc++' in x or 'libgcc_s' in x
-          ]
-          for l in otool_lines:
-            drake.command([
-              'install_name_tool', '-change',
-              l, '@rpath/%s' % (os.path.basename(l)), str(path)
-            ])
-            dep_dir = os.path.normpath(
-              os.path.join(os.path.dirname(str(path)), '..', 'lib'))
-            dep_file = \
-              os.path.normpath(os.path.join(dep_dir, os.path.basename(l)))
-            if not os.path.exists(dep_dir):
-              os.makedirs(dep_dir)
-            if not os.path.exists(dep_file):
-              import shutil
-              shutil.copy(l, dep_dir)
-              get_deps_fix_rpaths(drake.Path(dep_file))
-              os.chmod(dep_file, 0o755)
-              set_lib_id(dep_file)
-              os.chmod(dep_file, 0o555)
-          os.chmod(str(path), 0o555)
+          if cxx_toolkit.kind is drake.cxx.GccToolkit.Kind.gcc:
+            otool_out = subprocess.check_output(['otool', '-L',  str(path)])
+            otool_lines = otool_out.decode('utf-8').strip().split('\n')
+            otool_lines = [
+              x.replace('\t', '').split(' ')[0]
+              for x in otool_lines[1:] if 'libstdc++' in x or 'libgcc_s' in x
+            ]
+            for l in otool_lines:
+              drake.command([
+                'install_name_tool', '-change',
+                l, '@rpath/%s' % (os.path.basename(l)), str(path)
+              ])
+              dep_dir = os.path.normpath(
+                os.path.join(os.path.dirname(str(path)), '..', 'lib'))
+              dep_file = \
+                os.path.normpath(os.path.join(dep_dir, os.path.basename(l)))
+              if not os.path.exists(dep_dir):
+                os.makedirs(dep_dir)
+              if not os.path.exists(dep_file):
+                import shutil
+                shutil.copy(l, dep_dir)
+                get_deps_fix_rpaths(drake.Path(dep_file))
+                os.chmod(dep_file, 0o755)
+                set_lib_id(dep_file)
+                os.chmod(dep_file, 0o555)
+            os.chmod(str(path), 0o555)
 
         path = self.target().path()
         get_deps_fix_rpaths(path)
@@ -145,6 +145,9 @@ def configure(
                          strip_prefix = True)
     elle_lib = drake.copy(elle.elle.lib_dynamic, 'lib',
                           strip_prefix = True)
+    dokan_lib = None
+    athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
+                            strip_prefix = True)
   else:
     dropbox_lib = elle.dropbox.lib_static
     cryptography_lib = elle.cryptography.lib_static
@@ -152,9 +155,9 @@ def configure(
     reactor_lib = elle.reactor.lib_static
     aws_lib = elle.aws.library
     elle_lib = elle.elle.lib_static
+    dokan_lib = elle.reactor.dokan_lib
+    athena_lib = elle.athena.lib_static
 
-  athena_lib = drake.copy(elle.athena.lib_dynamic, 'lib',
-                          strip_prefix = True)
 
   cxx_toolkit = elle.cxx_toolkit
   cxx_config += elle.config
@@ -189,11 +192,14 @@ def configure(
       except:
         return '#define INFINIT_%s "%s"' % (name.upper(), value)
 
-  CxxVersionGenerator(drake.node('src/infinit/version.hh'), git)
+  CxxVersionGenerator(drake.node('src/infinit/version.hh'),
+                      git,
+                      production_build = production_build)
 
   infinit_sources = drake.nodes(
     'src/infinit/RPC.hh',
     'src/infinit/RPC.hxx',
+    'src/infinit/utility.hh',
     'src/infinit/credentials/AWSCredentials.cc',
     'src/infinit/credentials/AWSCredentials.hh',
     'src/infinit/credentials/Credentials.cc',
@@ -202,8 +208,6 @@ def configure(
     'src/infinit/credentials/OAuthCredentials.hh',
     'src/infinit/filesystem/filesystem.cc',
     'src/infinit/filesystem/filesystem.hh',
-    'src/infinit/filesystem/AnyBlock.cc',
-    'src/infinit/filesystem/AnyBlock.hh',
     'src/infinit/filesystem/Directory.cc',
     'src/infinit/filesystem/Directory.hh',
     'src/infinit/filesystem/File.cc',
@@ -218,6 +222,7 @@ def configure(
     'src/infinit/filesystem/umbrella.hh',
     'src/infinit/filesystem/Unknown.cc',
     'src/infinit/filesystem/Unknown.hh',
+    'src/infinit/filesystem/Unreachable.hh',
     'src/infinit/filesystem/xattribute.cc',
     'src/infinit/filesystem/xattribute.hh',
     'src/infinit/model/Address.cc',
@@ -358,11 +363,14 @@ def configure(
     cxx_config_infinit.lib('dbghelp')
     cxx_config_infinit.lib('iphlpapi')
     cxx_config_infinit.lib('crypt32')
-    libtype = drake.cxx.StaticLib
+    libtype = drake.cxx.DynLib
+    extra_libs = [dokan_lib]
+    cxx_config_infinit.use_whole_archive()
   else:
+    extra_libs = []
     libtype = drake.cxx.DynLib
   infinit_lib = libtype(
-    'lib/infinit',
+    (windows and 'bin' or 'lib') + '/infinit',
     infinit_sources + [athena_lib,
                        cryptography_lib,
                        aws_lib,
@@ -370,16 +378,17 @@ def configure(
                        dropbox_lib,
                        reactor_lib,
                        elle_lib
-                       ],
+                       ] + extra_libs,
     cxx_toolkit,
     cxx_config_infinit)
   rule_build << infinit_lib
 
-  crash_reporting = drake.include('crash_reporting',
-                                  cxx_toolkit = cxx_toolkit,
-                                  cxx_config = cxx_config)
-  crash_reporter_lib = drake.copy(crash_reporting.library, 'lib',
-                                  strip_prefix = True)
+  if not windows:
+    crash_reporting = drake.include('crash_reporting',
+                                    cxx_toolkit = cxx_toolkit,
+                                    cxx_config = cxx_config)
+    crash_reporter_lib = drake.copy(crash_reporting.library, 'lib',
+                                    strip_prefix = True)
 
   ## -------- ##
   ## Binaries ##
@@ -426,9 +435,12 @@ def configure(
     bin_cxx_config.lib('dbghelp')
     bin_cxx_config.lib('iphlpapi')
     bin_cxx_config.lib('crypt32')
+    bin_cxx_config.library_add(
+      drake.copy(dokan_lib, 'bin', True))
     bin_cxx_config.library_add(elle.boost.program_options_static)
     bin_cxx_config.library_add(elle.boost.regex_static)
-    bin_cxx_config.use_whole_archive()
+    bin_cxx_config.define('ELLE_SERIALIZATION_USE_DLL')
+    #bin_cxx_config.use_whole_archive()
   # Ship libstdc++
   additional_libs = []
   if linux:
@@ -462,10 +474,11 @@ def configure(
     ('infinit-credentials', [], True),
     ('infinit-device', [], True),
     ('infinit-drive', [], True),
+    ('infinit-journal', [], True),
     ('infinit-network', [], True),
     ('infinit-passport', [], True),
     ('infinit-smb', [], False),
-    ('infinit-storage', [aws_lib], True),
+    ('infinit-storage', (not windows) and [aws_lib] or [], True),
     ('infinit-user', [], True),
     ('infinit-volume', [], True),
     ('infinit-webdav', [], False),
@@ -475,6 +488,10 @@ def configure(
   ]
   if not windows:
     binaries_config.append(('sshfs', [], False))
+    additional_libs.append(crash_reporter_lib)
+    additional_libs += [elle_lib, reactor_lib, cryptography_lib]
+  else:
+    pass
   binaries = []
   global installed_binaries
   installed_binaries = []
@@ -491,10 +508,6 @@ def configure(
         source,
         bin_version,
         infinit_lib,
-        elle_lib,
-        reactor_lib,
-        cryptography_lib,
-        crash_reporter_lib,
       ] + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
@@ -502,29 +515,35 @@ def configure(
     binaries.append(bin)
     if install:
       installed_binaries.append(bin)
-      bin_sym = drake.node('bin/symbols/%s.sym' % name)
-      crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                       debian_syms_dir,
-                                       bin,
-                                       bin_sym)
-      installed_symbols.append(bin_sym)
+      if not windows:
+        bin_sym = drake.node('bin/symbols/%s.sym' % name)
+        crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                         debian_syms_dir,
+                                         bin,
+                                         bin_sym)
+        installed_symbols.append(bin_sym)
       def add_libraries(binary):
         installed_libraries.extend(binary.dynamic_libraries)
         for lib in binary.dynamic_libraries:
           add_libraries(lib)
       add_libraries(bin)
-  for lib in set(installed_libraries):
-    lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
-    crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
-                                     debian_syms_dir,
-                                     lib,
-                                     lib_sym)
-    installed_symbols.append(lib_sym)
+  if not windows:
+    for lib in set(installed_libraries):
+      lib_sym = drake.node('lib/symbols/%s.sym' % lib.path().basename())
+      crash_reporting.SymbolsGenerator(crash_reporting.dump_syms_exe,
+                                       debian_syms_dir,
+                                       lib,
+                                       lib_sym)
+      installed_symbols.append(lib_sym)
 
-  if prefix:
-    symbols_dir = '%s/%s' % (prefix, git.version())
-    for s in installed_symbols:
-      rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
+    if prefix:
+      symbols_dir = '%s/%s' % (prefix, git.version())
+      for s in installed_symbols:
+        rule_symbols << drake.copy(s, symbols_dir, strip_prefix = True)
+
+  connectivity = drake.copy(elle.reactor.connectivity, '.',
+                            strip_prefix = 'elle/reactor')
+  installed_binaries.append(connectivity)
 
   ## ----- ##
   ## Share ##
@@ -562,7 +581,14 @@ def configure(
 
   debian_nodes = install_nodes('debian/opt/infinit')
   git = drake.git.Git()
+  if cxx_toolkit.os is drake.os.linux:
+    platform = 'linux'
+  elif cxx_toolkit.os is drake.os.macos:
+    platform = 'macosx'
+  else:
+    platform = 'unknown'
   with drake.templating.Context(content = {
+      'platform': platform,
       'version': git.description(),
       'version_major': git.version().split('.')[0],
       'version_minor': git.version().split('.')[1],
@@ -576,9 +602,10 @@ def configure(
                strip_prefix = True),
   )
   rule_debian = drake.Rule('debian')
-  rule_debian << drake.debian.Packager(
-    'infinit_%s_amd64.deb' % git.description(),
-    debian_nodes, 'debian').package
+  if cxx_toolkit.os is drake.os.linux:
+    rule_debian << drake.debian.Packager(
+      'infinit_%s_amd64.deb' % git.description(),
+      debian_nodes, 'debian').package
 
   debian_debug_nodes = chain(
     installed_symbols,
@@ -587,7 +614,7 @@ def configure(
                strip_prefix = True),
   )
   rule_debian << drake.debian.Packager(
-    'infinit-debug-symbols-%s_0_amd64.deb' % git.description(),
+    'infinit-debug-symbols-%s-%s_0_amd64.deb' % (platform, git.description()),
     debian_debug_nodes, debian_debug_dir).package
 
   ## ------ ##
@@ -623,26 +650,27 @@ def configure(
           'debian': rule_debian
         }
       )
-      crash_test_libs = drake.copy([
-          crash_reporter_lib,
-          cryptography_lib,
-          elle_lib,
-          reactor_lib,
-        ] + additional_libs,
-        'tests/functional/lib', True)
-      crash_test_libs += drake.copy([
-          elle.boost.program_options_dynamic,
-          elle.boost.filesystem_dynamic,
-          elle.boost.regex_dynamic,
-        ], 'tests/functional/lib', True)
-      crash_test_bin = drake.cxx.Executable(
-        'tests/functional/bin/crasher', [
-          drake.node('tests/functional/bin/crasher.cc')
-        ] + crash_test_libs,
-        cxx_toolkit,
-        bin_cxx_config)
-      for test_name in [
-          'crash-reporter',
+      if not windows:
+        crash_test_libs = drake.copy([
+            crash_reporter_lib,
+            cryptography_lib,
+            elle_lib,
+            reactor_lib,
+          ] + additional_libs,
+          'tests/functional/lib', True)
+        crash_test_libs += drake.copy([
+            elle.boost.program_options_dynamic,
+            elle.boost.filesystem_dynamic,
+            elle.boost.regex_dynamic,
+          ], 'tests/functional/lib', True)
+        crash_test_bin = drake.cxx.Executable(
+          'tests/functional/bin/crasher', [
+            drake.node('tests/functional/bin/crasher.cc')
+          ] + crash_test_libs,
+          cxx_toolkit,
+          bin_cxx_config)
+
+      test_names = [
           'errors',
           'single-user-two-devices-shared-storage',
           'passport-restrictions',
@@ -657,23 +685,30 @@ def configure(
           'volume_cli',
           'drive_cli',
           'storage_cli',
-      ]:
+          'cli-backward-compatibility',
+      ]
+      if not windows:
+          test_names.append('crash-reporter')
+      for test_name in test_names:
         test = drake.node('tests/functional/%s' % test_name)
         rule_functional_tests << test
-        test.dependencies_add([crash_test_bin])
+        if not windows:
+          test.dependencies_add([crash_test_bin])
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
+        extra_path = [str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                 absolute = True))]
+        if not windows:
+            extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
+                                 absolute = True)))
+        extra_path.append(os.environ.get('PATH', ''))
         env = {
           'PYTHONPATH':
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
-          'PATH': ':'.join([
-            str(drake.path_build(installed_binaries[0].path(True).dirname(),
-                                 absolute = True)),
-            str(drake.path_build(crash_test_bin.path(True).dirname(),
-                                 absolute = True)),
-            os.environ.get('PATH', '')
-          ])
+          'PATH': ':'.join(extra_path)
         }
+        if cxx_toolkit.os == drake.os.windows:
+          env['EXE_EXT'] = '.exe'
         runner = drake.Runner(
           exe = test,
           env = env
@@ -715,6 +750,9 @@ def configure(
       link = False)
     cxx_config_tests.library_add(
       drake.copy(elle.boost.program_options_dynamic, 'lib', True))
+    cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
+    infinit_lib_tests = infinit_lib
+    infinit_lib_tests_consensus = infinit_lib
   else:
     cxx_config_tests.lib('shlwapi')
     cxx_config_tests.lib('ws2_32')
@@ -726,8 +764,19 @@ def configure(
     cxx_config_tests.library_add(elle.boost.filesystem_static)
     cxx_config_tests.library_add(elle.boost.program_options_static)
     cxx_config_tests.library_add(elle.boost.system_static)
-    cxx_config_tests.library_add(elle.boost.test_static)
     cxx_config_tests.use_whole_archive()
+    cxx_config_tests.define('ELLE_SERIALIZATION_USE_DLL')
+    cxx_config_tests.define('ELLE_TEST_NO_MEMFRY') # does not cross DLL boundaries
+
+    cxx_config_tests_no_boost_test = drake.cxx.Config(cxx_config_tests)
+    cxx_config_tests.library_add(elle.boost.test_static)
+    infinit_lib_tests = drake.copy(infinit_lib, 'tests',
+                                   strip_prefix = True)
+    infinit_lib_tests_consensus = drake.copy(infinit_lib, 'tests/consensus',
+                                             strip_prefix = True)
+    dokan_lib_tests = drake.copy(dokan_lib, 'tests', strip_prefix = True)
+    dokan_lib_tests_consensus = drake.copy(dokan_lib, 'tests/consensus',
+                                             strip_prefix = True)
   tests_names = [
     ('backward-compatibility', []),
     ('consensus/async', []),
@@ -736,28 +785,36 @@ def configure(
     ('doughnut', []),
     ('faith', []),
     ('rpc', []),
-    ('storage', []),
+    ('storage', [aws_lib]),
     ('async-conflict', []),
     ('kelips', []),
   ]
   if not windows:
     tests_names.append(('filesystem', binaries))
+    tests_extra_libs = [elle_lib, cryptography_lib, reactor_lib, protocol_lib]
+  else:
+    tests_extra_libs = []
   for test_name, dependencies in tests_names:
+    ifnt_lib = test_name == 'consensus/async' and infinit_lib_tests_consensus or infinit_lib_tests
+    if windows:
+      if test_name == 'consensus/async':
+        tests_extra_libs += [dokan_lib_tests_consensus]
+      else:
+        tests_extra_libs += [dokan_lib_tests]
     test = drake.cxx.Executable(
       'tests/%s' % test_name,
       [
         drake.node('tests/%s.cc' % test_name),
-        infinit_lib,
-        elle_lib,
-        cryptography_lib,
-        reactor_lib,
-        protocol_lib,
-      ],
+        ifnt_lib
+      ] + tests_extra_libs,
       cxx_toolkit,
-      cxx_config_tests)
+      test_name == 'backward-compatibility' and cxx_config_tests_no_boost_test or cxx_config_tests)
     test.dependencies_add(dependencies)
     rule_tests << test
-    env = {'SOURCE_DIR': drake.path_source()}
+    env = {
+      'SOURCE_DIR': drake.path_source(),
+      'BUILD_DIR': drake.path_build(),
+    }
     #  _____ _____  ____  __ _____
     # |  ___|_ _\ \/ /  \/  | ____|
     # | |_   | | \  /| |\/| |  _|

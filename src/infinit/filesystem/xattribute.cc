@@ -70,11 +70,13 @@ namespace infinit
       return size;
     }
     int
-    XAttributeHandle::write(elle::WeakBuffer buffer, size_t size, off_t offset)
+    XAttributeHandle::write(elle::ConstWeakBuffer buffer,
+                            size_t size,
+                            off_t offset)
     {
       if (_value.size() < size + offset)
         _value.resize(size + offset);
-      memcpy((void*)(_value.data() + offset), buffer.mutable_contents(), size);
+      memcpy((void*)(_value.data() + offset), buffer.contents(), size);
       _written = true;
       return size;
     }

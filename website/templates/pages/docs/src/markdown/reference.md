@@ -156,7 +156,7 @@ To push an existing user, simply invoke _infinit-user_ with the `--push` mode an
 
 ```
 $> infinit-user --push --name alice --fullname "Alice" --email alice@company.com
-Remotely pushed user "alice".
+Remotely saved user "alice".
 ```
 
 #### Create and push user on the Hub ####
@@ -168,7 +168,7 @@ We advise users to sign up to the Hub before performing other operations to avoi
 ```
 $> infinit-user --signup --name alice --fullname "Alice" --email alice@company.com
 Generating RSA keypair.
-Remotely pushed user "alice".
+Remotely saved user "alice".
 ```
 
 ### Fetch a user ###
@@ -292,7 +292,7 @@ As with the other utilities, you can otherwise push the network to the Hub with 
 
 ```
 $> infinit-network --push --as alice --name cluster
-Remotely pushed network "alice/cluster".
+Remotely saved network "alice/cluster".
 ```
 
 You can also manipulate networks without relying on the Hub. Please refer to the `--export` and `--import` options in this case.
@@ -420,7 +420,7 @@ You can otherwise push a local passport by invoking the `--push` action option a
 
 ```
 $> infinit-passport --push --as alice --network cluster --user bob
-Remotely pushed passport "alice/cluster: bob".
+Remotely saved passport "alice/cluster: bob".
 ```
 
 If you are using the pure decentralized environment i.e. without the Hub, you will need to manually export the passport and transmit it to the invited user in which case you should refer to the `--export` and `--import` options.
@@ -498,7 +498,7 @@ A volume often needs to be shared with the other users in the network. As with t
 
 ```
 $> infinit-volume --push --as alice --name shared
-Remotely pushed volume "alice/shared".
+Remotely saved volume "alice/shared".
 ```
 
 _**NOTE**: You may want to keep your volume hidden from the users on a network, in which case you could omit this step and distribute its descriptor using the `--export` and `--import` options._
@@ -526,7 +526,7 @@ The following command mounts an Infinit file system. Note that the `--publish` o
 $> infinit-volume --mount --as alice --name shared --mountpoint /mnt/shared/ --publish
 Fetched endpoints for "alice/cluster".
 Running network "alice/cluster".
-Remotely pushed endpoints for "alice/cluster".
+Remotely saved endpoints for "alice/cluster".
 Running volume "alice/shared".
 ...
 ```
@@ -597,6 +597,8 @@ $> chmod o+r /mnt/shared/awesome.txt
 $> chmod o+w /mnt/shared/awesome.txt
 -rw----rw-  1 alice  users     14B Jan 20 16:55 awesome.txt
 ```
+
+_**NOTE**: The option `--others-mode` can also be used in the binary infinit-acl to set and list the permissions associated with 'everybody'._
 
 ### List permissions ###
 
@@ -704,7 +706,7 @@ To activate this mode, you need to specify the `--full` option when signing up o
 
 <pre><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname Alice --full
 Password: ********
-Remotely pushed user "alice".
+Remotely saved user "alice".
 </code>
 </pre>
 
@@ -802,7 +804,7 @@ Creating a drive is as easy as any other operation. The following creates a driv
 ```
 $> infinit-drive --create --as alice --network cluster --volume shared --name workspace --description "Alice's, Bob's, Charlie's and Dave's workspace" --push
 Locally created drive "alice/workspace".
-Remotely pushed drive "alice/workspace".
+Remotely saved drive "alice/workspace".
 ```
 
 Note that the `--push` option is included to push the drive to the Hub so that it is easily retrievable by the other users, in particular the ones that we will be <a href="#invite-existing-users">inviting</a> to join.
@@ -826,19 +828,19 @@ There are two ways to invite users to join a drive depending on the fact that th
 
 Before you can invite a user to a drive, you need to be able to reference him/her. For that, you need to fetch his/her public identity using the `infinit-user --fetch` command (assuming you are using the Hub).
 
-Every user that will be invited must have been [issued a passport](#create-a-passport) to connect to the network. Since creating a passport for many users may be cumbersome, a `--passports` option is provided to the _infinit-drive_ binary in order to automatically create any missing passport.
+Every user that will be invited must have been [issued a passport](#create-a-passport) to connect to the network. Since creating a passport for many users may be cumbersome, a `--passport` option is provided to the _infinit-drive_ binary in order to automatically create any missing passport.
 
 The sequence of commands below shows how to invite both Bob and Charlie. Note that the user Bob has already been fetched locally and has already been issued a passport. However, Charlie is a freshly created user for whom no passport has been created.
 
 ```
 $> infinit-user --fetch --as alice --name charlie
 Fetched user "charlie".
-$> infinit-drive --invite --as alice --name workspace --user bob --user charlie --passports --push
+$> infinit-drive --invite --as alice --name workspace --user bob --user charlie --passport --push
 Locally created passport "alice/cluster: charlie".
 Locally created invitation for "bob".
 Locally created invitation for "charlie".
-Remotely pushed passport "alice/cluster: charlie".
-Remotely pushed invitations "alice/workspace: bob, charlie".
+Remotely saved passport "alice/cluster: charlie".
+Remotely saved invitations "alice/workspace: bob, charlie".
 ```
 
 That's it, Bob and Charlie have been invited to join the drive named "alice/workspace". Following the `--push` of the invitations, an email is sent to notify each invited user of their invitation and letting them know how to proceed.
@@ -847,7 +849,7 @@ If you would like to prepare invitations locally and push them all later, you ca
 
 ```
 $> infinit-drive --invite --as alice --name workspace --push
-Remotely pushed invitations "alice/workspace: bob, charlie".
+Remotely saved invitations "alice/workspace: bob, charlie".
 ```
 
 Without any `--user` specified, the `--invite` command will push each pending invitations to the Hub, sending the notification emails as a consequence.
@@ -873,7 +875,7 @@ $> infinit-user --fetch --as alice --name hub
 Fetched user "hub".
 $> infinit-passport --create --as alice --network cluster --user hub --allow-create-passport --push
 Locally created passport "alice/cluster: hub".
-Remotely pushed passport "alice/cluster: hub".
+Remotely saved passport "alice/cluster: hub".
 ```
 
 The Hub's user then needs to be registered to the network. This requires that the volume is mounted so that the _infinit-acl_ binary can be used to write the block.
@@ -889,7 +891,7 @@ Users can now be invited using their email addresses. They will receive an email
 ```
 $> infinit-drive --invite --as alice --name workspace --email dave@company.com --push
 Locally created invitation "alice/workspace: dave@company.com".
-Remotely pushed invitation "alice/workspace: dave@company.com".
+Remotely saved invitation "alice/workspace: dave@company.com".
 ```
 
 ### Join a drive ###
@@ -912,7 +914,7 @@ $> infinit-drive --join --as charlie --name alice/workspace
 Joined drive "alice/workspace".
 ```
 
-That's it, you are now allowed to access the drive "alice/workspace", which is an abstraction of the volume "alice/shared". Note that you could have accessed the volume without using the drive invitation anyway. However, should you launch the graphical user interface, you will see the "alice/workspace" drive that you just joined.
+That's it, you are now allowed to mount the volume (i.e. 'alice/shared') associated with the drive to browse, store and access files. Note that you could have done that without using through the drive invitation process because you are using the command-line tools. Non-tech-savvy users, however, will appreciate having an interface with only the drives they have been invited to join and thus have access to.
 
 LDAP
 ----
@@ -924,3 +926,16 @@ Monitor
 
 This binary is only provided in the **Enterprise** version of the Infinit storage platform. Please [contact us](/contact) to schedule a demo or talk to a sales representative.
 
+Journal
+-------
+When running a network or volume with the asynchronous option `--async`, operations are written to the local disk before being sent to the storage nodes. This ensures a better end user experience by not exposing them directly to the network latency or bandwidth.
+
+The _infinit-journal_ binary provides the means for checking the status of the asynchronous write buffer or _journal_.
+
+### Check asynchronous network cache ###
+In order to check the number of pending asynchronous operations and/or the amount of data remaining to be sent to the storage nodes, you can use the `--stat` option.
+
+```
+$> infinit-journal --stat --as alice --network alice/cluster
+alice/cluster: 185 operations, 71 MB
+```

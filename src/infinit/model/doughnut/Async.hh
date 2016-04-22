@@ -78,6 +78,8 @@ namespace infinit
           void
           _process_loop();
           void
+          _process_operation(elle::generic_unique_ptr<Op const> op);
+          void
           _init();
           void
           _push_op(Op op);
