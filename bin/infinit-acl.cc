@@ -97,27 +97,6 @@ public_key_from_username(std::string const& username, bool fetch)
 }
 
 static
-int
-port_setxattr(std::string const& file,
-              std::string const& key,
-              std::string const& value,
-              bool fallback_xattrs)
-{
-#ifndef INFINIT_WINDOWS
-  int res = setxattr(
-    file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
-  if (res >= 0 || !fallback_xattrs)
-    return res;
-#endif
-  if (!fallback_xattrs)
-    elle::unreachable();
-  auto attr_dir = file_xattrs_dir(file);
-  boost::filesystem::ofstream ofs(attr_dir / key);
-  ofs.write(value.data(), value.size());
-  return 0;
-}
-
-static
 boost::optional<std::string>
 path_mountpoint(std::string const& path, bool fallback)
 {
