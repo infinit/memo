@@ -82,6 +82,15 @@ COMMAND(populate_network)
 {
   auto self = self_user(ifnt, args);
   auto network = infinit::NetworkDescriptor(ifnt.network_get(mandatory(args, "network"), self));
+  auto drive_name = optional(args, "drive");
+  boost::optional<infinit::Drive> drive;
+  if (drive_name)
+    drive = ifnt.drive_get(*drive_name);
+  bool create_home = flag(args, "create-home");
+  std::string permissions = "rw";
+  auto perm_arg = optional(args, "permissions");
+  if (perm_arg)
+    permissions = *perm_arg;
   auto mountpoint = mandatory(args, "mountpoint");
   auto ldap = make_ldap(args);
   auto searchbase = mandatory(args, "searchbase");
@@ -159,7 +168,25 @@ COMMAND(populate_network)
     }
     catch (elle::Error const& e)
     {
-      ELLE_LOG("failed to push passport: %s", e);
+      ELLE_LOG("failed to push passport for %s: %s", u.second.name, e);
+    }
+    if (drive)
+    {
+      try
+      {
+        beyond_push(
+          elle::sprintf("drives/%s/invitations/%s", drive->name, u.second.name),
+          "invitation",
+          elle::sprintf("%s: %s", drive->name, u.second.name),
+          infinit::Drive::User(permissions, "ok", create_home),
+          self,
+          true,
+          true);
+      }
+      catch(elle::Error const& e)
+      {
+        ELLE_LOG("failed to push drive invite for %s: %s", u.second.name, e);
+      }
     }
     auto passport_ser = elle::serialization::json::serialize(passport, false);
     int res = port_setxattr(mountpoint, "infinit.register." + u.second.name,
@@ -307,6 +334,11 @@ main(int argc, char** argv)
         {"mountpoint,m", value<std::string>(), "Path to a mounted volume of the network"},
         {"network,n", value<std::string>(), "Network name"},
         {"as", value<std::string>(), "user"},
+        {"drive", value<std::string>(), "If set, invites all found users to the drive"},
+        {"create-home", bool_switch(), "Create user home directory"},
+        {"permissions", value<std::string>(), "Permissions to give: in (r,rw, none) (default: rw)"},
+        {"deny-write", bool_switch(), "Create a passport for read-only access"},
+        {"deny-storage", bool_switch(), "Create a passport that cannot contribute storage"},
       }
     },
     {
