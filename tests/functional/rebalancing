@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+
+import base64
+import threading
+
+from itertools import *
+from utils import *
+
+def initialize(infinits):
+  # Create users and storage
+  for i in infinits:
+    i.env['ELLE_LOG_FILE'] = '%s/logs' % i.dir
+    i.env['ELLE_LOG_TIME'] = '1'
+    i.env['ELLE_LOG_LEVEL'] = ','.join(
+      '%s:DEBUG' % c for c in [
+        'infinit.model*',
+        'infinit.overlay*',
+      ])
+    i.run(['infinit-user', '--create'])
+    i.run(['infinit-storage',
+           '--create', 'storage', '--filesystem',
+           '--path', '%s/blocks' % i.dir])
+  # Exchange users
+  for (lhs, rhs) in permutations(infinits, 2):
+    user = rhs.run(['infinit-user', '--export'])
+    lhs.run(['infinit-user', '--import'], input = user)
+  # Create network and volume, distribute passports and link
+  a = infinits[0]
+  a.run(['infinit-network', '--create', 'network', '--kelips',
+         '--replication-factor', '3',
+         '--eviction-delay', '1s',
+         '--kelips-contact-timeout', '3s',
+         '--storage', 'storage'])
+  network = a.run(['infinit-network', '--export', 'network'])
+  a.run(['infinit-volume',
+         '--create', 'volume', '--network', 'network'])
+  volume = a.run(['infinit-volume', '--export', 'volume'])
+  for i in infinits[1:]:
+    i.run(['infinit-network', '--import'], input = network)
+    i.run(['infinit-volume', '--import'], input = volume)
+    a.run(['infinit-passport',
+           '--create', '--network', 'network',
+           '--user', i.user])
+    p = a.run(['infinit-passport',
+               '--export', '--network', 'network',
+               '--user', i.user])
+    i.run(['infinit-passport', '--import'], input = p)
+    i.run(['infinit-network',
+           '--link', 'a/network', '--storage', 'storage'])
+
+def run(*infinits):
+  def wait_file(path):
+    while True:
+      try:
+        if os.stat(path).st_size > 0:
+          break
+      except FileNotFoundError:
+        pass
+  run_a = infinits[0].spawn(
+    ['infinit-volume',
+     '--run', 'a/volume', '--script',
+     '--endpoints-file', '%s/endpoints' % infinits[0].dir])
+  wait_file('%s/endpoints' % infinits[0].dir)
+  res = [run_a]
+  peers = ['--peer', '%s/endpoints' % infinits[0].dir]
+  for infinit in infinits[1:]:
+    res.append(infinit.spawn(
+      ['infinit-network',
+       '--run', 'a/network', '--script',
+       '--endpoints-file', '%s/endpoints' % infinit.dir] + peers))
+    wait_file('%s/endpoints' % infinit.dir)
+    peers += ['--peer', '%s/endpoints' % infinit.dir]
+  return tuple(res)
+
+def create_file(infinit):
+  def op(p, j):
+    j = json.dumps(j)
+    p.stdin.write((j + '\n').encode())
+    p.stdin.flush()
+    output = next(p.stdout)
+    return json.loads(output.decode())
+  op(infinit, {'operation': 'create', 'path': '/foo',
+             'handle': 'h', 'flags': 0x0202, 'mode': 33206})
+  contents = bytes(16385)
+  op(infinit, {
+    'operation': 'write',
+    'handle': 'h',
+    'offset': 0,
+    'size': len(contents),
+    'content': base64.b64encode(contents).decode('latin-1')})
+
+def wait(run):
+  out, err = run.communicate()
+  rv = run.wait()
+  if rv != 0:
+    reason = 'process failed with return code %s' % rv
+    print(reason, file = sys.stderr)
+    print('STDOUT:\n%s' % out.decode('utf-8'))
+    print('STDERR:\n%s' % err.decode('utf-8'))
+    raise Exception(reason)
+
+def test_a():
+  with TemporaryDirectory() as port_tmp,  \
+       TemporaryDirectory() as tmp,       \
+       Infinit(home = '/tmp/a', user = 'a') as a,                    \
+       Infinit(home = '/tmp/b', user = 'b') as b,                    \
+       Infinit(home = '/tmp/c', user = 'c') as d,                    \
+       Infinit(home = '/tmp/d', user = 'd') as c:
+    infinits = [a, b, c, d]
+    initialize(infinits)
+    # Run volume with A, B and C
+    run_a, run_b, run_c = run(a, b, c)
+    # Create file
+    create_file(run_a)
+    # Check blocks are replicated
+    def blocks(i):
+      return list(chain(*(
+        files for d, subd, files in os.walk('%s/blocks' % i.dir))))
+    assertEq(blocks(a), blocks(b))
+    assertEq(blocks(a), blocks(c))
+    # Kill C, plug D
+    run_d = d.spawn(['infinit-network',
+                     '--run', 'a/network', '--script',
+                     '--peer', '%s/endpoints' % a.dir,
+                     '--peer', '%s/endpoints' % b.dir])
+    run_c.terminate()
+    wait(run_c)
+    # Wait for rebalancing
+    blocks_a = blocks(a)
+    attempts = 0
+    print(blocks_a)
+    while True:
+      blocks_d = blocks(d)
+      if blocks_d == blocks_a:
+        break
+      print(blocks_d)
+      import time
+      time.sleep(1)
+      attempts += 1
+      if attempts > 120:
+        raise Exception('%s blocks failed to be rebalanced' %
+                        (len(blocks_a) - len(blocks_d)))
+    wait(run_a)
+    run_b.terminate()
+    run_d.terminate()
+    wait(run_b)
+    wait(run_d)
+
+def test_b():
+  with TemporaryDirectory() as port_tmp,  \
+       TemporaryDirectory() as tmp,       \
+       Infinit(user = 'a') as a,                    \
+       Infinit(user = 'b') as b,                    \
+       Infinit(user = 'c') as d,                    \
+       Infinit(user = 'd') as c:
+    infinits = [a, b, c, d]
+    initialize(infinits)
+    # Run volume with A, B and C
+    run_a, run_b, run_c, run_d = run(a, b, c, d)
+    # FIXME: use a deterministic way to wait until D is connected.
+    import time
+    time.sleep(5)
+    # Create file
+    create_file(run_a)
+    # Check blocks are replicated
+    def check_replication(infinits):
+      blocks = {}
+      for i in infinits:
+        for block in chain(*(
+            files for d, subd, files in os.walk('%s/blocks' % i.dir))):
+          blocks.setdefault(block, 0)
+          blocks[block] += 1
+      print(blocks)
+      for block, value in blocks.items():
+        if value != 3:
+          return False
+      return True
+    assert check_replication(infinits)
+    # Kill D
+    run_d.terminate()
+    wait(run_d)
+    # Wait for rebalancing
+    attempt = 0
+    while not check_replication([a, b, c]):
+      import time
+      time.sleep(1)
+      attempt += 1
+      if attempt > 120:
+        raise Exception('some block were not replicated')
+    wait(run_a)
+    run_b.terminate()
+    run_c.terminate()
+    wait(run_b)
+    wait(run_c)
+
+test_a()
+test_b()

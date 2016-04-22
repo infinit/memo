@@ -1,12 +1,12 @@
-
+import copy
 import json
+import os
 import pipes
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
-import os
 
 import infinit.beyond
 import infinit.beyond.bottle
@@ -14,17 +14,23 @@ import infinit.beyond.couchdb
 
 from datetime import timedelta
 
+cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
+
 class TemporaryDirectory:
 
-  def __init__(self):
-    self.__dir = None
+  def __init__(self, path = None):
+    self.__dir = path
+    self.__del = False
 
   def __enter__(self):
-    self.__dir = tempfile.mkdtemp()
+    if self.__dir is None:
+      self.__dir = tempfile.mkdtemp()
+      self.__del = True
     return self
 
   def __exit__(self, *args, **kwargs):
-    shutil.rmtree(self.__dir)
+    if self.__del:
+      shutil.rmtree(self.__dir)
 
   def __str__(self):
     return str(self.__dir)
@@ -43,41 +49,62 @@ def unreachable():
 
 class Infinit(TemporaryDirectory):
 
-  def __init__(self, beyond = None, infinit_root = None):
+  def __init__(self,
+               beyond = None,
+               infinit_root = None,
+               home = None,
+               user = None):
+    super().__init__(home)
     self.__beyond = beyond
     self.__infinit_root = infinit_root or ''
+    self.__user = user
+    self.__env = {}
+
+  def __enter__(self):
+    super().__enter__()
+    return self
 
   @property
   def version(self):
     return self.run(['infinit-volume', '--version'])[0]
 
   @property
+  def user(self):
+    return self.__user
+
+  @property
   def env(self):
-    env = {
-      'PATH': os.environ['PATH'],
-      'INFINIT_HOME': self.dir,
+    return self.__env
+
+  def spawn(self, args, input = None, return_code = 0, env = {}):
+    if isinstance(args, str):
+      args = args.split(' ')
+    if '/' not in args[0]:
+      args[0] = 'bin/%s' % args[0]
+    build_dir = os.environ.get('BUILD_DIR')
+    if build_dir:
+      args[0] = '%s/%s' % (build_dir, args[0])
+    args[0] += os.environ.get('EXE_EXT', '')
+    env_ = {
       'INFINIT_RDV': '',
       'INFINIT_BACKTRACE': '1',
     }
+    if self.dir is not None:
+      env_['INFINIT_HOME'] = self.dir
+    if self.__user is not None:
+      env_['INFINIT_USER'] = self.__user
     if 'WINEDEBUG' in os.environ:
-      env['WINEDEBUG'] = os.environ['WINEDEBUG']
+      env_['WINEDEBUG'] = os.environ['WINEDEBUG']
     if 'ELLE_LOG_LEVEL' in os.environ:
-      env['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
+      env_['ELLE_LOG_LEVEL'] = os.environ['ELLE_LOG_LEVEL']
     if self.__beyond is not None:
-      env['INFINIT_BEYOND'] = self.__beyond.domain
-    return env
-
-  def run(self, args, input = None, return_code = 0, env = {}, wait = True):
-    environ = self.env
-    environ.update(env)
-    if isinstance(args, str):
-      args = args.split(' ')
-    args[0] += os.environ.get('EXE_EXT', '')
-    cr = '\r\n' if os.environ.get('EXE_EXT') else '\n'
+      env_['INFINIT_BEYOND'] = self.__beyond.domain
+    env_.update(env)
+    env_.update(self.__env)
     if input is not None:
       args.append('-s')
     pretty = '%s %s' % (
-      ' '.join('%s=%s' % (k, v) for k, v in environ.items()),
+      ' '.join('%s=%s' % (k, v) for k, v in env_.items()),
       ' '.join(pipes.quote(arg) for arg in args))
     if input is not None:
       if isinstance(input, list):
@@ -90,27 +117,29 @@ class Infinit(TemporaryDirectory):
     print(pretty)
     process = subprocess.Popen(
       args,
-      env = environ,
+      env = env_,
       stdin =  subprocess.PIPE,
       stdout =  subprocess.PIPE,
       stderr =  subprocess.PIPE,
     )
     self.process = process
-    if not wait:
-      return process
-    out, err = process.communicate(input)
-    process.wait()
-    if process.returncode != return_code:
-      reason = err.decode('utf-8')
-      print(reason, file = sys.stderr)
-      #if process.returncode not in [0, 1]:
-      #  unreachable()
-      raise Exception('command failed with code %s: %s (reason: %s)' % \
-                      (process.returncode, pretty, reason))
+    if input is not None:
+      process.stdin.write(input)
+    process.pretty = pretty
+    return process
 
+  def run(self, args, input = None, return_code = 0, env = {}):
+    process = self.spawn(args, input, return_code, env)
+    out, err = process.communicate()
+    process.wait()
     out = out.decode('utf-8')
+    err = err.decode('utf-8')
+    if process.returncode != return_code:
+      raise Exception(
+        'command failed with code %s: %s\nstdout: %s\nstderr: %s' % \
+        (process.returncode, process.pretty, out, err))
     self.last_out = out
-    self.last_err = err and err.decode('utf-8')
+    self.last_err = err
     try:
       return json.loads(out)
     except:
@@ -306,9 +335,9 @@ class User():
     self.infinit = infinit
 
   def run(self, cli, **kargs):
-    print('run as %s:\t' % self.name, cli)
-    return self.infinit.run(cli.split(' '),
-                            env = { 'INFINIT_USER': self.name }, **kargs)
+    return self.infinit.run(
+      cli.split(' '),
+      env = { 'INFINIT_USER': self.name }, **kargs)
 
   def run_split(self, args, **kargs):
     return self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)

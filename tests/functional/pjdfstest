@@ -25,10 +25,10 @@ with Infinit() as user:
             '--as', 'user'])
   mountpoint = '%s/%s' % (user.dir, 'mountpoint')
   os.mkdir(mountpoint)
-  with user.run(['infinit-volume',
-                 '--mount', '--mountpoint', mountpoint,
-                 '--as', 'user',
-                 '--name', 'volume'], wait = False) as p:
+  with user.spawn(['infinit-volume',
+                   '--mount', '--mountpoint', mountpoint,
+                   '--as', 'user',
+                   '--name', 'volume']) as p:
     try:
       ready = False
       while not ready:

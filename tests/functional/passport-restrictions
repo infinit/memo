@@ -53,9 +53,10 @@ with TemporaryDirectory() as tmp, \
   try:
     infinit_2.run(['infinit-network', '--link', 'user/network',
         '--storage', 'storage', '--as', 'user2'])
-    raise Exception('link with storage suceeded when it should not have')
   except:
     pass
+  else:
+    raise Exception('link with storage should have failed')
   infinit_2.run(['infinit-network', '--link', 'user/network',
         '--as', 'user2'])
   response = infinit_1.run_script(
@@ -81,10 +82,10 @@ with TemporaryDirectory() as tmp, \
       'infinit-volume', '--run', '--as', 'user', 'volume',
       '--port-file', portfile],
       return_code = 118)
-  import threading
-  t = threading.Thread(target = run_volume)
-  t.start()
-  time.sleep(1)
+  volume_process = infinit_1.spawn([
+    'infinit-volume', '--run', '--as', 'user', 'volume',
+    '--port-file', portfile])
+  time.sleep(2)
   response = infinit_2.run_script(
     user = 'user2', volume = 'user/volume',
     peer = peer(),
@@ -97,5 +98,5 @@ with TemporaryDirectory() as tmp, \
     peer = peer())
   assertEq(response['success'], False)
   assertEq(response['message'], 'Access denied.')
-  infinit_1.process.kill()
-  t.join()
+  volume_process.terminate()
+  assert volume_process.wait() == 0

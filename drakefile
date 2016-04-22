@@ -743,8 +743,6 @@ def configure(
           ] + crash_test_libs,
           cxx_toolkit,
           bin_cxx_config)
-
-
       def functional_test(name, env = {}, binaries = []):
         t = {
           'name': name
@@ -758,21 +756,21 @@ def configure(
       tests = list(
         map(lambda x: functional_test(x),
             [
+              'cli-backward-compatibility',
+              'device_cli',
+              'drive_cli',
               'errors',
-              'single-user-two-devices-shared-storage',
+              #FIXME: 'flow',
+              'main_cli',
+              'network_cli',
               'passport-restrictions',
               'passport-sign-delegate',
-              #FIXME: 'flow',
-              # Test clis.
-              'main_cli',
-              'device_cli',
-              'user_cli',
-              'network_cli',
               'passport_cli',
-              'volume_cli',
-              'drive_cli',
+              # 'rebalancing',
+              'single-user-two-devices-shared-storage',
               'storage_cli',
-              'cli-backward-compatibility',
+              'user_cli',
+              'volume_cli',
             ]))
       if not windows:
         tests.append(functional_test('crash-reporter'))
@@ -785,6 +783,9 @@ def configure(
           'pjdfstest',
           {
             'PJDFSTESTS': str(pjdfstest.tests_folder),
+            'PATH': '%s:%s' % (
+              drake.path_build('pjdfstest', absolute = True),
+              os.environ['PATH']),
           },
           [pjdfstest.pjdfstest]
         ))
@@ -796,6 +797,7 @@ def configure(
         test.dependencies_add(installed_binaries)
         test.dependencies_add(beyond.package.nodes)
         test.dependencies_add(t.get('dependencies', []))
+        test.dependency_add(drake.node('tests/functional/utils.py'))
         extra_path = [str(drake.path_build(installed_binaries[0].path(True).dirname(),
                                            absolute = True))]
         extra_path += t.get('paths', [])
@@ -806,7 +808,8 @@ def configure(
         env = {
           'PYTHONPATH':
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
-          'PATH': ':'.join(extra_path)
+          'SOURCE_DIR': drake.path_source(),
+          'BUILD_DIR': drake.path_build(),
         }
         env.update(t.get('env', {}))
         if cxx_toolkit.os == drake.os.windows:

@@ -840,10 +840,6 @@ COMMAND(run)
           if (!pathname.empty())
             response.serialize("path", pathname);
         }
-        catch (reactor::FDStream::EOF const&)
-        {
-          return;
-        }
         catch (reactor::filesystem::Error const& e)
         {
           elle::serialization::json::SerializerOut response(std::cout);
@@ -858,12 +854,8 @@ COMMAND(run)
         }
         catch (elle::Error const& e)
         {
-#ifdef INFINIT_WINDOWS
-           // Something is outputing a ",'" garbage on stdout if we just
-           // return, which breaks the tests
-           exit(0);
-           return; // assume EOF
-#endif
+          if (stdin_stream.eof())
+            return;
           ELLE_LOG("bronk on op %s: %s", op, e);
           elle::serialization::json::SerializerOut response(std::cout);
           response.serialize("success", false);
