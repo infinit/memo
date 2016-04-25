@@ -589,16 +589,14 @@ namespace infinit
         Paxos::LocalPeer::_disappeared(model::Address id)
         {
           if (this->_nodes.erase(id))
-          {
-            ELLE_TRACE("%s: node %f disappeared, evict in %s",
-                       this, id, this->_node_timeout);
             this->_disappeared_schedule_eviction(id);
-          }
         }
 
         void
         Paxos::LocalPeer::_disappeared_schedule_eviction(model::Address id)
         {
+          ELLE_TRACE("%s: node %f disappeared, evict in %s",
+                     this, id, this->_node_timeout);
           auto it = this->_node_timeouts.emplace(
             std::piecewise_construct,
             std::forward_as_tuple(id),

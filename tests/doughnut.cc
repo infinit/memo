@@ -1132,6 +1132,7 @@ namespace rebalancing
     void
     _disappeared_schedule_eviction(infinit::model::Address id) override
     {
+      ELLE_TRACE("%s: node %f disappeared, evict when signaled", this, id);
       this->_evict.connect([this, id] { this->_disappeared_evict(id); });
     }
 
