@@ -561,8 +561,7 @@ namespace infinit
             return blocks::ValidationResult::failure("no write permissions");
           }
         }
-        ELLE_DEBUG("%s: check author signature, entry=%s, sig=%s",
-                   *this, !!entry, this->data_signature())
+        ELLE_DEBUG("check author signature")
         {
           if (is_group_entry)
           { // fetch latest key for group
