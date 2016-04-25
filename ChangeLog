@@ -1,7 +1,7 @@
 # Change Log
 
 
-## [0.5.5]
+## [0.5.5] - 2016-04-25
 
 Automatic replication of under-replicated metadata blocks and CPU
 usage improvement.
