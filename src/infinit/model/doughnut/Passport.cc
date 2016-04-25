@@ -81,8 +81,6 @@ namespace infinit
         elle::unconst(s.context()).get<Doughnut*>(dn, nullptr);
         if (!dn || dn->version() >= elle::Version(0, 5, 0))
         {
-          ELLE_DEBUG("serialize in 5: %s", dn);
-          //ELLE_DEBUG("%s", elle::Backtrace::current());
           s.serialize("allow_write", this->_allow_write);
           s.serialize("allow_storage", this->_allow_storage);
           s.serialize("allow_sign", this->_allow_sign);
