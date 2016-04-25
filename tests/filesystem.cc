@@ -2034,5 +2034,6 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(write_unlink), 0, 1);
   suite.add(BOOST_TEST_CASE(write_truncate), 0, 1);
   suite.add(BOOST_TEST_CASE(prefetcher_failure), 0, 5);
+  suite.add(BOOST_TEST_CASE(paxos_race), 0, 5);
   suite.add(BOOST_TEST_CASE(data_embed), 0, 5);
 }
