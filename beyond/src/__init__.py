@@ -450,8 +450,7 @@ class User:
         if hide_confirmation_codes:
           if self.emails[key] != True:
             return (key, False)
-        else:
-          return (key, self.emails[key])
+        return (key, self.emails[key])
       res['emails'] = dict(map(filter_confirmation_codes,
                                self.emails))
       if self.email is not None:
