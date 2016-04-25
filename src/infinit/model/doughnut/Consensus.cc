@@ -165,6 +165,10 @@ namespace infinit
                   ELLE_TRACE("network exception removing %f: %s",
                              address, e.what());
                 }
+                catch (infinit::protocol::Serializer::EOF const&)
+                {
+                  ELLE_TRACE("EOF while removing %f", address);
+                }
               });
             }
             reactor::wait(s);

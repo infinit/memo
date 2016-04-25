@@ -101,7 +101,7 @@ namespace infinit
       }
       catch (elle::Exception const& e)
       {
-        ELLE_ERR("%s: unexpected exception: %s", model, e.what());
+        ELLE_ERR("%s: unexpected exception: %s\n%s", model, e.what(), e.backtrace());
         throw;
       }
       catch (...)

@@ -331,10 +331,16 @@ namespace infinit
           channel.write(response);
         }
       }
-      catch (reactor::network::ConnectionClosed const&)
+      catch (infinit::protocol::Serializer::EOF const&)
       {}
-      catch (reactor::network::SocketClosed const&)
-      {}
+      catch (reactor::network::ConnectionClosed const& e)
+      {
+        ELLE_TRACE("unexpected ConnectionClosed: %s", e.backtrace());
+      }
+      catch (reactor::network::SocketClosed const& e)
+      {
+        ELLE_TRACE("unexpected SocketClosed: %s", e.backtrace());
+      }
     }
 
     template <typename T>

@@ -114,6 +114,11 @@ namespace infinit
             ELLE_TRACE("network exception when invoking %s (attempt %s/%s): %s",
                        name, attempt+1, max_attempts, e);
           }
+          catch(infinit::protocol::Serializer::EOF const& e)
+          {
+            ELLE_TRACE("EOF when invoking %s (attempt %s/%s): %s",
+                       name, attempt+1, max_attempts, e);
+          }
           if (max_attempts && ++attempt >= max_attempts)
           {
             _fast_fail = true;
