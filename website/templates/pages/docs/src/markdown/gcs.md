@@ -47,9 +47,9 @@ Creating the Infinit storage resource
 
 Now that the bucket has been created and Infinit has the GCS credentials, you can create the storage resource.
 
-Take care of referencing the bucket name you chose in the first step through the `--bucket` option along with the name of the credentials you just registered i.e the email address associated with your GCS account, in this example _alice@example.com_. Finally, the `--path` option can be used to specify a folder within the bucket to hold the blocks of encrypted data that Infinit will store.
+Take care of referencing the bucket name you chose in the first step through the `--bucket` option along with the name of the credentials you just registered i.e. the email address associated with your GCS account, in this example _alice@example.com_. Finally, the `--path` option can be used to specify a folder within the bucket to hold the blocks of encrypted data that Infinit will store.
 
 ```
-$> infinit-storage --create --gcs --name gcs-storage --account "alice@example.com" --bucket infinit-gcs-storage-eu-example-com --path blocks-folder
+$> infinit-storage --create --as alice --gcs --name gcs-storage --account "alice@example.com" --bucket infinit-gcs-storage-eu-example-com --path blocks-folder
 Created storage "gcs-storage".
 ```
