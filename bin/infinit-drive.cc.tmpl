@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include <elle/json/json.hh>
 #include <elle/log.hh>
 
 // Must be placed before main.hh.
@@ -390,13 +391,27 @@ COMMAND(list)
 {
   ELLE_TRACE_SCOPE("list");
   auto self = self_user(ifnt, args);
-  for (auto& drive: ifnt.drives_get())
+  if (script_mode)
   {
-    std::cout << drive.name;
-    if (drive.users.find(self.name) != drive.users.end())
-      std::cout << ": " << drive.users[self.name].status;
-    std::cout << std::endl;
+    elle::json::Array l;
+    for (auto& drive: ifnt.drives_get())
+    {
+      elle::json::Object o;
+      o["name"] = drive.name;
+      if (drive.users.find(self.name) != drive.users.end())
+        o["status"] = drive.users[self.name].status;
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
   }
+  else
+    for (auto& drive: ifnt.drives_get())
+    {
+      std::cout << drive.name;
+      if (drive.users.find(self.name) != drive.users.end())
+        std::cout << ": " << drive.users[self.name].status;
+      std::cout << std::endl;
+    }
 }
 
 static
