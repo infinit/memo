@@ -535,7 +535,8 @@ namespace infinit
           != valid_tokens.end())
       {
         // Check if token is an option descriptor.
-        if (token.find("--") != std::string::npos)
+        // Could start with - or --
+        if (token.find("-") == 0)
           handling_valid_option = true;
         // Only push back valid option descriptors and their associated values.
         if (handling_valid_option)
@@ -543,7 +544,7 @@ namespace infinit
       }
       // If we were passed an option descriptor, it's not a valid one. Ignore
       // proceeding value.
-      else if (token.find("--") != std::string::npos)
+      else if (token.find("-") == 0)
         handling_valid_option = false;
       // Assume invalid option descriptors are not multitoken and accept next
       // token as it is a positional argument.
