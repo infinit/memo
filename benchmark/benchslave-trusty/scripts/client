@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+sys.path.insert(0, '%s/lib' % os.path.dirname(os.path.realpath(__file__)))
+sys.path.insert(0, '%s/benchmark' % os.path.dirname(os.path.realpath(__file__)))
+
+from common import *
+
+from bonnie import bonnie
+from dbench import dbench
+from dd import dd
+from iozone import iozone
+
+import datetime
+import logging
+import shutil
+import signal
+import tarfile
+import time
+
+def parse_options():
+  import argparse
+  parser = argparse.ArgumentParser(description = 'Benchmark client')
+  parser.add_argument('--server',
+                      metavar = 'HOST',
+                      type = str,
+                      help = 'Server to connect to')
+  parser.add_argument('--infinit-port',
+                      metavar = 'PORT',
+                      type = int,
+                      help = 'Port for Infinit (default: 60000)',
+                      default = 60000)
+  parser.add_argument('--count',
+                      metavar = 'COUNT',
+                      type = int,
+                      help = 'Number of times to loop all tests (default: 1)',
+                      default = 1)
+  parser.add_argument('--infinit-version',
+                      metavar = 'VERSION',
+                      type = str,
+                      help = 'Version of Infinit to use')
+  parser.add_argument('--skip-download',
+                      action = 'store_true',
+                      help = 'Use local Infinit (default: false)',
+                      default = False)
+  parser.add_argument('--skip-results-archive',
+                      action = 'store_true',
+                      help = 'Leave results folder and do not create archive',
+                      default = False)
+  parser.add_argument('--benchmarks',
+                      metavar = 'BENCHMARK,BENCHMARK,...',
+                      type = str,
+                      help = 'benchmarks to run in comma separated list '\
+                             '(default: dbench,dd,iozone)',
+                      default = 'dbench,dd,iozone')
+
+  parser.add_argument('--bonnie-processes',
+                      metavar = 'COUNT',
+                      type = int,
+                      help = 'bonnie++ processes to launch (default: 1)',
+                      default = 1)
+  parser.add_argument('--bonnie-size',
+                      metavar = 'SIZE(MiB)[:CHUNK-SIZE(B)]',
+                      type = str,
+                      help = 'bonnie++ file size (default: 8192)',
+                      default = '8192')
+  parser.add_argument('--bonnie-files',
+                      metavar = 'COUNT(*1024)',
+                      type = int,
+                      help = 'bonnie++ number of small files (default: 1)',
+                      default = 1)
+  parser.add_argument('--bonnie-buffering',
+                      action = 'store_true',
+                      help = 'bonnie++ disable write bufferring',
+                      default = False)
+
+  parser.add_argument('--dbench-runtime',
+                      metavar = 'SECONDS',
+                      type = int,
+                      help = 'dbench test time (default: 300)',
+                      default = 300)
+  parser.add_argument('--dbench-processes',
+                      metavar = 'COUNT',
+                      type = int,
+                      help = 'dbench processes (default: 10)',
+                      default = 10)
+  parser.add_argument('--dbench-clients-per-process',
+                      metavar = 'COUNT',
+                      type = int,
+                      help = 'dbench clients per process (default: 1)',
+                      default = 1)
+
+  parser.add_argument('--dd-bs',
+                      metavar = 'SIZE',
+                      type = str,
+                      help = 'dd bs argument (default: 1M)',
+                      default = '1M')
+  parser.add_argument('--dd-count',
+                      metavar = 'COUNT',
+                      type = int,
+                      help = 'dd count argument (default: 1000)',
+                      default = 1000)
+
+  return parser.parse_args()
+
+logger = logging.getLogger('Benchmark client')
+logger.setLevel(logging.DEBUG)
+log_stream_handler = logging.StreamHandler()
+log_formatter = logging.Formatter('%(asctime)s: [%(levelname)s] %(message)s')
+log_stream_handler.setFormatter(log_formatter)
+logger.addHandler(log_stream_handler)
+
+args = parse_options()
+if not args.skip_download and args.infinit_version is None:
+  raise Exception('must specify --infinit-version')
+if args.skip_download and args.infinit_version:
+  raise Exception('select either --skip-download or --infinit-version')
+
+infinit_process = None
+benchmark = None
+results_dir = '/res'
+shutil.rmtree(results_dir, ignore_errors = True)
+os.makedirs(results_dir)
+
+def clean_mountpoint(mountpoint):
+  try:
+    run(['umount', mountpoint])
+  except:
+    pass
+  shutil.rmtree(mountpoint, ignore_errors = True)
+  os.makedirs(mountpoint, exist_ok = True)
+
+nfs_mountpoint = '/mnt/nfs'
+clean_mountpoint(nfs_mountpoint)
+
+infinit_mountpoint = '/mnt/infinit'
+clean_mountpoint(infinit_mountpoint)
+
+def _clean_up():
+  # Clean up
+  logger.info('Cleaning up...')
+  if benchmark:
+    benchmark.kill()
+  if infinit_process:
+    infinit_process.send_signal(signal.SIGINT)
+    infinit_process.wait()
+  try:
+    run(['umount', nfs_mountpoint])
+  except:
+    pass
+  shutil.rmtree('/client_home/.local/state', ignore_errors = True)
+  if not args.skip_download:
+    try:
+      run(['dpkg', '-r', 'infinit'])
+    except:
+      pass
+  logger.info('Done')
+  exit(0)
+
+def clean_up(signum, frame):
+  _clean_up()
+
+with InterruptHandler(clean_up) as h:
+  try:
+    logger.info('Preparing client...')
+    start_time = int(time.time())
+
+    if not args.skip_download:
+      logger.info('Installing Infinit...')
+      install_infinit(args.infinit_version)
+      logger.info('Installed infinit-%s' % args.infinit_version)
+
+    # Mount NFS
+    logger.info('Mounting NFS...')
+    run(['service', 'rpcbind', 'restart'])
+    run([
+      'mount', '-t', 'nfs',
+      '%s:/bench_scratch/nfs_storage' % args.server,
+      nfs_mountpoint,
+    ])
+    logger.info('...done')
+
+    # Mount Infinit
+    logger.info('Mounting Infinit...')
+    client_home = '/client_home'
+    infinit_env = {
+      'INFINIT_HOME': client_home,
+      'INFINIT_USER': 'bench',
+      'PATH': '/opt/infinit/bin',
+    }
+    infinit_process = run([
+        'infinit-volume', '--run',
+        '--name', 'v',
+        '--peer', '%s:%d' % (args.server, args.infinit_port),
+        '--mountpoint', infinit_mountpoint,
+        # '--async',
+        '--cache-ram-size', '%d' % (64 * 1024 * 1024),
+        '--cache-ram-ttl', '300',
+        '--cache-ram-invalidation', '15',
+        '--cache-disk-size', '%d' % (512 * 1024 * 1024),
+      ],
+      wait = False,
+      env = infinit_env,
+      write_to_file = '%s/infinit_mount_command' % results_dir
+    )
+    logger.info('...done')
+
+    benchmarks = [b.lower() for b in args.benchmarks.split(',')]
+
+    for i in range(1, args.count + 1):
+      logger.info('Run: %d of %d' % (i, args.count))
+      # bonnie++
+      if 'bonnie++' in benchmarks:
+        benchmark = bonnie(results_dir, logger,
+                           nfs_mountpoint, 'NFS', i,
+                           args.bonnie_processes,
+                           args.bonnie_size,
+                           args.bonnie_files,
+                           args.bonnie_buffering)
+        benchmark.start()
+        benchmark = bonnie(results_dir, logger,
+                           infinit_mountpoint, 'Infinit', i,
+                           args.bonnie_processes,
+                           args.bonnie_size,
+                           args.bonnie_files,
+                           args.bonnie_buffering)
+        benchmark.start()
+      # dbench
+      if 'dbench' in benchmarks:
+        benchmark = dbench(results_dir, logger,
+                           nfs_mountpoint, 'NFS', i,
+                           args.dbench_processes,
+                           args.dbench_clients_per_process,
+                           args.dbench_runtime)
+        benchmark.start()
+        benchmark = dbench(results_dir, logger,
+                           infinit_mountpoint, 'Infinit', i,
+                           args.dbench_processes,
+                           args.dbench_clients_per_process,
+                           args.dbench_runtime)
+        benchmark.start()
+      # dd
+      if 'dd' in benchmarks:
+        benchmark = dd(results_dir, logger, nfs_mountpoint, 'NFS', i,
+                       args.dd_bs, args.dd_count)
+        benchmark.start()
+        benchmark = dd(results_dir, logger, infinit_mountpoint, 'Infinit', i,
+                       args.dd_bs, args.dd_count)
+        benchmark.start()
+      if 'iozone' in benchmarks:
+        benchmark = iozone(results_dir, logger, nfs_mountpoint, 'NFS', i)
+        benchmark.start()
+        benchmark = iozone(results_dir, logger, infinit_mountpoint, 'Infinit', i)
+        benchmark.start()
+
+    logger.info('Done benchmarking')
+    benchmark = None
+    if not args.skip_results_archive:
+      infinit_version = run(['infinit-user', '--version'], env = infinit_env)[0]
+      results_name = 'bench_results_%s_%s' % (
+        infinit_version,
+        datetime.datetime.utcfromtimestamp(start_time).isoformat(),
+      )
+      results_file = '%s.tar.gz' % results_name
+      with tarfile.open(results_file, 'w:gz') as tar:
+        tar.add(results_dir, arcname = results_name)
+      shutil.rmtree(results_dir)
+      logger.info('Results: %s' % results_file)
+  except Exception as e:
+    logger.error('Encountered a problem: %s' % e)
+  finally:
+    _clean_up()
