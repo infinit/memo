@@ -270,7 +270,6 @@ COMMAND(delete_)
 {
   auto name = get_name(args);
   auto user = ifnt.user_get(name);
-  auto path = ifnt._user_path(user.name);
   if (user.private_key && (!flag(args, "force") || script_mode))
   {
     std::string res;
@@ -288,8 +287,30 @@ COMMAND(delete_)
     if (res != user.name)
       throw elle::Error("Aborting...");
   }
+  if (flag(args, "pull"))
+  {
+    try
+    {
+      auto self = self_user(ifnt, args);
+      beyond_delete("user", name, self);
+    }
+    catch (MissingLocalResource const& e)
+    {
+      throw elle::Error("unable to pull user, ensure the user has been set "
+                        "using --as or INFINIT_USER");
+    }
+    catch (MissingResource const& e)
+    {
+      // Ignore if the item is not on Beyond.
+    }
+    catch (elle::Error const& e)
+    {
+      throw;
+    }
+  }
   if (avatar_path(name))
     boost::filesystem::remove(avatar_path(name).get());
+  auto path = ifnt._user_path(user.name);
   if (boost::filesystem::remove(path))
     report_action("deleted", "user", user.name, std::string("locally"));
   else
@@ -456,7 +477,7 @@ main(int argc, char** argv)
   Mode::OptionDescription option_push_password =
     { "password", value<std::string>(), elle::sprintf(
       "password to authenticate with %s. Used with --full "
-      "(default: prompt for password)", beyond(true)).c_str() };
+      "(default: prompt for password)", beyond(true)) };
   Mode::OptionDescription option_fullname =
     { "fullname", value<std::string>(), "fullname of user (optional)" };
   Mode::OptionDescription option_avatar =
@@ -475,7 +496,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "user name (default: system user)" },
         option_key,
         { "push-user", bool_switch(),
-          elle::sprintf("push the user to %s", beyond(true)).c_str() },
+          elle::sprintf("push the user to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-user" },
         { "email", value<std::string>(),
           "valid email address (mandatory when using --push-user)" },
@@ -500,7 +521,7 @@ main(int argc, char** argv)
     },
     {
       "fetch",
-      elle::sprintf("Fetch a user from %s", beyond(true)).c_str(),
+      elle::sprintf("Fetch a user from %s", beyond(true)),
       &fetch,
       {},
       {
@@ -519,7 +540,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a user from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a user from %s", beyond(true)),
       &pull,
       {},
       {
@@ -536,11 +557,13 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(),
           "user to delete (default: system user)" },
         { "force", bool_switch(), "delete the user without any prompt" },
+        { "pull", bool_switch(),
+          elle::sprintf("pull the user if it is on %s", beyond(true)) },
       },
     },
     {
       "push",
-      elle::sprintf("Push a user to %s", beyond(true)).c_str(),
+      elle::sprintf("Push a user to %s", beyond(true)),
       &push,
       {},
       {
@@ -555,7 +578,7 @@ main(int argc, char** argv)
     },
     {
       "signup",
-      elle::sprintf("Create and push a user to %s", beyond(true)).c_str(),
+      elle::sprintf("Create and push a user to %s", beyond(true)),
       &signup_,
       "--email EMAIL",
       {
@@ -570,7 +593,7 @@ main(int argc, char** argv)
     },
     {
       "login",
-      elle::sprintf("Log the user to %s", beyond(true)).c_str(),
+      elle::sprintf("Log the user to %s", beyond(true)),
       &login,
       {},
       {
@@ -578,7 +601,7 @@ main(int argc, char** argv)
           "user name (default: system user)" },
         { "password", value<std::string>(), elle::sprintf(
           "password to authenticate with %s (default: prompt)",
-          beyond(true)).c_str() },
+          beyond(true)) },
       },
     },
     {

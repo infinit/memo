@@ -516,6 +516,21 @@ COMMAND(delete_)
   auto network_name = ifnt.qualified_name(name, owner);
   auto path = ifnt._network_path(network_name);
   auto network = ifnt.network_get(network_name, owner, false);
+  if (flag(args, "pull"))
+  {
+    try
+    {
+      beyond_delete("network", network_name, owner);
+    }
+    catch (MissingResource const& e)
+    {
+      // Ignore if the item is not on Beyond.
+    }
+    catch (elle::Error const& e)
+    {
+      throw;
+    }
+  }
   boost::filesystem::remove_all(network.cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "network", network_name, std::string("locally"));
@@ -810,6 +825,8 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to delete" },
+        { "pull", bool_switch(),
+          elle::sprintf("pull the network if it is on %s", beyond(true)) },
       },
     },
     {

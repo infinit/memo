@@ -121,6 +121,21 @@ COMMAND(delete_)
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
   auto volume = ifnt.volume_get(name);
+  if (flag(args, "pull"))
+  {
+    try
+    {
+      beyond_delete("volume", name, owner);
+    }
+    catch (MissingResource const& e)
+    {
+      // Ignore if the item is not on Beyond.
+    }
+    catch (elle::Error const& e)
+    {
+      throw;
+    }
+  }
   boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "volume", name, std::string("locally"));
@@ -1049,6 +1064,8 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to delete" },
+        { "pull", bool_switch(),
+          elle::sprintf("pull the volume if it is on %s", beyond(true)) },
       },
     },
     {
