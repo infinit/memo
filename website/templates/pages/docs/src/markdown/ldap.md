@@ -25,7 +25,11 @@ $> infinit-user --create --push --full --name jdoe --ldap-name cn=jdoe,ou=engine
 ```
 
 Once done, the user will be able to login to the GUI and/or fetch its user key
-from the hub using 'jdoe' as login, and his LDAP password.
+from the hub using 'jdoe' as login, and his LDAP password:
+
+```
+$> infinit-user --login --name jdoe --password MY-LDAP-PASSWORD
+```
 
 
 3. Batch export LDAP users to the hub
