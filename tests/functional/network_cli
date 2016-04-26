@@ -189,3 +189,19 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
                   '--as', 'alice'])
   assertEq(len(s1), 2)
   assertEq(len(s2), 2)
+
+with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+  # Local and Beyond.
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '--push'])
+  bob.run(['infinit-network', '--delete', '--as', 'bob', 'n'])
+  bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'])
+  assertEq(len(bob.run(['infinit-network', '--list', '--as', 'bob'])), 1)
+  bob.run(['infinit-network', '--delete', '--as', 'bob', 'n', '--pull'])
+  assertEq(len(bob.run(['infinit-network', '--list', '--as', 'bob'])), 0)
+  bob.run(['infinit-network', '--fetch', '--as', 'bob', 'n'], return_code = 1)
+  # Only local.
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n2'])
+  assertEq(len(bob.run(['infinit-network', '--list', '--as', 'bob'])), 1)
+  bob.run(['infinit-network', '--delete', '--as', 'bob', 'n2', '--pull'])
+  assertEq(len(bob.run(['infinit-network', '--list', '--as', 'bob'])), 0)

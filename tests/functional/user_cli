@@ -210,3 +210,24 @@ with Beyond() as b, Infinit(beyond = b) as alice:
   except Exception as e:
     pass
   alice.run(['infinit-user', '--pull', '--as', 'bob', '--name', 'bob'])
+
+# Pull and delete.
+with Beyond() as beyond, \
+    Infinit(beyond = beyond) as bob, \
+    Infinit(beyond = beyond) as alice:
+  bob.run(
+    ['infinit-user', '--signup', '--name', 'bob', '--email', 'bob@infinit.io'])
+  alice.run(['infinit-user', '--create', '--name', 'alice'])
+  # Local and Beyond.
+  bob.run(
+    ['infinit-user', '--delete', '--as', 'bob', '--name', 'bob', '--pull'],
+    input = 'bob')
+  assertEq(len(bob.run(['infinit-user', '--list'])), 0)
+  alice.run(['infinit-user', '--fetch', '--as', 'alice', '--name', 'bob'],
+            return_code = 1)
+  # Local only.
+  alice.run(
+    ['infinit-user', '--delete', '--as', 'alice', '--name', 'alice', '--pull'],
+    input = 'alice')
+  assertEq(len(alice.run(['infinit-user', '--list'])), 0)
+

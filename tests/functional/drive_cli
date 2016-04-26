@@ -290,3 +290,27 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
           list(itertools.chain(*itertools.product(['--email'], emails))))
   for email in emails:
     register(email)
+
+# Pull and delete.
+with Beyond() as beyond, Infinit(beyond = beyond) as b:
+  b.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  # Local and Beyond.
+  b.run(['infinit-network', '--create', '--as', 'bob', '--push', 'n'])
+  b.run(['infinit-volume', '--create', '--as', 'bob',
+         '--network', 'n', '--push', 'v'])
+  b.run(['infinit-drive', '--create', '--as', 'bob',
+         '--network', 'n', '--volume', 'v', '--push', 'd'])
+  assertEq(len(b.run(['infinit-drive', '--list', '--as', 'bob'])), 1)
+  b.run(['infinit-drive', '--delete', '--as', 'bob', 'd', '--pull'])
+  assertEq(len(b.run(['infinit-drive', '--list', '--as', 'bob'])), 0)
+  b.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)
+  # Local only.
+  b.run(['infinit-network', '--create', '--as', 'bob', 'n2'])
+  b.run(['infinit-volume', '--create', '--as', 'bob',
+         '--network', 'n', 'v2'])
+  b.run(['infinit-drive', '--create', '--as', 'bob',
+         '--network', 'n2', '--volume', 'v2', 'd2'])
+  assertEq(len(b.run(['infinit-drive', '--list', '--as', 'bob'])), 1)
+  b.run(['infinit-drive', '--delete', '--as', 'bob', 'd2', '--pull'])
+  assertEq(len(b.run(['infinit-drive', '--list', '--as', 'bob'])), 0)
+
