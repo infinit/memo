@@ -52,8 +52,8 @@ def parse_options():
                       metavar = 'BENCHMARK,BENCHMARK,...',
                       type = str,
                       help = 'benchmarks to run in comma separated list '\
-                             '(default: dbench,dd,iozone)',
-                      default = 'dbench,dd,iozone')
+                             '(default: dbench,dd)',
+                      default = 'dbench,dd')
 
   parser.add_argument('--bonnie-processes',
                       metavar = 'COUNT',
