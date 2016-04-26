@@ -13,10 +13,10 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
   bob.run(['infinit-user', '--fetch',
            '--name', 'alice'])
-  networks = []
+  networks = set()
   for i in range(10):
     network = 'network%r' % i
-    networks.append('bob/' + network)
+    networks.add('bob/%s' % network)
     bob.run(['infinit-network', '--create', '--push',
              '--name', network,
              '--as', 'bob'])
@@ -25,9 +25,9 @@ with Beyond() as beyond, Infinit(beyond) as bob, Infinit(beyond) as alice:
              '--user', 'alice',
              '--as', 'bob'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
-  l = map(lambda x: x.split(':')[0],
-          alice.run(['infinit-passport', '--list', '--as', 'alice']))
-  assertEq(set(l), set(networks))
+  l = set(p['network'] for p in alice.run_json(
+    ['infinit-passport', '--list', '--as', 'alice', '--script']))
+  assertEq(l, networks)
   for network in networks:
     alice.run(['infinit-network', '--fetch',
                '--name', network,

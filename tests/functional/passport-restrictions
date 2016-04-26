@@ -16,7 +16,7 @@ with TemporaryDirectory() as tmp, \
      '--kelips', '--k', '1',
     '--as', 'user',
   ])
-  network = infinit_1.run([
+  network = infinit_1.run_json([
     'infinit-network', '--export',
      'network',
     '--as', 'user',
@@ -26,7 +26,7 @@ with TemporaryDirectory() as tmp, \
      'volume', '--network', 'network',
     '--as', 'user',
   ])
-  volume = infinit_1.run([
+  volume = infinit_1.run_json([
     'infinit-volume', '--export',
      'volume',
     '--as', 'user',
@@ -40,11 +40,11 @@ with TemporaryDirectory() as tmp, \
   ])
   infinit_2.run(['infinit-network', '--import'], input = network)
   infinit_2.run(['infinit-volume', '--import'], input = volume)
-  user2 = infinit_2.run([
+  user2 = infinit_2.run_json  ([
     'infinit-user', '--export',  'user2'
   ])
   infinit_1.run(['infinit-user', '--import'], input = user2)
-  passport = infinit_1.run(['infinit-passport', '--create',
+  passport = infinit_1.run_json(['infinit-passport', '--create',
       '--user', 'user2', '--network', 'network', '--as', 'user',
       '--deny-write', '--deny-storage',
       '--output', '-'

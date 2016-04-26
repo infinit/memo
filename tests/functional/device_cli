@@ -13,12 +13,16 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
   alice.run(['infinit-user', '--signup',
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
-  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
-  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice',
-               '--passphrase', 'the_passphrase', '--no-countdown'])
-  alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice',
-              '--passphrase', 'the_passphrase'])
-  alice2_json = alice2.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice_json = alice.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice.run(
+    ['infinit-device', '--transmit', '--user', '--as', 'alice',
+     '--passphrase', 'the_passphrase', '--no-countdown'])
+  alice2.run(
+    ['infinit-device', '--receive', '--user', '--name', 'alice',
+     '--passphrase', 'the_passphrase'])
+  alice2_json = alice2.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
   assertEq(alice_json['private_key'], alice2_json['private_key'])
 
 # Passphrase from input.
@@ -29,12 +33,17 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
   alice.run(['infinit-user', '--signup',
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
-  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
-  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
-             input = passphrase)
-  alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
-             input = passphrase)
-  alice2_json = alice2.run(['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice_json = alice.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice.run(
+    ['infinit-device', '--transmit', '--user',
+     '--as', 'alice', '--no-countdown'],
+    input = passphrase)
+  alice2.run(
+    ['infinit-device', '--receive', '--user', '--name', 'alice'],
+    input = passphrase)
+  alice2_json = alice2.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
   assertEq(alice_json['private_key'], alice2_json['private_key'])
 
 #  Expired.
@@ -45,13 +54,17 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
    alice.run(['infinit-user', '--signup',
               '--name', 'alice',
               '--email', 'alice@infinit.io'])
-   alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
-   alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
-             input = passphrase)
+   alice_json = alice.run_json(
+     ['infinit-user', '--export', '--name', 'alice', '--full'])
+   alice.run(
+     ['infinit-device', '--transmit', '--user',
+      '--as', 'alice', '--no-countdown'],
+     input = passphrase)
    beyond.advance(5 * 6000 + 1)
    try:
-     alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
-                input = passphrase)
+     alice2.run(
+       ['infinit-device', '--receive', '--user', '--name', 'alice'],
+       input = passphrase)
      unreachable()
    except Exception as e:
      assert 'pairing/gone' in e.args[0]
@@ -64,12 +77,16 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
   alice.run(['infinit-user', '--signup',
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
-  alice_json = alice.run(['infinit-user', '--export', '--name', 'alice', '--full'])
-  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
-            input = passphrase)
+  alice_json = alice.run_json(
+    ['infinit-user', '--export', '--name', 'alice', '--full'])
+  alice.run(
+    ['infinit-device', '--transmit', '--user',
+     '--as', 'alice', '--no-countdown'],
+    input = passphrase)
   try:
-    alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
-               input = 'not_the_passphrase')
+    alice2.run(
+      ['infinit-device', '--receive', '--user', '--name', 'alice'],
+      input = 'not_the_passphrase')
     unreachable()
   except Exception as e:
     # Should just be 'invalid passphrase'.
@@ -84,8 +101,9 @@ with Beyond() as beyond, Infinit(beyond = beyond) as alice, \
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
   try:
-    alice.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
-              input = passphrase)
+    alice.run(
+      ['infinit-device', '--receive', '--user', '--name', 'alice'],
+      input = passphrase)
     unreachable()
   except Exception as e:
     # Should just be 'No pairing information'.
@@ -98,13 +116,17 @@ Infinit(beyond = beyond) as alice2:
   alice.run(['infinit-user', '--signup',
              '--name', 'alice',
              '--email', 'alice@infinit.io'])
-  alice.run(['infinit-device', '--transmit', '--user', '--as', 'alice', '--no-countdown'],
-             input = passphrase)
-  alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
-             input = passphrase)
+  alice.run(
+    ['infinit-device', '--transmit', '--user',
+     '--as', 'alice', '--no-countdown'],
+    input = passphrase)
+  alice2.run(
+    ['infinit-device', '--receive', '--user', '--name', 'alice'],
+    input = passphrase)
   try:
-    alice2.run(['infinit-device', '--receive', '--user', '--name', 'alice'],
-               input = passphrase)
+    alice2.run(
+      ['infinit-device', '--receive', '--user', '--name', 'alice'],
+      input = passphrase)
     unreachable()
   except Exception as e:
     # Should just be 'No pairing information'.

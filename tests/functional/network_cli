@@ -10,34 +10,39 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-user', '--create',  'alice'])
 
   try:
-    bob.run(['infinit-network', '--delete', '--name', 'broken', '--as', 'bob'])
+    bob.run(['infinit-network', '--delete', 'broken', '--as', 'bob'])
     unreachable()
   except Exception as e:
     pass
-  bob.run(['infinit-network', '--create', '--name', 'broken', '--as', 'bob'])
+  bob.run(['infinit-network', '--create', 'broken', '--as', 'bob'])
   # Simulate the network being run with cache and async.
   import os
   state_dir = '%s/.local/state/infinit/filesystem' % bob
   os.makedirs('%s/cache/bob/broken' % state_dir)
-  bob.run(['infinit-network', '--delete', '--name', 'broken', '--as', 'bob'])
+  bob.run(['infinit-network', '--delete',
+           '--name', 'broken', '--as', 'bob'])
   # Ensure network cache directory is removed
   assertEq(len(os.listdir('%s/cache/bob' % state_dir)), 0)
 
-  bob.run(['infinit-network', '--create', '--name', 'broken', '--as', 'bob'])
+  bob.run(['infinit-network', '--create', 'broken', '--as', 'bob'])
   # Specified.
-  bob.run(['infinit-network', '--delete', '--name', 'bob/broken', '--as', 'bob'])
-
-  bob.run(['infinit-network', '--create', '--name', 'osef', '--as', 'bob'])
-  net = bob.run(['infinit-network', '--export', '--name', 'osef', '--as', 'bob'])
+  bob.run(
+    ['infinit-network', '--delete', 'bob/broken', '--as', 'bob'])
+  bob.run(
+    ['infinit-network', '--create', '--name', 'osef', '--as', 'bob'])
+  net = bob.run_json(
+    ['infinit-network', '--export', '--name', 'osef', '--as', 'bob'])
   alice.run(['infinit-network', '--import'],
             input = net)
 
   try:
-    alice.run(['infinit-network', '--delete', '--name', 'osef', '--as', 'alice'])
+    alice.run(['infinit-network', '--delete',
+               '--name', 'osef', '--as', 'alice'])
     unreachable()
   except Exception as e:
     pass
-  alice.run(['infinit-network', '--delete', '--name', 'bob/osef', '--as', 'alice'])
+  alice.run(['infinit-network', '--delete',
+             '--name', 'bob/osef', '--as', 'alice'])
 
 # Fetch & list.
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
@@ -49,7 +54,7 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
   alice.run(['infinit-user', '--fetch', '--name', 'bob'])
 
   # Create.
-  l = bob.run(['infinit-network', '--list'])
+  l = bob.run_json(['infinit-network', '--list', '--script'])
   assertEq(len(l), 0)
   bob.run(['infinit-network', '--create', '--name', 'a', '--as', 'bob', '--push'])
   try:
@@ -57,20 +62,20 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
     unreachable()
   except Exception as e:
     pass
-  l = bob.run(['infinit-network', '--list'])
+  l = bob.run_json(['infinit-network', '--list', '--script'])
   assertEq(len(l), 1)
   bob.run(['infinit-network', '--create', '--name', 'b', '--as', 'bob', '--push'])
-  l = bob.run(['infinit-network', '--list'])
+  l = bob.run_json(['infinit-network', '--list', '--script'])
   assertEq(len(l), 2)
 
-  l = alice.run(['infinit-network', '--list'])
+  l = alice.run_json(['infinit-network', '--list', '--script'])
   assertEq(len(l), 0)
   alice.run(['infinit-network', '--fetch', '--name', 'bob/a', '--as', 'alice'])
-  l = alice.run(['infinit-network', '--list'])
+  l = alice.run_json(['infinit-network', '--list', '--script'])
   assertEq(len(l), 1)
   alice.run(['infinit-network', '--fetch', '--as', 'alice'])
   # Still one, alice hasn't been invited to the 2nd network.
-  l = alice.run(['infinit-network', '--list'])
+  l = alice.run_json(['infinit-network', '--list', '--script'])
   assertEq(len(l), 1)
 
 # Update network.
@@ -86,11 +91,11 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
 
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
   alice.run(['infinit-network', '--link', '--name', 'bob/n', '--as', 'alice'])
-  e0 = alice.run(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
+  e0 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
   new_version = '9.9.9'
   bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', new_version, '--as', 'bob', '--push'])
   alice.run(['infinit-network', '--fetch', '--name', 'bob/n', '--as', 'alice'])
-  e1 = alice.run(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
+  e1 = alice.run_json(['infinit-network', '--export', '--name', 'bob/n', '--as', 'alice'])
   assertNeq(e0['version'], e1['version'])
   assertEq(e1['version'], new_version)
   del e0['version']
@@ -112,14 +117,16 @@ def setup(beyond, bob, alice):
 with Beyond() as beyond, Infinit(beyond = beyond) as bob, \
      Infinit(beyond = beyond) as alice:
   setup(beyond, bob, alice)
-  assertEq(len(alice.run(['infinit-passport', '--list', '--as', 'alice'])),
+  assertEq(len(alice.run_json(['infinit-passport', '--list',
+                               '--as', 'alice', '--script'])),
            1)
   alice.run(['infinit-passport', '--delete', '--user', 'alice', '--network', 'bob/n', '--as', 'alice'])
-  assertEq(len(alice.run(['infinit-passport', '--list', '--as', 'alice'])),
+  assertEq(len(alice.run_json(['infinit-passport', '--list', '--as', 'alice', '--script'])),
            0)
   bob.run(['infinit-network', '--update', '--name', 'n', '--compatibility-version', '9.9.9', '--as', 'bob', '--push'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
-  assertEq(len(alice.run(['infinit-passport', '--list', '--as', 'alice'])),
+  assertEq(len(alice.run_json(['infinit-passport', '--list',
+                               '--as', 'alice', '--script'])),
            1)
 
 # Make sure endpoints and stats are kept after updating.

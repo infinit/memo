@@ -140,26 +140,33 @@ class Infinit(TemporaryDirectory):
         (process.returncode, process.pretty, out, err))
     self.last_out = out
     self.last_err = err
-    try:
-      return json.loads(out)
-    except:
-      _out = []
-      for line in out.split(cr):
-        if len(line) == 0:
-          continue
-        try:
-          _out.append(json.loads(line))
-        except:
-          _out.append('%s' % line);
-      return _out
+    return out, err
 
-  def run_script(self, user = None, volume='volume', seq = None, peer = None, **kvargs):
+  def run_json(self, *args, **kwargs):
+    out, err = self.run(*args, **kwargs)
+    try:
+      res = [json.loads(l) for l in out.split(cr) if l]
+      if len(res) == 0:
+        return None
+      elif len(res) == 1:
+        return res[0]
+      else:
+        return res
+    except Exception as e:
+      raise Exception('invalid JSON: %r' % out)
+
+  def run_script(self,
+                 user = None,
+                 volume = 'volume',
+                 seq = None,
+                 peer = None,
+                 **kwargs):
     cmd = ['infinit-volume', '--run', volume]
     if user is not None:
       cmd += ['--as', user]
     if peer is not None:
       cmd += ['--peer', peer]
-    response = self.run(cmd, input = seq or kvargs)
+    response = self.run_json(cmd, input = seq or kwargs)
     return response
 
 def assertEq(a, b):
@@ -338,6 +345,13 @@ class User():
     return self.infinit.run(
       cli.split(' '),
       env = { 'INFINIT_USER': self.name }, **kargs)
+
+  def run_json(self, *args, **kwargs):
+    if 'env' in kwargs:
+      env['INFINIT_USER'] = self.name
+    else:
+      kwargs['env'] = { 'INFINIT_USER': self.name }
+    return self.infinit.run_json(*args, **kwargs)
 
   def run_split(self, args, **kargs):
     return self.infinit.run(args, env = { 'INFINIT_USER': self.name }, **kargs)
