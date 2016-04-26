@@ -4,7 +4,7 @@ RUN apt-get update
 RUN apt-get install -y fuse
 RUN apt-get install -y nfs-kernel-server
 RUN apt-get install -y ssh
-RUN apt-get install -y software-properties-comm
+RUN apt-get install -y software-properties-common
 
 RUN apt-add-repository multiverse
 RUN apt-get update
