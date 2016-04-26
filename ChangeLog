@@ -6,6 +6,7 @@
 ### Added
 
 - Support JSON output with `--script` with `infinit-drive --list`.
+- Support JSON output with `--script` with `infinit-network --list`.
 
 ## [0.5.5] - 2016-04-25
 

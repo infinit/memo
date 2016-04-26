@@ -479,13 +479,26 @@ COMMAND(link_)
 
 COMMAND(list)
 {
-  for (auto const& network: ifnt.networks_get())
+  if (script_mode)
   {
-    std::cout << network.name;
-    if (network.model)
-      std::cout << ": linked";
-    std::cout << std::endl;
+    elle::json::Array l;
+    for (auto const& network: ifnt.networks_get())
+    {
+      elle::json::Object o;
+      o["name"] = network.name;
+      o["linked"] = bool(network.model);
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
   }
+  else
+    for (auto const& network: ifnt.networks_get())
+    {
+      std::cout << network.name;
+      if (network.model)
+        std::cout << ": linked";
+      std::cout << std::endl;
+    }
 }
 
 COMMAND(push)
