@@ -210,6 +210,7 @@ COMMAND(list)
   {
     path = ifnt._passport_path();
   }
+  elle::json::Array l;
   for (boost_fs::recursive_directory_iterator it(path);
        it != boost_fs::recursive_directory_iterator();
        ++it)
@@ -219,11 +220,21 @@ COMMAND(list)
       auto user_name = it->path().filename().string();
       boost_fs::ifstream f;
       ifnt._open_read(f, it->path(), user_name, "passport");
-      elle::serialization::json::SerializerIn s(f, false);
-      auto passport =  s.deserialize<infinit::Passport>();
-      std::cout << passport.network() << ": " << user_name << std::endl;
+      auto passport =
+        elle::serialization::json::deserialize<infinit::Passport>(f, false);
+      if (script_mode)
+      {
+        elle::json::Object o;
+        o["network"] = passport.network();
+        o["user"] = user_name;
+        l.push_back(std::move(o));
+      }
+      else
+        std::cout << passport.network() << ": " << user_name << std::endl;
     }
   }
+  if (script_mode)
+    elle::json::write(std::cout, l);
 }
 
 COMMAND(delete_)
