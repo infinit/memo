@@ -485,6 +485,7 @@ COMMAND(run)
           return;
         }
         path->chmod(mode);
+        path->setxattr("infinit.auth.inherit", "1", 0);
       });
     }
 #ifdef INFINIT_MACOSX
