@@ -149,6 +149,7 @@ def configure(
     'templates/pages/pricing.html',
     'templates/pages/solutions.html',
     'templates/pages/update.html',
+    'templates/pages/dropboxe.html',
 
     'templates/pages/docs/changelog.html',
     'templates/pages/docs/comparison.html',
@@ -197,6 +198,8 @@ def configure(
     'resources/images/schema-infrastructure@2x.png',
     'resources/images/schema-global.png',
     'resources/images/schema-global@2x.png',
+    'resources/images/schema-global-dropbox.png',
+    'resources/images/schema-global-dropbox@2x.png',
     'resources/images/schema-centralized.png',
     'resources/images/schema-centralized@2x.png',
     'resources/images/schema-distributed.png',
@@ -247,6 +250,8 @@ def configure(
     'resources/images/schema-deployment-multi-servers@2x.png',
     'resources/images/schema-cover.png',
     'resources/images/terminal.png',
+    'resources/images/encryption-fs.png',
+    'resources/images/encryption-fs@2x.png',
 
     'resources/images/docs/gcs/create-bucket.png',
     'resources/images/docs/gcs/oauth-permissions.png',

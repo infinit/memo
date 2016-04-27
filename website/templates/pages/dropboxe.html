@@ -1,0 +1,60 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <section class="intro">
+    <h2>
+      <img class="icon" src="${url('images/icons/infinit-cli.png')}" alt="Logo Infinit Cloud Apps">
+      Infinit — Project Dropboxe
+    </h2>
+    <h1>Access all your files without sync but with real encryption</h1>
+    <p class="subtitle">Build scalable and secure storage infrastructures by aggregating local storage and various cloud storages such as Amazon S3 or Dropbox.</p><br><br>
+
+    <img class="schema" src="${url('images/schema-global-dropbox.png')}" alt="Infinit Project">
+  </section>
+
+  <section class="location encryption">
+    <img class="security" src="${url('images/encryption-fs.png')}">
+    <h2>Real encryption</h2>
+    <p>With Dropbox, only the communications are encrypted while the blocks are stored in plain form on the servers.</p>
+
+    <p>Infinit provides a storage solution that both encrypts in transit and at rest so that a block of data cannot be decrypted by a potentially malicious storage server. </p>
+  </section>
+
+  <section class="location">
+    <img src="${url('images/bg-worldmap.png')}" alt="Data Location Control">
+    <h2>Control the location of your data</h2>
+    <p>When creating a drive, you can choose where your files will actually be stored in your country or even on a specific hosting provider.
+    </p>
+    <p class="note">Note that unlike Dropbox, Infinit Drive does not use your local storage capacity unless you want it to.</p>
+  </section>
+
+  <section class="access">
+    <h2>Store and access your files</h2>
+    <p>Once your drive opened, you can store, access and even stream files as if they were stored on your local hard disk.</p>
+    <img src="${url('images/virtual-disk-mac.png')}" alt="Virtual Disk">
+  </section>
+
+  <section class="integrations">
+    <table>
+      <tr>
+        <td><img src="${url('images/logos/aws-s3.png')}" alt="AWS S3"></td>
+        <td><img src="${url('images/logos/gcs.png')}" alt="GCS"></td>
+        <td><img src="${url('images/logos/dropbox.png')}" alt="Dropbox"></td>
+      </tr>
+      <tr>
+        <td><a href="${route('doc_storages_gcs')}">See Docs</a></td>
+        <td><a href="${route('doc_storages_s3')}">See Docs</a></td>
+        <td><span class="note">soon</span></td>
+      </tr>
+    </table>
+
+    <h2>Aggregate storage from different providers</h2>
+    <p>Infinit lets you build hybrid infrastructures by combining local storages from your computers, but also cloud providers like Amazon S3 or Google Cloud Storage.</p>
+  </section>
+
+  <section class="cta doc">
+   <a href="${route('doc_get_started')}" class="button">Get Started</a>
+    or <a href="${route('doc_comparisons')}dropbox">read our Dropbox comparison guide</a>
+  </section>
+</%block>

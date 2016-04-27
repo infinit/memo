@@ -521,7 +521,7 @@ body.home {
 | Drive       |
 `------------*/
 
-body.drive {
+body.drive, body.dropboxe {
   .content {
     h2 { font-size: 29px; line-height: 37px; }
     p { font-size: 16px; line-height: 26px; color: #4A4A4A; }
@@ -572,6 +572,11 @@ body.drive {
   section.integrations {
     clear:both; margin: 130px 15%;
 
+    table { float: right; margin-left: 20px;}
+    table tr td { text-align: center; }
+    table tr td img { float: none; margin:40px 25px 10px 25px;}
+    span.note {     color: #8a8a8a; font-style: italic;}
+
     h2 span {
       font-size: 15px; background: #C8D6DC; padding: 3px 6px;
       border-radius: 3px; color: white; font-weight: 600;
@@ -583,6 +588,35 @@ body.drive {
   section.cta {
     text-align: center; margin-bottom: 100px;
     img { vertical-align: text-bottom; margin-left: 3px; }
+  }
+}
+
+body.dropboxe {
+  section.intro {
+    img.icon { max-height: 33px; }
+    a.button { margin-top: 25px; margin-bottom: 25px; }
+    img.schema { margin-left: -50px;}
+  }
+
+  section.location {
+    border-top: 0;
+  }
+
+  section.encryption { padding-bottom: 60px;
+    img {
+      margin-top: 50px; width: 252px; height: 156px; margin-right: 100px;
+      float: left;
+    }
+  }
+
+  section.cta {
+    a.button { margin-right: 10px; vertical-align: middle; margin-top: 10px; }
+    a { color: @infinitblue; .transition() }
+    a:hover {
+      color: darken(@infinitblue, 10%);
+      border-bottom: 2px solid darken(@infinitblue, 10%);
+    }
+
   }
 }
 
