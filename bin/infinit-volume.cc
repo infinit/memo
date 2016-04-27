@@ -920,13 +920,28 @@ COMMAND(mount)
 
 COMMAND(list)
 {
-  for (auto const& volume: ifnt.volumes_get())
+  if (script_mode)
   {
-    std::cout << volume.name << ": network " << volume.network;
-    if (volume.mountpoint)
-      std::cout << " on " << volume.mountpoint.get();
-    std::cout << std::endl;
+    elle::json::Array l;
+    for (auto const& volume: ifnt.volumes_get())
+    {
+      elle::json::Object o;
+      o["name"] = volume.name;
+      o["network"] = volume.network;
+      if (volume.mountpoint)
+        o["mountpoint"] = volume.mountpoint.get();
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
   }
+  else
+    for (auto const& volume: ifnt.volumes_get())
+    {
+      std::cout << volume.name << ": network " << volume.network;
+      if (volume.mountpoint)
+        std::cout << " on " << volume.mountpoint.get();
+      std::cout << std::endl;
+    }
 }
 
 int
