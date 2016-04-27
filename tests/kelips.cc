@@ -291,6 +291,33 @@ ELLE_TEST_SCHEDULED(list_directory_3)
   ELLE_TRACE("done");
 }
 
+ELLE_TEST_SCHEDULED(list_directory_5_3)
+{
+  elle::filesystem::TemporaryDirectory d;
+  auto tmp = d.path();
+  elle::os::setenv("INFINIT_HOME", tmp.string(), true);
+  auto kp = infinit::cryptography::rsa::keypair::generate(512);
+  auto nodes = run_nodes(tmp, kp, 5, 1, 3);
+  auto fswrite = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
+  auto fsc = make_observer(nodes.front(), tmp, kp, 1, 3, true, false, false);
+  auto fsca = make_observer(nodes.front(), tmp, kp, 1, 3, true, true, false);
+  auto fsa = make_observer(nodes.front(), tmp, kp, 1, 3, false, true, false);
+  ELLE_TRACE("write");
+  make_files(*fswrite, "50", 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("list fsc");
+  ELLE_ASSERT_EQ(dir_size(*fsc,  "50"), 50);
+  ELLE_TRACE("list fsca");
+  ELLE_ASSERT_EQ(dir_size(*fsca, "50"), 50);
+  ELLE_TRACE("list fsa");
+  ELLE_ASSERT_EQ(dir_size(*fsa,  "50"), 50);
+  ELLE_TRACE("done");
+}
 // ELLE_TEST_SCHEDULED(conflictor)
 // {
 //   auto tmp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
@@ -551,6 +578,7 @@ ELLE_TEST_SUITE()
   suite.add(BOOST_TEST_CASE(times), 0, valgrind(32));
   suite.add(BOOST_TEST_CASE(list_directory), 0, valgrind(10));
   suite.add(BOOST_TEST_CASE(list_directory_3), 0, valgrind(60));
+  suite.add(BOOST_TEST_CASE(list_directory_5_3), 0, valgrind(60));
   // suite.add(BOOST_TEST_CASE(killed_nodes), 0, 600);
   //suite.add(BOOST_TEST_CASE(killed_nodes_half_lenient), 0, 600);
   // suite.add(BOOST_TEST_CASE(killed_nodes_k2), 0, 600);
