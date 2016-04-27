@@ -422,7 +422,7 @@ class Bottle(bottle.Bottle):
   def user_email_confirmed(self, name, email = None):
     user = self.user_from_name(name = name)
     email = email or user.email
-    if user.email is None or user.emails.get(email) == True:
+    if user.email is None or user.emails.get(email) == True or not self.__beyond.validate_email_address:
       raise Response(204, {})
     else:
       raise Response(404, {
