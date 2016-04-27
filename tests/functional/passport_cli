@@ -88,14 +88,14 @@ with Beyond() as beyond, \
            '-u', 'alice', '-n', 'n', '--push'])
   alice.run(['infinit-network', '--fetch', '--as', 'alice', 'bob/n'])
   alice.run(['infinit-passport', '--fetch', '--as', 'alice'])
-  assertEq(len(alice.run(['infinit-passport', '--list'])), 1)
+  assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 1)
   # Local and Beyond.
   bob.run(['infinit-passport', '--delete', '--as', 'bob',
            '-u', 'alice', '-n', 'n', '--pull'])
-  assertEq(len(bob.run(['infinit-passport', '--list'])), 0)
+  assertEq(len(bob.run_json(['infinit-passport', '--list', '-s'])), 0)
   # Local only.
   alice.run(['infinit-passport', '--delete', '--as', 'alice',
              '-u', 'alice', '-n', 'bob/n', '--pull'])
-  assertEq(len(alice.run(['infinit-passport', '--list'])), 0)
+  assertEq(len(alice.run_json(['infinit-passport', '--list', '-s'])), 0)
   alice.run(['infinit-passport', '--fetch', '--as', 'alice',
              '-u', 'alice', '-n', 'n'], return_code = 1)
