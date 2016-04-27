@@ -226,12 +226,12 @@ with Beyond() as beyond, \
   bob.run(
     ['infinit-user', '--delete', '--as', 'bob', '--name', 'bob', '--pull'],
     input = 'bob')
-  assertEq(len(bob.run(['infinit-user', '--list'])), 0)
+  assertEq(len(bob.run_json(['infinit-user', '--list', '-s'])), 0)
   alice.run(['infinit-user', '--fetch', '--as', 'alice', '--name', 'bob'],
             return_code = 1)
   # Local only.
   alice.run(
     ['infinit-user', '--delete', '--as', 'alice', '--name', 'alice', '--pull'],
     input = 'alice')
-  assertEq(len(alice.run(['infinit-user', '--list'])), 0)
+  assertEq(len(alice.run_json(['infinit-user', '--list', '-s'])), 0)
 
