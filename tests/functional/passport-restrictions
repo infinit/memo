@@ -99,4 +99,10 @@ with TemporaryDirectory() as tmp, \
   assertEq(response['success'], False)
   assertEq(response['message'], 'Access denied.')
   volume_process.terminate()
-  assert volume_process.wait() == 0
+  out, err = volume_process.communicate()
+  try:
+    assertEq(volume_process.wait(), 0)
+  except:
+    print('infinit-volume STDOUT: %s' % out)
+    print('infinit-volume STDERR: %s' % err)
+    raise
