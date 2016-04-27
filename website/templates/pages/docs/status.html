@@ -1,0 +1,55 @@
+<%inherit file="/base.html"/>
+
+<%block name="content">
+
+  <%include file='menu.html'/>
+
+  <section class="doc">
+
+    <h1>Status</h1>
+
+    <p>Keep track of announcements regarding system wide issues or performance status here.</p>
+
+    <blockquote class="green">
+      <img src="${url('images/icons/status-healthy.png')}" alt="">
+      Infinit Platform is <strong>Healthy</strong>.
+    </blockquote>
+
+    <!--
+    <blockquote class="yellow">
+      <img src="${url('images/icons/status-problems.png')}" alt="">
+      Infinit Platform is functional but some issues has been been found.
+    </blockquote>
+    -->
+
+    <!--
+    <blockquote class="red">
+      <img src="${url('images/icons/status-down.png')}" alt="">
+      Infinit Platform is malfunctional, be sure to check the current issues below.
+    </blockquote>
+    -->
+
+    <h2>Issues</h2>
+
+    <div class="issue">
+      <span class="date">03 Mar 2016</span>
+      <strong>Google Cloud Storage credentials don't work.</strong>
+      <span class="state green">resolved</span>
+      <a href="${route('doc_changelog')}#-0-5-4----2016-03-01">
+        <span class="version">0.5.4</span>
+      </a>
+      <p>The Google Cloud Storage credentials are mixed up with Google Drive ones.</p>
+    </div>
+
+    <div class="issue">
+      <span class="date">24 Feb 2016</span>
+      <strong>Problem with AWS storage.</strong>
+      <span class="state green">resolved</span>
+      <a href="${route('doc_changelog')}#-0-5-2----2016-02-25">
+        <span class="version">0.5.2</span>
+      </a>
+      <p>Found a bug with AWS credentials for us-east-1 region.</p>
+    </div>
+
+  </section>
+</%block>

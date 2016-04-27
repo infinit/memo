@@ -5,13 +5,16 @@ At the highest level, Infinit is a file system platform that allows for creating
 
 However, at the technology level, Infinit is a set of independent layers that can be used to develop powerful applications, create block-level data stores and more.
 
-<br><img src="${url('images/schema-technology.png')}" alt="Infinit Technology"><br>
+<br><img src="${url('images/schema-technology-infinit.png')}" alt="Infinit Technology">
+<p class="note">System calls issued by applications go through the kernel, back to the userspace through FUSE to finally reach Infinit software stack.</p>
 
-Reactor <a class="github" href="https://github.com/infinit/elle" target="_blank"><span class="star">soon on github</span></a>
------------
+<p class="github"><a href="https://github.com/infinit/elle" target="_blank"><span class="star">soon on github</span></a></p>
+
+Elle
+----
 *#high-performance* *#interoperability*
 
-The [reactor layer](https://en.wikipedia.org/wiki/Reactor_pattern) is a C++ development coroutine-based framework that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write/read and therefore to maintain.
+The Elle library is a C++ development coroutine-based framework based the [reactor pattern](https://en.wikipedia.org/wiki/Reactor_pattern) that allows for highly-concurrent and natural programming. What this means is that, unlike existing asynchronous frameworks that rely on threads and/or callbacks, Infinit’s reactor allows developers to write sequential code that is easy to write/read and therefore to maintain.
 
 This layer is composed of modules to perform various operations such as HTTP calls, RPCs, dealing with NATs, serializing data, writing FSMs, performing cryptographic operations and many more, the whole asynchronously in order to be as efficient as possible.
 
@@ -71,11 +74,18 @@ void echo(std::shared_ptr<reactor::network::Socket> socket)
 }
 ...
 ```
+<br>
 
-[Learn More](http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming)
+**Learn More**
 
-Overlay Network <a class="github" href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a>
-----------------------
+If you want to go further, check out our two presentations from our last C++ meetups.
+
+<p><a class="external" target="_blank" href="http://www.slideshare.net/infinit-one/highly-concurrent-yet-natural-programming"><img src="${url('images/icons/external-link.png')}">Highly concurrent yet natural programming</a> </p>
+<p><a class="external" target="_blank" href="http://www.slideshare.net/infinit-one/infinit-filesystem-reactor-reloaded"><img src="${url('images/icons/external-link.png')}">Infinit filesystem, Reactor reloaded</a></p>
+
+<p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
+Overlay Network
+---------------
 *#control* *#affordable* *#scalable* *#fault-tolerant* *#migration*
 
 The [overlay network](https://en.wikipedia.org/wiki/Overlay_network) layer connects the devices (desktop computer, server, mobile etc.) in a peer-to-peer manner i.e without a central server. The main purpose of this layer is to map identifiers (more precisely ranges of identifiers) onto nodes and to provide an algorithm to locate the node responsible for a given identifier.
@@ -92,8 +102,9 @@ The decentralized nature of the overlay network ensures scalability and performa
 
 Finally, by creating the overlay network according to your needs (data location for instance), you control the flow of information. Also, the flexibility to add and remove nodes dynamically makes such systems extremely affordable.
 
-Distributed Hash Table <a class="github" href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a>
--------------------------------
+<p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
+Distributed Hash Table
+----------------------
 *#flexible* *#reliable* *#migration*
 
 The [distributed hash table](https://en.wikipedia.org/wiki/Distributed_hash_table) (DHT) layer relies on the overlay network to provide a key-value store similar to hash tables, with the difference that the information is distributed across the network.
@@ -108,8 +119,9 @@ In addition to distributing the values among the nodes composing the overlay net
 
 *__Note__: In practice, the overlay network and distributed hash table are often combined into a single piece of software. For more information on the overlay networks and DHTs available, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.*
 
-File System <a class="github" href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a>
-----------------
+<p class="github"><a href="https://github.com/infinit/infinit" target="_blank"><span class="star">soon on github</span></a></p>
+File System
+-----------
 *#secure* *#natural* *#on-demand* *#access-control* *#versioning*
 
 The [file system](https://en.wikipedia.org/wiki/File_system) layer offers a hierarchical file organization on top of the distributed hash table whose role is to store blocks of data in a similar way to a hard disk.
@@ -128,6 +140,14 @@ Note that one can configure a device to use a limited amount of local storage ca
 
 Another problem with most cloud storage providers is that the files are not encrypted, leaving the user with no choice but to trust the cloud storage provider. Infinit has been conceived with the assumption that no storage provider can be trusted. In addition to relying on fault-tolerant algorithms, Infinit makes use of strong encryption. Whenever a document is edited for instance, the file is cut into chunks, every chunk is encrypted and then distributed and replicated throughout the distributed hash table. Every key used for encrypting a block is unique and known to the file owner only (along with the users who have been granted access).
 
-<br><img src="${url('images/schema-encryption.png')}" alt="Infinit Encryption Schema"><br>
+<br>
+<a href="#encryption-schema" class="open-popup">
+  <img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema" title="Click to see larger image">
+</a>
+<br>
+
+<div class="popup mfp-hide" id="encryption-schema">
+  <img src="${url('images/schema-technology-dht-overlay.png')}" alt="Infinit Encryption Schema">
+</div>
 
 Finally, the file system layer also provides access control (without the use of a centralized server), versioning and other file-system-related features.

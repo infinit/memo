@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <!-- ${version} -->
     <%
-    title = context.get('title', 'Infinit File Storage Platform')
+    title = context.get('title', 'Infinit - Decentralized Software‑Based File Storage Platform')
     description = context.get('description', 'Infinit allows for the creation of flexible, secure and controlled file storage infrastructure on top of public, private or hybrid cloud resources.')
     %>
     <title>${title}</title>
@@ -84,7 +84,7 @@
           <ul>
             <li class="made">
               <a class="icon-infinit" href="${route('home')}"></a>
-              <p>Copyright 2015</p>
+              <p>Copyright 2016</p>
               <p>Infinit International Inc</p>
               <p class="paris">Made with <span>❤</span> in Paris</p>
               <p class="nyc">Accelerated by Techstars NYC</p>
@@ -110,6 +110,7 @@
                 <li><a href="${route('pricing')}">Pricing</a></li>
                 <li><a href="${route('solutions')}">Solutions</a></li>
                 <li><a href="${route('opensource')}">Open Source</a></li>
+                <li><a href="${route('doc_status')}">Status</a></li>
               </ul>
             </li>
             <li class="connect">
@@ -163,5 +164,15 @@
       ga('create', 'UA-31957100-14', 'auto');
       ga('send', 'pageview');
     </script>
+
+        <!-- Google Tag Manager -->
+    <noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-WRQ2WV"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    '//www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-WRQ2WV');</script>
+    <!-- End Google Tag Manager -->
   </body>
 </html>

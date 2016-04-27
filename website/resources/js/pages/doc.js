@@ -14,24 +14,6 @@ function showPopupMenu(element) {
 
 $(document).ready(function() {
 
-  $('pre code').each(function(i, block) {
-    hljs.configure({ languages: ['bash', 'cpp'] });
-    hljs.initHighlighting();
-  });
-
-  $('a[href*=#]:not([href=#]):not([data-tab])').click(function() {
-    if (location.pathname.replace(/^\//,'') === this.pathname.replace(/^\//,'') && location.hostname === this.hostname) {
-      var target = $(this.hash);
-      target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
-      if (target.length) {
-        $('html,body').animate({
-          scrollTop: target.offset().top - 30
-        }, 500);
-        return false;
-      }
-    }
-  });
-
   /*----------------.
   | All             |
   `----------------*/
@@ -109,6 +91,18 @@ $(document).ready(function() {
     $('.iam_policy').click(function() {
       $('#iam-policy').show();
     });
+  }
+
+  if ($('body').hasClass('doc_technology')) {
+    // $('.open-popup').magnificPopup({
+    //   type:'inline',
+    //   midClick: true,
+    //   mainClass: 'mfp-fade'
+    // });
+
+    // $('.open-popup').click(function() {
+    //   $('#iam-policy').show();
+    // });
   }
 
 
@@ -191,7 +185,7 @@ $(document).ready(function() {
     });
   }
 
-  if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_changelog')) {
+  if ($('body').hasClass('doc_deployments') || $('body').hasClass('doc_changelog') || $('body').hasClass('doc_get_started')) {
     tabby.init();
   }
 
@@ -217,15 +211,6 @@ $(document).ready(function() {
     elem.onchange = function() {
       displayComparison();
     };
-
-    if (window.location.hash === '#slack') {
-      $.magnificPopup.open({
-        items: { src: '#slack'},
-        type: 'inline'
-      }, 0);
-
-      $('#slack').show();
-    }
 
     displayComparison();
   }

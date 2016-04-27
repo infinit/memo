@@ -21,7 +21,9 @@
 
     <img src="${url('images/schema-deployment-one-server.png')}" alt="Illustration of a centralized infrastructure i.e. a single server without redundancy"><br>
 
-    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.). Note that for Bob and subsequent users to be able to list/edit the volume's root directory, Alice would need to grant them access to do so through the <a href="/documentation/reference#access-control-list"><em>infinit-acl</em></a>.
+    <p>In order to set up such an infrastructure, please follow the instructions below, taking care to adjust the options according to your needs (storage capacity contributed by the server, names of the network/volumes etc.).</p>
+
+    <p><strong>IMPORTANT</strong>: For Bob and subsequent users to be able to list/edit the volume's root directory, Alice needs to grant them access to do so through the <a href="/documentation/reference#access-control-list"><em>infinit-acl</em></a>. Without this step, users would simply get a <em>Permission Denied</em> error.
 
     <ul data-tabs class="tabs">
       <li><a data-tab href="#centralized-server" class="active">Server <span>(Alice)</span></a></li>
@@ -64,7 +66,7 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
-    <p>Download full shell script: <a href="${url('scripts/centralized.sh')}" download="centralized.sh">centralized.sh</a>.</p>
+    <p>Download full shell script: <a class="external" href="${url('scripts/deployments/centralized.sh')}"><img src="${url('images/icons/external-link.png')}">centralized.sh</a>.</p>
 
     <h2 id="distributed">Distributed (multiple servers)</h2>
 
@@ -129,7 +131,7 @@ $> infinit-volume --mount --as bob --name alice/shared --async --cache --publish
       </div>
     </div>
 
-    <p>Download full shell script: <a href="${url('scripts/distributed.sh')}" download="distributed.sh">distributed.sh</a>.</p>
+    <p>Download full shell script: <a class="external" href="${url('scripts/deployments/distributed.sh')}"><img src="${url('images/icons/external-link.png')}">distributed.sh</a>.</p>
 
     <h2 id="decentralized">Decentralized (all servers)</h2>
 
@@ -213,7 +215,7 @@ $> infinit-volume --mount --as dave --name alice/shared --async --cache --publis
       </div>
     </div>
 
-    <p>Download full shell script: <a href="${url('scripts/decentralized.sh')}" download="decentralized.sh">decentralized.sh</a>.</p>
+    <p>Download full shell script: <a class="external" href="${url('scripts/deployments/decentralized.sh')}"><img src="${url('images/icons/external-link.png')}">decentralized.sh</a>.</p>
   <section>
 
 </%block>

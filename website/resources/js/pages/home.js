@@ -39,6 +39,10 @@ $(document).ready(function() {
         has_reach_terminal = true;
         launchTerminal();
       }
+
+      if ($(window).scrollTop() > 400) {
+        $('.btn-contact').addClass('show');
+      }
     });
 
     if (window.location.hash === '#slack') {

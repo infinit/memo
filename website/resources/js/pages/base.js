@@ -9,15 +9,33 @@ function displayBannerMessage(message) {
 
 $(document).ready(function() {
 
-  // $('.icon-slack').magnificPopup({
-  //   type:'inline',
-  //   midClick: true,
-  //   mainClass: 'mfp-fade'
-  // });
+  $('pre code').each(function(i, block) {
+    hljs.configure({ languages: ['bash', 'cpp'] });
+    hljs.initHighlighting();
+  });
 
-  // $('.icon-slack').click(function() {
-  //   $('#slack').show();
-  // });
+  $('a[href*=#]:not([href=#]):not([data-tab]):not(.open-popup)').click(function() {
+    if (location.pathname.replace(/^\//,'') === this.pathname.replace(/^\//,'') && location.hostname === this.hostname) {
+      var target = $(this.hash);
+      target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+      if (target.length) {
+        $('html,body').animate({
+          scrollTop: target.offset().top - 30
+        }, 500);
+        return false;
+      }
+    }
+  });
+
+  $('.icon-slack').magnificPopup({
+    type:'inline',
+    midClick: true,
+    mainClass: 'mfp-fade'
+  });
+
+  $('.icon-slack').click(function() {
+    $('#slack').show();
+  });
 
   $('.open-popup').magnificPopup({
     type:'inline',
@@ -50,5 +68,14 @@ $(document).ready(function() {
     e.preventDefault();
     e.unbind();
   });
+
+  if (window.location.hash === '#slack') {
+    $.magnificPopup.open({
+      items: { src: '#slack'},
+      type: 'inline'
+    }, 0);
+
+    $('#slack').show();
+  }
 
 });
