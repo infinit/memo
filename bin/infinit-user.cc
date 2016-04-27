@@ -395,15 +395,28 @@ COMMAND(login)
 
 COMMAND(list)
 {
-  for (auto const& user: ifnt.users_get())
+  if (script_mode)
   {
-    std::cout << user.name << ": public";
-    if (user.private_key)
-      std::cout << "/private keys";
-    else
-      std::cout << " key only";
-    std::cout << std::endl;
+    elle::json::Array l;
+    for (auto const& user: ifnt.users_get())
+    {
+      elle::json::Object o;
+      o["name"] = user.name;
+      o["has_private_key"] = bool(user.private_key);
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
   }
+  else
+    for (auto const& user: ifnt.users_get())
+    {
+      std::cout << user.name << ": public";
+      if (user.private_key)
+        std::cout << "/private keys";
+      else
+        std::cout << " key only";
+      std::cout << std::endl;
+    }
 }
 
 template <typename Buffer>
