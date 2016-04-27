@@ -592,6 +592,12 @@ body.drive, body.dropboxe {
 }
 
 body.dropboxe {
+  a { color: @infinitblue; .transition() }
+    a:hover {
+      color: darken(@infinitblue, 10%);
+      border-bottom: 2px solid darken(@infinitblue, 10%);
+    }
+
   section.intro {
     img.icon { max-height: 33px; }
     a.button { margin-top: 25px; margin-bottom: 25px; }
@@ -611,12 +617,6 @@ body.dropboxe {
 
   section.cta {
     a.button { margin-right: 10px; vertical-align: middle; margin-top: 10px; }
-    a { color: @infinitblue; .transition() }
-    a:hover {
-      color: darken(@infinitblue, 10%);
-      border-bottom: 2px solid darken(@infinitblue, 10%);
-    }
-
   }
 }
 

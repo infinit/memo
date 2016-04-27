@@ -72,7 +72,7 @@ class Website(bottle.Bottle):
   @view('pages/dropboxe.html')
   def root(self):
     return {
-      'title': 'Project Dropboxe',
+      'title': 'Infinit — Project Dropboxe',
       'description': 'Build scalable and secure storage infrastructures by aggregating local storage and various cloud storages such as Amazon S3 or Dropbox.',
     }
 
