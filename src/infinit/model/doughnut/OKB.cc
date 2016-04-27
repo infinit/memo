@@ -86,6 +86,8 @@ namespace infinit
       blocks::ValidationResult
       OKBHeader::validate(Address const& address) const
       {
+        static elle::Bench bench("bench.okb.validate", 10000_sec);
+        elle::Bench::BenchScope scope(bench);
         Address expected_address;
         ELLE_DEBUG("%s: check address", *this)
         {
@@ -356,6 +358,8 @@ namespace infinit
       blocks::ValidationResult
       BaseOKB<Block>::_validate(Model const& model) const
       {
+        static elle::Bench bench("bench.okb._validate", 10000_sec);
+        elle::Bench::BenchScope scope(bench);
         if (auto res = static_cast<OKBHeader const*>
             (this)->validate(this->address())); else
           return res;

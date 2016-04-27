@@ -85,6 +85,8 @@ namespace infinit
         struct Gossip;
         struct BootstrapRequest;
         struct FileBootstrapRequest;
+        struct MultiGetFileRequest;
+        struct MultiGetFileReply;
         struct GetFileRequest;
         struct GetFileReply;
         struct PutFileRequest;
@@ -208,6 +210,9 @@ namespace infinit
         _lookup(infinit::model::Address address, int n,
                 infinit::overlay::Operation op) const override;
         virtual
+        reactor::Generator<std::pair<model::Address, Overlay::WeakMember>>
+        _lookup(std::vector<infinit::model::Address> const& address, int n) const override;
+        virtual
         WeakMember
         _lookup_node(Address address) override;
       private:
@@ -225,7 +230,7 @@ namespace infinit
         send(packet::Packet& p, Contact* c, GossipEndpoint* ep, Address* addr);
         /// consistent address -> group mapper
         int
-        group_of(Address const& address);
+        group_of(Address const& address) const;
         void
         gossipListener();
         void
@@ -248,6 +253,10 @@ namespace infinit
         void
         onGetFileReply(packet::GetFileReply*);
         void
+        onMultiGetFileRequest(packet::MultiGetFileRequest*);
+        void
+        onMultiGetFileReply(packet::MultiGetFileReply*);
+        void
         onPutFileRequest(packet::PutFileRequest*);
         void
         onPutFileReply(packet::PutFileReply*);
@@ -263,6 +272,13 @@ namespace infinit
         cleanup();
         void
         addLocalResults(packet::GetFileRequest* p, reactor::yielder<PeerLocation>::type const* yield);
+        void
+        addLocalResults(packet::MultiGetFileRequest* p,
+                        reactor::yielder<std::pair<Address, PeerLocation>>::type const* yield,
+                        std::vector<std::set<Address>>& result_sets);
+        void
+        kelipsMGet(std::vector<Address> files, int n,
+                   std::function<void (std::pair<Address, PeerLocation>)> yield);
         void
         kelipsGet(Address file, int n, bool local_override, int attempts,
           bool query_node,

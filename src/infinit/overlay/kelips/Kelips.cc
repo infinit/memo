@@ -41,6 +41,10 @@
 
 ELLE_LOG_COMPONENT("infinit.overlay.kelips");
 
+#define BENCH(name)                                      \
+  static elle::Bench bench("bench.kelips." name, 10000_sec); \
+  elle::Bench::BenchScope bs(bench)
+
 typedef elle::serialization::Binary Serializer;
 
 namespace elle
@@ -546,6 +550,71 @@ namespace infinit
         };
         REGISTER(Gossip, "gossip");
 
+        struct MultiGetFileRequest: public Packet
+        {
+          MultiGetFileRequest()
+          {}
+
+          MultiGetFileRequest(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("sender", sender);
+            s.serialize("observer", observer);
+            s.serialize("id", request_id);
+            s.serialize("origin", originAddress);
+            s.serialize("endpoint", originEndpoints);
+            s.serialize("address", fileAddresses);
+            s.serialize("ttl", ttl);
+            s.serialize("count", count);
+            s.serialize("results", results);
+          }
+
+          int request_id;
+          Address originAddress;
+          std::vector<GossipEndpoint> originEndpoints;
+          int ttl;
+          int count;
+          std::vector<Address> fileAddresses;
+          std::vector<std::vector<PeerLocation>> results;
+        };
+        REGISTER(MultiGetFileRequest, "mget");
+
+        struct MultiGetFileReply: public Packet
+        {
+          MultiGetFileReply()
+          {}
+
+          MultiGetFileReply(elle::serialization::SerializerIn& input)
+          {
+            serialize(input);
+          }
+
+          void
+          serialize(elle::serialization::Serializer& s)
+          {
+            s.serialize("sender", sender);
+            s.serialize("observer", observer);
+            s.serialize("id", request_id);
+            s.serialize("origin", origin);
+            s.serialize("address", fileAddresses);
+            s.serialize("result", results);
+            s.serialize("ttl", ttl);
+          }
+
+          int request_id;
+          /// node who created the request
+          Address origin;
+          std::vector<Address> fileAddresses;
+          int ttl;
+          std::vector<std::vector<PeerLocation>> results;
+        };
+        REGISTER(MultiGetFileReply, "mgetReply");
+
         struct GetFileRequest: public Packet
         {
           GetFileRequest()
@@ -684,6 +753,7 @@ namespace infinit
       {
         std::vector<PeerLocation> result;
         std::vector<PeerLocation> insert_result;
+        std::vector<std::vector<PeerLocation>> multi_result;
         reactor::Barrier barrier;
         Time startTime;
       };
@@ -857,7 +927,7 @@ namespace infinit
       }
 
       int
-      Node::group_of(Address const& a)
+      Node::group_of(Address const& a) const
       {
         auto address = a.value();
         unsigned int addr4 = address[0]
@@ -1528,6 +1598,10 @@ namespace infinit
         onPutFileRequest(p);
         CASE(PutFileReply)
         onPutFileReply(p);
+        CASE(MultiGetFileRequest)
+        onMultiGetFileRequest(p);
+        CASE(MultiGetFileReply)
+        onMultiGetFileReply(p);
         CASE(GetFileRequest)
         onGetFileRequest(p);
         CASE(GetFileReply)
@@ -2173,6 +2247,29 @@ namespace infinit
       }
 
       void
+      Node::addLocalResults(packet::MultiGetFileRequest* p,
+        reactor::yielder<std::pair<Address, PeerLocation>>::type const* yield,
+        std::vector<std::set<Address>>& result_sets)
+      {
+        ELLE_ASSERT_LTE(p->results.size(), p->fileAddresses.size());
+        p->results.resize(p->fileAddresses.size());
+        for (unsigned i=0; i<p->fileAddresses.size(); ++i)
+        {
+          packet::GetFileRequest gfr;
+          gfr.fileAddress = p->fileAddresses[i];
+          gfr.result = p->results[i];
+          std::function <void(PeerLocation)> yield_next = [&](PeerLocation pl)
+          {
+            if (yield)
+              if (result_sets[i].insert(pl.first).second)
+                (*yield)(std::make_pair(gfr.fileAddress, pl));
+          };
+          addLocalResults(&gfr, &yield_next);
+          p->results[i] = gfr.result;
+        }
+      }
+
+      void
       Node::addLocalResults(packet::GetFileRequest* p,
         reactor::yielder<PeerLocation>::type const* yield)
       {
@@ -2236,6 +2333,67 @@ namespace infinit
             (*yield)(res);
         }
         nlocalhit.add(nhit);
+      }
+
+      void
+      Node::onMultiGetFileRequest(packet::MultiGetFileRequest* p)
+      {
+        ELLE_TRACE("%s: getFileRequest %s/%x %s/%s", *this, p->request_id, p->fileAddresses,
+          p->results.size(), p->count);
+        if (p->fileAddresses.empty())
+          return;
+        if (p->originEndpoints.empty())
+          p->originEndpoints = {p->endpoint};
+        int fg = group_of(p->fileAddresses.front());
+        if (fg == _group)
+        {
+          std::vector<std::set<Address>> result_sets;
+          addLocalResults(p, nullptr, result_sets);
+        }
+        bool done = true;
+        for (unsigned int i=0; i<p->fileAddresses.size(); ++i)
+        {
+          if (p->results[i].size() < unsigned(p->count))
+          {
+            done = false; break;
+          }
+        }
+        auto const& fg_contacts = _state.contacts[fg];
+        if (done
+          || fg_contacts.empty()
+          || (fg_contacts.size() == 1
+            && fg_contacts.find(p->originAddress) != fg_contacts.end())
+          || p->ttl == 0
+          )
+        {  // We got the full result or we cant forward, send reply
+          packet::MultiGetFileReply res;
+          res.sender = _self;
+          res.fileAddresses = p->fileAddresses;
+          res.origin = p->originAddress;
+          res.request_id = p->request_id;
+          res.results = p->results;
+          res.ttl = p->ttl;
+          if (p->originAddress == _self)
+            onMultiGetFileReply(&res);
+          else
+          {
+            Contact& c = *get_or_make(p->originAddress, true, p->originEndpoints);
+            ELLE_TRACE("%s: replying to %s/%s", *this, p->originEndpoints, p->request_id);
+            send(res, c);
+          }
+          return;
+        }
+        ELLE_TRACE("%s: route %s", *this, p->ttl);
+        p->ttl--;
+        p->sender = _self;
+        int count = _state.contacts[fg].size();
+        if (count == 0)
+          return;
+        std::uniform_int_distribution<> random(0, count-1);
+        int idx = random(_gen);
+        auto it = _state.contacts[fg].begin();
+        while (idx--) ++it;
+        send(*p, it->second);
       }
 
       void
@@ -2315,6 +2473,23 @@ namespace infinit
         auto it = _state.contacts[fg].begin();
         while (idx--) ++it;
         send(*p, it->second);
+      }
+
+      void
+      Node::onMultiGetFileReply(packet::MultiGetFileReply* p)
+      {
+        ELLE_DEBUG("%s: got reply for %x: %s", *this, p->fileAddresses, p->results);
+        auto it = _pending_requests.find(p->request_id);
+        if (it == _pending_requests.end())
+        {
+          ELLE_TRACE("%s: Unknown request id %s", *this, p->request_id);
+          return;
+        }
+        ELLE_DEBUG("%s: unlocking waiter on response %s: %s", *this, p->request_id,
+                   p->results);
+        it->second->multi_result = p->results;
+        it->second->barrier.open();
+        _pending_requests.erase(it);
       }
 
       void
@@ -2477,11 +2652,98 @@ namespace infinit
       }
 
       void
+      Node::kelipsMGet(std::vector<Address> files, int n,
+                       std::function<void (std::pair<Address, PeerLocation>)> yield)
+      {
+        BENCH("kelipsMGet");
+        ELLE_TRACE_SCOPE("%s: mget %s", *this, files);
+        std::vector<std::set<Address>> result_sets;
+        result_sets.resize(files.size());
+        packet::MultiGetFileRequest r;
+        r.sender = _self;
+        r.request_id = ++ _next_id;
+        r.originAddress = _self;
+        for (auto const& te: _local_endpoints)
+          r.originEndpoints.push_back(te.first);
+        r.fileAddresses = files;
+        r.ttl = _config.query_get_ttl;
+        r.count = n;
+        int fg = group_of(files.front());
+        if (fg == _group)
+        {
+          addLocalResults(&r, &yield, result_sets);
+          bool done = true;
+          for (unsigned int i=0; i<files.size(); ++i)
+          {
+            if (result_sets[i].size() < unsigned(n))
+            {
+              done = false; break;
+            }
+          }
+          if (done)
+            return;
+        }
+        for (int i = 0; i < _config.query_get_retries; ++i)
+        {
+          packet::MultiGetFileRequest req(r);
+          req.request_id = ++this->_next_id;
+          auto r = std::make_shared<PendingRequest>();
+          r->startTime = now();
+          r->barrier.close();
+          // Select target node
+          auto it = random_from(_state.contacts[fg], _gen);
+          if (it == _state.contacts[fg].end())
+            it = random_from(_state.contacts[_group], _gen);
+          if (it == _state.contacts[_group].end())
+          {
+            ELLE_TRACE("no contact to forward GET to");
+            continue;
+          }
+          auto ir =
+            this->_pending_requests.insert(std::make_pair(req.request_id, r));
+          ELLE_ASSERT(ir.second);
+          ELLE_DEBUG("%s: get request %s(%s)", *this, i, req.request_id);
+          send(req, it->second);
+                      reactor::wait(r->barrier,
+              boost::posix_time::milliseconds(_config.query_timeout_ms));
+          if (!r->barrier.opened())
+          {
+            ELLE_LOG("%s: mget request on %s timeout (try %s)",
+              *this, files, i);
+            this->_pending_requests.erase(ir.first);
+          }
+          else
+          {
+            ELLE_TRACE("request %s (%s) gave %s results",
+              i, req.request_id, r->multi_result.size());
+            ELLE_DUMP("got %s", r->multi_result);
+            for (unsigned f = 0; f < r->multi_result.size(); ++f)
+            {
+              for (auto fr: r->multi_result[f])
+                if (result_sets[f].insert(fr.first).second)
+                  yield(std::make_pair(files[f], PeerLocation{fr.first, fr.second}));
+            }
+            bool done = true;
+            for (unsigned i=0; i<files.size(); ++i)
+            {
+              if (result_sets[i].size() < unsigned(n))
+              {
+                done = false; break;
+              }
+            }
+            if (done)
+              break;
+          }
+        }
+      }
+
+      void
       Node::kelipsGet(Address file, int n, bool local_override, int attempts,
                       bool query_node,
                       bool fast_mode,
                       std::function <void(PeerLocation)> yield)
       {
+        BENCH("kelipsGet");
         ELLE_TRACE_SCOPE("%s: get %s", *this, file);
         if (attempts == -1)
           attempts = _config.query_get_retries;
@@ -2599,6 +2861,7 @@ namespace infinit
       std::vector<PeerLocation>
       Node::kelipsPut(Address file, int n)
       {
+        BENCH("kelipsPut");
         int fg = group_of(file);
         packet::PutFileRequest p;
         p.query_node = false;
@@ -2946,6 +3209,7 @@ namespace infinit
       Overlay::WeakMember
       Node::make_peer(PeerLocation hosts)
       {
+        BENCH("make_peer");
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
         static int cache_count = std::stoi(elle::os::getenv("INFINIT_PEER_CACHE_DUP", "1"));
         ELLE_TRACE("connecting to %s", hosts);
@@ -3045,11 +3309,42 @@ namespace infinit
         return true;
       }
 
+      reactor::Generator<std::pair<model::Address, Node::WeakMember>>
+      Node::_lookup(std::vector<infinit::model::Address> const& addresses,
+                    int n) const
+      {
+        if (this->doughnut()->version() < elle::Version(0, 6, 0))
+          return Overlay::_lookup(addresses, n);
+        std::vector<std::vector<model::Address>> grouped;
+        for (auto a: addresses)
+        {
+          int g = group_of(a);
+          if (grouped.size() <= unsigned(g))
+            grouped.resize(g+1);
+          grouped[g].push_back(a);
+        }
+        return reactor::generator<std::pair<Address, Node::WeakMember>>(
+          [this, n, grouped] (reactor::Generator<std::pair<Address,Node::WeakMember>>::yielder const& yield)
+        {
+          for (auto g: grouped)
+          {
+            if (g.empty())
+              continue;
+            elle::unconst(this)->kelipsMGet(g, n, [&](std::pair<Address, PeerLocation> ap)
+              {
+                yield(std::make_pair(ap.first,
+                                     elle::unconst(this)->make_peer(ap.second)));
+              });
+          }
+        });
+      }
+
       reactor::Generator<Overlay::WeakMember>
       Node::_lookup(infinit::model::Address address,
                     int n,
                     infinit::overlay::Operation op) const
       {
+        BENCH("lookup");
         if (op != infinit::overlay::Operation::OP_FETCH)
         {
           ELLE_TRACE("Waiting for bootstrap");
@@ -3250,6 +3545,7 @@ namespace infinit
       Overlay::WeakMember
       Node::_lookup_node(Address address)
       {
+        BENCH("lookup_node");
         if (address == _self)
           return this->local();
         auto async_lookup = [this, address]() {

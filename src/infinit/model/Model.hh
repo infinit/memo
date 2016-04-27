@@ -54,6 +54,7 @@ namespace infinit
     class Model
     {
     public:
+      typedef std::pair<Address, boost::optional<int>> AddressVersion;
       Model(boost::optional<elle::Version> version = {});
       ELLE_ATTRIBUTE_R(elle::Version, version);
       template <typename Block>
@@ -82,6 +83,10 @@ namespace infinit
        */
       std::unique_ptr<blocks::Block>
       fetch(Address address, boost::optional<int> local_version = {}) const;
+      void
+      fetch(std::vector<AddressVersion> const& addresses,
+            std::function<void(Address, std::unique_ptr<blocks::Block>,
+                               std::exception_ptr)> res) const;
       void
       remove(Address address);
       void
@@ -114,6 +119,11 @@ namespace infinit
       virtual
       std::unique_ptr<blocks::Block>
       _fetch(Address address, boost::optional<int> local_version) const = 0;
+      virtual
+      void
+      _fetch(std::vector<AddressVersion> const& addresses,
+             std::function<void(Address, std::unique_ptr<blocks::Block>,
+                               std::exception_ptr)> res) const;
       virtual
       void
       _remove(Address address, blocks::RemoveSignature sig) = 0;

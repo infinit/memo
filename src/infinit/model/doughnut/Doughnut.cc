@@ -308,6 +308,14 @@ namespace infinit
       }
 
       void
+      Doughnut::_fetch(std::vector<AddressVersion> const& addresses,
+        std::function<void(Address, std::unique_ptr<blocks::Block>,
+          std::exception_ptr)> res) const
+      {
+        this->_consensus->fetch(addresses, res);
+      }
+
+      void
       Doughnut::_remove(Address address, blocks::RemoveSignature rs)
       {
         this->_consensus->remove(address, std::move(rs));

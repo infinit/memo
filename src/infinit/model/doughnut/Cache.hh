@@ -60,6 +60,11 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
+          _fetch(std::vector<AddressVersion> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                    std::exception_ptr)> res) override;
+          virtual
+          void
           _remove(Address address, blocks::RemoveSignature rs) override;
 
         /*------.
@@ -70,8 +75,15 @@ namespace infinit
           void
           clear();
         private:
-          void _cleanup();
-          std::unique_ptr<blocks::Block> _copy(blocks::Block& block);
+          void
+          _cleanup();
+          std::unique_ptr<blocks::Block>
+          _fetch_cache(Address address, boost::optional<int> local_version,
+                       bool& hit, bool cache_only = false);
+          void
+          _insert_cache(blocks::Block& b);
+          std::unique_ptr<blocks::Block>
+          _copy(blocks::Block& block);
           ELLE_ATTRIBUTE_R(std::unique_ptr<Consensus>, backend);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_invalidation);
           ELLE_ATTRIBUTE_R(std::chrono::seconds, cache_ttl);
@@ -137,7 +149,7 @@ namespace infinit
           ELLE_ATTRIBUTE(reactor::Thread::unique_ptr, cleanup_thread);
         private:
           void _load_disk_cache();
-          void _disk_cache_push(std::unique_ptr<blocks::Block>& block);
+          void _disk_cache_push(blocks::Block& block);
           typedef std::unordered_map<Address, std::shared_ptr<reactor::Barrier>>
           Pending;
           ELLE_ATTRIBUTE(Pending, pending);

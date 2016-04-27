@@ -465,6 +465,9 @@ namespace infinit
         elle::os::getenv("INFINIT_PREFETCH_THREADS", "3"));
       static int prefetch_depth = std::stoi(
         elle::os::getenv("INFINIT_PREFETCH_DEPTH", "2"));
+      static int prefetch_group = std::stoi(
+        elle::os::getenv("INFINIT_PREFETCH_GROUP", "5"));
+      int group_size = prefetch_group;
       int nthreads = prefetch_threads;
       if (_prefetching || !nthreads
         || (FileSystem::now() - this->_last_prefetch) < std::chrono::seconds(15))
@@ -481,7 +484,7 @@ namespace infinit
       auto running = std::make_shared<int>(nthreads);
       auto parked = std::make_shared<int>(0);
       auto prefetch_task =
-        [self, files, fs=&fs, running, parked, nthreads]
+        [self, files, fs=&fs, running, parked, nthreads, group_size]
         {
           static elle::Bench bench("bench.fs.prefetch", 10000_sec);
           elle::Bench::BenchScope bs(bench);
@@ -507,40 +510,91 @@ namespace infinit
             }
             if (should_exit)
               break;
-            ++nf;
-            auto e = files->back();
-            ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
-            files->pop_back();
-            std::unique_ptr<model::blocks::Block> block;
-            try
+            std::vector<model::Model::AddressVersion> addresses;
+            std::unordered_map<Address, int> recurse;
+            do
             {
+              ++nf;
+              auto e = files->back();
+              ELLE_TRACE_SCOPE("%s: prefetch \"%s\"", *self, e.name);
+              files->pop_back();
               Address addr(e.address.value(),
-                           model::flags::mutable_block, false);
-              block = fs->block_store()->fetch(addr, e.cached_version);
-              if (e.is_dir && e.level +1 < prefetch_depth)
+                model::flags::mutable_block, false);
+              addresses.push_back(std::make_pair(addr, e.cached_version));
+              if (e.is_dir && e.level + 1 < prefetch_depth)
+                recurse.insert(std::make_pair(addr, e.level));;
+            } while (signed(addresses.size()) < group_size && !files->empty());
+            if (addresses.size() == 1)
+            {
+              std::unique_ptr<model::blocks::Block> block;
+              try
               {
-                std::shared_ptr<DirectoryData> d;
-                if (block)
-                  d = std::shared_ptr<DirectoryData>(
-                    new DirectoryData({}, *block, {true, true}));
-                else
-                  d = *(fs->directory_cache().find(addr));
-
-                for (auto const& f: d->_files)
-                  files->push_back(
-                    PrefetchEntry{f.first, f.second.second, e.level+1,
-                                  f.second.first == EntryType::directory,
-                                  cached_version(*fs, f.second.second, f.second.first)
-                    });
+                Address addr = addresses.front().first;
+                block = fs->block_store()->fetch(addr, addresses.front().second);
+                if (!recurse.empty())
+                {
+                  std::shared_ptr<DirectoryData> d;
+                  if (block)
+                    d = std::shared_ptr<DirectoryData>(
+                      new DirectoryData({}, *block, {true, true}));
+                  else
+                    d = *(fs->directory_cache().find(addr));
+              
+                  for (auto const& f: d->_files)
+                    files->push_back(
+                      PrefetchEntry{f.first, f.second.second, recurse.at(addr)+1,
+                                    f.second.first == EntryType::directory,
+                                    cached_version(*fs, f.second.second, f.second.first)
+                      });
+                }
+              }
+              catch(elle::Error const& e)
+              {
+                ELLE_TRACE("Exception while prefeching: %s", e.what());
+              }
+              catch(std::out_of_range const& e)
+              {
+                ELLE_TRACE("Entry vanished from cache: %s", e.what());
               }
             }
-            catch(elle::Error const& e)
-            {
-              ELLE_TRACE("Exception while prefeching: %s", e.what());
-            }
-            catch(std::out_of_range const& e)
-            {
-              ELLE_TRACE("Entry vanished from cache: %s", e.what());
+            else
+            { // multifetch
+              // FIXME: pass local versions
+              fs->block_store()->fetch(addresses,
+                  [&](Address addr, std::unique_ptr<model::blocks::Block> block,
+                      std::exception_ptr exception)
+                  {
+                    if (recurse.find(addr) != recurse.end()
+                      && recurse.at(addr) + 1 < prefetch_depth
+                      )
+                    {
+                      try
+                      {
+                        std::shared_ptr<DirectoryData> d;
+                        if (block)
+                        d = std::shared_ptr<DirectoryData>(
+                          new DirectoryData({}, *block, {true, true}));
+                        else
+                        {
+                          auto it = fs->directory_cache().find(addr);
+                          if (it == fs->directory_cache().end())
+                            throw elle::Error(
+                              elle::sprintf("directory at %f vanished from cache", addr));
+                          d = *it;
+                        }
+                        for (auto const& f: d->_files)
+                        files->push_back(
+                          PrefetchEntry{f.first, f.second.second, recurse.at(addr) +1,
+                                         f.second.first == EntryType::directory,
+                                         cached_version(*fs, f.second.second, f.second.first)
+                        });
+                      }
+                      catch (elle::Error const& e)
+                      {
+                        ELLE_TRACE("Exception while prefeching: %s", e.what());
+                      }
+                    }
+                  });
             }
           }
           ELLE_TRACE("prefetched %s entries in %s us",

@@ -68,6 +68,9 @@ namespace infinit
     | Lookup |
     `-------*/
     public:
+      /// Lookup multiple addresses (OP_FETCH/UPDATE only)
+      reactor::Generator<std::pair<model::Address, WeakMember>>
+      lookup(std::vector<model::Address> const& addresses, int n) const;
       /// Lookup a list of nodes
       reactor::Generator<WeakMember>
       lookup(model::Address address, int n, Operation op) const;
@@ -81,6 +84,9 @@ namespace infinit
       reactor::Generator<WeakMember>
       lookup_nodes(std::unordered_set<model::Address> address);
     protected:
+      virtual
+      reactor::Generator<std::pair<model::Address, WeakMember>>
+      _lookup(std::vector<model::Address> const& addresses, int n) const;
       virtual
       reactor::Generator<WeakMember>
       _lookup(model::Address address, int n, Operation op) const = 0;

@@ -114,16 +114,83 @@ namespace infinit
           this->_backend->remove(address, std::move(rs));
         }
 
+        void
+        Cache::_fetch(std::vector<AddressVersion> const& addresses,
+                      std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                         std::exception_ptr)> res)
+        {
+          std::vector<AddressVersion> missing;
+          for (auto a: addresses)
+          {
+            bool hit = false;
+            auto block = this->_fetch_cache(a.first, a.second, hit, true);
+            if (hit)
+              res(a.first, std::move(block), {});
+            else
+              missing.push_back(a);
+          }
+          _backend->fetch(missing,
+            [&](Address addr, std::unique_ptr<blocks::Block> block,
+                std::exception_ptr exc)
+            {
+              if (block)
+              {
+                this->_insert_cache(*block);
+              }
+              res(addr, std::move(block), exc);
+            });
+        }
+
         std::unique_ptr<blocks::Block>
         Cache::_fetch(Address address, boost::optional<int> local_version)
         {
+          bool hit = false;
+          auto res = _fetch_cache(address, local_version, hit);
+          return res;
+        }
+
+        void
+        Cache::_insert_cache(blocks::Block& b)
+        {
+          if (!b.validate(doughnut()))
+          {
+            ELLE_WARN("%s: invalid block received for %s", this, b.address());
+            throw elle::Error("invalid block");
+          }
+          static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
+          if (decode)
+            try
+            {
+              static elle::Bench bench("bench.cache.preempt_decode", 10000_sec);
+              elle::Bench::BenchScope bs(bench);
+              b.data();
+            }
+            catch (elle::Error const& e)
+            {
+              ELLE_TRACE("%s: block %f is not readable: %s", this, b.address(), e);
+            }
+          if (this->_disk_cache_size &&
+            dynamic_cast<blocks::ImmutableBlock*>(&b))
+          this->_disk_cache_push(b);
+          else if (dynamic_cast<blocks::MutableBlock*>(&b))
+            this->_cache.emplace(b.clone());
+
+        }
+        std::unique_ptr<blocks::Block>
+        Cache::_fetch_cache(Address address, boost::optional<int> local_version,
+                            bool& cache_hit, bool cache_only)
+        {
+          cache_hit = false;
           ELLE_TRACE_SCOPE("%s: fetch %f (local_version: %s)",
                            this, address, local_version);
           static elle::Bench bench_hit("bench.cache.ram.hit", 1000_sec);
           static elle::Bench bench_disk_hit("bench.cache.disk.hit", 1000_sec);
+          static elle::Bench bench("bench.cache._fetch", 10000_sec);
+          elle::Bench::BenchScope bs(bench);
           auto hit = this->_cache.find(address);
           if (hit != this->_cache.end())
           {
+            cache_hit = true;
             ELLE_DEBUG("cache hit");
             this->_cache.modify(
               hit, [] (CachedBlock& b) { b.last_used(now()); });
@@ -150,6 +217,7 @@ namespace infinit
             auto disk_hit = this->_disk_cache.find(address);
             if (disk_hit != this->_disk_cache.end())
             {
+              cache_hit = true;
               ELLE_DEBUG("cache hit(disk)");
               bench_disk_hit.add(1);
               auto path = *this->_disk_cache_path / elle::sprintf("%x", address);
@@ -166,6 +234,8 @@ namespace infinit
               ELLE_DEBUG("cache miss");
               bench_disk_hit.add(0);
             }
+            if (cache_only)
+              return {};
             auto it = this->_pending.find(address);
             if (it != this->_pending.end())
             {
@@ -190,38 +260,14 @@ namespace infinit
             // FIXME: pass the whole block to fetch() so we can cache it there ?
             if (res)
             {
-              if (!res->validate(doughnut()))
-              {
-                ELLE_WARN("%s: invalid block received for %f", this, address);
-                throw elle::Error("invalid block");
-              }
-              static bool decode = elle::os::getenv("INFINIT_NO_PREEMPT_DECODE", "").empty();
-              if (decode)
-                try
-                {
-                  static elle::Bench bench("bench.cache.preempt_decode", 10000_sec);
-                  elle::Bench::BenchScope bs(bench);
-                  res->data();
-                }
-                catch (elle::Error const& e)
-                {
-                  ELLE_TRACE("%s: block %f is not readable: %s", this, address, e);
-                }
-
-              if (this->_disk_cache_size &&
-                  !dynamic_cast<blocks::MutableBlock*>(res.get()))
-                this->_disk_cache_push(res);
-              else if (dynamic_cast<blocks::MutableBlock*>(res.get()))
-                this->_cache.emplace(res->clone());
-            }
-            if (res)
-            {
+              this->_insert_cache(*res);
               auto mut = dynamic_cast<blocks::MutableBlock*>(res.get());
               if (mut && local_version && mut->version() == *local_version)
                 return nullptr;
             }
             return res;
           }
+          return {};
         }
 
         void
@@ -269,27 +315,27 @@ namespace infinit
           }
           else
           {
-            this->_disk_cache_push(cloned);
+            this->_disk_cache_push(*cloned);
           }
         }
 
         void
-        Cache::_disk_cache_push(std::unique_ptr<blocks::Block>& block)
+        Cache::_disk_cache_push(blocks::Block& block)
         {
           if (!this->_disk_cache_path)
             return;
           auto path = *this->_disk_cache_path
-            / elle::sprintf("%x", block->address());
+            / elle::sprintf("%x", block.address());
           {
             boost::filesystem::ofstream ofs(path, std::ios::binary);
             elle::serialization::binary::SerializerOut sout(ofs);
             sout.set_context<Doughnut*>(&this->doughnut());
-            sout.serialize_forward(block);
+            sout.serialize_forward(&block);
           }
           auto sz = boost::filesystem::file_size(path);
-          this->_disk_cache.emplace(CachedCHB{block->address(), sz, now()});
+          this->_disk_cache.emplace(CachedCHB{block.address(), sz, now()});
           this->_disk_cache_used += sz;
-          ELLE_DEBUG("add %f to disk cache (%s bytes)", block->address(), sz);
+          ELLE_DEBUG("add %f to disk cache (%s bytes)", block.address(), sz);
           while (this->_disk_cache_used > this->_disk_cache_size)
           {
             ELLE_ASSERT(!this->_disk_cache.empty());
@@ -364,42 +410,17 @@ namespace infinit
               {
                 auto& order = this->_cache.get<2>();
                 auto deadline = now - this->_cache_invalidation;
-                while (!order.empty())
+                std::vector<Model::AddressVersion> need_refresh;
+                for (auto it = order.begin(); it != order.end(); ++it)
                 {
-                  auto& cached = *order.begin();
+                  auto& cached = *it;
                   if (!(cached.last_fetched() < deadline))
                     break;
                   auto const address = cached.block()->address();
                   if (auto mb =
                       dynamic_cast<blocks::MutableBlock*>(cached.block().get()))
                   {
-                    ELLE_DEBUG_SCOPE("refresh %s", address);
-                    try
-                    {
-                      auto block = this->_backend->fetch(address, mb->version());
-                      // Beware: everything is invalidated past there we probably
-                      // yielded.
-                      auto it = this->_cache.find(address);
-                      if (it != this->_cache.end())
-                        this->_cache.modify(
-                          it,
-                          [&] (CachedBlock& cache)
-                          {
-                            if (block)
-                              cache.block() = std::move(block);
-                            cache.last_fetched(now);
-                          });
-                    }
-                    catch (MissingBlock const&)
-                    {
-                      ELLE_DUMP("drop removed block");
-                      this->_cache.erase(address);
-                    }
-                    catch (elle::Error const& e)
-                    {
-                      ELLE_TRACE("Fetch error on %x: %s", address, e);
-                      this->_cache.erase(address);
-                    }
+                    need_refresh.push_back(std::make_pair(address, mb->version()));
                   }
                   else
                   {
@@ -407,8 +428,45 @@ namespace infinit
                     break;
                   }
                 }
+                static const int batch_size = std::stoi(
+                  elle::os::getenv("INFINIT_CACHE_REFRESH_BATCH_SIZE", "20"));
+                for (int i=0; i < signed(need_refresh.size()); i+= batch_size)
+                {
+                  std::vector<Model::AddressVersion> batch;
+                  if (signed(need_refresh.size()) >= (i + batch_size))
+                    batch.insert(batch.end(), need_refresh.begin() + i,
+                      need_refresh.begin() + i + batch_size);
+                  else
+                    batch.insert(batch.end(), need_refresh.begin() + i,
+                      need_refresh.end());
+                  ELLE_DEBUG("Processing batch %s-%s of %s",
+                    i, i+batch.size(), need_refresh.size());
+                  this->_backend->fetch(batch,
+                    [&](Address a, std::unique_ptr<blocks::Block> b,
+                      std::exception_ptr e)
+                    {
+                      if (e)
+                      {
+                        ELLE_TRACE("fetch error on %f: %s", a, e);
+                        this->_cache.erase(a);
+                      }
+                      else
+                      {
+                        auto it = this->_cache.find(a);
+                        if (it != this->_cache.end())
+                          this->_cache.modify(
+                            it,
+                            [&] (CachedBlock& cache)
+                            {
+                              if (b)
+                                cache.block() = std::move(b);
+                              cache.last_fetched(now);
+                            });
+                      }
+                    });
+                  }
+                }
               }
-            }
             reactor::sleep(
               boost::posix_time::seconds(
                 this->_cache_invalidation.count()) / 10);

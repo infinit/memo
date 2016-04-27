@@ -8,6 +8,7 @@
 
 # include <elle/named.hh>
 # include <elle/unordered_map.hh>
+# include <elle/Error.hh>
 
 # include <reactor/Generator.hh>
 
@@ -91,6 +92,15 @@ namespace infinit
           _fetch(Address address, boost::optional<int> local_version) override;
           virtual
           void
+          _fetch(std::vector<AddressVersion> const& addresses,
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                   std::exception_ptr)> res) override;
+          std::unique_ptr<blocks::Block>
+          _fetch(Address address,
+                 PaxosClient::Peers peers,
+                 boost::optional<int> local_version);
+          virtual
+          void
           _remove(Address address, blocks::RemoveSignature rs) override;
           bool
           _rebalance(PaxosClient& client, Address address);
@@ -118,6 +128,11 @@ namespace infinit
           make_local(boost::optional<int> port,
                      std::unique_ptr<storage::Storage> storage) override;
 
+          typedef std::pair<boost::optional<Paxos::PaxosClient::Accepted>,
+                            std::shared_ptr<elle::Error>>
+          AcceptedOrError;
+          typedef std::unordered_map<Address, AcceptedOrError>
+          GetMultiResult;
         /*-----.
         | Peer |
         `-----*/
@@ -152,6 +167,9 @@ namespace infinit
             get(PaxosServer::Quorum const& peers,
                 Address address,
                 boost::optional<int> local_version);
+            virtual
+            GetMultiResult
+            get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
           };
 
           /*----------.
@@ -215,6 +233,9 @@ namespace infinit
             get(PaxosServer::Quorum peers,
                 Address address,
                 boost::optional<int> local_version);
+            virtual
+            GetMultiResult
+            get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;
