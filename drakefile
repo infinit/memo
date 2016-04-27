@@ -810,6 +810,7 @@ def configure(
             str(drake.path_build('beyond/lib/python%s' % elle.python3.version)),
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
+          'OS': 'windows' if windows else 'unix',
         }
         env.update(t.get('env', {}))
         if cxx_toolkit.os == drake.os.windows:

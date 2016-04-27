@@ -100,9 +100,11 @@ with TemporaryDirectory() as tmp, \
   assertEq(response['message'], 'Access denied.')
   volume_process.terminate()
   out, err = volume_process.communicate()
-  try:
-    assertEq(volume_process.wait(), 0)
-  except:
-    print('infinit-volume STDOUT: %s' % out)
-    print('infinit-volume STDERR: %s' % err)
-    raise
+  if os.environ.get('OS') != 'windows':
+    try:
+      # SIGTERM is not caught on windows. Might be wine related.
+      assertEq(volume_process.wait(), 0)
+    except:
+      print('infinit-volume STDOUT: %s' % out)
+      print('infinit-volume STDERR: %s' % err)
+      raise
