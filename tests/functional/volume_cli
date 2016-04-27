@@ -36,12 +36,12 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   # Local and Beyond.
   bob.run(['infinit-volume', '--create', '--as', 'bob',
            'v', '--network', 'n', '--push'])
-  assertEq(len(bob.run(['infinit-volume', '--list'])), 1)
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
   bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v', '--pull'])
-  assertEq(len(bob.run(['infinit-volume', '--list'])), 0)
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
   bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
   # Local only.
   bob.run(['infinit-volume', '--create', '--as', 'bob', 'v2', '--network', 'n'])
-  assertEq(len(bob.run(['infinit-volume', '--list'])), 1)
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
   bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v2', '--pull'])
-  assertEq(len(bob.run(['infinit-volume', '--list'])), 0)
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
