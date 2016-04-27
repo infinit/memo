@@ -347,7 +347,7 @@ namespace infinit
           bool hit = false;
           auto block = this->_fetch_cache(address, local_version, hit);
           if (hit)
-            return std::move(block);
+            return block;
           else
             return this->_backend->fetch(address, local_version);
         }
