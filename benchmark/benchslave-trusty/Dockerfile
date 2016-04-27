@@ -19,5 +19,7 @@ ADD scripts /scripts
 ADD server_home /server_home
 ADD client_home /client_home
 
-EXPOSE 111/udp 2049/tcp
+# NFS
+EXPOSE 111/udp 111/tcp 2049/tcp 2049/udp
+# Infinit
 EXPOSE 60000/udp 60000/tcp

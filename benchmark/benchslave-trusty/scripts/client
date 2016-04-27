@@ -175,8 +175,8 @@ with InterruptHandler(clean_up) as h:
     logger.info('Mounting NFS...')
     run(['service', 'rpcbind', 'restart'])
     run([
-      'mount', '-t', 'nfs',
-      '%s:/bench_scratch/nfs_storage' % args.server,
+      'mount', '-t', 'nfs4',
+      '%s:/' % args.server,
       nfs_mountpoint,
     ])
     logger.info('...done')
