@@ -64,8 +64,8 @@ namespace infinit
           virtual
           void
           _fetch(std::vector<AddressVersion> const& addresses,
-            std::function<void(Address, std::unique_ptr<blocks::Block>,
-                               std::exception_ptr)> res);
+                 std::function<void(Address, std::unique_ptr<blocks::Block>,
+                                    std::exception_ptr)> res);
           virtual
           void
           _remove(Address address, blocks::RemoveSignature rs);

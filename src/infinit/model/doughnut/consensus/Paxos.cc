@@ -11,6 +11,8 @@
 #include <cryptography/rsa/PublicKey.hh>
 #include <cryptography/hash.hh>
 
+#include <reactor/for-each.hh>
+
 #include <infinit/RPC.hh>
 #include <infinit/model/MissingBlock.hh>
 #include <infinit/model/doughnut/Conflict.hh>
@@ -1568,9 +1570,10 @@ namespace infinit
         };
 
         void
-        Paxos::_fetch(std::vector<AddressVersion> const& addresses,
-                      std::function<void(Address, std::unique_ptr<blocks::Block>,
-                        std::exception_ptr)> res)
+        Paxos::_fetch(
+          std::vector<AddressVersion> const& addresses,
+          std::function<void(Address, std::unique_ptr<blocks::Block>,
+                             std::exception_ptr)> res)
         {
           BENCH("multi_fetch");
           if (this->doughnut().version() < elle::Version(0, 5, 0))
@@ -1595,19 +1598,18 @@ namespace infinit
             raw_addrs.push_back(a.first);
           auto hits = this->doughnut().overlay()->lookup(
             raw_addrs, this->_factor);
-
           static bool multipaxos = elle::os::getenv("INFINIT_PAXOS_NO_MULTI", "").empty();
           if (doughnut().version() < elle::Version(0, 6, 0))
             multipaxos = false;
+          std::unordered_map<Address, boost::optional<int>> versions;
+          for (auto a: addresses)
+            versions[a.first] = a.second;
           if (multipaxos)
           {
             std::unordered_map<overlay::Overlay::Member, std::vector<AddressVersion>> targets;
             std::unordered_map<Address, PaxosServer::Quorum> quorums;
-            std::unordered_map<Address, boost::optional<int>> versions;
             // track (nodeid, blockaddress) requests sent/pending to avoid duplicate on WrongQuorum
             std::set<std::pair<Address, Address>> requested;
-            for (auto a: addresses)
-              versions[a.first] = a.second;
             for (auto r: hits)
             {
               targets[r.second.lock()].push_back(std::make_pair(r.first, versions.at(r.first)));
@@ -1739,18 +1741,24 @@ namespace infinit
             for (auto r: hits)
             {
               auto& p = peers[r.first];
-              p.push_back(elle::make_unique<Peer>(r.second, r.first, boost::optional<int>()));
+              p.push_back(elle::make_unique<Peer>(
+                            r.second, r.first, versions.at(r.first)));
             }
-            for (auto& p: peers)
-              try
+            reactor::for_each_parallel(
+              peers,
+              [&] (std::pair<Address const, PaxosClient::Peers>& p)
               {
-                auto block = this->_fetch(p.first, std::move(p.second), {});
-                res(p.first, std::move(block), {});
-              }
-              catch (elle::Error const& e)
-              {
-                res(p.first, {}, std::current_exception());
-              }
+                try
+                {
+                  auto block = this->_fetch(
+                    p.first, std::move(p.second), versions.at(p.first));
+                  res(p.first, std::move(block), {});
+                }
+                catch (elle::Error const& e)
+                {
+                  res(p.first, {}, std::current_exception());
+                }
+              });
           }
         }
 
@@ -1764,12 +1772,13 @@ namespace infinit
             return fetch_from_members(peers, address, std::move(local_version));
           }
           auto peers = this->_peers(address, local_version);
-
           return _fetch(address, std::move(peers), local_version);
         }
 
         std::unique_ptr<blocks::Block>
-        Paxos::_fetch(Address address,PaxosClient::Peers peers, boost::optional<int> local_version)
+        Paxos::_fetch(Address address,
+                      PaxosClient::Peers peers,
+                      boost::optional<int> local_version)
         {
           if (peers.empty())
           {
