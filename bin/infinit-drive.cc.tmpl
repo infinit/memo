@@ -535,7 +535,7 @@ main(int argc, char** argv)
         option_description,
         option_icon,
         { "push-drive", bool_switch(),
-          elle::sprintf("push the created drive to %s", beyond(true)).c_str() },
+          elle::sprintf("push the created drive to %s", beyond(true)) },
         { "push,p", bool_switch(), "alias for --push-drive" },
       },
     },
@@ -586,18 +586,18 @@ main(int argc, char** argv)
     },
     {
       "push",
-      elle::sprintf("Push a drive to %s", beyond(true)).c_str(),
+      elle::sprintf("Push a drive to %s", beyond(true)),
       &push,
       "--name NAME",
       {
         { "name,n", value<std::string>(),
-          elle::sprintf("drive to push to %s", beyond(true)).c_str() },
+          elle::sprintf("drive to push to %s", beyond(true)) },
         option_icon,
       }
     },
     {
       "fetch",
-      elle::sprintf("fetch drive from %s", beyond(true)).c_str(),
+      elle::sprintf("fetch drive from %s", beyond(true)),
       &fetch,
       "",
       {
@@ -623,7 +623,7 @@ main(int argc, char** argv)
     },
     {
       "pull",
-      elle::sprintf("Remove a drive from %s", beyond(true)).c_str(),
+      elle::sprintf("Remove a drive from %s", beyond(true)),
       &pull,
       "--name NAME",
       {
