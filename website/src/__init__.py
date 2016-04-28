@@ -5,6 +5,7 @@ import os
 import re
 import json
 
+from bottle import redirect
 from infinit.website.utils import resources_path, route, static_file, view
 
 def error(code, reason = ''):
@@ -163,6 +164,10 @@ class Website(bottle.Bottle):
       'title': 'Change Log',
       'description': 'Have a look at all the recent changes of the Infinit platform.',
     }
+
+  @route('/documentation/changelog/<path:path>')
+  def root(self, path):
+    redirect('/documentation/changelog#' + path)
 
   @route('/documentation/status', name = 'doc_status')
   @view('pages/docs/status.html')
