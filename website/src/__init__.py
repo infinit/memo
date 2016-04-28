@@ -68,14 +68,6 @@ class Website(bottle.Bottle):
       'description': 'The Infinit Drive allows any small and medium business to securely store and access files from anywhere through an easy-to-use virtual disk drive interface.',
     }
 
-  @route('/dropboxe', name = 'dropboxe')
-  @view('pages/dropboxe.html')
-  def root(self):
-    return {
-      'title': 'Infinit — Project Dropboxe',
-      'description': 'Build scalable and secure storage infrastructures by aggregating local storage and various cloud storages such as Amazon S3 or Dropbox.',
-    }
-
   @route('/download', name = 'download')
   @view('pages/download.html')
   def root(self):
