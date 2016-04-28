@@ -217,7 +217,7 @@ class Website(bottle.Bottle):
   @view('pages/docs/comparison.html')
   def root(self, path):
     file = resources_path() + '/json/comparisons.json'
-    with open(file) as json_file:
+    with open(file, encoding = 'utf-8') as json_file:
       json_data = json.load(json_file)
 
     referer = bottle.request.params.get('from')
