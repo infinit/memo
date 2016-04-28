@@ -283,9 +283,9 @@ class Beyond:
               env = env,
               input = (json.dumps(data) + '\n').encode('utf-8'),
               timeout = 1)
-          except Exception:
-            raise Exception('impossible to import %s \'%s\'',
-                            type, data['name'])
+          except Exception as e:
+            raise Exception('impossible to import %s \'%s\': %s' % (
+                            type, data['name'], e))
         import_data('user', user.json())
         import_data('user', beyond.json(private = True))
         for drive in drives:
