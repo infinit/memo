@@ -798,8 +798,9 @@ def configure(
         test.dependencies_add(beyond.package.nodes)
         test.dependencies_add(t.get('dependencies', []))
         test.dependency_add(drake.node('tests/functional/utils.py'))
-        extra_path = [str(drake.path_build(installed_binaries[0].path(True).dirname(),
-                                           absolute = True))]
+        binaries_path = str(drake.path_build(installed_binaries[0].path(True).dirname(),
+                                             absolute = True))
+        extra_path = [binaries_path]
         extra_path += t.get('paths', [])
         if not windows:
           extra_path.append(str(drake.path_build(crash_test_bin.path(True).dirname(),
@@ -811,6 +812,7 @@ def configure(
           'SOURCE_DIR': drake.path_source(),
           'BUILD_DIR': drake.path_build(),
           'OS': 'windows' if windows else 'unix',
+          'INFINIT_BINARIES': str(binaries_path)
         }
         env.update(t.get('env', {}))
         if cxx_toolkit.os == drake.os.windows:
