@@ -330,6 +330,11 @@ COMMAND(run)
   bool created_mountpoint = false;
   if (mountpoint)
   {
+#ifdef INFINIT_WINDOWS
+    if (mountpoint.get().size() == 2 && mountpoint.get()[1] == ':')
+      ;
+    else
+#endif
     try
     {
       if (boost::filesystem::exists(mountpoint.get()))
