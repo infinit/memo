@@ -53,6 +53,8 @@ namespace infinit
           PaxosServer;
           typedef elle::Option<std::shared_ptr<blocks::Block>,
                                Paxos::PaxosClient::Quorum> Value;
+          typedef
+            std::pair<AddressVersion, PaxosServer::Quorum> AddressVersionQuorum;
 
         /*-------------.
         | Construction |
@@ -133,6 +135,7 @@ namespace infinit
           AcceptedOrError;
           typedef std::unordered_map<Address, AcceptedOrError>
           GetMultiResult;
+
         /*-----.
         | Peer |
         `-----*/
@@ -169,7 +172,7 @@ namespace infinit
                 boost::optional<int> local_version);
             virtual
             GetMultiResult
-            get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
+            get_multi(std::vector<AddressVersionQuorum> const& query);
           };
 
           /*----------.
@@ -212,6 +215,9 @@ namespace infinit
           | Paxos |
           `------*/
           public:
+            typedef
+              std::pair<AddressVersion, PaxosServer::Quorum>
+              AddressVersionQuorum;
             virtual
             boost::optional<PaxosClient::Accepted>
             propose(PaxosServer::Quorum peers,
@@ -235,7 +241,7 @@ namespace infinit
                 boost::optional<int> local_version);
             virtual
             GetMultiResult
-            get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query);
+            get_multi(std::vector<AddressVersionQuorum> const& query);
             virtual
             void
             store(blocks::Block const& block, StoreMode mode) override;

@@ -400,12 +400,12 @@ namespace infinit
         }
 
         Paxos::GetMultiResult
-        Paxos::RemotePeer::get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query)
+        Paxos::RemotePeer::get_multi(std::vector<AddressVersionQuorum> const& query)
         {
           return network_exception_to_unavailable([&] {
               auto get_multi = make_rpc<
                 GetMultiResult(
-                  std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const&)>("get_multi");
+                  std::vector<AddressVersionQuorum> const&)>("get_multi");
               get_multi.set_context<Doughnut*>(&this->_doughnut);
               return get_multi(query);
           });
@@ -1042,7 +1042,8 @@ namespace infinit
         }
 
         Paxos::GetMultiResult
-        Paxos::LocalPeer::get_multi(std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const& query)
+        Paxos::LocalPeer::get_multi(
+          std::vector<AddressVersionQuorum> const& query)
         {
           GetMultiResult res;
           for (auto& q: query)
@@ -1131,7 +1132,7 @@ namespace infinit
           rpcs.add(
             "get_multi",
             std::function<GetMultiResult
-            (std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> const&)>
+            (std::vector<AddressVersionQuorum> const&)>
             (std::bind(&LocalPeer::get_multi, this, ph::_1)));
         }
 
@@ -1624,7 +1625,7 @@ namespace infinit
               {
                 if (p.second.empty())
                   continue;
-                std::vector<std::pair<AddressVersion, PaxosServer::Quorum>> query;
+                std::vector<AddressVersionQuorum> query;
                 for (auto a: p.second)
                   query.push_back(std::make_pair(a, quorums.at(a.first)));
                 ELLE_DEBUG("querying %s addresses from %s", query.size(), p.first.get());
