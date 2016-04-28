@@ -275,6 +275,9 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
         method = 'POST',
         **kwargs)
       res.raise_for_status()
+      errors = res.json()['errors']
+      if len(errors):
+        print(errors)
       invitee.run(['infinit-passport', '--fetch', '--as', name])
       assertEq(
         len(invitee.run_json(
