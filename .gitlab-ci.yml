@@ -20,7 +20,7 @@ x86_64-centos6-gcc4:
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //redhat"
     - scp ../fs-build/infinit-$(GIT_DIR=../fs/.git git describe | sed -e 's:-:_:g' )-1.el6.x86_64.rpm debian@debian.infinit.io:brew
     - cd ../fs-build && scl enable devtoolset-4 rh-python34 "python3 drake --website=false --beyond=false -j $(nproc) //debian-debug"
-    - scp ../fs-build/infinit-debug-symbols-linux-centos6-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
+    - scp ../fs-build/infinit-debug-symbols-centos6-$(GIT_DIR=../fs/.git git describe)_0_amd64.deb debian@debian.infinit.io:repository
     - ssh debian@debian.infinit.io 'make debian'
   tags:
     - x86_64
