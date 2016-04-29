@@ -21,9 +21,6 @@ with Beyond() as beyond:
         throws(lambda: beyond.put(route, json = user),
                404,
                json = False)
-      not_found('users')
-      not_found('users/')
-      not_found('users//')
       not_found('users/unknown/')
       not_found('users/unknown/again')
       # Conflict.

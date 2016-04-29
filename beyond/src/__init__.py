@@ -209,6 +209,10 @@ class Beyond:
   ## User ##
   ## ---- ##
 
+  def users_get(self):
+    return (User.from_json(self, user)
+            for user in self.__datastore.users_fetch())
+
   def user_get(self, name):
     json = self.__datastore.user_fetch(name = name)
     return User.from_json(self, json)

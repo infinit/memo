@@ -178,6 +178,12 @@ class CouchDBDatastore:
   ## User ##
   ## ---- ##
 
+  def __user_purge_json(self, user):
+    user = dict(user)
+    user['id'] = user['_id']
+    del user['_id']
+    return user
+
   def user_insert(self, user):
     json = user.json(private = True,
                      hide_confirmation_codes = False)
@@ -187,13 +193,15 @@ class CouchDBDatastore:
     except couchdb.ResourceConflict:
       raise infinit.beyond.User.Duplicate()
 
+  def users_fetch(self):
+    # FIXME: double lookup
+    return (self.__user_purge_json(self.__couchdb['users'][u])
+            for u in self.__couchdb['users']
+            if not u.startswith('_design'))
+
   def user_fetch(self, name):
     try:
-      json = self.__couchdb['users'][name]
-      json = dict(json)
-      json['id'] = json['_id']
-      del json['_id']
-      return json
+      return self.__user_purge_json(self.__couchdb['users'][name])
     except couchdb.http.ResourceNotFound:
       raise infinit.beyond.User.NotFound()
 

@@ -9,7 +9,7 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond() as beyond:
+with Beyond(create_delegate_user = False) as beyond:
 
   class Test(unittest.TestCase):
 
@@ -24,10 +24,13 @@ with Beyond() as beyond:
              404,
              json = False)
       beyond.put('users/%s' % user['name'], json = user)
-      res = beyond.get('users/%s' % user['name']).json()
-      assert res["name"] == user["name"]
-      assert res["public_key"] == user["public_key"]
-      assert "email" not in res
+      user = beyond.get('users/%s' % user['name']).json()
+      assertEq(user['name'], user['name'])
+      assertEq(user['public_key'], user['public_key'])
+      assert 'email' not in user
+      users = beyond.get('users').json()
+      assertEq(len(users['users']), 1)
+      assertEq(users['users'][0], user)
 
 
   if __name__ == '__main__':

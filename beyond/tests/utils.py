@@ -41,7 +41,7 @@ bottle.Bottle.host = host
 
 class Beyond:
 
-  def __init__(self, **beyond_args):
+  def __init__(self, create_delegate_user = True, **beyond_args):
     super().__init__()
     self.__app = None
     self.__advance = timedelta()
@@ -49,7 +49,7 @@ class Beyond:
     self.__couchdb = infinit.beyond.couchdb.CouchDB()
     self.__datastore = None
     self.__beyond_args = beyond_args
-
+    self.__create_delegate_user = create_delegate_user
     setattr(self, 'get',
             lambda url, **kw: self.request(url = url, method = 'GET', **kw))
     setattr(self, 'put',
@@ -92,8 +92,9 @@ class Beyond:
     setattr(self.__beyond, '_Beyond__now', self.now)
     self.__app = infinit.beyond.bottle.Bottle(self.__beyond)
     self.__app.__enter__()
-    self.__beyond_user = User(name = self.__beyond.delegate_user)
-    self.__beyond_user.put(self, opt_out = False)
+    if self.__create_delegate_user:
+      self.__beyond_user = User(name = self.__beyond.delegate_user)
+      self.__beyond_user.put(self, opt_out = False)
     return self
 
   @property

@@ -100,7 +100,9 @@ class Bottle(bottle.Bottle):
         (getattr(self, 'user_%s_credentials_get' % s))
     self.route('/users/<username>/credentials/google/refresh') \
       (self.user_credentials_google_refresh)
-    # User
+
+    # Users
+    self.route('/users', method = 'GET')(self.users_get)
     self.route('/users/<name>', method = 'GET')(self.user_get)
     self.route('/users/<name>', method = 'PUT')(self.user_put)
     self.route('/users/<name>', method = 'DELETE')(self.user_delete)
@@ -399,6 +401,12 @@ class Bottle(bottle.Bottle):
         'reason': 'unknown email address'
       })
     raise Response(200, {})
+
+  def users_get(self):
+    import sys
+    return {
+      'users': [u.json() for u in self.__beyond.users_get()],
+      }
 
   def user_get(self, name):
     return self.user_from_name(name = name).json()
