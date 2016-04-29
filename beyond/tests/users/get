@@ -9,7 +9,8 @@ from utils import *
 
 from copy import deepcopy
 
-with Beyond(create_delegate_user = False) as beyond:
+with Beyond(create_delegate_user = False,
+            force_admin = True) as beyond:
 
   class Test(unittest.TestCase):
 

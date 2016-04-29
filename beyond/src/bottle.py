@@ -20,6 +20,8 @@ from infinit.beyond.gcs import GCS
 from infinit.beyond.plugins.jsongo import Plugin as JsongoPlugin
 from infinit.beyond.plugins.max_size import Plugin as MaxSizePlugin
 from infinit.beyond.plugins.response import Plugin as ResponsePlugin
+from infinit.beyond.plugins.certification import Plugin \
+  as CertificationPlugin
 
 bottle.BaseRequest.MEMFILE_MAX = 2.5 * 1000 * 1000
 
@@ -80,14 +82,17 @@ class Bottle(bottle.Bottle):
       beyond,
       gcs = None,
       production = True,
+      force_admin = False,
   ):
     super().__init__(catchall = not production)
     self.__beyond = beyond
     self.__ban_list = ['demo', 'root', 'admin']
+    self.__force_admin = force_admin
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
     self.install(JsongoPlugin())
     self.install(MaxSizePlugin(bottle.BaseRequest.MEMFILE_MAX))
+    self.install(CertificationPlugin())
     self.route('/')(self.root)
     # GCS
     self.__gcs = gcs
@@ -198,6 +203,22 @@ class Bottle(bottle.Bottle):
       self.drive_icon_delete)
     # Crash reports
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
+
+  @property
+  def admin(self):
+    if self.__force_admin:
+      return True
+    if not hasattr(bottle.request, 'certificate'):
+      return False
+    return bottle.request.certificate in [
+      'antony.mechin@infinit.io',
+      'baptiste.fradin@infinit.io',
+      'christopher.crone@infinit.io',
+      'gaetan.rochel@infinit.io',
+      'julien.quintard@infinit.io',
+      'matthieu.nottale@infinit.io',
+      'quentin.hocquet@infinit.io',
+    ]
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -403,7 +424,11 @@ class Bottle(bottle.Bottle):
     raise Response(200, {})
 
   def users_get(self):
-    import sys
+    if not self.admin:
+      raise Response(401, {
+        'error': 'admin',
+        'reason': 'administrator privilege required',
+      })
     return {
       'users': [u.json() for u in self.__beyond.users_get()],
       }
