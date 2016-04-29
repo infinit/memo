@@ -31,7 +31,8 @@ with Beyond(create_delegate_user = False,
       assert 'email' not in user
       users = beyond.get('users').json()
       assertEq(len(users['users']), 1)
-      assertEq(users['users'][0], user)
+      for k in ['name', 'public_key']:
+        assertEq(users['users'][0][k], user[k])
 
 
   if __name__ == '__main__':

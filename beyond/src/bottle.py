@@ -430,7 +430,8 @@ class Bottle(bottle.Bottle):
         'reason': 'administrator privilege required',
       })
     return {
-      'users': [u.json() for u in self.__beyond.users_get()],
+      'users': [u.json(private = True)
+                for u in self.__beyond.users_get()],
       }
 
   def user_get(self, name):
