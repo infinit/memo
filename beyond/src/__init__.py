@@ -66,6 +66,7 @@ templates = {
   },
 }
 # Make sure templates only contains entires named 'template' and 'version'.
+import itertools
 assert set(itertools.chain(*[list(x.keys()) for x in templates.values()])) == \
        {'template', 'version'}
 
