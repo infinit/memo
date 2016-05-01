@@ -194,10 +194,10 @@ class CouchDBDatastore:
       raise infinit.beyond.User.Duplicate()
 
   def users_fetch(self):
-    # FIXME: double lookup
-    return (self.__user_purge_json(self.__couchdb['users'][u])
-            for u in self.__couchdb['users']
-            if not u.startswith('_design'))
+    return (
+      self.__user_purge_json(u.doc) for u in
+      self.__couchdb['users'].view('_all_docs', include_docs = True)
+      if not u.id.startswith('_design/'))
 
   def user_fetch(self, name):
     try:
