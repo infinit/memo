@@ -433,8 +433,12 @@ class Bottle(bottle.Bottle):
 
   def users_get(self):
     self.require_admin()
+    def filter(u):
+      if 'private_key' in u:
+        u['private_key'] = None
+      return u
     return {
-      'users': [u.json(private = True)
+      'users': [filter(u.json(private = True))
                 for u in self.__beyond.users_get()],
     }
 
