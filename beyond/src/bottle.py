@@ -204,21 +204,29 @@ class Bottle(bottle.Bottle):
     # Crash reports
     self.route('/crash/report', method = 'PUT')(self.crash_report_put)
 
-  @property
-  def admin(self):
+  def require_admin(self):
     if self.__force_admin:
-      return True
+      return
     if not hasattr(bottle.request, 'certificate'):
-      return False
-    return bottle.request.certificate in [
-      'antony.mechin@infinit.io',
-      'baptiste.fradin@infinit.io',
-      'christopher.crone@infinit.io',
-      'gaetan.rochel@infinit.io',
-      'julien.quintard@infinit.io',
-      'matthieu.nottale@infinit.io',
-      'quentin.hocquet@infinit.io',
-    ]
+      raise Response(401, {
+        'error': 'admin',
+        'reason': 'administrator privilege required',
+      })
+    u = bottle.request.certificate
+    if u not in [
+        'antony.mechin@infinit.io',
+        'baptiste.fradin@infinit.io',
+        'christopher.crone@infinit.io',
+        'gaetan.rochel@infinit.io',
+        'julien.quintard@infinit.io',
+        'matthieu.nottale@infinit.io',
+        'mefyl@infinit.io',
+    ]:
+      raise Response(401, {
+        'error': 'admin',
+        'reason': 'you (%s) are not an administrator' % u,
+      })
+
 
   def __not_found(self, type, name):
     return Response(404, {
@@ -424,15 +432,11 @@ class Bottle(bottle.Bottle):
     raise Response(200, {})
 
   def users_get(self):
-    if not self.admin:
-      raise Response(401, {
-        'error': 'admin',
-        'reason': 'administrator privilege required',
-      })
+    self.require_admin()
     return {
       'users': [u.json(private = True)
                 for u in self.__beyond.users_get()],
-      }
+    }
 
   def user_get(self, name):
     return self.user_from_name(name = name).json()
