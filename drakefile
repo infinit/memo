@@ -489,9 +489,10 @@ def configure(
     ('infinit-webdav', [], False),
     ('infinit-fsck', [], False),
     ('reactor-example', [], False),
-    ('infinit-ldap', [], True),
     # ('s3fs', [aws_lib], False),
   ]
+  if elle.elle.ldap:
+    binaries_config.append(('infinit-ldap', [], True))
   if not windows:
     binaries_config.append(('sshfs', [], False))
     additional_libs.append(crash_reporter_lib)
