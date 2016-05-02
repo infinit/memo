@@ -245,12 +245,28 @@ COMMAND(create)
 COMMAND(list)
 {
   auto storages = ifnt.storages_get();
-  for (auto const& storage: storages)
+  if (script_mode)
   {
-    std::cout << storage->name << ": "
-              << (storage->capacity ? pretty_print(storage->capacity.get())
-                                    : "unlimited")
-              << std::endl;
+    elle::json::Array l;
+    for (auto const& storage: storages)
+    {
+      elle::json::Object o;
+      o["name"] = storage->name;
+      o["capacity"] = (storage->capacity ? pretty_print(storage->capacity.get())
+                                         : "unlimited");
+      l.push_back(std::move(o));
+    }
+    elle::json::write(std::cout, l);
+  }
+  else
+  {
+    for (auto const& storage: storages)
+    {
+      std::cout << storage->name << ": "
+                << (storage->capacity ? pretty_print(storage->capacity.get())
+                                      : "unlimited")
+                << std::endl;
+    }
   }
 }
 
