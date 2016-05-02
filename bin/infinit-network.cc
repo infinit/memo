@@ -623,6 +623,9 @@ COMMAND(run)
     });
   auto run = [&]
     {
+      reactor::Thread::unique_ptr stat_thread;
+      if (push)
+        stat_thread = make_stat_update_thread(self, network, *dht);
       report_action("running", "network", network.name);
       reactor::sleep();
     };

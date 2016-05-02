@@ -17,6 +17,8 @@ performance improvement.
   `infinit-passport`, `infinit-user` and `infinit-volume`.
 - Add Kelips batch requests, greatly improving performances for large
   set of files.
+- Push storage stats to the hub in `infinit-network` if `--push` is
+  passed.
 
 
 ## [0.5.5] - 2016-04-25
