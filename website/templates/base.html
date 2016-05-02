@@ -43,7 +43,9 @@
     <div id="popup_notice"><span class="icon"></span> <span class="message"></span></div>
     <div id="full"></div>
 
-    <div id="announcement">We're orgazining our first meetup about distributed storage in our Paris offices on May 25. <a target="_blank" href="http://www.meetup.com/Infinit-Paris/events/230662675/">Join us!</a></div>
+    % if request.route.name == 'home':
+      <div id="announcement">We're organizing our first meetup about distributed storage in our Paris offices on May 25. <a target="_blank" href="http://www.meetup.com/Infinit-Paris/events/230662675/">Join us!</a></div>
+    % endif
 
     <header>
       <a href="${route('home')}"><img src="${url('images/logo.png')}" alt="Infinit"><span>Storage</span></a>
