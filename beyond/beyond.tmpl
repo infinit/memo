@@ -107,6 +107,10 @@ def parse_options():
   parser.add_argument('--ldap-server',
                       type = str,
                       help = 'Hostname or URL of the ldap server')
+  parser.add_argument('--admin-users',
+                      type = str,
+                      default = '',
+                      help = 'Comma-separated list of admin users')
   return parser.parse_args()
 
 try:
@@ -133,8 +137,12 @@ try:
       gcs_app_secret = args.gcs_app_secret,
       validate_email_address = args.email_validation,
       sendwithus_api_key = args.sendwithus_app_key)
+    admin_users = []
+    if len(args.admin_users):
+      admin_users = args.admin_users.split(',')
     app = infinit.beyond.bottle.Bottle(
-      beyond, gcs = gcs, production = False, ldap_server = args.ldap_server)
+      beyond, gcs = gcs, production = False, ldap_server = args.ldap_server,
+      admin_users = admin_users)
     import bottle
     kwargs = {}
     if args.host is not None:

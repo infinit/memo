@@ -84,12 +84,14 @@ class Bottle(bottle.Bottle):
       production = True,
       force_admin = False,
       ldap_server = None,
+      admin_users = [],
   ):
     super().__init__(catchall = not production)
     self.__beyond = beyond
     self.__ban_list = ['demo', 'root', 'admin']
     self.__force_admin = force_admin
     self.__ldap_server = ldap_server
+    self.__admin_users = admin_users
     self.install(bottle.CertificationPlugin())
     self.install(ResponsePlugin())
     self.install(JsongoPlugin())
@@ -210,11 +212,24 @@ class Bottle(bottle.Bottle):
   def require_admin(self):
     if self.__force_admin:
       return
+    if bottle.request.auth is not None and self.__ldap_server is not None:
+      (name, password) = bottle.request.auth
+      if name in self.__admin_users:
+        try:
+          user = self.user_from_name(name)
+          import ldap3
+          server = ldap3.Server(self.__ldap_server)
+          c = ldap3.Connection(server, user.ldap_dn, password, auto_bind=True)
+          c.extend.standard.who_am_i()
+          return
+        except:
+           pass
     if not hasattr(bottle.request, 'certificate'):
       raise Response(401, {
         'error': 'admin',
         'reason': 'administrator privilege required',
-      })
+      },
+      {'WWW-Authenticate': 'Basic realm="beyond"'})
     u = bottle.request.certificate
     if u not in [
         'antony.mechin@infinit.io',
@@ -228,7 +243,8 @@ class Bottle(bottle.Bottle):
       raise Response(401, {
         'error': 'admin',
         'reason': 'you (%s) are not an administrator' % u,
-      })
+      },
+      {'WWW-Authenticate': 'Basic realm="beyond"'})
 
 
   def __not_found(self, type, name):
