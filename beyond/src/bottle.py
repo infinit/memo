@@ -446,8 +446,11 @@ class Bottle(bottle.Bottle):
     return self.user_from_name(name = name).json()
 
   def user_delete(self, name):
+    purge = True if bottle.request.query.purge else False
     user = self.user_from_name(name = name)
     self.authenticate(user)
+    if purge:
+      self.__beyond.user_purge(user = user)
     self.__beyond.user_delete(name)
 
   def user_avatar_put(self, name):
@@ -675,9 +678,12 @@ class Bottle(bottle.Bottle):
     return {}
 
   def network_delete(self, owner, name):
+    purge = True if bottle.request.query.purge else False
     user = self.user_from_name(name = owner)
     self.authenticate(user)
-    self.network_from_name(owner = owner, name = name)
+    network = self.network_from_name(owner = owner, name = name)
+    if purge:
+      self.__beyond.network_purge(user = user, network = network)
     self.__beyond.network_delete(owner, name)
 
   def network_volumes_get(self, owner, name):
@@ -740,9 +746,12 @@ class Bottle(bottle.Bottle):
       })
 
   def volume_delete(self, owner, name):
+    purge = True if bottle.request.query.purge else False
     user = self.user_from_name(name = owner)
     self.authenticate(user)
-    self.volume_from_name(owner = owner, name = name)
+    volume = self.volume_from_name(owner = owner, name = name)
+    if purge:
+      self.__beyond.volume_purge(user = user, volume = volume)
     self.__beyond.volume_delete(owner = owner, name = name)
 
   ## ----- ##
