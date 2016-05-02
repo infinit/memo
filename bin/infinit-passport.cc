@@ -196,42 +196,24 @@ COMMAND(list)
 {
   namespace boost_fs = boost::filesystem;
   auto network_name = optional(args, "network");
-  boost_fs::path path;
-  if (network_name)
+  if (network_name && !ifnt.is_qualified_name(network_name.get()))
   {
-    if (!ifnt.is_qualified_name(network_name.get()))
-    {
-      auto self = self_user(ifnt, args);
-      network_name = ifnt.qualified_name(network_name.get(), self);
-    }
-    path = ifnt._passport_path() / network_name.get();
+    auto self = self_user(ifnt, args);
+    network_name = ifnt.qualified_name(network_name.get(), self);
   }
-  else
-  {
-    path = ifnt._passport_path();
-  }
+  auto passports = ifnt.passports_get(network_name);
   elle::json::Array l;
-  for (boost_fs::recursive_directory_iterator it(path);
-       it != boost_fs::recursive_directory_iterator();
-       ++it)
+  for (auto const& pair: passports)
   {
-    if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+    if (script_mode)
     {
-      auto user_name = it->path().filename().string();
-      boost_fs::ifstream f;
-      ifnt._open_read(f, it->path(), user_name, "passport");
-      auto passport =
-        elle::serialization::json::deserialize<infinit::Passport>(f, false);
-      if (script_mode)
-      {
-        elle::json::Object o;
-        o["network"] = passport.network();
-        o["user"] = user_name;
-        l.push_back(std::move(o));
-      }
-      else
-        std::cout << passport.network() << ": " << user_name << std::endl;
+      elle::json::Object o;
+      o["network"] = pair.first.network();
+      o["user"] = pair.second;
+      l.push_back(std::move(o));
     }
+    else
+      std::cout << pair.first.network() << ": " << pair.second << std::endl;
   }
   if (script_mode)
     elle::json::write(std::cout, l);
@@ -251,22 +233,12 @@ COMMAND(delete_)
   }
   if (flag(args, "pull"))
   {
-    try
-    {
-      beyond_delete(
-        elle::sprintf("networks/%s/passports/%s", network_name, user_name),
-        "passport for",
-        user_name,
-        self);
-    }
-    catch (MissingResource const& e)
-    {
-      // Ignore if the item is not on Beyond.
-    }
-    catch (elle::Error const& e)
-    {
-      throw;
-    }
+    beyond_delete(
+      elle::sprintf("networks/%s/passports/%s", network_name, user_name),
+      "passport for",
+      user_name,
+      self,
+      true);
   }
   if (boost::filesystem::remove(path))
   {

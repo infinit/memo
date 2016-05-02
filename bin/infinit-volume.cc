@@ -112,7 +112,7 @@ COMMAND(pull)
 {
   auto owner = self_user(ifnt, args);
   auto name = volume_name(args, owner);
-  beyond_delete("volume", name, owner);
+  beyond_delete("volume", name, owner, false, flag(args, "purge"));
 }
 
 COMMAND(delete_)
@@ -121,21 +121,19 @@ COMMAND(delete_)
   auto name = volume_name(args, owner);
   auto path = ifnt._volume_path(name);
   auto volume = ifnt.volume_get(name);
-  if (flag(args, "pull"))
+  bool purge = flag(args, "purge");
+  bool pull = flag(args, "pull");
+  if (purge)
   {
-    try
+    for (auto const& drive: ifnt.drives_for_volume(name))
     {
-      beyond_delete("volume", name, owner);
-    }
-    catch (MissingResource const& e)
-    {
-      // Ignore if the item is not on Beyond.
-    }
-    catch (elle::Error const& e)
-    {
-      throw;
+      auto drive_path = ifnt._drive_path(drive);
+      if (boost::filesystem::remove(drive_path))
+        report_action("deleted", "drive", drive, std::string("locally"));
     }
   }
+  if (pull)
+    beyond_delete("volume", name, owner, true, purge);
   boost::filesystem::remove_all(volume.root_block_cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "volume", name, std::string("locally"));
@@ -1087,6 +1085,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "volume to delete" },
         { "pull", bool_switch(),
           elle::sprintf("pull the volume if it is on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects that depend on the volume" },
       },
     },
     {
@@ -1096,6 +1095,7 @@ main(int argc, char** argv)
       "--name VOLUME",
       {
         { "name,n", value<std::string>(), "volume to remove" },
+        { "purge", bool_switch(), "remove objects that depend on the volume" },
       },
     },
     {

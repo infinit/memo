@@ -288,6 +288,11 @@ COMMAND(delete_)
   auto name = mandatory(args, "name", "storage name");
   auto storage = ifnt.storage_get(name);
   bool clear = flag(args, "clear-content");
+  bool purge = flag(args, "purge");
+  bool pull = flag(args, "pull");
+  auto owner = self_user(ifnt, args);
+  if (pull && !purge)
+    throw elle::Error("\"--pull\" option is only valid when using \"--purge\"");
   if (auto fs_storage =
         dynamic_cast<infinit::storage::FilesystemStorageConfig*>(storage.get()))
   {
@@ -307,6 +312,51 @@ COMMAND(delete_)
   }
   else if (clear)
     throw elle::Error("only filesystem storages can be cleared");
+  if (purge)
+  {
+    auto networks = ifnt.networks_for_storage(name);
+    std::vector<std::string> volumes;
+    for (auto const& network: networks)
+    {
+      auto net_vols = ifnt.volumes_for_network(network);
+      volumes.insert(volumes.end(), net_vols.begin(), net_vols.end());
+      for (auto const& user: ifnt.user_passports_for_network(network))
+      {
+        auto passport_path = ifnt._passport_path(network, user);
+        if (boost::filesystem::remove(passport_path))
+        {
+          report_action("deleted", "passport",
+                        elle::sprintf("%s: %s", network, user),
+                        std::string("locally"));
+        }
+      }
+    }
+    for (auto const& volume: volumes)
+    {
+      auto vol_drives = ifnt.drives_for_volume(volume);
+      for (auto const& drive: vol_drives)
+      {
+        auto drive_path = ifnt._drive_path(drive);
+        if (boost::filesystem::remove(drive_path))
+          report_action("deleted", "drive", drive, std::string("locally"));
+      }
+    }
+    for (auto const& volume: volumes)
+    {
+      auto vol_path = ifnt._volume_path(volume);
+      if (boost::filesystem::remove(vol_path))
+        report_action("deleted", "volume", volume, std::string("locally"));
+    }
+    for (auto const& network: networks)
+    {
+      // Only need to pull network as Beyond handles cleaning up properly.
+      if (pull)
+        beyond_delete("network", network, owner, true, purge);
+      auto net_path = ifnt._network_path(network);
+      if (boost::filesystem::remove(net_path))
+        report_action("deleted", "network", network, std::string("locally"));
+    }
+  }
   auto path = ifnt._storage_path(name);
   bool ok = boost::filesystem::remove(path);
   if (ok)
@@ -419,6 +469,9 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "storage to delete" },
         { "clear-content", bool_switch(),
           "remove all blocks (filesystem only)" },
+        { "pull", bool_switch(), elle::sprintf("pull objects that depend on "
+          "the storage if they are on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects that depend on the storage" },
       },
     },
   };

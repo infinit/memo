@@ -492,6 +492,7 @@ COMMAND(list)
     elle::json::write(std::cout, l);
   }
   else
+  {
     for (auto const& network: ifnt.networks_get())
     {
       std::cout << network.name;
@@ -499,6 +500,7 @@ COMMAND(list)
         std::cout << ": linked";
       std::cout << std::endl;
     }
+  }
 }
 
 COMMAND(push)
@@ -519,7 +521,7 @@ COMMAND(pull)
   auto name_ = mandatory(args, "name", "network name");
   auto owner = self_user(ifnt, args);
   auto network_name = ifnt.qualified_name(name_, owner);
-  beyond_delete("network", network_name, owner);
+  beyond_delete("network", network_name, owner, false, flag(args, "purge"));
 }
 
 COMMAND(delete_)
@@ -529,21 +531,42 @@ COMMAND(delete_)
   auto network_name = ifnt.qualified_name(name, owner);
   auto path = ifnt._network_path(network_name);
   auto network = ifnt.network_get(network_name, owner, false);
-  if (flag(args, "pull"))
+  bool purge = flag(args, "purge");
+  bool pull = flag(args, "pull");
+  if (purge)
   {
-    try
+    auto volumes = ifnt.volumes_for_network(network_name);
+    std::vector<std::string> drives;
+    for (auto const& volume: volumes)
     {
-      beyond_delete("network", network_name, owner);
+      auto vol_drives = ifnt.drives_for_volume(volume);
+      drives.insert(drives.end(), vol_drives.begin(), vol_drives.end());
     }
-    catch (MissingResource const& e)
+    for (auto const& drive: drives)
     {
-      // Ignore if the item is not on Beyond.
+      auto drive_path = ifnt._drive_path(drive);
+      if (boost::filesystem::remove(drive_path))
+        report_action("deleted", "drive", drive, std::string("locally"));
     }
-    catch (elle::Error const& e)
+    for (auto const& volume: volumes)
     {
-      throw;
+      auto vol_path = ifnt._volume_path(volume);
+      if (boost::filesystem::remove(vol_path))
+        report_action("deleted", "volume", volume, std::string("locally"));
+    }
+    for (auto const& user: ifnt.user_passports_for_network(network_name))
+    {
+      auto passport_path = ifnt._passport_path(network_name, user);
+      if (boost::filesystem::remove(passport_path))
+      {
+        report_action("deleted", "passport",
+                      elle::sprintf("%s: %s", network_name, user),
+                      std::string("locally"));
+      }
     }
   }
+  if (pull)
+    beyond_delete("network", network_name, owner, true, purge);
   boost::filesystem::remove_all(network.cache_dir());
   if (boost::filesystem::remove(path))
     report_action("deleted", "network", network_name, std::string("locally"));
@@ -712,7 +735,7 @@ main(int argc, char** argv)
     ("encrypt", value<std::string>(),
       "use encryption: no,lazy,yes (default: yes)")
     ("protocol", value<std::string>(),
-      "RPC protocol to use: tcp,utp,all (default: all)")
+      "RPC protocol to use: tcp,utp,all\n(default: all)")
     ;
   Modes modes {
     {
@@ -840,6 +863,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "network to delete" },
         { "pull", bool_switch(),
           elle::sprintf("pull the network if it is on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects that depend on the network" },
       },
     },
     {
