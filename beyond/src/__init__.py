@@ -88,6 +88,7 @@ class Beyond:
       validate_email_address = True,
       limits = {},
       delegate_user = 'hub',
+      keep_deleted_users = False,
   ):
     self.__datastore = datastore
     self.__datastore.beyond = self
@@ -104,6 +105,7 @@ class Beyond:
     else:
       self.__emailer = emailer.NoOp()
     self.__delegate_user = delegate_user
+    self.__keep_deleted_users = keep_deleted_users
 
   @property
   def limits(self):
@@ -234,7 +236,12 @@ class Beyond:
     user = self.__datastore.user_by_ldap_dn(dn)
     return User.from_json(self, user)
 
+  def user_deleted_get(self, name):
+    return self.__datastore.user_deleted_get(name)
+
   def user_delete(self, name):
+    if self.__keep_deleted_users:
+      self.__datastore.user_deleted_add(name)
     return self.__datastore.user_delete(name = name)
 
   def user_networks_get(self, user):

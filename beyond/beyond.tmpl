@@ -111,6 +111,10 @@ def parse_options():
                       type = str,
                       default = '',
                       help = 'Comma-separated list of admin users')
+  parser.add_argument('--keep-deleted-users',
+                      type = bool,
+                      default = False,
+                      help = 'Retain data from deleted users')
   return parser.parse_args()
 
 try:
@@ -136,7 +140,8 @@ try:
       gcs_app_key = args.gcs_app_key,
       gcs_app_secret = args.gcs_app_secret,
       validate_email_address = args.email_validation,
-      sendwithus_api_key = args.sendwithus_app_key)
+      sendwithus_api_key = args.sendwithus_app_key,
+      keep_deleted_users = args.keep_deleted_users)
     admin_users = []
     if len(args.admin_users):
       admin_users = args.admin_users.split(',')

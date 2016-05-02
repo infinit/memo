@@ -108,6 +108,9 @@ class CouchDBDatastore:
                     ('per_email', self.__user_per_email),
                     ('per_ldap_dn', self.__user_per_ldap_dn),
                   ])
+    self.__design('deleted-users',
+                  updates = [],
+                  views = [])
     self.__design('pairing',
                   updates = [],
                   views = [])
@@ -272,6 +275,22 @@ class CouchDBDatastore:
   def user_delete(self, name):
     doc = self.__couchdb['users'][name]
     self.__couchdb['users'].delete(doc)
+
+  def user_deleted_get(self, name):
+    try:
+      return self.__couchdb['deleted-users'][name]
+    except couchdb.http.ResourceNotFound:
+      raise infinit.beyond.User.NotFound()
+
+  def user_deleted_add(self, name):
+    user = self.user_fetch(name)
+    try:
+      doc = self.user_deleted_get(name)
+      doc['versions'].append(user)
+      self.__couchdb['deleted-users'].save(doc)
+    except infinit.beyond.User.NotFound:
+      doc = {'_id': name, 'versions': [user]}
+      self.__couchdb['deleted-users'].save(doc)
 
   def __rows_to_networks(self, rows):
     network_from_db = infinit.beyond.Network.from_json
