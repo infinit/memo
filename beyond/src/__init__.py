@@ -64,6 +64,9 @@ templates = {
   'User/Confirmation Email': {
     'template': 'tem_b6ZtsWVHKzv4PUBDU7WTZj',
   },
+  'Sales/New Customer': {
+    'template': 'tem_SEWGs7yLLupWz9nXCmGq9J'
+  }
 }
 # Make sure templates only contains entires named 'template' and 'version'.
 import itertools
