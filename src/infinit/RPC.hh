@@ -218,6 +218,15 @@ namespace infinit
   public:
     using Passport = infinit::model::doughnut::Passport;
 
+    RPCServer(elle::Version version)
+      : _version(version)
+    {}
+
+    ~RPCServer()
+    {
+      _destroying(this);
+    }
+
     template <typename R, typename ... Args>
     void
     add(std::string const& name, std::function<R (Args...)> f)
@@ -226,18 +235,11 @@ namespace infinit
         elle::make_unique<ConcreteRPCHandler<R, Args...>>(f);
     }
 
-    RPCServer(boost::optional<elle::Version> version = {})
-      : _version(version)
-    {
-    }
-    ~RPCServer()
-    {
-      _destroying(this);
-    }
     void
     serve(std::iostream& s)
     {
-      protocol::Serializer serializer(s, false);
+      protocol::Serializer serializer(
+        s, elle_serialization_version(this->_version), false);
       serve(serializer);
     }
 
@@ -279,10 +281,8 @@ namespace infinit
             }
           }
           elle::IOStream ins(request.istreambuf());
-          std::unordered_map<elle::TypeInfo, elle::Version> versions;
-          if (this->_version)
-            versions = elle::serialization::get_serialization_versions
-              <infinit::serialization_tag>(this->_version.get());
+          auto versions = elle::serialization::get_serialization_versions
+            <infinit::serialization_tag>(this->_version);
           elle::serialization::binary::SerializerIn input(ins, versions, false);
           input.set_context(this->_context);
           std::string name;
@@ -310,7 +310,6 @@ namespace infinit
               throw;
             }
           }
-
           outs.flush();
           if (had_key)
           {
@@ -352,10 +351,9 @@ namespace infinit
 
     std::unordered_map<std::string, std::unique_ptr<RPCHandler>> _rpcs;
     elle::serialization::Context _context;
-    boost::optional<elle::Version> _version;
     std::unique_ptr<infinit::cryptography::SecretKey> _key;
     boost::signals2::signal<void(RPCServer*)> _destroying;
-
+    ELLE_ATTRIBUTE(elle::Version, version);
   };
 
   /*-------.
