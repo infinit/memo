@@ -30,7 +30,11 @@ Get Started
 
 <div>
 % if osname == "windows":
-<p><em>The following is written for users of Windows. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_linux')}">Linux</a> guide.</em></p>
+<blockquote class="warning">
+<strong>Note:</strong> Our Windows version is not publicly released yet. You can <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to get informed of the public release!
+</blockquote>
+
+<p><em>The following is written for users of Linux. You can also see the <a href="${route('doc_get_started_mac')}">Mac</a> guide.</em></p>
 
 % elif osname == "mac":
 <p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
