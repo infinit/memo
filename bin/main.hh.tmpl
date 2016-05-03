@@ -944,17 +944,20 @@ namespace infinit
     notify_storage(infinit::User const& user,
                    infinit::model::Address const& node_id)
     {
-      auto url = elle::sprintf(
-        "networks/%s/stat/%s/%s", name, user.name, node_id);
-      auto storage = this->dht()->storage->make();
-      Storages s{storage->usage(), storage->capacity()};
-
-      beyond_push(url,
-                  "storage usage",
-                  name,
-                  std::move(s),
-                  user,
-                  false);
+      ELLE_TRACE_SCOPE("push storage stats to %s", beyond());
+      try
+      {
+        auto url = elle::sprintf(
+          "networks/%s/stat/%s/%s", name, user.name, node_id);
+        auto storage = this->dht()->storage->make();
+        Storages s{storage->usage(), storage->capacity()};
+        beyond_push(
+          url, "storage usage", name, std::move(s), user, false);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("Error notifying storage size change: %s", e);
+      }
     }
 
     boost::filesystem::path
