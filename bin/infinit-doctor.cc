@@ -56,43 +56,50 @@ bool
 _networking(boost::program_options::variables_map const& args,
             boost::optional<std::ostream&> output_stream)
 {
-
   bool sane = true;
+  bool verbose = flag(args, "verbose");
   // Contact beyond.
-  auto& output = std::cout;
-  output << "Contacting " << beyond() << std::endl;
+  // XXX: Verbose.
+  std::cout << "Contacting " << beyond() << std::endl;
   {
     try
     {
       reactor::http::Request r(beyond(), reactor::http::Method::GET);
       reactor::wait(r);
-      if (r.status() != reactor::http::StatusCode::OK)
-        throw elle::Error(
-          elle::sprintf(
-            "Able to contact %s but got a %s error",
-            beyond(), r.status()));
-      output << "  ok" << std::endl << std::endl;
+      auto status = (r.status() == reactor::http::StatusCode::OK);
+      sane &= status;
+      if (verbose || !status)
+      {
+        auto& output = status ? std::cout : std::cerr;
+        elle::fprintf(output, "Able to contact %s but got a %s error",
+                      beyond(), r.status());
+        if (verbose)
+          output << "  ok" << std::endl << std::endl;
+      }
     }
     catch (elle::Error const&)
     {
-      elle::fprintf(output, "Unable to contact %s: %s\n", beyond(),
+      elle::fprintf(std::cerr, "Unable to contact %s: %s\n", beyond(),
                     elle::exception_string());
     }
   }
   // Interfaces.
   auto interfaces = elle::network::Interface::get_map(
     elle::network::Interface::Filter::no_loopback);
-  output << "Local IP Addresses:" << std::endl;
+  if (verbose)
+    std::cout << "Local IP Addresses:" << std::endl;
   std::vector<std::string> public_ips;
   for (auto i: interfaces)
   {
     if (i.second.ipv4_address.empty())
       continue;
-    output << "  " << i.second.ipv4_address << std::endl;
+    if (verbose)
+      std::cout << "  " << i.second.ipv4_address << std::endl;
     public_ips.push_back(i.second.ipv4_address);
   }
 
-  output << "\nConnectivity:" << std::endl;
+  if (verbose)
+    std::cout << "\nConnectivity:" << std::endl;
   std::string host = "192.241.139.66";
   uint16_t port = 5456;
   auto run = [&] (std::string const& name,
@@ -101,6 +108,7 @@ _networking(boost::program_options::variables_map const& args,
                     uint16_t port)> const& function)
   {
     std::string result = elle::sprintf("  %s: ", name);
+    auto status = true;
     try
     {
       auto address = function(host, port);
@@ -123,40 +131,67 @@ _networking(boost::program_options::variables_map const& args,
     catch (...)
     {
       result += elle::exception_string();
+      status = false;
     }
-    output << result << std::endl;
+    sane &= status;
+    if (!status || verbose)
+    {
+      auto& output = status ? std::cout : std::cerr;
+      output << result << std::endl;
+    }
   };
   run("TCP", reactor::connectivity::tcp);
   run("UDP", reactor::connectivity::udp);
   run("RDV_UTP", reactor::connectivity::rdv_utp);
-  output << "NAT ";
-  try
   {
-    output << reactor::connectivity::nat(host, port) << std::endl;
+    std::stringstream nat;
+    nat << "NAT ";
+    bool status = true;
+    try
+    {
+      nat << reactor::connectivity::nat(host, port) << std::endl;
+    }
+    catch (std::runtime_error const&)
+    {
+      nat << elle::exception_string() << std::endl;
+      status = false;
+    }
+    sane &= status;
+    if (!status || verbose)
+    {
+      auto& output = status ? std::cout : std::cerr;
+      output << nat.str() << std::endl;
+    }
   }
-  catch (std::runtime_error const&)
   {
-    output << elle::exception_string() << std::endl;
-  }
-
-  output << std::endl << "UPNP:" << std::endl;
-  auto upnp = reactor::network::UPNP::make();
-  try
-  {
-    upnp->initialize();
-    output << "  available: " << upnp->available() << std::endl;
-    auto ip = upnp->external_ip();
-    output << "  external_ip: " << ip << std::endl;
-    auto pm = upnp->setup_redirect(reactor::network::Protocol::tcp, 5678);
-    output << "  mapping: " << pm.internal_host << ':' << pm.internal_port
-      << " -> " << pm.external_host << ':' << pm.external_port << std::endl;
-    auto pm2 = upnp->setup_redirect(reactor::network::Protocol::udt, 5679);
-    output << "  mapping: " << pm2.internal_host << ':' << pm2.internal_port
-      << " -> " << pm2.external_host << ':' << pm2.external_port << std::endl;
-  }
-  catch (std::exception const& e)
-  {
-    output << "  exception: " << e.what() << std::endl;
+    bool status = true;
+    std::stringstream out;
+    out << "UPNP:" << std::endl;
+    auto upnp = reactor::network::UPNP::make();
+    try
+    {
+      upnp->initialize();
+      out << "  available: " << upnp->available() << std::endl;
+      auto ip = upnp->external_ip();
+      out << "  external_ip: " << ip << std::endl;
+      auto pm = upnp->setup_redirect(reactor::network::Protocol::tcp, 5678);
+      out << "  mapping: " << pm.internal_host << ':' << pm.internal_port
+          << " -> " << pm.external_host << ':' << pm.external_port << std::endl;
+      auto pm2 = upnp->setup_redirect(reactor::network::Protocol::udt, 5679);
+      out << "  mapping: " << pm2.internal_host << ':' << pm2.internal_port
+          << " -> " << pm2.external_host << ':' << pm2.external_port << std::endl;
+    }
+    catch (std::exception const& e)
+    {
+      out << "  exception: " << e.what() << std::endl;
+      status = false;
+    }
+    sane &= status;
+    if (!status || verbose)
+    {
+      auto& output = status ? std::cout : std::cerr;
+      output << out.str() << std::endl;
+    }
   }
   return sane;
 }
@@ -213,11 +248,12 @@ has_permission(boost::filesystem::path const& path,
 static
 bool
 permission(boost::filesystem::path const& path,
+           bool verbose,
            bool mandatory = true,
            uint32_t indent = 0)
 {
   auto sane = has_permission(path, mandatory);
-  if (script_mode || !sane.first)
+  if (verbose || !sane.first)
   {
     auto& output = sane.first ? std::cout : std::cerr;
     output << std::string(indent, ' ') << path.string() << ": "
@@ -228,25 +264,25 @@ permission(boost::filesystem::path const& path,
 
 static
 bool
-permissions()
+permissions(bool verbose)
 {
-  if (script_mode)
+  if (verbose)
     std::cout << "Peprmissions:" << std::endl;
   bool sane = true;
-  sane &= permission(elle::system::home_directory(), true, 2);
-  sane &= permission(infinit::xdg_cache_home(), false, 2);
-  sane &= permission(infinit::xdg_config_home(), false, 2);
-  sane &= permission(infinit::xdg_data_home(), false, 2);
-  sane &= permission(infinit::xdg_state_home(), false, 2);
+  sane &= permission(elle::system::home_directory(), verbose, true, 2);
+  sane &= permission(infinit::xdg_cache_home(), verbose, false, 2);
+  sane &= permission(infinit::xdg_config_home(), verbose, false, 2);
+  sane &= permission(infinit::xdg_data_home(), verbose, false, 2);
+  sane &= permission(infinit::xdg_state_home(), verbose, false, 2);
   return sane;
 }
 
 static
 bool
-environment()
+environment(bool verbose)
 {
   auto env = infinit_related_environment();
-  if (script_mode)
+  if (verbose)
   {
     std::cout << "Environment:" << std::endl;
     for (auto const& entry: env)
@@ -257,12 +293,12 @@ environment()
 
 static
 bool
-space_left(double min_ratio, uint32_t min_absolute)
+space_left(bool verbose, double min_ratio, uint32_t min_absolute)
 {
   auto f = boost::filesystem::space(infinit::xdg_data_home());
   double ratio = f.available / (double) f.capacity;
   bool full = (ratio < min_ratio) || (f.available < min_absolute);
-  if (script_mode || full)
+  if (verbose || full)
   {
     auto& output = full ? std::cerr : std::cout;
     output << "Space:" << std::endl;
@@ -273,12 +309,13 @@ space_left(double min_ratio, uint32_t min_absolute)
 
 static
 bool
-fuse()
+fuse(bool verbose)
 {
+#if 0
   try
   {
     elle::system::Process p({"fusermount", "-V"});
-    if (script_mode)
+    if (verbose)
       std::cout << "fuse: ok" << std::endl;
     return true;
   }
@@ -286,6 +323,9 @@ fuse()
   {
     return false;
   }
+#else
+  return true;
+#endif
 }
 
 static
@@ -311,8 +351,8 @@ _sanity(boost::program_options::variables_map const& args,
       return false;
     }
   };
-
-  if (script_mode)
+  bool verbose = flag(args, "verbose");
+  if (verbose)
   {
     std::cout << "Disclaimer: " << std::endl;
     std::cout << "" << std::endl;
@@ -323,7 +363,7 @@ _sanity(boost::program_options::variables_map const& args,
   sane &= test(
     [&] {
       auto self_name = self_user_name(args);
-      if (script_mode)
+      if (verbose)
       {
         std::cout << "User:" << std::endl;
         std::cout << "  default user name: " << self_name << std::endl;
@@ -333,10 +373,10 @@ _sanity(boost::program_options::variables_map const& args,
       // if (!boost::regex_match(test_name, str_matches, allowed))
       //   throw elle::Error("You won't be able to push this user on beyond");
     }, "Invalid or unrecognized user name");
-  sane &= space_left(0.02, 50 * 1024 * 1024);
-  sane &= environment();
-  sane &= permissions();
-  sane &= fuse();
+  sane &= space_left(verbose, 0.02, 50 * 1024 * 1024);
+  sane &= environment(verbose);
+  sane &= permissions(verbose);
+  sane &= fuse(verbose);
   return sane;
 }
 
@@ -376,10 +416,10 @@ _integrity(boost::program_options::variables_map const& args,
            boost::optional<std::ostream&> output_stream)
 {
   bool sane = true;
-#define CONVERT(xxx, ...)                       \
-  [] () {                                       \
-    auto entities = xxx(__VA_ARGS__);           \
-    return parse(entities);                     \
+#define CONVERT(entity_getter, ...)                       \
+  [] () {                                                 \
+    auto entities = entity_getter(__VA_ARGS__);           \
+    return parse(entities);                               \
   }()
 
   auto users = CONVERT(ifnt.users_get);
@@ -389,6 +429,7 @@ _integrity(boost::program_options::variables_map const& args,
   auto drives = CONVERT(ifnt.drives_get);
   auto volumes = CONVERT(ifnt.volumes_get);
   auto networks = CONVERT(ifnt.networks_get);
+  auto verbose = flag(args, "verbose");
   std::cout << "Storage resources:" << std::endl;
   for (auto& elem: storage_resources)
   {
@@ -408,24 +449,25 @@ _integrity(boost::program_options::variables_map const& args,
           });
       status = (it != aws_credentials.end());
       sane &= status;
-      if (script_mode || !status)
+      if (verbose || !status)
       {
         auto& output = !status ? std::cerr : std::cout;
-        elle::fprintf(output, "  [%s] %s (S3):\n", result(status), storage->name);
+        elle::fprintf(output, "  [%s] %s (AWS):\n", result(status), storage->name);
         if (status)
-          output << "      [✓] Credential: " << (*it)->display_name() << std::endl;
+          elle::fprintf(output, "      [%s] Credential: %s\n",
+                result(status), (*it)->display_name());
         else
-          output << "      [×] Missing credential" << std::endl;
+          elle::fprintf(output, "      [%s] Missing credential\n", result(status));
       }
     }
     if (auto fsconfig = dynamic_cast<infinit::storage::FilesystemStorageConfig const*>(storage.get()))
     {
       status = has_permission(fsconfig->path).first;
-      if (script_mode || !status)
+      if (verbose || !status)
       {
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (Filesystem):\n", result(status), storage->name);
-        elle::fprintf(output, "      [%s] ", result(has_permission(fsconfig->path, true).first));
+        elle::fprintf(output, "      [%s]", result(has_permission(fsconfig->path, true).first));
         permission(boost::filesystem::path(fsconfig->path), true);
       }
     }
@@ -441,14 +483,15 @@ _integrity(boost::program_options::variables_map const& args,
           });
       status = (it != gcs_credentials.end());
       sane &= status;
-      if (script_mode || !status)
+      if (verbose || !status)
       {
         auto& output = !status ? std::cerr : std::cout;
         elle::fprintf(output, "  [%s] %s (GCS):\n", result(status), storage->name);
         if (status)
-          output << "      [✓] Credential: " << (*it)->display_name() << std::endl;
+          elle::fprintf(output, "      [%s] Credential: %s\n",
+                result(status), (*it)->display_name());
         else
-          output << "      [×] Missing credential" << std::endl;
+          elle::fprintf(output, "      [%s] Missing credential\n", result(status));
       }
     }
     if (auto ssh = dynamic_cast<infinit::storage::SFTPStorageConfig const*>(storage.get()))
@@ -483,7 +526,7 @@ _integrity(boost::program_options::variables_map const& args,
         return (it != storage_resources.end() && it->second.second);
       });
     sane &= status;
-    if (script_mode || !status)
+    if (verbose || !status)
     {
       auto& output = !status ? std::cerr : std::cout;
       elle::fprintf(output, "%s[%s] %s:\n", "  ", result(status), network.name);
@@ -509,7 +552,7 @@ _integrity(boost::program_options::variables_map const& args,
     auto network_presents = network != networks.end();
     status = network_presents && network->second.second;
     sane &= status;
-    if (script_mode || !status)
+    if (verbose || !status)
     {
       auto& output = !status ? std::cerr : std::cout;
       elle::fprintf(output, "%s[%s] %s:\n%s    [%s] network: %s",
@@ -531,7 +574,7 @@ _integrity(boost::program_options::variables_map const& args,
     auto network_ok = network_presents && network->second.second;
     status = network_ok && volume_ok;
     sane &= status;
-    if (script_mode || !status)
+    if (verbose || !status)
     {
       auto& output = !status ? std::cerr : std::cout;
       elle::fprintf(
@@ -582,26 +625,45 @@ main(int argc, char** argv)
 {
   using boost::program_options::value;
   using boost::program_options::bool_switch;
+  Mode::OptionDescription verbose =
+   { "verbose,v", bool_switch(), "output everything" };
+
   Modes modes {
     {
       "all",
       "Perform all possible checks",
       &run_all,
+      "",
+      {
+        verbose
+      }
     },
     {
       "networking",
       "Perform networking checks",
       &networking,
+      "",
+      {
+        verbose
+      }
     },
     {
       "sanity",
       "Perform sanity checks",
       &sanity,
+      "",
+      {
+        verbose
+      }
     },
     {
       "integrity",
       "Perform integrity checks",
       &integrity,
+      "",
+      {
+        verbose
+      }
     }
   };
   return infinit::main("Infinit diagnostic utility", modes, argc, argv,
