@@ -304,6 +304,10 @@ class Website(bottle.Bottle):
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
+        sender = {
+          'address': bottle.request.forms.get('email'),
+          'reply_to': bottle.request.forms.get('email')
+        },
         email_data = {
           f: bottle.request.forms.get(f) for f in ['first_name', 'last_name', 'email', 'message', 'phone', 'company', 'country'] if bottle.request.forms.get(f)
         })
@@ -329,6 +333,10 @@ class Website(bottle.Bottle):
       response = self.__swu.send(
         email_id = 'tem_XvZ5rnCzWqiTv6NLawEET4',
         recipient = {'address': 'contact@infinit.sh'},
+        sender = {
+          'address': bottle.request.forms.get('email'),
+          'reply_to': bottle.request.forms.get('email')
+        },
         email_data = {
           'email': email,
           'message': '%s wants to join the Slack community.' % (email),
