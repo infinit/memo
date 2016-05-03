@@ -16,6 +16,7 @@
 # include <protocol/Serializer.hh>
 
 # include <infinit/model/doughnut/Passport.hh>
+# include <infinit/version.hh>
 
 namespace infinit
 {
@@ -218,7 +219,8 @@ namespace infinit
   public:
     using Passport = infinit::model::doughnut::Passport;
 
-    RPCServer(elle::Version version)
+    RPCServer(elle::Version version =
+              elle::Version(INFINIT_MAJOR, INFINIT_MINOR, INFINIT_SUBMINOR))
       : _version(version)
     {}
 
