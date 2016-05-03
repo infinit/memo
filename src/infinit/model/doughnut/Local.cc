@@ -1,6 +1,7 @@
 #include <infinit/model/doughnut/Local.hh>
 
 #include <elle/log.hh>
+#include <elle/os/environ.hh>
 #include <elle/network/Interface.hh>
 #include <elle/utility/Move.hh>
 
@@ -43,26 +44,38 @@ namespace infinit
         , _storage(std::move(storage))
         , _doughnut(dht)
       {
-        ELLE_TRACE_SCOPE("%s: construct", this);
-        if (p == Protocol::tcp || p == Protocol::all)
+        try
         {
-          this->_server = elle::make_unique<reactor::network::TCPServer>();
-          this->_server->listen(port);
-          this->_server_thread = elle::make_unique<reactor::Thread>(
-            elle::sprintf("%s server", *this),
-            [this] { this->_serve_tcp(); });
+          ELLE_TRACE_SCOPE("%s: construct", this);
+          bool v6 = elle::os::getenv("INFINIT_NO_IPV6", "").empty()
+              && dht.version() >= elle::Version(0, 7, 0);
+          if (p == Protocol::tcp || p == Protocol::all)
+          {
+            ELLE_LOG("tcp");
+            this->_server = elle::make_unique<reactor::network::TCPServer>();
+            this->_server->listen(port, v6);
+            this->_server_thread = elle::make_unique<reactor::Thread>(
+              elle::sprintf("%s server", *this),
+              [this] { this->_serve_tcp(); });
+          }
+          if (p == Protocol::utp || p == Protocol::all)
+          {
+            ELLE_LOG("utp");
+            this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
+            if (this->_server)
+              port = this->_server->port();
+            this->_utp_server->listen(port, v6);
+            this->_utp_server_thread = elle::make_unique<reactor::Thread>(
+              elle::sprintf("%s utp server", *this),
+              [this] { this->_serve_utp(); });
+          }
+          ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
         }
-        if (p == Protocol::utp || p == Protocol::all)
+        catch (std::exception const& e)
         {
-          this->_utp_server = elle::make_unique<reactor::network::UTPServer>();
-          if (this->_server)
-            port = this->_server->port();
-          this->_utp_server->listen(port);
-          this->_utp_server_thread = elle::make_unique<reactor::Thread>(
-            elle::sprintf("%s utp server", *this),
-            [this] { this->_serve_utp(); });
+          ELLE_WARN(e.what());
+          throw;
         }
-        ELLE_TRACE("%s: listen on %s", *this, this->server_endpoint());
       }
 
       Local::~Local()

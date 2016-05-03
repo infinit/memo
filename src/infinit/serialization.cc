@@ -25,6 +25,8 @@ namespace infinit
       {{ elle::type_info<elle::serialization_tag>(), elle::Version(0, 1, 0) }}},
     { elle::Version(0, 6, 0),
       {{ elle::type_info<elle::serialization_tag>(), elle::Version(0, 2, 0) }}},
+    { elle::Version(0, 7, 0),
+      {{ elle::type_info<elle::serialization_tag>(), elle::Version(0, 2, 0) }}},
   }};
 
   elle::Version
