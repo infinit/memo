@@ -50,12 +50,13 @@
 
 #include "version.hh"
 
-std::string program;
+extern std::string program;
 
 #define COMMAND(name) static void name(boost::program_options::variables_map const& args)
 
 #define NO_PRIVATE_KEY "user \"%s\" has no private key"
 
+inline
 bool
 show_hidden_options()
 {
@@ -65,6 +66,7 @@ show_hidden_options()
   return !elle::os::getenv("INFINIT_SHOW_HIDDEN_OPTIONS", "").empty();
 }
 
+inline
 std::string
 beyond(bool help = false)
 {
@@ -176,6 +178,7 @@ public:
   {}
 };
 
+inline
 void
 not_found(std::string const& name,
           std::string const& type)
@@ -185,6 +188,7 @@ not_found(std::string const& name,
             << std::endl;
 }
 
+inline
 void
 forbidden(std::string const& name,
           std::string const& type)
@@ -194,6 +198,7 @@ forbidden(std::string const& name,
             << std::endl;
 }
 
+inline
 void
 gone(std::string const& type)
 {
@@ -396,6 +401,7 @@ struct Mode
 };
 typedef std::vector<Mode> Modes;
 
+inline
 boost::program_options::variables_map
 parse_args(boost::program_options::options_description const& options,
            std::vector<std::string> const& args,
@@ -416,8 +422,8 @@ parse_args(boost::program_options::options_description const& options,
   return res;
 }
 
-bool script_mode = false;
-boost::optional<std::string> _as_user = {};
+extern bool script_mode;
+extern boost::optional<std::string> _as_user;
 
 static
 bool
@@ -454,6 +460,7 @@ namespace infinit
 
   typedef infinit::model::doughnut::Passport Passport;
 
+  inline
   void
   check_name(std::string const& name, bool no_slash = false)
   {
@@ -555,6 +562,7 @@ namespace infinit
     return res;
   }
 
+  inline
   int
   main(std::string desc,
        Modes const& modes,
@@ -936,17 +944,20 @@ namespace infinit
     notify_storage(infinit::User const& user,
                    infinit::model::Address const& node_id)
     {
-      auto url = elle::sprintf(
-        "networks/%s/stat/%s/%s", name, user.name, node_id);
-      auto storage = this->dht()->storage->make();
-      Storages s{storage->usage(), storage->capacity()};
-
-      beyond_push(url,
-                  "storage usage",
-                  name,
-                  std::move(s),
-                  user,
-                  false);
+      ELLE_TRACE_SCOPE("push storage stats to %s", beyond());
+      try
+      {
+        auto url = elle::sprintf(
+          "networks/%s/stat/%s/%s", name, user.name, node_id);
+        auto storage = this->dht()->storage->make();
+        Storages s{storage->usage(), storage->capacity()};
+        beyond_push(
+          url, "storage usage", name, std::move(s), user, false);
+      }
+      catch (elle::Error const& e)
+      {
+        ELLE_WARN("Error notifying storage size change: %s", e);
+      }
     }
 
     boost::filesystem::path
@@ -2114,6 +2125,7 @@ mandatory(boost::program_options::variables_map const& vm,
 }
 
 template <>
+inline
 std::vector<std::string>
 mandatory<std::vector<std::string>>(
   boost::program_options::variables_map const& vm,
@@ -2128,6 +2140,7 @@ mandatory<std::vector<std::string>>(
   return vm[name].as<std::vector<std::string>>();
 }
 
+inline
 bool
 flag(boost::program_options::variables_map const& vm,
      std::string const& name)
@@ -2135,6 +2148,7 @@ flag(boost::program_options::variables_map const& vm,
   return vm.count(name) && vm[name].as<bool>();
 }
 
+inline
 bool
 flag(boost::program_options::variables_map const& vm,
      Mode::OptionDescription const& option)
@@ -2145,6 +2159,7 @@ flag(boost::program_options::variables_map const& vm,
   return flag(vm, option.long_name());
 }
 
+inline
 bool
 _one(bool seen)
 {
@@ -2196,6 +2211,7 @@ all(Args&& ... args)
   return true;
 }
 
+inline
 bool
 aliased_flag(boost::program_options::variables_map const& vm,
              std::vector<std::string> aliases)
@@ -2208,6 +2224,7 @@ aliased_flag(boost::program_options::variables_map const& vm,
   return false;
 }
 
+inline
 Mode::OptionDescription
 option_output(std::string const& item)
 {
@@ -2216,6 +2233,7 @@ option_output(std::string const& item)
     elle::sprintf("file to write the %s to (default: stdout)", item).c_str());
 }
 
+inline
 std::unique_ptr<std::ostream, std::function<void (std::ostream*)>>
 get_output(boost::program_options::variables_map const& args)
 {
@@ -2238,6 +2256,7 @@ get_output(boost::program_options::variables_map const& args)
     (&std::cout, [] (std::ostream*) {});
 }
 
+inline
 Mode::OptionDescription
 option_input(std::string const& item)
 {
@@ -2246,6 +2265,7 @@ option_input(std::string const& item)
     elle::sprintf("file to read the %s from (default: stdin)", item).c_str());
 }
 
+inline
 std::unique_ptr<std::istream, std::function<void (std::istream*)>>
 get_input(boost::program_options::variables_map const& args)
 {
@@ -2295,6 +2315,7 @@ namespace infinit
     DasPrivateUserPublish);
 }
 
+inline
 void
 report(std::string const& msg)
 {
@@ -2305,6 +2326,7 @@ report(std::string const& msg)
   }
 }
 
+inline
 void
 report_action(std::string const& action,
               std::string const& type,
@@ -2315,24 +2337,28 @@ report_action(std::string const& action,
   report(elle::sprintf("%s%s %s \"\%s\"", where, action, type, name));
 }
 
+inline
 void
 report_created(std::string const& type, std::string const& name)
 {
   report_action("created", type, name, std::string("locally"));
 }
 
+inline
 void
 report_updated(std::string const& type, std::string const& name)
 {
   report_action("updated", type, name, std::string("locally"));
 }
 
+inline
 void
 report_imported(std::string const& type, std::string const& name)
 {
   report_action("imported", type, name);
 }
 
+inline
 void
 report_action_output(std::ostream& output,
                      std::string const& action,
@@ -2343,6 +2369,7 @@ report_action_output(std::ostream& output,
     report_action(action, type, name);
 }
 
+inline
 void
 report_exported(std::ostream& output,
                 std::string const& type,
@@ -2411,6 +2438,7 @@ namespace detail
   }
 
   template <>
+  inline
   void
   _read_error<BeyondError>(elle::json::Object& request)
   {
@@ -2450,6 +2478,7 @@ read_error(reactor::http::Request& r,
   detail::_read_error<Exception>(json);
 }
 
+inline
 void
 _beyond_push(reactor::http::Request& r,
              std::string const& type,
@@ -2534,6 +2563,7 @@ _beyond_push(reactor::http::Request& r,
   }
 }
 
+inline
 void
 beyond_push_data(std::string const& where,
                  std::string const& type,
@@ -2673,6 +2703,7 @@ beyond_fetch_data(std::string const& where,
                     output_report_action);
 }
 
+inline
 elle::json::Json
 beyond_fetch_json(std::string const& where,
                   std::string const& type,
@@ -2709,6 +2740,7 @@ beyond_fetch(std::string const& type,
   return beyond_fetch<T>(elle::sprintf("%ss/%s", type, name), type, name);
 }
 
+inline
 void
 beyond_delete(std::string const& where,
               std::string const& type,
@@ -2758,6 +2790,7 @@ beyond_delete(std::string const& where,
   }
 }
 
+inline
 void
 beyond_delete(std::string const& type,
               std::string const& name,
@@ -2891,6 +2924,7 @@ private:
   ELLE_ATTRIBUTE(reactor::network::PortMapping, port_map_udp);
 };
 
+inline
 void
 beyond_fetch_endpoints(infinit::Network const& network,
                        std::unordered_map<infinit::model::Address,
@@ -2932,6 +2966,7 @@ beyond_fetch_endpoints(infinit::Network const& network,
 
 namespace infinit
 {
+  inline
   Drive
   Infinit::drive_fetch(std::string const& name)
   {
@@ -2939,35 +2974,48 @@ namespace infinit
   }
 }
 
+reactor::Thread::unique_ptr
+make_stat_update_thread(infinit::User const& self,
+                        infinit::Network& network,
+                        infinit::model::doughnut::Doughnut& model);
 
+static
 Mode::OptionDescription option_cache(
   "cache", boost::program_options::bool_switch(),
   "enable caching with default values");
+static
 Mode::OptionDescription option_cache_ram_size(
   "cache-ram-size", boost::program_options::value<int>(),
   "maximum RAM block cache size in bytes\n(default: 64 MB)",
   {{"cache-size", boost::program_options::value<int>()}});
+static
 Mode::OptionDescription option_cache_ram_ttl(
   "cache-ram-ttl", boost::program_options::value<int>(),
   "RAM block cache time-to-live in seconds\n(default: 5 minutes)",
   {{"cache-ttl", boost::program_options::value<int>()}});
+static
 Mode::OptionDescription option_cache_ram_invalidation(
   "cache-ram-invalidation", boost::program_options::value<int>(),
   "RAM block cache invalidation time in seconds\n(default: 15 seconds)",
   {{"cache-invalidation", boost::program_options::value<int>()}});
+static
 Mode::OptionDescription option_cache_disk_size(
   "cache-disk-size", boost::program_options::value<uint64_t>(),
   "size of disk cache for immutable data in bytes\n(default: 512 MB)",
   {{"disk-cache-size", boost::program_options::value<uint64_t>()}});
+static
 Mode::OptionDescription option_port_file(
   "port-file", boost::program_options::value<std::string>(),
   "write node listening port to file");
+static
 Mode::OptionDescription option_endpoint_file(
   "endpoints-file", boost::program_options::value<std::string>(),
   "write node listening endpoints to file\n(format: host:port\\n)");
+static
 Mode::OptionDescription option_port(
   "port", boost::program_options::value<int>(),
   "outbound port to use");
+static
 Mode::OptionDescription option_disable_mac_utf8(
   "disable-utf-8-conversion", boost::program_options::bool_switch(),
   "disable FUSE conversion of UTF-8 to native format");
