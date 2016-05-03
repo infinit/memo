@@ -263,7 +263,7 @@ COMMAND(pull)
 {
   auto self = self_user(ifnt, args);
   auto user = get_name(args);
-  beyond_delete("user", user, self);
+  beyond_delete("user", user, self, false, flag(args, "purge"));
 }
 
 COMMAND(delete_)
@@ -601,6 +601,7 @@ main(int argc, char** argv)
       {
         { "name,n", value<std::string>(),
           "user to remove (default: system user)" },
+        { "purge", bool_switch(), "remove objects owned by the user" },
       },
     },
     {
