@@ -873,6 +873,7 @@ main(int argc, char** argv)
       "--name NETWORK",
       {
         { "name,n", value<std::string>(), "network to remove" },
+        { "purge", bool_switch(), "remove objects that depend on the network" },
       },
     },
     {
