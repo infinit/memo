@@ -89,7 +89,7 @@ def configure(
   )
   drake.markdown.Renderer(
     source = drake.Node('../ChangeLog'),
-    target = changelog
+    target = changelog,
   )
 
   changelog_drive = drake.node(
@@ -97,40 +97,14 @@ def configure(
   )
   drake.markdown.Renderer(
     source = drake.Node('templates/pages/drive/ChangeLog'),
-    target = changelog_drive
+    target = changelog_drive,
   )
-
-  class CopyAndCleanup(drake.Copy):
-
-    def __init__(self, source, to, post_process):
-      assert post_process is None
-      super().__init__(source = source,
-                       to = to,
-                       post_process = lambda x: self.replace(x)
-      )
-      self.__replacements = {
-        '<code>--': '<code>&#8209;&#8209;',
-        '&quot;': '\"'
-      }
-
-    def replace(self, target):
-      import fileinput
-      with fileinput.input([str(target)], inplace = True) as f:
-        for line in f:
-          for base, replacement in self.__replacements.items():
-            line = line.replace(base, replacement)
-          print(line, end='')
-      return True
-
-    def hash(self):
-      return self.__replacements
 
   def copy_generated_pages(nodes):
     return drake.copy(
       nodes,
       'templates/pages/docs/generated',
       strip_prefix = True,
-      builder = CopyAndCleanup
     )
 
   generated = copy_generated_pages(
