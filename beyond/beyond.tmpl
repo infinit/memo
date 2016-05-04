@@ -104,6 +104,10 @@ def parse_options():
   parser.add_argument('--port-file',
                       type = str,
                       help = 'File to write effective listen port to')
+  parser.add_argument('--force-admin',
+                      help = 'Force administrator mode',
+                      action = 'store_true',
+                      default = False)
   return parser.parse_args()
 
 try:
@@ -129,9 +133,10 @@ try:
       gcs_app_key = args.gcs_app_key,
       gcs_app_secret = args.gcs_app_secret,
       validate_email_address = args.email_validation,
-      sendwithus_api_key = args.sendwithus_app_key)
+      sendwithus_api_key = args.sendwithus_app_key,
+    )
     app = infinit.beyond.bottle.Bottle(
-      beyond, gcs = gcs, production = False)
+      beyond, gcs = gcs, production = False, force_admin = args.force_admin)
     import bottle
     kwargs = {}
     if args.host is not None:
