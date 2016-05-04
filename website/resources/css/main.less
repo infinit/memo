@@ -46,6 +46,11 @@ a.button, button.button, input.button, body.documentation section.doc p a.button
   &.border.black:hover { background: lighten(@black, 20%); color: white !important;}
 
   &.big { font-size: 16px; text-align: center; padding: 13px 20px; }
+
+  &.disabled, &.disabled:hover {
+    background: #D2D2D2;
+    box-shadow: 0 3px 0 0 #9A9A9A;
+  }
 }
 
 .spacer { clear: both; }
