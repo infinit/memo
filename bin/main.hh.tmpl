@@ -681,6 +681,7 @@ namespace infinit
               if (vm.count("as"))
                 _as_user = vm["as"].as<std::string>();
               Mode const* mode = nullptr;
+              bool misplaced_mode = false;
               std::vector<std::string> tokens;
               for (int i = 0; i < argc; i++)
                 tokens.emplace_back(std::string(argv[i]));
@@ -702,10 +703,17 @@ namespace infinit
                       }
                     }
                   }
+                  if (mode && pos != 1)
+                    misplaced_mode = true;
                 };
               get_mode(modes);
               if (mode == nullptr && hidden_modes)
                 get_mode(hidden_modes.get());
+              if (misplaced_mode)
+              {
+                (help ? std::cout : std::cerr) << "MODE must be the first argument." << std::endl;
+                mode = nullptr;
+              }
               if (!mode)
               {
                 std::ostream& output = help ? std::cout : std::cerr;
