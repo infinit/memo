@@ -38,7 +38,7 @@ port_getxattr(std::string const& file,
 {
 #ifndef INFINIT_WINDOWS
   int res = -1;
-  res = getxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
+  res = lgetxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
   if (res >= 0 || !fallback_xattrs)
     return res;
 #endif
@@ -58,7 +58,7 @@ port_setxattr(std::string const& file,
               bool fallback_xattrs)
 {
 #ifndef INFINIT_WINDOWS
-  int res = setxattr(
+  int res = lsetxattr(
     file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
   if (res >= 0 || !fallback_xattrs)
     return res;
