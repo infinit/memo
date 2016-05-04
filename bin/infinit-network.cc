@@ -596,9 +596,12 @@ COMMAND(run)
     flag(args, "async"), disk_cache_size, compatibility_version, port);
   // Only push if we have are contributing storage.
   bool push = aliased_flag(args, {"push-endpoints", "push", "publish"})
-            && dht->local()->storage();
+            && dht->local() && dht->local()->storage();
   if (!dht->local())
-    throw elle::Error(elle::sprintf("network \"%s\" is client-only", name));
+  {
+    throw elle::Error(elle::sprintf(
+      "network \"%s\" has no storage attached so is client only", name));
+  }
   if (auto port_file = optional(args, option_port_file))
     port_to_file(dht->local()->server_endpoint().port(), port_file.get());
   if (auto endpoint_file = optional(args, option_endpoint_file))
