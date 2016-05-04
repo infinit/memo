@@ -7,20 +7,16 @@ import urllib.parse
 
 from utils import *
 
-from copy import deepcopy
+class Test(unittest.TestCase):
 
-user = User()
-
-with Beyond() as beyond:
-
-  class Test(unittest.TestCase):
-
-    def test_delete_unknown(self):
+  def test_delete_unknown(self):
+    with Beyond() as beyond:
       throws(lambda: beyond.delete('users/castor'),
              404,
              json = False)
 
-    def test_works(self):
+  def test_works(self):
+    with Beyond() as beyond:
       user = User()
       throws(lambda: beyond.get('users/%s' % user['name']),
              404,
@@ -37,7 +33,8 @@ with Beyond() as beyond:
              404,
              json = False)
 
-    def test_deleting_another_user(self):
+  def test_deleting_another_user(self):
+    with Beyond() as beyond:
       alice = User()
       bob = User()
       beyond.put('users/%s' % alice['name'], json = alice)
@@ -47,5 +44,11 @@ with Beyond() as beyond:
              403,
              json = False)
 
-  if __name__ == '__main__':
-    unittest.main()
+  def test_admin(self):
+    with Beyond(force_admin = True) as admin_beyond:
+      alice = User()
+      admin_beyond.put('users/%s' % alice['name'], json = alice)
+      admin_beyond.delete('users/%s' % alice['name'])
+
+if __name__ == '__main__':
+  unittest.main()
