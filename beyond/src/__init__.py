@@ -306,19 +306,14 @@ class Beyond:
             except Network.NotFound:
               raise Exception('Unknown network \'%s\'' % drive.network)
             import_data('network', network.json())
-            subprocess.check_call(
+            output = subprocess.check_output(
               [
                 binary_path + 'infinit-passport' + exe_ext, '--create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
-              ],
-              env = env)
-            output = subprocess.check_output(
-              [
-                binary_path + 'infinit-passport' + exe_ext, '--export',
-                '--user', user.name,
-                '--network', network.name
+                '--output', '-',
+                '--script',
               ],
               env = env)
             import json
