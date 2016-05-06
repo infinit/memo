@@ -8,6 +8,9 @@ performance improvement.
 ### Added
 
 - Automatically rebalance under-replicated data blocks to new nodes.
+- Send network queries in batch when possible.
+- Enable to interrupt remote procedure call to save time when a query
+  is discarded.
 - Enable to set the inherit flag in default network permissions.
 - Support JSON output with `--script` for operation `--list` in
   `infinit-drive`, `infinit-network`, `infinit-passport`,
