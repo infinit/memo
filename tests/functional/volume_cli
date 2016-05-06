@@ -45,3 +45,22 @@ with Beyond() as beyond, Infinit(beyond = beyond) as bob:
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
   bob.run(['infinit-volume', '--delete', '--as', 'bob', 'v2', '--pull'])
   assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
+
+# Purge.
+with Beyond() as beyond, Infinit(beyond = beyond) as bob:
+  bob.run(['infinit-user', '--signup', 'bob', '--email', 'bob@infinit.io'])
+  bob.run(['infinit-storage', '--create', '--as', 'bob', 's', '--filesystem'])
+  bob.run(['infinit-network', '--create', '--as', 'bob', 'n', '-S', 's', '-p'])
+  bob.run(['infinit-volume', '--create', '--as', 'bob', 'v', '-N', 'n', '-p'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 1)
+  bob.run(['infinit-drive', '--create', '--as', 'bob', 'd',
+           '-V', 'v', '-N', 'n', '-p'])
+  assertEq(
+    len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 1)
+  bob.run(['infinit-volume', '--delete', '--as', 'bob',
+           '--purge', '--pull', 'v'])
+  assertEq(len(bob.run_json(['infinit-volume', '--list', '-s'])), 0)
+  assertEq(
+    len(bob.run_json(['infinit-drive', '--list', '--as', 'bob', '-s'])), 0)
+  bob.run(['infinit-volume', '--fetch', '--as', 'bob', 'v'], return_code = 1)
+  bob.run(['infinit-drive', '--fetch', '--as', 'bob', 'd'], return_code = 1)

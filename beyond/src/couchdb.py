@@ -135,6 +135,8 @@ class CouchDBDatastore:
                   updates = [('update', self.__drive_update)],
                   views = [
                     ('per_member_name', self.__drives_per_member_map),
+                    ('per_network_id', self.__drives_per_network_id_map),
+                    ('per_volume_id', self.__drives_per_volume_id_map),
                   ])
 
   def __create(self, name):
@@ -549,7 +551,23 @@ class CouchDBDatastore:
                                          key = name)
     return list(map(lambda x: drive_from_db(x.value), rows))
 
+  def network_drives_fetch(self, name):
+    rows = self.__couchdb['drives'].view('beyond/per_network_id', key = name)
+    drive_from_db = infinit.beyond.Drive.from_json
+    return list(map(lambda r: drive_from_db(self.beyond, r.value), rows))
+
+  def volume_drives_fetch(self, name):
+    rows = self.__couchdb['drives'].view('beyond/per_volume_id', key = name)
+    drive_from_db = infinit.beyond.Drive.from_json
+    return list(map(lambda r: drive_from_db(self.beyond, r.value), rows))
+
   def __drives_per_member_map(drive):
     for elem in drive.get('users', {}).keys():
       yield elem, drive
     yield drive['owner'], drive
+
+  def __drives_per_network_id_map(drive):
+    yield drive['network'], drive
+
+  def __drives_per_volume_id_map(drive):
+    yield drive['volume'], drive

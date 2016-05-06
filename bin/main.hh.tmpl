@@ -1433,6 +1433,33 @@ namespace infinit
       return s.deserialize<Passport>();
     }
 
+    std::vector<std::pair<Passport, std::string>>
+    passports_get(boost::optional<std::string> network = boost::none)
+    {
+      namespace boost_fs = boost::filesystem;
+      std::vector<std::pair<Passport, std::string>> res;
+      boost_fs::path path;
+      if (network)
+        path = this->_passport_path() / network.get();
+      else
+        path = this->_passport_path();
+      for (boost_fs::recursive_directory_iterator it(path);
+           it != boost_fs::recursive_directory_iterator();
+           ++it)
+      {
+        if (is_regular_file(it->status()) && !is_hidden_file(it->path()))
+        {
+          auto user_name = it->path().filename().string();
+          boost_fs::ifstream f;
+          this->_open_read(f, it->path(), user_name, "passport");
+          auto passport =
+            elle::serialization::json::deserialize<infinit::Passport>(f, false);
+          res.push_back(std::pair<Passport, std::string>(passport, user_name));
+        }
+      }
+      return res;
+    }
+
     void
     passport_save(Passport const& passport)
     {
@@ -1921,6 +1948,56 @@ namespace infinit
 
     Drive
     drive_fetch(std::string const& name);
+
+    std::vector<std::string>
+    networks_for_storage(std::string const& storage_name)
+    {
+      std::vector<std::string> res;
+      using namespace infinit::model::doughnut;
+      for (auto const& network: this->networks_get())
+      {
+        if (network.model)
+        {
+          auto* d = dynamic_cast<Configuration*>(network.model.get());
+          if (d && d->storage->name == storage_name)
+            res.push_back(network.name);
+        }
+      }
+      return res;
+    }
+
+    std::vector<std::string>
+    user_passports_for_network(std::string const& network_name)
+    {
+      std::vector<std::string> res;
+      for (auto const& pair: this->passports_get(network_name))
+        res.push_back(pair.second);
+      return res;
+    }
+
+    std::vector<std::string>
+    volumes_for_network(std::string const& network_name)
+    {
+      std::vector<std::string> res;
+      for (auto const& volume: this->volumes_get())
+      {
+        if (volume.network == network_name)
+          res.push_back(volume.name);
+      }
+      return res;
+    }
+
+    std::vector<std::string>
+    drives_for_volume(std::string const& volume_name)
+    {
+      std::vector<std::string> res;
+      for (auto const& drive: this->drives_get())
+      {
+        if (drive.volume == volume_name)
+          res.push_back(drive.name);
+      }
+      return res;
+    }
   };
 }
 
@@ -2753,7 +2830,9 @@ void
 beyond_delete(std::string const& where,
               std::string const& type,
               std::string const& name,
-              infinit::User const& self)
+              infinit::User const& self,
+              bool ignore_missing = false,
+              bool purge = false)
 {
   reactor::http::Request::Configuration c;
   auto headers = signature_headers(reactor::http::Method::DELETE,
@@ -2762,14 +2841,22 @@ beyond_delete(std::string const& where,
   for (auto const& header: headers)
     c.header_add(header.first, header.second);
   auto url = elle::sprintf("%s/%s", beyond(), where);
+  reactor::http::Request::QueryDict query;
+  if (purge)
+    query["purge"] = "true";
   reactor::http::Request r(url, reactor::http::Method::DELETE, std::move(c));
+  r.query_string(query);
   r.finalize();
   reactor::wait(r);
   if (r.status() == reactor::http::StatusCode::OK)
-    report_action("deleted", type, name, std::string("remotely"));
+  {
+    report_action(elle::sprintf("deleted%s", purge ? " and purged" : ""),
+                  type, name, std::string("remotely"));
+  }
   else if (r.status() == reactor::http::StatusCode::Not_Found)
   {
-    read_error<MissingResource>(r, type, name);
+    if (!ignore_missing)
+      read_error<MissingResource>(r, type, name);
   }
   else if (r.status() == reactor::http::StatusCode::See_Other ||
            r.status() == reactor::http::StatusCode::Temporary_Redirect)
@@ -2802,9 +2889,12 @@ inline
 void
 beyond_delete(std::string const& type,
               std::string const& name,
-              infinit::User const& self)
+              infinit::User const& self,
+              bool ignore_missing = false,
+              bool purge = false)
 {
-  beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self);
+  beyond_delete(elle::sprintf("%ss/%s", type, name), type, name, self,
+                ignore_missing, purge);
 }
 
 inline

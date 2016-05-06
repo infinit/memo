@@ -358,20 +358,9 @@ COMMAND(delete_)
   auto name = drive_name(args, owner);
   auto path = ifnt._drive_path(name);
   if (flag(args, "pull"))
-  {
-    try
-    {
-      beyond_delete("drive", name, owner);
-    }
-    catch (MissingResource const& e)
-    {
-      // Ignore if the item is not on Beyond.
-    }
-    catch (elle::Error const& e)
-    {
-      throw;
-    }
-  }
+    beyond_delete("drive", name, owner, true);
+  if (flag(args, "purge"))
+  { /* Nothing depends on a drive. */ }
   if (boost::filesystem::remove(path))
     report_action("deleted", "drive", name, std::string("locally"));
   else
@@ -384,7 +373,7 @@ COMMAND(pull)
   ELLE_TRACE_SCOPE("pull");
   auto owner = self_user(ifnt, args);
   auto name = drive_name(args, owner);
-  beyond_delete("drive", name, owner);
+  beyond_delete("drive", name, owner, false, flag(args, "purge"));
 }
 
 COMMAND(list)
@@ -619,6 +608,7 @@ main(int argc, char** argv)
         { "name,n", value<std::string>(), "drive to delete" },
         { "pull", bool_switch(),
           elle::sprintf("pull the drive if it is on %s", beyond(true)) },
+        { "purge", bool_switch(), "remove objects that depend on the drive" },
       },
     },
     {
@@ -628,6 +618,7 @@ main(int argc, char** argv)
       "--name NAME",
       {
         { "name,n", value<std::string>(), "drive to remove" },
+        { "purge", bool_switch(), "remove objects that depend on the drive" },
       },
     },
   };

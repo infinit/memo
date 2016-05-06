@@ -76,6 +76,30 @@ class Infinit(TemporaryDirectory):
   def env(self):
     return self.__env
 
+  @property
+  def data_home(self):
+    return '%s/.local/share/infinit/filesystem' % self.dir
+
+  @property
+  def storages_path(self):
+    return '%s/storages' % self.data_home
+
+  @property
+  def networks_path(self):
+    return '%s/networks' % self.data_home
+
+  @property
+  def passports_path(self):
+    return '%s/passports' % self.data_home
+
+  @property
+  def volumes_path(self):
+    return '%s/volumes' % self.data_home
+
+  @property
+  def drives_path(self):
+    return '%s/drives' % self.data_home
+
   def spawn(self, args, input = None, return_code = 0, env = {}):
     if isinstance(args, str):
       args = args.split(' ')

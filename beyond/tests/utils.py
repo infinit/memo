@@ -398,12 +398,18 @@ class Drive(dict):
       self['status'] = status
       self['create_home'] = create_home
 
-  def __init__(self, volume, description = "Lorem ipsum", members = {}, name = None):
+  def __init__(self,
+               volume,
+               owner = None,
+               description = "Lorem ipsum",
+               members = {},
+               name = None):
     name = name or 'drive_' + random_sequence()
     self.__short_name = name
     self.__volume = volume
-    self['name'] = volume.network.owner['name'] + '/' + self.__short_name
-    self['owner'] = volume.network.owner['name']
+    self.__owner = owner if owner else volume.network.owner
+    self['owner'] = owner['name'] if owner else volume.network.owner['name']
+    self['name'] = self['owner'] + '/' + self.__short_name
     self['network'] = self.volume.network['name']
     self['volume'] = self.volume['name']
     self['description'] = description
@@ -415,7 +421,7 @@ class Drive(dict):
 
   def put(self, hub, owner = None):
     if owner is None:
-      owner = self.volume.network.owner
+      owner = self.__owner
     return hub.put('drives/%s' % self['name'], json = self,
                    auth = owner.private_key)
 
