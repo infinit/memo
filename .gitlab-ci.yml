@@ -80,11 +80,12 @@ x86_64-windows-mingw4:
     - cd .. && zip -r "infinit-$(GIT_DIR=fs/.git git describe).zip" "infinit-$(GIT_DIR=fs/.git git describe)" && cd fs-build
     - mv "../infinit-$(GIT_DIR=../fs/.git git describe)" ../fs-install
     - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" debian@debian.infinit.io:windows
-#    - cd ../fs-build && python3 drake --website=false --beyond=false -j $(nproc) //install
   tags:
     - x86_64
     - windows
     - mingw4
+  except:
+    - feature/website
 
 # i686-windows-mingw4:
 #   stage: build
