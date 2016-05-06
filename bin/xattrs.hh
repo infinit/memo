@@ -23,12 +23,6 @@ file_xattrs_dir(std::string const& file)
   return res;
 }
 
-#ifdef INFINIT_MACOSX
-# define SXA_EXTRA ,0
-#else
-# define SXA_EXTRA
-#endif
-
 static
 int
 port_getxattr(std::string const& file,
@@ -38,7 +32,12 @@ port_getxattr(std::string const& file,
 {
 #ifndef INFINIT_WINDOWS
   int res = -1;
-  res = getxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
+# ifdef INFINIT_MACOSX
+  res = getxattr(file.c_str(), key.c_str(), val, val_size, 0, XATTR_NOFOLLOW);
+# else
+  res = lgetxattr(file.c_str(), key.c_str(), val, val_size);
+# endif
+
   if (res >= 0 || !fallback_xattrs)
     return res;
 #endif
@@ -48,4 +47,29 @@ port_getxattr(std::string const& file,
   boost::filesystem::ifstream ifs(attr_dir / key);
   ifs.read(val, val_size);
   return ifs.gcount();
+}
+
+static
+int
+port_setxattr(std::string const& file,
+              std::string const& key,
+              std::string const& value,
+              bool fallback_xattrs)
+{
+#ifndef INFINIT_WINDOWS
+# ifdef INFINIT_MACOSX
+  int res = setxattr(
+    file.c_str(), key.c_str(), value.data(), value.size(), 0, XATTR_NOFOLLOW);
+# else
+  int res = lsetxattr(file.c_str(), key.c_str(), value.data(), value.size(), 0);
+#endif
+  if (res >= 0 || !fallback_xattrs)
+    return res;
+#endif
+  if (!fallback_xattrs)
+    elle::unreachable();
+  auto attr_dir = file_xattrs_dir(file);
+  boost::filesystem::ofstream ofs(attr_dir / key);
+  ofs.write(value.data(), value.size());
+  return 0;
 }

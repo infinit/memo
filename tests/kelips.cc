@@ -573,7 +573,7 @@ ELLE_TEST_SUITE()
   elle::os::setenv("INFINIT_CONNECT_TIMEOUT", "1", 1);
   elle::os::setenv("INFINIT_SOFTFAIL_TIMEOUT", "2", 1);
   auto& suite = boost::unit_test::framework::master_test_suite();
-  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(32));
+  suite.add(BOOST_TEST_CASE(basic), 0, valgrind(60));
   suite.add(BOOST_TEST_CASE(conflicts), 0, valgrind(32));
   suite.add(BOOST_TEST_CASE(times), 0, valgrind(32));
   suite.add(BOOST_TEST_CASE(list_directory), 0, valgrind(10));

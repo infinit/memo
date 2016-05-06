@@ -153,6 +153,15 @@ namespace infinit
                       std::string const& value,
                       int flags)
     {
+      if (auto special = xattr_special(name))
+      {
+        ELLE_DEBUG("found special %s", *special);
+        if (special->find("auth.") == 0)
+        {
+          set_permissions(special->substr(strlen("auth.")), value, _address);
+          return;
+        }
+      }
       Node::setxattr(name, value, flags);
     }
 

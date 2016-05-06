@@ -293,7 +293,7 @@ class Beyond:
               args,
               env = env,
               input = (json.dumps(data) + '\n').encode('utf-8'),
-              timeout = 1)
+              timeout = 5)
           except Exception as e:
             raise Exception('impossible to import %s \'%s\': %s' % (
                             type, data['name'], e))
@@ -306,19 +306,14 @@ class Beyond:
             except Network.NotFound:
               raise Exception('Unknown network \'%s\'' % drive.network)
             import_data('network', network.json())
-            subprocess.check_call(
+            output = subprocess.check_output(
               [
                 binary_path + 'infinit-passport' + exe_ext, '--create',
                 '--user', user.name,
                 '--network', network.name,
                 '--as', self.delegate_user,
-              ],
-              env = env)
-            output = subprocess.check_output(
-              [
-                binary_path + 'infinit-passport' + exe_ext, '--export',
-                '--user', user.name,
-                '--network', network.name
+                '--output', '-',
+                '--script',
               ],
               env = env)
             import json
