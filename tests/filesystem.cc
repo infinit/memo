@@ -1786,7 +1786,7 @@ protected:
     ctx.set(&doughnut());
     res = elle::serialization::binary::deserialize<std::unique_ptr<blocks::Block>>(
       is, true, ctx);
-    return std::move(res);
+    return res;
   }
   std::unique_ptr<Super> _backend;
 };
@@ -1800,7 +1800,7 @@ no_cheat_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensu
 std::unique_ptr<infinit::model::doughnut::consensus::Consensus>
 same_consensus(std::unique_ptr<infinit::model::doughnut::consensus::Consensus> c)
 {
-  return std::move(c);
+  return c;
 }
 
 class DHTs
