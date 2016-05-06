@@ -23,12 +23,6 @@ file_xattrs_dir(std::string const& file)
   return res;
 }
 
-#ifdef INFINIT_MACOSX
-# define SXA_EXTRA ,0
-#else
-# define SXA_EXTRA
-#endif
-
 static
 int
 port_getxattr(std::string const& file,
@@ -38,7 +32,12 @@ port_getxattr(std::string const& file,
 {
 #ifndef INFINIT_WINDOWS
   int res = -1;
-  res = lgetxattr(file.c_str(), key.c_str(), val, val_size SXA_EXTRA SXA_EXTRA);
+# ifdef INFINIT_MACOSX
+  res = getxattr(file.c_str(), key.c_str(), val, val_size, 0, XATTR_NOFOLLOW);
+# else
+  res = lgetxattr(file.c_str(), key.c_str(), val, val_size);
+# endif
+
   if (res >= 0 || !fallback_xattrs)
     return res;
 #endif
@@ -58,8 +57,12 @@ port_setxattr(std::string const& file,
               bool fallback_xattrs)
 {
 #ifndef INFINIT_WINDOWS
-  int res = lsetxattr(
-    file.c_str(), key.c_str(), value.data(), value.size(), 0 SXA_EXTRA);
+# ifdef INFINIT_MACOSX
+  int res = setxattr(
+    file.c_str(), key.c_str(), value.data(), value.size(), 0, XATTR_NOFOLLOW);
+# else
+  int res = lsetxattr(file.c_str(), key.c_str(), value.data(), value.size(), 0);
+#endif
   if (res >= 0 || !fallback_xattrs)
     return res;
 #endif
