@@ -71,7 +71,6 @@ def configure(
   markdown = drake.nodes(
     'templates/pages/docs/src/markdown/filesystem.md',
     'templates/pages/docs/src/markdown/gcs.md',
-    'templates/pages/docs/src/markdown/get_started.md',
     'templates/pages/docs/src/markdown/get_started/linux_apt_install.md',
     'templates/pages/docs/src/markdown/get_started/linux_tarball_install.md',
     'templates/pages/docs/src/markdown/get_started/linux_fuse_install.md',
@@ -167,7 +166,6 @@ def configure(
     'templates/pages/docs/technology.html',
 
     'templates/pages/docs/get_started.html',
-    'templates/pages/docs/get_started_windows.html',
 
     'templates/pages/drive/drive.html',
     'templates/pages/drive/ChangeLog.html',

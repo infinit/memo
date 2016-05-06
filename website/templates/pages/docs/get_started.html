@@ -10,10 +10,10 @@
 
     <ul class="menu">
       <li class="notice"><span>Through this guide, it should take you around <strong>5 minutes</strong> to deploy your own infrastructure!</span></li>
-      <li class="1--installation"><a href="#1--installation">1. Installation</a></li>
-      <li class="2--basic-test"><a href="#2--basic-test">2. Basic Test</a></li>
-      <li class="3--create-infrastructure">
-        <a href="#3--create-infrastructure">3. Create Infrastructure</a>
+      <li class="installation"><a href="#installation">1. Installation</a></li>
+      <li class="basic-test"><a href="#basic-test">2. Basic Test</a></li>
+      <li class="create-infrastructure">
+        <a href="#create-infrastructure">3. Create Infrastructure</a>
         <ul>
           <li class="create-a-user"><a href="#create-a-user">Create a user</a></li>
           <li class="create-a-storage-resource"><a href="#create-a-storage-resource">Create a storage resource</a></li>
@@ -23,12 +23,403 @@
           <li class="access-from-another-machine"><a href="#access-from-another-machine">Access volume</a></li>
         </ul>
       </li>
-      <li class=4--go-further><a href="#4--go-further">4. Go Further</a></li>
+      <li class="go-further"><a href="#go-further">4. Go Further</a></li>
     </ul>
   </nav>
 
   <section class="doc">
-    <%include file='generated/get_started.html'/>
+
+    <%
+      if "mac" in request.path:
+        osname = "mac"
+      elif "linux" in request.path:
+        osname = "linux"
+      elif "windows" in request.path:
+        osname = "windows"
+      elif os() == "Macintosh":
+        osname = "mac"
+      elif os() == "Windows":
+        osname = "windows"
+      else:
+        osname = "linux"
+
+      if osname == "mac" or osname == "linux":
+        demo_mountpoint = "~/mnt-demo"
+        demo_home = "$PWD/share/infinit/filesystem/test/home/"
+        ls_command = "ls"
+        exe = ""
+      else:
+        demo_mountpoint = "z:"
+        demo_home = "c:/PATH_TO_INFINIT/share/infinit/filesystem/test/home/"
+        ls_command = "dir"
+        exe = ".exe"
+    %>
+
+    <h1>Get Started</h1>
+
+    % if osname == "windows":
+    <blockquote class="warning">
+      <strong>Note:</strong> Our Windows version is not publicly released yet. You can <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">sign up to our newsletter</a> to get informed of the public release!
+    </blockquote>
+
+    <p><em>The following is written for users of Linux. You can also see the <a href="${route('doc_get_started_mac')}">Mac</a> guide.</em></p>
+
+    % elif osname == "mac":
+    <p><em>The following is written for users of Mac OS X. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_linux')}">Linux</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
+    % else:
+    <p><em>The following is written for users of Linux. If you are not using one of these platforms, please refer to the <a href="${route('doc_get_started_mac')}">Mac</a> or <a href="${route('doc_get_started_windows')}">Windows</a> guide.</em></p>
+
+    % endif
+
+    <p><em>Before proceeding, this guide uses the Infinit command-line tools with a terminal window. You don’t need to be a UNIX guru but you should be familiar with typing shell commands and interpreting outputs. You can otherwise download the <a href="${route('drive')}">Infinit Drive desktop client</a>.</em></p>
+
+    <h2 id="installation">1. Installation</h2>
+
+    <h3 class="skip">Download and install Infinit’s dependencies</h3>
+
+    % if osname == "mac":
+      <%include file='generated/get_started/mac_fuse_install.html'/>
+      <!-- % elif osname == "windows": -->
+
+      <!-- <p> Infinit relies on <a href="https://github.com/dokan-dev/dokany">dokany</a> to create filesystems in userland. You will need to install it from the link below:</p>
+      <p><a href="https://github.com/dokan-dev/dokany/releases/download/v1.0.0-RC1/DokanSetup.exe" class="button">Download DOKANY</a></p> -->
+
+      <!-- <em><strong>NOTE</strong>: Infinit currently requires a 64 bit version of Windows 7 or Windows 8.</em> -->
+    % else:
+      <%include file='generated/get_started/linux_fuse_install.html'/>
+    % endif
+
+    <h3 class="skip">Download and install the Infinit command-line tools</h3>
+
+    % if osname == "mac":
+
+      <p>If you have <a href="http://brew.sh">Homebrew</a>, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball install.</p>
+
+      <ul data-tabs class="tabs">
+        <li><a data-tab href="#mac-homebrew-install" class="active">• Homebrew Install</a></li>
+        <li><a data-tab href="#mac-tarball-install">• Tarball Install</a></li>
+      </ul>
+
+      <div data-tabs-content class="data-tabs-content">
+        <div data-tabs-pane class="tabs-pane active" id="mac-homebrew-install">
+          <h3 class="skip">Homebrew Install</h3>
+          <%include file='generated/get_started/mac_homebrew_install.html'/>
+          <p>Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:</p>
+
+          <pre><code>$> cd /usr/local
+$> ls
+bin/    lib/    share/
+</code></pre>
+        </div>
+
+        <div data-tabs-pane class="tabs-pane" id="mac-tarball-install">
+          <h3 class="skip">Tarball Install</h3>
+          <%include file='generated/get_started/mac_tarball_install.html'/>
+
+          <p>Next, open your terminal and extract the Infinit tarball:</p>
+
+          <pre><code>$> tar xjvf infinit-x86_64-osx-clang3-${tarball_version}.tbz
+infinit-${tarball_version}/
+infinit-${tarball_version}/bin/
+infinit-${tarball_version}/lib
+...
+infinit-${tarball_version}/bin/infinit-storage
+infinit-${tarball_version}/bin/infinit-user
+infinit-${tarball_version}/bin/infinit-volume
+...</code></pre>
+
+      <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+
+          <pre><code>$> cd infinit-${tarball_version}/
+$> ls
+bin/    lib/    share/
+</code></pre>
+
+        </div>
+    </div>
+
+    <!-- % elif osname == "windows": -->
+
+    <!-- <img class="infinitcli" src="${url('images/icons/infinit-cli.png')}" alt="Infinit Command Line Tools">
+    <p>Click the link below to download the Infinit command-line tools:</p>
+
+    <a href="https://storage.googleapis.com/sh_infinit_releases/windows/Infinit-windows-${tarball_version}.zip
+    " class="button">Download Command Line Tools</a>
+    <p>Extract the downloaded zip file to some directory.</p> -->
+
+    % else:
+
+    <p>If you are using Ubuntu 14.04 or later, you can use our repository to install the command-line tools (recommended). Otherwise, choose the Tarball Install.</p>
+
+    <ul data-tabs class="tabs">
+      <li><a data-tab href="#linux-repository-install" class="active">• Repository Install</a></li>
+      <li><a data-tab href="#linux-tarball-install">• Tarball Install</a></li>
+    </ul>
+
+    <div data-tabs-content class="data-tabs-content">
+      <div data-tabs-pane class="tabs-pane active" id="linux-repository-install">
+        <h3 class="skip">Repository Install</h3>
+        <%include file='generated/get_started/linux_apt_install.html'/>
+
+        <p>Now that you’ve installed the command-line tools, take a look at what's included. The install contains the following subdirectories:</p>
+        <pre><code>$> cd /opt/infinit
+    $> ls
+    bin/    lib/    share/
+    </code></pre>
+      </div>
+
+      <div data-tabs-pane class="tabs-pane" id="linux-tarball-install">
+        <h3 class="skip">Tarball Install</h3>
+        <%include file='generated/get_started/linux_tarball_install.html'/>
+
+        <p>Next, open your terminal and extract the Infinit tarball:</p>
+
+        <pre><code>$> tar xjvf infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}.tbz
+    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/
+    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/lib
+    ...
+    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-storage
+    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-user
+    infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/bin/infinit-volume
+    ...
+    </code></pre>
+
+        <p>Now that you’ve extracted the tarball, take a look. The extracted directory contains the following subdirectories:</p>
+
+        <pre><code>$> cd infinit-x86_64-linux_debian_oldstable-gcc4-${tarball_version}/
+$> ls
+bin/    lib/    share/</code></pre>
+
+      </div>
+    </div>
+
+    <div>
+    % endif
+
+    <ul>
+      <li>The <code>bin/</code> subdirectory contains the actual Infinit binaries such as <em>infinit-user</em>, <em>infinit-network</em>, etc.</li>
+      <li>The <code>lib/</code> subdirectory contains all the libraries the above binaries depend upon to operate (excluding the FUSE library you installed earlier).</li>
+      <li>The <code>share/infinit/filesystem/test/</code> subdirectory is provided for you to quickly test the command-line tools, see below.</li>
+    </ul>
+
+
+    <h2 id="basic-test">2. Basic Test</h2>
+
+    <p>For you to quickly (through a single command) try Infinit out, the following is going to let you <strong>mount an existing volume</strong> and access files through a mount point. Don’t worry, this <em>demo</em> file system only contains test files that we put there ourselves for you to test Infinit. You cannot do any harm to those files since you only have read-only access to this test volume.</p>
+
+    <p>First, you need to understand that all the files that the Infinit command-line tools and file system binary create and use are located in the <code>$INFINIT_HOME</code> directory which, by default, is set to <code>$HOME</code>. More specifically, the configuration files are stored in <code>$INFINIT_DATA_HOME</code> (set by default to <code>$INFINIT_HOME/.local/share/infinit/filesystem/</code>) while other files such as cached blocks, journaled operations etc. are stored in other directories. All these <a href="${route('doc_environment_variables')}">environment variables</a> can be changed according to your needs.</p>
+
+    <p>In the following, we are going to run the <em>infinit-volume</em> command by prefixing it with the environment variable <code>INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home</code> to tell the command where to look for the configuration files required for this test, in this case in the <code>share/</code> directory that is next to the binaries and contains the configuration file for this <em>demo</em> volume.</p>
+
+    <pre><code>$> INFINIT_DATA_HOME=$PWD/share/infinit/filesystem/test/home/ ./bin/infinit-volume --mount --as demo --name infinit/demo --mountpoint ~/mnt-demo/ --publish --cache
+...
+Fetched endpoints for "infinit/demo".
+Running network "infinit/demo".
+[           infinit-volume           ] [main] client version: 0.5.4
+[        infinit.model.Model         ] [main] infinit::model::Model(0x7f7ffbc02bf0): compatibility version 0.3.0
+[        infinit.overlay.kelips        ] [main] Running in observer mode
+[        infinit.overlay.kelips        ] [main] Filesystem is read-only until peers are reached
+[        infinit.overlay.kelips        ] [main] Kelips(0.0.0.0:0): listening on port 62046
+Running volume "infinit/demo".
+...</code></pre>
+
+    <p><em><strong>NOTE:</strong> You can stop this test volume by hitting <code>CTRL^C</code> or by interrupting the infinit-volume process.</em></p>
+
+    <p>This command mounts the volume named <code>infinit/demo</code> on behalf of the user ‘demo’ and makes it accessible through the mount point <code>${demo_mountpoint}</code>.</p>
+
+    <p>Now open another terminal. You can access the files in the ‘demo’ volume by browsing the mount point <code>${demo_mountpoint}</code> as you would any other POSIX-compliant filesystem.</p>
+
+    <p>Infinit streams the data as it is needed from our server in the US. This allows you to access the files immediately without having to wait for them to be cloned locally as you would with a cloud storage service like Dropbox.</p>
+
+    <pre><code>$> ${ls_command} ${demo_mountpoint}
+Aosta Valley/         Brannenburg/          Cape Town/        Infinit_MakingOf.mp4      New York/             Paris/</code></pre>
+
+    <!-- <div>
+    % if osname == "windows":
+    </div>
+
+    <p><em><strong>NOTE</strong>: You must specify an unused drive letter as the mount point argument, mounting to an arbitrary path is not supported.</em></p>
+
+    <p>You can also browse the files from an explorer window.</p>
+
+    <p><em><strong>NOTE</strong>: If the new drive does not appear automatically in the `my PC` virtual directory, try entering `z:` in the url bar of explorer. If this fails with an error, open the start menu, select `run command`, and enter at the prompt `explorer z:`.</em></p>
+
+    <div>
+    % endif
+    </div> -->
+
+    <h2 id="create-infrastructure">3. Create Infrastructure</h2>
+
+    <p>It is now time for you to <strong>create your own storage infrastructure</strong>. What follows is a step-by-step guide to set up infrastructure for a single user with two devices (named A and B). One of the devices will contribute storage capacity to store the blocks of data composing the files while the second device will read and write blocks over the network. This creates an NFS-like system even though it is also possible to create infrastructure where more than one node stores blocks.
+
+    <img src="${url('images/schema-two-clients.png')}" alt="two devices with a file composed of blocks that are distributed among those devices">
+
+    <p><em><strong>NOTE:</strong> For more information to learn how to set up completely decentralized infrastructure, how to plug cloud storage services such as AWS S3, Google Cloud Storage etc. or how to invite non-tech-savvy users to join and use storage infrastructure to store and access files as usual, please refer to the <a href="${route('doc_reference')}">reference documentation</a>.</em></p>
+
+    <p>First, add the <code>bin/</code> directory to the PATH environment variable to be able to invoke the command-line tools from anywhere:</p>
+
+    <div>
+    <!-- % if osname == "windows":
+    <pre><code>$> set PATH=c:/path_to_infinit/bin;%PATH%
+    </code></pre> -->
+    <!-- % else: -->
+    <pre><code>$> export PATH=$PWD/bin/:$PATH</code></pre>
+    <!-- %endif -->
+    </div>
+
+    <h3 id="create-a-user">Create a user</h3>
+
+    <p>The first step consists of creating a user on the Hub. All the commands that follow use the user name <code>alice</code> but you should <strong>pick your own unique user name</strong>:</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-user --signup --name alice --email alice@company.com --fullname "Alice"
+Generating RSA keypair.
+Remotely saved user "alice".
+</code></pre>
+
+    <h3 id="create-a-storage-resource">Create a storage resource</h3>
+
+    <p>A storage resource behaves like a hard disk, storing data blocks without understanding the data’s meaning. The beauty of Infinit is that it is completely agnostic of the nature of such storage resources.</p>
+
+    <p>Next, we are going to declare a local storage resource. A local storage stores data blocks as files in a directory (such as <code>/var/storage/infinit/</code>) on the local filesystem.</p>
+
+    <p>The binary <em>infinit-storage</em> is used for this purpose. The option <code>--filesystem</code> is used to indicate that the storage will be on the local filesystem:</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-storage --create --filesystem --name local --capacity 1GB
+Created storage "local".</code></pre>
+
+    <h3 id="create-a-network">Create a network</h3>
+
+    <p>Now that we have at least one storage resource to store data, we can create a network interconnecting different machines.</p>
+
+    <p>The <em>infinit-network</em> command is used to create the network, specifying a name along with the list of storage resources to rely upon. We will ignore the other options now but you can read about them in the <a href="${route('doc_reference')}">reference documentation</a>. In this example, only the <code>local</code> storage resource is used but you could plug as many as you like. Obviously, you need to substitute <code>alice</code> with your username:</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-network --create --as alice --storage local --kelips --name my-network --push
+Locally created network "alice/my-network".
+Remotely saved network "alice/my-network".
+</code></pre>
+
+    <p><em><strong>NOTE:</strong> The <code>--push</code> option is used to publish the created network (likewise for other objects) onto the Hub for it to be easily fetched on another device or shared with other users.</em></p>
+
+    <h3 id="create-a-volume">Create a volume</h3>
+
+    <p>The last step on this device consists of creating a logical volume to store and access files. Volumes can be manipulated through the <em>infinit-volume</em> binary as shown next:</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --create --as alice --network my-network --name my-volume --push
+Locally created volume "alice/my-volume".
+Remotely saved volume "alice/my-volume".
+</code></pre>
+
+    <p>That’s it, you’ve created a volume named <code>my-volume</code> i.e. a filesystem. The blocks that the files are composed of will be distributed across the network named <code>my-network</code>, currently composed of a single computer with a single storage resource.</p>
+
+    <h3 id="mount-the-volume">Mount the volume</h3>
+
+    <p>Let’s access this volume by mounting it as easily as any other filesystem:</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-volume --mount --as alice --name my-volume --mountpoint ~/mnt-my-volume/ --async --cache --publish
+Fetched endpoints for "alice/my-network".
+Running network "alice/my-network".
+Remotely saved endpoints for "alice/my-network".
+Running volume "alice/my-volume".
+...
+</code></pre>
+
+    <p><em><strong>NOTE:</strong> This command does not return. You can make it run in the background if you prefer. To stop it and unmount the volume, just hit <code>CTRL^C</code> or interrupt the process. You should wait until the end of the guide to stop this process though.</em></p>
+
+    <p>That’s it! You can now create, list and access files from the mount point <code>~/mnt-my-volume</code>. Try creating a file right now:
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> echo "everything is" > ~/mnt-my-volume/awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
+everything is</code></pre>
+
+    <h3 id="access-from-another-machine">Access from another machine</h3>
+
+    <p>Now that you have successfully created and mounted a volume on your machine, it would be interesting to access the data from your other devices. If you don’t have another device, you can simulate another device by opening another terminal and <a href="${route('doc_environment_variables')}#infinit_home">setting</a> <code>INFINIT_HOME</code> to a different directory.</p>
+
+    <p>In order to access your volume from another device, you will need to transfer your user’s identity to that device. A user’s identity is analogous to an SSH key pair and should be treated in the same way. Because of its critical nature, it is not stored on the Hub like network and volume descriptors could be for instance. For this guide, we will rely on the Hub to transmit the identity in encrypted form to the other device.</p>
+
+    <p>Let’s transmit the user’s identity to the other device. Note that it will be encrypted with a passphrase chosen by you. Also you will only have 5 minutes to retrieve it on device B.</p>
+
+    <pre class="ribbon"><div><span>Device A</span></div><code>$> infinit-device --transmit --user --as alice
+Passphrase: ********
+Transmitted user identity for "alice".
+User identity on the Hub for: 297 seconds
+</code></pre>
+
+    <p>Now let’s move to device B. First, you need to download, install and configure the Infinit command-line tools on this new device as you did for device A. Please refer to the first sections of this guide for that purpose.</p>
+
+    <pre class="alternate"><div><span>Device B</span></div><code>$> infinit-device --receive --user --name alice
+Passphrase: ********
+Received user identity for "alice".
+</code></pre>
+
+    <p><em><strong>NOTE:</strong> The pairing process may have expired on device A. If so, please try again and enter the passphrase on device B in order to retrieve your user identity before the counter runs down.</em></p>
+
+    <p>The next steps consist of fetching the resources that you previously pushed on the Hub: networks and volumes.</p>
+
+    <pre class="alternate"><div><span>Device B</span></div><code>$> infinit-network --fetch --as alice --name my-network
+Fetched network "alice/my-network".
+$> infinit-volume --fetch --as alice --name my-volume
+Fetched volume "alice/my-volume".
+</code></pre>
+
+    <p>Let’s link this device to the <code>my-network</code> network you created on device A.</p>
+
+    <pre class="alternate"><div><span>Device B</span></div><code>$> infinit-network --link --as alice --name my-network
+    Linked device to network "alice/my-network".
+    </code></pre>
+
+    <p>Finally, the volume can be mounted on device B as simply as on device A:</p>
+
+    <pre class="alternate"><div><span>Device B</span></div><code>$> infinit-volume --mount --mountpoint ~/mnt-my-volume2/ --as alice --name my-volume --async --cache --publish
+Fetch endpoints for "alice/my-network".
+Running network “alice/my-network”.
+Running volume "alice/my-volume".
+...
+</code></pre>
+
+    <p>It is now time to check if the file you created on device A is synchronized with device B:</p>
+
+    <pre class="alternate"><div><span>Device B</span></div><code>$> ls ~/mnt-my-volume2/
+    awesome.txt
+$> cat ~/mnt-my-volume/awesome.txt
+everything is
+</code></pre>
+
+    <p>That’s it, you’ve created a filesystem that you quickly connected to with two devices, without having to go through a complicated administrative process.</p>
+
+    <h2 id="go-further">4. Go Further</h2>
+
+    <blockquote class="warning">
+    <strong>Notice:</strong> Some features may not be entirely developed yet, please have a look at <a href="${route('doc_roadmap')}">our roadmap</a> to follow our advancement. You can also subscribe to <a href="http://infinit.us2.list-manage.com/subscribe?u=29987e577ffc85d3a773ae9f0&id=b537e019ee" target="_blank">our newsletter</a> to get notified of our upcoming features.
+    </blockquote>
+
+    <p>You can now invite other users to join the network, to contribute additional storage and/or share files and collaborate. Take a look at the <a href="${route('doc_deployments')}">examples of deployments</a> or the <a href="${route('doc_reference')}">reference documentation</a> to learn how to add additional storage, add more nodes, invite friends and configure the network to be more resilient.</p>
+
+    <div>
+      <a class="go_deployments" href="${route('doc_deployments')}">
+        <img src="${url('images/icons/network.png')}">
+        <span>→ Deployment Examples</span>
+      </a>
+
+      <a class="go_reference" href="${route('doc_reference')}">
+        <img src="${url('images/icons/code.png')}">
+        <span>→ Reference Documentation</span>
+      </a>
+    </div>
+
+    <h3>Any question, feedback?</h3>
+
+    <p>Come talk to us! Whether you encounter a problem setting up your infrastructure, have a question or just to give us some feedback, we're never too far away:</p>
+
+    <ul>
+      <li><a href="https://reddit.com/r/infinit" class="icon-reddit">Reddit /r/infinit</a></li>
+      <li><a href="https://www.facebook.com/groups/1518536058464674/" class="icon-facebook">Facebook Group</a></li>
+      <li><a href="#slack" class="icon-slack">Slack Community</a></li>
+      <li><a href="http://webchat.freenode.net/?channels=infinit" class="icon-infinit">IRC Channel</a></li>
+      <li><a href="https://twitter.com/infinit_sh" class="icon-twitter">Twitter</a></li>
+    </ul>
   </section>
 
 </%block>
