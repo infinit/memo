@@ -162,7 +162,10 @@ namespace infinit
               {
                 _connected = false;
                 this->_serializer.reset(
-                  new protocol::Serializer(socket(), false));
+                  new protocol::Serializer(
+                    socket(),
+                    elle_serialization_version(this->_doughnut.version()),
+                    false));
                 this->_channels.reset(
                   new protocol::ChanneledStream(*this->_serializer));
                 static bool disable_key = getenv("INFINIT_RPC_DISABLE_CRYPTO");

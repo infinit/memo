@@ -8,6 +8,9 @@ performance improvement.
 ### Added
 
 - Automatically rebalance under-replicated data blocks to new nodes.
+- Send network queries in batch when possible.
+- Enable to interrupt remote procedure call to save time when a query
+  is discarded.
 - Enable to set the inherit flag in default network permissions.
 - Support JSON output with `--script` for operation `--list` in
   `infinit-drive`, `infinit-network`, `infinit-passport`,
@@ -17,6 +20,8 @@ performance improvement.
   `infinit-passport`, `infinit-user` and `infinit-volume`.
 - Add Kelips batch requests, greatly improving performances for large
   set of files.
+- Push storage stats to the hub in `infinit-network` if `--push` is
+  passed.
 
 
 ## [0.5.5] - 2016-04-25

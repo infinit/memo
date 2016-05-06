@@ -989,6 +989,17 @@ namespace infinit
                   return ss.str();
                 });
             }
+            else if (special->find("blockof.") == 0)
+            {
+              return umbrella(
+                [&]
+                {
+                  std::string file = special->substr(strlen("blockof."));
+                  auto addr = this->_data->files().at(file).second;
+                  auto block = this->_owner.block_store()->fetch(addr);
+                  return elle::serialization::json::serialize(block).string();
+                });
+            }
           }
           return Node::getxattr(key);
         });

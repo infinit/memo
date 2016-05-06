@@ -506,6 +506,7 @@ def configure(
     drake.path_build('%s/opt/infinit/lib/infinit/debug' % debian_debug_dir)
   installed_libraries = []
   bin_version = drake.node('bin/version.cc')
+  bin_sources = drake.nodes('bin/main.cc', 'bin/main.hh')
   for name, libs, install in binaries_config:
     source = drake.node('bin/%s.cc' % name)
     bin = drake.cxx.Executable(
@@ -513,7 +514,7 @@ def configure(
         source,
         bin_version,
         infinit_lib,
-      ] + libs + additional_libs,
+      ] + bin_sources + libs + additional_libs,
       cxx_toolkit,
       bin_cxx_config)
     rule_build << bin
