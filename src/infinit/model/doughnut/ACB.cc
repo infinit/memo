@@ -182,10 +182,12 @@ namespace infinit
         static bool bg = elle::os::getenv("INFINIT_NO_BACKGROUND_DECODE", "").empty();
         if (bg)
         {
-          reactor::Thread::NonInterruptible ni;
-          reactor::background([&] {
-              target = k.open(src);
-          });
+          elle::With<reactor::Thread::NonInterruptible>() << [&]
+          {
+            reactor::background([&] {
+                target = k.open(src);
+              });
+          };
         }
         else
           target = k.open(src);

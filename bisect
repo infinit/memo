@@ -1,0 +1,7 @@
+#!/bin/sh
+
+git submodule update --init --recursive
+cd _build
+if ! python3 ./drake -j 3 tests/doughnut.status; then
+    exit 1
+fi

@@ -422,40 +422,9 @@ COMMAND(run)
   auto node_id = model->overlay()->node_id();
   auto run = [&]
   {
+    reactor::Thread::unique_ptr stat_thread;
     if (push)
-    {
-      ELLE_DEBUG("Connect callback to log storage stat");
-      model->local()->storage()->register_notifier([&] {
-        try
-        {
-          network.notify_storage(self, node_id);
-        }
-        catch (elle::Error const& e)
-        {
-          ELLE_WARN("Error notifying storage size change: %s", e);
-        }
-      });
-
-      {
-        static reactor::Thread updater("periodic storage stat updater", [&] {
-          while (true)
-          {
-            ELLE_LOG_COMPONENT("infinit-volume");
-            ELLE_DEBUG(
-              "Hourly notification to beyond with storage usage (periodic)");
-            try
-            {
-              network.notify_storage(self, node_id);
-            }
-            catch (elle::Error const& e)
-            {
-              ELLE_WARN("Error notifying storage size change: %s", e);
-            }
-            reactor::wait(updater, 60_min);
-          }
-        });
-      }
-    }
+      stat_thread = make_stat_update_thread(self, network, *model);
     ELLE_TRACE_SCOPE("run volume");
     report_action("running", "volume", volume.name);
     auto fs = volume.run(std::move(model),
