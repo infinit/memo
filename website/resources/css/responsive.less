@@ -133,7 +133,7 @@
     }
   }
 
-  body.documentation, body.press, body.opensource {
+  body.documentation, body.press, body.opensource, body.contact {
     h1 { margin-top: 30px;}
     #sidebar { display: none; }
     section.doc { float: left; width: 84%; margin:0; padding: 0 7%;}
@@ -142,6 +142,12 @@
   body.download {
     section.platforms {
       .platform { width: 100%; float: none; margin: 0; margin-bottom: 50px;}
+    }
+  }
+
+  body.contact {
+    form {
+      input[type="text"], input[type="email"] { width: 100%; margin-bottom: 10px; }
     }
   }
 }
