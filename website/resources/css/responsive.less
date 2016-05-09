@@ -1,3 +1,10 @@
+@media (max-width:1020px) {
+  body.pricing {
+    section.doc { padding-left: 2%; padding-right: 2%; width: 98%;}
+    .plan p.price { position: initial; width: 100%; margin-top: 30px;}
+  }
+}
+
 @media (max-width:950px) {
   body.home {
     section.presentation {
@@ -51,13 +58,22 @@
     .filters { width: 100%; margin:0; }
     #search-input input { width: 86%; margin: 0 5%; padding: 14px 2%; }
   }
+}
 
+@media (max-width:720px) {
+  body.pricing {
+    .plan { width: 98%; text-align: center; padding-bottom: 30px; border-right: 0px; }
+    .plan h2 { width: 35%;}
+    .plan p { padding-left: 0;}
+    .plan hr { margin: 15px auto; width: 50%;}
+    section.estimation { display: none; }
+  }
 }
 
 @media (max-width:600px) {
   header {
-    ul li { display: none; }
-    ul li:last-child { display: block; }
+    > ul { display: none; }
+    nav { display: block; }
   }
 
   body.home {
@@ -114,9 +130,16 @@
     }
   }
 
-  body.documentation, body.press {
+  body.documentation, body.press, body.opensource {
+    h1 { margin-top: 30px;}
     #sidebar { display: none; }
     section.doc { float: left; width: 84%; margin:0; padding: 0 7%;}
+  }
+
+  body.download {
+    section.platforms {
+      .platform { width: 100%; float: none; margin: 0; margin-bottom: 50px;}
+    }
   }
 }
 

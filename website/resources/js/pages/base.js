@@ -9,6 +9,10 @@ function displayBannerMessage(message) {
 
 $(document).ready(function() {
 
+  $('header nav a').click(function() {
+    $('header nav').toggleClass('open');
+  });
+
   $('pre code').each(function(i, block) {
     hljs.configure({ languages: ['bash', 'cpp'] });
     hljs.initHighlighting();

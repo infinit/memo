@@ -128,7 +128,7 @@ header {
     // }
   }
 
-  ul {
+  > ul {
     float: right; margin-top: 18px;
 
     li {
@@ -147,6 +147,32 @@ header {
       a.button { margin-top: -9px;}
     }
   }
+
+  nav {
+    float: right; margin-left: 30px; margin-top: 22px; padding-bottom: 40px;
+    display: none; outline: none;
+
+    a { font-weight: 600; }
+    > a { padding: 10px; .transition(); opacity: 1; outline: none; }
+    ul {
+      display: none; position: absolute; width: 100%; left:0; margin: 0; padding:0;
+      top: 70px; z-index: 99;
+    }
+    ul li { text-align: right; }
+    ul li a {
+      padding: 13px 0; display: block; width: 100%; margin-right: 40px;
+      color: white; font-weight: 400; border-bottom: 1px solid lighten(@infinitblack, 15%);
+      border-top: 1px solid darken(@infinitblack, 20%); background: @infinitblack;
+      .transition();
+      &:hover { background: lighten(@infinitblack, 5%); }
+    }
+    ul li a span { margin-right: 38px; display: block;}
+
+    &.open > a { opacity: 0.5; }
+    &.open ul { display: block; }
+  }
+
+
 }
 
 section.blue {
@@ -994,7 +1020,7 @@ body.doc_get_started {
 body.faq {
   .content { min-height: 500px;}
 
-  h1 { text-align: center; margin-top: 40px; margin-bottom: 0px;}
+  h1 { text-align: center; margin-top: 40px; margin-bottom: 0px; font-size: 33px; }
 
   main { margin: 0 15%; }
 
