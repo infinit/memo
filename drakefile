@@ -477,6 +477,7 @@ def configure(
     ('infinit-acl', [], True),
     ('infinit-block', [], True),
     ('infinit-credentials', [], True),
+    ('infinit-daemon', [], True),
     ('infinit-device', [], True),
     ('infinit-drive', [], True),
     ('infinit-journal', [], True),
