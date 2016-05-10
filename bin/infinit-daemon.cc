@@ -4,6 +4,7 @@
 #include <boost/filesystem.hpp>
 
 #include <elle/log.hh>
+#include <elle/serialization/json.hh>
 
 #include <reactor/network/unix-domain-server.hh>
 #include <reactor/network/unix-domain-socket.hh>
@@ -11,6 +12,10 @@
 ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
+
+static
+std::string
+daemon_command(std::string const& s);
 
 static
 boost::filesystem::path
@@ -45,7 +50,18 @@ daemon_running()
   if (pid == -1)
     return false;
   int res = kill(pid, 0);
-  return res == 0;
+  if (res != 0)
+    return false;
+  try
+  {
+    daemon_command("{\"operation\": \"status\"}");
+    return true;
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_TRACE("status command threw %s", e);
+  }
+  return false;
 }
 
 static
@@ -58,11 +74,26 @@ daemon_stop()
     std::cerr << "Daemon is not running." << std::endl;
     return;
   }
-  ELLE_TRACE("Sending TERM to %s", pid);
-  kill(pid, SIGTERM);
+  try
+  {
+    daemon_command("{\"operation\": \"stop\"}");
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_TRACE("stop command threw %s", e);
+  }
   for (int i=0; i<50; ++i)
   {
-    if (!kill(pid, 0))
+    if (kill(pid, 0))
+      return;
+    usleep(100000);
+  }
+  ELLE_TRACE("Sending TERM to %s", pid);
+  if (kill(pid, SIGTERM))
+    ELLE_TRACE("kill failed");
+  for (int i=0; i<50; ++i)
+  {
+    if (kill(pid, 0))
       return;
     usleep(100000);
   }
@@ -70,7 +101,7 @@ daemon_stop()
   kill(pid, SIGKILL);
   for (int i=0; i<50; ++i)
   {
-    if (!kill(pid, 0))
+    if (kill(pid, 0))
       return;
     usleep(100000);
   }
@@ -80,7 +111,7 @@ static
 void
 daemonize()
 {
-  if (daemon(1, 0))
+  if (elle::os::getenv("INFINIT_NO_DAEMON", "").empty() && daemon(1, 0))
     throw elle::Error(elle::sprintf("daemon failed with %s", strerror(errno)));
   auto run = xdg_run();
   boost::filesystem::create_directories(run / "infinit-daemon");
@@ -105,17 +136,39 @@ daemon_command(std::string const& s)
       sock.write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
       ELLE_TRACE("reading result");
       reply = sock.read_until("\n").string();
-      ELLE_TRACE("ok: %s", reply);
+      ELLE_TRACE("ok: '%s'", reply);
     });
   sched.run();
   return reply;
 }
 
+
 static
 std::string
-process_command(std::string const& c)
+process_command(elle::json::Object query)
 {
-  return "OK";
+  ELLE_TRACE("command: %s", elle::json::pretty_print(query));
+  elle::serialization::json::SerializerIn command(query, false);
+  std::stringstream ss;
+  {
+    elle::serialization::json::SerializerOut response(ss, false);
+    auto op = command.deserialize<std::string>("operation");
+    response.serialize("operation", op);
+    if (op == "status")
+    {
+      response.serialize("status", "Ok");
+    }
+    else if (op == "stop")
+    {
+      exit(0);
+    }
+    else
+    {
+      response.serialize("error", "Unknown operatior: " + op);
+    }
+  }
+  ss << '\n';
+  return ss.str();
 }
 
 COMMAND(stop)
@@ -140,7 +193,9 @@ COMMAND(start)
   }
   daemonize();
   reactor::network::UnixDomainServer srv;
-  srv.listen(xdg_run() / "infinit-daemon" / "sock");
+  auto sockaddr = xdg_run() / "infinit-daemon" / "sock";
+  boost::filesystem::remove(sockaddr);
+  srv.listen(sockaddr);
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
@@ -155,18 +210,22 @@ COMMAND(start)
           {
             while (true)
             {
-              ELLE_TRACE("acquired socket, waiting for command");
-              auto command = socket->read_until("\n").string();
-              ELLE_TRACE("Processing command");
-              auto reply = process_command(command) + "\n";
-              ELLE_TRACE("sending result");
+              auto json =
+                boost::any_cast<elle::json::Object>(elle::json::read(**socket));
+              auto reply = process_command(json);
+              ELLE_TRACE("Writing reply: '%s'", reply);
               socket->write(reply);
-              ELLE_TRACE("done");
             }
           }
           catch (elle::Error const& e)
           {
             ELLE_TRACE("%s", e);
+            try
+            {
+              socket->write(std::string("{\"error\": \"") + e.what() + "\"}\n");
+            }
+            catch (elle::Error const&)
+            {}
           }
         });
     }
@@ -195,8 +254,27 @@ int main(int argc, char** argv)
       std::cerr << "Daemon is not running." << std::endl;
       return 1;
     }
-    std::vector<std::string> sargs(argv+1, argv + argc);
-    auto cmd = boost::algorithm::join(sargs, " ");
+    std::string cmd;
+    if (arg1[0] == '{')
+      cmd = arg1;
+    else
+    {
+      elle::json::Object obj;
+      obj.insert(std::make_pair("operation", arg1));
+      for (int i = 2; i < argc; ++i)
+      {
+        std::string kv = argv[i];
+        auto p = kv.find_first_of('=');
+        if (p == kv.npos)
+          obj.insert(std::make_pair(kv, std::string()));
+        else
+          obj.insert(std::make_pair(kv.substr(0, p), kv.substr(p+1)));
+      }
+      std::stringstream ss;
+      elle::json::write(ss, obj, false);
+      cmd = ss.str();
+      ELLE_TRACE("Parsed command: '%s'", cmd);
+    }
     try
     {
       std::cout << daemon_command(cmd) << std::endl;
