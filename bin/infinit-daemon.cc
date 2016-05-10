@@ -9,6 +9,8 @@
 #include <reactor/network/unix-domain-server.hh>
 #include <reactor/network/unix-domain-socket.hh>
 
+#include <infinit/utility.hh>
+
 ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
@@ -19,10 +21,16 @@ daemon_command(std::string const& s);
 
 static
 boost::filesystem::path
-xdg_run()
+pidfile_path()
 {
-  return elle::os::getenv("XDG_RUNTIME_DIR",
-    (infinit::home() / ".local" / "run").string());
+  return infinit::xdg_runtime_dir () / "daemon.pid";
+}
+
+static
+boost::filesystem::path
+sock_path()
+{
+  return infinit::xdg_runtime_dir() / "daemon.sock";
 }
 
 static
@@ -30,16 +38,9 @@ int
 daemon_pid()
 {
   int pid = -1;
-  std::ifstream ifs((xdg_run() /"infinit-daemon"/"pid").string());
+  boost::filesystem::ifstream ifs(pidfile_path());
   ifs >> pid;
   return pid;
-}
-
-static
-boost::filesystem::path
-daemon_port()
-{
-  return xdg_run() /"infinit-daemon"/"sock";
 }
 
 static
@@ -113,9 +114,7 @@ daemonize()
 {
   if (elle::os::getenv("INFINIT_NO_DAEMON", "").empty() && daemon(1, 0))
     throw elle::Error(elle::sprintf("daemon failed with %s", strerror(errno)));
-  auto run = xdg_run();
-  boost::filesystem::create_directories(run / "infinit-daemon");
-  std::ofstream ofs((run / "infinit-daemon" / "pid").string());
+  boost::filesystem::ofstream ofs(pidfile_path());
   ofs << getpid();
 }
 
@@ -130,7 +129,7 @@ daemon_command(std::string const& s)
     "main",
     [&]
     {
-      reactor::network::UnixDomainSocket sock(daemon_port());
+      reactor::network::UnixDomainSocket sock(sock_path());
       std::string cmd = s + "\n";
       ELLE_TRACE("writing query: %s", s);
       sock.write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
@@ -193,7 +192,7 @@ COMMAND(start)
   }
   daemonize();
   reactor::network::UnixDomainServer srv;
-  auto sockaddr = xdg_run() / "infinit-daemon" / "sock";
+  auto sockaddr = sock_path();
   boost::filesystem::remove(sockaddr);
   srv.listen(sockaddr);
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
