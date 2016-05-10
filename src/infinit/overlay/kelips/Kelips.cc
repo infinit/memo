@@ -3212,7 +3212,7 @@ namespace infinit
         BENCH("make_peer");
         static bool disable_cache = getenv("INFINIT_DISABLE_PEER_CACHE");
         static int cache_count = std::stoi(elle::os::getenv("INFINIT_PEER_CACHE_DUP", "1"));
-        ELLE_TRACE("connecting to %s", hosts);
+        ELLE_TRACE("connecting to %f", hosts);
         if (hosts.first == _self || hosts.first == Address::null)
         {
           ELLE_TRACE("target is local");

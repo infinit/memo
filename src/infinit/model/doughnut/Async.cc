@@ -365,7 +365,7 @@ namespace infinit
             hit = true;
             if (it->block)
             {
-              ELLE_TRACE("%s: fetch %s from memory queue", *this, address);
+              ELLE_TRACE("%s: fetch %f from memory queue", *this, address);
               if (local_version)
                 if (auto m = dynamic_cast<blocks::MutableBlock*>(
                       it->block.get()))
@@ -375,7 +375,7 @@ namespace infinit
             }
             else
             {
-              ELLE_TRACE("%s: fetch %s from disk journal at %s", *this, address, it->index);
+              ELLE_TRACE("%s: fetch %f from disk journal at %s", *this, address, it->index);
               auto res = this->_load_op(it->index).block;
               if (!res)
                 throw MissingBlock(address);
