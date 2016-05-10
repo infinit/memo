@@ -2,6 +2,7 @@
 
 #include <reactor/scheduler.hh>
 #include <reactor/network/tcp-server.hh>
+#include <reactor/network/tcp-socket.hh>
 
 #include <protocol/Serializer.hh>
 #include <protocol/ChanneledStream.hh>
