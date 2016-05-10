@@ -5,8 +5,8 @@
 
 #include <elle/log.hh>
 
-#include <reactor/network/tcp-server.hh>
-#include <reactor/network/tcp-socket.hh>
+#include <reactor/network/unix-domain-server.hh>
+#include <reactor/network/unix-domain-socket.hh>
 
 ELLE_LOG_COMPONENT("infinit-daemon");
 
@@ -31,13 +31,10 @@ daemon_pid()
 }
 
 static
-int
+boost::filesystem::path
 daemon_port()
 {
-  int pid = -1;
-  std::ifstream ifs((xdg_run() /"infinit-daemon"/"port").string());
-  ifs >> pid;
-  return pid;
+  return xdg_run() /"infinit-daemon"/"sock";
 }
 
 static
@@ -102,7 +99,7 @@ daemon_command(std::string const& s)
     "main",
     [&]
     {
-      reactor::network::TCPSocket sock("localhost", daemon_port());
+      reactor::network::UnixDomainSocket sock(daemon_port());
       std::string cmd = s + "\n";
       ELLE_TRACE("writing query: %s", s);
       sock.write(elle::ConstWeakBuffer(cmd.data(), cmd.size()));
@@ -142,12 +139,8 @@ COMMAND(start)
     return;
   }
   daemonize();
-  reactor::network::TCPServer srv;
-  srv.listen(0);
-  {
-    std::ofstream of((xdg_run() / "infinit-daemon" / "port").string());
-    of << srv.port();
-  }
+  reactor::network::UnixDomainServer srv;
+  srv.listen(xdg_run() / "infinit-daemon" / "sock");
   elle::With<reactor::Scope>() << [&] (reactor::Scope& scope)
   {
     while (true)
