@@ -10,6 +10,7 @@
 #include <elle/system/Process.hh>
 #include <elle/serialization/json.hh>
 
+#include <reactor/network/http-server.hh>
 #include <reactor/network/unix-domain-server.hh>
 #include <reactor/network/unix-domain-socket.hh>
 
@@ -133,11 +134,14 @@ class MountManager
 public:
   void create(std::string const& name, MountOptions const& options);
   void remove(std::string const& name);
+  bool exists(std::string const& name);
+  std::vector<std::string> list();
   void mount(std::string const& name);
   std::string mount(boost::optional<std::string> name, MountOptions const& options);
   void umount(std::string const& name);
   void status(boost::optional<std::string> name,
               elle::serialization::SerializerOut& reply);
+  std::string mountpoint(std::string const& name);
 private:
   std::unordered_map<std::string, Mount> _mounts;
   int _next_id;
@@ -170,6 +174,27 @@ MountManager::remove(std::string const& name)
   if (!boost::filesystem::exists(path))
     throw elle::Exception("mount " + name + " does not exist");
   boost::filesystem::remove(path);
+}
+
+std::vector<std::string>
+MountManager::list()
+{
+  auto path = infinit::xdg_data_home() / "mounts";
+  std::vector<std::string> res;
+  boost::filesystem::directory_iterator it(path);
+  boost::filesystem::directory_iterator end;
+  for (;it!=end; ++it)
+  {
+    res.push_back(it->path().filename().string());
+  }
+  return res;
+}
+
+bool
+MountManager::exists(std::string const& name)
+{
+  auto path = infinit::xdg_data_home() / "mounts" / name;
+  return boost::filesystem::exists(path);
 }
 
 void
@@ -233,6 +258,27 @@ void MountManager::status(boost::optional<std::string> name,
   if (it->second.options.mountpoint)
     reply.serialize("mountpoint", it->second.options.mountpoint.get());
 }
+
+std::string
+MountManager::mountpoint(std::string const& name)
+{
+  auto it = _mounts.find(name);
+  if (it == _mounts.end())
+    throw elle::Exception("not mounted: " + name);
+  return it->second.options.mountpoint.get();
+}
+
+class DockerVolumePlugin
+{
+public:
+  DockerVolumePlugin();
+  ~DockerVolumePlugin();
+  void install();
+  void uninstall();
+private:
+  reactor::network::HttpServer _server;
+  std::unordered_map<std::string, int> _mount_count;
+};
 
 static
 std::string
@@ -426,14 +472,13 @@ process_command(elle::json::Object query)
     response.serialize("operation", op);
     try
     {
-<<<<<<< d6661d2b701013811cd0c847a9070656721f2063
       if (op == "status")
       {
         response.serialize("status", "Ok");
       }
       else if (op == "stop")
       {
-        exit(0);
+        throw elle::Exit(0);
       }
       else if (op == "create")
       {
@@ -484,9 +529,6 @@ process_command(elle::json::Object query)
       {
         response.serialize("error", "Unknown operatior: " + op);
       }
-=======
-      throw elle::Exit(0);
->>>>>>> infinit-daemon: Remove PID file on exit.
     }
     catch (elle::Exception const& e)
     {
@@ -515,6 +557,7 @@ COMMAND(start)
 {
   if (daemon_running())
     elle::err("daemon already running");
+  DockerVolumePlugin dvp;
   if (!flag(args, "foreground"))
     daemonize();
   PIDFile pid;
@@ -556,6 +599,190 @@ COMMAND(start)
         });
     }
   };
+}
+
+DockerVolumePlugin::DockerVolumePlugin()
+{
+  install();
+}
+DockerVolumePlugin::~DockerVolumePlugin()
+{
+  uninstall();
+}
+
+void
+DockerVolumePlugin::uninstall()
+{
+}
+
+elle::json::Object
+retype_json(elle::json::Object const& in)
+{
+  elle::json::Object res;
+  for (auto const& e: in)
+  {
+    auto val = boost::any_cast<std::string>(e.second);
+    boost::any o = val;
+    if (val == "true")
+      o = true;
+    else if (val == "false")
+      o = false;
+    else
+    {
+      try
+      {
+        std::size_t pos = 0;
+        int vi = std::stoi(val, &pos);
+        if (pos != val.size())
+          throw std::runtime_error("stoi failure");
+        o = vi;
+      }
+      catch (std::exception const&)
+      {
+        if (val.find(',') != val.npos)
+        {
+          std::vector<std::string> vals;
+          boost::algorithm::split(vals, val, boost::is_any_of(","),
+            boost::token_compress_on);
+          if (vals.back().empty())
+            vals.pop_back();
+          elle::json::Array jvals(vals.begin(), vals.end());
+          o = jvals;
+        }
+        else
+          o = val;
+      }
+    }
+    res.insert(std::make_pair(e.first, o));
+  }
+  return res;
+}
+
+void
+DockerVolumePlugin::install()
+{
+  int port = _server.port();
+  std::string url = "tcp://localhost:" + std::to_string(port);
+  // plugin path is either in /etc/docker/plugins or /usr/lib/docker/plugins
+  auto dir = boost::filesystem::path("/usr") /"lib"/ "docker" / "plugins";
+  boost::system::error_code erc;
+  boost::filesystem::create_directories(dir, erc);
+  {
+    boost::filesystem::ofstream ofs(dir / "infinit.spec");
+    if (!ofs.good())
+    {
+      ELLE_LOG("Execute the following command: echo %s |sudo tee %s/infinit.spec",
+               url, dir.string());
+    }
+    ofs << url;
+  }
+  {
+    auto json = "\"name\": \"infinit\", \"address\": \"http://www.infinit.sh\"";
+    boost::filesystem::ofstream ofs(dir / "infinit.json");
+    if (!ofs.good())
+    {
+      ELLE_LOG("Execute the following command: echo '%s' |sudo tee %s/infinit.json",
+               json, dir.string());
+    }
+    ofs << json;
+  }
+  #define ROUTE_SIG  (reactor::network::HttpServer::Headers const&,     \
+                      reactor::network::HttpServer::Cookies const&,     \
+                      reactor::network::HttpServer::Parameters const&,  \
+                      elle::Buffer const& data) -> std::string
+  _server.register_route("/Plugin.Activate",  reactor::http::Method::POST,
+    [] ROUTE_SIG {
+      ELLE_TRACE("Activating plugin");
+      return "{\"Implements\": [\"VolumeDriver\"]}";
+    });
+  _server.register_route("/VolumeDriver.Create", reactor::http::Method::POST,
+    [] ROUTE_SIG {
+      auto stream = elle::IOStream(data.istreambuf());
+      // FIXME: detect and accept a dense option argument so that
+      // user can type '-o foo=bar,baz=baz' on docker cmd line
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      auto name = boost::any_cast<std::string>(json.at("Name"));
+      auto opts = boost::any_cast<elle::json::Object>(json.at("Opts"));
+      ELLE_TRACE("got create %s with %s", name, elle::json::pretty_print(opts));
+      auto sopts = retype_json(opts);
+      ELLE_TRACE("options retyped to %s", elle::json::pretty_print(sopts));
+      std::stringstream s;
+      elle::json::write(s, sopts, false);
+      auto mo = elle::serialization::json::deserialize<MountOptions>(s, false);
+      manager().create(name, mo);
+      return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
+      //return "{\"Err\": \"not implemented yet\"}";
+    });
+  _server.register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
+    [] ROUTE_SIG {
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      auto name = boost::any_cast<std::string>(json.at("Name"));
+      manager().remove(name);
+      return "{\"Err\": \"\"}";
+    });
+  _server.register_route("/VolumeDriver.Get", reactor::http::Method::POST,
+    [] ROUTE_SIG {
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      auto name = boost::any_cast<std::string>(json.at("Name"));
+      if (manager().exists(name))
+        return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
+      else
+        return "{\"Err\": \"No such mount\"}";
+    });
+  _server.register_route("/VolumeDriver.Mount", reactor::http::Method::POST,
+    [this] ROUTE_SIG {
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      auto name = boost::any_cast<std::string>(json.at("Name"));
+      auto it = _mount_count.find(name);
+      if (it != _mount_count.end())
+      {
+        ++it->second;
+      }
+      else
+      {
+        manager().mount(name);
+        _mount_count.insert(std::make_pair(name, 1));
+      }
+      return "{\"Err\": \"\", \"Mountpoint\": \""
+          + manager().mountpoint(name) +"\"}";
+    });
+  _server.register_route("/VolumeDriver.Unmount", reactor::http::Method::POST,
+    [this] ROUTE_SIG {
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      auto name = boost::any_cast<std::string>(json.at("Name"));
+      auto it = _mount_count.find(name);
+      if (it == _mount_count.end())
+        return "{\"Err\": \"No such mount\"}";
+      --it->second;
+      if (it->second == 0)
+      {
+        _mount_count.erase(it);
+        manager().umount(name);
+      }
+      return "{\"Err\": \"\"}";
+    });
+  _server.register_route("/VolumeDriver.Path", reactor::http::Method::POST,
+    [] ROUTE_SIG {
+      auto stream = elle::IOStream(data.istreambuf());
+      auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
+      auto name = boost::any_cast<std::string>(json.at("Name"));
+      return "{\"Err\": \"\", \"Mountpoint\": \""
+          + manager().mountpoint(name) +"\"}";
+    });
+  _server.register_route("/VolumeDriver.List", reactor::http::Method::POST,
+    [] ROUTE_SIG {
+      auto list = manager().list();
+      std::string res("{\"Err\": \"\", \"Volumes\": [");
+      for (auto const& n: list)
+        res += "{\"Name\": \"" + n + "\"},";
+      res = res.substr(0, res.size()-1);
+      res += "]}";
+      return res;
+    });
 }
 
 int
