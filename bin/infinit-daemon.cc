@@ -2,6 +2,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
@@ -531,20 +532,32 @@ main(int argc, char** argv)
           obj.insert(std::make_pair(kv, true));
         else
         {
+          std::string key = kv.substr(0, p);
           std::string val = kv.substr(p+1);
           if (val == "true")
-            obj.insert(std::make_pair(kv.substr(0, p), true));
+            obj.insert(std::make_pair(key, true));
           else if (val == "false")
-            obj.insert(std::make_pair(kv.substr(0, p), false));
+            obj.insert(std::make_pair(key, false));
           else
           {
             try
             {
-              obj.insert(std::make_pair(kv.substr(0, p), std::stoi(val)));
+              obj.insert(std::make_pair(key, std::stoi(val)));
             }
             catch (std::exception const& e)
             {
-              obj.insert(std::make_pair(kv.substr(0, p), val));
+              if (val.find(',') != val.npos)
+              {
+                std::vector<std::string> vals;
+                boost::algorithm::split(vals, val, boost::is_any_of(","),
+                                        boost::token_compress_on);
+                if (vals.back().empty())
+                  vals.pop_back();
+                elle::json::Array jvals(vals.begin(), vals.end());
+                obj.insert(std::make_pair(key, jvals));
+              }
+              else
+                obj.insert(std::make_pair(key, val));
             }
           }
         }
