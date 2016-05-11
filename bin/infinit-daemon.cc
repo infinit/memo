@@ -71,10 +71,7 @@ daemon_stop()
 {
   int pid = daemon_pid();
   if (!daemon_running() || pid == -1)
-  {
-    std::cerr << "Daemon is not running." << std::endl;
-    return;
-  }
+    elle::err("daemon is not running");
   try
   {
     daemon_command("{\"operation\": \"stop\"}");
@@ -184,10 +181,7 @@ COMMAND(status)
 COMMAND(start)
 {
   if (daemon_running())
-  {
-    std::cerr << "Daemon already running." << std::endl;
-    return;
-  }
+    elle::err("daemon already running");
   if (!flag(args, "foreground"))
     daemonize();
   {
@@ -234,7 +228,8 @@ COMMAND(start)
   };
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
   std::string arg1(argv[1]);
   bool dashed = true;
@@ -252,10 +247,7 @@ int main(int argc, char** argv)
   {
     // Assume query to be sent to daemon
     if (!daemon_running())
-    {
-      std::cerr << "Daemon is not running." << std::endl;
-      return 1;
-    }
+      elle::err("daemon is not running");
     std::string cmd;
     if (arg1[0] == '{')
       cmd = arg1;
@@ -277,15 +269,7 @@ int main(int argc, char** argv)
       cmd = ss.str();
       ELLE_TRACE("Parsed command: '%s'", cmd);
     }
-    try
-    {
-      std::cout << daemon_command(cmd) << std::endl;
-    }
-    catch (elle::Error const& e)
-    {
-      std::cerr << e.what() << std::endl;
-      return 1;
-    }
+    std::cout << daemon_command(cmd) << std::endl;
     return 0;
   }
   using boost::program_options::value;
