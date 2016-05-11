@@ -191,10 +191,13 @@ MountManager::mount(boost::optional<std::string> name, MountOptions const& optio
     name = "mount_" + std::to_string(++_next_id);
   Mount m;
   m.options = options;
+  if (m.options.mountpoint && m.options.mountpoint.get() == "auto")
+    m.options.mountpoint = (boost::filesystem::temp_directory_path()
+    / boost::filesystem::unique_path()).string();
   std::vector<std::string> arguments;
   arguments.push_back(self_path + "/infinit-volume");
   std::unordered_map<std::string, std::string> env;
-  options.to_commandline(arguments, env);
+  m.options.to_commandline(arguments, env);
   ELLE_TRACE("Spawning with %s %s", arguments, env);
   // FIXME upgrade Process to accept env
   for (auto const& e: env)
@@ -228,6 +231,8 @@ void MountManager::status(boost::optional<std::string> name,
     throw elle::Exception("not mounted: " + name.get());
   bool live = ! kill(it->second.process->pid(), 0);
   reply.serialize("live", live);
+  if (it->second.options.mountpoint)
+    reply.serialize("mountpoint", it->second.options.mountpoint.get());
 }
 
 static
