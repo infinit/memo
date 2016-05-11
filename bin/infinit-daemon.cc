@@ -161,7 +161,7 @@ MountManager::create(std::string const& name, MountOptions const& options)
   auto ser = elle::serialization::json::serialize(options);
   auto path = infinit::xdg_data_home() / "mounts" / name;
   if (boost::filesystem::exists(path))
-    throw elle::Exception("mount " + name + " already exists");
+    throw elle::Error("mount " + name + " already exists");
   boost::filesystem::create_directories(path.parent_path());
   boost::filesystem::ofstream ofs(path);
   ofs.write(reinterpret_cast<const char*>(ser.contents()), ser.size());
@@ -711,7 +711,6 @@ DockerVolumePlugin::install()
       auto mo = elle::serialization::json::deserialize<MountOptions>(s, false);
       manager().create(name, mo);
       return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
-      //return "{\"Err\": \"not implemented yet\"}";
     });
   _server.register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
     [] ROUTE_SIG {
@@ -832,41 +831,9 @@ main(int argc, char** argv)
         if (p == kv.npos)
           obj.insert(std::make_pair(kv, true));
         else
-        {
-          std::string key = kv.substr(0, p);
-          std::string val = kv.substr(p+1);
-          if (val == "true")
-            obj.insert(std::make_pair(key, true));
-          else if (val == "false")
-            obj.insert(std::make_pair(key, false));
-          else
-          {
-            try
-            {
-              std::size_t pos;
-              int iv = std::stoi(val, &pos);
-              if (pos != val.size())
-                throw std::runtime_error("stoi failure");
-              obj.insert(std::make_pair(key, iv));
-            }
-            catch (std::exception const& e)
-            {
-              if (val.find(',') != val.npos)
-              {
-                std::vector<std::string> vals;
-                boost::algorithm::split(vals, val, boost::is_any_of(","),
-                                        boost::token_compress_on);
-                if (vals.back().empty())
-                  vals.pop_back();
-                elle::json::Array jvals(vals.begin(), vals.end());
-                obj.insert(std::make_pair(key, jvals));
-              }
-              else
-                obj.insert(std::make_pair(key, val));
-            }
-          }
-        }
+          obj.insert(std::make_pair(kv.substr(0, p), kv.substr(p+1)));
       }
+      obj = retype_json(obj);
       std::stringstream ss;
       elle::json::write(ss, obj, false);
       cmd = ss.str();
