@@ -4,6 +4,7 @@
 #include <boost/filesystem.hpp>
 
 #include <elle/log.hh>
+#include <elle/system/Process.hh>
 #include <elle/serialization/json.hh>
 
 #include <reactor/network/unix-domain-server.hh>
@@ -15,7 +16,167 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
 
+
 std::string self_path;
+struct MountOptions
+{
+  MountOptions();
+  MountOptions(elle::serialization::SerializerIn& s);
+  void
+  serialize(elle::serialization::Serializer& s);
+  void to_commandline(std::vector<std::string>& arguments,
+                      std::unordered_map<std::string, std::string>& env) const;
+  std::string volume;
+  boost::optional<std::string> hub_url;
+  boost::optional<std::string> rdv;
+  boost::optional<std::vector<std::string>> fuse_options;
+  boost::optional<std::string> as;
+  boost::optional<bool> fetch;
+  boost::optional<bool> push;
+  boost::optional<bool> cache;
+  boost::optional<bool> async;
+  boost::optional<bool> readonly;
+  boost::optional<uint64_t> cache_ram_size;
+  boost::optional<uint64_t> cache_ram_ttl;
+  boost::optional<uint64_t> cache_ram_invalidation;
+  boost::optional<uint64_t> cache_disk_size;
+  boost::optional<std::string> mountpoint;
+};
+
+MountOptions::MountOptions()
+{
+}
+
+
+MountOptions::MountOptions(elle::serialization::SerializerIn& s)
+{
+  serialize(s);
+}
+
+void
+MountOptions::serialize(elle::serialization::Serializer& s)
+{
+  s.serialize("volume", volume);
+  s.serialize("hub_url", hub_url);
+  s.serialize("rdv", rdv);
+  s.serialize("fuse_options", fuse_options);
+  s.serialize("fetch", fetch);
+  s.serialize("push", push);
+  s.serialize("cache", cache);
+  s.serialize("async", async);
+  s.serialize("readonly", readonly);
+  s.serialize("cache_ram_size", cache_ram_size);
+  s.serialize("cache_ram_ttl", cache_ram_ttl);
+  s.serialize("cache_ram_invalidation", cache_ram_invalidation);
+  s.serialize("cache_disk_size", cache_disk_size);
+  s.serialize("mountpoint", mountpoint);
+  s.serialize("as", as);
+}
+
+void
+MountOptions::to_commandline(std::vector<std::string>& arguments,
+                             std::unordered_map<std::string, std::string>& env) const
+{
+  if (rdv)
+    env.insert(std::make_pair("INFINIT_RDV", rdv.get()));
+  if (hub_url)
+    env.insert(std::make_pair("INFINIT_BEYOND", hub_url.get()));
+  arguments.push_back("--run");
+  arguments.push_back(volume);
+  if (fuse_options)
+    for (auto const& fo: fuse_options.get())
+    {
+      arguments.push_back("--fuse-option");
+      arguments.push_back(fo);
+    }
+  if (fetch && *fetch) arguments.push_back("--fetch");
+  if (push && *push) arguments.push_back("--push");
+  if (cache && *cache) arguments.push_back("--cache");
+  if (async && *async) arguments.push_back("--async");
+  if (readonly && *readonly) arguments.push_back("--readonly");
+  if (cache_ram_size) {arguments.push_back("--cache-ram-size"); arguments.push_back(std::to_string(cache_ram_size.get()));}
+  if (cache_ram_ttl) {arguments.push_back("--cache-ram-ttl"); arguments.push_back(std::to_string(cache_ram_ttl.get()));}
+  if (cache_ram_invalidation) {arguments.push_back("--cache-ram-invalidation"); arguments.push_back(std::to_string(cache_ram_invalidation.get()));}
+  if (cache_disk_size) {arguments.push_back("--cache-disk-size"); arguments.push_back(std::to_string(cache_disk_size.get()));}
+  if (mountpoint)
+  {
+    arguments.push_back("--mountpoint");
+    arguments.push_back(mountpoint.get());
+  }
+  if (as)
+  {
+    arguments.push_back("--as");
+    arguments.push_back(as.get());
+  }
+
+}
+
+struct Mount
+{
+  MountOptions options;
+  std::unique_ptr<elle::system::Process> process;
+};
+
+class MountManager
+{
+public:
+  std::string mount(boost::optional<std::string> name, MountOptions const& options);
+  void umount(std::string const& name);
+  void status(boost::optional<std::string> name,
+              elle::serialization::SerializerOut& reply);
+private:
+  std::unordered_map<std::string, Mount> _mounts;
+  int _next_id;
+};
+
+static
+MountManager&
+manager()
+{
+  static MountManager mm;
+  return mm;
+}
+
+std::string
+MountManager::mount(boost::optional<std::string> name, MountOptions const& options)
+{
+  if (!name)
+    name = "mount_" + std::to_string(++_next_id);
+  Mount m;
+  m.options = options;
+  std::vector<std::string> arguments;
+  arguments.push_back(self_path + "/infinit-volume");
+  std::unordered_map<std::string, std::string> env;
+  options.to_commandline(arguments, env);
+  ELLE_TRACE("Spawning with %s %s", arguments, env);
+  // FIXME upgrade Process to accept env
+  for (auto const& e: env)
+    elle::os::setenv(e.first, e.second, true);
+  m.process = elle::make_unique<elle::system::Process>(arguments);
+  _mounts.insert(std::make_pair(name.get(), std::move(m)));
+  return name.get();
+}
+
+void
+MountManager::umount(std::string const& name)
+{
+  auto it = _mounts.find(name);
+  if (it == _mounts.end())
+    throw elle::Exception("not mounted: " + name);
+  kill(it->second.process->pid(), SIGTERM);
+  _mounts.erase(it);
+}
+
+void MountManager::status(boost::optional<std::string> name,
+                          elle::serialization::SerializerOut& reply)
+{
+  auto it = _mounts.find(name.get());
+  if (it == _mounts.end())
+    throw elle::Exception("not mounted: " + name.get());
+  bool live = ! kill(it->second.process->pid(), 0);
+  reply.serialize("live", live);
+}
+
 static
 std::string
 daemon_command(std::string const& s);
