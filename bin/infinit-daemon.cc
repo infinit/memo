@@ -310,17 +310,48 @@ process_command(elle::json::Object query)
     elle::serialization::json::SerializerOut response(ss, false);
     auto op = command.deserialize<std::string>("operation");
     response.serialize("operation", op);
-    if (op == "status")
+    try
     {
-      response.serialize("status", "Ok");
+      if (op == "status")
+      {
+        response.serialize("status", "Ok");
+      }
+      else if (op == "stop")
+      {
+        exit(0);
+      }
+      else if (op == "mount")
+      {
+        MountOptions mo(command);
+        boost::optional<std::string> name;
+        command.serialize("name", name);
+        name = manager().mount(name, mo);
+        response.serialize("name", name);
+        response.serialize("result", "Ok");
+      }
+      else if (op == "umount")
+      {
+        std::string name;
+        command.serialize("name", name);
+        manager().umount(name);
+        response.serialize("result", "Ok");
+      }
+      else if (op == "mount_status")
+      {
+        std::string name;
+        command.serialize("name", name);
+        manager().status(name, response);
+        response.serialize("result", "Ok");
+      }
+      else
+      {
+        response.serialize("error", "Unknown operatior: " + op);
+      }
     }
-    else if (op == "stop")
+    catch (elle::Exception const& e)
     {
-      exit(0);
-    }
-    else
-    {
-      response.serialize("error", "Unknown operatior: " + op);
+      response.serialize("result", "Error");
+      response.serialize("error", e.what());
     }
   }
   ss << '\n';
