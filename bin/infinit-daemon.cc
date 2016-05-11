@@ -44,6 +44,7 @@ struct MountOptions
   boost::optional<uint64_t> cache_ram_invalidation;
   boost::optional<uint64_t> cache_disk_size;
   boost::optional<std::string> mountpoint;
+  boost::optional<std::vector<std::string>> peers;
   typedef infinit::serialization_tag serialization_tag;
 };
 
@@ -75,6 +76,7 @@ MountOptions::serialize(elle::serialization::Serializer& s)
   s.serialize("cache_disk_size", cache_disk_size);
   s.serialize("mountpoint", mountpoint);
   s.serialize("as", as);
+  s.serialize("peers", peers);
 }
 
 void
@@ -91,6 +93,12 @@ MountOptions::to_commandline(std::vector<std::string>& arguments,
     for (auto const& fo: fuse_options.get())
     {
       arguments.push_back("--fuse-option");
+      arguments.push_back(fo);
+    }
+  if (peers)
+    for (auto const& fo: peers.get())
+    {
+      arguments.push_back("--peer");
       arguments.push_back(fo);
     }
   if (fetch && *fetch) arguments.push_back("--fetch");
