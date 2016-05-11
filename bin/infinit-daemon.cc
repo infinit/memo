@@ -3,6 +3,7 @@
 #include <signal.h>
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <elle/log.hh>
 #include <elle/system/Process.hh>
@@ -42,6 +43,7 @@ struct MountOptions
   boost::optional<uint64_t> cache_ram_invalidation;
   boost::optional<uint64_t> cache_disk_size;
   boost::optional<std::string> mountpoint;
+  typedef infinit::serialization_tag serialization_tag;
 };
 
 MountOptions::MountOptions()
@@ -121,6 +123,9 @@ struct Mount
 class MountManager
 {
 public:
+  void create(std::string const& name, MountOptions const& options);
+  void remove(std::string const& name);
+  void mount(std::string const& name);
   std::string mount(boost::optional<std::string> name, MountOptions const& options);
   void umount(std::string const& name);
   void status(boost::optional<std::string> name,
@@ -136,6 +141,38 @@ manager()
 {
   static MountManager mm;
   return mm;
+}
+
+void
+MountManager::create(std::string const& name, MountOptions const& options)
+{
+  auto ser = elle::serialization::json::serialize(options);
+  auto path = infinit::xdg_data_home() / "mounts" / name;
+  if (boost::filesystem::exists(path))
+    throw elle::Exception("mount " + name + " already exists");
+  boost::filesystem::create_directories(path.parent_path());
+  boost::filesystem::ofstream ofs(path);
+  ofs.write(reinterpret_cast<const char*>(ser.contents()), ser.size());
+}
+
+void
+MountManager::remove(std::string const& name)
+{
+  auto path = infinit::xdg_data_home() / "mounts" / name;
+  if (!boost::filesystem::exists(path))
+    throw elle::Exception("mount " + name + " does not exist");
+  boost::filesystem::remove(path);
+}
+
+void
+MountManager::mount(std::string const& name)
+{
+  auto path = infinit::xdg_data_home() / "mounts" / name;
+  if (!boost::filesystem::exists(path))
+    throw elle::Exception("mount " + name + " does not exist");
+  boost::filesystem::ifstream ifs(path);
+  auto mo = elle::serialization::json::deserialize<MountOptions>(ifs);
+  mount(name, mo);
 }
 
 std::string
@@ -327,7 +364,29 @@ process_command(elle::json::Object query)
       {
         exit(0);
       }
+      else if (op == "create")
+      {
+        MountOptions mo(command);
+        std::string name;
+        command.serialize("name", name);
+        manager().create(name, mo);
+        response.serialize("result", "Ok");
+      }
+      else if (op == "remove")
+      {
+        std::string name;
+        command.serialize("name", name);
+        manager().remove(name);
+        response.serialize("result", "Ok");
+      }
       else if (op == "mount")
+      {
+        std::string name;
+        command.serialize("name", name);
+        manager().mount(name);
+        response.serialize("result", "Ok");
+      }
+      else if (op == "mount_volume")
       {
         MountOptions mo(command);
         boost::optional<std::string> name;
