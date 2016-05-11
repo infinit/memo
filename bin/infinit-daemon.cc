@@ -739,15 +739,19 @@ DockerVolumePlugin::install()
       auto it = _mount_count.find(name);
       if (it != _mount_count.end())
       {
+        ELLE_TRACE("Already mounted");
         ++it->second;
       }
       else
       {
         manager().mount(name);
         _mount_count.insert(std::make_pair(name, 1));
+        reactor::sleep(4_sec);
       }
-      return "{\"Err\": \"\", \"Mountpoint\": \""
+      std::string res = "{\"Err\": \"\", \"Mountpoint\": \""
           + manager().mountpoint(name) +"\"}";
+      ELLE_TRACE("reply: %s", res);
+      return res;
     });
   _server.register_route("/VolumeDriver.Unmount", reactor::http::Method::POST,
     [this] ROUTE_SIG {
