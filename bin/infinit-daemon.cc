@@ -15,6 +15,7 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
 
+std::string self_path;
 static
 std::string
 daemon_command(std::string const& s);
@@ -231,6 +232,15 @@ COMMAND(start)
 int
 main(int argc, char** argv)
 {
+  if (argv[0][0] == '/')
+    self_path = boost::filesystem::path(argv[0]).parent_path().string();
+  else
+  {
+    char cwd[4096];
+    getcwd(cwd, 4096);
+    self_path = boost::filesystem::path(std::string(cwd) + "/" + argv[0])
+      .parent_path().string();
+  }
   std::string arg1(argv[1]);
   bool dashed = true;
   auto commands = {"start", "stop", "status"};
