@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <signal.h>
 
 #include <boost/filesystem.hpp>
@@ -153,6 +154,12 @@ MountManager::mount(boost::optional<std::string> name, MountOptions const& optio
   for (auto const& e: env)
     elle::os::setenv(e.first, e.second, true);
   m.process = elle::make_unique<elle::system::Process>(arguments);
+  int pid = m.process->pid();
+  std::thread t([pid] {
+      int status = 0;
+      ::waitpid(pid, &status, 0);
+  });
+  t.detach();
   _mounts.insert(std::make_pair(name.get(), std::move(m)));
   return name.get();
 }
