@@ -260,9 +260,26 @@ main(int argc, char** argv)
         std::string kv = argv[i];
         auto p = kv.find_first_of('=');
         if (p == kv.npos)
-          obj.insert(std::make_pair(kv, std::string()));
+          obj.insert(std::make_pair(kv, true));
         else
-          obj.insert(std::make_pair(kv.substr(0, p), kv.substr(p+1)));
+        {
+          std::string val = kv.substr(p+1);
+          if (val == "true")
+            obj.insert(std::make_pair(kv.substr(0, p), true));
+          else if (val == "false")
+            obj.insert(std::make_pair(kv.substr(0, p), false));
+          else
+          {
+            try
+            {
+              obj.insert(std::make_pair(kv.substr(0, p), std::stoi(val)));
+            }
+            catch (std::exception const& e)
+            {
+              obj.insert(std::make_pair(kv.substr(0, p), val));
+            }
+          }
+        }
       }
       std::stringstream ss;
       elle::json::write(ss, obj, false);
