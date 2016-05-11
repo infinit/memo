@@ -355,7 +355,7 @@ COMMAND(run)
   }
   if (args.count("fuse-option"))
   {
-    if (mountpoint)
+    if (!mountpoint)
       throw CommandLineError("FUSE options require the volume to be mounted");
     for (auto const& opt: args["fuse-option"].as<std::vector<std::string>>())
       fuse_options.push_back(opt);
