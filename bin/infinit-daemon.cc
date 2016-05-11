@@ -19,7 +19,6 @@ ELLE_LOG_COMPONENT("infinit-daemon");
 
 #include <main.hh>
 
-
 std::string self_path;
 struct MountOptions
 {
@@ -239,12 +238,70 @@ static
 std::string
 daemon_command(std::string const& s);
 
-static
-boost::filesystem::path
-pidfile_path()
+/*----.
+| PID |
+`----*/
+
+namespace elle
 {
-  return infinit::xdg_runtime_dir () / "daemon.pid";
+  class PIDFile
+  {
+  public:
+    PIDFile(boost::filesystem::path path)
+      : _path(std::move(path))
+    {
+      boost::filesystem::ofstream ofs(this->_path);
+      ofs << getpid();
+    }
+
+    ~PIDFile()
+    {
+      boost::filesystem::remove(this->_path);
+    }
+
+    static
+    int
+    read(boost::filesystem::path const& path)
+    {
+      boost::filesystem::ifstream ifs(path);
+      if (!ifs.good())
+        elle::err("unable to open %s for reading", path);
+      int pid = -1;
+      if (!(ifs >> pid))
+        elle::err("unable to read PID from %s", path);
+      return pid;
+    }
+
+    ELLE_ATTRIBUTE_R(boost::filesystem::path, path);
+  };
 }
+
+class PIDFile
+  : public elle::PIDFile
+{
+public:
+  PIDFile()
+    : elle::PIDFile(this->path())
+  {}
+
+  static
+  boost::filesystem::path
+  path()
+  {
+    return infinit::xdg_runtime_dir () / "daemon.pid";
+  }
+
+  static
+  int
+  read()
+  {
+    return elle::PIDFile::read(PIDFile::path());
+  }
+};
+
+static
+std::string
+daemon_command(std::string const& s);
 
 static
 boost::filesystem::path
@@ -255,42 +312,38 @@ sock_path()
 
 static
 int
-daemon_pid()
-{
-  int pid = -1;
-  boost::filesystem::ifstream ifs(pidfile_path());
-  ifs >> pid;
-  return pid;
-}
-
-static
-bool
 daemon_running()
 {
-  int pid = daemon_pid();
-  if (pid == -1)
-    return false;
-  int res = kill(pid, 0);
-  if (res != 0)
-    return false;
+  int pid = -1;
+  try
+  {
+    pid = PIDFile::read();
+  }
+  catch (elle::Error const& e)
+  {
+    ELLE_TRACE("error getting PID: %s", e);
+    return 0;
+  }
+  if (kill(pid, 0) != 0)
+    return 0;
   try
   {
     daemon_command("{\"operation\": \"status\"}");
-    return true;
+    return pid;
   }
   catch (elle::Error const& e)
   {
     ELLE_TRACE("status command threw %s", e);
+    return 0;
   }
-  return false;
 }
 
 static
 void
 daemon_stop()
 {
-  int pid = daemon_pid();
-  if (!daemon_running() || pid == -1)
+  int pid = daemon_running();
+  if (!pid)
     elle::err("daemon is not running");
   try
   {
@@ -300,10 +353,13 @@ daemon_stop()
   {
     ELLE_TRACE("stop command threw %s", e);
   }
-  for (int i=0; i<50; ++i)
+  for (int i = 0; i<50; ++i)
   {
     if (kill(pid, 0))
+    {
+      std::cout << "daemon stopped" << std::endl;
       return;
+    }
     usleep(100000);
   }
   ELLE_TRACE("Sending TERM to %s", pid);
@@ -370,6 +426,7 @@ process_command(elle::json::Object query)
     response.serialize("operation", op);
     try
     {
+<<<<<<< d6661d2b701013811cd0c847a9070656721f2063
       if (op == "status")
       {
         response.serialize("status", "Ok");
@@ -427,6 +484,9 @@ process_command(elle::json::Object query)
       {
         response.serialize("error", "Unknown operatior: " + op);
       }
+=======
+      throw elle::Exit(0);
+>>>>>>> infinit-daemon: Remove PID file on exit.
     }
     catch (elle::Exception const& e)
     {
@@ -457,10 +517,7 @@ COMMAND(start)
     elle::err("daemon already running");
   if (!flag(args, "foreground"))
     daemonize();
-  {
-    boost::filesystem::ofstream ofs(pidfile_path());
-    ofs << getpid();
-  }
+  PIDFile pid;
   reactor::network::UnixDomainServer srv;
   auto sockaddr = sock_path();
   boost::filesystem::remove(sockaddr);
