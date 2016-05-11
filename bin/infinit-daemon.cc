@@ -112,10 +112,8 @@ static
 void
 daemonize()
 {
-  if (elle::os::getenv("INFINIT_NO_DAEMON", "").empty() && daemon(1, 0))
-    throw elle::Error(elle::sprintf("daemon failed with %s", strerror(errno)));
-  boost::filesystem::ofstream ofs(pidfile_path());
-  ofs << getpid();
+  if (daemon(1, 0))
+    elle::err("failed to daemonize: %s", strerror(errno));
 }
 
 static
@@ -190,7 +188,12 @@ COMMAND(start)
     std::cerr << "Daemon already running." << std::endl;
     return;
   }
-  daemonize();
+  if (!flag(args, "foreground"))
+    daemonize();
+  {
+    boost::filesystem::ofstream ofs(pidfile_path());
+    ofs << getpid();
+  }
   reactor::network::UnixDomainServer srv;
   auto sockaddr = sock_path();
   boost::filesystem::remove(sockaddr);
@@ -300,7 +303,9 @@ int main(int argc, char** argv)
       "Start daemon",
       &start,
       "",
-      {}
+      {
+        { "foreground,f", bool_switch(), "do not daemonize" },
+      }
     },
     {
       "stop",
