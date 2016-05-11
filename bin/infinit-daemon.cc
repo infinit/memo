@@ -542,7 +542,11 @@ main(int argc, char** argv)
           {
             try
             {
-              obj.insert(std::make_pair(key, std::stoi(val)));
+              std::size_t pos;
+              int iv = std::stoi(val, &pos);
+              if (pos != val.size())
+                throw std::runtime_error("stoi failure");
+              obj.insert(std::make_pair(key, iv));
             }
             catch (std::exception const& e)
             {
