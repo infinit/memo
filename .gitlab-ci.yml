@@ -103,7 +103,7 @@ x86_64-windows-mingw4:
     - mv ../fs-install "../infinit-$(GIT_DIR=../fs/.git git describe)"
     - cd .. && zip -r "infinit-$(GIT_DIR=fs/.git git describe).zip" "infinit-$(GIT_DIR=fs/.git git describe)" && cd fs-build
     - mv "../infinit-$(GIT_DIR=../fs/.git git describe)" ../fs-install
-    - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" debian@debian.infinit.io:windows
+    - scp "../infinit-$(GIT_DIR=../fs/.git git describe).zip" debian@debian.infinit.io:/tmp/www
   tags:
     - x86_64
     - windows
