@@ -283,12 +283,12 @@ MountManager::mountpoint(std::string const& name)
 class DockerVolumePlugin
 {
 public:
-  DockerVolumePlugin();
+  DockerVolumePlugin(bool tcp);
   ~DockerVolumePlugin();
-  void install();
+  void install(bool tcp);
   void uninstall();
 private:
-  reactor::network::HttpServer _server;
+  std::unique_ptr<reactor::network::HttpServer> _server;
   std::unordered_map<std::string, int> _mount_count;
 };
 
@@ -530,7 +530,7 @@ COMMAND(start)
 {
   if (daemon_running())
     elle::err("daemon already running");
-  DockerVolumePlugin dvp;
+  DockerVolumePlugin dvp(flag(args, "docker-socket-tcp"));
   if (!flag(args, "foreground"))
     daemonize();
   PIDFile pid;
@@ -578,9 +578,9 @@ COMMAND(start)
   };
 }
 
-DockerVolumePlugin::DockerVolumePlugin()
+DockerVolumePlugin::DockerVolumePlugin(bool tcp)
 {
-  install();
+  install(tcp);
 }
 DockerVolumePlugin::~DockerVolumePlugin()
 {
@@ -636,15 +636,17 @@ retype_json(elle::json::Object const& in)
 }
 
 void
-DockerVolumePlugin::install()
+DockerVolumePlugin::install(bool tcp)
 {
-  int port = _server.port();
-  std::string url = "tcp://localhost:" + std::to_string(port);
   // plugin path is either in /etc/docker/plugins or /usr/lib/docker/plugins
   auto dir = boost::filesystem::path("/usr") /"lib"/ "docker" / "plugins";
   boost::system::error_code erc;
   boost::filesystem::create_directories(dir, erc);
+  if (tcp)
   {
+    this->_server = elle::make_unique<reactor::network::HttpServer>();
+    int port = _server->port();
+    std::string url = "tcp://localhost:" + std::to_string(port);
     boost::filesystem::ofstream ofs(dir / "infinit.spec");
     if (!ofs.good())
     {
@@ -653,6 +655,15 @@ DockerVolumePlugin::install()
     }
     ofs << url;
   }
+  else
+  {
+    auto us = elle::make_unique<reactor::network::UnixDomainServer>();
+    auto sock_path = boost::filesystem::path("/run") / "docker" / "plugins" / "infinit.sock";
+    boost::filesystem::create_directories(sock_path.parent_path());
+    us->listen(sock_path);
+    this->_server = elle::make_unique<reactor::network::HttpServer>(std::move(us));
+  }
+
   {
     auto json = "\"name\": \"infinit\", \"address\": \"http://www.infinit.sh\"";
     boost::filesystem::ofstream ofs(dir / "infinit.json");
@@ -667,12 +678,12 @@ DockerVolumePlugin::install()
                       reactor::network::HttpServer::Cookies const&,     \
                       reactor::network::HttpServer::Parameters const&,  \
                       elle::Buffer const& data) -> std::string
-  _server.register_route("/Plugin.Activate",  reactor::http::Method::POST,
+  _server->register_route("/Plugin.Activate",  reactor::http::Method::POST,
     [] ROUTE_SIG {
       ELLE_TRACE("Activating plugin");
       return "{\"Implements\": [\"VolumeDriver\"]}";
     });
-  _server.register_route("/VolumeDriver.Create", reactor::http::Method::POST,
+  _server->register_route("/VolumeDriver.Create", reactor::http::Method::POST,
     [] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       // FIXME: detect and accept a dense option argument so that
@@ -689,7 +700,7 @@ DockerVolumePlugin::install()
       manager().create(name, mo);
       return "{\"Err\": \"\", \"Volume\": {\"Name\": \"" + name + "\" }}";
     });
-  _server.register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
+  _server->register_route("/VolumeDriver.Remove", reactor::http::Method::POST,
     [] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
@@ -697,7 +708,7 @@ DockerVolumePlugin::install()
       manager().remove(name);
       return "{\"Err\": \"\"}";
     });
-  _server.register_route("/VolumeDriver.Get", reactor::http::Method::POST,
+  _server->register_route("/VolumeDriver.Get", reactor::http::Method::POST,
     [] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
@@ -707,7 +718,7 @@ DockerVolumePlugin::install()
       else
         return "{\"Err\": \"No such mount\"}";
     });
-  _server.register_route("/VolumeDriver.Mount", reactor::http::Method::POST,
+  _server->register_route("/VolumeDriver.Mount", reactor::http::Method::POST,
     [this] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
@@ -729,7 +740,7 @@ DockerVolumePlugin::install()
       ELLE_TRACE("reply: %s", res);
       return res;
     });
-  _server.register_route("/VolumeDriver.Unmount", reactor::http::Method::POST,
+  _server->register_route("/VolumeDriver.Unmount", reactor::http::Method::POST,
     [this] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
@@ -745,7 +756,7 @@ DockerVolumePlugin::install()
       }
       return "{\"Err\": \"\"}";
     });
-  _server.register_route("/VolumeDriver.Path", reactor::http::Method::POST,
+  _server->register_route("/VolumeDriver.Path", reactor::http::Method::POST,
     [] ROUTE_SIG {
       auto stream = elle::IOStream(data.istreambuf());
       auto json = boost::any_cast<elle::json::Object>(elle::json::read(stream));
@@ -753,7 +764,7 @@ DockerVolumePlugin::install()
       return "{\"Err\": \"\", \"Mountpoint\": \""
           + manager().mountpoint(name) +"\"}";
     });
-  _server.register_route("/VolumeDriver.List", reactor::http::Method::POST,
+  _server->register_route("/VolumeDriver.List", reactor::http::Method::POST,
     [] ROUTE_SIG {
       auto list = manager().list();
       std::string res("{\"Err\": \"\", \"Volumes\": [");
@@ -829,6 +840,7 @@ main(int argc, char** argv)
         { "foreground,f", bool_switch(), "do not daemonize" },
         { "log-level,l", value<std::string>(), "Log level to start volumes with"},
         { "log-path,d", value<std::string>(), "Store volume logs in given path"},
+        { "docker-socket-tcp", bool_switch(), "Use a TCP socket for docker plugin"},
       }
     },
     {
