@@ -4,7 +4,7 @@
 # include <sys/xattr.h>
 #endif
 
-static
+inline
 boost::filesystem::path
 file_xattrs_dir(std::string const& file)
 {
@@ -23,7 +23,7 @@ file_xattrs_dir(std::string const& file)
   return res;
 }
 
-static
+inline
 int
 port_getxattr(std::string const& file,
               std::string const& key,
@@ -49,7 +49,7 @@ port_getxattr(std::string const& file,
   return ifs.gcount();
 }
 
-static
+inline
 int
 port_setxattr(std::string const& file,
               std::string const& key,
