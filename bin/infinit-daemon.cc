@@ -562,7 +562,6 @@ DockerVolumePlugin::install(bool tcp)
     us->listen(sock_path);
     this->_server = elle::make_unique<reactor::network::HttpServer>(std::move(us));
   }
-
   {
     auto json = "\"name\": \"infinit\", \"address\": \"http://www.infinit.sh\"";
     boost::filesystem::ofstream ofs(dir / "infinit.json");
@@ -678,48 +677,6 @@ DockerVolumePlugin::install(bool tcp)
 int
 main(int argc, char** argv)
 {
-  std::string arg1(argv[1]);
-  bool dashed = true;
-  auto commands = {"start", "stop", "status"};
-  // Accept mode argument without a leading '--'
-  if (arg1[0] != '-')
-  {
-    if (std::find(commands.begin(), commands.end(), arg1) != commands.end())
-      arg1 = "--" + arg1;
-    else
-      dashed = false;
-    argv[1] = const_cast<char*>(arg1.c_str());
-  }
-  if (!dashed)
-  {
-    // Assume query to be sent to daemon
-    if (!daemon_running())
-      elle::err("daemon is not running");
-    std::string cmd;
-    if (arg1[0] == '{')
-      cmd = arg1;
-    else
-    {
-      elle::json::Object obj;
-      obj.insert(std::make_pair("operation", arg1));
-      for (int i = 2; i < argc; ++i)
-      {
-        std::string kv = argv[i];
-        auto p = kv.find_first_of('=');
-        if (p == kv.npos)
-          obj.insert(std::make_pair(kv, true));
-        else
-          obj.insert(std::make_pair(kv.substr(0, p), kv.substr(p+1)));
-      }
-      obj = retype_json(obj);
-      std::stringstream ss;
-      elle::json::write(ss, obj, false);
-      cmd = ss.str();
-      ELLE_TRACE("Parsed command: '%s'", cmd);
-    }
-    std::cout << daemon_command(cmd) << std::endl;
-    return 0;
-  }
   using boost::program_options::value;
   using boost::program_options::bool_switch;
   Modes modes {
